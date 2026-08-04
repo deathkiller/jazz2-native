@@ -55,35 +55,35 @@ namespace nCine
 		void EndFrame();
 
 	private:
-		bool withSceneGraph_;
-		HashMap<RHI::Texture*, std::unique_ptr<RHI::Texture>> textures_;
+		bool _withSceneGraph;
+		HashMap<RHI::Texture*, std::unique_ptr<RHI::Texture>> _textures;
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_RHI_GL)
 		// Sub-rect updates are repacked into a contiguous buffer where GL_UNPACK_ROW_LENGTH is unavailable
 		// (OpenGL ES / WebGL) or the backend is not OpenGL at all
-		SmallVector<char, 0> tempTexBuffer_;
+		SmallVector<char, 0> _tempTexBuffer;
 #endif
-		std::unique_ptr<RHI::ShaderProgram> imguiShaderProgram_;
-		std::unique_ptr<RHI::Buffer> vbo_;
-		std::unique_ptr<RHI::Buffer> ibo_;
+		std::unique_ptr<RHI::ShaderProgram> _imguiShaderProgram;
+		std::unique_ptr<RHI::Buffer> _vbo;
+		std::unique_ptr<RHI::Buffer> _ibo;
 
 		static const std::int32_t UniformsBufferSize = 65;
-		std::uint8_t uniformsBuffer_[UniformsBufferSize];
-		std::unique_ptr<RHI::ShaderUniforms> imguiShaderUniforms_;
-		IInputEventHandler* appInputHandler_;
+		std::uint8_t _uniformsBuffer[UniformsBufferSize];
+		std::unique_ptr<RHI::ShaderUniforms> _imguiShaderUniforms;
+		IInputEventHandler* _appInputHandler;
 
-		std::int32_t lastFrameWidth_;
-		std::int32_t lastFrameHeight_;
-		Matrix4x4f projectionMatrix_;
-		std::uint16_t lastLayerValue_;
+		std::int32_t _lastFrameWidth;
+		std::int32_t _lastFrameHeight;
+		Matrix4x4f _projectionMatrix;
+		std::uint16_t _lastLayerValue;
 
 #if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
-		std::int32_t attribLocationTex_;
-		std::int32_t attribLocationProjMtx_;
-		std::uint32_t attribLocationVtxPos_;
-		std::uint32_t attribLocationVtxUV_;
-		std::uint32_t attribLocationVtxColor_;
-		std::uint32_t vboHandle_;
-		std::uint32_t elementsHandle_;
+		std::int32_t _attribLocationTex;
+		std::int32_t _attribLocationProjMtx;
+		std::uint32_t _attribLocationVtxPos;
+		std::uint32_t _attribLocationVtxUV;
+		std::uint32_t _attribLocationVtxColor;
+		std::uint32_t _vboHandle;
+		std::uint32_t _elementsHandle;
 #endif
 
 		void DestroyTexture(ImTextureData* tex);

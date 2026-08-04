@@ -40,26 +40,26 @@ namespace nCine::Backends
 	{
 	public:
 		Qt5MouseState()
-			: buttons_(Qt::NoButton) {}
+			: _buttons(Qt::NoButton) {}
 
 		inline bool isLeftButtonDown() const override {
-			return buttons_ & Qt::LeftButton;
+			return _buttons & Qt::LeftButton;
 		}
 		inline bool isMiddleButtonDown() const override {
-			return buttons_ & Qt::MiddleButton;
+			return _buttons & Qt::MiddleButton;
 		}
 		inline bool isRightButtonDown() const override {
-			return buttons_ & Qt::RightButton;
+			return _buttons & Qt::RightButton;
 		}
 		inline bool isFourthButtonDown() const override {
-			return buttons_ & Qt::BackButton;
+			return _buttons & Qt::BackButton;
 		}
 		inline bool isFifthButtonDown() const override {
-			return buttons_ & Qt::ForwardButton;
+			return _buttons & Qt::ForwardButton;
 		}
 
 	private:
-		Qt::MouseButtons buttons_;
+		Qt::MouseButtons _buttons;
 
 		friend class Qt5InputManager;
 	};
@@ -73,26 +73,26 @@ namespace nCine::Backends
 	{
 	public:
 		Qt5MouseEvent()
-			: button_(Qt::NoButton) {}
+			: _button(Qt::NoButton) {}
 
 		inline bool isLeftButton() const override {
-			return button_ & Qt::LeftButton;
+			return _button & Qt::LeftButton;
 		}
 		inline bool isMiddleButton() const override {
-			return button_ & Qt::MiddleButton;
+			return _button & Qt::MiddleButton;
 		}
 		inline bool isRightButton() const override {
-			return button_ & Qt::RightButton;
+			return _button & Qt::RightButton;
 		}
 		inline bool isFourthButton() const override {
-			return button_ & Qt::BackButton;
+			return _button & Qt::BackButton;
 		}
 		inline bool isFifthButton() const override {
-			return button_ & Qt::ForwardButton;
+			return _button & Qt::ForwardButton;
 		}
 
 	private:
-		Qt::MouseButton button_;
+		Qt::MouseButton _button;
 
 		friend class Qt5InputManager;
 	};
@@ -121,7 +121,7 @@ namespace nCine::Backends
 		Qt5KeyboardState()
 		{
 			for (unsigned int i = 0; i < NumKeys; i++)
-				keys_[i] = 0;
+				_keys[i] = 0;
 		}
 
 		inline bool isKeyDown(Keys key) const override
@@ -129,12 +129,12 @@ namespace nCine::Backends
 			if (key == Keys::Unknown)
 				return false;
 			else
-				return keys_[static_cast<unsigned int>(key)] != 0;
+				return _keys[static_cast<unsigned int>(key)] != 0;
 		}
 
 	private:
 		static const unsigned int NumKeys = static_cast<unsigned int>(Keys::COUNT);
-		unsigned char keys_[NumKeys];
+		unsigned char _keys[NumKeys];
 
 		friend class Qt5InputManager;
 	};
@@ -161,12 +161,12 @@ namespace nCine::Backends
 		static const unsigned int NumAxes = 6;
 		/** @brief Minimum difference between two axis readings in order to trigger an event */
 		static const float AxisEventTolerance;
-		bool buttonState_[NumButtons];
-		unsigned char hatState_;
-		float axesValuesState_[NumAxes];
+		bool _buttonState[NumButtons];
+		unsigned char _hatState;
+		float _axesValuesState[NumAxes];
 
-		char name_[MaxNameLength];
-		std::unique_ptr<QGamepad> gamepad_;
+		char _name[MaxNameLength];
+		std::unique_ptr<QGamepad> _gamepad;
 
 		friend class Qt5InputManager;
 	};
@@ -235,10 +235,10 @@ namespace nCine::Backends
 		void wheelEvent(QWheelEvent* event);
 
 		inline const MouseState& mouseState() const override {
-			return mouseState_;
+			return _mouseState;
 		}
 		inline const KeyboardState& keyboardState() const override {
-			return keyboardState_;
+			return _keyboardState;
 		}
 
 #ifdef WITH_QT5GAMEPAD
@@ -277,7 +277,7 @@ namespace nCine::Backends
 			return 0;
 		}
 		inline const JoystickState& joystickState(int joyId) const override {
-			return nullJoystickState_;
+			return _nullJoystickState;
 		}
 #endif
 
@@ -286,23 +286,23 @@ namespace nCine::Backends
 	private:
 		static const int MaxNumJoysticks = 4;
 
-		static TouchEvent touchEvent_;
-		static Qt5MouseState mouseState_;
-		static Qt5MouseEvent mouseEvent_;
-		static Qt5ScrollEvent scrollEvent_;
-		static Qt5KeyboardState keyboardState_;
-		static KeyboardEvent keyboardEvent_;
-		static TextInputEvent textInputEvent_;
-		static Qt5JoystickState nullJoystickState_;
+		static TouchEvent _touchEvent;
+		static Qt5MouseState _mouseState;
+		static Qt5MouseEvent _mouseEvent;
+		static Qt5ScrollEvent _scrollEvent;
+		static Qt5KeyboardState _keyboardState;
+		static KeyboardEvent _keyboardEvent;
+		static TextInputEvent _textInputEvent;
+		static Qt5JoystickState _nullJoystickState;
 #ifdef WITH_QT5GAMEPAD
-		static Qt5JoystickState joystickStates_[MaxNumJoysticks];
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
-		static JoyConnectionEvent joyConnectionEvent_;
+		static Qt5JoystickState _joystickStates[MaxNumJoysticks];
+		static JoyButtonEvent _joyButtonEvent;
+		static JoyHatEvent _joyHatEvent;
+		static JoyAxisEvent _joyAxisEvent;
+		static JoyConnectionEvent _joyConnectionEvent;
 #endif
 
-		Qt5Widget& widget_;
+		Qt5Widget& _widget;
 
 		void updateTouchEvent(const QTouchEvent* event);
 

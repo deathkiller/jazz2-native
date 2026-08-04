@@ -46,9 +46,9 @@ namespace nCine::Backends
 		void updateMonitors() override;
 
 	private:
-		GXRModeObj* rmode_;
-		void* xfb_[2];
-		std::int32_t fbIndex_;
+		GXRModeObj* _rmode;
+		void* _xfb[2];
+		std::int32_t _fbIndex;
 
 		void update() override;
 

@@ -29,14 +29,14 @@ namespace nCine
 
 		/** @brief Returns the associated drawable node */
 		inline const DrawableNode* GetNode() const {
-			return node_;
+			return _node;
 		}
 		/** @brief Sets the associated drawable node */
 		bool SetNode(DrawableNode* node);
 
 		/** @brief Returns the assigned shader */
 		inline const Shader* GetShader() const {
-			return shader_;
+			return _shader;
 		}
 		/** @brief Assigns a shader to the node, or restores the default shader when `nullptr` */
 		bool SetShader(Shader* shader);
@@ -102,9 +102,9 @@ namespace nCine
 		bool CopyToUniformBlock(const char* blockName, std::uint8_t* src);
 
 	private:
-		DrawableNode* node_;
-		Shader* shader_;
-		std::int32_t previousShaderType_;
+		DrawableNode* _node;
+		Shader* _shader;
+		std::int32_t _previousShaderType;
 	};
 
 }

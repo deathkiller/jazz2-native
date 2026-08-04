@@ -499,42 +499,42 @@ namespace nCine::RHI::PVR
 		return nullptr;
 	}
 
-	PvrDevice::BlendingState PvrDevice::blending_;
-	PvrDevice::DepthTestState PvrDevice::depthTest_;
-	PvrDevice::CullFaceState PvrDevice::cullFace_;
-	PvrDevice::ScissorState PvrDevice::scissor_;
-	Recti PvrDevice::viewport_(0, 0, 0, 0);
-	Colorf PvrDevice::clearColor_(0.0f, 0.0f, 0.0f, 1.0f);
+	PvrDevice::BlendingState PvrDevice::_blending;
+	PvrDevice::DepthTestState PvrDevice::_depthTest;
+	PvrDevice::CullFaceState PvrDevice::_cullFace;
+	PvrDevice::ScissorState PvrDevice::_scissor;
+	Recti PvrDevice::_viewport(0, 0, 0, 0);
+	Colorf PvrDevice::_clearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	PvrShaderProgram* PvrDevice::currentProgram_ = nullptr;
-	const PvrTexture* PvrDevice::boundTextures_[PvrDevice::MaxTextureUnits] = {};
-	PvrDevice::UniformRange PvrDevice::boundUniformRanges_[PvrDevice::MaxUniformBindings] = {};
-	PvrRenderTarget* PvrDevice::currentRenderTarget_ = nullptr;
+	PvrShaderProgram* PvrDevice::_currentProgram = nullptr;
+	const PvrTexture* PvrDevice::_boundTextures[PvrDevice::MaxTextureUnits] = {};
+	PvrDevice::UniformRange PvrDevice::_boundUniformRanges[PvrDevice::MaxUniformBindings] = {};
+	PvrRenderTarget* PvrDevice::_currentRenderTarget = nullptr;
 
-	bool PvrDevice::pvrInitialized_ = false;
-	std::int32_t PvrDevice::logicalWidth_ = 640;
-	std::int32_t PvrDevice::logicalHeight_ = 480;
-	PvrDevice::SceneTarget PvrDevice::sceneTarget_ = PvrDevice::SceneTarget::None;
-	std::uint32_t PvrDevice::sceneCounter_ = 0;
-	PvrRenderTarget* PvrDevice::sceneRenderTarget_ = nullptr;
+	bool PvrDevice::_pvrInitialized = false;
+	std::int32_t PvrDevice::_logicalWidth = 640;
+	std::int32_t PvrDevice::_logicalHeight = 480;
+	PvrDevice::SceneTarget PvrDevice::_sceneTarget = PvrDevice::SceneTarget::None;
+	std::uint32_t PvrDevice::_sceneCounter = 0;
+	PvrRenderTarget* PvrDevice::_sceneRenderTarget = nullptr;
 
-	PvrTexture* PvrDevice::paletteTexture_ = nullptr;
-	std::uint32_t PvrDevice::paletteGeneration_ = 1;
-	PvrDevice::PaletteBank PvrDevice::paletteBanks_[PvrDevice::MaxPaletteBanks] = {};
-	std::uint32_t PvrDevice::paletteUseCounter_ = 0;
+	PvrTexture* PvrDevice::_paletteTexture = nullptr;
+	std::uint32_t PvrDevice::_paletteGeneration = 1;
+	PvrDevice::PaletteBank PvrDevice::_paletteBanks[PvrDevice::MaxPaletteBanks] = {};
+	std::uint32_t PvrDevice::_paletteUseCounter = 0;
 
-	std::vector<PvrDevice::PendingSoftwareLight> PvrDevice::pendingSoftwareLights_;
+	std::vector<PvrDevice::PendingSoftwareLight> PvrDevice::_pendingSoftwareLights;
 
-	pvr_ptr_t PvrDevice::lightmapVram_ = nullptr;
-	std::size_t PvrDevice::lightmapVramSize_ = 0;
-	std::int32_t PvrDevice::lightmapW_ = 0;
-	std::int32_t PvrDevice::lightmapH_ = 0;
+	pvr_ptr_t PvrDevice::_lightmapVram = nullptr;
+	std::size_t PvrDevice::_lightmapVramSize = 0;
+	std::int32_t PvrDevice::_lightmapW = 0;
+	std::int32_t PvrDevice::_lightmapH = 0;
 
 	// ------------------------------------------------------------------ session
 
 	void PvrDevice::InitializePvr()
 	{
-		if (pvrInitialized_) {
+		if (_pvrInitialized) {
 			return;
 		}
 
@@ -558,20 +558,20 @@ namespace nCine::RHI::PVR
 		pvr_set_bg_color(0.0f, 0.0f, 0.0f);
 		pvr_set_pal_format(PVR_PAL_ARGB8888);
 
-		pvrInitialized_ = true;
+		_pvrInitialized = true;
 	}
 
 	void PvrDevice::EnsureScene()
 	{
-		const SceneTarget wanted = (currentRenderTarget_ != nullptr ? SceneTarget::RenderTexture : SceneTarget::Screen);
-		if (sceneTarget_ == wanted && (wanted != SceneTarget::RenderTexture || sceneRenderTarget_ == currentRenderTarget_)) {
+		const SceneTarget wanted = (_currentRenderTarget != nullptr ? SceneTarget::RenderTexture : SceneTarget::Screen);
+		if (_sceneTarget == wanted && (wanted != SceneTarget::RenderTexture || _sceneRenderTarget == _currentRenderTarget)) {
 			return;
 		}
 		FinishScene();
 
 		pvr_wait_ready();
 		if (wanted == SceneTarget::RenderTexture) {
-			PvrTexture* texture = currentRenderTarget_->GetColorTexture(0);
+			PvrTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			if (texture == nullptr || texture->GetVramPointer() == nullptr) {
 				return;		// No surface to render into; draws will be skipped
 			}
@@ -587,41 +587,41 @@ namespace nCine::RHI::PVR
 				LOGE("Cannot start a render-to-texture scene for a {}x{} target", renderWidth, renderHeight);
 				return;
 			}
-			sceneRenderTarget_ = currentRenderTarget_;
+			_sceneRenderTarget = _currentRenderTarget;
 		} else {
 			pvr_scene_begin();
-			sceneRenderTarget_ = nullptr;
+			_sceneRenderTarget = nullptr;
 		}
 		pvr_list_begin(PVR_LIST_TR_POLY);
 		// A new list starts with no polygon-header state in the tile accelerator
 		InvalidateSubmittedHeader();
-		sceneTarget_ = wanted;
+		_sceneTarget = wanted;
 	}
 
 	void PvrDevice::FinishScene()
 	{
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 		pvr_list_finish();
 		pvr_scene_finish();
-		sceneTarget_ = SceneTarget::None;
-		sceneRenderTarget_ = nullptr;
-		sceneCounter_++;
+		_sceneTarget = SceneTarget::None;
+		_sceneRenderTarget = nullptr;
+		_sceneCounter++;
 	}
 
 	void PvrDevice::PresentFrame()
 	{
-		if (!pvrInitialized_) {
+		if (!_pvrInitialized) {
 			return;
 		}
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			// Nothing was drawn this frame; run an empty scene to keep the display pacing
 			pvr_wait_ready();
 			pvr_scene_begin();
 			pvr_list_begin(PVR_LIST_TR_POLY);
 			InvalidateSubmittedHeader();
-			sceneTarget_ = SceneTarget::Screen;
+			_sceneTarget = SceneTarget::Screen;
 		}
 		FinishScene();
 	}
@@ -629,8 +629,8 @@ namespace nCine::RHI::PVR
 	void PvrDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
 	{
 		if (width > 0 && height > 0) {
-			logicalWidth_ = width;
-			logicalHeight_ = height;
+			_logicalWidth = width;
+			_logicalHeight = height;
 		}
 	}
 
@@ -638,61 +638,61 @@ namespace nCine::RHI::PVR
 	{
 		offsetX = 0.0f;
 		offsetY = 0.0f;
-		if (currentRenderTarget_ != nullptr) {
+		if (_currentRenderTarget != nullptr) {
 			// Render-to-texture scenes render 1:1 into the target surface
 			scaleX = 1.0f;
 			scaleY = 1.0f;
 		} else {
-			scaleX = (logicalWidth_ > 0 ? 640.0f / float(logicalWidth_) : 1.0f);
-			scaleY = (logicalHeight_ > 0 ? 480.0f / float(logicalHeight_) : 1.0f);
+			scaleX = (_logicalWidth > 0 ? 640.0f / float(_logicalWidth) : 1.0f);
+			scaleY = (_logicalHeight > 0 ? 480.0f / float(_logicalHeight) : 1.0f);
 		}
 	}
 
 	// ------------------------------------------------------------------ state
 
-	void PvrDevice::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
+	void PvrDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void PvrDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
-	PvrDevice::BlendingState PvrDevice::GetBlendingState() { return blending_; }
-	void PvrDevice::SetBlendingState(const BlendingState& state) { blending_ = state; }
+	PvrDevice::BlendingState PvrDevice::GetBlendingState() { return _blending; }
+	void PvrDevice::SetBlendingState(const BlendingState& state) { _blending = state; }
 
-	void PvrDevice::SetDepthTestEnabled(bool enabled) { depthTest_.TestEnabled = enabled; }
-	void PvrDevice::SetDepthMaskEnabled(bool enabled) { depthTest_.MaskEnabled = enabled; }
-	PvrDevice::DepthTestState PvrDevice::GetDepthTestState() { return depthTest_; }
-	void PvrDevice::SetDepthTestState(const DepthTestState& state) { depthTest_ = state; }
+	void PvrDevice::SetDepthTestEnabled(bool enabled) { _depthTest.TestEnabled = enabled; }
+	void PvrDevice::SetDepthMaskEnabled(bool enabled) { _depthTest.MaskEnabled = enabled; }
+	PvrDevice::DepthTestState PvrDevice::GetDepthTestState() { return _depthTest; }
+	void PvrDevice::SetDepthTestState(const DepthTestState& state) { _depthTest = state; }
 
-	void PvrDevice::SetCullFaceEnabled(bool enabled) { cullFace_.Enabled = enabled; }
-	PvrDevice::CullFaceState PvrDevice::GetCullFaceState() { return cullFace_; }
-	void PvrDevice::SetCullFaceState(const CullFaceState& state) { cullFace_ = state; }
+	void PvrDevice::SetCullFaceEnabled(bool enabled) { _cullFace.Enabled = enabled; }
+	PvrDevice::CullFaceState PvrDevice::GetCullFaceState() { return _cullFace; }
+	void PvrDevice::SetCullFaceState(const CullFaceState& state) { _cullFace = state; }
 
-	PvrDevice::ScissorState PvrDevice::GetScissorState() { return scissor_; }
-	void PvrDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
+	PvrDevice::ScissorState PvrDevice::GetScissorState() { return _scissor; }
+	void PvrDevice::SetScissorState(const ScissorState& state) { _scissor = state; }
 	void PvrDevice::SetScissor(const Recti& rect)
 	{
 		// Same contract as the GL device: setting a rect also enables the test (callers like
 		// RenderCommand and Viewport rely on it and restore via SetScissorState afterwards)
-		scissor_.Enabled = true;
-		scissor_.Rect = rect;
+		_scissor.Enabled = true;
+		_scissor.Rect = rect;
 	}
-	void PvrDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
+	void PvrDevice::SetScissorTestEnabled(bool enabled) { _scissor.Enabled = enabled; }
 
-	Recti PvrDevice::GetViewport() { return viewport_; }
-	void PvrDevice::SetViewport(const Recti& rect) { viewport_ = rect; }
+	Recti PvrDevice::GetViewport() { return _viewport; }
+	void PvrDevice::SetViewport(const Recti& rect) { _viewport = rect; }
 	void PvrDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		viewport_ = Recti(x, y, width, height);
+		_viewport = Recti(x, y, width, height);
 	}
 
-	Colorf PvrDevice::GetClearColor() { return clearColor_; }
+	Colorf PvrDevice::GetClearColor() { return _clearColor; }
 	void PvrDevice::SetClearColor(const Colorf& color)
 	{
-		clearColor_ = color;
-		if (pvrInitialized_) {
+		_clearColor = color;
+		if (_pvrInitialized) {
 			pvr_set_bg_color(color.R, color.G, color.B);
 		}
 	}
@@ -700,26 +700,26 @@ namespace nCine::RHI::PVR
 	void PvrDevice::Clear(ClearFlags flags)
 	{
 		static_cast<void>(flags);
-		if (!pvrInitialized_) {
+		if (!_pvrInitialized) {
 			return;
 		}
-		if (currentRenderTarget_ == nullptr && sceneTarget_ == SceneTarget::None) {
+		if (_currentRenderTarget == nullptr && _sceneTarget == SceneTarget::None) {
 			// The first clear of a screen frame is provided for free by the scene background plane -
 			// pushing ~300k blended pixels through the translucent pipe for it again would be one of
 			// the most expensive draws of the whole frame. Only mid-scene clears (and render targets,
 			// which have no reliable background plane) paint the quad below.
-			pvr_set_bg_color(clearColor_.R, clearColor_.G, clearColor_.B);
+			pvr_set_bg_color(_clearColor.R, _clearColor.G, _clearColor.B);
 			return;
 		}
 		// The scene background provides the frame clear; an explicit mid-scene clear draws a flat quad
 		EnsureScene();
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
-		const float w = float(currentRenderTarget_ != nullptr ? viewport_.W : logicalWidth_) * scaleX;
-		const float h = float(currentRenderTarget_ != nullptr ? viewport_.H : logicalHeight_) * scaleY;
+		const float w = float(_currentRenderTarget != nullptr ? _viewport.W : _logicalWidth) * scaleX;
+		const float h = float(_currentRenderTarget != nullptr ? _viewport.H : _logicalHeight) * scaleY;
 
 		pvr_poly_cxt_t cxt;
 		pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
@@ -731,8 +731,8 @@ namespace nCine::RHI::PVR
 		pvr_poly_hdr_t hdr;
 		pvr_poly_compile(&hdr, &cxt);
 
-		const std::uint32_t argb = PackArgb(QuantizeChannel(clearColor_.R), QuantizeChannel(clearColor_.G),
-			QuantizeChannel(clearColor_.B), QuantizeChannel(clearColor_.A));
+		const std::uint32_t argb = PackArgb(QuantizeChannel(_clearColor.R), QuantizeChannel(_clearColor.G),
+			QuantizeChannel(_clearColor.B), QuantizeChannel(_clearColor.A));
 		const float px[4] = { w, w, 0.0f, 0.0f };
 		const float py[4] = { 0.0f, h, 0.0f, h };
 		const float uv[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -781,53 +781,53 @@ namespace nCine::RHI::PVR
 
 	void PvrDevice::SetupInitialState()
 	{
-		blending_ = BlendingState();
-		depthTest_ = DepthTestState();
-		cullFace_ = CullFaceState();
-		scissor_ = ScissorState();
+		_blending = BlendingState();
+		_depthTest = DepthTestState();
+		_cullFace = CullFaceState();
+		_scissor = ScissorState();
 	}
 
 	// ------------------------------------------------------------------ extensions
 
-	void PvrDevice::BindProgram(PvrShaderProgram* program) { currentProgram_ = program; }
-	PvrShaderProgram* PvrDevice::CurrentProgram() { return currentProgram_; }
+	void PvrDevice::BindProgram(PvrShaderProgram* program) { _currentProgram = program; }
+	PvrShaderProgram* PvrDevice::CurrentProgram() { return _currentProgram; }
 
 	void PvrDevice::BindTexture(std::uint32_t unit, const PvrTexture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
 	void PvrDevice::UnbindTexture(const PvrTexture* texture)
 	{
 		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
-			if (boundTextures_[i] == texture) {
-				boundTextures_[i] = nullptr;
+			if (_boundTextures[i] == texture) {
+				_boundTextures[i] = nullptr;
 			}
 		}
-		if (paletteTexture_ == texture) {
-			paletteTexture_ = nullptr;
+		if (_paletteTexture == texture) {
+			_paletteTexture = nullptr;
 		}
 		// Drop palette banks built from the destroyed palette so a stale pointer can never match
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
-			if (paletteBanks_[i].Palette == texture) {
-				paletteBanks_[i].PaletteOffset = -1;
-				paletteBanks_[i].Palette = nullptr;
+			if (_paletteBanks[i].Palette == texture) {
+				_paletteBanks[i].PaletteOffset = -1;
+				_paletteBanks[i].Palette = nullptr;
 			}
 		}
 	}
 
 	const PvrTexture* PvrDevice::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void PvrDevice::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
@@ -835,15 +835,15 @@ namespace nCine::RHI::PVR
 	{
 		// The scene state machine reacts lazily at the next draw (EnsureScene); an in-flight scene for a
 		// different target is finished there
-		currentRenderTarget_ = renderTarget;
+		_currentRenderTarget = renderTarget;
 	}
 
 	void PvrDevice::UnbindRenderTarget(const PvrRenderTarget* renderTarget)
 	{
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
-		if (sceneRenderTarget_ == renderTarget) {
+		if (_sceneRenderTarget == renderTarget) {
 			FinishScene();
 		}
 	}
@@ -852,19 +852,19 @@ namespace nCine::RHI::PVR
 
 	void PvrDevice::RegisterPaletteTexture(PvrTexture* texture)
 	{
-		paletteTexture_ = texture;
+		_paletteTexture = texture;
 		NotifyPaletteTextureChanged(texture, 0, texture != nullptr ? texture->GetHeight() : 0);
 	}
 
 	void PvrDevice::NotifyPaletteTextureChanged(PvrTexture* texture, std::int32_t firstRow, std::int32_t rowCount)
 	{
-		if (texture != paletteTexture_) {
+		if (texture != _paletteTexture) {
 			return;
 		}
-		paletteGeneration_++;
+		_paletteGeneration++;
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
-			if (paletteBanks_[i].PaletteOffset >= (firstRow - 1) * 256 && paletteBanks_[i].PaletteOffset < (firstRow + rowCount) * 256) {
-				paletteBanks_[i].PaletteOffset = -1;
+			if (_paletteBanks[i].PaletteOffset >= (firstRow - 1) * 256 && _paletteBanks[i].PaletteOffset < (firstRow + rowCount) * 256) {
+				_paletteBanks[i].PaletteOffset = -1;
 			}
 		}
 	}
@@ -893,19 +893,19 @@ namespace nCine::RHI::PVR
 			return -1;
 		}
 
-		paletteUseCounter_++;
+		_paletteUseCounter++;
 
 		std::int32_t bank = -1;
 		std::uint32_t oldestUse = UINT32_MAX;
 		std::int32_t oldestBank = 0;
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
-			if (paletteBanks_[i].PaletteOffset == paletteOffset && paletteBanks_[i].Palette == palette &&
-				paletteBanks_[i].PaletteVersion == version) {
+			if (_paletteBanks[i].PaletteOffset == paletteOffset && _paletteBanks[i].Palette == palette &&
+				_paletteBanks[i].PaletteVersion == version) {
 				bank = std::int32_t(i);
 				break;
 			}
-			if (paletteBanks_[i].LastUse < oldestUse) {
-				oldestUse = paletteBanks_[i].LastUse;
+			if (_paletteBanks[i].LastUse < oldestUse) {
+				oldestUse = _paletteBanks[i].LastUse;
 				oldestBank = std::int32_t(i);
 			}
 		}
@@ -918,12 +918,12 @@ namespace nCine::RHI::PVR
 					PackArgb(std::uint8_t(rgba & 0xFF), std::uint8_t((rgba >> 8) & 0xFF),
 						std::uint8_t((rgba >> 16) & 0xFF), std::uint8_t((rgba >> 24) & 0xFF)));
 			}
-			paletteBanks_[bank].PaletteOffset = paletteOffset;
-			paletteBanks_[bank].Palette = palette;
-			paletteBanks_[bank].PaletteVersion = version;
+			_paletteBanks[bank].PaletteOffset = paletteOffset;
+			_paletteBanks[bank].Palette = palette;
+			_paletteBanks[bank].PaletteVersion = version;
 		}
 
-		paletteBanks_[bank].LastUse = paletteUseCounter_;
+		_paletteBanks[bank].LastUse = _paletteUseCounter;
 		return bank;
 	}
 
@@ -949,28 +949,28 @@ namespace nCine::RHI::PVR
 		light.WaterLevelPx = waterLevelPx;
 		light.WaterTime = waterTime;
 		light.WaterCamY = waterCamY;
-		pendingSoftwareLights_.push_back(light);
+		_pendingSoftwareLights.push_back(light);
 	}
 
 	void PvrDevice::EndFrame()
 	{
-		if (!pendingSoftwareLights_.empty()) {
+		if (!_pendingSoftwareLights.empty()) {
 			static bool warnedLeftoverLights = false;
 			if (!warnedLeftoverLights) {
 				warnedLeftoverLights = true;
-				LOGW("Dropping {} unconsumed software-lighting entries", pendingSoftwareLights_.size());
+				LOGW("Dropping {} unconsumed software-lighting entries", _pendingSoftwareLights.size());
 			}
-			pendingSoftwareLights_.clear();
+			_pendingSoftwareLights.clear();
 		}
 	}
 
 	void PvrDevice::ApplyPendingSoftwareLighting()
 	{
-		if (pendingSoftwareLights_.empty()) {
+		if (_pendingSoftwareLights.empty()) {
 			return;
 		}
-		const PendingSoftwareLight light = pendingSoftwareLights_.front();
-		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
+		const PendingSoftwareLight light = _pendingSoftwareLights.front();
+		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
 		const bool hasWater = light.WaterActive;
@@ -979,7 +979,7 @@ namespace nCine::RHI::PVR
 		}
 
 		EnsureScene();
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 		float scaleX, scaleY, offsetX, offsetY;
@@ -995,23 +995,23 @@ namespace nCine::RHI::PVR
 			while (texW < light.LmW && texW < 1024) texW <<= 1;
 			while (texH < light.LmH && texH < 1024) texH <<= 1;
 			const std::size_t size = std::size_t(texW) * std::size_t(texH) * 2;
-			bool layoutChanged = (lightmapW_ != texW || lightmapH_ != texH);
-			if (lightmapVram_ == nullptr || lightmapVramSize_ < size) {
-				if (lightmapVram_ != nullptr) {
-					pvr_mem_free(lightmapVram_);
+			bool layoutChanged = (_lightmapW != texW || _lightmapH != texH);
+			if (_lightmapVram == nullptr || _lightmapVramSize < size) {
+				if (_lightmapVram != nullptr) {
+					pvr_mem_free(_lightmapVram);
 				}
-				lightmapVram_ = pvr_mem_malloc(size);
-				lightmapVramSize_ = size;
+				_lightmapVram = pvr_mem_malloc(size);
+				_lightmapVramSize = size;
 				layoutChanged = true;
 			}
-			if (lightmapVram_ != nullptr) {
-				lightmapW_ = texW;
-				lightmapH_ = texH;
+			if (_lightmapVram != nullptr) {
+				_lightmapW = texW;
+				_lightmapH = texH;
 				// The factors are written straight into video memory as a non-twiddled surface. This is a
 				// single screen-aligned quad, so the interleaved texel order would buy nothing at sampling
 				// time while costing a full twiddling pass (plus a same-sized staging copy) every frame -
 				// the same trade-off the sprite uploads make in PvrTexture::RefreshVramStore().
-				std::uint16_t* const surface = static_cast<std::uint16_t*>(lightmapVram_);
+				std::uint16_t* const surface = static_cast<std::uint16_t*>(_lightmapVram);
 				if (layoutChanged) {
 					// Only the used LmW x LmH region is rewritten per frame; the padding is sampled through
 					// the compensated texture coordinates only at the very edge, and is filled just once.
@@ -1052,7 +1052,7 @@ namespace nCine::RHI::PVR
 
 				pvr_poly_cxt_t cxt;
 				pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_NONTWIDDLED,
-					texW, texH, lightmapVram_, PVR_FILTER_BILINEAR);
+					texW, texH, _lightmapVram, PVR_FILTER_BILINEAR);
 				cxt.gen.culling = PVR_CULLING_NONE;
 				cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
 				cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
@@ -1115,11 +1115,11 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
-		const PvrBuffer* vbo = currentProgram_->GetBoundVbo();
+		const PvrBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1127,7 +1127,7 @@ namespace nCine::RHI::PVR
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const PvrUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const PvrUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1135,18 +1135,18 @@ namespace nCine::RHI::PVR
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		PvrTexture* texture = const_cast<PvrTexture*>(boundTextures_[0]);
+		PvrTexture* texture = const_cast<PvrTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -1162,12 +1162,12 @@ namespace nCine::RHI::PVR
 		// global palette is the fallback (mirrors the sprite path). TileMapMeshPalette binds
 		// uTexturePalette in its reflection, which is exactly what UsesPalette() reports - the remap
 		// intent needs no effect identity of its own.
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const PvrTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed()) {
-			paletteTex = boundTextures_[1];
+			paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
 
@@ -1197,7 +1197,7 @@ namespace nCine::RHI::PVR
 			const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
 			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels()) + paletteOffset;
 			vram = texture->EnsureBakedArgb4444(entries, paletteOffset,
-				(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+				(paletteTex == _paletteTexture ? _paletteGeneration : paletteTex->GetContentVersion()), paletteTex);
 			format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
 		} else {
 			vram = texture->AcquireVramPointer();
@@ -1208,15 +1208,15 @@ namespace nCine::RHI::PVR
 		}
 
 		EnsureScene();
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 		const float uvScaleU = texture->GetUScale();
 		const float uvScaleV = texture->GetVScale();
 
@@ -1226,19 +1226,19 @@ namespace nCine::RHI::PVR
 		cxt.gen.culling = PVR_CULLING_NONE;
 		cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
 		cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
-		cxt.blend.src = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.SrcRgb)) : PVR_BLEND_ONE);
-		cxt.blend.dst = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.DstRgb)) : PVR_BLEND_ZERO);
+		cxt.blend.src = (_blending.Enabled ? pvr_blend_mode_t(MapBlendPvr(_blending.SrcRgb)) : PVR_BLEND_ONE);
+		cxt.blend.dst = (_blending.Enabled ? pvr_blend_mode_t(MapBlendPvr(_blending.DstRgb)) : PVR_BLEND_ZERO);
 		cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
 		pvr_poly_hdr_t hdr;
 		pvr_poly_compile(&hdr, &cxt);
 
-		const bool clipActive = (scissor_.Enabled && screenPass);
+		const bool clipActive = (_scissor.Enabled && screenPass);
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
-			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
-			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
-			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
-			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
+			clipY0 = float(_scissor.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(_scissor.Rect.X + _scissor.Rect.W) * scaleX + offsetX;
+			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
 		}
 
 		// Projects one mesh vertex into raster space, matching the sprite path's corner synthesis
@@ -1351,11 +1351,11 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
-		const PvrBuffer* vbo = currentProgram_->GetBoundVbo();
+		const PvrBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1363,7 +1363,7 @@ namespace nCine::RHI::PVR
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const PvrUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const PvrUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1371,18 +1371,18 @@ namespace nCine::RHI::PVR
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		PvrTexture* texture = const_cast<PvrTexture*>(boundTextures_[0]);
+		PvrTexture* texture = const_cast<PvrTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -1401,9 +1401,9 @@ namespace nCine::RHI::PVR
 		pvr_ptr_t vram = nullptr;
 		std::uint32_t format = 0;
 		if (texture->IsIndexed()) {
-			const PvrTexture* paletteTex = boundTextures_[1];
+			const PvrTexture* paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 			std::int32_t bank = AcquirePaletteBankForRow(paletteTex, 0);
 			if (bank < 0) {
@@ -1420,15 +1420,15 @@ namespace nCine::RHI::PVR
 		}
 
 		EnsureScene();
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 		const float uvScaleU = texture->GetUScale();
 		const float uvScaleV = texture->GetVScale();
 
@@ -1438,8 +1438,8 @@ namespace nCine::RHI::PVR
 		cxt.gen.culling = PVR_CULLING_NONE;
 		cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
 		cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
-		cxt.blend.src = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.SrcRgb)) : PVR_BLEND_ONE);
-		cxt.blend.dst = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.DstRgb)) : PVR_BLEND_ZERO);
+		cxt.blend.src = (_blending.Enabled ? pvr_blend_mode_t(MapBlendPvr(_blending.SrcRgb)) : PVR_BLEND_ONE);
+		cxt.blend.dst = (_blending.Enabled ? pvr_blend_mode_t(MapBlendPvr(_blending.DstRgb)) : PVR_BLEND_ZERO);
 		cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
 		// Match the desktop sampler's ClampToEdge (the engine's texture default): with the KOS default
 		// wrap mode, the strip's V=0 bilinear fetch on the power-of-two-padded texture blends row 0
@@ -1449,13 +1449,13 @@ namespace nCine::RHI::PVR
 		pvr_poly_hdr_t hdr;
 		pvr_poly_compile(&hdr, &cxt);
 
-		const bool clipActive = (scissor_.Enabled && screenPass);
+		const bool clipActive = (_scissor.Enabled && screenPass);
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
-			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
-			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
-			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
-			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
+			clipY0 = float(_scissor.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(_scissor.Rect.X + _scissor.Rect.W) * scaleX + offsetX;
+			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
 		}
 
 		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
@@ -1520,7 +1520,7 @@ namespace nCine::RHI::PVR
 	void PvrDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		static_cast<void>(firstVertex);
-		if (currentProgram_ == nullptr || numVertices <= 0 || !pvrInitialized_) {
+		if (_currentProgram == nullptr || numVertices <= 0 || !_pvrInitialized) {
 			return;
 		}
 
@@ -1528,10 +1528,10 @@ namespace nCine::RHI::PVR
 		// true (program, variant) the loaders plumbed in - a program without an entry has no
 		// fixed_function block in its .shader file (LightingMesh, Blur, the Resize* family,
 		// runtime-compiled shaders, ...) and keeps the logged, skipped draw.
-		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
+		const FixedFunctionGeneratedEffect* generated = _currentProgram->GetGeneratedEffect();
 		if (generated == nullptr) {
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1553,8 +1553,8 @@ namespace nCine::RHI::PVR
 		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
 			if (primitive == PrimitiveType::LineStrip) {
 				DispatchLineStrip(firstVertex, numVertices);
-			} else if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the PVR dispatch", currentProgram_->GetObjectLabel());
+			} else if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the PVR dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1563,20 +1563,20 @@ namespace nCine::RHI::PVR
 		// (geometry synthesis included - the iris and the warp are ordinary blocks since phase 4)
 		const bool isQuadFamily = (generated->Fn != nullptr);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Effect not supported by the PVR dispatch", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Effect not supported by the PVR dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const PvrUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const PvrUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
-			block = currentProgram_->FindBlock("InstancesBlock");
+			block = _currentProgram->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
 			return;
@@ -1585,12 +1585,12 @@ namespace nCine::RHI::PVR
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		const ShaderCompiler::ProgramVariant* reflection = currentProgram_->GetReflection();
+		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
 		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
 			if (reflection != nullptr) {
 				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
@@ -1659,7 +1659,7 @@ namespace nCine::RHI::PVR
 		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette
 		// in its reflection, which is what UsesPalette() reports (PaletteRemap and the "...Palette"
 		// variants of the actor state effects alike)
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 
 		// The offset colour is added after texturing only on polygons compiled with specular enabled,
 		// which is a per-program property of the base material - so it comes from the generated
@@ -1676,7 +1676,7 @@ namespace nCine::RHI::PVR
 		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		PvrTexture* texture = const_cast<PvrTexture*>(hasTexture
-			? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
+			? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
 			return;
 		}
@@ -1686,30 +1686,30 @@ namespace nCine::RHI::PVR
 		const PvrTexture* paletteTex = nullptr;
 		if (isPaletteRemap || (texture != nullptr && texture->IsIndexed())) {
 			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
-			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
+			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? _boundTextures[paletteUnit] : nullptr);
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
 
 		EnsureScene();
-		if (sceneTarget_ == SceneTarget::None) {
+		if (_sceneTarget == SceneTarget::None) {
 			return;
 		}
 
 		// Bounds guard, mirroring the software device
-		const std::uint32_t rangeSize = boundUniformRanges_[binding].Size;
+		const std::uint32_t rangeSize = _boundUniformRanges[binding].Size;
 		if (batched && rangeSize > 0 && std::uint32_t(numInstances) * instanceStride > rangeSize) {
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
 
-		const std::int32_t blendSrc = (blending_.Enabled ? MapBlendPvr(blending_.SrcRgb) : PVR_BLEND_ONE);
-		const std::int32_t blendDst = (blending_.Enabled ? MapBlendPvr(blending_.DstRgb) : PVR_BLEND_ZERO);
+		const std::int32_t blendSrc = (_blending.Enabled ? MapBlendPvr(_blending.SrcRgb) : PVR_BLEND_ONE);
+		const std::int32_t blendDst = (_blending.Enabled ? MapBlendPvr(_blending.DstRgb) : PVR_BLEND_ZERO);
 		const std::int32_t filter = (hasTexture && texture->GetMagFilter() == nCine::SamplerFilter::Linear
 			? PVR_FILTER_BILINEAR : PVR_FILTER_NEAREST);
 
@@ -1745,7 +1745,7 @@ namespace nCine::RHI::PVR
 		// present time; the PVR scans out its buffer top-down directly, so screen passes mirror NDC here
 		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is
 		// what the sampling passes already expect - which is just the sign of the raster Y scale below.
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
@@ -1758,13 +1758,13 @@ namespace nCine::RHI::PVR
 		// mirror NDC, so the engine rect's Y addresses raster rows directly - see the GX device); only
 		// screen passes are clipped, which covers every scissor user on this tier (menu clipping,
 		// splitscreen viewports)
-		const bool clipActive = (scissor_.Enabled && screenPass);
+		const bool clipActive = (_scissor.Enabled && screenPass);
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
-			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
-			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
-			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
-			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
+			clipY0 = float(_scissor.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(_scissor.Rect.X + _scissor.Rect.W) * scaleX + offsetX;
+			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
 		}
 
 		for (std::int32_t k = 0; k < numInstances; k++) {
@@ -1810,7 +1810,7 @@ namespace nCine::RHI::PVR
 					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
 						paletteTex->GetPixels()) + paletteOffset;
 					vram = texture->EnsureBakedArgb4444(entries, paletteOffset,
-						(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+						(paletteTex == _paletteTexture ? _paletteGeneration : paletteTex->GetContentVersion()), paletteTex);
 					format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
 				} else {
 					vram = texture->AcquireVramPointer();
@@ -1938,7 +1938,7 @@ namespace nCine::RHI::PVR
 			}
 			// Resolved uniforms are the only thing the context needs the program for, so effects
 			// without the facility get no program plumbed at all (no resolution can ever run)
-			ctx.Program = (needsUniforms ? currentProgram_ : nullptr);
+			ctx.Program = (needsUniforms ? _currentProgram : nullptr);
 			if (needsStripBuilder) {
 				// The shaded-strip Material twin and the strip UV scale exist only for the strip
 				// builder; the material blend factors feed that twin's compilation

@@ -746,28 +746,28 @@ namespace nCine::RHI::GU
 		return nullptr;
 	}
 
-	GuDevice::BlendingState GuDevice::blending_;
-	GuDevice::DepthTestState GuDevice::depthTest_;
-	GuDevice::CullFaceState GuDevice::cullFace_;
-	GuDevice::ScissorState GuDevice::scissor_;
-	Recti GuDevice::viewport_(0, 0, 0, 0);
-	Colorf GuDevice::clearColor_(0.0f, 0.0f, 0.0f, 1.0f);
+	GuDevice::BlendingState GuDevice::_blending;
+	GuDevice::DepthTestState GuDevice::_depthTest;
+	GuDevice::CullFaceState GuDevice::_cullFace;
+	GuDevice::ScissorState GuDevice::_scissor;
+	Recti GuDevice::_viewport(0, 0, 0, 0);
+	Colorf GuDevice::_clearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	GuShaderProgram* GuDevice::currentProgram_ = nullptr;
-	const GuTexture* GuDevice::boundTextures_[GuDevice::MaxTextureUnits] = {};
-	GuDevice::UniformRange GuDevice::boundUniformRanges_[GuDevice::MaxUniformBindings] = {};
-	GuRenderTarget* GuDevice::currentRenderTarget_ = nullptr;
+	GuShaderProgram* GuDevice::_currentProgram = nullptr;
+	const GuTexture* GuDevice::_boundTextures[GuDevice::MaxTextureUnits] = {};
+	GuDevice::UniformRange GuDevice::_boundUniformRanges[GuDevice::MaxUniformBindings] = {};
+	GuRenderTarget* GuDevice::_currentRenderTarget = nullptr;
 
-	bool GuDevice::guInitialized_ = false;
-	bool GuDevice::listOpen_ = false;
-	std::int32_t GuDevice::logicalWidth_ = ScreenWidth;
-	std::int32_t GuDevice::logicalHeight_ = ScreenHeight;
-	std::uint32_t GuDevice::sceneCounter_ = 0;
+	bool GuDevice::_guInitialized = false;
+	bool GuDevice::_listOpen = false;
+	std::int32_t GuDevice::_logicalWidth = ScreenWidth;
+	std::int32_t GuDevice::_logicalHeight = ScreenHeight;
+	std::uint32_t GuDevice::_sceneCounter = 0;
 
-	GuTexture* GuDevice::paletteTexture_ = nullptr;
-	std::uint32_t GuDevice::paletteGeneration_ = 1;
+	GuTexture* GuDevice::_paletteTexture = nullptr;
+	std::uint32_t GuDevice::_paletteGeneration = 1;
 
-	std::vector<GuDevice::PendingSoftwareLight> GuDevice::pendingSoftwareLights_;
+	std::vector<GuDevice::PendingSoftwareLight> GuDevice::_pendingSoftwareLights;
 
 	namespace
 	{
@@ -784,7 +784,7 @@ namespace nCine::RHI::GU
 
 	void GuDevice::InitializeGu()
 	{
-		if (guInitialized_) {
+		if (_guInitialized) {
 			return;
 		}
 
@@ -825,34 +825,34 @@ namespace nCine::RHI::GU
 		// in the data cache; the GE would read whatever is behind it. One writeback settles that for good.
 		sceKernelDcacheWritebackInvalidateAll();
 
-		guInitialized_ = true;
+		_guInitialized = true;
 		LOGI("GU session initialized: {}x{} RGB565 (stride {}), {} KB display list, {} KB vertex arena",
 			ScreenWidth, ScreenHeight, ScreenStride, sizeof(displayList) / 1024, FrameArenaBytes / 1024);
 	}
 
 	void GuDevice::ShutdownGu()
 	{
-		if (!guInitialized_) {
+		if (!_guInitialized) {
 			return;
 		}
-		if (listOpen_) {
+		if (_listOpen) {
 			FlushBatch();
 			sceGuFinish();
 			sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
-			listOpen_ = false;
+			_listOpen = false;
 		}
 		sceGuDisplay(GU_FALSE);
 		sceGuTerm();
-		guInitialized_ = false;
+		_guInitialized = false;
 	}
 
 	void GuDevice::EnsureList()
 	{
-		if (!guInitialized_ || listOpen_) {
+		if (!_guInitialized || _listOpen) {
 			return;
 		}
 		sceGuStart(GU_DIRECT, displayList);
-		listOpen_ = true;
+		_listOpen = true;
 		// A fresh list re-sends the draw buffer of the context, and nothing else about the previous frame's
 		// state can be relied upon, so everything is reissued once
 		appliedStateValid = false;
@@ -862,13 +862,13 @@ namespace nCine::RHI::GU
 
 	void GuDevice::ApplyDrawTarget()
 	{
-		if (appliedTargetValid && appliedTarget == currentRenderTarget_) {
+		if (appliedTargetValid && appliedTarget == _currentRenderTarget) {
 			return;
 		}
 		FlushBatch();
 
-		if (currentRenderTarget_ != nullptr) {
-			GuTexture* texture = currentRenderTarget_->GetColorTexture(0);
+		if (_currentRenderTarget != nullptr) {
+			GuTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			void* surface = (texture != nullptr ? texture->GetRenderTargetSurface() : nullptr);
 			if (surface == nullptr) {
 				// No surface to render into; the draws will be skipped by their own checks
@@ -880,7 +880,7 @@ namespace nCine::RHI::GU
 		} else {
 			sceGuDrawBufferList(GU_PSM_5650, VramOffset(screenDrawOffset), ScreenStride);
 		}
-		appliedTarget = currentRenderTarget_;
+		appliedTarget = _currentRenderTarget;
 		appliedTargetValid = true;
 		// The rect is expressed in the target's raster space, so it has to be reprogrammed as well
 		appliedScissor[0] = -1;
@@ -890,26 +890,26 @@ namespace nCine::RHI::GU
 	{
 		std::int32_t x = 0, y = 0, w = ScreenWidth, h = ScreenHeight;
 		std::int32_t targetW = ScreenWidth, targetH = ScreenHeight;
-		if (currentRenderTarget_ != nullptr) {
-			const GuTexture* texture = currentRenderTarget_->GetColorTexture(0);
+		if (_currentRenderTarget != nullptr) {
+			const GuTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			targetW = (texture != nullptr ? texture->GetWidth() : ScreenWidth);
 			targetH = (texture != nullptr ? texture->GetHeight() : ScreenHeight);
 			w = targetW;
 			h = targetH;
 		}
-		if (scissor_.Enabled) {
+		if (_scissor.Enabled) {
 			float scaleX, scaleY;
 			GetTargetScale(scaleX, scaleY);
 			// The engine hands scissor rectangles in top-down logical coordinates. A screen pass maps them
 			// straight onto raster rows (it mirrors NDC, see Dispatch); a render-to-texture pass keeps the
 			// unmirrored top-down store, so its rect is flipped - the same split the GX device makes. A
 			// target renders 1:1, so its logical height IS its raster height.
-			const std::int32_t rasterY = (currentRenderTarget_ == nullptr
-				? scissor_.Rect.Y : targetH - scissor_.Rect.Y - scissor_.Rect.H);
-			x = std::int32_t(float(scissor_.Rect.X) * scaleX);
+			const std::int32_t rasterY = (_currentRenderTarget == nullptr
+				? _scissor.Rect.Y : targetH - _scissor.Rect.Y - _scissor.Rect.H);
+			x = std::int32_t(float(_scissor.Rect.X) * scaleX);
 			y = std::int32_t(float(rasterY) * scaleY);
-			w = std::int32_t(float(scissor_.Rect.W) * scaleX);
-			h = std::int32_t(float(scissor_.Rect.H) * scaleY);
+			w = std::int32_t(float(_scissor.Rect.W) * scaleX);
+			h = std::int32_t(float(_scissor.Rect.H) * scaleY);
 			// The GE takes the rect unclamped and a negative origin would wrap, so it is clipped to the
 			// surface here
 			if (x < 0) { w += x; x = 0; }
@@ -932,28 +932,28 @@ namespace nCine::RHI::GU
 
 	void GuDevice::GetTargetScale(float& scaleX, float& scaleY)
 	{
-		if (currentRenderTarget_ != nullptr) {
+		if (_currentRenderTarget != nullptr) {
 			// Render-to-texture passes render 1:1 into the target surface
 			scaleX = 1.0f;
 			scaleY = 1.0f;
 		} else {
-			scaleX = (logicalWidth_ > 0 ? float(ScreenWidth) / float(logicalWidth_) : 1.0f);
-			scaleY = (logicalHeight_ > 0 ? float(ScreenHeight) / float(logicalHeight_) : 1.0f);
+			scaleX = (_logicalWidth > 0 ? float(ScreenWidth) / float(_logicalWidth) : 1.0f);
+			scaleY = (_logicalHeight > 0 ? float(ScreenHeight) / float(_logicalHeight) : 1.0f);
 		}
 	}
 
 	void GuDevice::PresentFrame()
 	{
-		if (!guInitialized_) {
+		if (!_guInitialized) {
 			return;
 		}
-		if (!listOpen_) {
+		if (!_listOpen) {
 			// Nothing was drawn this frame; still run a list that clears, so the display keeps its pacing
 			// and a frame that produced no geometry does not show the previous one's contents
 			EnsureList();
 			ApplyDrawTarget();
-			const std::uint32_t abgr = PackAbgr(QuantizeChannel(clearColor_.R), QuantizeChannel(clearColor_.G),
-				QuantizeChannel(clearColor_.B), QuantizeChannel(clearColor_.A));
+			const std::uint32_t abgr = PackAbgr(QuantizeChannel(_clearColor.R), QuantizeChannel(_clearColor.G),
+				QuantizeChannel(_clearColor.B), QuantizeChannel(_clearColor.A));
 			sceGuClearColor(abgr);
 			sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT | GU_FAST_CLEAR_BIT);
 		} else {
@@ -963,13 +963,13 @@ namespace nCine::RHI::GU
 		sceGuFinish();
 		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below
 		sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
-		listOpen_ = false;
+		_listOpen = false;
 
 		if (TraceDrawStatistics) {
 			// Once a second at 60 Hz, so the trace stays readable while the game runs
-			if ((sceneCounter_ % 60) == 0) {
+			if ((_sceneCounter % 60) == 0) {
 				LOGI("Frame {}: {} GE draw calls, {} vertices, {} KB of the vertex arena, {} skipped draws",
-					sceneCounter_, frameDrawCalls, frameVertices, frameArenaUsed / 1024, frameSkippedDraws);
+					_sceneCounter, frameDrawCalls, frameVertices, frameArenaUsed / 1024, frameSkippedDraws);
 			}
 		}
 
@@ -979,7 +979,7 @@ namespace nCine::RHI::GU
 		// can point the GE back at the right one after a render-target pass
 		screenDrawOffset = (screenDrawOffset == 0 ? FramebufferBytes : 0);
 		appliedTargetValid = false;
-		sceneCounter_++;
+		_sceneCounter++;
 
 		// The GE is idle, so the frame's vertices, CLUT copies and generated textures can be overwritten
 		frameArenaUsed = 0;
@@ -992,8 +992,8 @@ namespace nCine::RHI::GU
 	void GuDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
 	{
 		if (width > 0 && height > 0) {
-			logicalWidth_ = width;
-			logicalHeight_ = height;
+			_logicalWidth = width;
+			_logicalHeight = height;
 		}
 	}
 
@@ -1052,50 +1052,50 @@ namespace nCine::RHI::GU
 
 	// ------------------------------------------------------------------ state
 
-	void GuDevice::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
+	void GuDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void GuDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
-	GuDevice::BlendingState GuDevice::GetBlendingState() { return blending_; }
-	void GuDevice::SetBlendingState(const BlendingState& state) { blending_ = state; }
+	GuDevice::BlendingState GuDevice::GetBlendingState() { return _blending; }
+	void GuDevice::SetBlendingState(const BlendingState& state) { _blending = state; }
 
-	void GuDevice::SetDepthTestEnabled(bool enabled) { depthTest_.TestEnabled = enabled; }
-	void GuDevice::SetDepthMaskEnabled(bool enabled) { depthTest_.MaskEnabled = enabled; }
-	GuDevice::DepthTestState GuDevice::GetDepthTestState() { return depthTest_; }
-	void GuDevice::SetDepthTestState(const DepthTestState& state) { depthTest_ = state; }
+	void GuDevice::SetDepthTestEnabled(bool enabled) { _depthTest.TestEnabled = enabled; }
+	void GuDevice::SetDepthMaskEnabled(bool enabled) { _depthTest.MaskEnabled = enabled; }
+	GuDevice::DepthTestState GuDevice::GetDepthTestState() { return _depthTest; }
+	void GuDevice::SetDepthTestState(const DepthTestState& state) { _depthTest = state; }
 
-	void GuDevice::SetCullFaceEnabled(bool enabled) { cullFace_.Enabled = enabled; }
-	GuDevice::CullFaceState GuDevice::GetCullFaceState() { return cullFace_; }
-	void GuDevice::SetCullFaceState(const CullFaceState& state) { cullFace_ = state; }
+	void GuDevice::SetCullFaceEnabled(bool enabled) { _cullFace.Enabled = enabled; }
+	GuDevice::CullFaceState GuDevice::GetCullFaceState() { return _cullFace; }
+	void GuDevice::SetCullFaceState(const CullFaceState& state) { _cullFace = state; }
 
-	GuDevice::ScissorState GuDevice::GetScissorState() { return scissor_; }
-	void GuDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
+	GuDevice::ScissorState GuDevice::GetScissorState() { return _scissor; }
+	void GuDevice::SetScissorState(const ScissorState& state) { _scissor = state; }
 	void GuDevice::SetScissor(const Recti& rect)
 	{
 		// Same contract as the GL device: setting a rect also enables the test (callers like RenderCommand
 		// and Viewport rely on it and restore via SetScissorState afterwards)
-		scissor_.Enabled = true;
-		scissor_.Rect = rect;
+		_scissor.Enabled = true;
+		_scissor.Rect = rect;
 	}
-	void GuDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
+	void GuDevice::SetScissorTestEnabled(bool enabled) { _scissor.Enabled = enabled; }
 
-	Recti GuDevice::GetViewport() { return viewport_; }
-	void GuDevice::SetViewport(const Recti& rect) { viewport_ = rect; }
+	Recti GuDevice::GetViewport() { return _viewport; }
+	void GuDevice::SetViewport(const Recti& rect) { _viewport = rect; }
 	void GuDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		viewport_ = Recti(x, y, width, height);
+		_viewport = Recti(x, y, width, height);
 	}
 
-	Colorf GuDevice::GetClearColor() { return clearColor_; }
-	void GuDevice::SetClearColor(const Colorf& color) { clearColor_ = color; }
+	Colorf GuDevice::GetClearColor() { return _clearColor; }
+	void GuDevice::SetClearColor(const Colorf& color) { _clearColor = color; }
 
 	void GuDevice::Clear(ClearFlags flags)
 	{
-		if (!guInitialized_) {
+		if (!_guInitialized) {
 			return;
 		}
 		EnsureList();
@@ -1112,15 +1112,15 @@ namespace nCine::RHI::GU
 		}
 		// The depth buffer lives at a fixed video-memory offset sized for the display, so clearing it while
 		// a render target of another size is bound would write outside it; depth is disabled anyway
-		if ((flags & ClearFlags::Depth) == ClearFlags::Depth && currentRenderTarget_ == nullptr) {
+		if ((flags & ClearFlags::Depth) == ClearFlags::Depth && _currentRenderTarget == nullptr) {
 			guFlags |= GU_DEPTH_BUFFER_BIT;
 		}
-		if ((flags & ClearFlags::Stencil) == ClearFlags::Stencil && currentRenderTarget_ == nullptr) {
+		if ((flags & ClearFlags::Stencil) == ClearFlags::Stencil && _currentRenderTarget == nullptr) {
 			guFlags |= GU_STENCIL_BUFFER_BIT;
 		}
 
-		const std::uint32_t abgr = PackAbgr(QuantizeChannel(clearColor_.R), QuantizeChannel(clearColor_.G),
-			QuantizeChannel(clearColor_.B), QuantizeChannel(clearColor_.A));
+		const std::uint32_t abgr = PackAbgr(QuantizeChannel(_clearColor.R), QuantizeChannel(_clearColor.G),
+			QuantizeChannel(_clearColor.B), QuantizeChannel(_clearColor.A));
 		sceGuClearColor(abgr);
 		sceGuClear(guFlags);
 		// sceGuClear() draws its own sprite with its own vertex format and leaves the clear-mode register
@@ -1170,33 +1170,33 @@ namespace nCine::RHI::GU
 
 	void GuDevice::SetupInitialState()
 	{
-		blending_ = BlendingState();
-		depthTest_ = DepthTestState();
-		cullFace_ = CullFaceState();
-		scissor_ = ScissorState();
+		_blending = BlendingState();
+		_depthTest = DepthTestState();
+		_cullFace = CullFaceState();
+		_scissor = ScissorState();
 	}
 
 	// ------------------------------------------------------------------ extensions
 
-	void GuDevice::BindProgram(GuShaderProgram* program) { currentProgram_ = program; }
-	GuShaderProgram* GuDevice::CurrentProgram() { return currentProgram_; }
+	void GuDevice::BindProgram(GuShaderProgram* program) { _currentProgram = program; }
+	GuShaderProgram* GuDevice::CurrentProgram() { return _currentProgram; }
 
 	void GuDevice::BindTexture(std::uint32_t unit, const GuTexture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
 	void GuDevice::UnbindTexture(const GuTexture* texture)
 	{
 		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
-			if (boundTextures_[i] == texture) {
-				boundTextures_[i] = nullptr;
+			if (_boundTextures[i] == texture) {
+				_boundTextures[i] = nullptr;
 			}
 		}
-		if (paletteTexture_ == texture) {
-			paletteTexture_ = nullptr;
+		if (_paletteTexture == texture) {
+			_paletteTexture = nullptr;
 		}
 		// A destroyed texture's store must not stay referenced by an open batch. Anything already submitted
 		// is safe: resources are only ever destroyed between frames (level loads, menu transitions), and
@@ -1215,14 +1215,14 @@ namespace nCine::RHI::GU
 
 	const GuTexture* GuDevice::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void GuDevice::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
@@ -1230,13 +1230,13 @@ namespace nCine::RHI::GU
 	{
 		// The draw path reacts lazily at the next draw or clear (ApplyDrawTarget), which is also where the
 		// open batch is closed - it belongs to the previous surface
-		currentRenderTarget_ = renderTarget;
+		_currentRenderTarget = renderTarget;
 	}
 
 	void GuDevice::UnbindRenderTarget(const GuRenderTarget* renderTarget)
 	{
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
 		if (appliedTarget == renderTarget) {
 			FlushBatch();
@@ -1249,16 +1249,16 @@ namespace nCine::RHI::GU
 
 	void GuDevice::RegisterPaletteTexture(GuTexture* texture)
 	{
-		paletteTexture_ = texture;
+		_paletteTexture = texture;
 		NotifyPaletteTextureChanged(texture, 0, texture != nullptr ? texture->GetHeight() : 0);
 	}
 
 	void GuDevice::NotifyPaletteTextureChanged(GuTexture* texture, std::int32_t firstRow, std::int32_t rowCount)
 	{
-		if (texture != paletteTexture_) {
+		if (texture != _paletteTexture) {
 			return;
 		}
-		paletteGeneration_++;
+		_paletteGeneration++;
 		for (std::int32_t i = 0; i < clutCacheCount; i++) {
 			if (clutCache[i].Palette == texture && clutCache[i].Offset >= (firstRow - 1) * 256 &&
 				clutCache[i].Offset < (firstRow + rowCount) * 256) {
@@ -1390,28 +1390,28 @@ namespace nCine::RHI::GU
 		light.WaterLevelPx = waterLevelPx;
 		light.WaterTime = waterTime;
 		light.WaterCamY = waterCamY;
-		pendingSoftwareLights_.push_back(light);
+		_pendingSoftwareLights.push_back(light);
 	}
 
 	void GuDevice::EndFrame()
 	{
-		if (!pendingSoftwareLights_.empty()) {
+		if (!_pendingSoftwareLights.empty()) {
 			static bool warnedLeftoverLights = false;
 			if (!warnedLeftoverLights) {
 				warnedLeftoverLights = true;
-				LOGW("Dropping {} unconsumed software-lighting entries", pendingSoftwareLights_.size());
+				LOGW("Dropping {} unconsumed software-lighting entries", _pendingSoftwareLights.size());
 			}
-			pendingSoftwareLights_.clear();
+			_pendingSoftwareLights.clear();
 		}
 	}
 
 	void GuDevice::ApplyPendingSoftwareLighting()
 	{
-		if (pendingSoftwareLights_.empty()) {
+		if (_pendingSoftwareLights.empty()) {
 			return;
 		}
-		const PendingSoftwareLight light = pendingSoftwareLights_.front();
-		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
+		const PendingSoftwareLight light = _pendingSoftwareLights.front();
+		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
 		const bool hasWater = light.WaterActive;
@@ -1541,11 +1541,11 @@ namespace nCine::RHI::GU
 			return;
 		}
 
-		const GuBuffer* vbo = currentProgram_->GetBoundVbo();
+		const GuBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1553,7 +1553,7 @@ namespace nCine::RHI::GU
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GuUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1561,18 +1561,18 @@ namespace nCine::RHI::GU
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		GuTexture* texture = const_cast<GuTexture*>(boundTextures_[0]);
+		GuTexture* texture = const_cast<GuTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -1587,12 +1587,12 @@ namespace nCine::RHI::GU
 		// The palette to remap with is whatever the material bound to the palette sampler; the registered
 		// global palette is the fallback (mirrors the sprite path). TileMapMeshPalette binds uTexturePalette
 		// in its reflection, which is exactly what UsesPalette() reports.
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const GuTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed() || texture->NeedsPaletteBake()) {
-			paletteTex = boundTextures_[1];
+			paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
 
@@ -1604,8 +1604,8 @@ namespace nCine::RHI::GU
 			std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
 			paletteOffset = std::int32_t(palOffset + 0.5f);
 		}
-		const std::uint32_t paletteVersion = (paletteTex == paletteTexture_
-			? paletteGeneration_ : (paletteTex != nullptr ? paletteTex->GetContentVersion() : 0));
+		const std::uint32_t paletteVersion = (paletteTex == _paletteTexture
+			? _paletteGeneration : (paletteTex != nullptr ? paletteTex->GetContentVersion() : 0));
 
 		DrawState state;
 		if (texture->NeedsPaletteBake()) {
@@ -1630,10 +1630,10 @@ namespace nCine::RHI::GU
 			return;
 		}
 		std::uint32_t srcFix = 0, dstFix = 0;
-		state.BlendEnabled = blending_.Enabled;
+		state.BlendEnabled = _blending.Enabled;
 		state.BlendOp = GU_ADD;
-		state.BlendSrc = MapBlendGu(blending_.SrcRgb, srcFix);
-		state.BlendDst = MapBlendGu(blending_.DstRgb, dstFix);
+		state.BlendSrc = MapBlendGu(_blending.SrcRgb, srcFix);
+		state.BlendDst = MapBlendGu(_blending.DstRgb, dstFix);
 		state.BlendSrcFix = srcFix;
 		state.BlendDstFix = dstFix;
 
@@ -1641,11 +1641,11 @@ namespace nCine::RHI::GU
 		ApplyDrawTarget();
 		ApplyScissor();
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
 		// transform once instead of being reapplied per vertex. A screen pass mirrors NDC, which is just the
@@ -1756,11 +1756,11 @@ namespace nCine::RHI::GU
 			return;
 		}
 
-		const GuBuffer* vbo = currentProgram_->GetBoundVbo();
+		const GuBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1768,7 +1768,7 @@ namespace nCine::RHI::GU
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GuUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1776,18 +1776,18 @@ namespace nCine::RHI::GU
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		GuTexture* texture = const_cast<GuTexture*>(boundTextures_[0]);
+		GuTexture* texture = const_cast<GuTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pvMat[16];
@@ -1802,11 +1802,11 @@ namespace nCine::RHI::GU
 			QuantizeChannel(color[2]), QuantizeChannel(color[3]));
 
 		DrawState state;
-		const std::uint32_t paletteVersion = paletteGeneration_;
+		const std::uint32_t paletteVersion = _paletteGeneration;
 		if (texture->NeedsPaletteBake()) {
-			const GuTexture* paletteTex = boundTextures_[1];
+			const GuTexture* paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 			if (paletteTex == nullptr || paletteTex->GetPixels() == nullptr ||
 				!texture->EnsureBakedStore(reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels()), 0,
@@ -1814,9 +1814,9 @@ namespace nCine::RHI::GU
 				return;
 			}
 		} else if (texture->IsIndexed()) {
-			const GuTexture* paletteTex = boundTextures_[1];
+			const GuTexture* paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 			state.Clut = AcquireClutForRow(paletteTex, 0, paletteVersion);
 			if (state.Clut == nullptr) {
@@ -1830,10 +1830,10 @@ namespace nCine::RHI::GU
 			return;
 		}
 		std::uint32_t srcFix = 0, dstFix = 0;
-		state.BlendEnabled = blending_.Enabled;
+		state.BlendEnabled = _blending.Enabled;
 		state.BlendOp = GU_ADD;
-		state.BlendSrc = MapBlendGu(blending_.SrcRgb, srcFix);
-		state.BlendDst = MapBlendGu(blending_.DstRgb, dstFix);
+		state.BlendSrc = MapBlendGu(_blending.SrcRgb, srcFix);
+		state.BlendDst = MapBlendGu(_blending.DstRgb, dstFix);
 		state.BlendSrcFix = srcFix;
 		state.BlendDstFix = dstFix;
 		state.Prim = GU_LINE_STRIP;
@@ -1842,11 +1842,11 @@ namespace nCine::RHI::GU
 		ApplyDrawTarget();
 		ApplyScissor();
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX;
@@ -1878,7 +1878,7 @@ namespace nCine::RHI::GU
 
 	void GuDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		if (currentProgram_ == nullptr || numVertices <= 0 || !guInitialized_) {
+		if (_currentProgram == nullptr || numVertices <= 0 || !_guInitialized) {
 			return;
 		}
 
@@ -1886,11 +1886,11 @@ namespace nCine::RHI::GU
 		// (program, variant) the loaders plumbed in - a program without an entry has no fixed_function block
 		// in its .shader file (Lighting, Blur, the Resize* family, runtime-compiled shaders, ...) and keeps
 		// the logged, skipped draw
-		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
+		const FixedFunctionGeneratedEffect* generated = _currentProgram->GetGeneratedEffect();
 		if (generated == nullptr) {
 			frameSkippedDraws++;
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1912,8 +1912,8 @@ namespace nCine::RHI::GU
 		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
 			if (primitive == PrimitiveType::LineStrip) {
 				DispatchLineStrip(firstVertex, numVertices);
-			} else if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the GU dispatch", currentProgram_->GetObjectLabel());
+			} else if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the GU dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1922,20 +1922,20 @@ namespace nCine::RHI::GU
 		const bool isQuadFamily = (generated->Fn != nullptr);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
 			frameSkippedDraws++;
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Effect not supported by the GU dispatch", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Effect not supported by the GU dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const GuUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
-			block = currentProgram_->FindBlock("InstancesBlock");
+			block = _currentProgram->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
 			return;
@@ -1944,12 +1944,12 @@ namespace nCine::RHI::GU
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		const ShaderCompiler::ProgramVariant* reflection = currentProgram_->GetReflection();
+		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
 		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
 			if (reflection != nullptr) {
 				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
@@ -2012,7 +2012,7 @@ namespace nCine::RHI::GU
 		}
 		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette in its
 		// reflection, which is what UsesPalette() reports
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 
 		const FixedFunctionRequirements reqs = generated->Requirements;
 		const bool needsTexelStep = ((reqs & FixedFunctionRequirements::NeedsTexelStep) == FixedFunctionRequirements::NeedsTexelStep);
@@ -2021,7 +2021,7 @@ namespace nCine::RHI::GU
 		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		GuTexture* texture = const_cast<GuTexture*>(hasTexture
-			? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
+			? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
 			return;
 		}
@@ -2031,26 +2031,26 @@ namespace nCine::RHI::GU
 		const GuTexture* paletteTex = nullptr;
 		if (isPaletteRemap || (texture != nullptr && (texture->IsIndexed() || texture->NeedsPaletteBake()))) {
 			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
-			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
+			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? _boundTextures[paletteUnit] : nullptr);
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
-		const std::uint32_t paletteVersion = (paletteTex == paletteTexture_
-			? paletteGeneration_ : (paletteTex != nullptr ? paletteTex->GetContentVersion() : 0));
+		const std::uint32_t paletteVersion = (paletteTex == _paletteTexture
+			? _paletteGeneration : (paletteTex != nullptr ? paletteTex->GetContentVersion() : 0));
 
 		EnsureList();
 		ApplyDrawTarget();
 		ApplyScissor();
 
 		// Bounds guard, mirroring the software device
-		const std::uint32_t rangeSize = boundUniformRanges_[binding].Size;
+		const std::uint32_t rangeSize = _boundUniformRanges[binding].Size;
 		if (batched && rangeSize > 0 && std::uint32_t(numInstances) * instanceStride > rangeSize) {
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
 
@@ -2058,10 +2058,10 @@ namespace nCine::RHI::GU
 		DrawState material;
 		{
 			std::uint32_t srcFix = 0, dstFix = 0;
-			material.BlendEnabled = blending_.Enabled;
+			material.BlendEnabled = _blending.Enabled;
 			material.BlendOp = GU_ADD;
-			material.BlendSrc = MapBlendGu(blending_.SrcRgb, srcFix);
-			material.BlendDst = MapBlendGu(blending_.DstRgb, dstFix);
+			material.BlendSrc = MapBlendGu(_blending.SrcRgb, srcFix);
+			material.BlendDst = MapBlendGu(_blending.DstRgb, dstFix);
 			material.BlendSrcFix = srcFix;
 			material.BlendDstFix = dstFix;
 		}
@@ -2075,7 +2075,7 @@ namespace nCine::RHI::GU
 		// present time; the GE scans out its buffer top-down directly, so screen passes mirror NDC here
 		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is
 		// what the sampling passes already expect - which is just the sign of the raster Y scale below.
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
@@ -2191,7 +2191,7 @@ namespace nCine::RHI::GU
 				ctx.AxisYx = spanYx;
 				ctx.AxisYy = spanYy;
 			}
-			ctx.Program = (needsUniforms ? currentProgram_ : nullptr);
+			ctx.Program = (needsUniforms ? _currentProgram : nullptr);
 			if (needsStripBuilder) {
 				ctx.UvScaleU = uvScaleU;
 				ctx.UvScaleV = uvScaleV;

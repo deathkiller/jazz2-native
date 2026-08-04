@@ -47,32 +47,32 @@ namespace nCine::RHI::PVR
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the linear host store (native, like the software backend) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format (R8/RG8 kept so the palette path can tell them apart) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of the linear host store */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/**
 			@brief Returns the base pointer of the linear host store (may be `nullptr` before an upload)
@@ -84,59 +84,59 @@ namespace nCine::RHI::PVR
 		*/
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return (pixels_.empty() || pixelsCompressed_) ? nullptr : pixels_.data();
+			return (_pixels.empty() || _pixelsCompressed) ? nullptr : _pixels.data();
 		}
 		/** @brief Returns a writable base pointer of the linear host store (`nullptr` when the store is compressed) */
 		inline std::uint8_t* MutablePixels() {
-			return (pixels_.empty() || pixelsCompressed_) ? nullptr : pixels_.data();
+			return (_pixels.empty() || _pixelsCompressed) ? nullptr : _pixels.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default; informational on PVR) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Alias of @ref GetMagFiltering() */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target (tile-accelerator RTT surface) */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/** @brief Marks the texture as (or no longer as) a color render target; becoming one allocates the RTT surface */
 		void SetRenderTarget(bool isRenderTarget);
 		/** @brief Returns a globally monotonic stamp of the texel store, advanced by every allocation or upload */
 		inline std::uint32_t GetContentVersion() const {
-			return contentVersion_;
+			return _contentVersion;
 		}
 
 		/** @brief Returns `true` when the VRAM store is 8bpp paletted (draws need a palette bank selected) */
 		inline bool IsIndexed() const {
-			return (uploadFormat_ == PixelFormat::R8);
+			return (_uploadFormat == PixelFormat::R8);
 		}
 		/** @brief Returns `true` when the texture needs the per-palette-row CPU bake (RG8 index + alpha) */
 		inline bool NeedsPaletteBake() const {
-			return (uploadFormat_ == PixelFormat::RG8);
+			return (_uploadFormat == PixelFormat::RG8);
 		}
 		/** @brief Returns `true` when this is the intercepted shared palette texture (rows become palette banks) */
 		inline bool IsPaletteTexture() const {
-			return isPaletteTexture_;
+			return _isPaletteTexture;
 		}
 
 		/** @brief Returns the VRAM texture pointer, or `nullptr` when none exists (RG8 without a bake, palette texture) */
 		inline pvr_ptr_t GetVramPointer() const {
-			return vram_;
+			return _vram;
 		}
 		/**
 			@brief Returns the VRAM texture pointer, rebuilding the store if it was reclaimed
@@ -148,23 +148,23 @@ namespace nCine::RHI::PVR
 		pvr_ptr_t AcquireVramPointer();
 		/** @brief Returns the PVR texture format word of the VRAM store WITHOUT the palette-bank bits (the device ors them in) */
 		inline std::uint32_t GetVramFormat() const {
-			return vramFormat_;
+			return _vramFormat;
 		}
 		/** @brief Returns the power-of-two padded VRAM width */
 		inline std::int32_t GetPaddedWidth() const {
-			return paddedWidth_;
+			return _paddedWidth;
 		}
 		/** @brief Returns the power-of-two padded VRAM height */
 		inline std::int32_t GetPaddedHeight() const {
-			return paddedHeight_;
+			return _paddedHeight;
 		}
 		/** @brief Returns the U compensation factor for the power-of-two padding (`realW / paddedW`) */
 		inline float GetUScale() const {
-			return uScale_;
+			return _uScale;
 		}
 		/** @brief Returns the V compensation factor for the power-of-two padding (`realH / paddedH`) */
 		inline float GetVScale() const {
-			return vScale_;
+			return _vScale;
 		}
 
 		/**
@@ -248,42 +248,42 @@ namespace nCine::RHI::PVR
 		static std::int32_t BytesPerPixel(PixelFormat format);
 
 	private:
-		static std::uint32_t nextHandle_;
-		static std::uint32_t nextContentVersion_;
+		static std::uint32_t _nextHandle;
+		static std::uint32_t _nextContentVersion;
 
-		std::uint32_t handle_;
-		std::uint32_t contentVersion_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		std::int32_t bytesPerPixel_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		SmallVector<std::uint8_t, 0> pixels_;
-		// Whether pixels_ holds the PackBits-compressed image instead of the linear one. The host store
+		std::uint32_t _handle;
+		std::uint32_t _contentVersion;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		std::int32_t _bytesPerPixel;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		SmallVector<std::uint8_t, 0> _pixels;
+		// Whether _pixels holds the PackBits-compressed image instead of the linear one. The host store
 		// exists only so the VRAM store can be rebuilt after eviction (and rows baked per palette), and all
 		// of those paths read it strictly front to back - while a full set of linear copies costs several
 		// megabytes of the console's 16 MB per level (the two biggest stock levels did not fit). Static
 		// indexed content (R8/RG8) compresses to roughly a third, so it is kept compressed and streamed
 		// through RlePixelReader where it is consumed.
-		bool pixelsCompressed_;
-		bool isRenderTarget_;
-		bool isPaletteTexture_;
+		bool _pixelsCompressed;
+		bool _isRenderTarget;
+		bool _isPaletteTexture;
 
-		pvr_ptr_t vram_;
-		std::uint32_t vramFormat_;
+		pvr_ptr_t _vram;
+		std::uint32_t _vramFormat;
 		/** @brief Bytes per texel the current VRAM store was allocated for, so a format change reallocates it */
-		std::int32_t vramBytesPerTexel_;
-		std::int32_t paddedWidth_;
-		std::int32_t paddedHeight_;
-		float uScale_;
-		float vScale_;
+		std::int32_t _vramBytesPerTexel;
+		std::int32_t _paddedWidth;
+		std::int32_t _paddedHeight;
+		float _uScale;
+		float _vScale;
 
 		// One baked copy is kept per palette row: the tile accelerator consumes textures only at scene end,
 		// so rebaking a row that an already submitted quad references would corrupt that quad (several rows
@@ -300,8 +300,8 @@ namespace nCine::RHI::PVR
 			std::uint32_t LastUsedScene;
 			const void* Palette;
 		};
-		BakedSlot bakedSlots_[BakedSlotCount];
-		std::int32_t nextBakedSlot_;
+		BakedSlot _bakedSlots[BakedSlotCount];
+		std::int32_t _nextBakedSlot;
 
 
 		/**
@@ -315,15 +315,15 @@ namespace nCine::RHI::PVR
 
 		// Every texture with video memory attached is linked into this list, most recently used first, so
 		// an allocation that runs out of memory can reclaim the least recently used stores (see Reclaim())
-		static PvrTexture* liveHead_;
-		static PvrTexture* liveTail_;
-		PvrTexture* livePrev_;
-		PvrTexture* liveNext_;
+		static PvrTexture* _liveHead;
+		static PvrTexture* _liveTail;
+		PvrTexture* _livePrev;
+		PvrTexture* _liveNext;
 		// The scene this texture was last drawn in. NeverUsed marks one that has been uploaded but not
 		// drawn yet, which must stay evictable - during level loading the scene counter does not advance,
 		// so an untouched texture would otherwise look like part of the scene being assembled
 		static constexpr std::uint32_t NeverUsed = ~std::uint32_t(0);
-		std::uint32_t lastUsedScene_;
+		std::uint32_t _lastUsedScene;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshVramStore();
@@ -331,7 +331,7 @@ namespace nCine::RHI::PVR
 
 		/** @brief Returns the size of the linear (uncompressed) level-0 image in bytes */
 		inline std::int32_t RawPixelsSize() const {
-			return strideBytes_ * (height_ > 0 ? height_ : 0);
+			return _strideBytes * (_height > 0 ? _height : 0);
 		}
 		/**
 			@brief Returns `true` when this texture keeps its host store compressed

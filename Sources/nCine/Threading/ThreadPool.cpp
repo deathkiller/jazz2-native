@@ -11,27 +11,27 @@ namespace nCine
 	}
 
 	ThreadPool::ThreadPool(std::size_t numThreads)
-		: threads_(numThreads), numThreads_(numThreads)
+		: _threads(numThreads), _numThreads(numThreads)
 	{
-		threadStruct_.queue = &queue_;
-		threadStruct_.queueMutex = &queueMutex_;
-		threadStruct_.queueCV = &queueCV_;
-		threadStruct_.shouldQuit = false;
+		_threadStruct.queue = &_queue;
+		_threadStruct.queueMutex = &_queueMutex;
+		_threadStruct.queueCV = &_queueCV;
+		_threadStruct.shouldQuit = false;
 
-		quitMutex_.Lock();
+		_quitMutex.Lock();
 
-		for (std::size_t i = 0; i < numThreads_; i++) {
-			threads_.emplace_back(WorkerFunction, &threadStruct_);
+		for (std::size_t i = 0; i < _numThreads; i++) {
+			_threads.emplace_back(WorkerFunction, &_threadStruct);
 		}
 	}
 
 	ThreadPool::~ThreadPool()
 	{
-		threadStruct_.shouldQuit = true;
-		queueCV_.Broadcast();
+		_threadStruct.shouldQuit = true;
+		_queueCV.Broadcast();
 
-		for (std::size_t i = 0; i < numThreads_; i++) {
-			threads_[i].Join();
+		for (std::size_t i = 0; i < _numThreads; i++) {
+			_threads[i].Join();
 		}
 	}
 
@@ -39,10 +39,10 @@ namespace nCine
 	{
 		DEATH_ASSERT(threadCommand);
 
-		queueMutex_.Lock();
-		queue_.push_back(std::move(threadCommand));
-		queueCV_.Broadcast();
-		queueMutex_.Unlock();
+		_queueMutex.Lock();
+		_queue.push_back(std::move(threadCommand));
+		_queueCV.Broadcast();
+		_queueMutex.Unlock();
 	}
 
 	void ThreadPool::WorkerFunction(void* arg)

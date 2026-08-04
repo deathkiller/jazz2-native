@@ -39,7 +39,7 @@ namespace nCine
 		};
 
 		ParticleAffector(Type type)
-			: type_(type) {}
+			: _type(type) {}
 		virtual ~ParticleAffector() {}
 
 		/**
@@ -58,12 +58,12 @@ namespace nCine
 
 		/** @brief Returns the affector type */
 		inline Type type() const {
-			return type_;
+			return _type;
 		}
 
 	protected:
 		/** @brief Affector type */
-		Type type_;
+		Type _type;
 
 		/** @brief Protected default copy constructor used to clone objects */
 		ParticleAffector(const ParticleAffector& other) = default;
@@ -92,7 +92,7 @@ namespace nCine
 		};
 
 		ColorAffector()
-			: ParticleAffector(Type::COLOR), colorSteps_(StepsInitialSize) {}
+			: ParticleAffector(Type::COLOR), _colorSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		ColorAffector(ColorAffector&&) = default;
@@ -114,11 +114,11 @@ namespace nCine
 
 		/** @brief Returns the array of color steps */
 		inline SmallVectorImpl<ColorStep>& steps() {
-			return colorSteps_;
+			return _colorSteps;
 		}
 		/** @brief Returns the array of color steps (read-only) */
 		inline const SmallVectorImpl<ColorStep>& steps() const {
-			return colorSteps_;
+			return _colorSteps;
 		}
 
 	protected:
@@ -126,7 +126,7 @@ namespace nCine
 		ColorAffector(const ColorAffector& other) = default;
 
 	private:
-		SmallVector<ColorStep, 0> colorSteps_;
+		SmallVector<ColorStep, 0> _colorSteps;
 	};
 
 	/**
@@ -164,7 +164,7 @@ namespace nCine
 			: SizeAffector(baseScale, baseScale) {}
 		/** @brief Constructs a size affector with a horizontal and a vertical base scale factor */
 		SizeAffector(float baseScaleX, float baseScaleY)
-			: ParticleAffector(Type::SIZE), sizeSteps_(StepsInitialSize), baseScale_(baseScaleX, baseScaleY) {}
+			: ParticleAffector(Type::SIZE), _sizeSteps(StepsInitialSize), _baseScale(baseScaleX, baseScaleY) {}
 		/** @brief Constructs a size affector with a vector base scale factor */
 		explicit SizeAffector(Vector2f baseScale)
 			: SizeAffector(baseScale.X, baseScale.Y) {}
@@ -197,41 +197,41 @@ namespace nCine
 
 		/** @brief Returns the array of size steps */
 		inline SmallVectorImpl<SizeStep>& steps() {
-			return sizeSteps_;
+			return _sizeSteps;
 		}
 		/** @brief Returns the array of size steps (read-only) */
 		inline const SmallVectorImpl<SizeStep>& steps() const {
-			return sizeSteps_;
+			return _sizeSteps;
 		}
 
 		/** @brief Returns the horizontal base scale factor */
 		inline float baseScaleX() const {
-			return baseScale_.X;
+			return _baseScale.X;
 		}
 		/** @brief Sets the horizontal base scale factor */
 		inline void setBaseScaleX(float baseScaleX) {
-			baseScale_.X = baseScaleX;
+			_baseScale.X = baseScaleX;
 		}
 		/** @brief Returns the vertical base scale factor */
 		inline float baseScaleY() const {
-			return baseScale_.Y;
+			return _baseScale.Y;
 		}
 		/** @brief Sets the vertical base scale factor */
 		inline void setBaseScaleY(float baseScaleY) {
-			baseScale_.Y = baseScaleY;
+			_baseScale.Y = baseScaleY;
 		}
 
 		/** @brief Returns the base scale factor */
 		inline Vector2f baseScale() const {
-			return baseScale_;
+			return _baseScale;
 		}
 		/** @brief Sets a uniform base scale factor */
 		inline void setBaseScale(float baseScale) {
-			baseScale_.Set(baseScale, baseScale);
+			_baseScale.Set(baseScale, baseScale);
 		}
 		/** @brief Sets a vector base scale factor */
 		inline void setBaseScale(Vector2f baseScale) {
-			baseScale_ = baseScale;
+			_baseScale = baseScale;
 		}
 
 	protected:
@@ -239,8 +239,8 @@ namespace nCine
 		SizeAffector(const SizeAffector& other) = default;
 
 	private:
-		SmallVector<SizeStep, 0> sizeSteps_;
-		Vector2f baseScale_;
+		SmallVector<SizeStep, 0> _sizeSteps;
+		Vector2f _baseScale;
 	};
 
 	/**
@@ -267,7 +267,7 @@ namespace nCine
 		};
 
 		RotationAffector()
-			: ParticleAffector(Type::ROTATION), rotationSteps_(StepsInitialSize) {}
+			: ParticleAffector(Type::ROTATION), _rotationSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		RotationAffector(RotationAffector&&) = default;
@@ -289,11 +289,11 @@ namespace nCine
 
 		/** @brief Returns the array of rotation steps */
 		inline SmallVectorImpl<RotationStep>& steps() {
-			return rotationSteps_;
+			return _rotationSteps;
 		}
 		/** @brief Returns the array of rotation steps (read-only) */
 		inline const SmallVectorImpl<RotationStep>& steps() const {
-			return rotationSteps_;
+			return _rotationSteps;
 		}
 
 	protected:
@@ -301,7 +301,7 @@ namespace nCine
 		RotationAffector(const RotationAffector& other) = default;
 
 	private:
-		SmallVector<RotationStep, 0> rotationSteps_;
+		SmallVector<RotationStep, 0> _rotationSteps;
 	};
 
 	/**
@@ -328,7 +328,7 @@ namespace nCine
 		};
 
 		PositionAffector()
-			: ParticleAffector(Type::POSITION), positionSteps_(StepsInitialSize) {}
+			: ParticleAffector(Type::POSITION), _positionSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		PositionAffector(PositionAffector&&) = default;
@@ -354,11 +354,11 @@ namespace nCine
 
 		/** @brief Returns the array of position steps */
 		inline SmallVectorImpl<PositionStep>& steps() {
-			return positionSteps_;
+			return _positionSteps;
 		}
 		/** @brief Returns the array of position steps (read-only) */
 		inline const SmallVectorImpl<PositionStep>& steps() const {
-			return positionSteps_;
+			return _positionSteps;
 		}
 
 	protected:
@@ -366,7 +366,7 @@ namespace nCine
 		PositionAffector(const PositionAffector& other) = default;
 
 	private:
-		SmallVector<PositionStep, 0> positionSteps_;
+		SmallVector<PositionStep, 0> _positionSteps;
 	};
 
 	/**
@@ -393,7 +393,7 @@ namespace nCine
 		};
 
 		VelocityAffector()
-			: ParticleAffector(Type::VELOCITY), velocitySteps_(StepsInitialSize) {}
+			: ParticleAffector(Type::VELOCITY), _velocitySteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		VelocityAffector(VelocityAffector&&) = default;
@@ -419,11 +419,11 @@ namespace nCine
 
 		/** @brief Returns the array of velocity steps */
 		inline SmallVectorImpl<VelocityStep>& steps() {
-			return velocitySteps_;
+			return _velocitySteps;
 		}
 		/** @brief Returns the array of velocity steps (read-only) */
 		inline const SmallVectorImpl<VelocityStep>& steps() const {
-			return velocitySteps_;
+			return _velocitySteps;
 		}
 
 	protected:
@@ -431,7 +431,7 @@ namespace nCine
 		VelocityAffector(const VelocityAffector& other) = default;
 
 	private:
-		SmallVector<VelocityStep, 0> velocitySteps_;
+		SmallVector<VelocityStep, 0> _velocitySteps;
 	};
 
 }

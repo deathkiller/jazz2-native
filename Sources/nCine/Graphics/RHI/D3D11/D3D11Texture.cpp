@@ -32,25 +32,25 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
-	std::uint32_t D3D11Texture::nextHandle_ = 1;
+	std::uint32_t D3D11Texture::_nextHandle = 1;
 
 	D3D11Texture::D3D11Texture(TextureTarget target)
-		: handle_(nextHandle_++), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
-			width_(0), height_(0), strideBytes_(0),
-			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
-			textureUnit_(0), isRenderTarget_(false),
-			gpuTexture_(nullptr), srv_(nullptr), sampler_(nullptr), contentsDirty_(false), hasCpuData_(false),
-			samplerMinFilter_(nCine::SamplerFilter::Nearest), samplerFilter_(nCine::SamplerFilter::Nearest), samplerWrap_(SamplerWrapping::ClampToEdge)
+		: _handle(_nextHandle++), _target(target), _format(PixelFormat::Unknown), _uploadFormat(PixelFormat::Unknown),
+			_width(0), _height(0), _strideBytes(0),
+			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest), _wrap(SamplerWrapping::ClampToEdge),
+			_textureUnit(0), _isRenderTarget(false),
+			_gpuTexture(nullptr), _srv(nullptr), _sampler(nullptr), _contentsDirty(false), _hasCpuData(false),
+			_samplerMinFilter(nCine::SamplerFilter::Nearest), _samplerFilter(nCine::SamplerFilter::Nearest), _samplerWrap(SamplerWrapping::ClampToEdge)
 	{
-		swizzle_[0] = SwizzleChannel::Red;
-		swizzle_[1] = SwizzleChannel::Green;
-		swizzle_[2] = SwizzleChannel::Blue;
-		swizzle_[3] = SwizzleChannel::Alpha;
+		_swizzle[0] = SwizzleChannel::Red;
+		_swizzle[1] = SwizzleChannel::Green;
+		_swizzle[2] = SwizzleChannel::Blue;
+		_swizzle[3] = SwizzleChannel::Alpha;
 	}
 
 	D3D11Texture::~D3D11Texture()
 	{
-		// Unbind from the device first so a later draw can't dereference this freed texture via boundTextures_
+		// Unbind from the device first so a later draw can't dereference this freed texture via _boundTextures
 		// (crashed in BindTextures during splitscreen level changes)
 		D3D11Device::UnbindTexture(this);
 		ReleaseGpu();
@@ -58,15 +58,15 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Texture::ReleaseGpu() const
 	{
-		if (srv_ != nullptr) { srv_->Release(); srv_ = nullptr; }
-		if (gpuTexture_ != nullptr) { gpuTexture_->Release(); gpuTexture_ = nullptr; }
-		if (sampler_ != nullptr) { sampler_->Release(); sampler_ = nullptr; }
+		if (_srv != nullptr) { _srv->Release(); _srv = nullptr; }
+		if (_gpuTexture != nullptr) { _gpuTexture->Release(); _gpuTexture = nullptr; }
+		if (_sampler != nullptr) { _sampler->Release(); _sampler = nullptr; }
 	}
 
 	bool D3D11Texture::IsIdentitySwizzle() const
 	{
-		return (swizzle_[0] == SwizzleChannel::Red && swizzle_[1] == SwizzleChannel::Green &&
-			swizzle_[2] == SwizzleChannel::Blue && swizzle_[3] == SwizzleChannel::Alpha);
+		return (_swizzle[0] == SwizzleChannel::Red && _swizzle[1] == SwizzleChannel::Green &&
+			_swizzle[2] == SwizzleChannel::Blue && _swizzle[3] == SwizzleChannel::Alpha);
 	}
 
 	const std::uint8_t* D3D11Texture::SwizzledUploadPixels() const
@@ -76,8 +76,8 @@ namespace nCine::RHI::D3D11
 		// RG8 textures set A<-Green so the shader's `src.a` reads the packed alpha byte) is baked into the
 		// uploaded texels here. Without this, `src.a` would always be 1.0 and RG8 sprites (gems, pre-packed
 		// index+alpha) would lose their transparency; R8 textures keep the identity swizzle and are untouched.
-		if (pixels_.empty() || IsIdentitySwizzle()) {
-			return pixels_.data();
+		if (_pixels.empty() || IsIdentitySwizzle()) {
+			return _pixels.data();
 		}
 		auto pick = [](SwizzleChannel channel, const std::uint8_t* texel) -> std::uint8_t {
 			switch (channel) {
@@ -90,83 +90,83 @@ namespace nCine::RHI::D3D11
 				default:					return texel[0];
 			}
 		};
-		swizzledPixels_.resize(pixels_.size());
-		const std::size_t texelCount = pixels_.size() / 4;
+		_swizzledPixels.resize(_pixels.size());
+		const std::size_t texelCount = _pixels.size() / 4;
 		for (std::size_t i = 0; i < texelCount; i++) {
-			const std::uint8_t* in = &pixels_[i * 4];
-			std::uint8_t* out = &swizzledPixels_[i * 4];
-			out[0] = pick(swizzle_[0], in);
-			out[1] = pick(swizzle_[1], in);
-			out[2] = pick(swizzle_[2], in);
-			out[3] = pick(swizzle_[3], in);
+			const std::uint8_t* in = &_pixels[i * 4];
+			std::uint8_t* out = &_swizzledPixels[i * 4];
+			out[0] = pick(_swizzle[0], in);
+			out[1] = pick(_swizzle[1], in);
+			out[2] = pick(_swizzle[2], in);
+			out[3] = pick(_swizzle[3], in);
 		}
-		return swizzledPixels_.data();
+		return _swizzledPixels.data();
 	}
 
 	void D3D11Texture::EnsureGpuTexture() const
 	{
 		ID3D11Device* device = D3D11Device::GetD3DDevice();
-		if (device == nullptr || width_ <= 0 || height_ <= 0) {
+		if (device == nullptr || _width <= 0 || _height <= 0) {
 			return;
 		}
 
-		if (gpuTexture_ != nullptr && !contentsDirty_) {
+		if (_gpuTexture != nullptr && !_contentsDirty) {
 			return;
 		}
 
 		// A CPU re-upload into an existing same-size texture just refreshes its contents
-		if (gpuTexture_ != nullptr && contentsDirty_ && !isRenderTarget_ && hasCpuData_ && !pixels_.empty()) {
+		if (_gpuTexture != nullptr && _contentsDirty && !_isRenderTarget && _hasCpuData && !_pixels.empty()) {
 			ID3D11DeviceContext* context = D3D11Device::GetD3DContext();
 			if (context != nullptr) {
-				context->UpdateSubresource(gpuTexture_, 0, nullptr, SwizzledUploadPixels(), std::uint32_t(strideBytes_), 0);
-				contentsDirty_ = false;
+				context->UpdateSubresource(_gpuTexture, 0, nullptr, SwizzledUploadPixels(), std::uint32_t(_strideBytes), 0);
+				_contentsDirty = false;
 				return;
 			}
 		}
 
 		// (Re)create the texture from scratch. The host store is always RGBA8 after the promotion in
 		// Allocate(), so a single DXGI format covers every runtime texture.
-		if (srv_ != nullptr) { srv_->Release(); srv_ = nullptr; }
-		if (gpuTexture_ != nullptr) { gpuTexture_->Release(); gpuTexture_ = nullptr; }
+		if (_srv != nullptr) { _srv->Release(); _srv = nullptr; }
+		if (_gpuTexture != nullptr) { _gpuTexture->Release(); _gpuTexture = nullptr; }
 
 		D3D11_TEXTURE2D_DESC desc = {};
-		desc.Width = static_cast<UINT>(width_);
-		desc.Height = static_cast<UINT>(height_);
+		desc.Width = static_cast<UINT>(_width);
+		desc.Height = static_cast<UINT>(_height);
 		desc.MipLevels = 1;
 		desc.ArraySize = 1;
 		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (isRenderTarget_ ? D3D11_BIND_RENDER_TARGET : 0u);
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (_isRenderTarget ? D3D11_BIND_RENDER_TARGET : 0u);
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
 		D3D11_SUBRESOURCE_DATA init = {};
-		const bool hasInit = (hasCpuData_ && !isRenderTarget_ && !pixels_.empty());
+		const bool hasInit = (_hasCpuData && !_isRenderTarget && !_pixels.empty());
 		if (hasInit) {
 			init.pSysMem = SwizzledUploadPixels();
-			init.SysMemPitch = static_cast<UINT>(strideBytes_);
+			init.SysMemPitch = static_cast<UINT>(_strideBytes);
 		}
 
-		if (FAILED(device->CreateTexture2D(&desc, hasInit ? &init : nullptr, &gpuTexture_))) {
-			gpuTexture_ = nullptr;
+		if (FAILED(device->CreateTexture2D(&desc, hasInit ? &init : nullptr, &_gpuTexture))) {
+			_gpuTexture = nullptr;
 			return;
 		}
-		device->CreateShaderResourceView(gpuTexture_, nullptr, &srv_);
-		contentsDirty_ = false;
+		device->CreateShaderResourceView(_gpuTexture, nullptr, &_srv);
+		_contentsDirty = false;
 	}
 
 	ID3D11ShaderResourceView* D3D11Texture::GetSRV() const
 	{
 		EnsureGpuTexture();
-		return srv_;
+		return _srv;
 	}
 
 	ID3D11Texture2D* D3D11Texture::GetOrCreateTexture2D() const
 	{
 		EnsureGpuTexture();
-		return gpuTexture_;
+		return _gpuTexture;
 	}
 
 	ID3D11SamplerState* D3D11Texture::GetSampler() const
@@ -175,18 +175,18 @@ namespace nCine::RHI::D3D11
 		if (device == nullptr) {
 			return nullptr;
 		}
-		if (sampler_ != nullptr && samplerFilter_ == magFilter_ && samplerMinFilter_ == minFilter_ && samplerWrap_ == wrap_) {
-			return sampler_;
+		if (_sampler != nullptr && _samplerFilter == _magFilter && _samplerMinFilter == _minFilter && _samplerWrap == _wrap) {
+			return _sampler;
 		}
-		if (sampler_ != nullptr) { sampler_->Release(); sampler_ = nullptr; }
+		if (_sampler != nullptr) { _sampler->Release(); _sampler = nullptr; }
 
 		D3D11_SAMPLER_DESC desc = {};
 		// Compose the filter from both the minification and magnification modes (mip mode is irrelevant, the
 		// backend only ever stores level 0)
-		const bool magLinear = (magFilter_ == nCine::SamplerFilter::Linear ||
-			magFilter_ == nCine::SamplerFilter::LinearMipmapNearest || magFilter_ == nCine::SamplerFilter::LinearMipmapLinear);
-		const bool minLinear = (minFilter_ == nCine::SamplerFilter::Linear ||
-			minFilter_ == nCine::SamplerFilter::LinearMipmapNearest || minFilter_ == nCine::SamplerFilter::LinearMipmapLinear);
+		const bool magLinear = (_magFilter == nCine::SamplerFilter::Linear ||
+			_magFilter == nCine::SamplerFilter::LinearMipmapNearest || _magFilter == nCine::SamplerFilter::LinearMipmapLinear);
+		const bool minLinear = (_minFilter == nCine::SamplerFilter::Linear ||
+			_minFilter == nCine::SamplerFilter::LinearMipmapNearest || _minFilter == nCine::SamplerFilter::LinearMipmapLinear);
 		if (minLinear && magLinear) {
 			desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		} else if (minLinear) {
@@ -197,7 +197,7 @@ namespace nCine::RHI::D3D11
 			desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 		}
 		D3D11_TEXTURE_ADDRESS_MODE address;
-		switch (wrap_) {
+		switch (_wrap) {
 			case SamplerWrapping::Repeat: address = D3D11_TEXTURE_ADDRESS_WRAP; break;
 			case SamplerWrapping::MirroredRepeat: address = D3D11_TEXTURE_ADDRESS_MIRROR; break;
 			default: address = D3D11_TEXTURE_ADDRESS_CLAMP; break;
@@ -208,11 +208,11 @@ namespace nCine::RHI::D3D11
 		desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		desc.MinLOD = 0;
 		desc.MaxLOD = D3D11_FLOAT32_MAX;
-		device->CreateSamplerState(&desc, &sampler_);
-		samplerMinFilter_ = minFilter_;
-		samplerFilter_ = magFilter_;
-		samplerWrap_ = wrap_;
-		return sampler_;
+		device->CreateSamplerState(&desc, &_sampler);
+		_samplerMinFilter = _minFilter;
+		_samplerFilter = _magFilter;
+		_samplerWrap = _wrap;
+		return _sampler;
 	}
 
 	std::int32_t D3D11Texture::BytesPerPixel(PixelFormat format)
@@ -230,31 +230,31 @@ namespace nCine::RHI::D3D11
 	{
 		// Keep a self-consistent 4-byte-per-texel store for the runtime formats: promote the narrower ones
 		// (RGB8 render targets and the palette-index formats R8 / RG8) to an RGBA8 store, remembering the
-		// original in uploadFormat_. Mirrors the software backend's promotion so the backend can lift the same
+		// original in _uploadFormat. Mirrors the software backend's promotion so the backend can lift the same
 		// bytes into an `ID3D11Texture2D` without a separate widening step.
-		uploadFormat_ = format;
-		format_ = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
-		width_ = width;
-		height_ = height;
-		const std::int32_t bpp = BytesPerPixel(format_);
-		strideBytes_ = width * bpp;
-		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		_uploadFormat = format;
+		_format = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
+		_width = width;
+		_height = height;
+		const std::int32_t bpp = BytesPerPixel(_format);
+		_strideBytes = width * bpp;
+		_pixels.assign(std::size_t(_strideBytes) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
 		// The size/format changed, so any existing GPU texture must be rebuilt on the next bind
-		if (srv_ != nullptr) { srv_->Release(); srv_ = nullptr; }
-		if (gpuTexture_ != nullptr) { gpuTexture_->Release(); gpuTexture_ = nullptr; }
-		contentsDirty_ = true;
+		if (_srv != nullptr) { _srv->Release(); _srv = nullptr; }
+		if (_gpuTexture != nullptr) { _gpuTexture->Release(); _gpuTexture = nullptr; }
+		_contentsDirty = true;
 	}
 
 	bool D3D11Texture::Bind(std::uint32_t textureUnit) const
 	{
-		textureUnit_ = textureUnit;
+		_textureUnit = textureUnit;
 		D3D11Device::BindTexture(textureUnit, this);
 		return true;
 	}
 
 	bool D3D11Texture::Unbind() const
 	{
-		D3D11Device::BindTexture(textureUnit_, nullptr);
+		D3D11Device::BindTexture(_textureUnit, nullptr);
 		return true;
 	}
 
@@ -271,17 +271,17 @@ namespace nCine::RHI::D3D11
 			return;
 		}
 		Allocate(format, width, height);
-		if (data != nullptr && !pixels_.empty()) {
-			hasCpuData_ = true;
+		if (data != nullptr && !_pixels.empty()) {
+			_hasCpuData = true;
 			const std::int32_t srcBpp = BytesPerPixel(format);
-			const std::int32_t dstBpp = BytesPerPixel(format_);
+			const std::int32_t dstBpp = BytesPerPixel(_format);
 			if (srcBpp == dstBpp) {
-				std::memcpy(pixels_.data(), data, pixels_.size());
+				std::memcpy(_pixels.data(), data, _pixels.size());
 			} else {
 				const std::uint8_t* src = static_cast<const std::uint8_t*>(data);
-				for (std::int32_t y = 0; y < height_; y++) {
-					CopyExpandRow(pixels_.data() + std::size_t(y) * strideBytes_,
-						dstBpp, src + std::size_t(y) * std::size_t(width_) * srcBpp, srcBpp, width_);
+				for (std::int32_t y = 0; y < _height; y++) {
+					CopyExpandRow(_pixels.data() + std::size_t(y) * _strideBytes,
+						dstBpp, src + std::size_t(y) * std::size_t(_width) * srcBpp, srcBpp, _width);
 				}
 			}
 		}
@@ -290,16 +290,16 @@ namespace nCine::RHI::D3D11
 	void D3D11Texture::TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data)
 	{
 		static_cast<void>(bgr);
-		if (level != 0 || data == nullptr || pixels_.empty()) {
+		if (level != 0 || data == nullptr || _pixels.empty()) {
 			return;
 		}
-		hasCpuData_ = true;
-		contentsDirty_ = true;
+		_hasCpuData = true;
+		_contentsDirty = true;
 		const std::int32_t srcBpp = BytesPerPixel(format);
-		const std::int32_t dstBpp = BytesPerPixel(format_);
+		const std::int32_t dstBpp = BytesPerPixel(_format);
 		for (std::int32_t y = 0; y < height; y++) {
 			const std::int32_t dstY = yoffset + y;
-			if (dstY < 0 || dstY >= height_) {
+			if (dstY < 0 || dstY >= _height) {
 				continue;
 			}
 			std::int32_t dstX = xoffset;
@@ -310,14 +310,14 @@ namespace nCine::RHI::D3D11
 				copyW += dstX;
 				dstX = 0;
 			}
-			if (dstX + copyW > width_) {
-				copyW = width_ - dstX;
+			if (dstX + copyW > _width) {
+				copyW = _width - dstX;
 			}
 			if (copyW <= 0) {
 				continue;
 			}
 			const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
-			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
+			std::uint8_t* dstRow = _pixels.data() + std::size_t(dstY) * _strideBytes + std::size_t(dstX) * dstBpp;
 			CopyExpandRow(dstRow, dstBpp, srcRow, srcBpp, copyW);
 		}
 	}
@@ -361,25 +361,25 @@ namespace nCine::RHI::D3D11
 
 		// A render target's contents only exist on the GPU (the host store is never written by draws), so read
 		// it back through a staging copy; plain textures return the host store directly
-		if (isRenderTarget_ && gpuTexture_ != nullptr) {
+		if (_isRenderTarget && _gpuTexture != nullptr) {
 			ID3D11Device* device = D3D11Device::GetD3DDevice();
 			ID3D11DeviceContext* context = D3D11Device::GetD3DContext();
 			if (device != nullptr && context != nullptr) {
 				D3D11_TEXTURE2D_DESC desc = {};
-				gpuTexture_->GetDesc(&desc);
+				_gpuTexture->GetDesc(&desc);
 				desc.Usage = D3D11_USAGE_STAGING;
 				desc.BindFlags = 0;
 				desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 				desc.MiscFlags = 0;
 				ID3D11Texture2D* staging = nullptr;
 				if (SUCCEEDED(device->CreateTexture2D(&desc, nullptr, &staging))) {
-					context->CopyResource(staging, gpuTexture_);
+					context->CopyResource(staging, _gpuTexture);
 					D3D11_MAPPED_SUBRESOURCE mapped;
 					if (SUCCEEDED(context->Map(staging, 0, D3D11_MAP_READ, 0, &mapped))) {
-						const std::uint32_t rowBytes = std::uint32_t(width_) * 4;
+						const std::uint32_t rowBytes = std::uint32_t(_width) * 4;
 						std::uint8_t* dst = static_cast<std::uint8_t*>(pixels);
 						const std::uint8_t* src = static_cast<const std::uint8_t*>(mapped.pData);
-						for (std::int32_t y = 0; y < height_; y++) {
+						for (std::int32_t y = 0; y < _height; y++) {
 							std::memcpy(dst + std::size_t(y) * rowBytes, src + std::size_t(y) * mapped.RowPitch, rowBytes);
 						}
 						context->Unmap(staging, 0);
@@ -391,35 +391,35 @@ namespace nCine::RHI::D3D11
 			}
 		}
 
-		if (!pixels_.empty()) {
-			std::memcpy(pixels, pixels_.data(), pixels_.size());
+		if (!_pixels.empty()) {
+			std::memcpy(pixels, _pixels.data(), _pixels.size());
 		}
 	}
 
 	void D3D11Texture::SetMinFiltering(nCine::SamplerFilter filter)
 	{
-		minFilter_ = filter;
+		_minFilter = filter;
 	}
 
 	void D3D11Texture::SetMagFiltering(nCine::SamplerFilter filter)
 	{
-		magFilter_ = filter;
+		_magFilter = filter;
 	}
 
 	void D3D11Texture::SetWrap(SamplerWrapping wrap)
 	{
-		wrap_ = wrap;
+		_wrap = wrap;
 	}
 
 	void D3D11Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		swizzle_[0] = r;
-		swizzle_[1] = g;
-		swizzle_[2] = b;
-		swizzle_[3] = a;
+		_swizzle[0] = r;
+		_swizzle[1] = g;
+		_swizzle[2] = b;
+		_swizzle[3] = a;
 		// The swizzle is baked into the uploaded texels (D3D11 has no SRV channel remap), so a change must
 		// rebuild the GPU texture; it is usually set right after the upload, before the first bind.
-		contentsDirty_ = true;
+		_contentsDirty = true;
 	}
 
 	void D3D11Texture::SetMaxLevel(std::int32_t maxLevel)

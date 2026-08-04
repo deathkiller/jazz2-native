@@ -38,7 +38,7 @@ namespace nCine
 		_timeMults[2] = _timeMults[1];
 		_timeMults[1] = timeMultLast;
 
-		// Update the FPS average calculation every `avgInterval_` seconds
+		// Update the FPS average calculation every `_averageInterval` seconds
 		if (_frameStart < _lastAvgUpdate || _frameStart < _lastLogUpdate) {
 			LOGW("Detected time discontinuity, resetting counters");
 			_lastAvgUpdate = _frameStart;
@@ -54,7 +54,7 @@ namespace nCine
 		}
 
 		const float secsSinceLastLogUpdate = (_frameStart - _lastLogUpdate).seconds();
-		// Log number of frames and FPS every `logInterval_` seconds
+		// Log number of frames and FPS every `_loggingInterval` seconds
 		if (_loggingInterval > 0.0f && _avgNumFrames != 0 && secsSinceLastLogUpdate > _loggingInterval) {
 			_avgFps = static_cast<float>(_logNumFrames) / _loggingInterval;
 #if defined(DEATH_TRACE) && defined(DEATH_DEBUG)

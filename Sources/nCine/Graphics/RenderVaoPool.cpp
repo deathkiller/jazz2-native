@@ -8,7 +8,7 @@ namespace nCine
 {
 	RenderVaoPool::RenderVaoPool(std::uint32_t vaoPoolSize)
 	{
-		vaoPool_.reserve(vaoPoolSize);
+		_vaoPool.reserve(vaoPoolSize);
 
 		// Start with a VAO bound to the OpenGL context
 		RHI::VertexFormat format;
@@ -26,7 +26,7 @@ namespace nCine
 		const std::uint64_t fingerprint = vertexFormat.CalculateFingerprint();
 
 		bool vaoFound = false;
-		for (VaoBinding& binding : vaoPool_) {
+		for (VaoBinding& binding : _vaoPool) {
 			if (binding.fingerprint == fingerprint && binding.format == vertexFormat) {
 				vaoFound = true;
 				const bool bindChanged = binding.object->Bind();
@@ -41,7 +41,7 @@ namespace nCine
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
 					RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				}
-				binding.lastBindIndex = ++bindIndex_;
+				binding.lastBindIndex = ++_bindIndex;
 #if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolBinding();
 #endif
@@ -51,31 +51,31 @@ namespace nCine
 
 		if (!vaoFound) {
 			std::uint32_t index = 0;
-			if (vaoPool_.size() < vaoPool_.capacity()) {
-				auto& item = vaoPool_.emplace_back();
+			if (_vaoPool.size() < _vaoPool.capacity()) {
+				auto& item = _vaoPool.emplace_back();
 				item.object = std::make_unique<RHI::VertexArray>();
-				index = std::uint32_t(vaoPool_.size() - 1);
+				index = std::uint32_t(_vaoPool.size() - 1);
 #if defined(DEATH_DEBUG)
 				if (RHI::Debug::IsAvailable()) {
-					std::size_t length = formatInto(debugString, "Created and defined VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
+					std::size_t length = formatInto(debugString, "Created and defined VAO 0x{:x} ({})", std::uintptr_t(_vaoPool[index].object.get()), index);
 					RHI::Debug::MessageInsert({ debugString, length });
 
 					length = formatInto(debugString, "VAO_#{}", index);
-					vaoPool_.back().object->SetObjectLabel({ debugString, length });
+					_vaoPool.back().object->SetObjectLabel({ debugString, length });
 				}
 #endif
 			} else {
 				// Find the least recently used VAO
-				std::uint64_t lruBindIndex = vaoPool_[0].lastBindIndex;
-				for (std::uint32_t i = 1; i < vaoPool_.size(); i++) {
-					if (vaoPool_[i].lastBindIndex < lruBindIndex) {
+				std::uint64_t lruBindIndex = _vaoPool[0].lastBindIndex;
+				for (std::uint32_t i = 1; i < _vaoPool.size(); i++) {
+					if (_vaoPool[i].lastBindIndex < lruBindIndex) {
 						index = i;
-						lruBindIndex = vaoPool_[i].lastBindIndex;
+						lruBindIndex = _vaoPool[i].lastBindIndex;
 					}
 				}
 
 #if defined(DEATH_DEBUG)
-				std::size_t length = formatInto(debugString, "Reuse and define VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
+				std::size_t length = formatInto(debugString, "Reuse and define VAO 0x{:x} ({})", std::uintptr_t(_vaoPool[index].object.get()), index);
 				RHI::Debug::MessageInsert({ debugString, length });
 #endif
 #if defined(NCINE_PROFILING)
@@ -83,22 +83,22 @@ namespace nCine
 #endif
 			}
 
-			const bool bindChanged = vaoPool_[index].object->Bind();
-			DEATH_ASSERT(bindChanged || vaoPool_.size() == 1);
+			const bool bindChanged = _vaoPool[index].object->Bind();
+			DEATH_ASSERT(bindChanged || _vaoPool.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
-			const std::uint32_t oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
+			const std::uint32_t oldIboHandle = _vaoPool[index].format.GetIbo() ? _vaoPool[index].format.GetIbo()->GetGLHandle() : 0;
 			RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), oldIboHandle);
-			vaoPool_[index].format = vertexFormat;
-			vaoPool_[index].fingerprint = fingerprint;
-			vaoPool_[index].format.Define();
-			vaoPool_[index].lastBindIndex = ++bindIndex_;
+			_vaoPool[index].format = vertexFormat;
+			_vaoPool[index].fingerprint = fingerprint;
+			_vaoPool[index].format.Define();
+			_vaoPool[index].lastBindIndex = ++_bindIndex;
 #if defined(NCINE_PROFILING)
 			RenderStatistics::AddVaoPoolBinding();
 #endif
 		}
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::GatherVaoPoolStatistics(std::uint32_t(vaoPool_.size()), std::uint32_t(vaoPool_.capacity()));
+		RenderStatistics::GatherVaoPoolStatistics(std::uint32_t(_vaoPool.size()), std::uint32_t(_vaoPool.capacity()));
 #endif
 	}
 

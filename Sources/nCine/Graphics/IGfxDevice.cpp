@@ -49,7 +49,7 @@ namespace nCine
 		LOGI("Canvas was resized to {}x{} (canvas size is {}x{}; ratio is {})", (int)(event->elementWidth * pixelRatio2), (int)(event->elementHeight * pixelRatio2), (int)cssWidth, (int)cssHeight, pixelRatio2);
 #	endif
 		IGfxDevice* gfxDevice = static_cast<IGfxDevice*>(userData);
-		gfxDevice->isFullscreen_ = event->isFullscreen;
+		gfxDevice->_isFullscreen = event->isFullscreen;
 
 		if (event->elementWidth > 0 && event->elementHeight > 0) {
 #	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
@@ -78,8 +78,8 @@ namespace nCine
 #endif
 
 	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
-		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
-			contextInfo_(contextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
+		: _drawableWidth(windowMode.width), _drawableHeight(windowMode.height), _width(windowMode.width), _height(windowMode.height),
+			_contextInfo(contextInfo), _isFullscreen(windowMode.isFullscreen), _displayMode(displayMode), _numMonitors(0)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;
@@ -88,21 +88,21 @@ namespace nCine
 		emscripten_get_element_css_size("canvas", &cssWidth, &cssHeight);
 #	if defined(EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3)
 		// `contrib.glfw3` should handle HiDPI automatically
-		width_ = static_cast<int>(cssWidth);
-		height_ = static_cast<int>(cssHeight);
+		_width = static_cast<int>(cssWidth);
+		_height = static_cast<int>(cssHeight);
 #	else
 		float pixelRatio = emscripten_get_device_pixel_ratio();
-		width_ = static_cast<int>(cssWidth * pixelRatio);
-		height_ = static_cast<int>(cssHeight * pixelRatio);
+		_width = static_cast<int>(cssWidth * pixelRatio);
+		_height = static_cast<int>(cssHeight * pixelRatio);
 #	endif
 		
-		drawableWidth_ = width_;
-		drawableHeight_ = height_;
+		_drawableWidth = _width;
+		_drawableHeight = _height;
 
 		EmscriptenFullscreenChangeEvent fsce;
 		emscripten_get_fullscreen_status(&fsce);
-		if (isFullscreen_ != fsce.isFullscreen) {
-			isFullscreen_ = fsce.isFullscreen;
+		if (_isFullscreen != fsce.isFullscreen) {
+			_isFullscreen = fsce.isFullscreen;
 			// TODO: Broadcast event here?
 		}
 
@@ -116,12 +116,12 @@ namespace nCine
 #	endif
 #endif
 
-		currentVideoMode_.width = width_;
-		currentVideoMode_.height = height_;
-		currentVideoMode_.refreshRate = 0.0f;
-		currentVideoMode_.redBits = displayMode.redBits();
-		currentVideoMode_.greenBits = displayMode.greenBits();
-		currentVideoMode_.blueBits = displayMode.blueBits();
+		_currentVideoMode.width = _width;
+		_currentVideoMode.height = _height;
+		_currentVideoMode.refreshRate = 0.0f;
+		_currentVideoMode.redBits = displayMode.redBits();
+		_currentVideoMode.greenBits = displayMode.greenBits();
+		_currentVideoMode.blueBits = displayMode.blueBits();
 	}
 
 	/**
@@ -131,16 +131,16 @@ namespace nCine
 	 */
 	unsigned int IGfxDevice::numMonitors() const
 	{
-		return numMonitors_;
+		return _numMonitors;
 	}
 
 	const IGfxDevice::Monitor& IGfxDevice::monitor(unsigned int index) const
 	{
-		DEATH_ASSERT(index < numMonitors_);
-		if (index >= numMonitors_) {
+		DEATH_ASSERT(index < _numMonitors);
+		if (index >= _numMonitors) {
 			index = 0;
 		}
-		return monitors_[index];
+		return _monitors[index];
 	}
 
 	float IGfxDevice::windowScalingFactor() const
@@ -157,7 +157,7 @@ namespace nCine
 
 	void IGfxDevice::initDeviceViewport()
 	{
-		RHI::Device::InitViewport(0, 0, drawableWidth_, drawableHeight_);
+		RHI::Device::InitViewport(0, 0, _drawableWidth, _drawableHeight);
 	}
 
 	void IGfxDevice::setupDevice()

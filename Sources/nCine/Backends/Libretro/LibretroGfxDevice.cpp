@@ -34,23 +34,23 @@ namespace nCine::Backends
 	LibretroGfxDevice::LibretroGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, contextInfo, displayMode), _lastWidth(0), _lastHeight(0)
 	{
-		drawableWidth_ = width_;
-		drawableHeight_ = height_;
+		_drawableWidth = _width;
+		_drawableHeight = _height;
 
-		numMonitors_ = 1;
-		monitors_[0].name = "libretro";
-		monitors_[0].position = Vector2i(0, 0);
-		monitors_[0].scale = Vector2f(1.0f, 1.0f);
-		monitors_[0].numVideoModes = 1;
-		currentVideoMode_.width = width_;
-		currentVideoMode_.height = height_;
-		currentVideoMode_.refreshRate = (float)_targetFps;
-		monitors_[0].videoModes[0] = currentVideoMode_;
+		_numMonitors = 1;
+		_monitors[0].name = "libretro";
+		_monitors[0].position = Vector2i(0, 0);
+		_monitors[0].scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].numVideoModes = 1;
+		_currentVideoMode.width = _width;
+		_currentVideoMode.height = _height;
+		_currentVideoMode.refreshRate = (float)_targetFps;
+		_monitors[0].videoModes[0] = _currentVideoMode;
 
 #if defined(WITH_RHI_SOFTWARE)
 		// Same init as SdlGfxDevice::initSoftwarePresent(): give the render pipeline a valid
 		// CPU screen buffer before the first frame
-		RHI::Device::ResizeScreenFramebuffer(drawableWidth_, drawableHeight_);
+		RHI::Device::ResizeScreenFramebuffer(_drawableWidth, _drawableHeight);
 #endif
 		initDeviceViewport();
 	}
@@ -124,9 +124,9 @@ namespace nCine::Backends
 		// Hardware rendering: the frame was drawn straight into the frontend's FBO
 		// (GLFramebuffer::SetDefaultHandle), just tell the frontend it is ready
 		if (LibretroApplication::IsInsideFrame) {
-			_lastAnnouncedWidth = drawableWidth_;
-			_lastAnnouncedHeight = drawableHeight_;
-			LibretroApplication::VideoRefreshCallback(RETRO_HW_FRAME_BUFFER_VALID, (unsigned)drawableWidth_, (unsigned)drawableHeight_, 0);
+			_lastAnnouncedWidth = _drawableWidth;
+			_lastAnnouncedHeight = _drawableHeight;
+			LibretroApplication::VideoRefreshCallback(RETRO_HW_FRAME_BUFFER_VALID, (unsigned)_drawableWidth, (unsigned)_drawableHeight, 0);
 		}
 #else
 		// Same presentation sequence as SdlGfxDevice::presentSoftware()

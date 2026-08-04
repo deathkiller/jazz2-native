@@ -34,10 +34,10 @@ namespace nCine::Backends
 		void simulateAxisEvent(int axisId, float value);
 
 	private:
-		int joyId_;
-		bool buttonsState_[MaxNumButtons];
-		unsigned char hatState_;
-		float axesValuesState_[MaxNumAxes];
+		int _joyId;
+		bool _buttonsState[MaxNumButtons];
+		unsigned char _hatState;
+		float _axesValuesState[MaxNumAxes];
 
 		friend class PspInputManager;
 	};
@@ -73,10 +73,10 @@ namespace nCine::Backends
 		static void updateJoystickStates();
 
 	private:
-		static bool connected_;
-		static PspJoystickState state_;
+		static bool _connected;
+		static PspJoystickState _state;
 
-		// The state object dispatches through the protected shared joyMapping_/inputEventHandler_
+		// The state object dispatches through the protected shared _joyMapping/_inputEventHandler
 		friend class PspJoystickState;
 	};
 }

@@ -197,17 +197,17 @@ namespace nCine::RHI::Vulkan
 			std::uint32_t Size = 0;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static VulkanShaderProgram* currentProgram_;
-		static const VulkanTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static VulkanRenderTarget* currentRenderTarget_;
+		static VulkanShaderProgram* _currentProgram;
+		static const VulkanTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static VulkanRenderTarget* _currentRenderTarget;
 
 		// Loader bootstrap (resolves the entry points declared in VulkanCommon.h). Void signatures, so these
 		// stay declarable in this vulkan.h-free contract header.

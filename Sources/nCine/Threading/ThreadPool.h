@@ -41,14 +41,14 @@ namespace nCine
 		};
 #endif
 
-		std::list<std::unique_ptr<IThreadCommand>> queue_;
-		SmallVector<Thread, 0> threads_;
-		Mutex queueMutex_;
-		CondVariable queueCV_;
-		Mutex quitMutex_;
-		std::size_t numThreads_;
+		std::list<std::unique_ptr<IThreadCommand>> _queue;
+		SmallVector<Thread, 0> _threads;
+		Mutex _queueMutex;
+		CondVariable _queueCV;
+		Mutex _quitMutex;
+		std::size_t _numThreads;
 
-		ThreadStruct threadStruct_;
+		ThreadStruct _threadStruct;
 		static void WorkerFunction(void* arg);
 
 		/** @brief Deleted copy constructor */

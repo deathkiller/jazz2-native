@@ -215,32 +215,32 @@ namespace nCine::RHI::D3D11
 			std::uint32_t Size = 0;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static D3D11ShaderProgram* currentProgram_;
-		static const D3D11Texture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static D3D11RenderTarget* currentRenderTarget_;
+		static D3D11ShaderProgram* _currentProgram;
+		static const D3D11Texture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static D3D11RenderTarget* _currentRenderTarget;
 
 		// Real Direct3D 11 objects (owned)
-		static ID3D11Device* device_;
-		static ID3D11DeviceContext* context_;
-		static IDXGISwapChain* swapchain_;
-		static ID3D11RenderTargetView* backbufferRtv_;
-		static bool vsync_;
+		static ID3D11Device* _device;
+		static ID3D11DeviceContext* _context;
+		static IDXGISwapChain* _swapchain;
+		static ID3D11RenderTargetView* _backbufferRtv;
+		static bool _vsync;
 		// DXGI_SWAP_CHAIN_FLAGs the swap chain was actually created with (the presentation model is negotiated
 		// with fallbacks, see CreateSwapchain): ResizeBuffers() must repeat them, and tearing may only be
 		// requested at present time when the chain carries DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
-		static std::uint32_t swapchainFlags_;
-		static std::int32_t backbufferWidth_;
-		static std::int32_t backbufferHeight_;
+		static std::uint32_t _swapchainFlags;
+		static std::int32_t _backbufferWidth;
+		static std::int32_t _backbufferHeight;
 		// Largest 2D texture dimension of the obtained feature level (set by CreateSwapchain)
-		static std::int32_t maxTextureDimension_;
+		static std::int32_t _maxTextureDimension;
 
 		// The engine renders in the OpenGL convention. The D3D backend replays that faithfully: every draw's
 		// clip-space Y is flipped (projection matrix, see BindConstantBuffers) so all targets - the back-buffer and
@@ -249,20 +249,20 @@ namespace nCine::RHI::D3D11
 		// (no render target) is drawn into this intermediate texture and PresentFrame() flip-blits it into the DXGI
 		// back-buffer (the single GL bottom-up -> D3D top-down scan-out correction, the software backend's
 		// SDL_FLIP_VERTICAL equivalent). A negative-height viewport, the usual remedy, is ignored by the runtime here.
-		static ID3D11Texture2D* presentTexture_;
-		static ID3D11RenderTargetView* presentRtv_;
-		static ID3D11ShaderResourceView* presentSrv_;
+		static ID3D11Texture2D* _presentTexture;
+		static ID3D11RenderTargetView* _presentRtv;
+		static ID3D11ShaderResourceView* _presentSrv;
 
 		// Set while BeginSecondaryFrame() redirects drawing into a secondary swap chain (an ImGui platform
 		// window): its back-buffer view stands in for the screen target, and because it is presented directly -
 		// without the intermediate texture and its flip-blit - that surface is the one place the backend renders
 		// TOP-DOWN. Both exceptions the orientation implies are keyed on these: no projection Y flip
 		// (BindConstantBuffers) and a flipped scissor rectangle (ApplyRenderState, hence the height).
-		static ID3D11RenderTargetView* secondaryTargetRtv_;
-		static std::int32_t secondaryTargetHeight_;
-		static ID3D11VertexShader* presentVs_;
-		static ID3D11PixelShader* presentPs_;
-		static ID3D11SamplerState* presentSampler_;
+		static ID3D11RenderTargetView* _secondaryTargetRtv;
+		static std::int32_t _secondaryTargetHeight;
+		static ID3D11VertexShader* _presentVs;
+		static ID3D11PixelShader* _presentPs;
+		static ID3D11SamplerState* _presentSampler;
 
 		// Dynamic constant-buffer pool: one reusable DYNAMIC buffer per pool slot, updated with WRITE_DISCARD
 		// when its bytes actually change (the driver versions it so previously recorded draws keep their data).
@@ -276,10 +276,10 @@ namespace nCine::RHI::D3D11
 			std::uint64_t ContentHash = 0;	// xxHash3 of the bytes last uploaded to Buffer
 			std::uint32_t ContentSize = 0;	// number of those bytes (0 = buffer just (re)created, cache invalid)
 		};
-		static SmallVector<PooledCBuffer, 0> cbufferPool_;
+		static SmallVector<PooledCBuffer, 0> _cbufferPool;
 		// Reusable scratch for gathering a _Globals cbuffer's scattered loose uniforms into one contiguous
 		// block so it can be hashed and uploaded in a single copy
-		static SmallVector<std::uint8_t, 0> cbufferStaging_;
+		static SmallVector<std::uint8_t, 0> _cbufferStaging;
 
 		// Cached pipeline-state objects, created on demand from the recorded blend/cull/scissor state
 		struct BlendStateEntry
@@ -287,14 +287,14 @@ namespace nCine::RHI::D3D11
 			std::uint64_t Key;
 			ID3D11BlendState* State;
 		};
-		static SmallVector<BlendStateEntry, 8> blendStates_;
+		static SmallVector<BlendStateEntry, 8> _blendStates;
 		struct RasterStateEntry
 		{
 			std::uint32_t Key;
 			ID3D11RasterizerState* State;
 		};
-		static SmallVector<RasterStateEntry, 8> rasterStates_;
-		static ID3D11DepthStencilState* depthDisabledState_;
+		static SmallVector<RasterStateEntry, 8> _rasterStates;
+		static ID3D11DepthStencilState* _depthDisabledState;
 
 		// Last-applied context state (redundant-bind elimination). DrawCommon re-applies everything each draw
 		// and D3D11 does not filter redundant calls itself, so these shadows skip the API call when the value
@@ -305,23 +305,23 @@ namespace nCine::RHI::D3D11
 		{
 			std::int32_t L = 0, T = 0, R = 0, B = 0;
 		};
-		static ID3D11BlendState* lastBlendState_;
-		static ID3D11RasterizerState* lastRasterState_;
-		static bool depthStateApplied_;
-		static ID3D11VertexShader* lastVs_;
-		static ID3D11PixelShader* lastPs_;
-		static std::uint32_t lastTopology_;			// D3D11_PRIMITIVE_TOPOLOGY value; 0 (UNDEFINED) = unknown
+		static ID3D11BlendState* _lastBlendState;
+		static ID3D11RasterizerState* _lastRasterState;
+		static bool _depthStateApplied;
+		static ID3D11VertexShader* _lastVs;
+		static ID3D11PixelShader* _lastPs;
+		static std::uint32_t _lastTopology;			// D3D11_PRIMITIVE_TOPOLOGY value; 0 (UNDEFINED) = unknown
 		// The RTV set last passed to OMSetRenderTargets (all bound color attachments, in slot order)
-		static ID3D11RenderTargetView* lastRtvs_[MaxRenderTargets];
-		static std::uint32_t lastRtvCount_;
-		static bool lastRtvValid_;
-		static Recti lastViewport_;
-		static bool lastViewportValid_;
-		static CachedRect lastScissorRect_;
-		static bool lastScissorValid_;
-		static ID3D11ShaderResourceView* lastSrvs_[2][MaxTextureUnits];		// [0] = PS stage, [1] = VS stage
-		static ID3D11SamplerState* lastSamplers_[2][MaxTextureUnits];
-		static bool srvShadowValid_;
+		static ID3D11RenderTargetView* _lastRtvs[MaxRenderTargets];
+		static std::uint32_t _lastRtvCount;
+		static bool _lastRtvValid;
+		static Recti _lastViewport;
+		static bool _lastViewportValid;
+		static CachedRect _lastScissorRect;
+		static bool _lastScissorValid;
+		static ID3D11ShaderResourceView* _lastSrvs[2][MaxTextureUnits];		// [0] = PS stage, [1] = VS stage
+		static ID3D11SamplerState* _lastSamplers[2][MaxTextureUnits];
+		static bool _srvShadowValid;
 
 		/** @brief Forgets all last-applied context state so the next draw re-issues every binding */
 		static void InvalidateCachedState();
@@ -329,7 +329,7 @@ namespace nCine::RHI::D3D11
 		/** @brief Returns the view standing in for the "screen" target: the present texture, or a secondary swap chain's back-buffer while one is bound */
 		static ID3D11RenderTargetView* ScreenRtv();
 
-		/** @brief (Re)creates @ref backbufferRtv_ from the current swap-chain back-buffer and binds it */
+		/** @brief (Re)creates @ref _backbufferRtv from the current swap-chain back-buffer and binds it */
 		static bool CreateBackbufferRtv();
 		/** @brief (Re)creates the intermediate present texture (RTV+SRV) and the flip-blit shaders/sampler at @p width x @p height */
 		static bool CreatePresentResources(std::int32_t width, std::int32_t height);

@@ -36,13 +36,13 @@ namespace nCine
 
 	private:
 		/** @brief Array of opaque render command pointers */
-		SmallVector<RenderCommand*, 0> opaqueQueue_;
+		SmallVector<RenderCommand*, 0> _opaqueQueue;
 		/** @brief Array of opaque batched render command pointers */
-		SmallVector<RenderCommand*, 0> opaqueBatchedQueue_;
+		SmallVector<RenderCommand*, 0> _opaqueBatchedQueue;
 		/** @brief Array of transparent render command pointers */
-		SmallVector<RenderCommand*, 0> transparentQueue_;
+		SmallVector<RenderCommand*, 0> _transparentQueue;
 		/** @brief Array of transparent batched render command pointers */
-		SmallVector<RenderCommand*, 0> transparentBatchedQueue_;
+		SmallVector<RenderCommand*, 0> _transparentBatchedQueue;
 	};
 
 }

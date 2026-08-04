@@ -43,9 +43,9 @@ namespace nCine
 
 	private:
 		/** @brief Audio file handle */
-		std::unique_ptr<Death::IO::Stream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> _fileHandle;
 		/** @brief Vorbisfile decoder handle */
-		mutable OggVorbis_File oggFile_;
+		mutable OggVorbis_File _oggFile;
 
 #if defined(WITH_VORBIS_DYNAMIC)
 		using ov_clear_t = decltype(ov_clear);

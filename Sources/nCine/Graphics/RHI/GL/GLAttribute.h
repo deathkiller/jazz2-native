@@ -26,19 +26,19 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the attribute location, or -1 if it has no location */
 		inline GLint GetLocation() const {
-			return location_;
+			return _location;
 		}
 		/** @brief Returns the number of components for array attributes (1 for non-array attributes) */
 		inline GLint GetSize() const {
-			return size_;
+			return _size;
 		}
 		/** @brief Returns the GL type of the attribute (e.g., `GL_FLOAT_VEC4`) */
 		inline GLenum GetType() const {
-			return type_;
+			return _type;
 		}
 		/** @brief Returns the attribute name */
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 		/**
 		 * @brief Returns the basic GL type underlying the attribute type
@@ -57,11 +57,11 @@ namespace nCine::RHI::GL
 		bool HasReservedPrefix() const;
 
 	private:
-		GLint location_;
-		GLint size_;
-		GLenum type_;
+		GLint _location;
+		GLint _size;
+		GLenum _type;
 		static constexpr std::int32_t MaxNameLength = 32;
-		char name_[MaxNameLength];
+		char _name[MaxNameLength];
 	};
 
 }

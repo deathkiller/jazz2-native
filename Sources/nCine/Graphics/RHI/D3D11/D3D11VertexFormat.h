@@ -32,113 +32,113 @@ namespace nCine::RHI::D3D11
 
 		public:
 			Attribute()
-				: vbo_(nullptr), pointer_(nullptr), index_(0), size_(0), type_(0), stride_(0), baseOffset_(0), enabled_(false), normalized_(false) {}
+				: _vbo(nullptr), _pointer(nullptr), _index(0), _size(0), _type(0), _stride(0), _baseOffset(0), _enabled(false), _normalized(false) {}
 
 			void Init(std::uint32_t index, std::int32_t size, std::uint32_t type) {
-				index_ = index;
-				size_ = size;
-				type_ = type;
-				enabled_ = true;
+				_index = index;
+				_size = size;
+				_type = type;
+				_enabled = true;
 			}
 
 			// Mirrors the OpenGL backend's `Attribute::operator==` (only enabled attributes are compared in
 			// depth); the source buffer is compared by pointer identity, which is equivalent for this backend
 			// and avoids needing the complete `D3D11BufferObject` type in this header
 			bool operator==(const Attribute& other) const {
-				return ((other.enabled_ == false && enabled_ == false) ||
-						((other.enabled_ == true && enabled_ == true) &&
-							other.vbo_ == vbo_ &&
-							other.index_ == index_ &&
-							other.size_ == size_ &&
-							other.type_ == type_ &&
-							other.normalized_ == normalized_ &&
-							other.stride_ == stride_ &&
-							other.pointer_ == pointer_ &&
-							other.baseOffset_ == baseOffset_));
+				return ((other._enabled == false && _enabled == false) ||
+						((other._enabled == true && _enabled == true) &&
+							other._vbo == _vbo &&
+							other._index == _index &&
+							other._size == _size &&
+							other._type == _type &&
+							other._normalized == _normalized &&
+							other._stride == _stride &&
+							other._pointer == _pointer &&
+							other._baseOffset == _baseOffset));
 			}
 			bool operator!=(const Attribute& other) const {
 				return !operator==(other);
 			}
 
 			inline bool IsEnabled() const {
-				return enabled_;
+				return _enabled;
 			}
 			inline const D3D11BufferObject* GetVbo() const {
-				return vbo_;
+				return _vbo;
 			}
 			inline std::uint32_t GetIndex() const {
-				return index_;
+				return _index;
 			}
 			inline std::int32_t GetSize() const {
-				return size_;
+				return _size;
 			}
 			inline std::uint32_t GetType() const {
-				return type_;
+				return _type;
 			}
 			inline bool IsNormalized() const {
-				return normalized_;
+				return _normalized;
 			}
 			inline std::int32_t GetStride() const {
-				return stride_;
+				return _stride;
 			}
 			inline const void* GetPointer() const {
-				return pointer_;
+				return _pointer;
 			}
 			inline std::uint32_t GetBaseOffset() const {
-				return baseOffset_;
+				return _baseOffset;
 			}
 
 			void SetVboParameters(std::int32_t stride, const void* pointer) {
-				stride_ = stride;
-				pointer_ = pointer;
+				_stride = stride;
+				_pointer = pointer;
 			}
 			inline void setVbo(const D3D11BufferObject* vbo) {
-				vbo_ = vbo;
+				_vbo = vbo;
 			}
 			inline void SetBaseOffset(std::uint32_t baseOffset) {
-				baseOffset_ = baseOffset;
+				_baseOffset = baseOffset;
 			}
 			inline void SetSize(std::int32_t size) {
-				size_ = size;
+				_size = size;
 			}
 			inline void SetType(std::uint32_t type) {
-				type_ = type;
+				_type = type;
 			}
 			inline void SetNormalized(bool normalized) {
-				normalized_ = normalized;
+				_normalized = normalized;
 			}
 
 		private:
-			const D3D11BufferObject* vbo_;
-			const void* pointer_;
-			std::uint32_t index_;
-			std::int32_t size_;
-			std::uint32_t type_;
-			std::int32_t stride_;
-			std::uint32_t baseOffset_;
-			bool enabled_;
-			bool normalized_;
+			const D3D11BufferObject* _vbo;
+			const void* _pointer;
+			std::uint32_t _index;
+			std::int32_t _size;
+			std::uint32_t _type;
+			std::int32_t _stride;
+			std::uint32_t _baseOffset;
+			bool _enabled;
+			bool _normalized;
 		};
 
 		D3D11VertexFormat()
-			: ibo_(nullptr) {}
+			: _ibo(nullptr) {}
 
 		inline std::uint32_t GetAttributeCount() const {
-			return std::uint32_t(attributes_.size());
+			return std::uint32_t(_attributes.size());
 		}
 
 		inline const D3D11BufferObject* GetIbo() const {
-			return ibo_;
+			return _ibo;
 		}
 		inline void SetIbo(const D3D11BufferObject* ibo) {
-			ibo_ = ibo;
+			_ibo = ibo;
 		}
 		/** @brief Applies the vertex format (no-op; the recorded layout is consumed at input-layout creation) */
 		void Define() {}
 		/** @brief Disables all attributes and clears the index buffer */
 		void Reset() {
-			attributes_.clear();
-			ibo_ = nullptr;
+			_attributes.clear();
+			_ibo = nullptr;
 		}
 
 		std::uint64_t CalculateFingerprint() const {
@@ -146,22 +146,22 @@ namespace nCine::RHI::D3D11
 		}
 
 		inline Attribute& operator[](std::uint32_t index) {
-			if (index >= attributes_.size()) {
-				attributes_.resize(index + 1);
+			if (index >= _attributes.size()) {
+				_attributes.resize(index + 1);
 			}
-			return attributes_[index];
+			return _attributes[index];
 		}
 		inline const Attribute& operator[](std::uint32_t index) const {
-			return attributes_[index];
+			return _attributes[index];
 		}
 
 		// Mirrors the OpenGL backend's `GLVertexFormat::operator==`: equal index buffers and attribute sets
 		bool operator==(const D3D11VertexFormat& other) const {
-			if (other.ibo_ != ibo_ || other.attributes_.size() != attributes_.size()) {
+			if (other._ibo != _ibo || other._attributes.size() != _attributes.size()) {
 				return false;
 			}
-			for (std::uint32_t i = 0; i < attributes_.size(); i++) {
-				if (other.attributes_[i] != attributes_[i]) {
+			for (std::uint32_t i = 0; i < _attributes.size(); i++) {
+				if (other._attributes[i] != _attributes[i]) {
 					return false;
 				}
 			}
@@ -172,8 +172,8 @@ namespace nCine::RHI::D3D11
 		}
 
 	private:
-		SmallVector<Attribute, MaxAttributes> attributes_;
-		const D3D11BufferObject* ibo_;
+		SmallVector<Attribute, MaxAttributes> _attributes;
+		const D3D11BufferObject* _ibo;
 	};
 
 	/**

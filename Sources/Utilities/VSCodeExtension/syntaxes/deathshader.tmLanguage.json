@@ -1,0 +1,576 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Death™ Shader",
+	"scopeName": "source.deathshader",
+	"fileTypes": [
+		"shader",
+		"inc"
+	],
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#version-error"
+		},
+		{
+			"include": "#preprocessor"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#entry-points"
+		},
+		{
+			"include": "#declarations"
+		},
+		{
+			"include": "#code"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.deathshader",
+					"begin": "//",
+					"end": "$"
+				},
+				{
+					"name": "comment.block.deathshader",
+					"begin": "/\\*",
+					"end": "\\*/"
+				}
+			]
+		},
+		"version-error": {
+			"comment": "The engine injects the #version header itself - writing one in a .shader file is an error",
+			"match": "^\\s*(#\\s*version)\\b.*$",
+			"name": "invalid.illegal.version-directive.deathshader"
+		},
+		"preprocessor": {
+			"patterns": [
+				{
+					"comment": "#include \"relative/path\" - expanded textually before parsing",
+					"match": "^\\s*(#\\s*include)\\s+(\"[^\"]*\")",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.include.deathshader"
+						},
+						"2": {
+							"name": "string.quoted.double.include.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "Stage conditionals resolved at compile time - only the #ifdef/#ifndef forms are legal",
+					"match": "^\\s*(#\\s*(?:ifdef|ifndef))\\s+(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER)\\b",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.conditional.deathshader"
+						},
+						"2": {
+							"name": "support.constant.stage-macro.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "A stage macro in any other preprocessor construct is a hard error",
+					"match": "^\\s*(#\\s*(?:if|elif|define|undef))\\b.*\\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER)\\b.*$",
+					"name": "invalid.illegal.stage-macro-form.deathshader",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.deathshader"
+						}
+					}
+				},
+				{
+					"match": "^\\s*(#\\s*(?:define|undef))\\s+([A-Za-z_][A-Za-z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.define.deathshader"
+						},
+						"2": {
+							"name": "entity.name.function.preprocessor.deathshader"
+						}
+					}
+				},
+				{
+					"match": "^\\s*(#\\s*(?:if|ifdef|ifndef|else|elif|endif|error|pragma|line|extension))\\b",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.deathshader"
+						}
+					}
+				},
+				{
+					"match": "\\bdefined\\b",
+					"name": "keyword.other.defined.deathshader"
+				}
+			]
+		},
+		"directives": {
+			"patterns": [
+				{
+					"comment": "program <Name>; - required, exactly once, before every other directive",
+					"match": "^\\s*(program)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.program.deathshader"
+						},
+						"2": {
+							"name": "entity.name.type.program.deathshader"
+						},
+						"3": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "batched <Name>; - canvas_item only, emits the batched twin program",
+					"match": "^\\s*(batched)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.batched.deathshader"
+						},
+						"2": {
+							"name": "entity.name.type.program.deathshader"
+						},
+						"3": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "shader_type canvas_item|custom;",
+					"match": "^\\s*(shader_type)\\s+(canvas_item|custom)?\\s*([A-Za-z_][A-Za-z0-9_]*)?\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.shader-type.deathshader"
+						},
+						"2": {
+							"name": "constant.language.shader-type.deathshader"
+						},
+						"3": {
+							"name": "invalid.illegal.shader-type.deathshader"
+						},
+						"4": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "variant <NAME>; - one extra program variant compiled with #define <NAME> (1)",
+					"match": "^\\s*(variant)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.variant.deathshader"
+						},
+						"2": {
+							"name": "entity.name.constant.variant.deathshader"
+						},
+						"3": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "render_mode <mode>[, <mode>];",
+					"begin": "^\\s*(render_mode)\\b",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.other.directive.render-mode.deathshader"
+						}
+					},
+					"end": ";",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					},
+					"patterns": [
+						{
+							"match": "\\b(blend_mix|blend_add|blend_sub|blend_mul|blend_premul_alpha|unshaded)\\b",
+							"name": "constant.language.render-mode.deathshader"
+						},
+						{
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+							"name": "invalid.illegal.render-mode.deathshader"
+						},
+						{
+							"match": ",",
+							"name": "punctuation.separator.deathshader"
+						}
+					]
+				},
+				{
+					"comment": "precision mediump|highp; - the two-token form is a directive (with a type it is plain GLSL)",
+					"match": "^\\s*(precision)\\s+(mediump|highp)\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.precision.deathshader"
+						},
+						"2": {
+							"name": "constant.language.precision.deathshader"
+						},
+						"3": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "attribute [layout(location = N)] <decl>; - a vertex attribute (vertex stage only)",
+					"match": "^\\s*(attribute)\\b",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.attribute.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "varying [flat] [precision] <type> <name>; - an out/in pair across the two stages",
+					"match": "^\\s*(varying)\\b(?:\\s+(flat|smooth|noperspective|centroid))?",
+					"captures": {
+						"1": {
+							"name": "keyword.other.directive.varying.deathshader"
+						},
+						"2": {
+							"name": "storage.modifier.interpolation.deathshader"
+						}
+					}
+				}
+			]
+		},
+		"uniform-hints": {
+			"comment": "uniform <type> <name> : <hint>[, <hint>]; - texture_unit(N) is the only hint reflection keeps",
+			"begin": "(:)(?=[^;]*;)",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.separator.hint.deathshader"
+				}
+			},
+			"end": "(?=;)",
+			"patterns": [
+				{
+					"match": "\\b(texture_unit)\\s*(\\()\\s*(\\d+)\\s*(\\))",
+					"captures": {
+						"1": {
+							"name": "support.function.hint.texture-unit.deathshader"
+						},
+						"2": {
+							"name": "punctuation.section.parens.begin.deathshader"
+						},
+						"3": {
+							"name": "constant.numeric.deathshader"
+						},
+						"4": {
+							"name": "punctuation.section.parens.end.deathshader"
+						}
+					}
+				},
+				{
+					"match": "\\b(hint_range)\\s*(\\()([^)]*)(\\))",
+					"captures": {
+						"1": {
+							"name": "support.function.hint.deathshader"
+						},
+						"2": {
+							"name": "punctuation.section.parens.begin.deathshader"
+						},
+						"3": {
+							"name": "constant.numeric.deathshader"
+						},
+						"4": {
+							"name": "punctuation.section.parens.end.deathshader"
+						}
+					}
+				},
+				{
+					"match": "\\b(source_color|filter_nearest|filter_linear|repeat_enable|repeat_disable)\\b",
+					"name": "support.function.hint.deathshader"
+				},
+				{
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+					"name": "invalid.illegal.hint.deathshader"
+				},
+				{
+					"match": ",",
+					"name": "punctuation.separator.deathshader"
+				}
+			]
+		},
+		"declarations": {
+			"patterns": [
+				{
+					"comment": "layout (std140) uniform <Block> { ... };",
+					"match": "\\b(layout)\\s*(\\()\\s*(std140|std430|location|binding|set)\\b",
+					"captures": {
+						"1": {
+							"name": "storage.modifier.layout.deathshader"
+						},
+						"2": {
+							"name": "punctuation.section.parens.begin.deathshader"
+						},
+						"3": {
+							"name": "support.constant.layout.deathshader"
+						}
+					}
+				},
+				{
+					"match": "^\\s*(uniform)\\b",
+					"captures": {
+						"1": {
+							"name": "storage.modifier.uniform.deathshader"
+						}
+					}
+				},
+				{
+					"include": "#uniform-hints"
+				},
+				{
+					"match": "\\b(struct)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.struct.deathshader"
+						},
+						"2": {
+							"name": "entity.name.type.struct.deathshader"
+						}
+					}
+				}
+			]
+		},
+		"entry-points": {
+			"patterns": [
+				{
+					"comment": "The fixed-function pass list of the console backends, transpiled to C++ (never part of the GLSL stages)",
+					"begin": "^\\s*(void)\\s+(fixed_function)\\s*(\\()([^)]*)(\\))\\s*(\\{)",
+					"beginCaptures": {
+						"1": {
+							"name": "storage.type.deathshader"
+						},
+						"2": {
+							"name": "entity.name.function.entry-point.fixed-function.deathshader"
+						},
+						"3": {
+							"name": "punctuation.section.parens.begin.deathshader"
+						},
+						"4": {
+							"name": "meta.fixed-function-targets.deathshader",
+							"patterns": [
+								{
+									"match": "\\b(pvr|gx|psp)\\b",
+									"name": "constant.language.fixed-function-target.deathshader"
+								},
+								{
+									"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+									"name": "invalid.illegal.fixed-function-target.deathshader"
+								},
+								{
+									"match": ",",
+									"name": "punctuation.separator.deathshader"
+								}
+							]
+						},
+						"5": {
+							"name": "punctuation.section.parens.end.deathshader"
+						},
+						"6": {
+							"name": "punctuation.section.block.begin.deathshader"
+						}
+					},
+					"end": "^\\s*(\\})",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.section.block.end.deathshader"
+						}
+					},
+					"name": "meta.block.fixed-function.deathshader",
+					"patterns": [
+						{
+							"include": "#fixed-function-body"
+						}
+					]
+				},
+				{
+					"comment": "void vertex() / void fragment() - the GLSL entry points spliced into main()",
+					"match": "^\\s*(void)\\s+(vertex|fragment)\\s*(\\()\\s*(\\))",
+					"captures": {
+						"1": {
+							"name": "storage.type.deathshader"
+						},
+						"2": {
+							"name": "entity.name.function.entry-point.deathshader"
+						},
+						"3": {
+							"name": "punctuation.section.parens.begin.deathshader"
+						},
+						"4": {
+							"name": "punctuation.section.parens.end.deathshader"
+						}
+					}
+				}
+			]
+		},
+		"fixed-function-body": {
+			"patterns": [
+				{
+					"include": "#comments"
+				},
+				{
+					"include": "#preprocessor"
+				},
+				{
+					"comment": "pipeline <name>; - binds the effect to a backend pipeline stage instead of a pass list",
+					"match": "\\b(pipeline)\\s+(tile_map_mesh|lighting_combine|line_strip_mesh)\\s*(;)",
+					"captures": {
+						"1": {
+							"name": "keyword.other.pipeline.deathshader"
+						},
+						"2": {
+							"name": "support.constant.pipeline-intrinsic.deathshader"
+						},
+						"3": {
+							"name": "punctuation.terminator.deathshader"
+						}
+					}
+				},
+				{
+					"comment": "pass <name>; - declares one bundle of hardware state",
+					"match": "\\b(pass)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.pass.deathshader"
+						},
+						"2": {
+							"name": "variable.other.pass.deathshader"
+						}
+					}
+				},
+				{
+					"match": "\\b(submit_quad|submit_strip|submit_strip_shaded)\\b",
+					"name": "support.function.submit.deathshader"
+				},
+				{
+					"match": "\\b(strip_position|strip_uv|strip_color)\\b",
+					"name": "support.function.strip.deathshader"
+				},
+				{
+					"comment": "Optional EffectContext facilities - the generated table records which ones an effect calls",
+					"match": "\\b(texel_size|has_texel_size|quad_origin|quad_axis_x|quad_axis_y|has_uniform|uniform_vec2|uniform_vec4)\\b",
+					"name": "support.function.context.deathshader"
+				},
+				{
+					"comment": "Pass fields: color (vec4), offset_color (vec3), screen_offset (vec2), blend, tev, luma_gain (float)",
+					"match": "(\\.)(color|offset_color|screen_offset|blend|tev|luma_gain)\\b",
+					"captures": {
+						"1": {
+							"name": "punctuation.accessor.deathshader"
+						},
+						"2": {
+							"name": "variable.other.property.pass-field.deathshader"
+						}
+					}
+				},
+				{
+					"match": "\\b(MATERIAL|ADD|OPAQUE|ALPHA)\\b",
+					"name": "constant.language.blend-mode.deathshader"
+				},
+				{
+					"match": "\\b(MODULATE_X2|MODULATE_X4|MODULATE|SILHOUETTE|TINT_MIX|LUMA_RAMP)\\b",
+					"name": "constant.language.tev-preset.deathshader"
+				},
+				{
+					"match": "\\bctx\\b",
+					"name": "variable.language.context.deathshader"
+				},
+				{
+					"include": "#code"
+				}
+			]
+		},
+		"code": {
+			"patterns": [
+				{
+					"include": "#comments"
+				},
+				{
+					"comment": "Referencing fragColor is a parse error - COLOR is the fragment output variable itself",
+					"match": "\\bfragColor\\b",
+					"name": "invalid.illegal.frag-color.deathshader"
+				},
+				{
+					"comment": "Canvas-mode built-ins; also the fragment output in custom mode (COLOR)",
+					"match": "\\b(COLOR|UV|VERTEX|PALETTE_OFFSET|TEXTURE)\\b",
+					"name": "variable.language.builtin.deathshader"
+				},
+				{
+					"comment": "Canvas built-ins the compiler reports as unsupported",
+					"match": "\\b(NORMAL|SCREEN_UV|SCREEN_PIXEL_SIZE|TIME|POINT_COORD)\\b",
+					"name": "invalid.deprecated.unsupported-builtin.deathshader"
+				},
+				{
+					"match": "\\bgl_(Position|VertexID|InstanceID|FragCoord|FragDepth|PointSize|PointCoord|FrontFacing|ClipDistance|VertexIndex|InstanceIndex)\\b",
+					"name": "variable.language.gl.deathshader"
+				},
+				{
+					"include": "#preprocessor"
+				},
+				{
+					"match": "\\b(if|else|for|while|do|switch|case|default|break|continue|return|discard)\\b",
+					"name": "keyword.control.deathshader"
+				},
+				{
+					"match": "\\b(void|bool|int|uint|float|double|vec2|vec3|vec4|bvec2|bvec3|bvec4|ivec2|ivec3|ivec4|uvec2|uvec3|uvec4|mat2|mat3|mat4|mat2x2|mat2x3|mat2x4|mat3x2|mat3x3|mat3x4|mat4x2|mat4x3|mat4x4|sampler2D|sampler2DArray|sampler3D|samplerCube|isampler2D|usampler2D|sampler2DShadow)\\b",
+					"name": "storage.type.deathshader"
+				},
+				{
+					"match": "\\b(const|in|out|inout|uniform|varying|attribute|flat|smooth|noperspective|centroid|invariant|layout|struct|precision|lowp|mediump|highp)\\b",
+					"name": "storage.modifier.deathshader"
+				},
+				{
+					"comment": "GLSL built-in functions",
+					"match": "\\b(abs|acos|acosh|all|any|asin|asinh|atan|atanh|bitCount|ceil|clamp|cos|cosh|cross|degrees|determinant|dFdx|dFdy|distance|dot|equal|exp|exp2|faceforward|floatBitsToInt|floatBitsToUint|floor|fma|fract|fwidth|greaterThan|greaterThanEqual|intBitsToFloat|inverse|inversesqrt|isinf|isnan|length|lessThan|lessThanEqual|log|log2|matrixCompMult|max|min|mix|mod|modf|normalize|not|notEqual|outerProduct|pow|radians|reflect|refract|round|roundEven|sign|sin|sinh|smoothstep|sqrt|step|tan|tanh|texelFetch|texture|textureGrad|textureLod|textureProj|textureSize|transpose|trunc|uintBitsToFloat)\\b(?=\\s*\\()",
+					"name": "support.function.glsl.deathshader"
+				},
+				{
+					"match": "\\b(true|false)\\b",
+					"name": "constant.language.boolean.deathshader"
+				},
+				{
+					"comment": "The variant/config macros that pass through textually",
+					"match": "\\b(GL_ES|BATCH_SIZE)\\b",
+					"name": "support.constant.deathshader"
+				},
+				{
+					"match": "\\b\\d+\\.\\d*(?:[eE][+-]?\\d+)?[fF]?\\b|\\b\\.\\d+(?:[eE][+-]?\\d+)?[fF]?\\b|\\b\\d+(?:[eE][+-]?\\d+)[fF]?\\b|\\b\\d+[uU]?\\b|\\b0[xX][0-9a-fA-F]+[uU]?\\b",
+					"name": "constant.numeric.deathshader"
+				},
+				{
+					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*\\()",
+					"name": "entity.name.function.call.deathshader"
+				},
+				{
+					"match": "(\\.)([xyzwrgbastpq]{1,4})\\b",
+					"captures": {
+						"1": {
+							"name": "punctuation.accessor.deathshader"
+						},
+						"2": {
+							"name": "variable.other.member.swizzle.deathshader"
+						}
+					}
+				},
+				{
+					"match": "<<|>>|\\+\\+|--|&&|\\|\\||[-+*/%<>=!&^|~?:]",
+					"name": "keyword.operator.deathshader"
+				},
+				{
+					"match": ";",
+					"name": "punctuation.terminator.deathshader"
+				}
+			]
+		}
+	}
+}

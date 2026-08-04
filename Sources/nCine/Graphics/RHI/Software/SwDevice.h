@@ -250,23 +250,23 @@ namespace nCine::RHI::Software
 			std::uint32_t Size = 0;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static SwShaderProgram* currentProgram_;
-		static const SwTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static SwRenderTarget* currentRenderTarget_;
-		static std::uint8_t* defaultFbPixels_;
-		static std::int32_t defaultFbWidth_;
-		static std::int32_t defaultFbHeight_;
-		static std::int32_t defaultFbStride_;
+		static SwShaderProgram* _currentProgram;
+		static const SwTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static SwRenderTarget* _currentRenderTarget;
+		static std::uint8_t* _defaultFbPixels;
+		static std::int32_t _defaultFbWidth;
+		static std::int32_t _defaultFbHeight;
+		static std::int32_t _defaultFbStride;
 		/** @brief Backend-owned pixel store for the screen back-buffer (only used by the present path) */
-		static std::vector<std::uint8_t> screenPixels_;
+		static std::vector<std::uint8_t> _screenPixels;
 
 		/** @brief One queued software-lighting/water combine, submitted by the compositor and applied at the next Combine draw */
 		struct PendingSoftwareLight
@@ -279,7 +279,7 @@ namespace nCine::RHI::Software
 			float WaterLevelPx = 0.0f, WaterTime = 0.0f, WaterCamY = 0.0f;
 		};
 		/** @brief FIFO of pending software-lighting combines (one per viewport, in submission order) */
-		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
+		static std::vector<PendingSoftwareLight> _pendingSoftwareLights;
 
 		/** @brief Resolves the color framebuffer that draws and clears write into (RT color 0, else default) */
 		static bool ResolveFramebuffer(Framebuffer& out);

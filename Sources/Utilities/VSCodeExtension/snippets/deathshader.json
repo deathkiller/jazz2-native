@@ -1,0 +1,184 @@
+{
+	"Custom-mode shader skeleton": {
+		"prefix": "shader-custom",
+		"description": "A full custom-mode .shader file: program directive plus both entry points",
+		"body": [
+			"program ${1:Name};",
+			"",
+			"uniform mat4 uProjectionMatrix;",
+			"uniform mat4 uViewMatrix;",
+			"",
+			"attribute vec2 aPosition;",
+			"attribute vec2 aTexCoords;",
+			"",
+			"varying vec2 vTexCoords;",
+			"",
+			"void vertex() {",
+			"\tgl_Position = uProjectionMatrix * uViewMatrix * vec4(aPosition, 0.0, 1.0);",
+			"\tvTexCoords = aTexCoords;",
+			"}",
+			"",
+			"void fragment() {",
+			"\tCOLOR = ${0:vec4(1.0)};",
+			"}",
+			""
+		]
+	},
+	"Canvas-mode shader skeleton": {
+		"prefix": "shader-canvas",
+		"description": "A canvas_item .shader file using the sprite template (no vertex() needed)",
+		"body": [
+			"program ${1:Name};",
+			"shader_type canvas_item;",
+			"",
+			"uniform sampler2D uTexture : texture_unit(0);",
+			"",
+			"void fragment() {",
+			"\tCOLOR = texture(TEXTURE, UV) * COLOR;$0",
+			"}",
+			""
+		]
+	},
+	"program directive": {
+		"prefix": "program",
+		"description": "Required once, before every other directive",
+		"body": "program ${1:Name};$0"
+	},
+	"shader_type canvas_item": {
+		"prefix": "shader_type",
+		"description": "Opt into the sprite-template lowering (default is custom)",
+		"body": "shader_type ${1|canvas_item,custom|};$0"
+	},
+	"variant directive": {
+		"prefix": "variant",
+		"description": "One extra program variant, compiled with #define <NAME> (1)",
+		"body": "variant ${1:USE_PALETTE};$0"
+	},
+	"batched directive": {
+		"prefix": "batched",
+		"description": "canvas_item only - also emit the batched twin program",
+		"body": "batched ${1:BatchedName};$0"
+	},
+	"render_mode directive": {
+		"prefix": "render_mode",
+		"description": "Blend/shading modes stored as the RenderModes bitmask",
+		"body": "render_mode ${1|blend_mix,blend_add,blend_sub,blend_mul,blend_premul_alpha,unshaded|};$0"
+	},
+	"precision directive": {
+		"prefix": "precision",
+		"description": "Float precision of the auto-emitted GL_ES fragment prologue",
+		"body": "precision ${1|mediump,highp|};$0"
+	},
+	"vertex entry point": {
+		"prefix": "vertex",
+		"description": "The vertex stage body, spliced verbatim into main()",
+		"body": [
+			"void vertex() {",
+			"\t$0",
+			"}"
+		]
+	},
+	"fragment entry point": {
+		"prefix": "fragment",
+		"description": "The fragment stage body; COLOR is the output and is undefined until written",
+		"body": [
+			"void fragment() {",
+			"\tCOLOR = $0;",
+			"}"
+		]
+	},
+	"fixed_function block (generic)": {
+		"prefix": "fixed_function",
+		"description": "Console fixed-function pass list serving every backend without a more specific block",
+		"body": [
+			"void fixed_function() {",
+			"\tpass p;",
+			"\tp.color = ${1:COLOR};",
+			"\tsubmit_quad(p);$0",
+			"}"
+		]
+	},
+	"fixed_function block (per backend)": {
+		"prefix": "fixed_function-target",
+		"description": "Fixed-function block overriding the generic one for specific backends",
+		"body": [
+			"void fixed_function(${1|pvr,gx,psp|}) {",
+			"\tpass p;",
+			"\tp.color = ${2:COLOR};",
+			"\tsubmit_quad(p);$0",
+			"}"
+		]
+	},
+	"fixed_function pipeline block": {
+		"prefix": "pipeline",
+		"description": "Bind the effect to a backend pipeline stage instead of a pass list",
+		"body": [
+			"void fixed_function() {",
+			"\tpipeline ${1|tile_map_mesh,lighting_combine,line_strip_mesh|};",
+			"}"
+		]
+	},
+	"pass declaration": {
+		"prefix": "pass",
+		"description": "One bundle of hardware state, submitted over the sprite quad",
+		"body": [
+			"pass ${1:p};",
+			"${1:p}.color = ${2:COLOR};",
+			"submit_quad(${1:p});$0"
+		]
+	},
+	"sampler uniform with texture unit": {
+		"prefix": "uniform-sampler",
+		"description": "Sampler uniform with an explicit texture_unit(N) hint",
+		"body": "uniform sampler2D ${1:uTexture} : texture_unit(${2:0});$0"
+	},
+	"std140 instance block": {
+		"prefix": "instance-block",
+		"description": "The engine's standard per-sprite uniform block",
+		"body": [
+			"layout (std140) uniform InstanceBlock",
+			"{",
+			"\tmat4 modelMatrix;",
+			"\tvec4 color;",
+			"\tvec4 texRect;",
+			"\tvec2 spriteSize;",
+			"};",
+			"$0"
+		]
+	},
+	"varying declaration": {
+		"prefix": "varying",
+		"description": "Lowered to an out in the vertex stage and an in in the fragment stage",
+		"body": "varying ${1|vec2,vec3,vec4,float|} ${2:vValue};$0"
+	},
+	"attribute declaration": {
+		"prefix": "attribute",
+		"description": "A vertex attribute - emitted in the vertex stage only",
+		"body": "attribute ${1|vec2,vec3,vec4|} ${2:aValue};$0"
+	},
+	"stage conditional": {
+		"prefix": "ifdef-stage",
+		"description": "Compile-time stage conditional (rarely needed - only the #ifdef/#ifndef forms are legal)",
+		"body": [
+			"#ifdef ${1|VERTEX_STAGE,FRAGMENT_STAGE|}",
+			"$0",
+			"#endif"
+		]
+	},
+	"software-renderer conditional": {
+		"prefix": "ifdef-software",
+		"description": "Resolved when a stage source is built; only --emit-sw-generated defines it",
+		"body": [
+			"#ifndef SOFTWARE_RENDERER",
+			"$0",
+			"#else",
+			"",
+			"#endif"
+		]
+	},
+	"include": {
+		"prefix": "include",
+		"description": "Textual include, relative to this file, up to depth 8",
+		"body": "#include \"${1:Include/Name.inc}\"$0"
+	}
+}

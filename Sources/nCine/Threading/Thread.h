@@ -52,11 +52,11 @@ namespace nCine
 
 	private:
 #	if defined(DEATH_TARGET_WINDOWS)
-		DWORD_PTR affinityMask_;
+		DWORD_PTR _affinityMask;
 #	elif defined(DEATH_TARGET_APPLE)
-		integer_t affinityTag_;
+		integer_t _affinityTag;
 #	else
-		cpu_set_t cpuSet_;
+		cpu_set_t _cpuSet;
 #	endif
 	};
 

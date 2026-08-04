@@ -130,22 +130,22 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 		inline Introspection GetIntrospection() const {
-			return introspection_;
+			return _introspection;
 		}
 		inline QueryPhase GetQueryPhase() const {
-			return queryPhase_;
+			return _queryPhase;
 		}
 		inline std::uint32_t GetBatchSize() const {
-			return batchSize_;
+			return _batchSize;
 		}
 		inline void SetBatchSize(std::uint32_t value) {
-			batchSize_ = value;
+			_batchSize = value;
 		}
 
 		bool IsLinked() const;
@@ -158,10 +158,10 @@ namespace nCine::RHI::GXM
 		}
 
 		inline std::uint32_t GetUniformsSize() const {
-			return uniformsSize_;
+			return _uniformsSize;
 		}
 		inline std::uint32_t GetUniformBlocksSize() const {
-			return uniformBlocksSize_;
+			return _uniformBlocksSize;
 		}
 
 		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
@@ -171,7 +171,7 @@ namespace nCine::RHI::GXM
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
-			reflection_ = reflection;
+			_reflection = reflection;
 		}
 		/**
 			@brief Records the true (program, variant) identity of the loaded shader
@@ -180,12 +180,12 @@ namespace nCine::RHI::GXM
 			fixed-function console backends resolve their generated effect tables from it.
 		*/
 		inline void SetProgramIdentity(const char* programName, const char* variantName) {
-			programName_ = programName;
-			variantName_ = variantName;
+			_programName = programName;
+			_variantName = variantName;
 		}
 		/** @brief Returns the generated program's name, or `nullptr` for one that carries no identity */
 		inline const char* GetProgramName() const {
-			return programName_;
+			return _programName;
 		}
 
 		bool Link(Introspection introspection);
@@ -196,7 +196,7 @@ namespace nCine::RHI::GXM
 		bool FinalizeAfterLinking(Introspection introspection);
 
 		inline std::uint32_t GetAttributeCount() const {
-			return std::uint32_t(attributes_.size());
+			return std::uint32_t(_attributes.size());
 		}
 		bool HasAttribute(const char* name) const;
 		/** @brief Returns `true` if the reflection declares @p name with an integer type (a batch element index) */
@@ -215,10 +215,10 @@ namespace nCine::RHI::GXM
 		void SetObjectLabel(StringView label);
 
 		inline bool GetLogOnErrors() const {
-			return shouldLogOnErrors_;
+			return _shouldLogOnErrors;
 		}
 		inline void SetLogOnErrors(bool shouldLogOnErrors) {
-			shouldLogOnErrors_ = shouldLogOnErrors;
+			_shouldLogOnErrors = shouldLogOnErrors;
 		}
 
 		// -- Backend extensions (used by the uniform caches and the device draw path) --
@@ -230,11 +230,11 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns the compiled vertex stage, or `nullptr` if the program did not link */
 		inline const SceGxmProgram* GetVertexStage() const {
-			return vertexStage_;
+			return _vertexStage;
 		}
 		/** @brief Returns the compiled fragment stage, or `nullptr` */
 		inline const SceGxmProgram* GetFragmentStage() const {
-			return fragmentStage_;
+			return _fragmentStage;
 		}
 		/** @brief Returns/creates the patched vertex program for the currently bound vertex format, or `nullptr` */
 		SceGxmVertexProgram* GetVertexProgram();
@@ -248,20 +248,20 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns the byte size of the vertex stage's default uniform buffer */
 		inline std::uint32_t GetVertexUniformBufferSize() const {
-			return vertexUniformBufferSize_;
+			return _vertexUniformBufferSize;
 		}
 		/** @brief Returns the byte size of the fragment stage's default uniform buffer */
 		inline std::uint32_t GetFragmentUniformBufferSize() const {
-			return fragmentUniformBufferSize_;
+			return _fragmentUniformBufferSize;
 		}
 
 		/** @brief Loose-uniform slots of the vertex stage (resolved once at link time) */
 		inline const SmallVector<GxmUniformSlot, 0>& GetVertexUniformSlots() const {
-			return vertexUniformSlots_;
+			return _vertexUniformSlots;
 		}
 		/** @brief Loose-uniform slots of the fragment stage */
 		inline const SmallVector<GxmUniformSlot, 0>& GetFragmentUniformSlots() const {
-			return fragmentUniformSlots_;
+			return _fragmentUniformSlots;
 		}
 
 		/**
@@ -306,11 +306,11 @@ namespace nCine::RHI::GXM
 
 		/** @brief Uniform-block member uploads of the vertex stage */
 		inline const SmallVector<GxmBlockUpload, 0>& GetVertexBlockUploads() const {
-			return vertexBlockUploads_;
+			return _vertexBlockUploads;
 		}
 		/** @brief Uniform-block member uploads of the fragment stage */
 		inline const SmallVector<GxmBlockUpload, 0>& GetFragmentBlockUploads() const {
-			return fragmentBlockUploads_;
+			return _fragmentBlockUploads;
 		}
 
 		/**
@@ -329,52 +329,52 @@ namespace nCine::RHI::GXM
 
 		/** @brief Sampler slots of the vertex stage (rare, but sceGxm allows vertex texturing) */
 		inline const SmallVector<GxmSamplerSlot, 0>& GetVertexSamplerSlots() const {
-			return vertexSamplerSlots_;
+			return _vertexSamplerSlots;
 		}
 		/** @brief Sampler slots of the fragment stage */
 		inline const SmallVector<GxmSamplerSlot, 0>& GetFragmentSamplerSlots() const {
-			return fragmentSamplerSlots_;
+			return _fragmentSamplerSlots;
 		}
 
 		/** @brief Returns `true` if the vertex stage reads any vertex attribute */
 		inline bool HasVertexAttributes() const {
-			return !stageAttributes_.empty();
+			return !_stageAttributes.empty();
 		}
 		/** @brief Returns the vertex attributes the compiled stage declares (see @ref GxmStageAttribute) */
 		inline const SmallVector<GxmStageAttribute, 4>& GetStageAttributes() const {
-			return stageAttributes_;
+			return _stageAttributes;
 		}
 		/** @brief Returns the vertex buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const GxmBufferObject* GetBoundVbo() const {
-			return boundVbo_;
+			return _boundVbo;
 		}
 		/** @brief Returns the index buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const GxmBufferObject* GetBoundIbo() const {
-			return boundIbo_;
+			return _boundIbo;
 		}
 		/** @brief Returns the byte offset into the bound vertex buffer the attributes start at */
 		inline std::uint32_t GetVboOffset() const {
-			return vboOffset_;
+			return _vboOffset;
 		}
 		/** @brief Returns `true` if the vertex layout takes its corner (and instance index) from a device static stream */
 		inline bool UsesStaticCornerStream() const {
-			return usesCornerStream_;
+			return _usesCornerStream;
 		}
 		/** @brief Returns `true` if the static stream is the batched one (six vertices per sprite, with an instance index) */
 		inline bool UsesBatchedCornerStream() const {
-			return usesBatchedStream_;
+			return _usesBatchedStream;
 		}
 		/** @brief Returns `true` if the vertex layout reads any attribute out of the pipeline's vertex buffer */
 		inline bool UsesGeometryStream() const {
-			return usesGeometryStream_;
+			return _usesGeometryStream;
 		}
 		/** @brief Returns the sceGxm stream index the static corner stream is bound to (0 when there is no geometry stream) */
 		inline std::uint32_t GetStaticStreamIndex() const {
-			return (usesGeometryStream_ ? 1u : 0u);
+			return (_usesGeometryStream ? 1u : 0u);
 		}
 		/** @brief Returns the per-vertex byte stride of the geometry stream */
 		inline std::uint32_t GetGeometryStride() const {
-			return geometryStride_;
+			return _geometryStride;
 		}
 
 		/** @brief Packs a blend configuration into the key @ref GetFragmentProgram() caches on */
@@ -430,57 +430,57 @@ namespace nCine::RHI::GXM
 		static SceGxmProgram* CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes);
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		Status status_;
-		Introspection introspection_;
-		QueryPhase queryPhase_;
-		std::uint32_t batchSize_;
-		bool shouldLogOnErrors_;
-		std::uint32_t uniformsSize_;
-		std::uint32_t uniformBlocksSize_;
+		std::uint32_t _handle;
+		Status _status;
+		Introspection _introspection;
+		QueryPhase _queryPhase;
+		std::uint32_t _batchSize;
+		bool _shouldLogOnErrors;
+		std::uint32_t _uniformsSize;
+		std::uint32_t _uniformBlocksSize;
 
-		SmallVector<GxmUniform, 0> uniforms_;
-		SmallVector<GxmUniformBlock, 0> uniformBlocks_;
-		SmallVector<GxmAttribute, 0> attributes_;
+		SmallVector<GxmUniform, 0> _uniforms;
+		SmallVector<GxmUniformBlock, 0> _uniformBlocks;
+		SmallVector<GxmAttribute, 0> _attributes;
 		// What the compiled vertex stage declares, which is not the same set the reflection lists
-		SmallVector<GxmStageAttribute, 4> stageAttributes_;
+		SmallVector<GxmStageAttribute, 4> _stageAttributes;
 
-		const ShaderCompiler::ProgramVariant* reflection_;
-		const char* programName_;
-		const char* variantName_;
+		const ShaderCompiler::ProgramVariant* _reflection;
+		const char* _programName;
+		const char* _variantName;
 
-		GxmVertexFormat vertexFormat_;
-		const GxmBufferObject* boundVbo_;
-		const GxmBufferObject* boundIbo_;
-		std::uint32_t vboOffset_;
-		bool usesCornerStream_;
-		bool usesBatchedStream_;
-		bool usesGeometryStream_;
-		std::uint32_t geometryStride_;
+		GxmVertexFormat _vertexFormat;
+		const GxmBufferObject* _boundVbo;
+		const GxmBufferObject* _boundIbo;
+		std::uint32_t _vboOffset;
+		bool _usesCornerStream;
+		bool _usesBatchedStream;
+		bool _usesGeometryStream;
+		std::uint32_t _geometryStride;
 
 		struct ResolvedUniform
 		{
 			String Name;
 			const std::uint8_t* Data;
 		};
-		SmallVector<ResolvedUniform, 0> resolvedUniforms_;
+		SmallVector<ResolvedUniform, 0> _resolvedUniforms;
 
 		// Compiled stages (owned: allocated by vitaShaRK, released with free()) and their patcher registrations
-		SceGxmProgram* vertexStage_;
-		SceGxmProgram* fragmentStage_;
-		SceGxmShaderPatcherId vertexStageId_;
-		SceGxmShaderPatcherId fragmentStageId_;
+		SceGxmProgram* _vertexStage;
+		SceGxmProgram* _fragmentStage;
+		SceGxmShaderPatcherId _vertexStageId;
+		SceGxmShaderPatcherId _fragmentStageId;
 
-		std::uint32_t vertexUniformBufferSize_;
-		std::uint32_t fragmentUniformBufferSize_;
-		SmallVector<GxmUniformSlot, 0> vertexUniformSlots_;
-		SmallVector<GxmUniformSlot, 0> fragmentUniformSlots_;
-		SmallVector<GxmBlockUpload, 0> vertexBlockUploads_;
-		SmallVector<GxmBlockUpload, 0> fragmentBlockUploads_;
-		SmallVector<GxmSamplerSlot, 0> vertexSamplerSlots_;
-		SmallVector<GxmSamplerSlot, 0> fragmentSamplerSlots_;
+		std::uint32_t _vertexUniformBufferSize;
+		std::uint32_t _fragmentUniformBufferSize;
+		SmallVector<GxmUniformSlot, 0> _vertexUniformSlots;
+		SmallVector<GxmUniformSlot, 0> _fragmentUniformSlots;
+		SmallVector<GxmBlockUpload, 0> _vertexBlockUploads;
+		SmallVector<GxmBlockUpload, 0> _fragmentBlockUploads;
+		SmallVector<GxmSamplerSlot, 0> _vertexSamplerSlots;
+		SmallVector<GxmSamplerSlot, 0> _fragmentSamplerSlots;
 
 		// Patched programs, created on demand (see the class documentation)
 		struct CachedVertexProgram
@@ -488,19 +488,19 @@ namespace nCine::RHI::GXM
 			std::uint64_t Fingerprint;
 			SceGxmVertexProgram* Program;
 		};
-		SmallVector<CachedVertexProgram, 2> vertexPrograms_;
+		SmallVector<CachedVertexProgram, 2> _vertexPrograms;
 		struct CachedFragmentProgram
 		{
 			std::uint32_t BlendKey;
 			SceGxmFragmentProgram* Program;
 		};
-		SmallVector<CachedFragmentProgram, 4> fragmentPrograms_;
+		SmallVector<CachedFragmentProgram, 4> _fragmentPrograms;
 
 		void PerformIntrospection();
-		/** @brief Fills @ref stageAttributes_ from the compiled vertex stage's attribute parameters */
+		/** @brief Fills @ref _stageAttributes from the compiled vertex stage's attribute parameters */
 		void ReflectStageAttributes();
 		void ImportReflection();
-		/** @brief Compiles the generated Cg sources of @ref programName_ / @ref variantName_ and registers them */
+		/** @brief Compiles the generated Cg sources of @ref _programName / @ref _variantName and registers them */
 		bool CompileStages();
 		/** @brief Resolves one stage's parameters into the uniform, block and sampler slot tables */
 		void ReflectStage(const SceGxmProgram* program, SmallVector<GxmUniformSlot, 0>& uniformSlots,

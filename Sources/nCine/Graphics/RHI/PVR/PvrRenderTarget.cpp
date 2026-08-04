@@ -5,23 +5,23 @@
 namespace nCine::RHI::PVR
 {
 	PvrRenderTarget::PvrRenderTarget()
-		: numDrawBuffers_(1)
+		: _numDrawBuffers(1)
 	{
 		for (std::uint32_t i = 0; i < MaxColorAttachments; i++) {
-			colorTextures_[i] = nullptr;
+			_colorTextures[i] = nullptr;
 		}
 	}
 
 	PvrRenderTarget::~PvrRenderTarget()
 	{
-		// Clear from the device so a destroyed target can't dangle as currentRenderTarget_
+		// Clear from the device so a destroyed target can't dangle as _currentRenderTarget
 		PvrDevice::UnbindRenderTarget(this);
 	}
 
 	void PvrRenderTarget::AttachColorTexture(PvrTexture& texture, std::uint32_t index)
 	{
 		if (index < MaxColorAttachments) {
-			colorTextures_[index] = &texture;
+			_colorTextures[index] = &texture;
 			// Tag the texture so the rasterizer treats its store as bottom-up (GL framebuffer convention)
 			// both when drawing into it and when later sampling it as a source
 			texture.SetRenderTarget(true);
@@ -31,7 +31,7 @@ namespace nCine::RHI::PVR
 	void PvrRenderTarget::DetachColorTexture(std::uint32_t index)
 	{
 		if (index < MaxColorAttachments) {
-			colorTextures_[index] = nullptr;
+			_colorTextures[index] = nullptr;
 		}
 	}
 
@@ -59,13 +59,13 @@ namespace nCine::RHI::PVR
 
 	bool PvrRenderTarget::SetDrawBuffers(std::uint32_t numColorAttachments)
 	{
-		numDrawBuffers_ = numColorAttachments;
+		_numDrawBuffers = numColorAttachments;
 		return true;
 	}
 
 	bool PvrRenderTarget::IsStatusComplete()
 	{
-		return (colorTextures_[0] != nullptr);
+		return (_colorTextures[0] != nullptr);
 	}
 
 	void PvrRenderTarget::InvalidateDepthStencil(DepthStencilFormat format)

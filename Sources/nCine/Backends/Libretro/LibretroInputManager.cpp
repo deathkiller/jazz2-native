@@ -24,8 +24,8 @@ namespace nCine::Backends
 
 	LibretroInputManager::LibretroInputManager()
 	{
-		joyMapping_.Init(this);
-		joyMapping_.AddMappingsFromString(RetroPadMapping);
+		_joyMapping.Init(this);
+		_joyMapping.AddMappingsFromString(RetroPadMapping);
 	}
 
 	const JoystickGuid LibretroInputManager::joyGuid(int joyId) const
@@ -38,9 +38,9 @@ namespace nCine::Backends
 		for (std::int32_t joyId = 0; joyId < NumPads; joyId++) {
 			JoyConnectionEvent event;
 			event.joyId = joyId;
-			joyMapping_.OnJoyConnected(event);
-			if (inputEventHandler_ != nullptr) {
-				inputEventHandler_->OnJoyConnected(event);
+			_joyMapping.OnJoyConnected(event);
+			if (_inputEventHandler != nullptr) {
+				_inputEventHandler->OnJoyConnected(event);
 			}
 		}
 	}
@@ -50,7 +50,7 @@ namespace nCine::Backends
 		LibretroApplication::InputPollCallback();
 
 		for (std::int32_t port = 0; port < NumPads; port++) {
-			RetroJoystickState& joyState = joyStates_[port];
+			RetroJoystickState& joyState = _joyStates[port];
 
 			for (std::int32_t id = 0; id < NumButtons; id++) {
 				bool pressed = LibretroApplication::InputStateCallback((unsigned)port, RETRO_DEVICE_JOYPAD, 0, (unsigned)id) != 0;
@@ -60,11 +60,11 @@ namespace nCine::Backends
 					event.joyId = port;
 					event.buttonId = id;
 					if (pressed) {
-						joyMapping_.OnJoyButtonPressed(event);
-						if (inputEventHandler_ != nullptr) inputEventHandler_->OnJoyButtonPressed(event);
+						_joyMapping.OnJoyButtonPressed(event);
+						if (_inputEventHandler != nullptr) _inputEventHandler->OnJoyButtonPressed(event);
 					} else {
-						joyMapping_.OnJoyButtonReleased(event);
-						if (inputEventHandler_ != nullptr) inputEventHandler_->OnJoyButtonReleased(event);
+						_joyMapping.OnJoyButtonReleased(event);
+						if (_inputEventHandler != nullptr) _inputEventHandler->OnJoyButtonReleased(event);
 					}
 				}
 			}
@@ -86,8 +86,8 @@ namespace nCine::Backends
 					event.joyId = port;
 					event.axisId = id;
 					event.value = value;
-					joyMapping_.OnJoyAxisMoved(event);
-					if (inputEventHandler_ != nullptr) inputEventHandler_->OnJoyAxisMoved(event);
+					_joyMapping.OnJoyAxisMoved(event);
+					if (_inputEventHandler != nullptr) _inputEventHandler->OnJoyAxisMoved(event);
 				}
 			}
 		}

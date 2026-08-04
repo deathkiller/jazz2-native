@@ -28,7 +28,7 @@ namespace nCine::Backends
 		friend class nCine::AndroidApplication;
 
 	public:
-		inline static unsigned int SdkVersion() { return sdkVersion_; }
+		inline static unsigned int SdkVersion() { return _sdkVersion; }
 
 		static JNIEnv *jniEnv;
 
@@ -38,8 +38,8 @@ namespace nCine::Backends
 		static bool CheckAndClearExceptions();
 
 	private:
-		static JavaVM* javaVM_;
-		static unsigned int sdkVersion_;
+		static JavaVM* _javaVM;
+		static unsigned int _sdkVersion;
 
 		/** @brief Attaches the Java virtual machine to make use of JNI */
 		static void AttachJVM(struct android_app* state);
@@ -59,7 +59,7 @@ namespace nCine::Backends
 	{
 	public:
 		AndroidJniClass()
-			: javaObject_(nullptr) {}
+			: _javaObject(nullptr) {}
 		explicit AndroidJniClass(jobject javaObject);
 		virtual ~AndroidJniClass();
 
@@ -74,10 +74,10 @@ namespace nCine::Backends
 		AndroidJniClass& operator=(const AndroidJniClass&) = delete;
 
 		inline bool IsNull() const {
-			return javaObject_ == nullptr;
+			return _javaObject == nullptr;
 		}
 		inline jobject javaObject() const {
-			return javaObject_;
+			return _javaObject;
 		}
 
 		static jclass findClass(const char* name);
@@ -86,7 +86,7 @@ namespace nCine::Backends
 		static jfieldID getStaticFieldID(jclass javaClass, const char* name, const char* signature);
 
 	protected:
-		jobject javaObject_;
+		jobject _javaObject;
 
 		friend class AndroidJniHelper;
 	};
@@ -111,9 +111,9 @@ namespace nCine::Backends
 		float getRange() const;
 		
 	private:
-		static jclass javaClass_;
-		static jmethodID midGetMin_;
-		static jmethodID midGetRange_;
+		static jclass _javaClass;
+		static jmethodID _midGetMin;
+		static jmethodID _midGetRange;
 	};
 
 	/** @brief Wraps JNI access to `android.os.VibrationEffect` */
@@ -126,8 +126,8 @@ namespace nCine::Backends
 		static AndroidJniClass_VibrationEffect createOneShot(long milliseconds, int amplitude);
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midCreateOneShot_;
+		static jclass _javaClass;
+		static jmethodID _midCreateOneShot;
 	};
 
 	/** @brief Wraps JNI access to `android.os.Vibrator` */
@@ -144,9 +144,9 @@ namespace nCine::Backends
 		void vibrate(const AndroidJniClass_VibrationEffect& vibe) const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midCancel_;
-		static jmethodID midVibrate_;
+		static jclass _javaClass;
+		static jmethodID _midCancel;
+		static jmethodID _midVibrate;
 	};
 
 	/** @brief Wraps JNI access to `android.os.VibratorManager` */
@@ -161,10 +161,10 @@ namespace nCine::Backends
 		AndroidJniClass_Vibrator getVibrator(int vibratorId) const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midCancel_;
-		static jmethodID midGetVibratorIds_;
-		static jmethodID midGetVibrator_;
+		static jclass _javaClass;
+		static jmethodID _midCancel;
+		static jmethodID _midGetVibratorIds;
+		static jmethodID _midGetVibrator;
 	};
 
 	/** @brief Wraps JNI access to `android.view.InputDevice` */
@@ -186,17 +186,17 @@ namespace nCine::Backends
 		AndroidJniClass_VibratorManager getVibratorManager() const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midGetDevice_;
-		static jmethodID midGetDeviceIds_;
-		static jmethodID midGetName_;
-		static jmethodID midGetDescriptor_;
-		static jmethodID midGetVendorId_;
-		static jmethodID midGetProductId_;
-		static jmethodID midGetMotionRange_;
-		static jmethodID midGetSources_;
-		static jmethodID midHasKeys_;
-		static jmethodID midGetVibratorManager_;
+		static jclass _javaClass;
+		static jmethodID _midGetDevice;
+		static jmethodID _midGetDeviceIds;
+		static jmethodID _midGetName;
+		static jmethodID _midGetDescriptor;
+		static jmethodID _midGetVendorId;
+		static jmethodID _midGetProductId;
+		static jmethodID _midGetMotionRange;
+		static jmethodID _midGetSources;
+		static jmethodID _midHasKeys;
+		static jmethodID _midGetVibratorManager;
 	};
 
 	/** @brief Wraps JNI access to `android.view.KeyCharacterMap` */
@@ -209,8 +209,8 @@ namespace nCine::Backends
 		static bool deviceHasKey(int button);
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midDeviceHasKey_;
+		static jclass _javaClass;
+		static jmethodID _midDeviceHasKey;
 	};
 
 	/** @brief Wraps JNI access to `android.view.KeyEvent` */
@@ -228,13 +228,13 @@ namespace nCine::Backends
 		bool isPrintingKey() const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midConstructor_;
-		static jmethodID midConstructor2_;
-		static jmethodID midGetUnicodeCharMetaState_;
-		static jmethodID midGetUnicodeChar_;
-		static jmethodID midGetCharacters_;
-		static jmethodID midIsPrintingKey_;
+		static jclass _javaClass;
+		static jmethodID _midConstructor;
+		static jmethodID _midConstructor2;
+		static jmethodID _midGetUnicodeCharMetaState;
+		static jmethodID _midGetUnicodeChar;
+		static jmethodID _midGetCharacters;
+		static jmethodID _midIsPrintingKey;
 	};
 	
 	/** @brief Wraps JNI access to `android.view.Display.Mode` */
@@ -253,10 +253,10 @@ namespace nCine::Backends
 		float getRefreshRate() const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midGetPhysicalHeight_;
-		static jmethodID midGetPhysicalWidth_;
-		static jmethodID midGetRefreshRate_;
+		static jclass _javaClass;
+		static jmethodID _midGetPhysicalHeight;
+		static jmethodID _midGetPhysicalWidth;
+		static jmethodID _midGetRefreshRate;
 	};
 
 	/** @brief Wraps JNI access to `android.view.Display` */
@@ -275,10 +275,10 @@ namespace nCine::Backends
 		int getSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const;
 
 	private:
-		static jclass javaClass_;
-		static jmethodID midGetMode_;
-		static jmethodID midGetName_;
-		static jmethodID midGetSupportedModes_;
+		static jclass _javaClass;
+		static jmethodID _midGetMode;
+		static jmethodID _midGetName;
+		static jmethodID _midGetSupportedModes;
 	};
 
 	/** @brief Wraps JNI access to `android.app.Activity` */
@@ -301,31 +301,31 @@ namespace nCine::Backends
 		static void hideStatusBar();
 
 	private:
-		static jobject activityObject_;
-		static jmethodID midFinishAndRemoveTask_;
-		static jmethodID midGetPackageName_;
-		static jmethodID midGetPreferredLanguage_;
-		static jmethodID midIsScreenRound_;
-		static jmethodID midHasExternalStoragePermission_;
-		static jmethodID midRequestExternalStoragePermission_;
-		static jmethodID midSetActivityEnabled_;
-		static jmethodID midOpenUrl_;
-		static jmethodID midGetWindow_;
-		static jmethodID midGetSystemService_;
+		static jobject _activityObject;
+		static jmethodID _midFinishAndRemoveTask;
+		static jmethodID _midGetPackageName;
+		static jmethodID _midGetPreferredLanguage;
+		static jmethodID _midIsScreenRound;
+		static jmethodID _midHasExternalStoragePermission;
+		static jmethodID _midRequestExternalStoragePermission;
+		static jmethodID _midSetActivityEnabled;
+		static jmethodID _midOpenUrl;
+		static jmethodID _midGetWindow;
+		static jmethodID _midGetSystemService;
 
-		static jobject vibratorObject_;
-		static jobject insetsControllerObject_;
-		static jmethodID midInsetsShow_;
-		static jmethodID midInsetsHide_;
+		static jobject _vibratorObject;
+		static jobject _insetsControllerObject;
+		static jmethodID _midInsetsShow;
+		static jmethodID _midInsetsHide;
 
-		static jmethodID midGetDecorView_;
-		static jclass rectClass_;
-		static jmethodID midRectInit_;
-		static jfieldID fidRectLeft_;
-		static jfieldID fidRectTop_;
-		static jfieldID fidRectRight_;
-		static jfieldID fidRectBottom_;
-		static jmethodID midGetWindowVisibleDisplayFrame_;
+		static jmethodID _midGetDecorView;
+		static jclass _rectClass;
+		static jmethodID _midRectInit;
+		static jfieldID _fidRectLeft;
+		static jfieldID _fidRectTop;
+		static jfieldID _fidRectRight;
+		static jfieldID _fidRectBottom;
+		static jmethodID _midGetWindowVisibleDisplayFrame;
 	};
 
 	/** @brief Wraps JNI access to `android.view.inputmethod.InputMethodManager` */
@@ -340,11 +340,11 @@ namespace nCine::Backends
 		static bool hideSoftInput();
 
 	private:
-		static jobject inputMethodManagerObject_;
-		static jmethodID midToggleSoftInput_;
-		static jmethodID midShowSoftInput_;
-		static jmethodID midHideSoftInput_;
-		static jmethodID midGetWindowToken_;
+		static jobject _inputMethodManagerObject;
+		static jmethodID _midToggleSoftInput;
+		static jmethodID _midShowSoftInput;
+		static jmethodID _midHideSoftInput;
+		static jmethodID _midGetWindowToken;
 
 		static const int SHOW_IMPLICIT = 1;
 		static const int HIDE_IMPLICIT_ONLY = 1;
@@ -361,9 +361,9 @@ namespace nCine::Backends
 		static int getDisplays(AndroidJniClass_Display* destination, int maxSize);
 
 	private:
-		static jobject displayManagerObject_;
-		static jmethodID midGetDisplay_;
-		static jmethodID midGetDisplays_;
+		static jobject _displayManagerObject;
+		static jmethodID _midGetDisplay;
+		static jmethodID _midGetDisplays;
 	};
 
 	/** @brief Wraps JNI access to `android.provider.Settings.Secure` */
@@ -375,6 +375,6 @@ namespace nCine::Backends
 		static StringView getAndroidId();
 
 	private:
-		static String androidId_;
+		static String _androidId;
 	};
 }

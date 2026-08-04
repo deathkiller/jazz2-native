@@ -2,36 +2,36 @@
 
 namespace nCine::RHI::GL
 {
-	GLCullFace::State GLCullFace::state_;
+	GLCullFace::State GLCullFace::_state;
 
 	void GLCullFace::Enable()
 	{
-		if (state_.enabled == false) {
+		if (_state.enabled == false) {
 			glEnable(GL_CULL_FACE);
-			state_.enabled = true;
+			_state.enabled = true;
 		}
 	}
 
 	void GLCullFace::Disable()
 	{
-		if (state_.enabled == true) {
+		if (_state.enabled == true) {
 			glDisable(GL_CULL_FACE);
-			state_.enabled = false;
+			_state.enabled = false;
 		}
 	}
 
 	void GLCullFace::SetMode(GLenum mode)
 	{
-		if (mode != state_.mode) {
+		if (mode != _state.mode) {
 			glCullFace(mode);
-			state_.mode = mode;
+			_state.mode = mode;
 		}
 	}
 
 	void GLCullFace::Reapply()
 	{
-		if (state_.enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-		glCullFace(state_.mode);
+		if (_state.enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+		glCullFace(_state.mode);
 	}
 
 	void GLCullFace::SetState(State newState)
@@ -43,6 +43,6 @@ namespace nCine::RHI::GL
 		}
 		SetMode(newState.mode);
 
-		state_ = newState;
+		_state = newState;
 	}
 }

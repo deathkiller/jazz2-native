@@ -380,21 +380,21 @@ namespace nCine::Backends
 		}
 	}
 
-	bool ImGuiSdlInput::inputEnabled_ = true;
-	SDL_Window* ImGuiSdlInput::window_ = nullptr;
-	unsigned long int ImGuiSdlInput::time_ = 0;
-	char* ImGuiSdlInput::clipboardTextData_ = nullptr;
-	bool ImGuiSdlInput::wantUpdateMonitors_ = false;
-	unsigned int ImGuiSdlInput::mouseWindowID_ = 0;
-	int ImGuiSdlInput::mouseButtonsDown_ = 0;
-	SDL_Cursor* ImGuiSdlInput::mouseCursors_[ImGuiMouseCursor_COUNT] = {};
-	SDL_Cursor* ImGuiSdlInput::mouseLastCursor_ = nullptr;
-	unsigned int ImGuiSdlInput::mouseLastLeaveFrame_ = 0;
-	bool ImGuiSdlInput::mouseCanUseGlobalState_ = false;
+	bool ImGuiSdlInput::_inputEnabled = true;
+	SDL_Window* ImGuiSdlInput::_window = nullptr;
+	unsigned long int ImGuiSdlInput::_time = 0;
+	char* ImGuiSdlInput::_clipboardTextData = nullptr;
+	bool ImGuiSdlInput::_wantUpdateMonitors = false;
+	unsigned int ImGuiSdlInput::_mouseWindowID = 0;
+	int ImGuiSdlInput::_mouseButtonsDown = 0;
+	SDL_Cursor* ImGuiSdlInput::_mouseCursors[ImGuiMouseCursor_COUNT] = {};
+	SDL_Cursor* ImGuiSdlInput::_mouseLastCursor = nullptr;
+	unsigned int ImGuiSdlInput::_mouseLastLeaveFrame = 0;
+	bool ImGuiSdlInput::_mouseCanUseGlobalState = false;
 
-	ImVector<SDL_GameController*> ImGuiSdlInput::gamepads_;
-	ImGuiSdlInput::GamepadMode ImGuiSdlInput::gamepadMode_ = ImGuiSdlInput::GamepadMode::AUTO_FIRST;
-	bool ImGuiSdlInput::wantUpdateGamepadsList_ = false;
+	ImVector<SDL_GameController*> ImGuiSdlInput::_gamepads;
+	ImGuiSdlInput::GamepadMode ImGuiSdlInput::_gamepadMode = ImGuiSdlInput::GamepadMode::AUTO_FIRST;
+	bool ImGuiSdlInput::_wantUpdateGamepadsList = false;
 
 	void ImGuiSdlInput::init(SDL_Window* window, SDL_GLContext glContextHandle)
 	{
@@ -406,13 +406,13 @@ namespace nCine::Backends
 
 		// Check and store if we are on a SDL backend that supports global mouse position
 		// ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
-		mouseCanUseGlobalState_ = false;
+		_mouseCanUseGlobalState = false;
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
 		const char* sdlBackend = SDL_GetCurrentVideoDriver();
 		static const char* globalMouseWhitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
 		for (int n = 0; n < IM_ARRAYSIZE(globalMouseWhitelist); n++) {
 			if (strncmp(sdlBackend, globalMouseWhitelist[n], strlen(globalMouseWhitelist[n])) == 0) {
-				mouseCanUseGlobalState_ = true;
+				_mouseCanUseGlobalState = true;
 				break;
 			}
 		}
@@ -427,7 +427,7 @@ namespace nCine::Backends
 		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors; // We can honor GetMouseCursor() values (optional)
 		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos; // We can honor io.WantSetMousePos requests (optional, rarely used)
 
-		window_ = window;
+		_window = window;
 
 		pio.Platform_SetClipboardTextFn = setClipboardText;
 		pio.Platform_GetClipboardTextFn = clipboardText;
@@ -440,19 +440,19 @@ namespace nCine::Backends
 #endif
 
 		// Gamepad handling
-		gamepadMode_ = GamepadMode::AUTO_FIRST;
-		wantUpdateGamepadsList_ = true;
+		_gamepadMode = GamepadMode::AUTO_FIRST;
+		_wantUpdateGamepadsList = true;
 
 		// Load mouse cursors
-		mouseCursors_[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-		mouseCursors_[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-		mouseCursors_[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-		mouseCursors_[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-		mouseCursors_[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-		mouseCursors_[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-		mouseCursors_[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
-		mouseCursors_[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-		mouseCursors_[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
+		_mouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+		_mouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+		_mouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+		_mouseCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+		_mouseCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+		_mouseCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+		_mouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+		_mouseCursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+		_mouseCursors[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
 
 		// Set platform dependent data in viewport
 		// Our mouse update function expect PlatformHandle to be filled for the main viewport
@@ -499,7 +499,7 @@ namespace nCine::Backends
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		if (mouseCanUseGlobalState_) {
+		if (_mouseCanUseGlobalState) {
 			io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 
 			// Register platform interface (will be coupled with a renderer interface)
@@ -550,16 +550,16 @@ namespace nCine::Backends
 		ImGui::DestroyPlatformWindows();
 #endif
 
-		window_ = nullptr;
+		_window = nullptr;
 
 		// Destroy last known clipboard data
-		if (clipboardTextData_)
-			SDL_free(clipboardTextData_);
-		clipboardTextData_ = nullptr;
+		if (_clipboardTextData)
+			SDL_free(_clipboardTextData);
+		_clipboardTextData = nullptr;
 
 		// Destroy SDL mouse cursors
 		for (ImGuiMouseCursor i = 0; i < ImGuiMouseCursor_COUNT; i++)
-			SDL_FreeCursor(mouseCursors_[i]);
+			SDL_FreeCursor(_mouseCursors[i]);
 		closeGamepads();
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -574,12 +574,12 @@ namespace nCine::Backends
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Setup main viewport size (every frame to accommodate for window resizing)
-		getWindowSizeAndFramebufferScale(window_, nullptr, &io.DisplaySize, &io.DisplayFramebufferScale);
+		getWindowSizeAndFramebufferScale(_window, nullptr, &io.DisplaySize, &io.DisplayFramebufferScale);
 
 #if defined(IMGUI_HAS_DOCK)
 #	if !defined(DEATH_TARGET_WINDOWS)
 		// Keep polling under Windows to handle changes of work area when resizing taskbar
-		if (wantUpdateMonitors_)
+		if (_wantUpdateMonitors)
 #	endif
 			updateMonitors();
 #endif
@@ -588,14 +588,14 @@ namespace nCine::Backends
 		// (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
 		static Uint64 frequency = SDL_GetPerformanceFrequency();
 		Uint64 currentTime = SDL_GetPerformanceCounter();
-		if (currentTime <= time_)
-			currentTime = time_ + 1;
-		io.DeltaTime = time_ > 0 ? static_cast<float>((static_cast<double>(currentTime - time_) / frequency)) : static_cast<float>(1.0f / 60.0f);
-		time_ = currentTime;
+		if (currentTime <= _time)
+			currentTime = _time + 1;
+		io.DeltaTime = _time > 0 ? static_cast<float>((static_cast<double>(currentTime - _time) / frequency)) : static_cast<float>(1.0f / 60.0f);
+		_time = currentTime;
 
-		if (mouseLastLeaveFrame_ && mouseLastLeaveFrame_ >= ImGui::GetFrameCount() && mouseButtonsDown_ == 0) {
-			mouseWindowID_ = 0;
-			mouseLastLeaveFrame_ = 0;
+		if (_mouseLastLeaveFrame && _mouseLastLeaveFrame >= ImGui::GetFrameCount() && _mouseButtonsDown == 0) {
+			_mouseWindowID = 0;
+			_mouseLastLeaveFrame = 0;
 			io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 		}
 
@@ -634,7 +634,7 @@ namespace nCine::Backends
 	// If you have multiple SDL events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
 	bool ImGuiSdlInput::processEvent(const SDL_Event* event)
 	{
-		if (!inputEnabled_)
+		if (!_inputEnabled)
 			return false;
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -695,7 +695,7 @@ namespace nCine::Backends
 
 				io.AddMouseSourceEvent(event->wheel.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
 				io.AddMouseButtonEvent(mouseButton, (event->type == SDL_MOUSEBUTTONDOWN));
-				mouseButtonsDown_ = (event->type == SDL_MOUSEBUTTONDOWN) ? (mouseButtonsDown_ | (1 << mouseButton)) : (mouseButtonsDown_ & ~(1 << mouseButton));
+				_mouseButtonsDown = (event->type == SDL_MOUSEBUTTONDOWN) ? (_mouseButtonsDown | (1 << mouseButton)) : (_mouseButtonsDown & ~(1 << mouseButton));
 				return true;
 			}
 			case SDL_TEXTINPUT: {
@@ -730,16 +730,16 @@ namespace nCine::Backends
 			case SDL_EVENT_DISPLAY_MOVED:
 			case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
 			{
-				wantUpdateMonitors_ = true;
+				_wantUpdateMonitors = true;
 				return true;
 			}
 			// SDL3 flattened SDL_WINDOWEVENT into individual event types (there is no event->window.event sub-field)
 			case SDL_EVENT_WINDOW_MOUSE_ENTER:
-				mouseWindowID_ = event->window.windowID;
-				mouseLastLeaveFrame_ = 0;
+				_mouseWindowID = event->window.windowID;
+				_mouseLastLeaveFrame = 0;
 				return true;
 			case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-				mouseLastLeaveFrame_ = ImGui::GetFrameCount() + 1;
+				_mouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
 				return true;
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				io.AddFocusEvent(true);
@@ -770,7 +770,7 @@ namespace nCine::Backends
 			{
 				// 2.0.26 has SDL_DISPLAYEVENT_CONNECTED/SDL_DISPLAYEVENT_DISCONNECTED/SDL_DISPLAYEVENT_ORIENTATION,
 				// so change of DPI/Scaling are not reflected in this event. (SDL3 has it)
-				wantUpdateMonitors_ = true;
+				_wantUpdateMonitors = true;
 				return true;
 			}
 #endif
@@ -788,10 +788,10 @@ namespace nCine::Backends
 #endif
 				const Uint8 windowEvent = event->window.event;
 				if (windowEvent == SDL_WINDOWEVENT_ENTER) {
-					mouseWindowID_ = event->window.windowID;
-					mouseLastLeaveFrame_ = 0;
+					_mouseWindowID = event->window.windowID;
+					_mouseLastLeaveFrame = 0;
 				} else if (windowEvent == SDL_WINDOWEVENT_LEAVE) {
-					mouseLastLeaveFrame_ = ImGui::GetFrameCount() + 1;
+					_mouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
 				} else if (windowEvent == SDL_WINDOWEVENT_FOCUS_GAINED) {
 					io.AddFocusEvent(true);
 				} else if (windowEvent == SDL_WINDOWEVENT_FOCUS_LOST) {
@@ -811,7 +811,7 @@ namespace nCine::Backends
 #endif
 			case SDL_CONTROLLERDEVICEADDED:
 			case SDL_CONTROLLERDEVICEREMOVED: {
-				wantUpdateGamepadsList_ = true;
+				_wantUpdateGamepadsList = true;
 				return true;
 			}
 		}
@@ -820,11 +820,11 @@ namespace nCine::Backends
 
 	const char* ImGuiSdlInput::clipboardText(ImGuiContext* ctx)
 	{
-		if (clipboardTextData_ != nullptr) {
-			SDL_free(clipboardTextData_);
+		if (_clipboardTextData != nullptr) {
+			SDL_free(_clipboardTextData);
 		}
-		clipboardTextData_ = SDL_GetClipboardText();
-		return clipboardTextData_;
+		_clipboardTextData = SDL_GetClipboardText();
+		return _clipboardTextData;
 	}
 
 	void ImGuiSdlInput::updateMouseData()
@@ -835,7 +835,7 @@ namespace nCine::Backends
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
 		// - SDL_CaptureMouse() let the OS know, e.g., that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
 		// - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
-		if (mouseCanUseGlobalState_) {
+		if (_mouseCanUseGlobalState) {
 			bool wantCapture = false;
 			for (int buttonN = 0; buttonN < ImGuiMouseButton_COUNT && !wantCapture; buttonN++) {
 				if (ImGui::IsMouseDragging(buttonN, 1.0f))
@@ -849,10 +849,10 @@ namespace nCine::Backends
 		}
 
 		SDL_Window* focusedWindow = SDL_GetKeyboardFocus();
-		const bool isAppFocused = (window_ == focusedWindow);
+		const bool isAppFocused = (_window == focusedWindow);
 #else
-		SDL_Window* focusedWindow = window_;
-		const bool isAppFocused = (SDL_GetWindowFlags(window_) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
+		SDL_Window* focusedWindow = _window;
+		const bool isAppFocused = (SDL_GetWindowFlags(_window) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
 #endif
 
 		if (isAppFocused) {
@@ -865,26 +865,26 @@ namespace nCine::Backends
 					SDL_WarpMouseGlobal(io.MousePos.x, io.MousePos.y);
 				else
 #	endif
-					SDL_WarpMouseInWindow(window_, io.MousePos.x, io.MousePos.y);
+					SDL_WarpMouseInWindow(_window, io.MousePos.x, io.MousePos.y);
 #else
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
 				if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 					SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);
 				else
 #endif
-					SDL_WarpMouseInWindow(window_, (int)io.MousePos.x, (int)io.MousePos.y);
+					SDL_WarpMouseInWindow(_window, (int)io.MousePos.x, (int)io.MousePos.y);
 #endif
 			}
 
 			// (Optional) Fallback to provide mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
 #if defined(WITH_SDL3)
 			// SDL3: relative mouse mode is per-window; the global mouse state reports float coordinates
-			const bool isRelativeMouseMode = SDL_GetWindowRelativeMouseMode(window_);
-			if (mouseCanUseGlobalState_ && mouseButtonsDown_ == 0 && !isRelativeMouseMode) {
+			const bool isRelativeMouseMode = SDL_GetWindowRelativeMouseMode(_window);
+			if (_mouseCanUseGlobalState && _mouseButtonsDown == 0 && !isRelativeMouseMode) {
 				float mouseXGlobal = 0.0f, mouseYGlobal = 0.0f;
 				SDL_GetGlobalMouseState(&mouseXGlobal, &mouseYGlobal);
 				int windowX = 0, windowY = 0;
-				SDL_GetWindowPosition(window_, &windowX, &windowY);
+				SDL_GetWindowPosition(_window, &windowX, &windowY);
 #if defined(IMGUI_HAS_VIEWPORT)
 				if (!(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)) {
 					SDL_GetWindowPosition(focusedWindow, &windowX, &windowY);
@@ -896,10 +896,10 @@ namespace nCine::Backends
 			}
 #else
 			const bool isRelativeMouseMode = SDL_GetRelativeMouseMode() != 0;
-			if (mouseCanUseGlobalState_ && mouseButtonsDown_ == 0 && !isRelativeMouseMode) {
+			if (_mouseCanUseGlobalState && _mouseButtonsDown == 0 && !isRelativeMouseMode) {
 				int windowX, windowY, mouseXGlobal, mouseYGlobal;
 				SDL_GetGlobalMouseState(&mouseXGlobal, &mouseYGlobal);
-				SDL_GetWindowPosition(window_, &windowX, &windowY);
+				SDL_GetWindowPosition(_window, &windowX, &windowY);
 #if defined(IMGUI_HAS_VIEWPORT)
 				if (!(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)) {
 					SDL_GetWindowPosition(focusedWindow, &windowX, &windowY);
@@ -915,7 +915,7 @@ namespace nCine::Backends
 #if defined(IMGUI_HAS_VIEWPORT)
 		if (io.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport) {
 			ImGuiID mouseViewportId = 0;
-			if (ImGuiViewport* mouseViewport = getViewportForWindowID(mouseWindowID_)) {
+			if (ImGuiViewport* mouseViewport = getViewportForWindowID(_mouseWindowID)) {
 				mouseViewportId = mouseViewport->ID;
 			}
 			io.AddMouseViewportEvent(mouseViewportId);
@@ -940,10 +940,10 @@ namespace nCine::Backends
 #endif
 		} else {
 			// Show OS mouse cursor
-			SDL_Cursor* expectedCursor = (mouseCursors_[imguiCursor] ? mouseCursors_[imguiCursor] : mouseCursors_[ImGuiMouseCursor_Arrow]);
-			if (mouseLastCursor_ != expectedCursor) {
+			SDL_Cursor* expectedCursor = (_mouseCursors[imguiCursor] ? _mouseCursors[imguiCursor] : _mouseCursors[ImGuiMouseCursor_Arrow]);
+			if (_mouseLastCursor != expectedCursor) {
 				SDL_SetCursor(expectedCursor); // SDL function doesn't have an early out (see #6113)
-				mouseLastCursor_ = expectedCursor;
+				_mouseLastCursor = expectedCursor;
 			}
 #if defined(WITH_SDL3)
 			SDL_ShowCursor();
@@ -987,11 +987,11 @@ namespace nCine::Backends
 
 	void ImGuiSdlInput::closeGamepads()
 	{
-		if (gamepadMode_ != GamepadMode::MANUAL) {
-			for (SDL_GameController* gamepad : gamepads_) {
+		if (_gamepadMode != GamepadMode::MANUAL) {
+			for (SDL_GameController* gamepad : _gamepads) {
 				SDL_GameControllerClose(gamepad);
 			}
-			gamepads_.resize(0);
+			_gamepads.resize(0);
 		}
 	}
 
@@ -1001,13 +1001,13 @@ namespace nCine::Backends
 		if (mode == GamepadMode::MANUAL) {
 			IM_ASSERT(manualGamepadsArray != nullptr && manualGamepadsCount > 0);
 			for (unsigned int n = 0; n < manualGamepadsCount; n++) {
-				gamepads_.push_back(manualGamepadsArray[n]);
+				_gamepads.push_back(manualGamepadsArray[n]);
 			}
 		} else {
 			IM_ASSERT(manualGamepadsArray == nullptr && manualGamepadsCount == 0);
-			wantUpdateGamepadsList_ = true;
+			_wantUpdateGamepadsList = true;
 		}
-		gamepadMode_ = mode;
+		_gamepadMode = mode;
 	}
 
 	void ImGuiSdlInput::updateGamepads()
@@ -1015,7 +1015,7 @@ namespace nCine::Backends
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Update list of controller(s) to use
-		if (wantUpdateGamepadsList_ && gamepadMode_ != GamepadMode::MANUAL) {
+		if (_wantUpdateGamepadsList && _gamepadMode != GamepadMode::MANUAL) {
 			closeGamepads();
 #if defined(WITH_SDL3)
 			// SDL3 enumerates already-gamepad-capable devices directly (as instance IDs), so no SDL_IsGamepad check
@@ -1023,8 +1023,8 @@ namespace nCine::Backends
 			SDL_JoystickID* gamepadIds = SDL_GetGamepads(&gamepadCount);
 			for (int n = 0; n < gamepadCount; n++) {
 				if (SDL_GameController* gamepad = SDL_GameControllerOpen(gamepadIds[n])) {
-					gamepads_.push_back(gamepad);
-					if (gamepadMode_ == GamepadMode::AUTO_FIRST)
+					_gamepads.push_back(gamepad);
+					if (_gamepadMode == GamepadMode::AUTO_FIRST)
 						break;
 				}
 			}
@@ -1034,21 +1034,21 @@ namespace nCine::Backends
 			for (int n = 0; n < joystickCount; n++) {
 				if (SDL_IsGameController(n)) {
 					if (SDL_GameController* gamepad = SDL_GameControllerOpen(n)) {
-						gamepads_.push_back(gamepad);
-						if (gamepadMode_ == GamepadMode::AUTO_FIRST)
+						_gamepads.push_back(gamepad);
+						if (_gamepadMode == GamepadMode::AUTO_FIRST)
 							break;
 					}
 				}
 			}
 #endif
-			wantUpdateGamepadsList_ = false;
+			_wantUpdateGamepadsList = false;
 		}
 
 		// FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
 		if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
 			return;
 		io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-		if (gamepads_.Size == 0)
+		if (_gamepads.Size == 0)
 			return;
 		io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
@@ -1057,30 +1057,30 @@ namespace nCine::Backends
 		// Update gamepad inputs
 		// clang-format off
 		const int thumbDeadZone = 8000; // SDL_gamecontroller.h suggests using this value.
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadStart, SDL_CONTROLLER_BUTTON_START);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadBack, SDL_CONTROLLER_BUTTON_BACK);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadFaceLeft, SDL_CONTROLLER_BUTTON_X);		// Xbox X, PS Square
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadFaceRight, SDL_CONTROLLER_BUTTON_B);		// Xbox B, PS Circle
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadFaceUp, SDL_CONTROLLER_BUTTON_Y);		// Xbox Y, PS Triangle
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadFaceDown, SDL_CONTROLLER_BUTTON_A);		// Xbox A, PS Cross
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadDpadLeft, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadDpadRight, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadDpadUp, SDL_CONTROLLER_BUTTON_DPAD_UP);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadDpadDown, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadL1, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadR1, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadL2, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 0.0f, 32767);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadR2, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0.0f, 32767);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadL3, SDL_CONTROLLER_BUTTON_LEFTSTICK);
-		updateGamepadButton(gamepads_, io, ImGuiKey_GamepadR3, SDL_CONTROLLER_BUTTON_RIGHTSTICK);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadLStickLeft, SDL_CONTROLLER_AXIS_LEFTX, -thumbDeadZone, -32768);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadLStickRight, SDL_CONTROLLER_AXIS_LEFTX, +thumbDeadZone, +32767);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadLStickUp, SDL_CONTROLLER_AXIS_LEFTY, -thumbDeadZone, -32768);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadLStickDown, SDL_CONTROLLER_AXIS_LEFTY, +thumbDeadZone, +32767);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadRStickLeft, SDL_CONTROLLER_AXIS_RIGHTX, -thumbDeadZone, -32768);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadRStickRight, SDL_CONTROLLER_AXIS_RIGHTX, +thumbDeadZone, +32767);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadRStickUp, SDL_CONTROLLER_AXIS_RIGHTY, -thumbDeadZone, -32768);
-		updateGamepadAnalog(gamepads_, io, ImGuiKey_GamepadRStickDown, SDL_CONTROLLER_AXIS_RIGHTY, +thumbDeadZone, +32767);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadStart, SDL_CONTROLLER_BUTTON_START);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadBack, SDL_CONTROLLER_BUTTON_BACK);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadFaceLeft, SDL_CONTROLLER_BUTTON_X);		// Xbox X, PS Square
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadFaceRight, SDL_CONTROLLER_BUTTON_B);		// Xbox B, PS Circle
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadFaceUp, SDL_CONTROLLER_BUTTON_Y);		// Xbox Y, PS Triangle
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadFaceDown, SDL_CONTROLLER_BUTTON_A);		// Xbox A, PS Cross
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadDpadLeft, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadDpadRight, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadDpadUp, SDL_CONTROLLER_BUTTON_DPAD_UP);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadDpadDown, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadL1, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadR1, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadL2, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 0.0f, 32767);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadR2, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0.0f, 32767);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadL3, SDL_CONTROLLER_BUTTON_LEFTSTICK);
+		updateGamepadButton(_gamepads, io, ImGuiKey_GamepadR3, SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadLStickLeft, SDL_CONTROLLER_AXIS_LEFTX, -thumbDeadZone, -32768);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadLStickRight, SDL_CONTROLLER_AXIS_LEFTX, +thumbDeadZone, +32767);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadLStickUp, SDL_CONTROLLER_AXIS_LEFTY, -thumbDeadZone, -32768);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadLStickDown, SDL_CONTROLLER_AXIS_LEFTY, +thumbDeadZone, +32767);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadRStickLeft, SDL_CONTROLLER_AXIS_RIGHTX, -thumbDeadZone, -32768);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadRStickRight, SDL_CONTROLLER_AXIS_RIGHTX, +thumbDeadZone, +32767);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadRStickUp, SDL_CONTROLLER_AXIS_RIGHTY, -thumbDeadZone, -32768);
+		updateGamepadAnalog(_gamepads, io, ImGuiKey_GamepadRStickDown, SDL_CONTROLLER_AXIS_RIGHTY, +thumbDeadZone, +32767);
 		// clang-format on
 	}
 
@@ -1119,7 +1119,7 @@ namespace nCine::Backends
 	{
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 		pio.Monitors.resize(0);
-		wantUpdateMonitors_ = false;
+		_wantUpdateMonitors = false;
 #	if defined(WITH_SDL3)
 		// SDL3 enumerates displays as opaque SDL_DisplayID values (SDL2 used a 0-based count/index)
 		int display_count = 0;
@@ -1201,9 +1201,9 @@ namespace nCine::Backends
 		sdl_flags |= (useOpenGL ? SDL_WINDOW_OPENGL : 0);
 #	endif
 #	if defined(WITH_SDL3)
-		sdl_flags |= (Uint32)(SDL_GetWindowFlags(window_) & SDL_WINDOW_HIGH_PIXEL_DENSITY);
+		sdl_flags |= (Uint32)(SDL_GetWindowFlags(_window) & SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #	else
-		sdl_flags |= SDL_GetWindowFlags(window_) & SDL_WINDOW_ALLOW_HIGHDPI;
+		sdl_flags |= SDL_GetWindowFlags(_window) & SDL_WINDOW_ALLOW_HIGHDPI;
 #	endif
 		sdl_flags |= SDL_WINDOW_HIDDEN;
 		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;

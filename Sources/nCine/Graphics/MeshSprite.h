@@ -85,23 +85,23 @@ namespace nCine
 
 		/** @brief Returns the number of bytes used by each vertex */
 		inline std::uint32_t bytesPerVertex() const {
-			return bytesPerVertex_;
+			return _bytesPerVertex;
 		}
 		/** @brief Returns the number of vertices of the sprite mesh */
 		inline std::uint32_t numVertices() const {
-			return numVertices_;
+			return _numVertices;
 		}
 		/** @brief Returns the total number of bytes used by all sprite's vertices */
 		inline std::uint32_t numBytes() const {
-			return numVertices_ * bytesPerVertex_;
+			return _numVertices * _bytesPerVertex;
 		}
 		/** @brief Returns the vertices data of the sprite mesh */
 		inline const float* vertices() const {
-			return vertexDataPointer_;
+			return _vertexDataPointer;
 		}
 		/** @brief Returns `true` if the vertices belong to the sprite and are not stored externally */
 		inline bool uniqueVertices() const {
-			return vertexDataPointer_ == vertices_.data();
+			return _vertexDataPointer == _vertices.data();
 		}
 
 		/**
@@ -142,15 +142,15 @@ namespace nCine
 
 		/** @brief Returns the number of indices used to draw the sprite mesh */
 		inline std::uint32_t numIndices() const {
-			return numIndices_;
+			return _numIndices;
 		}
 		/** @brief Returns the indices used to draw the sprite mesh */
 		inline const std::uint16_t* indices() const {
-			return indexDataPointer_;
+			return _indexDataPointer;
 		}
 		/** @brief Returns `true` if the indices belong to the sprite and are not stored externally */
 		inline bool uniqueIndices() const {
-			return indexDataPointer_ == indices_.data();
+			return _indexDataPointer == _indices.data();
 		}
 		/** @brief Copies the indices from a pointer into the sprite */
 		void copyIndices(std::uint32_t numIndices, const std::uint16_t* indices);
@@ -174,20 +174,20 @@ namespace nCine
 
 	private:
 		/** @brief The array of vertex positions, interleaved with texture coordinates when a texture is attached */
-		SmallVector<float, 0> vertices_;
+		SmallVector<float, 0> _vertices;
 		/** @brief Pointer to vertex data, either from a shared array or unique to this sprite */
-		const float* vertexDataPointer_;
+		const float* _vertexDataPointer;
 		/** @brief The number of bytes used by each vertex */
-		std::uint32_t bytesPerVertex_;
+		std::uint32_t _bytesPerVertex;
 		/** @brief The number of vertices, either shared or not, that composes the mesh */
-		std::uint32_t numVertices_;
+		std::uint32_t _numVertices;
 
 		/** @brief The array of indices used to draw the sprite mesh */
-		SmallVector<std::uint16_t, 0> indices_;
+		SmallVector<std::uint16_t, 0> _indices;
 		/** @brief Pointer to index data, either from a shared array or unique to this sprite */
-		const std::uint16_t* indexDataPointer_;
+		const std::uint16_t* _indexDataPointer;
 		/** @brief The number of indices, either shared or not, that composes the mesh */
-		std::uint32_t numIndices_;
+		std::uint32_t _numIndices;
 
 		/** @brief Initializer method for constructors and the copy constructor */
 		void init();

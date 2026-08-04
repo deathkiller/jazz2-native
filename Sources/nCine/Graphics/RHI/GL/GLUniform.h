@@ -36,33 +36,33 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the active uniform index within the program */
 		inline GLuint GetIndex() const {
-			return index_;
+			return _index;
 		}
 		/** @brief Returns the index of the owning uniform block, or -1 if the uniform is not in a block */
 		inline GLint GetBlockIndex() const {
-			return blockIndex_;
+			return _blockIndex;
 		}
 		/** @brief Returns the uniform location, or -1 if it has no location (e.g., block members) */
 		inline GLint GetLocation() const {
-			return location_;
+			return _location;
 		}
 		/** @brief Returns the number of array elements (1 for non-array uniforms) */
 		inline GLint GetSize() const {
-			return size_;
+			return _size;
 		}
 		/** @brief Returns the native GL type enum of the uniform (e.g., `GL_FLOAT_VEC4`) */
 		inline GLenum GetGLType() const {
-			return type_;
+			return _type;
 		}
 		/** @brief Returns the reflected (backend-neutral) type of the uniform, converted from the native GL type enum */
 		ShaderCompiler::UniformType GetType() const;
 		/** @brief Returns the byte offset of the uniform within its uniform block */
 		inline GLint GetOffset() const {
-			return offset_;
+			return _offset;
 		}
 		/** @brief Returns the uniform name */
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 		/** @brief Returns the basic component type (`GL_FLOAT`, `GL_INT` or `GL_BOOL`) derived from the GL type */
 		GLenum GetBasicType() const;
@@ -77,14 +77,14 @@ namespace nCine::RHI::GL
 		bool HasReservedPrefix() const;
 
 	private:
-		GLuint index_;
+		GLuint _index;
 		// Active uniforms not in a block have a block index of -1
-		GLint blockIndex_;
-		GLint location_;
-		GLint size_;
-		GLenum type_;
-		GLint offset_;
-		char name_[MaxNameLength];
+		GLint _blockIndex;
+		GLint _location;
+		GLint _size;
+		GLenum _type;
+		GLint _offset;
+		char _name[MaxNameLength];
 	};
 
 }

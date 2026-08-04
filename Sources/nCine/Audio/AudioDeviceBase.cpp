@@ -5,9 +5,9 @@
 namespace nCine
 {
 	AudioDeviceBase::AudioDeviceBase()
-		: gain_(1.0f)
+		: _gain(1.0f)
 #if defined(WITH_THREADS)
-			, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
+			, _decodeThreadCreated(false), _decodeThreadShouldQuit(false)
 #endif
 	{
 	}
@@ -21,26 +21,26 @@ namespace nCine
 
 	void AudioDeviceBase::setSourcePool(ArrayView<const std::uint32_t> sourceIds)
 	{
-		sourcePool_.clear();
-		sourcePool_.reserve(sourceIds.size());
+		_sourcePool.clear();
+		_sourcePool.reserve(sourceIds.size());
 		// Backwards, so the pool hands out the first source id first
 		for (std::size_t i = sourceIds.size(); i > 0; i--) {
-			sourcePool_.push_back(sourceIds[i - 1]);
+			_sourcePool.push_back(sourceIds[i - 1]);
 		}
 	}
 
 	const IAudioPlayer* AudioDeviceBase::player(std::uint32_t index) const
 	{
-		if (index < players_.size()) {
-			return players_[index];
+		if (index < _players.size()) {
+			return _players[index];
 		}
 		return nullptr;
 	}
 
 	IAudioPlayer* AudioDeviceBase::player(std::uint32_t index)
 	{
-		if (index < players_.size()) {
-			return players_[index];
+		if (index < _players.size()) {
+			return _players[index];
 		}
 		return nullptr;
 	}
@@ -48,18 +48,18 @@ namespace nCine
 	void AudioDeviceBase::stopPlayers()
 	{
 		// Iterating backwards because stop() unregisters the player, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			players_[i - 1]->stop();
+		for (std::size_t i = _players.size(); i > 0; i--) {
+			_players[i - 1]->stop();
 		}
-		players_.clear();
+		_players.clear();
 	}
 
 	void AudioDeviceBase::pausePlayers()
 	{
-		for (auto& player : players_) {
+		for (auto& player : _players) {
 			player->pause();
 		}
-		players_.clear();
+		_players.clear();
 	}
 
 	void AudioDeviceBase::stopPlayers(PlayerType playerType)
@@ -69,8 +69,8 @@ namespace nCine
 			: AudioStreamPlayer::sType();
 
 		// Iterating backwards because stop() unregisters the player, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			IAudioPlayer* player = players_[i - 1];
+		for (std::size_t i = _players.size(); i > 0; i--) {
+			IAudioPlayer* player = _players[i - 1];
 			if (player->type() == objectType) {
 				player->stop();
 			}
@@ -84,18 +84,18 @@ namespace nCine
 			: AudioStreamPlayer::sType();
 
 		// Iterating backwards, so removing the current element doesn't affect the remaining ones
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			IAudioPlayer* player = players_[i - 1];
+		for (std::size_t i = _players.size(); i > 0; i--) {
+			IAudioPlayer* player = _players[i - 1];
 			if (player->type() == objectType) {
 				player->pause();
-				players_.eraseUnordered(&players_[i - 1]);
+				_players.eraseUnordered(&_players[i - 1]);
 			}
 		}
 	}
 
 	void AudioDeviceBase::freezePlayers()
 	{
-		for (auto& player : players_) {
+		for (auto& player : _players) {
 			player->pause();
 		}
 		// The players array is not cleared at this point, it is needed as-is by the unfreeze method
@@ -103,35 +103,35 @@ namespace nCine
 
 	void AudioDeviceBase::unfreezePlayers()
 	{
-		for (auto& player : players_) {
+		for (auto& player : _players) {
 			player->play();
 		}
 	}
 
 	std::uint32_t AudioDeviceBase::registerPlayer(IAudioPlayer* player)
 	{
-		if (sourcePool_.empty()) {
+		if (_sourcePool.empty()) {
 			return UnavailableSource;
 		}
 
-		std::uint32_t sourceId = sourcePool_.pop_back_val();
-		players_.push_back(player);
+		std::uint32_t sourceId = _sourcePool.pop_back_val();
+		_players.push_back(player);
 		return sourceId;
 	}
 
 	void AudioDeviceBase::unregisterPlayer(IAudioPlayer* player)
 	{
-		if (player->sourceId_ == UnavailableSource) {
+		if (player->_sourceId == UnavailableSource) {
 			return;
 		}
 
-		sourcePool_.push_back(player->sourceId_);
-		player->sourceId_ = UnavailableSource;
+		_sourcePool.push_back(player->_sourceId);
+		player->_sourceId = UnavailableSource;
 
-		auto it = players_.begin();
-		while (it != players_.end()) {
+		auto it = _players.begin();
+		while (it != _players.end()) {
 			if (*it == player) {
-				players_.erase(it);
+				_players.erase(it);
 				break;
 			}
 			++it;
@@ -141,23 +141,23 @@ namespace nCine
 	void AudioDeviceBase::updatePlayers()
 	{
 		// Iterating backwards because a finished player unregisters itself, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			players_[i - 1]->updateState();
+		for (std::size_t i = _players.size(); i > 0; i--) {
+			_players[i - 1]->updateState();
 		}
 	}
 
 	bool AudioDeviceBase::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
 #if defined(WITH_THREADS)
-		decodeMutex_.Lock();
-		if (!decodeThreadCreated_) {
+		_decodeMutex.Lock();
+		if (!_decodeThreadCreated) {
 			// The decoding thread is created lazily on the first streamed sound
-			decodeThreadCreated_ = true;
-			decodeThread_ = Thread(AudioDeviceBase::decodeThreadFunc, this);
+			_decodeThreadCreated = true;
+			_decodeThread = Thread(AudioDeviceBase::decodeThreadFunc, this);
 		}
-		decodeQueue_.push_back(request);
-		decodeMutex_.Unlock();
-		decodeQueueCond_.Signal();
+		_decodeQueue.push_back(request);
+		_decodeMutex.Unlock();
+		_decodeQueueCond.Signal();
 		return true;
 #else
 		return false;
@@ -172,43 +172,43 @@ namespace nCine
 			return;
 		}
 
-		decodeMutex_.Lock();
+		_decodeMutex.Lock();
 		// Remove the request from the queue if it hasn't been picked up yet
-		for (std::size_t i = 0; i < decodeQueue_.size(); i++) {
-			if (decodeQueue_[i] == request) {
-				decodeQueue_.erase(&decodeQueue_[i]);
+		for (std::size_t i = 0; i < _decodeQueue.size(); i++) {
+			if (_decodeQueue[i] == request) {
+				_decodeQueue.erase(&_decodeQueue[i]);
 				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
-				decodeMutex_.Unlock();
+				_decodeMutex.Unlock();
 				return;
 			}
 		}
 		// Wait for the decoding thread if the request is currently being executed
-		while (activeDecodeRequest_ == request) {
-			decodeDoneCond_.Wait(decodeMutex_);
+		while (_activeDecodeRequest == request) {
+			_decodeDoneCond.Wait(_decodeMutex);
 		}
-		decodeMutex_.Unlock();
+		_decodeMutex.Unlock();
 #endif
 	}
 
 	void AudioDeviceBase::shutdownDecodeThread()
 	{
 #if defined(WITH_THREADS)
-		decodeMutex_.Lock();
-		if (decodeThreadShouldQuit_) {
-			decodeMutex_.Unlock();
+		_decodeMutex.Lock();
+		if (_decodeThreadShouldQuit) {
+			_decodeMutex.Unlock();
 			return;
 		}
-		decodeThreadShouldQuit_ = true;
+		_decodeThreadShouldQuit = true;
 		// Requests still in the queue will never be executed, reset them so their owners don't wait forever
-		for (auto& request : decodeQueue_) {
+		for (auto& request : _decodeQueue) {
 			request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
-		decodeQueue_.clear();
-		decodeMutex_.Unlock();
-		decodeQueueCond_.Broadcast();
-		if (decodeThreadCreated_) {
-			decodeThread_.Join();
-			decodeThreadCreated_ = false;
+		_decodeQueue.clear();
+		_decodeMutex.Unlock();
+		_decodeQueueCond.Broadcast();
+		if (_decodeThreadCreated) {
+			_decodeThread.Join();
+			_decodeThreadCreated = false;
 		}
 #endif
 	}
@@ -219,32 +219,32 @@ namespace nCine
 		Thread::SetCurrentName("Audio decoding");
 
 		AudioDeviceBase* device = static_cast<AudioDeviceBase*>(arg);
-		device->decodeMutex_.Lock();
+		device->_decodeMutex.Lock();
 		while (true) {
-			while (device->decodeQueue_.empty() && !device->decodeThreadShouldQuit_) {
-				device->decodeQueueCond_.Wait(device->decodeMutex_);
+			while (device->_decodeQueue.empty() && !device->_decodeThreadShouldQuit) {
+				device->_decodeQueueCond.Wait(device->_decodeMutex);
 			}
-			if (device->decodeThreadShouldQuit_) {
+			if (device->_decodeThreadShouldQuit) {
 				break;
 			}
 
-			device->activeDecodeRequest_ = std::move(device->decodeQueue_.front());
-			device->decodeQueue_.erase(device->decodeQueue_.begin());
-			device->decodeMutex_.Unlock();
+			device->_activeDecodeRequest = std::move(device->_decodeQueue.front());
+			device->_decodeQueue.erase(device->_decodeQueue.begin());
+			device->_decodeMutex.Unlock();
 
 			// Decoding is executed without holding the lock, so new requests can still be submitted
-			device->activeDecodeRequest_->Execute();
+			device->_activeDecodeRequest->Execute();
 
-			device->decodeMutex_.Lock();
-			device->activeDecodeRequest_ = nullptr;
-			device->decodeDoneCond_.Broadcast();
+			device->_decodeMutex.Lock();
+			device->_activeDecodeRequest = nullptr;
+			device->_decodeDoneCond.Broadcast();
 		}
-		device->decodeMutex_.Unlock();
+		device->_decodeMutex.Unlock();
 	}
 #endif
 
 	const Vector3f& AudioDeviceBase::getListenerPosition() const
 	{
-		return listenerPos_;
+		return _listenerPos;
 	}
 }

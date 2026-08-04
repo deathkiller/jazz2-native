@@ -86,7 +86,7 @@ namespace nCine::RHI::GXM
 		}
 	}
 
-	std::uint32_t GxmShaderProgram::nextHandle_ = 1;
+	std::uint32_t GxmShaderProgram::_nextHandle = 1;
 
 	GxmShaderProgram::GxmShaderProgram()
 		: GxmShaderProgram(QueryPhase::Immediate)
@@ -94,13 +94,13 @@ namespace nCine::RHI::GXM
 	}
 
 	GxmShaderProgram::GxmShaderProgram(QueryPhase queryPhase)
-		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Enabled), queryPhase_(queryPhase),
-			batchSize_(std::uint32_t(DefaultBatchSize)), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
-			reflection_(nullptr), programName_(nullptr), variantName_(nullptr),
-			boundVbo_(nullptr), boundIbo_(nullptr), vboOffset_(0), usesCornerStream_(false), usesBatchedStream_(false),
-			usesGeometryStream_(false), geometryStride_(0),
-			vertexStage_(nullptr), fragmentStage_(nullptr), vertexStageId_(nullptr), fragmentStageId_(nullptr),
-			vertexUniformBufferSize_(0), fragmentUniformBufferSize_(0)
+		: _handle(_nextHandle++), _status(Status::NotLinked), _introspection(Introspection::Enabled), _queryPhase(queryPhase),
+			_batchSize(std::uint32_t(DefaultBatchSize)), _shouldLogOnErrors(true), _uniformsSize(0), _uniformBlocksSize(0),
+			_reflection(nullptr), _programName(nullptr), _variantName(nullptr),
+			_boundVbo(nullptr), _boundIbo(nullptr), _vboOffset(0), _usesCornerStream(false), _usesBatchedStream(false),
+			_usesGeometryStream(false), _geometryStride(0),
+			_vertexStage(nullptr), _fragmentStage(nullptr), _vertexStageId(nullptr), _fragmentStageId(nullptr),
+			_vertexUniformBufferSize(0), _fragmentUniformBufferSize(0)
 	{
 	}
 
@@ -109,7 +109,7 @@ namespace nCine::RHI::GXM
 	{
 		static_cast<void>(vertexFile);
 		static_cast<void>(fragmentFile);
-		introspection_ = introspection;
+		_introspection = introspection;
 	}
 
 	GxmShaderProgram::GxmShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection)
@@ -138,35 +138,35 @@ namespace nCine::RHI::GXM
 			if (SceGxmContext* context = GxmDevice::GetContext()) {
 				sceGxmFinish(context);
 			}
-			for (CachedVertexProgram& cached : vertexPrograms_) {
+			for (CachedVertexProgram& cached : _vertexPrograms) {
 				sceGxmShaderPatcherReleaseVertexProgram(patcher, cached.Program);
 			}
-			for (CachedFragmentProgram& cached : fragmentPrograms_) {
+			for (CachedFragmentProgram& cached : _fragmentPrograms) {
 				sceGxmShaderPatcherReleaseFragmentProgram(patcher, cached.Program);
 			}
-			if (vertexStageId_ != nullptr) {
-				sceGxmShaderPatcherUnregisterProgram(patcher, vertexStageId_);
+			if (_vertexStageId != nullptr) {
+				sceGxmShaderPatcherUnregisterProgram(patcher, _vertexStageId);
 			}
-			if (fragmentStageId_ != nullptr) {
-				sceGxmShaderPatcherUnregisterProgram(patcher, fragmentStageId_);
+			if (_fragmentStageId != nullptr) {
+				sceGxmShaderPatcherUnregisterProgram(patcher, _fragmentStageId);
 			}
 		}
-		vertexPrograms_.clear();
-		fragmentPrograms_.clear();
-		vertexStageId_ = nullptr;
-		fragmentStageId_ = nullptr;
+		_vertexPrograms.clear();
+		_fragmentPrograms.clear();
+		_vertexStageId = nullptr;
+		_fragmentStageId = nullptr;
 
 		// The GXP binaries are our own copies of the compiler's output (see CompileCgStage), and the patcher
 		// only borrowed them
-		std::free(vertexStage_);
-		std::free(fragmentStage_);
-		vertexStage_ = nullptr;
-		fragmentStage_ = nullptr;
+		std::free(_vertexStage);
+		std::free(_fragmentStage);
+		_vertexStage = nullptr;
+		_fragmentStage = nullptr;
 	}
 
 	bool GxmShaderProgram::IsLinked() const
 	{
-		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
+		return (_status == Status::Linked || _status == Status::LinkedWithDeferredQueries || _status == Status::LinkedWithIntrospection);
 	}
 
 	bool GxmShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
@@ -207,12 +207,12 @@ namespace nCine::RHI::GXM
 			return false;
 		}
 
-		const GeneratedCgShader* sources = FindGeneratedCgShader(programName_, variantName_);
+		const GeneratedCgShader* sources = FindGeneratedCgShader(_programName, _variantName);
 		if (sources == nullptr) {
-			if (shouldLogOnErrors_) {
+			if (_shouldLogOnErrors) {
 				LOGE("No generated Cg source for shader \"{}\" (variant \"{}\"): either its Cg transform was "
 					"declined by the emitter, or the shader is compiled at runtime, which this backend cannot do",
-					programName_ != nullptr ? programName_ : "<unnamed>", variantName_ != nullptr ? variantName_ : "");
+					_programName != nullptr ? _programName : "<unnamed>", _variantName != nullptr ? _variantName : "");
 			}
 			return false;
 		}
@@ -221,55 +221,55 @@ namespace nCine::RHI::GXM
 		String vertexSource, fragmentSource;
 		const char* vertexText = sources->VertexSource;
 		const char* fragmentText = sources->FragmentSource;
-		if (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0) {
-			vertexSource = PatchBatchSize(vertexText, batchSize_);
-			fragmentSource = PatchBatchSize(fragmentText, batchSize_);
+		if (_batchSize != std::uint32_t(DefaultBatchSize) && _batchSize > 0) {
+			vertexSource = PatchBatchSize(vertexText, _batchSize);
+			fragmentSource = PatchBatchSize(fragmentText, _batchSize);
 			vertexText = vertexSource.data();
 			fragmentText = fragmentSource.data();
 		}
 
 		std::uint32_t vertexSize = 0;
-		vertexStage_ = CompileCgStage(vertexText, true, vertexSize);
-		if (vertexStage_ == nullptr) {
-			LOGE("Failed to compile the vertex stage of shader \"{}\"", programName_ != nullptr ? programName_ : "<unnamed>");
+		_vertexStage = CompileCgStage(vertexText, true, vertexSize);
+		if (_vertexStage == nullptr) {
+			LOGE("Failed to compile the vertex stage of shader \"{}\"", _programName != nullptr ? _programName : "<unnamed>");
 			return false;
 		}
 
 		std::uint32_t fragmentSize = 0;
-		fragmentStage_ = CompileCgStage(fragmentText, false, fragmentSize);
-		if (fragmentStage_ == nullptr) {
-			LOGE("Failed to compile the fragment stage of shader \"{}\"", programName_ != nullptr ? programName_ : "<unnamed>");
-			std::free(vertexStage_);
-			vertexStage_ = nullptr;
+		_fragmentStage = CompileCgStage(fragmentText, false, fragmentSize);
+		if (_fragmentStage == nullptr) {
+			LOGE("Failed to compile the fragment stage of shader \"{}\"", _programName != nullptr ? _programName : "<unnamed>");
+			std::free(_vertexStage);
+			_vertexStage = nullptr;
 			return false;
 		}
 
-		std::int32_t result = sceGxmShaderPatcherRegisterProgram(patcher, vertexStage_, &vertexStageId_);
+		std::int32_t result = sceGxmShaderPatcherRegisterProgram(patcher, _vertexStage, &_vertexStageId);
 		if (result < 0) {
 			LOGE("sceGxmShaderPatcherRegisterProgram(vertex) failed with 0x{:.8x}", std::uint32_t(result));
 			return false;
 		}
-		result = sceGxmShaderPatcherRegisterProgram(patcher, fragmentStage_, &fragmentStageId_);
+		result = sceGxmShaderPatcherRegisterProgram(patcher, _fragmentStage, &_fragmentStageId);
 		if (result < 0) {
 			LOGE("sceGxmShaderPatcherRegisterProgram(fragment) failed with 0x{:.8x}", std::uint32_t(result));
 			return false;
 		}
 
-		vertexUniformBufferSize_ = sceGxmProgramGetDefaultUniformBufferSize(vertexStage_);
-		fragmentUniformBufferSize_ = sceGxmProgramGetDefaultUniformBufferSize(fragmentStage_);
+		_vertexUniformBufferSize = sceGxmProgramGetDefaultUniformBufferSize(_vertexStage);
+		_fragmentUniformBufferSize = sceGxmProgramGetDefaultUniformBufferSize(_fragmentStage);
 		return true;
 	}
 
 	void GxmShaderProgram::ReflectStage(const SceGxmProgram* program, SmallVector<GxmUniformSlot, 0>& uniformSlots,
 		SmallVector<GxmBlockUpload, 0>& blockUploads, SmallVector<GxmSamplerSlot, 0>& samplerSlots)
 	{
-		if (program == nullptr || reflection_ == nullptr) {
+		if (program == nullptr || _reflection == nullptr) {
 			return;
 		}
 
 		// Loose uniforms: the byte size comes from the engine-side reflection rather than the compiled
 		// parameter, because that is the layout the uniform cache wrote and the whole value moves as one copy
-		for (const GxmUniform& uniform : uniforms_) {
+		for (const GxmUniform& uniform : _uniforms) {
 			if (uniform.GetBlockIndex() != -1) {
 				continue;
 			}
@@ -287,8 +287,8 @@ namespace nCine::RHI::GXM
 		// Uniform blocks: the Cg emitter hoisted each member to a top-level uniform, so a block is uploaded
 		// member by member from the range the pipeline bound. The binding index the pipeline uses is the
 		// block's own index (see GxmShaderUniformBlocks::Bind()).
-		for (std::size_t blockIndex = 0; blockIndex < reflection_->BlockCount; blockIndex++) {
-			const ShaderCompiler::UniformBlock& block = reflection_->Blocks[blockIndex];
+		for (std::size_t blockIndex = 0; blockIndex < _reflection->BlockCount; blockIndex++) {
+			const ShaderCompiler::UniformBlock& block = _reflection->Blocks[blockIndex];
 			// A batched instance array has to move as one contiguous run, because the reflection describes one
 			// element and the shader's array is addressed by index - there is no per-element parameter to resolve.
 			// Every other block is a set of independent uniforms that the Cg emitter hoisted out of it, and each
@@ -324,7 +324,7 @@ namespace nCine::RHI::GXM
 						compiledStride = (elementIndex - index) * 4u;
 						if (compiledStride != sourceStride) {
 							LOGD("Shader \"{}\" packs \"{}\" {} bytes apart, not the {} its std140 stride implies",
-								programName_ != nullptr ? programName_ : "<unnamed>", member.Name,
+								_programName != nullptr ? _programName : "<unnamed>", member.Name,
 								compiledStride, sourceStride);
 						}
 					}
@@ -332,8 +332,8 @@ namespace nCine::RHI::GXM
 					// instance it filled rather than one - clamping to a single element is exactly the kind of
 					// silent truncation that renders "almost right". This does assume the compiled array element
 					// is laid out like the engine's std140 one, which it is (verified on the console).
-					const std::uint32_t blockBytes = (blockIndex < uniformBlocks_.size()
-						? std::uint32_t(uniformBlocks_[blockIndex].GetSize()) : 0u);
+					const std::uint32_t blockBytes = (blockIndex < _uniformBlocks.size()
+						? std::uint32_t(_uniformBlocks[blockIndex].GetSize()) : 0u);
 					memberBytes = (blockBytes > member.Offset ? blockBytes - member.Offset : 0u);
 				} else {
 					// Just this member. Copying the rest of the block along with it - which is what the batched
@@ -348,8 +348,8 @@ namespace nCine::RHI::GXM
 					if (memberBytes == 0) {
 						// A type with no component count of its own (a struct aggregate); the old bulk copy is
 						// the only thing that can move it, so keep doing that rather than nothing
-						const std::uint32_t blockBytes = (blockIndex < uniformBlocks_.size()
-							? std::uint32_t(uniformBlocks_[blockIndex].GetSize()) : 0u);
+						const std::uint32_t blockBytes = (blockIndex < _uniformBlocks.size()
+							? std::uint32_t(_uniformBlocks[blockIndex].GetSize()) : 0u);
 						memberBytes = (blockBytes > member.Offset ? blockBytes - member.Offset : 0u);
 					}
 
@@ -361,7 +361,7 @@ namespace nCine::RHI::GXM
 						blockBase = base;
 					} else if (base != blockBase) {
 						LOGD("Shader \"{}\" lays out \"{}.{}\" at byte {}, not the {} its std140 offset implies",
-							programName_ != nullptr ? programName_ : "<unnamed>", block.Name, member.Name,
+							_programName != nullptr ? _programName : "<unnamed>", block.Name, member.Name,
 							index * 4u, blockBase + std::int64_t(member.Offset));
 					}
 				}
@@ -372,8 +372,8 @@ namespace nCine::RHI::GXM
 
 		// Samplers: the reflection assigns each one the texture unit the material binds to, while the compiled
 		// shader decides which sceGxm texture slot it reads - both are needed to route a bound texture
-		for (std::size_t i = 0; i < reflection_->TextureCount; i++) {
-			const ShaderCompiler::TextureBinding& texture = reflection_->Textures[i];
+		for (std::size_t i = 0; i < _reflection->TextureCount; i++) {
+			const ShaderCompiler::TextureBinding& texture = _reflection->Textures[i];
 			const SceGxmProgramParameter* parameter = sceGxmProgramFindParameterByName(program, texture.Name);
 			if (parameter == nullptr || sceGxmProgramParameterGetCategory(parameter) != SCE_GXM_PARAMETER_CATEGORY_SAMPLER) {
 				continue;
@@ -386,18 +386,18 @@ namespace nCine::RHI::GXM
 
 	bool GxmShaderProgram::Link(Introspection introspection)
 	{
-		introspection_ = introspection;
+		_introspection = introspection;
 
-		if (reflection_ == nullptr) {
-			if (shouldLogOnErrors_) {
+		if (_reflection == nullptr) {
+			if (_shouldLogOnErrors) {
 				LOGE("Cannot link a shader program without offline reflection on this backend");
 			}
-			status_ = Status::CompilationFailed;
+			_status = Status::CompilationFailed;
 			return false;
 		}
 
 		if (!CompileStages()) {
-			status_ = Status::CompilationFailed;
+			_status = Status::CompilationFailed;
 			return false;
 		}
 
@@ -406,64 +406,64 @@ namespace nCine::RHI::GXM
 
 	bool GxmShaderProgram::FinalizeAfterLinking(Introspection introspection)
 	{
-		introspection_ = introspection;
-		status_ = Status::Linked;
+		_introspection = introspection;
+		_status = Status::Linked;
 		PerformIntrospection();
 		return true;
 	}
 
 	void GxmShaderProgram::PerformIntrospection()
 	{
-		if (introspection_ == Introspection::Disabled || reflection_ == nullptr) {
+		if (_introspection == Introspection::Disabled || _reflection == nullptr) {
 			return;
 		}
 
-		uniforms_.clear();
-		uniformBlocks_.clear();
-		attributes_.clear();
-		uniformsSize_ = 0;
-		uniformBlocksSize_ = 0;
-		vertexUniformSlots_.clear();
-		fragmentUniformSlots_.clear();
-		vertexBlockUploads_.clear();
-		fragmentBlockUploads_.clear();
-		vertexSamplerSlots_.clear();
-		fragmentSamplerSlots_.clear();
-		stageAttributes_.clear();
+		_uniforms.clear();
+		_uniformBlocks.clear();
+		_attributes.clear();
+		_uniformsSize = 0;
+		_uniformBlocksSize = 0;
+		_vertexUniformSlots.clear();
+		_fragmentUniformSlots.clear();
+		_vertexBlockUploads.clear();
+		_fragmentBlockUploads.clear();
+		_vertexSamplerSlots.clear();
+		_fragmentSamplerSlots.clear();
+		_stageAttributes.clear();
 
 		ImportReflection();
 		ReflectStageAttributes();
-		ReflectStage(vertexStage_, vertexUniformSlots_, vertexBlockUploads_, vertexSamplerSlots_);
-		ReflectStage(fragmentStage_, fragmentUniformSlots_, fragmentBlockUploads_, fragmentSamplerSlots_);
+		ReflectStage(_vertexStage, _vertexUniformSlots, _vertexBlockUploads, _vertexSamplerSlots);
+		ReflectStage(_fragmentStage, _fragmentUniformSlots, _fragmentBlockUploads, _fragmentSamplerSlots);
 
 		// A uniform block that resolved in neither stage means every draw of this program reads undefined
 		// instance data - the failure mode that looks like garbled sprites rather than like an error
-		for (std::size_t blockIndex = 0; blockIndex < reflection_->BlockCount; blockIndex++) {
+		for (std::size_t blockIndex = 0; blockIndex < _reflection->BlockCount; blockIndex++) {
 			bool reached = false;
-			for (const GxmBlockUpload& upload : vertexBlockUploads_) {
+			for (const GxmBlockUpload& upload : _vertexBlockUploads) {
 				reached |= (upload.BindingIndex == blockIndex);
 			}
-			for (const GxmBlockUpload& upload : fragmentBlockUploads_) {
+			for (const GxmBlockUpload& upload : _fragmentBlockUploads) {
 				reached |= (upload.BindingIndex == blockIndex);
 			}
 			if (!reached) {
 				LOGW("Shader \"{}\" uniform block \"{}\" reaches neither stage; its draws will read undefined uniforms",
-					programName_ != nullptr ? programName_ : "<unnamed>", reflection_->Blocks[blockIndex].Name);
+					_programName != nullptr ? _programName : "<unnamed>", _reflection->Blocks[blockIndex].Name);
 			}
 		}
 
-		status_ = Status::LinkedWithIntrospection;
+		_status = Status::LinkedWithIntrospection;
 	}
 
 	void GxmShaderProgram::ReflectStageAttributes()
 	{
-		if (vertexStage_ == nullptr) {
+		if (_vertexStage == nullptr) {
 			return;
 		}
 
-		const std::uint32_t count = sceGxmProgramGetParameterCount(vertexStage_);
+		const std::uint32_t count = sceGxmProgramGetParameterCount(_vertexStage);
 		for (std::uint32_t i = 0; i < count; i++) {
-			const SceGxmProgramParameter* parameter = sceGxmProgramGetParameter(vertexStage_, i);
+			const SceGxmProgramParameter* parameter = sceGxmProgramGetParameter(_vertexStage, i);
 			if (parameter == nullptr || sceGxmProgramParameterGetCategory(parameter) != SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE) {
 				continue;
 			}
@@ -476,7 +476,7 @@ namespace nCine::RHI::GXM
 			if (const char* lastDot = std::strrchr(name, '.')) {
 				name = lastDot + 1;
 			}
-			stageAttributes_.push_back({name,
+			_stageAttributes.push_back({name,
 				std::uint16_t(sceGxmProgramParameterGetResourceIndex(parameter)),
 				std::uint8_t(sceGxmProgramParameterGetComponentCount(parameter))});
 		}
@@ -484,22 +484,22 @@ namespace nCine::RHI::GXM
 
 	void GxmShaderProgram::ImportReflection()
 	{
-		const ShaderCompiler::ProgramVariant& reflection = *reflection_;
+		const ShaderCompiler::ProgramVariant& reflection = *_reflection;
 		std::int32_t nextLocation = 0;
 
 		// Loose uniforms - samplers are kept in a separate reflection list but treated as loose uniforms here
 		for (std::size_t i = 0; i < reflection.UniformCount; i++) {
 			const ShaderCompiler::Uniform& u = reflection.Uniforms[i];
-			uniforms_.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 		for (std::size_t i = 0; i < reflection.TextureCount; i++) {
 			const ShaderCompiler::TextureBinding& t = reflection.Textures[i];
-			uniforms_.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 
-		uniformBlocks_.reserve(reflection.BlockCount);
+		_uniformBlocks.reserve(reflection.BlockCount);
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
 			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
 
@@ -508,18 +508,18 @@ namespace nCine::RHI::GXM
 			std::uint32_t effectiveBatchSize = 0;
 			std::uint32_t dataSize = b.BaseSize;
 			if (b.InstanceStride > 0) {
-				effectiveBatchSize = (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0)
-					? batchSize_ : (64u * 1024u) / b.InstanceStride;
+				effectiveBatchSize = (_batchSize != std::uint32_t(DefaultBatchSize) && _batchSize > 0)
+					? _batchSize : (64u * 1024u) / b.InstanceStride;
 				dataSize += b.InstanceStride * effectiveBatchSize;
 			}
 
-			const std::uint32_t blockIndex = std::uint32_t(uniformBlocks_.size());
-			uniformBlocks_.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
-			GxmUniformBlock& block = uniformBlocks_.back();
-			uniformBlocksSize_ += block.GetSize();
+			const std::uint32_t blockIndex = std::uint32_t(_uniformBlocks.size());
+			_uniformBlocks.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
+			GxmUniformBlock& block = _uniformBlocks.back();
+			_uniformBlocksSize += block.GetSize();
 
-			if (introspection_ != Introspection::NoUniformsInBlocks) {
-				block.members_.reserve(b.MemberCount);
+			if (_introspection != Introspection::NoUniformsInBlocks) {
+				block._members.reserve(b.MemberCount);
 				for (std::size_t j = 0; j < b.MemberCount; j++) {
 					const ShaderCompiler::BlockMember& m = b.Members[j];
 					if (m.Type == ShaderCompiler::UniformType::Struct) {
@@ -528,14 +528,14 @@ namespace nCine::RHI::GXM
 					}
 					GxmUniform member;
 					member.SetName(m.Name);
-					member.type_ = m.Type;
-					member.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
+					member._type = m.Type;
+					member._size = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
 						? std::int32_t(effectiveBatchSize)
 						: (m.ArraySize > 0 ? std::int32_t(m.ArraySize) : 1);
-					member.blockIndex_ = std::int32_t(blockIndex);
-					member.offset_ = std::int32_t(m.Offset);
-					member.owner_ = this;
-					block.members_.push_back(member);
+					member._blockIndex = std::int32_t(blockIndex);
+					member._offset = std::int32_t(m.Offset);
+					member._owner = this;
+					block._members.push_back(member);
 				}
 			}
 		}
@@ -543,8 +543,8 @@ namespace nCine::RHI::GXM
 		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
 			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
 			const std::int32_t location = (a.Location >= 0 ? a.Location : std::int32_t(i));
-			attributes_.emplace_back(a.Name, a.Type, location);
-			vertexFormat_[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
+			_attributes.emplace_back(a.Name, a.Type, location);
+			_vertexFormat[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
 		}
 	}
 
@@ -555,7 +555,7 @@ namespace nCine::RHI::GXM
 
 	bool GxmShaderProgram::HasAttribute(const char* name) const
 	{
-		for (const GxmAttribute& attribute : attributes_) {
+		for (const GxmAttribute& attribute : _attributes) {
 			if (std::strcmp(attribute.GetName(), name) == 0) {
 				return true;
 			}
@@ -565,7 +565,7 @@ namespace nCine::RHI::GXM
 
 	bool GxmShaderProgram::IsIntegerAttribute(const char* name) const
 	{
-		for (const GxmAttribute& attribute : attributes_) {
+		for (const GxmAttribute& attribute : _attributes) {
 			if (std::strcmp(attribute.GetName(), name) == 0) {
 				const ShaderCompiler::UniformType type = attribute.GetType();
 				return (type == ShaderCompiler::UniformType::Int || type == ShaderCompiler::UniformType::UInt);
@@ -576,9 +576,9 @@ namespace nCine::RHI::GXM
 
 	GxmVertexFormat::Attribute* GxmShaderProgram::GetAttribute(const char* name)
 	{
-		for (const GxmAttribute& attribute : attributes_) {
+		for (const GxmAttribute& attribute : _attributes) {
 			if (std::strcmp(attribute.GetName(), name) == 0 && attribute.GetLocation() >= 0) {
-				return &vertexFormat_[std::uint32_t(attribute.GetLocation())];
+				return &_vertexFormat[std::uint32_t(attribute.GetLocation())];
 			}
 		}
 		return nullptr;
@@ -586,10 +586,10 @@ namespace nCine::RHI::GXM
 
 	void GxmShaderProgram::DefineVertexFormat(const GxmBufferObject* vbo, const GxmBufferObject* ibo, std::uint32_t vboOffset)
 	{
-		boundVbo_ = vbo;
-		boundIbo_ = ibo;
-		vboOffset_ = vboOffset;
-		vertexFormat_.SetIbo(ibo);
+		_boundVbo = vbo;
+		_boundIbo = ibo;
+		_vboOffset = vboOffset;
+		_vertexFormat.SetIbo(ibo);
 
 		// The corner and instance-index attributes are fed by the device's static streams, not by the
 		// pipeline's geometry buffer - the shaders read them instead of gl_VertexID (see VertexIdRewrite).
@@ -597,16 +597,16 @@ namespace nCine::RHI::GXM
 		// The compiled stage decides which streams exist: a sprite shader's corner and instance index come
 		// from the device's static streams and appear in no reflection, while a mesh shader's attributes come
 		// out of the pipeline's vertex buffer and do
-		usesCornerStream_ = false;
-		usesBatchedStream_ = false;
-		usesGeometryStream_ = false;
-		geometryStride_ = 0;
-		for (const GxmStageAttribute& stageAttribute : stageAttributes_) {
+		_usesCornerStream = false;
+		_usesBatchedStream = false;
+		_usesGeometryStream = false;
+		_geometryStride = 0;
+		for (const GxmStageAttribute& stageAttribute : _stageAttributes) {
 			const bool isCorner = (std::strcmp(stageAttribute.Name, Material::QuadCornerAttributeName) == 0);
 			const bool isInstance = (std::strcmp(stageAttribute.Name, "aInstanceIndex") == 0);
 			if (isCorner || isInstance) {
-				usesCornerStream_ = true;
-				usesBatchedStream_ |= isInstance;
+				_usesCornerStream = true;
+				_usesBatchedStream |= isInstance;
 				continue;
 			}
 			if (vbo == nullptr) {
@@ -615,9 +615,9 @@ namespace nCine::RHI::GXM
 			if (GxmVertexFormat::Attribute* formatAttribute = GetAttribute(stageAttribute.Name)) {
 				formatAttribute->setVbo(vbo);
 				formatAttribute->SetBaseOffset(vboOffset);
-				usesGeometryStream_ = true;
+				_usesGeometryStream = true;
 				if (formatAttribute->GetStride() > 0) {
-					geometryStride_ = std::uint32_t(formatAttribute->GetStride());
+					_geometryStride = std::uint32_t(formatAttribute->GetStride());
 				}
 			}
 		}
@@ -625,23 +625,23 @@ namespace nCine::RHI::GXM
 
 	void GxmShaderProgram::Reset()
 	{
-		if (status_ != Status::NotLinked && status_ != Status::CompilationFailed) {
-			uniforms_.clear();
-			uniformBlocks_.clear();
-			attributes_.clear();
-			uniformsSize_ = 0;
-			uniformBlocksSize_ = 0;
-			resolvedUniforms_.clear();
-			vertexUniformSlots_.clear();
-			fragmentUniformSlots_.clear();
-			vertexBlockUploads_.clear();
-			fragmentBlockUploads_.clear();
-			vertexSamplerSlots_.clear();
-			fragmentSamplerSlots_.clear();
-			vertexFormat_.Reset();
+		if (_status != Status::NotLinked && _status != Status::CompilationFailed) {
+			_uniforms.clear();
+			_uniformBlocks.clear();
+			_attributes.clear();
+			_uniformsSize = 0;
+			_uniformBlocksSize = 0;
+			_resolvedUniforms.clear();
+			_vertexUniformSlots.clear();
+			_fragmentUniformSlots.clear();
+			_vertexBlockUploads.clear();
+			_fragmentBlockUploads.clear();
+			_vertexSamplerSlots.clear();
+			_fragmentSamplerSlots.clear();
+			_vertexFormat.Reset();
 			ReleaseGpu();
 		}
-		status_ = Status::NotLinked;
+		_status = Status::NotLinked;
 	}
 
 	void GxmShaderProgram::SetObjectLabel(StringView label)
@@ -651,18 +651,18 @@ namespace nCine::RHI::GXM
 
 	void GxmShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
-		for (ResolvedUniform& resolved : resolvedUniforms_) {
+		for (ResolvedUniform& resolved : _resolvedUniforms) {
 			if (resolved.Name == name) {
 				resolved.Data = data;
 				return;
 			}
 		}
-		resolvedUniforms_.push_back({String{name}, data});
+		_resolvedUniforms.push_back({String{name}, data});
 	}
 
 	const std::uint8_t* GxmShaderProgram::ResolveUniform(const char* name) const
 	{
-		for (const ResolvedUniform& resolved : resolvedUniforms_) {
+		for (const ResolvedUniform& resolved : _resolvedUniforms) {
 			if (resolved.Name == name) {
 				return resolved.Data;
 			}
@@ -824,12 +824,12 @@ namespace nCine::RHI::GXM
 	SceGxmVertexProgram* GxmShaderProgram::GetVertexProgram()
 	{
 		SceGxmShaderPatcher* patcher = GxmDevice::GetShaderPatcher();
-		if (patcher == nullptr || vertexStageId_ == nullptr) {
+		if (patcher == nullptr || _vertexStageId == nullptr) {
 			return nullptr;
 		}
 
-		const std::uint64_t fingerprint = vertexFormat_.CalculateFingerprint();
-		for (const CachedVertexProgram& cached : vertexPrograms_) {
+		const std::uint64_t fingerprint = _vertexFormat.CalculateFingerprint();
+		for (const CachedVertexProgram& cached : _vertexPrograms) {
 			if (cached.Fingerprint == fingerprint) {
 				return cached.Program;
 			}
@@ -844,7 +844,7 @@ namespace nCine::RHI::GXM
 
 		// Built from what the compiled stage declares - the reflection does not list a sprite shader's
 		// synthesized corner and instance-index inputs at all (see GxmStageAttribute)
-		for (const GxmStageAttribute& stageAttribute : stageAttributes_) {
+		for (const GxmStageAttribute& stageAttribute : _stageAttributes) {
 			if (attributeCount >= SCE_GXM_MAX_VERTEX_ATTRIBUTES) {
 				break;
 			}
@@ -864,11 +864,11 @@ namespace nCine::RHI::GXM
 			}
 
 			const GxmVertexFormat::Attribute* formatAttribute = GetAttribute(stageAttribute.Name);
-			if (formatAttribute == nullptr || !usesGeometryStream_) {
+			if (formatAttribute == nullptr || !_usesGeometryStream) {
 				// A geometry attribute the pipeline never described has no stream to read from; leaving it
 				// undeclared is better than pointing it at nothing
 				LOGW("Vertex attribute \"{}\" of shader \"{}\" has no vertex buffer bound and was skipped",
-					stageAttribute.Name, programName_ != nullptr ? programName_ : "<unnamed>");
+					stageAttribute.Name, _programName != nullptr ? _programName : "<unnamed>");
 				continue;
 			}
 
@@ -898,31 +898,31 @@ namespace nCine::RHI::GXM
 			// A shader with no attribute inputs at all still needs a vertex program; sceGxm accepts an empty
 			// attribute set as long as no stream is declared either
 			SceGxmVertexProgram* program = nullptr;
-			const std::int32_t result = sceGxmShaderPatcherCreateVertexProgram(patcher, vertexStageId_, nullptr, 0, nullptr, 0, &program);
+			const std::int32_t result = sceGxmShaderPatcherCreateVertexProgram(patcher, _vertexStageId, nullptr, 0, nullptr, 0, &program);
 			if (result < 0) {
 				LOGE("sceGxmShaderPatcherCreateVertexProgram(no attributes) failed with 0x{:.8x}", std::uint32_t(result));
 				return nullptr;
 			}
-			vertexPrograms_.push_back({fingerprint, program});
+			_vertexPrograms.push_back({fingerprint, program});
 			return program;
 		}
 
 		// Only the streams the layout actually reads are declared: sceGxm expects an address for every one of
 		// them, and a layout with no geometry attributes gives the static stream slot 0 instead
 		std::uint32_t streamCount = 0;
-		if (usesGeometryStream_) {
-			gxmStreams[streamCount].stride = std::uint16_t(geometryStride_);
+		if (_usesGeometryStream) {
+			gxmStreams[streamCount].stride = std::uint16_t(_geometryStride);
 			gxmStreams[streamCount].indexSource = SCE_GXM_INDEX_SOURCE_INDEX_16BIT;
 			streamCount++;
 		}
-		if (usesCornerStream_) {
-			gxmStreams[staticStreamIndex].stride = std::uint16_t(usesBatchedStream_ ? 12 : 8);
+		if (_usesCornerStream) {
+			gxmStreams[staticStreamIndex].stride = std::uint16_t(_usesBatchedStream ? 12 : 8);
 			gxmStreams[staticStreamIndex].indexSource = SCE_GXM_INDEX_SOURCE_INDEX_16BIT;
 			streamCount = staticStreamIndex + 1;
 		}
 
 		SceGxmVertexProgram* program = nullptr;
-		const std::int32_t result = sceGxmShaderPatcherCreateVertexProgram(patcher, vertexStageId_,
+		const std::int32_t result = sceGxmShaderPatcherCreateVertexProgram(patcher, _vertexStageId,
 			gxmAttributes, attributeCount, gxmStreams, streamCount, &program);
 		if (result < 0) {
 			LOGE("sceGxmShaderPatcherCreateVertexProgram({} attributes, {} streams) failed with 0x{:.8x}",
@@ -930,32 +930,32 @@ namespace nCine::RHI::GXM
 			return nullptr;
 		}
 
-		vertexPrograms_.push_back({fingerprint, program});
+		_vertexPrograms.push_back({fingerprint, program});
 		return program;
 	}
 
 	SceGxmFragmentProgram* GxmShaderProgram::GetFragmentProgram(std::uint32_t blendKey, const SceGxmBlendInfo* blendInfo)
 	{
 		SceGxmShaderPatcher* patcher = GxmDevice::GetShaderPatcher();
-		if (patcher == nullptr || fragmentStageId_ == nullptr) {
+		if (patcher == nullptr || _fragmentStageId == nullptr) {
 			return nullptr;
 		}
 
-		for (const CachedFragmentProgram& cached : fragmentPrograms_) {
+		for (const CachedFragmentProgram& cached : _fragmentPrograms) {
 			if (cached.BlendKey == blendKey) {
 				return cached.Program;
 			}
 		}
 
 		SceGxmFragmentProgram* program = nullptr;
-		const std::int32_t result = sceGxmShaderPatcherCreateFragmentProgram(patcher, fragmentStageId_,
-			SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, blendInfo, vertexStage_, &program);
+		const std::int32_t result = sceGxmShaderPatcherCreateFragmentProgram(patcher, _fragmentStageId,
+			SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, blendInfo, _vertexStage, &program);
 		if (result < 0) {
 			LOGE("sceGxmShaderPatcherCreateFragmentProgram(blend 0x{:.8x}) failed with 0x{:.8x}", blendKey, std::uint32_t(result));
 			return nullptr;
 		}
 
-		fragmentPrograms_.push_back({blendKey, program});
+		_fragmentPrograms.push_back({blendKey, program});
 		return program;
 	}
 }

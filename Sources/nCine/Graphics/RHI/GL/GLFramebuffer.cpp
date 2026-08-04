@@ -6,26 +6,26 @@
 
 namespace nCine::RHI::GL
 {
-	std::uint32_t GLFramebuffer::readBoundBuffer_ = 0;
-	std::uint32_t GLFramebuffer::drawBoundBuffer_ = 0;
-	GLuint GLFramebuffer::defaultHandle_ = 0;
+	std::uint32_t GLFramebuffer::_readBoundBuffer = 0;
+	std::uint32_t GLFramebuffer::_drawBoundBuffer = 0;
+	GLuint GLFramebuffer::_defaultHandle = 0;
 
 	GLFramebuffer::GLFramebuffer()
-		: glHandle_(0), numDrawBuffers_(0)
+		: _glHandle(0), _numDrawBuffers(0)
 	{
-		glGenFramebuffers(1, &glHandle_);
+		glGenFramebuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	GLFramebuffer::~GLFramebuffer()
 	{
-		if (readBoundBuffer_ == glHandle_) {
+		if (_readBoundBuffer == _glHandle) {
 			Unbind(GL_READ_FRAMEBUFFER);
 		}
-		if (drawBoundBuffer_ == glHandle_) {
+		if (_drawBoundBuffer == _glHandle) {
 			Unbind(GL_DRAW_FRAMEBUFFER);
 		}
-		glDeleteFramebuffers(1, &glHandle_);
+		glDeleteFramebuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
@@ -41,12 +41,12 @@ namespace nCine::RHI::GL
 
 	bool GLFramebuffer::Bind(GLenum target) const
 	{
-		return BindHandle(target, glHandle_);
+		return BindHandle(target, _glHandle);
 	}
 
 	bool GLFramebuffer::Unbind(GLenum target)
 	{
-		return BindHandle(target, defaultHandle_);
+		return BindHandle(target, _defaultHandle);
 	}
 
 	bool GLFramebuffer::DrawBuffers(std::uint32_t numDrawBuffers)
@@ -55,15 +55,15 @@ namespace nCine::RHI::GL
 		// glDrawBuffers() is ES 3.0 and MRT does not exist on ES2 - a framebuffer always renders to its single
 		// GL_COLOR_ATTACHMENT0, which is exactly what a draw-buffer count of 0/1 selects, so those are no-ops
 		DEATH_ASSERT(numDrawBuffers <= 1, "Multiple render targets are not supported on OpenGL|ES 2.0", false);
-		numDrawBuffers_ = numDrawBuffers;
+		_numDrawBuffers = numDrawBuffers;
 		return false;
 #else
 		static const GLenum drawBuffers[MaxDrawbuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
 															GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
-		if (numDrawBuffers < MaxDrawbuffers && numDrawBuffers_ != numDrawBuffers) {
+		if (numDrawBuffers < MaxDrawbuffers && _numDrawBuffers != numDrawBuffers) {
 			glDrawBuffers(numDrawBuffers, drawBuffers);
 			GL_LOG_ERRORS();
-			numDrawBuffers_ = numDrawBuffers;
+			_numDrawBuffers = numDrawBuffers;
 			return true;
 		}
 		return false;
@@ -72,21 +72,21 @@ namespace nCine::RHI::GL
 
 	bool GLFramebuffer::AttachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
-		if (attachedRenderbuffers_.size() >= MaxRenderbuffers - 1) {
+		if (_attachedRenderbuffers.size() >= MaxRenderbuffers - 1) {
 			return false;
 		}
-		for (std::uint32_t i = 0; i < attachedRenderbuffers_.size(); i++) {
-			if (attachedRenderbuffers_[i]->GetAttachment() == attachment) {
+		for (std::uint32_t i = 0; i < _attachedRenderbuffers.size(); i++) {
+			if (_attachedRenderbuffers[i]->GetAttachment() == attachment) {
 				return false;
 			}
 		}
 
-		std::unique_ptr<GLRenderbuffer>& buffer = attachedRenderbuffers_.emplace_back(std::make_unique<GLRenderbuffer>(internalFormat, width, height));
+		std::unique_ptr<GLRenderbuffer>& buffer = _attachedRenderbuffers.emplace_back(std::make_unique<GLRenderbuffer>(internalFormat, width, height));
 		buffer->SetObjectLabel(label);
 		buffer->SetAttachment(attachment);
 
 		Bind(GL_FRAMEBUFFER);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, buffer->glHandle_);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, buffer->_glHandle);
 		GL_LOG_ERRORS();
 		return true;
 	}
@@ -98,12 +98,12 @@ namespace nCine::RHI::GL
 
 	bool GLFramebuffer::DetachRenderbuffer(GLenum attachment)
 	{
-		for (std::uint32_t i = 0; i < attachedRenderbuffers_.size(); i++) {
-			if (attachedRenderbuffers_[i]->GetAttachment() == attachment) {
+		for (std::uint32_t i = 0; i < _attachedRenderbuffers.size(); i++) {
+			if (_attachedRenderbuffers[i]->GetAttachment() == attachment) {
 				Bind(GL_FRAMEBUFFER);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, 0);
 				GL_LOG_ERRORS();
-				attachedRenderbuffers_.eraseUnordered(i);
+				_attachedRenderbuffers.eraseUnordered(i);
 				return true;
 			}
 		}
@@ -113,7 +113,7 @@ namespace nCine::RHI::GL
 	void GLFramebuffer::AttachTexture(GLTexture& texture, GLenum attachment)
 	{
 		Bind(GL_FRAMEBUFFER);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, texture.target_, texture.glHandle_, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, texture._target, texture._glHandle, 0);
 		GL_LOG_ERRORS();
 	}
 
@@ -151,7 +151,7 @@ namespace nCine::RHI::GL
 
 	void GLFramebuffer::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::FrameBuffer, _glHandle, label);
 	}
 
 	bool GLFramebuffer::BindHandle(GLenum target, GLuint glHandle)
@@ -163,21 +163,21 @@ namespace nCine::RHI::GL
 		// remap every request so callers like GLRenderTarget::BindDraw() and the destructor stay portable
 		target = GL_FRAMEBUFFER;
 #endif
-		if (target == GL_FRAMEBUFFER && (readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {
+		if (target == GL_FRAMEBUFFER && (_readBoundBuffer != glHandle || _drawBoundBuffer != glHandle)) {
 			glBindFramebuffer(target, glHandle);
 			GL_LOG_ERRORS();
-			readBoundBuffer_ = glHandle;
-			drawBoundBuffer_ = glHandle;
+			_readBoundBuffer = glHandle;
+			_drawBoundBuffer = glHandle;
 			return true;
-		} else if (target == GL_READ_FRAMEBUFFER && readBoundBuffer_ != glHandle) {
+		} else if (target == GL_READ_FRAMEBUFFER && _readBoundBuffer != glHandle) {
 			glBindFramebuffer(target, glHandle);
 			GL_LOG_ERRORS();
-			readBoundBuffer_ = glHandle;
+			_readBoundBuffer = glHandle;
 			return true;
-		} else if (target == GL_DRAW_FRAMEBUFFER && drawBoundBuffer_ != glHandle) {
+		} else if (target == GL_DRAW_FRAMEBUFFER && _drawBoundBuffer != glHandle) {
 			glBindFramebuffer(target, glHandle);
 			GL_LOG_ERRORS();
-			drawBoundBuffer_ = glHandle;
+			_drawBoundBuffer = glHandle;
 			return true;
 		}
 		return false;
@@ -188,9 +188,9 @@ namespace nCine::RHI::GL
 		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 
 		if (target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER)
-			return readBoundBuffer_;
+			return _readBoundBuffer;
 		else
-			return drawBoundBuffer_;
+			return _drawBoundBuffer;
 	}
 
 	void GLFramebuffer::SetBoundHandle(GLenum target, GLuint glHandle)
@@ -198,9 +198,9 @@ namespace nCine::RHI::GL
 		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 
 		if (target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER)
-			readBoundBuffer_ = glHandle;
+			_readBoundBuffer = glHandle;
 
 		if (target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER)
-			drawBoundBuffer_ = glHandle;
+			_drawBoundBuffer = glHandle;
 	}
 }

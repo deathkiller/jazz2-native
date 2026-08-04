@@ -37,35 +37,35 @@ namespace nCine
 		};
 	}
 
-	std::unique_ptr<BinaryShaderCache> RenderResources::binaryShaderCache_;
-	std::unique_ptr<RenderBuffersManager> RenderResources::buffersManager_;
-	std::unique_ptr<RenderVaoPool> RenderResources::vaoPool_;
-	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
-	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
+	std::unique_ptr<BinaryShaderCache> RenderResources::_binaryShaderCache;
+	std::unique_ptr<RenderBuffersManager> RenderResources::_buffersManager;
+	std::unique_ptr<RenderVaoPool> RenderResources::_vaoPool;
+	std::unique_ptr<RenderCommandPool> RenderResources::_renderCommandPool;
+	std::unique_ptr<RenderBatcher> RenderResources::_renderBatcher;
 
 #if defined(RHI_GL_PROFILE_ES2)
-	std::unique_ptr<RHI::Buffer> RenderResources::quadCornerVbo_;
+	std::unique_ptr<RHI::Buffer> RenderResources::_quadCornerVbo;
 #endif
 
-	std::unique_ptr<RHI::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
-	HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> RenderResources::batchedShaders_(32);
+	std::unique_ptr<RHI::ShaderProgram> RenderResources::_defaultShaderPrograms[DefaultShaderProgramsCount];
+	HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> RenderResources::_batchedShaders(32);
 
-	std::uint8_t RenderResources::cameraUniformsBuffer_[UniformsBufferSize];
-	HashMap<RHI::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::cameraUniformDataMap_(32);
+	std::uint8_t RenderResources::_cameraUniformsBuffer[UniformsBufferSize];
+	HashMap<RHI::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::_cameraUniformDataMap(32);
 
-	Camera* RenderResources::currentCamera_ = nullptr;
-	std::unique_ptr<Camera> RenderResources::defaultCamera_;
-	Viewport* RenderResources::currentViewport_ = nullptr;
+	Camera* RenderResources::_currentCamera = nullptr;
+	std::unique_ptr<Camera> RenderResources::_defaultCamera;
+	Viewport* RenderResources::_currentViewport = nullptr;
 
 	RHI::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
-		return (shaderProgramType != Material::ShaderProgramType::Custom ? defaultShaderPrograms_[std::int32_t(shaderProgramType)].get() : nullptr);
+		return (shaderProgramType != Material::ShaderProgramType::Custom ? _defaultShaderPrograms[std::int32_t(shaderProgramType)].get() : nullptr);
 	}
 
 	RHI::ShaderProgram* RenderResources::GetBatchedShader(const RHI::ShaderProgram* shader)
 	{
-		auto it = batchedShaders_.find(shader);
-		return (it != batchedShaders_.end() ? it->second : nullptr);
+		auto it = _batchedShaders.find(shader);
+		return (it != _batchedShaders.end() ? it->second : nullptr);
 	}
 
 	bool RenderResources::RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader)
@@ -74,34 +74,34 @@ namespace nCine
 		FATAL_ASSERT(batchedShader != nullptr);
 		FATAL_ASSERT(shader != batchedShader);
 
-		return batchedShaders_.emplace(shader, batchedShader).second;
+		return _batchedShaders.emplace(shader, batchedShader).second;
 	}
 
 	bool RenderResources::UnregisterBatchedShader(const RHI::ShaderProgram* shader)
 	{
 		DEATH_ASSERT(shader != nullptr);
-		return (batchedShaders_.erase(shader) > 0);
+		return (_batchedShaders.erase(shader) > 0);
 	}
 
 	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
-		auto it = cameraUniformDataMap_.find(shaderProgram);
-		return (it != cameraUniformDataMap_.end() ? &it->second : nullptr);
+		auto it = _cameraUniformDataMap.find(shaderProgram);
+		return (it != _cameraUniformDataMap.end() ? &it->second : nullptr);
 	}
 
 	void RenderResources::InsertCameraUniformData(RHI::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
 		FATAL_ASSERT(shaderProgram != nullptr);
 
-		//if (cameraUniformDataMap_.loadFactor() >= 0.8f)
-		//	cameraUniformDataMap_.rehash(cameraUniformDataMap_.capacity() * 2);
+		//if (_cameraUniformDataMap.loadFactor() >= 0.8f)
+		//	_cameraUniformDataMap.rehash(_cameraUniformDataMap.capacity() * 2);
 
-		cameraUniformDataMap_.emplace(shaderProgram, std::move(cameraUniformData));
+		_cameraUniformDataMap.emplace(shaderProgram, std::move(cameraUniformData));
 	}
 
 	bool RenderResources::RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
-		return cameraUniformDataMap_.erase(shaderProgram);
+		return _cameraUniformDataMap.erase(shaderProgram);
 	}
 
 	void RenderResources::SetDefaultAttributesParameters(RHI::ShaderProgram& shaderProgram)
@@ -148,51 +148,51 @@ namespace nCine
 
 	void RenderResources::SetCurrentCamera(Camera* camera)
 	{
-		currentCamera_ = (camera != nullptr ? camera : defaultCamera_.get());
+		_currentCamera = (camera != nullptr ? camera : _defaultCamera.get());
 	}
 
 	void RenderResources::UpdateCameraUniforms()
 	{
 		// The buffer is shared among every shader program. There is no need to call `setFloatVector()` as `setDirty()` is enough.
-		std::memcpy(cameraUniformsBuffer_, currentCamera_->GetProjection().Data(), 64);
-		std::memcpy(cameraUniformsBuffer_ + 64, currentCamera_->GetView().Data(), 64);
-		for (auto i = cameraUniformDataMap_.begin(); i != cameraUniformDataMap_.end(); ++i) {
+		std::memcpy(_cameraUniformsBuffer, _currentCamera->GetProjection().Data(), 64);
+		std::memcpy(_cameraUniformsBuffer + 64, _currentCamera->GetView().Data(), 64);
+		for (auto i = _cameraUniformDataMap.begin(); i != _cameraUniformDataMap.end(); ++i) {
 			CameraUniformData& cameraUniformData = i->second;
 
-			if (cameraUniformData.camera != currentCamera_) {
+			if (cameraUniformData.camera != _currentCamera) {
 				i->second.shaderUniforms.SetDirty(true);
-				cameraUniformData.camera = currentCamera_;
+				cameraUniformData.camera = _currentCamera;
 			} else {
-				if (cameraUniformData.updateFrameProjectionMatrix < currentCamera_->UpdateFrameProjectionMatrix()) {
+				if (cameraUniformData.updateFrameProjectionMatrix < _currentCamera->UpdateFrameProjectionMatrix()) {
 					i->second.shaderUniforms.GetUniform(Material::ProjectionMatrixUniformName)->SetDirty(true);
 				}
-				if (cameraUniformData.updateFrameViewMatrix < currentCamera_->UpdateFrameViewMatrix()) {
+				if (cameraUniformData.updateFrameViewMatrix < _currentCamera->UpdateFrameViewMatrix()) {
 					i->second.shaderUniforms.GetUniform(Material::ViewMatrixUniformName)->SetDirty(true);
 				}
 			}
 
-			cameraUniformData.updateFrameProjectionMatrix = currentCamera_->UpdateFrameProjectionMatrix();
-			cameraUniformData.updateFrameViewMatrix = currentCamera_->UpdateFrameViewMatrix();
+			cameraUniformData.updateFrameProjectionMatrix = _currentCamera->UpdateFrameProjectionMatrix();
+			cameraUniformData.updateFrameViewMatrix = _currentCamera->UpdateFrameViewMatrix();
 		}
 	}
 
 	void RenderResources::SetCurrentViewport(Viewport* viewport)
 	{
 		FATAL_ASSERT(viewport != nullptr);
-		currentViewport_ = viewport;
+		_currentViewport = viewport;
 	}
 
 	void RenderResources::CreateMinimal()
 	{
 		// `CreateMinimal()` cannot be called after `Create()`
-		DEATH_ASSERT(binaryShaderCache_ == nullptr);
-		DEATH_ASSERT(buffersManager_ == nullptr);
-		DEATH_ASSERT(vaoPool_ == nullptr);
+		DEATH_ASSERT(_binaryShaderCache == nullptr);
+		DEATH_ASSERT(_buffersManager == nullptr);
+		DEATH_ASSERT(_vaoPool == nullptr);
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
-		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
-		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+		_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
+		_vaoPool = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 	}
 
 	void RenderResources::Create()
@@ -200,46 +200,46 @@ namespace nCine
 		// `Create()` can be called after `CreateMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		if (binaryShaderCache_ == nullptr) {
-			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+		if (_binaryShaderCache == nullptr) {
+			_binaryShaderCache = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		}
-		if (buffersManager_ == nullptr) {
-			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
+		if (_buffersManager == nullptr) {
+			_buffersManager = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
 		}
 		// The backend places committed uniform blocks into the streaming uniform buffer through this hook,
 		// so it doesn't have to know the pipeline's buffer suballocator
 		RHI::ShaderUniformBlocks::SetUniformRangeAllocator([](std::uint32_t bytes) {
-			return buffersManager_->AcquireMemory(RenderBuffersManager::BufferTypes::Uniform, bytes);
+			return _buffersManager->AcquireMemory(RenderBuffersManager::BufferTypes::Uniform, bytes);
 		});
-		if (vaoPool_ == nullptr) {
-			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+		if (_vaoPool == nullptr) {
+			_vaoPool = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
-		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
-		renderBatcher_ = std::make_unique<RenderBatcher>();
-		defaultCamera_ = std::make_unique<Camera>();
-		currentCamera_ = defaultCamera_.get();
+		_renderCommandPool = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
+		_renderBatcher = std::make_unique<RenderBatcher>();
+		_defaultCamera = std::make_unique<Camera>();
+		_currentCamera = _defaultCamera.get();
 
 #if defined(RHI_GL_PROFILE_ES2)
 		// The ES2 sprite/full-screen shaders read the quad corner from this static attribute instead of
 		// synthesizing it from gl_VertexID. The four corners are in the order of the single-quad 4-vertex
 		// TRIANGLE_STRIP draw (matching the old "vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2))").
-		if (quadCornerVbo_ == nullptr) {
+		if (_quadCornerVbo == nullptr) {
 			static const float quadCorners[] = { 1.0f, 0.0f,  1.0f, 1.0f,  0.0f, 0.0f,  0.0f, 1.0f };
-			quadCornerVbo_ = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
-			quadCornerVbo_->BufferData(sizeof(quadCorners), quadCorners, BufferUsage::StaticDraw);
-			quadCornerVbo_->SetObjectLabel("QuadCornerVBO");
+			_quadCornerVbo = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
+			_quadCornerVbo->BufferData(sizeof(quadCorners), quadCorners, BufferUsage::StaticDraw);
+			_quadCornerVbo->SetObjectLabel("QuadCornerVBO");
 		}
 #endif
 
 		ShaderLoad shadersToLoad[] = {
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, RHI::ShaderProgram::Introspection::Enabled, "Sprite" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShadersGen::DefaultMeshSprite, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShadersGen::DefaultMeshSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShadersGen::DefaultBatchedSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShadersGen::DefaultBatchedSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShadersGen::DefaultBatchedMeshSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, RHI::ShaderProgram::Introspection::Enabled, "Sprite" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShadersGen::DefaultMeshSprite, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShadersGen::DefaultMeshSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShadersGen::DefaultBatchedSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShadersGen::DefaultBatchedSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShadersGen::DefaultBatchedMeshSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			{ RenderResources::_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
 		};
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
@@ -268,7 +268,7 @@ namespace nCine
 				continue;
 			}
 #endif
-			if (binaryShaderCache_->LoadFromCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
+			if (_binaryShaderCache->LoadFromCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
 				// Shader is already compiled and up-to-date
 				continue;
 			}
@@ -366,43 +366,43 @@ namespace nCine
 			}
 
 			FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
-			binaryShaderCache_->SaveToCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get());
+			_binaryShaderCache->SaveToCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get());
 		}
 		RegisterDefaultBatchedShaders();
 
 		// Calculating a default projection matrix for all shader programs
 		auto res = theApplication().GetResolution();
-		defaultCamera_->SetOrthoProjection(0.0f, float(res.X), 0.0f, float(res.Y));
+		_defaultCamera->SetOrthoProjection(0.0f, float(res.X), 0.0f, float(res.Y));
 	}
 
 	void RenderResources::Dispose()
 	{
 		RHI::ShaderUniformBlocks::SetUniformRangeAllocator(nullptr);
 
-		for (auto& shaderProgram : defaultShaderPrograms_) {
+		for (auto& shaderProgram : _defaultShaderPrograms) {
 			shaderProgram.reset(nullptr);
 		}
 
-		DEATH_ASSERT(cameraUniformDataMap_.empty());
+		DEATH_ASSERT(_cameraUniformDataMap.empty());
 
-		defaultCamera_.reset(nullptr);
-		renderBatcher_.reset(nullptr);
-		renderCommandPool_.reset(nullptr);
-		vaoPool_.reset(nullptr);
-		buffersManager_.reset(nullptr);
+		_defaultCamera.reset(nullptr);
+		_renderBatcher.reset(nullptr);
+		_renderCommandPool.reset(nullptr);
+		_vaoPool.reset(nullptr);
+		_buffersManager.reset(nullptr);
 
 		LOGI("Rendering resources disposed");
 	}
 
 	void RenderResources::RegisterDefaultBatchedShaders()
 	{
-		batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)].get());
-		//batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)].get());
-		batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)].get());
-		batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)].get());
-		//batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)].get());
-		batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)].get());
-		//batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)].get());
-		//batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)].get());
+		_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::Sprite)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedSprites)].get());
+		//_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::SpriteGray)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)].get());
+		_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)].get());
+		_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::MeshSprite)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)].get());
+		//_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)].get());
+		_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)].get());
+		//_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)].get());
+		//_batchedShaders.emplace(_defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::TextNodeRed)].get(), _defaultShaderPrograms[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)].get());
 	}
 }

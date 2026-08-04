@@ -65,7 +65,7 @@ namespace nCine
 	}
 
 	Shader::Shader()
-		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate)), renderModes_(0)
+		: Object(ObjectType::Shader), _glShaderProgram(std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate)), _renderModes(0)
 	{
 	}
 
@@ -100,7 +100,7 @@ namespace nCine
 
 	Shader::~Shader()
 	{
-		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
+		RenderResources::UnregisterBatchedShader(_glShaderProgram.get());
 	}
 
 	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
@@ -111,21 +111,21 @@ namespace nCine
 			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
+		_glShaderProgram->Reset(); // reset before attaching new shaders
+		_glShaderProgram->SetBatchSize(batchSize);
+		_glShaderProgram->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, fragment, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
 
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
+		_glShaderProgram->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return IsLinked();
 	}
@@ -185,28 +185,28 @@ namespace nCine
 		}
 #endif
 
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
+		_glShaderProgram->Reset(); // reset before attaching new shaders
+		_glShaderProgram->SetBatchSize(batchSize);
+		_glShaderProgram->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vsSource, batchSize, {});
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, fsSource, batchSize, {});
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
 
 		// Set after Reset(), which clears any previous reflection
-		glShaderProgram_->SetReflection(&variant);
+		_glShaderProgram->SetReflection(&variant);
 		// The fixed-function console backends resolve their generated effects from this true
 		// (program, variant) identity at link time - never from the object label
 		if (programName != nullptr) {
-			glShaderProgram_->SetProgramIdentity(programName, variant.Name);
+			_glShaderProgram->SetProgramIdentity(programName, variant.Name);
 		}
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
+		_glShaderProgram->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return IsLinked();
 	}
@@ -219,21 +219,21 @@ namespace nCine
 			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
+		_glShaderProgram->Reset(); // reset before attaching new shaders
+		_glShaderProgram->SetBatchSize(batchSize);
+		_glShaderProgram->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), vertexPath);
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), vertexPath);
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), fragmentPath);
+		_glShaderProgram->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), fragmentPath);
 
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
+		_glShaderProgram->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return IsLinked();
 	}
@@ -267,7 +267,7 @@ namespace nCine
 		// shaders also skip GL introspection (the view only has to live for the duration of this call)
 		const ShaderCompiler::Program& view = program.GetView();
 		const ShaderCompiler::ProgramVariant& variantView = view.Variants[variant - program.Variants.data()];
-		renderModes_ = view.RenderModes;
+		_renderModes = view.RenderModes;
 		return LoadFromMemory(shaderName, introspection, variantView, batchSize);
 	}
 
@@ -308,9 +308,9 @@ namespace nCine
 			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
-		glShaderProgram_->Reset();
-		glShaderProgram_->SetObjectLabel(shaderName);
-		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
+		_glShaderProgram->Reset();
+		_glShaderProgram->SetObjectLabel(shaderName);
+		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, _glShaderProgram.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
 	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, const char* programName)
@@ -321,26 +321,26 @@ namespace nCine
 			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
-		glShaderProgram_->Reset();
-		glShaderProgram_->SetObjectLabel(shaderName);
-		glShaderProgram_->SetReflection(&variant);
+		_glShaderProgram->Reset();
+		_glShaderProgram->SetObjectLabel(shaderName);
+		_glShaderProgram->SetReflection(&variant);
 		// Identity travels with the reflection so a cache hit resolves console effects the same way
 		// a fresh compile does (the binary cache is disabled on the fixed-function tiers today, but
 		// the invariant is kept regardless)
 		if (programName != nullptr) {
-			glShaderProgram_->SetProgramIdentity(programName, variant.Name);
+			_glShaderProgram->SetProgramIdentity(programName, variant.Name);
 		}
-		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
+		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, _glShaderProgram.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
 	bool Shader::SaveToCache(const char* shaderName, std::uint64_t shaderVersion) const
 	{
-		return RenderResources::GetBinaryShaderCache().SaveToCache(shaderName, shaderVersion, glShaderProgram_.get());
+		return RenderResources::GetBinaryShaderCache().SaveToCache(shaderName, shaderVersion, _glShaderProgram.get());
 	}
 
 	bool Shader::SetAttribute(const char* name, std::int32_t stride, void* pointer)
 	{
-		RHI::VertexFormat::Attribute* attribute = glShaderProgram_->GetAttribute(name);
+		RHI::VertexFormat::Attribute* attribute = _glShaderProgram->GetAttribute(name);
 		if (attribute != nullptr) {
 			attribute->SetVboParameters(stride, pointer);
 		}
@@ -349,36 +349,36 @@ namespace nCine
 
 	bool Shader::IsLinked() const
 	{
-		return glShaderProgram_->IsLinked();
+		return _glShaderProgram->IsLinked();
 	}
 
 	unsigned int Shader::RetrieveInfoLogLength() const
 	{
-		return glShaderProgram_->RetrieveInfoLogLength();
+		return _glShaderProgram->RetrieveInfoLogLength();
 	}
 
 	void Shader::RetrieveInfoLog(std::string& infoLog) const
 	{
-		glShaderProgram_->RetrieveInfoLog(infoLog);
+		_glShaderProgram->RetrieveInfoLog(infoLog);
 	}
 
 	bool Shader::GetLogOnErrors() const
 	{
-		return glShaderProgram_->GetLogOnErrors();
+		return _glShaderProgram->GetLogOnErrors();
 	}
 
 	void Shader::SetLogOnErrors(bool shouldLogOnErrors)
 	{
-		glShaderProgram_->SetLogOnErrors(shouldLogOnErrors);
+		_glShaderProgram->SetLogOnErrors(shouldLogOnErrors);
 	}
 
 	void Shader::SetGLShaderProgramLabel(const char* label)
 	{
-		glShaderProgram_->SetObjectLabel(label);
+		_glShaderProgram->SetObjectLabel(label);
 	}
 
 	void Shader::RegisterBatchedShader(Shader& batchedShader)
 	{
-		RenderResources::RegisterBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
+		RenderResources::RegisterBatchedShader(_glShaderProgram.get(), batchedShader._glShaderProgram.get());
 	}
 }

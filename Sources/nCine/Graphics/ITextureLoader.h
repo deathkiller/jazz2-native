@@ -27,38 +27,38 @@ namespace nCine
 		 * @brief Returns `true` if the texture has been correctly loaded
 		 */
 		inline bool hasLoaded() const {
-			return hasLoaded_;
+			return _hasLoaded;
 		}
 
 		/**
 		 * @brief Returns texture width in pixels
 		 */
 		inline std::int32_t width() const {
-			return width_;
+			return _width;
 		}
 		/**
 		 * @brief Returns texture height in pixels
 		 */
 		inline std::int32_t height() const {
-			return height_;
+			return _height;
 		}
 		/**
 		 * @brief Returns texture size as a `Vector2i`
 		 */
 		inline Vector2i size() const {
-			return Vector2i(width_, height_);
+			return Vector2i(_width, _height);
 		}
 		/**
 		 * @brief Returns the number of MIP maps stored in the texture file
 		 */
 		inline std::int32_t mipMapCount() const {
-			return mipMapCount_;
+			return _mipMapCount;
 		}
 		/**
 		 * @brief Returns texture data size in bytes
 		 */
 		inline std::uint32_t dataSize() const {
-			return dataSize_;
+			return _dataSize;
 		}
 		/**
 		 * @brief Returns the texture data size in bytes for the specified MIP map level
@@ -70,13 +70,13 @@ namespace nCine
 		 * @brief Returns the texture format object
 		 */
 		inline const TextureFormat& texFormat() const {
-			return texFormat_;
+			return _texFormat;
 		}
 		/**
 		 * @brief Returns the pointer to pixel data
 		 */
 		inline const std::uint8_t* pixels() const {
-			return pixels_.get();
+			return _pixels.get();
 		}
 		/**
 		 * @brief Returns the pointer to pixel data for the specified MIP map level
@@ -96,19 +96,19 @@ namespace nCine
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Whether the loading process has been successful */
-		bool hasLoaded_;
+		bool _hasLoaded;
 		/** @brief Texture file handle */
-		std::unique_ptr<Death::IO::Stream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> _fileHandle;
 
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t headerSize_;
-		std::uint32_t dataSize_;
-		std::int32_t mipMapCount_;
-		std::unique_ptr<std::uint32_t[]> mipDataOffsets_;
-		std::unique_ptr<std::uint32_t[]> mipDataSizes_;
-		TextureFormat texFormat_;
-		std::unique_ptr<std::uint8_t[]> pixels_;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _headerSize;
+		std::uint32_t _dataSize;
+		std::int32_t _mipMapCount;
+		std::unique_ptr<std::uint32_t[]> _mipDataOffsets;
+		std::unique_ptr<std::uint32_t[]> _mipDataSizes;
+		TextureFormat _texFormat;
+		std::unique_ptr<std::uint8_t[]> _pixels;
 #endif
 
 		/** @brief An empty constructor only used by `TextureLoaderRaw` */

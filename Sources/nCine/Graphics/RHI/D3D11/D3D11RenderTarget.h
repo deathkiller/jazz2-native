@@ -26,18 +26,18 @@ namespace nCine::RHI::D3D11
 	public:
 		D3D11Renderbuffer() = default;
 		void Create(DepthStencilFormat format, std::int32_t width, std::int32_t height) {
-			format_ = format;
-			width_ = width;
-			height_ = height;
+			_format = format;
+			_width = width;
+			_height = height;
 		}
 		inline std::uint32_t GetGLHandle() const {
 			return 0;
 		}
 
 	private:
-		DepthStencilFormat format_ = DepthStencilFormat::None;
-		std::int32_t width_ = 0;
-		std::int32_t height_ = 0;
+		DepthStencilFormat _format = DepthStencilFormat::None;
+		std::int32_t _width = 0;
+		std::int32_t _height = 0;
 	};
 
 	/**
@@ -122,19 +122,19 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns the texture attached at the given color attachment index, or `nullptr` */
 		inline D3D11Texture* GetColorTexture(std::uint32_t index) const {
-			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
+			return (index < MaxColorAttachments ? _colorTextures[index] : nullptr);
 		}
 		/** @brief Returns the number of color attachments enabled for drawing (see @ref SetDrawBuffers()) */
 		inline std::uint32_t GetNumDrawBuffers() const {
-			return numDrawBuffers_;
+			return _numDrawBuffers;
 		}
 
 	private:
-		D3D11Texture* colorTextures_[MaxColorAttachments];
-		std::uint32_t numDrawBuffers_;
+		D3D11Texture* _colorTextures[MaxColorAttachments];
+		std::uint32_t _numDrawBuffers;
 		// Render target view per color attachment, created lazily and invalidated when its attachment changes
-		ID3D11RenderTargetView* rtvs_[MaxColorAttachments];
-		D3D11Texture* rtvTextures_[MaxColorAttachments];	// the texture rtvs_[i] was built for (to detect attachment changes)
+		ID3D11RenderTargetView* _rtvs[MaxColorAttachments];
+		D3D11Texture* _rtvTextures[MaxColorAttachments];	// the texture _rtvs[i] was built for (to detect attachment changes)
 
 		/** @brief Releases the view of one color attachment (on attachment change and destruction) */
 		void ReleaseRTV(std::uint32_t index);

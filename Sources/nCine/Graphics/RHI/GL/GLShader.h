@@ -48,11 +48,11 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the shader object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns the current compilation status */
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 
 		/** @brief Loads the shader source from the given string */
@@ -88,7 +88,7 @@ namespace nCine::RHI::GL
 	private:
 		static constexpr std::uint32_t MaxShaderSourceLength = 32 * 1024;
 
-		GLuint glHandle_;
-		Status status_;
+		GLuint _glHandle;
+		Status _status;
 	};
 }

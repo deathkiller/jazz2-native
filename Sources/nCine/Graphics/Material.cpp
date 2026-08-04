@@ -15,16 +15,16 @@ namespace nCine
 	}
 
 	Material::Material(RHI::ShaderProgram* program, RHI::Texture* texture)
-		: isBlendingEnabled_(false), sortKeyDirty_(true), usedTextureUnits_(texture != nullptr ? 1 : 0),
-			srcBlendingFactor_(BlendingFactor::SrcAlpha), destBlendingFactor_(BlendingFactor::OneMinusSrcAlpha),
-			srcAlphaBlendingFactor_(BlendingFactor::One), destAlphaBlendingFactor_(BlendingFactor::OneMinusSrcAlpha),
-			sortKey_(0), shaderChangeCounter_(0),
-			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
+		: _isBlendingEnabled(false), _sortKeyDirty(true), _usedTextureUnits(texture != nullptr ? 1 : 0),
+			_srcBlendingFactor(BlendingFactor::SrcAlpha), _destBlendingFactor(BlendingFactor::OneMinusSrcAlpha),
+			_srcAlphaBlendingFactor(BlendingFactor::One), _destAlphaBlendingFactor(BlendingFactor::OneMinusSrcAlpha),
+			_sortKey(0), _shaderChangeCounter(0),
+			_shaderProgramType(ShaderProgramType::Custom), _shaderProgram(program), _uniformsHostBufferSize(0)
 	{
 		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
-			textures_[i] = nullptr;
+			_textures[i] = nullptr;
 		}
-		textures_[0] = texture;
+		_textures[0] = texture;
 
 		if (program != nullptr) {
 			SetShaderProgram(program);
@@ -58,29 +58,29 @@ namespace nCine
 		// Only an actual change invalidates the sort key. Re-setting the same factors is the norm for pooled
 		// commands - a burst of particles or a tile layer sets them identically on every object, every frame -
 		// and each invalidation costs a full hash of the material state in GetSortKey().
-		if (srcBlendingFactor_ == srcRgbBlendingFactor && destBlendingFactor_ == destRgbBlendingFactor &&
-			srcAlphaBlendingFactor_ == srcAlphaBlendingFactor && destAlphaBlendingFactor_ == destAlphaBlendingFactor) {
+		if (_srcBlendingFactor == srcRgbBlendingFactor && _destBlendingFactor == destRgbBlendingFactor &&
+			_srcAlphaBlendingFactor == srcAlphaBlendingFactor && _destAlphaBlendingFactor == destAlphaBlendingFactor) {
 			return;
 		}
 
-		srcBlendingFactor_ = srcRgbBlendingFactor;
-		destBlendingFactor_ = destRgbBlendingFactor;
-		srcAlphaBlendingFactor_ = srcAlphaBlendingFactor;
-		destAlphaBlendingFactor_ = destAlphaBlendingFactor;
-		sortKeyDirty_ = true;
+		_srcBlendingFactor = srcRgbBlendingFactor;
+		_destBlendingFactor = destRgbBlendingFactor;
+		_srcAlphaBlendingFactor = srcAlphaBlendingFactor;
+		_destAlphaBlendingFactor = destAlphaBlendingFactor;
+		_sortKeyDirty = true;
 	}
 
 	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
 	{
 		RHI::ShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
-		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
+		if (shaderProgram == nullptr || shaderProgram == _shaderProgram) {
 			return false;
 		}
 
 		SetShaderProgram(shaderProgram);
 
 		// Should be assigned after calling `setShaderProgram()`
-		shaderProgramType_ = shaderProgramType;
+		_shaderProgramType = shaderProgramType;
 		return true;
 	}
 
@@ -88,21 +88,21 @@ namespace nCine
 	{
 		// Allow self-assignment to take into account the case where the shader program loads new shaders
 
-		shaderProgramType_ = ShaderProgramType::Custom;
-		shaderProgram_ = program;
-		sortKeyDirty_ = true;
-		shaderChangeCounter_++;
+		_shaderProgramType = ShaderProgramType::Custom;
+		_shaderProgram = program;
+		_sortKeyDirty = true;
+		_shaderChangeCounter++;
 		// The camera uniforms are handled separately as they have a different update frequency
-		shaderUniforms_.SetProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
-		shaderUniformBlocks_.SetProgram(shaderProgram_);
+		_shaderUniforms.SetProgram(_shaderProgram, nullptr, ProjectionViewMatrixExcludeString);
+		_shaderUniformBlocks.SetProgram(_shaderProgram);
 
-		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
+		RenderResources::SetDefaultAttributesParameters(*_shaderProgram);
 	}
 
 	bool Material::SetShader(Shader* shader)
 	{
-		RHI::ShaderProgram* shaderProgram = shader->glShaderProgram_.get();
-		if (shaderProgram == shaderProgram_) {
+		RHI::ShaderProgram* shaderProgram = shader->_glShaderProgram.get();
+		if (shaderProgram == _shaderProgram) {
 			return false;
 		}
 
@@ -132,40 +132,40 @@ namespace nCine
 
 	void Material::SetDefaultAttributesParameters()
 	{
-		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
+		RenderResources::SetDefaultAttributesParameters(*_shaderProgram);
 	}
 
 	void Material::ReserveUniformsDataMemory()
 	{
-		DEATH_ASSERT(shaderProgram_);
+		DEATH_ASSERT(_shaderProgram);
 
 		// Total memory size for all uniforms and uniform blocks
-		const std::uint32_t uniformsSize = shaderProgram_->GetUniformsSize() + shaderProgram_->GetUniformBlocksSize();
-		if (uniformsSize > uniformsHostBufferSize_) {
-			uniformsHostBuffer_ = std::make_unique<std::uint8_t[]>(uniformsSize);
-			uniformsHostBufferSize_ = uniformsSize;
+		const std::uint32_t uniformsSize = _shaderProgram->GetUniformsSize() + _shaderProgram->GetUniformBlocksSize();
+		if (uniformsSize > _uniformsHostBufferSize) {
+			_uniformsHostBuffer = std::make_unique<std::uint8_t[]>(uniformsSize);
+			_uniformsHostBufferSize = uniformsSize;
 		}
-		std::uint8_t* dataPointer = uniformsHostBuffer_.get();
-		shaderUniforms_.SetUniformsDataPointer(dataPointer);
-		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
+		std::uint8_t* dataPointer = _uniformsHostBuffer.get();
+		_shaderUniforms.SetUniformsDataPointer(dataPointer);
+		_shaderUniformBlocks.SetUniformsDataPointer(&dataPointer[_shaderProgram->GetUniformsSize()]);
 	}
 
 	void Material::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		DEATH_ASSERT(shaderProgram_);
+		DEATH_ASSERT(_shaderProgram);
 		DEATH_ASSERT(dataPointer);
 
-		uniformsHostBuffer_.reset(nullptr);
-		uniformsHostBufferSize_ = 0;
-		shaderUniforms_.SetUniformsDataPointer(dataPointer);
-		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
+		_uniformsHostBuffer.reset(nullptr);
+		_uniformsHostBufferSize = 0;
+		_shaderUniforms.SetUniformsDataPointer(dataPointer);
+		_shaderUniformBlocks.SetUniformsDataPointer(&dataPointer[_shaderProgram->GetUniformsSize()]);
 	}
 
 	const RHI::Texture* Material::GetTexture(std::uint32_t unit) const
 	{
 		const RHI::Texture* texture = nullptr;
 		if (unit < RHI::Texture::MaxTextureUnits) {
-			texture = textures_[unit];
+			texture = _textures[unit];
 		}
 		return texture;
 	}
@@ -175,9 +175,9 @@ namespace nCine
 		bool result = false;
 		if (unit < RHI::Texture::MaxTextureUnits) {
 			// Rebinding the texture already on the unit leaves the sort key valid (see SetBlendingFactors)
-			if (textures_[unit] != texture) {
-				textures_[unit] = texture;
-				sortKeyDirty_ = true;
+			if (_textures[unit] != texture) {
+				_textures[unit] = texture;
+				_sortKeyDirty = true;
 				UpdateUsedTextureUnits(unit, texture != nullptr);
 			}
 			result = true;
@@ -187,16 +187,16 @@ namespace nCine
 
 	bool Material::SetTexture(std::uint32_t unit, const Texture& texture)
 	{
-		return SetTexture(unit, texture.rhiTexture_.get());
+		return SetTexture(unit, texture._rhiTexture.get());
 	}
 
 	bool Material::SetTexture(std::uint32_t unit, std::nullptr_t)
 	{
 		bool result = false;
 		if (unit < RHI::Texture::MaxTextureUnits) {
-			if (textures_[unit] != nullptr) {
-				textures_[unit] = nullptr;
-				sortKeyDirty_ = true;
+			if (_textures[unit] != nullptr) {
+				_textures[unit] = nullptr;
+				_sortKeyDirty = true;
 				UpdateUsedTextureUnits(unit, false);
 			}
 			result = true;
@@ -207,40 +207,40 @@ namespace nCine
 	void Material::UpdateUsedTextureUnits(std::uint32_t unit, bool textureSet)
 	{
 		if (textureSet) {
-			if (unit >= usedTextureUnits_) {
-				usedTextureUnits_ = std::uint8_t(unit + 1);
+			if (unit >= _usedTextureUnits) {
+				_usedTextureUnits = std::uint8_t(unit + 1);
 			}
-		} else if (unit + 1 == usedTextureUnits_) {
+		} else if (unit + 1 == _usedTextureUnits) {
 			// The highest used unit was cleared, find the new highest one
 			std::uint32_t n = unit;
-			while (n > 0 && textures_[n - 1] == nullptr) {
+			while (n > 0 && _textures[n - 1] == nullptr) {
 				n--;
 			}
-			usedTextureUnits_ = std::uint8_t(n);
+			_usedTextureUnits = std::uint8_t(n);
 		}
 	}
 
 	void Material::Bind()
 	{
-		// Units above `usedTextureUnits_` are intentionally left untouched, samplers of this
+		// Units above `_usedTextureUnits` are intentionally left untouched, samplers of this
 		// material's shader only reference units that the material binds itself
-		for (std::uint32_t i = 0; i < usedTextureUnits_; i++) {
-			if (textures_[i] != nullptr) {
-				textures_[i]->Bind(i);
+		for (std::uint32_t i = 0; i < _usedTextureUnits; i++) {
+			if (_textures[i] != nullptr) {
+				_textures[i]->Bind(i);
 			} else {
 				RHI::Texture::Unbind(i);
 			}
 		}
 
-		if (shaderProgram_) {
-			shaderProgram_->Use();
-			shaderUniformBlocks_.Bind();
+		if (_shaderProgram) {
+			_shaderProgram->Use();
+			_shaderUniformBlocks.Bind();
 		}
 	}
 
 	void Material::DefineVertexFormat(const RHI::Buffer* vbo, const RHI::Buffer* ibo, std::uint32_t vboOffset)
 	{
-		shaderProgram_->DefineVertexFormat(vbo, ibo, vboOffset);
+		_shaderProgram->DefineVertexFormat(vbo, ibo, vboOffset);
 	}
 
 	namespace
@@ -280,8 +280,8 @@ namespace nCine
 
 	std::uint32_t Material::GetSortKey()
 	{
-		if (!sortKeyDirty_) {
-			return sortKey_;
+		if (!_sortKeyDirty) {
+			return _sortKey;
 		}
 
 		constexpr std::uint32_t Seed = 1697381921;
@@ -289,16 +289,16 @@ namespace nCine
 		SortHashData hashData alignas(8);
 
 		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
-			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetUniqueId() : 0;
+			hashData.textures[i] = (_textures[i] != nullptr) ? _textures[i]->GetUniqueId() : 0;
 		}
-		hashData.shaderProgram = shaderProgram_->GetUniqueId();
-		hashData.srcBlendingFactor = blendingFactorToInt(srcBlendingFactor_);
-		hashData.destBlendingFactor = blendingFactorToInt(destBlendingFactor_);
-		hashData.srcAlphaBlendingFactor = blendingFactorToInt(srcAlphaBlendingFactor_);
-		hashData.destAlphaBlendingFactor = blendingFactorToInt(destAlphaBlendingFactor_);
+		hashData.shaderProgram = _shaderProgram->GetUniqueId();
+		hashData.srcBlendingFactor = blendingFactorToInt(_srcBlendingFactor);
+		hashData.destBlendingFactor = blendingFactorToInt(_destBlendingFactor);
+		hashData.srcAlphaBlendingFactor = blendingFactorToInt(_srcAlphaBlendingFactor);
+		hashData.destAlphaBlendingFactor = blendingFactorToInt(_destAlphaBlendingFactor);
 
-		sortKey_ = (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
-		sortKeyDirty_ = false;
-		return sortKey_;
+		_sortKey = (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
+		_sortKeyDirty = false;
+		return _sortKey;
 	}
 }

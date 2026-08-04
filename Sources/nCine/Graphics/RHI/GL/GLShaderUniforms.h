@@ -45,17 +45,17 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the number of managed uniforms */
 		inline std::uint32_t GetUniformCount() const {
-			return uniformCaches_.size();
+			return _uniformCaches.size();
 		}
 		/** @brief Returns whether a uniform with the specified name is managed */
 		inline bool HasUniform(const char* name) const {
-			return (uniformCaches_.find(String::nullTerminatedView(name)) != nullptr);
+			return (_uniformCaches.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		/** @brief Returns the uniform cache with the specified name, or `nullptr` if not found */
 		GLUniformCache* GetUniform(const char* name);
 		/** @brief Returns the hashmap of all managed uniform caches */
 		inline const UniformHashMapType& GetAllUniforms() const {
-			return uniformCaches_;
+			return _uniformCaches;
 		}
 		/**
 		 * @brief Notes that a managed uniform cache may have been modified externally
@@ -64,16 +64,16 @@ namespace nCine::RHI::GL
 		 * explicitly when a uniform is written through a long-lived cached pointer.
 		 */
 		inline void MarkDirty() {
-			maybeDirty_ = true;
+			_maybeDirty = true;
 		}
 		/** @brief Uses the program and uploads all dirty uniforms to the GL */
 		void CommitUniforms();
 
 	private:
-		GLShaderProgram* shaderProgram_;
+		GLShaderProgram* _shaderProgram;
 		// Conservative flag for the commit early-out, set whenever a uniform cache may have been dirtied
-		bool maybeDirty_;
-		UniformHashMapType uniformCaches_;
+		bool _maybeDirty;
+		UniformHashMapType _uniformCaches;
 
 		// Imports the uniforms with the option of including only some or excluding others
 		void ImportUniforms(const char* includeOnly, const char* exclude);

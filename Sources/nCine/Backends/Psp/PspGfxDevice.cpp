@@ -13,21 +13,21 @@ namespace nCine::Backends
 
 		// The panel is fixed: pin every size to the display. The logical (game) resolution is driven
 		// separately by the render pipeline through Device::ResizeScreenFramebuffer.
-		width_ = 480;
-		height_ = 272;
-		drawableWidth_ = 480;
-		drawableHeight_ = 272;
-		isFullscreen_ = true;
+		_width = 480;
+		_height = 272;
+		_drawableWidth = 480;
+		_drawableHeight = 272;
+		_isFullscreen = true;
 
-		currentVideoMode_.width = std::uint32_t(width_);
-		currentVideoMode_.height = std::uint32_t(height_);
+		_currentVideoMode.width = std::uint32_t(_width);
+		_currentVideoMode.height = std::uint32_t(_height);
 		// The PSP panel is driven at ~59.94 Hz, which is what sceDisplayWaitVblankStart() paces to
-		currentVideoMode_.refreshRate = 59.94f;
+		_currentVideoMode.refreshRate = 59.94f;
 
 		updateMonitors();
 		initDeviceViewport();
 
-		LOGI("Video mode initialized: {}x{} (GU)", width_, height_);
+		LOGI("Video mode initialized: {}x{} (GU)", _width, _height);
 	}
 
 	PspGfxDevice::~PspGfxDevice()
@@ -83,7 +83,7 @@ namespace nCine::Backends
 	const IGfxDevice::VideoMode& PspGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
-		return currentVideoMode_;
+		return _currentVideoMode;
 	}
 
 	void PspGfxDevice::setResolutionInternal(int width, int height)
@@ -95,12 +95,12 @@ namespace nCine::Backends
 	void PspGfxDevice::updateMonitors()
 	{
 		// One fixed "monitor" (the built-in panel), so windowScalingFactor() and the monitor queries stay valid
-		numMonitors_ = 1;
-		monitors_[0].name = "LCD";
-		monitors_[0].position = Vector2i(0, 0);
-		monitors_[0].scale = Vector2f(1.0f, 1.0f);
-		monitors_[0].numVideoModes = 1;
-		monitors_[0].videoModes[0] = currentVideoMode_;
+		_numMonitors = 1;
+		_monitors[0].name = "LCD";
+		_monitors[0].position = Vector2i(0, 0);
+		_monitors[0].scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].numVideoModes = 1;
+		_monitors[0].videoModes[0] = _currentVideoMode;
 	}
 }
 

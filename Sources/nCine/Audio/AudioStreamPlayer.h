@@ -30,37 +30,37 @@ namespace nCine
 		bool loadFromFile(const char* filename);
 
 		inline std::uint32_t bufferId() const override {
-			return audioStream_.bufferId();
+			return _audioStream.bufferId();
 		}
 
 		inline std::int32_t bytesPerSample() const override {
-			return audioStream_.bytesPerSample();
+			return _audioStream.bytesPerSample();
 		}
 		inline std::int32_t numChannels() const override {
-			return audioStream_.numChannels();
+			return _audioStream.numChannels();
 		}
 		inline std::int32_t frequency() const override {
-			return audioStream_.frequency();
+			return _audioStream.frequency();
 		}
 
 		inline std::int32_t numSamples() const override {
-			return audioStream_.numSamples();
+			return _audioStream.numSamples();
 		}
 		inline float duration() const override {
-			return audioStream_.duration();
+			return _audioStream.duration();
 		}
 
 		inline std::int32_t bufferSize() const override {
-			return audioStream_.bufferSize();
+			return _audioStream.bufferSize();
 		}
 
 		/** @brief Returns the number of samples held by a single streaming buffer */
 		inline std::int32_t numStreamSamples() const {
-			return audioStream_.numStreamSamples();
+			return _audioStream.numStreamSamples();
 		}
 		/** @brief Returns the size of a single streaming buffer in bytes */
 		inline std::int32_t streamBufferSize() const {
-			return audioStream_.streamBufferSize();
+			return _audioStream.streamBufferSize();
 		}
 
 		void play() override;
@@ -76,6 +76,6 @@ namespace nCine
 		}
 
 	private:
-		AudioStream audioStream_;
+		AudioStream _audioStream;
 	};
 }

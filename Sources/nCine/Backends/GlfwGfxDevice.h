@@ -61,7 +61,7 @@ namespace nCine::Backends
 		void setWindowSize(int width, int height) override;
 
 		inline void setWindowTitle(StringView windowTitle) override {
-			glfwSetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
+			glfwSetWindowTitle(_windowHandle, String::nullTerminatedView(windowTitle).data());
 		}
 		void setWindowIcon(StringView windowIconFilename) override;
 
@@ -82,22 +82,22 @@ namespace nCine::Backends
 
 	private:
 		/** @brief GLFW3 window handle */
-		static GLFWwindow* windowHandle_;
+		static GLFWwindow* _windowHandle;
 
 		/**
 		 * @brief GLFW3 monitor pointers
 		 *
 		 * @note Used to retrieve the index in the monitors array
 		 */
-		static GLFWmonitor* monitorPointers_[MaxMonitors];
+		static GLFWmonitor* _monitorPointers[MaxMonitors];
 
 		/** @brief Monitor index to use in full screen */
-		static int fsMonitorIndex_;
+		static int _fsMonitorIndex;
 		/** @brief Video mode index to use in full screen */
-		static int fsModeIndex_;
+		static int _fsModeIndex;
 
-		int lastWindowWidth_;
-		int lastWindowHeight_;
+		int _lastWindowWidth;
+		int _lastWindowHeight;
 
 		/** @brief Deleted copy constructor */
 		GlfwGfxDevice(const GlfwGfxDevice&) = delete;
@@ -116,7 +116,7 @@ namespace nCine::Backends
 
 		/** @brief Returns the window handle used by GLFW3 */
 		static GLFWwindow* windowHandle() {
-			return windowHandle_;
+			return _windowHandle;
 		}
 
 		/** @brief Callback for `glfwSetErrorCallback()` */

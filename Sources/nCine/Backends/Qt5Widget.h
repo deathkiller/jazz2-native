@@ -39,7 +39,7 @@ namespace nCine::Backends
 
 		/** @brief If set to `false` the widget will stop automatically updating each frame */
 		inline void setShouldUpdate(bool shouldUpdate) {
-			shouldUpdate_ = shouldUpdate;
+			_shouldUpdate = shouldUpdate;
 		}
 
 		/** @brief Returns the application event handler driving the embedded engine */
@@ -60,10 +60,10 @@ namespace nCine::Backends
 		void autoUpdate();
 
 	private:
-		MainApplication& application_;
-		std::unique_ptr<IAppEventHandler>(*createAppEventHandler_)();
-		bool isInitialized_;
-		bool shouldUpdate_;
+		MainApplication& _application;
+		std::unique_ptr<IAppEventHandler>(*_createAppEventHandler)();
+		bool _isInitialized;
+		bool _shouldUpdate;
 
 		void shutdown();
 

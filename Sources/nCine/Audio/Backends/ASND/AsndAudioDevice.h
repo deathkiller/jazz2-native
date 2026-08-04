@@ -144,11 +144,11 @@ namespace nCine
 		};
 
 		/** @brief Whether `ASND_Init()` succeeded */
-		bool initialized_;
+		bool _initialized;
 		/** @brief All buffers, the id of a buffer is its index plus one */
-		SmallVector<Buffer, 0> buffers_;
+		SmallVector<Buffer, 0> _buffers;
 		/** @brief State of every voice, indexed by voice number */
-		Source sources_[MaxSources];
+		Source _sources[MaxSources];
 
 		/** @brief Returns the buffer of the specified id, or `nullptr` if there is none */
 		Buffer* bufferForId(std::uint32_t bufferId);

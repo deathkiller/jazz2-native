@@ -58,13 +58,13 @@ namespace nCine
 		};
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, std::uint32_t bucketIndex)
-			: hashMap_(hashMap), bucketIndex_(bucketIndex), tag_(SentinelTag::REGULAR) {}
+			: _hashMap(hashMap), _bucketIndex(bucketIndex), _tag(SentinelTag::REGULAR) {}
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, SentinelTagInit tag);
 
 		/** @brief Implicitly converts a non-constant iterator to a constant one */
 		StaticHashMapIterator(const StaticHashMapIterator<K, T, HashFunc, Capacity, false>& it)
-			: hashMap_(it.hashMap_), bucketIndex_(it.bucketIndex_), tag_(SentinelTag(it.tag_)) {}
+			: _hashMap(it._hashMap), _bucketIndex(it._bucketIndex), _tag(SentinelTag(it._tag)) {}
 
 		/** @brief Dereferences the iterator, returning the value of the pointed element */
 		Reference operator*() const;
@@ -82,20 +82,20 @@ namespace nCine
 		/** @brief Returns `true` if both iterators point to the same element */
 		friend inline bool operator==(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
-				return (lhs.hashMap_ == rhs.hashMap_ && lhs.bucketIndex_ == rhs.bucketIndex_);
+			if (lhs._tag == SentinelTag::REGULAR && rhs._tag == SentinelTag::REGULAR) {
+				return (lhs._hashMap == rhs._hashMap && lhs._bucketIndex == rhs._bucketIndex);
 			} else {
-				return (lhs.tag_ == rhs.tag_);
+				return (lhs._tag == rhs._tag);
 			}
 		}
 
 		/** @brief Returns `true` if the iterators point to different elements */
 		friend inline bool operator!=(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
-				return (lhs.hashMap_ != rhs.hashMap_ || lhs.bucketIndex_ != rhs.bucketIndex_);
+			if (lhs._tag == SentinelTag::REGULAR && rhs._tag == SentinelTag::REGULAR) {
+				return (lhs._hashMap != rhs._hashMap || lhs._bucketIndex != rhs._bucketIndex);
 			} else {
-				return (lhs.tag_ != rhs.tag_);
+				return (lhs._tag != rhs._tag);
 			}
 		}
 
@@ -116,9 +116,9 @@ namespace nCine
 			END			// Iterator past the last element
 		};
 
-		typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap_;
-		std::uint32_t bucketIndex_;
-		SentinelTag tag_;
+		typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr _hashMap;
+		std::uint32_t _bucketIndex;
+		SentinelTag _tag;
 
 		// Makes the iterator point to the next non-empty element in the hashmap
 		void next();
@@ -167,11 +167,11 @@ namespace nCine
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, SentinelTagInit tag)
-		: hashMap_(hashMap), bucketIndex_(0)
+		: _hashMap(hashMap), _bucketIndex(0)
 	{
 		switch (tag) {
-			case SentinelTagInit::BEGINNING: tag_ = SentinelTag::BEGINNING; break;
-			case SentinelTagInit::END: tag_ = SentinelTag::END; break;
+			case SentinelTagInit::BEGINNING: _tag = SentinelTag::BEGINNING; break;
+			case SentinelTagInit::END: _tag = SentinelTag::END; break;
 		}
 	}
 
@@ -216,7 +216,7 @@ namespace nCine
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::NodeReference StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::node() const
 	{
-		return hashMap_->nodes_[bucketIndex_];
+		return _hashMap->_nodes[_bucketIndex];
 	}
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
@@ -234,56 +234,56 @@ namespace nCine
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	hash_t StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::hash() const
 	{
-		return hashMap_->hashes_[bucketIndex_];
+		return _hashMap->_hashes[_bucketIndex];
 	}
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	void StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::next()
 	{
-		if (tag_ == SentinelTag::REGULAR) {
-			if (bucketIndex_ >= hashMap_->capacity() - 1) {
-				tag_ = SentinelTag::END;
+		if (_tag == SentinelTag::REGULAR) {
+			if (_bucketIndex >= _hashMap->capacity() - 1) {
+				_tag = SentinelTag::END;
 				return;
 			} else {
-				bucketIndex_++;
+				_bucketIndex++;
 			}
-		} else if (tag_ == SentinelTag::BEGINNING) {
-			tag_ = SentinelTag::REGULAR;
-			bucketIndex_ = 0;
-		} else if (tag_ == SentinelTag::END) {
+		} else if (_tag == SentinelTag::BEGINNING) {
+			_tag = SentinelTag::REGULAR;
+			_bucketIndex = 0;
+		} else if (_tag == SentinelTag::END) {
 			return;
 		}
 		// Search the first non empty index starting from the current one
-		while (bucketIndex_ < hashMap_->capacity() - 1 && hashMap_->hashes_[bucketIndex_] == NullHash) {
-			bucketIndex_++;
+		while (_bucketIndex < _hashMap->capacity() - 1 && _hashMap->_hashes[_bucketIndex] == NullHash) {
+			_bucketIndex++;
 		}
-		if (hashMap_->hashes_[bucketIndex_] == NullHash) {
-			tag_ = SentinelTag::END;
+		if (_hashMap->_hashes[_bucketIndex] == NullHash) {
+			_tag = SentinelTag::END;
 		}
 	}
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	void StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::previous()
 	{
-		if (tag_ == SentinelTag::REGULAR) {
-			if (bucketIndex_ == 0) {
-				tag_ = SentinelTag::BEGINNING;
+		if (_tag == SentinelTag::REGULAR) {
+			if (_bucketIndex == 0) {
+				_tag = SentinelTag::BEGINNING;
 				return;
 			} else {
-				bucketIndex_--;
+				_bucketIndex--;
 			}
-		} else if (tag_ == SentinelTag::END) {
-			tag_ = SentinelTag::REGULAR;
-			bucketIndex_ = hashMap_->capacity() - 1;
-		} else if (tag_ == SentinelTag::BEGINNING) {
+		} else if (_tag == SentinelTag::END) {
+			_tag = SentinelTag::REGULAR;
+			_bucketIndex = _hashMap->capacity() - 1;
+		} else if (_tag == SentinelTag::BEGINNING) {
 			return;
 		}
 		// Search the first non empty index starting from the current one
-		while (bucketIndex_ > 0 && hashMap_->hashes_[bucketIndex_] == NullHash) {
-			bucketIndex_--;
+		while (_bucketIndex > 0 && _hashMap->_hashes[_bucketIndex] == NullHash) {
+			_bucketIndex--;
 		}
-		if (hashMap_->hashes_[bucketIndex_] == NullHash) {
-			tag_ = SentinelTag::BEGINNING;
+		if (_hashMap->_hashes[_bucketIndex] == NullHash) {
+			_tag = SentinelTag::BEGINNING;
 		}
 	}
 }

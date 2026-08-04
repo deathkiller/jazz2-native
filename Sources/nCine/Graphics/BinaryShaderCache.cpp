@@ -27,12 +27,12 @@ namespace nCine
 #endif
 
 	BinaryShaderCache::BinaryShaderCache(StringView path)
-		: isAvailable_(false), platformHash_(0)
+		: _isAvailable(false), _platformHash(0)
 	{
 #if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// The software backend compiles no shaders, the Direct3D 11 backend does not use GL program binaries,
 		// and the Vulkan backend runs from pre-compiled SPIR-V shader modules (no GL program binary exists to
-		// cache), so there is nothing to cache on any of these. Stay silently disabled (isAvailable_ is already
+		// cache), so there is nothing to cache on any of these. Stay silently disabled (_isAvailable is already
 		// false, so every cache operation is a no-op) instead of querying GL capabilities and logging a
 		// missing-extension warning that does not apply here.
 #else
@@ -76,26 +76,26 @@ namespace nCine
 
 		const auto& infoStrings = caps.GetInfoStrings();
 
-		platformHash_ =
+		_platformHash =
 			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer),
 				xxHash3(infoStrings.apiVersion, std::strlen(infoStrings.apiVersion)));
 
 		char platformHashString[24];
-		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
-		path_ = fs::CombinePath(path, { platformHashString, platformHashLength });
-		fs::CreateDirectories(path_);
+		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", _platformHash);
+		_path = fs::CombinePath(path, { platformHashString, platformHashLength });
+		fs::CreateDirectories(_path);
 
 		bufferSize = 64 * 1024;
 		bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 
-		const bool pathExists = fs::DirectoryExists(path_);
-		isAvailable_ = (isSupported && pathExists);
+		const bool pathExists = fs::DirectoryExists(_path);
+		_isAvailable = (isSupported && pathExists);
 #endif
 	}
 
 	String BinaryShaderCache::GetCachedShaderPath(const char* shaderName)
 	{
-		if (!isAvailable_ || shaderName == nullptr || shaderName[0] == '\0') {
+		if (!_isAvailable || shaderName == nullptr || shaderName[0] == '\0') {
 			return {};
 		}
 
@@ -103,7 +103,7 @@ namespace nCine
 
 		char filename[32];
 		std::size_t filenameLength = formatInto(filename, "{:.16x}.shader", shaderNameHash);
-		return fs::CombinePath(path_, { filename, filenameLength });
+		return fs::CombinePath(_path, { filename, filenameLength });
 	}
 
 	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program, RHI::ShaderProgram::Introspection introspection)
@@ -215,10 +215,10 @@ namespace nCine
 
 	std::uint32_t BinaryShaderCache::Prune()
 	{
-		auto platformHashString = fs::GetFileName(path_);
+		auto platformHashString = fs::GetFileName(_path);
 
 		std::uint32_t directoriesRemoved = 0;
-		for (auto shaderPath : fs::Directory(fs::GetDirectoryName(path_))) {
+		for (auto shaderPath : fs::Directory(fs::GetDirectoryName(_path))) {
 			if (fs::DirectoryExists(shaderPath)) {
 				StringView filename = fs::GetFileName(shaderPath);
 				if (filename != platformHashString) {
@@ -236,8 +236,8 @@ namespace nCine
 
 	bool BinaryShaderCache::Clear()
 	{
-		bool success = fs::RemoveDirectoryRecursive(path_);
-		fs::CreateDirectories(path_);
+		bool success = fs::RemoveDirectoryRecursive(_path);
+		fs::CreateDirectories(_path);
 		return success;
 	}
 
@@ -247,7 +247,7 @@ namespace nCine
 			return false;
 		}
 
-		path_ = path;
+		_path = path;
 		return true;
 	}
 }

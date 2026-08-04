@@ -78,7 +78,7 @@
 //		return false;
 //	}
 //
-//	png_init_io(pngPtr, fileHandle->filePointer_);
+//	png_init_io(pngPtr, fileHandle->_filePointer);
 //
 //	const unsigned int pngColorType = (properties.format == Format::RGB8) ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
 //	// Write header (8 bit colour depth)

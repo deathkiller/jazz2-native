@@ -70,15 +70,15 @@
 
 namespace nCine::Backends
 {
-	SDL_Window* SdlGfxDevice::windowHandle_ = nullptr;
-	SDL_GLContext SdlGfxDevice::glContextHandle_;
+	SDL_Window* SdlGfxDevice::_windowHandle = nullptr;
+	SDL_GLContext SdlGfxDevice::_glContextHandle;
 
 #if defined(WITH_SDL3) && !defined(DEATH_TARGET_VITA)
 	namespace
 	{
-		// SDL3 identifies displays by an opaque SDL_DisplayID rather than a 0-based index. The engine's monitors_
+		// SDL3 identifies displays by an opaque SDL_DisplayID rather than a 0-based index. The engine's _monitors
 		// array is still index-based, so these translate between a DisplayID and its position in SDL_GetDisplays()
-		// order (which is exactly the order updateMonitors() enumerates monitors_ in).
+		// order (which is exactly the order updateMonitors() enumerates _monitors in).
 		unsigned int displayIndexFromId(SDL_DisplayID id)
 		{
 			int count = 0;
@@ -129,27 +129,27 @@ namespace nCine::Backends
 		// Uniform across backends: tears down the D3D11 / Vulkan device + swap chain, no-op on OpenGL / software
 		RHI::Device::DestroySwapchain();
 #if defined(WITH_RHI_SOFTWARE)
-		if (softwareTexture_ != nullptr) {
-			SDL_DestroyTexture(softwareTexture_);
-			softwareTexture_ = nullptr;
+		if (_softwareTexture != nullptr) {
+			SDL_DestroyTexture(_softwareTexture);
+			_softwareTexture = nullptr;
 		}
-		if (softwareRenderer_ != nullptr) {
-			SDL_DestroyRenderer(softwareRenderer_);
-			softwareRenderer_ = nullptr;
+		if (_softwareRenderer != nullptr) {
+			SDL_DestroyRenderer(_softwareRenderer);
+			_softwareRenderer = nullptr;
 		}
 #elif defined(DEATH_TARGET_VITA)
 		// Vita renders through vitaGL (brought up with vglInit() in initDevice), not an SDL-managed GL context.
 		// No explicit teardown is issued here.
 #elif !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN)
 #	if defined(WITH_SDL3)
-		SDL_GL_DestroyContext(glContextHandle_);
+		SDL_GL_DestroyContext(_glContextHandle);
 #	else
-		SDL_GL_DeleteContext(glContextHandle_);
+		SDL_GL_DeleteContext(_glContextHandle);
 #	endif
-		glContextHandle_ = nullptr;
+		_glContextHandle = nullptr;
 #endif
-		SDL_DestroyWindow(windowHandle_);
-		windowHandle_ = nullptr;
+		SDL_DestroyWindow(_windowHandle);
+		_windowHandle = nullptr;
 
 		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 		SDL_Quit();
@@ -197,68 +197,68 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::setResolution(bool fullscreen, int width, int height)
 	{
-		isFullscreen_ = fullscreen;
+		_isFullscreen = fullscreen;
 
 #if defined(WITH_SDL3)
 		// SDL3: SDL_SetWindowFullscreen takes a bool; the fullscreen video mode (or desktop/borderless when
 		// NULL) is chosen separately via SDL_SetWindowFullscreenMode. SDL_WINDOW_FULLSCREEN_DESKTOP is gone.
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
-		SDL_SetWindowFullscreen(windowHandle_, fullscreen);
+		SDL_SetWindowFullscreen(_windowHandle, fullscreen);
 		if (width > 0 && height > 0) {
-			width_ = width;
-			height_ = height;
+			_width = width;
+			_height = height;
 		}
 #	else
 		if (fullscreen) {
 			if (width <= 0 || height <= 0) {
-				SDL_SetWindowFullscreenMode(windowHandle_, nullptr);	// desktop (borderless) fullscreen
-				SDL_SetWindowFullscreen(windowHandle_, true);
+				SDL_SetWindowFullscreenMode(_windowHandle, nullptr);	// desktop (borderless) fullscreen
+				SDL_SetWindowFullscreen(_windowHandle, true);
 			} else {
-				width_ = width;
-				height_ = height;
-				SDL_SetWindowFullscreen(windowHandle_, true);
-				SDL_SetWindowSize(windowHandle_, width, height);
+				_width = width;
+				_height = height;
+				SDL_SetWindowFullscreen(_windowHandle, true);
+				SDL_SetWindowSize(_windowHandle, width, height);
 			}
 		} else {
-			SDL_SetWindowFullscreen(windowHandle_, false);
+			SDL_SetWindowFullscreen(_windowHandle, false);
 			if (width > 0 && height > 0) {
-				width_ = width;
-				height_ = height;
-				SDL_SetWindowSize(windowHandle_, width, height);
+				_width = width;
+				_height = height;
+				SDL_SetWindowSize(_windowHandle, width, height);
 			}
 		}
 #	endif
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-		SDL_SetWindowFullscreen(windowHandle_, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		SDL_SetWindowFullscreen(_windowHandle, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		if (width > 0 && height > 0) {
-			width_ = width;
-			height_ = height;
+			_width = width;
+			_height = height;
 		}
 #else
 		if (fullscreen) {
 			if (width <= 0 || height <= 0) {
-				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				SDL_SetWindowFullscreen(_windowHandle, SDL_WINDOW_FULLSCREEN_DESKTOP);
 			} else {
-				width_ = width;
-				height_ = height;
-				SDL_SetWindowFullscreen(windowHandle_, SDL_WINDOW_FULLSCREEN);
-				SDL_SetWindowSize(windowHandle_, width, height);
+				_width = width;
+				_height = height;
+				SDL_SetWindowFullscreen(_windowHandle, SDL_WINDOW_FULLSCREEN);
+				SDL_SetWindowSize(_windowHandle, width, height);
 			}
 		} else {
-			SDL_SetWindowFullscreen(windowHandle_, 0);
+			SDL_SetWindowFullscreen(_windowHandle, 0);
 			if (width > 0 && height > 0) {
-				width_ = width;
-				height_ = height;
-				SDL_SetWindowSize(windowHandle_, width, height);
+				_width = width;
+				_height = height;
+				SDL_SetWindowSize(_windowHandle, width, height);
 			}
 		}
 #endif
 
-		SDL_GetWindowSize(windowHandle_, &width_, &height_);
-		queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
-		RHI::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
+		SDL_GetWindowSize(_windowHandle, &_width, &_height);
+		queryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
+		RHI::Device::ResizeSwapchain(_drawableWidth, _drawableHeight);	// no-op on OpenGL / software
 #if defined(WITH_RHI_SOFTWARE)
-		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+		resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #endif
 	}
 
@@ -273,7 +273,7 @@ namespace nCine::Backends
 		// the backend can tidy up any partially-recorded frame, then the loop is throttled to a low rate while
 		// minimized. (The OpenGL and software arms are not compiled here, so they are unaffected.)
 		RHI::Device::PresentFrame();
-		if ((SDL_GetWindowFlags(windowHandle_) & SDL_WINDOW_MINIMIZED) != 0) {
+		if ((SDL_GetWindowFlags(_windowHandle) & SDL_WINDOW_MINIMIZED) != 0) {
 			SDL_Delay(12);
 		}
 #elif defined(WITH_RHI_GXM)
@@ -285,21 +285,21 @@ namespace nCine::Backends
 		// created nor manages this GL context). GL_FALSE = do not pump the SceCommonDialog overlay here.
 		vglSwapBuffers(GL_FALSE);
 #else
-		SDL_GL_SwapWindow(windowHandle_);
+		SDL_GL_SwapWindow(_windowHandle);
 #endif
 	}
 
 	void SdlGfxDevice::setResolutionInternal(int width, int height)
 	{
-		width_ = width;
-		height_ = height;
-		SDL_SetWindowSize(windowHandle_, width, height);
+		_width = width;
+		_height = height;
+		SDL_SetWindowSize(_windowHandle, width, height);
 	}
 
 	void SdlGfxDevice::setWindowTitle(StringView windowTitle)
 	{
 #if !defined(DEATH_TARGET_VITA)
-		SDL_SetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
+		SDL_SetWindowTitle(_windowHandle, String::nullTerminatedView(windowTitle).data());
 #endif
 	}
 
@@ -315,12 +315,12 @@ namespace nCine::Backends
 		// parameter), SDL_FreeSurface -> SDL_DestroySurface, and SDL_PIXELFORMAT_BGR888 -> SDL_PIXELFORMAT_XBGR8888
 		const SDL_PixelFormat pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_ABGR8888 : SDL_PIXELFORMAT_XBGR8888;
 		SDL_Surface* surface = SDL_CreateSurfaceFrom(image->width(), image->height(), pixelFormat, pixels, pitch);
-		SDL_SetWindowIcon(windowHandle_, surface);
+		SDL_SetWindowIcon(_windowHandle, surface);
 		SDL_DestroySurface(surface);
 #	else
 		const Uint32 pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_ABGR8888 : SDL_PIXELFORMAT_BGR888;
 		SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(pixels, image->width(), image->height(), bytesPerPixel * 8, pitch, pixelFormat);
-		SDL_SetWindowIcon(windowHandle_, surface);
+		SDL_SetWindowIcon(_windowHandle, surface);
 		SDL_FreeSurface(surface);
 #	endif
 #endif
@@ -329,7 +329,7 @@ namespace nCine::Backends
 	void SdlGfxDevice::setWindowPosition(int x, int y)
 	{
 #if !defined(DEATH_TARGET_VITA)
-		SDL_SetWindowPosition(windowHandle_, x, y);
+		SDL_SetWindowPosition(_windowHandle, x, y);
 #endif
 	}
 
@@ -337,17 +337,17 @@ namespace nCine::Backends
 	{
 #if !defined(DEATH_TARGET_VITA)
 		// Change resolution only in case it is valid and it really changes
-		if (width == 0 || height == 0 || (width == width_ && height == height_)) {
+		if (width == 0 || height == 0 || (width == _width && height == _height)) {
 			return;
 		}
 
-		if (!isFullscreen_) {
-			SDL_SetWindowSize(windowHandle_, width, height);
-			SDL_GetWindowSize(windowHandle_, &width_, &height_);
-			queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
-			RHI::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
+		if (!_isFullscreen) {
+			SDL_SetWindowSize(_windowHandle, width, height);
+			SDL_GetWindowSize(_windowHandle, &_width, &_height);
+			queryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
+			RHI::Device::ResizeSwapchain(_drawableWidth, _drawableHeight);	// no-op on OpenGL / software
 #	if defined(WITH_RHI_SOFTWARE)
-			resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+			resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #	endif
 		}
 #endif
@@ -357,7 +357,7 @@ namespace nCine::Backends
 	{
 		Vector2i position(0, 0);
 #if !defined(DEATH_TARGET_VITA)
-		SDL_GetWindowPosition(windowHandle_, &position.X, &position.Y);
+		SDL_GetWindowPosition(_windowHandle, &position.X, &position.Y);
 #endif
 		return position;
 	}
@@ -365,7 +365,7 @@ namespace nCine::Backends
 	void SdlGfxDevice::flashWindow() const
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 16) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
-		SDL_FlashWindow(windowHandle_, SDL_FLASH_UNTIL_FOCUSED);
+		SDL_FlashWindow(_windowHandle, SDL_FLASH_UNTIL_FOCUSED);
 #endif
 	}
 
@@ -374,64 +374,64 @@ namespace nCine::Backends
 #if defined(DEATH_TARGET_VITA)
 		return 0;
 #elif defined(WITH_SDL3)
-		return (windowHandle_ != nullptr ? displayIndexFromId(SDL_GetDisplayForWindow(windowHandle_)) : 0);
+		return (_windowHandle != nullptr ? displayIndexFromId(SDL_GetDisplayForWindow(_windowHandle)) : 0);
 #else
-		const int retrievedIndex = (windowHandle_ != nullptr ? SDL_GetWindowDisplayIndex(windowHandle_) : 0);
+		const int retrievedIndex = (_windowHandle != nullptr ? SDL_GetWindowDisplayIndex(_windowHandle) : 0);
 		return (retrievedIndex >= 0 ? static_cast<unsigned int>(retrievedIndex) : 0);
 #endif
 	}
 
 	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
-		if (monitorIndex >= numMonitors_)
+		if (monitorIndex >= _numMonitors)
 			monitorIndex = 0;
 
 #if defined(WITH_SDL3)
 		const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(displayIdFromIndex(monitorIndex));
 		if (mode != nullptr) {
-			convertVideoModeInfo(*mode, currentVideoMode_);
+			convertVideoModeInfo(*mode, _currentVideoMode);
 		}
 #else
 		SDL_DisplayMode mode;
 		SDL_GetCurrentDisplayMode(monitorIndex, &mode);
-		convertVideoModeInfo(mode, currentVideoMode_);
+		convertVideoModeInfo(mode, _currentVideoMode);
 #endif
 
-		return currentVideoMode_;
+		return _currentVideoMode;
 	}
 
 	bool SdlGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
 #if defined(WITH_SDL3)
-		SDL_DisplayID displayId = SDL_GetDisplayForWindow(windowHandle_);
+		SDL_DisplayID displayId = SDL_GetDisplayForWindow(_windowHandle);
 		unsigned int displayIndex = displayIndexFromId(displayId);
-		if (displayIndex >= numMonitors_) {
+		if (displayIndex >= _numMonitors) {
 			displayIndex = 0;
 			displayId = displayIdFromIndex(0);
 		}
 
-		if ((std::int32_t)modeIndex < monitors_[displayIndex].numVideoModes) {
+		if ((std::int32_t)modeIndex < _monitors[displayIndex].numVideoModes) {
 			int count = 0;
 			// SDL3: SDL_GetDisplayMode(index,...) -> SDL_GetFullscreenDisplayModes (array of mode pointers);
 			// SDL_SetWindowDisplayMode -> SDL_SetWindowFullscreenMode
 			SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayId, &count);
 			bool result = false;
 			if (modes != nullptr && (std::int32_t)modeIndex < count) {
-				result = SDL_SetWindowFullscreenMode(windowHandle_, modes[modeIndex]);
+				result = SDL_SetWindowFullscreenMode(_windowHandle, modes[modeIndex]);
 			}
 			SDL_free(modes);
 			return result;
 		}
 #elif !defined(DEATH_TARGET_VITA)
-		std::int32_t displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
-		if (displayIndex < 0 || displayIndex >= (std::int32_t)numMonitors_) {
+		std::int32_t displayIndex = SDL_GetWindowDisplayIndex(_windowHandle);
+		if (displayIndex < 0 || displayIndex >= (std::int32_t)_numMonitors) {
 			displayIndex = 0;
 		}
 
-		if ((std::int32_t)modeIndex < monitors_[displayIndex].numVideoModes) {
+		if ((std::int32_t)modeIndex < _monitors[displayIndex].numVideoModes) {
 			SDL_DisplayMode mode;
 			SDL_GetDisplayMode(displayIndex, modeIndex, &mode);
-			return SDL_SetWindowDisplayMode(windowHandle_, &mode);
+			return SDL_SetWindowDisplayMode(_windowHandle, &mode);
 		}
 #endif
 		return false;
@@ -496,10 +496,10 @@ namespace nCine::Backends
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		windowFlags |= NCINE_SDL_WINDOW_HIGHDPI;
 #	endif
-		if (width_ <= 0 || height_ <= 0) {
+		if (_width <= 0 || _height <= 0) {
 			windowFlags |= NCINE_SDL_WINDOW_FULLSCREEN_DESKTOP;
-			isFullscreen_ = true;
-		} else if (isFullscreen_) {
+			_isFullscreen = true;
+		} else if (_isFullscreen) {
 			windowFlags |= SDL_WINDOW_FULLSCREEN;
 		}
 		if (windowPosX == AppConfiguration::WindowPositionIgnore) {
@@ -511,40 +511,40 @@ namespace nCine::Backends
 
 #	if defined(WITH_SDL3)
 		// SDL3 dropped the x/y parameters from SDL_CreateWindow; the position is applied separately afterwards
-		windowHandle_ = SDL_CreateWindow("", width_, height_, windowFlags);
-		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
-		SDL_SetWindowPosition(windowHandle_, windowPosX, windowPosY);
+		_windowHandle = SDL_CreateWindow("", _width, _height, windowFlags);
+		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
+		SDL_SetWindowPosition(_windowHandle, windowPosX, windowPosY);
 #	else
-		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, windowFlags);
-		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+		_windowHandle = SDL_CreateWindow("", windowPosX, windowPosY, _width, _height, windowFlags);
+		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
 #	endif
-		SDL_SetWindowResizable(windowHandle_, NCINE_SDL_BOOL(isResizable));
+		SDL_SetWindowResizable(_windowHandle, NCINE_SDL_BOOL(isResizable));
 		// Resolution should be set to current screen size when it was left unspecified
-		if (width_ <= 0 || height_ <= 0) {
-			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		if (_width <= 0 || _height <= 0) {
+			SDL_GetWindowSize(_windowHandle, &_width, &_height);
 		}
 
 #	if defined(WITH_RHI_SOFTWARE)
-		initSoftwarePresent(displayMode_.hasVSync());
+		initSoftwarePresent(_displayMode.hasVSync());
 #	else
-		queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
+		queryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
 #		if defined(WITH_RHI_D3D11)
 		{
 			// The DXGI swap chain is created for the window's native HWND
 #			if defined(WITH_SDL3)
 			// SDL3 removed SDL_syswm.h; the native HWND is read from the window's property store instead
-			void* nativeWindow = SDL_GetPointerProperty(SDL_GetWindowProperties(windowHandle_),
+			void* nativeWindow = SDL_GetPointerProperty(SDL_GetWindowProperties(_windowHandle),
 				SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 			FATAL_ASSERT_MSG(nativeWindow != nullptr, "SDL_GetWindowProperties(HWND) failed: {}", SDL_GetError());
 			const bool created = RHI::Device::CreateSwapchain(nativeWindow,
-				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
+				_drawableWidth, _drawableHeight, _displayMode.hasVSync());
 #			else
 			SDL_SysWMinfo wmInfo;
 			SDL_VERSION(&wmInfo.version);
-			const SDL_bool gotInfo = SDL_GetWindowWMInfo(windowHandle_, &wmInfo);
+			const SDL_bool gotInfo = SDL_GetWindowWMInfo(_windowHandle, &wmInfo);
 			FATAL_ASSERT_MSG(gotInfo == SDL_TRUE, "SDL_GetWindowWMInfo failed: {}", SDL_GetError());
 			const bool created = RHI::Device::CreateSwapchain(reinterpret_cast<void*>(wmInfo.info.win.window),
-				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
+				_drawableWidth, _drawableHeight, _displayMode.hasVSync());
 #			endif
 			FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and swap chain");
 		}
@@ -552,8 +552,8 @@ namespace nCine::Backends
 		{
 			// The Vulkan backend takes the SDL_Window* directly (it queries the required instance extensions
 			// and creates the presentation surface from it via the SDL Vulkan API)
-			const bool created = RHI::Device::CreateSwapchain(reinterpret_cast<void*>(windowHandle_),
-				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
+			const bool created = RHI::Device::CreateSwapchain(reinterpret_cast<void*>(_windowHandle),
+				_drawableWidth, _drawableHeight, _displayMode.hasVSync());
 			FATAL_ASSERT_MSG(created, "Failed to create the Vulkan device and swap chain");
 		}
 #		endif
@@ -563,29 +563,29 @@ namespace nCine::Backends
 		return;
 #endif
 		// Setting OpenGL attributes
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, displayMode_.blueBits());
-		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, displayMode_.alphaBits());
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, displayMode_.isDoubleBuffered());
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, displayMode_.depthBits());
-		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, displayMode_.stencilBits());
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, contextInfo_.majorVersion);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextInfo_.minorVersion);
+		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, _displayMode.redBits());
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, _displayMode.greenBits());
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, _displayMode.blueBits());
+		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, _displayMode.alphaBits());
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, _displayMode.isDoubleBuffered());
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, _displayMode.depthBits());
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, _displayMode.stencilBits());
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, _contextInfo.majorVersion);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, _contextInfo.minorVersion);
 #if defined(RHI_GL_PROFILE_ES)
 		SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #else
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, contextInfo_.coreProfile
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, _contextInfo.coreProfile
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
-		if (!contextInfo_.forwardCompatible) {
+		if (!_contextInfo.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 		}
-		if (contextInfo_.debugContext) {
+		if (_contextInfo.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
 
@@ -602,10 +602,10 @@ namespace nCine::Backends
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		flags |= NCINE_SDL_WINDOW_HIGHDPI;
 #endif
-		if (width_ <= 0 || height_ <= 0) {
+		if (_width <= 0 || _height <= 0) {
 			flags |= NCINE_SDL_WINDOW_FULLSCREEN_DESKTOP;
-			isFullscreen_ = true;
-		} else if (isFullscreen_) {
+			_isFullscreen = true;
+		} else if (_isFullscreen) {
 			flags |= SDL_WINDOW_FULLSCREEN;
 		}
 
@@ -619,38 +619,38 @@ namespace nCine::Backends
 		// Creating the window
 #if defined(WITH_SDL3)
 		// SDL3 dropped the x/y parameters from SDL_CreateWindow; the position is applied separately afterwards
-		windowHandle_ = SDL_CreateWindow("", width_, height_, flags);
-		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
-		SDL_SetWindowPosition(windowHandle_, windowPosX, windowPosY);
+		_windowHandle = SDL_CreateWindow("", _width, _height, flags);
+		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
+		SDL_SetWindowPosition(_windowHandle, windowPosX, windowPosY);
 #else
-		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
-		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+		_windowHandle = SDL_CreateWindow("", windowPosX, windowPosY, _width, _height, flags);
+		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
 #endif
 #if defined(DEATH_TARGET_VITA)
 		// vitaGL renders to the Vita's fixed 960x544 panel and owns the framebuffer, so SDL's drawable size (which
 		// can be skewed by the window size or HighDPI scaling) is not authoritative here - pin it to the panel so
 		// the device viewport matches vitaGL's backbuffer exactly. Otherwise the scene renders into a screen corner.
-		drawableWidth_ = 960;
-		drawableHeight_ = 544;
+		_drawableWidth = 960;
+		_drawableHeight = 544;
 #elif defined(WITH_SDL3)
-		SDL_GetWindowSizeInPixels(windowHandle_, &drawableWidth_, &drawableHeight_);
+		SDL_GetWindowSizeInPixels(_windowHandle, &_drawableWidth, &_drawableHeight);
 #else
-		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		SDL_GL_GetDrawableSize(_windowHandle, &_drawableWidth, &_drawableHeight);
 #endif
 		initDeviceViewport();
 
-		SDL_SetWindowResizable(windowHandle_, NCINE_SDL_BOOL(isResizable));
+		SDL_SetWindowResizable(_windowHandle, NCINE_SDL_BOOL(isResizable));
 
 		// resolution should be set to current screen size
-		if (width_ <= 0 || height_ <= 0) {
-			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		if (_width <= 0 || _height <= 0) {
+			SDL_GetWindowSize(_windowHandle, &_width, &_height);
 		}
 
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		LOGD("Initializing OpenGL|ES {}.{} context...", contextInfo_.majorVersion, contextInfo_.minorVersion);
+		LOGD("Initializing OpenGL|ES {}.{} context...", _contextInfo.majorVersion, _contextInfo.minorVersion);
 #else
-		LOGD("Initializing OpenGL {}.{} {} context...", contextInfo_.majorVersion, contextInfo_.minorVersion,
-			contextInfo_.coreProfile ? "Core" : "Compatibility");
+		LOGD("Initializing OpenGL {}.{} {} context...", _contextInfo.majorVersion, _contextInfo.minorVersion,
+			_contextInfo.coreProfile ? "Core" : "Compatibility");
 #endif
 
 #if defined(WITH_RHI_GXM)
@@ -658,7 +658,7 @@ namespace nCine::Backends
 		// create at all: this brings up sceGxm itself, the display buffers and the shader patcher. It is not an
 		// SDL-managed surface either - the Vita has one fixed 960x544 panel, which the window handle and the
 		// requested size below say nothing about, so they are ignored.
-		FATAL_ASSERT_MSG(RHI::Device::CreateSwapchain(nullptr, drawableWidth_, drawableHeight_, true),
+		FATAL_ASSERT_MSG(RHI::Device::CreateSwapchain(nullptr, _drawableWidth, _drawableHeight, true),
 			"Failed to initialize the sceGxm rendering backend");
 #elif defined(DEATH_TARGET_VITA)
 		// PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation layered over SceGxm. This is not
@@ -672,31 +672,31 @@ namespace nCine::Backends
 		vglInit(0x100000);
 #else
 	Retry:
-		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
+		_glContextHandle = SDL_GL_CreateContext(_windowHandle);
 
-		if (!glContextHandle_ && contextInfo_.minorVersion > 0) {
+		if (!_glContextHandle && _contextInfo.minorVersion > 0) {
 			// Retry with lower minor version
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("SDL_GL_CreateContext() with OpenGL|ES {}.{} failed, retrying with lower version: {}",
-				contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
+				_contextInfo.majorVersion, _contextInfo.minorVersion, SDL_GetError());
 #else
-			LOGW(contextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
-				contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
+			LOGW(_contextInfo.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
+				_contextInfo.majorVersion, _contextInfo.minorVersion, SDL_GetError());
 #endif
-			contextInfo_.minorVersion--;
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextInfo_.minorVersion);
+			_contextInfo.minorVersion--;
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, _contextInfo.minorVersion);
 			goto Retry;
 		}
 
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
-			contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
+		FATAL_ASSERT_MSG(_glContextHandle, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
+			_contextInfo.majorVersion, _contextInfo.minorVersion, SDL_GetError());
 #else
-		FATAL_ASSERT_MSG(glContextHandle_, contextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
-			contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
+		FATAL_ASSERT_MSG(_glContextHandle, _contextInfo.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
+			_contextInfo.majorVersion, _contextInfo.minorVersion, SDL_GetError());
 #endif
 
-		const int interval = (displayMode_.hasVSync() ? 1 : 0);
+		const int interval = (_displayMode.hasVSync() ? 1 : 0);
 		SDL_GL_SetSwapInterval(interval);
 #endif
 
@@ -704,7 +704,7 @@ namespace nCine::Backends
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
-		contextInfo_.debugContext = (contextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
+		_contextInfo.debugContext = (_contextInfo.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
 
@@ -715,61 +715,61 @@ namespace nCine::Backends
 		// SDL3: SDL_CreateRenderer takes only (window, driver-name); the accelerated/vsync flags are gone.
 		// Passing a null driver name lets SDL pick a suitable (accelerated when available) renderer, and vsync
 		// is configured afterwards through SDL_SetRenderVSync.
-		softwareRenderer_ = SDL_CreateRenderer(windowHandle_, nullptr);
-		FATAL_ASSERT_MSG(softwareRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
-		SDL_SetRenderVSync(softwareRenderer_, hasVSync ? 1 : 0);
+		_softwareRenderer = SDL_CreateRenderer(_windowHandle, nullptr);
+		FATAL_ASSERT_MSG(_softwareRenderer, "SDL_CreateRenderer failed: {}", SDL_GetError());
+		SDL_SetRenderVSync(_softwareRenderer, hasVSync ? 1 : 0);
 
-		SDL_GetRenderOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
-		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+		SDL_GetRenderOutputSize(_softwareRenderer, &_drawableWidth, &_drawableHeight);
+		resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #	else
 		Uint32 rendererFlags = SDL_RENDERER_ACCELERATED;
 		if (hasVSync) {
 			rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 		}
-		softwareRenderer_ = SDL_CreateRenderer(windowHandle_, -1, rendererFlags);
-		if (softwareRenderer_ == nullptr) {
+		_softwareRenderer = SDL_CreateRenderer(_windowHandle, -1, rendererFlags);
+		if (_softwareRenderer == nullptr) {
 			// Fall back to a non-accelerated renderer if no accelerated one is available
-			softwareRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_SOFTWARE);
+			_softwareRenderer = SDL_CreateRenderer(_windowHandle, -1, SDL_RENDERER_SOFTWARE);
 		}
-		FATAL_ASSERT_MSG(softwareRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
+		FATAL_ASSERT_MSG(_softwareRenderer, "SDL_CreateRenderer failed: {}", SDL_GetError());
 
-		SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
-		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+		SDL_GetRendererOutputSize(_softwareRenderer, &_drawableWidth, &_drawableHeight);
+		resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #	endif
 	}
 
 	void SdlGfxDevice::resizeSoftwareTarget(int width, int height)
 	{
-		if (width <= 0 || height <= 0 || softwareRenderer_ == nullptr) {
+		if (width <= 0 || height <= 0 || _softwareRenderer == nullptr) {
 			return;
 		}
-		if (softwareTexture_ != nullptr && width == softwareTextureWidth_ && height == softwareTextureHeight_) {
+		if (_softwareTexture != nullptr && width == _softwareTextureWidth && height == _softwareTextureHeight) {
 			return;
 		}
-		if (softwareTexture_ != nullptr) {
-			SDL_DestroyTexture(softwareTexture_);
-			softwareTexture_ = nullptr;
+		if (_softwareTexture != nullptr) {
+			SDL_DestroyTexture(_softwareTexture);
+			_softwareTexture = nullptr;
 		}
 #	if defined(RHI_USE_FB16)
 		// 16-bit mode: the backend framebuffer stores native-endian RGB565 texels, SDL's RGB565 packed format
-		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_RGB565,
+		_softwareTexture = SDL_CreateTexture(_softwareRenderer, SDL_PIXELFORMAT_RGB565,
 			SDL_TEXTUREACCESS_STREAMING, width, height);
 #	else
 		// The backend framebuffer is laid out as R,G,B,A bytes per texel; on a little-endian host that byte
 		// order is SDL's ABGR8888 packed format
-		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_ABGR8888,
+		_softwareTexture = SDL_CreateTexture(_softwareRenderer, SDL_PIXELFORMAT_ABGR8888,
 			SDL_TEXTUREACCESS_STREAMING, width, height);
 #	endif
-		FATAL_ASSERT_MSG(softwareTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
-		softwareTextureWidth_ = width;
-		softwareTextureHeight_ = height;
+		FATAL_ASSERT_MSG(_softwareTexture, "SDL_CreateTexture failed: {}", SDL_GetError());
+		_softwareTextureWidth = width;
+		_softwareTextureHeight = height;
 		// Give the root screen viewport a CPU framebuffer of the same size to render into
 		RHI::Device::ResizeScreenFramebuffer(width, height);
 	}
 
 	void SdlGfxDevice::presentSoftware()
 	{
-		if (softwareRenderer_ == nullptr) {
+		if (_softwareRenderer == nullptr) {
 			return;
 		}
 		// Render any draws the tile renderer deferred this frame into the screen buffer before we read it
@@ -783,25 +783,25 @@ namespace nCine::Backends
 		// (drawable) size no longer drives the framebuffer size — this is what makes the software renderer draw
 		// the scene at the cheap internal resolution instead of the full window resolution.
 		if (fb.pixels != nullptr && fb.width > 0 && fb.height > 0 &&
-			(fb.width != softwareTextureWidth_ || fb.height != softwareTextureHeight_)) {
+			(fb.width != _softwareTextureWidth || fb.height != _softwareTextureHeight)) {
 			resizeSoftwareTarget(fb.width, fb.height);
 		}
-		if (softwareTexture_ == nullptr) {
+		if (_softwareTexture == nullptr) {
 			return;
 		}
-		if (fb.pixels != nullptr && fb.width == softwareTextureWidth_ && fb.height == softwareTextureHeight_) {
-			SDL_UpdateTexture(softwareTexture_, nullptr, fb.pixels, fb.strideBytes);
+		if (fb.pixels != nullptr && fb.width == _softwareTextureWidth && fb.height == _softwareTextureHeight) {
+			SDL_UpdateTexture(_softwareTexture, nullptr, fb.pixels, fb.strideBytes);
 		}
-		SDL_RenderClear(softwareRenderer_);
+		SDL_RenderClear(_softwareRenderer);
 		// The SwRaster engine renders the screen color buffer bottom-up (OpenGL framebuffer convention), so
 		// present it flipped vertically into the top-left-origin window
 #	if defined(WITH_SDL3)
 		// SDL3: SDL_RenderCopyEx -> SDL_RenderTextureRotated (float rects; null = whole texture / whole target)
-		SDL_RenderTextureRotated(softwareRenderer_, softwareTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
+		SDL_RenderTextureRotated(_softwareRenderer, _softwareTexture, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
 #	else
-		SDL_RenderCopyEx(softwareRenderer_, softwareTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
+		SDL_RenderCopyEx(_softwareRenderer, _softwareTexture, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
 #	endif
-		SDL_RenderPresent(softwareRenderer_);
+		SDL_RenderPresent(_softwareRenderer);
 	}
 #endif
 
@@ -814,28 +814,28 @@ namespace nCine::Backends
 		int monitorCount = 0;
 		SDL_DisplayID* displays = SDL_GetDisplays(&monitorCount);
 		DEATH_ASSERT(monitorCount >= 1);
-		numMonitors_ = (monitorCount < (int)MaxMonitors) ? monitorCount : MaxMonitors;
+		_numMonitors = (monitorCount < (int)MaxMonitors) ? monitorCount : MaxMonitors;
 
-		for (unsigned int i = 0; i < numMonitors_; i++) {
+		for (unsigned int i = 0; i < _numMonitors; i++) {
 			const SDL_DisplayID displayId = displays[i];
-			monitors_[i].name = SDL_GetDisplayName(displayId);
-			DEATH_ASSERT(monitors_[i].name != nullptr);
+			_monitors[i].name = SDL_GetDisplayName(displayId);
+			DEATH_ASSERT(_monitors[i].name != nullptr);
 
 			SDL_Rect bounds;
 			SDL_GetDisplayBounds(displayId, &bounds);
-			monitors_[i].position.X = bounds.x;
-			monitors_[i].position.Y = bounds.y;
+			_monitors[i].position.X = bounds.x;
+			_monitors[i].position.Y = bounds.y;
 
 			// SDL3 replaced SDL_GetDisplayDPI with a single content-scale factor (1.0 == 100% == 96 DPI)
 			const float contentScale = SDL_GetDisplayContentScale(displayId);
-			monitors_[i].scale.X = (contentScale > 0.0f ? contentScale : 1.0f);
-			monitors_[i].scale.Y = monitors_[i].scale.X;
+			_monitors[i].scale.X = (contentScale > 0.0f ? contentScale : 1.0f);
+			_monitors[i].scale.Y = _monitors[i].scale.X;
 
 			int modeCount = 0;
 			SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayId, &modeCount);
-			monitors_[i].numVideoModes = (modeCount < (int)MaxVideoModes) ? modeCount : MaxVideoModes;
-			for (std::int32_t j = 0; j < monitors_[i].numVideoModes; j++) {
-				convertVideoModeInfo(*modes[j], monitors_[i].videoModes[j]);
+			_monitors[i].numVideoModes = (modeCount < (int)MaxVideoModes) ? modeCount : MaxVideoModes;
+			for (std::int32_t j = 0; j < _monitors[i].numVideoModes; j++) {
+				convertVideoModeInfo(*modes[j], _monitors[i].videoModes[j]);
 			}
 			SDL_free(modes);
 		}
@@ -845,29 +845,29 @@ namespace nCine::Backends
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
 		DEATH_ASSERT(monitorCount >= 1);
-		numMonitors_ = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
+		_numMonitors = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
 
-		for (unsigned int i = 0; i < numMonitors_; i++) {
-			monitors_[i].name = SDL_GetDisplayName(i);
-			DEATH_ASSERT(monitors_[i].name != nullptr);
+		for (unsigned int i = 0; i < _numMonitors; i++) {
+			_monitors[i].name = SDL_GetDisplayName(i);
+			DEATH_ASSERT(_monitors[i].name != nullptr);
 
 			SDL_Rect bounds;
 			SDL_GetDisplayBounds(i, &bounds);
-			monitors_[i].position.X = bounds.x;
-			monitors_[i].position.Y = bounds.y;
+			_monitors[i].position.X = bounds.x;
+			_monitors[i].position.Y = bounds.y;
 
 			float hDpi, vDpi;
 			SDL_GetDisplayDPI(i, nullptr, &hDpi, &vDpi);
-			monitors_[i].scale.X = hDpi / DefaultDPI;
-			monitors_[i].scale.Y = vDpi / DefaultDPI;
+			_monitors[i].scale.X = hDpi / DefaultDPI;
+			_monitors[i].scale.Y = vDpi / DefaultDPI;
 
 			const int modeCount = SDL_GetNumDisplayModes(i);
-			monitors_[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
+			_monitors[i].numVideoModes = (modeCount < MaxVideoModes) ? modeCount : MaxVideoModes;
 
 			SDL_DisplayMode mode;
-			for (std::int32_t j = 0; j < monitors_[i].numVideoModes; j++) {
+			for (std::int32_t j = 0; j < _monitors[i].numVideoModes; j++) {
 				SDL_GetDisplayMode(i, j, &mode);
-				convertVideoModeInfo(mode, monitors_[i].videoModes[j]);
+				convertVideoModeInfo(mode, _monitors[i].videoModes[j]);
 			}
 		}
 #endif

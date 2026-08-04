@@ -1,0 +1,5 @@
+.vscode/**
+test/**
+jsconfig.json
+.vscodeignore
+**/*.map

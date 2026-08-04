@@ -5,10 +5,10 @@
 
 namespace nCine::RHI::GU
 {
-	std::uint32_t GuBuffer::nextHandle_ = 1;
+	std::uint32_t GuBuffer::_nextHandle = 1;
 
 	GuBuffer::GuBuffer(BufferTarget target)
-		: handle_(nextHandle_++), target_(target)
+		: _handle(_nextHandle++), _target(target)
 	{
 	}
 
@@ -27,24 +27,24 @@ namespace nCine::RHI::GU
 	void GuBuffer::BufferData(std::size_t size, const void* data, BufferUsage usage)
 	{
 		static_cast<void>(usage);
-		if (data == nullptr && size == storage_.size()) {
+		if (data == nullptr && size == _storage.size()) {
 			// Same-size orphaning (BufferData with no data is how the streaming buffers discard last
 			// frame's contents) - the contract leaves the contents undefined, so re-zeroing the whole
 			// store every frame is nothing but wasted memory traffic
 			return;
 		}
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
 	}
 
 	void GuBuffer::BufferSubData(std::size_t offset, std::size_t size, const void* data)
 	{
-		if (data == nullptr || size == 0 || offset + size > storage_.size()) {
+		if (data == nullptr || size == 0 || offset + size > _storage.size()) {
 			return;
 		}
-		std::memcpy(storage_.data() + offset, data, size);
+		std::memcpy(_storage.data() + offset, data, size);
 	}
 
 	void GuBuffer::BufferStorage(std::size_t size, const void* data, MapFlags flags)
@@ -52,36 +52,36 @@ namespace nCine::RHI::GU
 		// Everything lives in a resizable host store, so "immutable storage" is just a plain
 		// (re)allocation; the storage/mapping flags do not apply
 		static_cast<void>(flags);
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
 	}
 
 	void GuBuffer::BindBufferBase(std::uint32_t index)
 	{
-		BindBufferRange(index, 0, storage_.size());
+		BindBufferRange(index, 0, _storage.size());
 	}
 
 	void GuBuffer::BindBufferRange(std::uint32_t index, std::size_t offset, std::size_t size)
 	{
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return;
 		}
-		if (offset + size > storage_.size()) {
-			size = storage_.size() - offset;
+		if (offset + size > _storage.size()) {
+			size = _storage.size() - offset;
 		}
-		GuDevice::BindUniformRange(index, storage_.data() + offset, std::uint32_t(size));
+		GuDevice::BindUniformRange(index, _storage.data() + offset, std::uint32_t(size));
 	}
 
 	void* GuBuffer::MapBufferRange(std::size_t offset, std::size_t length, MapFlags access)
 	{
 		static_cast<void>(length);
 		static_cast<void>(access);
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return nullptr;
 		}
-		return storage_.data() + offset;
+		return _storage.data() + offset;
 	}
 
 	void GuBuffer::FlushMappedBufferRange(std::size_t offset, std::size_t length)

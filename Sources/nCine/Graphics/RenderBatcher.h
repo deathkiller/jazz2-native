@@ -57,7 +57,7 @@ namespace nCine
 		 *
 		 * @note It is a RAM buffer and cannot be handled by the `RenderBuffersManager`.
 		 */
-		SmallVector<ManagedBuffer, 0> buffers_;
+		SmallVector<ManagedBuffer, 0> _buffers;
 
 		/**
 		 * @brief Builds a single batched command from a run of source commands

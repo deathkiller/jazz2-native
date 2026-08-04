@@ -86,21 +86,21 @@ namespace nCine::RHI::GX
 		}
 	}
 
-	std::uint32_t GxTexture::nextHandle_ = 1;
-	std::uint32_t GxTexture::nextContentVersion_ = 0;
+	std::uint32_t GxTexture::_nextHandle = 1;
+	std::uint32_t GxTexture::_nextContentVersion = 0;
 
 	GxTexture::GxTexture(TextureTarget target)
-		: handle_(nextHandle_++), contentVersion_(0), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
-			width_(0), height_(0), strideBytes_(0), bytesPerPixel_(0),
-			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
-			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
-			tiledStore_(nullptr), tiledStoreSize_(0), texObjValid_(false),
-			bakedSlots_{}, nextBakedSlot_(0)
+		: _handle(_nextHandle++), _contentVersion(0), _target(target), _format(PixelFormat::Unknown), _uploadFormat(PixelFormat::Unknown),
+			_width(0), _height(0), _strideBytes(0), _bytesPerPixel(0),
+			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest), _wrap(SamplerWrapping::ClampToEdge),
+			_textureUnit(0), _isRenderTarget(false), _isPaletteTexture(false),
+			_tiledStore(nullptr), _tiledStoreSize(0), _texObjValid(false),
+			_bakedSlots{}, _nextBakedSlot(0)
 	{
-		swizzle_[0] = SwizzleChannel::Red;
-		swizzle_[1] = SwizzleChannel::Green;
-		swizzle_[2] = SwizzleChannel::Blue;
-		swizzle_[3] = SwizzleChannel::Alpha;
+		_swizzle[0] = SwizzleChannel::Red;
+		_swizzle[1] = SwizzleChannel::Green;
+		_swizzle[2] = SwizzleChannel::Blue;
+		_swizzle[3] = SwizzleChannel::Alpha;
 	}
 
 	GxTexture::~GxTexture()
@@ -112,18 +112,18 @@ namespace nCine::RHI::GX
 
 	void GxTexture::FreeTiledStores()
 	{
-		if (tiledStore_ != nullptr) {
-			free(tiledStore_);
-			tiledStore_ = nullptr;
-			tiledStoreSize_ = 0;
+		if (_tiledStore != nullptr) {
+			free(_tiledStore);
+			_tiledStore = nullptr;
+			_tiledStoreSize = 0;
 		}
-		texObjValid_ = false;
+		_texObjValid = false;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Store != nullptr) {
-				free(bakedSlots_[i].Store);
-				bakedSlots_[i].Store = nullptr;
+			if (_bakedSlots[i].Store != nullptr) {
+				free(_bakedSlots[i].Store);
+				_bakedSlots[i].Store = nullptr;
 			}
-			bakedSlots_[i].Valid = false;
+			_bakedSlots[i].Valid = false;
 		}
 	}
 
@@ -140,84 +140,84 @@ namespace nCine::RHI::GX
 
 	void GxTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height)
 	{
-		uploadFormat_ = format;
-		format_ = format;
-		width_ = width;
-		height_ = height;
-		bytesPerPixel_ = BytesPerPixel(format_);
-		strideBytes_ = width * bytesPerPixel_;
-		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		_uploadFormat = format;
+		_format = format;
+		_width = width;
+		_height = height;
+		_bytesPerPixel = BytesPerPixel(_format);
+		_strideBytes = width * _bytesPerPixel;
+		_pixels.assign(std::size_t(_strideBytes) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
 		FreeTiledStores();
-		contentVersion_ = ++nextContentVersion_;
+		_contentVersion = ++_nextContentVersion;
 	}
 
 	void GxTexture::InitTexObj(GXTexObj& obj, void* store, std::uint8_t gxFormat, bool ci)
 	{
-		const std::uint8_t wrap = (wrap_ == SamplerWrapping::Repeat ? GX_REPEAT
-			: (wrap_ == SamplerWrapping::MirroredRepeat ? GX_MIRROR : GX_CLAMP));
+		const std::uint8_t wrap = (_wrap == SamplerWrapping::Repeat ? GX_REPEAT
+			: (_wrap == SamplerWrapping::MirroredRepeat ? GX_MIRROR : GX_CLAMP));
 		if (ci) {
 			// The TLUT name is patched per draw by the device (GX_InitTexObjTlut) before loading the object
-			GX_InitTexObjCI(&obj, store, std::uint16_t(width_), std::uint16_t(height_), gxFormat, wrap, wrap, GX_FALSE, GX_TLUT0);
+			GX_InitTexObjCI(&obj, store, std::uint16_t(_width), std::uint16_t(_height), gxFormat, wrap, wrap, GX_FALSE, GX_TLUT0);
 		} else {
-			GX_InitTexObj(&obj, store, std::uint16_t(width_), std::uint16_t(height_), gxFormat, wrap, wrap, GX_FALSE);
+			GX_InitTexObj(&obj, store, std::uint16_t(_width), std::uint16_t(_height), gxFormat, wrap, wrap, GX_FALSE);
 		}
-		const std::uint8_t filter = (magFilter_ == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
+		const std::uint8_t filter = (_magFilter == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
 		GX_InitTexObjFilterMode(&obj, filter, filter);
 	}
 
 	void GxTexture::RefreshTiledStore()
 	{
-		texObjValid_ = false;
-		if (pixels_.empty() || width_ <= 0 || height_ <= 0 || isPaletteTexture_) {
+		_texObjValid = false;
+		if (_pixels.empty() || _width <= 0 || _height <= 0 || _isPaletteTexture) {
 			return;
 		}
 
 		std::size_t required = 0;
-		if (uploadFormat_ == PixelFormat::R8) {
-			required = TiledSizeCi8(width_, height_);
-		} else if (uploadFormat_ == PixelFormat::RGB8 || uploadFormat_ == PixelFormat::RGBA8) {
-			required = TiledSizeRgba8(width_, height_);
+		if (_uploadFormat == PixelFormat::R8) {
+			required = TiledSizeCi8(_width, _height);
+		} else if (_uploadFormat == PixelFormat::RGB8 || _uploadFormat == PixelFormat::RGBA8) {
+			required = TiledSizeRgba8(_width, _height);
 		} else {
 			// RG8 keeps only the linear store; the tiled copy is baked per palette row on demand
 			return;
 		}
 
-		if (tiledStore_ == nullptr || tiledStoreSize_ != required) {
-			if (tiledStore_ != nullptr) {
-				free(tiledStore_);
+		if (_tiledStore == nullptr || _tiledStoreSize != required) {
+			if (_tiledStore != nullptr) {
+				free(_tiledStore);
 			}
-			tiledStore_ = static_cast<std::uint8_t*>(memalign(32, required));
-			tiledStoreSize_ = required;
-			if (tiledStore_ == nullptr) {
+			_tiledStore = static_cast<std::uint8_t*>(memalign(32, required));
+			_tiledStoreSize = required;
+			if (_tiledStore == nullptr) {
 				LOGE("Out of memory allocating a {} B tiled texture store", required);
 				return;
 			}
 		}
 
-		if (uploadFormat_ == PixelFormat::R8) {
-			TileCi8(tiledStore_, pixels_.data(), width_, height_, strideBytes_);
-			InitTexObj(texObj_, tiledStore_, GX_TF_CI8, true);
+		if (_uploadFormat == PixelFormat::R8) {
+			TileCi8(_tiledStore, _pixels.data(), _width, _height, _strideBytes);
+			InitTexObj(_texObj, _tiledStore, GX_TF_CI8, true);
 		} else {
-			TileRgba8(tiledStore_, pixels_.data(), width_, height_, strideBytes_, bytesPerPixel_);
-			InitTexObj(texObj_, tiledStore_, GX_TF_RGBA8, false);
+			TileRgba8(_tiledStore, _pixels.data(), _width, _height, _strideBytes, _bytesPerPixel);
+			InitTexObj(_texObj, _tiledStore, GX_TF_RGBA8, false);
 		}
-		DCFlushRange(tiledStore_, std::uint32_t(tiledStoreSize_));
+		DCFlushRange(_tiledStore, std::uint32_t(_tiledStoreSize));
 		GX_InvalidateTexAll();
-		texObjValid_ = true;
+		_texObjValid = true;
 	}
 
 	GXTexObj* GxTexture::GetTexObj()
 	{
-		if (!texObjValid_ && isRenderTarget_) {
+		if (!_texObjValid && _isRenderTarget) {
 			// A render target's tiled store is written by EFB copies; (re)create it lazily
 			SetRenderTarget(true);
 		}
-		return (texObjValid_ ? &texObj_ : nullptr);
+		return (_texObjValid ? &_texObj : nullptr);
 	}
 
 	GXTexObj* GxTexture::EnsureBakedRgba(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette)
 	{
-		if (pixels_.empty() || uploadFormat_ != PixelFormat::RG8 || paletteRow == nullptr) {
+		if (_pixels.empty() || _uploadFormat != PixelFormat::RG8 || paletteRow == nullptr) {
 			return nullptr;
 		}
 		const std::uint32_t currentFrame = GxDevice::GetFrameCounter();
@@ -227,28 +227,28 @@ namespace nCine::RHI::GX
 		// texture's whole lifetime. Far older than anything the asynchronous FIFO could still read.
 		constexpr std::uint32_t ReclaimAfterFrames = 300;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Store != nullptr && currentFrame - bakedSlots_[i].LastUsedFrame > ReclaimAfterFrames) {
-				free(bakedSlots_[i].Store);
-				bakedSlots_[i].Store = nullptr;
-				bakedSlots_[i].Valid = false;
+			if (_bakedSlots[i].Store != nullptr && currentFrame - _bakedSlots[i].LastUsedFrame > ReclaimAfterFrames) {
+				free(_bakedSlots[i].Store);
+				_bakedSlots[i].Store = nullptr;
+				_bakedSlots[i].Valid = false;
 			}
 		}
 
 		BakedSlot* slot = nullptr;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
-				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
-					bakedSlots_[i].LastUsedFrame = currentFrame;
-					return &bakedSlots_[i].TexObj;
+			if (_bakedSlots[i].Valid && _bakedSlots[i].PaletteRow == paletteRowIndex && _bakedSlots[i].Palette == palette) {
+				if (_bakedSlots[i].PaletteGeneration == paletteGeneration && _bakedSlots[i].ContentVersion == _contentVersion) {
+					_bakedSlots[i].LastUsedFrame = currentFrame;
+					return &_bakedSlots[i].TexObj;
 				}
-				slot = &bakedSlots_[i];	// Stale bake of the same row, refresh it in place
+				slot = &_bakedSlots[i];	// Stale bake of the same row, refresh it in place
 				break;
 			}
 		}
 		if (slot == nullptr) {
 			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-				if (!bakedSlots_[i].Valid) {
-					slot = &bakedSlots_[i];
+				if (!_bakedSlots[i].Valid) {
+					slot = &_bakedSlots[i];
 					break;
 				}
 			}
@@ -257,10 +257,10 @@ namespace nCine::RHI::GX
 			// Never evict a bake the current frame still references - the FIFO consumes draws
 			// asynchronously, so overwriting one could corrupt the already submitted quads
 			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-				const std::int32_t candidate = (nextBakedSlot_ + i) % BakedSlotCount;
-				if (bakedSlots_[candidate].LastUsedFrame != currentFrame) {
-					slot = &bakedSlots_[candidate];
-					nextBakedSlot_ = (candidate + 1) % BakedSlotCount;
+				const std::int32_t candidate = (_nextBakedSlot + i) % BakedSlotCount;
+				if (_bakedSlots[candidate].LastUsedFrame != currentFrame) {
+					slot = &_bakedSlots[candidate];
+					_nextBakedSlot = (candidate + 1) % BakedSlotCount;
 					break;
 				}
 			}
@@ -271,11 +271,11 @@ namespace nCine::RHI::GX
 				warnedSlots = true;
 				LOGW("More than {} palette rows used with one texture in a single frame, expect glitches", BakedSlotCount);
 			}
-			slot = &bakedSlots_[nextBakedSlot_];
-			nextBakedSlot_ = (nextBakedSlot_ + 1) % BakedSlotCount;
+			slot = &_bakedSlots[_nextBakedSlot];
+			_nextBakedSlot = (_nextBakedSlot + 1) % BakedSlotCount;
 		}
 
-		const std::size_t required = TiledSizeRgba8(width_, height_);
+		const std::size_t required = TiledSizeRgba8(_width, _height);
 		if (slot->Store == nullptr) {
 			slot->Store = static_cast<std::uint8_t*>(memalign(32, required));
 			if (slot->Store == nullptr) {
@@ -286,11 +286,11 @@ namespace nCine::RHI::GX
 
 		// Resolve each texel through the palette row (index -> RGB) and its own alpha byte, into a
 		// temporary linear RGBA row consumed by the tiler row by row
-		std::vector<std::uint8_t> linear(std::size_t(width_) * std::size_t(height_) * 4);
-		for (std::int32_t y = 0; y < height_; y++) {
-			const std::uint8_t* src = pixels_.data() + std::size_t(y) * strideBytes_;
-			std::uint8_t* dst = linear.data() + std::size_t(y) * width_ * 4;
-			for (std::int32_t x = 0; x < width_; x++) {
+		std::vector<std::uint8_t> linear(std::size_t(_width) * std::size_t(_height) * 4);
+		for (std::int32_t y = 0; y < _height; y++) {
+			const std::uint8_t* src = _pixels.data() + std::size_t(y) * _strideBytes;
+			std::uint8_t* dst = linear.data() + std::size_t(y) * _width * 4;
+			for (std::int32_t x = 0; x < _width; x++) {
 				const std::uint32_t color = paletteRow[src[x * 2]];
 				dst[x * 4 + 0] = std::uint8_t(color & 0xFF);
 				dst[x * 4 + 1] = std::uint8_t((color >> 8) & 0xFF);
@@ -298,7 +298,7 @@ namespace nCine::RHI::GX
 				dst[x * 4 + 3] = src[x * 2 + 1];
 			}
 		}
-		TileRgba8(slot->Store, linear.data(), width_, height_, width_ * 4, 4);
+		TileRgba8(slot->Store, linear.data(), _width, _height, _width * 4, 4);
 		InitTexObj(slot->TexObj, slot->Store, GX_TF_RGBA8, false);
 		DCFlushRange(slot->Store, std::uint32_t(required));
 		GX_InvalidateTexAll();
@@ -306,7 +306,7 @@ namespace nCine::RHI::GX
 		slot->Valid = true;
 		slot->PaletteRow = paletteRowIndex;
 		slot->PaletteGeneration = paletteGeneration;
-		slot->ContentVersion = contentVersion_;
+		slot->ContentVersion = _contentVersion;
 		slot->LastUsedFrame = currentFrame;
 		slot->Palette = palette;
 		return &slot->TexObj;
@@ -314,34 +314,34 @@ namespace nCine::RHI::GX
 
 	void GxTexture::SetRenderTarget(bool isRenderTarget)
 	{
-		isRenderTarget_ = isRenderTarget;
-		if (isRenderTarget && width_ > 0 && height_ > 0) {
+		_isRenderTarget = isRenderTarget;
+		if (isRenderTarget && _width > 0 && _height > 0) {
 			// The EFB copy writes a tiled RGBA8 image; allocate/refresh the destination store
-			const std::size_t required = TiledSizeRgba8(width_, height_);
-			if (tiledStore_ == nullptr || tiledStoreSize_ != required) {
-				if (tiledStore_ != nullptr) {
-					free(tiledStore_);
+			const std::size_t required = TiledSizeRgba8(_width, _height);
+			if (_tiledStore == nullptr || _tiledStoreSize != required) {
+				if (_tiledStore != nullptr) {
+					free(_tiledStore);
 				}
-				tiledStore_ = static_cast<std::uint8_t*>(memalign(32, required));
-				tiledStoreSize_ = required;
+				_tiledStore = static_cast<std::uint8_t*>(memalign(32, required));
+				_tiledStoreSize = required;
 			}
-			if (tiledStore_ != nullptr) {
-				InitTexObj(texObj_, tiledStore_, GX_TF_RGBA8, false);
-				texObjValid_ = true;
+			if (_tiledStore != nullptr) {
+				InitTexObj(_texObj, _tiledStore, GX_TF_RGBA8, false);
+				_texObjValid = true;
 			}
 		}
 	}
 
 	bool GxTexture::Bind(std::uint32_t textureUnit) const
 	{
-		textureUnit_ = textureUnit;
+		_textureUnit = textureUnit;
 		GxDevice::BindTexture(textureUnit, this);
 		return true;
 	}
 
 	bool GxTexture::Unbind() const
 	{
-		GxDevice::BindTexture(textureUnit_, nullptr);
+		GxDevice::BindTexture(_textureUnit, nullptr);
 		return true;
 	}
 
@@ -358,12 +358,12 @@ namespace nCine::RHI::GX
 			return;		// Level 0 only
 		}
 		Allocate(format, width, height);
-		if (data != nullptr && !pixels_.empty()) {
-			std::memcpy(pixels_.data(), data, pixels_.size());
-			contentVersion_ = ++nextContentVersion_;
+		if (data != nullptr && !_pixels.empty()) {
+			std::memcpy(_pixels.data(), data, _pixels.size());
+			_contentVersion = ++_nextContentVersion;
 		}
-		if (isPaletteTexture_) {
-			GxDevice::NotifyPaletteTextureChanged(this, 0, height_);
+		if (_isPaletteTexture) {
+			GxDevice::NotifyPaletteTextureChanged(this, 0, _height);
 		} else {
 			RefreshTiledStore();
 		}
@@ -372,15 +372,15 @@ namespace nCine::RHI::GX
 	void GxTexture::TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data)
 	{
 		static_cast<void>(bgr);
-		if (level != 0 || data == nullptr || pixels_.empty()) {
+		if (level != 0 || data == nullptr || _pixels.empty()) {
 			return;
 		}
 		const std::int32_t srcBpp = BytesPerPixel(format);
-		const std::int32_t dstBpp = bytesPerPixel_;
+		const std::int32_t dstBpp = _bytesPerPixel;
 		const std::int32_t copyBpp = (srcBpp < dstBpp ? srcBpp : dstBpp);
 		for (std::int32_t y = 0; y < height; y++) {
 			const std::int32_t dstY = yoffset + y;
-			if (dstY < 0 || dstY >= height_) {
+			if (dstY < 0 || dstY >= _height) {
 				continue;
 			}
 			std::int32_t dstX = xoffset;
@@ -391,14 +391,14 @@ namespace nCine::RHI::GX
 				copyW += dstX;
 				dstX = 0;
 			}
-			if (dstX + copyW > width_) {
-				copyW = width_ - dstX;
+			if (dstX + copyW > _width) {
+				copyW = _width - dstX;
 			}
 			if (copyW <= 0) {
 				continue;
 			}
 			const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
-			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
+			std::uint8_t* dstRow = _pixels.data() + std::size_t(dstY) * _strideBytes + std::size_t(dstX) * dstBpp;
 			if (srcBpp == dstBpp) {
 				std::memcpy(dstRow, srcRow, std::size_t(copyW) * dstBpp);
 			} else {
@@ -413,8 +413,8 @@ namespace nCine::RHI::GX
 				}
 			}
 		}
-		contentVersion_ = ++nextContentVersion_;
-		if (isPaletteTexture_) {
+		_contentVersion = ++_nextContentVersion;
+		if (_isPaletteTexture) {
 			GxDevice::NotifyPaletteTextureChanged(this, yoffset, height);
 		} else {
 			// v1 keeps the tiling simple: any sub-update re-tiles the whole level (sub-updates are rare -
@@ -427,7 +427,7 @@ namespace nCine::RHI::GX
 	{
 		static_cast<void>(levels);
 		Allocate(format, width, height);
-		if (isRenderTarget_) {
+		if (_isRenderTarget) {
 			SetRenderTarget(true);
 		}
 	}
@@ -449,60 +449,60 @@ namespace nCine::RHI::GX
 		static_cast<void>(level);
 		static_cast<void>(format);
 		static_cast<void>(bgr);
-		if (pixels != nullptr && !pixels_.empty()) {
-			std::memcpy(pixels, pixels_.data(), pixels_.size());
+		if (pixels != nullptr && !_pixels.empty()) {
+			std::memcpy(pixels, _pixels.data(), _pixels.size());
 		}
 	}
 
 	void GxTexture::SetMinFiltering(nCine::SamplerFilter filter)
 	{
-		minFilter_ = filter;
-		if (texObjValid_) {
-			const std::uint8_t f = (magFilter_ == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
-			GX_InitTexObjFilterMode(&texObj_, f, f);
+		_minFilter = filter;
+		if (_texObjValid) {
+			const std::uint8_t f = (_magFilter == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
+			GX_InitTexObjFilterMode(&_texObj, f, f);
 		}
 	}
 
 	void GxTexture::SetMagFiltering(nCine::SamplerFilter filter)
 	{
-		magFilter_ = filter;
-		if (texObjValid_) {
-			const std::uint8_t f = (magFilter_ == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
-			GX_InitTexObjFilterMode(&texObj_, f, f);
+		_magFilter = filter;
+		if (_texObjValid) {
+			const std::uint8_t f = (_magFilter == nCine::SamplerFilter::Linear ? GX_LINEAR : GX_NEAR);
+			GX_InitTexObjFilterMode(&_texObj, f, f);
 		}
 	}
 
 	void GxTexture::SetWrap(SamplerWrapping wrap)
 	{
-		if (wrap_ == wrap) {
+		if (_wrap == wrap) {
 			return;
 		}
-		wrap_ = wrap;
+		_wrap = wrap;
 		// Wrap only parameterizes GX_InitTexObj (read by InitTexObj), so the texture objects are
 		// re-initialized in place over the existing stores - the texel data is unaffected, and re-tiling
 		// the whole level through RefreshTiledStore() here was pure wasted work
-		if (texObjValid_ && tiledStore_ != nullptr) {
+		if (_texObjValid && _tiledStore != nullptr) {
 			// Render targets always hold an RGBA8 store, whatever the upload format was (see SetRenderTarget)
-			if (uploadFormat_ == PixelFormat::R8 && !isRenderTarget_) {
-				InitTexObj(texObj_, tiledStore_, GX_TF_CI8, true);
+			if (_uploadFormat == PixelFormat::R8 && !_isRenderTarget) {
+				InitTexObj(_texObj, _tiledStore, GX_TF_CI8, true);
 			} else {
-				InitTexObj(texObj_, tiledStore_, GX_TF_RGBA8, false);
+				InitTexObj(_texObj, _tiledStore, GX_TF_RGBA8, false);
 			}
 		}
 		// The baked RGBA8 copies of an RG8 store carry their own texture objects with the same wrap state
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Valid && bakedSlots_[i].Store != nullptr) {
-				InitTexObj(bakedSlots_[i].TexObj, bakedSlots_[i].Store, GX_TF_RGBA8, false);
+			if (_bakedSlots[i].Valid && _bakedSlots[i].Store != nullptr) {
+				InitTexObj(_bakedSlots[i].TexObj, _bakedSlots[i].Store, GX_TF_RGBA8, false);
 			}
 		}
 	}
 
 	void GxTexture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		swizzle_[0] = r;
-		swizzle_[1] = g;
-		swizzle_[2] = b;
-		swizzle_[3] = a;
+		_swizzle[0] = r;
+		_swizzle[1] = g;
+		_swizzle[2] = b;
+		_swizzle[3] = a;
 	}
 
 	void GxTexture::SetMaxLevel(std::int32_t maxLevel)
@@ -520,7 +520,7 @@ namespace nCine::RHI::GX
 		// The shared palette texture is uploaded by ContentResolver under this exact name; its rows are
 		// turned into TLUTs by the device instead of a sampled texture
 		if (label == "Palettes"_s) {
-			isPaletteTexture_ = true;
+			_isPaletteTexture = true;
 			FreeTiledStores();
 			GxDevice::RegisterPaletteTexture(this);
 		}

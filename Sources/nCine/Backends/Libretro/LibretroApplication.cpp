@@ -43,7 +43,7 @@ namespace nCine::Backends
 	bool LibretroApplication::Init(CreateAppEventHandlerDelegate createAppEventHandler)
 	{
 		PreInitCommon(createAppEventHandler());
-		if (shouldQuit_) {
+		if (_shouldQuit) {
 			return false;
 		}
 
@@ -52,35 +52,35 @@ namespace nCine::Backends
 		// keep the engine's own frame limiter as a backstop. It is bypassed automatically
 		// while the frontend reports fast-forwarding (see retro_run).
 		SetFrameLimiter(true);
-		appCfg_.withVSync = false;
+		_appCfg.withVSync = false;
 
-		IGfxDevice::ContextInfo contextInfo(appCfg_);
+		IGfxDevice::ContextInfo contextInfo(_appCfg);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
-		std::int32_t width = (appCfg_.resolution.X > 0 ? appCfg_.resolution.X : 720);
-		std::int32_t height = (appCfg_.resolution.Y > 0 ? appCfg_.resolution.Y : 405);
+		std::int32_t width = (_appCfg.resolution.X > 0 ? _appCfg.resolution.X : 720);
+		std::int32_t height = (_appCfg.resolution.Y > 0 ? _appCfg.resolution.Y : 405);
 		const IGfxDevice::WindowMode windowMode(width, height, 0, 0, false, false, false);
 
-		gfxDevice_ = std::make_unique<LibretroGfxDevice>(windowMode, contextInfo, displayMode);
-		inputManager_ = std::make_unique<LibretroInputManager>();
+		_gfxDevice = std::make_unique<LibretroGfxDevice>(windowMode, contextInfo, displayMode);
+		_inputManager = std::make_unique<LibretroInputManager>();
 
 		InitCommon();
 
 		SetAutoSuspension(false);
 		SetFocus(true);
-		static_cast<LibretroInputManager&>(*inputManager_).connectJoystick();
-		return !shouldQuit_;
+		static_cast<LibretroInputManager&>(*_inputManager).connectJoystick();
+		return !_shouldQuit;
 	}
 
 	void LibretroApplication::RunFrame()
 	{
-		static_cast<LibretroGfxDevice&>(*gfxDevice_).beginFrame();
-		static_cast<LibretroInputManager&>(*inputManager_).processFrame();
+		static_cast<LibretroGfxDevice&>(*_gfxDevice).beginFrame();
+		static_cast<LibretroInputManager&>(*_inputManager).processFrame();
 		Step();
 	}
 
 	void LibretroApplication::SetFrameLimiter(bool enabled)
 	{
-		appCfg_.frameLimit = (enabled ? (std::uint32_t)(LibretroGfxDevice::GetTargetFps() + 0.5) : 0);
+		_appCfg.frameLimit = (enabled ? (std::uint32_t)(LibretroGfxDevice::GetTargetFps() + 0.5) : 0);
 	}
 
 	void LibretroApplication::Shutdown()
@@ -90,12 +90,12 @@ namespace nCine::Backends
 
 	bool LibretroApplication::SaveState(Death::IO::Stream& dest)
 	{
-		return (appEventHandler_ != nullptr && appEventHandler_->OnSaveState(dest));
+		return (_appEventHandler != nullptr && _appEventHandler->OnSaveState(dest));
 	}
 
 	bool LibretroApplication::LoadState(std::shared_ptr<Death::IO::Stream> src)
 	{
-		return (appEventHandler_ != nullptr && appEventHandler_->OnLoadState(std::move(src)));
+		return (_appEventHandler != nullptr && _appEventHandler->OnLoadState(std::move(src)));
 	}
 }
 

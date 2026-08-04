@@ -49,69 +49,69 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the stored texels (after any promotion to the RGBA8 store) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format before promotion (R8/RG8/RGB8 kept) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of level 0 */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/** @brief Returns the base pointer of the level-0 texel store (may be `nullptr` before an upload); the single-level store ignores @p level */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode, same as @ref GetWrapS()) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter (alias of @ref GetMagFiltering()) */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/** @brief Marks the texture as (or no longer as) a color render target (rebuilds the GPU texture with the render-target bind flag when it changes) */
 		inline void SetRenderTarget(bool isRenderTarget) {
-			if (isRenderTarget != isRenderTarget_) {
-				isRenderTarget_ = isRenderTarget;
+			if (isRenderTarget != _isRenderTarget) {
+				_isRenderTarget = isRenderTarget;
 				ReleaseGpu();
-				contentsDirty_ = true;
+				_contentsDirty = true;
 			}
 		}
 		/** @brief Returns a writable base pointer of the level-0 texel store (for render-target output) */
 		inline std::uint8_t* MutablePixels() {
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 
 		/** @brief Binds the texture to the specified texture unit on the device */
@@ -156,7 +156,7 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns the magnification filter */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 
 		static bool SupportsImmutableStorage() {
@@ -178,52 +178,52 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns the existing SRV without creating one (device shadow-state scrubbing on destroy) */
 		inline ID3D11ShaderResourceView* PeekSRV() const {
-			return srv_;
+			return _srv;
 		}
 		/** @brief Returns the existing sampler without creating one */
 		inline ID3D11SamplerState* PeekSampler() const {
-			return sampler_;
+			return _sampler;
 		}
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		SmallVector<std::uint8_t, 0> pixels_;
-		// Swizzled copy of pixels_ uploaded to the GPU when the sampling swizzle is not the identity. D3D11's
+		std::uint32_t _handle;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		SmallVector<std::uint8_t, 0> _pixels;
+		// Swizzled copy of _pixels uploaded to the GPU when the sampling swizzle is not the identity. D3D11's
 		// base SRV has no per-channel swizzle (unlike GL's GL_TEXTURE_SWIZZLE_*), so the swizzle is baked into
 		// the texels instead. Rebuilt lazily whenever the contents or swizzle change.
-		mutable SmallVector<std::uint8_t, 0> swizzledPixels_;
-		bool isRenderTarget_;
+		mutable SmallVector<std::uint8_t, 0> _swizzledPixels;
+		bool _isRenderTarget;
 
 		// GPU objects, created lazily from the host store on first bind (mutable so the const bind-time
-		// accessors can materialize them); `contentsDirty_` forces a refresh after a CPU upload
-		mutable ID3D11Texture2D* gpuTexture_;
-		mutable ID3D11ShaderResourceView* srv_;
-		mutable ID3D11SamplerState* sampler_;
-		mutable bool contentsDirty_;
-		mutable bool hasCpuData_;
-		mutable nCine::SamplerFilter samplerMinFilter_;
-		mutable nCine::SamplerFilter samplerFilter_;
-		mutable SamplerWrapping samplerWrap_;
+		// accessors can materialize them); `_contentsDirty` forces a refresh after a CPU upload
+		mutable ID3D11Texture2D* _gpuTexture;
+		mutable ID3D11ShaderResourceView* _srv;
+		mutable ID3D11SamplerState* _sampler;
+		mutable bool _contentsDirty;
+		mutable bool _hasCpuData;
+		mutable nCine::SamplerFilter _samplerMinFilter;
+		mutable nCine::SamplerFilter _samplerFilter;
+		mutable SamplerWrapping _samplerWrap;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
-		/** @brief (Re)creates @ref gpuTexture_ + @ref srv_ from the host store when missing or dirty */
+		/** @brief (Re)creates @ref _gpuTexture + @ref _srv from the host store when missing or dirty */
 		void EnsureGpuTexture() const;
-		/** @brief Returns `true` if @ref swizzle_ is the identity mapping (R,G,B,A) */
+		/** @brief Returns `true` if @ref _swizzle is the identity mapping (R,G,B,A) */
 		bool IsIdentitySwizzle() const;
-		/** @brief Returns the texels to upload: @ref pixels_ for the identity swizzle, otherwise a swizzle-baked copy */
+		/** @brief Returns the texels to upload: @ref _pixels for the identity swizzle, otherwise a swizzle-baked copy */
 		const std::uint8_t* SwizzledUploadPixels() const;
 	};
 }

@@ -36,10 +36,10 @@ namespace nCine::Backends
 		constexpr std::int32_t ButtonGuide = 10;
 
 		// Event scratch (single-threaded poll)
-		JoyButtonEvent joyButtonEvent_;
-		JoyHatEvent joyHatEvent_;
-		JoyAxisEvent joyAxisEvent_;
-		JoyConnectionEvent joyConnectionEvent_;
+		JoyButtonEvent _joyButtonEvent;
+		JoyHatEvent _joyHatEvent;
+		JoyAxisEvent _joyAxisEvent;
+		JoyConnectionEvent _joyConnectionEvent;
 
 		inline float NormalizeStick(unsigned char value)
 		{
@@ -48,37 +48,37 @@ namespace nCine::Backends
 		}
 	}
 
-	bool PspInputManager::connected_ = false;
-	PspJoystickState PspInputManager::state_;
+	bool PspInputManager::_connected = false;
+	PspJoystickState PspInputManager::_state;
 
 	PspJoystickState::PspJoystickState()
-		: joyId_(-1), hatState_(HatState::Centered)
+		: _joyId(-1), _hatState(HatState::Centered)
 	{
-		std::memset(buttonsState_, 0, sizeof(buttonsState_));
-		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
+		std::memset(_buttonsState, 0, sizeof(_buttonsState));
+		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
 	bool PspJoystickState::isButtonPressed(int buttonId) const
 	{
-		return (buttonId >= 0 && buttonId < MaxNumButtons && buttonsState_[buttonId]);
+		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
 	unsigned char PspJoystickState::hatState(int hatId) const
 	{
-		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::Centered));
+		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
 	float PspJoystickState::axisValue(int axisId) const
 	{
-		return (axisId >= 0 && axisId < MaxNumAxes ? axesValuesState_[axisId] : 0.0f);
+		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
 	void PspJoystickState::resetJoystickState(int joyId)
 	{
-		joyId_ = joyId;
-		hatState_ = HatState::Centered;
-		std::memset(buttonsState_, 0, sizeof(buttonsState_));
-		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
+		_joyId = joyId;
+		_hatState = HatState::Centered;
+		std::memset(_buttonsState, 0, sizeof(_buttonsState));
+		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
 	void PspJoystickState::simulateButtonEvent(int buttonId, bool pressed)
@@ -86,30 +86,30 @@ namespace nCine::Backends
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && buttonsState_[buttonId] != pressed) {
-			joyButtonEvent_.joyId = joyId_;
-			joyButtonEvent_.buttonId = buttonId;
+		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.joyId = _joyId;
+			_joyButtonEvent.buttonId = buttonId;
 			if (pressed) {
-				PspInputManager::joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
-				IInputManager::handler()->OnJoyButtonPressed(joyButtonEvent_);
+				PspInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
-				PspInputManager::joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
-				IInputManager::handler()->OnJoyButtonReleased(joyButtonEvent_);
+				PspInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
-		buttonsState_[buttonId] = pressed;
+		_buttonsState[buttonId] = pressed;
 	}
 
 	void PspJoystickState::simulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && hatState_ != state) {
-			joyHatEvent_.joyId = joyId_;
-			joyHatEvent_.hatId = 0;
-			joyHatEvent_.hatState = state;
-			PspInputManager::joyMapping_.OnJoyHatMoved(joyHatEvent_);
-			IInputManager::handler()->OnJoyHatMoved(joyHatEvent_);
+		if (IInputManager::handler() != nullptr && _hatState != state) {
+			_joyHatEvent.joyId = _joyId;
+			_joyHatEvent.hatId = 0;
+			_joyHatEvent.hatState = state;
+			PspInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
+			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
 		}
-		hatState_ = state;
+		_hatState = state;
 	}
 
 	void PspJoystickState::simulateAxisEvent(int axisId, float value)
@@ -117,21 +117,21 @@ namespace nCine::Backends
 		if (axisId < 0 || axisId >= MaxNumAxes) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && std::abs(axesValuesState_[axisId] - value) > AxisEventTolerance) {
-			joyAxisEvent_.joyId = joyId_;
-			joyAxisEvent_.axisId = axisId;
-			joyAxisEvent_.value = value;
-			PspInputManager::joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
-			IInputManager::handler()->OnJoyAxisMoved(joyAxisEvent_);
+		if (IInputManager::handler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
+			_joyAxisEvent.joyId = _joyId;
+			_joyAxisEvent.axisId = axisId;
+			_joyAxisEvent.value = value;
+			PspInputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
+			IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
 		}
-		axesValuesState_[axisId] = value;
+		_axesValuesState[axisId] = value;
 	}
 
 	PspInputManager::PspInputManager()
 	{
-		joyMapping_.Init(this);
+		_joyMapping.Init(this);
 
-		state_.resetJoystickState(0);
+		_state.resetJoystickState(0);
 
 		// The analog stick is only sampled into SceCtrlData when the controller service runs in analog mode
 		sceCtrlSetSamplingCycle(0);
@@ -157,7 +157,7 @@ namespace nCine::Backends
 
 	bool PspInputManager::isJoyPresent(int joyId) const
 	{
-		return (joyId == 0 && connected_);
+		return (joyId == 0 && _connected);
 	}
 
 	const char* PspInputManager::joyName(int joyId) const
@@ -195,7 +195,7 @@ namespace nCine::Backends
 	{
 		static PspJoystickState nullJoystickState;
 		if (isJoyPresent(joyId)) {
-			return state_;
+			return _state;
 		}
 		return nullJoystickState;
 	}
@@ -226,46 +226,46 @@ namespace nCine::Backends
 			return;
 		}
 
-		if (!connected_) {
-			connected_ = true;
-			joyConnectionEvent_.joyId = 0;
-			joyMapping_.OnJoyConnected(joyConnectionEvent_);
-			if (inputEventHandler_ != nullptr) {
-				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
+		if (!_connected) {
+			_connected = true;
+			_joyConnectionEvent.joyId = 0;
+			_joyMapping.OnJoyConnected(_joyConnectionEvent);
+			if (_inputEventHandler != nullptr) {
+				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		}
 
 		// The PSP face buttons sit where a DualShock's do, so they map onto the XInput names the same way
 		// the engine's PlayStation gamepad handling already assumes: Cross = A, Circle = B, Square = X,
 		// Triangle = Y
-		state_.simulateButtonEvent(ButtonA, (pad.Buttons & PSP_CTRL_CROSS) != 0);
-		state_.simulateButtonEvent(ButtonB, (pad.Buttons & PSP_CTRL_CIRCLE) != 0);
-		state_.simulateButtonEvent(ButtonX, (pad.Buttons & PSP_CTRL_SQUARE) != 0);
-		state_.simulateButtonEvent(ButtonY, (pad.Buttons & PSP_CTRL_TRIANGLE) != 0);
-		state_.simulateButtonEvent(ButtonLShoulder, (pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
-		state_.simulateButtonEvent(ButtonRShoulder, (pad.Buttons & PSP_CTRL_RTRIGGER) != 0);
-		state_.simulateButtonEvent(ButtonBack, (pad.Buttons & PSP_CTRL_SELECT) != 0);
-		state_.simulateButtonEvent(ButtonStart, (pad.Buttons & PSP_CTRL_START) != 0);
+		_state.simulateButtonEvent(ButtonA, (pad.Buttons & PSP_CTRL_CROSS) != 0);
+		_state.simulateButtonEvent(ButtonB, (pad.Buttons & PSP_CTRL_CIRCLE) != 0);
+		_state.simulateButtonEvent(ButtonX, (pad.Buttons & PSP_CTRL_SQUARE) != 0);
+		_state.simulateButtonEvent(ButtonY, (pad.Buttons & PSP_CTRL_TRIANGLE) != 0);
+		_state.simulateButtonEvent(ButtonLShoulder, (pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
+		_state.simulateButtonEvent(ButtonRShoulder, (pad.Buttons & PSP_CTRL_RTRIGGER) != 0);
+		_state.simulateButtonEvent(ButtonBack, (pad.Buttons & PSP_CTRL_SELECT) != 0);
+		_state.simulateButtonEvent(ButtonStart, (pad.Buttons & PSP_CTRL_START) != 0);
 		// Nothing on the console clicks a stick, and the Home button belongs to the firmware's exit dialog
-		state_.simulateButtonEvent(ButtonLStick, false);
-		state_.simulateButtonEvent(ButtonRStick, false);
-		state_.simulateButtonEvent(ButtonGuide, false);
+		_state.simulateButtonEvent(ButtonLStick, false);
+		_state.simulateButtonEvent(ButtonRStick, false);
+		_state.simulateButtonEvent(ButtonGuide, false);
 
 		unsigned char hat = HatState::Centered;
 		if (pad.Buttons & PSP_CTRL_UP) hat |= HatState::Up;
 		if (pad.Buttons & PSP_CTRL_RIGHT) hat |= HatState::Right;
 		if (pad.Buttons & PSP_CTRL_DOWN) hat |= HatState::Down;
 		if (pad.Buttons & PSP_CTRL_LEFT) hat |= HatState::Left;
-		state_.simulateHatEvent(hat);
+		_state.simulateHatEvent(hat);
 
-		state_.simulateAxisEvent(0, NormalizeStick(pad.Lx));
-		state_.simulateAxisEvent(1, NormalizeStick(pad.Ly));
+		_state.simulateAxisEvent(0, NormalizeStick(pad.Lx));
+		_state.simulateAxisEvent(1, NormalizeStick(pad.Ly));
 		// No right stick and no analog triggers: the shoulder buttons are digital, so their axes stay at the
 		// released end of the [-1, 1] range the trigger mapping expects
-		state_.simulateAxisEvent(2, 0.0f);
-		state_.simulateAxisEvent(3, 0.0f);
-		state_.simulateAxisEvent(4, -1.0f);
-		state_.simulateAxisEvent(5, -1.0f);
+		_state.simulateAxisEvent(2, 0.0f);
+		_state.simulateAxisEvent(3, 0.0f);
+		_state.simulateAxisEvent(4, -1.0f);
+		_state.simulateAxisEvent(5, -1.0f);
 	}
 }
 

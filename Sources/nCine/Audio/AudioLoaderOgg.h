@@ -24,7 +24,7 @@ namespace nCine
 
 	private:
 		/** @brief Vorbisfile decoder handle */
-		OggVorbis_File oggFile_;
+		OggVorbis_File _oggFile;
 	};
 }
 

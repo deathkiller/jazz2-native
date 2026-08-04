@@ -96,7 +96,7 @@ namespace nCine
 		virtual ~IInputManager() {}
 		/** @brief Returns the current input event handler */
 		static inline IInputEventHandler* handler() {
-			return inputEventHandler_;
+			return _inputEventHandler;
 		}
 		/** @brief Sets the input event handler */
 		static void setHandler(IInputEventHandler* inputEventHandler);
@@ -157,17 +157,17 @@ namespace nCine
 
 		/** @brief Returns the current mouse cursor mode */
 		inline Cursor cursor() const {
-			return cursor_;
+			return _cursor;
 		}
 		/** @brief Sets the mouse cursor mode */
 		virtual void setCursor(Cursor cursor);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static IInputEventHandler* inputEventHandler_;
-		static Cursor cursor_;
+		static IInputEventHandler* _inputEventHandler;
+		static Cursor _cursor;
 
-		static JoyMapping joyMapping_;
+		static JoyMapping _joyMapping;
 #endif
 	};
 
@@ -176,10 +176,10 @@ namespace nCine
 	class NullInputManager : public IInputManager
 	{
 	public:
-		NullInputManager() : mouseState_{}, keyState_{}, joyState_{} {}
+		NullInputManager() : _mouseState{}, _keyState{}, _joyState{} {}
 
-		virtual const MouseState& mouseState() const override { return mouseState_; }
-		virtual const KeyboardState& keyboardState() const override { return keyState_; }
+		virtual const MouseState& mouseState() const override { return _mouseState; }
+		virtual const KeyboardState& keyboardState() const override { return _keyState; }
 
 		String getClipboardText() const override { return {}; }
 		StringView getKeyName(Keys key) const override { return {}; }
@@ -191,7 +191,7 @@ namespace nCine
 		int joyNumHats(int joyId) const override { return 0; }
 		int joyNumAxes(int joyId) const override { return 0; }
 
-		const JoystickState& joystickState(int joyId) const override { return joyState_; }
+		const JoystickState& joystickState(int joyId) const override { return _joyState; }
 		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override { return false; }
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override { return false; }
 
@@ -219,9 +219,9 @@ namespace nCine
 		};
 
 	private:
-		NullMouseState mouseState_;
-		NullKeyboardState keyState_;
-		NullJoystickState joyState_;
+		NullMouseState _mouseState;
+		NullKeyboardState _keyState;
+		NullJoystickState _joyState;
 	};
 #endif
 }

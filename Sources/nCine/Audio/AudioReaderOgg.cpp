@@ -29,17 +29,17 @@ namespace nCine
 #endif
 
 	AudioReaderOgg::AudioReaderOgg(std::unique_ptr<Stream> fileHandle, const OggVorbis_File& oggFile)
-		: fileHandle_(std::move(fileHandle)), oggFile_(oggFile)
+		: _fileHandle(std::move(fileHandle)), _oggFile(oggFile)
 	{
-		DEATH_ASSERT(fileHandle_->IsValid());
+		DEATH_ASSERT(_fileHandle->IsValid());
 	}
 
 	AudioReaderOgg::~AudioReaderOgg()
 	{
 #if defined(WITH_VORBIS_DYNAMIC)
-		_ov_clear(&oggFile_);
+		_ov_clear(&_oggFile);
 #else
-		ov_clear(&oggFile_);
+		ov_clear(&_oggFile);
 #endif
 	}
 
@@ -62,15 +62,15 @@ namespace nCine
 		do {
 			// Read up to a buffer's worth of decoded sound data (2: 16bit, 1: signed)
 #if defined(WITH_VORBIS_DYNAMIC)
-			bytes = _ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
+			bytes = _ov_read(&_oggFile, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
 #else
-			bytes = ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
+			bytes = ov_read(&_oggFile, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
 #endif
 			if (bytes < 0) {
 #if defined(WITH_VORBIS_DYNAMIC)
-				_ov_clear(&oggFile_);
+				_ov_clear(&_oggFile);
 #else
-				ov_clear(&oggFile_);
+				ov_clear(&_oggFile);
 #endif
 				LOGE("Error decoding at bitstream {}", bitStream);
 			}
@@ -88,9 +88,9 @@ namespace nCine
 	void AudioReaderOgg::rewind() const
 	{
 #if defined(WITH_VORBIS_DYNAMIC)
-		_ov_raw_seek(&oggFile_, 0);
+		_ov_raw_seek(&_oggFile, 0);
 #else
-		ov_raw_seek(&oggFile_, 0);
+		ov_raw_seek(&_oggFile, 0);
 #endif
 	}
 

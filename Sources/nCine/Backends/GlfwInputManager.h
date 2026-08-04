@@ -78,20 +78,20 @@ namespace nCine::Backends
 	{
 	public:
 		GlfwJoystickState()
-			: numButtons_(0), numHats_(0), numAxes_(0), buttons_(nullptr), hats_(nullptr), axesValues_(nullptr) {}
+			: _numButtons(0), _numHats(0), _numAxes(0), _buttons(nullptr), _hats(nullptr), _axesValues(nullptr) {}
 
 		bool isButtonPressed(int buttonId) const override;
 		unsigned char hatState(int hatId) const override;
 		float axisValue(int axisId) const override;
 
 	private:
-		int numButtons_;
-		int numHats_;
-		int numAxes_;
+		int _numButtons;
+		int _numHats;
+		int _numAxes;
 
-		const unsigned char* buttons_;
-		const unsigned char* hats_;
-		const float* axesValues_;
+		const unsigned char* _buttons;
+		const unsigned char* _hats;
+		const float* _axesValues;
 
 		friend class GlfwInputManager;
 	};
@@ -115,7 +115,7 @@ namespace nCine::Backends
 
 		const MouseState& mouseState() const override;
 		inline const KeyboardState& keyboardState() const override {
-			return keyboardState_;
+			return _keyboardState;
 		}
 
 		String getClipboardText() const override;
@@ -155,35 +155,35 @@ namespace nCine::Backends
 			static const float AxisEventTolerance;
 
 			/** @brief Old state used to simulate joystick buttons events */
-			unsigned char buttonsState_[MaxNumJoysticks][MaxNumButtons];
+			unsigned char _buttonsState[MaxNumJoysticks][MaxNumButtons];
 			/** @brief Old state used to simulate joystick hats events */
-			unsigned char hatsState_[MaxNumJoysticks][MaxNumHats];
+			unsigned char _hatsState[MaxNumJoysticks][MaxNumHats];
 			/** @brief Old state used to simulate joystick axes events */
-			float axesValuesState_[MaxNumJoysticks][MaxNumAxes];
+			float _axesValuesState[MaxNumJoysticks][MaxNumAxes];
 		};
 #endif
 
-		static bool windowHasFocus_;
-		static GlfwMouseState mouseState_;
-		static MouseEvent mouseEvent_;
-		static GlfwScrollEvent scrollEvent_;
-		static GlfwKeyboardState keyboardState_;
-		static KeyboardEvent keyboardEvent_;
-		static TextInputEvent textInputEvent_;
-		static GlfwJoystickState nullJoystickState_;
-		static SmallVector<GlfwJoystickState, MaxNumJoysticks> joystickStates_;
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
-		static JoyConnectionEvent joyConnectionEvent_;
-		static JoystickEventsSimulator joyEventsSimulator_;
+		static bool _windowHasFocus;
+		static GlfwMouseState _mouseState;
+		static MouseEvent _mouseEvent;
+		static GlfwScrollEvent _scrollEvent;
+		static GlfwKeyboardState _keyboardState;
+		static KeyboardEvent _keyboardEvent;
+		static TextInputEvent _textInputEvent;
+		static GlfwJoystickState _nullJoystickState;
+		static SmallVector<GlfwJoystickState, MaxNumJoysticks> _joystickStates;
+		static JoyButtonEvent _joyButtonEvent;
+		static JoyHatEvent _joyHatEvent;
+		static JoyAxisEvent _joyAxisEvent;
+		static JoyConnectionEvent _joyConnectionEvent;
+		static JoystickEventsSimulator _joyEventsSimulator;
 
 		/** @brief The window width before a window content scale event */
-		static int preScalingWidth_;
+		static int _preScalingWidth;
 		/** @brief The window height before a window content scale event */
-		static int preScalingHeight_;
+		static int _preScalingHeight;
 		/** @brief The last frame a window size callback was called */
-		static unsigned long int lastFrameWindowSizeChanged_;
+		static unsigned long int _lastFrameWindowSizeChanged;
 
 		static void monitorCallback(GLFWmonitor* monitor, int event);
 		static void windowCloseCallback(GLFWwindow* window);
@@ -212,10 +212,10 @@ namespace nCine::Backends
 		double xCursor, yCursor;
 
 		glfwGetCursorPos(GlfwGfxDevice::windowHandle(), &xCursor, &yCursor);
-		mouseState_.x = int(xCursor);
-		mouseState_.y = int(yCursor);
+		_mouseState.x = int(xCursor);
+		_mouseState.y = int(yCursor);
 
-		return mouseState_;
+		return _mouseState;
 	}
 }
 

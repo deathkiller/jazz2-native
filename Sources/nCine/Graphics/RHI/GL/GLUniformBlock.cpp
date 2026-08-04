@@ -9,9 +9,9 @@
 namespace nCine::RHI::GL
 {
 	GLUniformBlock::GLUniformBlock()
-		: program_(0), index_(0), size_(0), alignAmount_(0), bindingIndex_(-1)
+		: _program(0), _index(0), _size(0), _alignAmount(0), _bindingIndex(-1)
 	{
-		name_[0] = '\0';
+		_name[0] = '\0';
 	}
 
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index, DiscoverUniforms discover)
@@ -29,13 +29,13 @@ namespace nCine::RHI::GL
 #else
 		GLint nameLength = 0;
 		GLint uniformCount = 0;
-		program_ = program;
-		index_ = index;
+		_program = program;
+		_index = index;
 
-		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &size_);
+		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &_size);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLength);
 		DEATH_ASSERT(nameLength <= MaxNameLength);
-		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, name_);
+		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, _name);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &uniformCount);
 
 		if (discover == DiscoverUniforms::ENABLED && uniformCount > 0) {
@@ -60,11 +60,11 @@ namespace nCine::RHI::GL
 
 			for (std::int32_t i = 0; i < uniformCount; i++) {
 				GLUniform blockUniform;
-				blockUniform.index_ = uniformIndices[i];
-				blockUniform.blockIndex_ = static_cast<GLint>(index);
-				blockUniform.type_ = static_cast<GLenum>(uniformTypes[i]);
-				blockUniform.size_ = uniformSizes[i];
-				blockUniform.offset_ = uniformOffsets[i];
+				blockUniform._index = uniformIndices[i];
+				blockUniform._blockIndex = static_cast<GLint>(index);
+				blockUniform._type = static_cast<GLenum>(uniformTypes[i]);
+				blockUniform._size = uniformSizes[i];
+				blockUniform._offset = uniformOffsets[i];
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 				DEATH_ASSERT(uniformNameLengths[i] <= GLUniform::MaxNameLength,
@@ -72,14 +72,14 @@ namespace nCine::RHI::GL
 #endif
 
 #if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN)
-				glGetActiveUniformName(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], blockUniform.name_);
+				glGetActiveUniformName(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], blockUniform._name);
 #else
 				// Some drivers do not accept a `nullptr` for size and type
 				GLint unusedSize;
 				GLenum unusedType;
-				glGetActiveUniform(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], &unusedSize, &unusedType, blockUniform.name_);
+				glGetActiveUniform(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], &unusedSize, &unusedType, blockUniform._name);
 #endif
-				blockUniforms_[blockUniform.name_] = blockUniform;
+				_blockUniforms[blockUniform._name] = blockUniform;
 			}
 		}
 
@@ -87,8 +87,8 @@ namespace nCine::RHI::GL
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
 		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
-		size_ += alignAmount_;
+		_alignAmount = (offsetAlignment - _size % offsetAlignment) % offsetAlignment;
+		_size += _alignAmount;
 #endif
 	}
 
@@ -100,19 +100,19 @@ namespace nCine::RHI::GL
 	GLUniformBlock::GLUniformBlock(GLuint program, const char* name, GLuint index, GLint dataSize)
 		: GLUniformBlock()
 	{
-		program_ = program;
-		index_ = index;
-		size_ = dataSize;
+		_program = program;
+		_index = index;
+		_size = dataSize;
 
 		std::size_t length = strnlen(name, MaxNameLength);
 		DEATH_ASSERT(length < MaxNameLength);
-		std::memcpy(name_, name, length);
-		name_[length] = '\0';
+		std::memcpy(_name, name, length);
+		_name[length] = '\0';
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
 		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
-		size_ += alignAmount_;
+		_alignAmount = (offsetAlignment - _size % offsetAlignment) % offsetAlignment;
+		_size += _alignAmount;
 	}
 
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)
@@ -122,12 +122,12 @@ namespace nCine::RHI::GL
 		// never called (block members are pushed as loose uniforms)
 		static_cast<void>(blockBinding);
 #else
-		DEATH_ASSERT(program_ != 0);
+		DEATH_ASSERT(_program != 0);
 
-		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
-			glUniformBlockBinding(program_, index_, blockBinding);
+		if (_bindingIndex != static_cast<GLint>(blockBinding)) {
+			glUniformBlockBinding(_program, _index, blockBinding);
 			GL_LOG_ERRORS();
-			bindingIndex_ = static_cast<GLint>(blockBinding);
+			_bindingIndex = static_cast<GLint>(blockBinding);
 		}
 #endif
 	}

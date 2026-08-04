@@ -86,23 +86,23 @@ namespace nCine
 		Material(RHI::ShaderProgram* program, RHI::Texture* texture);
 
 		inline bool IsBlendingEnabled() const {
-			return isBlendingEnabled_;
+			return _isBlendingEnabled;
 		}
 		inline void SetBlendingEnabled(bool blendingEnabled) {
-			isBlendingEnabled_ = blendingEnabled;
+			_isBlendingEnabled = blendingEnabled;
 		}
 
 		inline BlendingFactor GetSrcBlendingFactor() const {
-			return srcBlendingFactor_;
+			return _srcBlendingFactor;
 		}
 		inline BlendingFactor GetDestBlendingFactor() const {
-			return destBlendingFactor_;
+			return _destBlendingFactor;
 		}
 		inline BlendingFactor GetSrcAlphaBlendingFactor() const {
-			return srcAlphaBlendingFactor_;
+			return _srcAlphaBlendingFactor;
 		}
 		inline BlendingFactor GetDestAlphaBlendingFactor() const {
-			return destAlphaBlendingFactor_;
+			return _destAlphaBlendingFactor;
 		}
 		/** @brief Sets the blending factors for both color and alpha */
 		void SetBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor);
@@ -110,11 +110,11 @@ namespace nCine
 		void SetBlendingFactors(BlendingFactor srcRgbBlendingFactor, BlendingFactor destRgbBlendingFactor, BlendingFactor srcAlphaBlendingFactor, BlendingFactor destAlphaBlendingFactor);
 
 		inline ShaderProgramType GetShaderProgramType() const {
-			return shaderProgramType_;
+			return _shaderProgramType;
 		}
 		bool SetShaderProgramType(ShaderProgramType shaderProgramType);
 		inline const RHI::ShaderProgram* GetShaderProgram() const {
-			return shaderProgram_;
+			return _shaderProgram;
 		}
 		void SetShaderProgram(RHI::ShaderProgram* program);
 		bool SetShader(Shader* shader);
@@ -125,29 +125,29 @@ namespace nCine
 
 		/** @brief Wrapper around `RHI::ShaderUniforms::HasUniform()` */
 		inline bool HasUniform(const char* name) const {
-			return shaderUniforms_.HasUniform(name);
+			return _shaderUniforms.HasUniform(name);
 		}
 		/** @brief Wrapper around `RHI::ShaderUniformBlocks::HasUniformBlock()` */
 		inline bool HasUniformBlock(const char* name) const {
-			return shaderUniformBlocks_.HasUniformBlock(name);
+			return _shaderUniformBlocks.HasUniformBlock(name);
 		}
 
 		/** @brief Wrapper around `RHI::ShaderUniforms::GetUniform()` */
 		inline RHI::UniformCache* Uniform(const char* name) {
-			return shaderUniforms_.GetUniform(name);
+			return _shaderUniforms.GetUniform(name);
 		}
 		/** @brief Wrapper around `RHI::ShaderUniformBlocks::GetUniformBlock()` */
 		inline RHI::UniformBlockCache* UniformBlock(const char* name) {
-			return shaderUniformBlocks_.GetUniformBlock(name);
+			return _shaderUniformBlocks.GetUniformBlock(name);
 		}
 
 		/** @brief Wrapper around `RHI::ShaderUniforms::GetAllUniforms()` */
 		inline const RHI::ShaderUniforms::UniformHashMapType& GetAllUniforms() const {
-			return shaderUniforms_.GetAllUniforms();
+			return _shaderUniforms.GetAllUniforms();
 		}
 		/** @brief Wrapper around `RHI::ShaderUniformBlocks::GetAllUniformBlocks()` */
 		inline const RHI::ShaderUniformBlocks::UniformHashMapType& GetAllUniformBlocks() const {
-			return shaderUniformBlocks_.GetAllUniformBlocks();
+			return _shaderUniformBlocks.GetAllUniformBlocks();
 		}
 
 		const RHI::Texture* GetTexture(std::uint32_t unit) const;
@@ -166,41 +166,41 @@ namespace nCine
 		}
 
 	private:
-		bool isBlendingEnabled_;
+		bool _isBlendingEnabled;
 		// Whether the cached sort key has to be recomputed
-		bool sortKeyDirty_;
+		bool _sortKeyDirty;
 		// Number of texture units in use, i.e. the highest unit with a texture plus one
-		std::uint8_t usedTextureUnits_;
-		BlendingFactor srcBlendingFactor_;
-		BlendingFactor destBlendingFactor_;
-		BlendingFactor srcAlphaBlendingFactor_;
-		BlendingFactor destAlphaBlendingFactor_;
+		std::uint8_t _usedTextureUnits;
+		BlendingFactor _srcBlendingFactor;
+		BlendingFactor _destBlendingFactor;
+		BlendingFactor _srcAlphaBlendingFactor;
+		BlendingFactor _destAlphaBlendingFactor;
 		// Cached result of GetSortKey(), recomputed only when the hashed state changes
-		std::uint32_t sortKey_;
+		std::uint32_t _sortKey;
 		// Incremented every time SetShaderProgram() rebuilds the uniform caches, so
 		// that pointers into them can be cached and safely invalidated by observers
-		std::uint32_t shaderChangeCounter_;
-		ShaderProgramType shaderProgramType_;
-		RHI::ShaderProgram* shaderProgram_;
-		RHI::ShaderUniforms shaderUniforms_;
-		RHI::ShaderUniformBlocks shaderUniformBlocks_;
-		const RHI::Texture* textures_[RHI::Texture::MaxTextureUnits];
+		std::uint32_t _shaderChangeCounter;
+		ShaderProgramType _shaderProgramType;
+		RHI::ShaderProgram* _shaderProgram;
+		RHI::ShaderUniforms _shaderUniforms;
+		RHI::ShaderUniformBlocks _shaderUniformBlocks;
+		const RHI::Texture* _textures[RHI::Texture::MaxTextureUnits];
 
 		/** @brief The size of the memory buffer containing uniform values */
-		std::uint32_t uniformsHostBufferSize_;
+		std::uint32_t _uniformsHostBufferSize;
 		/** @brief Memory buffer with uniform values to be sent to the GPU */
-		std::unique_ptr<std::uint8_t[]> uniformsHostBuffer_;
+		std::unique_ptr<std::uint8_t[]> _uniformsHostBuffer;
 
 		void Bind();
 		// Maintains the used texture unit count after a texture change on the specified unit
 		void UpdateUsedTextureUnits(std::uint32_t unit, bool textureSet);
 		/** @brief Wrapper around `RHI::ShaderUniforms::CommitUniforms()` */
 		inline void CommitUniforms() {
-			shaderUniforms_.CommitUniforms();
+			_shaderUniforms.CommitUniforms();
 		}
 		/** @brief Wrapper around `RHI::ShaderUniformBlocks::CommitUniformBlocks()` */
 		inline void CommitUniformBlocks() {
-			shaderUniformBlocks_.CommitUniformBlocks();
+			_shaderUniformBlocks.CommitUniformBlocks();
 		}
 		/** @brief Wrapper around `RHI::ShaderProgram::DefineVertexFormat()` */
 		void DefineVertexFormat(const RHI::Buffer* vbo, const RHI::Buffer* ibo, std::uint32_t vboOffset);

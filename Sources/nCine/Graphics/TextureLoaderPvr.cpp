@@ -13,7 +13,7 @@ namespace nCine
 	{
 		Pvr3Header header;
 
-		if (!fileHandle_->IsValid()) {
+		if (!_fileHandle->IsValid()) {
 			return;
 		}
 
@@ -22,24 +22,24 @@ namespace nCine
 		const bool formatParsed = parseFormat(header);
 		DEATH_ASSERT(formatParsed, "PVR format cannot be parsed", );
 
-		hasLoaded_ = true;
+		_hasLoaded = true;
 	}
 
 	bool TextureLoaderPvr::readHeader(Pvr3Header& header)
 	{
 		// PVR3 header is 52 bytes long
-		fileHandle_->Read(&header, 52);
+		_fileHandle->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
 		DEATH_ASSERT(AsLE(header.version) == 0x03525650, "Invalid PVR3 signature", false);
 
-		headerSize_ = 52 + AsLE(header.metaDataSize);
-		width_ = AsLE(header.width);
-		height_ = AsLE(header.height);
-		mipMapCount_ = header.numMipmaps;
+		_headerSize = 52 + AsLE(header.metaDataSize);
+		_width = AsLE(header.width);
+		_height = AsLE(header.height);
+		_mipMapCount = header.numMipmaps;
 
-		if (mipMapCount_ == 0) {
-			mipMapCount_ = 1;
+		if (_mipMapCount == 0) {
+			_mipMapCount = 1;
 		}
 		return true;
 	}
@@ -193,17 +193,17 @@ namespace nCine
 
 			loadPixels(internalFormat);
 			if (bgra) {
-				texFormat_.bgrFormat();
+				_texFormat.bgrFormat();
 			}
 		}
 
-		if (mipMapCount_ > 1) {
-			LOGI("MIP Maps: {}", mipMapCount_);
-			mipDataOffsets_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
-			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
-			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
-			if (dataSizesSum != dataSize_) {
-				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, dataSize_);
+		if (_mipMapCount > 1) {
+			LOGI("MIP Maps: {}", _mipMapCount);
+			_mipDataOffsets = std::make_unique<std::uint32_t[]>(_mipMapCount);
+			_mipDataSizes = std::make_unique<std::uint32_t[]>(_mipMapCount);
+			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
+			if (dataSizesSum != _dataSize) {
+				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, _dataSize);
 			}
 		}
 

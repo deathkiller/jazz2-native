@@ -26,7 +26,7 @@ namespace nCine
 		{
 		public:
 			constexpr Matrix4x4() noexcept
-				: vecs_{Vector4<T>(T(1), T(0), T(0), T(0)), Vector4<T>(T(0), T(1), T(0), T(0)), Vector4<T>(T(0), T(0), T(1), T(0)), Vector4<T>(T(0), T(0), T(0), T(1))} {}
+				: _vecs{Vector4<T>(T(1), T(0), T(0), T(0)), Vector4<T>(T(0), T(1), T(0), T(0)), Vector4<T>(T(0), T(0), T(1), T(0)), Vector4<T>(T(0), T(0), T(0), T(1))} {}
 
 			explicit Matrix4x4(NoInitT) noexcept {}
 
@@ -145,7 +145,7 @@ namespace nCine
 			/** @} */
 
 		private:
-			Vector4<T> vecs_[4];
+			Vector4<T> _vecs[4];
 		};
 
 		/** @brief Four-by-four matrix of floats */
@@ -160,63 +160,63 @@ namespace nCine
 		template<class T>
 		inline void Matrix4x4<T>::Set(const Vector4<T>& v0, const Vector4<T>& v1, const Vector4<T>& v2, const Vector4<T>& v3)
 		{
-			vecs_[0] = v0;
-			vecs_[1] = v1;
-			vecs_[2] = v2;
-			vecs_[3] = v3;
+			_vecs[0] = v0;
+			_vecs[1] = v1;
+			_vecs[2] = v2;
+			_vecs[3] = v3;
 		}
 
 		template<class T>
 		inline T* Matrix4x4<T>::Data()
 		{
-			return &vecs_[0][0];
+			return &_vecs[0][0];
 		}
 
 		template<class T>
 		inline const T* Matrix4x4<T>::Data() const
 		{
-			return &vecs_[0][0];
+			return &_vecs[0][0];
 		}
 
 		template<class T>
 		inline Vector4<T>& Matrix4x4<T>::operator[](std::size_t index)
 		{
 			DEATH_ASSERT(index < 4);
-			return vecs_[index];
+			return _vecs[index];
 		}
 
 		template<class T>
 		inline const Vector4<T>& Matrix4x4<T>::operator[](std::size_t index) const
 		{
 			DEATH_ASSERT(index < 4);
-			return vecs_[index];
+			return _vecs[index];
 		}
 
 		template<class T>
 		inline bool Matrix4x4<T>::operator==(const Matrix4x4& m) const
 		{
-			return (vecs_[0] == m[0] && vecs_[1] == m[1] && vecs_[2] == m[2] && vecs_[3] == m[3]);
+			return (_vecs[0] == m[0] && _vecs[1] == m[1] && _vecs[2] == m[2] && _vecs[3] == m[3]);
 		}
 
 		template<class T>
 		inline bool Matrix4x4<T>::operator!=(const Matrix4x4& m) const
 		{
-			return (vecs_[0] != m[0] || vecs_[1] != m[1] || vecs_[2] != m[2] || vecs_[3] != m[3]);
+			return (_vecs[0] != m[0] || _vecs[1] != m[1] || _vecs[2] != m[2] || _vecs[3] != m[3]);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator-() const
 		{
-			return Matrix4x4(-vecs_[0], -vecs_[1], -vecs_[2], -vecs_[3]);
+			return Matrix4x4(-_vecs[0], -_vecs[1], -_vecs[2], -_vecs[3]);
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator+=(const Matrix4x4& m)
 		{
-			vecs_[0] += m[0];
-			vecs_[1] += m[1];
-			vecs_[2] += m[2];
-			vecs_[3] += m[3];
+			_vecs[0] += m[0];
+			_vecs[1] += m[1];
+			_vecs[2] += m[2];
+			_vecs[3] += m[3];
 
 			return *this;
 		}
@@ -224,10 +224,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator-=(const Matrix4x4& m)
 		{
-			vecs_[0] -= m[0];
-			vecs_[1] -= m[1];
-			vecs_[2] -= m[2];
-			vecs_[3] -= m[3];
+			_vecs[0] -= m[0];
+			_vecs[1] -= m[1];
+			_vecs[2] -= m[2];
+			_vecs[3] -= m[3];
 
 			return *this;
 		}
@@ -241,10 +241,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator/=(const Matrix4x4& m)
 		{
-			vecs_[0] /= m[0];
-			vecs_[1] /= m[1];
-			vecs_[2] /= m[2];
-			vecs_[3] /= m[3];
+			_vecs[0] /= m[0];
+			_vecs[1] /= m[1];
+			_vecs[2] /= m[2];
+			_vecs[3] /= m[3];
 
 			return *this;
 		}
@@ -252,10 +252,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator+=(T s)
 		{
-			vecs_[0] += s;
-			vecs_[1] += s;
-			vecs_[2] += s;
-			vecs_[3] += s;
+			_vecs[0] += s;
+			_vecs[1] += s;
+			_vecs[2] += s;
+			_vecs[3] += s;
 
 			return *this;
 		}
@@ -263,10 +263,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator-=(T s)
 		{
-			vecs_[0] -= s;
-			vecs_[1] -= s;
-			vecs_[2] -= s;
-			vecs_[3] -= s;
+			_vecs[0] -= s;
+			_vecs[1] -= s;
+			_vecs[2] -= s;
+			_vecs[3] -= s;
 
 			return *this;
 		}
@@ -274,10 +274,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator*=(T s)
 		{
-			vecs_[0] *= s;
-			vecs_[1] *= s;
-			vecs_[2] *= s;
-			vecs_[3] *= s;
+			_vecs[0] *= s;
+			_vecs[1] *= s;
+			_vecs[2] *= s;
+			_vecs[3] *= s;
 
 			return *this;
 		}
@@ -285,10 +285,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::operator/=(T s)
 		{
-			vecs_[0] /= s;
-			vecs_[1] /= s;
-			vecs_[2] /= s;
-			vecs_[3] /= s;
+			_vecs[0] /= s;
+			_vecs[1] /= s;
+			_vecs[2] /= s;
+			_vecs[3] /= s;
 
 			return *this;
 		}
@@ -334,19 +334,19 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator+(const Matrix4x4& m) const
 		{
-			return Matrix4x4(vecs_[0] + m[0],
-				vecs_[1] + m[1],
-				vecs_[2] + m[2],
-				vecs_[3] + m[3]);
+			return Matrix4x4(_vecs[0] + m[0],
+				_vecs[1] + m[1],
+				_vecs[2] + m[2],
+				_vecs[3] + m[3]);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator-(const Matrix4x4& m) const
 		{
-			return Matrix4x4(vecs_[0] - m[0],
-				vecs_[1] - m[1],
-				vecs_[2] - m[2],
-				vecs_[3] - m[3]);
+			return Matrix4x4(_vecs[0] - m[0],
+				_vecs[1] - m[1],
+				_vecs[2] - m[2],
+				_vecs[3] - m[3]);
 		}
 
 		template<class T>
@@ -379,55 +379,55 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator/(const Matrix4x4& m) const
 		{
-			return Matrix4x4(vecs_[0] / m[0],
-				vecs_[1] / m[1],
-				vecs_[2] / m[2],
-				vecs_[3] / m[3]);
+			return Matrix4x4(_vecs[0] / m[0],
+				_vecs[1] / m[1],
+				_vecs[2] / m[2],
+				_vecs[3] / m[3]);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator+(T s) const
 		{
-			return Matrix4x4(vecs_[0] + s,
-				vecs_[1] + s,
-				vecs_[2] + s,
-				vecs_[3] + s);
+			return Matrix4x4(_vecs[0] + s,
+				_vecs[1] + s,
+				_vecs[2] + s,
+				_vecs[3] + s);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator-(T s) const
 		{
-			return Matrix4x4(vecs_[0] - s,
-				vecs_[1] - s,
-				vecs_[2] - s,
-				vecs_[3] - s);
+			return Matrix4x4(_vecs[0] - s,
+				_vecs[1] - s,
+				_vecs[2] - s,
+				_vecs[3] - s);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator*(T s) const
 		{
-			return Matrix4x4(vecs_[0] * s,
-				vecs_[1] * s,
-				vecs_[2] * s,
-				vecs_[3] * s);
+			return Matrix4x4(_vecs[0] * s,
+				_vecs[1] * s,
+				_vecs[2] * s,
+				_vecs[3] * s);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::operator/(T s) const
 		{
-			return Matrix4x4(vecs_[0] / s,
-				vecs_[1] / s,
-				vecs_[2] / s,
-				vecs_[3] / s);
+			return Matrix4x4(_vecs[0] / s,
+				_vecs[1] / s,
+				_vecs[2] / s,
+				_vecs[3] / s);
 		}
 
 		template<class S>
 		inline Matrix4x4<S> operator*(S s, const Matrix4x4<S>& m)
 		{
-			return Matrix4x4<S>(s * m.vecs_[0],
-				s * m.vecs_[1],
-				s * m.vecs_[2],
-				s * m.vecs_[3]);
+			return Matrix4x4<S>(s * m._vecs[0],
+				s * m._vecs[1],
+				s * m._vecs[2],
+				s * m._vecs[3]);
 		}
 
 		template<class T>

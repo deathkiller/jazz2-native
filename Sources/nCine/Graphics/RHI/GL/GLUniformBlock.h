@@ -47,28 +47,28 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the active uniform block index within the program */
 		inline GLuint GetIndex() const {
-			return index_;
+			return _index;
 		}
 		/** @brief Returns the current binding index of the block, or -1 if not bound */
 		inline GLint GetBindingIndex() const {
-			return bindingIndex_;
+			return _bindingIndex;
 		}
 		/** @brief Returns the block size in bytes, padded to the uniform buffer offset alignment */
 		inline GLint GetSize() const {
-			return size_;
+			return _size;
 		}
 		/** @brief Returns the number of padding bytes added to the original size for offset alignment */
 		inline std::uint8_t GetAlignAmount() const {
-			return alignAmount_;
+			return _alignAmount;
 		}
 		/** @brief Returns the uniform block name */
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 
 		/** @brief Returns the member uniform with the specified name, or `nullptr` if not found */
 		inline GLUniform* GetUniform(const char* name) {
-			return blockUniforms_.find(String::nullTerminatedView(name));
+			return _blockUniforms.find(String::nullTerminatedView(name));
 		}
 		/** @brief Sets the binding index of the block, skipping the GL call if it is unchanged */
 		void SetBlockBinding(GLuint blockBinding);
@@ -78,16 +78,16 @@ namespace nCine::RHI::GL
 		static const std::int32_t MaxNumBlockUniforms = 16;
 
 		static const std::uint32_t BlockUniformHashSize = 8;
-		StaticHashMap<String, GLUniform, BlockUniformHashSize> blockUniforms_;
+		StaticHashMap<String, GLUniform, BlockUniformHashSize> _blockUniforms;
 
-		GLuint program_;
-		GLuint index_;
+		GLuint _program;
+		GLuint _index;
 		// Offset aligned size for `glBindBufferRange()` calls
-		GLint size_;
-		// Uniform buffer offset alignment added to `size_`
-		std::uint8_t alignAmount_;
+		GLint _size;
+		// Uniform buffer offset alignment added to `_size`
+		std::uint8_t _alignAmount;
 		// Current binding index for the uniform block. Negative if not bound.
-		GLint bindingIndex_;
-		char name_[MaxNameLength];
+		GLint _bindingIndex;
+		char _name[MaxNameLength];
 	};
 }

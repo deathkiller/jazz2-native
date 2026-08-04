@@ -7,27 +7,27 @@
 namespace nCine::RHI::GL
 {
 	GLVertexFormat::Attribute::Attribute()
-		: vbo_(nullptr), pointer_(nullptr), index_(0), size_(-1), type_(GL_FLOAT), stride_(0), baseOffset_(0), enabled_(false), normalized_(GL_FALSE)
+		: _vbo(nullptr), _pointer(nullptr), _index(0), _size(-1), _type(GL_FLOAT), _stride(0), _baseOffset(0), _enabled(false), _normalized(GL_FALSE)
 	{
 	}
 
 	GLVertexFormat::GLVertexFormat()
-		: ibo_(nullptr), attributes_(MaxAttributes)
+		: _ibo(nullptr), _attributes(MaxAttributes)
 	{
 	}
 
 	bool GLVertexFormat::Attribute::operator==(const Attribute& other) const
 	{
-		return ((other.enabled_ == false && enabled_ == false) ||
-				((other.enabled_ == true && enabled_ == true) &&
-					(other.vbo_ && vbo_ && other.vbo_->GetGLHandle() == vbo_->GetGLHandle()) &&
-					other.index_ == index_ &&
-					other.size_ == size_ &&
-					other.type_ == type_ &&
-					other.normalized_ == normalized_ &&
-					other.stride_ == stride_ &&
-					other.pointer_ == pointer_ &&
-					other.baseOffset_ == baseOffset_));
+		return ((other._enabled == false && _enabled == false) ||
+				((other._enabled == true && _enabled == true) &&
+					(other._vbo && _vbo && other._vbo->GetGLHandle() == _vbo->GetGLHandle()) &&
+					other._index == _index &&
+					other._size == _size &&
+					other._type == _type &&
+					other._normalized == _normalized &&
+					other._stride == _stride &&
+					other._pointer == _pointer &&
+					other._baseOffset == _baseOffset));
 	}
 
 	bool GLVertexFormat::Attribute::operator!=(const Attribute& other) const
@@ -37,15 +37,15 @@ namespace nCine::RHI::GL
 
 	void GLVertexFormat::Attribute::Init(std::uint32_t index, GLint size, GLenum type)
 	{
-		enabled_ = true;
-		vbo_ = nullptr;
-		index_ = index;
-		size_ = size;
-		type_ = type;
-		normalized_ = GL_FALSE;
-		stride_ = 0;
-		pointer_ = nullptr;
-		baseOffset_ = 0;
+		_enabled = true;
+		_vbo = nullptr;
+		_index = index;
+		_size = size;
+		_type = type;
+		_normalized = GL_FALSE;
+		_stride = 0;
+		_pointer = nullptr;
+		_baseOffset = 0;
 	}
 
 	void GLVertexFormat::Attribute::SetVboParameters(GLsizei stride, const GLvoid* pointer)
@@ -54,69 +54,69 @@ namespace nCine::RHI::GL
 		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE);
 
 		if (stride > MaxVertexAttribStride) {
-			stride_ = MaxVertexAttribStride;
+			_stride = MaxVertexAttribStride;
 			LOGW("Vertex attribute stride ({}) is bigger than the maximum value supported ({})", stride, MaxVertexAttribStride);
 		} else
 #endif
 		{
-			stride_ = stride;
+			_stride = stride;
 		}
 
-		pointer_ = pointer;
+		_pointer = pointer;
 	}
 
 	void GLVertexFormat::Define()
 	{
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
-			if (attributes_[i].enabled_) {
-				attributes_[i].vbo_->Bind();
-				glEnableVertexAttribArray(attributes_[i].index_);
+			if (_attributes[i]._enabled) {
+				_attributes[i]._vbo->Bind();
+				glEnableVertexAttribArray(_attributes[i]._index);
 
 #if (defined(RHI_GL_PROFILE_ES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
-				const GLubyte* initialPointer = reinterpret_cast<const GLubyte*>(attributes_[i].pointer_);
-				const GLvoid* pointer = reinterpret_cast<const GLvoid*>(initialPointer + attributes_[i].baseOffset_);
+				const GLubyte* initialPointer = reinterpret_cast<const GLubyte*>(_attributes[i]._pointer);
+				const GLvoid* pointer = reinterpret_cast<const GLvoid*>(initialPointer + _attributes[i]._baseOffset);
 #else
-				const GLvoid* pointer = attributes_[i].pointer_;
+				const GLvoid* pointer = _attributes[i]._pointer;
 #endif
 
 #if defined(RHI_GL_PROFILE_ES2)
 				// ES2 has no integer vertex attributes (glVertexAttribIPointer is ES 3.0) and no GL_(UNSIGNED_)INT
 				// attribute data type at all; the ESSL 100 emitter already declares every attribute float-typed and
 				// the only integer-typed streams belong to the batched-mesh programs this profile never compiles
-				glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
+				glVertexAttribPointer(_attributes[i]._index, _attributes[i]._size, _attributes[i]._type, _attributes[i]._normalized, _attributes[i]._stride, pointer);
 #else
-				switch (attributes_[i].type_) {
+				switch (_attributes[i]._type) {
 					case GL_BYTE:
 					case GL_UNSIGNED_BYTE:
 					case GL_SHORT:
 					case GL_UNSIGNED_SHORT:
 					case GL_INT:
 					case GL_UNSIGNED_INT:
-						if (attributes_[i].normalized_) {
-							glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, GL_TRUE, attributes_[i].stride_, pointer);
+						if (_attributes[i]._normalized) {
+							glVertexAttribPointer(_attributes[i]._index, _attributes[i]._size, _attributes[i]._type, GL_TRUE, _attributes[i]._stride, pointer);
 						} else {
-							glVertexAttribIPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].stride_, pointer);
+							glVertexAttribIPointer(_attributes[i]._index, _attributes[i]._size, _attributes[i]._type, _attributes[i]._stride, pointer);
 						}
 						break;
 					default:
-						glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
+						glVertexAttribPointer(_attributes[i]._index, _attributes[i]._size, _attributes[i]._type, _attributes[i]._normalized, _attributes[i]._stride, pointer);
 						break;
 				}
 #endif
 			}
 		}
 
-		if (ibo_) {
-			ibo_->Bind();
+		if (_ibo) {
+			_ibo->Bind();
 		}
 	}
 
 	void GLVertexFormat::Reset()
 	{
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
-			attributes_[i].enabled_ = false;
+			_attributes[i]._enabled = false;
 		}
-		ibo_ = nullptr;
+		_ibo = nullptr;
 	}
 
 	namespace
@@ -134,28 +134,28 @@ namespace nCine::RHI::GL
 	std::uint64_t GLVertexFormat::CalculateFingerprint() const
 	{
 		// Mirrors operator==(): only enabled attributes and the IBO identity contribute
-		std::uint64_t hash = std::uint64_t(std::uintptr_t(ibo_));
+		std::uint64_t hash = std::uint64_t(std::uintptr_t(_ibo));
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
-			const Attribute& attribute = attributes_[i];
-			if (!attribute.enabled_) {
+			const Attribute& attribute = _attributes[i];
+			if (!attribute._enabled) {
 				continue;
 			}
-			hash = hashCombine(hash, (std::uint64_t(attribute.index_) << 32) | (attribute.vbo_ != nullptr ? attribute.vbo_->GetGLHandle() : 0));
-			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute.size_)) << 32) | attribute.type_);
-			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute.stride_)) << 33) | (std::uint64_t(attribute.baseOffset_) << 1) | (attribute.normalized_ ? 1u : 0u));
-			hash = hashCombine(hash, std::uint64_t(std::uintptr_t(attribute.pointer_)));
+			hash = hashCombine(hash, (std::uint64_t(attribute._index) << 32) | (attribute._vbo != nullptr ? attribute._vbo->GetGLHandle() : 0));
+			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute._size)) << 32) | attribute._type);
+			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute._stride)) << 33) | (std::uint64_t(attribute._baseOffset) << 1) | (attribute._normalized ? 1u : 0u));
+			hash = hashCombine(hash, std::uint64_t(std::uintptr_t(attribute._pointer)));
 		}
 		return hash;
 	}
 
 	bool GLVertexFormat::operator==(const GLVertexFormat& other) const
 	{
-		bool areEqual = (other.ibo_ == ibo_ && other.attributes_.size() == attributes_.size());
+		bool areEqual = (other._ibo == _ibo && other._attributes.size() == _attributes.size());
 
 		// If indices are the same then check attributes too
 		if (areEqual) {
-			for (std::uint32_t i = 0; i < attributes_.size(); i++) {
-				if (other.attributes_[i] != attributes_[i]) {
+			for (std::uint32_t i = 0; i < _attributes.size(); i++) {
+				if (other._attributes[i] != _attributes[i]) {
 					areEqual = false;
 					break;
 				}

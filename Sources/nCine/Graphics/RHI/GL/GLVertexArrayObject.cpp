@@ -41,34 +41,34 @@ namespace nCine::RHI::GL
 
 namespace nCine::RHI::GL
 {
-	unsigned int GLVertexArrayObject::boundVAO_ = 0;
+	unsigned int GLVertexArrayObject::_boundVAO = 0;
 
 	GLVertexArrayObject::GLVertexArrayObject()
-		: glHandle_(0)
+		: _glHandle(0)
 	{
 #if defined(RHI_GL_PROFILE_ES2) && !defined(DEATH_TARGET_VITA)
 		ResolveVertexArrayEntryPoints();
 #endif
-		glGenVertexArrays(1, &glHandle_);
+		glGenVertexArrays(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	GLVertexArrayObject::~GLVertexArrayObject()
 	{
-		if (boundVAO_ == glHandle_) {
+		if (_boundVAO == _glHandle) {
 			Unbind();
 		}
 
-		glDeleteVertexArrays(1, &glHandle_);
+		glDeleteVertexArrays(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	bool GLVertexArrayObject::Bind() const
 	{
-		if (boundVAO_ != glHandle_) {
-			glBindVertexArray(glHandle_);
+		if (_boundVAO != _glHandle) {
+			glBindVertexArray(_glHandle);
 			GL_LOG_ERRORS();
-			boundVAO_ = glHandle_;
+			_boundVAO = _glHandle;
 			return true;
 		}
 		return false;
@@ -76,10 +76,10 @@ namespace nCine::RHI::GL
 
 	bool GLVertexArrayObject::Unbind()
 	{
-		if (boundVAO_ != 0) {
+		if (_boundVAO != 0) {
 			glBindVertexArray(0);
 			GL_LOG_ERRORS();
-			boundVAO_ = 0;
+			_boundVAO = 0;
 			return true;
 		}
 		return false;
@@ -87,6 +87,6 @@ namespace nCine::RHI::GL
 
 	void GLVertexArrayObject::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::VertexArray, _glHandle, label);
 	}
 }

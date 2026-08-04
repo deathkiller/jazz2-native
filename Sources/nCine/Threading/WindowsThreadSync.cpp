@@ -12,27 +12,27 @@ namespace nCine
 
 	Mutex::Mutex()
 	{
-		::InitializeCriticalSection(&handle_);
+		::InitializeCriticalSection(&_handle);
 	}
 
 	Mutex::~Mutex()
 	{
-		::DeleteCriticalSection(&handle_);
+		::DeleteCriticalSection(&_handle);
 	}
 
 	void Mutex::Lock()
 	{
-		::EnterCriticalSection(&handle_);
+		::EnterCriticalSection(&_handle);
 	}
 
 	void Mutex::Unlock()
 	{
-		::LeaveCriticalSection(&handle_);
+		::LeaveCriticalSection(&_handle);
 	}
 
 	int Mutex::TryLock()
 	{
-		return ::TryEnterCriticalSection(&handle_);
+		return ::TryEnterCriticalSection(&_handle);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -40,25 +40,25 @@ namespace nCine
 	///////////////////////////////////////////////////////////
 
 	CondVariable::CondVariable()
-		: waitersCount_(0)
+		: _waitersCount(0)
 	{
-		events_[0] = ::CreateEvent(nullptr, FALSE, FALSE, nullptr); // Signal
-		events_[1] = ::CreateEvent(nullptr, TRUE, FALSE, nullptr); // Broadcast
-		::InitializeCriticalSection(&waitersCountLock_);
+		_events[0] = ::CreateEvent(nullptr, FALSE, FALSE, nullptr); // Signal
+		_events[1] = ::CreateEvent(nullptr, TRUE, FALSE, nullptr); // Broadcast
+		::InitializeCriticalSection(&_waitersCountLock);
 	}
 
 	CondVariable::~CondVariable()
 	{
-		::CloseHandle(events_[0]); // Signal
-		::CloseHandle(events_[1]); // Broadcast
-		::DeleteCriticalSection(&waitersCountLock_);
+		::CloseHandle(_events[0]); // Signal
+		::CloseHandle(_events[1]); // Broadcast
+		::DeleteCriticalSection(&_waitersCountLock);
 	}
 
 	void CondVariable::Wait(Mutex& mutex)
 	{
-		::EnterCriticalSection(&waitersCountLock_);
-		waitersCount_++;
-		::LeaveCriticalSection(&waitersCountLock_);
+		::EnterCriticalSection(&_waitersCountLock);
+		_waitersCount++;
+		::LeaveCriticalSection(&_waitersCountLock);
 
 		mutex.Unlock();
 		WaitEvents();
@@ -67,37 +67,37 @@ namespace nCine
 
 	void CondVariable::Signal()
 	{
-		::EnterCriticalSection(&waitersCountLock_);
-		const bool haveWaiters = (waitersCount_ > 0);
-		::LeaveCriticalSection(&waitersCountLock_);
+		::EnterCriticalSection(&_waitersCountLock);
+		const bool haveWaiters = (_waitersCount > 0);
+		::LeaveCriticalSection(&_waitersCountLock);
 
 		if (haveWaiters) {
-			::SetEvent(events_[0]); // Signal
+			::SetEvent(_events[0]); // Signal
 		}
 	}
 
 	void CondVariable::Broadcast()
 	{
-		::EnterCriticalSection(&waitersCountLock_);
-		const bool haveWaiters = (waitersCount_ > 0);
-		::LeaveCriticalSection(&waitersCountLock_);
+		::EnterCriticalSection(&_waitersCountLock);
+		const bool haveWaiters = (_waitersCount > 0);
+		::LeaveCriticalSection(&_waitersCountLock);
 
 		if (haveWaiters) {
-			::SetEvent(events_[1]); // Broadcast
+			::SetEvent(_events[1]); // Broadcast
 		}
 	}
 
 	void CondVariable::WaitEvents()
 	{
-		const int result = ::WaitForMultipleObjects(2, events_, FALSE, INFINITE);
+		const int result = ::WaitForMultipleObjects(2, _events, FALSE, INFINITE);
 
-		::EnterCriticalSection(&waitersCountLock_);
-		waitersCount_--;
-		const bool isLastWaiter = (result == (WAIT_OBJECT_0 + 1)) && (waitersCount_ == 0);
-		::LeaveCriticalSection(&waitersCountLock_);
+		::EnterCriticalSection(&_waitersCountLock);
+		_waitersCount--;
+		const bool isLastWaiter = (result == (WAIT_OBJECT_0 + 1)) && (_waitersCount == 0);
+		::LeaveCriticalSection(&_waitersCountLock);
 
 		if (isLastWaiter) {
-			::ResetEvent(events_[1]); // Broadcast
+			::ResetEvent(_events[1]); // Broadcast
 		}
 	}
 
@@ -106,7 +106,7 @@ namespace nCine
 	// ReadWriteLock CLASS
 	///////////////////////////////////////////////////////////
 
-	ReadWriteLock::ReadWriteLock() : rwlock_(SRWLOCK_INIT)
+	ReadWriteLock::ReadWriteLock() : _rwlock(SRWLOCK_INIT)
 	{
 	}
 

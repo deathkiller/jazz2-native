@@ -93,14 +93,14 @@ namespace nCine
 		}
 	}
 
-	AicaAudioDevice* AicaAudioDevice::current_ = nullptr;
+	AicaAudioDevice* AicaAudioDevice::_current = nullptr;
 
 	AicaAudioDevice::AicaAudioDevice()
-		: initialized_(false)
+		: _initialized(false)
 	{
 		LOGD("Initializing AICA audio device...");
 
-		current_ = this;
+		_current = this;
 
 		// Uploads the driver the ARM core runs and sets up the sound RAM allocator
 		if (snd_init() < 0) {
@@ -113,7 +113,7 @@ namespace nCine
 			LOGE("snd_stream_init_ex() failed, streamed audio will be unavailable");
 		}
 
-		initialized_ = true;
+		_initialized = true;
 
 		std::uint32_t sourceIds[MaxSources];
 		for (std::int32_t i = 0; i < MaxSources; i++) {
@@ -133,17 +133,17 @@ namespace nCine
 		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
 		shutdownDecodeThread();
 
-		if (initialized_) {
+		if (_initialized) {
 			for (std::int32_t i = 0; i < MaxSources; i++) {
 				stopSample(i);
 				releaseStream(i);
 			}
 			snd_stream_shutdown();
 			snd_shutdown();
-			initialized_ = false;
+			_initialized = false;
 		}
 
-		for (Buffer& buffer : buffers_) {
+		for (Buffer& buffer : _buffers) {
 			for (std::uint32_t address : buffer.spuAddress) {
 				if (address != 0) {
 					snd_mem_free(address);
@@ -151,14 +151,14 @@ namespace nCine
 			}
 			std::free(buffer.data);
 		}
-		buffers_.clear();
+		_buffers.clear();
 
-		current_ = nullptr;
+		_current = nullptr;
 	}
 
 	bool AicaAudioDevice::isValid() const
 	{
-		return initialized_;
+		return _initialized;
 	}
 
 	const char* AicaAudioDevice::name() const
@@ -175,7 +175,7 @@ namespace nCine
 
 	void AicaAudioDevice::setGain(float gain)
 	{
-		gain_ = gain;
+		_gain = gain;
 
 		// There is no master volume in the hardware, it is folded into each channel instead
 		for (std::int32_t i = 0; i < MaxSources; i++) {
@@ -185,12 +185,12 @@ namespace nCine
 
 	void AicaAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
-		listenerPos_ = position;
+		_listenerPos = position;
 
 		// Moving the listener changes the panning and attenuation of every source that is not
 		// relative to it, which the mix here has to be told about explicitly
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			if (!sources_[i].relative) {
+			if (!_sources[i].relative) {
 				applyVolume(i);
 			}
 		}
@@ -206,10 +206,10 @@ namespace nCine
 
 	AicaAudioDevice::Buffer* AicaAudioDevice::bufferForId(std::uint32_t bufferId)
 	{
-		if (bufferId == 0 || bufferId > buffers_.size()) {
+		if (bufferId == 0 || bufferId > _buffers.size()) {
 			return nullptr;
 		}
-		Buffer& buffer = buffers_[bufferId - 1];
+		Buffer& buffer = _buffers[bufferId - 1];
 		return (buffer.used ? &buffer : nullptr);
 	}
 
@@ -221,7 +221,7 @@ namespace nCine
 		// previous owner would decide whether it loops or streams behind the player's back
 		const std::int32_t index = sourceForId(sourceId);
 		if (index >= 0) {
-			sources_[index] = Source();
+			_sources[index] = Source();
 		}
 		return sourceId;
 	}
@@ -232,7 +232,7 @@ namespace nCine
 		// runs before the players so that a buffer the driver finished with this frame is already
 		// counted as processed by the time the stream tries to reclaim it.
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			Source& source = sources_[i];
+			Source& source = _sources[i];
 			if (source.streamHandle >= 0 && source.started && !source.paused) {
 				snd_stream_poll(source.streamHandle);
 			}
@@ -243,19 +243,19 @@ namespace nCine
 
 	std::uint32_t AicaAudioDevice::createBuffer(BufferUsage usage)
 	{
-		for (std::size_t i = 0; i < buffers_.size(); i++) {
-			if (!buffers_[i].used) {
-				buffers_[i].used = true;
-				buffers_[i].usage = usage;
-				buffers_[i].size = 0;
+		for (std::size_t i = 0; i < _buffers.size(); i++) {
+			if (!_buffers[i].used) {
+				_buffers[i].used = true;
+				_buffers[i].usage = usage;
+				_buffers[i].size = 0;
 				return std::uint32_t(i + 1);
 			}
 		}
 
-		buffers_.emplace_back();
-		buffers_.back().used = true;
-		buffers_.back().usage = usage;
-		return std::uint32_t(buffers_.size());
+		_buffers.emplace_back();
+		_buffers.back().used = true;
+		_buffers.back().usage = usage;
+		return std::uint32_t(_buffers.size());
 	}
 
 	void AicaAudioDevice::deleteBuffer(std::uint32_t bufferId)
@@ -417,9 +417,9 @@ namespace nCine
 
 	void AicaAudioDevice::computeVolume(std::int32_t index, bool isStereo, std::int32_t& volume, std::int32_t& pan)
 	{
-		const Source& source = sources_[index];
+		const Source& source = _sources[index];
 
-		float level = gain_ * source.gain;
+		float level = _gain * source.gain;
 		float panning = 0.0f;
 
 		// A stereo buffer is played straight to the output and ignores its position, which is what
@@ -429,8 +429,8 @@ namespace nCine
 			// IAudioPlayer::getAdjustedPosition), so it only has to be made relative to the listener
 			Vector3f relative = source.position;
 			if (!source.relative) {
-				relative -= Vector3f(listenerPos_.X * LengthToPhysical,
-					listenerPos_.Y * -LengthToPhysical, listenerPos_.Z * -LengthToPhysical);
+				relative -= Vector3f(_listenerPos.X * LengthToPhysical,
+					_listenerPos.Y * -LengthToPhysical, _listenerPos.Z * -LengthToPhysical);
 			}
 
 			const float distance = relative.Length();
@@ -456,7 +456,7 @@ namespace nCine
 
 	void AicaAudioDevice::applyVolume(std::int32_t index)
 	{
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (!source.started) {
 			return;
 		}
@@ -505,7 +505,7 @@ namespace nCine
 
 	void AicaAudioDevice::startSample(std::int32_t index, std::int32_t sampleOffset)
 	{
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		const Buffer* buffer = bufferForId(source.attachedBufferId);
 		if (buffer == nullptr || buffer->numSamples <= 0 || buffer->spuAddress[0] == 0) {
 			return;
@@ -572,7 +572,7 @@ namespace nCine
 
 	void AicaAudioDevice::stopSample(std::int32_t index)
 	{
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 
 		aica_channel_t channelData {};
 		channelData.cmd = AICA_CH_CMD_STOP;
@@ -588,7 +588,7 @@ namespace nCine
 
 	void AicaAudioDevice::releaseStream(std::int32_t index)
 	{
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (source.streamHandle < 0) {
 			return;
 		}
@@ -602,7 +602,7 @@ namespace nCine
 
 	void* AicaAudioDevice::fillStream(std::int32_t index, std::int32_t bytesRequested, std::int32_t& bytesProvided)
 	{
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		bytesProvided = 0;
 
 		// Everything before numProcessed is waiting to be reclaimed by the stream, the buffer being
@@ -641,14 +641,14 @@ namespace nCine
 	void* AicaAudioDevice::streamCallback(int handle, int bytesRequested, int* bytesProvided)
 	{
 		*bytesProvided = 0;
-		if (current_ == nullptr) {
+		if (_current == nullptr) {
 			return nullptr;
 		}
 
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			if (current_->sources_[i].streamHandle == handle) {
+			if (_current->_sources[i].streamHandle == handle) {
 				std::int32_t provided = 0;
-				void* result = current_->fillStream(i, bytesRequested, provided);
+				void* result = _current->fillStream(i, bytesRequested, provided);
 				*bytesProvided = int(provided);
 				return result;
 			}
@@ -663,7 +663,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		source.attachedBufferId = bufferId;
 
 		if (bufferId == 0) {
@@ -686,7 +686,7 @@ namespace nCine
 	{
 		const std::int32_t index = sourceForId(sourceId);
 		if (index >= 0) {
-			sources_[index].gain = gain;
+			_sources[index].gain = gain;
 			applyVolume(index);
 		}
 	}
@@ -698,7 +698,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		source.pitch = pitch;
 
 		// A stream is resampled at the rate it was started with and the driver has no way to change
@@ -731,7 +731,7 @@ namespace nCine
 		if (index >= 0) {
 			// Taken into account when the channel is keyed on, the loop flag is part of the start
 			// command and cannot be changed while a sample is sounding
-			sources_[index].looping = looping;
+			_sources[index].looping = looping;
 		}
 	}
 
@@ -739,7 +739,7 @@ namespace nCine
 	{
 		const std::int32_t index = sourceForId(sourceId);
 		if (index >= 0) {
-			sources_[index].relative = relative;
+			_sources[index].relative = relative;
 			applyVolume(index);
 		}
 	}
@@ -748,7 +748,7 @@ namespace nCine
 	{
 		const std::int32_t index = sourceForId(sourceId);
 		if (index >= 0) {
-			sources_[index].position = position;
+			_sources[index].position = position;
 			applyVolume(index);
 		}
 	}
@@ -766,7 +766,7 @@ namespace nCine
 			return 0;
 		}
 
-		const Source& source = sources_[index];
+		const Source& source = _sources[index];
 		if (source.streaming || !source.started || source.channels[0] < 0) {
 			return 0;
 		}
@@ -780,7 +780,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (source.streaming) {
 			return;
 		}
@@ -802,7 +802,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		const bool wasPaused = source.paused;
 		source.paused = false;
 
@@ -843,7 +843,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (!source.started || source.paused) {
 			return;
 		}
@@ -869,7 +869,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (source.streaming) {
 			if (source.started) {
 				snd_stream_stop(source.streamHandle);
@@ -894,7 +894,7 @@ namespace nCine
 			return false;
 		}
 
-		const Source& source = sources_[index];
+		const Source& source = _sources[index];
 		if (!source.started || source.paused) {
 			return false;
 		}
@@ -914,7 +914,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (source.numQueued >= MaxQueuedBuffers) {
 			LOGW("Streaming queue of source {} is full, dropping a buffer", sourceId);
 			return;
@@ -936,7 +936,7 @@ namespace nCine
 	std::int32_t AicaAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
 	{
 		const std::int32_t index = sourceForId(sourceId);
-		return (index >= 0 ? sources_[index].numProcessed : 0);
+		return (index >= 0 ? _sources[index].numProcessed : 0);
 	}
 
 	void AicaAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
@@ -946,7 +946,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[index];
+		Source& source = _sources[index];
 		if (count > source.numProcessed) {
 			count = source.numProcessed;
 		}

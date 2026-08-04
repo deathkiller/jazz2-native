@@ -51,34 +51,34 @@ namespace nCine
 
 		/** @brief Returns the backend buffer id */
 		inline std::uint32_t bufferId() const {
-			return bufferId_;
+			return _bufferId;
 		}
 
 		/** @brief Returns the number of bytes per sample */
 		inline std::int32_t bytesPerSample() const {
-			return bytesPerSample_;
+			return _bytesPerSample;
 		}
 		/** @brief Returns the number of audio channels */
 		inline std::int32_t numChannels() const {
-			return numChannels_;
+			return _numChannels;
 		}
 		/** @brief Returns the sample frequency */
 		inline std::int32_t frequency() const {
-			return frequency_;
+			return _frequency;
 		}
 
 		/** @brief Returns the total number of samples */
 		inline std::int32_t numSamples() const {
-			return numSamples_;
+			return _numSamples;
 		}
 		/** @brief Returns the duration in seconds */
 		inline float duration() const {
-			return duration_;
+			return _duration;
 		}
 
 		/** @brief Returns the size of the buffer in bytes */
 		inline std::int32_t bufferSize() const {
-			return numSamples_ * numChannels_ * bytesPerSample_;
+			return _numSamples * _numChannels * _bytesPerSample;
 		}
 
 		/** @brief Returns the static object type of this class */
@@ -88,19 +88,19 @@ namespace nCine
 
 	private:
 		/** @brief Backend buffer id */
-		std::uint32_t bufferId_;
+		std::uint32_t _bufferId;
 
 		/** @brief Number of bytes per sample */
-		std::int32_t bytesPerSample_;
+		std::int32_t _bytesPerSample;
 		/** @brief Number of channels */
-		std::int32_t numChannels_;
+		std::int32_t _numChannels;
 		/** @brief Sample frequency */
-		std::int32_t frequency_;
+		std::int32_t _frequency;
 
 		/** @brief Number of samples */
-		std::int32_t numSamples_;
+		std::int32_t _numSamples;
 		/** @brief Duration in seconds */
-		float duration_;
+		float _duration;
 
 		/** @brief Loads audio samples using the supplied loader and its reader */
 		bool load(IAudioLoader& audioLoader);

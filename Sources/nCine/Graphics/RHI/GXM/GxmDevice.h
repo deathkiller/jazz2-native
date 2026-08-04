@@ -294,100 +294,100 @@ namespace nCine::RHI::GXM
 			std::uint32_t Size = 0;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static GxmShaderProgram* currentProgram_;
-		static const GxmTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static GxmRenderTarget* currentRenderTarget_;
+		static GxmShaderProgram* _currentProgram;
+		static const GxmTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static GxmRenderTarget* _currentRenderTarget;
 
 		// -- Real sceGxm objects (owned) --
 
-		static SceGxmContext* context_;
-		static SceGxmShaderPatcher* shaderPatcher_;
+		static SceGxmContext* _context;
+		static SceGxmShaderPatcher* _shaderPatcher;
 		// One render target covers both the intermediate screen surface and the display buffers: they share
 		// the panel's dimensions, and a sceGxmRenderTarget only describes the tiling of a size, not a surface
-		static SceGxmRenderTarget* displayRenderTarget_;
+		static SceGxmRenderTarget* _displayRenderTarget;
 
-		static GxmMemory::Block contextHostMem_;
-		static GxmMemory::Block vdmRingBuffer_;
-		static GxmMemory::Block vertexRingBuffer_;
-		static GxmMemory::Block fragmentRingBuffer_;
-		static GxmMemory::Block fragmentUsseRingBuffer_;
-		static GxmMemory::Block patcherBufferMem_;
-		static GxmMemory::Block patcherVertexUsseMem_;
-		static GxmMemory::Block patcherFragmentUsseMem_;
+		static GxmMemory::Block _contextHostMem;
+		static GxmMemory::Block _vdmRingBuffer;
+		static GxmMemory::Block _vertexRingBuffer;
+		static GxmMemory::Block _fragmentRingBuffer;
+		static GxmMemory::Block _fragmentUsseRingBuffer;
+		static GxmMemory::Block _patcherBufferMem;
+		static GxmMemory::Block _patcherVertexUsseMem;
+		static GxmMemory::Block _patcherFragmentUsseMem;
 
-		static GxmMemory::Block displayBuffers_[DisplayBufferCount];
-		static SceGxmColorSurface displaySurfaces_[DisplayBufferCount];
-		static SceGxmSyncObject* displaySyncObjects_[DisplayBufferCount];
-		static std::uint32_t backBufferIndex_;
-		static std::uint32_t frontBufferIndex_;
+		static GxmMemory::Block _displayBuffers[DisplayBufferCount];
+		static SceGxmColorSurface _displaySurfaces[DisplayBufferCount];
+		static SceGxmSyncObject* _displaySyncObjects[DisplayBufferCount];
+		static std::uint32_t _backBufferIndex;
+		static std::uint32_t _frontBufferIndex;
 
 		// The intermediate surface every draw that is not aimed at a render target lands in, kept bottom-up
 		// like OpenGL and flipped into the display buffer at present time (see the class documentation)
-		static GxmMemory::Block screenBuffer_;
-		static SceGxmColorSurface screenSurface_;
-		static SceGxmTexture screenTexture_;
+		static GxmMemory::Block _screenBuffer;
+		static SceGxmColorSurface _screenSurface;
+		static SceGxmTexture _screenTexture;
 		// Serializes the frame's writes to the screen surface against the present blit that samples them
-		static SceGxmSyncObject* screenSyncObject_;
+		static SceGxmSyncObject* _screenSyncObject;
 
-		static GxmMemory::Block depthBuffer_;
-		static SceGxmDepthStencilSurface depthSurface_;
+		static GxmMemory::Block _depthBuffer;
+		static SceGxmDepthStencilSurface _depthSurface;
 
-		static bool initialized_;
-		static bool vsync_;
-		static bool sceneOpen_;
+		static bool _initialized;
+		static bool _vsync;
+		static bool _sceneOpen;
 		// Texels the open scene renders into, which is what identifies it: a target change that lands on the
 		// same surface goes on adding to this scene rather than starting one that would discard it (see
 		// EnsureScene())
-		static void* sceneSurfaceData_;
-		static std::uint32_t sceneCounter_;
+		static void* _sceneSurfaceData;
+		static std::uint32_t _sceneCounter;
 		// State that has to be re-applied after a scene begins (sceGxmBeginScene resets the pipeline state)
-		static bool sceneStateApplied_;
+		static bool _sceneStateApplied;
 
 		// Dimensions of the surface the open scene renders into, recorded when it begins. The viewport and
 		// region clip are derived from them, and reading them back from the render target instead would mean
 		// re-entering GxmRenderTarget::GetSceneTarget() - which is allowed to end the very scene being set up
-		static std::int32_t sceneWidth_;
-		static std::int32_t sceneHeight_;
+		static std::int32_t _sceneWidth;
+		static std::int32_t _sceneHeight;
 
 		// -- Built-in shaders --
 
 		// Clear: a full-screen quad in clip space filled with a uniform colour, the tile-based renderer's
 		// equivalent of glClear (see the class documentation)
-		static SceGxmShaderPatcherId clearVertexId_;
-		static SceGxmShaderPatcherId clearFragmentId_;
-		static SceGxmVertexProgram* clearVertexProgram_;
-		static SceGxmFragmentProgram* clearFragmentProgram_;
+		static SceGxmShaderPatcherId _clearVertexId;
+		static SceGxmShaderPatcherId _clearFragmentId;
+		static SceGxmVertexProgram* _clearVertexProgram;
+		static SceGxmFragmentProgram* _clearFragmentProgram;
 		// Next slot of the clear quad ring, so concurrent clears in one frame keep their own colours
-		static std::uint32_t clearQuadIndex_;
-		static GxmMemory::Block clearVertices_;
+		static std::uint32_t _clearQuadIndex;
+		static GxmMemory::Block _clearVertices;
 
 		// Present: the screen surface sampled with a flipped V into the display buffer
-		static SceGxmShaderPatcherId presentVertexId_;
-		static SceGxmShaderPatcherId presentFragmentId_;
-		static SceGxmVertexProgram* presentVertexProgram_;
-		static SceGxmFragmentProgram* presentFragmentProgram_;
-		static GxmMemory::Block presentVertices_;
+		static SceGxmShaderPatcherId _presentVertexId;
+		static SceGxmShaderPatcherId _presentFragmentId;
+		static SceGxmVertexProgram* _presentVertexProgram;
+		static SceGxmFragmentProgram* _presentFragmentProgram;
+		static GxmMemory::Block _presentVertices;
 
 		// Shared 0, 1, 2, ... index buffer standing in for the missing non-indexed draw. Grown on demand by
 		// the largest DrawArrays() the frame issues
-		static GxmMemory::Block sequentialIndices_;
-		static std::uint32_t sequentialIndexCount_;
+		static GxmMemory::Block _sequentialIndices;
+		static std::uint32_t _sequentialIndexCount;
 		// The same trick for the missing line-strip primitive: pairs (0,1), (1,2), (2,3), ... so a window of
 		// this buffer turns a strip of N vertices into the N-1 independent line segments it means
-		static GxmMemory::Block lineStripIndices_;
-		static std::uint32_t lineStripVertexCount_;
+		static GxmMemory::Block _lineStripIndices;
+		static std::uint32_t _lineStripVertexCount;
 
 		// The two static streams feeding the vertex-ID-free sprite shaders (see GetQuadCornerStream())
-		static GxmMemory::Block quadCornerStream_;
-		static GxmMemory::Block batchedCornerStream_;
+		static GxmMemory::Block _quadCornerStream;
+		static GxmMemory::Block _batchedCornerStream;
 
 		/** @brief Opens a scene on the current target if none is open, and (re)applies the pipeline state it reset */
 		static bool EnsureScene();
@@ -418,19 +418,19 @@ namespace nCine::RHI::GXM
 			SceGxmDepthStencilSurface*& depthSurface, SceGxmSyncObject*& syncObject, std::int32_t& width, std::int32_t& height);
 		// Written by the GPU when a scene's fragment phase completes, so the next scene can be held off until
 		// the surface it may sample is really there (see FinishScene())
-		static SceGxmNotification sceneNotification_;
+		static SceGxmNotification _sceneNotification;
 
 		/** @brief Blocks displaced by a grown buffer, freed once the frame that may still read them is done */
 		static constexpr std::uint32_t RetiredBlockCount = 8;
-		static GxmMemory::Block retiredBlocks_[RetiredBlockCount];
+		static GxmMemory::Block _retiredBlocks[RetiredBlockCount];
 		/** @brief Holds @p block until the end of the frame instead of releasing it now, and invalidates it */
 		static void RetireBlock(GxmMemory::Block& block);
 		/** @brief Frees every retired block (called after the frame's barrier) */
 		static void ReleaseRetiredBlocks();
 
-		/** @brief Returns `true` if @ref sequentialIndices_ covers @p count indices, growing it if it does not */
+		/** @brief Returns `true` if @ref _sequentialIndices covers @p count indices, growing it if it does not */
 		static bool EnsureSequentialIndices(std::uint32_t count);
-		/** @brief Returns `true` if @ref lineStripIndices_ covers a strip of @p vertexCount vertices, growing it if it does not */
+		/** @brief Returns `true` if @ref _lineStripIndices covers a strip of @p vertexCount vertices, growing it if it does not */
 		static bool EnsureLineStripIndices(std::uint32_t vertexCount);
 		/** @brief Compiles a built-in Cg shader pair and registers it with the patcher */
 		static bool CreateBuiltinShaders();

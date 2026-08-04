@@ -137,146 +137,146 @@ namespace nCine::RHI::D3D11
 
 	// -- Static state --
 
-	D3D11Device::BlendingState D3D11Device::blending_;
-	D3D11Device::DepthTestState D3D11Device::depthTest_;
-	D3D11Device::CullFaceState D3D11Device::cullFace_;
-	D3D11Device::ScissorState D3D11Device::scissor_;
-	Recti D3D11Device::viewport_(0, 0, 0, 0);
-	Colorf D3D11Device::clearColor_(0.0f, 0.0f, 0.0f, 0.0f);
+	D3D11Device::BlendingState D3D11Device::_blending;
+	D3D11Device::DepthTestState D3D11Device::_depthTest;
+	D3D11Device::CullFaceState D3D11Device::_cullFace;
+	D3D11Device::ScissorState D3D11Device::_scissor;
+	Recti D3D11Device::_viewport(0, 0, 0, 0);
+	Colorf D3D11Device::_clearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	D3D11ShaderProgram* D3D11Device::currentProgram_ = nullptr;
-	const D3D11Texture* D3D11Device::boundTextures_[MaxTextureUnits] = {};
-	D3D11Device::UniformRange D3D11Device::boundUniformRanges_[MaxUniformBindings] = {};
-	D3D11RenderTarget* D3D11Device::currentRenderTarget_ = nullptr;
+	D3D11ShaderProgram* D3D11Device::_currentProgram = nullptr;
+	const D3D11Texture* D3D11Device::_boundTextures[MaxTextureUnits] = {};
+	D3D11Device::UniformRange D3D11Device::_boundUniformRanges[MaxUniformBindings] = {};
+	D3D11RenderTarget* D3D11Device::_currentRenderTarget = nullptr;
 
-	ID3D11Device* D3D11Device::device_ = nullptr;
-	ID3D11DeviceContext* D3D11Device::context_ = nullptr;
-	IDXGISwapChain* D3D11Device::swapchain_ = nullptr;
-	ID3D11RenderTargetView* D3D11Device::backbufferRtv_ = nullptr;
-	bool D3D11Device::vsync_ = true;
-	std::uint32_t D3D11Device::swapchainFlags_ = 0;
-	std::int32_t D3D11Device::backbufferWidth_ = 0;
-	std::int32_t D3D11Device::backbufferHeight_ = 0;
-	std::int32_t D3D11Device::maxTextureDimension_ = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-	ID3D11Texture2D* D3D11Device::presentTexture_ = nullptr;
-	ID3D11RenderTargetView* D3D11Device::presentRtv_ = nullptr;
-	ID3D11ShaderResourceView* D3D11Device::presentSrv_ = nullptr;
-	ID3D11VertexShader* D3D11Device::presentVs_ = nullptr;
-	ID3D11PixelShader* D3D11Device::presentPs_ = nullptr;
-	ID3D11SamplerState* D3D11Device::presentSampler_ = nullptr;
-	ID3D11RenderTargetView* D3D11Device::secondaryTargetRtv_ = nullptr;
-	std::int32_t D3D11Device::secondaryTargetHeight_ = 0;
+	ID3D11Device* D3D11Device::_device = nullptr;
+	ID3D11DeviceContext* D3D11Device::_context = nullptr;
+	IDXGISwapChain* D3D11Device::_swapchain = nullptr;
+	ID3D11RenderTargetView* D3D11Device::_backbufferRtv = nullptr;
+	bool D3D11Device::_vsync = true;
+	std::uint32_t D3D11Device::_swapchainFlags = 0;
+	std::int32_t D3D11Device::_backbufferWidth = 0;
+	std::int32_t D3D11Device::_backbufferHeight = 0;
+	std::int32_t D3D11Device::_maxTextureDimension = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+	ID3D11Texture2D* D3D11Device::_presentTexture = nullptr;
+	ID3D11RenderTargetView* D3D11Device::_presentRtv = nullptr;
+	ID3D11ShaderResourceView* D3D11Device::_presentSrv = nullptr;
+	ID3D11VertexShader* D3D11Device::_presentVs = nullptr;
+	ID3D11PixelShader* D3D11Device::_presentPs = nullptr;
+	ID3D11SamplerState* D3D11Device::_presentSampler = nullptr;
+	ID3D11RenderTargetView* D3D11Device::_secondaryTargetRtv = nullptr;
+	std::int32_t D3D11Device::_secondaryTargetHeight = 0;
 
-	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::cbufferPool_;
-	SmallVector<std::uint8_t, 0> D3D11Device::cbufferStaging_;
-	SmallVector<D3D11Device::BlendStateEntry, 8> D3D11Device::blendStates_;
-	SmallVector<D3D11Device::RasterStateEntry, 8> D3D11Device::rasterStates_;
-	ID3D11DepthStencilState* D3D11Device::depthDisabledState_ = nullptr;
+	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::_cbufferPool;
+	SmallVector<std::uint8_t, 0> D3D11Device::_cbufferStaging;
+	SmallVector<D3D11Device::BlendStateEntry, 8> D3D11Device::_blendStates;
+	SmallVector<D3D11Device::RasterStateEntry, 8> D3D11Device::_rasterStates;
+	ID3D11DepthStencilState* D3D11Device::_depthDisabledState = nullptr;
 
-	ID3D11BlendState* D3D11Device::lastBlendState_ = nullptr;
-	ID3D11RasterizerState* D3D11Device::lastRasterState_ = nullptr;
-	bool D3D11Device::depthStateApplied_ = false;
-	ID3D11VertexShader* D3D11Device::lastVs_ = nullptr;
-	ID3D11PixelShader* D3D11Device::lastPs_ = nullptr;
-	std::uint32_t D3D11Device::lastTopology_ = 0;
-	ID3D11RenderTargetView* D3D11Device::lastRtvs_[D3D11Device::MaxRenderTargets] = {};
-	std::uint32_t D3D11Device::lastRtvCount_ = 0;
-	bool D3D11Device::lastRtvValid_ = false;
-	Recti D3D11Device::lastViewport_(0, 0, 0, 0);
-	bool D3D11Device::lastViewportValid_ = false;
-	D3D11Device::CachedRect D3D11Device::lastScissorRect_;
-	bool D3D11Device::lastScissorValid_ = false;
-	ID3D11ShaderResourceView* D3D11Device::lastSrvs_[2][D3D11Device::MaxTextureUnits] = {};
-	ID3D11SamplerState* D3D11Device::lastSamplers_[2][D3D11Device::MaxTextureUnits] = {};
-	bool D3D11Device::srvShadowValid_ = false;
+	ID3D11BlendState* D3D11Device::_lastBlendState = nullptr;
+	ID3D11RasterizerState* D3D11Device::_lastRasterState = nullptr;
+	bool D3D11Device::_depthStateApplied = false;
+	ID3D11VertexShader* D3D11Device::_lastVs = nullptr;
+	ID3D11PixelShader* D3D11Device::_lastPs = nullptr;
+	std::uint32_t D3D11Device::_lastTopology = 0;
+	ID3D11RenderTargetView* D3D11Device::_lastRtvs[D3D11Device::MaxRenderTargets] = {};
+	std::uint32_t D3D11Device::_lastRtvCount = 0;
+	bool D3D11Device::_lastRtvValid = false;
+	Recti D3D11Device::_lastViewport(0, 0, 0, 0);
+	bool D3D11Device::_lastViewportValid = false;
+	D3D11Device::CachedRect D3D11Device::_lastScissorRect;
+	bool D3D11Device::_lastScissorValid = false;
+	ID3D11ShaderResourceView* D3D11Device::_lastSrvs[2][D3D11Device::MaxTextureUnits] = {};
+	ID3D11SamplerState* D3D11Device::_lastSamplers[2][D3D11Device::MaxTextureUnits] = {};
+	bool D3D11Device::_srvShadowValid = false;
 
 	void D3D11Device::InvalidateCachedState()
 	{
-		lastBlendState_ = nullptr;
-		lastRasterState_ = nullptr;
-		depthStateApplied_ = false;
-		lastVs_ = nullptr;
-		lastPs_ = nullptr;
-		lastTopology_ = 0;
-		std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
-		lastRtvCount_ = 0;
-		lastRtvValid_ = false;
-		lastViewportValid_ = false;
-		lastScissorValid_ = false;
-		std::memset(lastSrvs_, 0, sizeof(lastSrvs_));
-		std::memset(lastSamplers_, 0, sizeof(lastSamplers_));
-		srvShadowValid_ = false;
+		_lastBlendState = nullptr;
+		_lastRasterState = nullptr;
+		_depthStateApplied = false;
+		_lastVs = nullptr;
+		_lastPs = nullptr;
+		_lastTopology = 0;
+		std::memset(_lastRtvs, 0, sizeof(_lastRtvs));
+		_lastRtvCount = 0;
+		_lastRtvValid = false;
+		_lastViewportValid = false;
+		_lastScissorValid = false;
+		std::memset(_lastSrvs, 0, sizeof(_lastSrvs));
+		std::memset(_lastSamplers, 0, sizeof(_lastSamplers));
+		_srvShadowValid = false;
 	}
 
 	// -- Pipeline state (recorded) --
 
-	void D3D11Device::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
+	void D3D11Device::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 
 	void D3D11Device::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
 
-	D3D11Device::BlendingState D3D11Device::GetBlendingState() { return blending_; }
-	void D3D11Device::SetBlendingState(const BlendingState& state) { blending_ = state; }
+	D3D11Device::BlendingState D3D11Device::GetBlendingState() { return _blending; }
+	void D3D11Device::SetBlendingState(const BlendingState& state) { _blending = state; }
 
-	void D3D11Device::SetDepthTestEnabled(bool enabled) { depthTest_.TestEnabled = enabled; }
-	void D3D11Device::SetDepthMaskEnabled(bool enabled) { depthTest_.MaskEnabled = enabled; }
-	D3D11Device::DepthTestState D3D11Device::GetDepthTestState() { return depthTest_; }
-	void D3D11Device::SetDepthTestState(const DepthTestState& state) { depthTest_ = state; }
+	void D3D11Device::SetDepthTestEnabled(bool enabled) { _depthTest.TestEnabled = enabled; }
+	void D3D11Device::SetDepthMaskEnabled(bool enabled) { _depthTest.MaskEnabled = enabled; }
+	D3D11Device::DepthTestState D3D11Device::GetDepthTestState() { return _depthTest; }
+	void D3D11Device::SetDepthTestState(const DepthTestState& state) { _depthTest = state; }
 
-	void D3D11Device::SetCullFaceEnabled(bool enabled) { cullFace_.Enabled = enabled; }
-	D3D11Device::CullFaceState D3D11Device::GetCullFaceState() { return cullFace_; }
-	void D3D11Device::SetCullFaceState(const CullFaceState& state) { cullFace_ = state; }
+	void D3D11Device::SetCullFaceEnabled(bool enabled) { _cullFace.Enabled = enabled; }
+	D3D11Device::CullFaceState D3D11Device::GetCullFaceState() { return _cullFace; }
+	void D3D11Device::SetCullFaceState(const CullFaceState& state) { _cullFace = state; }
 
-	D3D11Device::ScissorState D3D11Device::GetScissorState() { return scissor_; }
-	void D3D11Device::SetScissorState(const ScissorState& state) { scissor_ = state; }
-	void D3D11Device::SetScissor(const Recti& rect) { scissor_.Enabled = true; scissor_.Rect = rect; }
-	void D3D11Device::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
+	D3D11Device::ScissorState D3D11Device::GetScissorState() { return _scissor; }
+	void D3D11Device::SetScissorState(const ScissorState& state) { _scissor = state; }
+	void D3D11Device::SetScissor(const Recti& rect) { _scissor.Enabled = true; _scissor.Rect = rect; }
+	void D3D11Device::SetScissorTestEnabled(bool enabled) { _scissor.Enabled = enabled; }
 
-	Recti D3D11Device::GetViewport() { return viewport_; }
+	Recti D3D11Device::GetViewport() { return _viewport; }
 
 	void D3D11Device::SetViewport(const Recti& rect)
 	{
-		viewport_ = rect;
-		if (context_ != nullptr) {
+		_viewport = rect;
+		if (_context != nullptr) {
 			D3D11_VIEWPORT vp = MakeViewport(rect);
-			context_->RSSetViewports(1, &vp);
-			lastViewport_ = rect;
-			lastViewportValid_ = true;
+			_context->RSSetViewports(1, &vp);
+			_lastViewport = rect;
+			_lastViewportValid = true;
 		}
 	}
 
 	void D3D11Device::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		viewport_ = Recti(x, y, width, height);
+		_viewport = Recti(x, y, width, height);
 	}
 
-	Colorf D3D11Device::GetClearColor() { return clearColor_; }
-	void D3D11Device::SetClearColor(const Colorf& color) { clearColor_ = color; }
+	Colorf D3D11Device::GetClearColor() { return _clearColor; }
+	void D3D11Device::SetClearColor(const Colorf& color) { _clearColor = color; }
 
 	void D3D11Device::Clear(ClearFlags flags)
 	{
-		if (context_ == nullptr) {
+		if (_context == nullptr) {
 			return;
 		}
 		if ((flags & ClearFlags::Color) != ClearFlags::None) {
-			const float c[4] = { clearColor_.R, clearColor_.G, clearColor_.B, clearColor_.A };
-			if (currentRenderTarget_ != nullptr) {
+			const float c[4] = { _clearColor.R, _clearColor.G, _clearColor.B, _clearColor.A };
+			if (_currentRenderTarget != nullptr) {
 				// The clear covers every bound color attachment (the contiguous attached run, bounded by the
 				// draw-buffer count), matching glClear's semantics of clearing all enabled draw buffers
 				ID3D11RenderTargetView* rtvs[D3D11RenderTarget::MaxColorAttachments];
-				const std::uint32_t numRtvs = currentRenderTarget_->GetRTVs(rtvs);
+				const std::uint32_t numRtvs = _currentRenderTarget->GetRTVs(rtvs);
 				for (std::uint32_t i = 0; i < numRtvs; i++) {
-					context_->ClearRenderTargetView(rtvs[i], c);
+					_context->ClearRenderTargetView(rtvs[i], c);
 				}
 			} else {
 				ID3D11RenderTargetView* screenRtv = ScreenRtv();
 				if (screenRtv != nullptr) {
-					context_->ClearRenderTargetView(screenRtv, c);
+					_context->ClearRenderTargetView(screenRtv, c);
 				}
 			}
 		}
@@ -305,8 +305,8 @@ namespace nCine::RHI::D3D11
 	void D3D11Device::DrawCommon(PrimitiveType primitive, std::int32_t firstVertex, std::uint32_t count,
 		bool indexed, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		D3D11ShaderProgram* prog = currentProgram_;
-		if (context_ == nullptr || prog == nullptr || prog->GetVertexShader() == nullptr || count == 0) {
+		D3D11ShaderProgram* prog = _currentProgram;
+		if (_context == nullptr || prog == nullptr || prog->GetVertexShader() == nullptr || count == 0) {
 			return;
 		}
 
@@ -315,11 +315,11 @@ namespace nCine::RHI::D3D11
 		// The viewport is always positive/top-down; the GL<->D3D vertical flip is applied uniformly in the vertex
 		// transform (projection matrix Y negated in BindConstantBuffers), which flips every draw to every target
 		// consistently - so back-buffer geometry and off-screen render targets stay in agreement with no present-flip.
-		if (!lastViewportValid_ || lastViewport_ != viewport_) {
-			D3D11_VIEWPORT vp = MakeViewport(viewport_);
-			context_->RSSetViewports(1, &vp);
-			lastViewport_ = viewport_;
-			lastViewportValid_ = true;
+		if (!_lastViewportValid || _lastViewport != _viewport) {
+			D3D11_VIEWPORT vp = MakeViewport(_viewport);
+			_context->RSSetViewports(1, &vp);
+			_lastViewport = _viewport;
+			_lastViewportValid = true;
 		}
 
 		// SV_VertexID shaders (sprites, background, the fullscreen post-processing chain) need no vertex buffer;
@@ -335,32 +335,32 @@ namespace nCine::RHI::D3D11
 			}
 			UINT strideU = stride;
 			UINT vbOffset = 0;
-			context_->IASetInputLayout(layout);
-			context_->IASetVertexBuffers(0, 1, &vb, &strideU, &vbOffset);
+			_context->IASetInputLayout(layout);
+			_context->IASetVertexBuffers(0, 1, &vb, &strideU, &vbOffset);
 			if (indexed) {
 				const D3D11BufferObject* ibo = prog->GetBoundIbo();
 				ID3D11Buffer* ib = (ibo != nullptr ? ibo->GetD3DBuffer() : nullptr);
 				if (ib == nullptr) {
 					return;
 				}
-				context_->IASetIndexBuffer(ib, indexFormat == IndexFormat::UInt32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
+				_context->IASetIndexBuffer(ib, indexFormat == IndexFormat::UInt32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT, 0);
 			}
 		} else {
-			context_->IASetInputLayout(nullptr);
+			_context->IASetInputLayout(nullptr);
 		}
 
 		const D3D11_PRIMITIVE_TOPOLOGY topology = MapPrimitive(primitive);
-		if (lastTopology_ != std::uint32_t(topology)) {
-			context_->IASetPrimitiveTopology(topology);
-			lastTopology_ = std::uint32_t(topology);
+		if (_lastTopology != std::uint32_t(topology)) {
+			_context->IASetPrimitiveTopology(topology);
+			_lastTopology = std::uint32_t(topology);
 		}
-		if (lastVs_ != prog->GetVertexShader()) {
-			lastVs_ = prog->GetVertexShader();
-			context_->VSSetShader(lastVs_, nullptr, 0);
+		if (_lastVs != prog->GetVertexShader()) {
+			_lastVs = prog->GetVertexShader();
+			_context->VSSetShader(_lastVs, nullptr, 0);
 		}
-		if (lastPs_ != prog->GetPixelShader()) {
-			lastPs_ = prog->GetPixelShader();
-			context_->PSSetShader(lastPs_, nullptr, 0);
+		if (_lastPs != prog->GetPixelShader()) {
+			_lastPs = prog->GetPixelShader();
+			_context->PSSetShader(_lastPs, nullptr, 0);
 		}
 		BindConstantBuffers();
 		BindTextures();
@@ -369,14 +369,14 @@ namespace nCine::RHI::D3D11
 		const UINT indexSize = (indexFormat == IndexFormat::UInt32 ? 4u : 2u);
 		if (indexed) {
 			if (numInstances > 1) {
-				context_->DrawIndexedInstanced(count, std::uint32_t(numInstances), static_cast<UINT>(indexOffset / indexSize), baseVertex, 0);
+				_context->DrawIndexedInstanced(count, std::uint32_t(numInstances), static_cast<UINT>(indexOffset / indexSize), baseVertex, 0);
 			} else {
-				context_->DrawIndexed(count, static_cast<UINT>(indexOffset / indexSize), baseVertex);
+				_context->DrawIndexed(count, static_cast<UINT>(indexOffset / indexSize), baseVertex);
 			}
 		} else if (numInstances > 1) {
-			context_->DrawInstanced(count, std::uint32_t(numInstances), std::uint32_t(firstVertex), 0);
+			_context->DrawInstanced(count, std::uint32_t(numInstances), std::uint32_t(firstVertex), 0);
 		} else {
-			context_->Draw(count, std::uint32_t(firstVertex));
+			_context->Draw(count, std::uint32_t(firstVertex));
 		}
 	}
 
@@ -385,10 +385,10 @@ namespace nCine::RHI::D3D11
 		// "Screen" is the intermediate present texture (flip-blitted into the back-buffer at present time), or the
 		// back-buffer itself if that texture is missing - unless drawing is currently redirected into a secondary
 		// swap chain, whose back-buffer then stands in for the screen target
-		if (secondaryTargetRtv_ != nullptr) {
-			return secondaryTargetRtv_;
+		if (_secondaryTargetRtv != nullptr) {
+			return _secondaryTargetRtv;
 		}
-		return (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+		return (_presentRtv != nullptr ? _presentRtv : _backbufferRtv);
 	}
 
 	void D3D11Device::BindCurrentRenderTarget()
@@ -403,8 +403,8 @@ namespace nCine::RHI::D3D11
 		// SetDrawBuffers - the glDrawBuffers equivalent).
 		ID3D11RenderTargetView* rtvs[MaxRenderTargets] = {};
 		std::uint32_t numRtvs;
-		if (currentRenderTarget_ != nullptr) {
-			numRtvs = currentRenderTarget_->GetRTVs(rtvs);
+		if (_currentRenderTarget != nullptr) {
+			numRtvs = _currentRenderTarget->GetRTVs(rtvs);
 			if (numRtvs == 0) {
 				// Attachment 0 unusable: keep the historical behavior of explicitly binding a null target
 				numRtvs = 1;
@@ -413,8 +413,8 @@ namespace nCine::RHI::D3D11
 			rtvs[0] = ScreenRtv();
 			numRtvs = 1;
 		}
-		if (lastRtvValid_ && lastRtvCount_ == numRtvs &&
-			std::memcmp(lastRtvs_, rtvs, numRtvs * sizeof(ID3D11RenderTargetView*)) == 0) {
+		if (_lastRtvValid && _lastRtvCount == numRtvs &&
+			std::memcmp(_lastRtvs, rtvs, numRtvs * sizeof(ID3D11RenderTargetView*)) == 0) {
 			return;
 		}
 
@@ -422,31 +422,31 @@ namespace nCine::RHI::D3D11
 		// from an earlier pass, unbind it explicitly. Without this the runtime silently nulls the SRV slot at
 		// draw time, which would desync the SRV shadow cache (it would still believe the SRV is bound and skip
 		// a later rebind). Covers every bound color attachment, not just attachment 0.
-		if (currentRenderTarget_ != nullptr) {
+		if (_currentRenderTarget != nullptr) {
 			ID3D11ShaderResourceView* nullSrv = nullptr;
 			for (std::uint32_t a = 0; a < numRtvs; a++) {
-				const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(a);
+				const D3D11Texture* rtTex = _currentRenderTarget->GetColorTexture(a);
 				ID3D11ShaderResourceView* rtSrv = (rtTex != nullptr ? rtTex->GetSRV() : nullptr);
 				if (rtSrv == nullptr) {
 					continue;
 				}
 				for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
-					if (lastSrvs_[0][u] == rtSrv) {
-						context_->PSSetShaderResources(u, 1, &nullSrv);
-						lastSrvs_[0][u] = nullptr;
+					if (_lastSrvs[0][u] == rtSrv) {
+						_context->PSSetShaderResources(u, 1, &nullSrv);
+						_lastSrvs[0][u] = nullptr;
 					}
-					if (lastSrvs_[1][u] == rtSrv) {
-						context_->VSSetShaderResources(u, 1, &nullSrv);
-						lastSrvs_[1][u] = nullptr;
+					if (_lastSrvs[1][u] == rtSrv) {
+						_context->VSSetShaderResources(u, 1, &nullSrv);
+						_lastSrvs[1][u] = nullptr;
 					}
 				}
 			}
 		}
 
-		context_->OMSetRenderTargets(numRtvs, rtvs, nullptr);
-		std::memcpy(lastRtvs_, rtvs, sizeof(lastRtvs_));
-		lastRtvCount_ = numRtvs;
-		lastRtvValid_ = true;
+		_context->OMSetRenderTargets(numRtvs, rtvs, nullptr);
+		std::memcpy(_lastRtvs, rtvs, sizeof(_lastRtvs));
+		_lastRtvCount = numRtvs;
+		_lastRtvValid = true;
 	}
 
 	std::uint32_t D3D11Device::AcquireConstantBuffer(std::uint32_t size)
@@ -455,10 +455,10 @@ namespace nCine::RHI::D3D11
 		if (size16 == 0) {
 			size16 = 16;
 		}
-		if (s_cbufferCursor >= cbufferPool_.size()) {
-			cbufferPool_.push_back(PooledCBuffer{});
+		if (s_cbufferCursor >= _cbufferPool.size()) {
+			_cbufferPool.push_back(PooledCBuffer{});
 		}
-		PooledCBuffer& entry = cbufferPool_[s_cbufferCursor];
+		PooledCBuffer& entry = _cbufferPool[s_cbufferCursor];
 		if (entry.Buffer == nullptr || entry.Size < size16) {
 			SafeRelease(entry.Buffer);
 			D3D11_BUFFER_DESC desc = {};
@@ -466,7 +466,7 @@ namespace nCine::RHI::D3D11
 			desc.Usage = D3D11_USAGE_DYNAMIC;
 			desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			if (FAILED(device_->CreateBuffer(&desc, nullptr, &entry.Buffer))) {
+			if (FAILED(_device->CreateBuffer(&desc, nullptr, &entry.Buffer))) {
 				entry.Buffer = nullptr;
 			}
 			entry.Size = size16;
@@ -477,7 +477,7 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Device::BindConstantBuffers()
 	{
-		D3D11ShaderProgram* prog = currentProgram_;
+		D3D11ShaderProgram* prog = _currentProgram;
 		s_cbufferCursor = 0;
 
 		auto buildAndBind = [&](const CBufferSlotList& slots, bool vertexStage) {
@@ -489,10 +489,10 @@ namespace nCine::RHI::D3D11
 				if (slot.IsGlobals) {
 					// Loose uniforms are scattered across the program's resolved-value pointers, so gather them
 					// (plus the projection Y-flip) into the reusable staging buffer first.
-					if (cbufferStaging_.size() < uploadSize) {
-						cbufferStaging_.resize(uploadSize);
+					if (_cbufferStaging.size() < uploadSize) {
+						_cbufferStaging.resize(uploadSize);
 					}
-					std::uint8_t* dst = cbufferStaging_.data();
+					std::uint8_t* dst = _cbufferStaging.data();
 					std::memset(dst, 0, uploadSize);
 					for (const D3D11CBufferSlot::GlobalVar& gv : slot.Globals) {
 						const std::uint8_t* src = prog->ResolveUniform(gv.Name.c_str());
@@ -507,7 +507,7 @@ namespace nCine::RHI::D3D11
 							// composite and direct-drawn HUD consistent; PresentFrame() flip-blits once for D3D scan-out.
 							// The exception is a secondary swap chain (an ImGui platform window): it is presented
 							// directly, with no flip-blit to undo the flip, so it is drawn top-down as D3D expects.
-							if (secondaryTargetHeight_ == 0 && gv.Size >= 64 && (gv.Name == "uProjectionMatrix" || gv.Name == "uGuiProjection")) {
+							if (_secondaryTargetHeight == 0 && gv.Size >= 64 && (gv.Name == "uProjectionMatrix" || gv.Name == "uGuiProjection")) {
 								float* m = reinterpret_cast<float*>(dst + gv.Offset);
 								m[1] = -m[1];
 								m[5] = -m[5];
@@ -521,8 +521,8 @@ namespace nCine::RHI::D3D11
 					if (slot.BlockIndex < 0 || slot.BlockIndex >= std::int32_t(MaxUniformBindings)) {
 						continue;
 					}
-					const std::uint8_t* blockData = boundUniformRanges_[slot.BlockIndex].Data;
-					const std::uint32_t blockSize = boundUniformRanges_[slot.BlockIndex].Size;
+					const std::uint8_t* blockData = _boundUniformRanges[slot.BlockIndex].Data;
+					const std::uint32_t blockSize = _boundUniformRanges[slot.BlockIndex].Size;
 					if (blockData != nullptr) {
 						// A uniform block is bound with exactly the bytes the shader reads (valid instances), so a
 						// buffer sized to the uploaded range is enough and avoids allocating the full declared cbuffer
@@ -531,16 +531,16 @@ namespace nCine::RHI::D3D11
 						}
 						srcBytes = blockData;
 					} else {
-						if (cbufferStaging_.size() < uploadSize) {
-							cbufferStaging_.resize(uploadSize);
+						if (_cbufferStaging.size() < uploadSize) {
+							_cbufferStaging.resize(uploadSize);
 						}
-						std::memset(cbufferStaging_.data(), 0, uploadSize);
-						srcBytes = cbufferStaging_.data();
+						std::memset(_cbufferStaging.data(), 0, uploadSize);
+						srcBytes = _cbufferStaging.data();
 					}
 				}
 
 				const std::uint32_t poolIndex = AcquireConstantBuffer(uploadSize);
-				PooledCBuffer& entry = cbufferPool_[poolIndex];
+				PooledCBuffer& entry = _cbufferPool[poolIndex];
 				ID3D11Buffer* cb = entry.Buffer;
 				if (cb == nullptr) {
 					continue;
@@ -553,19 +553,19 @@ namespace nCine::RHI::D3D11
 				const std::uint64_t hash = static_cast<std::uint64_t>(xxHash3(reinterpret_cast<const char*>(srcBytes), uploadSize));
 				if (entry.ContentSize != uploadSize || entry.ContentHash != hash) {
 					D3D11_MAPPED_SUBRESOURCE mapped;
-					if (FAILED(context_->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+					if (FAILED(_context->Map(cb, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
 						continue;
 					}
 					std::memcpy(mapped.pData, srcBytes, uploadSize);
-					context_->Unmap(cb, 0);
+					_context->Unmap(cb, 0);
 					entry.ContentHash = hash;
 					entry.ContentSize = uploadSize;
 				}
 
 				if (vertexStage) {
-					context_->VSSetConstantBuffers(slot.Register, 1, &cb);
+					_context->VSSetConstantBuffers(slot.Register, 1, &cb);
 				} else {
-					context_->PSSetConstantBuffers(slot.Register, 1, &cb);
+					_context->PSSetConstantBuffers(slot.Register, 1, &cb);
 				}
 			}
 		};
@@ -580,32 +580,32 @@ namespace nCine::RHI::D3D11
 		// the call when the slot already holds this SRV/sampler. The read/write hazard guard: a texture that is
 		// any color attachment of the current render target is never bound as an SRV (the runtime would silently
 		// null it, desyncing the shadow); it re-binds naturally on the first draw after the target changes.
-		const D3D11ShaderProgram* prog = currentProgram_;
+		const D3D11ShaderProgram* prog = _currentProgram;
 		const std::uint32_t psMask = prog->GetPsTextureMask();
 		const std::uint32_t vsMask = prog->GetVsTextureMask();
 		const D3D11Texture* rtTexs[D3D11RenderTarget::MaxColorAttachments];
 		std::uint32_t numRtTexs = 0;
-		if (currentRenderTarget_ != nullptr) {
-			std::uint32_t boundCount = currentRenderTarget_->GetAttachedCount();
-			const std::uint32_t numDrawBuffers = currentRenderTarget_->GetNumDrawBuffers();
+		if (_currentRenderTarget != nullptr) {
+			std::uint32_t boundCount = _currentRenderTarget->GetAttachedCount();
+			const std::uint32_t numDrawBuffers = _currentRenderTarget->GetNumDrawBuffers();
 			if (numDrawBuffers > 0 && numDrawBuffers < boundCount) {
 				boundCount = numDrawBuffers;
 			}
 			for (std::uint32_t a = 0; a < boundCount; a++) {
-				const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(a);
+				const D3D11Texture* rtTex = _currentRenderTarget->GetColorTexture(a);
 				if (rtTex != nullptr) {
 					rtTexs[numRtTexs++] = rtTex;
 				}
 			}
 		}
-		const bool force = !srvShadowValid_;
+		const bool force = !_srvShadowValid;
 
 		std::uint32_t mask = psMask | vsMask;
 		for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
 			if ((mask & (1u << u)) == 0 && !force) {
 				continue;
 			}
-			const D3D11Texture* tex = boundTextures_[u];
+			const D3D11Texture* tex = _boundTextures[u];
 			for (std::uint32_t a = 0; a < numRtTexs; a++) {
 				if (tex == rtTexs[a]) {
 					tex = nullptr;
@@ -614,37 +614,37 @@ namespace nCine::RHI::D3D11
 			}
 			ID3D11ShaderResourceView* srv = (tex != nullptr ? tex->GetSRV() : nullptr);
 			ID3D11SamplerState* samp = (tex != nullptr ? tex->GetSampler() : nullptr);
-			if (force || lastSrvs_[0][u] != srv) {
-				context_->PSSetShaderResources(u, 1, &srv);
-				lastSrvs_[0][u] = srv;
+			if (force || _lastSrvs[0][u] != srv) {
+				_context->PSSetShaderResources(u, 1, &srv);
+				_lastSrvs[0][u] = srv;
 			}
-			if (force || lastSamplers_[0][u] != samp) {
-				context_->PSSetSamplers(u, 1, &samp);
-				lastSamplers_[0][u] = samp;
+			if (force || _lastSamplers[0][u] != samp) {
+				_context->PSSetSamplers(u, 1, &samp);
+				_lastSamplers[0][u] = samp;
 			}
-			if (force || lastSrvs_[1][u] != srv) {
-				context_->VSSetShaderResources(u, 1, &srv);
-				lastSrvs_[1][u] = srv;
+			if (force || _lastSrvs[1][u] != srv) {
+				_context->VSSetShaderResources(u, 1, &srv);
+				_lastSrvs[1][u] = srv;
 			}
-			if (force || lastSamplers_[1][u] != samp) {
-				context_->VSSetSamplers(u, 1, &samp);
-				lastSamplers_[1][u] = samp;
+			if (force || _lastSamplers[1][u] != samp) {
+				_context->VSSetSamplers(u, 1, &samp);
+				_lastSamplers[1][u] = samp;
 			}
 		}
-		srvShadowValid_ = true;
+		_srvShadowValid = true;
 	}
 
 	void D3D11Device::ApplyRenderState()
 	{
 		// Blend state (keyed on enabled + the four factors)
 		{
-			std::uint64_t key = (blending_.Enabled ? 1u : 0u);
-			key |= std::uint64_t(BlendCode(blending_.SrcRgb)) << 1;
-			key |= std::uint64_t(BlendCode(blending_.DstRgb)) << 5;
-			key |= std::uint64_t(BlendCode(blending_.SrcAlpha)) << 9;
-			key |= std::uint64_t(BlendCode(blending_.DstAlpha)) << 13;
+			std::uint64_t key = (_blending.Enabled ? 1u : 0u);
+			key |= std::uint64_t(BlendCode(_blending.SrcRgb)) << 1;
+			key |= std::uint64_t(BlendCode(_blending.DstRgb)) << 5;
+			key |= std::uint64_t(BlendCode(_blending.SrcAlpha)) << 9;
+			key |= std::uint64_t(BlendCode(_blending.DstAlpha)) << 13;
 			ID3D11BlendState* state = nullptr;
-			for (const BlendStateEntry& e : blendStates_) {
+			for (const BlendStateEntry& e : _blendStates) {
 				if (e.Key == key) {
 					state = e.State;
 					break;
@@ -656,45 +656,45 @@ namespace nCine::RHI::D3D11
 				// RenderTarget[0] description to every simultaneously bound render target, which is exactly
 				// the GL contract - no per-attachment replication needed.
 				D3D11_BLEND_DESC desc = {};
-				desc.RenderTarget[0].BlendEnable = blending_.Enabled ? TRUE : FALSE;
-				desc.RenderTarget[0].SrcBlend = MapBlend(blending_.SrcRgb, false);
-				desc.RenderTarget[0].DestBlend = MapBlend(blending_.DstRgb, false);
+				desc.RenderTarget[0].BlendEnable = _blending.Enabled ? TRUE : FALSE;
+				desc.RenderTarget[0].SrcBlend = MapBlend(_blending.SrcRgb, false);
+				desc.RenderTarget[0].DestBlend = MapBlend(_blending.DstRgb, false);
 				desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-				desc.RenderTarget[0].SrcBlendAlpha = MapBlend(blending_.SrcAlpha, true);
-				desc.RenderTarget[0].DestBlendAlpha = MapBlend(blending_.DstAlpha, true);
+				desc.RenderTarget[0].SrcBlendAlpha = MapBlend(_blending.SrcAlpha, true);
+				desc.RenderTarget[0].DestBlendAlpha = MapBlend(_blending.DstAlpha, true);
 				desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 				desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-				if (SUCCEEDED(device_->CreateBlendState(&desc, &state))) {
-					blendStates_.push_back({ key, state });
+				if (SUCCEEDED(_device->CreateBlendState(&desc, &state))) {
+					_blendStates.push_back({ key, state });
 				}
 			}
-			if (state != lastBlendState_ || state == nullptr) {
+			if (state != _lastBlendState || state == nullptr) {
 				const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-				context_->OMSetBlendState(state, blendFactor, 0xFFFFFFFF);
-				lastBlendState_ = state;
+				_context->OMSetBlendState(state, blendFactor, 0xFFFFFFFF);
+				_lastBlendState = state;
 			}
 		}
 
 		// Depth-stencil: the renderer is 2D and no depth buffer is attached, so depth is always disabled
-		if (depthDisabledState_ == nullptr) {
+		if (_depthDisabledState == nullptr) {
 			D3D11_DEPTH_STENCIL_DESC desc = {};
 			desc.DepthEnable = FALSE;
 			desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 			desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
 			desc.StencilEnable = FALSE;
-			device_->CreateDepthStencilState(&desc, &depthDisabledState_);
-			depthStateApplied_ = false;
+			_device->CreateDepthStencilState(&desc, &_depthDisabledState);
+			_depthStateApplied = false;
 		}
-		if (!depthStateApplied_) {
-			context_->OMSetDepthStencilState(depthDisabledState_, 0);
-			depthStateApplied_ = true;
+		if (!_depthStateApplied) {
+			_context->OMSetDepthStencilState(_depthDisabledState, 0);
+			_depthStateApplied = true;
 		}
 
 		// Rasterizer (keyed on cull enabled + mode + scissor enabled)
 		{
-			std::uint32_t key = (cullFace_.Enabled ? 1u : 0u) | (std::uint32_t(cullFace_.Mode) << 1) | (scissor_.Enabled ? 0x10000u : 0u);
+			std::uint32_t key = (_cullFace.Enabled ? 1u : 0u) | (std::uint32_t(_cullFace.Mode) << 1) | (_scissor.Enabled ? 0x10000u : 0u);
 			ID3D11RasterizerState* state = nullptr;
-			for (const RasterStateEntry& e : rasterStates_) {
+			for (const RasterStateEntry& e : _rasterStates) {
 				if (e.Key == key) {
 					state = e.State;
 					break;
@@ -703,10 +703,10 @@ namespace nCine::RHI::D3D11
 			if (state == nullptr) {
 				D3D11_RASTERIZER_DESC desc = {};
 				desc.FillMode = D3D11_FILL_SOLID;
-				if (!cullFace_.Enabled) {
+				if (!_cullFace.Enabled) {
 					desc.CullMode = D3D11_CULL_NONE;
 				} else {
-					desc.CullMode = (cullFace_.Mode == CullFaceMode::Front ? D3D11_CULL_FRONT : D3D11_CULL_BACK);
+					desc.CullMode = (_cullFace.Mode == CullFaceMode::Front ? D3D11_CULL_FRONT : D3D11_CULL_BACK);
 				}
 				desc.FrontCounterClockwise = TRUE;	// GL default winding
 				// A command's layer is turned into a clip-space Z spanning the camera's near..far planes, which are
@@ -716,14 +716,14 @@ namespace nCine::RHI::D3D11
 				// range renderable; there is nothing to lose, the renderer is 2D and never attaches a depth buffer
 				// (see the always-disabled depth-stencil state above). Mirrors the Vulkan backend's depth clamp.
 				desc.DepthClipEnable = FALSE;
-				desc.ScissorEnable = scissor_.Enabled ? TRUE : FALSE;
-				if (SUCCEEDED(device_->CreateRasterizerState(&desc, &state))) {
-					rasterStates_.push_back({ key, state });
+				desc.ScissorEnable = _scissor.Enabled ? TRUE : FALSE;
+				if (SUCCEEDED(_device->CreateRasterizerState(&desc, &state))) {
+					_rasterStates.push_back({ key, state });
 				}
 			}
-			if (state != lastRasterState_ || state == nullptr) {
-				context_->RSSetState(state);
-				lastRasterState_ = state;
+			if (state != _lastRasterState || state == nullptr) {
+				_context->RSSetState(state);
+				_lastRasterState = state;
 			}
 		}
 
@@ -734,13 +734,13 @@ namespace nCine::RHI::D3D11
 		// D3D row index (top = glY) - the correction is PresentFrame()'s flip-blit. The real back-buffer is
 		// top-down but is never scissored into (that blit runs with the default rasterizer state, which has
 		// scissoring disabled); a secondary swap chain, drawn top-down because it skips the flip-blit, is not.
-		if (scissor_.Enabled) {
-			const Recti& r = scissor_.Rect;
-			// The one top-down surface is a secondary swap chain's back-buffer (see secondaryTargetHeight_), whose
+		if (_scissor.Enabled) {
+			const Recti& r = _scissor.Rect;
+			// The one top-down surface is a secondary swap chain's back-buffer (see _secondaryTargetHeight), whose
 			// rows therefore need the standard flip against the target height
 			std::int32_t top = r.Y;
-			if (secondaryTargetHeight_ > 0) {
-				top = secondaryTargetHeight_ - (r.Y + r.H);
+			if (_secondaryTargetHeight > 0) {
+				top = _secondaryTargetHeight - (r.Y + r.H);
 			}
 			D3D11_RECT sr;
 			// A rectangle may reach outside the target (an ImGui window dragged past the left/top edge gives
@@ -750,11 +750,11 @@ namespace nCine::RHI::D3D11
 			sr.top = (top > 0 ? top : 0);
 			sr.right = (r.X + r.W > sr.left ? r.X + r.W : sr.left);
 			sr.bottom = (top + r.H > sr.top ? top + r.H : sr.top);
-			if (!lastScissorValid_ || lastScissorRect_.L != sr.left || lastScissorRect_.T != sr.top ||
-				lastScissorRect_.R != sr.right || lastScissorRect_.B != sr.bottom) {
-				context_->RSSetScissorRects(1, &sr);
-				lastScissorRect_ = { sr.left, sr.top, sr.right, sr.bottom };
-				lastScissorValid_ = true;
+			if (!_lastScissorValid || _lastScissorRect.L != sr.left || _lastScissorRect.T != sr.top ||
+				_lastScissorRect.R != sr.right || _lastScissorRect.B != sr.bottom) {
+				_context->RSSetScissorRects(1, &sr);
+				_lastScissorRect = { sr.left, sr.top, sr.right, sr.bottom };
+				_lastScissorValid = true;
 			}
 		}
 	}
@@ -770,21 +770,21 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Device::SetupInitialState()
 	{
-		blending_ = BlendingState{};
-		depthTest_ = DepthTestState{};
-		cullFace_ = CullFaceState{};
-		scissor_ = ScissorState{};
+		_blending = BlendingState{};
+		_depthTest = DepthTestState{};
+		_cullFace = CullFaceState{};
+		_scissor = ScissorState{};
 	}
 
 	// -- Backend extensions (recorders) --
 
-	void D3D11Device::BindProgram(D3D11ShaderProgram* program) { currentProgram_ = program; }
-	D3D11ShaderProgram* D3D11Device::CurrentProgram() { return currentProgram_; }
+	void D3D11Device::BindProgram(D3D11ShaderProgram* program) { _currentProgram = program; }
+	D3D11ShaderProgram* D3D11Device::CurrentProgram() { return _currentProgram; }
 
 	void D3D11Device::BindTexture(std::uint32_t unit, const D3D11Texture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
@@ -795,8 +795,8 @@ namespace nCine::RHI::D3D11
 		// in splitscreen). Clear every unit it may be bound to. Only touches the static array (no D3D calls), so it
 		// is safe at any time including shutdown. Mirrors GLTexture's destructor.
 		for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
-			if (boundTextures_[unit] == texture) {
-				boundTextures_[unit] = nullptr;
+			if (_boundTextures[unit] == texture) {
+				_boundTextures[unit] = nullptr;
 			}
 		}
 		// Scrub the last-bound SRV/sampler shadows too (the views are released right after this call, and a new
@@ -807,13 +807,13 @@ namespace nCine::RHI::D3D11
 			ID3D11SamplerState* samp = texture->PeekSampler();
 			for (std::uint32_t stage = 0; stage < 2; stage++) {
 				for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
-					if (srv != nullptr && lastSrvs_[stage][unit] == srv) {
-						lastSrvs_[stage][unit] = nullptr;
-						srvShadowValid_ = false;
+					if (srv != nullptr && _lastSrvs[stage][unit] == srv) {
+						_lastSrvs[stage][unit] = nullptr;
+						_srvShadowValid = false;
 					}
-					if (samp != nullptr && lastSamplers_[stage][unit] == samp) {
-						lastSamplers_[stage][unit] = nullptr;
-						srvShadowValid_ = false;
+					if (samp != nullptr && _lastSamplers[stage][unit] == samp) {
+						_lastSamplers[stage][unit] = nullptr;
+						_srvShadowValid = false;
 					}
 				}
 			}
@@ -822,37 +822,37 @@ namespace nCine::RHI::D3D11
 
 	const D3D11Texture* D3D11Device::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void D3D11Device::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
 	void D3D11Device::SetRenderTarget(D3D11RenderTarget* renderTarget)
 	{
-		currentRenderTarget_ = renderTarget;
-		if (context_ != nullptr) {
+		_currentRenderTarget = renderTarget;
+		if (_context != nullptr) {
 			BindCurrentRenderTarget();
 		}
 	}
 
 	void D3D11Device::UnbindRenderTarget(const D3D11RenderTarget* renderTarget)
 	{
-		// Called from ~D3D11RenderTarget so a destroyed render target can't dangle as currentRenderTarget_ (a later
+		// Called from ~D3D11RenderTarget so a destroyed render target can't dangle as _currentRenderTarget (a later
 		// Clear/scissor/draw dereferences it). Reverts to the screen (nullptr); the pipeline binds a fresh target
 		// before drawing to it. Only touches the static pointer (no D3D calls), so it is safe at any time.
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
 		// The RTVs are released with the target; forget them so a recycled pointer can't match the shadow
-		std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
-		lastRtvCount_ = 0;
-		lastRtvValid_ = false;
+		std::memset(_lastRtvs, 0, sizeof(_lastRtvs));
+		_lastRtvCount = 0;
+		_lastRtvValid = false;
 	}
 
 	void D3D11Device::OnRtvReleased(const ID3D11RenderTargetView* rtv)
@@ -861,12 +861,12 @@ namespace nCine::RHI::D3D11
 		// destruction). If the dying view is part of the last-bound shadow, forget the whole set so a new RTV
 		// recycling the same pointer can't be mistaken for still bound (the next draw re-issues the bind).
 		// Only touches the static shadow (no D3D calls), so it is safe at any time including shutdown.
-		if (lastRtvValid_ && rtv != nullptr) {
-			for (std::uint32_t i = 0; i < lastRtvCount_; i++) {
-				if (lastRtvs_[i] == rtv) {
-					std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
-					lastRtvCount_ = 0;
-					lastRtvValid_ = false;
+		if (_lastRtvValid && rtv != nullptr) {
+			for (std::uint32_t i = 0; i < _lastRtvCount; i++) {
+				if (_lastRtvs[i] == rtv) {
+					std::memset(_lastRtvs, 0, sizeof(_lastRtvs));
+					_lastRtvCount = 0;
+					_lastRtvValid = false;
 					break;
 				}
 			}
@@ -875,15 +875,15 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Device::OnProgramDestroyed(const D3D11ShaderProgram* program)
 	{
-		if (currentProgram_ == program) {
-			currentProgram_ = nullptr;
+		if (_currentProgram == program) {
+			_currentProgram = nullptr;
 		}
 		if (program != nullptr) {
-			if (lastVs_ != nullptr && lastVs_ == program->GetVertexShader()) {
-				lastVs_ = nullptr;
+			if (_lastVs != nullptr && _lastVs == program->GetVertexShader()) {
+				_lastVs = nullptr;
 			}
-			if (lastPs_ != nullptr && lastPs_ == program->GetPixelShader()) {
-				lastPs_ = nullptr;
+			if (_lastPs != nullptr && _lastPs == program->GetPixelShader()) {
+				_lastPs = nullptr;
 			}
 		}
 	}
@@ -967,8 +967,8 @@ namespace nCine::RHI::D3D11
 
 	bool D3D11Device::CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync)
 	{
-		vsync_ = vsync;
-		swapchainFlags_ = 0;	// negotiated below on the desktop path; the UWP CoreWindow chain carries no flags
+		_vsync = vsync;
+		_swapchainFlags = 0;	// negotiated below on the desktop path; the UWP CoreWindow chain carries no flags
 
 		if (width <= 0) width = 1;
 		if (height <= 0) height = 1;
@@ -995,11 +995,11 @@ namespace nCine::RHI::D3D11
 		// with Direct2D/DirectWrite and matches the ANGLE/UWP configuration.
 		const UINT createFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 		HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createFlags,
-			requestedLevels, numRequestedLevels, D3D11_SDK_VERSION, &device_, &obtainedLevel, &context_);
+			requestedLevels, numRequestedLevels, D3D11_SDK_VERSION, &_device, &obtainedLevel, &_context);
 		if (FAILED(hr)) {
 			LOGW("D3D11CreateDevice (hardware) failed (0x{:.8x}), falling back to WARP", static_cast<std::uint32_t>(hr));
 			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createFlags,
-				requestedLevels, numRequestedLevels, D3D11_SDK_VERSION, &device_, &obtainedLevel, &context_);
+				requestedLevels, numRequestedLevels, D3D11_SDK_VERSION, &_device, &obtainedLevel, &_context);
 		}
 		if (FAILED(hr)) {
 			LOGE("D3D11CreateDevice failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
@@ -1009,7 +1009,7 @@ namespace nCine::RHI::D3D11
 
 		// Fetch the DXGI factory that owns the device's adapter (needed for CreateSwapChainForCoreWindow)
 		IDXGIDevice1* dxgiDevice = nullptr;
-		hr = device_->QueryInterface(__uuidof(IDXGIDevice1), reinterpret_cast<void**>(&dxgiDevice));
+		hr = _device->QueryInterface(__uuidof(IDXGIDevice1), reinterpret_cast<void**>(&dxgiDevice));
 		if (FAILED(hr) || dxgiDevice == nullptr) {
 			LOGE("Failed to query IDXGIDevice1 from the Direct3D 11 device: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			DestroySwapchain();
@@ -1046,14 +1046,14 @@ namespace nCine::RHI::D3D11
 		sd.Flags = 0;
 
 		IDXGISwapChain1* swapchain1 = nullptr;
-		hr = factory->CreateSwapChainForCoreWindow(device_, reinterpret_cast<IUnknown*>(windowHandle), &sd, nullptr, &swapchain1);
+		hr = factory->CreateSwapChainForCoreWindow(_device, reinterpret_cast<IUnknown*>(windowHandle), &sd, nullptr, &swapchain1);
 		SafeRelease(factory);
 		if (FAILED(hr) || swapchain1 == nullptr) {
 			LOGE("IDXGIFactory2::CreateSwapChainForCoreWindow() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			DestroySwapchain();
 			return false;
 		}
-		swapchain_ = swapchain1;							// IDXGISwapChain1 derives from IDXGISwapChain
+		_swapchain = swapchain1;							// IDXGISwapChain1 derives from IDXGISwapChain
 #else
 		// -- Desktop (SDL2 HWND) path: a windowed swap chain created from the native HWND --
 		// The *flip model* is preferred over the legacy bitblt one: its buffers can be handed straight to the
@@ -1066,10 +1066,10 @@ namespace nCine::RHI::D3D11
 		// flip model otherwise replaces with a vblank-paced discard), then plain flip, then legacy bitblt.
 		auto createDeviceAndSwapchain = [&](D3D_DRIVER_TYPE driverType, DXGI_SWAP_EFFECT swapEffect, UINT flags) -> HRESULT {
 			// A failed attempt may have handed back some of the objects; start from a clean slate every time
-			SafeRelease(swapchain_);
-			SafeRelease(context_);
-			SafeRelease(device_);
-			swapchainFlags_ = flags;
+			SafeRelease(_swapchain);
+			SafeRelease(_context);
+			SafeRelease(_device);
+			_swapchainFlags = flags;
 
 			DXGI_SWAP_CHAIN_DESC sd = {};
 			// The flip model requires at least two buffers (and forbids multisampling, which is unused here)
@@ -1089,7 +1089,7 @@ namespace nCine::RHI::D3D11
 
 			return D3D11CreateDeviceAndSwapChain(nullptr, driverType, nullptr, 0,
 				requestedLevels, numRequestedLevels, D3D11_SDK_VERSION,
-				&sd, &swapchain_, &device_, &obtainedLevel, &context_);
+				&sd, &_swapchain, &_device, &obtainedLevel, &_context);
 		};
 		auto negotiateSwapchain = [&](D3D_DRIVER_TYPE driverType) -> HRESULT {
 			HRESULT result = createDeviceAndSwapchain(driverType, DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
@@ -1118,11 +1118,11 @@ namespace nCine::RHI::D3D11
 			// Remember the negotiated model for the summary trace below - it is worth knowing when a presentation
 			// problem is reported (a bitblt chain cannot cover the taskbar in borderless fullscreen, nor tear)
 			DXGI_SWAP_CHAIN_DESC obtained = {};
-			if (SUCCEEDED(swapchain_->GetDesc(&obtained))) {
+			if (SUCCEEDED(_swapchain->GetDesc(&obtained))) {
 				swapchainModel = (obtained.SwapEffect == DXGI_SWAP_EFFECT_DISCARD || obtained.SwapEffect == DXGI_SWAP_EFFECT_SEQUENTIAL ? "bitblt" : "flip");
 				swapchainBuffers = static_cast<std::uint32_t>(obtained.BufferCount);
 			}
-			swapchainTearing = ((swapchainFlags_ & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0);
+			swapchainTearing = ((_swapchainFlags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0);
 		}
 
 		// DXGI hooks the output window and turns Alt+Enter into its own exclusive-fullscreen toggle. The game
@@ -1131,7 +1131,7 @@ namespace nCine::RHI::D3D11
 		// disagreeing about the fullscreen state. Opt out and leave SDL as the only authority.
 		{
 			IDXGIFactory* factory = nullptr;
-			if (SUCCEEDED(swapchain_->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) && factory != nullptr) {
+			if (SUCCEEDED(_swapchain->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) && factory != nullptr) {
 				factory->MakeWindowAssociation(reinterpret_cast<HWND>(windowHandle), DXGI_MWA_NO_ALT_ENTER);
 				SafeRelease(factory);
 			}
@@ -1140,15 +1140,15 @@ namespace nCine::RHI::D3D11
 
 		// The real texture-dimension limit of the obtained feature level: D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION
 		// (16384) on 11_x, 8192 (the D3D10_REQ_ equivalent) on the 10.x fallback levels
-		maxTextureDimension_ = (obtainedLevel >= D3D_FEATURE_LEVEL_11_0 ? D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION : 8192);
+		_maxTextureDimension = (obtainedLevel >= D3D_FEATURE_LEVEL_11_0 ? D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION : 8192);
 
 		if (!CreateBackbufferRtv()) {
 			DestroySwapchain();
 			return false;
 		}
 
-		backbufferWidth_ = width;
-		backbufferHeight_ = height;
+		_backbufferWidth = width;
+		_backbufferHeight = height;
 		CreatePresentResources(width, height);
 
 		SetViewport(Recti(0, 0, width, height));
@@ -1165,57 +1165,57 @@ namespace nCine::RHI::D3D11
 
 	bool D3D11Device::CreateBackbufferRtv()
 	{
-		if (device_ == nullptr || swapchain_ == nullptr) {
+		if (_device == nullptr || _swapchain == nullptr) {
 			return false;
 		}
 
 		ID3D11Texture2D* backBuffer = nullptr;
-		HRESULT hr = swapchain_->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
+		HRESULT hr = _swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
 		if (FAILED(hr) || backBuffer == nullptr) {
 			LOGE("IDXGISwapChain::GetBuffer() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return false;
 		}
 
-		hr = device_->CreateRenderTargetView(backBuffer, nullptr, &backbufferRtv_);
+		hr = _device->CreateRenderTargetView(backBuffer, nullptr, &_backbufferRtv);
 		backBuffer->Release();
 		if (FAILED(hr)) {
 			LOGE("ID3D11Device::CreateRenderTargetView() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return false;
 		}
 
-		context_->OMSetRenderTargets(1, &backbufferRtv_, nullptr);
+		_context->OMSetRenderTargets(1, &_backbufferRtv, nullptr);
 		InvalidateCachedState();
 		return true;
 	}
 
 	void D3D11Device::ResizeSwapchain(std::int32_t width, std::int32_t height)
 	{
-		if (swapchain_ == nullptr || context_ == nullptr || width <= 0 || height <= 0) {
+		if (_swapchain == nullptr || _context == nullptr || width <= 0 || height <= 0) {
 			return;
 		}
 
-		context_->OMSetRenderTargets(0, nullptr, nullptr);
-		SafeRelease(backbufferRtv_);
+		_context->OMSetRenderTargets(0, nullptr, nullptr);
+		SafeRelease(_backbufferRtv);
 
 		// The creation flags must be repeated here (0 would silently drop DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING and
 		// make the next tearing present fail); 0 buffers / DXGI_FORMAT_UNKNOWN keep the existing count and format
-		HRESULT hr = swapchain_->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height),
-			DXGI_FORMAT_UNKNOWN, static_cast<UINT>(swapchainFlags_));
+		HRESULT hr = _swapchain->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height),
+			DXGI_FORMAT_UNKNOWN, static_cast<UINT>(_swapchainFlags));
 		if (FAILED(hr)) {
 			LOGE("IDXGISwapChain::ResizeBuffers() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return;
 		}
 
 		CreateBackbufferRtv();
-		backbufferWidth_ = width;
-		backbufferHeight_ = height;
+		_backbufferWidth = width;
+		_backbufferHeight = height;
 		CreatePresentResources(width, height);
 		SetViewport(Recti(0, 0, width, height));
 	}
 
 	bool D3D11Device::CreatePresentResources(std::int32_t width, std::int32_t height)
 	{
-		if (device_ == nullptr || width <= 0 || height <= 0) {
+		if (_device == nullptr || width <= 0 || height <= 0) {
 			return false;
 		}
 
@@ -1230,27 +1230,27 @@ namespace nCine::RHI::D3D11
 		desc.SampleDesc.Count = 1;
 		desc.Usage = D3D11_USAGE_DEFAULT;
 		desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		if (FAILED(device_->CreateTexture2D(&desc, nullptr, &presentTexture_))) {
+		if (FAILED(_device->CreateTexture2D(&desc, nullptr, &_presentTexture))) {
 			return false;
 		}
-		device_->CreateRenderTargetView(presentTexture_, nullptr, &presentRtv_);
-		device_->CreateShaderResourceView(presentTexture_, nullptr, &presentSrv_);
+		_device->CreateRenderTargetView(_presentTexture, nullptr, &_presentRtv);
+		_device->CreateShaderResourceView(_presentTexture, nullptr, &_presentSrv);
 
 		// Compile the flip-blit shaders and sampler once (kept across resizes)
-		if (presentVs_ == nullptr || presentPs_ == nullptr) {
+		if (_presentVs == nullptr || _presentPs == nullptr) {
 			ID3DBlob* vsBlob = nullptr;
 			ID3DBlob* psBlob = nullptr;
 			if (SUCCEEDED(D3DCompile(kPresentVs, std::strlen(kPresentVs), nullptr, nullptr, nullptr, "VSMain", "vs_4_0", 0, 0, &vsBlob, nullptr)) &&
 				SUCCEEDED(D3DCompile(kPresentPs, std::strlen(kPresentPs), nullptr, nullptr, nullptr, "PSMain", "ps_4_0", 0, 0, &psBlob, nullptr))) {
-				device_->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &presentVs_);
-				device_->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &presentPs_);
+				_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &_presentVs);
+				_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &_presentPs);
 			} else {
 				LOGE("Failed to compile the Direct3D 11 present flip-blit shaders");
 			}
 			SafeRelease(vsBlob);
 			SafeRelease(psBlob);
 		}
-		if (presentSampler_ == nullptr) {
+		if (_presentSampler == nullptr) {
 			D3D11_SAMPLER_DESC sd = {};
 			sd.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 			sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -1258,16 +1258,16 @@ namespace nCine::RHI::D3D11
 			sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 			sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 			sd.MaxLOD = D3D11_FLOAT32_MAX;
-			device_->CreateSamplerState(&sd, &presentSampler_);
+			_device->CreateSamplerState(&sd, &_presentSampler);
 		}
 		return true;
 	}
 
 	void D3D11Device::ReleasePresentResources()
 	{
-		SafeRelease(presentSrv_);
-		SafeRelease(presentRtv_);
-		SafeRelease(presentTexture_);
+		SafeRelease(_presentSrv);
+		SafeRelease(_presentRtv);
+		SafeRelease(_presentTexture);
 	}
 
 	void D3D11Device::PresentFrame()
@@ -1276,40 +1276,40 @@ namespace nCine::RHI::D3D11
 		// flip-blit it vertically into the real back-buffer, then present. This is the single GL->D3D scan-out
 		// correction (the software backend's SDL_FLIP_VERTICAL equivalent), applied only at the final output so it
 		// is uniform across every path regardless of how many off-screen round-trips it made.
-		if (context_ != nullptr && backbufferRtv_ != nullptr && presentSrv_ != nullptr &&
-			presentVs_ != nullptr && presentPs_ != nullptr) {
-			context_->OMSetRenderTargets(1, &backbufferRtv_, nullptr);
+		if (_context != nullptr && _backbufferRtv != nullptr && _presentSrv != nullptr &&
+			_presentVs != nullptr && _presentPs != nullptr) {
+			_context->OMSetRenderTargets(1, &_backbufferRtv, nullptr);
 			D3D11_VIEWPORT vp;
 			vp.TopLeftX = 0.0f;
 			vp.TopLeftY = 0.0f;
-			vp.Width = static_cast<float>(backbufferWidth_);
-			vp.Height = static_cast<float>(backbufferHeight_);
+			vp.Width = static_cast<float>(_backbufferWidth);
+			vp.Height = static_cast<float>(_backbufferHeight);
 			vp.MinDepth = 0.0f;
 			vp.MaxDepth = 1.0f;
-			context_->RSSetViewports(1, &vp);
-			context_->IASetInputLayout(nullptr);
-			context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			context_->RSSetState(nullptr);
-			context_->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
-			context_->VSSetShader(presentVs_, nullptr, 0);
-			context_->PSSetShader(presentPs_, nullptr, 0);
-			context_->PSSetShaderResources(0, 1, &presentSrv_);
-			context_->PSSetSamplers(0, 1, &presentSampler_);
-			context_->Draw(3, 0);
+			_context->RSSetViewports(1, &vp);
+			_context->IASetInputLayout(nullptr);
+			_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			_context->RSSetState(nullptr);
+			_context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+			_context->VSSetShader(_presentVs, nullptr, 0);
+			_context->PSSetShader(_presentPs, nullptr, 0);
+			_context->PSSetShaderResources(0, 1, &_presentSrv);
+			_context->PSSetSamplers(0, 1, &_presentSampler);
+			_context->Draw(3, 0);
 			// Unbind so the present texture can be bound as a render target again next frame (no read/write hazard)
 			ID3D11ShaderResourceView* nullSrv = nullptr;
-			context_->PSSetShaderResources(0, 1, &nullSrv);
+			_context->PSSetShaderResources(0, 1, &nullSrv);
 			// The blit bound its own shaders/state/target directly; drop the shadow state so the next frame's
 			// first draw re-issues everything
 			InvalidateCachedState();
 		}
-		if (swapchain_ != nullptr) {
+		if (_swapchain != nullptr) {
 			// With vsync off, a flip-model chain created with ALLOW_TEARING must also be *presented* with the
 			// tearing flag to actually run uncapped; without it the flip model paces every present to vblank
 			// (the flag is only legal at sync interval 0, which is exactly the vsync-off case)
-			const UINT presentFlags = (!vsync_ && (swapchainFlags_ & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0
+			const UINT presentFlags = (!_vsync && (_swapchainFlags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0
 				? DXGI_PRESENT_ALLOW_TEARING : 0u);
-			swapchain_->Present(vsync_ ? 1 : 0, presentFlags);
+			_swapchain->Present(_vsync ? 1 : 0, presentFlags);
 		}
 	}
 
@@ -1328,7 +1328,7 @@ namespace nCine::RHI::D3D11
 
 	void* D3D11Device::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
 	{
-		if (device_ == nullptr || swapchain_ == nullptr || windowHandle == nullptr) {
+		if (_device == nullptr || _swapchain == nullptr || windowHandle == nullptr) {
 			return nullptr;
 		}
 		if (width <= 0) width = 1;
@@ -1336,7 +1336,7 @@ namespace nCine::RHI::D3D11
 
 		// Every swap chain of a device must come from the factory that owns its adapter - reuse the main one's
 		IDXGIFactory* factory = nullptr;
-		if (FAILED(swapchain_->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) || factory == nullptr) {
+		if (FAILED(_swapchain->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) || factory == nullptr) {
 			LOGE("Failed to obtain the DXGI factory for a secondary swap chain");
 			return nullptr;
 		}
@@ -1355,7 +1355,7 @@ namespace nCine::RHI::D3D11
 			sd.Windowed = TRUE;
 			sd.SwapEffect = swapEffect;
 			IDXGISwapChain* result = nullptr;
-			if (FAILED(factory->CreateSwapChain(device_, &sd, &result))) {
+			if (FAILED(factory->CreateSwapChain(_device, &sd, &result))) {
 				return nullptr;
 			}
 			return result;
@@ -1380,7 +1380,7 @@ namespace nCine::RHI::D3D11
 
 		ID3D11Texture2D* backBuffer = nullptr;
 		if (SUCCEEDED(chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer))) && backBuffer != nullptr) {
-			device_->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
+			_device->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
 			backBuffer->Release();
 		}
 		if (sc->Rtv == nullptr) {
@@ -1397,7 +1397,7 @@ namespace nCine::RHI::D3D11
 		if (sc == nullptr) {
 			return;
 		}
-		if (secondaryTargetRtv_ == sc->Rtv) {
+		if (_secondaryTargetRtv == sc->Rtv) {
 			EndSecondaryFrame();
 		}
 		if (sc->Rtv != nullptr) {
@@ -1413,7 +1413,7 @@ namespace nCine::RHI::D3D11
 	void D3D11Device::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
 	{
 		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
-		if (sc == nullptr || sc->Swapchain == nullptr || device_ == nullptr || width <= 0 || height <= 0) {
+		if (sc == nullptr || sc->Swapchain == nullptr || _device == nullptr || width <= 0 || height <= 0) {
 			return;
 		}
 		if (sc->Width == width && sc->Height == height) {
@@ -1421,7 +1421,7 @@ namespace nCine::RHI::D3D11
 		}
 
 		// Every reference to the back-buffer must be gone before ResizeBuffers
-		if (secondaryTargetRtv_ == sc->Rtv) {
+		if (_secondaryTargetRtv == sc->Rtv) {
 			EndSecondaryFrame();
 		}
 		if (sc->Rtv != nullptr) {
@@ -1438,7 +1438,7 @@ namespace nCine::RHI::D3D11
 
 		ID3D11Texture2D* backBuffer = nullptr;
 		if (SUCCEEDED(sc->Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer))) && backBuffer != nullptr) {
-			device_->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
+			_device->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
 			backBuffer->Release();
 		}
 	}
@@ -1446,30 +1446,30 @@ namespace nCine::RHI::D3D11
 	void D3D11Device::BeginSecondaryFrame(void* handle, bool clear)
 	{
 		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
-		if (context_ == nullptr || sc == nullptr || sc->Rtv == nullptr) {
+		if (_context == nullptr || sc == nullptr || sc->Rtv == nullptr) {
 			return;
 		}
 
 		// The redirection works through the "screen" target (see ScreenRtv()), so any off-screen render target
 		// left bound by the scene must be cleared first, and the shadow state dropped so the next draw rebinds
-		currentRenderTarget_ = nullptr;
-		secondaryTargetRtv_ = sc->Rtv;
-		secondaryTargetHeight_ = sc->Height;
+		_currentRenderTarget = nullptr;
+		_secondaryTargetRtv = sc->Rtv;
+		_secondaryTargetHeight = sc->Height;
 		InvalidateCachedState();
 
 		if (clear) {
 			const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-			context_->ClearRenderTargetView(sc->Rtv, black);
+			_context->ClearRenderTargetView(sc->Rtv, black);
 		}
 	}
 
 	void D3D11Device::EndSecondaryFrame()
 	{
-		if (secondaryTargetRtv_ == nullptr) {
+		if (_secondaryTargetRtv == nullptr) {
 			return;
 		}
-		secondaryTargetRtv_ = nullptr;
-		secondaryTargetHeight_ = 0;
+		_secondaryTargetRtv = nullptr;
+		_secondaryTargetHeight = 0;
 		// The next draw must not keep writing into the window that is no longer bound
 		InvalidateCachedState();
 	}
@@ -1484,47 +1484,47 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Device::ReleasePipelineObjects()
 	{
-		for (PooledCBuffer& e : cbufferPool_) {
+		for (PooledCBuffer& e : _cbufferPool) {
 			SafeRelease(e.Buffer);
 		}
-		cbufferPool_.clear();
-		for (BlendStateEntry& e : blendStates_) {
+		_cbufferPool.clear();
+		for (BlendStateEntry& e : _blendStates) {
 			SafeRelease(e.State);
 		}
-		blendStates_.clear();
-		for (RasterStateEntry& e : rasterStates_) {
+		_blendStates.clear();
+		for (RasterStateEntry& e : _rasterStates) {
 			SafeRelease(e.State);
 		}
-		rasterStates_.clear();
-		SafeRelease(depthDisabledState_);
+		_rasterStates.clear();
+		SafeRelease(_depthDisabledState);
 	}
 
 	void D3D11Device::DestroySwapchain()
 	{
-		if (context_ != nullptr) {
-			context_->OMSetRenderTargets(0, nullptr, nullptr);
-			context_->ClearState();
-			context_->Flush();
+		if (_context != nullptr) {
+			_context->OMSetRenderTargets(0, nullptr, nullptr);
+			_context->ClearState();
+			_context->Flush();
 		}
 		// Secondary swap chains are owned by whoever created them (ImGui destroys its platform windows on
 		// shutdown); just make sure a redirection cannot outlive the device
-		secondaryTargetRtv_ = nullptr;
-		secondaryTargetHeight_ = 0;
+		_secondaryTargetRtv = nullptr;
+		_secondaryTargetHeight = 0;
 		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();
-		SafeRelease(presentSampler_);
-		SafeRelease(presentPs_);
-		SafeRelease(presentVs_);
-		SafeRelease(backbufferRtv_);
-		SafeRelease(swapchain_);
-		SafeRelease(context_);
-		SafeRelease(device_);
-		swapchainFlags_ = 0;
+		SafeRelease(_presentSampler);
+		SafeRelease(_presentPs);
+		SafeRelease(_presentVs);
+		SafeRelease(_backbufferRtv);
+		SafeRelease(_swapchain);
+		SafeRelease(_context);
+		SafeRelease(_device);
+		_swapchainFlags = 0;
 	}
 
-	ID3D11Device* D3D11Device::GetD3DDevice() { return device_; }
-	ID3D11DeviceContext* D3D11Device::GetD3DContext() { return context_; }
+	ID3D11Device* D3D11Device::GetD3DDevice() { return _device; }
+	ID3D11DeviceContext* D3D11Device::GetD3DContext() { return _context; }
 
-	std::int32_t D3D11Device::GetMaxTextureDimension() { return maxTextureDimension_; }
+	std::int32_t D3D11Device::GetMaxTextureDimension() { return _maxTextureDimension; }
 }

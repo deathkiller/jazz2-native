@@ -23,20 +23,20 @@ namespace nCine::Backends
 
 		// The panel is fixed: pin every size to the display. The logical (game) resolution is driven
 		// separately by the render pipeline through Device::ResizeScreenFramebuffer.
-		width_ = 640;
-		height_ = 480;
-		drawableWidth_ = 640;
-		drawableHeight_ = 480;
-		isFullscreen_ = true;
+		_width = 640;
+		_height = 480;
+		_drawableWidth = 640;
+		_drawableHeight = 480;
+		_isFullscreen = true;
 
-		currentVideoMode_.width = std::uint32_t(width_);
-		currentVideoMode_.height = std::uint32_t(height_);
-		currentVideoMode_.refreshRate = 60.0f;
+		_currentVideoMode.width = std::uint32_t(_width);
+		_currentVideoMode.height = std::uint32_t(_height);
+		_currentVideoMode.refreshRate = 60.0f;
 
 		updateMonitors();
 		initDeviceViewport();
 
-		LOGI("Video mode initialized: {}x{} (PowerVR)", width_, height_);
+		LOGI("Video mode initialized: {}x{} (PowerVR)", _width, _height);
 	}
 
 	DcGfxDevice::~DcGfxDevice() = default;
@@ -87,7 +87,7 @@ namespace nCine::Backends
 	const IGfxDevice::VideoMode& DcGfxDevice::currentVideoMode(unsigned int monitorIndex) const
 	{
 		static_cast<void>(monitorIndex);
-		return currentVideoMode_;
+		return _currentVideoMode;
 	}
 
 	void DcGfxDevice::setResolutionInternal(int width, int height)
@@ -99,12 +99,12 @@ namespace nCine::Backends
 	void DcGfxDevice::updateMonitors()
 	{
 		// One fixed "monitor" (the TV), so windowScalingFactor() and the monitor queries stay valid
-		numMonitors_ = 1;
-		monitors_[0].name = "TV";
-		monitors_[0].position = Vector2i(0, 0);
-		monitors_[0].scale = Vector2f(1.0f, 1.0f);
-		monitors_[0].numVideoModes = 1;
-		monitors_[0].videoModes[0] = currentVideoMode_;
+		_numMonitors = 1;
+		_monitors[0].name = "TV";
+		_monitors[0].position = Vector2i(0, 0);
+		_monitors[0].scale = Vector2f(1.0f, 1.0f);
+		_monitors[0].numVideoModes = 1;
+		_monitors[0].videoModes[0] = _currentVideoMode;
 	}
 }
 

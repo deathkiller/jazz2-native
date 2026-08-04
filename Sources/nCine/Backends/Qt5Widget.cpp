@@ -14,26 +14,26 @@
 namespace nCine::Backends
 {
 	Qt5Widget::Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
-		: QOpenGLWidget(parent), application_(static_cast<MainApplication&>(theApplication())),
-			createAppEventHandler_(createAppEventHandler), isInitialized_(false), shouldUpdate_(true)
+		: QOpenGLWidget(parent), _application(static_cast<MainApplication&>(theApplication())),
+			_createAppEventHandler(createAppEventHandler), _isInitialized(false), _shouldUpdate(true)
 	{
 		setFocusPolicy(Qt::StrongFocus);
 		setMouseTracking(true);
 		QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(autoUpdate()));
 
-		//ASSERT(createAppEventHandler_);
-		application_.qt5Widget_ = this;
-		application_.init(createAppEventHandler_, argc, argv);
-		application_.setAutoSuspension(false);
+		//ASSERT(_createAppEventHandler);
+		_application._qt5Widget = this;
+		_application.init(_createAppEventHandler, argc, argv);
+		_application.setAutoSuspension(false);
 
-		const int width = application_.appConfiguration().resolution.x;
-		const int height = application_.appConfiguration().resolution.y;
+		const int width = _application.appConfiguration().resolution.x;
+		const int height = _application.appConfiguration().resolution.y;
 		QRect rect = geometry();
-		rect.setWidth(application_.appConfiguration().resolution.x);
-		rect.setHeight(application_.appConfiguration().resolution.y);
+		rect.setWidth(_application.appConfiguration().resolution.x);
+		rect.setHeight(_application.appConfiguration().resolution.y);
 		setGeometry(rect);
 
-		if (!application_.appCfg_.isResizable) {
+		if (!_application._appCfg.isResizable) {
 			setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 			setMinimumSize(width, height);
 			setMaximumSize(width, height);
@@ -47,17 +47,17 @@ namespace nCine::Backends
 
 	IAppEventHandler& Qt5Widget::appEventHandler()
 	{
-		return *application_.appEventHandler_;
+		return *_application._appEventHandler;
 	}
 
 	bool Qt5Widget::event(QEvent* event)
 	{
-		Qt5InputManager* inputManager = static_cast<Qt5InputManager*>(&application_.inputManager());
+		Qt5InputManager* inputManager = static_cast<Qt5InputManager*>(&_application.inputManager());
 
 		if (event->type() == QEvent::FocusIn) {
-			application_.setFocus(true);
+			_application.setFocus(true);
 		} else if (event->type() == QEvent::FocusOut) {
-			application_.setFocus(false);
+			_application.setFocus(false);
 		}
 
 		switch (event->type()) {
@@ -86,7 +86,7 @@ namespace nCine::Backends
 			case QEvent::Resize: {
 				makeCurrent();
 				const QSize size = static_cast<QResizeEvent*>(event)->size();
-				application_.resizeScreenViewport(size.width(), size.height());
+				_application.resizeScreenViewport(size.width(), size.height());
 				doneCurrent();
 				return QWidget::event(event);
 			}
@@ -108,20 +108,20 @@ namespace nCine::Backends
 
 	void Qt5Widget::initializeGL()
 	{
-		Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*application_.gfxDevice_);
+		Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*_application._gfxDevice);
 
 #if defined(WITH_GLEW)
 		gfxDevice.initGlew();
 #endif
-		application_.initCommon();
+		_application.initCommon();
 		gfxDevice.resetTextureBinding();
-		isInitialized_ = true;
+		_isInitialized = true;
 	}
 
 	void Qt5Widget::resizeGL(int w, int h)
 	{
-		if (isInitialized_) {
-			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*application_.gfxDevice_);
+		if (_isInitialized) {
+			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(*_application._gfxDevice);
 			gfxDevice.setResolution(w, h);
 			gfxDevice.resetTextureBinding();
 		}
@@ -129,9 +129,9 @@ namespace nCine::Backends
 
 	void Qt5Widget::paintGL()
 	{
-		if (isInitialized_) {
-			if (!application_.shouldQuit()) {
-				application_.run();
+		if (_isInitialized) {
+			if (!_application.shouldQuit()) {
+				_application.run();
 			} else {
 				shutdown();
 				QCoreApplication::quit();
@@ -141,39 +141,39 @@ namespace nCine::Backends
 
 	QSize Qt5Widget::minimumSizeHint() const
 	{
-		if (application_.appConfiguration().isResizable) {
+		if (_application.appConfiguration().isResizable) {
 			return QSize(-1, -1);
 		}
 
-		if (isInitialized_) {
-			return QSize(application_.width(), application_.height());
+		if (_isInitialized) {
+			return QSize(_application.width(), _application.height());
 		} else {
-			return QSize(application_.appCfg_.resolution.x, application_.appCfg_.resolution.y);
+			return QSize(_application._appCfg.resolution.x, _application._appCfg.resolution.y);
 		}
 	}
 
 	QSize Qt5Widget::sizeHint() const
 	{
-		if (isInitialized_) {
-			return QSize(application_.width(), application_.height());
+		if (_isInitialized) {
+			return QSize(_application.width(), _application.height());
 		} else {
-			return QSize(application_.appCfg_.resolution.x, application_.appCfg_.resolution.y);
+			return QSize(_application._appCfg.resolution.x, _application._appCfg.resolution.y);
 		}
 	}
 
 	void Qt5Widget::autoUpdate()
 	{
-		if (shouldUpdate_) {
+		if (_shouldUpdate) {
 			update();
 		}
 	}
 
 	void Qt5Widget::shutdown()
 	{
-		if (isInitialized_) {
-			application_.shutdownCommon();
-			application_.qt5Widget_ = nullptr;
-			isInitialized_ = false;
+		if (_isInitialized) {
+			_application.shutdownCommon();
+			_application._qt5Widget = nullptr;
+			_isInitialized = false;
 		}
 		disconnect(SIGNAL(frameSwapped()));
 	}

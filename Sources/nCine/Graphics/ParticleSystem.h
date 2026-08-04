@@ -40,7 +40,7 @@ namespace nCine
 
 		/** @brief Adds a particle affector, taking ownership of it */
 		inline void addAffector(std::unique_ptr<ParticleAffector> affector) {
-			affectors_.push_back(affector.release());
+			_affectors.push_back(affector.release());
 		}
 		/** @brief Deletes all particle affectors */
 		void clearAffectors();
@@ -51,20 +51,20 @@ namespace nCine
 
 		/** @brief Returns whether the system is simulated in local space */
 		inline bool inLocalSpace() const {
-			return inLocalSpace_;
+			return _inLocalSpace;
 		}
 		/** @brief Sets whether the system is simulated in local space */
 		inline void setInLocalSpace(bool inLocalSpace) {
-			inLocalSpace_ = inLocalSpace;
+			_inLocalSpace = inLocalSpace;
 		}
 
 		/** @brief Returns the total number of particles in the pool */
 		inline std::uint32_t numParticles() const {
-			return std::uint32_t(particleArray_.size());
+			return std::uint32_t(_particleArray.size());
 		}
 		/** @brief Returns the number of particles currently alive */
 		inline std::uint32_t numAliveParticles() const {
-			return std::uint32_t(particleArray_.size()) - poolTop_ - 1;
+			return std::uint32_t(_particleArray.size()) - _poolTop - 1;
 		}
 
 		/** @brief Sets the texture object for every particle */
@@ -103,19 +103,19 @@ namespace nCine
 
 	private:
 		/** @brief Particle pool size */
-		std::uint32_t poolSize_;
+		std::uint32_t _poolSize;
 		/** @brief Index of the next free particle in the pool */
-		std::int32_t poolTop_;
+		std::int32_t _poolTop;
 		/** @brief Pool containing available particles (only dead ones) */
-		SmallVector<Particle*, 0> particlePool_;
+		SmallVector<Particle*, 0> _particlePool;
 		/** @brief Array containing every particle (dead or alive) */
-		SmallVector<Particle*, 0> particleArray_;
+		SmallVector<Particle*, 0> _particleArray;
 
 		/** @brief Array of particle affectors */
-		SmallVector<ParticleAffector*, 0> affectors_;
+		SmallVector<ParticleAffector*, 0> _affectors;
 
 		/** @brief Whether the system is simulated in local space */
-		bool inLocalSpace_;
+		bool _inLocalSpace;
 	};
 
 }

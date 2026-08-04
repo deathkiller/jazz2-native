@@ -2,15 +2,15 @@
 
 namespace nCine::RHI::GL
 {
-	GLViewport::State GLViewport::state_;
+	GLViewport::State GLViewport::_state;
 
 	void GLViewport::SetRect(const Recti& rect)
 	{
-		if (rect.X != state_.rect.X || rect.Y != state_.rect.Y ||
-			rect.W != state_.rect.W || rect.H != state_.rect.H) {
+		if (rect.X != _state.rect.X || rect.Y != _state.rect.Y ||
+			rect.W != _state.rect.W || rect.H != _state.rect.H) {
 			FATAL_ASSERT(rect.W >= 0 && rect.H >= 0);
 			glViewport(rect.X, rect.Y, rect.W, rect.H);
-			state_.rect = rect;
+			_state.rect = rect;
 		}
 	}
 
@@ -21,20 +21,20 @@ namespace nCine::RHI::GL
 
 	void GLViewport::Reapply()
 	{
-		glViewport(state_.rect.X, state_.rect.Y, state_.rect.W, state_.rect.H);
+		glViewport(_state.rect.X, _state.rect.Y, _state.rect.W, _state.rect.H);
 	}
 
 	void GLViewport::SetState(State newState)
 	{
 		SetRect(newState.rect);
-		state_ = newState;
+		_state = newState;
 	}
 
 	void GLViewport::InitRect(GLint x, GLint y, GLsizei width, GLsizei height)
 	{
-		state_.rect.X = x;
-		state_.rect.Y = y;
-		state_.rect.W = width;
-		state_.rect.H = height;
+		_state.rect.X = x;
+		_state.rect.Y = y;
+		_state.rect.W = width;
+		_state.rect.H = height;
 	}
 }

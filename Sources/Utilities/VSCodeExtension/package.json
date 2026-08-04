@@ -1,0 +1,188 @@
+{
+	"name": "death-shader",
+	"displayName": "Death™ Shader Language",
+	"description": "Syntax highlighting, completion, hovers and live diagnostics for the .shader language of Jazz² Resurrection, backed by the in-tree ShaderCompiler.",
+	"version": "1.0.0",
+	"publisher": "Dan R.",
+	"license": "GPL-3.0-or-later",
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"categories": [
+		"Programming Languages",
+		"Linters"
+	],
+	"keywords": [
+		"death",
+		"shader",
+		"glsl",
+		"jazz2",
+		"ncine"
+	],
+	"main": "./src/extension.js",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Diagnostics and the transform previews run the workspace's ShaderCompiler executable."
+		}
+	},
+	"contributes": {
+		"languages": [
+			{
+				"id": "death-shader",
+				"aliases": [
+					"Death™ Shader",
+					"death-shader"
+				],
+				"extensions": [
+					".shader",
+					".inc"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "death-shader",
+				"scopeName": "source.deathshader",
+				"path": "./syntaxes/deathshader.tmLanguage.json"
+			}
+		],
+		"snippets": [
+			{
+				"language": "death-shader",
+				"path": "./snippets/deathshader.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "deathShader.showReflection",
+				"title": "Death™ Shader: Show Reflection Dump (--check)"
+			},
+			{
+				"command": "deathShader.showEssl100",
+				"title": "Death™ Shader: Show ESSL 100 Transform (--essl100-check)"
+			},
+			{
+				"command": "deathShader.showHlsl",
+				"title": "Death™ Shader: Show HLSL Transform (--hlsl)"
+			},
+			{
+				"command": "deathShader.showCg",
+				"title": "Death™ Shader: Show Cg Transform (--cg)"
+			},
+			{
+				"command": "deathShader.showVulkan",
+				"title": "Death™ Shader: Show Vulkan GLSL Transform (--vulkan)"
+			},
+			{
+				"command": "deathShader.validateNow",
+				"title": "Death™ Shader: Validate Current File"
+			},
+			{
+				"command": "deathShader.showCompilerPath",
+				"title": "Death™ Shader: Show Resolved ShaderCompiler Path"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "deathShader.showReflection",
+					"when": "resourceLangId == death-shader",
+					"group": "deathshader@1"
+				},
+				{
+					"command": "deathShader.showHlsl",
+					"when": "resourceLangId == death-shader",
+					"group": "deathshader@2"
+				},
+				{
+					"command": "deathShader.showVulkan",
+					"when": "resourceLangId == death-shader",
+					"group": "deathshader@3"
+				},
+				{
+					"command": "deathShader.showCg",
+					"when": "resourceLangId == death-shader",
+					"group": "deathshader@4"
+				},
+				{
+					"command": "deathShader.showEssl100",
+					"when": "resourceLangId == death-shader",
+					"group": "deathshader@5"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "deathShader.showReflection",
+					"when": "resourceLangId == death-shader"
+				},
+				{
+					"command": "deathShader.showEssl100",
+					"when": "resourceLangId == death-shader"
+				},
+				{
+					"command": "deathShader.showHlsl",
+					"when": "resourceLangId == death-shader"
+				},
+				{
+					"command": "deathShader.showCg",
+					"when": "resourceLangId == death-shader"
+				},
+				{
+					"command": "deathShader.showVulkan",
+					"when": "resourceLangId == death-shader"
+				},
+				{
+					"command": "deathShader.validateNow",
+					"when": "resourceLangId == death-shader"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Death™ Shader",
+			"properties": {
+				"deathShader.compilerPath": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Path to the `ShaderCompiler` executable. Relative paths resolve against the workspace folder. Leave empty to auto-detect the usual build outputs (`Sources/Utilities/ShaderCompiler/x64/Release`, `build*/Sources/Utilities/ShaderCompiler`, `out/build/*/...`) and then `PATH`.",
+					"scope": "machine-overridable"
+				},
+				"deathShader.validate.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "Report parse, reflection and emitter errors from ShaderCompiler as diagnostics."
+				},
+				"deathShader.validate.run": {
+					"type": "string",
+					"enum": [
+						"onSave",
+						"onType"
+					],
+					"enumDescriptions": [
+						"Validate when the file is saved (and when it is first opened).",
+						"Validate while typing. A dirty buffer is written to a temporary file next to the original so that relative #include paths still resolve."
+					],
+					"default": "onSave",
+					"description": "When to run the compiler for diagnostics."
+				},
+				"deathShader.validate.delay": {
+					"type": "number",
+					"default": 400,
+					"minimum": 50,
+					"maximum": 5000,
+					"description": "Debounce in milliseconds before validating while typing."
+				},
+				"deathShader.validate.builtinChecks": {
+					"type": "boolean",
+					"default": true,
+					"description": "Also report the handful of hard errors the extension can detect on its own (a missing 'program' directive, a '#version' line, a reference to 'fragColor', 'batched' without canvas mode). These work without the executable."
+				}
+			}
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/deathkiller/jazz2-native"
+	}
+}

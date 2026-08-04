@@ -82,84 +82,84 @@ namespace nCine::RHI::GU
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the linear host store (native, like the software backend) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format (R8/RG8 kept so the palette path can tell them apart) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of the linear host store */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/** @brief Returns the base pointer of the linear host store (may be `nullptr` before an upload) */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return (pixels_.empty() ? nullptr : pixels_.data());
+			return (_pixels.empty() ? nullptr : _pixels.data());
 		}
 		/** @brief Returns a writable base pointer of the linear host store (`nullptr` before an upload) */
 		inline std::uint8_t* MutablePixels() {
-			return (pixels_.empty() ? nullptr : pixels_.data());
+			return (_pixels.empty() ? nullptr : _pixels.data());
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default; informational on GU) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Alias of @ref GetMagFiltering() */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/** @brief Marks the texture as (or no longer as) a color render target; becoming one allocates its surface */
 		void SetRenderTarget(bool isRenderTarget);
 		/** @brief Returns a globally monotonic stamp of the texel store, advanced by every allocation or upload */
 		inline std::uint32_t GetContentVersion() const {
-			return contentVersion_;
+			return _contentVersion;
 		}
 
 		/** @brief Returns `true` when the store holds palette indices (draws resolve them through a CLUT) */
 		inline bool IsIndexed() const {
-			return (uploadFormat_ == PixelFormat::R8);
+			return (_uploadFormat == PixelFormat::R8);
 		}
 		/** @brief Returns `true` when the texture needs the per-palette-row CPU bake (RG8 index + alpha) */
 		inline bool NeedsPaletteBake() const {
-			return (uploadFormat_ == PixelFormat::RG8);
+			return (_uploadFormat == PixelFormat::RG8);
 		}
 		/** @brief Returns `true` when this is the intercepted shared palette texture (its rows become CLUTs) */
 		inline bool IsPaletteTexture() const {
-			return isPaletteTexture_;
+			return _isPaletteTexture;
 		}
 
 		// -- GE store (read by the draw dispatch) --
@@ -174,15 +174,15 @@ namespace nCine::RHI::GU
 		const Page* AcquirePage(std::int32_t texelX, std::int32_t texelY);
 		/** @brief Returns the `GU_PSM_*` pixel format of the GE store (valid once a page exists) */
 		inline std::int32_t GetGuPixelFormat() const {
-			return guFormat_;
+			return _guFormat;
 		}
 		/** @brief Number of pages the image is split into along each axis (1 x 1 for anything up to 512x512) */
 		inline std::int32_t GetPageCountX() const {
-			return pagesX_;
+			return _pagesX;
 		}
 		/** @brief Number of pages the image is split into along each axis */
 		inline std::int32_t GetPageCountY() const {
-			return pagesY_;
+			return _pagesY;
 		}
 
 		/**
@@ -215,11 +215,11 @@ namespace nCine::RHI::GU
 
 		/** @brief Returns the surface the GE renders into when this texture is a render target, or `nullptr` */
 		inline void* GetRenderTargetSurface() const {
-			return renderTargetSurface_;
+			return _renderTargetSurface;
 		}
 		/** @brief Returns the row pitch in texels of @ref GetRenderTargetSurface() */
 		inline std::int32_t GetRenderTargetStride() const {
-			return renderTargetStride_;
+			return _renderTargetStride;
 		}
 
 		/** @brief Binds the texture to the specified texture unit on the device */
@@ -287,37 +287,37 @@ namespace nCine::RHI::GU
 		// beyond two rows falls back to rebuilding, with a one-time warning.
 		static constexpr std::int32_t BakedStoreCount = 2;
 
-		static std::uint32_t nextHandle_;
-		static std::uint32_t nextContentVersion_;
+		static std::uint32_t _nextHandle;
+		static std::uint32_t _nextContentVersion;
 
-		std::uint32_t handle_;
-		std::uint32_t contentVersion_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		std::int32_t bytesPerPixel_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		SmallVector<std::uint8_t, 0> pixels_;
-		bool isRenderTarget_;
-		bool isPaletteTexture_;
+		std::uint32_t _handle;
+		std::uint32_t _contentVersion;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		std::int32_t _bytesPerPixel;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		SmallVector<std::uint8_t, 0> _pixels;
+		bool _isRenderTarget;
+		bool _isPaletteTexture;
 
 		// The GE store: one allocation holding every page back to back (pages are laid out row-major).
 		// Rebuilt lazily from the host store, so an upload only invalidates it.
-		std::uint8_t* geStore_;
-		std::size_t geStoreSize_;
-		std::int32_t guFormat_;
-		std::int32_t geBytesPerTexel_;
-		std::int32_t pagesX_;
-		std::int32_t pagesY_;
-		SmallVector<Page, 1> pages_;
-		bool geStoreValid_;
+		std::uint8_t* _geStore;
+		std::size_t _geStoreSize;
+		std::int32_t _guFormat;
+		std::int32_t _geBytesPerTexel;
+		std::int32_t _pagesX;
+		std::int32_t _pagesY;
+		SmallVector<Page, 1> _pages;
+		bool _geStoreValid;
 		// Which bake the GE store currently holds (RG8 only) and the two cached bakes it can be switched
 		// between without a rebuild
 		struct BakedStore
@@ -329,21 +329,21 @@ namespace nCine::RHI::GU
 			const void* Palette = nullptr;
 			bool Valid = false;
 		};
-		BakedStore bakedStores_[BakedStoreCount];
-		std::int32_t activeBakedStore_;
-		std::int32_t nextBakedStore_;
+		BakedStore _bakedStores[BakedStoreCount];
+		std::int32_t _activeBakedStore;
+		std::int32_t _nextBakedStore;
 		// Number of full uploads the texture has received. Content that is replaced again (video frames)
 		// stops being swizzled, because interleaving it every frame costs more than the sampling saves.
-		std::uint32_t uploadCount_;
+		std::uint32_t _uploadCount;
 		// Whether MapStreamingTexels() handed the GE store out and its channel order still has to be
 		// flipped into the GE's before a draw can read it
-		bool streamingSwapPending_;
+		bool _streamingSwapPending;
 
 		// The render-target surface the GE draws into (video memory when it fits, main memory otherwise);
 		// it doubles as the texture's single page when the target is sampled afterwards
-		void* renderTargetSurface_;
-		std::int32_t renderTargetStride_;
-		bool renderTargetSurfaceInVram_;
+		void* _renderTargetSurface;
+		std::int32_t _renderTargetStride;
+		bool _renderTargetSurfaceInVram;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		/** @brief Recomputes the page grid and the GE pixel format from the upload format and size */
@@ -361,7 +361,7 @@ namespace nCine::RHI::GU
 
 		/** @brief Returns the size of the linear (uncompressed) level-0 image in bytes */
 		inline std::int32_t RawPixelsSize() const {
-			return strideBytes_ * (height_ > 0 ? height_ : 0);
+			return _strideBytes * (_height > 0 ? _height : 0);
 		}
 	};
 }

@@ -3,31 +3,31 @@
 
 namespace nCine::RHI::GL
 {
-	GLuint GLRenderbuffer::boundBuffer_ = 0;
+	GLuint GLRenderbuffer::_boundBuffer = 0;
 
 	GLRenderbuffer::GLRenderbuffer(GLenum internalFormat, GLsizei width, GLsizei height)
-		: glHandle_(0), attachment_(GL_NONE)
+		: _glHandle(0), _attachment(GL_NONE)
 	{
-		glGenRenderbuffers(1, &glHandle_);
+		glGenRenderbuffers(1, &_glHandle);
 		Storage(internalFormat, width, height);
 		GL_LOG_ERRORS();
 	}
 
 	GLRenderbuffer::~GLRenderbuffer()
 	{
-		if (boundBuffer_ == glHandle_) {
+		if (_boundBuffer == _glHandle) {
 			Unbind();
 		}
-		glDeleteRenderbuffers(1, &glHandle_);
+		glDeleteRenderbuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	bool GLRenderbuffer::Bind() const
 	{
-		if (boundBuffer_ != glHandle_) {
-			glBindRenderbuffer(GL_RENDERBUFFER, glHandle_);
+		if (_boundBuffer != _glHandle) {
+			glBindRenderbuffer(GL_RENDERBUFFER, _glHandle);
 			GL_LOG_ERRORS();
-			boundBuffer_ = glHandle_;
+			_boundBuffer = _glHandle;
 			return true;
 		}
 		return false;
@@ -35,10 +35,10 @@ namespace nCine::RHI::GL
 
 	bool GLRenderbuffer::Unbind()
 	{
-		if (boundBuffer_ != 0) {
+		if (_boundBuffer != 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			GL_LOG_ERRORS();
-			boundBuffer_ = 0;
+			_boundBuffer = 0;
 			return true;
 		}
 		return false;
@@ -46,7 +46,7 @@ namespace nCine::RHI::GL
 
 	void GLRenderbuffer::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::RenderBuffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::RenderBuffer, _glHandle, label);
 	}
 
 	void GLRenderbuffer::Storage(GLenum internalFormat, GLsizei width, GLsizei height)

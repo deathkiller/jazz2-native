@@ -6,15 +6,15 @@ namespace nCine
 {
 	RenderCommandPool::RenderCommandPool(std::uint32_t poolSize)
 	{
-		freeCommandsPool_.reserve(poolSize);
-		usedCommandsPool_.reserve(poolSize);
+		_freeCommandsPool.reserve(poolSize);
+		_usedCommandsPool.reserve(poolSize);
 	}
 
 	RenderCommandPool::~RenderCommandPool() = default;
 
 	RenderCommand* RenderCommandPool::Add()
 	{
-		return usedCommandsPool_.emplace_back(std::make_unique<RenderCommand>()).get();
+		return _usedCommandsPool.emplace_back(std::make_unique<RenderCommand>()).get();
 	}
 
 	RenderCommand* RenderCommandPool::Add(RHI::ShaderProgram* shaderProgram)
@@ -28,14 +28,14 @@ namespace nCine
 	{
 		RenderCommand* retrievedCommand = nullptr;
 
-		for (std::uint32_t i = 0; i < freeCommandsPool_.size(); i++) {
-			std::uint32_t poolSize = std::uint32_t(freeCommandsPool_.size());
-			std::unique_ptr<RenderCommand>& command = freeCommandsPool_[i];
+		for (std::uint32_t i = 0; i < _freeCommandsPool.size(); i++) {
+			std::uint32_t poolSize = std::uint32_t(_freeCommandsPool.size());
+			std::unique_ptr<RenderCommand>& command = _freeCommandsPool[i];
 			if (command && command->GetMaterial().GetShaderProgram() == shaderProgram) {
 				retrievedCommand = command.get();
-				usedCommandsPool_.push_back(std::move(command));
-				command = std::move(freeCommandsPool_[poolSize - 1]);
-				freeCommandsPool_.pop_back();
+				_usedCommandsPool.push_back(std::move(command));
+				command = std::move(_freeCommandsPool[poolSize - 1]);
+				_freeCommandsPool.pop_back();
 				break;
 			}
 		}
@@ -64,11 +64,11 @@ namespace nCine
 	void RenderCommandPool::Reset()
 	{
 #if defined(NCINE_PROFILING)
-		RenderStatistics::GatherCommandPoolStatistics(std::uint32_t(usedCommandsPool_.size()), std::uint32_t(freeCommandsPool_.size()));
+		RenderStatistics::GatherCommandPoolStatistics(std::uint32_t(_usedCommandsPool.size()), std::uint32_t(_freeCommandsPool.size()));
 #endif
-		for (std::unique_ptr<RenderCommand>& command : usedCommandsPool_) {
-			freeCommandsPool_.push_back(std::move(command));
+		for (std::unique_ptr<RenderCommand>& command : _usedCommandsPool) {
+			_freeCommandsPool.push_back(std::move(command));
 		}
-		usedCommandsPool_.clear();
+		_usedCommandsPool.clear();
 	}
 }

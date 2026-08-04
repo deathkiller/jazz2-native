@@ -62,17 +62,17 @@ namespace nCine
 
 		/** @brief Returns the specifications for a buffer of the specified type */
 		inline const BufferSpecifications& Specs(BufferTypes type) const {
-			return specs_[std::int32_t(type)];
+			return _specs[std::int32_t(type)];
 		}
 		/** @brief Requests an amount of bytes from the specified buffer type */
 		inline Parameters AcquireMemory(BufferTypes type, std::uint32_t bytes) {
-			return AcquireMemory(type, bytes, specs_[std::int32_t(type)].alignment);
+			return AcquireMemory(type, bytes, _specs[std::int32_t(type)].alignment);
 		}
 		/** @brief Requests an amount of bytes from the specified buffer type with a custom alignment requirement */
 		Parameters AcquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment);
 
 	private:
-		BufferSpecifications specs_[std::int32_t(BufferTypes::Count)];
+		BufferSpecifications _specs[std::int32_t(BufferTypes::Count)];
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -95,13 +95,13 @@ namespace nCine
 		// Number of ring sections that persistently mapped buffers are divided into
 		static constexpr std::uint32_t NumPersistentSections = 3;
 
-		SmallVector<ManagedBuffer, 0> buffers_;
+		SmallVector<ManagedBuffer, 0> _buffers;
 		// Whether the common buffers use persistently mapped immutable storage with a section ring
-		bool usePersistentMapping_;
+		bool _usePersistentMapping;
 		// Current section of the persistent buffer ring
-		std::uint32_t currentSection_;
+		std::uint32_t _currentSection;
 		// Fences protecting each ring section from being overwritten while the GPU still reads it
-		FenceHandle sectionFences_[NumPersistentSections];
+		FenceHandle _sectionFences[NumPersistentSections];
 
 		void FlushUnmap();
 		void Remap();

@@ -570,17 +570,17 @@ namespace nCine::RHI::Vulkan
 
 	// -- Static state --
 
-	VulkanDevice::BlendingState VulkanDevice::blending_;
-	VulkanDevice::DepthTestState VulkanDevice::depthTest_;
-	VulkanDevice::CullFaceState VulkanDevice::cullFace_;
-	VulkanDevice::ScissorState VulkanDevice::scissor_;
-	Recti VulkanDevice::viewport_(0, 0, 0, 0);
-	Colorf VulkanDevice::clearColor_(0.0f, 0.0f, 0.0f, 0.0f);
+	VulkanDevice::BlendingState VulkanDevice::_blending;
+	VulkanDevice::DepthTestState VulkanDevice::_depthTest;
+	VulkanDevice::CullFaceState VulkanDevice::_cullFace;
+	VulkanDevice::ScissorState VulkanDevice::_scissor;
+	Recti VulkanDevice::_viewport(0, 0, 0, 0);
+	Colorf VulkanDevice::_clearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	VulkanShaderProgram* VulkanDevice::currentProgram_ = nullptr;
-	const VulkanTexture* VulkanDevice::boundTextures_[MaxTextureUnits] = {};
-	VulkanDevice::UniformRange VulkanDevice::boundUniformRanges_[MaxUniformBindings] = {};
-	VulkanRenderTarget* VulkanDevice::currentRenderTarget_ = nullptr;
+	VulkanShaderProgram* VulkanDevice::_currentProgram = nullptr;
+	const VulkanTexture* VulkanDevice::_boundTextures[MaxTextureUnits] = {};
+	VulkanDevice::UniformRange VulkanDevice::_boundUniformRanges[MaxUniformBindings] = {};
+	VulkanRenderTarget* VulkanDevice::_currentRenderTarget = nullptr;
 
 	// -- Shared context accessors (declared in VulkanCommon.h) --
 
@@ -1126,39 +1126,39 @@ namespace nCine::RHI::Vulkan
 
 	// -- Pipeline state (recorded; applied at draw time) --
 
-	void VulkanDevice::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
+	void VulkanDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 
 	void VulkanDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
 
-	VulkanDevice::BlendingState VulkanDevice::GetBlendingState() { return blending_; }
-	void VulkanDevice::SetBlendingState(const BlendingState& state) { blending_ = state; }
+	VulkanDevice::BlendingState VulkanDevice::GetBlendingState() { return _blending; }
+	void VulkanDevice::SetBlendingState(const BlendingState& state) { _blending = state; }
 
-	void VulkanDevice::SetDepthTestEnabled(bool enabled) { depthTest_.TestEnabled = enabled; }
-	void VulkanDevice::SetDepthMaskEnabled(bool enabled) { depthTest_.MaskEnabled = enabled; }
-	VulkanDevice::DepthTestState VulkanDevice::GetDepthTestState() { return depthTest_; }
-	void VulkanDevice::SetDepthTestState(const DepthTestState& state) { depthTest_ = state; }
+	void VulkanDevice::SetDepthTestEnabled(bool enabled) { _depthTest.TestEnabled = enabled; }
+	void VulkanDevice::SetDepthMaskEnabled(bool enabled) { _depthTest.MaskEnabled = enabled; }
+	VulkanDevice::DepthTestState VulkanDevice::GetDepthTestState() { return _depthTest; }
+	void VulkanDevice::SetDepthTestState(const DepthTestState& state) { _depthTest = state; }
 
-	void VulkanDevice::SetCullFaceEnabled(bool enabled) { cullFace_.Enabled = enabled; }
-	VulkanDevice::CullFaceState VulkanDevice::GetCullFaceState() { return cullFace_; }
-	void VulkanDevice::SetCullFaceState(const CullFaceState& state) { cullFace_ = state; }
+	void VulkanDevice::SetCullFaceEnabled(bool enabled) { _cullFace.Enabled = enabled; }
+	VulkanDevice::CullFaceState VulkanDevice::GetCullFaceState() { return _cullFace; }
+	void VulkanDevice::SetCullFaceState(const CullFaceState& state) { _cullFace = state; }
 
-	VulkanDevice::ScissorState VulkanDevice::GetScissorState() { return scissor_; }
-	void VulkanDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
-	void VulkanDevice::SetScissor(const Recti& rect) { scissor_.Enabled = true; scissor_.Rect = rect; }
-	void VulkanDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
+	VulkanDevice::ScissorState VulkanDevice::GetScissorState() { return _scissor; }
+	void VulkanDevice::SetScissorState(const ScissorState& state) { _scissor = state; }
+	void VulkanDevice::SetScissor(const Recti& rect) { _scissor.Enabled = true; _scissor.Rect = rect; }
+	void VulkanDevice::SetScissorTestEnabled(bool enabled) { _scissor.Enabled = enabled; }
 
-	Recti VulkanDevice::GetViewport() { return viewport_; }
-	void VulkanDevice::SetViewport(const Recti& rect) { viewport_ = rect; }
-	void VulkanDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height) { viewport_ = Recti(x, y, width, height); }
+	Recti VulkanDevice::GetViewport() { return _viewport; }
+	void VulkanDevice::SetViewport(const Recti& rect) { _viewport = rect; }
+	void VulkanDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height) { _viewport = Recti(x, y, width, height); }
 
-	Colorf VulkanDevice::GetClearColor() { return clearColor_; }
-	void VulkanDevice::SetClearColor(const Colorf& color) { clearColor_ = color; }
+	Colorf VulkanDevice::GetClearColor() { return _clearColor; }
+	void VulkanDevice::SetClearColor(const Colorf& color) { _clearColor = color; }
 
 	void VulkanDevice::Clear(ClearFlags flags)
 	{
@@ -1171,15 +1171,15 @@ namespace nCine::RHI::Vulkan
 		if (!s_frameActive) {
 			BeginFrame();
 		}
-		if (!EnsureRenderPass(currentRenderTarget_)) {
+		if (!EnsureRenderPass(_currentRenderTarget)) {
 			return;
 		}
 		// GL semantics: glClear covers every color attachment enabled for drawing, so clear all of the render
 		// pass's attachments (bounded by the target's draw-buffer count, mirroring glDrawBuffers)
 		std::uint32_t clearCount = 1;
-		if (currentRenderTarget_ != nullptr) {
-			clearCount = currentRenderTarget_->GetAttachedCount();
-			const std::uint32_t numDrawBuffers = currentRenderTarget_->GetNumDrawBuffers();
+		if (_currentRenderTarget != nullptr) {
+			clearCount = _currentRenderTarget->GetAttachedCount();
+			const std::uint32_t numDrawBuffers = _currentRenderTarget->GetNumDrawBuffers();
 			if (numDrawBuffers > 0 && numDrawBuffers < clearCount) {
 				clearCount = numDrawBuffers;
 			}
@@ -1192,14 +1192,14 @@ namespace nCine::RHI::Vulkan
 			VkClearAttachment& ca = cas[i];
 			ca.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			ca.colorAttachment = i;
-			ca.clearValue.color.float32[0] = clearColor_.R;
-			ca.clearValue.color.float32[1] = clearColor_.G;
-			ca.clearValue.color.float32[2] = clearColor_.B;
-			ca.clearValue.color.float32[3] = clearColor_.A;
+			ca.clearValue.color.float32[0] = _clearColor.R;
+			ca.clearValue.color.float32[1] = _clearColor.G;
+			ca.clearValue.color.float32[2] = _clearColor.B;
+			ca.clearValue.color.float32[3] = _clearColor.A;
 		}
-		VkExtent2D extent = (currentRenderTarget_ == nullptr) ? s_screenExtent
-			: VkExtent2D{ std::uint32_t(currentRenderTarget_->GetColorTexture(0) ? currentRenderTarget_->GetColorTexture(0)->GetWidth() : 0),
-						  std::uint32_t(currentRenderTarget_->GetColorTexture(0) ? currentRenderTarget_->GetColorTexture(0)->GetHeight() : 0) };
+		VkExtent2D extent = (_currentRenderTarget == nullptr) ? s_screenExtent
+			: VkExtent2D{ std::uint32_t(_currentRenderTarget->GetColorTexture(0) ? _currentRenderTarget->GetColorTexture(0)->GetWidth() : 0),
+						  std::uint32_t(_currentRenderTarget->GetColorTexture(0) ? _currentRenderTarget->GetColorTexture(0)->GetHeight() : 0) };
 		VkClearRect rect = {};
 		rect.rect.offset = { 0, 0 };
 		rect.rect.extent = extent;
@@ -1545,52 +1545,52 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanDevice::SetupInitialState()
 	{
-		blending_ = BlendingState{};
-		depthTest_ = DepthTestState{};
-		cullFace_ = CullFaceState{};
-		scissor_ = ScissorState{};
+		_blending = BlendingState{};
+		_depthTest = DepthTestState{};
+		_cullFace = CullFaceState{};
+		_scissor = ScissorState{};
 	}
 
 	// -- Backend extensions (recorders) --
 
-	void VulkanDevice::BindProgram(VulkanShaderProgram* program) { currentProgram_ = program; }
-	VulkanShaderProgram* VulkanDevice::CurrentProgram() { return currentProgram_; }
+	void VulkanDevice::BindProgram(VulkanShaderProgram* program) { _currentProgram = program; }
+	VulkanShaderProgram* VulkanDevice::CurrentProgram() { return _currentProgram; }
 
 	void VulkanDevice::BindTexture(std::uint32_t unit, const VulkanTexture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
 	void VulkanDevice::UnbindTexture(const VulkanTexture* texture)
 	{
 		for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
-			if (boundTextures_[unit] == texture) {
-				boundTextures_[unit] = nullptr;
+			if (_boundTextures[unit] == texture) {
+				_boundTextures[unit] = nullptr;
 			}
 		}
 	}
 
 	const VulkanTexture* VulkanDevice::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void VulkanDevice::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
-	void VulkanDevice::SetRenderTarget(VulkanRenderTarget* renderTarget) { currentRenderTarget_ = renderTarget; }
+	void VulkanDevice::SetRenderTarget(VulkanRenderTarget* renderTarget) { _currentRenderTarget = renderTarget; }
 
 	void VulkanDevice::UnbindRenderTarget(const VulkanRenderTarget* renderTarget)
 	{
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
 	}
 
@@ -1611,19 +1611,19 @@ namespace nCine::RHI::Vulkan
 				++it;
 			}
 		}
-		if (currentProgram_ == program) {
-			currentProgram_ = nullptr;
+		if (_currentProgram == program) {
+			_currentProgram = nullptr;
 		}
 	}
 
 	// Internal accessors used by the anonymous-namespace draw helpers
-	VulkanRenderTarget* VulkanDevice::currentRenderTargetInternal() { return currentRenderTarget_; }
+	VulkanRenderTarget* VulkanDevice::currentRenderTargetInternal() { return _currentRenderTarget; }
 	std::uint32_t VulkanDevice::MaxUniformBindingsPublic() { return MaxUniformBindings; }
 	void VulkanDevice::GetUniformRange(std::uint32_t index, const std::uint8_t*& data, std::uint32_t& size)
 	{
 		if (index < MaxUniformBindings) {
-			data = boundUniformRanges_[index].Data;
-			size = boundUniformRanges_[index].Size;
+			data = _boundUniformRanges[index].Data;
+			size = _boundUniformRanges[index].Size;
 		} else {
 			data = nullptr;
 			size = 0;

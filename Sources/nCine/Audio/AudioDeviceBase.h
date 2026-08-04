@@ -30,14 +30,14 @@ namespace nCine
 		AudioDeviceBase& operator=(const AudioDeviceBase&) = delete;
 
 		inline float gain() const override {
-			return gain_;
+			return _gain;
 		}
 
 		inline std::uint32_t maxNumPlayers() const override {
-			return std::uint32_t(sourcePool_.size() + players_.size());
+			return std::uint32_t(_sourcePool.size() + _players.size());
 		}
 		inline std::uint32_t numPlayers() const override {
-			return std::uint32_t(players_.size());
+			return std::uint32_t(_players.size());
 		}
 		// Spelled with the fixed-width type the interface uses: on targets where `std::uint32_t` is `long
 		// unsigned int` (MIPS, among others) `unsigned int` is a different type and would not override it
@@ -66,13 +66,13 @@ namespace nCine
 		static constexpr std::size_t TypicalNumSources = 16;
 
 		/** @brief Listener gain (master volume) */
-		float gain_;
+		float _gain;
 		/** @brief Listener position */
-		Vector3f listenerPos_;
+		Vector3f _listenerPos;
 		/** @brief Pool of currently inactive source ids */
-		SmallVector<std::uint32_t, TypicalNumSources> sourcePool_;
+		SmallVector<std::uint32_t, TypicalNumSources> _sourcePool;
 		/** @brief Currently active audio players */
-		SmallVector<IAudioPlayer*, TypicalNumSources> players_;
+		SmallVector<IAudioPlayer*, TypicalNumSources> _players;
 
 		AudioDeviceBase();
 
@@ -90,21 +90,21 @@ namespace nCine
 	private:
 #if defined(WITH_THREADS)
 		// Decoding thread that executes stream decode requests ahead of time
-		Thread decodeThread_;
+		Thread _decodeThread;
 		// Protects the request queue, the active request and the quit flag
-		Mutex decodeMutex_;
+		Mutex _decodeMutex;
 		// Signaled when a request is added to the queue or the thread should quit
-		CondVariable decodeQueueCond_;
+		CondVariable _decodeQueueCond;
 		// Signaled when the decoding thread finishes executing a request
-		CondVariable decodeDoneCond_;
+		CondVariable _decodeDoneCond;
 		// Queue of decode requests waiting to be executed
-		SmallVector<std::shared_ptr<StreamDecodeRequest>, 4> decodeQueue_;
+		SmallVector<std::shared_ptr<StreamDecodeRequest>, 4> _decodeQueue;
 		// Request currently being executed by the decoding thread, if any
-		std::shared_ptr<StreamDecodeRequest> activeDecodeRequest_;
+		std::shared_ptr<StreamDecodeRequest> _activeDecodeRequest;
 		// Whether the decoding thread has been created
-		bool decodeThreadCreated_;
+		bool _decodeThreadCreated;
 		// Whether the decoding thread should quit
-		bool decodeThreadShouldQuit_;
+		bool _decodeThreadShouldQuit;
 
 		static void decodeThreadFunc(void* arg);
 #endif

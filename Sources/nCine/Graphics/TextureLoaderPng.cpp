@@ -19,13 +19,13 @@ namespace nCine
 		constexpr std::uint8_t PngTypeIndexed = 1;
 		constexpr std::uint8_t PngTypeColor = 2;
 
-		if (!fileHandle_->IsValid()) {
+		if (!_fileHandle->IsValid()) {
 			return;
 		}
 
 		// Check header signature
 		std::uint8_t internalBuffer[sizeof(PngSignature)];
-		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
+		_fileHandle->Read(internalBuffer, sizeof(PngSignature));
 		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
 			LOGE("Invalid PNG signature");
 			return;
@@ -39,8 +39,8 @@ namespace nCine
 		SmallVector<std::uint8_t, 0> data;
 
 		while (true) {
-			std::int32_t length = ReadInt32BigEndian(fileHandle_);
-			std::uint32_t type = ReadInt32BigEndian(fileHandle_);
+			std::int32_t length = ReadInt32BigEndian(_fileHandle);
+			std::uint32_t type = ReadInt32BigEndian(_fileHandle);
 
 			if (!headerParsed && type != 'IHDR') {
 				// Header does not appear first
@@ -48,38 +48,38 @@ namespace nCine
 				return;
 			}
 
-			std::int32_t blockEndPosition = std::int32_t(fileHandle_->GetPosition()) + length;
+			std::int32_t blockEndPosition = std::int32_t(_fileHandle->GetPosition()) + length;
 
 			switch (type) {
 				case 'IHDR': {
 					DEATH_ASSERT(!headerParsed, "PNG file is corrupted", );
 
-					width_ = ReadInt32BigEndian(fileHandle_);
-					height_ = ReadInt32BigEndian(fileHandle_);
+					_width = ReadInt32BigEndian(_fileHandle);
+					_height = ReadInt32BigEndian(_fileHandle);
 
 					std::uint8_t bitDepth;
-					fileHandle_->Read(&bitDepth, sizeof(bitDepth));
+					_fileHandle->Read(&bitDepth, sizeof(bitDepth));
 					std::uint8_t colorType;
-					fileHandle_->Read(&colorType, sizeof(colorType));
+					_fileHandle->Read(&colorType, sizeof(colorType));
 
 					if (bitDepth == 8 && colorType == (PngTypeIndexed | PngTypeColor)) {
 						isPaletted = true;
 					}
 					is24Bit = (colorType == PngTypeColor);
 
-					std::int32_t dataLength = width_ * height_;
+					std::int32_t dataLength = _width * _height;
 					if (!isPaletted) {
 						dataLength *= 4;
 					}
 
-					pixels_ = std::make_unique<std::uint8_t[]>(dataLength);
+					_pixels = std::make_unique<std::uint8_t[]>(dataLength);
 
 					std::uint8_t compression;
-					fileHandle_->Read(&compression, sizeof(compression));
+					_fileHandle->Read(&compression, sizeof(compression));
 					std::uint8_t filter;
-					fileHandle_->Read(&filter, sizeof(filter));
+					_fileHandle->Read(&filter, sizeof(filter));
 					std::uint8_t interlace;
-					fileHandle_->Read(&interlace, sizeof(interlace));
+					_fileHandle->Read(&interlace, sizeof(interlace));
 
 					if (compression != 0) {
 						// Compression method is not supported
@@ -100,7 +100,7 @@ namespace nCine
 					std::int32_t prevlength = std::int32_t(data.size());
 					std::int32_t newLength = prevlength + length;
 					data.resize_for_overwrite(newLength);
-					fileHandle_->Read(data.data() + prevlength, length);
+					_fileHandle->Read(data.data() + prevlength, length);
 					break;
 				}
 
@@ -111,7 +111,7 @@ namespace nCine
 					// a megabyte-sized contiguous block for a font atlas, which is the kind of request that
 					// fails on a console heap long before it is actually out of memory.
 					const std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
-					std::size_t dataLength = 16 + std::size_t(height_) * (1 + std::size_t(width_) * pxStride);
+					std::size_t dataLength = 16 + std::size_t(_height) * (1 + std::size_t(_width) * pxStride);
 					auto buffer = std::make_unique<std::uint8_t[]>(dataLength);
 
 					MemoryStream ms(data.data() + 2, data.size() - 2);
@@ -120,12 +120,12 @@ namespace nCine
 					DEATH_ASSERT(uc.IsValid(), "PNG file cannot be decompressed", );
 
 					std::int32_t o = 0;
-					std::int32_t srcStride = width_ * pxStride;
-					std::int32_t dstStride = width_ * (isPaletted ? 1 : 4);
+					std::int32_t srcStride = _width * pxStride;
+					std::int32_t dstStride = _width * (isPaletted ? 1 : 4);
 
 					auto bufferPrev = std::make_unique<std::uint8_t[]>(srcStride);
 
-					for (std::int32_t y = 0; y < height_; y++) {
+					for (std::int32_t y = 0; y < _height; y++) {
 						// Read filter
 						std::uint8_t filter = buffer[o++];
 
@@ -143,36 +143,36 @@ namespace nCine
 
 						if (is24Bit) {
 							for (std::int32_t i = 0; i < srcStride; i++) {
-								std::memcpy(&pixels_[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
-								pixels_[y * dstStride + 4 * i + 3] = 255;
+								std::memcpy(&_pixels[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
+								_pixels[y * dstStride + 4 * i + 3] = 255;
 							}
 						} else {
-							std::memcpy(&pixels_[y * dstStride], bufferRow, srcStride);
+							std::memcpy(&_pixels[y * dstStride], bufferRow, srcStride);
 						}
 
 						std::memcpy(bufferPrev.get(), bufferRow, srcStride);
 					}
 
-					mipMapCount_ = 1;
-					texFormat_ = TextureFormat(PixelFormat::RGBA8);
-					hasLoaded_ = true;
+					_mipMapCount = 1;
+					_texFormat = TextureFormat(PixelFormat::RGBA8);
+					_hasLoaded = true;
 					return;
 				}
 
 				default: {
-					fileHandle_->Seek(length, SeekOrigin::Current);
+					_fileHandle->Seek(length, SeekOrigin::Current);
 					break;
 				}
 			}
 
-			if (fileHandle_->GetPosition() != blockEndPosition) {
+			if (_fileHandle->GetPosition() != blockEndPosition) {
 				// Block has incorrect length
 				LOGE("PNG file is corrupted");
 				return;
 			}
 
 			// Skip CRC
-			fileHandle_->Seek(4, SeekOrigin::Current);
+			_fileHandle->Seek(4, SeekOrigin::Current);
 		}
 
 		LOGE("PNG file is corrupted");

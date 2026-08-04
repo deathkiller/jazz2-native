@@ -4,31 +4,31 @@
 namespace nCine
 {
 	Camera::Camera()
-		: viewValues_(0.0f, 0.0f, 0.0f, 1.0f), view_(Matrix4x4f::Identity), updateFrameProjectionMatrix_(0), updateFrameViewMatrix_(0)
+		: _viewValues(0.0f, 0.0f, 0.0f, 1.0f), _view(Matrix4x4f::Identity), _updateFrameProjectionMatrix(0), _updateFrameViewMatrix(0)
 	{
 		auto res = theApplication().GetResolution();
 
-		projectionValues_.left = 0.0f;
-		projectionValues_.right = res.X;
-		projectionValues_.top = 0.0f;
-		projectionValues_.bottom = res.Y;
+		_projectionValues.left = 0.0f;
+		_projectionValues.right = res.X;
+		_projectionValues.top = 0.0f;
+		_projectionValues.bottom = res.Y;
 
-		projection_ = Matrix4x4f::Ortho(projectionValues_.left, projectionValues_.right,
-										projectionValues_.bottom, projectionValues_.top,
-										projectionValues_.nearClip, projectionValues_.farClip);
+		_projection = Matrix4x4f::Ortho(_projectionValues.left, _projectionValues.right,
+										_projectionValues.bottom, _projectionValues.top,
+										_projectionValues.nearClip, _projectionValues.farClip);
 	}
 
 	void Camera::SetOrthoProjection(float left, float right, float top, float bottom)
 	{
-		projectionValues_.left = left;
-		projectionValues_.right = right;
-		projectionValues_.top = top;
-		projectionValues_.bottom = bottom;
+		_projectionValues.left = left;
+		_projectionValues.right = right;
+		_projectionValues.top = top;
+		_projectionValues.bottom = bottom;
 
-		projection_ = Matrix4x4f::Ortho(projectionValues_.left, projectionValues_.right,
-										projectionValues_.bottom, projectionValues_.top,
-										projectionValues_.nearClip, projectionValues_.farClip);
-		updateFrameProjectionMatrix_ = theApplication().GetFrameCount();
+		_projection = Matrix4x4f::Ortho(_projectionValues.left, _projectionValues.right,
+										_projectionValues.bottom, _projectionValues.top,
+										_projectionValues.nearClip, _projectionValues.farClip);
+		_updateFrameProjectionMatrix = theApplication().GetFrameCount();
 	}
 
 	void Camera::SetOrthoProjection(const ProjectionValues& values)
@@ -38,14 +38,14 @@ namespace nCine
 
 	void Camera::SetView(Vector2f position, float rotation, float scale)
 	{
-		viewValues_.position = position;
-		viewValues_.rotation = rotation;
-		viewValues_.scale = scale;
+		_viewValues.position = position;
+		_viewValues.rotation = rotation;
+		_viewValues.scale = scale;
 
-		view_ = Matrix4x4f::Translation(-position.X, -position.Y, 0.0f);
-		view_.RotateZ(-rotation);
-		view_.Scale(scale, scale, 1.0f);
-		updateFrameViewMatrix_ = theApplication().GetFrameCount();
+		_view = Matrix4x4f::Translation(-position.X, -position.Y, 0.0f);
+		_view.RotateZ(-rotation);
+		_view.Scale(scale, scale, 1.0f);
+		_updateFrameViewMatrix = theApplication().GetFrameCount();
 	}
 
 	void Camera::SetView(float x, float y, float rotation, float scale)

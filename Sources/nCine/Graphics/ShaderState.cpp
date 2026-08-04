@@ -29,7 +29,7 @@ namespace nCine
 	}
 
 	ShaderState::ShaderState(DrawableNode* node, Shader* shader)
-		: node_(nullptr), shader_(nullptr), previousShaderType_(std::int32_t(Material::ShaderProgramType::Custom))
+		: _node(nullptr), _shader(nullptr), _previousShaderType(std::int32_t(Material::ShaderProgramType::Custom))
 	{
 		SetNode(node);
 		SetShader(shader);
@@ -45,21 +45,21 @@ namespace nCine
 	{
 		bool nodeHasChanged = false;
 
-		if (node != node_) {
-			if (node_ != nullptr) {
-				Material& prevMaterial = node_->renderCommand_.GetMaterial();
-				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
+		if (node != _node) {
+			if (_node != nullptr) {
+				Material& prevMaterial = _node->_renderCommand.GetMaterial();
+				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(_previousShaderType);
 				prevMaterial.SetShaderProgramType(programType);
 			}
 
 			if (node != nullptr) {
-				Material& material = node->renderCommand_.GetMaterial();
-				previousShaderType_ = std::int32_t(material.GetShaderProgramType());
+				Material& material = node->_renderCommand.GetMaterial();
+				_previousShaderType = std::int32_t(material.GetShaderProgramType());
 			}
-			node_ = node;
+			_node = node;
 
-			if (shader_ != nullptr) {
-				SetShader(shader_);
+			if (_shader != nullptr) {
+				SetShader(_shader);
 			}
 
 			nodeHasChanged = true;
@@ -73,20 +73,20 @@ namespace nCine
 		bool shaderHasChanged = false;
 
 		// Allow shader self-assignment to take into account the case where it loads new data
-		if (node_ != nullptr) {
-			Material& material = node_->renderCommand_.GetMaterial();
+		if (_node != nullptr) {
+			Material& material = _node->_renderCommand.GetMaterial();
 			if (shader == nullptr) {
-				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
+				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(_previousShaderType);
 				material.SetShaderProgramType(programType);
 			} else if (shader->IsLinked()) {
 				if (material.GetShaderProgramType() != Material::ShaderProgramType::Custom)
-					previousShaderType_ = std::int32_t(material.GetShaderProgramType());
+					_previousShaderType = std::int32_t(material.GetShaderProgramType());
 
-				material.SetShaderProgram(shader->glShaderProgram_.get());
+				material.SetShaderProgram(shader->_glShaderProgram.get());
 			}
 
-			shader_ = shader;
-			node_->shaderHasChanged();
+			_shader = shader;
+			_node->shaderHasChanged();
 			shaderHasChanged = true;
 		}
 
@@ -96,10 +96,10 @@ namespace nCine
 	/** @note Use this method when the content of the currently assigned shader changes */
 	bool ShaderState::ResetShader()
 	{
-		if (shader_ != nullptr && shader_->IsLinked() && node_) {
-			Material& material = node_->renderCommand_.GetMaterial();
-			material.SetShaderProgram(shader_->glShaderProgram_.get());
-			node_->shaderHasChanged();
+		if (_shader != nullptr && _shader->IsLinked() && _node) {
+			Material& material = _node->_renderCommand.GetMaterial();
+			material.SetShaderProgram(_shader->_glShaderProgram.get());
+			_node->shaderHasChanged();
 			return true;
 		}
 		return false;
@@ -108,11 +108,11 @@ namespace nCine
 	/** @note Contrary to uniforms, there is no need to set the texture again when resetting or replacing the shader */
 	bool ShaderState::SetTexture(std::uint32_t unit, const Texture* texture)
 	{
-		if (node_ == nullptr) {
+		if (_node == nullptr) {
 			return false;
 		}
 
-		Material& material = node_->renderCommand_.GetMaterial();
+		Material& material = _node->_renderCommand.GetMaterial();
 		const bool result = texture ? material.SetTexture(unit, *texture) : material.SetTexture(unit, nullptr);
 
 		return result;
@@ -120,12 +120,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformInt(const char* blockName, const char* name, const std::int32_t* vector)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr || vector == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntVector(vector);
 		}
@@ -135,12 +135,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0);
 		}
@@ -150,12 +150,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1);
 		}
@@ -165,12 +165,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2);
 		}
@@ -180,12 +180,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2, value3);
 		}
@@ -210,12 +210,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const float* vector)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr || vector == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatVector(vector);
 		}
@@ -225,12 +225,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0);
 		}
@@ -240,12 +240,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1);
 		}
@@ -255,12 +255,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2);
 		}
@@ -270,12 +270,12 @@ namespace nCine
 
 	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3)
 	{
-		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
+		if (_node == nullptr || _shader == nullptr || name == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(_node->_renderCommand.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2, value3);
 		}
@@ -305,12 +305,12 @@ namespace nCine
 
 	std::uint32_t ShaderState::GetUniformBlockSize(const char* blockName)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
+		if (_node == nullptr || _shader == nullptr || blockName == nullptr) {
 			return 0;
 		}
 
 		std::uint32_t size = 0;
-		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = _node->_renderCommand.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			size = static_cast<std::uint32_t>(uniformBlock->GetSize());
 		}
@@ -320,12 +320,12 @@ namespace nCine
 
 	bool ShaderState::CopyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
+		if (_node == nullptr || _shader == nullptr || blockName == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = _node->_renderCommand.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(destIndex, src, numBytes);
 		}
@@ -340,12 +340,12 @@ namespace nCine
 
 	bool ShaderState::CopyToUniformBlock(const char* blockName, std::uint8_t* src)
 	{
-		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
+		if (_node == nullptr || _shader == nullptr || blockName == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = _node->_renderCommand.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(src);
 		}

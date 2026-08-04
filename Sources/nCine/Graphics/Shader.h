@@ -122,7 +122,7 @@ namespace nCine
 
 		/** @brief Returns the `render_mode` flags of the shader (a bitmask of @ref ShaderCompiler::RenderMode, 0 when none were declared) */
 		inline std::uint32_t GetRenderModes() const {
-			return renderModes_;
+			return _renderModes;
 		}
 		/**
 		 * @brief Sets the `render_mode` flags of the shader
@@ -131,11 +131,11 @@ namespace nCine
 		 * @ref Material::SetShader() can apply the declared blending preset automatically.
 		 */
 		inline void SetRenderModes(std::uint32_t renderModes) {
-			renderModes_ = renderModes;
+			_renderModes = renderModes;
 		}
 
 		RHI::ShaderProgram* GetHandle() {
-			return glShaderProgram_.get();
+			return _glShaderProgram.get();
 		}
 
 		inline static ObjectType sType() {
@@ -144,8 +144,8 @@ namespace nCine
 
 	private:
 		/** @brief Underlying OpenGL shader program */
-		std::unique_ptr<RHI::ShaderProgram> glShaderProgram_;
+		std::unique_ptr<RHI::ShaderProgram> _glShaderProgram;
 		// "render_mode" bitmask (ShaderCompiler::RenderMode), 0 when none were declared
-		std::uint32_t renderModes_;
+		std::uint32_t _renderModes;
 	};
 }

@@ -30,9 +30,9 @@ using namespace nCine::Backends;
 #	define GL_CALL(op)													\
 		do {															\
 			op;															\
-			GLenum glErr_ = glGetError();								\
-			if (glErr_ != 0) {											\
-				LOGE("GL error 0x{:x} returned from {}", glErr_, #op);	\
+			GLenum _glErr = glGetError();								\
+			if (_glErr != 0) {											\
+				LOGE("GL error 0x{:x} returned from {}", _glErr, #op);	\
 			}															\
 		} while (0)
 #else
@@ -42,7 +42,7 @@ using namespace nCine::Backends;
 namespace nCine
 {
 	ImGuiDrawing::ImGuiDrawing(bool withSceneGraph)
-		: withSceneGraph_(withSceneGraph), appInputHandler_(nullptr), lastFrameWidth_(0), lastFrameHeight_(0), lastLayerValue_(0)
+		: _withSceneGraph(withSceneGraph), _appInputHandler(nullptr), _lastFrameWidth(0), _lastFrameHeight(0), _lastLayerValue(0)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
@@ -78,25 +78,25 @@ namespace nCine
 #endif
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-		imguiShaderProgram_ = std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate);
+		_imguiShaderProgram = std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate);
 #if defined(WITH_RHI_GL)
 #	if defined(RHI_GL_PROFILE_ES2)
 		// The ES2 profile compiles with "#version 100", so it needs the ESSL 100 (Essl100Emitter) sources
-		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource100);
-		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource100);
+		_imguiShaderProgram->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource100);
+		_imguiShaderProgram->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource100);
 #	else
-		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource);
-		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource);
+		_imguiShaderProgram->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource);
+		_imguiShaderProgram->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource);
 #	endif
 #else
 		// Non-GL backends consume their own precompiled artifact from the offline reflection (D3D11: HLSL,
 		// Vulkan: SPIR-V, software: transpiled C++) - the same route RenderResources uses for the engine's
 		// precompiled programs. The GL source strings are compiled out (nullptr) on these builds and their
 		// AttachShaderFromString is an inert stub, so the reflection is the only shader input Link() needs.
-		imguiShaderProgram_->SetReflection(&ShadersGen::DefaultImGui.Variants[0]);
+		_imguiShaderProgram->SetReflection(&ShadersGen::DefaultImGui.Variants[0]);
 #endif
-		imguiShaderProgram_->Link(RHI::ShaderProgram::Introspection::Enabled);
-		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != RHI::ShaderProgram::Status::LinkingFailed);
+		_imguiShaderProgram->Link(RHI::ShaderProgram::Introspection::Enabled);
+		FATAL_ASSERT(_imguiShaderProgram->GetStatus() != RHI::ShaderProgram::Status::LinkingFailed);
 
 		if (!withSceneGraph) {
 			SetupBuffersAndShader();
@@ -206,13 +206,13 @@ namespace nCine
 
 #if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 		// The raw-GL buffer handles only exist on the GL backend (matching the member declarations)
-		if (vboHandle_) {
-			glDeleteBuffers(1, &vboHandle_);
-			vboHandle_ = 0;
+		if (_vboHandle) {
+			glDeleteBuffers(1, &_vboHandle);
+			_vboHandle = 0;
 		}
-		if (elementsHandle_) {
-			glDeleteBuffers(1, &elementsHandle_);
-			elementsHandle_ = 0;
+		if (_elementsHandle) {
+			glDeleteBuffers(1, &_elementsHandle);
+			_elementsHandle = 0;
 		}
 #endif
 
@@ -238,17 +238,17 @@ namespace nCine
 #endif
 
 #if !defined(IMGUI_HAS_VIEWPORT)
-		// projectionMatrix_ must be recaltulated when the main window moves if viewports are active
+		// _projectionMatrix must be recaltulated when the main window moves if viewports are active
 		ImGuiIO& io = ImGui::GetIO();
-		if (lastFrameWidth_ != io.DisplaySize.x || lastFrameHeight_ != io.DisplaySize.y) {
-			lastFrameWidth_ = io.DisplaySize.x;
-			lastFrameHeight_ = io.DisplaySize.y;
-			projectionMatrix_ = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
+		if (_lastFrameWidth != io.DisplaySize.x || _lastFrameHeight != io.DisplaySize.y) {
+			_lastFrameWidth = io.DisplaySize.x;
+			_lastFrameHeight = io.DisplaySize.y;
+			_projectionMatrix = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
 
-			if (!withSceneGraph_) {
-				imguiShaderUniforms_->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
-				imguiShaderUniforms_->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
-				imguiShaderUniforms_->CommitUniforms();
+			if (!_withSceneGraph) {
+				_imguiShaderUniforms->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(_projectionMatrix.Data());
+				_imguiShaderUniforms->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
+				_imguiShaderUniforms->CommitUniforms();
 			}
 		}
 #endif
@@ -289,14 +289,14 @@ namespace nCine
 
 		ImGuiIO& io = ImGui::GetIO();
 		if (io.WantCaptureKeyboard) {
-			if (appInputHandler_ == nullptr) {
-				appInputHandler_ = IInputManager::handler();
+			if (_appInputHandler == nullptr) {
+				_appInputHandler = IInputManager::handler();
 				IInputManager::setHandler(nullptr);
 			}
 		} else {
-			if (appInputHandler_ != nullptr) {
-				IInputManager::setHandler(appInputHandler_);
-				appInputHandler_ = nullptr;
+			if (_appInputHandler != nullptr) {
+				IInputManager::setHandler(_appInputHandler);
+				_appInputHandler = nullptr;
 			}
 		}
 
@@ -314,7 +314,7 @@ namespace nCine
 	void ImGuiDrawing::DestroyTexture(ImTextureData* tex)
 	{
 		RHI::Texture* texturePtr = (RHI::Texture*)(intptr_t)tex->TexID;
-		textures_.erase(texturePtr);
+		_textures.erase(texturePtr);
 
 		// Clear identifiers and mark as destroyed (in order to allow, e.g., calling InvalidateDeviceObjects while running)
 		tex->SetTexID(ImTextureID_Invalid);
@@ -353,7 +353,7 @@ namespace nCine
 			texture->TexImage2D(0, PixelFormat::RGBA8, false, tex->Width, tex->Height, pixels);
 
 			RHI::Texture* texturePtr = texture.get();
-			textures_.emplace(texturePtr, std::move(texture));
+			_textures.emplace(texturePtr, std::move(texture));
 			// Store identifiers
 			tex->SetTexID((ImTextureID)(intptr_t)texturePtr);
 			tex->SetStatus(ImTextureStatus_OK);
@@ -382,12 +382,12 @@ namespace nCine
 			// GL ES doesn't have GL_UNPACK_ROW_LENGTH, so we need to (A) copy to a contiguous buffer or (B) upload line by line.
 			for (ImTextureRect& r : tex->Updates) {
 				const int srcPitch = r.w * tex->BytesPerPixel;
-				if (tempTexBuffer_.size() < r.h * srcPitch)
-					tempTexBuffer_.resize(r.h * srcPitch);
-				char* outP = tempTexBuffer_.data();
+				if (_tempTexBuffer.size() < r.h * srcPitch)
+					_tempTexBuffer.resize(r.h * srcPitch);
+				char* outP = _tempTexBuffer.data();
 				for (int y = 0; y < r.h; y++, outP += srcPitch)
 					memcpy(outP, tex->GetPixelsAt(r.x, r.y + y), srcPitch);
-				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, PixelFormat::RGBA8, false, tempTexBuffer_.data());
+				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, PixelFormat::RGBA8, false, _tempTexBuffer.data());
 			}
 #endif
 			tex->SetStatus(ImTextureStatus_OK);
@@ -402,7 +402,7 @@ namespace nCine
 	RenderCommand* ImGuiDrawing::RetrieveCommandFromPool()
 	{
 		bool commandAdded = false;
-		RenderCommand* retrievedCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(imguiShaderProgram_.get(), commandAdded);
+		RenderCommand* retrievedCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(_imguiShaderProgram.get(), commandAdded);
 		if (commandAdded) {
 			SetupRenderCommand(*retrievedCommand);
 		}
@@ -414,14 +414,14 @@ namespace nCine
 		cmd.SetType(RenderCommand::Type::ImGui);
 
 		Material& material = cmd.GetMaterial();
-		material.SetShaderProgram(imguiShaderProgram_.get());
+		material.SetShaderProgram(_imguiShaderProgram.get());
 		material.ReserveUniformsDataMemory();
 		material.Uniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
-		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
-		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
+		_imguiShaderProgram->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
+		_imguiShaderProgram->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 		material.SetBlendingEnabled(true);
 		material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
@@ -453,9 +453,9 @@ namespace nCine
 		}
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		// projectionMatrix_ must be recaltulated when the main window moves if viewports are active
-		projectionMatrix_ = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
-		projectionMatrix_.Translate(-clipOff.x, -clipOff.y, 0.0f);
+		// _projectionMatrix must be recaltulated when the main window moves if viewports are active
+		_projectionMatrix = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
+		_projectionMatrix.Translate(-clipOff.x, -clipOff.y, 0.0f);
 #endif
 
 		std::uint32_t numCmd = 0;
@@ -464,7 +464,7 @@ namespace nCine
 
 			RenderCommand& firstCmd = *RetrieveCommandFromPool();
 
-			firstCmd.GetMaterial().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
+			firstCmd.GetMaterial().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(_projectionMatrix.Data());
 
 			firstCmd.GetGeometry().ShareVbo(nullptr);
 			float* vertices = firstCmd.GetGeometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
@@ -476,11 +476,11 @@ namespace nCine
 			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(std::uint16_t));
 			firstCmd.GetGeometry().ReleaseIndexPointer();
 
-			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
+			if (_lastLayerValue != theApplication().GetGuiSettings().imguiLayer) {
 				// It is enough to set the uniform value once as every ImGui command share the same shader
 				const float depth = RenderCommand::CalculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
 				firstCmd.GetMaterial().Uniform(Material::DepthUniformName)->SetFloatValue(depth);
-				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
+				_lastLayerValue = theApplication().GetGuiSettings().imguiLayer;
 			}
 
 			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
@@ -517,23 +517,23 @@ namespace nCine
 
 	void ImGuiDrawing::SetupBuffersAndShader()
 	{
-		vbo_ = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
-		ibo_ = std::make_unique<RHI::Buffer>(BufferTarget::Index);
+		_vbo = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
+		_ibo = std::make_unique<RHI::Buffer>(BufferTarget::Index);
 
-		imguiShaderUniforms_ = std::make_unique<RHI::ShaderUniforms>(imguiShaderProgram_.get());
-		imguiShaderUniforms_->SetUniformsDataPointer(uniformsBuffer_);
-		imguiShaderUniforms_->GetUniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
+		_imguiShaderUniforms = std::make_unique<RHI::ShaderUniforms>(_imguiShaderProgram.get());
+		_imguiShaderUniforms->SetUniformsDataPointer(_uniformsBuffer);
+		_imguiShaderUniforms->GetUniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
 
-		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
-		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
+		_imguiShaderProgram->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
+		_imguiShaderProgram->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
+		_imguiShaderProgram->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 	}
 
 	void ImGuiDrawing::Draw()
 	{
-		DrawData(ImGui::GetDrawData(), vbo_.get(), ibo_.get());
+		DrawData(ImGui::GetDrawData(), _vbo.get(), _ibo.get());
 	}
 
 	void ImGuiDrawing::DrawData(ImDrawData* drawData, RHI::Buffer* vbo, RHI::Buffer* ibo)
@@ -557,12 +557,12 @@ namespace nCine
 
 		// The projection is derived from this draw data, not from the display size: a multi-viewport platform
 		// window has its own origin (DisplayPos), and its geometry is expressed in the same virtual desktop space
-		imguiShaderProgram_->Use();
+		_imguiShaderProgram->Use();
 		Matrix4x4f projection = Matrix4x4f::Ortho(drawData->DisplayPos.x, drawData->DisplayPos.x + drawData->DisplaySize.x,
 			drawData->DisplayPos.y + drawData->DisplaySize.y, drawData->DisplayPos.y, -1.0f, 1.0f);
-		imguiShaderUniforms_->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projection.Data());
-		imguiShaderUniforms_->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
-		imguiShaderUniforms_->CommitUniforms();
+		_imguiShaderUniforms->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projection.Data());
+		_imguiShaderUniforms->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
+		_imguiShaderUniforms->CommitUniforms();
 
 		RHI::Device::BlendingState blendingState = RHI::Device::GetBlendingState();
 		RHI::Device::SetBlendingEnabled(true);
@@ -585,7 +585,7 @@ namespace nCine
 		}
 		if (totalVertices > 0 && totalIndices > 0) {
 			// Always define vertex format (and bind VAO) before uploading data to buffers
-			imguiShaderProgram_->DefineVertexFormat(vbo, ibo);
+			_imguiShaderProgram->DefineVertexFormat(vbo, ibo);
 			vbo->BufferData(totalVertices * sizeof(ImDrawVert), nullptr, BufferUsage::StreamDraw);
 			ibo->BufferData(totalIndices * sizeof(ImDrawIdx), nullptr, BufferUsage::StreamDraw);
 
@@ -597,7 +597,7 @@ namespace nCine
 				vertexOffset += std::size_t(imCmdList->VtxBuffer.Size);
 				indexOffset += std::size_t(imCmdList->IdxBuffer.Size);
 			}
-			imguiShaderProgram_->Use();
+			_imguiShaderProgram->Use();
 		}
 
 		std::size_t vertexBase = 0, indexBase = 0;
@@ -659,18 +659,18 @@ namespace nCine
 		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &lastVertexArray);
 
 		// TODO: Use nCine shaders directly instead
-		auto shaderHandle = imguiShaderProgram_.get()->GetGLHandle();
+		auto shaderHandle = _imguiShaderProgram.get()->GetGLHandle();
 
-		attribLocationTex_ = glGetUniformLocation(shaderHandle, "uTexture");
-		attribLocationProjMtx_ = glGetUniformLocation(shaderHandle, "uGuiProjection");
-		attribLocationVtxPos_ = (GLuint)glGetAttribLocation(shaderHandle, "aPosition");
-		attribLocationVtxUV_ = (GLuint)glGetAttribLocation(shaderHandle, "aTexCoords");
-		attribLocationVtxColor_ = (GLuint)glGetAttribLocation(shaderHandle, "aColor");
+		_attribLocationTex = glGetUniformLocation(shaderHandle, "uTexture");
+		_attribLocationProjMtx = glGetUniformLocation(shaderHandle, "uGuiProjection");
+		_attribLocationVtxPos = (GLuint)glGetAttribLocation(shaderHandle, "aPosition");
+		_attribLocationVtxUV = (GLuint)glGetAttribLocation(shaderHandle, "aTexCoords");
+		_attribLocationVtxColor = (GLuint)glGetAttribLocation(shaderHandle, "aColor");
 
 		// Create buffers
 		// TODO: Use nCine RHI::Buffer directly
-		glGenBuffers(1, &vboHandle_);
-		glGenBuffers(1, &elementsHandle_);
+		glGenBuffers(1, &_vboHandle);
+		glGenBuffers(1, &_elementsHandle);
 
 		// Restore modified GL state
 		glBindTexture(GL_TEXTURE_2D, lastTexture);
@@ -780,24 +780,24 @@ namespace nCine
 		};
 
 		// TODO: Use nCine shaders directly instead
-		auto shaderHandle = imguiShaderProgram_.get()->GetGLHandle();
+		auto shaderHandle = _imguiShaderProgram.get()->GetGLHandle();
 
 		glUseProgram(shaderHandle);
-		glUniform1i(attribLocationTex_, 0);
-		glUniformMatrix4fv(attribLocationProjMtx_, 1, GL_FALSE, &ortho_projection[0][0]);
+		glUniform1i(_attribLocationTex, 0);
+		glUniformMatrix4fv(_attribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
 		glBindVertexArray(vertexArrayObject);
 
 		// Bind vertex/index buffers and setup attributes for ImDrawVert
-		GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, vboHandle_));
-		GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementsHandle_));
+		GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, _vboHandle));
+		GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementsHandle));
 
-		GL_CALL(glEnableVertexAttribArray(attribLocationVtxPos_));
-		GL_CALL(glEnableVertexAttribArray(attribLocationVtxUV_));
-		GL_CALL(glEnableVertexAttribArray(attribLocationVtxColor_));
-		GL_CALL(glVertexAttribPointer(attribLocationVtxPos_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
-		GL_CALL(glVertexAttribPointer(attribLocationVtxUV_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, uv)));
-		GL_CALL(glVertexAttribPointer(attribLocationVtxColor_, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
+		GL_CALL(glEnableVertexAttribArray(_attribLocationVtxPos));
+		GL_CALL(glEnableVertexAttribArray(_attribLocationVtxUV));
+		GL_CALL(glEnableVertexAttribArray(_attribLocationVtxColor));
+		GL_CALL(glVertexAttribPointer(_attribLocationVtxPos, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
+		GL_CALL(glVertexAttribPointer(_attribLocationVtxUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, uv)));
+		GL_CALL(glVertexAttribPointer(_attribLocationVtxColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
 	}
 #elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_D3D11)
 	// The Direct3D 11 multi-viewport path renders through the ordinary RHI pipeline: one device serves every
@@ -817,7 +817,7 @@ namespace nCine
 
 		// Platform windows are drawn outside the scene graph, so they need the vertex/index buffers and uniform
 		// storage of the direct path even when the main window renders through the render-command path
-		if (vbo_ == nullptr) {
+		if (_vbo == nullptr) {
 			SetupBuffersAndShader();
 		}
 	}
@@ -873,7 +873,7 @@ namespace nCine
 
 		// The shared buffers are enough here: this backend executes each draw as it is issued, so the next window
 		// overwriting them cannot affect the draws already made
-		DrawData(drawData, vbo_.get(), ibo_.get());
+		DrawData(drawData, _vbo.get(), _ibo.get());
 
 		RHI::Device::EndSecondaryFrame();
 		RHI::Device::SetViewport(previousViewport);
@@ -915,7 +915,7 @@ namespace nCine
 
 		// Platform windows are drawn outside the scene graph, so they need the vertex/index buffers and uniform
 		// storage of the direct path even when the main window renders through the render-command path
-		if (vbo_ == nullptr) {
+		if (_vbo == nullptr) {
 			SetupBuffersAndShader();
 		}
 	}

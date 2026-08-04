@@ -5,12 +5,12 @@
 namespace nCine
 {
 	AudioBufferPlayer::AudioBufferPlayer()
-		: IAudioPlayer(ObjectType::AudioBufferPlayer), audioBuffer_(nullptr)
+		: IAudioPlayer(ObjectType::AudioBufferPlayer), _audioBuffer(nullptr)
 	{
 	}
 
 	AudioBufferPlayer::AudioBufferPlayer(AudioBuffer* audioBuffer)
-		: IAudioPlayer(ObjectType::AudioBufferPlayer), audioBuffer_(audioBuffer)
+		: IAudioPlayer(ObjectType::AudioBufferPlayer), _audioBuffer(audioBuffer)
 	{
 	}
 
@@ -21,54 +21,54 @@ namespace nCine
 
 	std::uint32_t AudioBufferPlayer::bufferId() const
 	{
-		std::uint32_t bufferId = (audioBuffer_ != nullptr ? audioBuffer_->bufferId() : 0U);
-		return (state_ != PlayerState::Initial && state_ != PlayerState::Stopped ? bufferId : 0U);
+		std::uint32_t bufferId = (_audioBuffer != nullptr ? _audioBuffer->bufferId() : 0U);
+		return (_state != PlayerState::Initial && _state != PlayerState::Stopped ? bufferId : 0U);
 	}
 
 	std::int32_t AudioBufferPlayer::bytesPerSample() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->bytesPerSample() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->bytesPerSample() : 0);
 	}
 
 	std::int32_t AudioBufferPlayer::numChannels() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->numChannels() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->numChannels() : 0);
 	}
 
 	std::int32_t AudioBufferPlayer::frequency() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->frequency() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->frequency() : 0);
 	}
 
 	std::int32_t AudioBufferPlayer::numSamples() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->numSamples() : 0UL);
+		return (_audioBuffer != nullptr ? _audioBuffer->numSamples() : 0UL);
 	}
 
 	float AudioBufferPlayer::duration() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->duration() : 0.0f);
+		return (_audioBuffer != nullptr ? _audioBuffer->duration() : 0.0f);
 	}
 
 	std::int32_t AudioBufferPlayer::bufferSize() const
 	{
-		return (audioBuffer_ != nullptr ? audioBuffer_->bufferSize() : 0);
+		return (_audioBuffer != nullptr ? _audioBuffer->bufferSize() : 0);
 	}
 
 	void AudioBufferPlayer::setAudioBuffer(AudioBuffer* audioBuffer)
 	{
 		stop();
-		audioBuffer_ = audioBuffer;
+		_audioBuffer = audioBuffer;
 	}
 
 	void AudioBufferPlayer::play()
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
-		switch (state_) {
+		switch (_state) {
 			case PlayerState::Initial:
 			case PlayerState::Stopped: {
-				if (audioBuffer_ == nullptr) {
+				if (_audioBuffer == nullptr) {
 					break;
 				}
 
@@ -79,32 +79,32 @@ namespace nCine
 					}
 					break;
 				}
-				sourceId_ = source;
+				_sourceId = source;
 
-				device.setSourceBuffer(sourceId_, audioBuffer_->bufferId());
+				device.setSourceBuffer(_sourceId, _audioBuffer->bufferId());
 				// Setting source looping only if not streaming
-				device.setSourceLooping(sourceId_, GetFlags(PlayerFlags::Looping));
+				device.setSourceLooping(_sourceId, GetFlags(PlayerFlags::Looping));
 
-				device.setSourceGain(sourceId_, gain_);
-				device.setSourcePitch(sourceId_, pitch_);
+				device.setSourceGain(_sourceId, _gain);
+				device.setSourcePitch(_sourceId, _pitch);
 
 				updateFilters();
 
 				bool isSourceRelative = GetFlags(PlayerFlags::SourceRelative);
 				bool isAs2D = GetFlags(PlayerFlags::As2D);
 
-				device.setSourceRelative(sourceId_, isSourceRelative || isAs2D);
-				setPositionInternal(getAdjustedPosition(device, position_, isSourceRelative, isAs2D));
+				device.setSourceRelative(_sourceId, isSourceRelative || isAs2D);
+				setPositionInternal(getAdjustedPosition(device, _position, isSourceRelative, isAs2D));
 
-				device.playSource(sourceId_);
-				state_ = PlayerState::Playing;
+				device.playSource(_sourceId);
+				_state = PlayerState::Playing;
 				break;
 			}
 			case PlayerState::Paused: {
 				updateFilters();
 
-				device.playSource(sourceId_);
-				state_ = PlayerState::Playing;
+				device.playSource(_sourceId);
+				_state = PlayerState::Playing;
 				break;
 			}
 		}
@@ -112,10 +112,10 @@ namespace nCine
 
 	void AudioBufferPlayer::pause()
 	{
-		switch (state_) {
+		switch (_state) {
 			case PlayerState::Playing: {
-				theServiceLocator().GetAudioDevice().pauseSource(sourceId_);
-				state_ = PlayerState::Paused;
+				theServiceLocator().GetAudioDevice().pauseSource(_sourceId);
+				_state = PlayerState::Paused;
 				break;
 			}
 		}
@@ -125,14 +125,14 @@ namespace nCine
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
-		switch (state_) {
+		switch (_state) {
 			case PlayerState::Playing:
 			case PlayerState::Paused: {
-				device.stopSource(sourceId_);
+				device.stopSource(_sourceId);
 				// Detach the buffer from source
-				device.setSourceBuffer(sourceId_, 0);
-				device.setSourceLowPass(sourceId_, 1.0f);
-				state_ = PlayerState::Stopped;
+				device.setSourceBuffer(_sourceId, 0);
+				device.setSourceLowPass(_sourceId, 1.0f);
+				_state = PlayerState::Stopped;
 				break;
 			}
 		}
@@ -145,21 +145,21 @@ namespace nCine
 		if (isLooping() != value) {
 			IAudioPlayer::setLooping(value);
 			// Applying the change immediately, so the per-frame update doesn't have to re-set it
-			if (sourceId_ != IAudioDevice::UnavailableSource) {
-				theServiceLocator().GetAudioDevice().setSourceLooping(sourceId_, value);
+			if (_sourceId != IAudioDevice::UnavailableSource) {
+				theServiceLocator().GetAudioDevice().setSourceLooping(_sourceId, value);
 			}
 		}
 	}
 
 	void AudioBufferPlayer::updateState()
 	{
-		if (state_ == PlayerState::Playing) {
+		if (_state == PlayerState::Playing) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
-			if (!device.isSourcePlaying(sourceId_)) {
+			if (!device.isSourcePlaying(_sourceId)) {
 				// Detach the buffer from source
-				device.setSourceBuffer(sourceId_, 0);
-				device.setSourceLowPass(sourceId_, 1.0f);
-				state_ = PlayerState::Stopped;
+				device.setSourceBuffer(_sourceId, 0);
+				device.setSourceLowPass(_sourceId, 1.0f);
+				_state = PlayerState::Stopped;
 
 				device.unregisterPlayer(this);
 			}

@@ -26,18 +26,18 @@ namespace nCine::RHI::GXM
 	public:
 		GxmRenderbuffer() = default;
 		void Create(DepthStencilFormat format, std::int32_t width, std::int32_t height) {
-			format_ = format;
-			width_ = width;
-			height_ = height;
+			_format = format;
+			_width = width;
+			_height = height;
 		}
 		inline std::uint32_t GetGLHandle() const {
 			return 0;
 		}
 
 	private:
-		DepthStencilFormat format_ = DepthStencilFormat::None;
-		std::int32_t width_ = 0;
-		std::int32_t height_ = 0;
+		DepthStencilFormat _format = DepthStencilFormat::None;
+		std::int32_t _width = 0;
+		std::int32_t _height = 0;
 	};
 
 	/**
@@ -119,11 +119,11 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns the texture attached at the given colour attachment index, or `nullptr` */
 		inline GxmTexture* GetColorTexture(std::uint32_t index) const {
-			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
+			return (index < MaxColorAttachments ? _colorTextures[index] : nullptr);
 		}
 		/** @brief Returns the number of colour attachments enabled for drawing (see @ref SetDrawBuffers()) */
 		inline std::uint32_t GetNumDrawBuffers() const {
-			return numDrawBuffers_;
+			return _numDrawBuffers;
 		}
 
 		/**
@@ -142,18 +142,18 @@ namespace nCine::RHI::GXM
 			SceGxmSyncObject*& syncObject, std::int32_t& width, std::int32_t& height);
 
 	private:
-		GxmTexture* colorTextures_[MaxColorAttachments];
-		std::uint32_t numDrawBuffers_;
+		GxmTexture* _colorTextures[MaxColorAttachments];
+		std::uint32_t _numDrawBuffers;
 
 		// The sceGxm objects describing the current attachment, rebuilt when it changes
-		SceGxmRenderTarget* gxmRenderTarget_;
-		SceGxmColorSurface colorSurface_;
-		SceGxmSyncObject* syncObject_;		// serializes writing these texels against sampling them
-		GxmTexture* surfaceTexture_;		// the texture colorSurface_ was built over (to detect a change)
-		void* surfaceData_;					// its GPU address at that point (a reallocation invalidates the surface)
-		std::int32_t surfaceWidth_;
-		std::int32_t surfaceHeight_;
-		bool surfaceValid_;
+		SceGxmRenderTarget* _gxmRenderTarget;
+		SceGxmColorSurface _colorSurface;
+		SceGxmSyncObject* _syncObject;		// serializes writing these texels against sampling them
+		GxmTexture* _surfaceTexture;		// the texture _colorSurface was built over (to detect a change)
+		void* _surfaceData;					// its GPU address at that point (a reallocation invalidates the surface)
+		std::int32_t _surfaceWidth;
+		std::int32_t _surfaceHeight;
+		bool _surfaceValid;
 
 		/** @brief Releases the sceGxm render target and invalidates the colour surface */
 		void ReleaseSceneTarget();

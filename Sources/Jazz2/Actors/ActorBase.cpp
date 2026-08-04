@@ -1484,7 +1484,7 @@ namespace Jazz2::Actors
 			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteOffset(-1), _baseIndexed(false), _basePaletteOffset(0)
 	{
 		_type = ObjectType::Sprite;
-		renderCommand_.SetType(RenderCommand::Type::Sprite);
+		_renderCommand.SetType(RenderCommand::Type::Sprite);
 		Initialize(ActorRendererType::Default);
 	}
 
@@ -1507,25 +1507,25 @@ namespace Jazz2::Actors
 		bool hasPalette = (_paletteOffset >= 0 || _baseIndexed);
 		bool shaderChanged;
 		switch (type) {
-			case ActorRendererType::Outline: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::OutlinePalette : PrecompiledShader::Outline)); break;
-			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::WhiteMaskPalette : PrecompiledShader::WhiteMask)); break;
-			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::PartialWhiteMaskPalette : PrecompiledShader::PartialWhiteMask)); break;
-			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::FrozenMaskPalette : PrecompiledShader::FrozenMask)); break;
+			case ActorRendererType::Outline: shaderChanged = _renderCommand.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::OutlinePalette : PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = _renderCommand.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::WhiteMaskPalette : PrecompiledShader::WhiteMask)); break;
+			case ActorRendererType::PartialWhiteMask: shaderChanged = _renderCommand.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::PartialWhiteMaskPalette : PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = _renderCommand.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::FrozenMaskPalette : PrecompiledShader::FrozenMask)); break;
 			default:
 				// Default state has no precompiled "palette-off" shader - it uses the built-in Sprite program instead
 				shaderChanged = (hasPalette
-					? renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::PaletteRemap))
-					: renderCommand_.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+					? _renderCommand.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::PaletteRemap))
+					: _renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 				break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;
-				if (texture_ != nullptr) {
-					Vector2i texSize = texture_->GetSize();
+				if (_texture != nullptr) {
+					Vector2i texSize = _texture->GetSize();
 					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
@@ -1538,13 +1538,13 @@ namespace Jazz2::Actors
 		// after shaderHasChanged() (which (re)allocates the uniform data and resets uTexture to unit 0) so the
 		// sampler/texture binding sticks. Every render type has a palette variant now.
 		if (hasPalette) {
-			RHI::UniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
+			RHI::UniformCache* paletteUniform = _renderCommand.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 			Texture* paletteTexture = resolver.GetPaletteTexture();
 			if (paletteTexture != nullptr) {
-				renderCommand_.GetMaterial().SetTexture(1, *paletteTexture);
+				_renderCommand.GetMaterial().SetTexture(1, *paletteTexture);
 			}
 			// A recolor override (>= 0) wins; otherwise the sprite samples its own palette region (offset 0 for most
 			// sprites, the gem-gradient rows for gems)
@@ -1624,8 +1624,8 @@ namespace Jazz2::Actors
 			case ActorRendererType::Outline:
 				if (_rendererTransition < 0.8f) {
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.06f, 0.8f);
-					if (texture_ != nullptr) {
-						Vector2i texSize = texture_->GetSize();
+					if (_texture != nullptr) {
+						Vector2i texSize = _texture->GetSize();
 						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}
@@ -1633,8 +1633,8 @@ namespace Jazz2::Actors
 			case ActorRendererType::FrozenMask:
 				if (_rendererTransition < 1.0f) {
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.14f, 1.0f);
-					if (texture_ != nullptr) {
-						Vector2i texSize = texture_->GetSize();
+					if (_texture != nullptr) {
+						Vector2i texSize = _texture->GetSize();
 						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}

@@ -33,12 +33,12 @@ namespace nCine::RHI::GL
 		/** @brief Overwrites every bucket with the same value (used to drop the cache when external code changed the bindings) */
 		void SetAll(value_t value) {
 			for (std::uint32_t i = 0; i < S; i++) {
-				buckets_[i] = value;
+				_buckets[i] = value;
 			}
 		}
 
 	private:
-		value_t buckets_[S];
+		value_t _buckets[S];
 		MappingFunc mappingFunc;
 	};
 
@@ -47,13 +47,13 @@ namespace nCine::RHI::GL
 	{
 		// Initializing with a null OpenGL object id
 		for (std::uint32_t i = 0; i < S; i++)
-			buckets_[i] = 0;
+			_buckets[i] = 0;
 	}
 
 	template<std::uint32_t S, class MappingFunc>
 	inline value_t& GLHashMap<S, MappingFunc>::operator[](key_t key)
 	{
-		return buckets_[mappingFunc(key)];
+		return _buckets[mappingFunc(key)];
 	}
 
 	/**

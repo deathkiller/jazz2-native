@@ -710,6 +710,214 @@ their exact `--check` dumps in @cpp "tests/expected" @ce, inputs that must fail 
 @cpp "tests/errors" @ce, ESSL 100 fixtures in @cpp "tests/essl100" @ce, and `tests/RunTests.ps1` to
 run everything including emitted-header shape assertions.
 
+@section shader-compiler-editor Editor support (Visual Studio Code)
+
+@cpp "Sources/Utilities/VSCodeExtension" @ce is a Visual Studio Code extension for the `.shader`
+language. Its point of difference from a generic GLSL mode is that it **runs this tool**: diagnostics
+are the compiler's own, obtained from `ShaderCompiler <file> --check`, so the squiggles in the editor
+and the errors from a regeneration cannot disagree. Around that it adds highlighting that knows the
+keyword directives and the fixed-function DSL, completion driven by the cursor's context, hovers that
+explain what the compiler does with each construct, an outline, `#include` navigation, and one-keystroke
+previews of the five source-to-source transforms.
+
+It is plain JavaScript --- no build step, no npm dependency, nothing to compile. The extension host
+runs @cpp "src/extension.js" @ce directly.
+
+@subsection shader-compiler-editor-install Installing
+
+Point the editor's extensions directory at the in-tree copy, then restart Visual Studio Code
+@m_span{m-text m-dim} (or run *Developer: Reload Window*) @m_endspan so the new directory is scanned:
+
+@code{.sh}
+# Linux / macOS
+ln -sfn "$PWD/Sources/Utilities/VSCodeExtension" ~/.vscode/extensions/death-shader
+@endcode
+
+@code{.bat}
+rem Windows, from an elevated prompt (a directory junction needs no elevation on recent builds)
+mklink /D "%USERPROFILE%\.vscode\extensions\death-shader" "%CD%\Sources\Utilities\VSCodeExtension"
+@endcode
+
+@m_class{m-noindent}
+
+A symlink is preferable to a copy: the extension then tracks the repository, so a change to the
+language and a change to its editor support land together. To develop the extension itself, open
+@cpp "Sources/Utilities/VSCodeExtension" @ce as a folder and press <tt>F5</tt> --- the bundled
+@cpp ".vscode/launch.json" @ce starts an extension-host window with the repository root already open.
+For distribution outside the repository, `npx @vscode/vsce package` produces a `.vsix`; that is the
+only workflow that needs Node installed.
+
+@subsection shader-compiler-editor-compiler How it finds the tool
+
+The executable is resolved in this order, the first hit winning:
+
+1.  The `deathShader.compilerPath` setting, if set --- absolute, or relative to the workspace folder
+    @m_span{m-text m-dim} (never relative to the editor's working directory) @m_endspan.
+2.  Build outputs inside the workspace:
+    @cpp "Sources/Utilities/ShaderCompiler/<x64|ARM64EC|Win32>/<Release|Debug>/" @ce (the MSBuild
+    project's output, and where `GenerateAll.ps1` expects it), then any CMake tree at the repository
+    root whose directory name starts with `build` or `cmake-build`, then
+    @cpp "out/build/<preset>/" @ce for the Visual Studio CMake integration.
+3.  `ShaderCompiler` on `PATH`.
+
+@m_class{m-noindent}
+
+A status-bar item on the right names the executable in use, or warns when none was found; clicking it
+prints the resolved path. Without an executable the extension still works --- it falls back to the
+checks in @ref shader-compiler-editor-diagnostics "the second diagnostic layer" --- but nothing that
+needs to parse or transform a shader is available.
+
+@subsection shader-compiler-editor-features Highlighting, completion and navigation
+
+The grammar is self-contained, so it does not depend on any other GLSL extension being installed. On
+top of ordinary GLSL it scopes the language's own vocabulary: the top-level directives, the
+`uniform ... : hint` list, the three entry points, the canvas built-ins, the compile-time stage macros,
+and the whole fixed-function DSL as its own region @m_span{m-text m-dim} (`pass`, `pipeline`, the
+`submit_*` calls, the pass fields and their `MATERIAL`/`ADD`/... and `MODULATE`/`LUMA_RAMP`/... values,
+the optional context facilities) @m_endspan. Constructs the language **rejects** are scoped as errors,
+so a colour theme paints them as mistakes before the compiler ever runs: `fragColor`, a `#version`
+line, an unsupported canvas built-in, an unknown render mode or uniform hint, and a stage macro used
+in `#if defined(...)` / `#elif` / `#define` / `#undef`.
+
+Completion is chosen from the cursor's context rather than offered as one flat list:
+
+Where the cursor is | What is offered
+------------------- | ---------------
+Brace depth 0 | The directives, the entry points, `#include`, types, and the names this file declares
+After `shader_type`, `render_mode` or `precision` | Only that directive's legal values --- nothing else
+After the `:` of a `uniform` | Only the seven uniform hints
+Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `psp`
+Inside a `fixed_function` body | The fixed-function statements, the `submit_*` calls, the pass fields with their enum values, the context facilities, and the small maths subset the transpiler accepts
+Inside `vertex()` or `fragment()` | GLSL built-ins and `gl_*`, the mode-appropriate canvas built-ins, and this file's uniforms, varyings, attributes, block members, structs, `#define`s, `variant` names and helper functions
+Inside an `#include "..."` | The sibling `.inc` / `.shader` files, walked directory by directory
+
+@m_class{m-noindent}
+
+The mode-awareness is real, not cosmetic: the canvas built-ins are only offered under
+`shader_type canvas_item` @m_span{m-text m-dim} (in custom mode `TEXTURE` is an ordinary user
+identifier, so offering it would be wrong) @m_endspan, `VERTEX` only inside `vertex()`, and
+`TEXTURE` / `PALETTE_OFFSET` only outside it.
+
+Hovering a directive, built-in, uniform hint, pass field or context facility shows what the compiler
+does with it --- the same rules this page documents. Hovering a name the file declares shows its
+declaration line. <tt>Ctrl</tt>-clicking an `#include` path opens the file, go-to-definition works on
+any name declared in the document, and the outline
+@m_span{m-text m-dim} (<tt>Ctrl</tt>+<tt>Shift</tt>+<tt>O</tt>) @m_endspan lists the programs, the
+batched twin, the variants, the uniform blocks, the uniforms with their texture units, the varyings,
+the attributes, the helper functions and the entry points with their `fixed_function` target lists.
+
+Snippets cover the whole-file skeletons @m_span{m-text m-dim} (`shader-custom`, `shader-canvas`)
+@m_endspan and every directive, entry point and `fixed_function` shape.
+
+@subsection shader-compiler-editor-diagnostics Diagnostics
+
+Two independent layers, both on by default:
+
+1.  **The compiler.** `ShaderCompiler <file> --check` is run over the document; it parses and reflects
+    the input and writes nothing. Its stderr is parsed in all three shapes described under
+    @ref shader-compiler-usage "the command-line reference" ---
+    @cpp "<file>:<line>: error: <message>" @ce, @cpp "<file>: error: <message>" @ce and a bare
+    @cpp "error: <message>" @ce --- including Windows paths whose drive letter contains a colon.
+    Anything the parser, the reflection or an emitter reports therefore reaches the editor verbatim.
+2.  **Checks the extension can prove on its own,** so a file still gets feedback with no executable
+    around: a missing or duplicate `program`, a missing `void fragment()`
+    @m_span{m-text m-dim} (or `void vertex()` in custom mode) @m_endspan, a directive written before
+    `program`, `batched` without `shader_type canvas_item`, a `#version` line, a reference to
+    `fragColor`, a stage macro in an illegal preprocessor form, a `return;` inside a canvas-mode
+    `vertex()`, and an unsupported canvas built-in. Each one is a hard error this page documents.
+    Set `deathShader.validate.builtinChecks` to @cpp false @ce to leave diagnostics entirely to the
+    compiler.
+
+@m_class{m-noindent}
+
+The second layer knows when **not** to fire, which matters more than what it catches. Every structural
+check stands down for a file containing `#include`, because the includes are expanded textually before
+parsing and may legitimately carry the `program` directive or an entry point --- exactly the shape
+@cpp "LightingMesh.shader" @ce has. The canvas-only rules are skipped in custom mode, and a mention
+inside a comment never reports.
+
+@m_class{m-block m-info}
+
+@par Line numbers and includes
+The compiler reports lines of the **include-expanded** stream, so for a file with `#include` lines a
+reported number need not correspond to anything in the buffer. Rather than anchoring a squiggle
+somewhere misleading, the extension appends a note to the message saying which line of the expanded
+stream it came from, and says so explicitly when that line is past the end of the file.
+
+Validation runs on save, and on open. Setting `deathShader.validate.run` to `onType` validates while
+typing, debounced by `deathShader.validate.delay`. Since the compiler reads from disk, a dirty buffer
+is then written to a temporary copy first: **next to the original** when the document has `#include`
+lines @m_span{m-text m-dim} (include paths resolve relative to the input file, so a copy elsewhere
+would not find them) @m_endspan and in the OS temporary directory otherwise. Those copies carry a
+@cpp ".vscode-death-shader-tmp." @ce infix and are deleted immediately; leftovers from a killed
+session are swept up on activation. Nothing else in the tree is ever written.
+
+@subsection shader-compiler-editor-previews Transform previews
+
+The five inspection dumps are exposed as commands --- right-click a `.shader` file, or use the command
+palette. All of them print to stdout and write nothing, so they are safe to run on a buffer at any
+time:
+
+Command | Runs
+------- | ----
+<em>Death™ Shader: Show Reflection Dump</em> | `--check`
+<em>Death™ Shader: Show HLSL Transform</em> | `--hlsl`
+<em>Death™ Shader: Show Vulkan GLSL Transform</em> | `--vulkan`
+<em>Death™ Shader: Show Cg Transform</em> | `--cg`
+<em>Death™ Shader: Show ESSL 100 Transform</em> | `--essl100-check`
+
+@m_class{m-noindent}
+
+Each opens the transform in a preview beside the source, so the GLSL and what a given backend actually
+receives can be read side by side. *Show Resolved ShaderCompiler Path* and *Validate Current File*
+round out the command set.
+
+@subsection shader-compiler-editor-settings Settings
+
+Setting | Default | Meaning
+------- | ------- | -------
+`deathShader.compilerPath` | `""` | Explicit path to the executable; empty auto-detects as described above
+`deathShader.validate.enable` | @cpp true @ce | Report diagnostics at all
+`deathShader.validate.run` | `onSave` | `onSave` or `onType`
+`deathShader.validate.delay` | `400` | Debounce in milliseconds for `onType`
+`deathShader.validate.builtinChecks` | @cpp true @ce | The executable-free checks of the second layer
+
+@m_class{m-noindent}
+
+The extension declares itself unsupported in untrusted workspaces, since diagnostics and the previews
+execute a binary from the workspace.
+
+@subsection shader-compiler-editor-maintaining Keeping it in step with the tool
+
+`.inc` is registered for the language as well, since the shader includes in @cpp "Sources/Shaders/Include" @ce
+use that extension. Such a file is treated as an **include fragment**: it is pasted textually into some
+`.shader` file, so it has no `program` directive, no entry points and no `shader_type` of its own. The
+structural checks therefore stand down for it @m_span{m-text m-dim} (the ones that do not depend on
+file structure still apply) @m_endspan, and because its shader mode cannot be known from the file
+alone, completion there offers the canvas built-ins regardless of mode instead of guessing.
+
+The language vocabulary lives in exactly one place, @cpp "src/language.js" @ce, which both the
+completion and the hovers read. **When this page gains a directive, a `render_mode`, a pass field or a
+context facility, add it there too** --- and to
+@cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its own colour. The test suite asserts the
+closed sets against what the parser accepts @m_span{m-text m-dim} (the six render modes, the three
+fixed-function targets, the six pass fields, the four blend modes, the six tev presets, the three
+pipeline intrinsics) @m_endspan, so a set that drifts out of step fails a test rather than silently
+offering a stale list.
+
+@code{.sh}
+node test/run-tests.js && node test/run-provider-tests.js
+@endcode
+
+@m_class{m-noindent}
+
+Both suites are dependency-free and also run under any other plain JS engine, `gjs` included.
+@cpp "run-tests.js" @ce covers the text analysis --- comment stripping, the document scan, the cursor
+contexts, the three diagnostic shapes, and every check together with the cases that must **not** fire.
+@cpp "run-provider-tests.js" @ce drives the real editor providers against a mock `vscode` API wrapped
+in a proxy that throws on any member it does not define, so a mistyped API name fails in the test
+rather than in the editor.
+
 @section shader-compiler-cg The Cg dialect (PS Vita)
 
 The PS Vita's `sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline

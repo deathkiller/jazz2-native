@@ -36,23 +36,23 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns a synthetic handle uniquely identifying the buffer (used by material sort keys) */
 		inline std::uint32_t GetGLHandle() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the binding target of the buffer */
 		inline BufferTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 		/** @brief Returns the size in bytes of the data store */
 		inline std::size_t GetSize() const {
-			return storage_.size();
+			return _storage.size();
 		}
 		/** @brief Returns the base pointer of the host-side data store */
 		inline std::uint8_t* HostData() {
-			return storage_.data();
+			return _storage.data();
 		}
 		/** @brief Returns the base pointer of the host-side data store */
 		inline const std::uint8_t* HostData() const {
-			return storage_.data();
+			return _storage.data();
 		}
 
 		/** @brief Marks the buffer as the currently bound one for its target (always issues the "bind") */
@@ -99,20 +99,20 @@ namespace nCine::RHI::Vulkan
 		}
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		BufferTarget target_;
-		std::vector<std::uint8_t> storage_;
+		std::uint32_t _handle;
+		BufferTarget _target;
+		std::vector<std::uint8_t> _storage;
 
 		// Host-visible GPU buffer mirroring the host store for the Vertex/Index targets (Uniform targets stay
 		// host-only). Kept as opaque integers so this contract header does not need <vulkan/vulkan.h>; the .cpp
-		// reinterprets them to VkBuffer/VkDeviceMemory. Refreshed lazily from the store when gpuDirty_ is set.
-		mutable std::uint64_t gpuBuffer_;
-		mutable std::uint64_t gpuMemory_;
-		mutable void* gpuMapped_;
-		mutable std::size_t gpuCapacity_;
-		mutable bool gpuDirty_;
+		// reinterprets them to VkBuffer/VkDeviceMemory. Refreshed lazily from the store when _gpuDirty is set.
+		mutable std::uint64_t _gpuBuffer;
+		mutable std::uint64_t _gpuMemory;
+		mutable void* _gpuMapped;
+		mutable std::size_t _gpuCapacity;
+		mutable bool _gpuDirty;
 
 		void ReleaseGpu() const;
 	};

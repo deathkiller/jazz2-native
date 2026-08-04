@@ -40,7 +40,7 @@ namespace nCine::RHI::PVR
 	public:
 		/** @brief Monotonic count of finished scenes, used to detect "still referenced by the current scene" resources */
 		static std::uint32_t GetSceneCounter() {
-			return sceneCounter_;
+			return _sceneCounter;
 		}
 
 		/**
@@ -230,37 +230,37 @@ namespace nCine::RHI::PVR
 			std::uint32_t LastUse = 0;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static PvrShaderProgram* currentProgram_;
-		static const PvrTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static PvrRenderTarget* currentRenderTarget_;
+		static PvrShaderProgram* _currentProgram;
+		static const PvrTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static PvrRenderTarget* _currentRenderTarget;
 
-		static bool pvrInitialized_;
-		static std::int32_t logicalWidth_;
-		static std::int32_t logicalHeight_;
-		static SceneTarget sceneTarget_;
-		static PvrRenderTarget* sceneRenderTarget_;
+		static bool _pvrInitialized;
+		static std::int32_t _logicalWidth;
+		static std::int32_t _logicalHeight;
+		static SceneTarget _sceneTarget;
+		static PvrRenderTarget* _sceneRenderTarget;
 
-		static PvrTexture* paletteTexture_;
-		static std::uint32_t paletteGeneration_;
-		static PaletteBank paletteBanks_[MaxPaletteBanks];
-		static std::uint32_t paletteUseCounter_;
-		static std::uint32_t sceneCounter_;
+		static PvrTexture* _paletteTexture;
+		static std::uint32_t _paletteGeneration;
+		static PaletteBank _paletteBanks[MaxPaletteBanks];
+		static std::uint32_t _paletteUseCounter;
+		static std::uint32_t _sceneCounter;
 
-		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
+		static std::vector<PendingSoftwareLight> _pendingSoftwareLights;
 
 		// Lightmap combine texture (rebuilt per Combine draw from the queued float lightmap)
-		static pvr_ptr_t lightmapVram_;
-		static std::size_t lightmapVramSize_;
-		static std::int32_t lightmapW_;
-		static std::int32_t lightmapH_;
+		static pvr_ptr_t _lightmapVram;
+		static std::size_t _lightmapVramSize;
+		static std::int32_t _lightmapW;
+		static std::int32_t _lightmapH;
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)

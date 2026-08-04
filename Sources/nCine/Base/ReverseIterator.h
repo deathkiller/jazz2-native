@@ -17,12 +17,12 @@ namespace nCine
 		using Reference = typename IteratorTraits<Iterator>::Reference;
 
 		explicit ReverseIterator(Iterator it)
-			: it_(it) {}
+			: _it(it) {}
 
 		/// Converting constructor between compatible reverse iterators
 		template <typename Iter>
 		ReverseIterator(const ReverseIterator<Iter>& reverseIt)
-			: it_(reverseIt.base()) {}
+			: _it(reverseIt.base()) {}
 
 		/// Deferencing operator
 		Reference operator*() const;
@@ -47,12 +47,12 @@ namespace nCine
 		ReverseIterator operator-(std::int32_t n) const;
 		/// Pointer subtraction operator (reversed)
 		friend inline std::int32_t operator-(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return -std::int32_t(lhs.it_ - rhs.it_);
+			return -std::int32_t(lhs._it - rhs._it);
 		}
 		/// Pointer subtraction operator for compatible reverse iterators (reversed)
 		template <typename Iter>
 		friend inline std::int32_t operator-(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return -std::int32_t(lhs.it_ - rhs.base());
+			return -std::int32_t(lhs._it - rhs.base());
 		}
 
 		/// Subscript operator
@@ -60,66 +60,66 @@ namespace nCine
 
 		/// Equality operator
 		friend inline bool operator==(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ == rhs.it_;
+			return lhs._it == rhs._it;
 		}
 		/// Equality operator for compatible reverse iterators
 		template <typename Iter>
 		friend inline bool operator==(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ == rhs.base();
+			return lhs._it == rhs.base();
 		}
 
 		/// Inequality operator
 		friend inline bool operator!=(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ != rhs.it_;
+			return lhs._it != rhs._it;
 		}
 		/// Inequality operator for compatible reverse iterators
 		template <typename Iter>
 		friend inline bool operator!=(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ != rhs.base();
+			return lhs._it != rhs.base();
 		}
 
 		/// Greater than operator (reversed)
 		friend inline bool operator>(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ < rhs.it_;
+			return lhs._it < rhs._it;
 		}
 		template <typename Iter>
 		/// Greater than operator for compatible reverse iterators (reversed)
 		friend inline bool operator>(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ < rhs.base();
+			return lhs._it < rhs.base();
 		}
 		/// Less than operator (reversed)
 		friend inline bool operator<(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ > rhs.it_;
+			return lhs._it > rhs._it;
 		}
 		/// Less than operator for compatible reverse iterators (reversed)
 		template <typename Iter>
 		friend inline bool operator<(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ > rhs.base();
+			return lhs._it > rhs.base();
 		}
 		/// Greater than or equal to operator (reversed)
 		friend inline bool operator>=(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ <= rhs.it_;
+			return lhs._it <= rhs._it;
 		}
 		/// Greater than or equal to operator for compatible reverse iterators (reversed)
 		template <typename Iter>
 		friend inline bool operator>=(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ <= rhs.base();
+			return lhs._it <= rhs.base();
 		}
 		/// Less than or equal to operator (reversed)
 		friend inline bool operator<=(const ReverseIterator& lhs, const ReverseIterator& rhs) {
-			return lhs.it_ >= rhs.it_;
+			return lhs._it >= rhs._it;
 		}
 		/// Less than or equal to operator for compatible reverse iterators (reversed)
 		template <typename Iter>
 		friend inline bool operator<=(const ReverseIterator& lhs, const ReverseIterator<Iter>& rhs) {
-			return lhs.it_ >= rhs.base();
+			return lhs._it >= rhs.base();
 		}
 
 		/// Returns the base iterator
 		Iterator base() const;
 
 	private:
-		Iterator it_;
+		Iterator _it;
 	};
 
 	/// Iterator traits structure specialization for `ReverseIterator` class
@@ -141,13 +141,13 @@ namespace nCine
 	template<class Iterator>
 	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator*() const
 	{
-		return *it_;
+		return *_it;
 	}
 
 	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator++()
 	{
-		--it_;
+		--_it;
 
 		return *this;
 	}
@@ -158,7 +158,7 @@ namespace nCine
 		// Create an unmodified copy to return
 		ReverseIterator<Iterator> iterator = *this;
 
-		--it_;
+		--_it;
 
 		return iterator;
 	}
@@ -166,7 +166,7 @@ namespace nCine
 	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator--()
 	{
-		++it_;
+		++_it;
 
 		return *this;
 	}
@@ -177,7 +177,7 @@ namespace nCine
 		// Create an unmodified copy to return
 		ReverseIterator<Iterator> iterator = *this;
 
-		++it_;
+		++_it;
 
 		return iterator;
 	}
@@ -185,7 +185,7 @@ namespace nCine
 	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator+=(std::int32_t n)
 	{
-		it_ -= n;
+		_it -= n;
 
 		return *this;
 	}
@@ -193,7 +193,7 @@ namespace nCine
 	template<class Iterator>
 	ReverseIterator<Iterator>& ReverseIterator<Iterator>::operator-=(std::int32_t n)
 	{
-		it_ += n;
+		_it += n;
 
 		return *this;
 	}
@@ -202,7 +202,7 @@ namespace nCine
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator+(std::int32_t n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
-		iterator.it_ -= n;
+		iterator._it -= n;
 
 		return iterator;
 	}
@@ -211,7 +211,7 @@ namespace nCine
 	ReverseIterator<Iterator> ReverseIterator<Iterator>::operator-(std::int32_t n) const
 	{
 		ReverseIterator<Iterator> iterator = *this;
-		iterator.it_ += n;
+		iterator._it += n;
 
 		return iterator;
 	}
@@ -219,13 +219,13 @@ namespace nCine
 	template<class Iterator>
 	inline typename ReverseIterator<Iterator>::Reference ReverseIterator<Iterator>::operator[](std::int32_t n) const
 	{
-		return *(it_ - n);
+		return *(_it - n);
 	}
 
 	template<class Iterator>
 	inline Iterator ReverseIterator<Iterator>::base() const
 	{
-		return it_;
+		return _it;
 	}
 
 }

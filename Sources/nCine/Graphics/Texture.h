@@ -123,47 +123,47 @@ namespace nCine
 
 		/** @brief Returns the texture width */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the texture height */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the number of texture MIP map levels */
 		inline std::int32_t GetMipMapLevels() const {
-			return mipMapLevels_;
+			return _mipMapLevels;
 		}
 		/** @brief Returns the texture size */
 		inline Vector2i GetSize() const {
-			return Vector2i(width_, height_);
+			return Vector2i(_width, _height);
 		}
 		/** @brief Returns the texture rectangle */
 		inline Recti GetRect() const {
-			return Recti(0, 0, width_, height_);
+			return Recti(0, 0, _width, _height);
 		}
 
 		/** @brief Returns `true` if the texture holds compressed data */
 		inline bool IsCompressed() const {
-			return isCompressed_;
+			return _isCompressed;
 		}
 		/** @brief Returns the number of color channels */
 		std::uint32_t GetChannelCount() const;
 		/** @brief Returns the amount of video memory needed to load the texture */
 		inline std::uint32_t GetDataSize() const {
-			return dataSize_;
+			return _dataSize;
 		}
 
 		/** @brief Returns the texture filtering for minification */
 		inline SamplerFilter GetMinFiltering() const {
-			return minFiltering_;
+			return _minFiltering;
 		}
 		/** @brief Returns the texture filtering for magnification */
 		inline SamplerFilter GetMagFiltering() const {
-			return magFiltering_;
+			return _magFiltering;
 		}
 		/** @brief Returns the texture wrapping for both `s` and `t` coordinates */
 		inline SamplerWrapping GetWrap() const {
-			return wrapMode_;
+			return _wrapMode;
 		}
 		/** @brief Sets the texture filtering for minification */
 		void SetMinFiltering(SamplerFilter filter);
@@ -192,17 +192,17 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<RHI::Texture> rhiTexture_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t mipMapLevels_;
-		bool isCompressed_;
-		Format format_;
-		std::uint32_t dataSize_;
+		std::unique_ptr<RHI::Texture> _rhiTexture;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _mipMapLevels;
+		bool _isCompressed;
+		Format _format;
+		std::uint32_t _dataSize;
 
-		SamplerFilter minFiltering_;
-		SamplerFilter magFiltering_;
-		SamplerWrapping wrapMode_;
+		SamplerFilter _minFiltering;
+		SamplerFilter _magFiltering;
+		SamplerWrapping _wrapMode;
 
 		/** @brief Initializes an empty texture by creating storage for it */
 		void Initialize(const ITextureLoader& texLoader);

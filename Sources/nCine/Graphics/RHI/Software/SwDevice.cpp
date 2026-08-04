@@ -87,126 +87,126 @@ namespace nCine::RHI::Software
 
 	}
 
-	SwDevice::BlendingState SwDevice::blending_;
-	SwDevice::DepthTestState SwDevice::depthTest_;
-	SwDevice::CullFaceState SwDevice::cullFace_;
-	SwDevice::ScissorState SwDevice::scissor_;
-	Recti SwDevice::viewport_(0, 0, 0, 0);
-	Colorf SwDevice::clearColor_(0.0f, 0.0f, 0.0f, 0.0f);
+	SwDevice::BlendingState SwDevice::_blending;
+	SwDevice::DepthTestState SwDevice::_depthTest;
+	SwDevice::CullFaceState SwDevice::_cullFace;
+	SwDevice::ScissorState SwDevice::_scissor;
+	Recti SwDevice::_viewport(0, 0, 0, 0);
+	Colorf SwDevice::_clearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	SwShaderProgram* SwDevice::currentProgram_ = nullptr;
-	const SwTexture* SwDevice::boundTextures_[SwDevice::MaxTextureUnits] = {};
-	SwDevice::UniformRange SwDevice::boundUniformRanges_[SwDevice::MaxUniformBindings] = {};
-	SwRenderTarget* SwDevice::currentRenderTarget_ = nullptr;
-	std::uint8_t* SwDevice::defaultFbPixels_ = nullptr;
-	std::int32_t SwDevice::defaultFbWidth_ = 0;
-	std::int32_t SwDevice::defaultFbHeight_ = 0;
-	std::int32_t SwDevice::defaultFbStride_ = 0;
-	std::vector<std::uint8_t> SwDevice::screenPixels_;
-	std::vector<SwDevice::PendingSoftwareLight> SwDevice::pendingSoftwareLights_;
+	SwShaderProgram* SwDevice::_currentProgram = nullptr;
+	const SwTexture* SwDevice::_boundTextures[SwDevice::MaxTextureUnits] = {};
+	SwDevice::UniformRange SwDevice::_boundUniformRanges[SwDevice::MaxUniformBindings] = {};
+	SwRenderTarget* SwDevice::_currentRenderTarget = nullptr;
+	std::uint8_t* SwDevice::_defaultFbPixels = nullptr;
+	std::int32_t SwDevice::_defaultFbWidth = 0;
+	std::int32_t SwDevice::_defaultFbHeight = 0;
+	std::int32_t SwDevice::_defaultFbStride = 0;
+	std::vector<std::uint8_t> SwDevice::_screenPixels;
+	std::vector<SwDevice::PendingSoftwareLight> SwDevice::_pendingSoftwareLights;
 
 	void SwDevice::SetBlendingEnabled(bool enabled)
 	{
-		blending_.Enabled = enabled;
+		_blending.Enabled = enabled;
 	}
 
 	void SwDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
 
 	SwDevice::BlendingState SwDevice::GetBlendingState()
 	{
-		return blending_;
+		return _blending;
 	}
 
 	void SwDevice::SetBlendingState(const BlendingState& state)
 	{
-		blending_ = state;
+		_blending = state;
 	}
 
 	void SwDevice::SetDepthTestEnabled(bool enabled)
 	{
-		depthTest_.TestEnabled = enabled;
+		_depthTest.TestEnabled = enabled;
 	}
 
 	void SwDevice::SetDepthMaskEnabled(bool enabled)
 	{
-		depthTest_.MaskEnabled = enabled;
+		_depthTest.MaskEnabled = enabled;
 	}
 
 	SwDevice::DepthTestState SwDevice::GetDepthTestState()
 	{
-		return depthTest_;
+		return _depthTest;
 	}
 
 	void SwDevice::SetDepthTestState(const DepthTestState& state)
 	{
-		depthTest_ = state;
+		_depthTest = state;
 	}
 
 	void SwDevice::SetCullFaceEnabled(bool enabled)
 	{
-		cullFace_.Enabled = enabled;
+		_cullFace.Enabled = enabled;
 	}
 
 	SwDevice::CullFaceState SwDevice::GetCullFaceState()
 	{
-		return cullFace_;
+		return _cullFace;
 	}
 
 	void SwDevice::SetCullFaceState(const CullFaceState& state)
 	{
-		cullFace_ = state;
+		_cullFace = state;
 	}
 
 	SwDevice::ScissorState SwDevice::GetScissorState()
 	{
-		return scissor_;
+		return _scissor;
 	}
 
 	void SwDevice::SetScissorState(const ScissorState& state)
 	{
-		scissor_ = state;
+		_scissor = state;
 	}
 
 	void SwDevice::SetScissor(const Recti& rect)
 	{
-		scissor_.Enabled = true;
-		scissor_.Rect = rect;
+		_scissor.Enabled = true;
+		_scissor.Rect = rect;
 	}
 
 	void SwDevice::SetScissorTestEnabled(bool enabled)
 	{
-		scissor_.Enabled = enabled;
+		_scissor.Enabled = enabled;
 	}
 
 	Recti SwDevice::GetViewport()
 	{
-		return viewport_;
+		return _viewport;
 	}
 
 	void SwDevice::SetViewport(const Recti& rect)
 	{
-		viewport_ = rect;
+		_viewport = rect;
 	}
 
 	void SwDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		viewport_ = Recti(x, y, width, height);
+		_viewport = Recti(x, y, width, height);
 	}
 
 	Colorf SwDevice::GetClearColor()
 	{
-		return clearColor_;
+		return _clearColor;
 	}
 
 	void SwDevice::SetClearColor(const Colorf& color)
 	{
-		clearColor_ = color;
+		_clearColor = color;
 	}
 
 	void SwDevice::Clear(ClearFlags flags)
@@ -221,8 +221,8 @@ namespace nCine::RHI::Software
 		}
 		// A render target's color texture is stored bottom-up, the screen back-buffer top-down; Clear fills
 		// the whole store either way, so the flag only has to match SetColorBuffer's row convention
-		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, currentRenderTarget_ != nullptr);
-		SwRaster::Clear(clearColor_.R, clearColor_.G, clearColor_.B, clearColor_.A);
+		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, _currentRenderTarget != nullptr);
+		SwRaster::Clear(_clearColor.R, _clearColor.G, _clearColor.B, _clearColor.A);
 	}
 
 	void SwDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
@@ -271,75 +271,75 @@ namespace nCine::RHI::Software
 
 	void SwDevice::SetupInitialState()
 	{
-		blending_ = BlendingState{};
-		depthTest_ = DepthTestState{};
-		cullFace_ = CullFaceState{};
-		scissor_ = ScissorState{};
+		_blending = BlendingState{};
+		_depthTest = DepthTestState{};
+		_cullFace = CullFaceState{};
+		_scissor = ScissorState{};
 	}
 
 	void SwDevice::BindProgram(SwShaderProgram* program)
 	{
-		currentProgram_ = program;
+		_currentProgram = program;
 	}
 
 	SwShaderProgram* SwDevice::CurrentProgram()
 	{
-		return currentProgram_;
+		return _currentProgram;
 	}
 
 	void SwDevice::BindTexture(std::uint32_t unit, const SwTexture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
 	void SwDevice::UnbindTexture(const SwTexture* texture)
 	{
-		// Called from ~SwTexture so a destroyed texture never lingers as a dangling pointer in boundTextures_ (a
+		// Called from ~SwTexture so a destroyed texture never lingers as a dangling pointer in _boundTextures (a
 		// later deferred draw reads it in Dispatch and would dereference freed memory - the same class of crash the
 		// D3D11 backend hit during splitscreen level changes). Clears every unit it may be bound to.
 		for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
-			if (boundTextures_[unit] == texture) {
-				boundTextures_[unit] = nullptr;
+			if (_boundTextures[unit] == texture) {
+				_boundTextures[unit] = nullptr;
 			}
 		}
 	}
 
 	const SwTexture* SwDevice::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void SwDevice::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
 	void SwDevice::SetRenderTarget(SwRenderTarget* renderTarget)
 	{
-		currentRenderTarget_ = renderTarget;
+		_currentRenderTarget = renderTarget;
 	}
 
 	void SwDevice::UnbindRenderTarget(const SwRenderTarget* renderTarget)
 	{
-		// Called from ~SwRenderTarget so a destroyed target can't dangle as currentRenderTarget_ (ResolveFramebuffer
+		// Called from ~SwRenderTarget so a destroyed target can't dangle as _currentRenderTarget (ResolveFramebuffer
 		// and Dispatch dereference it). Reverts to the default framebuffer (nullptr); the pipeline binds a fresh
 		// target before the next off-screen draw.
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
 	}
 
 	void SwDevice::SetDefaultFramebuffer(const Framebuffer& framebuffer)
 	{
-		defaultFbPixels_ = framebuffer.pixels;
-		defaultFbWidth_ = framebuffer.width;
-		defaultFbHeight_ = framebuffer.height;
-		defaultFbStride_ = framebuffer.strideBytes;
+		_defaultFbPixels = framebuffer.pixels;
+		_defaultFbWidth = framebuffer.width;
+		_defaultFbHeight = framebuffer.height;
+		_defaultFbStride = framebuffer.strideBytes;
 	}
 
 	void SwDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
@@ -355,11 +355,11 @@ namespace nCine::RHI::Software
 		constexpr std::size_t ScreenBpp = 4;
 #endif
 		const std::size_t required = std::size_t(width) * std::size_t(height) * ScreenBpp;
-		if (screenPixels_.size() != required) {
-			screenPixels_.assign(required, 0);
+		if (_screenPixels.size() != required) {
+			_screenPixels.assign(required, 0);
 		}
 		Framebuffer fb;
-		fb.pixels = screenPixels_.data();
+		fb.pixels = _screenPixels.data();
 		fb.width = width;
 		fb.height = height;
 		fb.strideBytes = width * std::int32_t(ScreenBpp);
@@ -369,10 +369,10 @@ namespace nCine::RHI::Software
 	Framebuffer SwDevice::GetScreenFramebuffer()
 	{
 		Framebuffer fb;
-		fb.pixels = defaultFbPixels_;
-		fb.width = defaultFbWidth_;
-		fb.height = defaultFbHeight_;
-		fb.strideBytes = defaultFbStride_;
+		fb.pixels = _defaultFbPixels;
+		fb.width = _defaultFbWidth;
+		fb.height = _defaultFbHeight;
+		fb.strideBytes = _defaultFbStride;
 		return fb;
 	}
 
@@ -383,15 +383,15 @@ namespace nCine::RHI::Software
 
 	void SwDevice::EndFrame()
 	{
-		if (!pendingSoftwareLights_.empty()) {
+		if (!_pendingSoftwareLights.empty()) {
 			// A queued lightmap was not consumed by a Combine draw this frame (the draw was culled or skipped);
 			// drop the leftovers so they cannot desync the FIFO pairing or dangle into the next frame
 			static bool warnedLeftoverLights = false;
 			if (!warnedLeftoverLights) {
 				warnedLeftoverLights = true;
-				LOGW("{} software-lighting entr{} left unconsumed at frame end - dropping", pendingSoftwareLights_.size(), pendingSoftwareLights_.size() == 1 ? "y" : "ies");
+				LOGW("{} software-lighting entr{} left unconsumed at frame end - dropping", _pendingSoftwareLights.size(), _pendingSoftwareLights.size() == 1 ? "y" : "ies");
 			}
-			pendingSoftwareLights_.clear();
+			_pendingSoftwareLights.clear();
 		}
 	}
 
@@ -417,7 +417,7 @@ namespace nCine::RHI::Software
 		entry.WaterCamY = waterCamY;
 		// Pushed in Visit/OnDraw order; the matching Combine draws are dispatched in that same order, so the queue
 		// is consumed front-to-back (see ApplyPendingSoftwareLighting)
-		pendingSoftwareLights_.push_back(entry);
+		_pendingSoftwareLights.push_back(entry);
 	}
 
 	// Shifts one row of RGBA8 pixels horizontally in place with edge clamping: out(x) = in(clamp(x + shift,
@@ -462,12 +462,12 @@ namespace nCine::RHI::Software
 
 	void SwDevice::ApplyPendingSoftwareLighting()
 	{
-		if (pendingSoftwareLights_.empty()) {
+		if (_pendingSoftwareLights.empty()) {
 			// No lighting queued for this Combine draw: the scene stays as rasterized (fully lit)
 			return;
 		}
-		const PendingSoftwareLight light = pendingSoftwareLights_.front();
-		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
+		const PendingSoftwareLight light = _pendingSoftwareLights.front();
+		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
 		const bool hasWater = light.WaterActive;
@@ -603,8 +603,8 @@ namespace nCine::RHI::Software
 
 	bool SwDevice::ResolveFramebuffer(Framebuffer& out)
 	{
-		if (currentRenderTarget_ != nullptr) {
-			SwTexture* texture = currentRenderTarget_->GetColorTexture(0);
+		if (_currentRenderTarget != nullptr) {
+			SwTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			if (texture != nullptr && texture->MutablePixels() != nullptr) {
 				out.pixels = texture->MutablePixels();
 				out.width = texture->GetWidth();
@@ -613,11 +613,11 @@ namespace nCine::RHI::Software
 				return true;
 			}
 		}
-		if (defaultFbPixels_ != nullptr) {
-			out.pixels = defaultFbPixels_;
-			out.width = defaultFbWidth_;
-			out.height = defaultFbHeight_;
-			out.strideBytes = defaultFbStride_;
+		if (_defaultFbPixels != nullptr) {
+			out.pixels = _defaultFbPixels;
+			out.width = _defaultFbWidth;
+			out.height = _defaultFbHeight;
+			out.strideBytes = _defaultFbStride;
 			return true;
 		}
 		return false;
@@ -786,11 +786,11 @@ namespace nCine::RHI::Software
 
 	void SwDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		if (currentProgram_ == nullptr || numVertices <= 0) {
+		if (_currentProgram == nullptr || numVertices <= 0) {
 			return;
 		}
 
-		const SwEffect effect = currentProgram_->GetEffect();
+		const SwEffect effect = _currentProgram->GetEffect();
 
 		// The viewport compositor. The software backend renders the scene straight to the screen buffer and has no
 		// shader post-processing, so a Combine draw does not run a fragment: it triggers the CPU dynamic-lighting
@@ -812,13 +812,13 @@ namespace nCine::RHI::Software
 			effect == SwEffect::PaletteRemap || effect == SwEffect::BatchedPaletteRemap);
 		const SwGeneratedShaderInfo* generatedShader = nullptr;
 		if (prefersGenerated) {
-			generatedShader = FindGeneratedShader(currentProgram_->GetObjectLabel());
+			generatedShader = FindGeneratedShader(_currentProgram->GetObjectLabel());
 			if (generatedShader == nullptr) {
 				// The engine registers the nCine default programs under labels without the shader file's
 				// "Default" prefix (e.g. "MeshSprite" for DefaultMeshSprite.shader, "BatchedMeshSprites"
 				// for DefaultBatchedMeshSprites.shader); retry prefixed so the mesh family resolves its
 				// transpiled fragment. Sprite-family labels never get here (they classify to a fast path).
-				const char* label = currentProgram_->GetObjectLabel();
+				const char* label = _currentProgram->GetObjectLabel();
 				if (label != nullptr && label[0] != '\0') {
 					std::string prefixed = "Default";
 					prefixed += label;
@@ -829,7 +829,7 @@ namespace nCine::RHI::Software
 				// Expected for shaders the offline transpiler declined - their visuals are simply absent on
 				// the software backend. Warn once per program, not per draw.
 				static std::vector<std::string> warnedLabels;
-				const char* label = currentProgram_->GetObjectLabel();
+				const char* label = _currentProgram->GetObjectLabel();
 				const std::string labelStr = (label != nullptr ? label : "<unlabeled>");
 				if (std::find(warnedLabels.begin(), warnedLabels.end(), labelStr) == warnedLabels.end()) {
 					warnedLabels.push_back(labelStr);
@@ -848,18 +848,18 @@ namespace nCine::RHI::Software
 		// A render target's color texture is stored bottom-up (OpenGL framebuffer convention); the screen
 		// back-buffer is top-down. The engine derives every store's orientation - and the matching sample
 		// alignment - from this one flag, so the effects never need a manual Y-flip.
-		const bool isFboTarget = (currentRenderTarget_ != nullptr);
+		const bool isFboTarget = (_currentRenderTarget != nullptr);
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0) ? viewport_ : Recti(0, 0, fb.width, fb.height);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0) ? _viewport : Recti(0, 0, fb.width, fb.height);
 
-		const std::uint8_t* projBytes = currentProgram_->ResolveUniform("uProjectionMatrix");
-		const std::uint8_t* viewBytes = currentProgram_->ResolveUniform("uViewMatrix");
+		const std::uint8_t* projBytes = _currentProgram->ResolveUniform("uProjectionMatrix");
+		const std::uint8_t* viewBytes = _currentProgram->ResolveUniform("uViewMatrix");
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const SwUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const SwUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
-			block = currentProgram_->FindBlock("InstancesBlock");
+			block = _currentProgram->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
 			LOGW("Skipped draw: Program has no instance block");
@@ -869,14 +869,14 @@ namespace nCine::RHI::Software
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			LOGW("Skipped draw: No uniform block data bound");
 			return;
 		}
 
 		// Sampler texture units and the batched instance stride come from the offline reflection
-		const ShaderCompiler::ProgramVariant* reflection = currentProgram_->GetReflection();
+		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
 		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
 			if (reflection != nullptr) {
 				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
@@ -899,7 +899,7 @@ namespace nCine::RHI::Software
 
 		// Reads a committed loose uniform (or fills a default when it was never set)
 		auto readUniform = [](const char* name, float* dst, int count, float def) {
-			const std::uint8_t* p = currentProgram_->ResolveUniform(name);
+			const std::uint8_t* p = _currentProgram->ResolveUniform(name);
 			if (p != nullptr) {
 				const float* f = reinterpret_cast<const float*>(p);
 				for (int i = 0; i < count; i++) { dst[i] = f[i]; }
@@ -915,13 +915,13 @@ namespace nCine::RHI::Software
 		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, isFboTarget);
 		SwRaster::SetViewport(viewport.X, viewport.Y, viewport.W, viewport.H);
 		// nCine hands scissor rectangles in bottom-up (OpenGL) window coordinates; the engine flips them
-		SwRaster::SetScissor(scissor_.Enabled, scissor_.Rect.X, scissor_.Rect.Y, scissor_.Rect.W, scissor_.Rect.H);
+		SwRaster::SetScissor(_scissor.Enabled, _scissor.Rect.X, _scissor.Rect.Y, _scissor.Rect.W, _scissor.Rect.H);
 
 		SwBlendFactor bsrc = SwBlendFactor::One, bdst = SwBlendFactor::Zero;
-		bool blendOn = blending_.Enabled;
+		bool blendOn = _blending.Enabled;
 		if (blendOn) {
-			bsrc = MapBlend(static_cast<BlendingFactor>(static_cast<std::uint32_t>(blending_.SrcRgb)));
-			bdst = MapBlend(static_cast<BlendingFactor>(static_cast<std::uint32_t>(blending_.DstRgb)));
+			bsrc = MapBlend(static_cast<BlendingFactor>(static_cast<std::uint32_t>(_blending.SrcRgb)));
+			bdst = MapBlend(static_cast<BlendingFactor>(static_cast<std::uint32_t>(_blending.DstRgb)));
 		}
 
 		// Fills a draw context from one instance's fixed-function state and hands it to the engine as a
@@ -931,7 +931,7 @@ namespace nCine::RHI::Software
 		auto drawQuad = [&](const FFState& ff, FragmentShaderFn fragmentShader, void* userData, std::uint32_t userDataSize) {
 			DrawContext ctx;
 			for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
-				ctx.textures[u] = boundTextures_[u];
+				ctx.textures[u] = _boundTextures[u];
 			}
 			ctx.ff = ff;
 			ctx.fragmentShader = fragmentShader;
@@ -949,8 +949,8 @@ namespace nCine::RHI::Software
 			ctx.blendingEnabled = blendOn;
 			ctx.blendSrc = bsrc;
 			ctx.blendDst = bdst;
-			ctx.scissorEnabled = scissor_.Enabled;
-			ctx.scissorRect = scissor_.Rect;
+			ctx.scissorEnabled = _scissor.Enabled;
+			ctx.scissorRect = _scissor.Rect;
 			SwRaster::SetDrawContext(ctx);
 			SwRaster::Draw(PrimitiveType::TriangleStrip, 0, 4);
 		};
@@ -990,12 +990,12 @@ namespace nCine::RHI::Software
 			// duplicates between meshes only ever form degenerate (zero-area) triangles inside a run.
 			// In-game consumers: the HUD weapon wheel (LineStrip) and the multiplayer minimap ribbons
 			// (TriangleStrip); plain quad sprites never have attributes, so they never take this path.
-			SwVertexFormat::Attribute* posAttr = currentProgram_->GetAttribute("aPosition");
+			SwVertexFormat::Attribute* posAttr = _currentProgram->GetAttribute("aPosition");
 			if (posAttr != nullptr && posAttr->IsEnabled() && posAttr->GetVbo() != nullptr) {
 				DispatchMeshVerticesImpl(primitive, firstVertex, numVertices, *generatedShader,
-					currentProgram_, pv, blockData, boundUniformRanges_[binding].Size, instanceStride,
-					samplerUnit("uTexture", 0), boundTextures_, blendOn, bsrc, bdst,
-					scissor_.Enabled, scissor_.Rect);
+					_currentProgram, pv, blockData, _boundUniformRanges[binding].Size, instanceStride,
+					samplerUnit("uTexture", 0), _boundTextures, blendOn, bsrc, bdst,
+					_scissor.Enabled, _scissor.Rect);
 				SwRaster::ClearDrawContext();
 				return;
 			}
@@ -1003,7 +1003,7 @@ namespace nCine::RHI::Software
 			// The generated fragment reads the sprite's instance state (and any constant varying) at the fixed
 			// sprite-family std140 offsets (through kPaletteOffsetOffset). Guard against a program whose instance
 			// block does not follow that layout, so the reads below never run past the bound block.
-			const std::uint32_t blockDataSize = boundUniformRanges_[binding].Size;
+			const std::uint32_t blockDataSize = _boundUniformRanges[binding].Size;
 			const std::size_t maxByte = std::size_t(numInstances > 0 ? numInstances - 1 : 0) * instanceStride +
 				(kPaletteOffsetOffset + sizeof(float));
 			if (blockDataSize != 0 && maxByte > blockDataSize) {
@@ -1046,7 +1046,7 @@ namespace nCine::RHI::Software
 				}
 				for (std::uint32_t fi = 0; fi < generatedShader->uniformFieldCount; fi++) {
 					const SwGeneratedUniformField& field = generatedShader->uniformFields[fi];
-					const std::uint8_t* v = currentProgram_->ResolveUniform(field.name);
+					const std::uint8_t* v = _currentProgram->ResolveUniform(field.name);
 					if (v != nullptr && field.offset + field.componentCount * sizeof(float) <= uniformsSize) {
 						std::memcpy(uniformScratch + field.offset, v, field.componentCount * sizeof(float));
 					}

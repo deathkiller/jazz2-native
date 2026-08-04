@@ -129,7 +129,7 @@ namespace nCine
 		virtual void setSwapInterval(int interval) = 0;
 
 		/** @brief Returns `true` if the device renders in full screen */
-		inline bool isFullscreen() const { return isFullscreen_; }
+		inline bool isFullscreen() const { return _isFullscreen; }
 		/** @brief Sets the screen resolution with two integers */
 		virtual void setResolution(bool fullscreen, int width = 0, int height = 0) = 0;
 
@@ -145,15 +145,15 @@ namespace nCine
 		virtual void setWindowIcon(StringView iconFilename) = 0;
 
 		/** @brief Returns the window or video mode width in screen coordinates */
-		inline int width() const { return width_; }
+		inline int width() const { return _width; }
 		/** @brief Returns the window or video mode height in screen coordinates */
-		inline int height() const { return height_; }
+		inline int height() const { return _height; }
 		/** @brief Returns the window or video mode resolution in screen coordinates as a `Vector2i` object */
-		inline Vector2i resolution() const { return Vector2i(width_, height_); }
+		inline Vector2i resolution() const { return Vector2i(_width, _height); }
 		/** @brief Returns the window or video mode resolution in screen coordinates as a `Rectf` object */
-		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(width_), static_cast<float>(height_)); }
+		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_width), static_cast<float>(_height)); }
 		/** @brief Returns the window or video mode resolution aspect ratio */
-		inline float aspect() const { return width_ / static_cast<float>(height_); }
+		inline float aspect() const { return _width / static_cast<float>(_height); }
 		/**
 		 * @brief Sets the window size with two integers
 		 *
@@ -169,27 +169,27 @@ namespace nCine
 		 *
 		 * It may differ from @ref width() on HiDPI screens.
 		 */
-		inline int drawableWidth() const { return drawableWidth_; }
+		inline int drawableWidth() const { return _drawableWidth; }
 		/**
 		 * @brief Returns the window height in pixels
 		 *
 		 * It may differ from @ref height() on HiDPI screens.
 		 */
-		inline int drawableHeight() const { return drawableHeight_; }
+		inline int drawableHeight() const { return _drawableHeight; }
 		/** @brief Returns the window resolution in pixels as a `Vector2i` object */
-		inline Vector2i drawableResolution() const { return Vector2i(drawableWidth_, drawableHeight_); }
+		inline Vector2i drawableResolution() const { return Vector2i(_drawableWidth, _drawableHeight); }
 		/** @brief Returns the window resolution in pixels as a `Rectf` object */
-		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(drawableWidth_), static_cast<float>(drawableHeight_)); }
+		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_drawableWidth), static_cast<float>(_drawableHeight)); }
 		/** @brief Returns the window drawable resolution aspect ratio */
-		inline float drawableAspect() const { return drawableWidth_ / static_cast<float>(drawableHeight_); }
+		inline float drawableAspect() const { return _drawableWidth / static_cast<float>(_drawableHeight); }
 
 		/** @brief Highlights the application window to notify the user */
 		inline virtual void flashWindow() const { }
 
 		/** @brief Returns the OpenGL context creation attributes */
-		inline const ContextInfo& contextInfo() const { return contextInfo_; }
+		inline const ContextInfo& contextInfo() const { return _contextInfo; }
 		/** @brief Returns the display mode */
-		inline const DisplayMode& displayMode() const { return displayMode_; }
+		inline const DisplayMode& displayMode() const { return _displayMode; }
 
 		/** @brief Returns the number of connected monitors */
 		unsigned int numMonitors() const;
@@ -221,24 +221,24 @@ namespace nCine
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Window width in screen coordinates */
-		std::int32_t width_;
+		std::int32_t _width;
 		/** @brief Window height in screen coordinates */
-		std::int32_t height_;
+		std::int32_t _height;
 		/** @brief Window width in pixels (for HiDPI screens) */
-		std::int32_t drawableWidth_;
+		std::int32_t _drawableWidth;
 		/** @brief Window height in pixels (for HiDPI screens) */
-		std::int32_t drawableHeight_;
+		std::int32_t _drawableHeight;
 		/** @brief Whether rendering occurs in full screen */
-		bool isFullscreen_;
+		bool _isFullscreen;
 		/** @brief OpenGL context creation attributes */
-		ContextInfo contextInfo_;
+		ContextInfo _contextInfo;
 		/** @brief Display properties */
-		DisplayMode displayMode_;
+		DisplayMode _displayMode;
 
-		Monitor monitors_[MaxMonitors];
-		std::uint32_t numMonitors_;
+		Monitor _monitors[MaxMonitors];
+		std::uint32_t _numMonitors;
 		/** @brief Cache to avoid searching the current video mode in a monitor's array */
-		mutable VideoMode currentVideoMode_;
+		mutable VideoMode _currentVideoMode;
 #endif
 
 		/** @brief Initializes the OpenGL viewport based on the drawable resolution */
@@ -291,7 +291,7 @@ namespace nCine
 
 		void flashWindow() const override {}
 
-		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override { return currentVideoMode_; }
+		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override { return _currentVideoMode; }
 
 	protected:
 		void setResolutionInternal(int width, int height) override {}

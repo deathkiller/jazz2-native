@@ -353,15 +353,15 @@ namespace nCine::Backends
 #endif
 	}
 
-	bool ImGuiGlfwInput::inputEnabled_ = true;
-	GLFWwindow* ImGuiGlfwInput::window_ = nullptr;
-	GLFWwindow* ImGuiGlfwInput::mouseWindow_ = nullptr;
-	double ImGuiGlfwInput::time_ = 0.0;
-	GLFWcursor* ImGuiGlfwInput::mouseCursors_[ImGuiMouseCursor_COUNT] = {};
-	ImVec2 ImGuiGlfwInput::lastValidMousePos_ = { FLT_MAX, FLT_MAX };
-	bool ImGuiGlfwInput::installedCallbacks_ = false;
-	bool ImGuiGlfwInput::wantUpdateMonitors_ = false;
-	GLFWwindow* ImGuiGlfwInput::keyOwnerWindows_[GLFW_KEY_LAST] = {};
+	bool ImGuiGlfwInput::_inputEnabled = true;
+	GLFWwindow* ImGuiGlfwInput::_window = nullptr;
+	GLFWwindow* ImGuiGlfwInput::_mouseWindow = nullptr;
+	double ImGuiGlfwInput::_time = 0.0;
+	GLFWcursor* ImGuiGlfwInput::_mouseCursors[ImGuiMouseCursor_COUNT] = {};
+	ImVec2 ImGuiGlfwInput::_lastValidMousePos = { FLT_MAX, FLT_MAX };
+	bool ImGuiGlfwInput::_installedCallbacks = false;
+	bool ImGuiGlfwInput::_wantUpdateMonitors = false;
+	GLFWwindow* ImGuiGlfwInput::_keyOwnerWindows[GLFW_KEY_LAST] = {};
 
 	void ImGuiGlfwInput::init(GLFWwindow* window, bool withCallbacks)
 	{
@@ -384,34 +384,34 @@ namespace nCine::Backends
 #	endif
 #endif
 
-		window_ = window;
-		time_ = 0.0;
-		wantUpdateMonitors_ = true;
+		_window = window;
+		_time = 0.0;
+		_wantUpdateMonitors = true;
 
 		pio.Platform_SetClipboardTextFn = setClipboardText;
 		pio.Platform_GetClipboardTextFn = clipboardText;
-		pio.Platform_ClipboardUserData = window_;
+		pio.Platform_ClipboardUserData = _window;
 
 		// Create mouse cursors
 		// (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
 		// GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
 		// Missing cursors will return NULL and our _UpdateMouseCursor() function will use the Arrow cursor instead.)
 		const GLFWerrorfun prevErrorCallback = glfwSetErrorCallback(nullptr);
-		mouseCursors_[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeNS] = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeEW] = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeNS] = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeEW] = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
 #if GLFW_HAS_NEW_CURSORS
-		mouseCursors_[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_RESIZE_NESW_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_RESIZE_NESW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
 #else
-		mouseCursors_[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-		mouseCursors_[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+		_mouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
 		glfwSetErrorCallback(prevErrorCallback);
 #if GLFW_HAS_GETERROR && !defined(DEATH_TARGET_EMSCRIPTEN) // Eat errors (see #5908)
@@ -436,9 +436,9 @@ namespace nCine::Backends
 		// Set platform dependent data in viewport
 		ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 #if defined(DEATH_TARGET_WINDOWS)
-		mainViewport->PlatformHandleRaw = glfwGetWin32Window(window_);
+		mainViewport->PlatformHandleRaw = glfwGetWin32Window(_window);
 #elif defined(DEATH_TARGET_APPLE)
-		mainViewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(window_);
+		mainViewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(_window);
 #else
 		(void)mainViewport;
 #endif
@@ -479,10 +479,10 @@ namespace nCine::Backends
 		// Register main window handle (which is owned by the main application, not by us)
 		// This is mostly for simplicity and consistency, so that our code (e.g., mouse handling etc.) can use same logic for main and secondary viewports.
 		ViewportData* vd = new ViewportData();
-		vd->Window = window_;
+		vd->Window = _window;
 		vd->WindowOwned = false;
 		mainViewport->PlatformUserData = vd;
-		mainViewport->PlatformHandle = (void*)window_;
+		mainViewport->PlatformHandle = (void*)_window;
 
 #	if defined(DEATH_TARGET_WINDOWS)
 		HINSTANCE inst = ((HINSTANCE)&__ImageBase);
@@ -518,12 +518,12 @@ namespace nCine::Backends
 #	endif
 #endif
 
-		if (installedCallbacks_) {
-			restoreCallbacks(window_);
+		if (_installedCallbacks) {
+			restoreCallbacks(_window);
 		}
 
 		for (ImGuiMouseCursor i = 0; i < ImGuiMouseCursor_COUNT; i++) {
-			glfwDestroyCursor(mouseCursors_[i]);
+			glfwDestroyCursor(_mouseCursors[i]);
 		}
 
 		// Windows: register a WndProc hook so we can intercept some messages.
@@ -547,19 +547,19 @@ namespace nCine::Backends
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Setup main viewport size (every frame to accommodate for window resizing)
-		getWindowSizeAndFramebufferScale(window_, &io.DisplaySize, &io.DisplayFramebufferScale);
+		getWindowSizeAndFramebufferScale(_window, &io.DisplaySize, &io.DisplayFramebufferScale);
 
 		// Setup display size (every frame to accommodate for window resizing)
 		int w, h;
 		int displayW, displayH;
-		glfwGetWindowSize(window_, &w, &h);
-		glfwGetFramebufferSize(window_, &displayW, &displayH);
+		glfwGetWindowSize(_window, &w, &h);
+		glfwGetFramebufferSize(_window, &displayW, &displayH);
 		io.DisplaySize = ImVec2(static_cast<float>(w), static_cast<float>(h));
 		if (w > 0 && h > 0) {
 			io.DisplayFramebufferScale = ImVec2(static_cast<float>(displayW) / w, static_cast<float>(displayH) / h);
 		}
 #if defined(IMGUI_HAS_DOCK)
-		if (wantUpdateMonitors_) {
+		if (_wantUpdateMonitors) {
 			updateMonitors();
 		}
 #endif
@@ -567,11 +567,11 @@ namespace nCine::Backends
 		// Setup time step
 		// (Accept glfwGetTime() not returning a monotonically increasing value. Seems to happens on disconnecting peripherals and probably on VMs and Emscripten, see #6491, #6189, #6114, #3644)
 		double currentTime = glfwGetTime();
-		if (currentTime <= time_) {
-			currentTime = time_ + 0.00001f;
+		if (currentTime <= _time) {
+			currentTime = _time + 0.00001f;
 		}
-		io.DeltaTime = (time_ > 0.0 ? static_cast<float>(currentTime - time_) : static_cast<float>(1.0f / 60.0f));
-		time_ = currentTime;
+		io.DeltaTime = (_time > 0.0 ? static_cast<float>(currentTime - _time) : static_cast<float>(1.0f / 60.0f));
+		_time = currentTime;
 
 		updateMouseData();
 		updateMouseCursor();
@@ -590,18 +590,18 @@ namespace nCine::Backends
 			ImGui::RenderPlatformWindowsDefault();
 
 			// Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
-			glfwMakeContextCurrent(window_);
+			glfwMakeContextCurrent(_window);
 		}
 #endif
 	}
 
 	void ImGuiGlfwInput::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 	{
-		if (prevUserCallbackMousebutton != nullptr && window == window_) {
+		if (prevUserCallbackMousebutton != nullptr && window == _window) {
 			prevUserCallbackMousebutton(window, button, action, mods);
 		}
 
-		if (!inputEnabled_) {
+		if (!_inputEnabled) {
 			return;
 		}
 
@@ -614,11 +614,11 @@ namespace nCine::Backends
 
 	void ImGuiGlfwInput::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		if (prevUserCallbackScroll != nullptr && window == window_) {
+		if (prevUserCallbackScroll != nullptr && window == _window) {
 			prevUserCallbackScroll(window, xoffset, yoffset);
 		}
 
-		if (!inputEnabled_) {
+		if (!_inputEnabled) {
 			return;
 		}
 
@@ -631,18 +631,18 @@ namespace nCine::Backends
 
 	void ImGuiGlfwInput::keyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods)
 	{
-		if (prevUserCallbackKey != nullptr && window == window_) {
+		if (prevUserCallbackKey != nullptr && window == _window) {
 			prevUserCallbackKey(window, keycode, scancode, action, mods);
 		}
 
-		if (!inputEnabled_ || (action != GLFW_PRESS && action != GLFW_RELEASE)) {
+		if (!_inputEnabled || (action != GLFW_PRESS && action != GLFW_RELEASE)) {
 			return;
 		}
 
 		updateKeyModifiers(window);
 
-		if (keycode >= 0 && keycode < IM_ARRAYSIZE(keyOwnerWindows_)) {
-			keyOwnerWindows_[keycode] = (action == GLFW_PRESS ? window : nullptr);
+		if (keycode >= 0 && keycode < IM_ARRAYSIZE(_keyOwnerWindows)) {
+			_keyOwnerWindows[keycode] = (action == GLFW_PRESS ? window : nullptr);
 		}
 
 		keycode = translateUntranslatedKey(keycode, scancode);
@@ -655,7 +655,7 @@ namespace nCine::Backends
 
 	void ImGuiGlfwInput::windowFocusCallback(GLFWwindow* window, int focused)
 	{
-		if (prevUserCallbackWindowFocus != nullptr && window == window_) {
+		if (prevUserCallbackWindowFocus != nullptr && window == _window) {
 			prevUserCallbackWindowFocus(window, focused);
 		}
 
@@ -665,11 +665,11 @@ namespace nCine::Backends
 
 	void ImGuiGlfwInput::cursorPosCallback(GLFWwindow* window, double x, double y)
 	{
-		if (prevUserCallbackCursorPos != nullptr && window == window_) {
+		if (prevUserCallbackCursorPos != nullptr && window == _window) {
 			prevUserCallbackCursorPos(window, x, y);
 		}
 
-		if (!inputEnabled_) {
+		if (!_inputEnabled) {
 			return;
 		}
 
@@ -683,33 +683,33 @@ namespace nCine::Backends
 		}
 #endif
 		io.AddMousePosEvent(static_cast<float>(x), static_cast<float>(y));
-		lastValidMousePos_ = ImVec2(static_cast<float>(x), static_cast<float>(y));
+		_lastValidMousePos = ImVec2(static_cast<float>(x), static_cast<float>(y));
 	}
 
 	void ImGuiGlfwInput::cursorEnterCallback(GLFWwindow* window, int entered)
 	{
-		if (prevUserCallbackCursorEnter != nullptr && window == window_) {
+		if (prevUserCallbackCursorEnter != nullptr && window == _window) {
 			prevUserCallbackCursorEnter(window, entered);
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		if (entered) {
-			mouseWindow_ = window;
-			io.AddMousePosEvent(lastValidMousePos_.x, lastValidMousePos_.y);
-		} else if (!entered && mouseWindow_ == window) {
-			lastValidMousePos_ = io.MousePos;
-			mouseWindow_ = nullptr;
+			_mouseWindow = window;
+			io.AddMousePosEvent(_lastValidMousePos.x, _lastValidMousePos.y);
+		} else if (!entered && _mouseWindow == window) {
+			_lastValidMousePos = io.MousePos;
+			_mouseWindow = nullptr;
 			io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 		}
 	}
 
 	void ImGuiGlfwInput::charCallback(GLFWwindow* window, unsigned int c)
 	{
-		if (prevUserCallbackChar != nullptr && window == window_) {
+		if (prevUserCallbackChar != nullptr && window == _window) {
 			prevUserCallbackChar(window, c);
 		}
 
-		if (!inputEnabled_) {
+		if (!_inputEnabled) {
 			return;
 		}
 
@@ -723,7 +723,7 @@ namespace nCine::Backends
 			prevUserCallbackMonitor(monitor, event);
 		}
 
-		wantUpdateMonitors_ = true;
+		_wantUpdateMonitors = true;
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -769,8 +769,8 @@ namespace nCine::Backends
 
 	void ImGuiGlfwInput::installCallbacks(GLFWwindow* window)
 	{
-		IM_ASSERT(!installedCallbacks_ && "Callbacks already installed!");
-		IM_ASSERT(window_ == window);
+		IM_ASSERT(!_installedCallbacks && "Callbacks already installed!");
+		IM_ASSERT(_window == window);
 
 		prevUserCallbackWindowFocus = glfwSetWindowFocusCallback(window, windowFocusCallback);
 		prevUserCallbackCursorEnter = glfwSetCursorEnterCallback(window, cursorEnterCallback);
@@ -780,13 +780,13 @@ namespace nCine::Backends
 		prevUserCallbackKey = glfwSetKeyCallback(window, keyCallback);
 		prevUserCallbackChar = glfwSetCharCallback(window, charCallback);
 		prevUserCallbackMonitor = glfwSetMonitorCallback(monitorCallback);
-		installedCallbacks_ = true;
+		_installedCallbacks = true;
 	}
 
 	void ImGuiGlfwInput::restoreCallbacks(GLFWwindow* window)
 	{
-		IM_ASSERT(installedCallbacks_ && "Callbacks not installed!");
-		IM_ASSERT(window_ == window);
+		IM_ASSERT(_installedCallbacks && "Callbacks not installed!");
+		IM_ASSERT(_window == window);
 
 		glfwSetWindowFocusCallback(window, prevUserCallbackWindowFocus);
 		glfwSetCursorEnterCallback(window, prevUserCallbackCursorEnter);
@@ -797,7 +797,7 @@ namespace nCine::Backends
 		glfwSetCharCallback(window, prevUserCallbackChar);
 		glfwSetMonitorCallback(prevUserCallbackMonitor);
 
-		installedCallbacks_ = false;
+		_installedCallbacks = false;
 		prevUserCallbackWindowFocus = nullptr;
 		prevUserCallbackCursorEnter = nullptr;
 		prevUserCallbackCursorPos = nullptr;
@@ -833,7 +833,7 @@ namespace nCine::Backends
 				}
 
 				// (Optional) Fallback to provide mouse position when focused (ImGui_ImplGlfw_CursorPosCallback already provides this when hovered or captured)
-				if (mouseWindow_ == nullptr) {
+				if (_mouseWindow == nullptr) {
 					double mouseX, mouseY;
 					glfwGetCursorPos(window, &mouseX, &mouseY);
 					if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -844,7 +844,7 @@ namespace nCine::Backends
 						mouseX += windowX;
 						mouseY += windowY;
 					}
-					lastValidMousePos_ = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+					_lastValidMousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
 					io.AddMousePosEvent(static_cast<float>(mouseX), static_cast<float>(mouseY));
 				}
 			}
@@ -869,7 +869,7 @@ namespace nCine::Backends
 				mouseViewportId = viewport->ID;
 			}
 #	else
-			// We cannot use mouseWindow_ maintained from CursorEnter/Leave callbacks, because it is locked to the window capturing mouse.
+			// We cannot use _mouseWindow maintained from CursorEnter/Leave callbacks, because it is locked to the window capturing mouse.
 #	endif
 	}
 
@@ -880,19 +880,19 @@ namespace nCine::Backends
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 	const bool isWindowFocused = true;
 #	else
-	const bool isWindowFocused = glfwGetWindowAttrib(window_, GLFW_FOCUSED) != 0;
+	const bool isWindowFocused = glfwGetWindowAttrib(_window, GLFW_FOCUSED) != 0;
 #	endif
 	if (isWindowFocused) {
 		// (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
 		if (io.WantSetMousePos) {
-			glfwSetCursorPos(window_, static_cast<double>(io.MousePos.x), static_cast<double>(io.MousePos.y));
+			glfwSetCursorPos(_window, static_cast<double>(io.MousePos.x), static_cast<double>(io.MousePos.y));
 		}
 
 		// (Optional) Fallback to provide mouse position when focused (ImGui_ImplGlfw_CursorPosCallback already provides this when hovered or captured)
-		if (window_ == nullptr) {
+		if (_window == nullptr) {
 			double mouseX, mouseY;
-			glfwGetCursorPos(window_, &mouseX, &mouseY);
-			lastValidMousePos_ = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+			glfwGetCursorPos(_window, &mouseX, &mouseY);
+			_lastValidMousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
 			io.AddMousePosEvent(static_cast<float>(mouseX), static_cast<float>(mouseY));
 		}
 	}
@@ -902,7 +902,7 @@ namespace nCine::Backends
 	void ImGuiGlfwInput::updateMouseCursor()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(window_, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+		if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(_window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
 			return;
 		}
 
@@ -917,19 +917,19 @@ namespace nCine::Backends
 			} else {
 				// Show OS mouse cursor
 				// FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
-				glfwSetCursor(window, mouseCursors_[imguiCursor] ? mouseCursors_[imguiCursor] : mouseCursors_[ImGuiMouseCursor_Arrow]);
+				glfwSetCursor(window, _mouseCursors[imguiCursor] ? _mouseCursors[imguiCursor] : _mouseCursors[ImGuiMouseCursor_Arrow]);
 				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
 		}
 #else
 		if (imguiCursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
 			// Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-			glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 		} else {
 			// Show OS mouse cursor
 			// FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
-			glfwSetCursor(window_, mouseCursors_[imguiCursor] ? mouseCursors_[imguiCursor] : mouseCursors_[ImGuiMouseCursor_Arrow]);
-			glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			glfwSetCursor(_window, _mouseCursors[imguiCursor] ? _mouseCursors[imguiCursor] : _mouseCursors[ImGuiMouseCursor_Arrow]);
+			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
 #endif
 	}
@@ -1048,7 +1048,7 @@ namespace nCine::Backends
 	void ImGuiGlfwInput::updateMonitors()
 	{
 		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
-		wantUpdateMonitors_ = false;
+		_wantUpdateMonitors = false;
 
 		int monitorsCount = 0;
 		GLFWmonitor** glfwMonitors = glfwGetMonitors(&monitorsCount);
@@ -1119,7 +1119,7 @@ namespace nCine::Backends
 #	if GLFW_HAS_WINDOW_TOPMOST
 		glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost ? true : false));
 #	endif
-		GLFWwindow* shareWindow = window_;
+		GLFWwindow* shareWindow = _window;
 		vd->Window = glfwCreateWindow(static_cast<std::int32_t>(viewport->Size.x), static_cast<std::int32_t>(viewport->Size.y), "", nullptr, shareWindow);
 		vd->WindowOwned = true;
 		viewport->PlatformHandle = static_cast<void*>(vd->Window);
@@ -1166,8 +1166,8 @@ namespace nCine::Backends
 #	endif
 				// Release any keys that were pressed in the window being destroyed and are still held down,
 				// because we will not receive any release events after window is destroyed.
-				for (int i = 0; i < IM_ARRAYSIZE(keyOwnerWindows_); i++) {
-					if (keyOwnerWindows_[i] == vd->Window) {
+				for (int i = 0; i < IM_ARRAYSIZE(_keyOwnerWindows); i++) {
+					if (_keyOwnerWindows[i] == vd->Window) {
 						keyCallback(vd->Window, i, 0, GLFW_RELEASE, 0); // Later params are only used for main viewport, on which this function is never called.
 					}
 				}

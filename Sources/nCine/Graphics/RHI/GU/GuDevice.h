@@ -52,7 +52,7 @@ namespace nCine::RHI::GU
 	public:
 		/** @brief Monotonic count of finished frames, used to detect "still referenced by the current frame" resources */
 		static std::uint32_t GetSceneCounter() {
-			return sceneCounter_;
+			return _sceneCounter;
 		}
 
 		/**
@@ -251,28 +251,28 @@ namespace nCine::RHI::GU
 			float WaterLevelPx = 0.0f, WaterTime = 0.0f, WaterCamY = 0.0f;
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static GuShaderProgram* currentProgram_;
-		static const GuTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static GuRenderTarget* currentRenderTarget_;
+		static GuShaderProgram* _currentProgram;
+		static const GuTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static GuRenderTarget* _currentRenderTarget;
 
-		static bool guInitialized_;
-		static bool listOpen_;
-		static std::int32_t logicalWidth_;
-		static std::int32_t logicalHeight_;
-		static std::uint32_t sceneCounter_;
+		static bool _guInitialized;
+		static bool _listOpen;
+		static std::int32_t _logicalWidth;
+		static std::int32_t _logicalHeight;
+		static std::uint32_t _sceneCounter;
 
-		static GuTexture* paletteTexture_;
-		static std::uint32_t paletteGeneration_;
+		static GuTexture* _paletteTexture;
+		static std::uint32_t _paletteGeneration;
 
-		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
+		static std::vector<PendingSoftwareLight> _pendingSoftwareLights;
 
 		/** @brief Opens the frame's display list if it is not open yet (the draw paths and Clear() call this) */
 		static void EnsureList();

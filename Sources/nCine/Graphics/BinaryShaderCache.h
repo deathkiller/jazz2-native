@@ -32,12 +32,12 @@ namespace nCine
 
 		/** @brief Returns whether binary shaders are supported and the cache can be used */
 		inline bool IsAvailable() const {
-			return isAvailable_;
+			return _isAvailable;
 		}
 
 		/** @brief Returns the hash value that identifies the current OpenGL platform */
 		inline std::uint64_t GetPlatformHash() const {
-			return platformHash_;
+			return _platformHash;
 		}
 
 		/** @brief Returns the on-disk path of the cached binary for the specified shader */
@@ -55,7 +55,7 @@ namespace nCine
 
 		/** @brief Returns the current cache directory for binary shaders */
 		inline const StringView Path() {
-			return path_;
+			return _path;
 		}
 		/** @brief Sets a new directory as the cache for binary shaders */
 		bool SetPath(StringView path);
@@ -67,13 +67,13 @@ namespace nCine
 #endif
 
 		/** @brief Whether the OpenGL context supports binary shaders and the cache is available */
-		bool isAvailable_;
+		bool _isAvailable;
 
 		/** @brief The hash value that identifies a specific OpenGL platform */
-		std::uint64_t platformHash_;
+		std::uint64_t _platformHash;
 
 		/** @brief The cache directory containing the binary shaders */
-		String path_;
+		String _path;
 
 #if defined(WITH_RHI_GL) && !defined(DEATH_TARGET_VITA)
 		glGetProgramBinary_t _glGetProgramBinary;

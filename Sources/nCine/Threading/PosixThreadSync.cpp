@@ -12,27 +12,27 @@ namespace nCine
 
 	Mutex::Mutex()
 	{
-		pthread_mutex_init(&mutex_, nullptr);
+		pthread_mutex_init(&_mutex, nullptr);
 	}
 
 	Mutex::~Mutex()
 	{
-		pthread_mutex_destroy(&mutex_);
+		pthread_mutex_destroy(&_mutex);
 	}
 
 	void Mutex::Lock()
 	{
-		pthread_mutex_lock(&mutex_);
+		pthread_mutex_lock(&_mutex);
 	}
 
 	void Mutex::Unlock()
 	{
-		pthread_mutex_unlock(&mutex_);
+		pthread_mutex_unlock(&_mutex);
 	}
 
 	int Mutex::TryLock()
 	{
-		return pthread_mutex_trylock(&mutex_);
+		return pthread_mutex_trylock(&_mutex);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -41,27 +41,27 @@ namespace nCine
 
 	CondVariable::CondVariable()
 	{
-		pthread_cond_init(&cond_, nullptr);
+		pthread_cond_init(&_cond, nullptr);
 	}
 
 	CondVariable::~CondVariable()
 	{
-		pthread_cond_destroy(&cond_);
+		pthread_cond_destroy(&_cond);
 	}
 
 	void CondVariable::Wait(Mutex& mutex)
 	{
-		pthread_cond_wait(&cond_, &(mutex.mutex_));
+		pthread_cond_wait(&_cond, &(mutex._mutex));
 	}
 
 	void CondVariable::Signal()
 	{
-		pthread_cond_signal(&cond_);
+		pthread_cond_signal(&_cond);
 	}
 
 	void CondVariable::Broadcast()
 	{
-		pthread_cond_broadcast(&cond_);
+		pthread_cond_broadcast(&_cond);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -70,12 +70,12 @@ namespace nCine
 
 	ReadWriteLock::ReadWriteLock()
 	{
-		pthread_rwlock_init(&rwlock_, nullptr);
+		pthread_rwlock_init(&_rwlock, nullptr);
 	}
 
 	ReadWriteLock::~ReadWriteLock()
 	{
-		pthread_rwlock_destroy(&rwlock_);
+		pthread_rwlock_destroy(&_rwlock);
 	}
 
 	///////////////////////////////////////////////////////////
@@ -86,12 +86,12 @@ namespace nCine
 
 	Barrier::Barrier(std::uint32_t count)
 	{
-		pthread_barrier_init(&barrier_, nullptr, count);
+		pthread_barrier_init(&_barrier, nullptr, count);
 	}
 
 	Barrier::~Barrier()
 	{
-		pthread_barrier_destroy(&barrier_);
+		pthread_barrier_destroy(&_barrier);
 	}
 
 #endif

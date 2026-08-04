@@ -47,7 +47,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the framebuffer object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 
 		/** @brief Binds the framebuffer to both the read and draw targets */
@@ -63,21 +63,21 @@ namespace nCine::RHI::GL
 		/** @brief Sets the handle @ref Unbind() binds as the "default" framebuffer — non-zero when the
 			screen is a framebuffer owned by a host (e.g. the libretro frontend's render FBO) */
 		static void SetDefaultHandle(GLuint handle) {
-			defaultHandle_ = handle;
+			_defaultHandle = handle;
 		}
 		/** @brief Drops the cached read/draw bindings so the next bind re-applies (external code changed them) */
 		static void InvalidateCachedBindings() {
-			readBoundBuffer_ = ~0u;
-			drawBoundBuffer_ = ~0u;
+			_readBoundBuffer = ~0u;
+			_drawBoundBuffer = ~0u;
 		}
 
 		/** @brief Returns the number of active color draw buffers */
-		inline std::uint32_t GetDrawbufferCount() const { return numDrawBuffers_; }
+		inline std::uint32_t GetDrawbufferCount() const { return _numDrawBuffers; }
 		/** @brief Sets the number of color attachments enabled as draw buffers */
 		bool DrawBuffers(std::uint32_t numDrawBuffers);
 
 		/** @brief Returns the number of attached renderbuffers */
-		inline std::uint32_t GetRenderbufferCount() const { return std::uint32_t(attachedRenderbuffers_.size()); }
+		inline std::uint32_t GetRenderbufferCount() const { return std::uint32_t(_attachedRenderbuffers.size()); }
 		/** @brief Creates a renderbuffer with a debug label and attaches it to the given attachment point */
 		bool AttachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
 		/** @brief Creates a renderbuffer and attaches it to the given attachment point */
@@ -101,13 +101,13 @@ namespace nCine::RHI::GL
 		void SetObjectLabel(StringView label);
 
 	private:
-		static std::uint32_t readBoundBuffer_;
-		static std::uint32_t drawBoundBuffer_;
-		static GLuint defaultHandle_;
+		static std::uint32_t _readBoundBuffer;
+		static std::uint32_t _drawBoundBuffer;
+		static GLuint _defaultHandle;
 
-		std::uint32_t numDrawBuffers_;
-		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> attachedRenderbuffers_;
-		GLuint glHandle_;
+		std::uint32_t _numDrawBuffers;
+		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> _attachedRenderbuffers;
+		GLuint _glHandle;
 
 		static bool BindHandle(GLenum target, GLuint glHandle);
 		static GLuint GetBoundHandle(GLenum target);

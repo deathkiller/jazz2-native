@@ -60,18 +60,18 @@ namespace nCine::Backends
 
 	private:
 		/** @brief The EGL display connection */
-		EGLDisplay display_;
+		EGLDisplay _display;
 		/** @brief The EGL drawing surface */
-		EGLSurface surface_;
+		EGLSurface _surface;
 		/** @brief The EGL rendering context */
-		EGLContext context_;
+		EGLContext _context;
 		/** @brief The EGL config used to create the first surface */
-		EGLConfig config_;
+		EGLConfig _config;
 
-		struct android_app* state_;
+		struct android_app* _state;
 
 		static const unsigned int MaxMonitorNameLength = 128;
-		static char monitorNames_[MaxMonitors][MaxMonitorNameLength];
+		static char _monitorNames[MaxMonitors][MaxMonitorNameLength];
 
 		/** @brief Initializes the OpenGL graphics context */
 		void initDevice();

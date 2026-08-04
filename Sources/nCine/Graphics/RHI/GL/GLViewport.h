@@ -35,7 +35,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the current viewport rectangle */
 		static Recti GetRect() {
-			return state_.rect;
+			return _state.rect;
 		}
 		/**
 		 * @brief Sets the viewport rectangle
@@ -55,7 +55,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the whole cached viewport state */
 		static State GetState() {
-			return state_;
+			return _state;
 		}
 		/** @brief Restores the whole viewport state */
 		static void SetState(State newState);
@@ -64,7 +64,7 @@ namespace nCine::RHI::GL
 		static void Reapply();
 
 	private:
-		static State state_;
+		static State _state;
 
 		static void InitRect(GLint x, GLint y, GLsizei width, GLsizei height);
 	};

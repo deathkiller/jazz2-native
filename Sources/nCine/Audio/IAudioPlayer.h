@@ -36,7 +36,7 @@ namespace nCine
 
 		/** @brief Returns the backend id of the source */
 		inline std::uint32_t sourceId() const {
-			return sourceId_;
+			return _sourceId;
 		}
 
 		/** @brief Returns the backend id of the currently playing buffer */
@@ -71,19 +71,19 @@ namespace nCine
 
 		/** @brief Returns the current playback state */
 		inline PlayerState state() const {
-			return state_;
+			return _state;
 		}
 		/** @brief Returns `true` if the player is currently playing */
 		inline bool isPlaying() const {
-			return state_ == PlayerState::Playing;
+			return _state == PlayerState::Playing;
 		}
 		/** @brief Returns `true` if the player is paused */
 		inline bool isPaused() const {
-			return state_ == PlayerState::Paused;
+			return _state == PlayerState::Paused;
 		}
 		/** @brief Returns `true` if the player is stopped */
 		inline bool isStopped() const {
-			return state_ == PlayerState::Stopped;
+			return _state == PlayerState::Stopped;
 		}
 
 		/** @brief Returns `true` if the player is looping */
@@ -112,28 +112,28 @@ namespace nCine
 
 		/** @brief Returns the player gain */
 		inline float gain() const {
-			return gain_;
+			return _gain;
 		}
 		/** @brief Sets the player gain */
 		virtual void setGain(float gain);
 
 		/** @brief Returns the player pitch */
 		inline float pitch() const {
-			return pitch_;
+			return _pitch;
 		}
 		/** @brief Sets the player pitch */
 		virtual void setPitch(float pitch);
 
 		/** @brief Returns the player low-pass amount */
 		inline float lowPass() const {
-			return lowPass_;
+			return _lowPass;
 		}
 		/** @brief Sets the player low-pass amount */
 		virtual void setLowPass(float value);
 
 		/** @brief Returns the player position */
 		inline Vector3f position() const {
-			return position_;
+			return _position;
 		}
 		/** @brief Sets the player position */
 		virtual void setPosition(const Vector3f& position);
@@ -150,29 +150,29 @@ namespace nCine
 		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
 		/** @brief Backend source id */
-		std::uint32_t sourceId_;
+		std::uint32_t _sourceId;
 		/** @brief Current playback state */
-		PlayerState state_;
+		PlayerState _state;
 		/** @brief Player flags */
-		PlayerFlags flags_;
+		PlayerFlags _flags;
 		/** @brief Gain */
-		float gain_;
+		float _gain;
 		/** @brief Pitch */
-		float pitch_;
+		float _pitch;
 		/** @brief Low-pass amount */
-		float lowPass_;
+		float _lowPass;
 		/** @brief Position in space */
-		Vector3f position_;
+		Vector3f _position;
 
 		constexpr bool GetFlags(PlayerFlags flag) const noexcept {
-			return (flags_ & flag) == flag;
+			return (_flags & flag) == flag;
 		}
 
 		constexpr void SetFlags(PlayerFlags flag, bool value) noexcept {
 			if (value) {
-				flags_ = flags_ | flag;
+				_flags = _flags | flag;
 			} else {
-				flags_ = flags_ & (~flag);
+				_flags = _flags & (~flag);
 			}
 		}
 #endif

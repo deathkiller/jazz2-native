@@ -4,40 +4,40 @@
 namespace nCine
 {
 	Particle::Particle(SceneNode* parent, Texture* texture)
-		: Sprite(parent, texture), life_(0.0f), startingLife(0.0f), startingRotation(0.0f), inLocalSpace_(false)
+		: Sprite(parent, texture), _life(0.0f), startingLife(0.0f), startingRotation(0.0f), _inLocalSpace(false)
 	{
 		_type = ObjectType::Particle;
-		renderCommand_.SetType(RenderCommand::Type::Particle);
+		_renderCommand.SetType(RenderCommand::Type::Particle);
 		setEnabled(false);
 	}
 
 	Particle::Particle(const Particle& other)
-		: Sprite(other), life_(other.life_), startingLife(other.startingLife), startingRotation(other.startingRotation), inLocalSpace_(other.inLocalSpace_)
+		: Sprite(other), _life(other._life), startingLife(other.startingLife), startingRotation(other.startingRotation), _inLocalSpace(other._inLocalSpace)
 	{
 		_type = ObjectType::Particle;
-		renderCommand_.SetType(RenderCommand::Type::Particle);
+		_renderCommand.SetType(RenderCommand::Type::Particle);
 	}
 
 	void Particle::init(float life, Vector2f pos, Vector2f vel, float rot, bool inLocalSpace)
 	{
-		life_ = life;
+		_life = life;
 		startingLife = life;
 		startingRotation = rot;
 		setPosition(pos);
-		velocity_ = vel;
+		_velocity = vel;
 		setRotation(rot);
-		inLocalSpace_ = inLocalSpace;
+		_inLocalSpace = inLocalSpace;
 		setEnabled(true);
 	}
 
 	void Particle::OnUpdate(float timeMult)
 	{
-		if (timeMult >= life_) {
-			life_ = 0.0f; // dead particle
+		if (timeMult >= _life) {
+			_life = 0.0f; // dead particle
 			setEnabled(false);
 		} else {
-			life_ -= timeMult;
-			move(velocity_ * timeMult);
+			_life -= timeMult;
+			move(_velocity * timeMult);
 		}
 	}
 
@@ -45,13 +45,13 @@ namespace nCine
 	{
 		SceneNode::transform();
 
-		if (!inLocalSpace_) {
-			worldMatrix_ = localMatrix_;
+		if (!_inLocalSpace) {
+			_worldMatrix = _localMatrix;
 
 			// Always independent movement
-			absScaleFactor_ = scaleFactor_;
-			absRotation_ = rotation_;
-			absPosition_ = position_;
+			_absScaleFactor = _scaleFactor;
+			_absRotation = _rotation;
+			_absPosition = _position;
 		}
 	}
 }

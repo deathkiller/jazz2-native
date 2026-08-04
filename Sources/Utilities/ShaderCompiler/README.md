@@ -763,6 +763,18 @@ per-shader headers can only be produced on Windows, so regenerating those header
 would silently drop both. A separate aggregate keeps a Cg run from touching anything else. The whole
 header is gated behind `#if defined(WITH_RHI_GXM)`.
 
+## Editor support
+
+[`../VSCodeExtension`](../VSCodeExtension/README.md) is a Visual Studio Code extension for this
+language: highlighting, context-aware completion, hovers, an outline, `#include` navigation and live
+diagnostics obtained by running `ShaderCompiler <file> --check` on the buffer. It also exposes the
+five inspection dumps (`--check`, `--hlsl`, `--vulkan`, `--cg`, `--essl100-check`) as side-by-side
+previews. Plain JavaScript, no build step, no npm dependency.
+
+If you change the language — a new directive, a new `render_mode`, another `fixed_function` pass field
+or context facility — update `src/language.js` there as well; it is the single table the completion
+and the hovers both read, and its test suite asserts the sets match this document.
+
 ## Known limitations
 
 - Object-like macros only; no function-like macro expansion; no token pasting/stringizing.

@@ -41,7 +41,7 @@ namespace nCine::RHI::Vulkan
 		void EnsureGpu() const;
 		/** @brief `true` if CPU texels are pending upload to the GPU image (a streaming update not yet recorded) */
 		inline bool HasPendingUpload() const {
-			return contentsDirty_ && hasCpuData_ && !isRenderTarget_ && !pixels_.empty();
+			return _contentsDirty && _hasCpuData && !_isRenderTarget && !_pixels.empty();
 		}
 		/** @brief Records the pending CPU->GPU texel upload (staging copy + layout barriers) into @p cmdBuffer (an opaque `VkCommandBuffer`); the device frees the staging buffer once the frame completes */
 		void RecordStreamingUpload(std::uint64_t cmdBuffer) const;
@@ -55,79 +55,79 @@ namespace nCine::RHI::Vulkan
 		std::uint32_t GpuFormat() const;
 		/** @brief Returns the last-known `VkImageLayout` of the image (device layout tracking) */
 		std::uint32_t GetCurrentLayout() const {
-			return currentLayout_;
+			return _currentLayout;
 		}
 		/** @brief Records the current `VkImageLayout` (the device updates this after each transition) */
 		void SetCurrentLayout(std::uint32_t layout) const {
-			currentLayout_ = layout;
+			_currentLayout = layout;
 		}
 		/** @brief Releases the GPU image / view / sampler (on re-allocation and destruction) */
 		void ReleaseGpu() const;
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the stored texels (after any promotion to the RGBA8 store) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format before promotion (R8/RG8/RGB8 kept) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of level 0 */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/** @brief Returns the base pointer of the level-0 texel store (may be `nullptr` before an upload); the single-level store ignores @p level */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode, same as @ref GetWrapS()) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter (alias of @ref GetMagFiltering()) */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/** @brief Marks the texture as (or no longer as) a color render target (rebuilds the GPU image with the color-attachment usage when it changes) */
 		inline void SetRenderTarget(bool isRenderTarget) {
-			if (isRenderTarget != isRenderTarget_) {
-				isRenderTarget_ = isRenderTarget;
+			if (isRenderTarget != _isRenderTarget) {
+				_isRenderTarget = isRenderTarget;
 				ReleaseGpu();
 			}
 		}
 		/** @brief Returns a writable base pointer of the level-0 texel store (for render-target output) */
 		inline std::uint8_t* MutablePixels() {
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 
 		/** @brief Binds the texture to the specified texture unit on the device */
@@ -172,7 +172,7 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns the magnification filter */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 
 		static bool SupportsImmutableStorage() {
@@ -193,38 +193,38 @@ namespace nCine::RHI::Vulkan
 		static std::int32_t BytesPerPixel(PixelFormat format);
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		std::vector<std::uint8_t> pixels_;
-		bool isRenderTarget_;
+		std::uint32_t _handle;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		std::vector<std::uint8_t> _pixels;
+		bool _isRenderTarget;
 
 		// GPU objects, created lazily from the host store (mutable so the const bind-time accessors can
-		// materialize them). Opaque integers so this header needs no <vulkan/vulkan.h>. contentsDirty_ forces
-		// a texel re-upload; viewDirty_ rebuilds the view after a swizzle change; currentLayout_ tracks the
+		// materialize them). Opaque integers so this header needs no <vulkan/vulkan.h>. _contentsDirty forces
+		// a texel re-upload; _viewDirty rebuilds the view after a swizzle change; _currentLayout tracks the
 		// image's VkImageLayout for the device's render-pass / sampling transitions.
-		mutable std::uint64_t gpuImage_;
-		mutable std::uint64_t gpuMemory_;
-		mutable std::uint64_t gpuView_;
-		mutable std::uint64_t gpuSampler_;
-		mutable std::uint32_t currentLayout_;
-		mutable std::uint32_t gpuFormat_;
-		mutable bool contentsDirty_;
-		mutable bool viewDirty_;
-		mutable bool hasCpuData_;
-		mutable nCine::SamplerFilter samplerFilter_;
-		mutable SamplerWrapping samplerWrap_;
+		mutable std::uint64_t _gpuImage;
+		mutable std::uint64_t _gpuMemory;
+		mutable std::uint64_t _gpuView;
+		mutable std::uint64_t _gpuSampler;
+		mutable std::uint32_t _currentLayout;
+		mutable std::uint32_t _gpuFormat;
+		mutable bool _contentsDirty;
+		mutable bool _viewDirty;
+		mutable bool _hasCpuData;
+		mutable nCine::SamplerFilter _samplerFilter;
+		mutable SamplerWrapping _samplerWrap;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 	};

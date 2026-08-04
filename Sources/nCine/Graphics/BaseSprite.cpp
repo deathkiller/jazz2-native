@@ -5,9 +5,9 @@
 namespace nCine
 {
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), paletteOffset_(0.0f)
+		: DrawableNode(parent, xx, yy), _texture(texture), _texRect(0, 0, 0, 0), _flippedX(false), _flippedY(false), _paletteOffset(0.0f)
 	{
-		renderCommand_.GetMaterial().SetBlendingEnabled(true);
+		_renderCommand.GetMaterial().SetBlendingEnabled(true);
 	}
 
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, Vector2f position)
@@ -18,17 +18,17 @@ namespace nCine
 	void BaseSprite::setSize(float width, float height)
 	{
 		// Update anchor points when size changes
-		if (anchorPoint_.X != 0.0f) {
-			anchorPoint_.X = (anchorPoint_.X / width_) * width;
+		if (_anchorPoint.X != 0.0f) {
+			_anchorPoint.X = (_anchorPoint.X / _width) * width;
 		}
-		if (anchorPoint_.Y != 0.0f) {
-			anchorPoint_.Y = (anchorPoint_.Y / height_) * height;
+		if (_anchorPoint.Y != 0.0f) {
+			_anchorPoint.Y = (_anchorPoint.Y / _height) * height;
 		}
 
-		width_ = width;
-		height_ = height;
-		dirtyBits_.set(DirtyBitPositions::SizeBit);
-		dirtyBits_.set(DirtyBitPositions::AabbBit);
+		_width = width;
+		_height = height;
+		_dirtyBits.set(DirtyBitPositions::SizeBit);
+		_dirtyBits.set(DirtyBitPositions::AabbBit);
 	}
 
 	/** @note Setting a texture that is already assigned is equivalent to @ref resetTexture() */
@@ -36,135 +36,135 @@ namespace nCine
 	{
 		// Allow self-assignment to take into account the case where the texture stays the same but it loads new data
 		textureHasChanged(texture);
-		texture_ = texture;
-		dirtyBits_.set(DirtyBitPositions::TextureBit);
+		_texture = texture;
+		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
 	/** @note Use this method when the content of the currently assigned texture changes */
 	void BaseSprite::resetTexture()
 	{
-		textureHasChanged(texture_);
-		dirtyBits_.set(DirtyBitPositions::TextureBit);
+		textureHasChanged(_texture);
+		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
 	void BaseSprite::setTexRect(const Recti& rect)
 	{
-		texRect_ = rect;
+		_texRect = rect;
 		setSize(static_cast<float>(rect.W), static_cast<float>(rect.H));
 
-		if (flippedX_) {
-			texRect_.X += texRect_.W;
-			texRect_.W *= -1;
+		if (_flippedX) {
+			_texRect.X += _texRect.W;
+			_texRect.W *= -1;
 		}
 
-		if (flippedY_) {
-			texRect_.Y += texRect_.H;
-			texRect_.H *= -1;
+		if (_flippedY) {
+			_texRect.Y += _texRect.H;
+			_texRect.H *= -1;
 		}
 
-		dirtyBits_.set(DirtyBitPositions::TextureBit);
+		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
 	void BaseSprite::setFlippedX(bool flippedX)
 	{
-		if (flippedX_ != flippedX) {
-			texRect_.X += texRect_.W;
-			texRect_.W *= -1;
-			flippedX_ = flippedX;
+		if (_flippedX != flippedX) {
+			_texRect.X += _texRect.W;
+			_texRect.W *= -1;
+			_flippedX = flippedX;
 
-			dirtyBits_.set(DirtyBitPositions::TextureBit);
+			_dirtyBits.set(DirtyBitPositions::TextureBit);
 		}
 	}
 
 	void BaseSprite::setFlippedY(bool flippedY)
 	{
-		if (flippedY_ != flippedY) {
-			texRect_.Y += texRect_.H;
-			texRect_.H *= -1;
-			flippedY_ = flippedY;
+		if (_flippedY != flippedY) {
+			_texRect.Y += _texRect.H;
+			_texRect.H *= -1;
+			_flippedY = flippedY;
 
-			dirtyBits_.set(DirtyBitPositions::TextureBit);
+			_dirtyBits.set(DirtyBitPositions::TextureBit);
 		}
 	}
 
 	BaseSprite::BaseSprite(const BaseSprite& other)
-		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
-			flippedX_(other.flippedX_), flippedY_(other.flippedY_), paletteOffset_(other.paletteOffset_)
+		: DrawableNode(other), _texture(other._texture), _texRect(other._texRect),
+			_flippedX(other._flippedX), _flippedY(other._flippedY), _paletteOffset(other._paletteOffset)
 	{
 	}
 
 	void BaseSprite::setPaletteOffset(float paletteOffset)
 	{
-		if (paletteOffset_ != paletteOffset) {
-			paletteOffset_ = paletteOffset;
+		if (_paletteOffset != paletteOffset) {
+			_paletteOffset = paletteOffset;
 			// Uploaded together with the sprite size (see updateRenderCommand)
-			dirtyBits_.set(DirtyBitPositions::SizeBit);
+			_dirtyBits.set(DirtyBitPositions::SizeBit);
 		}
 	}
 
 	void BaseSprite::shaderHasChanged()
 	{
-		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
-		RHI::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
+		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+		RHI::UniformCache* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
 
-		dirtyBits_.set(DirtyBitPositions::TransformationBit);
-		dirtyBits_.set(DirtyBitPositions::ColorBit);
-		dirtyBits_.set(DirtyBitPositions::SizeBit);
-		dirtyBits_.set(DirtyBitPositions::TextureBit);
+		_dirtyBits.set(DirtyBitPositions::TransformationBit);
+		_dirtyBits.set(DirtyBitPositions::ColorBit);
+		_dirtyBits.set(DirtyBitPositions::SizeBit);
+		_dirtyBits.set(DirtyBitPositions::TextureBit);
 	}
 
 	void BaseSprite::updateRenderCommand()
 	{
 		ZoneScopedC(0x81A861);
 
-		RHI::UniformBlockCache* instanceBlock = renderCommand_.GetInstanceBlock();
+		RHI::UniformBlockCache* instanceBlock = _renderCommand.GetInstanceBlock();
 
-		if (dirtyBits_.test(DirtyBitPositions::TransformationUploadBit)) {
-			renderCommand_.SetTransformation(worldMatrix_);
-			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
+		if (_dirtyBits.test(DirtyBitPositions::TransformationUploadBit)) {
+			_renderCommand.SetTransformation(_worldMatrix);
+			//_dirtyBits.reset(DirtyBitPositions::TransformationUploadBit);
 		}
-		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
+		if (_dirtyBits.test(DirtyBitPositions::ColorUploadBit)) {
 			RHI::UniformCache* colorUniform = instanceBlock->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
 				colorUniform->SetFloatVector(absColor().Data());
 			}
-			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
+			//_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
 		}
-		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
+		if (_dirtyBits.test(DirtyBitPositions::SizeBit)) {
 			RHI::UniformCache* spriteSizeUniform = instanceBlock->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
-				spriteSizeUniform->SetFloatValue(width_, height_);
+				spriteSizeUniform->SetFloatValue(_width, _height);
 			}
 			// Present only in palette shaders (sprite_vs/batched_sprites_vs); null elsewhere
 			RHI::UniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
-				palOffsetUniform->SetFloatValue(paletteOffset_);
+				palOffsetUniform->SetFloatValue(_paletteOffset);
 			}
-			dirtyBits_.reset(DirtyBitPositions::SizeBit);
+			_dirtyBits.reset(DirtyBitPositions::SizeBit);
 		}
 
-		if (dirtyBits_.test(DirtyBitPositions::TextureBit)) {
-			if (texture_ != nullptr) {
-				renderCommand_.GetMaterial().SetTexture(*texture_);
+		if (_dirtyBits.test(DirtyBitPositions::TextureBit)) {
+			if (_texture != nullptr) {
+				_renderCommand.GetMaterial().SetTexture(*_texture);
 
 				RHI::UniformCache* texRectUniform = instanceBlock->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
-					const Vector2i texSize = texture_->GetSize();
-					const float texScaleX = texRect_.W / float(texSize.X);
-					const float texBiasX = texRect_.X / float(texSize.X);
-					const float texScaleY = texRect_.H / float(texSize.Y);
-					const float texBiasY = texRect_.Y / float(texSize.Y);
+					const Vector2i texSize = _texture->GetSize();
+					const float texScaleX = _texRect.W / float(texSize.X);
+					const float texBiasX = _texRect.X / float(texSize.X);
+					const float texScaleY = _texRect.H / float(texSize.Y);
+					const float texBiasY = _texRect.Y / float(texSize.Y);
 
 					texRectUniform->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				}
 			} else {
-				renderCommand_.GetMaterial().SetTexture(nullptr);
+				_renderCommand.GetMaterial().SetTexture(nullptr);
 			}
 
-			dirtyBits_.reset(DirtyBitPositions::TextureBit);
+			_dirtyBits.reset(DirtyBitPositions::TextureBit);
 		}
 	}
 }

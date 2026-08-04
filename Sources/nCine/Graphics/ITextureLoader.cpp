@@ -24,22 +24,22 @@ using namespace Death::IO;
 namespace nCine
 {
 	ITextureLoader::ITextureLoader()
-		: hasLoaded_(false), width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
+		: _hasLoaded(false), _width(0), _height(0), _headerSize(0), _dataSize(0), _mipMapCount(1)
 	{
 	}
 
 	ITextureLoader::ITextureLoader(std::unique_ptr<Stream> fileHandle)
-		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), width_(0), height_(0), headerSize_(0), dataSize_(0), mipMapCount_(1)
+		: _hasLoaded(false), _fileHandle(std::move(fileHandle)), _width(0), _height(0), _headerSize(0), _dataSize(0), _mipMapCount(1)
 	{
 	}
 
 	std::int32_t ITextureLoader::dataSize(std::uint32_t mipMapLevel) const
 	{
 		std::int32_t dataSize = 0;
-		if (mipMapCount_ > 1 && std::uint32_t(mipMapLevel) < mipMapCount_) {
-			dataSize = mipDataSizes_[mipMapLevel];
+		if (_mipMapCount > 1 && std::uint32_t(mipMapLevel) < _mipMapCount) {
+			dataSize = _mipDataSizes[mipMapLevel];
 		} else if (mipMapLevel == 0) {
-			dataSize = dataSize_;
+			dataSize = _dataSize;
 		}
 		return dataSize;
 	}
@@ -48,11 +48,11 @@ namespace nCine
 	{
 		const std::uint8_t* pixels = nullptr;
 
-		if (pixels_ != nullptr) {
-			if (mipMapCount_ > 1 && std::int32_t(mipMapLevel) < mipMapCount_) {
-				pixels = pixels_.get() + mipDataOffsets_[mipMapLevel];
+		if (_pixels != nullptr) {
+			if (_mipMapCount > 1 && std::int32_t(mipMapLevel) < _mipMapCount) {
+				pixels = _pixels.get() + _mipDataOffsets[mipMapLevel];
 			} else if (mipMapLevel == 0) {
-				pixels = pixels_.get();
+				pixels = _pixels.get();
 			}
 		}
 
@@ -110,12 +110,12 @@ namespace nCine
 
 	void ITextureLoader::loadPixels(PixelFormat format)
 	{
-		texFormat_ = TextureFormat(format);
+		_texFormat = TextureFormat(format);
 
-		dataSize_ = fileHandle_->GetSize() - headerSize_;
-		fileHandle_->Seek(headerSize_, SeekOrigin::Current);
+		_dataSize = _fileHandle->GetSize() - _headerSize;
+		_fileHandle->Seek(_headerSize, SeekOrigin::Current);
 
-		pixels_ = std::make_unique<std::uint8_t[]>(dataSize_);
-		fileHandle_->Read(pixels_.get(), dataSize_);
+		_pixels = std::make_unique<std::uint8_t[]>(_dataSize);
+		_fileHandle->Read(_pixels.get(), _dataSize);
 	}
 }

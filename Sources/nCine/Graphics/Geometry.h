@@ -29,38 +29,38 @@ namespace nCine
 
 		/** @brief Returns the primitive type (`PrimitiveType::Triangles`, `PrimitiveType::TriangleStrip`, ...) */
 		inline PrimitiveType GetPrimitiveType() const {
-			return primitiveType_;
+			return _primitiveType;
 		}
 		/** @brief Returns the index of the first vertex to draw */
 		inline std::int32_t GetFirstVertex() const {
-			return firstVertex_;
+			return _firstVertex;
 		}
 		/** @brief Returns the number of vertices */
 		inline std::int32_t GetVertexCount() const {
-			return numVertices_;
+			return _numVertices;
 		}
 		/** @brief Returns the number of float elements that compose the vertex format */
 		inline std::uint32_t GetElementsPerVertex() const {
-			return numElementsPerVertex_;
+			return _numElementsPerVertex;
 		}
 
 		/** @brief Sets all three drawing parameters at once */
 		void SetDrawParameters(PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices);
 		/** @brief Sets the primitive type (`PrimitiveType::Triangles`, `PrimitiveType::TriangleStrip`, ...) */
 		inline void SetPrimitiveType(PrimitiveType primitiveType) {
-			primitiveType_ = primitiveType;
+			_primitiveType = primitiveType;
 		}
 		/** @brief Sets the index of the first vertex to draw */
 		inline void SetFirstVertex(std::int32_t firstVertex) {
-			firstVertex_ = firstVertex;
+			_firstVertex = firstVertex;
 		}
 		/** @brief Sets the number of vertices */
 		inline void SetVertexCount(std::int32_t numVertices) {
-			numVertices_ = numVertices;
+			_numVertices = numVertices;
 		}
 		/** @brief Sets the number of float elements that compose the vertex format */
 		inline void SetElementsPerVertex(std::uint32_t numElements) {
-			numElementsPerVertex_ = numElements;
+			_numElementsPerVertex = numElements;
 		}
 		/** @brief Creates a custom VBO that is unique to this object */
 		void CreateCustomVbo(std::uint32_t numFloats, BufferUsage usage);
@@ -84,7 +84,7 @@ namespace nCine
 
 		/** @brief Returns a pointer into host memory containing vertex data to be copied into a VBO */
 		inline const float* GetHostVertexPointer() const {
-			return hostVertexPointer_;
+			return _hostVertexPointer;
 		}
 		/** @brief Sets a pointer into host memory containing vertex data to be copied into a VBO */
 		void SetHostVertexPointer(const float* vertexPointer);
@@ -94,15 +94,15 @@ namespace nCine
 
 		/** @brief Returns the number of indices used to render the geometry */
 		inline std::uint32_t GetIndexCount() const {
-			return numIndices_;
+			return _numIndices;
 		}
 		/** @brief Sets the index of the first index to draw */
 		inline void SetFirstIndex(std::uint16_t firstIndex) {
-			firstIndex_ = firstIndex;
+			_firstIndex = firstIndex;
 		}
 		/** @brief Sets the number of indices used to render the geometry */
 		inline void SetIndexCount(std::uint32_t numIndices) {
-			numIndices_ = numIndices;
+			_numIndices = numIndices;
 		}
 		/** @brief Creates a custom IBO that is unique to this object */
 		void CreateCustomIbo(std::uint32_t numIndices, BufferUsage usage);
@@ -115,7 +115,7 @@ namespace nCine
 
 		/** @brief Returns a pointer into host memory containing index data to be copied into an IBO */
 		inline const std::uint16_t* GetHostIndexPointer() const {
-			return hostIndexPointer_;
+			return _hostIndexPointer;
 		}
 		/** @brief Sets a pointer into host memory containing index data to be copied into an IBO */
 		void SetHostIndexPointer(const std::uint16_t* indexPointer);
@@ -124,27 +124,27 @@ namespace nCine
 		void ShareIbo(const Geometry* geometry);
 
 	private:
-		PrimitiveType primitiveType_;
-		std::int32_t firstVertex_;
-		std::int32_t numVertices_;
-		std::uint32_t numElementsPerVertex_;
-		std::uint16_t firstIndex_;
-		std::uint32_t numIndices_;
-		const float* hostVertexPointer_;
-		const std::uint16_t* hostIndexPointer_;
+		PrimitiveType _primitiveType;
+		std::int32_t _firstVertex;
+		std::int32_t _numVertices;
+		std::uint32_t _numElementsPerVertex;
+		std::uint16_t _firstIndex;
+		std::uint32_t _numIndices;
+		const float* _hostVertexPointer;
+		const std::uint16_t* _hostIndexPointer;
 
-		std::unique_ptr<RHI::Buffer> vbo_;
-		BufferUsage vboUsageFlags_;
-		RenderBuffersManager::Parameters vboParams_;
-		const RenderBuffersManager::Parameters* sharedVboParams_;
+		std::unique_ptr<RHI::Buffer> _vbo;
+		BufferUsage _vboUsageFlags;
+		RenderBuffersManager::Parameters _vboParams;
+		const RenderBuffersManager::Parameters* _sharedVboParams;
 
-		std::unique_ptr<RHI::Buffer> ibo_;
-		BufferUsage iboUsageFlags_;
-		RenderBuffersManager::Parameters iboParams_;
-		const RenderBuffersManager::Parameters* sharedIboParams_;
+		std::unique_ptr<RHI::Buffer> _ibo;
+		BufferUsage _iboUsageFlags;
+		RenderBuffersManager::Parameters _iboParams;
+		const RenderBuffersManager::Parameters* _sharedIboParams;
 
-		bool hasDirtyVertices_;
-		bool hasDirtyIndices_;
+		bool _hasDirtyVertices;
+		bool _hasDirtyIndices;
 
 		void Bind();
 		void Draw(std::int32_t numInstances);
@@ -152,10 +152,10 @@ namespace nCine
 		void CommitIndices();
 
 		inline const RenderBuffersManager::Parameters& GetVboParams() const {
-			return sharedVboParams_ ? *sharedVboParams_ : vboParams_;
+			return _sharedVboParams ? *_sharedVboParams : _vboParams;
 		}
 		inline const RenderBuffersManager::Parameters& GetIboParams() const {
-			return sharedIboParams_ ? *sharedIboParams_ : iboParams_;
+			return _sharedIboParams ? *_sharedIboParams : _iboParams;
 		}
 	};
 

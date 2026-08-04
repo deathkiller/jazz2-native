@@ -58,20 +58,20 @@ namespace nCine
 		withGlDebugContext(false),
 
 		// Compile-time variables
-		glCoreProfile_(true),
-		glForwardCompatible_(true),
+		_glCoreProfile(true),
+		_glForwardCompatible(true),
 #if defined(RHI_GL_PROFILE_ES2)
 		// Real OpenGL|ES 2.0 profile (PS Vita target): ESSL 100, no UBOs, no gl_VertexID
-		glMajorVersion_(2),
-		glMinorVersion_(0),
+		_glMajorVersion(2),
+		_glMinorVersion(0),
 #elif defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		glMajorVersion_(3),
-		glMinorVersion_(0),
+		_glMajorVersion(3),
+		_glMinorVersion(0),
 #else
-		glMajorVersion_(3),
-		glMinorVersion_(3),
+		_glMajorVersion(3),
+		_glMinorVersion(3),
 #endif
-		argv_(nullptr)
+		_argv(nullptr)
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		dataPath() = "assets:/"_s;
@@ -97,16 +97,16 @@ namespace nCine
 
 	const String& AppConfiguration::dataPath() const
 	{
-		return dataPath_;
+		return _dataPath;
 	}
 
 	String& AppConfiguration::dataPath()
 	{
-		return dataPath_;
+		return _dataPath;
 	}
 
 	const StringView AppConfiguration::argv(std::size_t index) const
 	{
-		return argv_[index];
+		return _argv[index];
 	}
 }

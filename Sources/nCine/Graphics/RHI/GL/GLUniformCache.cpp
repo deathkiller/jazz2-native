@@ -7,95 +7,95 @@
 namespace nCine::RHI::GL
 {
 	GLUniformCache::GLUniformCache()
-		: uniform_(nullptr), dataPointer_(nullptr), isDirty_(false)
+		: _uniform(nullptr), _dataPointer(nullptr), _isDirty(false)
 	{
 	}
 
 	GLUniformCache::GLUniformCache(const GLUniform* uniform)
-		: uniform_(uniform), dataPointer_(nullptr), isDirty_(false)
+		: _uniform(uniform), _dataPointer(nullptr), _isDirty(false)
 	{
 		DEATH_ASSERT(uniform);
 	}
 
 	const GLfloat* GLUniformCache::GetFloatVector() const
 	{
-		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat()));
+		DEATH_ASSERT(_uniform == nullptr || (_dataPointer != nullptr && CheckFloat()));
 		const GLfloat* vec = nullptr;
 
-		if (dataPointer_ != nullptr) {
-			vec = reinterpret_cast<GLfloat*>(dataPointer_);
+		if (_dataPointer != nullptr) {
+			vec = reinterpret_cast<GLfloat*>(_dataPointer);
 		}
 		return vec;
 	}
 
 	GLfloat GLUniformCache::GetFloatValue(std::uint32_t index) const
 	{
-		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat() && uniform_->GetComponentCount() > index));
+		DEATH_ASSERT(_uniform == nullptr || (_dataPointer != nullptr && CheckFloat() && _uniform->GetComponentCount() > index));
 
 		GLfloat value = 0.0f;
 
-		if (dataPointer_ != nullptr) {
-			value = reinterpret_cast<const GLfloat*>(dataPointer_)[index];
+		if (_dataPointer != nullptr) {
+			value = reinterpret_cast<const GLfloat*>(_dataPointer)[index];
 		}
 		return value;
 	}
 
 	const GLint* GLUniformCache::GetIntVector() const
 	{
-		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt()));
+		DEATH_ASSERT(_uniform == nullptr || (_dataPointer != nullptr && CheckInt()));
 		const GLint* vec = nullptr;
 
-		if (dataPointer_ != nullptr) {
-			vec = reinterpret_cast<GLint*>(dataPointer_);
+		if (_dataPointer != nullptr) {
+			vec = reinterpret_cast<GLint*>(_dataPointer);
 		}
 		return vec;
 	}
 
 	GLint GLUniformCache::GetIntValue(std::uint32_t index) const
 	{
-		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt() && uniform_->GetComponentCount() > index));
+		DEATH_ASSERT(_uniform == nullptr || (_dataPointer != nullptr && CheckInt() && _uniform->GetComponentCount() > index));
 		GLint value = 0;
 
-		if (dataPointer_ != nullptr) {
-			value = reinterpret_cast<const GLint*>(dataPointer_)[index];
+		if (_dataPointer != nullptr) {
+			value = reinterpret_cast<const GLint*>(_dataPointer)[index];
 		}
 		return value;
 	}
 
 	bool GLUniformCache::SetFloatVector(const GLfloat* vec)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat()) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckFloat()) {
 			return false;
 		}
 
-		isDirty_ = true;
-		std::memcpy(dataPointer_, vec, sizeof(GLfloat) * uniform_->GetComponentCount());
+		_isDirty = true;
+		std::memcpy(_dataPointer, vec, sizeof(GLfloat) * _uniform->GetComponentCount());
 		return true;
 	}
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(1)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckFloat() || !CheckComponents(1)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLfloat* data = reinterpret_cast<GLfloat*>(dataPointer_);
+		_isDirty = true;
+		GLfloat* data = reinterpret_cast<GLfloat*>(_dataPointer);
 		data[0] = v0;
 		return true;
 	}
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(2)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckFloat() || !CheckComponents(2)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLfloat* data = reinterpret_cast<GLfloat*>(dataPointer_);
+		_isDirty = true;
+		GLfloat* data = reinterpret_cast<GLfloat*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		return true;
@@ -103,13 +103,13 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(3)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckFloat() || !CheckComponents(3)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLfloat* data = reinterpret_cast<GLfloat*>(dataPointer_);
+		_isDirty = true;
+		GLfloat* data = reinterpret_cast<GLfloat*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		data[2] = v2;
@@ -118,13 +118,13 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(4)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckFloat() || !CheckComponents(4)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLfloat* data = reinterpret_cast<GLfloat*>(dataPointer_);
+		_isDirty = true;
+		GLfloat* data = reinterpret_cast<GLfloat*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		data[2] = v2;
@@ -134,38 +134,38 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::SetIntVector(const GLint* vec)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt()) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckInt()) {
 			return false;
 		}
 
-		isDirty_ = true;
-		std::memcpy(dataPointer_, vec, sizeof(GLint) * uniform_->GetComponentCount());
+		_isDirty = true;
+		std::memcpy(_dataPointer, vec, sizeof(GLint) * _uniform->GetComponentCount());
 		return true;
 	}
 
 	bool GLUniformCache::SetIntValue(GLint v0)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(1)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckInt() || !CheckComponents(1)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLint* data = reinterpret_cast<GLint*>(dataPointer_);
+		_isDirty = true;
+		GLint* data = reinterpret_cast<GLint*>(_dataPointer);
 		data[0] = v0;
 		return true;
 	}
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(2)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckInt() || !CheckComponents(2)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLint* data = reinterpret_cast<GLint*>(dataPointer_);
+		_isDirty = true;
+		GLint* data = reinterpret_cast<GLint*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		return true;
@@ -173,13 +173,13 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1, GLint v2)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(3)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckInt() || !CheckComponents(3)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLint* data = reinterpret_cast<GLint*>(dataPointer_);
+		_isDirty = true;
+		GLint* data = reinterpret_cast<GLint*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		data[2] = v2;
@@ -188,13 +188,13 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1, GLint v2, GLint v3)
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(4)) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !CheckInt() || !CheckComponents(4)) {
 			return false;
 		}
 
-		isDirty_ = true;
-		GLint* data = reinterpret_cast<GLint*>(dataPointer_);
+		_isDirty = true;
+		GLint* data = reinterpret_cast<GLint*>(_dataPointer);
 		data[0] = v0;
 		data[1] = v1;
 		data[2] = v2;
@@ -204,48 +204,48 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::CommitValue()
 	{
-		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
-		if (uniform_ == nullptr || dataPointer_ == nullptr || !isDirty_) {
+		DEATH_ASSERT(_uniform == nullptr || _dataPointer != nullptr);
+		if (_uniform == nullptr || _dataPointer == nullptr || !_isDirty) {
 			return false;
 		}
 
 		// The uniform must not belong to any uniform block
-		DEATH_ASSERT(uniform_->GetBlockIndex() == -1);
+		DEATH_ASSERT(_uniform->GetBlockIndex() == -1);
 
-		const GLint location = uniform_->GetLocation();
-		switch (uniform_->GetGLType()) {
+		const GLint location = _uniform->GetLocation();
+		switch (_uniform->GetGLType()) {
 			case GL_FLOAT:
-				glUniform1fv(location, 1, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniform1fv(location, 1, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_FLOAT_VEC2:
-				glUniform2fv(location, 1, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniform2fv(location, 1, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_FLOAT_VEC3:
-				glUniform3fv(location, 1, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniform3fv(location, 1, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_FLOAT_VEC4:
-				glUniform4fv(location, 1, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniform4fv(location, 1, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_INT:
-				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
+				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(_dataPointer));
 				break;
 			case GL_INT_VEC2:
-				glUniform2iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
+				glUniform2iv(location, 1, reinterpret_cast<const GLint*>(_dataPointer));
 				break;
 			case GL_INT_VEC3:
-				glUniform3iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
+				glUniform3iv(location, 1, reinterpret_cast<const GLint*>(_dataPointer));
 				break;
 			case GL_INT_VEC4:
-				glUniform4iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
+				glUniform4iv(location, 1, reinterpret_cast<const GLint*>(_dataPointer));
 				break;
 			case GL_FLOAT_MAT2:
-				glUniformMatrix2fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniformMatrix2fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_FLOAT_MAT3:
-				glUniformMatrix3fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniformMatrix3fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 			case GL_FLOAT_MAT4:
-				glUniformMatrix4fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(dataPointer_));
+				glUniformMatrix4fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(_dataPointer));
 				break;
 #if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 			case GL_SAMPLER_1D:
@@ -258,21 +258,21 @@ namespace nCine::RHI::GL
 #if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 			case GL_SAMPLER_BUFFER:
 #endif
-				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
+				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(_dataPointer));
 				break;
 			default:
-				LOGW("No available case to handle type: {}", uniform_->GetGLType());
+				LOGW("No available case to handle type: {}", _uniform->GetGLType());
 				break;
 		}
 
-		isDirty_ = false;
+		_isDirty = false;
 		return true;
 	}
 
 	bool GLUniformCache::CheckFloat() const
 	{
-		if (uniform_->GetBasicType() != GL_FLOAT) {
-			LOGE("Uniform \"{}\" is not floating point", uniform_->GetName());
+		if (_uniform->GetBasicType() != GL_FLOAT) {
+			LOGE("Uniform \"{}\" is not floating point", _uniform->GetName());
 			return false;
 		} else {
 			return true;
@@ -281,23 +281,23 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::CheckInt() const
 	{
-		if (uniform_->GetBasicType() != GL_INT &&
+		if (_uniform->GetBasicType() != GL_INT &&
 #if !defined(DEATH_TARGET_VITA)	// vitaGL declares neither GL_BOOL nor GL_SAMPLER_3D
-			uniform_->GetBasicType() != GL_BOOL &&
+			_uniform->GetBasicType() != GL_BOOL &&
 #endif
 #if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
-			uniform_->GetBasicType() != GL_SAMPLER_1D &&
+			_uniform->GetBasicType() != GL_SAMPLER_1D &&
 #endif
-			uniform_->GetBasicType() != GL_SAMPLER_2D &&
+			_uniform->GetBasicType() != GL_SAMPLER_2D &&
 #if !defined(DEATH_TARGET_VITA)
-			uniform_->GetBasicType() != GL_SAMPLER_3D &&
+			_uniform->GetBasicType() != GL_SAMPLER_3D &&
 #endif
-			uniform_->GetBasicType() != GL_SAMPLER_CUBE
+			_uniform->GetBasicType() != GL_SAMPLER_CUBE
 #if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
-			&& uniform_->GetBasicType() != GL_SAMPLER_BUFFER
+			&& _uniform->GetBasicType() != GL_SAMPLER_BUFFER
 #endif
 		) {
-			LOGE("Uniform \"{}\" is not integer", uniform_->GetName());
+			LOGE("Uniform \"{}\" is not integer", _uniform->GetName());
 			return false;
 		} else {
 			return true;
@@ -306,8 +306,8 @@ namespace nCine::RHI::GL
 
 	bool GLUniformCache::CheckComponents(std::uint32_t requiredComponents) const
 	{
-		if (uniform_->GetComponentCount() != requiredComponents) {
-			LOGE("Uniform \"{}\" has {} components, not {}", uniform_->GetName(), uniform_->GetComponentCount(), requiredComponents);
+		if (_uniform->GetComponentCount() != requiredComponents) {
+			LOGE("Uniform \"{}\" has {} components, not {}", _uniform->GetName(), _uniform->GetComponentCount(), requiredComponents);
 			return false;
 		} else {
 			return true;

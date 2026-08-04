@@ -33,7 +33,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the current clear color */
 		static Colorf GetColor() {
-			return state_.color;
+			return _state.color;
 		}
 		/** @brief Sets the clear color */
 		static void SetColor(const Colorf& color);
@@ -49,7 +49,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the whole cached clear color state */
 		static State GetState() {
-			return state_;
+			return _state;
 		}
 		/** @brief Restores the whole clear color state */
 		static void SetState(State newState);
@@ -58,7 +58,7 @@ namespace nCine::RHI::GL
 		static void Reapply();
 
 	private:
-		static State state_;
+		static State _state;
 	};
 
 }

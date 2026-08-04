@@ -13,7 +13,7 @@ namespace nCine::RHI::GXM
 		constexpr std::uint32_t LpddrPageSize = 4 * 1024;
 		constexpr std::uint32_t CdramPageSize = 256 * 1024;
 
-		std::uint32_t allocatedBytes_ = 0;
+		std::uint32_t _allocatedBytes = 0;
 
 		// Render-target texels whose address is reserved for one geometry (see GxmMemory::AcquireSurface()). A
 		// session uses a handful of sizes - the game's resolution, the levels of the blur chain, the display -
@@ -29,8 +29,8 @@ namespace nCine::RHI::GXM
 			bool InUse = false;
 		};
 
-		RetainedSurface retainedSurfaces_[MaxRetainedSurfaces];
-		std::uint32_t retainedSurfaceCount_ = 0;
+		RetainedSurface _retainedSurfaces[MaxRetainedSurfaces];
+		std::uint32_t _retainedSurfaceCount = 0;
 
 		inline std::uint32_t AlignUp(std::uint32_t value, std::uint32_t alignment)
 		{
@@ -70,7 +70,7 @@ namespace nCine::RHI::GXM
 			block.Uid = uid;
 			block.Base = base;
 			block.Size = alignedSize;
-			allocatedBytes_ += alignedSize;
+			_allocatedBytes += alignedSize;
 			return block;
 		}
 	}
@@ -99,7 +99,7 @@ namespace nCine::RHI::GXM
 			return Block();
 		}
 
-		for (RetainedSurface& surface : retainedSurfaces_) {
+		for (RetainedSurface& surface : _retainedSurfaces) {
 			if (!surface.InUse && surface.Stride == stride && surface.Height == height) {
 				surface.InUse = true;
 				return surface.Memory;
@@ -108,8 +108,8 @@ namespace nCine::RHI::GXM
 
 		Block block = AllocCdram(name, stride * height, SCE_GXM_MEMORY_ATTRIB_RW);
 		if (block.IsValid()) {
-			if (retainedSurfaceCount_ < MaxRetainedSurfaces) {
-				RetainedSurface& surface = retainedSurfaces_[retainedSurfaceCount_++];
+			if (_retainedSurfaceCount < MaxRetainedSurfaces) {
+				RetainedSurface& surface = _retainedSurfaces[_retainedSurfaceCount++];
 				surface.Stride = stride;
 				surface.Height = height;
 				surface.Memory = block;
@@ -130,7 +130,7 @@ namespace nCine::RHI::GXM
 			return;
 		}
 
-		for (RetainedSurface& surface : retainedSurfaces_) {
+		for (RetainedSurface& surface : _retainedSurfaces) {
 			if (surface.Memory.Uid == block.Uid) {
 				// Kept mapped and kept out of the allocator, so the next target of this geometry lands on the
 				// very same address; the caller's handle goes away either way
@@ -172,7 +172,7 @@ namespace nCine::RHI::GXM
 		block.Size = alignedSize;
 		block.UsseOffset = usseOffset;
 		block.MappedAs = Kind::VertexUsse;
-		allocatedBytes_ += alignedSize;
+		_allocatedBytes += alignedSize;
 		return block;
 	}
 
@@ -205,7 +205,7 @@ namespace nCine::RHI::GXM
 		block.Size = alignedSize;
 		block.UsseOffset = usseOffset;
 		block.MappedAs = Kind::FragmentUsse;
-		allocatedBytes_ += alignedSize;
+		_allocatedBytes += alignedSize;
 		return block;
 	}
 
@@ -225,8 +225,8 @@ namespace nCine::RHI::GXM
 		}
 
 		sceKernelFreeMemBlock(block.Uid);
-		if (allocatedBytes_ >= block.Size) {
-			allocatedBytes_ -= block.Size;
+		if (_allocatedBytes >= block.Size) {
+			_allocatedBytes -= block.Size;
 		}
 
 		block.Uid = InvalidUid;
@@ -238,6 +238,6 @@ namespace nCine::RHI::GXM
 
 	std::uint32_t GxmMemory::GetAllocatedBytes()
 	{
-		return allocatedBytes_;
+		return _allocatedBytes;
 	}
 }
