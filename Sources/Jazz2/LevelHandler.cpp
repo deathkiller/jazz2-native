@@ -108,7 +108,7 @@ namespace Jazz2
 	LevelHandler::LevelHandler(IRootController* root)
 		: _root(root),
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
-			_lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
+			_lightingMeshShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
 #endif
 			_eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
 			_cheatsUsed(false), _checkpointCreated(false), _nextLevelType(ExitType::None),
@@ -774,8 +774,9 @@ namespace Jazz2
 		if (notInitialized) {
 			LOGI("Acquiring required shaders");
 
-			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
-			if (_lightingShader == nullptr) { LOGW("PrecompiledShader::Lighting failed"); }
+			// Every light of a viewport goes out as one mesh, so there is no per-light program to acquire
+			_lightingMeshShader = resolver.GetShader(PrecompiledShader::LightingMesh);
+			if (_lightingMeshShader == nullptr) { LOGW("PrecompiledShader::LightingMesh failed"); }
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
 			if (_blurShader == nullptr) { LOGW("PrecompiledShader::Blur failed"); }
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);

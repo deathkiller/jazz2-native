@@ -89,7 +89,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\Shared\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\;$(ProjectDir)..\..\Shared\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -125,10 +125,10 @@
     <ClCompile Include="ShaderParser.cpp" />
     <ClCompile Include="Main.cpp" />
     <!-- Death::Containers dependency (the tool gained String/StringView/format usage) -->
-    <ClCompile Include="..\Shared\Containers\String.cpp" />
-    <ClCompile Include="..\Shared\Containers\StringView.cpp" />
-    <ClCompile Include="..\Shared\Base\Format.cpp" />
-    <ClCompile Include="..\Shared\Cpu.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\String.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\StringView.cpp" />
+    <ClCompile Include="..\..\Shared\Base\Format.cpp" />
+    <ClCompile Include="..\..\Shared\Cpu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConsoleFixedFunction.h" />

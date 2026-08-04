@@ -1526,7 +1526,7 @@ namespace nCine::RHI::PVR
 
 		// The program's whole console identity is its generated-table entry, resolved at load from the
 		// true (program, variant) the loaders plumbed in - a program without an entry has no
-		// fixed_function block in its .shader file (Lighting, Blur, the Resize* family,
+		// fixed_function block in its .shader file (LightingMesh, Blur, the Resize* family,
 		// runtime-compiled shaders, ...) and keeps the logged, skipped draw.
 		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
 		if (generated == nullptr) {

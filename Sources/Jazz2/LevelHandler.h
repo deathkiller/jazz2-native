@@ -237,7 +237,7 @@ namespace Jazz2
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 		// Post-processing shaders (bloom + lighting compositing). Only backends with cheap programmable shaders
 		// run the full-screen post-process chain, so these are absent on the software backend (see RhiFwd.h)
-		Shader* _lightingShader;
+		Shader* _lightingMeshShader;
 		Shader* _blurShader;
 		Shader* _downsampleShader;
 		Shader* _combineShader;

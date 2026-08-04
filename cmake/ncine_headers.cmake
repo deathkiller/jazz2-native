@@ -175,10 +175,10 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
 	# Runtime part of ShaderCompiler, shared with the offline tool
-	${NCINE_SOURCE_DIR}/ShaderCompiler/ConstFold.h
-	${NCINE_SOURCE_DIR}/ShaderCompiler/GlslReflect.h
-	${NCINE_SOURCE_DIR}/ShaderCompiler/RuntimeShader.h
-	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.h
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/ConstFold.h
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/GlslReflect.h
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/RuntimeShader.h
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/ShaderParser.h
 )
 
 if(NCINE_PREFERRED_RHI STREQUAL "Software")

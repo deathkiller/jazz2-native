@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM64EC">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64EC</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64EC">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64EC</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}</ProjectGuid>
+    <RootNamespace>AssetPacker</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64EC'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64EC'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <!--
+      Subdirectory of "Libs\Windows" holding the prebuilt import libraries. ARM64EC links the x64 ones
+      by design (MSVC defines _M_X64 there too), so only the 32-bit platform differs.
+    -->
+    <Jazz2LibsArch Condition="'$(Platform)'=='Win32'">x86</Jazz2LibsArch>
+    <Jazz2LibsArch Condition="'$(Platform)'!='Win32'">x64</Jazz2LibsArch>
+    <Jazz2LibsDir>$(ProjectDir)..\..\..\Libs</Jazz2LibsDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\;$(ProjectDir)..\..\Shared\;$(ProjectDir)..\..\Dependencies\;$(Jazz2LibsDir)\Includes\;$(Jazz2LibsDir)\Includes\zlib\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!--
+        Mirrors the AssetPacker CMake target's definitions. CMAKE_BUILD makes the shared headers prefer
+        the in-tree relative includes and, importantly, suppresses their `#pragma comment(lib, "../Libs/...")`
+        auto-linking - those paths are relative to the project directory and only resolve for a project
+        sitting in "Sources", so zlib is linked explicitly below instead. DEATH_TRACE is on (the tool
+        reports progress through the logging macros) but deliberately WITHOUT DEATH_TRACE_VERBOSE_IO,
+        since a conversion touches thousands of files and logging each one buries the output.
+      -->
+      <PreprocessorDefinitions>CMAKE_BUILD;DEATH_NO_THREADS;DEATH_TRACE;WITH_ZLIB;WIN32;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(Jazz2LibsDir)\Windows\$(Jazz2LibsArch)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;DEATH_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="FontPacker.cpp" />
+    <ClCompile Include="PngCodec.cpp" />
+    <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
+    <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\AssetConverter.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\EventConverter.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\J2vRecompressor.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Anims.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Block.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Data.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Episode.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Level.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp" />
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Tileset.cpp" />
+    <ClCompile Include="..\..\nCine\Base\Algorithms.cpp" />
+    <!--
+      The platform-neutral base layer, shared with the game (SHARED_SOURCES in cmake/ncine_sources.cmake)
+      minus IO\WebRequest.cpp - the packer does no networking, and WebRequest would drag in libcurl for nothing
+    -->
+    <ClCompile Include="..\..\Shared\Cpu.cpp" />
+    <ClCompile Include="..\..\Shared\Environment.cpp" />
+    <ClCompile Include="..\..\Shared\Utf8.cpp" />
+    <ClCompile Include="..\..\Shared\Base\Format.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\DateTime.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\SmallVector.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\String.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\StringUtils.cpp" />
+    <ClCompile Include="..\..\Shared\Containers\StringView.cpp" />
+    <ClCompile Include="..\..\Shared\Core\Logger.cpp" />
+    <ClCompile Include="..\..\Shared\Cryptography\xxHash.cpp" />
+    <ClCompile Include="..\..\Shared\IO\AndroidAssetStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\BoundedFileStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\EmscriptenFileStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\FileStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\FileSystem.cpp" />
+    <ClCompile Include="..\..\Shared\IO\MemoryStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\PakFile.cpp" />
+    <ClCompile Include="..\..\Shared\IO\Stream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\Compression\DeflateStream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\Compression\Lz4Stream.cpp" />
+    <ClCompile Include="..\..\Shared\IO\Compression\ZstdStream.cpp" />
+    <ClCompile Include="..\..\Shared\Threading\Implementation\WaitOnAddress.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FontPacker.h" />
+    <ClInclude Include="PngCodec.h" />
+    <ClInclude Include="..\..\Main.h" />
+    <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />
+    <ClInclude Include="..\..\Jazz2\EventType.h" />
+    <ClInclude Include="..\..\Jazz2\UI\FontFormat.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\AssetConverter.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\EventConverter.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\J2vRecompressor.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Anims.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Anims.Palettes.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Block.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Data.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Episode.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Level.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Strings.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Tileset.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

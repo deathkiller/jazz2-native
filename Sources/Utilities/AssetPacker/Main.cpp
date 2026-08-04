@@ -6,13 +6,13 @@
 
 #include "FontPacker.h"
 
-#include "../Main.h"
-#include "../Jazz2/ContentFileTypes.h"
-#include "../Jazz2/Compatibility/AssetConverter.h"
-#include "../Jazz2/Compatibility/J2vRecompressor.h"
-#include "../Jazz2/Compatibility/JJ2Anims.h"
-#include "../Jazz2/EventType.h"
-#include "../nCine/Base/Algorithms.h"
+#include "../../Main.h"
+#include "../../Jazz2/ContentFileTypes.h"
+#include "../../Jazz2/Compatibility/AssetConverter.h"
+#include "../../Jazz2/Compatibility/J2vRecompressor.h"
+#include "../../Jazz2/Compatibility/JJ2Anims.h"
+#include "../../Jazz2/EventType.h"
+#include "../../nCine/Base/Algorithms.h"
 
 #include <Containers/Array.h>
 #include <Containers/DateTime.h>

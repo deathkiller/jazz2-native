@@ -8,7 +8,7 @@ namespace Jazz2 {
 
 @m_class{m-noindent}
 
-**AssetPacker** is a standalone command-line tool in @cpp "Sources/AssetPacker" @ce that
+**AssetPacker** is a standalone command-line tool in @cpp "Sources/Utilities/AssetPacker" @ce that
 converts original Jazz Jackrabbit 2 data into the layout a given platform loads. The game
 performs the same conversion on its first run @m_span{m-text m-dim} (see
 `GameEventHandler::RefreshCache`, which forwards to the shared
@@ -27,7 +27,7 @@ The tool is host-only --- it is built by default as part of the desktop CMake bu
 (`NCINE_BUILD_ASSET_PACKER`, default @cpp ON @ce) and skipped for every cross-compiled
 target. It links only the base layer and the original-data converters, deliberately not the
 engine, so it has no renderer, no window backend and no networking. After a regular
-@ref building "desktop build" the binary is at @cpp "build/Sources/AssetPacker/AssetPacker" @ce.
+@ref building "desktop build" the binary is at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
 
 @section asset-packer-usage Command-line reference
 

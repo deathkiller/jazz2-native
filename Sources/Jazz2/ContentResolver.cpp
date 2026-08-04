@@ -1908,9 +1908,21 @@ namespace Jazz2
 
 		ZoneScoped;
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", ShadersGen::Lighting);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", ShadersGen::BatchedLighting, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		// Lighting only exists on the shader render path - the direct tier composites it on the CPU in the combine
+		// pass and never asks for this (see LevelHandler::OnInitialized). All lights of a viewport go out as one
+		// mesh, so there is no per-light program and no batched twin of one: a batch would still be one instance
+		// block per light, while this shares the interleaved per-vertex format (position.xy, texcoords.xy,
+		// color.rgba = 8 floats / 32 bytes) of the tile-layer meshes, filled in LightingRenderer::OnDraw().
+		{
+			_precompiledShaders[(std::int32_t)PrecompiledShader::LightingMesh] = CompileShader("LightingMesh", ShadersGen::LightingMesh);
+			Shader* shader = _precompiledShaders[(std::int32_t)PrecompiledShader::LightingMesh].get();
+			constexpr std::int32_t Stride = 8 * sizeof(float);
+			shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+			shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+			shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+		}
+#endif
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", ShadersGen::Blur);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", ShadersGen::Downsample);

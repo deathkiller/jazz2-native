@@ -29,7 +29,8 @@ param([string]$Glslang = '', [switch]$Check, [switch]$NoDxbc)
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$shadersDir = Join-Path (Split-Path -Parent $scriptDir) 'Shaders'
+$sourcesDir = Split-Path -Parent (Split-Path -Parent $scriptDir)		# .../Sources (the tool lives in Sources/Utilities/ShaderCompiler)
+$shadersDir = Join-Path $sourcesDir 'Shaders'
 $committedDir = Join-Path $shadersDir 'Generated'
 if ($Check) {
     $outDir = Join-Path ([System.IO.Path]::GetTempPath()) ("Jazz2-ShaderCheck-" + [System.IO.Path]::GetRandomFileName())
@@ -39,7 +40,7 @@ if ($Check) {
 $tool = Join-Path $scriptDir 'x64\Release\ShaderCompiler.exe'
 
 if (-not (Test-Path $tool)) {
-    Write-Host "error: ShaderCompiler.exe not found at '$tool' - build Sources/ShaderCompiler first"
+    Write-Host "error: ShaderCompiler.exe not found at '$tool' - build Sources/Utilities/ShaderCompiler first"
     exit 1
 }
 if (-not (Test-Path $shadersDir)) {
@@ -62,7 +63,7 @@ function Find-Glslang([string]$override) {
     $vs = Get-ChildItem 'C:\Program Files*\Microsoft Visual Studio\*\*\Common7\IDE\Extensions\*\external\glslangValidator.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($vs) { return $vs.FullName }
     # Repo-local build-tree copy (may be transient)
-    $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+    $repoRoot = Split-Path -Parent $sourcesDir
     $repoCopy = Join-Path $repoRoot '.fake\_legacy\.fake\glsl\glslangValidator.exe'
     if (Test-Path $repoCopy) { return $repoCopy }
     return $null

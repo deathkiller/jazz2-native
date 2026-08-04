@@ -5,9 +5,9 @@
 #include "../Application.h"
 #include "../tracy.h"
 #include "../../Main.h"
-#include "../../ShaderCompiler/RuntimeShader.h"
+#include "../../Utilities/ShaderCompiler/RuntimeShader.h"
 #if defined(RHI_GL_PROFILE_ES2)
-#	include "../../ShaderCompiler/Essl100.h"
+#	include "../../Utilities/ShaderCompiler/Essl100.h"
 #endif
 
 #include <IO/FileSystem.h>

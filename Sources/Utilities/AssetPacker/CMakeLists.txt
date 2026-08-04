@@ -8,9 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(AssetPacker)
 
 target_include_directories(AssetPacker PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/..
-	${CMAKE_CURRENT_SOURCE_DIR}/../Shared
-	${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies
+	${CMAKE_CURRENT_SOURCE_DIR}/../..
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies
 )
 
 # The packer does no networking, and WebRequest would drag in libcurl for nothing
@@ -29,7 +29,7 @@ set(SOURCES
 	${CONVERTER_SOURCES}
 )
 
-ncine_assign_source_group(PATH_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../ ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+ncine_assign_source_group(PATH_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../../ ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 target_sources(AssetPacker PRIVATE ${SOURCES})
 

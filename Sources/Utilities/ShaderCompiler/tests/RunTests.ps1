@@ -16,7 +16,7 @@ $ErrorActionPreference = 'Stop'
 $testsDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $tool = Join-Path (Split-Path -Parent $testsDir) 'x64\Release\ShaderCompiler.exe'
 if (-not (Test-Path $tool)) {
-    Write-Host "error: ShaderCompiler.exe not found at '$tool' - build Sources/ShaderCompiler first"
+    Write-Host "error: ShaderCompiler.exe not found at '$tool' - build Sources/Utilities/ShaderCompiler first"
     exit 1
 }
 

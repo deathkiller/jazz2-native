@@ -361,8 +361,7 @@ namespace Jazz2::Resources
 	*/
 	enum class PrecompiledShader
 	{
-		Lighting,							/**< Lighting */
-		BatchedLighting,					/**< Batched variant of @ref Lighting */
+		LightingMesh,						/**< Light aggregation shader, one draw for all lights of a viewport */
 
 		Blur,								/**< Blur */
 		Downsample,							/**< Downsample */

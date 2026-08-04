@@ -3,7 +3,7 @@
 /**
 	@file SwShaderRuntime.h
 
-	C++ runtime library the GLSL-to-C++ transpiler (ShaderCompiler/GlslToCpp) targets.
+	C++ runtime library the GLSL-to-C++ transpiler (Utilities/ShaderCompiler/GlslToCpp) targets.
 
 	The offline transpiler lowers a shader's fragment GLSL into a plain C++ function that the CPU
 	software renderer calls once per pixel, so an effect runs in software exactly as its GLSL

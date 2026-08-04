@@ -567,15 +567,32 @@ namespace Jazz2::Tiles
 		std::int32_t _renderCommandsPeakAge;
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-		// Per-frame pools for whole-layer tile meshes, replacing the per-tile commands. One vertex buffer is filled
-		// per drawn tile layer; each layer mesh is then split into chunks that individually fit the shared array
-		// buffer limit (64 KB), so a layer emits one command per chunk (usually just one). Both pools grow on demand
-		// and reset in OnEndFrame(); host vertex pointers reference the buffers until the render queue is flushed, so
-		// a buffer is never reused within a frame (across viewports the counts simply keep growing).
-		SmallVector<SmallVector<float, 0>, 0> _layerMeshVertices;
-		SmallVector<std::unique_ptr<RenderCommand>, 0> _layerMeshCommands;
-		std::int32_t _layerMeshVerticesCount = 0;
-		std::int32_t _layerMeshCommandCount = 0;
+		// Per-frame pools for aggregated meshes, replacing the per-tile and per-particle commands. One vertex buffer
+		// is filled per drawn tile layer and per debris group; each mesh is then split into chunks that individually
+		// fit the shared array buffer limit (64 KB), so a mesh emits one command per chunk (usually just one). Both
+		// pools grow on demand and reset in OnEndFrame(); host vertex pointers reference the buffers until the render
+		// queue is flushed, so a buffer is never reused within a frame (across viewports the counts simply keep growing).
+		SmallVector<SmallVector<float, 0>, 0> _meshVertices;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _meshCommands;
+		std::int32_t _meshVerticesCount = 0;
+		std::int32_t _meshCommandCount = 0;
+		/// Highest number of vertex buffers rented in one frame since the pool was last trimmed. Shares the age
+		/// counter of the command pool, as both are trimmed together (see @ref OnEndFrame()).
+		std::int32_t _meshVerticesPeak = 0;
+
+		/// One accumulated batch of debris quads - everything a particle carries outside the vertex stream, so
+		/// particles that agree on all of it share a single draw (a death burst is one sprite at one depth, hence
+		/// one group for the whole effect)
+		struct DebrisMeshGroup
+		{
+			Texture* DiffuseTexture;
+			std::int32_t PaletteOffset;
+			std::uint16_t Depth;
+			bool AdditiveBlending;
+			std::int32_t VerticesIndex;
+		};
+
+		SmallVector<DebrisMeshGroup, 4> _debrisMeshGroups;
 #endif
 
 		std::int32_t _texturedBackgroundLayer;
@@ -589,8 +606,15 @@ namespace Jazz2::Tiles
 		// layer mesh buffer. Color is (1,1,1,alpha); the layer tint is applied via the command's instance color.
 		static void AppendTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
 			float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha);
-		// Emits the accumulated tile-layer mesh as one or more render commands (split into <=64 KB chunks)
-		void EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, std::int32_t chunk, const Vector4f& layerColor, std::uint16_t depth);
+		// Appends one particle's two triangles in the same layout, with its rotation, scale and frame offset already
+		// folded into the four corners - the quad the sprite shader would have synthesized from its model matrix
+		static void AppendDebrisQuad(SmallVector<float, 0>& vertices, const DestructibleDebris& debris);
+		// Rents a mesh vertex buffer from the per-frame pool and returns its index (the pool can reallocate, so
+		// callers hold indices rather than pointers)
+		std::int32_t RentMeshVertices();
+		// Emits an accumulated mesh as one or more render commands (split into <=64 KB chunks)
+		void EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
+			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending);
 #endif
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);
