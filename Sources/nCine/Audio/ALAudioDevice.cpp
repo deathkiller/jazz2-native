@@ -16,7 +16,7 @@ using namespace Death::Containers::Literals;
 namespace nCine
 {
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, sourcePoolExhausted_(false), nativeFreq_(44100), deviceName_(nullptr)
+		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, nativeFreq_(44100), deviceName_(nullptr)
 #if defined(WITH_THREADS)
 		, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
 #endif
@@ -33,16 +33,17 @@ namespace nCine
 
 		device_ = alcOpenDevice(nullptr);
 		if (device_ == nullptr) {
-			LOGE("alcOpenDevice() failed with error 0x{:x}", alGetError());
+			LOGE("alcOpenDevice() failed with error 0x{:x}", alcGetError(nullptr));
 			return;
 		}
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
+			const ALCenum error = alcGetError(device_);
 			alcCloseDevice(device_);
 			device_ = nullptr;
-			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
+			LOGE("alcCreateContext() failed with error 0x{:x}", error);
 			return;
 		}
 
@@ -56,11 +57,12 @@ namespace nCine
 #endif
 
 		if (!alcMakeContextCurrent(context_)) {
+			const ALCenum error = alcGetError(device_);
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
 			context_ = nullptr;
 			device_ = nullptr;
-			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
+			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", error);
 			return;
 		}
 
@@ -73,10 +75,6 @@ namespace nCine
 			for (std::int32_t i = MaxSources - 1; i >= 0; i--) {
 				sourcePool_.push_back(sources_[i]);
 			}
-
-#if defined(DEATH_TARGET_VITA)
-			LOGI("Vita audio: {} OpenAL sources, {} Hz output", MaxSources, nativeFreq_);
-#endif
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -336,10 +334,6 @@ namespace nCine
 	unsigned int ALAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
 		if (sourcePool_.empty()) {
-			if (!sourcePoolExhausted_) {
-				LOGW("Audio source pool exhausted: {} active players (limit {})", players_.size(), MaxSources);
-				sourcePoolExhausted_ = true;
-			}
 			return UnavailableSource;
 		}
 
@@ -359,7 +353,6 @@ namespace nCine
 		}
 
 		sourcePool_.push_back(player->sourceId_);
-		sourcePoolExhausted_ = false;
 		player->sourceId_ = UnavailableSource;
 
 		auto it = players_.begin();

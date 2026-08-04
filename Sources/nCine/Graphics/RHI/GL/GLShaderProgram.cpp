@@ -184,13 +184,6 @@ namespace nCine::RHI::GL
 
 	bool GLShaderProgram::Link(Introspection introspection)
 	{
-#if defined(DEATH_TARGET_VITA)
-		auto marker = Death::IO::FileSystem::Open("ux0:/data/Jazz2/LastGLCall.txt"_s, Death::IO::FileAccess::Write);
-		if (marker->IsValid()) {
-			marker->Write("glLinkProgram", 13);
-			marker->Flush();
-		}
-#endif
 		glLinkProgram(glHandle_);
 		return FinalizeAfterLinking(introspection);
 	}

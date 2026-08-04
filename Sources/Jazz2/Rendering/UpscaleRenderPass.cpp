@@ -178,7 +178,7 @@ namespace Jazz2::Rendering
 		}
 
 		// Prepare render command
-#if !defined(DISABLE_RESCALE_SHADERS) && !defined(DEATH_TARGET_VITA)
+#if !defined(DISABLE_RESCALE_SHADERS)
 		_resizeAtLogicalScale = false;
 		if (overlay) {
 			// The overlay layer is composited at the native logical resolution straight onto the screen, so it must

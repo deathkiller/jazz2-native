@@ -155,9 +155,6 @@ namespace nCine
 			ALint numQueuedBuffers = 0;
 			alGetSourcei(source, AL_BUFFERS_QUEUED, &numQueuedBuffers);
 			if (numQueuedBuffers > 0) {
-				if (state == AL_STOPPED) {
-					LOGW("Audio stream underrun: restarting source {} with {} queued buffers", source, numQueuedBuffers);
-				}
 				// Need to restart play
 				alSourcePlay(source);
 			}

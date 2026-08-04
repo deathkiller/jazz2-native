@@ -13,6 +13,10 @@
 
 namespace Jazz2::Tiles
 {
+#if defined(DEATH_TARGET_VITA)
+	constexpr std::int32_t MaxDebrisCountVita = 32;
+#endif
+
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_animatedTilesOffset(0), _triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
@@ -1468,7 +1472,7 @@ namespace Jazz2::Tiles
 		for (std::int32_t i = 0; i < 4; i++) {
 #if defined(DEATH_TARGET_VITA)
 			// Each debris fragment is an individual transparent draw on Vita's ES2 renderer.
-			if (_debrisList.size() >= 32) {
+			if (_debrisList.size() >= MaxDebrisCountVita) {
 				return;
 			}
 #endif
@@ -1516,7 +1520,7 @@ namespace Jazz2::Tiles
 		for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 			for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
 #if defined(DEATH_TARGET_VITA)
-				if (_debrisList.size() >= 32) {
+				if (_debrisList.size() >= MaxDebrisCountVita) {
 					return;
 				}
 #endif
@@ -1565,7 +1569,7 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t i = 0; i < count; i++) {
 #if defined(DEATH_TARGET_VITA)
-			if (_debrisList.size() >= 32) {
+			if (_debrisList.size() >= MaxDebrisCountVita) {
 				return;
 			}
 #endif
@@ -1707,11 +1711,13 @@ namespace Jazz2::Tiles
 			}
 			RenderCommand* command = _debrisMeshCommands[_debrisMeshCommandCount++].get();
 			const bool indexed = (firstInBatch->PaletteOffset >= 0);
-			command->GetMaterial().SetShader(ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+			const bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
 			command->GetMaterial().SetBlendingEnabled(true);
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha,
 				((firstInBatch->Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending ? BlendingFactor::One : BlendingFactor::OneMinusSrcAlpha));
-			command->GetMaterial().ReserveUniformsDataMemory();
+			if (shaderChanged) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+			}
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 			auto& geometry = command->GetGeometry();

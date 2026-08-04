@@ -87,10 +87,7 @@ namespace nCine
 
 	private:
 		/** @brief Maximum number of OpenAL sources */
-#if defined(DEATH_TARGET_VITA)
-		// Reserve CPU time for module decoding and keep the software mixer predictable.
-		static constexpr std::int32_t MaxSources = 24;
-#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		static constexpr std::int32_t MaxSources = 48;
 #else
 		static constexpr std::int32_t MaxSources = 64;
@@ -108,8 +105,6 @@ namespace nCine
 		SmallVector<ALuint, MaxSources> sourcePool_;
 		/** @brief Currently active audio players */
 		SmallVector<IAudioPlayer*, MaxSources> players_;
-		/** @brief Whether source pool exhaustion was already reported */
-		bool sourcePoolExhausted_;
 		/** @brief Listener position */
 		Vector3f _listenerPos;
 		/** @brief Native device sample frequency */

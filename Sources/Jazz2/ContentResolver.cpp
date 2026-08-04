@@ -1898,8 +1898,8 @@ namespace Jazz2
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS) && !defined(DEATH_TARGET_VITA)
-		// vitaGL faults in SceGxm while linking the 3xBR scaler. The Vita path falls back to the
-		// standard sprite scaler in UpscaleRenderPass, which is also substantially cheaper on its GPU.
+		// vitaGL faults in SceGxm while linking the 3xBR scaler. Vita uses the standard
+		// sprite scaler instead, which is both stable and substantially cheaper.
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", ShadersGen::ResizeHQ2x);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", ShadersGen::Resize3xBrz);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", ShadersGen::ResizeCrtScanlines);
@@ -1921,15 +1921,6 @@ namespace Jazz2
 
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const ShaderCompiler::Program& program, const char* variantName, Shader::Introspection introspection)
 	{
-#if defined(DEATH_TARGET_VITA)
-		// Preserve the last shader name when vitaGL faults inside SceGxm during linking.
-		auto marker = fs::Open("ux0:/data/Jazz2/LastShader.txt"_s, FileAccess::Write);
-		if (marker->IsValid()) {
-			marker->Write(shaderName, std::strlen(shaderName));
-			marker->Flush();
-		}
-#endif
-
 		const ShaderCompiler::ProgramVariant* variant = nullptr;
 		if (variantName == nullptr || variantName[0] == '\0') {
 			// The base variant is unnamed (Name "") and is always Variants[0]

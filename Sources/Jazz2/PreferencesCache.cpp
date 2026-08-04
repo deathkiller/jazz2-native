@@ -47,8 +47,13 @@ namespace Jazz2
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = true;
 	bool PreferencesCache::BackgroundDithering = true;
+#if defined(DEATH_TARGET_VITA)
+	bool PreferencesCache::BlurEffects = false;
+	std::uint8_t PreferencesCache::LightingResolutionPercent = 50;
+#else
 	bool PreferencesCache::BlurEffects = true;
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
+#endif
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;

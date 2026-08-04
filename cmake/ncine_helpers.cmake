@@ -447,7 +447,8 @@ function(ncine_apply_compiler_options target)
 			target_compile_options(${target} PRIVATE "-fno-exceptions")
 		endif()
 		if(VITA)
-			# VitaSDK's __cxa_guard_acquire() locks an uninitialized pthread mutex.
+			# Thread-safe static guards grow the first ELF data segment until vita-elf-create cannot
+			# append SCE metadata without overlapping the next segment.
 			target_compile_options(${target} PRIVATE "-fno-threadsafe-statics")
 		endif()
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)

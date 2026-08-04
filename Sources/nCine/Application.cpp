@@ -853,58 +853,6 @@ namespace nCine
 	{
 		frameTimer_->AddFrame();
 
-#if defined(DEATH_TARGET_VITA)
-		// Statistics are gathered while rendering the previous frame. Log only sustained drops so
-		// loading hitches do not obscure the command mix that is actually causing slow gameplay.
-		static float slowFrameDuration = 0.0f;
-		static float logCooldown = 0.0f;
-		static std::unique_ptr<FileStream> performanceLog = []() {
-			auto file = std::make_unique<FileStream>("ux0:/data/Jazz2/VitaPerformance.log"_s, FileAccess::Write);
-			if (file->IsValid()) {
-#if defined(NCINE_PROFILING)
-				constexpr char Header[] = "Vita performance log: light cap 64, debris cap 32; entries are written after 0.5 seconds below 25 FPS\n";
-#else
-				constexpr char Header[] = "Vita performance log: FPS-only release diagnostics; entries are written after 0.5 seconds below 25 FPS\n";
-#endif
-				file->Write(Header, sizeof(Header) - 1);
-				file->Flush();
-			}
-			return file;
-		}();
-		const float frameDuration = frameTimer_->GetLastFrameDuration();
-		if (frameDuration > (1.0f / 25.0f)) {
-			slowFrameDuration += std::min(frameDuration, 0.1f);
-		} else {
-			slowFrameDuration = 0.0f;
-		}
-		logCooldown -= frameDuration;
-		if (slowFrameDuration >= 0.5f && logCooldown <= 0.0f) {
-#if defined(NCINE_PROFILING)
-			const auto& allCommands = RenderStatistics::GetAllCommands();
-			const auto& spriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::Sprite);
-			const auto& meshSpriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::MeshSprite);
-			const auto& tileMapCommands = RenderStatistics::GetCommands(RenderCommand::Type::TileMap);
-			const auto& particleCommands = RenderStatistics::GetCommands(RenderCommand::Type::Particle);
-			const auto& lightingCommands = RenderStatistics::GetCommands(RenderCommand::Type::Lighting);
-			const auto& textCommands = RenderStatistics::GetCommands(RenderCommand::Type::Text);
-			const auto& unspecifiedCommands = RenderStatistics::GetCommands(RenderCommand::Type::Unspecified);
-			char entry[256];
-			std::size_t length = formatInto(entry, "VitaPerf: {:.1f} ms, {:.1f} FPS; draws {} (sprite {}, mesh {}, tile {}, particle {}, light {}, text {}, other {}), vertices {}, transparent {}\n",
-				frameDuration * 1000.0f, frameTimer_->GetAverageFps(), allCommands.commands, spriteCommands.commands,
-				meshSpriteCommands.commands, tileMapCommands.commands, particleCommands.commands, lightingCommands.commands,
-				textCommands.commands, unspecifiedCommands.commands, allCommands.vertices, allCommands.transparents);
-#else
-			char entry[96];
-			std::size_t length = formatInto(entry, "VitaPerf: {:.1f} ms, {:.1f} FPS\n", frameDuration * 1000.0f, frameTimer_->GetAverageFps());
-#endif
-			if (performanceLog->IsValid()) {
-				performanceLog->Write(entry, length);
-				performanceLog->Flush();
-			}
-			logCooldown = 2.0f;
-		}
-#endif
-
 #if defined(WITH_IMGUI)
 		if (appCfg_.withGraphics) {
 			ZoneScopedN("ImGui newFrame");
