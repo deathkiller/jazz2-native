@@ -34,6 +34,12 @@
     <Filter Include="Header Files\nCine\Audio">
       <UniqueIdentifier>{1251ca81-4f8c-41dd-b37d-03cd22b356c8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\nCine\Audio\Backends">
+      <UniqueIdentifier>{983fa8aa-d099-4190-97b7-4de01ecf889a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Audio\Backends\AL">
+      <UniqueIdentifier>{33f5942e-1046-485a-a1bc-353a47eb60bc}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\nCine\Base">
       <UniqueIdentifier>{d2beec57-7003-42d7-b22f-b563df9d803c}</UniqueIdentifier>
     </Filter>
@@ -195,6 +201,12 @@
     </Filter>
     <Filter Include="Source Files\nCine\Audio">
       <UniqueIdentifier>{2617eb82-0e20-47d7-9288-35f78e88f537}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Audio\Backends">
+      <UniqueIdentifier>{3da9b132-aa0d-4a5a-86cb-17f8eae46dad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Audio\Backends\AL">
+      <UniqueIdentifier>{ab16415e-9370-4b7a-96d3-43f770eaa36b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\nCine\Base">
       <UniqueIdentifier>{5a47b260-7c5c-4464-a7ac-e9a6fbe91a23}</UniqueIdentifier>
@@ -540,8 +552,14 @@
     <ClInclude Include="nCine\Audio\IAudioReader.h">
       <Filter>Header Files\nCine\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Audio\ALAudioDevice.h">
+    <ClInclude Include="nCine\Audio\AudioDeviceBase.h">
       <Filter>Header Files\nCine\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\Backends\AL\ALAudioDevice.h">
+      <Filter>Header Files\nCine\Audio\Backends\AL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Audio\Backends\AL\ALDebug.h">
+      <Filter>Header Files\nCine\Audio\Backends\AL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Audio\AudioLoaderOgg.h">
       <Filter>Header Files\nCine\Audio</Filter>
@@ -778,6 +796,12 @@
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\AssetConverter.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Compatibility\J2vRecompressor.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h">
@@ -1883,8 +1907,11 @@
     <ClCompile Include="Jazz2\Actors\Weapons\BlasterShot.cpp">
       <Filter>Source Files\Jazz2\Actors\Weapons</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Audio\ALAudioDevice.cpp">
+    <ClCompile Include="nCine\Audio\AudioDeviceBase.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Audio\Backends\AL\ALAudioDevice.cpp">
+      <Filter>Source Files\nCine\Audio\Backends\AL</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Audio\AudioBuffer.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
@@ -2094,6 +2121,12 @@
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\AssetConverter.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Compatibility\J2vRecompressor.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Compatibility\EventConverter.cpp">
@@ -2931,9 +2964,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Icons\Main.ico">
-      <Filter>Resource Files\Icons</Filter>
-    </Image>
-    <Image Include="Icons\Log.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
   </ItemGroup>

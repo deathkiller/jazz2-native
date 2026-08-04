@@ -42,7 +42,9 @@ jobs:
     - name: 'Install Dependencies'
       shell: bash
       run: |
-        apk add --no-cache cmake meson ninja pkgconf libisofs-dev zlib-dev
+        # GNU tar and zstd are for actions/cache in the step below - it shells out to `tar --posix --files-from`,
+        # which the image's BusyBox tar doesn't understand, so saving the cache fails during post-job cleanup
+        apk add --no-cache cmake meson ninja pkgconf libisofs-dev zlib-dev tar zstd
 
         # mkdcdisc is used to create a bootable CDI image with the game content included
         git init /tmp/mkdcdisc

@@ -136,7 +136,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -160,7 +160,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -185,7 +185,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -207,7 +207,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -230,7 +230,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -256,7 +256,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -464,7 +464,9 @@
     <ClInclude Include="Jazz2\Actors\Weapons\ToasterShot.h" />
     <ClInclude Include="Jazz2\AnimationLoopMode.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
+    <ClInclude Include="Jazz2\Compatibility\AssetConverter.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
+    <ClInclude Include="Jazz2\Compatibility\J2vRecompressor.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.Palettes.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Block.h" />
@@ -579,9 +581,9 @@
     <ClInclude Include="Jazz2\WeatherType.h" />
     <ClInclude Include="nCine\AppConfiguration.h" />
     <ClInclude Include="nCine\Application.h" />
-    <ClInclude Include="nCine\Audio\ALAudioDevice.h" />
     <ClInclude Include="nCine\Audio\AudioBuffer.h" />
     <ClInclude Include="nCine\Audio\AudioBufferPlayer.h" />
+    <ClInclude Include="nCine\Audio\AudioDeviceBase.h" />
     <ClInclude Include="nCine\Audio\AudioLoaderMpt.h" />
     <ClInclude Include="nCine\Audio\AudioLoaderOgg.h" />
     <ClInclude Include="nCine\Audio\AudioLoaderWav.h" />
@@ -590,6 +592,8 @@
     <ClInclude Include="nCine\Audio\AudioReaderWav.h" />
     <ClInclude Include="nCine\Audio\AudioStream.h" />
     <ClInclude Include="nCine\Audio\AudioStreamPlayer.h" />
+    <ClInclude Include="nCine\Audio\Backends\AL\ALAudioDevice.h" />
+    <ClInclude Include="nCine\Audio\Backends\AL\ALDebug.h" />
     <ClInclude Include="nCine\Audio\IAudioDevice.h" />
     <ClInclude Include="nCine\Audio\IAudioLoader.h" />
     <ClInclude Include="nCine\Audio\IAudioPlayer.h" />
@@ -905,7 +909,9 @@
     <ClCompile Include="Jazz2\Actors\Weapons\TNT.cpp" />
     <ClCompile Include="Jazz2\Actors\Weapons\ToasterShot.cpp" />
     <ClCompile Include="Jazz2\Compatibility\AnimSetMapping.cpp" />
+    <ClCompile Include="Jazz2\Compatibility\AssetConverter.cpp" />
     <ClCompile Include="Jazz2\Compatibility\EventConverter.cpp" />
+    <ClCompile Include="Jazz2\Compatibility\J2vRecompressor.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Anims.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Block.cpp" />
     <ClCompile Include="Jazz2\Compatibility\JJ2Data.cpp" />
@@ -1000,9 +1006,9 @@
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
-    <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />
     <ClCompile Include="nCine\Audio\AudioBuffer.cpp" />
     <ClCompile Include="nCine\Audio\AudioBufferPlayer.cpp" />
+    <ClCompile Include="nCine\Audio\AudioDeviceBase.cpp" />
     <ClCompile Include="nCine\Audio\AudioLoaderMpt.cpp" />
     <ClCompile Include="nCine\Audio\AudioLoaderOgg.cpp" />
     <ClCompile Include="nCine\Audio\AudioLoaderWav.cpp" />
@@ -1011,6 +1017,7 @@
     <ClCompile Include="nCine\Audio\AudioReaderWav.cpp" />
     <ClCompile Include="nCine\Audio\AudioStream.cpp" />
     <ClCompile Include="nCine\Audio\AudioStreamPlayer.cpp" />
+    <ClCompile Include="nCine\Audio\Backends\AL\ALAudioDevice.cpp" />
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp" />
     <ClCompile Include="nCine\Audio\IAudioPlayer.cpp" />
     <ClCompile Include="nCine\Backends\ImGuiGlfwInput.cpp" />
@@ -1159,7 +1166,6 @@
     <Manifest Include="App.manifest" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Icons\Log.ico" />
     <Image Include="Icons\Main.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
