@@ -917,8 +917,9 @@ namespace Jazz2
 		std::uint16_t gunspotY = s->ReadValueAsLE<std::uint16_t>();
 
 		// A tightly packed sheet lists where every frame sits instead of laying them out in a grid, so it
-		// carries its own size (see JJ2Anims::PackFramesTightly)
-		SmallVector<FrameRect, 0> frameRects;
+		// carries its own size (see JJ2Anims::PackFramesTightly). The name has to stay qualified here, because
+		// <windows.h> declares a global FrameRect() and this file sees Jazz2::Resources through a using directive.
+		SmallVector<Resources::FrameRect, 0> frameRects;
 		std::uint32_t width, height;
 		if ((flags & 0x04) == 0x04) {
 			width = s->ReadValueAsLE<std::uint16_t>();
@@ -926,7 +927,7 @@ namespace Jazz2
 
 			frameRects.reserve(frameCount);
 			for (std::uint32_t i = 0; i < frameCount; i++) {
-				FrameRect& rect = frameRects.emplace_back();
+				Resources::FrameRect& rect = frameRects.emplace_back();
 				rect.X = s->ReadValueAsLE<std::uint16_t>();
 				rect.Y = s->ReadValueAsLE<std::uint16_t>();
 				rect.W = s->ReadValueAsLE<std::uint16_t>();

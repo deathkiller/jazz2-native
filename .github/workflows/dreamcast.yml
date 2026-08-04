@@ -85,6 +85,17 @@ jobs:
         git remote add origin https://github.com/KallistiOS/kos-ports.git
         git fetch --depth 1 origin ${KOS_PORTS_COMMIT}
         git checkout FETCH_HEAD
+
+        # The port pulls the release tarball straight from zlib.net with a bare `curl -O -L`. That has no --fail,
+        # so when the host answers a hosted runner with an error page instead of the file, the page is written out
+        # under the tarball's name and the build stops at the size check that follows. Seeding the file skips the
+        # download entirely (see kos-ports scripts/download.mk) - the GitHub release asset is byte-identical, and
+        # the checksum in the port's own distinfo still gets to verify it.
+        ZLIB_VERSION=$(sed -n 's/^PORTVERSION *= *//p' /opt/toolchains/dc/kos-ports/zlib/Makefile | tr -d '[:space:]')
+        mkdir -p /opt/toolchains/dc/kos-ports/zlib/dist/
+        curl -fsSL -o /opt/toolchains/dc/kos-ports/zlib/dist/zlib-${ZLIB_VERSION}.tar.gz \
+          https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz
+
         # The port installs into the KOS tree itself, so the cache above covers it too
         make -C /opt/toolchains/dc/kos-ports/zlib install
 

@@ -333,12 +333,12 @@ namespace Jazz2::UI
 		// Build the chunk index of the 4 interleaved compressed streams - only chunk positions are kept
 		// and the data is read from the file on demand while the video plays, so the whole video never
 		// has to be buffered into memory (required on memory-constrained platforms)
-		SmallVector<Pair<std::int64_t, std::int32_t>, 0> chunks[arraySize(_decompressedStreams)];
+		SmallVector<Pair<std::int64_t, std::int32_t>, 0> chunks[arraySize(&Cinematics::_decompressedStreams)];
 		std::int64_t totalOffset = s->GetPosition();
 		const std::int64_t fileSize = s->GetSize();
 
 		while (totalOffset < fileSize) {
-			for (std::int32_t i = 0; i < std::int32_t(arraySize(_decompressedStreams)); i++) {
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(&Cinematics::_decompressedStreams)); i++) {
 				std::int32_t bytesLeft = s->ReadValueAsLE<std::int32_t>();
 				totalOffset += 4;
 				chunks[i].push_back(Pair(totalOffset, bytesLeft));
@@ -351,7 +351,7 @@ namespace Jazz2::UI
 		// starts where the first chunk does
 		_fileWindow.Initialize(s.get(), (chunks[0].empty() ? 0 : chunks[0][0].first()));
 
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_decompressedStreams)); i++) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(&Cinematics::_decompressedStreams)); i++) {
 			// Skip first two bytes (zlib header 0x78 0xDA)
 			_compressedStreams[i].Initialize(&_fileWindow, std::move(chunks[i]), 2);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
