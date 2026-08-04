@@ -2,7 +2,6 @@
 #pragma once
 
 #include "Antialiasing.h"
-#include "BatchedLighting.h"
 #include "BatchedShieldFire.h"
 #include "BatchedShieldLightning.h"
 #include "Blur.h"
@@ -20,7 +19,7 @@
 #include "DefaultSpriteNoTexture.h"
 #include "Downsample.h"
 #include "FrozenMask.h"
-#include "Lighting.h"
+#include "LightingMesh.h"
 #include "Outline.h"
 #include "OutlinePalette.h"
 #include "PaletteRemap.h"
@@ -50,7 +49,6 @@ namespace Jazz2::ShadersGen
 	// All generated Jazz2 shader programs, sorted by name
 	inline constexpr const ShaderCompiler::Program* AllPrograms[] = {
 		&Antialiasing,
-		&BatchedLighting,
 		&BatchedShieldFire,
 		&BatchedShieldLightning,
 		&Blur,
@@ -62,7 +60,7 @@ namespace Jazz2::ShadersGen
 		&Downsample,
 		&FrozenMask,
 		&BatchedFrozenMask,
-		&Lighting,
+		&LightingMesh,
 		&Outline,
 		&BatchedOutline,
 		&OutlinePalette,

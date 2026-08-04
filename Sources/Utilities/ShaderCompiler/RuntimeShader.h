@@ -16,7 +16,7 @@
 */
 
 #include "GlslReflect.h"
-#include "../Shaders/Generated/ShaderCompilerTypes.h"
+#include "../../Shaders/Generated/ShaderCompilerTypes.h"
 
 namespace ShaderCompiler
 {

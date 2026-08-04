@@ -502,8 +502,9 @@ namespace ShaderCompiler
 			ES2 has no gl_VertexID and ESSL 100 has no integer bit/modulo operators, so the corner cannot be
 			recomputed in-shader. Every single-quad formula is a function of the two terms float(id>>1) and
 			float(id%2); substituting them with (1 - aQuadCorner.x) and aQuadCorner.y reproduces the exact
-			corner of any of them (plain sprite, Lighting's 0.5-offset, TouchCircle) after constant folding,
-			given the runtime supplies aQuadCorner = {(1,0),(1,1),(0,0),(0,1)} for the 4-vertex strip. The
+			corner of any of them (the plain sprite and TouchCircle forms in the tree today, and equally a
+			centred one written as 0.5 - float(id >> 1)) after constant folding, given the runtime supplies
+			aQuadCorner = {(1,0),(1,1),(0,0),(0,1)} for the 4-vertex strip. The
 			batched corner + instance index are fixed expressions replaced wholesale.
 		*/
 		// The rewrite itself lives in VertexIdRewrite.h: the Cg dialect emitted for the PS Vita's sceGxm

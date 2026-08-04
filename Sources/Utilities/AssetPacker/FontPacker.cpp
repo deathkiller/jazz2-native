@@ -1,10 +1,10 @@
 #include "FontPacker.h"
 #include "PngCodec.h"
 
-#include "../Jazz2/ContentFileTypes.h"
-#include "../Jazz2/UI/FontFormat.h"
-#include "../Jazz2/Compatibility/JJ2Anims.h"
-#include "../Jazz2/Compatibility/JJ2Anims.Palettes.h"
+#include "../../Jazz2/ContentFileTypes.h"
+#include "../../Jazz2/UI/FontFormat.h"
+#include "../../Jazz2/Compatibility/JJ2Anims.h"
+#include "../../Jazz2/Compatibility/JJ2Anims.Palettes.h"
 
 #include <algorithm>
 #include <cmath>

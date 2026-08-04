@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{26ee7ab9-4e99-432c-5032-4b6a400c2e2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2">
+      <UniqueIdentifier>{ed4e3166-2ef1-5bbb-ef2b-f68a19a5195e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\Compatibility">
+      <UniqueIdentifier>{7dea3dd7-b36f-36f5-2e0d-c408435e5bfd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Jazz2\UI">
+      <UniqueIdentifier>{4ff9375f-5c40-ab18-7346-2828f1e379c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{ee194cb1-a6e3-3255-5881-141c38e76b1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2">
+      <UniqueIdentifier>{895897b4-cb9b-145b-3714-c88250f2e475}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Compatibility">
+      <UniqueIdentifier>{8979723a-f095-ccaa-0c0b-258ccd6e1841}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared">
+      <UniqueIdentifier>{b0d65e54-f642-3235-212b-a47fe26a4eff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Base">
+      <UniqueIdentifier>{2bfd8dfe-5cf1-4b9a-419c-0e206068364d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Containers">
+      <UniqueIdentifier>{54e48a0c-df9b-e887-d97f-80c7f19a4932}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Core">
+      <UniqueIdentifier>{d2e1f5cf-b849-a53a-d12d-a447e6990c7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Cryptography">
+      <UniqueIdentifier>{a69be6cc-f171-4e3c-266f-7eb1bbbdde4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\IO">
+      <UniqueIdentifier>{41034850-9066-2a15-533e-e470e056f12e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\IO\Compression">
+      <UniqueIdentifier>{e3143baa-3a18-1ddf-50a6-90853bee4f8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Threading">
+      <UniqueIdentifier>{bddc7ee7-c157-3325-2f7f-926a65e0aec5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Shared\Threading\Implementation">
+      <UniqueIdentifier>{0b72db0a-6898-aabc-26fa-ede75e85298b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine">
+      <UniqueIdentifier>{5b5fa49f-a110-0426-ab4b-f058344bc520}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Base">
+      <UniqueIdentifier>{7e648915-b10d-a8a5-ff79-687fc3cc8de5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FontPacker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PngCodec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\AssetConverter.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\EventConverter.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\J2vRecompressor.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Anims.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Block.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Data.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Episode.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Level.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Strings.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Jazz2\Compatibility\JJ2Tileset.cpp">
+      <Filter>Source Files\Jazz2\Compatibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\nCine\Base\Algorithms.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Cpu.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Environment.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Utf8.cpp">
+      <Filter>Source Files\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Base\Format.cpp">
+      <Filter>Source Files\Shared\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Containers\DateTime.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Containers\SmallVector.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Containers\String.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Containers\StringUtils.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Containers\StringView.cpp">
+      <Filter>Source Files\Shared\Containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Core\Logger.cpp">
+      <Filter>Source Files\Shared\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Cryptography\xxHash.cpp">
+      <Filter>Source Files\Shared\Cryptography</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\AndroidAssetStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\BoundedFileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\EmscriptenFileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\FileStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\FileSystem.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\MemoryStream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\PakFile.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\Stream.cpp">
+      <Filter>Source Files\Shared\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\Compression\DeflateStream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\Compression\Lz4Stream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\IO\Compression\ZstdStream.cpp">
+      <Filter>Source Files\Shared\IO\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Threading\Implementation\WaitOnAddress.cpp">
+      <Filter>Source Files\Shared\Threading\Implementation</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FontPacker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PngCodec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\ContentFileTypes.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\EventType.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\UI\FontFormat.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\AssetConverter.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\EventConverter.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\J2vRecompressor.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Anims.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Anims.Palettes.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Block.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Data.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Episode.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Level.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Strings.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Tileset.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Version.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+  </ItemGroup>
+</Project>

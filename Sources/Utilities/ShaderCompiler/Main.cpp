@@ -402,8 +402,8 @@ namespace
 		limitation of the transpiler that it does not detect itself (and cannot be fixed here):
 
 		It always lowers the `vTexCoords` varying to the fragment's own 2-component texture coordinate
-		`vec2(in.u, in.v)`. A shader that declares vTexCoords wider than `vec2` (e.g. the Lighting family
-		packs data into a vec4 vTexCoords) and reads a 3rd/4th component would touch a component `sw::vec2`
+		`vec2(in.u, in.v)`. A shader that declares vTexCoords wider than `vec2` (e.g. LightingMesh packs data
+		into a vec4 vTexCoords) and reads a 3rd/4th component would touch a component `sw::vec2`
 		does not have. Such a shader also cannot be reproduced by the sprite-quad path anyway.
 
 		(Helpers referencing the fragment input `in` used to be rejected here too, but helpers now take `in`

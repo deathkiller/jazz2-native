@@ -8,7 +8,7 @@ namespace Death {
 
 @m_class{m-noindent}
 
-**ShaderCompiler** is a standalone command-line tool in @cpp "Sources/ShaderCompiler" @ce.
+**ShaderCompiler** is a standalone command-line tool in @cpp "Sources/Utilities/ShaderCompiler" @ce.
 It reads annotated `.shader` files from @cpp "Sources/Shaders" @ce, expands their variants,
 performs GLSL declaration reflection **offline**, and emits self-contained C++ headers with the
 sources and reflection data, so the runtime no longer needs `glGetActiveUniform` introspection or
@@ -77,14 +77,14 @@ Wii, GameCube and Dreamcast) @m_endspan because it always runs on the build mach
 built completely standalone:
 
 @code{.sh}
-cmake -S Sources/ShaderCompiler -B build-shadercompiler
+cmake -S Sources/Utilities/ShaderCompiler -B build-shadercompiler
 cmake --build build-shadercompiler
 @endcode
 
 @m_class{m-noindent}
 
 On Windows, `GenerateAll.ps1` expects the executable at
-@cpp "Sources/ShaderCompiler/x64/Release/ShaderCompiler.exe" @ce, which is where the included
+@cpp "Sources/Utilities/ShaderCompiler/x64/Release/ShaderCompiler.exe" @ce, which is where the included
 `ShaderCompiler.vcxproj` puts it. The tool target also compiles `RuntimeShader.cpp` --- the runtime
 facade that is built into the game as well --- so drift between the offline and the runtime path is
 caught early.
@@ -176,7 +176,7 @@ A `.shader` file is a custom shader language: GLSL globals plus @cpp void vertex
 statements at brace depth 0, terminated by `;`. Comments follow GLSL rules and pass through into the
 emitted sources. Do **not** put @cpp #version @ce in the input --- the engine injects the version
 header (@cpp "#version 330" @ce, @cpp "#version 300 es" @ce, @cpp "#version 100" @ce) and the
-platform defines at runtime. @cpp "Sources/ShaderCompiler/README.md" @ce is the full in-tree
+platform defines at runtime. @cpp "Sources/Utilities/ShaderCompiler/README.md" @ce is the full in-tree
 specification, including the std140 layout rules and the `--check` dump format.
 
 @subsection shader-compiler-input-directives Top-level directives
@@ -665,7 +665,7 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
 
 @section shader-compiler-workflow Regenerating the committed headers
 
-`GenerateAll.ps1` in @cpp "Sources/ShaderCompiler" @ce runs the tool over every
+`GenerateAll.ps1` in @cpp "Sources/Utilities/ShaderCompiler" @ce runs the tool over every
 @cpp "Sources/Shaders/*.shader" @ce and writes everything into
 @cpp "Sources/Shaders/Generated" @ce, in this order:
 
@@ -684,9 +684,9 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
 The typical workflow after editing a `.shader` file is therefore:
 
 @code{.bat}
-cd Sources\ShaderCompiler
+cd Sources\Utilities\ShaderCompiler
 powershell .\GenerateAll.ps1
-git add ..\Shaders ..\Shaders\Generated
+git add ..\..\Shaders ..\..\Shaders\Generated
 @endcode
 
 @m_class{m-noindent}
@@ -705,7 +705,7 @@ date --- without ever modifying the tree. Missing and extra files count as stale
 stale. Run it after editing a shader, or in CI: the build itself never detects stale committed
 headers.
 
-The tool also ships a test suite in @cpp "Sources/ShaderCompiler/tests" @ce --- sample inputs with
+The tool also ships a test suite in @cpp "Sources/Utilities/ShaderCompiler/tests" @ce --- sample inputs with
 their exact `--check` dumps in @cpp "tests/expected" @ce, inputs that must fail to parse in
 @cpp "tests/errors" @ce, ESSL 100 fixtures in @cpp "tests/essl100" @ce, and `tests/RunTests.ps1` to
 run everything including emitted-header shape assertions.

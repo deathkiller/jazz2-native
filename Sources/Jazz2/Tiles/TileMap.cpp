@@ -25,25 +25,36 @@ namespace Jazz2::Tiles
 		constexpr bool SupportsTexturedBackgroundCircle = true;
 
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		// Absolute ceiling on the render command pool, which is what a burst of debris really costs (one command
-		// per visible particle, ~840 bytes each on the Dreamcast). TileMap::MaxDebrisCount already bounds it for a
-		// single viewport, but OnDraw() runs once per viewport and the count only resets at the end of the frame,
-		// so in splitscreen the pool would grow with the number of players. Particles beyond this are not drawn.
-		constexpr std::int32_t MaxPooledRenderCommands = 768;
-		// Slots the pool keeps even when nothing needs them - roughly what one viewport of a level without debris
+		// Slots the render command pool keeps even when nothing needs them - roughly what one viewport of a level
 		// asks for, so the common case never reallocates
 		constexpr std::int32_t MinPooledRenderCommands = 32;
-		// How long the pool has to stay below its peak before the slots above it are released again. A burst
-		// fades out over about 300 frames, so trimming sooner would only fight the effect that is still running.
+		// How long a pool has to stay below its peak before the slots above it are released again. A burst of
+		// debris fades out over about 300 frames, so trimming sooner would only fight the effect still running.
 		constexpr std::int32_t RenderCommandPoolTrimInterval = 600;
 		// Capacity _debrisList keeps around, so the usual handful of particles never reallocates
 		constexpr std::int32_t MinDebrisCapacity = 64;
+		// Buffers the mesh vertex pool keeps around (one per drawn tile layer plus one per debris group, which a
+		// level of eight layers with a burst running fits into), and the floats each of them keeps - 48 per quad,
+		// so this holds a modest layer or burst without reallocating
+		constexpr std::int32_t MinPooledMeshBuffers = 12;
+		constexpr std::int32_t MinMeshBufferCapacity = 48 * 128;
+#	if !defined(TILEMAP_USE_SINGLE_DRAW)
+		// Absolute ceiling on the render command pool for the fallback path that rents one command per visible
+		// particle (~840 bytes each on the Dreamcast). TileMap::MaxDebrisCount already bounds it for a single
+		// viewport, but OnDraw() runs once per viewport and the count only resets at the end of the frame, so in
+		// splitscreen the pool would grow with the number of players. Particles beyond this are not drawn.
+		constexpr std::int32_t MaxPooledRenderCommands = 768;
+#	endif
 #else
 		// Desktop targets have the memory for the effect at full detail, so nothing is bounded or trimmed
-		constexpr std::int32_t MaxPooledRenderCommands = 0;
 		constexpr std::int32_t MinPooledRenderCommands = 0;
 		constexpr std::int32_t RenderCommandPoolTrimInterval = 0;
 		constexpr std::int32_t MinDebrisCapacity = 0;
+		constexpr std::int32_t MinPooledMeshBuffers = 0;
+		constexpr std::int32_t MinMeshBufferCapacity = 0;
+#	if !defined(TILEMAP_USE_SINGLE_DRAW)
+		constexpr std::int32_t MaxPooledRenderCommands = 0;
+#	endif
 #endif
 	}
 
@@ -66,6 +77,9 @@ namespace Jazz2::Tiles
 	TileMap::~TileMap()
 	{
 		TracyPlot("TileMap Render Commands", 0LL);
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		TracyPlot("TileMap Mesh Commands", 0LL);
+#endif
 	}
 
 	bool TileMap::IsValid() const
@@ -203,12 +217,17 @@ namespace Jazz2::Tiles
 	void TileMap::OnEndFrame()
 	{
 		if (RenderCommandPoolTrimInterval > 0) {
-			// The pool only ever grew to its high-water mark, so a single burst of debris - one command per
-			// visible particle - pinned a few hundred kilobytes for the rest of the level. Hand the slots above
-			// the recent peak back once the burst is long over; they are recreated on demand if it happens again.
+			// A pool only ever grew to its high-water mark, so one level with many unmeshable layers - or, on the
+			// fallback path, a single burst of debris - pinned a few hundred kilobytes for the rest of the level.
+			// Hand the slots above the recent peak back once the peak is long over; they are recreated on demand.
 			if (_renderCommandsPeak < _renderCommandsCount) {
 				_renderCommandsPeak = _renderCommandsCount;
 			}
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+			if (_meshVerticesPeak < _meshVerticesCount) {
+				_meshVerticesPeak = _meshVerticesCount;
+			}
+#endif
 			_renderCommandsPeakAge++;
 			if (_renderCommandsPeakAge >= RenderCommandPoolTrimInterval) {
 				std::size_t target = (std::size_t)std::max(_renderCommandsPeak, MinPooledRenderCommands);
@@ -224,6 +243,25 @@ namespace Jazz2::Tiles
 						_renderCommandUniforms.shrink(target);
 					}
 				}
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+				// Aggregating moved what a burst costs from the command pool into these vertex buffers - 192 bytes
+				// per particle per viewport that sees it - so they are trimmed the same way. A buffer above the
+				// peak is dropped whole, which is what frees the floats; the slot array is left at its high-water
+				// mark because shrinking it reallocates bitwise, and a relocated buffer that never allocated
+				// would be left believing the inline storage it no longer sits in is a heap block of its own.
+				// The buffers still in use only give back capacity they have grown far past, as the layer or
+				// group they serve asks for about the same size every frame.
+				std::size_t bufferTarget = (std::size_t)std::max(_meshVerticesPeak, MinPooledMeshBuffers);
+				if (_meshVertices.size() > bufferTarget) {
+					_meshVertices.pop_back_n(_meshVertices.size() - bufferTarget);
+				}
+				for (auto& buffer : _meshVertices) {
+					if (buffer.capacity() > (std::size_t)MinMeshBufferCapacity && buffer.size() * 4 < buffer.capacity()) {
+						buffer.shrink(std::max(buffer.size() * 2, (std::size_t)MinMeshBufferCapacity));
+					}
+				}
+				_meshVerticesPeak = 0;
+#endif
 				_renderCommandsPeak = 0;
 				_renderCommandsPeakAge = 0;
 			}
@@ -238,8 +276,8 @@ namespace Jazz2::Tiles
 		// OnDraw() is called multiple times if multiple viewports are active
 		_renderCommandsCount = 0;
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-		_layerMeshVerticesCount = 0;
-		_layerMeshCommandCount = 0;
+		_meshVerticesCount = 0;
+		_meshCommandCount = 0;
 #endif
 	}
 
@@ -294,7 +332,12 @@ namespace Jazz2::Tiles
 
 		DrawDebris(renderQueue);
 
+		// Counts only the per-tile/per-particle commands, which the mesh path leaves to the unmeshable layers -
+		// the aggregated tile layers and debris groups are the second plot
 		TracyPlot("TileMap Render Commands", static_cast<std::int64_t>(_renderCommandsCount));
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		TracyPlot("TileMap Mesh Commands", static_cast<std::int64_t>(_meshCommandCount));
+#endif
 
 		return true;
 	}
@@ -1049,7 +1092,7 @@ namespace Jazz2::Tiles
 			bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1);
 			TileSet* meshTileSet = (meshMode ? _tileSets[0].Data.get() : nullptr);
 			// One vertex buffer per chunk, rented on first use - a layer usually touches only some of them.
-			// Indices rather than pointers, because renting can grow (and so reallocate) _layerMeshVertices.
+			// Indices rather than pointers, because renting can grow (and so reallocate) _meshVertices.
 			SmallVector<std::int32_t, 2> chunkVertices;
 			if DEATH_LIKELY(meshMode) {
 				chunkVertices.resize(meshTileSet->GetTextureCount(), -1);
@@ -1090,9 +1133,15 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+					// Which texture chunk holds this tile. Has to be read BEFORE ResolveTextureDiffuse(), which
+					// takes the ID by reference and rebases it into that chunk - afterwards the ID is always
+					// below TilesPerTexture and this would collapse to chunk 0, drawing the whole layer out of
+					// the first texture. A no-op single-texture lookup normally; only a device texture-size
+					// limit small enough to split the tileset atlas (the consoles) makes it matter.
 					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileId >= tileSet->TilesPerTexture
 						? tileId / tileSet->TilesPerTexture : 0);
+#endif
 					Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
 					if DEATH_UNLIKELY(tileTexture == nullptr) {
 						continue;
@@ -1122,16 +1171,12 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 					if DEATH_LIKELY(meshMode) {
 						// Accumulate this tile into its chunk's mesh; the layer tint and palette are applied once
-						// per emitted mesh in EmitLayerMesh(). The per-tile alpha rides along in the vertex color.
+						// per emitted mesh in EmitMesh(). The per-tile alpha rides along in the vertex color.
 						std::int32_t& verticesIndex = chunkVertices[tileChunk];
 						if (verticesIndex < 0) {
-							if (_layerMeshVerticesCount >= (std::int32_t)_layerMeshVertices.size()) {
-								_layerMeshVertices.emplace_back();
-							}
-							verticesIndex = _layerMeshVerticesCount++;
-							_layerMeshVertices[verticesIndex].clear();
+							verticesIndex = RentMeshVertices();
 						}
-						AppendTileQuad(_layerMeshVertices[verticesIndex], x2r, y2r, (float)TileSet::DefaultTileSize,
+						AppendTileQuad(_meshVertices[verticesIndex], x2r, y2r, (float)TileSet::DefaultTileSize,
 							texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
 						continue;
 					}
@@ -1176,11 +1221,13 @@ namespace Jazz2::Tiles
 				// between chunks doesn't matter - they all share the layer's depth.
 				for (std::int32_t chunk = 0; chunk < (std::int32_t)chunkVertices.size(); chunk++) {
 					const std::int32_t verticesIndex = chunkVertices[chunk];
-					if (verticesIndex < 0 || _layerMeshVertices[verticesIndex].empty()) {
+					if (verticesIndex < 0 || _meshVertices[verticesIndex].empty()) {
 						continue;
 					}
-					EmitLayerMesh(renderQueue, _layerMeshVertices[verticesIndex], meshTileSet, chunk,
-						layerColor, layer.Description.Depth);
+					// Tiles use the default sprite palette (row 0, offset 0); every tile accumulated into these
+					// vertices resolved to this chunk of the tileset atlas
+					EmitMesh(renderQueue, _meshVertices[verticesIndex], *meshTileSet->TextureDiffuse[chunk],
+						meshTileSet->IsIndexed, 0, layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false);
 				}
 			}
 #endif
@@ -1266,7 +1313,7 @@ namespace Jazz2::Tiles
 		float xr = x + size, yr = y + size;
 
 		// Two triangles, 8 floats per vertex: position.xy, texcoords.uv, color.rgba (white * per-tile alpha; the
-		// layer tint is applied via the command's instance color in EmitLayerMesh)
+		// layer tint is applied via the command's instance color in EmitMesh)
 		std::size_t base = vertices.size();
 		// Every float is written below, so the zero-initialization resize() would do first is wasted work
 		vertices.resize_for_overwrite(base + 6 * 8);
@@ -1283,30 +1330,82 @@ namespace Jazz2::Tiles
 		put(x,  yr, u0, v1);
 	}
 
-	void TileMap::EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, std::int32_t chunk, const Vector4f& layerColor, std::uint16_t depth)
+	std::int32_t TileMap::RentMeshVertices()
+	{
+		if (_meshVerticesCount >= (std::int32_t)_meshVertices.size()) {
+			_meshVertices.emplace_back();
+		}
+		std::int32_t verticesIndex = _meshVerticesCount++;
+		_meshVertices[verticesIndex].clear();
+		return verticesIndex;
+	}
+
+	void TileMap::AppendDebrisQuad(SmallVector<float, 0>& vertices, const DestructibleDebris& debris)
+	{
+		// The sprite shader would have built this quad from the particle's model matrix: a unit quad scaled by
+		// Size, rotated around the centre of the drawn area and translated to Pos. The mesh stream is in world
+		// space, so the same Translation * RotationZ * Scaling * Translation is folded into the four corners here
+		// - which is the whole point, as it costs less than the three 4x4 multiplies the chain used to.
+		const float c = std::cos(debris.Angle);
+		const float s = std::sin(debris.Angle);
+		const float ns = std::sin(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+		const float xx = c * debris.Scale, xy = s * debris.Scale;
+		const float yx = ns * debris.Scale, yy = c * debris.Scale;
+		// Local extent of the quad before the rotation, centred on the drawn area (see GetFrameOffset())
+		const float localX = debris.FrameOffset.X - debris.Size.X * 0.5f;
+		const float localY = debris.FrameOffset.Y - debris.Size.Y * 0.5f;
+		// One corner plus the two rotated edge vectors, so the remaining three corners are additions
+		const float x0 = debris.Pos.X + xx * localX + yx * localY;
+		const float y0 = debris.Pos.Y + xy * localX + yy * localY;
+		const float ex = xx * debris.Size.X, ey = xy * debris.Size.X;
+		const float fx = yx * debris.Size.Y, fy = yy * debris.Size.Y;
+
+		// UVs at the quad corners, exactly as the sprite vertex stage maps them: u = px * texScaleX + texBiasX
+		const float u0 = debris.TexBiasX, v0 = debris.TexBiasY;
+		const float u1 = debris.TexScaleX + debris.TexBiasX, v1 = debris.TexScaleY + debris.TexBiasY;
+
+		// Same 8-float layout and same vertex order as AppendTileQuad(), so a particle is still recognized as a
+		// quad by the backends that fold the two triangles back into one four-vertex strip
+		std::size_t base = vertices.size();
+		vertices.resize_for_overwrite(base + 6 * 8);
+		float* v = vertices.data() + base;
+		auto put = [&](float px, float py, float pu, float pv) {
+			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
+			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = debris.Alpha;
+		};
+		put(x0,           y0,           u0, v0);
+		put(x0 + ex,      y0 + ey,      u1, v0);
+		put(x0 + ex + fx, y0 + ey + fy, u1, v1);
+		put(x0,           y0,           u0, v0);
+		put(x0 + ex + fx, y0 + ey + fy, u1, v1);
+		put(x0 + fx,      y0 + fy,      u0, v1);
+	}
+
+	void TileMap::EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
+		std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending)
 	{
 		constexpr std::uint32_t FloatsPerVertex = 8;
 		// Cap vertices per command to whatever the shared array buffer can actually hold, queried at runtime from the
 		// buffer manager (same source RenderBatcher uses) instead of a fixed size - so it adapts to the configured VBO
-		// size rather than assuming 64 KB. Rounded down to a multiple of 6 (one tile = two triangles = 6 vertices) so
-		// chunk boundaries fall on tile boundaries.
+		// size rather than assuming 64 KB. Rounded down to a multiple of 6 (one quad = two triangles = 6 vertices) so
+		// chunk boundaries fall on quad boundaries.
 		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
 		std::uint32_t maxVerticesPerChunk = maxVertexDataSize / (FloatsPerVertex * sizeof(float));
 		maxVerticesPerChunk -= (maxVerticesPerChunk % 6);
-		bool indexed = tileSet->IsIndexed;
 
 		std::uint32_t totalVertices = (std::uint32_t)(vertices.size() / FloatsPerVertex);
 		for (std::uint32_t firstVertex = 0; firstVertex < totalVertices; firstVertex += maxVerticesPerChunk) {
 			std::uint32_t count = std::min(maxVerticesPerChunk, totalVertices - firstVertex);
 
-			if (_layerMeshCommandCount >= (std::int32_t)_layerMeshCommands.size()) {
-				auto& newCommand = _layerMeshCommands.emplace_back(std::make_unique<RenderCommand>());
+			if (_meshCommandCount >= (std::int32_t)_meshCommands.size()) {
+				auto& newCommand = _meshCommands.emplace_back(std::make_unique<RenderCommand>());
 				newCommand->GetMaterial().SetBlendingEnabled(true);
 			}
-			RenderCommand* command = _layerMeshCommands[_layerMeshCommandCount++].get();
+			RenderCommand* command = _meshCommands[_meshCommandCount++].get();
 
-			command->SetType(RenderCommand::Type::TileMap);
-			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			command->SetType(type);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha,
+				additiveBlending ? BlendingFactor::One : BlendingFactor::OneMinusSrcAlpha);
 
 			bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
 				indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
@@ -1324,9 +1423,9 @@ namespace Jazz2::Tiles
 				}
 			}
 
-			// Layer tint goes in the instance color; the per-vertex color carries each tile's alpha. palOffset stays 0.
+			// The mesh-wide tint goes in the instance color; the per-vertex color carries each quad's own alpha
 			auto instanceBlock = command->GetInstanceBlock();
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(layerColor.Data());
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(FloatsPerVertex);
@@ -1337,9 +1436,8 @@ namespace Jazz2::Tiles
 			// Vertex positions are already in world space, so the model matrix is identity
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);
-			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1.
-			// Every tile accumulated into these vertices resolved to this chunk of the tileset atlas.
-			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse[chunk], indexed, 0);
+			// Binds diffuse on unit 0 and, when the mesh is recolored at draw time, the palette on unit 1
+			ContentResolver::Get().BindSpritePalette(*command, texture, indexed, paletteOffset);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1905,6 +2003,46 @@ namespace Jazz2::Tiles
 		viewportRect.W += MaxDebrisSize * 2.0f;
 		viewportRect.H += MaxDebrisSize * 2.0f;
 
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Particles are aggregated exactly like a tile layer is: everything that has to stay per command - the
+		// texture, the palette row, the blending and the depth - becomes a group key, and everything else (the
+		// rotated corners, the UVs, the fading alpha) goes into the vertex stream. A death burst is one sprite at
+		// one depth, so the whole effect ends up as a single draw instead of one command per particle.
+		_debrisMeshGroups.clear();
+
+		for (const auto& debris : _debrisList) {
+			if (!viewportRect.Contains(debris.Pos)) {
+				continue;
+			}
+
+			const bool additiveBlending = ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending);
+			std::int32_t verticesIndex = -1;
+			// A handful of groups at most (the burst, the tile debris, the weather), so a linear scan beats a map
+			for (auto& group : _debrisMeshGroups) {
+				if (group.DiffuseTexture == debris.DiffuseTexture && group.PaletteOffset == debris.PaletteOffset &&
+					group.Depth == debris.Depth && group.AdditiveBlending == additiveBlending) {
+					verticesIndex = group.VerticesIndex;
+					break;
+				}
+			}
+			if (verticesIndex < 0) {
+				verticesIndex = RentMeshVertices();
+				_debrisMeshGroups.push_back({ debris.DiffuseTexture, debris.PaletteOffset, debris.Depth,
+					additiveBlending, verticesIndex });
+			}
+
+			AppendDebrisQuad(_meshVertices[verticesIndex], debris);
+		}
+
+		for (const auto& group : _debrisMeshGroups) {
+			// Indexed sprite debris is recolored at draw time through the palette shader; baked debris (a tileset
+			// texture, for instance) carries its colors already and uses the plain mesh shader
+			const bool indexed = (group.PaletteOffset >= 0);
+			EmitMesh(renderQueue, _meshVertices[group.VerticesIndex], *group.DiffuseTexture, indexed,
+				(std::uint16_t)(indexed ? group.PaletteOffset : 0), Vector4f(1.0f, 1.0f, 1.0f, 1.0f),
+				group.Depth, RenderCommand::Type::Particle, group.AdditiveBlending);
+		}
+#else
 		// Constant for every debris of the frame, so resolved once instead of per particle
 		auto& resolver = ContentResolver::Get();
 		Texture* paletteTexture = resolver.GetPaletteTexture();
@@ -1969,6 +2107,7 @@ namespace Jazz2::Tiles
 
 			renderQueue.AddCommand(command);
 		}
+#endif
 	}
 
 	bool TileMap::GetTrigger(std::uint8_t triggerId)

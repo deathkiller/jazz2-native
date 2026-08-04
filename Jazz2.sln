@@ -1,11 +1,15 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34714.143
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Jazz2", "Sources\Jazz2.vcxproj", "{7D39862C-AB77-4BE2-9DED-D330BD162623}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderCompiler", "Sources\ShaderCompiler\ShaderCompiler.vcxproj", "{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utilities", "Utilities", "{D14E0C55-9B2A-4F81-B0E7-6C3A17D9F248}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShaderCompiler", "Sources\Utilities\ShaderCompiler\ShaderCompiler.vcxproj", "{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AssetPacker", "Sources\Utilities\AssetPacker\AssetPacker.vcxproj", "{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,9 +45,25 @@ Global
 		{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9}.Release|x64.Build.0 = Release|x64
 		{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9}.Release|x86.ActiveCfg = Release|Win32
 		{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9}.Release|x86.Build.0 = Release|Win32
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|ARM64EC.ActiveCfg = Debug|ARM64EC
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|ARM64EC.Build.0 = Debug|ARM64EC
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|x64.ActiveCfg = Debug|x64
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|x64.Build.0 = Debug|x64
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|x86.ActiveCfg = Debug|Win32
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Debug|x86.Build.0 = Debug|Win32
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|ARM64EC.ActiveCfg = Release|ARM64EC
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|ARM64EC.Build.0 = Release|ARM64EC
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|x64.ActiveCfg = Release|x64
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|x64.Build.0 = Release|x64
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|x86.ActiveCfg = Release|Win32
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3E1FA6D4-8C2B-4E5A-9D07-52B94A1CE0F9} = {D14E0C55-9B2A-4F81-B0E7-6C3A17D9F248}
+		{A6C31E8D-4F70-4B1D-9C33-5E82D7A0B419} = {D14E0C55-9B2A-4F81-B0E7-6C3A17D9F248}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B7309A18-EABF-4CEE-9DA1-085CA3985B8C}

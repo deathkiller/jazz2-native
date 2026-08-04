@@ -118,98 +118,6 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "BatchedLighting", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
-
-struct Instance
-{
-	float4x4 modelMatrix;
-	float4 color;
-	float4 texRect;
-	float2 spriteSize;
-};
-
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform Instance instances[BATCH_SIZE];
-
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 aQuadCorner;
-static float aInstanceIndex;
-static float4 gl_Position;
-static float4 vTexCoords;
-static float4 vColor;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-	float aInstanceIndex : TEXCOORD1;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float4 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	aInstanceIndex = _input.aInstanceIndex;
-	float2 aPosition = float2(-0.5 + (1.0 - aQuadCorner.x), -0.5 + (1.0 - aQuadCorner.y));
-	float4 position = float4(aPosition.x * instances[int(aInstanceIndex)].spriteSize.x, aPosition.y * instances[int(aInstanceIndex)].spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(instances[int(aInstanceIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = instances[int(aInstanceIndex)].texRect;
-	vColor = float4(instances[int(aInstanceIndex)].color.x, instances[int(aInstanceIndex)].color.y, aPosition.x * 2.0, aPosition.y * 2.0);
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	_output.vColor = vColor;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float4 vTexCoords;
-static float4 vColor;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float4 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-float lightBlend(float t)
-{
-	return t * t * t;
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	vColor = _input.vColor;
-	float2 center = vTexCoords.xy;
-	float radiusNear = vTexCoords.z;
-	float intensity = vColor.x;
-	float brightness = vColor.y;
-	float dist = length(vColor.zw);
-	if (dist > 1.0) {
-		COLOR = float4(0.0, 0.0, 0.0, 1.0);
-	} else {
-		float diffuseFactor = 1.0;
-		float strength = diffuseFactor * lightBlend(clamp(1.0 - (dist - radiusNear) / (1.0 - radiusNear), 0.0, 1.0));
-		COLOR = float4(strength * intensity, strength * brightness, 0.0, 1.0);
-	}
-	return COLOR;
-}
-)" },
 			{ "BatchedShieldFire", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -2104,7 +2012,7 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "Lighting", "",
+			{ "LightingMesh", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
@@ -2116,14 +2024,18 @@ uniform float2 spriteSize;
 
 uniform sampler2D uTexture : TEXUNIT0;
 
-static float2 aQuadCorner;
+static float2 aPosition;
+static float2 aTexCoords;
+static float4 aColor;
 static float4 gl_Position;
 static float4 vTexCoords;
 static float4 vColor;
 
 struct VsInput
 {
-	float2 aQuadCorner : TEXCOORD0;
+	float2 aPosition : TEXCOORD0;
+	float2 aTexCoords : TEXCOORD1;
+	float4 aColor : TEXCOORD2;
 };
 
 struct VsOutput
@@ -2135,12 +2047,12 @@ struct VsOutput
 
 VsOutput main(VsInput _input)
 {
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(0.5 - (1.0 - aQuadCorner.x), 0.5 - aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = texRect;
-	vColor = float4(color.x, color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+	aPosition = _input.aPosition;
+	aTexCoords = _input.aTexCoords;
+	aColor = _input.aColor;
+	gl_Position = mul(float4(aPosition.x, aPosition.y, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float4(0.0, 0.0, aTexCoords.x, 0.0);
+	vColor = aColor;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;

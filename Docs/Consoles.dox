@@ -66,7 +66,7 @@ cmake -B build -D CMAKE_BUILD_TYPE=Release
 make -j $(nproc) -C build
 
 # Convert an installed copy of the original game into a console content tree
-./build/Sources/AssetPacker/AssetPacker <path to the game installation> ./build/ConsoleContent --target=console
+./build/Sources/Utilities/AssetPacker/AssetPacker <path to the game installation> ./build/ConsoleContent --target=console
 @endcode
 
 @m_class{m-noindent}

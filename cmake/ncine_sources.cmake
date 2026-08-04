@@ -116,10 +116,10 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.cpp
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp
 	# Runtime part of ShaderCompiler, shared with the offline tool - enables loading ".shader" files at runtime
-	${NCINE_SOURCE_DIR}/ShaderCompiler/ConstFold.cpp
-	${NCINE_SOURCE_DIR}/ShaderCompiler/GlslReflect.cpp
-	${NCINE_SOURCE_DIR}/ShaderCompiler/RuntimeShader.cpp
-	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.cpp
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/ConstFold.cpp
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/GlslReflect.cpp
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/RuntimeShader.cpp
+	${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/ShaderParser.cpp
 )
 
 if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
@@ -127,7 +127,7 @@ if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
 	# engine, so runtime-compiled (".shader") shaders get the same lowering the precompiled ones receive
 	# offline (Shader.cpp calls Essl100Emitter::Transform under RHI_GL_PROFILE_ES2). The other profiles and
 	# the non-GL backends never reference or compile this file.
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/ShaderCompiler/Essl100.cpp)
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler/Essl100.cpp)
 endif()
 
 if(NCINE_PREFERRED_RHI STREQUAL "Software")
