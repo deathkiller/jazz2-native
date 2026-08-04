@@ -120,31 +120,31 @@ namespace nCine::RHI
 		}
 
 		// The tier the pipeline runs on this backend, which is what most of the guarded rendering code keys on
-		LOGI("Rendering tier: {}{}{}{}",
 #	if defined(RHI_CAP_POSTPROCESSING)
-			"post-processing (shaders, render targets)",
+		const char* tier = "post-processing (shaders, render targets)";
 #	elif defined(RHI_CAP_SHADERS)
-			"direct (shaders, no render targets)",
+		const char* tier = "direct (shaders, no render targets)";
 #	elif defined(RHI_CAP_FRAMEBUFFERS)
-			"direct (render targets, no shaders)",
+		const char* tier = "direct (render targets, no shaders)";
 #	else
-			"direct (no shaders, no render targets)",
+		const char* tier = "direct (no shaders, no render targets)";
 #	endif
 #	if defined(RHI_CAP_PALETTED_TEXTURES)
-			", paletted textures",
+		const char* palettedTextures = ", paletted textures";
 #	else
-			"",
+		const char* palettedTextures = "";
 #	endif
 #	if defined(RHI_CAP_STREAMING_TEXTURES)
-			", streaming textures",
+		const char* streamingTextures = ", streaming textures";
 #	else
-			"",
+		const char* streamingTextures = "";
 #	endif
 #	if defined(RHI_USE_FB16)
-			", 16-bit framebuffer");
+		const char* framebufferFormat = ", 16-bit framebuffer";
 #	else
-			"");
+		const char* framebufferFormat = "";
 #	endif
+		LOGI("Rendering tier: {}{}{}{}", tier, palettedTextures, streamingTextures, framebufferFormat);
 
 		LOGI("--- Rendering device capabilities ---");
 		LOGI("Max texture size: {}", _intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);

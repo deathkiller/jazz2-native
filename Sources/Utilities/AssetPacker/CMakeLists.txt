@@ -39,6 +39,18 @@ target_sources(AssetPacker PRIVATE ${SOURCES})
 # output. NCINE_VERSION matches the game so the cache index it writes isn't seen as coming from another build.
 target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\"")
 
+if(WIN32)
+	# Not going through ncine_apply_compiler_options() also means missing the Unicode switch it sets for the game.
+	# Without it the TCHAR-generic Win32 entry points resolve to their ANSI variants, which the wide string
+	# literals the shared sources pass to them don't convert to.
+	target_compile_definitions(AssetPacker PRIVATE "_UNICODE" "UNICODE")
+elseif(APPLE)
+	# Shared/IO/FileSystem.cpp reaches for the Objective-C runtime directly in MoveToTrash() and
+	# LaunchDirectoryAsync(), so the frameworks owning the classes it looks up by name have to be linked even
+	# though the tool itself has no user interface (Foundation also brings in libobjc, where objc_msgSend lives)
+	target_link_libraries(AssetPacker PRIVATE "-framework Foundation" "-framework AppKit")
+endif()
+
 if(TARGET ZLIB::ZLIB)
 	target_link_libraries(AssetPacker PRIVATE ZLIB::ZLIB)
 	target_compile_definitions(AssetPacker PRIVATE "WITH_ZLIB")
