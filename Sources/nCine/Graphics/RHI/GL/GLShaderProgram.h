@@ -84,31 +84,31 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the shader program object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns the current lifecycle status */
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 		/** @brief Returns the introspection level used when linking */
 		inline Introspection GetIntrospection() const {
-			return introspection_;
+			return _introspection;
 		}
 		/** @brief Returns when compilation and linking status are queried */
 		inline QueryPhase GetQueryPhase() const {
-			return queryPhase_;
+			return _queryPhase;
 		}
 		/** @brief Returns the batch size, or @ref DefaultBatchSize if the shader is not batched */
 		inline std::uint32_t GetBatchSize() const {
-			return batchSize_;
+			return _batchSize;
 		}
 		/** @brief Sets the batch size used for batched rendering */
 		inline void SetBatchSize(std::uint32_t value) {
-			batchSize_ = value;
+			_batchSize = value;
 		}
 
 		/** @brief Returns `true` if the program has been linked successfully */
@@ -125,11 +125,11 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the total memory needed for all uniforms outside of blocks */
 		inline std::uint32_t GetUniformsSize() const {
-			return uniformsSize_;
+			return _uniformsSize;
 		}
 		/** @brief Returns the total memory needed for all uniforms inside of blocks */
 		inline std::uint32_t GetUniformBlocksSize() const {
-			return uniformBlocksSize_;
+			return _uniformBlocksSize;
 		}
 
 		/**
@@ -174,7 +174,7 @@ namespace nCine::RHI::GL
 		 * introspection runs (it is consumed and cleared afterwards, and cleared by @ref Reset()).
 		 */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
-			reflection_ = reflection;
+			_reflection = reflection;
 		}
 		/**
 			@brief Records the true (program, variant) identity of the loaded shader
@@ -219,11 +219,11 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the number of active vertex attributes discovered by introspection */
 		inline std::uint32_t GetAttributeCount() const {
-			return attributeLocations_.size();
+			return _attributeLocations.size();
 		}
 		/** @brief Returns `true` if the program has an active vertex attribute with the given name */
 		inline bool HasAttribute(const char* name) const {
-			return (attributeLocations_.find(String::nullTerminatedView(name)) != nullptr);
+			return (_attributeLocations.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		/** @brief Returns the vertex format attribute with the given name, or `nullptr` if not found */
 		GLVertexFormat::Attribute* GetAttribute(const char* name);
@@ -259,7 +259,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the automatic log on errors flag */
 		inline bool GetLogOnErrors() const {
-			return shouldLogOnErrors_;
+			return _shouldLogOnErrors;
 		}
 		/**
 		 * @brief Sets the automatic log on errors flag
@@ -267,12 +267,12 @@ namespace nCine::RHI::GL
 		 * When `true`, the shader program automatically logs compilation and linking errors.
 		 */
 		inline void SetLogOnErrors(bool shouldLogOnErrors) {
-			shouldLogOnErrors_ = shouldLogOnErrors;
+			_shouldLogOnErrors = shouldLogOnErrors;
 		}
 
 		/** @brief Drops the cached bound program so the next @ref Use() re-applies (external code changed it) */
 		static void InvalidateCachedBinding() {
-			boundProgram_ = ~0u;
+			_boundProgram = ~0u;
 		}
 
 	private:
@@ -284,31 +284,31 @@ namespace nCine::RHI::GL
 		static constexpr std::int32_t UniformBlocksInitialSize = 4;
 		static constexpr std::int32_t AttributesInitialSize = 4;
 
-		static GLuint boundProgram_;
+		static GLuint _boundProgram;
 
-		GLuint glHandle_;
+		GLuint _glHandle;
 
-		SmallVector<std::unique_ptr<GLShader>, AttachedShadersInitialSize> attachedShaders_;
-		Status status_;
-		Introspection introspection_;
-		QueryPhase queryPhase_;
-		std::uint32_t batchSize_;
+		SmallVector<std::unique_ptr<GLShader>, AttachedShadersInitialSize> _attachedShaders;
+		Status _status;
+		Introspection _introspection;
+		QueryPhase _queryPhase;
+		std::uint32_t _batchSize;
 
 		/** @brief Whether the shader program should automatically log errors (the information log) */
-		bool shouldLogOnErrors_;
+		bool _shouldLogOnErrors;
 
-		std::uint32_t uniformsSize_;
-		std::uint32_t uniformBlocksSize_;
+		std::uint32_t _uniformsSize;
+		std::uint32_t _uniformBlocksSize;
 
-		SmallVector<GLUniform, 0> uniforms_;
-		SmallVector<GLUniformBlock, 0> uniformBlocks_;
-		SmallVector<GLAttribute, 0> attributes_;
+		SmallVector<GLUniform, 0> _uniforms;
+		SmallVector<GLUniformBlock, 0> _uniformBlocks;
+		SmallVector<GLAttribute, 0> _attributes;
 
 		/** @brief Offline reflection used instead of GL introspection, consumed by PerformIntrospection() */
-		const ShaderCompiler::ProgramVariant* reflection_;
+		const ShaderCompiler::ProgramVariant* _reflection;
 
-		StaticHashMap<String, std::int32_t, GLVertexFormat::MaxAttributes> attributeLocations_;
-		GLVertexFormat vertexFormat_;
+		StaticHashMap<String, std::int32_t, GLVertexFormat::MaxAttributes> _attributeLocations;
+		GLVertexFormat _vertexFormat;
 
 		bool ProcessDeferredQueries();
 		bool CheckLinking();

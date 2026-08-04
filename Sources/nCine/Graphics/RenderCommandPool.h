@@ -48,8 +48,8 @@ namespace nCine
 		void Reset();
 
 	private:
-		SmallVector<std::unique_ptr<RenderCommand>, 0> freeCommandsPool_;
-		SmallVector<std::unique_ptr<RenderCommand>, 0> usedCommandsPool_;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _freeCommandsPool;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _usedCommandsPool;
 	};
 
 }

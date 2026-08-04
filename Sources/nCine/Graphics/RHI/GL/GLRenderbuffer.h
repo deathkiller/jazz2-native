@@ -31,16 +31,16 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the renderbuffer object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 
 		/** @brief Sets the framebuffer attachment point this renderbuffer is associated with */
 		inline void SetAttachment(GLenum attachment) {
-			attachment_ = attachment;
+			_attachment = attachment;
 		}
 		/** @brief Returns the framebuffer attachment point this renderbuffer is associated with */
 		inline GLenum GetAttachment() const {
-			return attachment_;
+			return _attachment;
 		}
 
 		/**
@@ -60,10 +60,10 @@ namespace nCine::RHI::GL
 		void SetObjectLabel(StringView label);
 
 	private:
-		static GLuint boundBuffer_;
+		static GLuint _boundBuffer;
 
-		GLuint glHandle_;
-		GLenum attachment_;
+		GLuint _glHandle;
+		GLenum _attachment;
 
 		void Storage(GLenum internalFormat, GLsizei width, GLsizei height);
 	};

@@ -5,10 +5,10 @@
 
 namespace nCine::RHI::Software
 {
-	std::uint32_t SwBuffer::nextHandle_ = 1;
+	std::uint32_t SwBuffer::_nextHandle = 1;
 
 	SwBuffer::SwBuffer(BufferTarget target)
-		: handle_(nextHandle_++), target_(target)
+		: _handle(_nextHandle++), _target(target)
 	{
 	}
 
@@ -27,18 +27,18 @@ namespace nCine::RHI::Software
 	void SwBuffer::BufferData(std::size_t size, const void* data, BufferUsage usage)
 	{
 		static_cast<void>(usage);
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
 	}
 
 	void SwBuffer::BufferSubData(std::size_t offset, std::size_t size, const void* data)
 	{
-		if (data == nullptr || size == 0 || offset + size > storage_.size()) {
+		if (data == nullptr || size == 0 || offset + size > _storage.size()) {
 			return;
 		}
-		std::memcpy(storage_.data() + offset, data, size);
+		std::memcpy(_storage.data() + offset, data, size);
 	}
 
 	void SwBuffer::BufferStorage(std::size_t size, const void* data, MapFlags flags)
@@ -46,36 +46,36 @@ namespace nCine::RHI::Software
 		// The software backend keeps everything in a resizable host store, so "immutable storage" is just
 		// a plain (re)allocation; the storage/mapping flags do not apply
 		static_cast<void>(flags);
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
 	}
 
 	void SwBuffer::BindBufferBase(std::uint32_t index)
 	{
-		BindBufferRange(index, 0, storage_.size());
+		BindBufferRange(index, 0, _storage.size());
 	}
 
 	void SwBuffer::BindBufferRange(std::uint32_t index, std::size_t offset, std::size_t size)
 	{
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return;
 		}
-		if (offset + size > storage_.size()) {
-			size = storage_.size() - offset;
+		if (offset + size > _storage.size()) {
+			size = _storage.size() - offset;
 		}
-		SwDevice::BindUniformRange(index, storage_.data() + offset, std::uint32_t(size));
+		SwDevice::BindUniformRange(index, _storage.data() + offset, std::uint32_t(size));
 	}
 
 	void* SwBuffer::MapBufferRange(std::size_t offset, std::size_t length, MapFlags access)
 	{
 		static_cast<void>(length);
 		static_cast<void>(access);
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return nullptr;
 		}
-		return storage_.data() + offset;
+		return _storage.data() + offset;
 	}
 
 	void SwBuffer::FlushMappedBufferRange(std::size_t offset, std::size_t length)

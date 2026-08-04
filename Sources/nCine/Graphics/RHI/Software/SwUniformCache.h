@@ -25,18 +25,18 @@ namespace nCine::RHI::Software
 	{
 	public:
 		SwUniformCache()
-			: uniform_(nullptr), dataPointer_(nullptr), isDirty_(false) {}
+			: _uniform(nullptr), _dataPointer(nullptr), _isDirty(false) {}
 		explicit SwUniformCache(const SwUniform* uniform)
-			: uniform_(uniform), dataPointer_(nullptr), isDirty_(false) {}
+			: _uniform(uniform), _dataPointer(nullptr), _isDirty(false) {}
 
 		inline const SwUniform* GetUniform() const {
-			return uniform_;
+			return _uniform;
 		}
 		inline std::uint8_t* GetDataPointer() const {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		inline void SetDataPointer(std::uint8_t* dataPointer) {
-			dataPointer_ = dataPointer;
+			_dataPointer = dataPointer;
 		}
 
 		const float* GetFloatVector() const;
@@ -56,18 +56,18 @@ namespace nCine::RHI::Software
 		bool SetIntValue(std::int32_t v0, std::int32_t v1, std::int32_t v2, std::int32_t v3);
 
 		inline bool IsDirty() const {
-			return isDirty_;
+			return _isDirty;
 		}
 		inline void SetDirty(bool isDirty) {
-			isDirty_ = isDirty;
+			_isDirty = isDirty;
 		}
 		/** @brief Publishes a dirty loose-uniform value to the owning program; a no-op for block members */
 		bool CommitValue();
 
 	private:
-		const SwUniform* uniform_;
-		std::uint8_t* dataPointer_;
-		bool isDirty_;
+		const SwUniform* _uniform;
+		std::uint8_t* _dataPointer;
+		bool _isDirty;
 
 		bool CheckFloat() const;
 		bool CheckInt() const;
@@ -85,11 +85,11 @@ namespace nCine::RHI::Software
 	{
 	public:
 		SwUniformBlockCache()
-			: uniformBlock_(nullptr), dataPointer_(nullptr), usedSize_(0) {}
+			: _uniformBlock(nullptr), _dataPointer(nullptr), _usedSize(0) {}
 		explicit SwUniformBlockCache(SwUniformBlock* uniformBlock);
 
 		inline const SwUniformBlock* uniformBlock() const {
-			return uniformBlock_;
+			return _uniformBlock;
 		}
 		std::uint32_t GetIndex() const;
 		std::int32_t GetBindingIndex() const;
@@ -97,21 +97,21 @@ namespace nCine::RHI::Software
 		std::uint8_t GetAlignAmount() const;
 
 		inline std::uint8_t* GetDataPointer() {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		inline const std::uint8_t* GetDataPointer() const {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		void SetDataPointer(std::uint8_t* dataPointer);
 
 		inline std::int32_t usedSize() const {
-			return usedSize_;
+			return _usedSize;
 		}
 		void SetUsedSize(std::int32_t usedSize);
 
 		bool CopyData(std::uint32_t destIndex, const std::uint8_t* src, std::uint32_t numBytes);
 		inline bool CopyData(const std::uint8_t* src) {
-			return CopyData(0, src, std::uint32_t(usedSize_));
+			return CopyData(0, src, std::uint32_t(_usedSize));
 		}
 
 		/** @brief Returns the member uniform cache with the specified name, or `nullptr` if not found */
@@ -119,15 +119,15 @@ namespace nCine::RHI::Software
 		void SetBlockBinding(std::int32_t blockBinding);
 
 	private:
-		SwUniformBlock* uniformBlock_;
-		std::uint8_t* dataPointer_;
-		std::int32_t usedSize_;
+		SwUniformBlock* _uniformBlock;
+		std::uint8_t* _dataPointer;
+		std::int32_t _usedSize;
 
 		struct NamedCache
 		{
 			String Name;
 			SwUniformCache Cache;
 		};
-		std::vector<NamedCache> uniformCaches_;
+		std::vector<NamedCache> _uniformCaches;
 	};
 }

@@ -39,7 +39,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns whether blending is enabled */
 		static bool IsEnabled() {
-			return state_.enabled;
+			return _state.enabled;
 		}
 		/** @brief Enables blending */
 		static void Enable();
@@ -64,7 +64,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the whole cached blending state */
 		static State GetState() {
-			return state_;
+			return _state;
 		}
 		/** @brief Restores the whole blending state */
 		static void SetState(State newState);
@@ -73,7 +73,7 @@ namespace nCine::RHI::GL
 		static void Reapply();
 
 	private:
-		static State state_;
+		static State _state;
 	};
 
 }

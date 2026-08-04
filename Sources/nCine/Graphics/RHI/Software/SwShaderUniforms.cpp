@@ -39,7 +39,7 @@ namespace nCine::RHI::Software
 	}
 
 	SwShaderUniforms::SwShaderUniforms()
-		: shaderProgram_(nullptr), maybeDirty_(true)
+		: _shaderProgram(nullptr), _maybeDirty(true)
 	{
 	}
 
@@ -57,24 +57,24 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniforms::SetProgram(SwShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformCaches_.clear();
-		maybeDirty_ = true;
+		_shaderProgram = shaderProgram;
+		_uniformCaches.clear();
+		_maybeDirty = true;
 
-		if (shaderProgram_->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
 		}
 	}
 
 	void SwShaderUniforms::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = true;
+		_maybeDirty = true;
 		std::uint32_t offset = 0;
-		for (SwUniformCache& cache : uniformCaches_) {
+		for (SwUniformCache& cache : _uniformCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.GetUniform()->GetMemorySize();
 		}
@@ -82,18 +82,18 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
-		maybeDirty_ = isDirty;
-		for (SwUniformCache& cache : uniformCaches_) {
+		_maybeDirty = isDirty;
+		for (SwUniformCache& cache : _uniformCaches) {
 			cache.SetDirty(isDirty);
 		}
 	}
 
 	bool SwShaderUniforms::HasUniform(const char* name) const
 	{
-		for (const SwUniformCache& cache : uniformCaches_) {
+		for (const SwUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
 				return true;
 			}
@@ -103,9 +103,9 @@ namespace nCine::RHI::Software
 
 	SwUniformCache* SwShaderUniforms::GetUniform(const char* name)
 	{
-		for (SwUniformCache& cache : uniformCaches_) {
+		for (SwUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
-				maybeDirty_ = true;
+				_maybeDirty = true;
 				return &cache;
 			}
 		}
@@ -114,38 +114,38 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ == nullptr) {
+		if (_shaderProgram == nullptr) {
 			return;
 		}
-		if (maybeDirty_ && shaderProgram_->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
-			shaderProgram_->Use();
-			for (SwUniformCache& cache : uniformCaches_) {
+		if (_maybeDirty && _shaderProgram->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
+			_shaderProgram->Use();
+			for (SwUniformCache& cache : _uniformCaches) {
 				cache.CommitValue();
 			}
-			maybeDirty_ = false;
+			_maybeDirty = false;
 		}
 	}
 
 	void SwShaderUniforms::ImportUniforms(const char* includeOnly, const char* exclude)
 	{
-		for (const SwUniform& uniform : shaderProgram_->uniforms_) {
+		for (const SwUniform& uniform : _shaderProgram->_uniforms) {
 			if (ShouldImport(uniform.GetName(), includeOnly, exclude)) {
-				uniformCaches_.push_back(SwUniformCache(&uniform));
+				_uniformCaches.push_back(SwUniformCache(&uniform));
 			}
 		}
 	}
 
 	// -------------------------------------------------------------------------------------------------
 
-	SwShaderUniformBlocks::UniformRangeAllocator SwShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
+	SwShaderUniformBlocks::UniformRangeAllocator SwShaderUniformBlocks::_uniformRangeAllocator = nullptr;
 
 	void SwShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
 	{
-		uniformRangeAllocator_ = allocator;
+		_uniformRangeAllocator = allocator;
 	}
 
 	SwShaderUniformBlocks::SwShaderUniformBlocks()
-		: shaderProgram_(nullptr), dataPointer_(nullptr)
+		: _shaderProgram(nullptr), _dataPointer(nullptr)
 	{
 	}
 
@@ -163,23 +163,23 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniformBlocks::SetProgram(SwShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformBlockCaches_.clear();
+		_shaderProgram = shaderProgram;
+		_uniformBlockCaches.clear();
 
-		if (shaderProgram_->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == SwShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniformBlocks(includeOnly, exclude);
 		}
 	}
 
 	void SwShaderUniformBlocks::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		dataPointer_ = dataPointer;
+		_dataPointer = dataPointer;
 		std::int32_t offset = 0;
-		for (SwUniformBlockCache& cache : uniformBlockCaches_) {
+		for (SwUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
 		}
@@ -187,7 +187,7 @@ namespace nCine::RHI::Software
 
 	bool SwShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
-		for (const SwUniformBlockCache& cache : uniformBlockCaches_) {
+		for (const SwUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
@@ -197,7 +197,7 @@ namespace nCine::RHI::Software
 
 	SwUniformBlockCache* SwShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
-		for (SwUniformBlockCache& cache : uniformBlockCaches_) {
+		for (SwUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
@@ -207,30 +207,30 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != SwShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		std::int32_t totalUsedSize = 0;
 		bool hasMemoryGaps = false;
-		for (SwUniformBlockCache& cache : uniformBlockCaches_) {
-			if (cache.GetDataPointer() != dataPointer_ + totalUsedSize) {
+		for (SwUniformBlockCache& cache : _uniformBlockCaches) {
+			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
 				hasMemoryGaps = true;
 			}
 			totalUsedSize += cache.usedSize();
 		}
 
-		if (totalUsedSize > 0 && uniformRangeAllocator_ != nullptr) {
-			uboParams_ = uniformRangeAllocator_(std::uint32_t(totalUsedSize));
-			if (uboParams_.mapBase != nullptr) {
+		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
+			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
+			if (_uboParams.mapBase != nullptr) {
 				if (hasMemoryGaps) {
 					std::int32_t offset = 0;
-					for (SwUniformBlockCache& cache : uniformBlockCaches_) {
-						std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, cache.GetDataPointer(), cache.usedSize());
+					for (SwUniformBlockCache& cache : _uniformBlockCaches) {
+						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
 						offset += cache.usedSize();
 					}
 				} else {
-					std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
 				}
 			}
 		}
@@ -238,25 +238,25 @@ namespace nCine::RHI::Software
 
 	void SwShaderUniformBlocks::Bind()
 	{
-		if (uboParams_.object == nullptr) {
+		if (_uboParams.object == nullptr) {
 			return;
 		}
 
-		uboParams_.object->Bind();
+		_uboParams.object->Bind();
 		std::size_t moreOffset = 0;
-		for (SwUniformBlockCache& cache : uniformBlockCaches_) {
+		for (SwUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(uboParams_.offset) + moreOffset;
-			uboParams_.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
+			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
+			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
 			moreOffset += std::size_t(cache.usedSize());
 		}
 	}
 
 	void SwShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)
 	{
-		for (SwUniformBlock& block : shaderProgram_->uniformBlocks_) {
+		for (SwUniformBlock& block : _shaderProgram->_uniformBlocks) {
 			if (ShouldImport(block.GetName(), includeOnly, exclude)) {
-				uniformBlockCaches_.push_back(SwUniformBlockCache(&block));
+				_uniformBlockCaches.push_back(SwUniformBlockCache(&block));
 			}
 		}
 	}

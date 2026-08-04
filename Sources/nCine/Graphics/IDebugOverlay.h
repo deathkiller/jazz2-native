@@ -42,7 +42,7 @@ namespace nCine
 
 		/** @brief Returns the mutable display settings of the overlay */
 		inline DisplaySettings& GetSettings() {
-			return settings_;
+			return _settings;
 		}
 		/** @brief Updates the overlay and draws it for the current frame */
 		virtual void Update() = 0;
@@ -56,15 +56,15 @@ namespace nCine
 
 	protected:
 		/** @brief Display settings controlling which parts of the overlay are shown */
-		DisplaySettings settings_;
+		DisplaySettings _settings;
 		/** @brief Time stamp of the last textual data update */
-		TimeStamp lastUpdateTime_;
+		TimeStamp _lastUpdateTime;
 		/** @brief Minimum interval in seconds between textual data updates */
-		float updateTime_;
+		float _updateTime;
 	};
 
 	inline IDebugOverlay::IDebugOverlay(float profileTextUpdateTime)
-		: updateTime_(profileTextUpdateTime) {}
+		: _updateTime(profileTextUpdateTime) {}
 
 	inline IDebugOverlay::~IDebugOverlay() {}
 }

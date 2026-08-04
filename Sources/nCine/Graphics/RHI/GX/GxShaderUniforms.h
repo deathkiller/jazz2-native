@@ -39,24 +39,24 @@ namespace nCine::RHI::GX
 		void SetDirty(bool isDirty);
 
 		inline std::uint32_t GetUniformCount() const {
-			return std::uint32_t(uniformCaches_.size());
+			return std::uint32_t(_uniformCaches.size());
 		}
 		bool HasUniform(const char* name) const;
 		GxUniformCache* GetUniform(const char* name);
 		/** @brief Returns the container of all managed uniform caches (range-iterates as `GxUniformCache&`) */
 		inline const UniformHashMapType& GetAllUniforms() const {
-			return uniformCaches_;
+			return _uniformCaches;
 		}
 		inline void MarkDirty() {
-			maybeDirty_ = true;
+			_maybeDirty = true;
 		}
 		void CommitUniforms();
 
 	private:
-		GxShaderProgram* shaderProgram_;
-		bool maybeDirty_;
+		GxShaderProgram* _shaderProgram;
+		bool _maybeDirty;
 
-		UniformHashMapType uniformCaches_;
+		UniformHashMapType _uniformCaches;
 
 		void ImportUniforms(const char* includeOnly, const char* exclude);
 	};
@@ -93,25 +93,25 @@ namespace nCine::RHI::GX
 		void SetUniformsDataPointer(std::uint8_t* dataPointer);
 
 		inline std::uint32_t GetUniformBlockCount() const {
-			return std::uint32_t(uniformBlockCaches_.size());
+			return std::uint32_t(_uniformBlockCaches.size());
 		}
 		bool HasUniformBlock(const char* name) const;
 		GxUniformBlockCache* GetUniformBlock(const char* name);
 		/** @brief Returns the container of all managed block caches (range-iterates as `GxUniformBlockCache&`) */
 		inline const UniformHashMapType& GetAllUniformBlocks() const {
-			return uniformBlockCaches_;
+			return _uniformBlockCaches;
 		}
 		void CommitUniformBlocks();
 		void Bind();
 
 	private:
-		static UniformRangeAllocator uniformRangeAllocator_;
+		static UniformRangeAllocator _uniformRangeAllocator;
 
-		GxShaderProgram* shaderProgram_;
-		std::uint8_t* dataPointer_;
-		RHI::BufferRange uboParams_;
+		GxShaderProgram* _shaderProgram;
+		std::uint8_t* _dataPointer;
+		RHI::BufferRange _uboParams;
 
-		UniformHashMapType uniformBlockCaches_;
+		UniformHashMapType _uniformBlockCaches;
 
 		void ImportUniformBlocks(const char* includeOnly, const char* exclude);
 	};

@@ -5,37 +5,37 @@
 
 namespace nCine
 {
-	RenderStatistics::Commands RenderStatistics::allCommands_;
-	RenderStatistics::Commands RenderStatistics::typedCommands_[(int)RenderCommand::Type::Count];
-	RenderStatistics::Buffers RenderStatistics::typedBuffers_[(int)RenderBuffersManager::BufferTypes::Count];
-	RenderStatistics::Textures RenderStatistics::textures_;
-	RenderStatistics::CustomBuffers RenderStatistics::customVbos_;
-	RenderStatistics::CustomBuffers RenderStatistics::customIbos_;
-	std::uint32_t RenderStatistics::index_ = 0;
-	std::uint32_t RenderStatistics::culledNodes_[2] = { 0, 0 };
-	RenderStatistics::VaoPool RenderStatistics::vaoPool_;
-	RenderStatistics::CommandPool RenderStatistics::commandPool_;
+	RenderStatistics::Commands RenderStatistics::_allCommands;
+	RenderStatistics::Commands RenderStatistics::_typedCommands[(int)RenderCommand::Type::Count];
+	RenderStatistics::Buffers RenderStatistics::_typedBuffers[(int)RenderBuffersManager::BufferTypes::Count];
+	RenderStatistics::Textures RenderStatistics::_textures;
+	RenderStatistics::CustomBuffers RenderStatistics::_customVbos;
+	RenderStatistics::CustomBuffers RenderStatistics::_customIbos;
+	std::uint32_t RenderStatistics::_index = 0;
+	std::uint32_t RenderStatistics::_culledNodes[2] = { 0, 0 };
+	RenderStatistics::VaoPool RenderStatistics::_vaoPool;
+	RenderStatistics::CommandPool RenderStatistics::_commandPool;
 
 	void RenderStatistics::Reset()
 	{
-		TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
-		TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
+		TracyPlot("Vertices", static_cast<int64_t>(_allCommands.vertices));
+		TracyPlot("Render Commands", static_cast<int64_t>(_allCommands.commands));
 
 		for (unsigned int i = 0; i < (unsigned int)RenderCommand::Type::Count; i++) {
-			typedCommands_[i].reset();
+			_typedCommands[i].reset();
 		}
-		allCommands_.reset();
+		_allCommands.reset();
 
 		for (unsigned int i = 0; i < (unsigned int)RenderBuffersManager::BufferTypes::Count; i++) {
-			typedBuffers_[i].reset();
+			_typedBuffers[i].reset();
 		}
 
 		// Ping pong index for last and current frame
-		index_ = (index_ + 1) % 2;
-		culledNodes_[index_] = 0;
+		_index = (_index + 1) % 2;
+		_culledNodes[_index] = 0;
 
-		vaoPool_.reset();
-		commandPool_.reset();
+		_vaoPool.reset();
+		_commandPool.reset();
 	}
 
 	void RenderStatistics::GatherStatistics(const RenderCommand& command)
@@ -55,25 +55,25 @@ namespace nCine
 		}
 
 		const unsigned int typeIndex = (unsigned int)command.GetType();
-		typedCommands_[typeIndex].vertices += verticesToCount;
-		typedCommands_[typeIndex].commands++;
-		typedCommands_[typeIndex].transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
-		typedCommands_[typeIndex].instances += command.GetInstanceCount();
-		typedCommands_[typeIndex].batchSize += command.GetBatchSize();
+		_typedCommands[typeIndex].vertices += verticesToCount;
+		_typedCommands[typeIndex].commands++;
+		_typedCommands[typeIndex].transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
+		_typedCommands[typeIndex].instances += command.GetInstanceCount();
+		_typedCommands[typeIndex].batchSize += command.GetBatchSize();
 
-		allCommands_.vertices += verticesToCount;
-		allCommands_.commands++;
-		allCommands_.transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
-		allCommands_.instances += command.GetInstanceCount();
-		allCommands_.batchSize += command.GetBatchSize();
+		_allCommands.vertices += verticesToCount;
+		_allCommands.commands++;
+		_allCommands.transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
+		_allCommands.instances += command.GetInstanceCount();
+		_allCommands.batchSize += command.GetBatchSize();
 	}
 
 	void RenderStatistics::GatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer)
 	{
 		const unsigned int typeIndex = (unsigned int)buffer.type;
-		typedBuffers_[typeIndex].count++;
-		typedBuffers_[typeIndex].size += buffer.size;
-		typedBuffers_[typeIndex].usedSpace += buffer.size - buffer.freeSpace;
+		_typedBuffers[typeIndex].count++;
+		_typedBuffers[typeIndex].size += buffer.size;
+		_typedBuffers[typeIndex].usedSpace += buffer.size - buffer.freeSpace;
 	}
 }
 

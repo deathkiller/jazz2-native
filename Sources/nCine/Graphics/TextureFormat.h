@@ -17,18 +17,18 @@ namespace nCine
 	class TextureFormat
 	{
 	public:
-		TextureFormat() : pixelFormat_(PixelFormat::Unknown), bgr_(false) {}
-		explicit TextureFormat(PixelFormat format) : pixelFormat_(format), bgr_(false) {}
+		TextureFormat() : _pixelFormat(PixelFormat::Unknown), _bgr(false) {}
+		explicit TextureFormat(PixelFormat format) : _pixelFormat(format), _bgr(false) {}
 
 		/** @brief Returns the backend-neutral pixel format */
 		inline PixelFormat pixelFormat() const {
-			return pixelFormat_;
+			return _pixelFormat;
 		}
 		/** @brief Returns `true` if the format holds compressed data */
 		bool isCompressed() const;
 		/** @brief Returns `true` if the external channel order is BGR/BGRA instead of RGB/RGBA */
 		inline bool isBgr() const {
-			return bgr_;
+			return _bgr;
 		}
 		/** @brief Returns the number of color channels */
 		std::uint32_t numChannels() const;
@@ -40,8 +40,8 @@ namespace nCine
 		static std::uint32_t calculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes);
 
 	private:
-		PixelFormat pixelFormat_;
-		bool bgr_;
+		PixelFormat _pixelFormat;
+		bool _bgr;
 	};
 
 }

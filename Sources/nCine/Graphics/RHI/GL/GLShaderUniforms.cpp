@@ -8,7 +8,7 @@
 namespace nCine::RHI::GL
 {
 	GLShaderUniforms::GLShaderUniforms()
-		: shaderProgram_(nullptr), maybeDirty_(true)
+		: _shaderProgram(nullptr), _maybeDirty(true)
 	{
 	}
 
@@ -28,12 +28,12 @@ namespace nCine::RHI::GL
 	{
 		DEATH_ASSERT(shaderProgram != nullptr);
 
-		shaderProgram_ = shaderProgram;
-		shaderProgram_->ProcessDeferredQueries();
-		uniformCaches_.clear();
-		maybeDirty_ = true;
+		_shaderProgram = shaderProgram;
+		_shaderProgram->ProcessDeferredQueries();
+		_uniformCaches.clear();
+		_maybeDirty = true;
 
-		if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
 		}
 	}
@@ -42,13 +42,13 @@ namespace nCine::RHI::GL
 	{
 		DEATH_ASSERT(dataPointer != nullptr);
 
-		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = true;
+		_maybeDirty = true;
 		std::uint32_t offset = 0;
-		for (GLUniformCache& uniformCache : uniformCaches_) {
+		for (GLUniformCache& uniformCache : _uniformCaches) {
 			uniformCache.SetDataPointer(dataPointer + offset);
 			offset += uniformCache.GetUniform()->GetMemorySize();
 		}
@@ -56,12 +56,12 @@ namespace nCine::RHI::GL
 
 	void GLShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = isDirty;
-		for (auto& uniform : uniformCaches_) {
+		_maybeDirty = isDirty;
+		for (auto& uniform : _uniformCaches) {
 			uniform.SetDirty(isDirty);
 		}
 	}
@@ -71,11 +71,11 @@ namespace nCine::RHI::GL
 		DEATH_ASSERT(name != nullptr);
 		GLUniformCache* uniformCache = nullptr;
 
-		if (shaderProgram_ != nullptr) {
-			uniformCache = uniformCaches_.find(String::nullTerminatedView(name));
+		if (_shaderProgram != nullptr) {
+			uniformCache = _uniformCaches.find(String::nullTerminatedView(name));
 			// The caller may write to the returned cache, so the commit early-out has to be pessimistic
 			if (uniformCache != nullptr) {
-				maybeDirty_ = true;
+				_maybeDirty = true;
 			}
 		} else {
 			LOGE("Cannot find uniform \"{}\", no shader program associated", name);
@@ -85,13 +85,13 @@ namespace nCine::RHI::GL
 
 	void GLShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ != nullptr) {
-			if (maybeDirty_ && shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
-				shaderProgram_->Use();
-				for (auto& uniform : uniformCaches_) {
+		if (_shaderProgram != nullptr) {
+			if (_maybeDirty && _shaderProgram->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+				_shaderProgram->Use();
+				for (auto& uniform : _uniformCaches) {
 					uniform.CommitValue();
 				}
-				maybeDirty_ = false;
+				_maybeDirty = false;
 			}
 		} else {
 			LOGE("No shader program associated");
@@ -103,7 +103,7 @@ namespace nCine::RHI::GL
 		constexpr std::uint32_t MaxUniformName = 128;
 
 		std::uint32_t importedCount = 0;
-		for (const GLUniform& uniform : shaderProgram_->uniforms_) {
+		for (const GLUniform& uniform : _shaderProgram->_uniforms) {
 			const char* uniformName = uniform.GetName();
 			const char* currentIncludeOnly = includeOnly;
 			const char* currentExclude = exclude;
@@ -132,7 +132,7 @@ namespace nCine::RHI::GL
 
 			if (shouldImport) {
 				GLUniformCache uniformCache(&uniform);
-				uniformCaches_[uniformName] = uniformCache;
+				_uniformCaches[uniformName] = uniformCache;
 				importedCount++;
 			}
 		}

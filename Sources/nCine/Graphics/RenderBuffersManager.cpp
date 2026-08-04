@@ -19,9 +19,9 @@ using namespace Death::Containers::Literals;
 namespace nCine
 {
 	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, bool useBufferStorage, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize)
-		: usePersistentMapping_(false), currentSection_(0), sectionFences_{}
+		: _usePersistentMapping(false), _currentSection(0), _sectionFences{}
 	{
-		buffers_.reserve(4);
+		_buffers.reserve(4);
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 
@@ -30,54 +30,54 @@ namespace nCine
 		const std::int32_t glMinor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Minor);
 		const bool hasBufferStorage = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_BUFFER_STORAGE) ||
 			(glMajor > 4 || (glMajor == 4 && glMinor >= 4));
-		usePersistentMapping_ = (useBufferStorage && hasBufferStorage);
-		if (usePersistentMapping_) {
+		_usePersistentMapping = (useBufferStorage && hasBufferStorage);
+		if (_usePersistentMapping) {
 			LOGI("Persistently mapped buffer storage is enabled for streaming buffers");
 		}
 #endif
 
 		const MapFlags commonMapFlags = (useBufferMapping ? MapFlags::Write | MapFlags::InvalidateBuffer | MapFlags::FlushExplicit : MapFlags::None);
 
-		BufferSpecifications& vboSpecs = specs_[std::int32_t(BufferTypes::Array)];
+		BufferSpecifications& vboSpecs = _specs[std::int32_t(BufferTypes::Array)];
 		vboSpecs.type = BufferTypes::Array;
 		vboSpecs.target = BufferTarget::Vertex;
 		vboSpecs.mapFlags = commonMapFlags;
 		vboSpecs.usageFlags = BufferUsage::StreamDraw;
 		vboSpecs.maxSize = vboMaxSize;
 		vboSpecs.alignment = sizeof(float);
-		vboSpecs.persistent = usePersistentMapping_;
+		vboSpecs.persistent = _usePersistentMapping;
 
-		BufferSpecifications& iboSpecs = specs_[std::int32_t(BufferTypes::ElementArray)];
+		BufferSpecifications& iboSpecs = _specs[std::int32_t(BufferTypes::ElementArray)];
 		iboSpecs.type = BufferTypes::ElementArray;
 		iboSpecs.target = BufferTarget::Index;
 		iboSpecs.mapFlags = commonMapFlags;
 		iboSpecs.usageFlags = BufferUsage::StreamDraw;
 		iboSpecs.maxSize = iboMaxSize;
 		iboSpecs.alignment = sizeof(std::uint16_t);
-		iboSpecs.persistent = usePersistentMapping_;
+		iboSpecs.persistent = _usePersistentMapping;
 
 		const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		const std::int32_t uboMaxSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
-		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
+		BufferSpecifications& uboSpecs = _specs[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;
 		uboSpecs.target = BufferTarget::Uniform;
 		uboSpecs.mapFlags = commonMapFlags;
 		uboSpecs.usageFlags = BufferUsage::StreamDraw;
 		uboSpecs.maxSize = std::uint32_t(uboMaxSize);
 		uboSpecs.alignment = std::uint32_t(offsetAlignment);
-		uboSpecs.persistent = usePersistentMapping_;
+		uboSpecs.persistent = _usePersistentMapping;
 
 		// Create the first buffer for each type right away
 		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
 #if defined(RHI_GL_PROFILE_ES2)
 			// ES2 has no uniform buffer objects (binding GL_UNIFORM_BUFFER would be an invalid enum) and nothing
 			// acquires uniform-type memory on this profile (GLShaderUniformBlocks pushes loose glUniform* instead)
-			if (specs_[i].type == BufferTypes::Uniform) {
+			if (_specs[i].type == BufferTypes::Uniform) {
 				continue;
 			}
 #endif
-			CreateBuffer(specs_[i]);
+			CreateBuffer(_specs[i]);
 		}
 	}
 
@@ -85,7 +85,7 @@ namespace nCine
 	{
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		for (std::uint32_t i = 0; i < NumPersistentSections; i++) {
-			RHI::Device::DeleteFence(sectionFences_[i]);
+			RHI::Device::DeleteFence(_sectionFences[i]);
 		}
 #endif
 	}
@@ -105,17 +105,17 @@ namespace nCine
 
 	RenderBuffersManager::Parameters RenderBuffersManager::AcquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment)
 	{
-		FATAL_ASSERT_MSG(bytes <= specs_[std::int32_t(type)].maxSize, "Trying to acquire {} bytes when the maximum for buffer type \"{}\" is {}",
-						   bytes, bufferTypeToString(type), specs_[std::int32_t(type)].maxSize);
+		FATAL_ASSERT_MSG(bytes <= _specs[std::int32_t(type)].maxSize, "Trying to acquire {} bytes when the maximum for buffer type \"{}\" is {}",
+						   bytes, bufferTypeToString(type), _specs[std::int32_t(type)].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one
-		if (alignment % specs_[std::int32_t(type)].alignment != 0) {
-			alignment = specs_[std::int32_t(type)].alignment;
+		if (alignment % _specs[std::int32_t(type)].alignment != 0) {
+			alignment = _specs[std::int32_t(type)].alignment;
 		}
 
 		Parameters params;
 
-		for (ManagedBuffer& buffer : buffers_) {
+		for (ManagedBuffer& buffer : _buffers) {
 			if (buffer.type == type) {
 				// The alignment is calculated on the absolute offset, so it also holds within a ring section
 				const std::uint32_t offset = buffer.sectionOffset + (buffer.size - buffer.freeSpace);
@@ -133,8 +133,8 @@ namespace nCine
 		}
 
 		if (params.object == nullptr) {
-			CreateBuffer(specs_[std::int32_t(type)]);
-			ManagedBuffer& newBuffer = buffers_.back();
+			CreateBuffer(_specs[std::int32_t(type)]);
+			ManagedBuffer& newBuffer = _buffers.back();
 			const std::uint32_t offset = newBuffer.sectionOffset;
 			const std::uint32_t alignAmount = (alignment - offset % alignment) % alignment;
 			params.object = newBuffer.object.get();
@@ -152,14 +152,14 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 
-		for (ManagedBuffer& buffer : buffers_) {
+		for (ManagedBuffer& buffer : _buffers) {
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(buffer);
 #endif
 			const std::uint32_t usedSize = buffer.size - buffer.freeSpace;
-			FATAL_ASSERT(usedSize <= specs_[std::int32_t(buffer.type)].maxSize);
+			FATAL_ASSERT(usedSize <= _specs[std::int32_t(buffer.type)].maxSize);
 
-			if (specs_[std::int32_t(buffer.type)].persistent) {
+			if (_specs[std::int32_t(buffer.type)].persistent) {
 				// Coherent persistent mappings need no flush or unmap, the free space
 				// is reclaimed when the ring advances to the next section in Remap()
 				continue;
@@ -167,7 +167,7 @@ namespace nCine
 
 			buffer.freeSpace = buffer.size;
 
-			if (specs_[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
+			if (_specs[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
 				if (usedSize > 0) {
 					buffer.object->BufferSubData(0, usedSize, buffer.hostBuffer.get());
 				}
@@ -188,27 +188,27 @@ namespace nCine
 		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
-		if (usePersistentMapping_) {
+		if (_usePersistentMapping) {
 			// This runs right after the frame's draw calls were submitted, so a fence here protects
 			// everything the GPU may still read from the current section. Advancing then waits on the
 			// fence inserted `NumPersistentSections - 1` frames ago before its section is reused.
-			RHI::Device::DeleteFence(sectionFences_[currentSection_]);
-			sectionFences_[currentSection_] = RHI::Device::InsertFence();
+			RHI::Device::DeleteFence(_sectionFences[_currentSection]);
+			_sectionFences[_currentSection] = RHI::Device::InsertFence();
 
-			currentSection_ = (currentSection_ + 1) % NumPersistentSections;
-			if (sectionFences_[currentSection_] != nullptr) {
-				if (!RHI::Device::ClientWaitFence(sectionFences_[currentSection_], 1000000000)) {
-					LOGW("Wait for persistent buffer section {} failed", currentSection_);
+			_currentSection = (_currentSection + 1) % NumPersistentSections;
+			if (_sectionFences[_currentSection] != nullptr) {
+				if (!RHI::Device::ClientWaitFence(_sectionFences[_currentSection], 1000000000)) {
+					LOGW("Wait for persistent buffer section {} failed", _currentSection);
 				}
-				RHI::Device::DeleteFence(sectionFences_[currentSection_]);
+				RHI::Device::DeleteFence(_sectionFences[_currentSection]);
 			}
 		}
 #endif
 
-		for (ManagedBuffer& buffer : buffers_) {
-			if (specs_[std::int32_t(buffer.type)].persistent) {
+		for (ManagedBuffer& buffer : _buffers) {
+			if (_specs[std::int32_t(buffer.type)].persistent) {
 				DEATH_ASSERT(buffer.mapBase != nullptr);
-				buffer.sectionOffset = currentSection_ * buffer.size;
+				buffer.sectionOffset = _currentSection * buffer.size;
 				buffer.freeSpace = buffer.size;
 				continue;
 			}
@@ -216,11 +216,11 @@ namespace nCine
 			DEATH_ASSERT(buffer.freeSpace == buffer.size);
 			DEATH_ASSERT(buffer.mapBase == nullptr);
 
-			if (specs_[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
-				buffer.object->BufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
+			if (_specs[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
+				buffer.object->BufferData(buffer.size, nullptr, _specs[std::int32_t(buffer.type)].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
-				buffer.mapBase = static_cast<std::uint8_t*>(buffer.object->MapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
+				buffer.mapBase = static_cast<std::uint8_t*>(buffer.object->MapBufferRange(0, buffer.size, _specs[std::int32_t(buffer.type)].mapFlags));
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
@@ -229,7 +229,7 @@ namespace nCine
 	void RenderBuffersManager::CreateBuffer(const BufferSpecifications& specs)
 	{
 		ZoneScopedC(0x81A861);
-		ManagedBuffer& managedBuffer = buffers_.emplace_back();
+		ManagedBuffer& managedBuffer = _buffers.emplace_back();
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;
 		managedBuffer.object = std::make_unique<RHI::Buffer>(specs.target);
@@ -240,7 +240,7 @@ namespace nCine
 			const std::int64_t totalSize = std::int64_t(specs.maxSize) * NumPersistentSections;
 			managedBuffer.object->BufferStorage(totalSize, nullptr, storageFlags);
 			managedBuffer.mapBase = static_cast<std::uint8_t*>(managedBuffer.object->MapBufferRange(0, totalSize, storageFlags));
-			managedBuffer.sectionOffset = currentSection_ * specs.maxSize;
+			managedBuffer.sectionOffset = _currentSection * specs.maxSize;
 		} else
 #endif
 		{
@@ -275,7 +275,7 @@ namespace nCine
 #if defined(DEATH_DEBUG)
 		if (RHI::Debug::IsAvailable()) {
 			char debugString[128];
-			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
+			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(_buffers.back().object.get()));
 			RHI::Debug::MessageInsert({ debugString, length });
 		}
 #endif

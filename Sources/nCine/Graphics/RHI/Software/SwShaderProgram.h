@@ -98,22 +98,22 @@ namespace nCine::RHI::Software
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 		inline Introspection GetIntrospection() const {
-			return introspection_;
+			return _introspection;
 		}
 		inline QueryPhase GetQueryPhase() const {
-			return queryPhase_;
+			return _queryPhase;
 		}
 		inline std::uint32_t GetBatchSize() const {
-			return batchSize_;
+			return _batchSize;
 		}
 		inline void SetBatchSize(std::uint32_t value) {
-			batchSize_ = value;
+			_batchSize = value;
 		}
 
 		bool IsLinked() const;
@@ -126,10 +126,10 @@ namespace nCine::RHI::Software
 		}
 
 		inline std::uint32_t GetUniformsSize() const {
-			return uniformsSize_;
+			return _uniformsSize;
 		}
 		inline std::uint32_t GetUniformBlocksSize() const {
-			return uniformBlocksSize_;
+			return _uniformBlocksSize;
 		}
 
 		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
@@ -139,7 +139,7 @@ namespace nCine::RHI::Software
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
-			reflection_ = reflection;
+			_reflection = reflection;
 		}
 		/**
 			@brief Records the true (program, variant) identity of the loaded shader
@@ -162,7 +162,7 @@ namespace nCine::RHI::Software
 		bool FinalizeAfterLinking(Introspection introspection);
 
 		inline std::uint32_t GetAttributeCount() const {
-			return std::uint32_t(attributes_.size());
+			return std::uint32_t(_attributes.size());
 		}
 		bool HasAttribute(const char* name) const;
 		SwVertexFormat::Attribute* GetAttribute(const char* name);
@@ -179,29 +179,29 @@ namespace nCine::RHI::Software
 		void SetObjectLabel(StringView label);
 
 		inline bool GetLogOnErrors() const {
-			return shouldLogOnErrors_;
+			return _shouldLogOnErrors;
 		}
 		inline void SetLogOnErrors(bool shouldLogOnErrors) {
-			shouldLogOnErrors_ = shouldLogOnErrors;
+			_shouldLogOnErrors = shouldLogOnErrors;
 		}
 
 		// -- Software backend extensions (used by the device and the effects) --
 
 		/** @brief Returns the C++ effect this program dispatches to */
 		inline SwEffect GetEffect() const {
-			return effect_;
+			return _effect;
 		}
 		/** @brief Returns the object label the program was tagged with (the shader name), or an empty string */
 		inline const char* GetObjectLabel() const {
-			return label_.data();
+			return _label.data();
 		}
 		/** @brief Returns `true` if the program is the dithering variant of its effect (derived from the label) */
 		inline bool IsDitherVariant() const {
-			return ditherVariant_;
+			return _ditherVariant;
 		}
 		/** @brief Returns the offline reflection last set on the program (kept for the effects to read) */
 		inline const ShaderCompiler::ProgramVariant* GetReflection() const {
-			return effectReflection_;
+			return _effectReflection;
 		}
 		/** @brief Returns the imported metadata of the uniform block with the given name, or `nullptr` */
 		const SwUniformBlock* FindBlock(const char* name) const;
@@ -211,39 +211,39 @@ namespace nCine::RHI::Software
 		const std::uint8_t* ResolveUniform(const char* name) const;
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		Status status_;
-		Introspection introspection_;
-		QueryPhase queryPhase_;
-		std::uint32_t batchSize_;
-		bool shouldLogOnErrors_;
-		std::uint32_t uniformsSize_;
-		std::uint32_t uniformBlocksSize_;
+		std::uint32_t _handle;
+		Status _status;
+		Introspection _introspection;
+		QueryPhase _queryPhase;
+		std::uint32_t _batchSize;
+		bool _shouldLogOnErrors;
+		std::uint32_t _uniformsSize;
+		std::uint32_t _uniformBlocksSize;
 
-		std::vector<SwUniform> uniforms_;
-		std::vector<SwUniformBlock> uniformBlocks_;
-		std::vector<SwAttribute> attributes_;
+		std::vector<SwUniform> _uniforms;
+		std::vector<SwUniformBlock> _uniformBlocks;
+		std::vector<SwAttribute> _attributes;
 
-		const ShaderCompiler::ProgramVariant* reflection_;
+		const ShaderCompiler::ProgramVariant* _reflection;
 		// Kept after introspection so the effects can read member offsets/texture bindings at draw time
-		const ShaderCompiler::ProgramVariant* effectReflection_;
-		SwEffect effect_;
-		bool ditherVariant_;
+		const ShaderCompiler::ProgramVariant* _effectReflection;
+		SwEffect _effect;
+		bool _ditherVariant;
 		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
-		String label_;
+		String _label;
 
-		SwVertexFormat vertexFormat_;
-		const SwBuffer* boundVbo_;
-		const SwBuffer* boundIbo_;
+		SwVertexFormat _vertexFormat;
+		const SwBuffer* _boundVbo;
+		const SwBuffer* _boundIbo;
 
 		struct ResolvedUniform
 		{
 			String Name;
 			const std::uint8_t* Data;
 		};
-		std::vector<ResolvedUniform> resolvedUniforms_;
+		std::vector<ResolvedUniform> _resolvedUniforms;
 
 		void PerformIntrospection();
 		void ImportReflection();

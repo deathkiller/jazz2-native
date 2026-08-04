@@ -10,9 +10,9 @@
 namespace nCine
 {
 	Texture::Texture()
-		: Object(ObjectType::Texture), rhiTexture_(std::make_unique<RHI::Texture>(TextureTarget::Texture2D)), width_(0), height_(0),
-			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
-			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
+		: Object(ObjectType::Texture), _rhiTexture(std::make_unique<RHI::Texture>(TextureTarget::Texture2D)), _width(0), _height(0),
+			_mipMapLevels(0), _isCompressed(false), _format(Format::Unknown), _dataSize(0), _minFiltering(SamplerFilter::Nearest),
+			_magFiltering(SamplerFilter::Nearest), _wrapMode(SamplerWrapping::ClampToEdge)
 	{
 	}
 
@@ -54,8 +54,8 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		// Don't remove data from statistics if this is a moved out object
-		if (dataSize_ > 0 && rhiTexture_ != nullptr) {
-			RenderStatistics::RemoveTexture(dataSize_);
+		if (_dataSize > 0 && _rhiTexture != nullptr) {
+			RenderStatistics::RemoveTexture(_dataSize);
 		}
 #endif
 	}
@@ -68,23 +68,23 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		if (width == width_ && height == height_ && mipMapCount == mipMapLevels_ && format == format_) {
+		if (width == _width && height == _height && mipMapCount == _mipMapLevels && format == _format) {
 			return;
 		}
 
 		TextureLoaderRaw texLoader(width, height, mipMapCount, format);
 
 #if defined(NCINE_PROFILING)
-		if (dataSize_ > 0) {
-			RenderStatistics::RemoveTexture(dataSize_);
+		if (_dataSize > 0) {
+			RenderStatistics::RemoveTexture(_dataSize);
 		}
 #endif
-		rhiTexture_->Bind();
-		rhiTexture_->SetObjectLabel(name);
+		_rhiTexture->Bind();
+		_rhiTexture->SetObjectLabel(name);
 		Initialize(texLoader);
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::AddTexture(dataSize_);
+		RenderStatistics::AddTexture(_dataSize);
 #endif
 	}
 
@@ -114,17 +114,17 @@ namespace nCine
 		}
 
 #if defined(NCINE_PROFILING)
-		if (dataSize_ > 0) {
-			RenderStatistics::RemoveTexture(dataSize_);
+		if (_dataSize > 0) {
+			RenderStatistics::RemoveTexture(_dataSize);
 		}
 #endif
-		rhiTexture_->Bind();
-		rhiTexture_->SetObjectLabel(filename);
+		_rhiTexture->Bind();
+		_rhiTexture->SetObjectLabel(filename);
 		Initialize(*texLoader);
 		Load(*texLoader);
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::AddTexture(dataSize_);
+		RenderStatistics::AddTexture(_dataSize);
 #endif
 		return true;
 	}
@@ -132,7 +132,7 @@ namespace nCine
 	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr)
 	{
-		return LoadFromTexels(bufferPtr, 0, 0, 0, width_, height_);
+		return LoadFromTexels(bufferPtr, 0, 0, 0, _width, _height);
 	}
 
 	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
@@ -154,7 +154,7 @@ namespace nCine
 
 		// Tightly-packed single-/dual-/triple-channel rows may not meet the default 4-byte unpack alignment
 		std::int32_t alignment;
-		switch (format_) {
+		switch (_format) {
 			case Format::R8:	alignment = 1; break;
 			case Format::RG8:	alignment = 2; break;
 			case Format::RGB8:	alignment = 1; break;
@@ -164,7 +164,7 @@ namespace nCine
 		if (alignment != 4) {
 			RHI::Texture::SetUnpackAlignment(alignment);
 		}
-		rhiTexture_->TexSubImage2D(level, x, y, width, height, format_, false, data);
+		_rhiTexture->TexSubImage2D(level, x, y, width, height, _format, false, data);
 		if (alignment != 4) {
 			RHI::Texture::SetUnpackAlignment(4);
 		}
@@ -175,7 +175,7 @@ namespace nCine
 #if defined(RHI_CAP_STREAMING_TEXTURES)
 	void* Texture::MapStreamingTexels(std::int32_t& strideBytes)
 	{
-		return rhiTexture_->MapStreamingTexels(strideBytes);
+		return _rhiTexture->MapStreamingTexels(strideBytes);
 	}
 #endif
 
@@ -197,13 +197,13 @@ namespace nCine
 		}
 
 		RHI::Texture::ClearErrors();
-		rhiTexture_->GetTexImage(level, format_, false, bufferPtr);
+		_rhiTexture->GetTexImage(level, _format, false, bufferPtr);
 		return !RHI::Texture::CheckErrors();
 	}
 
 	std::uint32_t Texture::GetChannelCount() const
 	{
-		switch (format_) {
+		switch (_format) {
 			case Texture::Format::R8:
 				return 1;
 			case Texture::Format::RG8:
@@ -220,42 +220,42 @@ namespace nCine
 
 	void Texture::SetMinFiltering(SamplerFilter filter)
 	{
-		if (minFiltering_ == filter) {
+		if (_minFiltering == filter) {
 			return;
 		}
 
-		rhiTexture_->SetMinFiltering(filter);
-		minFiltering_ = filter;
+		_rhiTexture->SetMinFiltering(filter);
+		_minFiltering = filter;
 	}
 
 	void Texture::SetMagFiltering(SamplerFilter filter)
 	{
-		if (magFiltering_ == filter) {
+		if (_magFiltering == filter) {
 			return;
 		}
 
-		rhiTexture_->SetMagFiltering(filter);
-		magFiltering_ = filter;
+		_rhiTexture->SetMagFiltering(filter);
+		_magFiltering = filter;
 	}
 
 	void Texture::SetWrap(SamplerWrapping wrapMode)
 	{
-		if (wrapMode_ == wrapMode) {
+		if (_wrapMode == wrapMode) {
 			return;
 		}
 
-		rhiTexture_->SetWrap(wrapMode);
-		wrapMode_ = wrapMode;
+		_rhiTexture->SetWrap(wrapMode);
+		_wrapMode = wrapMode;
 	}
 
 	void Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		rhiTexture_->SetSwizzle(r, g, b, a);
+		_rhiTexture->SetSwizzle(r, g, b, a);
 	}
 
 	void Texture::SetTextureLabel(const char* label)
 	{
-		rhiTexture_->SetObjectLabel(label);
+		_rhiTexture->SetObjectLabel(label);
 	}
 
 	/**
@@ -264,7 +264,7 @@ namespace nCine
 	 */
 	void* Texture::GetGuiTexId() const
 	{
-		return const_cast<void*>(reinterpret_cast<const void*>(rhiTexture_.get()));
+		return const_cast<void*>(reinterpret_cast<const void*>(_rhiTexture.get()));
 	}
 
 	void Texture::Initialize(const ITextureLoader& texLoader)
@@ -294,51 +294,51 @@ namespace nCine
 		const bool withTexStorage = RHI::Texture::SupportsImmutableStorage();
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
-		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || format_ != pixelFormat)) {
+		if (_dataSize == 0 || (_width != texLoader.width() || _height != texLoader.height() || _format != pixelFormat)) {
 			if (withTexStorage) {
-				if (dataSize_ > 0) {
+				if (_dataSize > 0) {
 					// The texture needs to be recreated as its storage is immutable
-					rhiTexture_ = std::make_unique<RHI::Texture>(TextureTarget::Texture2D);
-					dataSize_ = 0;
+					_rhiTexture = std::make_unique<RHI::Texture>(TextureTarget::Texture2D);
+					_dataSize = 0;
 				}
 
-				if (dataSize_ == 0) {
-					rhiTexture_->TexStorage2D(texLoader.mipMapCount(), pixelFormat, texLoader.width(), texLoader.height());
+				if (_dataSize == 0) {
+					_rhiTexture->TexStorage2D(texLoader.mipMapCount(), pixelFormat, texLoader.width(), texLoader.height());
 				}
 			} else if (!texFormat.isCompressed()) {
 				std::int32_t levelWidth = texLoader.width();
 				std::int32_t levelHeight = texLoader.height();
 
 				for (std::int32_t i = 0; i < texLoader.mipMapCount(); i++) {
-					rhiTexture_->TexImage2D(i, pixelFormat, bgr, levelWidth, levelHeight, nullptr);
+					_rhiTexture->TexImage2D(i, pixelFormat, bgr, levelWidth, levelHeight, nullptr);
 					levelWidth /= 2;
 					levelHeight /= 2;
 				}
 			}
 		}
 
-		width_ = texLoader.width();
-		height_ = texLoader.height();
-		mipMapLevels_ = texLoader.mipMapCount();
-		isCompressed_ = texFormat.isCompressed();
-		format_ = pixelFormat;
-		dataSize_ = dataSize;
+		_width = texLoader.width();
+		_height = texLoader.height();
+		_mipMapLevels = texLoader.mipMapCount();
+		_isCompressed = texFormat.isCompressed();
+		_format = pixelFormat;
+		_dataSize = dataSize;
 
-		rhiTexture_->SetWrap(SamplerWrapping::ClampToEdge);
-		wrapMode_ = SamplerWrapping::ClampToEdge;
+		_rhiTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		_wrapMode = SamplerWrapping::ClampToEdge;
 
-		if (mipMapLevels_ > 1) {
-			rhiTexture_->SetMagFiltering(SamplerFilter::Linear);
-			rhiTexture_->SetMinFiltering(SamplerFilter::LinearMipmapLinear);
-			magFiltering_ = SamplerFilter::Linear;
-			minFiltering_ = SamplerFilter::LinearMipmapLinear;
+		if (_mipMapLevels > 1) {
+			_rhiTexture->SetMagFiltering(SamplerFilter::Linear);
+			_rhiTexture->SetMinFiltering(SamplerFilter::LinearMipmapLinear);
+			_magFiltering = SamplerFilter::Linear;
+			_minFiltering = SamplerFilter::LinearMipmapLinear;
 			// To prevent artifacts if the MIP map chain is not complete
-			rhiTexture_->SetMaxLevel(mipMapLevels_);
+			_rhiTexture->SetMaxLevel(_mipMapLevels);
 		} else {
-			rhiTexture_->SetMagFiltering(SamplerFilter::Linear);
-			rhiTexture_->SetMinFiltering(SamplerFilter::Linear);
-			magFiltering_ = SamplerFilter::Linear;
-			minFiltering_ = SamplerFilter::Linear;
+			_rhiTexture->SetMagFiltering(SamplerFilter::Linear);
+			_rhiTexture->SetMinFiltering(SamplerFilter::Linear);
+			_magFiltering = SamplerFilter::Linear;
+			_minFiltering = SamplerFilter::Linear;
 		}
 	}
 
@@ -349,21 +349,21 @@ namespace nCine
 		const TextureFormat& texFormat = texLoader.texFormat();
 		const PixelFormat pixelFormat = texFormat.pixelFormat();
 		const bool bgr = texFormat.isBgr();
-		std::int32_t levelWidth = width_;
-		std::int32_t levelHeight = height_;
+		std::int32_t levelWidth = _width;
+		std::int32_t levelHeight = _height;
 
 		for (std::int32_t mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
 			const std::uint8_t* data = texLoader.pixels(mipIdx);
 
 			if (texFormat.isCompressed()) {
 				if (withTexStorage) {
-					rhiTexture_->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					_rhiTexture->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				} else {
-					rhiTexture_->CompressedTexImage2D(mipIdx, pixelFormat, levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					_rhiTexture->CompressedTexImage2D(mipIdx, pixelFormat, levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				}
 			} else {
 				// Storage has already been created at this point
-				rhiTexture_->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, bgr, data);
+				_rhiTexture->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, bgr, data);
 			}
 
 			levelWidth /= 2;

@@ -54,17 +54,17 @@ namespace nCine
 		Camera();
 
 		inline const ProjectionValues& GetProjectionValues() const {
-			return projectionValues_;
+			return _projectionValues;
 		}
 		inline const ViewValues& GetViewValues() const {
-			return viewValues_;
+			return _viewValues;
 		}
 
 		inline const Matrix4x4f& GetProjection() const {
-			return projection_;
+			return _projection;
 		}
 		inline const Matrix4x4f& GetView() const {
-			return view_;
+			return _view;
 		}
 
 		void SetOrthoProjection(float left, float right, float top, float bottom);
@@ -75,21 +75,21 @@ namespace nCine
 		void SetView(const ViewValues& values);
 
 		inline std::uint32_t UpdateFrameProjectionMatrix() const {
-			return updateFrameProjectionMatrix_;
+			return _updateFrameProjectionMatrix;
 		}
 		inline std::uint32_t UpdateFrameViewMatrix() const {
-			return updateFrameViewMatrix_;
+			return _updateFrameViewMatrix;
 		}
 
 	private:
-		ProjectionValues projectionValues_;
-		ViewValues viewValues_;
-		Matrix4x4f projection_;
-		Matrix4x4f view_;
+		ProjectionValues _projectionValues;
+		ViewValues _viewValues;
+		Matrix4x4f _projection;
+		Matrix4x4f _view;
 		/** @brief Last frame in which the projection matrix was changed */
-		std::uint32_t updateFrameProjectionMatrix_;
+		std::uint32_t _updateFrameProjectionMatrix;
 		/** @brief Last frame in which the view matrix was changed */
-		std::uint32_t updateFrameViewMatrix_;
+		std::uint32_t _updateFrameViewMatrix;
 	};
 
 }

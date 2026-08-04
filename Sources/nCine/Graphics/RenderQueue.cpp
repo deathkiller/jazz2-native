@@ -11,15 +11,15 @@ namespace nCine
 {
 	RenderQueue::RenderQueue()
 	{
-		opaqueQueue_.reserve(16);
-		opaqueBatchedQueue_.reserve(16);
-		transparentQueue_.reserve(16);
-		transparentBatchedQueue_.reserve(16);
+		_opaqueQueue.reserve(16);
+		_opaqueBatchedQueue.reserve(16);
+		_transparentQueue.reserve(16);
+		_transparentBatchedQueue.reserve(16);
 	}
 
 	bool RenderQueue::IsEmpty() const
 	{
-		return (opaqueQueue_.empty() && transparentQueue_.empty());
+		return (_opaqueQueue.empty() && _transparentQueue.empty());
 	}
 
 	void RenderQueue::AddCommand(RenderCommand* command)
@@ -28,9 +28,9 @@ namespace nCine
 		command->CalculateMaterialSortKey();
 
 		if (!command->GetMaterial().IsBlendingEnabled()) {
-			opaqueQueue_.push_back(command);
+			_opaqueQueue.push_back(command);
 		} else {
-			transparentQueue_.push_back(command);
+			_transparentQueue.push_back(command);
 		}
 	}
 
@@ -78,17 +78,17 @@ namespace nCine
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
 
 		// Sorting the queues with the relevant orders
-		sort(opaqueQueue_.begin(), opaqueQueue_.end(), descendingOrder);
-		sort(transparentQueue_.begin(), transparentQueue_.end(), ascendingOrder);
+		sort(_opaqueQueue.begin(), _opaqueQueue.end(), descendingOrder);
+		sort(_transparentQueue.begin(), _transparentQueue.end(), ascendingOrder);
 
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
+		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &_opaqueBatchedQueue : &_opaqueQueue;
+		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &_transparentBatchedQueue : &_transparentQueue;
 
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
-			RenderResources::GetRenderBatcher().CreateBatches(opaqueQueue_, opaqueBatchedQueue_);
-			RenderResources::GetRenderBatcher().CreateBatches(transparentQueue_, transparentBatchedQueue_);
+			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue);
+			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue);
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
@@ -121,8 +121,8 @@ namespace nCine
 		static char debugString[128];
 #endif
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
+		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &_opaqueBatchedQueue : &_opaqueQueue;
+		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &_transparentBatchedQueue : &_transparentQueue;
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;
@@ -213,10 +213,10 @@ namespace nCine
 
 	void RenderQueue::Clear()
 	{
-		opaqueQueue_.clear();
-		opaqueBatchedQueue_.clear();
-		transparentQueue_.clear();
-		transparentBatchedQueue_.clear();
+		_opaqueQueue.clear();
+		_opaqueBatchedQueue.clear();
+		_transparentQueue.clear();
+		_transparentBatchedQueue.clear();
 
 		RenderResources::GetRenderBatcher().Reset();
 	}

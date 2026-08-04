@@ -44,49 +44,49 @@ namespace nCine
 		: BaseSprite(other)
 	{
 		init();
-		setTexRect(other.texRect_);
+		setTexRect(other._texRect);
 	}
 
 	void Sprite::init()
 	{
 		ZoneScopedC(0x81A861);
-		/*if (texture_ != nullptr && texture_->name() != nullptr){
+		/*if (_texture != nullptr && _texture->name() != nullptr){
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
+			ZoneText(_texture->name(), nctl::strnlen(_texture->name(), Object::MaxNameLength));
 		}*/
 
 		_type = ObjectType::Sprite;
-		renderCommand_.SetType(RenderCommand::Type::Sprite);
+		_renderCommand.SetType(RenderCommand::Type::Sprite);
 
-		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-		renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
+		Material::ShaderProgramType shaderProgramType = (_texture != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
+		_renderCommand.GetMaterial().SetShaderProgramType(shaderProgramType);
 		shaderHasChanged();
-		renderCommand_.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
-		if (texture_ != nullptr) {
-			setTexRect(Recti(0, 0, texture_->GetWidth(), texture_->GetHeight()));
+		if (_texture != nullptr) {
+			setTexRect(Recti(0, 0, _texture->GetWidth(), _texture->GetHeight()));
 		}
 	}
 
 	void Sprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.GetMaterial().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
+		if (_renderCommand.GetMaterial().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
 			Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-			const bool hasChanged = renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
+			const bool hasChanged = _renderCommand.GetMaterial().SetShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();
 			}
 		}
 
 		if (newTexture != nullptr) {
-			if (texture_ != nullptr && texture_ != newTexture) {
+			if (_texture != nullptr && _texture != newTexture) {
 				// Trying to keep the old texture rectangle aspect ratio
-				Recti texRect = texRect_;
-				texRect.X = (int)((texRect.X / float(texture_->GetWidth())) * float(newTexture->GetWidth()));
-				texRect.Y = (int)((texRect.Y / float(texture_->GetHeight())) * float(newTexture->GetHeight()));
-				texRect.W = (int)((texRect.W / float(texture_->GetWidth())) * float(newTexture->GetWidth()));
-				texRect.H = (int)((texRect.H / float(texture_->GetHeight())) * float(newTexture->GetHeight()));
-				setTexRect(texRect); // it also sets width_ and height_
+				Recti texRect = _texRect;
+				texRect.X = (int)((texRect.X / float(_texture->GetWidth())) * float(newTexture->GetWidth()));
+				texRect.Y = (int)((texRect.Y / float(_texture->GetHeight())) * float(newTexture->GetHeight()));
+				texRect.W = (int)((texRect.W / float(_texture->GetWidth())) * float(newTexture->GetWidth()));
+				texRect.H = (int)((texRect.H / float(_texture->GetHeight())) * float(newTexture->GetHeight()));
+				setTexRect(texRect); // it also sets _width and _height
 			} else {
 				// Assigning a new texture where there wasn't any or reassigning the same texture (that might have changed size)
 				setTexRect(Recti(0, 0, newTexture->GetWidth(), newTexture->GetHeight()));

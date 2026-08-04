@@ -47,7 +47,7 @@ namespace nCine
 	}
 
 	AsndAudioDevice::AsndAudioDevice()
-		: initialized_(false)
+		: _initialized(false)
 	{
 		LOGD("Initializing ASND audio device...");
 
@@ -55,7 +55,7 @@ namespace nCine
 		ASND_Init();
 		// The mixer starts out paused
 		ASND_Pause(0);
-		initialized_ = true;
+		_initialized = true;
 
 		// Every voice is a source, they are all available from the start
 		std::uint32_t sourceIds[MaxSources];
@@ -76,15 +76,15 @@ namespace nCine
 		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
 		shutdownDecodeThread();
 
-		if (initialized_) {
+		if (_initialized) {
 			for (std::int32_t i = 0; i < MaxSources; i++) {
 				ASND_StopVoice(i);
 			}
 			ASND_End();
-			initialized_ = false;
+			_initialized = false;
 		}
 
-		for (Buffer& buffer : buffers_) {
+		for (Buffer& buffer : _buffers) {
 			std::free(buffer.data);
 			buffer.data = nullptr;
 		}
@@ -92,7 +92,7 @@ namespace nCine
 
 	bool AsndAudioDevice::isValid() const
 	{
-		return initialized_;
+		return _initialized;
 	}
 
 	const char* AsndAudioDevice::name() const
@@ -102,7 +102,7 @@ namespace nCine
 
 	void AsndAudioDevice::setGain(float gain)
 	{
-		gain_ = gain;
+		_gain = gain;
 
 		// The DSP has no master volume, it is folded into the per-voice volume instead
 		for (std::int32_t i = 0; i < MaxSources; i++) {
@@ -112,12 +112,12 @@ namespace nCine
 
 	void AsndAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
-		listenerPos_ = position;
+		_listenerPos = position;
 
 		// Moving the listener changes the panning and attenuation of every source that is not relative
 		// to it, which the mix here has to be told about explicitly
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			if (!sources_[i].relative) {
+			if (!_sources[i].relative) {
 				applyVolume(i);
 			}
 		}
@@ -140,7 +140,7 @@ namespace nCine
 		// inheriting any of it from the previous owner would be a silent and confusing bug.
 		const std::int32_t voice = voiceForId(sourceId);
 		if (voice >= 0) {
-			sources_[voice] = Source();
+			_sources[voice] = Source();
 		}
 		return sourceId;
 	}
@@ -162,26 +162,26 @@ namespace nCine
 
 	AsndAudioDevice::Buffer* AsndAudioDevice::bufferForId(std::uint32_t bufferId)
 	{
-		if (bufferId == 0 || bufferId > buffers_.size()) {
+		if (bufferId == 0 || bufferId > _buffers.size()) {
 			return nullptr;
 		}
-		Buffer& buffer = buffers_[bufferId - 1];
+		Buffer& buffer = _buffers[bufferId - 1];
 		return (buffer.used ? &buffer : nullptr);
 	}
 
 	std::uint32_t AsndAudioDevice::createBuffer(BufferUsage usage)
 	{
-		for (std::size_t i = 0; i < buffers_.size(); i++) {
-			if (!buffers_[i].used) {
-				buffers_[i].used = true;
-				buffers_[i].size = 0;
+		for (std::size_t i = 0; i < _buffers.size(); i++) {
+			if (!_buffers[i].used) {
+				_buffers[i].used = true;
+				_buffers[i].size = 0;
 				return std::uint32_t(i + 1);
 			}
 		}
 
-		buffers_.emplace_back();
-		buffers_.back().used = true;
-		return std::uint32_t(buffers_.size());
+		_buffers.emplace_back();
+		_buffers.back().used = true;
+		return std::uint32_t(_buffers.size());
 	}
 
 	void AsndAudioDevice::deleteBuffer(std::uint32_t bufferId)
@@ -232,7 +232,7 @@ namespace nCine
 
 	void AsndAudioDevice::computeVolume(std::int32_t voice, std::int32_t& volumeLeft, std::int32_t& volumeRight)
 	{
-		const Source& source = sources_[voice];
+		const Source& source = _sources[voice];
 
 		// Which buffer is sounding decides whether the position is used at all: OpenAL plays a stereo
 		// buffer straight to the output and ignores its position, and that is matched here
@@ -242,7 +242,7 @@ namespace nCine
 		const Buffer* buffer = bufferForId(bufferId);
 		const bool isStereo = (buffer != nullptr && isStereoFormat(buffer->voiceFormat));
 
-		float left = gain_ * source.gain;
+		float left = _gain * source.gain;
 		float right = left;
 
 		if (!isStereo) {
@@ -250,8 +250,8 @@ namespace nCine
 			// IAudioPlayer::getAdjustedPosition), so it only has to be made relative to the listener
 			Vector3f relative = source.position;
 			if (!source.relative) {
-				relative -= Vector3f(listenerPos_.X * LengthToPhysical,
-					listenerPos_.Y * -LengthToPhysical, listenerPos_.Z * -LengthToPhysical);
+				relative -= Vector3f(_listenerPos.X * LengthToPhysical,
+					_listenerPos.Y * -LengthToPhysical, _listenerPos.Z * -LengthToPhysical);
 			}
 
 			const float distance = relative.Length();
@@ -286,7 +286,7 @@ namespace nCine
 
 	void AsndAudioDevice::applyVolume(std::int32_t voice)
 	{
-		if (!sources_[voice].started) {
+		if (!_sources[voice].started) {
 			return;
 		}
 
@@ -297,7 +297,7 @@ namespace nCine
 
 	void AsndAudioDevice::startVoice(std::int32_t voice, const Buffer& buffer)
 	{
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 
 		// ASND expresses the playback rate as the sample rate of the source data, so the pitch
 		// multiplier scales it. The DSP resamples anything up to 144 kHz, but past its own output
@@ -335,7 +335,7 @@ namespace nCine
 	void AsndAudioDevice::pump()
 	{
 		for (std::int32_t voice = 0; voice < MaxSources; voice++) {
-			Source& source = sources_[voice];
+			Source& source = _sources[voice];
 			if (!source.streaming || source.numQueued == 0) {
 				continue;
 			}
@@ -382,7 +382,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 		source.attachedBufferId = bufferId;
 
 		if (bufferId == 0) {
@@ -405,7 +405,7 @@ namespace nCine
 	{
 		const std::int32_t voice = voiceForId(sourceId);
 		if (voice >= 0) {
-			sources_[voice].gain = gain;
+			_sources[voice].gain = gain;
 			applyVolume(voice);
 		}
 	}
@@ -417,7 +417,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 		source.pitch = pitch;
 
 		if (source.started) {
@@ -444,7 +444,7 @@ namespace nCine
 		if (voice >= 0) {
 			// Taken into account when the voice is started, ASND decides between a one-shot and a
 			// looping voice at that point and cannot be told to switch afterwards
-			sources_[voice].looping = looping;
+			_sources[voice].looping = looping;
 		}
 	}
 
@@ -452,7 +452,7 @@ namespace nCine
 	{
 		const std::int32_t voice = voiceForId(sourceId);
 		if (voice >= 0) {
-			sources_[voice].relative = relative;
+			_sources[voice].relative = relative;
 			applyVolume(voice);
 		}
 	}
@@ -461,7 +461,7 @@ namespace nCine
 	{
 		const std::int32_t voice = voiceForId(sourceId);
 		if (voice >= 0) {
-			sources_[voice].position = position;
+			_sources[voice].position = position;
 			applyVolume(voice);
 		}
 	}
@@ -474,12 +474,12 @@ namespace nCine
 	std::int32_t AsndAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
 	{
 		const std::int32_t voice = voiceForId(sourceId);
-		if (voice < 0 || !sources_[voice].started) {
+		if (voice < 0 || !_sources[voice].started) {
 			return 0;
 		}
 
 		// The tick counter runs at the output rate, the caller wants samples of the source data
-		const Source& source = sources_[voice];
+		const Source& source = _sources[voice];
 		const Buffer* buffer = bufferForId(source.streaming
 			? (source.numQueued > 0 ? source.queuedBufferIds[0] : 0)
 			: source.attachedBufferId);
@@ -501,7 +501,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 
 		if (source.paused) {
 			source.paused = false;
@@ -530,8 +530,8 @@ namespace nCine
 			return;
 		}
 
-		sources_[voice].paused = true;
-		if (sources_[voice].started) {
+		_sources[voice].paused = true;
+		if (_sources[voice].started) {
 			ASND_PauseVoice(voice, 1);
 		}
 	}
@@ -543,7 +543,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 		if (source.started) {
 			ASND_StopVoice(voice);
 			source.started = false;
@@ -563,7 +563,7 @@ namespace nCine
 			return false;
 		}
 
-		const Source& source = sources_[voice];
+		const Source& source = _sources[voice];
 		if (!source.started || source.paused) {
 			return false;
 		}
@@ -577,7 +577,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 		if (source.numQueued >= MaxQueuedBuffers) {
 			LOGW("Streaming queue of source {} is full, dropping a buffer", sourceId);
 			return;
@@ -595,7 +595,7 @@ namespace nCine
 	std::int32_t AsndAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
 	{
 		const std::int32_t voice = voiceForId(sourceId);
-		return (voice >= 0 ? sources_[voice].numProcessed : 0);
+		return (voice >= 0 ? _sources[voice].numProcessed : 0);
 	}
 
 	void AsndAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
@@ -605,7 +605,7 @@ namespace nCine
 			return;
 		}
 
-		Source& source = sources_[voice];
+		Source& source = _sources[voice];
 		if (count > source.numProcessed) {
 			count = source.numProcessed;
 		}
@@ -628,14 +628,14 @@ namespace nCine
 
 	void AsndAudioDevice::suspendDevice()
 	{
-		if (initialized_) {
+		if (_initialized) {
 			ASND_Pause(1);
 		}
 	}
 
 	void AsndAudioDevice::resumeDevice()
 	{
-		if (initialized_) {
+		if (_initialized) {
 			ASND_Pause(0);
 		}
 	}

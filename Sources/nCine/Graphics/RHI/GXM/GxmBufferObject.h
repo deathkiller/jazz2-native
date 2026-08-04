@@ -44,23 +44,23 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns a synthetic handle uniquely identifying the buffer (used by material sort keys) */
 		inline std::uint32_t GetGLHandle() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the binding target of the buffer */
 		inline BufferTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 		/** @brief Returns the size in bytes of the data store */
 		inline std::size_t GetSize() const {
-			return size_;
+			return _size;
 		}
 		/** @brief Returns the base pointer of the data store */
 		inline std::uint8_t* HostData() {
-			return data_;
+			return _data;
 		}
 		/** @brief Returns the base pointer of the data store */
 		inline const std::uint8_t* HostData() const {
-			return data_;
+			return _data;
 		}
 		/**
 			@brief Returns the GPU-visible base address of the store, or `nullptr` if it could not be allocated
@@ -68,7 +68,7 @@ namespace nCine::RHI::GXM
 			The same pointer @ref HostData() returns, only named for the side that consumes it.
 		*/
 		inline const void* GetGpuData() const {
-			return (gpuBlock_.IsValid() ? data_ : nullptr);
+			return (_gpuBlock.IsValid() ? _data : nullptr);
 		}
 
 		/** @brief Marks the buffer as the currently bound one for its target (always issues the "bind") */
@@ -115,17 +115,17 @@ namespace nCine::RHI::GXM
 		}
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		BufferTarget target_;
+		std::uint32_t _handle;
+		BufferTarget _target;
 
 		// Base and size of the store, whichever of the two backing kinds below provides it
-		std::uint8_t* data_;
-		std::size_t size_;
+		std::uint8_t* _data;
+		std::size_t _size;
 
 		// GPU-visible backing of the store
-		GxmMemory::Block gpuBlock_;
+		GxmMemory::Block _gpuBlock;
 
 		/** @brief (Re)allocates the store to at least @p size bytes, keeping an already large enough one */
 		void Reserve(std::size_t size);

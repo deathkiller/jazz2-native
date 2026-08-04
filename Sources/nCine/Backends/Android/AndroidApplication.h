@@ -34,12 +34,12 @@ namespace nCine
 
 		/** @brief Returns `true` if the application has already called @ref Init() */
 		inline bool IsInitialized() const {
-			return isInitialized_;
+			return _isInitialized;
 		}
 
 		/** @brief Returns `true` if the main screen is round */
 		inline bool IsScreenRound() const {
-			return isScreenRound_;
+			return _isScreenRound;
 		}
 
 		bool OpenUrl(StringView url) override;
@@ -71,12 +71,12 @@ namespace nCine
 		void HideStatusBar() override;
 
 	private:
-		bool isInitialized_;
-		bool isBackInvoked_;
-		bool isScreenRound_;
+		bool _isInitialized;
+		bool _isBackInvoked;
+		bool _isScreenRound;
 
-		struct android_app* state_;
-		CreateAppEventHandlerDelegate createAppEventHandler_;
+		struct android_app* _state;
+		CreateAppEventHandlerDelegate _createAppEventHandler;
 		
 		void PreInit();
 		/** @brief Must be called at the beginning to initialize the application */

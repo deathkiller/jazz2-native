@@ -19,8 +19,8 @@ using namespace Death::IO;
 namespace nCine
 {
 	IAudioLoader::IAudioLoader(std::unique_ptr<Stream> fileHandle)
-		: hasLoaded_(false), fileHandle_(std::move(fileHandle)), bytesPerSample_(0), numChannels_(0),
-			frequency_(0), numSamples_(0L), duration_(0.0f)
+		: _hasLoaded(false), _fileHandle(std::move(fileHandle)), _bytesPerSample(0), _numChannels(0),
+			_frequency(0), _numSamples(0L), _duration(0.0f)
 	{
 	}
 

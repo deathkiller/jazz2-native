@@ -8,29 +8,29 @@
 namespace nCine::RHI::GL
 {
 	GLUniformBlockCache::GLUniformBlockCache()
-		: uniformBlock_(nullptr), dataPointer_(nullptr), usedSize_(0)
+		: _uniformBlock(nullptr), _dataPointer(nullptr), _usedSize(0)
 	{
 	}
 
 	GLUniformBlockCache::GLUniformBlockCache(GLUniformBlock* uniformBlock)
-		: uniformBlock_(uniformBlock), dataPointer_(nullptr), usedSize_(0)
+		: _uniformBlock(uniformBlock), _dataPointer(nullptr), _usedSize(0)
 	{
 		DEATH_ASSERT(uniformBlock);
-		usedSize_ = uniformBlock->GetSize();
+		_usedSize = uniformBlock->GetSize();
 
 		static_assert(UniformHashSize >= GLUniformBlock::BlockUniformHashSize, "Uniform cache is smaller than the number of uniforms");
 
-		for (const GLUniform& uniform : uniformBlock->blockUniforms_) {
+		for (const GLUniform& uniform : uniformBlock->_blockUniforms) {
 			GLUniformCache uniformCache(&uniform);
-			uniformCaches_[uniform.GetName()] = uniformCache;
+			_uniformCaches[uniform.GetName()] = uniformCache;
 		}
 	}
 
 	GLuint GLUniformBlockCache::GetIndex() const
 	{
 		GLuint index = 0;
-		if (uniformBlock_ != nullptr) {
-			index = uniformBlock_->GetIndex();
+		if (_uniformBlock != nullptr) {
+			index = _uniformBlock->GetIndex();
 		}
 		return index;
 	}
@@ -38,8 +38,8 @@ namespace nCine::RHI::GL
 	GLuint GLUniformBlockCache::GetBindingIndex() const
 	{
 		GLuint bindingIndex = 0;
-		if (uniformBlock_ != nullptr) {
-			bindingIndex = uniformBlock_->GetBindingIndex();
+		if (_uniformBlock != nullptr) {
+			bindingIndex = _uniformBlock->GetBindingIndex();
 		}
 		return bindingIndex;
 	}
@@ -47,8 +47,8 @@ namespace nCine::RHI::GL
 	GLint GLUniformBlockCache::GetSize() const
 	{
 		GLint size = 0;
-		if (uniformBlock_ != nullptr) {
-			size = uniformBlock_->GetSize();
+		if (_uniformBlock != nullptr) {
+			size = _uniformBlock->GetSize();
 		}
 		return size;
 	}
@@ -56,46 +56,46 @@ namespace nCine::RHI::GL
 	std::uint8_t GLUniformBlockCache::GetAlignAmount() const
 	{
 		std::uint8_t alignAmount = 0;
-		if (uniformBlock_ != nullptr) {
-			alignAmount = uniformBlock_->GetAlignAmount();
+		if (_uniformBlock != nullptr) {
+			alignAmount = _uniformBlock->GetAlignAmount();
 		}
 		return alignAmount;
 	}
 
 	void GLUniformBlockCache::SetDataPointer(GLubyte* dataPointer)
 	{
-		dataPointer_ = dataPointer;
+		_dataPointer = dataPointer;
 
-		for (GLUniformCache& uniformCache : uniformCaches_) {
-			uniformCache.SetDataPointer(dataPointer_ + uniformCache.GetUniform()->GetOffset());
+		for (GLUniformCache& uniformCache : _uniformCaches) {
+			uniformCache.SetDataPointer(_dataPointer + uniformCache.GetUniform()->GetOffset());
 		}
 	}
 
 	void GLUniformBlockCache::SetUsedSize(GLint usedSize)
 	{
 		if (usedSize >= 0) {
-			usedSize_ = usedSize;
+			_usedSize = usedSize;
 		}
 	}
 
 	bool GLUniformBlockCache::CopyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes)
 	{
-		if (destIndex + numBytes > std::uint32_t(GetSize()) || numBytes == 0 || src == nullptr || dataPointer_ == nullptr) {
+		if (destIndex + numBytes > std::uint32_t(GetSize()) || numBytes == 0 || src == nullptr || _dataPointer == nullptr) {
 			return false;
 		}
-		std::memcpy(&dataPointer_[destIndex], src, numBytes);
+		std::memcpy(&_dataPointer[destIndex], src, numBytes);
 		return true;
 	}
 
 	GLUniformCache* GLUniformBlockCache::GetUniform(StringView name)
 	{
-		return uniformCaches_.find(String::nullTerminatedView(name));
+		return _uniformCaches.find(String::nullTerminatedView(name));
 	}
 
 	void GLUniformBlockCache::SetBlockBinding(GLuint blockBinding)
 	{
-		if (uniformBlock_) {
-			uniformBlock_->SetBlockBinding(blockBinding);
+		if (_uniformBlock) {
+			_uniformBlock->SetBlockBinding(blockBinding);
 		}
 	}
 
@@ -111,7 +111,7 @@ namespace nCine::RHI::GL
 		// vec2 / vec3 types (stride 16 vs their tight size) and the columns of mat2 / mat3 (column stride 16
 		// vs 8 / 12) - repack those into a scratch buffer before uploading. vec4-sized rows (vec4, ivec4,
 		// mat4 columns) are already dense.
-		for (GLUniformCache& memberCache : uniformCaches_) {
+		for (GLUniformCache& memberCache : _uniformCaches) {
 			const GLUniform* uniform = memberCache.GetUniform();
 			if (uniform == nullptr) {
 				continue;

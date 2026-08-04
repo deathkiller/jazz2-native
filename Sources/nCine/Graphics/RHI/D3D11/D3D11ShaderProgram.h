@@ -124,22 +124,22 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 		inline Introspection GetIntrospection() const {
-			return introspection_;
+			return _introspection;
 		}
 		inline QueryPhase GetQueryPhase() const {
-			return queryPhase_;
+			return _queryPhase;
 		}
 		inline std::uint32_t GetBatchSize() const {
-			return batchSize_;
+			return _batchSize;
 		}
 		inline void SetBatchSize(std::uint32_t value) {
-			batchSize_ = value;
+			_batchSize = value;
 		}
 
 		bool IsLinked() const;
@@ -152,10 +152,10 @@ namespace nCine::RHI::D3D11
 		}
 
 		inline std::uint32_t GetUniformsSize() const {
-			return uniformsSize_;
+			return _uniformsSize;
 		}
 		inline std::uint32_t GetUniformBlocksSize() const {
-			return uniformBlocksSize_;
+			return _uniformBlocksSize;
 		}
 
 		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
@@ -165,7 +165,7 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes and compile HLSL */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
-			reflection_ = reflection;
+			_reflection = reflection;
 		}
 		/**
 			@brief Records the true (program, variant) identity of the loaded shader
@@ -188,7 +188,7 @@ namespace nCine::RHI::D3D11
 		bool FinalizeAfterLinking(Introspection introspection);
 
 		inline std::uint32_t GetAttributeCount() const {
-			return std::uint32_t(attributes_.size());
+			return std::uint32_t(_attributes.size());
 		}
 		bool HasAttribute(const char* name) const;
 		D3D11VertexFormat::Attribute* GetAttribute(const char* name);
@@ -205,10 +205,10 @@ namespace nCine::RHI::D3D11
 		void SetObjectLabel(StringView label);
 
 		inline bool GetLogOnErrors() const {
-			return shouldLogOnErrors_;
+			return _shouldLogOnErrors;
 		}
 		inline void SetLogOnErrors(bool shouldLogOnErrors) {
-			shouldLogOnErrors_ = shouldLogOnErrors;
+			_shouldLogOnErrors = shouldLogOnErrors;
 		}
 
 		// -- Backend extensions (used by the uniform caches and the device draw path) --
@@ -220,89 +220,89 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Returns the compiled vertex shader, or `nullptr` if not compiled (e.g. runtime shader with no HLSL) */
 		inline ID3D11VertexShader* GetVertexShader() const {
-			return vertexShader_;
+			return _vertexShader;
 		}
 		/** @brief Returns the compiled pixel shader, or `nullptr` */
 		inline ID3D11PixelShader* GetPixelShader() const {
-			return pixelShader_;
+			return _pixelShader;
 		}
 		/** @brief Returns/creates the input layout for this program's attributes + bound vertex format; `nullptr` for `SV_VertexID` shaders */
 		ID3D11InputLayout* GetInputLayout();
 		/** @brief Returns `true` if the vertex shader reads vertex attributes (needs an input layout + vertex buffer) */
 		inline bool HasVertexAttributes() const {
-			return !attributes_.empty();
+			return !_attributes.empty();
 		}
 		/** @brief Returns the vertex buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const D3D11BufferObject* GetBoundVbo() const {
-			return boundVbo_;
+			return _boundVbo;
 		}
 		/** @brief Returns the index buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const D3D11BufferObject* GetBoundIbo() const {
-			return boundIbo_;
+			return _boundIbo;
 		}
 		/** @brief Returns the per-vertex byte stride (from the first enabled attribute of the bound vertex format) */
 		std::uint32_t GetVertexStride() const;
 
 		/** @brief Constant-buffer slots the vertex stage expects (rebuilt and bound each draw) */
 		inline const CBufferSlotList& GetVsCBuffers() const {
-			return vsCBuffers_;
+			return _vsCBuffers;
 		}
 		/** @brief Constant-buffer slots the pixel stage expects */
 		inline const CBufferSlotList& GetPsCBuffers() const {
-			return psCBuffers_;
+			return _psCBuffers;
 		}
 		/** @brief Bitmask of the texture/sampler registers the vertex stage actually reads (bit N = slot tN/sN) */
 		inline std::uint32_t GetVsTextureMask() const {
-			return vsTextureMask_;
+			return _vsTextureMask;
 		}
 		/** @brief Bitmask of the texture/sampler registers the pixel stage actually reads */
 		inline std::uint32_t GetPsTextureMask() const {
-			return psTextureMask_;
+			return _psTextureMask;
 		}
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		Status status_;
-		Introspection introspection_;
-		QueryPhase queryPhase_;
-		std::uint32_t batchSize_;
-		bool shouldLogOnErrors_;
-		std::uint32_t uniformsSize_;
-		std::uint32_t uniformBlocksSize_;
+		std::uint32_t _handle;
+		Status _status;
+		Introspection _introspection;
+		QueryPhase _queryPhase;
+		std::uint32_t _batchSize;
+		bool _shouldLogOnErrors;
+		std::uint32_t _uniformsSize;
+		std::uint32_t _uniformBlocksSize;
 
-		SmallVector<D3D11Uniform, 0> uniforms_;
-		SmallVector<D3D11UniformBlock, 0> uniformBlocks_;
-		SmallVector<D3D11Attribute, 0> attributes_;
+		SmallVector<D3D11Uniform, 0> _uniforms;
+		SmallVector<D3D11UniformBlock, 0> _uniformBlocks;
+		SmallVector<D3D11Attribute, 0> _attributes;
 
-		const ShaderCompiler::ProgramVariant* reflection_;
+		const ShaderCompiler::ProgramVariant* _reflection;
 
-		D3D11VertexFormat vertexFormat_;
-		const D3D11BufferObject* boundVbo_;
-		const D3D11BufferObject* boundIbo_;
+		D3D11VertexFormat _vertexFormat;
+		const D3D11BufferObject* _boundVbo;
+		const D3D11BufferObject* _boundIbo;
 
 		struct ResolvedUniform
 		{
 			String Name;
 			const std::uint8_t* Data;
 		};
-		SmallVector<ResolvedUniform, 0> resolvedUniforms_;
+		SmallVector<ResolvedUniform, 0> _resolvedUniforms;
 
 		// Compiled Direct3D 11 objects (owned)
-		ID3D11VertexShader* vertexShader_;
-		ID3D11PixelShader* pixelShader_;
-		ID3D11InputLayout* inputLayout_;
-		std::uint64_t inputLayoutFingerprint_;		// vertex-format fingerprint the cached input layout was built for
-		ShaderByteCode vsByteCode_;					// kept for building input layouts
-		CBufferSlotList vsCBuffers_;
-		CBufferSlotList psCBuffers_;
-		std::uint32_t vsTextureMask_ = 0;			// texture/sampler registers the stage binds (from bytecode reflection)
-		std::uint32_t psTextureMask_ = 0;
+		ID3D11VertexShader* _vertexShader;
+		ID3D11PixelShader* _pixelShader;
+		ID3D11InputLayout* _inputLayout;
+		std::uint64_t _inputLayoutFingerprint;		// vertex-format fingerprint the cached input layout was built for
+		ShaderByteCode _vsByteCode;					// kept for building input layouts
+		CBufferSlotList _vsCBuffers;
+		CBufferSlotList _psCBuffers;
+		std::uint32_t _vsTextureMask = 0;			// texture/sampler registers the stage binds (from bytecode reflection)
+		std::uint32_t _psTextureMask = 0;
 
 		void PerformIntrospection();
 		void ImportReflection();
-		/** @brief Compiles `reflection_`'s HLSL stage sources and reflects their constant buffers (called during introspection) */
+		/** @brief Compiles `_reflection`'s HLSL stage sources and reflects their constant buffers (called during introspection) */
 		void CompileHlsl();
 		/** @brief Reflects the constant buffers and used texture/sampler registers of one compiled stage bytecode */
 		void ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, CBufferSlotList& slots, std::uint32_t& textureMask);

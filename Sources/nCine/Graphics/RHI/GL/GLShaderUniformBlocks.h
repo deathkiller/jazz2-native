@@ -49,17 +49,17 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the number of managed uniform blocks */
 		inline unsigned int GetUniformBlockCount() const {
-			return uniformBlockCaches_.size();
+			return _uniformBlockCaches.size();
 		}
 		/** @brief Returns whether a uniform block with the specified name is managed */
 		inline bool HasUniformBlock(const char* name) const {
-			return (uniformBlockCaches_.find(String::nullTerminatedView(name)) != nullptr);
+			return (_uniformBlockCaches.find(String::nullTerminatedView(name)) != nullptr);
 		}
 		/** @brief Returns the uniform block cache with the specified name, or `nullptr` if not found */
 		GLUniformBlockCache* GetUniformBlock(const char* name);
 		/** @brief Returns the hashmap of all managed uniform block caches */
 		inline const UniformHashMapType& GetAllUniformBlocks() const {
-			return uniformBlockCaches_;
+			return _uniformBlockCaches;
 		}
 		/** @brief Copies the managed blocks into a uniform buffer acquired from the buffers manager */
 		void CommitUniformBlocks();
@@ -68,16 +68,16 @@ namespace nCine::RHI::GL
 		void Bind();
 
 	private:
-		static UniformRangeAllocator uniformRangeAllocator_;
+		static UniformRangeAllocator _uniformRangeAllocator;
 
-		GLShaderProgram* shaderProgram_;
+		GLShaderProgram* _shaderProgram;
 		// Pointer to the data of the first uniform block
-		GLubyte* dataPointer_;
+		GLubyte* _dataPointer;
 
 		// Uniform buffer range for binding
-		RHI::BufferRange uboParams_;
+		RHI::BufferRange _uboParams;
 
-		UniformHashMapType uniformBlockCaches_;
+		UniformHashMapType _uniformBlockCaches;
 
 		// Imports the uniform blocks with the option of including only some or excluding others
 		void ImportUniformBlocks(const char* includeOnly, const char* exclude);

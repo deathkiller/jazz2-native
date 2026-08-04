@@ -111,7 +111,7 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
-	std::uint32_t D3D11ShaderProgram::nextHandle_ = 1;
+	std::uint32_t D3D11ShaderProgram::_nextHandle = 1;
 
 	D3D11ShaderProgram::D3D11ShaderProgram()
 		: D3D11ShaderProgram(QueryPhase::Immediate)
@@ -119,10 +119,10 @@ namespace nCine::RHI::D3D11
 	}
 
 	D3D11ShaderProgram::D3D11ShaderProgram(QueryPhase queryPhase)
-		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
-			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
-			reflection_(nullptr), boundVbo_(nullptr), boundIbo_(nullptr),
-			vertexShader_(nullptr), pixelShader_(nullptr), inputLayout_(nullptr), inputLayoutFingerprint_(~std::uint64_t(0))
+		: _handle(_nextHandle++), _status(Status::NotLinked), _introspection(Introspection::Disabled), _queryPhase(queryPhase),
+			_batchSize(DefaultBatchSize), _shouldLogOnErrors(true), _uniformsSize(0), _uniformBlocksSize(0),
+			_reflection(nullptr), _boundVbo(nullptr), _boundIbo(nullptr),
+			_vertexShader(nullptr), _pixelShader(nullptr), _inputLayout(nullptr), _inputLayoutFingerprint(~std::uint64_t(0))
 	{
 	}
 
@@ -149,9 +149,9 @@ namespace nCine::RHI::D3D11
 		// Clear this program from the device's current-program and last-bound-shader tracking before the
 		// shader objects are released, so a recycled pointer can't be mistaken for a still-bound shader
 		D3D11Device::OnProgramDestroyed(this);
-		SafeRelease(inputLayout_);
-		SafeRelease(pixelShader_);
-		SafeRelease(vertexShader_);
+		SafeRelease(_inputLayout);
+		SafeRelease(_pixelShader);
+		SafeRelease(_vertexShader);
 		// The pipeline keys per-shader camera uniform data on the program pointer; drop this program's
 		// entry so RenderResources::Dispose() finds the map empty (mirrors GLShaderProgram's destructor)
 		RenderResources::RemoveCameraUniformData(this);
@@ -159,7 +159,7 @@ namespace nCine::RHI::D3D11
 
 	bool D3D11ShaderProgram::IsLinked() const
 	{
-		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
+		return (_status == Status::Linked || _status == Status::LinkedWithDeferredQueries || _status == Status::LinkedWithIntrospection);
 	}
 
 	bool D3D11ShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
@@ -198,7 +198,7 @@ namespace nCine::RHI::D3D11
 
 	bool D3D11ShaderProgram::FinalizeAfterLinking(Introspection introspection)
 	{
-		introspection_ = introspection;
+		_introspection = introspection;
 		PerformIntrospection();
 		return true;
 	}
@@ -210,40 +210,40 @@ namespace nCine::RHI::D3D11
 
 	void D3D11ShaderProgram::PerformIntrospection()
 	{
-		if (introspection_ != Introspection::Disabled && status_ != Status::LinkedWithIntrospection) {
-			uniformsSize_ = 0;
-			uniformBlocksSize_ = 0;
+		if (_introspection != Introspection::Disabled && _status != Status::LinkedWithIntrospection) {
+			_uniformsSize = 0;
+			_uniformBlocksSize = 0;
 
-			if (reflection_ != nullptr) {
+			if (_reflection != nullptr) {
 				ImportReflection();
 				// Compile the HLSL stage sources while the reflection is still available. Attribute/block
 				// imports above populate the data the cbuffer reflection maps block cbuffers against.
 				CompileHlsl();
 			}
-			status_ = Status::LinkedWithIntrospection;
+			_status = Status::LinkedWithIntrospection;
 		}
 		// The reflection is consumed by introspection (its layout is imported into the members above)
-		reflection_ = nullptr;
+		_reflection = nullptr;
 	}
 
 	void D3D11ShaderProgram::ImportReflection()
 	{
-		const ShaderCompiler::ProgramVariant& reflection = *reflection_;
+		const ShaderCompiler::ProgramVariant& reflection = *_reflection;
 		std::int32_t nextLocation = 0;
 
 		// Loose uniforms - samplers are kept in a separate reflection list but treated as loose uniforms here
 		for (std::size_t i = 0; i < reflection.UniformCount; i++) {
 			const ShaderCompiler::Uniform& u = reflection.Uniforms[i];
-			uniforms_.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 		for (std::size_t i = 0; i < reflection.TextureCount; i++) {
 			const ShaderCompiler::TextureBinding& t = reflection.Textures[i];
-			uniforms_.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 
-		uniformBlocks_.reserve(reflection.BlockCount);
+		_uniformBlocks.reserve(reflection.BlockCount);
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
 			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
 
@@ -252,18 +252,18 @@ namespace nCine::RHI::D3D11
 			std::uint32_t effectiveBatchSize = 0;
 			std::uint32_t dataSize = b.BaseSize;
 			if (b.InstanceStride > 0) {
-				effectiveBatchSize = (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0)
-					? batchSize_ : (64u * 1024u) / b.InstanceStride;
+				effectiveBatchSize = (_batchSize != std::uint32_t(DefaultBatchSize) && _batchSize > 0)
+					? _batchSize : (64u * 1024u) / b.InstanceStride;
 				dataSize += b.InstanceStride * effectiveBatchSize;
 			}
 
-			const std::uint32_t blockIndex = std::uint32_t(uniformBlocks_.size());
-			uniformBlocks_.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
-			D3D11UniformBlock& block = uniformBlocks_.back();
-			uniformBlocksSize_ += block.GetSize();
+			const std::uint32_t blockIndex = std::uint32_t(_uniformBlocks.size());
+			_uniformBlocks.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
+			D3D11UniformBlock& block = _uniformBlocks.back();
+			_uniformBlocksSize += block.GetSize();
 
-			if (introspection_ != Introspection::NoUniformsInBlocks) {
-				block.members_.reserve(b.MemberCount);
+			if (_introspection != Introspection::NoUniformsInBlocks) {
+				block._members.reserve(b.MemberCount);
 				for (std::size_t j = 0; j < b.MemberCount; j++) {
 					const ShaderCompiler::BlockMember& m = b.Members[j];
 					if (m.Type == ShaderCompiler::UniformType::Struct) {
@@ -272,14 +272,14 @@ namespace nCine::RHI::D3D11
 					}
 					D3D11Uniform member;
 					member.SetName(m.Name);
-					member.type_ = m.Type;
-					member.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
+					member._type = m.Type;
+					member._size = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
 						? std::int32_t(effectiveBatchSize)
 						: (m.ArraySize > 0 ? std::int32_t(m.ArraySize) : 1);
-					member.blockIndex_ = std::int32_t(blockIndex);
-					member.offset_ = std::int32_t(m.Offset);
-					member.owner_ = this;
-					block.members_.push_back(member);
+					member._blockIndex = std::int32_t(blockIndex);
+					member._offset = std::int32_t(m.Offset);
+					member._owner = this;
+					block._members.push_back(member);
 				}
 			}
 		}
@@ -287,8 +287,8 @@ namespace nCine::RHI::D3D11
 		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
 			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
 			const std::int32_t location = (a.Location >= 0 ? a.Location : std::int32_t(i));
-			attributes_.emplace_back(a.Name, a.Type, location);
-			vertexFormat_[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
+			_attributes.emplace_back(a.Name, a.Type, location);
+			_vertexFormat[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
 		}
 	}
 
@@ -303,15 +303,15 @@ namespace nCine::RHI::D3D11
 		ShaderByteCode vsBytes;
 		ShaderByteCode psBytes;
 
-		const char* vsSource = reflection_->HlslVsSource;
-		const char* fsSource = reflection_->HlslFsSource;
-		if (reflection_->HlslVsDxbc != nullptr && reflection_->HlslFsDxbc != nullptr &&
-			reflection_->HlslVsDxbcSize > 0 && reflection_->HlslFsDxbcSize > 0) {
+		const char* vsSource = _reflection->HlslVsSource;
+		const char* fsSource = _reflection->HlslFsSource;
+		if (_reflection->HlslVsDxbc != nullptr && _reflection->HlslFsDxbc != nullptr &&
+			_reflection->HlslVsDxbcSize > 0 && _reflection->HlslFsDxbcSize > 0) {
 			// Precompiled path: ShaderCompiler embedded offline-compiled DXBC (same entry points/targets and
 			// column-major packing as the runtime compile below, but fully optimized) - no D3DCompile at
 			// startup and no on-disk cache needed. This is also what UWP/Xbox builds run.
-			vsBytes.assign(reflection_->HlslVsDxbc, reflection_->HlslVsDxbc + reflection_->HlslVsDxbcSize);
-			psBytes.assign(reflection_->HlslFsDxbc, reflection_->HlslFsDxbc + reflection_->HlslFsDxbcSize);
+			vsBytes.assign(_reflection->HlslVsDxbc, _reflection->HlslVsDxbc + _reflection->HlslVsDxbcSize);
+			psBytes.assign(_reflection->HlslFsDxbc, _reflection->HlslFsDxbc + _reflection->HlslFsDxbcSize);
 		} else if (vsSource != nullptr && fsSource != nullptr) {
 			// Runtime-compile fallback for variants that carry only HLSL text (headers generated without
 			// d3dcompiler_47 or with --no-dxbc)
@@ -353,7 +353,7 @@ namespace nCine::RHI::D3D11
 				};
 
 				if (!compileStage(vsSource, "VSMain", "vs_4_0", vsBytes) || !compileStage(fsSource, "PSMain", "ps_4_0", psBytes)) {
-					status_ = Status::CompilationFailed;
+					_status = Status::CompilationFailed;
 					return;
 				}
 				if (!cachePath.empty()) {
@@ -362,29 +362,29 @@ namespace nCine::RHI::D3D11
 			}
 		} else {
 			// No HLSL lowering available (e.g. a runtime-compiled shader outside the emitter's subset)
-			if (shouldLogOnErrors_) {
-				LOGW("Program {} has no HLSL bytecode or sources; draws with it are skipped", handle_);
+			if (_shouldLogOnErrors) {
+				LOGW("Program {} has no HLSL bytecode or sources; draws with it are skipped", _handle);
 			}
 			return;
 		}
 
-		HRESULT hr = device->CreateVertexShader(vsBytes.data(), vsBytes.size(), nullptr, &vertexShader_);
+		HRESULT hr = device->CreateVertexShader(vsBytes.data(), vsBytes.size(), nullptr, &_vertexShader);
 		if (SUCCEEDED(hr)) {
-			hr = device->CreatePixelShader(psBytes.data(), psBytes.size(), nullptr, &pixelShader_);
+			hr = device->CreatePixelShader(psBytes.data(), psBytes.size(), nullptr, &_pixelShader);
 		}
 		if (FAILED(hr)) {
 			LOGE("Failed to create Direct3D 11 shader objects: 0x{:.8x}", static_cast<std::uint32_t>(hr));
-			SafeRelease(vertexShader_);
-			SafeRelease(pixelShader_);
-			status_ = Status::CompilationFailed;
+			SafeRelease(_vertexShader);
+			SafeRelease(_pixelShader);
+			_status = Status::CompilationFailed;
 			return;
 		}
 
 		// Keep the VS bytecode so input layouts can be validated/created against it later
-		vsByteCode_ = vsBytes;
+		_vsByteCode = vsBytes;
 
-		ReflectStageCBuffers(vsBytes.data(), vsBytes.size(), vsCBuffers_, vsTextureMask_);
-		ReflectStageCBuffers(psBytes.data(), psBytes.size(), psCBuffers_, psTextureMask_);
+		ReflectStageCBuffers(vsBytes.data(), vsBytes.size(), _vsCBuffers, _vsTextureMask);
+		ReflectStageCBuffers(psBytes.data(), psBytes.size(), _psCBuffers, _psTextureMask);
 	}
 
 	void D3D11ShaderProgram::ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, CBufferSlotList& slots, std::uint32_t& textureMask)
@@ -442,8 +442,8 @@ namespace nCine::RHI::D3D11
 			} else {
 				slot.IsGlobals = false;
 				slot.BlockIndex = -1;
-				for (std::size_t b = 0; b < uniformBlocks_.size(); b++) {
-					if (std::strcmp(uniformBlocks_[b].GetName(), cbDesc.Name) == 0) {
+				for (std::size_t b = 0; b < _uniformBlocks.size(); b++) {
+					if (std::strcmp(_uniformBlocks[b].GetName(), cbDesc.Name) == 0) {
 						slot.BlockIndex = std::int32_t(b);
 						break;
 					}
@@ -458,13 +458,13 @@ namespace nCine::RHI::D3D11
 
 	ID3D11InputLayout* D3D11ShaderProgram::GetInputLayout()
 	{
-		if (attributes_.empty() || vsByteCode_.empty()) {
+		if (_attributes.empty() || _vsByteCode.empty()) {
 			return nullptr;
 		}
 		// The attribute set is fixed per program, so the layout is built once and cached (the per-vertex byte
 		// offsets/stride the pipeline set on the vertex format are stable for this program's geometry).
-		if (inputLayout_ != nullptr) {
-			return inputLayout_;
+		if (_inputLayout != nullptr) {
+			return _inputLayout;
 		}
 
 		ID3D11Device* device = D3D11Device::GetD3DDevice();
@@ -474,17 +474,17 @@ namespace nCine::RHI::D3D11
 
 		// One input element per reflected attribute. The HLSL emitter assigns each attribute the semantic
 		// TEXCOORD<location>, so the semantic index is the attribute location; the within-vertex byte offset
-		// comes from the vertex format the pipeline defined (its `pointer_`), matching the GL backend which
+		// comes from the vertex format the pipeline defined (its `_pointer`), matching the GL backend which
 		// feeds that same value to glVertexAttribPointer.
 		// One element per attribute; the shipped attribute-based shaders stay well inside the inline capacity
 		SmallVector<D3D11_INPUT_ELEMENT_DESC, D3D11VertexFormat::MaxAttributes> elements;
-		elements.reserve(attributes_.size());
-		for (const D3D11Attribute& a : attributes_) {
+		elements.reserve(_attributes.size());
+		for (const D3D11Attribute& a : _attributes) {
 			const std::int32_t loc = a.GetLocation();
 			if (loc < 0) {
 				continue;
 			}
-			const D3D11VertexFormat::Attribute& fa = vertexFormat_[std::uint32_t(loc)];
+			const D3D11VertexFormat::Attribute& fa = _vertexFormat[std::uint32_t(loc)];
 			D3D11_INPUT_ELEMENT_DESC desc = {};
 			desc.SemanticName = "TEXCOORD";
 			desc.SemanticIndex = static_cast<UINT>(loc);
@@ -511,21 +511,21 @@ namespace nCine::RHI::D3D11
 
 		ID3D11InputLayout* layout = nullptr;
 		const HRESULT hr = device->CreateInputLayout(elements.data(), static_cast<UINT>(elements.size()),
-			vsByteCode_.data(), vsByteCode_.size(), &layout);
+			_vsByteCode.data(), _vsByteCode.size(), &layout);
 		if (FAILED(hr)) {
-			LOGE("CreateInputLayout failed for program {}: 0x{:.8x}", handle_, static_cast<std::uint32_t>(hr));
+			LOGE("CreateInputLayout failed for program {}: 0x{:.8x}", _handle, static_cast<std::uint32_t>(hr));
 			return nullptr;
 		}
 
-		inputLayout_ = layout;
-		return inputLayout_;
+		_inputLayout = layout;
+		return _inputLayout;
 	}
 
 	std::uint32_t D3D11ShaderProgram::GetVertexStride() const
 	{
-		for (const D3D11Attribute& a : attributes_) {
+		for (const D3D11Attribute& a : _attributes) {
 			if (a.GetLocation() >= 0) {
-				const D3D11VertexFormat::Attribute& fa = vertexFormat_[std::uint32_t(a.GetLocation())];
+				const D3D11VertexFormat::Attribute& fa = _vertexFormat[std::uint32_t(a.GetLocation())];
 				if (fa.IsEnabled() && fa.GetStride() > 0) {
 					return static_cast<std::uint32_t>(fa.GetStride());
 				}
@@ -536,7 +536,7 @@ namespace nCine::RHI::D3D11
 
 	bool D3D11ShaderProgram::HasAttribute(const char* name) const
 	{
-		for (const D3D11Attribute& a : attributes_) {
+		for (const D3D11Attribute& a : _attributes) {
 			if (std::strcmp(a.GetName(), name) == 0) {
 				return true;
 			}
@@ -546,9 +546,9 @@ namespace nCine::RHI::D3D11
 
 	D3D11VertexFormat::Attribute* D3D11ShaderProgram::GetAttribute(const char* name)
 	{
-		for (const D3D11Attribute& a : attributes_) {
+		for (const D3D11Attribute& a : _attributes) {
 			if (std::strcmp(a.GetName(), name) == 0 && a.GetLocation() >= 0) {
-				return &vertexFormat_[std::uint32_t(a.GetLocation())];
+				return &_vertexFormat[std::uint32_t(a.GetLocation())];
 			}
 		}
 		return nullptr;
@@ -556,40 +556,40 @@ namespace nCine::RHI::D3D11
 
 	void D3D11ShaderProgram::DefineVertexFormat(const D3D11BufferObject* vbo, const D3D11BufferObject* ibo, std::uint32_t vboOffset)
 	{
-		boundVbo_ = vbo;
-		boundIbo_ = ibo;
+		_boundVbo = vbo;
+		_boundIbo = ibo;
 		if (vbo != nullptr) {
-			for (const D3D11Attribute& a : attributes_) {
+			for (const D3D11Attribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
-					D3D11VertexFormat::Attribute& attr = vertexFormat_[std::uint32_t(a.GetLocation())];
+					D3D11VertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
 					attr.setVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}
-			vertexFormat_.SetIbo(ibo);
+			_vertexFormat.SetIbo(ibo);
 		}
 	}
 
 	void D3D11ShaderProgram::Reset()
 	{
 		D3D11Device::OnProgramDestroyed(this);
-		uniforms_.clear();
-		uniformBlocks_.clear();
-		attributes_.clear();
-		resolvedUniforms_.clear();
-		vertexFormat_.Reset();
-		vsCBuffers_.clear();
-		psCBuffers_.clear();
-		vsByteCode_.clear();
-		vsTextureMask_ = 0;
-		psTextureMask_ = 0;
-		SafeRelease(inputLayout_);
-		SafeRelease(pixelShader_);
-		SafeRelease(vertexShader_);
-		inputLayoutFingerprint_ = ~std::uint64_t(0);
-		status_ = Status::NotLinked;
-		batchSize_ = DefaultBatchSize;
-		reflection_ = nullptr;
+		_uniforms.clear();
+		_uniformBlocks.clear();
+		_attributes.clear();
+		_resolvedUniforms.clear();
+		_vertexFormat.Reset();
+		_vsCBuffers.clear();
+		_psCBuffers.clear();
+		_vsByteCode.clear();
+		_vsTextureMask = 0;
+		_psTextureMask = 0;
+		SafeRelease(_inputLayout);
+		SafeRelease(_pixelShader);
+		SafeRelease(_vertexShader);
+		_inputLayoutFingerprint = ~std::uint64_t(0);
+		_status = Status::NotLinked;
+		_batchSize = DefaultBatchSize;
+		_reflection = nullptr;
 	}
 
 	void D3D11ShaderProgram::SetObjectLabel(StringView label)
@@ -600,18 +600,18 @@ namespace nCine::RHI::D3D11
 
 	void D3D11ShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
-		for (ResolvedUniform& r : resolvedUniforms_) {
+		for (ResolvedUniform& r : _resolvedUniforms) {
 			if (r.Name == name) {
 				r.Data = data;
 				return;
 			}
 		}
-		resolvedUniforms_.push_back({name, data});
+		_resolvedUniforms.push_back({name, data});
 	}
 
 	const std::uint8_t* D3D11ShaderProgram::ResolveUniform(const char* name) const
 	{
-		for (const ResolvedUniform& r : resolvedUniforms_) {
+		for (const ResolvedUniform& r : _resolvedUniforms) {
 			if (r.Name == name) {
 				return r.Data;
 			}

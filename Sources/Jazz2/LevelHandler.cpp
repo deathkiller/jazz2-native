@@ -91,12 +91,12 @@ namespace Jazz2
 
 	void AudioBufferPlayerForSplitscreen::updatePosition()
 	{
-		if (state_ != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
+		if (_state != PlayerState::Playing || GetFlags(PlayerFlags::SourceRelative) || GetFlags(PlayerFlags::As2D)) {
 			return;
 		}
 
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		setPositionInternal(getAdjustedPosition(device, position_, false, false));
+		setPositionInternal(getAdjustedPosition(device, _position, false, false));
 	}
 
 	void AudioBufferPlayerForSplitscreen::updateViewports(ArrayView<std::unique_ptr<Rendering::PlayerViewport>> viewports)

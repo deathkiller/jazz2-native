@@ -18,7 +18,7 @@ namespace nCine::RHI
 	public:
 		std::int32_t GetApiVersion(ApiVersion version) const override;
 		inline const InfoStrings& GetInfoStrings() const override {
-			return infoStrings_;
+			return _infoStrings;
 		}
 		std::int32_t GetValue(IntValues valueName) const override;
 		std::int32_t GetArrayValue(ArrayIntValues valueName, std::uint32_t index) const override;
@@ -28,19 +28,19 @@ namespace nCine::RHI
 		/** @brief Largest number of program binary formats that can be cached */
 		static constexpr std::int32_t MaxProgramBinaryFormats = 4;
 
-		std::int32_t majorVersion_;
-		std::int32_t minorVersion_;
+		std::int32_t _majorVersion;
+		std::int32_t _minorVersion;
 		/** @brief Release version number (not available in OpenGL ES) */
-		std::int32_t releaseVersion_;
+		std::int32_t _releaseVersion;
 
-		InfoStrings infoStrings_;
+		InfoStrings _infoStrings;
 
 		/** @brief Cached values of the queryable integer limits */
-		std::int32_t intValues_[std::int32_t(IRhiCapabilities::IntValues::Count)];
+		std::int32_t _intValues[std::int32_t(IRhiCapabilities::IntValues::Count)];
 		/** @brief Cached availability flags of the queryable OpenGL extensions */
-		bool extensions_[std::int32_t(IRhiCapabilities::Extensions::Count)];
+		bool _extensions[std::int32_t(IRhiCapabilities::Extensions::Count)];
 		/** @brief Cached program binary formats, the first @ref IntValues::NUM_PROGRAM_BINARY_FORMATS are valid */
-		std::int32_t programBinaryFormats_[MaxProgramBinaryFormats];
+		std::int32_t _programBinaryFormats[MaxProgramBinaryFormats];
 
 		RhiCapabilitiesBase();
 

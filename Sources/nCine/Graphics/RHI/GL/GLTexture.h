@@ -44,15 +44,15 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the texture object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns the target of the texture (e.g., `GL_TEXTURE_2D`) */
 		inline GLenum GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/**
@@ -124,17 +124,17 @@ namespace nCine::RHI::GL
 		static void InvalidateCachedBindings();
 
 	private:
-		static class GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> boundTextures_[MaxTextureUnits];
-		static std::uint32_t boundUnit_;
+		static class GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> _boundTextures[MaxTextureUnits];
+		static std::uint32_t _boundUnit;
 
-		GLuint glHandle_;
-		GLenum target_;
+		GLuint _glHandle;
+		GLenum _target;
 		/**
 		 * @brief Texture unit the texture was last bound to
 		 *
 		 * Mutable so that `const` texture objects can still be bound to a texture unit.
 		 */
-		mutable std::uint32_t textureUnit_;
+		mutable std::uint32_t _textureUnit;
 
 		static bool BindHandle(GLenum target, GLuint glHandle, std::uint32_t textureUnit);
 		static bool BindHandle(GLenum target, GLuint glHandle) {

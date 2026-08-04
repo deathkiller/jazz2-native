@@ -56,7 +56,7 @@ namespace nCine::Backends
 		bool isButtonDown(MouseButton button) const override;
 
 	private:
-		unsigned int buttons_;
+		unsigned int _buttons;
 
 		friend class SdlInputManager;
 	};
@@ -80,7 +80,7 @@ namespace nCine::Backends
 	public:
 		SdlKeyboardState()
 		{
-			keyState_ = SDL_GetKeyboardState(nullptr);
+			_keyState = SDL_GetKeyboardState(nullptr);
 		}
 
 		inline bool isKeyDown(Keys key) const override
@@ -89,7 +89,7 @@ namespace nCine::Backends
 			if (sdlKey == SDL_SCANCODE_UNKNOWN) {
 				return false;
 			} else {
-				return keyState_[sdlKey] != 0;
+				return _keyState[sdlKey] != 0;
 			}
 		}
 
@@ -98,9 +98,9 @@ namespace nCine::Backends
 	private:
 #if defined(WITH_SDL3)
 		// SDL3: SDL_GetKeyboardState returns a const bool array (was const Uint8 in SDL2)
-		const bool *keyState_;
+		const bool *_keyState;
 #else
-		const unsigned char *keyState_;
+		const unsigned char *_keyState;
 #endif
 	};
 
@@ -111,7 +111,7 @@ namespace nCine::Backends
 	{
 	public:
 		SdlJoystickState()
-			: sdlJoystick_(nullptr) {}
+			: _sdlJoystick(nullptr) {}
 
 		/** @brief Maximum absolute value reported by a joystick axis */
 		static constexpr short int MaxAxisValue = 32767;
@@ -121,7 +121,7 @@ namespace nCine::Backends
 		float axisValue(int axisId) const override;
 
 	private:
-		SDL_Joystick *sdlJoystick_;
+		SDL_Joystick *_sdlJoystick;
 
 		friend class SdlInputManager;
 	};
@@ -153,16 +153,16 @@ namespace nCine::Backends
 #if defined(WITH_SDL3)
 			// SDL3: SDL_GetMouseState reports the cursor position as float
 			float mouseX = 0.0f, mouseY = 0.0f;
-			mouseState_.buttons_ = SDL_GetMouseState(&mouseX, &mouseY);
-			mouseState_.x = static_cast<int>(mouseX);
-			mouseState_.y = static_cast<int>(mouseY);
+			_mouseState._buttons = SDL_GetMouseState(&mouseX, &mouseY);
+			_mouseState.x = static_cast<int>(mouseX);
+			_mouseState.y = static_cast<int>(mouseY);
 #else
-			mouseState_.buttons_ = SDL_GetMouseState(&mouseState_.x, &mouseState_.y);
+			_mouseState._buttons = SDL_GetMouseState(&_mouseState.x, &_mouseState.y);
 #endif
-			return mouseState_;
+			return _mouseState;
 		}
 
-		inline const KeyboardState& keyboardState() const override { return keyboardState_; }
+		inline const KeyboardState& keyboardState() const override { return _keyboardState; }
 
 		String getClipboardText() const override;
 		bool setClipboardText(StringView text) override;
@@ -183,22 +183,22 @@ namespace nCine::Backends
 	private:
 		static constexpr int MaxNumJoysticks = 16;
 
-		static TouchEvent touchEvent_;
-		static SdlMouseState mouseState_;
-		static MouseEvent mouseEvent_;
-		static SdlScrollEvent scrollEvent_;
-		static SdlKeyboardState keyboardState_;
-		static KeyboardEvent keyboardEvent_;
-		static TextInputEvent textInputEvent_;
+		static TouchEvent _touchEvent;
+		static SdlMouseState _mouseState;
+		static MouseEvent _mouseEvent;
+		static SdlScrollEvent _scrollEvent;
+		static SdlKeyboardState _keyboardState;
+		static KeyboardEvent _keyboardEvent;
+		static TextInputEvent _textInputEvent;
 
-		static SDL_Joystick *sdlJoysticks_[MaxNumJoysticks];
-		static SmallVector<SdlJoystickState, MaxNumJoysticks> joystickStates_;
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
-		static JoyConnectionEvent joyConnectionEvent_;
+		static SDL_Joystick *_sdlJoysticks[MaxNumJoysticks];
+		static SmallVector<SdlJoystickState, MaxNumJoysticks> _joystickStates;
+		static JoyButtonEvent _joyButtonEvent;
+		static JoyHatEvent _joyHatEvent;
+		static JoyAxisEvent _joyAxisEvent;
+		static JoyConnectionEvent _joyConnectionEvent;
 
-		static char joyGuidString_[33];
+		static char _joyGuidString[33];
 
 		/** @brief Deleted copy constructor */
 		SdlInputManager(const SdlInputManager &) = delete;

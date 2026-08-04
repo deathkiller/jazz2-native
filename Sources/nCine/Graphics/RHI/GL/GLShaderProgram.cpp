@@ -55,7 +55,7 @@ namespace nCine::RHI::GL
 		}
 	}
 
-	GLuint GLShaderProgram::boundProgram_ = 0;
+	GLuint GLShaderProgram::_boundProgram = 0;
 
 	GLShaderProgram::GLShaderProgram()
 		: GLShaderProgram(QueryPhase::Immediate)
@@ -63,21 +63,21 @@ namespace nCine::RHI::GL
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
-		: glHandle_(0), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase), batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0), reflection_(nullptr)
+		: _glHandle(0), _status(Status::NotLinked), _introspection(Introspection::Disabled), _queryPhase(queryPhase), _batchSize(DefaultBatchSize), _shouldLogOnErrors(true), _uniformsSize(0), _uniformBlocksSize(0), _reflection(nullptr)
 	{
-		glHandle_ = glCreateProgram();
+		_glHandle = glCreateProgram();
 
-		attachedShaders_.reserve(AttachedShadersInitialSize);
-		uniforms_.reserve(UniformsInitialSize);
-		uniformBlocks_.reserve(UniformBlocksInitialSize);
-		attributes_.reserve(AttributesInitialSize);
+		_attachedShaders.reserve(AttachedShadersInitialSize);
+		_uniforms.reserve(UniformsInitialSize);
+		_uniformBlocks.reserve(UniformBlocksInitialSize);
+		_attributes.reserve(AttributesInitialSize);
 		
 #if defined(RHI_GL_PROFILE_ES2)
 		// GL_PROGRAM_BINARY_RETRIEVABLE_HINT (and glProgramParameteri) is ES 3.0; the ES2-era
 		// OES_get_program_binary path retrieves binaries without a hint
 #else
 		if (RenderResources::GetBinaryShaderCache().IsAvailable()) {
-			glProgramParameteri(glHandle_, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+			glProgramParameteri(_glHandle, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		}
 #endif
 	}
@@ -105,11 +105,11 @@ namespace nCine::RHI::GL
 
 	GLShaderProgram::~GLShaderProgram()
 	{
-		if (boundProgram_ == glHandle_) {
+		if (_boundProgram == _glHandle) {
 			glUseProgram(0);
 		}
 
-		glDeleteProgram(glHandle_);
+		glDeleteProgram(_glHandle);
 
 #if !defined(WITH_RHI_SOFTWARE)
 		// The render pipeline is built against a single backend's `RHI::` aliases; when the software
@@ -120,26 +120,26 @@ namespace nCine::RHI::GL
 
 	bool GLShaderProgram::IsLinked() const
 	{
-		return (status_ == Status::Linked ||
-				status_ == Status::LinkedWithDeferredQueries ||
-				status_ == Status::LinkedWithIntrospection);
+		return (_status == Status::Linked ||
+				_status == Status::LinkedWithDeferredQueries ||
+				_status == Status::LinkedWithIntrospection);
 	}
 
 	std::uint32_t GLShaderProgram::RetrieveInfoLogLength() const
 	{
 		GLint length = 0;
-		glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+		glGetProgramiv(_glHandle, GL_INFO_LOG_LENGTH, &length);
 		return static_cast<std::uint32_t>(length);
 	}
 
 	void GLShaderProgram::RetrieveInfoLog(std::string& infoLog) const
 	{
 		GLint length = 0;
-		glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+		glGetProgramiv(_glHandle, GL_INFO_LOG_LENGTH, &length);
 
 		if (length > 0 && infoLog.capacity() > 0) {
 			const std::uint32_t capacity = (std::uint32_t)infoLog.capacity();
-			glGetProgramInfoLog(glHandle_, capacity, &length, infoLog.data());
+			glGetProgramInfoLog(_glHandle, capacity, &length, infoLog.data());
 			infoLog.resize(static_cast<std::uint32_t>(length) < capacity - 1 ? static_cast<std::uint32_t>(length) : capacity - 1);
 		}
 	}
@@ -163,34 +163,34 @@ namespace nCine::RHI::GL
 	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(stage == ShaderStage::Vertex ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER);
 		shader->LoadFromStringsAndFile(strings, filename);
-		glAttachShader(glHandle_, shader->GetGLHandle());
+		glAttachShader(_glHandle, shader->GetGLHandle());
 
-		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
+		const GLShader::ErrorChecking errorChecking = (_queryPhase == GLShaderProgram::QueryPhase::Immediate)
 			? GLShader::ErrorChecking::Immediate
 			: GLShader::ErrorChecking::Deferred;
-		const bool hasCompiled = shader->Compile(errorChecking, shouldLogOnErrors_);
+		const bool hasCompiled = shader->Compile(errorChecking, _shouldLogOnErrors);
 
 		if (hasCompiled) {
-			attachedShaders_.push_back(std::move(shader));
+			_attachedShaders.push_back(std::move(shader));
 		} else {
-			status_ = Status::CompilationFailed;
+			_status = Status::CompilationFailed;
 		}
 		return hasCompiled;
 	}
 
 	bool GLShaderProgram::Link(Introspection introspection)
 	{
-		glLinkProgram(glHandle_);
+		glLinkProgram(_glHandle);
 		return FinalizeAfterLinking(introspection);
 	}
 
 	void GLShaderProgram::Use()
 	{
-		if (boundProgram_ != glHandle_) {
+		if (_boundProgram != _glHandle) {
 			ProcessDeferredQueries();
 
-			glUseProgram(glHandle_);
-			boundProgram_ = glHandle_;
+			glUseProgram(_glHandle);
+			_boundProgram = _glHandle;
 		}
 	}
 
@@ -200,19 +200,19 @@ namespace nCine::RHI::GL
 		// vitaGL provides no glValidateProgram(), program validation is a debug-only aid, so assume success
 		return true;
 #else
-		glValidateProgram(glHandle_);
+		glValidateProgram(_glHandle);
 		GLint status;
-		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
+		glGetProgramiv(_glHandle, GL_VALIDATE_STATUS, &status);
 		return (status == GL_TRUE);
 #endif
 	}
 
 	bool GLShaderProgram::FinalizeAfterLinking(Introspection introspection)
 	{
-		introspection_ = introspection;
+		_introspection = introspection;
 
-		if (queryPhase_ == QueryPhase::Immediate) {
-			status_ = Status::NotLinked;
+		if (_queryPhase == QueryPhase::Immediate) {
+			_status = Status::NotLinked;
 			const bool linkCheck = CheckLinking();
 			if (!linkCheck) {
 				return false;
@@ -221,17 +221,17 @@ namespace nCine::RHI::GL
 			// After linking, shader objects are not needed anymore
 #if !defined(DEATH_TARGET_VITA)
 			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
-			for (auto& shader : attachedShaders_) {
-				glDetachShader(glHandle_, shader->GetGLHandle());
+			for (auto& shader : _attachedShaders) {
+				glDetachShader(_glHandle, shader->GetGLHandle());
 			}
 #endif
 
-			attachedShaders_.clear();
+			_attachedShaders.clear();
 
 			PerformIntrospection();
 			return linkCheck;
 		} else {
-			status_ = GLShaderProgram::Status::LinkedWithDeferredQueries;
+			_status = GLShaderProgram::Status::LinkedWithDeferredQueries;
 			return true;
 		}
 	}
@@ -242,9 +242,9 @@ namespace nCine::RHI::GL
 		GLVertexFormat::Attribute* vertexAttribute = nullptr;
 
 		std::int32_t location = -1;
-		const bool attributeFound = attributeLocations_.contains(name, location);
+		const bool attributeFound = _attributeLocations.contains(name, location);
 		if (attributeFound) {
-			vertexAttribute = &vertexFormat_[location];
+			vertexAttribute = &_vertexFormat[location];
 		}
 		return vertexAttribute;
 	}
@@ -256,36 +256,36 @@ namespace nCine::RHI::GL
 		// corner VBO (bound to aQuadCorner); any real geometry attributes (mesh sprites) come from the geometry
 		// VBO. A VAO must be bound even when the sprite has no geometry VBO, so drive it off attribute presence.
 		std::int32_t cornerLocation = -1;
-		attributeLocations_.contains(Material::QuadCornerAttributeName, cornerLocation);
+		_attributeLocations.contains(Material::QuadCornerAttributeName, cornerLocation);
 		const GLBufferObject* cornerVbo = static_cast<const GLBufferObject*>(RenderResources::GetQuadCornerVbo());
 		bool hasBoundAttribute = false;
-		for (std::int32_t location : attributeLocations_) {
+		for (std::int32_t location : _attributeLocations) {
 			if (location == cornerLocation) {
 				if (cornerVbo != nullptr) {
-					vertexFormat_[location].setVbo(cornerVbo);
-					vertexFormat_[location].SetBaseOffset(0);
+					_vertexFormat[location].setVbo(cornerVbo);
+					_vertexFormat[location].SetBaseOffset(0);
 					hasBoundAttribute = true;
 				}
 			} else if (vbo != nullptr) {
-				vertexFormat_[location].setVbo(vbo);
-				vertexFormat_[location].SetBaseOffset(vboOffset);
+				_vertexFormat[location].setVbo(vbo);
+				_vertexFormat[location].SetBaseOffset(vboOffset);
 				hasBoundAttribute = true;
 			}
 		}
-		vertexFormat_.SetIbo(ibo);
+		_vertexFormat.SetIbo(ibo);
 		if (hasBoundAttribute) {
-			RenderResources::GetVaoPool().BindVao(vertexFormat_);
+			RenderResources::GetVaoPool().BindVao(_vertexFormat);
 		}
 #else
 		if (vbo != nullptr) {
-			for (std::int32_t location : attributeLocations_) {
-				vertexFormat_[location].setVbo(vbo);
-				vertexFormat_[location].SetBaseOffset(vboOffset);
+			for (std::int32_t location : _attributeLocations) {
+				_vertexFormat[location].setVbo(vbo);
+				_vertexFormat[location].SetBaseOffset(vboOffset);
 			}
-			vertexFormat_.SetIbo(ibo);
+			_vertexFormat.SetIbo(ibo);
 
 #if !defined(WITH_RHI_SOFTWARE)
-			RenderResources::GetVaoPool().BindVao(vertexFormat_);
+			RenderResources::GetVaoPool().BindVao(_vertexFormat);
 #endif
 		}
 #endif
@@ -293,51 +293,51 @@ namespace nCine::RHI::GL
 
 	void GLShaderProgram::Reset()
 	{
-		if (status_ != Status::NotLinked && status_ != Status::CompilationFailed) {
-			uniforms_.clear();
-			uniformBlocks_.clear();
-			attributes_.clear();
+		if (_status != Status::NotLinked && _status != Status::CompilationFailed) {
+			_uniforms.clear();
+			_uniformBlocks.clear();
+			_attributes.clear();
 
-			attributeLocations_.clear();
-			vertexFormat_.Reset();
+			_attributeLocations.clear();
+			_vertexFormat.Reset();
 
-			if (boundProgram_ == glHandle_) {
+			if (_boundProgram == _glHandle) {
 				glUseProgram(0);
 			}
 
 #if !defined(DEATH_TARGET_VITA)
 			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
-			for (auto& shader : attachedShaders_) {
-				glDetachShader(glHandle_, shader->GetGLHandle());
+			for (auto& shader : _attachedShaders) {
+				glDetachShader(_glHandle, shader->GetGLHandle());
 			}
 #endif
 
-			attachedShaders_.clear();
-			glDeleteProgram(glHandle_);
+			_attachedShaders.clear();
+			glDeleteProgram(_glHandle);
 
 #if !defined(WITH_RHI_SOFTWARE)
 			RenderResources::RemoveCameraUniformData(this);
 			RenderResources::UnregisterBatchedShader(this);
 #endif
 
-			glHandle_ = glCreateProgram();
+			_glHandle = glCreateProgram();
 		}
 
-		status_ = Status::NotLinked;
-		batchSize_ = DefaultBatchSize;
-		reflection_ = nullptr;
+		_status = Status::NotLinked;
+		_batchSize = DefaultBatchSize;
+		_reflection = nullptr;
 	}
 
 	void GLShaderProgram::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Program, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Program, _glHandle, label);
 	}
 
 	bool GLShaderProgram::ProcessDeferredQueries()
 	{
-		if (status_ == GLShaderProgram::Status::LinkedWithDeferredQueries) {
-			for (std::unique_ptr<GLShader>& attachedShader : attachedShaders_) {
-				const bool compileCheck = attachedShader->CheckCompilation(shouldLogOnErrors_);
+		if (_status == GLShaderProgram::Status::LinkedWithDeferredQueries) {
+			for (std::unique_ptr<GLShader>& attachedShader : _attachedShaders) {
+				const bool compileCheck = attachedShader->CheckCompilation(_shouldLogOnErrors);
 				if (!compileCheck) {
 					return false;
 				}
@@ -351,12 +351,12 @@ namespace nCine::RHI::GL
 			// After linking, shader objects are not needed anymore
 #if !defined(DEATH_TARGET_VITA)
 			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
-			for (auto& shader : attachedShaders_) {
-				glDetachShader(glHandle_, shader->GetGLHandle());
+			for (auto& shader : _attachedShaders) {
+				glDetachShader(_glHandle, shader->GetGLHandle());
 			}
 #endif
 
-			attachedShaders_.clear();
+			_attachedShaders.clear();
 
 			PerformIntrospection();
 		}
@@ -365,42 +365,42 @@ namespace nCine::RHI::GL
 
 	bool GLShaderProgram::CheckLinking()
 	{
-		if (status_ == Status::Linked || status_ == Status::LinkedWithIntrospection) {
+		if (_status == Status::Linked || _status == Status::LinkedWithIntrospection) {
 			return true;
 		}
 
 		GLint status;
-		glGetProgramiv(glHandle_, GL_LINK_STATUS, &status);
+		glGetProgramiv(_glHandle, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE) {
 #if defined(DEATH_TRACE)
-			if (shouldLogOnErrors_) {
+			if (_shouldLogOnErrors) {
 				GLint length = 0;
-				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				glGetProgramiv(_glHandle, GL_INFO_LOG_LENGTH, &length);
 				if (length > 0) {
 					static char buffer[2048];
-					glGetProgramInfoLog(glHandle_, sizeof(buffer), &length, buffer);
+					glGetProgramInfoLog(_glHandle, sizeof(buffer), &length, buffer);
 					LOGW("{}", buffer);
 				}
 			}
 #endif
-			status_ = Status::LinkingFailed;
+			_status = Status::LinkingFailed;
 			return false;
 		}
 
-		status_ = Status::Linked;
+		_status = Status::Linked;
 		return true;
 	}
 
 	void GLShaderProgram::PerformIntrospection()
 	{
-		if (introspection_ != Introspection::Disabled && status_ != Status::LinkedWithIntrospection) {
-			uniformsSize_ = 0;
-			uniformBlocksSize_ = 0;
+		if (_introspection != Introspection::Disabled && _status != Status::LinkedWithIntrospection) {
+			_uniformsSize = 0;
+			_uniformBlocksSize = 0;
 
-			if (reflection_ != nullptr) {
+			if (_reflection != nullptr) {
 				ImportReflection();
 			} else {
-				const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NoUniformsInBlocks)
+				const GLUniformBlock::DiscoverUniforms discover = (_introspection == Introspection::NoUniformsInBlocks)
 					? GLUniformBlock::DiscoverUniforms::DISABLED
 					: GLUniformBlock::DiscoverUniforms::ENABLED;
 
@@ -409,32 +409,32 @@ namespace nCine::RHI::GL
 				DiscoverAttributes();
 			}
 			InitVertexFormat();
-			status_ = Status::LinkedWithIntrospection;
+			_status = Status::LinkedWithIntrospection;
 		}
 		// The reflection data is consumed by introspection and may not outlive the caller, so it is never kept
-		reflection_ = nullptr;
+		_reflection = nullptr;
 	}
 
 	void GLShaderProgram::ImportReflection()
 	{
 		ZoneScopedC(0x81A861);
-		const ShaderCompiler::ProgramVariant& reflection = *reflection_;
+		const ShaderCompiler::ProgramVariant& reflection = *_reflection;
 
 		// Loose uniforms - the reflection keeps samplers in a separate list, but GL treats them as uniforms
 		// (all samplers are 2D across the shader set; the reflected texture bindings carry no dimension)
 		for (std::size_t i = 0; i < reflection.UniformCount; i++) {
 			const ShaderCompiler::Uniform& u = reflection.Uniforms[i];
-			GLUniform& uniform = uniforms_.emplace_back(glHandle_, u.Name, UniformTypeToGL(u.Type), GLint(u.ArraySize));
-			uniformsSize_ += uniform.GetMemorySize();
+			GLUniform& uniform = _uniforms.emplace_back(_glHandle, u.Name, UniformTypeToGL(u.Type), GLint(u.ArraySize));
+			_uniformsSize += uniform.GetMemorySize();
 
-			LOGD("Shader program {} - uniform {} : \"{}\" (reflected)", glHandle_, uniform.GetLocation(), uniform.GetName());
+			LOGD("Shader program {} - uniform {} : \"{}\" (reflected)", _glHandle, uniform.GetLocation(), uniform.GetName());
 		}
 		for (std::size_t i = 0; i < reflection.TextureCount; i++) {
 			const ShaderCompiler::TextureBinding& t = reflection.Textures[i];
-			GLUniform& uniform = uniforms_.emplace_back(glHandle_, t.Name, GL_SAMPLER_2D, 1);
-			uniformsSize_ += uniform.GetMemorySize();
+			GLUniform& uniform = _uniforms.emplace_back(_glHandle, t.Name, GL_SAMPLER_2D, 1);
+			_uniformsSize += uniform.GetMemorySize();
 
-			LOGD("Shader program {} - sampler uniform {} : \"{}\" (reflected)", glHandle_, uniform.GetLocation(), uniform.GetName());
+			LOGD("Shader program {} - sampler uniform {} : \"{}\" (reflected)", _glHandle, uniform.GetLocation(), uniform.GetName());
 		}
 
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
@@ -448,10 +448,10 @@ namespace nCine::RHI::GL
 			// (the ES2 path never binds a buffer range).
 			const GLuint blockIndex = GL_INVALID_INDEX;
 #else
-			const GLuint blockIndex = glGetUniformBlockIndex(glHandle_, b.Name);
+			const GLuint blockIndex = glGetUniformBlockIndex(_glHandle, b.Name);
 			if (blockIndex == GL_INVALID_INDEX) {
 				// The whole block was optimized out by the driver - GL introspection would not have listed it either
-				LOGD("Shader program {} - uniform block \"{}\" is inactive and was skipped", glHandle_, b.Name);
+				LOGD("Shader program {} - uniform block \"{}\" is inactive and was skipped", _glHandle, b.Name);
 				continue;
 			}
 #endif
@@ -461,15 +461,15 @@ namespace nCine::RHI::GL
 			std::uint32_t effectiveBatchSize = 0;
 			std::uint32_t dataSize = b.BaseSize;
 			if (b.InstanceStride > 0) {
-				effectiveBatchSize = (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0)
-					? batchSize_ : (64 * 1024) / b.InstanceStride;
+				effectiveBatchSize = (_batchSize != std::uint32_t(DefaultBatchSize) && _batchSize > 0)
+					? _batchSize : (64 * 1024) / b.InstanceStride;
 				dataSize += b.InstanceStride * effectiveBatchSize;
 			}
 
-			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, b.Name, blockIndex, GLint(dataSize));
-			uniformBlocksSize_ += uniformBlock.GetSize();
+			GLUniformBlock& uniformBlock = _uniformBlocks.emplace_back(_glHandle, b.Name, blockIndex, GLint(dataSize));
+			_uniformBlocksSize += uniformBlock.GetSize();
 
-			if (introspection_ != Introspection::NoUniformsInBlocks) {
+			if (_introspection != Introspection::NoUniformsInBlocks) {
 				for (std::size_t j = 0; j < b.MemberCount; j++) {
 					const ShaderCompiler::BlockMember& m = b.Members[j];
 					if (m.Type == ShaderCompiler::UniformType::Struct) {
@@ -481,22 +481,22 @@ namespace nCine::RHI::GL
 					GLUniform blockUniform;
 					std::size_t nameLength = strnlen(m.Name, GLUniform::MaxNameLength);
 					DEATH_ASSERT(nameLength < GLUniform::MaxNameLength);
-					std::memcpy(blockUniform.name_, m.Name, nameLength);
-					blockUniform.name_[nameLength] = '\0';
-					blockUniform.blockIndex_ = GLint(blockIndex);
-					blockUniform.type_ = UniformTypeToGL(m.Type);
-					blockUniform.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize) ? GLint(effectiveBatchSize)
+					std::memcpy(blockUniform._name, m.Name, nameLength);
+					blockUniform._name[nameLength] = '\0';
+					blockUniform._blockIndex = GLint(blockIndex);
+					blockUniform._type = UniformTypeToGL(m.Type);
+					blockUniform._size = (m.ArraySize == ShaderCompiler::SymbolicArraySize) ? GLint(effectiveBatchSize)
 						: (m.ArraySize > 0 ? GLint(m.ArraySize) : 1);
-					blockUniform.offset_ = GLint(m.Offset);
+					blockUniform._offset = GLint(m.Offset);
 #if defined(RHI_GL_PROFILE_ES2)
 					// The member is a real loose uniform on ES2 - resolve its location for the glUniform upload
-					blockUniform.location_ = glGetUniformLocation(glHandle_, m.Name);
+					blockUniform._location = glGetUniformLocation(_glHandle, m.Name);
 #endif
-					uniformBlock.blockUniforms_[blockUniform.name_] = blockUniform;
+					uniformBlock._blockUniforms[blockUniform._name] = blockUniform;
 				}
 			}
 
-			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align, reflected)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
+			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align, reflected)", _glHandle, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 
 #if defined(RHI_GL_PROFILE_ES2)
@@ -507,8 +507,8 @@ namespace nCine::RHI::GL
 #else
 		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
 			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
-			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, a.Name, UniformTypeToGL(a.Type));
-			LOGD("Shader program {} - attribute {} : \"{}\" (reflected)", glHandle_, attribute.GetLocation(), attribute.GetName());
+			DEATH_UNUSED GLAttribute& attribute = _attributes.emplace_back(_glHandle, a.Name, UniformTypeToGL(a.Type));
+			LOGD("Shader program {} - attribute {} : \"{}\" (reflected)", _glHandle, attribute.GetLocation(), attribute.GetName());
 		}
 #endif
 		GL_LOG_ERRORS();
@@ -521,13 +521,13 @@ namespace nCine::RHI::GL
 		// ES2 has no uniform blocks, so every active uniform is a loose one - enumerate them directly
 		// (glGetActiveUniformsiv() used below to filter out block members is ES 3.0)
 		GLint uniformCount = 0;
-		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
+		glGetProgramiv(_glHandle, GL_ACTIVE_UNIFORMS, &uniformCount);
 
 		for (GLint i = 0; i < uniformCount; i++) {
-			GLUniform& uniform = uniforms_.emplace_back(glHandle_, static_cast<GLuint>(i));
-			uniformsSize_ += uniform.GetMemorySize();
+			GLUniform& uniform = _uniforms.emplace_back(_glHandle, static_cast<GLuint>(i));
+			_uniformsSize += uniform.GetMemorySize();
 
-			LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
+			LOGD("Shader program {} - uniform {} : \"{}\"", _glHandle, uniform.GetLocation(), uniform.GetName());
 		}
 #else
 		static const std::uint32_t NumIndices = 512;
@@ -535,7 +535,7 @@ namespace nCine::RHI::GL
 		static GLint blockIndices[NumIndices];
 
 		GLint uniformCount = 0;
-		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
+		glGetProgramiv(_glHandle, GL_ACTIVE_UNIFORMS, &uniformCount);
 
 		if (uniformCount > 0) {
 			std::uint32_t uniformsOutsideBlocks = 0;
@@ -549,7 +549,7 @@ namespace nCine::RHI::GL
 				for (std::uint32_t i = 0; i < uniformCountStep; i++)
 					uniformIndices[i] = startIndex + i;
 
-				glGetActiveUniformsiv(glHandle_, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
+				glGetActiveUniformsiv(_glHandle, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
 
 				for (std::uint32_t i = 0; i < uniformCountStep; i++) {
 					if (blockIndices[i] == -1) {
@@ -564,10 +564,10 @@ namespace nCine::RHI::GL
 			}
 
 			for (std::uint32_t i = 0; i < uniformsOutsideBlocks; i++) {
-				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
-				uniformsSize_ += uniform.GetMemorySize();
+				GLUniform& uniform = _uniforms.emplace_back(_glHandle, indices[i]);
+				_uniformsSize += uniform.GetMemorySize();
 
-				LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
+				LOGD("Shader program {} - uniform {} : \"{}\"", _glHandle, uniform.GetLocation(), uniform.GetName());
 			}
 		}
 #endif
@@ -583,13 +583,13 @@ namespace nCine::RHI::GL
 #else
 		ZoneScopedC(0x81A861);
 		GLint count;
-		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORM_BLOCKS, &count);
+		glGetProgramiv(_glHandle, GL_ACTIVE_UNIFORM_BLOCKS, &count);
 
 		for (std::int32_t i = 0; i < count; i++) {
-			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
-			uniformBlocksSize_ += uniformBlock.GetSize();
+			GLUniformBlock& uniformBlock = _uniformBlocks.emplace_back(_glHandle, i, discover);
+			_uniformBlocksSize += uniformBlock.GetSize();
 
-			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
+			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align)", _glHandle, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 		GL_LOG_ERRORS();
 #endif
@@ -599,11 +599,11 @@ namespace nCine::RHI::GL
 	{
 		ZoneScopedC(0x81A861);
 		GLint count;
-		glGetProgramiv(glHandle_, GL_ACTIVE_ATTRIBUTES, &count);
+		glGetProgramiv(_glHandle, GL_ACTIVE_ATTRIBUTES, &count);
 
 		for (std::int32_t i = 0; i < count; i++) {
-			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
-			LOGD("Shader program {} - attribute {} : \"{}\"", glHandle_, attribute.GetLocation(), attribute.GetName());
+			DEATH_UNUSED GLAttribute& attribute = _attributes.emplace_back(_glHandle, i);
+			LOGD("Shader program {} - attribute {} : \"{}\"", _glHandle, attribute.GetLocation(), attribute.GetName());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -611,23 +611,23 @@ namespace nCine::RHI::GL
 	void GLShaderProgram::InitVertexFormat()
 	{
 		ZoneScopedC(0x81A861);
-		const std::uint32_t count = (std::uint32_t)attributes_.size();
+		const std::uint32_t count = (std::uint32_t)_attributes.size();
 		if (count > GLVertexFormat::MaxAttributes) {
 			LOGW("More active attributes ({}) than supported by the vertex format class ({})", count, GLVertexFormat::MaxAttributes);
 		}
-		for (std::uint32_t i = 0; i < attributes_.size(); i++) {
-			const GLAttribute& attribute = attributes_[i];
+		for (std::uint32_t i = 0; i < _attributes.size(); i++) {
+			const GLAttribute& attribute = _attributes[i];
 			const std::int32_t location = attribute.GetLocation();
 			if (location < 0)
 				continue;
 
-			attributeLocations_[attribute.GetName()] = location;
-			vertexFormat_[location].Init(attribute.GetLocation(), attribute.GetComponentCount(), attribute.GetBasicType());
+			_attributeLocations[attribute.GetName()] = location;
+			_vertexFormat[location].Init(attribute.GetLocation(), attribute.GetComponentCount(), attribute.GetBasicType());
 #if defined(RHI_GL_PROFILE_ES2)
 			// The ES2 quad-corner attribute is fed from a tightly-packed static VBO (a plain vec2 stream),
 			// not the geometry VBO; set its stride/offset once here (the VBO is bound in DefineVertexFormat).
 			if (std::strcmp(attribute.GetName(), Material::QuadCornerAttributeName) == 0) {
-				vertexFormat_[location].SetVboParameters(2 * sizeof(GLfloat), nullptr);
+				_vertexFormat[location].SetVboParameters(2 * sizeof(GLfloat), nullptr);
 			}
 #endif
 		}

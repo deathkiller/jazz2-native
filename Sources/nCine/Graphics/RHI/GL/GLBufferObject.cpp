@@ -5,45 +5,45 @@
 
 namespace nCine::RHI::GL
 {
-	GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> GLBufferObject::boundBuffers_;
-	GLuint GLBufferObject::boundIndexBase_[MaxIndexBufferRange];
-	GLBufferObject::BufferRange GLBufferObject::boundBufferRange_[MaxIndexBufferRange];
+	GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> GLBufferObject::_boundBuffers;
+	GLuint GLBufferObject::_boundIndexBase[MaxIndexBufferRange];
+	GLBufferObject::BufferRange GLBufferObject::_boundBufferRange[MaxIndexBufferRange];
 
 	GLBufferObject::GLBufferObject(GLenum target)
-		: glHandle_(0), target_(target), size_(0), mapped_(false)
+		: _glHandle(0), _target(target), _size(0), _mapped(false)
 	{
-		glGenBuffers(1, &glHandle_);
+		glGenBuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	GLBufferObject::~GLBufferObject()
 	{
-		if (boundBuffers_[target_] == glHandle_)
+		if (_boundBuffers[_target] == _glHandle)
 			Unbind();
 
 		// Scrub the indexed-binding caches, or a new buffer recycling this GL handle would be
 		// considered already bound and the actual glBindBufferBase()/glBindBufferRange() skipped
 		for (std::int32_t i = 0; i < MaxIndexBufferRange; i++) {
-			if (boundIndexBase_[i] == glHandle_) {
-				boundIndexBase_[i] = 0;
+			if (_boundIndexBase[i] == _glHandle) {
+				_boundIndexBase[i] = 0;
 			}
-			if (boundBufferRange_[i].glHandle == glHandle_) {
-				boundBufferRange_[i].glHandle = 0;
-				boundBufferRange_[i].offset = 0;
-				boundBufferRange_[i].ptrsize = 0;
+			if (_boundBufferRange[i].glHandle == _glHandle) {
+				_boundBufferRange[i].glHandle = 0;
+				_boundBufferRange[i].offset = 0;
+				_boundBufferRange[i].ptrsize = 0;
 			}
 		}
 
-		glDeleteBuffers(1, &glHandle_);
+		glDeleteBuffers(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	bool GLBufferObject::Bind() const
 	{
-		if (boundBuffers_[target_] != glHandle_) {
-			glBindBuffer(target_, glHandle_);
+		if (_boundBuffers[_target] != _glHandle) {
+			glBindBuffer(_target, _glHandle);
 			GL_LOG_ERRORS();
-			boundBuffers_[target_] = glHandle_;
+			_boundBuffers[_target] = _glHandle;
 			return true;
 		}
 		return false;
@@ -51,10 +51,10 @@ namespace nCine::RHI::GL
 
 	bool GLBufferObject::Unbind() const
 	{
-		if (boundBuffers_[target_] != 0) {
-			glBindBuffer(target_, 0);
+		if (_boundBuffers[_target] != 0) {
+			glBindBuffer(_target, 0);
 			GL_LOG_ERRORS();
-			boundBuffers_[target_] = 0;
+			_boundBuffers[_target] = 0;
 			return true;
 		}
 		return false;
@@ -64,16 +64,16 @@ namespace nCine::RHI::GL
 	{
 		TracyGpuZone("glBufferData");
 		Bind();
-		glBufferData(target_, size, data, usage);
+		glBufferData(_target, size, data, usage);
 		GL_LOG_ERRORS();
-		size_ = size;
+		_size = size;
 	}
 
 	void GLBufferObject::BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
 	{
 		TracyGpuZone("glBufferSubData");
 		Bind();
-		glBufferSubData(target_, offset, size, data);
+		glBufferSubData(_target, offset, size, data);
 		GL_LOG_ERRORS();
 	}
 
@@ -82,9 +82,9 @@ namespace nCine::RHI::GL
 	{
 		TracyGpuZone("glBufferStorage");
 		Bind();
-		glBufferStorage(target_, size, data, flags);
+		glBufferStorage(_target, size, data, flags);
 		GL_LOG_ERRORS();
-		size_ = size;
+		_size = size;
 	}
 #endif
 
@@ -95,17 +95,17 @@ namespace nCine::RHI::GL
 		// profile - the block members are pushed as loose uniforms and CommitUniformBlocks() is a no-op
 		static_cast<void>(index);
 #else
-		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
+		DEATH_ASSERT(_target == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange) {
-			glBindBufferBase(target_, index, glHandle_);
-		} else if (boundIndexBase_[index] != glHandle_) {
-			boundBufferRange_[index].glHandle = -1;
-			boundBufferRange_[index].offset = 0;
-			boundBufferRange_[index].ptrsize = 0;
-			boundIndexBase_[index] = glHandle_;
-			glBindBufferBase(target_, index, glHandle_);
+			glBindBufferBase(_target, index, _glHandle);
+		} else if (_boundIndexBase[index] != _glHandle) {
+			_boundBufferRange[index].glHandle = -1;
+			_boundBufferRange[index].offset = 0;
+			_boundBufferRange[index].ptrsize = 0;
+			_boundIndexBase[index] = _glHandle;
+			glBindBufferBase(_target, index, _glHandle);
 		}
 		GL_LOG_ERRORS();
 #endif
@@ -119,19 +119,19 @@ namespace nCine::RHI::GL
 		static_cast<void>(offset);
 		static_cast<void>(ptrsize);
 #else
-		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
+		DEATH_ASSERT(_target == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange) {
-			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
-		} else if (boundBufferRange_[index].glHandle != glHandle_ ||
-				 boundBufferRange_[index].offset != offset ||
-				 boundBufferRange_[index].ptrsize != ptrsize) {
-			boundIndexBase_[index] = -1;
-			boundBufferRange_[index].glHandle = glHandle_;
-			boundBufferRange_[index].offset = offset;
-			boundBufferRange_[index].ptrsize = ptrsize;
-			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
+			glBindBufferRange(_target, index, _glHandle, offset, ptrsize);
+		} else if (_boundBufferRange[index].glHandle != _glHandle ||
+				 _boundBufferRange[index].offset != offset ||
+				 _boundBufferRange[index].ptrsize != ptrsize) {
+			_boundIndexBase[index] = -1;
+			_boundBufferRange[index].glHandle = _glHandle;
+			_boundBufferRange[index].offset = offset;
+			_boundBufferRange[index].ptrsize = ptrsize;
+			glBindBufferRange(_target, index, _glHandle, offset, ptrsize);
 		}
 		GL_LOG_ERRORS();
 #endif
@@ -147,10 +147,10 @@ namespace nCine::RHI::GL
 		static_cast<void>(access);
 		return nullptr;
 #else
-		FATAL_ASSERT(mapped_ == false);
-		mapped_ = true;
+		FATAL_ASSERT(_mapped == false);
+		_mapped = true;
 		Bind();
-		void* result = glMapBufferRange(target_, offset, length, access);
+		void* result = glMapBufferRange(_target, offset, length, access);
 		GL_LOG_ERRORS();
 		return result;
 #endif
@@ -163,9 +163,9 @@ namespace nCine::RHI::GL
 		static_cast<void>(offset);
 		static_cast<void>(length);
 #else
-		FATAL_ASSERT(mapped_ == true);
+		FATAL_ASSERT(_mapped == true);
 		Bind();
-		glFlushMappedBufferRange(target_, offset, length);
+		glFlushMappedBufferRange(_target, offset, length);
 		GL_LOG_ERRORS();
 #endif
 	}
@@ -176,10 +176,10 @@ namespace nCine::RHI::GL
 		// glUnmapBuffer's ES 3.0 signature is unreached on this profile (see MapBufferRange above)
 		return GL_TRUE;
 #else
-		FATAL_ASSERT(mapped_ == true);
-		mapped_ = false;
+		FATAL_ASSERT(_mapped == true);
+		_mapped = false;
 		Bind();
-		GLboolean result = glUnmapBuffer(target_);
+		GLboolean result = glUnmapBuffer(_target);
 		GL_LOG_ERRORS();
 		return result;
 #endif
@@ -188,23 +188,23 @@ namespace nCine::RHI::GL
 #if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 	void GLBufferObject::TexBuffer(GLenum internalformat)
 	{
-		FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);
-		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, glHandle_);
+		FATAL_ASSERT(_target == GL_TEXTURE_BUFFER);
+		glTexBuffer(GL_TEXTURE_BUFFER, internalformat, _glHandle);
 		GL_LOG_ERRORS();
 	}
 #endif
 
 	void GLBufferObject::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Buffer, _glHandle, label);
 	}
 
 	bool GLBufferObject::BindHandle(GLenum target, GLuint glHandle)
 	{
-		if (boundBuffers_[target] != glHandle) {
+		if (_boundBuffers[target] != glHandle) {
 			glBindBuffer(target, glHandle);
 			GL_LOG_ERRORS();
-			boundBuffers_[target] = glHandle;
+			_boundBuffers[target] = glHandle;
 			return true;
 		}
 		return false;
@@ -212,6 +212,6 @@ namespace nCine::RHI::GL
 
 	GLuint GLBufferObject::GetBoundHandle(GLenum target)
 	{
-		return boundBuffers_[target];
+		return _boundBuffers[target];
 	}
 }

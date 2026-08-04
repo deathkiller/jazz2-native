@@ -50,7 +50,7 @@ namespace nCine::Backends
 
 		/** @brief Enables or disables input processing */
 		static inline void setInputEnabled(bool inputEnabled) {
-			inputEnabled_ = inputEnabled;
+			_inputEnabled = inputEnabled;
 		}
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -71,25 +71,25 @@ namespace nCine::Backends
 			MANUAL
 		};
 
-		static bool inputEnabled_;
+		static bool _inputEnabled;
 
-		static SDL_Window* window_;
-		static unsigned long int time_;
-		static char* clipboardTextData_;
-		static bool wantUpdateMonitors_;
+		static SDL_Window* _window;
+		static unsigned long int _time;
+		static char* _clipboardTextData;
+		static bool _wantUpdateMonitors;
 
 		// Mouse handling
-		static unsigned int mouseWindowID_;
-		static int mouseButtonsDown_;
-		static SDL_Cursor* mouseCursors_[ImGuiMouseCursor_COUNT];
-		static SDL_Cursor* mouseLastCursor_;
-		static unsigned int mouseLastLeaveFrame_;
-		static bool mouseCanUseGlobalState_;
+		static unsigned int _mouseWindowID;
+		static int _mouseButtonsDown;
+		static SDL_Cursor* _mouseCursors[ImGuiMouseCursor_COUNT];
+		static SDL_Cursor* _mouseLastCursor;
+		static unsigned int _mouseLastLeaveFrame;
+		static bool _mouseCanUseGlobalState;
 
 		// Gamepad handling
-		static ImVector<SDL_GameController*> gamepads_;
-		static GamepadMode gamepadMode_;
-		static bool wantUpdateGamepadsList_;
+		static ImVector<SDL_GameController*> _gamepads;
+		static GamepadMode _gamepadMode;
+		static bool _wantUpdateGamepadsList;
 
 		static const char* clipboardText(ImGuiContext* ctx);
 		static void updateMouseData();

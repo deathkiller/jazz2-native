@@ -14,18 +14,18 @@ namespace nCine
 	TextureLoaderQoi::TextureLoaderQoi(std::unique_ptr<Stream> fileHandle)
 		: ITextureLoader(std::move(fileHandle))
 	{
-		if (!fileHandle_->IsValid()) {
+		if (!_fileHandle->IsValid()) {
 			return;
 		}
 
-		auto fileSize = fileHandle_->GetSize();
+		auto fileSize = _fileHandle->GetSize();
 		if (fileSize < QOI_HEADER_SIZE || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, files are usually smaller than 1MB
 			return;
 		}
 
 		auto buffer = std::make_unique<char[]>(fileSize);
-		fileHandle_->Read(buffer.get(), fileSize);
+		_fileHandle->Read(buffer.get(), fileSize);
 
 		qoi_desc desc = { };
 		void* data = qoi_decode(buffer.get(), fileSize, &desc, 4);
@@ -34,17 +34,17 @@ namespace nCine
 		}
 
 		int imageSize = desc.width * desc.height * desc.channels;
-		pixels_ = std::make_unique<std::uint8_t[]>(imageSize);
+		_pixels = std::make_unique<std::uint8_t[]>(imageSize);
 		// TODO: remove this additional copy
-		memcpy(pixels_.get(), data, imageSize);
+		memcpy(_pixels.get(), data, imageSize);
 		QOI_FREE(data);
 
-		width_ = desc.width;
-		height_ = desc.height;
-		mipMapCount_ = 1;
-		texFormat_ = TextureFormat(PixelFormat::RGBA8);
+		_width = desc.width;
+		_height = desc.height;
+		_mipMapCount = 1;
+		_texFormat = TextureFormat(PixelFormat::RGBA8);
 
-		hasLoaded_ = true;
+		_hasLoaded = true;
 	}
 }
 

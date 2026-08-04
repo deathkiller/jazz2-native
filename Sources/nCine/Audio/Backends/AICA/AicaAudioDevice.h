@@ -179,14 +179,14 @@ namespace nCine
 		};
 
 		/** @brief Whether the sound processor was brought up successfully */
-		bool initialized_;
+		bool _initialized;
 		/** @brief All buffers, the id of a buffer is its index plus one */
-		SmallVector<Buffer, 0> buffers_;
+		SmallVector<Buffer, 0> _buffers;
 		/** @brief State of every source, indexed by source id minus one */
-		Source sources_[MaxSources];
+		Source _sources[MaxSources];
 
 		/** @brief The one instance, so the C callback of the stream driver can find its way back */
-		static AicaAudioDevice* current_;
+		static AicaAudioDevice* _current;
 
 		/** @brief Returns the buffer of the specified id, or `nullptr` if there is none */
 		Buffer* bufferForId(std::uint32_t bufferId);

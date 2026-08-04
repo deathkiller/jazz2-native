@@ -83,64 +83,64 @@ namespace nCine::RHI::Software
 		static constexpr std::uint32_t MaxNameLength = 48;
 
 		SwUniform()
-			: type_(ShaderCompiler::UniformType::Float), size_(0), location_(-1), blockIndex_(-1), offset_(0), owner_(nullptr)
+			: _type(ShaderCompiler::UniformType::Float), _size(0), _location(-1), _blockIndex(-1), _offset(0), _owner(nullptr)
 		{
-			name_[0] = '\0';
+			_name[0] = '\0';
 		}
 		SwUniform(SwShaderProgram* owner, const char* name, ShaderCompiler::UniformType type, std::int32_t arraySize, std::int32_t location)
-			: type_(type), size_(arraySize > 0 ? arraySize : 1), location_(location), blockIndex_(-1), offset_(0), owner_(owner)
+			: _type(type), _size(arraySize > 0 ? arraySize : 1), _location(location), _blockIndex(-1), _offset(0), _owner(owner)
 		{
 			SetName(name);
 		}
 
 		inline std::int32_t GetLocation() const {
-			return location_;
+			return _location;
 		}
 		inline std::int32_t GetBlockIndex() const {
-			return blockIndex_;
+			return _blockIndex;
 		}
 		inline std::int32_t GetSize() const {
-			return size_;
+			return _size;
 		}
 		/** @brief Returns the reflected (backend-neutral) type of the uniform */
 		inline ShaderCompiler::UniformType GetType() const {
-			return type_;
+			return _type;
 		}
 		inline std::int32_t GetOffset() const {
-			return offset_;
+			return _offset;
 		}
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 		inline SwShaderProgram* GetOwner() const {
-			return owner_;
+			return _owner;
 		}
 		inline std::uint32_t GetComponentCount() const {
-			return UniformTypeInfo::ComponentCount(type_);
+			return UniformTypeInfo::ComponentCount(_type);
 		}
 		inline bool IsFloat() const {
-			return UniformTypeInfo::IsFloat(type_);
+			return UniformTypeInfo::IsFloat(_type);
 		}
 		inline std::uint32_t GetMemorySize() const {
 			return std::uint32_t(GetSize()) * GetComponentCount() * 4u;
 		}
 
 	private:
-		char name_[MaxNameLength];
-		ShaderCompiler::UniformType type_;
-		std::int32_t size_;
-		std::int32_t location_;
-		std::int32_t blockIndex_;
-		std::int32_t offset_;
-		SwShaderProgram* owner_;
+		char _name[MaxNameLength];
+		ShaderCompiler::UniformType _type;
+		std::int32_t _size;
+		std::int32_t _location;
+		std::int32_t _blockIndex;
+		std::int32_t _offset;
+		SwShaderProgram* _owner;
 
 		void SetName(const char* name) {
 			std::size_t length = std::strlen(name);
 			if (length >= MaxNameLength) {
 				length = MaxNameLength - 1;
 			}
-			std::memcpy(name_, name, length);
-			name_[length] = '\0';
+			std::memcpy(_name, name, length);
+			_name[length] = '\0';
 		}
 	};
 
@@ -166,35 +166,35 @@ namespace nCine::RHI::Software
 		};
 
 		SwUniformBlock()
-			: index_(0), size_(0), alignAmount_(0), bindingIndex_(-1)
+			: _index(0), _size(0), _alignAmount(0), _bindingIndex(-1)
 		{
-			name_[0] = '\0';
+			_name[0] = '\0';
 		}
 		SwUniformBlock(std::uint32_t index, const char* name, std::int32_t dataSize)
-			: index_(index), size_(dataSize), alignAmount_(0), bindingIndex_(-1)
+			: _index(index), _size(dataSize), _alignAmount(0), _bindingIndex(-1)
 		{
 			SetName(name);
 		}
 
 		inline std::uint32_t GetIndex() const {
-			return index_;
+			return _index;
 		}
 		inline std::int32_t GetBindingIndex() const {
-			return bindingIndex_;
+			return _bindingIndex;
 		}
 		inline std::int32_t GetSize() const {
-			return size_;
+			return _size;
 		}
 		inline std::uint8_t GetAlignAmount() const {
-			return alignAmount_;
+			return _alignAmount;
 		}
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 
 		/** @brief Returns the member uniform with the specified name, or `nullptr` if not found */
 		SwUniform* GetUniform(const char* name) {
-			for (SwUniform& u : members_) {
+			for (SwUniform& u : _members) {
 				if (std::strcmp(u.GetName(), name) == 0) {
 					return &u;
 				}
@@ -202,24 +202,24 @@ namespace nCine::RHI::Software
 			return nullptr;
 		}
 		void SetBlockBinding(std::int32_t blockBinding) {
-			bindingIndex_ = blockBinding;
+			_bindingIndex = blockBinding;
 		}
 
 	private:
-		char name_[MaxNameLength];
-		std::uint32_t index_;
-		std::int32_t size_;
-		std::uint8_t alignAmount_;
-		std::int32_t bindingIndex_;
-		std::vector<SwUniform> members_;
+		char _name[MaxNameLength];
+		std::uint32_t _index;
+		std::int32_t _size;
+		std::uint8_t _alignAmount;
+		std::int32_t _bindingIndex;
+		std::vector<SwUniform> _members;
 
 		void SetName(const char* name) {
 			std::size_t length = std::strlen(name);
 			if (length >= MaxNameLength) {
 				length = MaxNameLength - 1;
 			}
-			std::memcpy(name_, name, length);
-			name_[length] = '\0';
+			std::memcpy(_name, name, length);
+			_name[length] = '\0';
 		}
 	};
 
@@ -232,37 +232,37 @@ namespace nCine::RHI::Software
 		static constexpr std::uint32_t MaxNameLength = 32;
 
 		SwAttribute()
-			: type_(ShaderCompiler::UniformType::Float), location_(-1)
+			: _type(ShaderCompiler::UniformType::Float), _location(-1)
 		{
-			name_[0] = '\0';
+			_name[0] = '\0';
 		}
 		SwAttribute(const char* name, ShaderCompiler::UniformType type, std::int32_t location)
-			: type_(type), location_(location)
+			: _type(type), _location(location)
 		{
 			std::size_t length = std::strlen(name);
 			if (length >= MaxNameLength) {
 				length = MaxNameLength - 1;
 			}
-			std::memcpy(name_, name, length);
-			name_[length] = '\0';
+			std::memcpy(_name, name, length);
+			_name[length] = '\0';
 		}
 
 		inline std::int32_t GetLocation() const {
-			return location_;
+			return _location;
 		}
 		inline ShaderCompiler::UniformType GetType() const {
-			return type_;
+			return _type;
 		}
 		inline const char* GetName() const {
-			return name_;
+			return _name;
 		}
 		inline std::int32_t GetComponentCount() const {
-			return std::int32_t(UniformTypeInfo::ComponentCount(type_));
+			return std::int32_t(UniformTypeInfo::ComponentCount(_type));
 		}
 
 	private:
-		char name_[MaxNameLength];
-		ShaderCompiler::UniformType type_;
-		std::int32_t location_;
+		char _name[MaxNameLength];
+		ShaderCompiler::UniformType _type;
+		std::int32_t _location;
 	};
 }

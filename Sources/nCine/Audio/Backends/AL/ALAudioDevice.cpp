@@ -30,15 +30,15 @@ namespace nCine
 	}
 
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), sources_{}, nativeFreq_(44100), deviceName_(nullptr)
+		: _device(nullptr), _context(nullptr), _sources{}, _nativeFreq(44100), _deviceName(nullptr)
 #if defined(OPENAL_FILTERS_SUPPORTED)
-		, filters_{}
+		, _filters{}
 #endif
 #if defined(WITH_LIBRETRO)
-		, alcRenderSamplesSOFT_(nullptr)
+		, _alcRenderSamplesSOFT(nullptr)
 #endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
+		, _alcReopenDeviceSOFT(nullptr), _pEnumerator(nullptr), _lastDeviceChangeTime(0), _shouldRecreate(false)
 #endif
 	{
 		Init();
@@ -53,17 +53,17 @@ namespace nCine
 		// device mixes on demand and retro_run pulls the samples through renderSamples(). The core is
 		// always built against OpenAL Soft, which has the extension since v1.14.
 		auto alcLoopbackOpenDeviceSOFT = (LPALCLOOPBACKOPENDEVICESOFT)alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT");
-		alcRenderSamplesSOFT_ = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(nullptr, "alcRenderSamplesSOFT");
-		if (alcLoopbackOpenDeviceSOFT != nullptr && alcRenderSamplesSOFT_ != nullptr) {
-			device_ = alcLoopbackOpenDeviceSOFT(nullptr);
+		_alcRenderSamplesSOFT = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(nullptr, "alcRenderSamplesSOFT");
+		if (alcLoopbackOpenDeviceSOFT != nullptr && _alcRenderSamplesSOFT != nullptr) {
+			_device = alcLoopbackOpenDeviceSOFT(nullptr);
 		} else {
 			LOGE("The OpenAL library does not support ALC_SOFT_loopback");
 		}
 #else
-		device_ = alcOpenDevice(nullptr);
+		_device = alcOpenDevice(nullptr);
 #endif
-		DEATH_ASSERT(device_ != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
-		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
+		DEATH_ASSERT(_device != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
+		_deviceName = alcGetString(_device, ALC_DEVICE_SPECIFIER);
 
 #if defined(WITH_LIBRETRO)
 		// A loopback context must be created with its render format: 16-bit interleaved stereo (what
@@ -74,12 +74,12 @@ namespace nCine
 			ALC_FREQUENCY, 48000,
 			0
 		};
-		context_ = alcCreateContext(device_, loopbackAttrs);
+		_context = alcCreateContext(_device, loopbackAttrs);
 #else
-		context_ = alcCreateContext(device_, nullptr);
+		_context = alcCreateContext(_device, nullptr);
 #endif
-		if (context_ == nullptr) {
-			alcCloseDevice(device_);
+		if (_context == nullptr) {
+			alcCloseDevice(_device);
 			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
 			return;
 		}
@@ -87,21 +87,21 @@ namespace nCine
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Try to get native sample rate of default audio device (default is 44100)
 		ALCint nativeFreq = 0;
-		alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
+		alcGetIntegerv(_device, ALC_FREQUENCY, 1, &nativeFreq);
 		if (nativeFreq >= 44100 && nativeFreq <= 192000) {
-			nativeFreq_ = nativeFreq;
+			_nativeFreq = nativeFreq;
 		}
 #endif
 
-		if (!alcMakeContextCurrent(context_)) {
-			alcDestroyContext(context_);
-			alcCloseDevice(device_);
+		if (!alcMakeContextCurrent(_context)) {
+			alcDestroyContext(_context);
+			alcCloseDevice(_device);
 			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
 			return;
 		}
 
 		alGetError();
-		alGenSources(MaxSources, sources_);
+		alGenSources(MaxSources, _sources);
 		const ALenum error = alGetError();
 		if (error != AL_NO_ERROR) {
 			LOGE("alGenSources() failed with error 0x{:x}", error);
@@ -109,13 +109,13 @@ namespace nCine
 			// The distance model parameters never change per source, so they are applied once here
 			// instead of every time a player takes a source out of the pool
 			for (std::int32_t i = 0; i < MaxSources; i++) {
-				alSourcef(sources_[i], AL_REFERENCE_DISTANCE, ReferenceDistance);
-				alSourcef(sources_[i], AL_MAX_DISTANCE, MaxDistance);
+				alSourcef(_sources[i], AL_REFERENCE_DISTANCE, ReferenceDistance);
+				alSourcef(_sources[i], AL_MAX_DISTANCE, MaxDistance);
 			}
 
 			std::uint32_t sourceIds[MaxSources];
 			for (std::int32_t i = 0; i < MaxSources; i++) {
-				sourceIds[i] = sources_[i];
+				sourceIds[i] = _sources[i];
 			}
 			setSourcePool(arrayView(sourceIds, MaxSources));
 		}
@@ -124,7 +124,7 @@ namespace nCine
 		alDopplerFactor(1.0f);
 		alSpeedOfSound(360.0f);
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
-		alListenerf(AL_GAIN, gain_);
+		alListenerf(AL_GAIN, _gain);
 
 #if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Don't stop sources when device is disconnected if supported
@@ -134,8 +134,8 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device, it's a context
 		// extension, so it has to be queried with alcGetProcAddress() and the device
-		if (alcIsExtensionPresent(device_, "ALC_SOFT_reopen_device")) {
-			alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alcGetProcAddress(device_, "alcReopenDeviceSOFT");
+		if (alcIsExtensionPresent(_device, "ALC_SOFT_reopen_device")) {
+			_alcReopenDeviceSOFT = (LPALCREOPENDEVICESOFT)alcGetProcAddress(_device, "alcReopenDeviceSOFT");
 		}
 		registerAudioEvents();
 #endif
@@ -143,20 +143,20 @@ namespace nCine
 #if defined(DEATH_TRACE)
 		// Log OpenAL device info
 		LOGI("--- OpenAL device info ---");
-		StringView deviceName = alcGetString(device_, ALC_DEVICE_SPECIFIER);
+		StringView deviceName = alcGetString(_device, ALC_DEVICE_SPECIFIER);
 		StringView renderer = alGetString(AL_RENDERER);
 		StringView version = alGetString(AL_VERSION);
 		LOGI(deviceName != renderer ? "Device Name: {} ({})" : "Device Name: {}", deviceName, renderer);
 		LOGI("OpenAL Version: {}", version);
 
 		ALCint attributesSize = 0;
-		alcGetIntegerv(device_, ALC_ATTRIBUTES_SIZE, 1, &attributesSize);
+		alcGetIntegerv(_device, ALC_ATTRIBUTES_SIZE, 1, &attributesSize);
 		if (attributesSize > 0) {
 			constexpr std::int32_t MaxAttributes = 16;
 			ALCint attributes[MaxAttributes * 2];
 			const ALCint numAttributes = (attributesSize < MaxAttributes * 2) ? attributesSize : MaxAttributes * 2;
 
-			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, numAttributes, attributes);
+			alcGetIntegerv(_device, ALC_ALL_ATTRIBUTES, numAttributes, attributes);
 
 			ALCint monoSources = 0, stereoSources = 0, efxVersionMajor = 0, efxVersionMinor = 0, efxAuxSends = 0;
 			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
@@ -176,9 +176,9 @@ namespace nCine
 			}
 
 #	if defined(ALC_EXT_EFX_NAME)
-			bool hasExtEfx = alcIsExtensionPresent(device_, ALC_EXT_EFX_NAME);
+			bool hasExtEfx = alcIsExtensionPresent(_device, ALC_EXT_EFX_NAME);
 #	else
-			bool hasExtEfx = alcIsExtensionPresent(device_, "ALC_EXT_EFX");
+			bool hasExtEfx = alcIsExtensionPresent(_device, "ALC_EXT_EFX");
 #	endif
 			if (hasExtEfx) {
 				LOGI("ALC_EXT_EFX Version: {}.{} ({} auxiliary sends)", efxVersionMajor, efxVersionMinor, efxAuxSends);
@@ -255,45 +255,45 @@ namespace nCine
 
 #if defined(OPENAL_FILTERS_SUPPORTED)
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			if (filters_[i] != 0) {
-				alSourcei(sources_[i], AL_DIRECT_FILTER, 0);
-				alDeleteFilters(1, &filters_[i]);
-				filters_[i] = 0;
+			if (_filters[i] != 0) {
+				alSourcei(_sources[i], AL_DIRECT_FILTER, 0);
+				alDeleteFilters(1, &_filters[i]);
+				_filters[i] = 0;
 			}
 		}
 #endif
 
-		for (ALuint sourceId : sources_) {
+		for (ALuint sourceId : _sources) {
 			alSourcei(sourceId, AL_BUFFER, AL_NONE);
 		}
-		alDeleteSources(MaxSources, sources_);
+		alDeleteSources(MaxSources, _sources);
 
-		alcDestroyContext(context_);
+		alcDestroyContext(_context);
 
-		if (!alcCloseDevice(device_)) {
+		if (!alcCloseDevice(_device)) {
 			LOGW("alcCloseDevice() failed with error 0x{:x}", alGetError());
 		}
 	}
 
 	bool ALAudioDevice::isValid() const
 	{
-		return (device_ != nullptr);
+		return (_device != nullptr);
 	}
 
 	const char* ALAudioDevice::name() const
 	{
-		return deviceName_;
+		return _deviceName;
 	}
 
 	void ALAudioDevice::setGain(float gain)
 	{
-		gain_ = gain;
-		alListenerf(AL_GAIN, gain_);
+		_gain = gain;
+		alListenerf(AL_GAIN, _gain);
 	}
 
 	void ALAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
-		listenerPos_ = position;
+		_listenerPos = position;
 
 		alListener3f(AL_POSITION, position.X * LengthToPhysical, position.Y * -LengthToPhysical, position.Z * -LengthToPhysical);
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
@@ -301,7 +301,7 @@ namespace nCine
 
 	std::int32_t ALAudioDevice::nativeFrequency()
 	{
-		return nativeFreq_;
+		return _nativeFreq;
 	}
 
 	std::uint32_t ALAudioDevice::createBuffer(BufferUsage usage)
@@ -380,8 +380,8 @@ namespace nCine
 	ALuint* ALAudioDevice::filterForSource(std::uint32_t sourceId)
 	{
 		for (std::int32_t i = 0; i < MaxSources; i++) {
-			if (sources_[i] == sourceId) {
-				return &filters_[i];
+			if (_sources[i] == sourceId) {
+				return &_filters[i];
 			}
 		}
 		return nullptr;
@@ -489,10 +489,10 @@ namespace nCine
 #if defined(WITH_LIBRETRO)
 	bool ALAudioDevice::renderSamples(std::int16_t* buffer, std::int32_t numFrames)
 	{
-		if (device_ == nullptr) {
+		if (_device == nullptr) {
 			return false;
 		}
-		alcRenderSamplesSOFT_(device_, buffer, numFrames);
+		_alcRenderSamplesSOFT(_device, buffer, numFrames);
 		return true;
 	}
 #endif
@@ -500,8 +500,8 @@ namespace nCine
 	void ALAudioDevice::suspendDevice()
 	{
 #if defined(ALC_SOFT_pause_device)
-		if (device_ != nullptr) {
-			alcDevicePauseSOFT(device_);
+		if (_device != nullptr) {
+			alcDevicePauseSOFT(_device);
 		}
 #endif
 	}
@@ -509,8 +509,8 @@ namespace nCine
 	void ALAudioDevice::resumeDevice()
 	{
 #if defined(ALC_SOFT_pause_device)
-		if (device_ != nullptr) {
-			alcDeviceResumeSOFT(device_);
+		if (_device != nullptr) {
+			alcDeviceResumeSOFT(_device);
 		}
 #endif
 	}
@@ -519,8 +519,8 @@ namespace nCine
 	void ALAudioDevice::updatePlayers()
 	{
 		// Audio device cannot be recreated in event callback, so do it here
-		if (shouldRecreate_) {
-			shouldRecreate_ = false;
+		if (_shouldRecreate) {
+			_shouldRecreate = false;
 			recreateAudioDevice();
 		}
 
@@ -532,21 +532,21 @@ namespace nCine
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device
 		// TODO: If the extension is not present, the device should be fully recreated
 		LOGI("Audio device must be recreated due to system changes");
-		if (alcReopenDeviceSOFT_ != nullptr) {
-			if (!alcReopenDeviceSOFT_(device_, nullptr, nullptr)) {
+		if (_alcReopenDeviceSOFT != nullptr) {
+			if (!_alcReopenDeviceSOFT(_device, nullptr, nullptr)) {
 				LOGE("Cannot recreate audio device - alcReopenDeviceSOFT() failed!");
 			}
 
 			// Try to get native sample rate of new audio device
 			ALCint nativeFreq = 0;
-			alcGetIntegerv(device_, ALC_FREQUENCY, 1, &nativeFreq);
+			alcGetIntegerv(_device, ALC_FREQUENCY, 1, &nativeFreq);
 			if (nativeFreq >= 44100 && nativeFreq <= 192000) {
-				nativeFreq_ = nativeFreq;
+				_nativeFreq = nativeFreq;
 			}
 
 #	if defined(DEATH_DEBUG) && defined(DEATH_TRACE) && defined(ALC_SOFT_HRTF)
 			ALCint status;
-			alcGetIntegerv(device_, ALC_HRTF_STATUS_SOFT, 1, &status);
+			alcGetIntegerv(_device, ALC_HRTF_STATUS_SOFT, 1, &status);
 			const char* statusStr;
 			switch (status) {
 				case ALC_HRTF_DISABLED_SOFT: statusStr = "disabled"; break;
@@ -565,12 +565,12 @@ namespace nCine
 
 	void ALAudioDevice::registerAudioEvents()
 	{
-		HRESULT hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
+		HRESULT hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&_pEnumerator));
 		if (hr == CO_E_NOTINITIALIZED) {
 			LOGW("CoCreateInstance() failed with error CO_E_NOTINITIALIZED");
 			hr = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
 			if (FAILED(hr)) {
-				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
+				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&_pEnumerator));
 				if (FAILED(hr)) {
 					LOGE("CoCreateInstance() failed with error 0x{:.8x}", hr);
 				}
@@ -579,8 +579,8 @@ namespace nCine
 			LOGE("CoCreateInstance() failed with error 0x{:.8x}", hr);
 		}
 
-		if (pEnumerator_ != nullptr) {
-			HRESULT hr = pEnumerator_->RegisterEndpointNotificationCallback(this);
+		if (_pEnumerator != nullptr) {
+			HRESULT hr = _pEnumerator->RegisterEndpointNotificationCallback(this);
 			if (FAILED(hr)) {
 				LOGE("RegisterEndpointNotificationCallback() failed with error 0x{:.8x}", hr);
 			}
@@ -589,13 +589,13 @@ namespace nCine
 
 	void ALAudioDevice::unregisterAudioEvents()
 	{
-		if (pEnumerator_ == nullptr) {
+		if (_pEnumerator == nullptr) {
 			return;
 		}
 
-		pEnumerator_->UnregisterEndpointNotificationCallback(this);
-		pEnumerator_->Release();
-		pEnumerator_ = nullptr;
+		_pEnumerator->UnregisterEndpointNotificationCallback(this);
+		_pEnumerator->Release();
+		_pEnumerator = nullptr;
 	}
 
 	ULONG ALAudioDevice::AddRef()
@@ -636,7 +636,7 @@ namespace nCine
 	HRESULT ALAudioDevice::OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState)
 	{
 		// OnDefaultDeviceChanged() is called afterwards, so no need to handle it here
-		//shouldRecreate_ = true;
+		//_shouldRecreate = true;
 		return S_OK;
 	}
 
@@ -654,10 +654,10 @@ namespace nCine
 
 		std::uint64_t now = Environment::QueryUnbiasedInterruptTimeAsMs();
 		String newDeviceId = Utf8::FromUtf16(pwstrDefaultDeviceId);
-		if (now - lastDeviceChangeTime_ > DeviceChangeLimitMs || newDeviceId != lastDeviceId_) {
-			lastDeviceChangeTime_ = now;
-			lastDeviceId_ = std::move(newDeviceId);
-			shouldRecreate_ = true;
+		if (now - _lastDeviceChangeTime > DeviceChangeLimitMs || newDeviceId != _lastDeviceId) {
+			_lastDeviceChangeTime = now;
+			_lastDeviceId = std::move(newDeviceId);
+			_shouldRecreate = true;
 		}
 
 		return S_OK;

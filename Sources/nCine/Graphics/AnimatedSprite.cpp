@@ -19,7 +19,7 @@ namespace nCine
 	}
 
 	AnimatedSprite::AnimatedSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: Sprite(parent, texture, xx, yy), anims_(4), currentAnimIndex_(0)
+		: Sprite(parent, texture, xx, yy), _anims(4), _currentAnimIndex(0)
 	{
 		_type = ObjectType::AnimatedSprite;
 	}
@@ -42,28 +42,28 @@ namespace nCine
 	bool AnimatedSprite::isPaused() const
 	{
 		bool isPaused = true;
-		if (!anims_.empty()) {
-			isPaused = anims_[currentAnimIndex_].isPaused();
+		if (!_anims.empty()) {
+			isPaused = _anims[_currentAnimIndex].isPaused();
 		}
 		return isPaused;
 	}
 
 	void AnimatedSprite::setPaused(bool isPaused)
 	{
-		if (!anims_.empty()) {
-			anims_[currentAnimIndex_].setPaused(isPaused);
+		if (!_anims.empty()) {
+			_anims[_currentAnimIndex].setPaused(isPaused);
 		}
 	}
 
 	void AnimatedSprite::OnUpdate(float timeMult)
 	{
-		if (!anims_.empty()) {
-			const unsigned int previousFrame = anims_[currentAnimIndex_].frame();
-			anims_[currentAnimIndex_].updateFrame(timeMult);
+		if (!_anims.empty()) {
+			const unsigned int previousFrame = _anims[_currentAnimIndex].frame();
+			_anims[_currentAnimIndex].updateFrame(timeMult);
 
 			// Updating sprite texture rectangle only on change
-			if (previousFrame != anims_[currentAnimIndex_].frame()) {
-				setTexRect(anims_[currentAnimIndex_].rect());
+			if (previousFrame != _anims[_currentAnimIndex].frame()) {
+				setTexRect(_anims[_currentAnimIndex].rect());
 			}
 		}
 
@@ -72,37 +72,37 @@ namespace nCine
 
 	void AnimatedSprite::addAnimation(const RectAnimation& anim)
 	{
-		anims_.push_back(anim);
-		currentAnimIndex_ = (unsigned int)anims_.size() - 1;
-		setTexRect(anims_[currentAnimIndex_].rect());
+		_anims.push_back(anim);
+		_currentAnimIndex = (unsigned int)_anims.size() - 1;
+		setTexRect(_anims[_currentAnimIndex].rect());
 	}
 
 	void AnimatedSprite::addAnimation(RectAnimation&& anim)
 	{
-		anims_.push_back(std::move(anim));
-		currentAnimIndex_ = (unsigned int)anims_.size() - 1;
-		setTexRect(anims_[currentAnimIndex_].rect());
+		_anims.push_back(std::move(anim));
+		_currentAnimIndex = (unsigned int)_anims.size() - 1;
+		setTexRect(_anims[_currentAnimIndex].rect());
 	}
 
 	void AnimatedSprite::clearAnimations()
 	{
-		anims_.clear();
+		_anims.clear();
 	}
 
 	void AnimatedSprite::setAnimationIndex(std::uint32_t animIndex)
 	{
-		if (!anims_.empty()) {
-			DEATH_ASSERT(animIndex < anims_.size());
-			currentAnimIndex_ = animIndex;
-			setTexRect(anims_[currentAnimIndex_].rect());
+		if (!_anims.empty()) {
+			DEATH_ASSERT(animIndex < _anims.size());
+			_currentAnimIndex = animIndex;
+			setTexRect(_anims[_currentAnimIndex].rect());
 		}
 	}
 
 	RectAnimation* AnimatedSprite::currentAnimation()
 	{
 		RectAnimation* currentAnim = nullptr;
-		if (!anims_.empty()) {
-			currentAnim = &anims_[currentAnimIndex_];
+		if (!_anims.empty()) {
+			currentAnim = &_anims[_currentAnimIndex];
 		}
 		return currentAnim;
 	}
@@ -110,8 +110,8 @@ namespace nCine
 	const RectAnimation* AnimatedSprite::currentAnimation() const
 	{
 		const RectAnimation* currentAnim = nullptr;
-		if (!anims_.empty()) {
-			currentAnim = &anims_[currentAnimIndex_];
+		if (!_anims.empty()) {
+			currentAnim = &_anims[_currentAnimIndex];
 		}
 		return currentAnim;
 	}
@@ -119,22 +119,22 @@ namespace nCine
 	std::uint32_t AnimatedSprite::frame() const
 	{
 		unsigned int frame = 0;
-		if (!anims_.empty()) {
-			frame = anims_[currentAnimIndex_].frame();
+		if (!_anims.empty()) {
+			frame = _anims[_currentAnimIndex].frame();
 		}
 		return frame;
 	}
 
 	void AnimatedSprite::setFrame(std::uint32_t frameNum)
 	{
-		if (!anims_.empty()) {
-			anims_[currentAnimIndex_].setFrame(frameNum);
-			setTexRect(anims_[currentAnimIndex_].rect());
+		if (!_anims.empty()) {
+			_anims[_currentAnimIndex].setFrame(frameNum);
+			setTexRect(_anims[_currentAnimIndex].rect());
 		}
 	}
 
 	AnimatedSprite::AnimatedSprite(const AnimatedSprite& other)
-		: Sprite(other), anims_(other.anims_), currentAnimIndex_(other.currentAnimIndex_)
+		: Sprite(other), _anims(other._anims), _currentAnimIndex(other._currentAnimIndex)
 	{
 		_type = ObjectType::AnimatedSprite;
 		setFrame(other.frame());

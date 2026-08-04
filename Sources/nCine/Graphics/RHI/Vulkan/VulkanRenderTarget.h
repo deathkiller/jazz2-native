@@ -23,18 +23,18 @@ namespace nCine::RHI::Vulkan
 	public:
 		VulkanRenderbuffer() = default;
 		void Create(DepthStencilFormat format, std::int32_t width, std::int32_t height) {
-			format_ = format;
-			width_ = width;
-			height_ = height;
+			_format = format;
+			_width = width;
+			_height = height;
 		}
 		inline std::uint32_t GetGLHandle() const {
 			return 0;
 		}
 
 	private:
-		DepthStencilFormat format_ = DepthStencilFormat::None;
-		std::int32_t width_ = 0;
-		std::int32_t height_ = 0;
+		DepthStencilFormat _format = DepthStencilFormat::None;
+		std::int32_t _width = 0;
+		std::int32_t _height = 0;
 	};
 
 	/**
@@ -112,7 +112,7 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns the texture attached at the given color attachment index, or `nullptr` */
 		inline VulkanTexture* GetColorTexture(std::uint32_t index) const {
-			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
+			return (index < MaxColorAttachments ? _colorTextures[index] : nullptr);
 		}
 
 		/** @brief Returns the number of contiguously attached color textures starting from attachment 0 (the framebuffer / render-pass attachment count) */
@@ -120,16 +120,16 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns the number of color attachments enabled for drawing (see @ref SetDrawBuffers()) */
 		inline std::uint32_t GetNumDrawBuffers() const {
-			return numDrawBuffers_;
+			return _numDrawBuffers;
 		}
 
 	private:
-		VulkanTexture* colorTextures_[MaxColorAttachments];
-		std::uint32_t numDrawBuffers_;
+		VulkanTexture* _colorTextures[MaxColorAttachments];
+		std::uint32_t _numDrawBuffers;
 
 		// Cached VkFramebuffer over all attached color textures (opaque; rebuilt when any attachment changes)
-		std::uint64_t framebuffer_;
-		std::uint64_t framebufferViews_[MaxColorAttachments];	// the image views the framebuffer was built for
-		std::uint32_t framebufferViewCount_;					// their count (the framebuffer's attachment count)
+		std::uint64_t _framebuffer;
+		std::uint64_t _framebufferViews[MaxColorAttachments];	// the image views the framebuffer was built for
+		std::uint32_t _framebufferViewCount;					// their count (the framebuffer's attachment count)
 	};
 }

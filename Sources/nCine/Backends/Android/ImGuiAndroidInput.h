@@ -17,12 +17,12 @@ namespace nCine::Backends
 		static bool processEvent(const AInputEvent* event);
 
 		static inline void setInputEnabled(bool inputEnabled) {
-			inputEnabled_ = inputEnabled;
+			_inputEnabled = inputEnabled;
 		}
 
 	private:
-		static ANativeWindow* window_;
-		static bool inputEnabled_;
+		static ANativeWindow* _window;
+		static bool _inputEnabled;
 	};
 }
 

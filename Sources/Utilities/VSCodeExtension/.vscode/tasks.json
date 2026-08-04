@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run all extension tests",
+			"type": "shell",
+			"command": "node test/run-tests.js && node test/run-provider-tests.js",
+			"group": { "kind": "test", "isDefault": true },
+			"problemMatcher": []
+		},
+		{
+			"label": "Run analysis tests",
+			"type": "shell",
+			"command": "node test/run-tests.js",
+			"problemMatcher": []
+		},
+		{
+			"label": "Run provider tests",
+			"type": "shell",
+			"command": "node test/run-provider-tests.js",
+			"problemMatcher": []
+		}
+	]
+}

@@ -14,8 +14,8 @@ namespace nCine
 	{
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
-		bytesPerSample_ = 2;
-		numChannels_ = 2;
+		_bytesPerSample = 2;
+		_numChannels = 2;
 
 #if defined(DEATH_TARGET_PSP)
 		// Rendering a module is the most expensive thing the Allegrex is asked to do outside the renderer, and
@@ -29,15 +29,15 @@ namespace nCine
 		constexpr std::int32_t PreferredFrequency = 0;
 #endif
 		const std::int32_t nativeFrequency = device.nativeFrequency();
-		frequency_ = (PreferredFrequency > 0 && PreferredFrequency < nativeFrequency ? PreferredFrequency : nativeFrequency);
+		_frequency = (PreferredFrequency > 0 && PreferredFrequency < nativeFrequency ? PreferredFrequency : nativeFrequency);
 
-		numSamples_ = UINT32_MAX;
-		hasLoaded_ = true;
+		_numSamples = UINT32_MAX;
+		_hasLoaded = true;
 	}
 
 	std::unique_ptr<IAudioReader> AudioLoaderMpt::createReader()
 	{
-		return std::make_unique<AudioReaderMpt>(std::move(fileHandle_), frequency_);
+		return std::make_unique<AudioReaderMpt>(std::move(_fileHandle), _frequency);
 	}
 }
 

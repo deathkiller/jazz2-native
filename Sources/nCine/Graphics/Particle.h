@@ -21,15 +21,15 @@ namespace nCine
 
 	public:
 		/** @brief Current particle remaining life in seconds */
-		float life_;
+		float _life;
 		/** @brief Initial particle remaining life */
 		float startingLife; // for affectors
 		/** @brief Initial particle rotation */
 		float startingRotation; // for affectors
 		/** @brief Current particle velocity vector */
-		Vector2f velocity_;
+		Vector2f _velocity;
 		/** @brief Whether particle transformations are in local space */
-		bool inLocalSpace_;
+		bool _inLocalSpace;
 
 		/** @brief Constructor for a particle with a parent and texture, positioned in the relative origin */
 		Particle(SceneNode* parent, Texture* texture);
@@ -40,7 +40,7 @@ namespace nCine
 
 		/** @brief Returns `true` if the particle is still alive */
 		inline bool isAlive() const {
-			return life_ > 0.0f;
+			return _life > 0.0f;
 		}
 
 	protected:

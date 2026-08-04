@@ -22,27 +22,27 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	ASensorManager* AndroidInputManager::sensorManager_ = nullptr;
-	const ASensor* AndroidInputManager::accelerometerSensor_ = nullptr;
-	ASensorEventQueue* AndroidInputManager::sensorEventQueue_ = nullptr;
-	bool AndroidInputManager::accelerometerEnabled_ = false;
-	AccelerometerEvent AndroidInputManager::accelerometerEvent_;
-	TouchEvent AndroidInputManager::touchEvent_;
-	AndroidKeyboardState AndroidInputManager::keyboardState_;
-	KeyboardEvent AndroidInputManager::keyboardEvent_;
-	TextInputEvent AndroidInputManager::textInputEvent_;
-	AndroidMouseState AndroidInputManager::mouseState_;
-	MouseEvent AndroidInputManager::mouseEvent_;
-	ScrollEvent AndroidInputManager::scrollEvent_;
-	int AndroidInputManager::simulatedMouseButtonState_ = 0;
+	ASensorManager* AndroidInputManager::_sensorManager = nullptr;
+	const ASensor* AndroidInputManager::_accelerometerSensor = nullptr;
+	ASensorEventQueue* AndroidInputManager::_sensorEventQueue = nullptr;
+	bool AndroidInputManager::_accelerometerEnabled = false;
+	AccelerometerEvent AndroidInputManager::_accelerometerEvent;
+	TouchEvent AndroidInputManager::_touchEvent;
+	AndroidKeyboardState AndroidInputManager::_keyboardState;
+	KeyboardEvent AndroidInputManager::_keyboardEvent;
+	TextInputEvent AndroidInputManager::_textInputEvent;
+	AndroidMouseState AndroidInputManager::_mouseState;
+	MouseEvent AndroidInputManager::_mouseEvent;
+	ScrollEvent AndroidInputManager::_scrollEvent;
+	int AndroidInputManager::_simulatedMouseButtonState = 0;
 
-	AndroidJoystickState AndroidInputManager::nullJoystickState_;
-	AndroidJoystickState AndroidInputManager::joystickStates_[MaxNumJoysticks];
-	JoyButtonEvent AndroidInputManager::joyButtonEvent_;
-	JoyHatEvent AndroidInputManager::joyHatEvent_;
-	JoyAxisEvent AndroidInputManager::joyAxisEvent_;
-	JoyConnectionEvent AndroidInputManager::joyConnectionEvent_;
-	Timer AndroidInputManager::joyCheckTimer_;
+	AndroidJoystickState AndroidInputManager::_nullJoystickState;
+	AndroidJoystickState AndroidInputManager::_joystickStates[MaxNumJoysticks];
+	JoyButtonEvent AndroidInputManager::_joyButtonEvent;
+	JoyHatEvent AndroidInputManager::_joyHatEvent;
+	JoyAxisEvent AndroidInputManager::_joyAxisEvent;
+	JoyConnectionEvent AndroidInputManager::_joyConnectionEvent;
+	Timer AndroidInputManager::_joyCheckTimer;
 
 	// TODO: Implement new axis order - https://github.com/libsdl-org/SDL/commit/de3909a190f6e1a3f11776ce42927f99b0381675
 	const int AndroidJoystickState::AxesToMap[AndroidJoystickState::NumAxesToMap] = {
@@ -85,29 +85,29 @@ namespace nCine::Backends
 	}
 
 	AndroidJoystickState::AndroidJoystickState()
-		: deviceId_(-1), numButtons_(0), numAxes_(0), numAxesMapped_(0),
-			hasDPad_(false), hasHatAxes_(false), hatState_(HatState::Centered)
+		: _deviceId(-1), _numButtons(0), _numAxes(0), _numAxesMapped(0),
+			_hasDPad(false), _hasHatAxes(false), _hatState(HatState::Centered)
 	{
-		name_[0] = '\0';
+		_name[0] = '\0';
 		for (int i = 0; i < MaxButtons; i++) {
-			buttonsMapping_[i] = 0;
-			buttons_[i] = false;
+			_buttonsMapping[i] = 0;
+			_buttons[i] = false;
 		}
 		for (int i = 0; i < MaxAxes; i++) {
-			axesMapping_[i] = 0;
-			axesMinValues_[i] = -1.0f;
-			axesRangeValues_[i] = 2.0f;
-			axesValues_[i] = 0.0f;
+			_axesMapping[i] = 0;
+			_axesMinValues[i] = -1.0f;
+			_axesRangeValues[i] = 2.0f;
+			_axesValues[i] = 0.0f;
 		}
 		for (int i = 0; i < MaxVibrators; i++) {
-			vibratorsIds_[i] = 0;
+			_vibratorsIds[i] = 0;
 		}
 	}
 
 	AndroidInputManager::AndroidInputManager(struct android_app* state)
 	{
 		initAccelerometerSensor(state);
-		joyMapping_.Init(this);
+		_joyMapping.Init(this);
 		checkConnectedJoysticks();
 
 #if defined(WITH_IMGUI)
@@ -123,46 +123,46 @@ namespace nCine::Backends
 	}
 
 	AndroidMouseState::AndroidMouseState()
-		: buttonState_(0)
+		: _buttonState(0)
 	{
 	}
 
 	bool AndroidMouseState::isButtonDown(MouseButton button) const
 	{
-		return checkMouseButton(buttonState_, button);
+		return checkMouseButton(_buttonState, button);
 	}
 
 	bool AndroidJoystickState::isButtonPressed(int buttonId) const
 	{
-		return (buttonId >= 0 && buttonId < numButtons_ && buttons_[buttonId]);
+		return (buttonId >= 0 && buttonId < _numButtons && _buttons[buttonId]);
 	}
 
 	unsigned char AndroidJoystickState::hatState(int hatId) const
 	{
-		return (hatId >= 0 && hatId < numHats_ ? hatState_ : HatState::Centered);
+		return (hatId >= 0 && hatId < _numHats ? _hatState : HatState::Centered);
 	}
 
 	float AndroidJoystickState::axisValue(int axisId) const
 	{
 		// The value has already been remapped from min..max to -1.0f..1.0f
-		return (axisId >= 0 && axisId < numAxesMapped_ ? axesValues_[axisId] : 0.0f);
+		return (axisId >= 0 && axisId < _numAxesMapped ? _axesValues[axisId] : 0.0f);
 	}
 
 	/** @brief Enables the accelerometer sensor; called by `enableAccelerometer()` and when the application gains focus */
 	void AndroidInputManager::enableAccelerometerSensor()
 	{
-		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
-			ASensorEventQueue_enableSensor(sensorEventQueue_, accelerometerSensor_);
+		if (_accelerometerEnabled && _accelerometerSensor != nullptr) {
+			ASensorEventQueue_enableSensor(_sensorEventQueue, _accelerometerSensor);
 			// 60 events per second
-			ASensorEventQueue_setEventRate(sensorEventQueue_, accelerometerSensor_, (1000L / 60) * 1000);
+			ASensorEventQueue_setEventRate(_sensorEventQueue, _accelerometerSensor, (1000L / 60) * 1000);
 		}
 	}
 
 	/** @brief Disables the accelerometer sensor; called by `enableAccelerometer()` and when the application loses focus */
 	void AndroidInputManager::disableAccelerometerSensor()
 	{
-		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
-			ASensorEventQueue_disableSensor(sensorEventQueue_, accelerometerSensor_);
+		if (_accelerometerEnabled && _accelerometerSensor != nullptr) {
+			ASensorEventQueue_disableSensor(_sensorEventQueue, _accelerometerSensor);
 		}
 	}
 
@@ -174,18 +174,18 @@ namespace nCine::Backends
 		} else {
 			disableAccelerometerSensor();
 		}
-		accelerometerEnabled_ = enabled;
+		_accelerometerEnabled = enabled;
 	}
 
 	void AndroidInputManager::parseAccelerometerEvent()
 	{
-		if (inputEventHandler_ != nullptr && accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
+		if (_inputEventHandler != nullptr && _accelerometerEnabled && _accelerometerSensor != nullptr) {
 			ASensorEvent event;
-			while (ASensorEventQueue_getEvents(sensorEventQueue_, &event, 1) > 0) {
-				accelerometerEvent_.x = event.acceleration.x;
-				accelerometerEvent_.y = event.acceleration.y;
-				accelerometerEvent_.z = event.acceleration.z;
-				inputEventHandler_->OnAcceleration(accelerometerEvent_);
+			while (ASensorEventQueue_getEvents(_sensorEventQueue, &event, 1) > 0) {
+				_accelerometerEvent.x = event.acceleration.x;
+				_accelerometerEvent.y = event.acceleration.y;
+				_accelerometerEvent.z = event.acceleration.z;
+				_inputEventHandler->OnAcceleration(_accelerometerEvent);
 			}
 		}
 	}
@@ -193,7 +193,7 @@ namespace nCine::Backends
 	bool AndroidInputManager::parseEvent(const AInputEvent* event)
 	{
 		// Early out if there is no input event handler
-		if (inputEventHandler_ == nullptr) {
+		if (_inputEventHandler == nullptr) {
 			return false;
 		}
 
@@ -229,13 +229,13 @@ namespace nCine::Backends
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
 		DEATH_ASSERT(joyId >= 0);
-		return (joyId < MaxNumJoysticks && joystickStates_[joyId].deviceId_ != -1);
+		return (joyId < MaxNumJoysticks && _joystickStates[joyId]._deviceId != -1);
 	}
 
 	const char* AndroidInputManager::joyName(int joyId) const
 	{
 		if (isJoyPresent(joyId)) {
-			return joystickStates_[joyId].name_;
+			return _joystickStates[joyId]._name;
 		} else {
 			return nullptr;
 		}
@@ -244,7 +244,7 @@ namespace nCine::Backends
 	const JoystickGuid AndroidInputManager::joyGuid(int joyId) const
 	{
 		if (isJoyPresent(joyId)) {
-			return joystickStates_[joyId].guid_;
+			return _joystickStates[joyId]._guid;
 		} else {
 			return JoystickGuidType::Unknown;
 		}
@@ -252,50 +252,50 @@ namespace nCine::Backends
 
 	int AndroidInputManager::joyNumButtons(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? joystickStates_[joyId].numButtons_ : -1);
+		return (isJoyPresent(joyId) ? _joystickStates[joyId]._numButtons : -1);
 	}
 
 	int AndroidInputManager::joyNumHats(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? joystickStates_[joyId].numHats_ : -1);
+		return (isJoyPresent(joyId) ? _joystickStates[joyId]._numHats : -1);
 	}
 
 	int AndroidInputManager::joyNumAxes(int joyId) const
 	{
-		return (isJoyPresent(joyId) ? joystickStates_[joyId].numAxesMapped_ : -1);
+		return (isJoyPresent(joyId) ? _joystickStates[joyId]._numAxesMapped : -1);
 	}
 
 	const JoystickState& AndroidInputManager::joystickState(int joyId) const
 	{
 		if (isJoyPresent(joyId)) {
-			return joystickStates_[joyId];
+			return _joystickStates[joyId];
 		} else {
-			return nullJoystickState_;
+			return _nullJoystickState;
 		}
 	}
 	
 	bool AndroidInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
 		if (isJoyPresent(joyId)) {
-			if (joystickStates_[joyId].numVibrators_ > 0) {
+			if (_joystickStates[joyId]._numVibrators > 0) {
 				const unsigned char amplitude = static_cast<unsigned char>(std::clamp(lowFreqIntensity, 0.0f, 1.0f) * 255);
 
-				joystickStates_[joyId].vibrators_[0].cancel();
+				_joystickStates[joyId]._vibrators[0].cancel();
 				// `amplitude` must either be `DEFAULT_AMPLITUDE`, or between 1 and 255 inclusive
 				if (amplitude > 0) {
 					const AndroidJniClass_VibrationEffect vibration = AndroidJniClass_VibrationEffect::createOneShot(durationMs, amplitude);
-					joystickStates_[joyId].vibrators_[0].vibrate(vibration);
+					_joystickStates[joyId]._vibrators[0].vibrate(vibration);
 				}
 			}
-			if (joystickStates_[joyId].numVibrators_ > 1) {
+			if (_joystickStates[joyId]._numVibrators > 1) {
 				// Clamp intensity between 0.0f and 1.0f
 				const unsigned char amplitude = static_cast<unsigned char>(std::clamp(highFreqIntensity, 0.0f, 1.0f) * 255);
 
-				joystickStates_[joyId].vibrators_[1].cancel();
+				_joystickStates[joyId]._vibrators[1].cancel();
 				// `amplitude` must either be `DEFAULT_AMPLITUDE`, or between 1 and 255 inclusive
 				if (amplitude > 0) {
 					const AndroidJniClass_VibrationEffect vibration = AndroidJniClass_VibrationEffect::createOneShot(durationMs, amplitude);
-					joystickStates_[joyId].vibrators_[1].vibrate(vibration);
+					_joystickStates[joyId]._vibrators[1].vibrate(vibration);
 				}
 			}
 			return true;
@@ -316,32 +316,32 @@ namespace nCine::Backends
 		const int joyId = findJoyId(deviceId);
 
 		// If the index is valid and device is not blacklisted then the structure can be updated
-		if (joyId > -1 && joystickStates_[joyId].guid_.isValid()) {
+		if (joyId > -1 && _joystickStates[joyId]._guid.isValid()) {
 			switch (AInputEvent_getType(event)) {
 				case AINPUT_EVENT_TYPE_KEY: {
 					const int keyCode = AKeyEvent_getKeyCode(event);
 					int buttonIndex = -1;
 					if (keyCode >= AKEYCODE_BUTTON_A && keyCode < AKEYCODE_ESCAPE) {
-						buttonIndex = joystickStates_[joyId].buttonsMapping_[keyCode - AKEYCODE_BUTTON_A];
+						buttonIndex = _joystickStates[joyId]._buttonsMapping[keyCode - AKEYCODE_BUTTON_A];
 					} else if (keyCode == AKEYCODE_BACK) {
 						// Back button is always the last one
 						const unsigned int lastIndex = AndroidJoystickState::MaxButtons - 1;
-						buttonIndex = joystickStates_[joyId].buttonsMapping_[lastIndex];
+						buttonIndex = _joystickStates[joyId]._buttonsMapping[lastIndex];
 					}
 
 					if (buttonIndex != -1) {
-						joyButtonEvent_.joyId = joyId;
-						joyButtonEvent_.buttonId = buttonIndex;
+						_joyButtonEvent.joyId = joyId;
+						_joyButtonEvent.buttonId = buttonIndex;
 						switch (AKeyEvent_getAction(event)) {
 							case AKEY_EVENT_ACTION_DOWN:
-								joystickStates_[joyId].buttons_[buttonIndex] = true;
-								joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
-								inputEventHandler_->OnJoyButtonPressed(joyButtonEvent_);
+								_joystickStates[joyId]._buttons[buttonIndex] = true;
+								_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
+								_inputEventHandler->OnJoyButtonPressed(_joyButtonEvent);
 								break;
 							case AKEY_EVENT_ACTION_UP:
-								joystickStates_[joyId].buttons_[buttonIndex] = false;
-								joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
-								inputEventHandler_->OnJoyButtonReleased(joyButtonEvent_);
+								_joystickStates[joyId]._buttons[buttonIndex] = false;
+								_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
+								_inputEventHandler->OnJoyButtonReleased(_joyButtonEvent);
 								break;
 							case AKEY_EVENT_ACTION_MULTIPLE:
 								break;
@@ -349,10 +349,10 @@ namespace nCine::Backends
 					}
 
 					if (keyCode >= AKEYCODE_DPAD_UP && keyCode < AKEYCODE_DPAD_CENTER) {
-						joyHatEvent_.joyId = joyId;
-						joyHatEvent_.hatId = 0; // No more than one hat is supported
+						_joyHatEvent.joyId = joyId;
+						_joyHatEvent.hatId = 0; // No more than one hat is supported
 
-						unsigned char hatState = joystickStates_[joyId].hatState_;
+						unsigned char hatState = _joystickStates[joyId]._hatState;
 						unsigned char hatValue = 0;
 
 						switch (keyCode) {
@@ -367,29 +367,29 @@ namespace nCine::Backends
 							hatState &= ~hatValue;
 						}
 
-						if (joystickStates_[joyId].hatState_ != hatState) {
-							joystickStates_[joyId].hatState_ = hatState;
-							joyHatEvent_.hatState = joystickStates_[joyId].hatState_;
+						if (_joystickStates[joyId]._hatState != hatState) {
+							_joystickStates[joyId]._hatState = hatState;
+							_joyHatEvent.hatState = _joystickStates[joyId]._hatState;
 
-							joyMapping_.OnJoyHatMoved(joyHatEvent_);
-							inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+							_joyMapping.OnJoyHatMoved(_joyHatEvent);
+							_inputEventHandler->OnJoyHatMoved(_joyHatEvent);
 						}
 					}
 					break;
 				}
 				case AINPUT_EVENT_TYPE_MOTION: {
-					joyAxisEvent_.joyId = joyId;
+					_joyAxisEvent.joyId = joyId;
 
-					auto& joyState = joystickStates_[joyId];
+					auto& joyState = _joystickStates[joyId];
 					unsigned char hatState = 0;
-					for (int i = 0; i < joyState.numAxes_; i++) {
-						const int axis = joyState.axesMapping_[i];
+					for (int i = 0; i < joyState._numAxes; i++) {
+						const int axis = joyState._axesMapping[i];
 						const float axisRawValue = AMotionEvent_getAxisValue(event, axis, 0);
-						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState.axesMinValues_[i]) / joyState.axesRangeValues_[i];
+						const float axisValue = -1.0f + 2.0f * (axisRawValue - joyState._axesMinValues[i]) / joyState._axesRangeValues[i];
 
 						if (axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) {
-							joyHatEvent_.joyId = joyId;
-							joyHatEvent_.hatId = 0; // No more than one hat is supported
+							_joyHatEvent.joyId = joyId;
+							_joyHatEvent.hatId = 0; // No more than one hat is supported
 
 							constexpr float HatThresholdValue = 0.99f;
 							if (axis == AMOTION_EVENT_AXIS_HAT_X) {
@@ -406,20 +406,20 @@ namespace nCine::Backends
 								}
 							}
 						} else {
-							joyState.axesValues_[i] = axisValue;
+							joyState._axesValues[i] = axisValue;
 							
-							joyAxisEvent_.axisId = i;
-							joyAxisEvent_.value = axisValue;
-							joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
-							inputEventHandler_->OnJoyAxisMoved(joyAxisEvent_);
+							_joyAxisEvent.axisId = i;
+							_joyAxisEvent.value = axisValue;
+							_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
+							_inputEventHandler->OnJoyAxisMoved(_joyAxisEvent);
 						}
 					}
 
-					if (joyState.hatState_ != hatState) {
-						joyState.hatState_ = hatState;
-						joyHatEvent_.hatState = joyState.hatState_;
-						joyMapping_.OnJoyHatMoved(joyHatEvent_);
-						inputEventHandler_->OnJoyHatMoved(joyHatEvent_);
+					if (joyState._hatState != hatState) {
+						joyState._hatState = hatState;
+						_joyHatEvent.hatState = joyState._hatState;
+						_joyMapping.OnJoyHatMoved(_joyHatEvent);
+						_inputEventHandler->OnJoyHatMoved(_joyHatEvent);
 					}
 					break;
 				}
@@ -442,40 +442,40 @@ namespace nCine::Backends
 
 		int metaState = AKeyEvent_getMetaState(event);
 
-		keyboardEvent_.scancode = AKeyEvent_getScanCode(event);
-		keyboardEvent_.sym = AndroidKeys::keySymValueToEnum(keyCode);
-		keyboardEvent_.mod = AndroidKeys::keyModMaskToEnumMask(metaState);
+		_keyboardEvent.scancode = AKeyEvent_getScanCode(event);
+		_keyboardEvent.sym = AndroidKeys::keySymValueToEnum(keyCode);
+		_keyboardEvent.mod = AndroidKeys::keyModMaskToEnumMask(metaState);
 
-		const unsigned int keySym = static_cast<unsigned int>(keyboardEvent_.sym);
+		const unsigned int keySym = static_cast<unsigned int>(_keyboardEvent.sym);
 		const int action = AKeyEvent_getAction(event);
 		switch (action) {
 			case AKEY_EVENT_ACTION_DOWN:
-				if (keyboardEvent_.sym != Keys::Unknown) {
-					keyboardState_.keys_[keySym] = 1;
+				if (_keyboardEvent.sym != Keys::Unknown) {
+					_keyboardState._keys[keySym] = 1;
 				}
-				inputEventHandler_->OnKeyPressed(keyboardEvent_);
+				_inputEventHandler->OnKeyPressed(_keyboardEvent);
 
 				if ((metaState & AMETA_CTRL_ON) == 0) {
 					AndroidJniClass_KeyEvent keyEvent(AInputEvent_getType(event), keyCode);
 					if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
 						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
-						textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
-						if (textInputEvent_.length > 0) {
-							inputEventHandler_->OnTextInput(textInputEvent_);
+						_textInputEvent.length = Utf8::FromCodePoint(unicodeKey, _textInputEvent.text);
+						if (_textInputEvent.length > 0) {
+							_inputEventHandler->OnTextInput(_textInputEvent);
 						}
 					}
 				}
 				break;
 			case AKEY_EVENT_ACTION_UP:
-				if (keyboardEvent_.sym != Keys::Unknown) {
-					keyboardState_.keys_[keySym] = 0;
+				if (_keyboardEvent.sym != Keys::Unknown) {
+					_keyboardState._keys[keySym] = 0;
 				}
-				inputEventHandler_->OnKeyReleased(keyboardEvent_);
+				_inputEventHandler->OnKeyReleased(_keyboardEvent);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
 				// AKEY_EVENT_ACTION_MULTIPLE should be deprecated, but it seems it's still used even on Android 13
-				if (keyboardEvent_.sym != Keys::Unknown) {
-					inputEventHandler_->OnKeyPressed(keyboardEvent_);
+				if (_keyboardEvent.sym != Keys::Unknown) {
+					_inputEventHandler->OnKeyPressed(_keyboardEvent);
 				}
 				// TODO: This section doesn't work anyway with software keyboards (https://stackoverflow.com/q/21124051)
 				/*else if ((metaState & AMETA_CTRL_ON) == 0) {
@@ -487,15 +487,15 @@ namespace nCine::Backends
 					int flags = AKeyEvent_getFlags(event);
 					int source = AInputEvent_getSource(event);
 
-					AndroidJniClass_KeyEvent keyEvent(downTime, eventTime, action, keyCode, repeatCount, metaState, deviceID, keyboardEvent_.scancode, flags, source);
-					textInputEvent_.length = keyEvent.getCharacters(textInputEvent_.text, sizeof(textInputEvent_.text));
-					if (textInputEvent_.length > 0) {
-						inputEventHandler_->OnTextInput(textInputEvent_);
+					AndroidJniClass_KeyEvent keyEvent(downTime, eventTime, action, keyCode, repeatCount, metaState, deviceID, _keyboardEvent.scancode, flags, source);
+					_textInputEvent.length = keyEvent.getCharacters(_textInputEvent.text, sizeof(_textInputEvent.text));
+					if (_textInputEvent.length > 0) {
+						_inputEventHandler->OnTextInput(_textInputEvent);
 					} else if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
 						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
-						textInputEvent_.length = Utf8::FromCodePoint(unicodeKey, textInputEvent_.text);
-						if (textInputEvent_.length > 0) {
-							inputEventHandler_->OnTextInput(textInputEvent_);
+						_textInputEvent.length = Utf8::FromCodePoint(unicodeKey, _textInputEvent.text);
+						if (_textInputEvent.length > 0) {
+							_inputEventHandler->OnTextInput(_textInputEvent);
 						}
 					}
 				}*/
@@ -513,10 +513,10 @@ namespace nCine::Backends
 		float w = static_cast<float>(res.X);
 		float h = static_cast<float>(res.Y);
 
-		touchEvent_.count = AMotionEvent_getPointerCount(event);
-		touchEvent_.actionIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-		for (unsigned int i = 0; i < touchEvent_.count && i < TouchEvent::MaxPointers; i++) {
-			TouchEvent::Pointer& pointer = touchEvent_.pointers[i];
+		_touchEvent.count = AMotionEvent_getPointerCount(event);
+		_touchEvent.actionIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+		for (unsigned int i = 0; i < _touchEvent.count && i < TouchEvent::MaxPointers; i++) {
+			TouchEvent::Pointer& pointer = _touchEvent.pointers[i];
 			pointer.id = AMotionEvent_getPointerId(event, i);
 			pointer.x = AMotionEvent_getX(event, i) / w;
 			pointer.y = AMotionEvent_getY(event, i) / h;
@@ -525,23 +525,23 @@ namespace nCine::Backends
 
 		switch (action & AMOTION_EVENT_ACTION_MASK) {
 			case AMOTION_EVENT_ACTION_DOWN:
-				touchEvent_.type = TouchEventType::Down;
+				_touchEvent.type = TouchEventType::Down;
 				break;
 			case AMOTION_EVENT_ACTION_UP:
-				touchEvent_.type = TouchEventType::Up;
+				_touchEvent.type = TouchEventType::Up;
 				break;
 			case AMOTION_EVENT_ACTION_MOVE:
-				touchEvent_.type = TouchEventType::Move;
+				_touchEvent.type = TouchEventType::Move;
 				break;
 			case AMOTION_EVENT_ACTION_POINTER_DOWN:
-				touchEvent_.type = TouchEventType::PointerDown;
+				_touchEvent.type = TouchEventType::PointerDown;
 				break;
 			case AMOTION_EVENT_ACTION_POINTER_UP:
-				touchEvent_.type = TouchEventType::PointerUp;
+				_touchEvent.type = TouchEventType::PointerUp;
 				break;
 		}
 
-		inputEventHandler_->OnTouchEvent(touchEvent_);
+		_inputEventHandler->OnTouchEvent(_touchEvent);
 		return true;
 	}
 
@@ -550,18 +550,18 @@ namespace nCine::Backends
 		const int action = AMotionEvent_getAction(event);
 		int buttonState = 0;
 
-		mouseEvent_.x = static_cast<int>(AMotionEvent_getX(event, 0));
-		mouseEvent_.y = static_cast<int>(theApplication().GetHeight() - AMotionEvent_getY(event, 0));
-		mouseState_.x = mouseEvent_.x;
-		mouseState_.y = mouseEvent_.y;
+		_mouseEvent.x = static_cast<int>(AMotionEvent_getX(event, 0));
+		_mouseEvent.y = static_cast<int>(theApplication().GetHeight() - AMotionEvent_getY(event, 0));
+		_mouseState.x = _mouseEvent.x;
+		_mouseState.y = _mouseEvent.y;
 
 		// Mask out back and forward buttons in the detected state
 		// as those are simulated as right and middle buttons
 		int maskOutButtons = 0;
-		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_SECONDARY) {
+		if (_simulatedMouseButtonState & AMOTION_EVENT_BUTTON_SECONDARY) {
 			maskOutButtons |= AMOTION_EVENT_BUTTON_BACK;
 		}
-		if (simulatedMouseButtonState_ & AMOTION_EVENT_BUTTON_TERTIARY) {
+		if (_simulatedMouseButtonState & AMOTION_EVENT_BUTTON_TERTIARY) {
 			maskOutButtons |= AMOTION_EVENT_BUTTON_FORWARD;
 		}
 
@@ -569,31 +569,31 @@ namespace nCine::Backends
 			case AMOTION_EVENT_ACTION_DOWN:
 				buttonState = AMotionEvent_getButtonState(event);
 				buttonState &= ~maskOutButtons;
-				buttonState |= simulatedMouseButtonState_;
+				buttonState |= _simulatedMouseButtonState;
 
-				mouseEvent_.button = androidToNcineMouseButton(mouseState_.buttonState_ ^ buttonState); // pressed button mask
-				mouseState_.buttonState_ = buttonState;
-				inputEventHandler_->OnMouseDown(mouseEvent_);
+				_mouseEvent.button = androidToNcineMouseButton(_mouseState._buttonState ^ buttonState); // pressed button mask
+				_mouseState._buttonState = buttonState;
+				_inputEventHandler->OnMouseDown(_mouseEvent);
 				break;
 			case AMOTION_EVENT_ACTION_UP:
 				buttonState = AMotionEvent_getButtonState(event);
 				buttonState &= ~maskOutButtons;
-				buttonState |= simulatedMouseButtonState_;
+				buttonState |= _simulatedMouseButtonState;
 
-				mouseEvent_.button = androidToNcineMouseButton(mouseState_.buttonState_ ^ buttonState); // released button mask
-				mouseState_.buttonState_ = buttonState;
-				inputEventHandler_->OnMouseUp(mouseEvent_);
+				_mouseEvent.button = androidToNcineMouseButton(_mouseState._buttonState ^ buttonState); // released button mask
+				_mouseState._buttonState = buttonState;
+				_inputEventHandler->OnMouseUp(_mouseEvent);
 				break;
 			case AMOTION_EVENT_ACTION_MOVE:
 			case AMOTION_EVENT_ACTION_HOVER_MOVE:
-				inputEventHandler_->OnMouseMove(mouseState_);
+				_inputEventHandler->OnMouseMove(_mouseState);
 				break;
 		}
 
-		scrollEvent_.x = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HSCROLL, 0);
-		scrollEvent_.y = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, 0);
-		if (fabsf(scrollEvent_.x) > 0.0f || fabsf(scrollEvent_.y) > 0.0f) {
-			inputEventHandler_->OnMouseWheel(scrollEvent_);
+		_scrollEvent.x = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HSCROLL, 0);
+		_scrollEvent.y = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, 0);
+		if (fabsf(_scrollEvent.x) > 0.0f || fabsf(_scrollEvent.y) > 0.0f) {
+			_inputEventHandler->OnMouseWheel(_scrollEvent);
 		}
 
 		return true;
@@ -610,16 +610,16 @@ namespace nCine::Backends
 			// checking previous action to avoid key repeat events
 			if (action == AKEY_EVENT_ACTION_DOWN && oldAction == AKEY_EVENT_ACTION_UP) {
 				oldAction = action;
-				simulatedMouseButtonState_ |= simulatedButton;
-				mouseEvent_.button = androidToNcineMouseButton(simulatedButton);
-				mouseState_.buttonState_ |= simulatedButton;
-				inputEventHandler_->OnMouseDown(mouseEvent_);
+				_simulatedMouseButtonState |= simulatedButton;
+				_mouseEvent.button = androidToNcineMouseButton(simulatedButton);
+				_mouseState._buttonState |= simulatedButton;
+				_inputEventHandler->OnMouseDown(_mouseEvent);
 			} else if (action == AKEY_EVENT_ACTION_UP && oldAction == AKEY_EVENT_ACTION_DOWN) {
 				oldAction = action;
-				simulatedMouseButtonState_ &= ~simulatedButton;
-				mouseEvent_.button = androidToNcineMouseButton(simulatedButton);
-				mouseState_.buttonState_ &= ~simulatedButton;
-				inputEventHandler_->OnMouseUp(mouseEvent_);
+				_simulatedMouseButtonState &= ~simulatedButton;
+				_mouseEvent.button = androidToNcineMouseButton(simulatedButton);
+				_mouseState._buttonState &= ~simulatedButton;
+				_inputEventHandler->OnMouseUp(_mouseEvent);
 			}
 		}
 
@@ -631,39 +631,39 @@ namespace nCine::Backends
 		// Prepare to monitor accelerometer
 #if __ANDROID_API__ >= 26
 		AndroidApplication& application = static_cast<AndroidApplication&>(theApplication());
-		sensorManager_ = ASensorManager_getInstanceForPackage(application.packageName());
+		_sensorManager = ASensorManager_getInstanceForPackage(application.packageName());
 #else
-		sensorManager_ = ASensorManager_getInstance();
+		_sensorManager = ASensorManager_getInstance();
 #endif
-		accelerometerSensor_ = ASensorManager_getDefaultSensor(sensorManager_, ASENSOR_TYPE_ACCELEROMETER);
-		sensorEventQueue_ = ASensorManager_createEventQueue(sensorManager_, state->looper, LOOPER_ID_USER, nullptr, nullptr);
+		_accelerometerSensor = ASensorManager_getDefaultSensor(_sensorManager, ASENSOR_TYPE_ACCELEROMETER);
+		_sensorEventQueue = ASensorManager_createEventQueue(_sensorManager, state->looper, LOOPER_ID_USER, nullptr, nullptr);
 
-		if (accelerometerSensor_ == nullptr) {
+		if (_accelerometerSensor == nullptr) {
 			LOGW("No accelerometer sensor available");
 		}
 	}
 
 	void AndroidInputManager::updateJoystickConnections()
 	{
-		if (joyCheckTimer_.interval() >= JoyCheckRateSecs) {
+		if (_joyCheckTimer.interval() >= JoyCheckRateSecs) {
 			checkDisconnectedJoysticks();
 			checkConnectedJoysticks();
-			joyCheckTimer_.start();
+			_joyCheckTimer.start();
 		}
 	}
 
 	void AndroidInputManager::checkDisconnectedJoysticks()
 	{
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
-			const int deviceId = joystickStates_[i].deviceId_;
+			const int deviceId = _joystickStates[i]._deviceId;
 			if (deviceId > -1 && !isDeviceConnected(deviceId)) {
-				LOGI("Gamepad {} \"{}\" (device {}) has been disconnected", i, joystickStates_[i].name_, deviceId);
-				joystickStates_[i].deviceId_ = -1;
+				LOGI("Gamepad {} \"{}\" (device {}) has been disconnected", i, _joystickStates[i]._name, deviceId);
+				_joystickStates[i]._deviceId = -1;
 
-				if (inputEventHandler_ != nullptr && joystickStates_[i].guid_.isValid()) {
-					joyConnectionEvent_.joyId = i;
-					inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
-					joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
+				if (_inputEventHandler != nullptr && _joystickStates[i]._guid.isValid()) {
+					_joyConnectionEvent.joyId = i;
+					_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
+					_joyMapping.OnJoyDisconnected(_joyConnectionEvent);
 				}
 			}
 		}
@@ -677,7 +677,7 @@ namespace nCine::Backends
 
 		int connectedJoys = 0;
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
-			if (joystickStates_[i].deviceId_ > -1) {
+			if (_joystickStates[i]._deviceId > -1) {
 				connectedJoys++;
 			}
 		}
@@ -691,7 +691,7 @@ namespace nCine::Backends
 				((sources & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK)) {
 				const int joyId = findJoyId(deviceIds[i]);
 				if (joyId > -1) {
-					joystickStates_[joyId].deviceId_ = deviceIds[i];
+					_joystickStates[joyId]._deviceId = deviceIds[i];
 				}
 
 				connectedJoys++;
@@ -708,29 +708,29 @@ namespace nCine::Backends
 
 		for (unsigned int i = 0; i < MaxNumJoysticks; i++) {
 			// Keeping track of the first unused joystick id, in case this is the first event from a new joystick
-			if (joystickStates_[i].deviceId_ < 0 && joyId == -1) {
+			if (_joystickStates[i]._deviceId < 0 && joyId == -1) {
 				joyId = i;
-			} else if (joystickStates_[i].deviceId_ == deviceId) {
+			} else if (_joystickStates[i]._deviceId == deviceId) {
 				// If the joystick is already known then the loop ends
 				joyId = i;
 				break;
 			}
 		}
 
-		if (joyId > -1 && joystickStates_[joyId].deviceId_ != deviceId) {
+		if (joyId > -1 && _joystickStates[joyId]._deviceId != deviceId) {
 			deviceInfo(deviceId, joyId);
 
-			const uint8_t* g = joystickStates_[joyId].guid_.data;
+			const uint8_t* g = _joystickStates[joyId]._guid.data;
 			LOGI("Device {} \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] has been connected as gamepad {} - {} axes, {} buttons, {} vibs",
-				deviceId, joystickStates_[joyId].name_, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
-				joyId, joystickStates_[joyId].numAxes_, joystickStates_[joyId].numButtons_, joystickStates_[joyId].numVibrators_);
+				deviceId, _joystickStates[joyId]._name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
+				joyId, _joystickStates[joyId]._numAxes, _joystickStates[joyId]._numButtons, _joystickStates[joyId]._numVibrators);
 			
-			joystickStates_[joyId].deviceId_ = deviceId;
+			_joystickStates[joyId]._deviceId = deviceId;
 
-			if (inputEventHandler_ != nullptr && joystickStates_[joyId].guid_.isValid()) {
-				joyConnectionEvent_.joyId = joyId;
-				joyMapping_.OnJoyConnected(joyConnectionEvent_);
-				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
+			if (_inputEventHandler != nullptr && _joystickStates[joyId]._guid.isValid()) {
+				_joyConnectionEvent.joyId = joyId;
+				_joyMapping.OnJoyConnected(_joyConnectionEvent);
+				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		}
 
@@ -750,20 +750,20 @@ namespace nCine::Backends
 
 		AndroidJniClass_InputDevice inputDevice = AndroidJniClass_InputDevice::getDevice(deviceId);
 		if (!inputDevice.IsNull()) {
-			auto& joyState = joystickStates_[joyId];
+			auto& joyState = _joystickStates[joyId];
 
-			inputDevice.getName(joyState.name_, AndroidJoystickState::MaxNameLength);
-			auto nameLower = StringUtils::lowercase(StringView(joyState.name_));
+			inputDevice.getName(joyState._name, AndroidJoystickState::MaxNameLength);
+			auto nameLower = StringUtils::lowercase(StringView(joyState._name));
 			// Internal Android TV devices, NVIDIA Shield devices, WSA devices are not valid controllers
 			if (nameLower == "virtual-remote"_s || nameLower == "virtual-search"_s || nameLower == "virtual_keyboard"_s ||
 				nameLower == "shield-ask-remote"_s ||
 				nameLower == "uinput-fpc"_s /* Fingerprint Sensor */ ||
 				nameLower == "tpv_smtrc"_s || nameLower == "tpv_multirc"_s || nameLower == "tpv_mutilrc"_s /* TP Vision (Philips TV) Smart Remote */) {
 				// Marking as invalid controller
-				joyState.guid_ = JoystickGuidType::Unknown;
-				joyState.numButtons_ = 0;
-				joyState.numHats_ = 0;
-				joyState.numAxes_ = 0;
+				joyState._guid = JoystickGuidType::Unknown;
+				joyState._numButtons = 0;
+				joyState._numHats = 0;
+				joyState._numAxes = 0;
 				LOGI("Device ({}, {}) - Invalid controller", deviceId, joyId);
 				return;
 			}
@@ -771,7 +771,7 @@ namespace nCine::Backends
 			const int vendorId = inputDevice.getVendorId();
 			const int productId = inputDevice.getProductId();
 			inputDevice.getDescriptor(deviceInfoString, MaxStringLength);
-			joyState.guid_ = JoyMapping::CreateJoystickGuid(/*SDL_HARDWARE_BUS_BLUETOOTH*/0x05, vendorId, productId, 0, deviceInfoString, 0, 0);
+			joyState._guid = JoyMapping::CreateJoystickGuid(/*SDL_HARDWARE_BUS_BLUETOOTH*/0x05, vendorId, productId, 0, deviceInfoString, 0, 0);
 
 			// Checking all AKEYCODE_BUTTON_* plus AKEYCODE_BACK
 			constexpr int maxButtons = AndroidJoystickState::MaxButtons;
@@ -813,17 +813,17 @@ namespace nCine::Backends
 				}
 
 				if (hasKey) {
-					joyState.buttonsMapping_[i] = (int)ButtonNames[i];
+					joyState._buttonsMapping[i] = (int)ButtonNames[i];
 #if defined(DEATH_TRACE)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d:%d", (int)ButtonNames[i], keyCode);
 #endif
 					buttonMask |= ButtonMasks[i];
 					numFoundButtons++;
 				} else {
-					joyState.buttonsMapping_[i] = -1;
+					joyState._buttonsMapping[i] = -1;
 				}
 			}
-			joyState.numButtons_ = numFoundButtons;
+			joyState._numButtons = numFoundButtons;
 #if defined(DEATH_TRACE)
 			if (numFoundButtons == 0) {
 				sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
@@ -831,7 +831,7 @@ namespace nCine::Backends
 			LOGI("Device ({}, {}) - Buttons{}", deviceId, joyId, deviceInfoString);
 #endif
 
-			joyState.hasDPad_ = true;
+			joyState._hasDPad = true;
 			if (__ANDROID_API__ >= 19 && AndroidJniHelper::SdkVersion() >= 19) {
 				int buttonsToCheck[4];
 				for (int i = 0; i < arraySize(buttonsToCheck); i++) {
@@ -842,7 +842,7 @@ namespace nCine::Backends
 
 				for (int i = 0; i < arraySize(buttonsToCheck); i++) {
 					if (!checkedButtons[i]) {
-						joyState.hasDPad_ = false;
+						joyState._hasDPad = false;
 						LOGI("Device ({}, {}) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
@@ -851,7 +851,7 @@ namespace nCine::Backends
 				for (int button = AKEYCODE_DPAD_UP; button < AKEYCODE_DPAD_CENTER; button++) {
 					const bool hasKey = AndroidJniClass_KeyCharacterMap::deviceHasKey(button);
 					if (!hasKey) {
-						joyState.hasDPad_ = false;
+						joyState._hasDPad = false;
 						LOGI("Device ({}, {}) - D-Pad not detected", deviceId, joyId);
 						break;
 					}
@@ -861,7 +861,7 @@ namespace nCine::Backends
 #if defined(DEATH_TRACE)
 			deviceInfoString[0] = '\0';
 #endif
-			joyState.hasHatAxes_ = true;
+			joyState._hasHatAxes = true;
 
 			int numAxes = 0;
 			int numAxesMapped = 0;
@@ -874,14 +874,14 @@ namespace nCine::Backends
 					const float rangeValue = motionRange.getRange();
 					
 					if (numAxes < AndroidJoystickState::MaxAxes) {
-						joyState.axesMapping_[numAxes] = axis;
+						joyState._axesMapping[numAxes] = axis;
 						// Avoid a division by zero by only assigning valid range values
 						if (rangeValue != 0.0f) {
-							joyState.axesMinValues_[numAxes] = minValue;
-							joyState.axesRangeValues_[numAxes] = rangeValue;
+							joyState._axesMinValues[numAxes] = minValue;
+							joyState._axesRangeValues[numAxes] = rangeValue;
 						} else {
-							joyState.axesMinValues_[numAxes] = -1.0f;
-							joyState.axesRangeValues_[numAxes] = 2.0f;
+							joyState._axesMinValues[numAxes] = -1.0f;
+							joyState._axesRangeValues[numAxes] = 2.0f;
 						}
 					}
 #if defined(DEATH_TRACE)
@@ -892,8 +892,8 @@ namespace nCine::Backends
 					}
 					numAxes++;
 				} else {
-					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState.hasHatAxes_) {
-						joyState.hasHatAxes_ = false;
+					if ((axis == AMOTION_EVENT_AXIS_HAT_X || axis == AMOTION_EVENT_AXIS_HAT_Y) && joyState._hasHatAxes) {
+						joyState._hasHatAxes = false;
 						LOGI("Device ({}, {}) - Axis hats not detected", deviceId, joyId);
 					}
 				}
@@ -906,25 +906,25 @@ namespace nCine::Backends
 #endif
 			if (numAxes >= 4) {
 				// Android sometimes returns strange range for the first two axes, all other axes are fine
-				if (std::abs(joyState.axesMinValues_[0]) < 0.01f && joyState.axesRangeValues_[0] > 128.0f &&
-					std::abs(joyState.axesMinValues_[1]) < 0.01f && joyState.axesRangeValues_[1] > 128.0f &&
-					joyState.axesMinValues_[2] == -1.0f && joyState.axesRangeValues_[2] == 2.0f &&
-					joyState.axesMinValues_[3] == -1.0f && joyState.axesRangeValues_[3] == 2.0f) {
-					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 0, joyState.axesMapping_[0], joyState.axesRangeValues_[0], -1.0f, 1.0f);
-					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 1, joyState.axesMapping_[1], joyState.axesRangeValues_[1], -1.0f, 1.0f);
-					joyState.axesMinValues_[0] = -1.0f;
-					joyState.axesRangeValues_[0] = 2.0f;
-					joyState.axesMinValues_[1] = -1.0f;
-					joyState.axesRangeValues_[1] = 2.0f;
+				if (std::abs(joyState._axesMinValues[0]) < 0.01f && joyState._axesRangeValues[0] > 128.0f &&
+					std::abs(joyState._axesMinValues[1]) < 0.01f && joyState._axesRangeValues[1] > 128.0f &&
+					joyState._axesMinValues[2] == -1.0f && joyState._axesRangeValues[2] == 2.0f &&
+					joyState._axesMinValues[3] == -1.0f && joyState._axesRangeValues[3] == 2.0f) {
+					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 0, joyState._axesMapping[0], joyState._axesRangeValues[0], -1.0f, 1.0f);
+					LOGW("Device ({}, {}) - Axis {}:{} reported strange range {:.2f}, using {:.2f} to {:.2f} instead", deviceId, joyId, 1, joyState._axesMapping[1], joyState._axesRangeValues[1], -1.0f, 1.0f);
+					joyState._axesMinValues[0] = -1.0f;
+					joyState._axesRangeValues[0] = 2.0f;
+					joyState._axesMinValues[1] = -1.0f;
+					joyState._axesRangeValues[1] = 2.0f;
 				}
 			}
 
-			joyState.numAxes_ = numAxes;
-			joyState.numAxesMapped_ = numAxesMapped;
+			joyState._numAxes = numAxes;
+			joyState._numAxesMapped = numAxesMapped;
 
-			joyState.numHats_ = 0;
-			if (joyState.hasDPad_ || joyState.hasHatAxes_) {
-				joyState.numHats_ = 1; // No more than one hat is supported
+			joyState._numHats = 0;
+			if (joyState._hasDPad || joyState._hasHatAxes) {
+				joyState._numHats = 1; // No more than one hat is supported
 			}
 
 			if (AndroidJniHelper::SdkVersion() >= 31) {
@@ -933,22 +933,22 @@ namespace nCine::Backends
 #endif
 				AndroidJniClass_VibratorManager vibratorManager = inputDevice.getVibratorManager();
 				// There might be more vibrators available than the maximum number supported
-				joyState.numVibrators_ = vibratorManager.getVibratorIds(joyState.vibratorsIds_, AndroidJoystickState::MaxVibrators);
+				joyState._numVibrators = vibratorManager.getVibratorIds(joyState._vibratorsIds, AndroidJoystickState::MaxVibrators);
 
-				if (joyState.numVibrators_ == 0) {
+				if (joyState._numVibrators == 0) {
 #if defined(DEATH_TRACE)
 					sprintf(&deviceInfoString[strlen(deviceInfoString)], " not detected");
 #endif
 				} else {
 					for (int i = 0; i < AndroidJoystickState::MaxVibrators; i++) {
-						joyState.vibrators_[i] = vibratorManager.getVibrator(joyState.vibratorsIds_[i]);
+						joyState._vibrators[i] = vibratorManager.getVibrator(joyState._vibratorsIds[i]);
 #if defined(DEATH_TRACE)
-						sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d", joyState.vibratorsIds_[i]);
+						sprintf(&deviceInfoString[strlen(deviceInfoString)], " %d", joyState._vibratorsIds[i]);
 #endif
 					}
 				}
 #if defined(DEATH_TRACE)
-				LOGI("Device ({}, {}) - Vibs{} ({})", deviceId, joyId, deviceInfoString, joyState.numVibrators_);
+				LOGI("Device ({}, {}) - Vibs{} ({})", deviceId, joyId, deviceInfoString, joyState._numVibrators);
 #endif
 			}
 
@@ -964,14 +964,14 @@ namespace nCine::Backends
 				if (numAxes >= 6) {
 					axisMask |= 0x10 | 0x20;
 				}
-				if (joyState.hasDPad_ || joyState.hasHatAxes_) {
+				if (joyState._hasDPad || joyState._hasHatAxes) {
 					buttonMask |= 0x800 | 0x1000 | 0x2000 | 0x4000;
 				}
 
-				joyState.guid_.data[12] = buttonMask & 0xff;
-				joyState.guid_.data[13] = (buttonMask >> 8) & 0xff;
-				joyState.guid_.data[14] = axisMask & 0xff;
-				joyState.guid_.data[15] = (axisMask >> 8) & 0xff;
+				joyState._guid.data[12] = buttonMask & 0xff;
+				joyState._guid.data[13] = (buttonMask >> 8) & 0xff;
+				joyState._guid.data[14] = axisMask & 0xff;
+				joyState._guid.data[15] = (axisMask >> 8) & 0xff;
 			}
 		}
 	}

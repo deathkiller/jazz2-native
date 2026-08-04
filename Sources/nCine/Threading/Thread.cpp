@@ -157,44 +157,44 @@ namespace nCine
 	void ThreadAffinityMask::Zero()
 	{
 #	if defined(DEATH_TARGET_WINDOWS)
-		affinityMask_ = 0LL;
+		_affinityMask = 0LL;
 #	elif defined(DEATH_TARGET_APPLE)
-		affinityTag_ = THREAD_AFFINITY_TAG_NULL;
+		_affinityTag = THREAD_AFFINITY_TAG_NULL;
 #	else
-		CPU_ZERO(&cpuSet_);
+		CPU_ZERO(&_cpuSet);
 #	endif
 	}
 
 	void ThreadAffinityMask::Set(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_WINDOWS)
-		affinityMask_ |= 1LL << cpuNum;
+		_affinityMask |= 1LL << cpuNum;
 #	elif defined(DEATH_TARGET_APPLE)
-		affinityTag_ |= 1 << cpuNum;
+		_affinityTag |= 1 << cpuNum;
 #	else
-		CPU_SET(cpuNum, &cpuSet_);
+		CPU_SET(cpuNum, &_cpuSet);
 #	endif
 	}
 
 	void ThreadAffinityMask::Clear(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_WINDOWS)
-		affinityMask_ &= ~(1LL << cpuNum);
+		_affinityMask &= ~(1LL << cpuNum);
 #	elif defined(DEATH_TARGET_APPLE)
-		affinityTag_ &= ~(1 << cpuNum);
+		_affinityTag &= ~(1 << cpuNum);
 #	else
-		CPU_CLR(cpuNum, &cpuSet_);
+		CPU_CLR(cpuNum, &_cpuSet);
 #	endif
 	}
 
 	bool ThreadAffinityMask::IsSet(std::int32_t cpuNum)
 	{
 #	if defined(DEATH_TARGET_WINDOWS)
-		return ((affinityMask_ >> cpuNum) & 1LL) != 0;
+		return ((_affinityMask >> cpuNum) & 1LL) != 0;
 #	elif defined(DEATH_TARGET_APPLE)
-		return ((affinityTag_ >> cpuNum) & 1) != 0;
+		return ((_affinityTag >> cpuNum) & 1) != 0;
 #	else
-		return CPU_ISSET(cpuNum, &cpuSet_) != 0;
+		return CPU_ISSET(cpuNum, &_cpuSet) != 0;
 #	endif
 	}
 
@@ -681,17 +681,17 @@ namespace nCine
 		}
 
 #	if defined(DEATH_TARGET_WINDOWS)
-		affinityMask.affinityMask_ = ::SetThreadAffinityMask(_sharedBlock->_handle, ~0);
-		::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
+		affinityMask._affinityMask = ::SetThreadAffinityMask(_sharedBlock->_handle, ~0);
+		::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask._affinityMask);
 #	elif defined(DEATH_TARGET_APPLE)
 		thread_affinity_policy_data_t threadAffinityPolicy;
 		thread_port_t threadPort = pthread_mach_thread_np(_sharedBlock->_handle);
 		mach_msg_type_number_t policyCount = THREAD_AFFINITY_POLICY_COUNT;
 		boolean_t getDefault = FALSE;
 		thread_policy_get(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), &policyCount, &getDefault);
-		affinityMask.affinityTag_ = threadAffinityPolicy.affinity_tag;
+		affinityMask._affinityTag = threadAffinityPolicy.affinity_tag;
 #	else
-		pthread_getaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask.cpuSet_);
+		pthread_getaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask._cpuSet);
 #	endif
 
 		return affinityMask;
@@ -705,13 +705,13 @@ namespace nCine
 		}
 
 #	if defined(DEATH_TARGET_WINDOWS)
-		::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask.affinityMask_);
+		::SetThreadAffinityMask(_sharedBlock->_handle, affinityMask._affinityMask);
 #	elif defined(DEATH_TARGET_APPLE)
-		thread_affinity_policy_data_t threadAffinityPolicy = { affinityMask.affinityTag_ };
+		thread_affinity_policy_data_t threadAffinityPolicy = { affinityMask._affinityTag };
 		thread_port_t threadPort = pthread_mach_thread_np(_sharedBlock->_handle);
 		thread_policy_set(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), THREAD_AFFINITY_POLICY_COUNT);
 #	else
-		pthread_setaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask.cpuSet_);
+		pthread_setaffinity_np(_sharedBlock->_handle, sizeof(cpu_set_t), &affinityMask._cpuSet);
 #	endif
 	}
 #endif

@@ -23,18 +23,18 @@ namespace nCine::RHI::PVR
 	public:
 		PvrRenderbuffer() = default;
 		void Create(DepthStencilFormat format, std::int32_t width, std::int32_t height) {
-			format_ = format;
-			width_ = width;
-			height_ = height;
+			_format = format;
+			_width = width;
+			_height = height;
 		}
 		inline std::uint32_t GetGLHandle() const {
 			return 0;
 		}
 
 	private:
-		DepthStencilFormat format_ = DepthStencilFormat::None;
-		std::int32_t width_ = 0;
-		std::int32_t height_ = 0;
+		DepthStencilFormat _format = DepthStencilFormat::None;
+		std::int32_t _width = 0;
+		std::int32_t _height = 0;
 	};
 
 	/**
@@ -104,11 +104,11 @@ namespace nCine::RHI::PVR
 
 		/** @brief Returns the texture attached at the given color attachment index, or `nullptr` */
 		inline PvrTexture* GetColorTexture(std::uint32_t index) const {
-			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
+			return (index < MaxColorAttachments ? _colorTextures[index] : nullptr);
 		}
 
 	private:
-		PvrTexture* colorTextures_[MaxColorAttachments];
-		std::uint32_t numDrawBuffers_;
+		PvrTexture* _colorTextures[MaxColorAttachments];
+		std::uint32_t _numDrawBuffers;
 	};
 }

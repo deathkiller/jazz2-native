@@ -29,24 +29,24 @@ namespace nCine::RHI::Software
 		}
 	}
 
-	std::uint32_t SwTexture::nextHandle_ = 1;
-	std::uint32_t SwTexture::nextContentVersion_ = 0;
+	std::uint32_t SwTexture::_nextHandle = 1;
+	std::uint32_t SwTexture::_nextContentVersion = 0;
 
 	SwTexture::SwTexture(TextureTarget target)
-		: handle_(nextHandle_++), contentVersion_(0), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
-			width_(0), height_(0), strideBytes_(0), bytesPerPixel_(0),
-			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
-			textureUnit_(0), isRenderTarget_(false)
+		: _handle(_nextHandle++), _contentVersion(0), _target(target), _format(PixelFormat::Unknown), _uploadFormat(PixelFormat::Unknown),
+			_width(0), _height(0), _strideBytes(0), _bytesPerPixel(0),
+			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest), _wrap(SamplerWrapping::ClampToEdge),
+			_textureUnit(0), _isRenderTarget(false)
 	{
-		swizzle_[0] = SwizzleChannel::Red;
-		swizzle_[1] = SwizzleChannel::Green;
-		swizzle_[2] = SwizzleChannel::Blue;
-		swizzle_[3] = SwizzleChannel::Alpha;
+		_swizzle[0] = SwizzleChannel::Red;
+		_swizzle[1] = SwizzleChannel::Green;
+		_swizzle[2] = SwizzleChannel::Blue;
+		_swizzle[3] = SwizzleChannel::Alpha;
 	}
 
 	SwTexture::~SwTexture()
 	{
-		// Clear from the device so a destroyed texture can't dangle in boundTextures_ (a later deferred draw would
+		// Clear from the device so a destroyed texture can't dangle in _boundTextures (a later deferred draw would
 		// dereference freed memory in Dispatch)
 		SwDevice::UnbindTexture(this);
 	}
@@ -72,50 +72,50 @@ namespace nCine::RHI::Software
 		// cases still widen to an RGBA8 store: RGB8 (3-byte texels are unaligned, and it is the render-
 		// target format of the shader path), and any texture attached as a render target (the rasterizer
 		// composites 4 bytes per pixel - see SetRenderTarget, which re-widens an already-native store).
-		// The requested format is remembered in uploadFormat_ so the palette effect can still distinguish
+		// The requested format is remembered in _uploadFormat so the palette effect can still distinguish
 		// an R8 index texture (alpha from the palette entry) from an RG8 one (alpha from the texture's G)
 		// even after such a widening.
-		uploadFormat_ = format;
-		format_ = (format == PixelFormat::RGB8 || (isRenderTarget_ && (format == PixelFormat::R8 || format == PixelFormat::RG8))
+		_uploadFormat = format;
+		_format = (format == PixelFormat::RGB8 || (_isRenderTarget && (format == PixelFormat::R8 || format == PixelFormat::RG8))
 			? PixelFormat::RGBA8 : format);
-		width_ = width;
-		height_ = height;
-		bytesPerPixel_ = BytesPerPixel(format_);
-		strideBytes_ = width * bytesPerPixel_;
+		_width = width;
+		_height = height;
+		_bytesPerPixel = BytesPerPixel(_format);
+		_strideBytes = width * _bytesPerPixel;
 		// A deferred tile-renderer command may still reference this texture's current store (the prepared
 		// command snapshots the level-0 pixel pointer at submit); drain the queue before the buffer can be
 		// reallocated so no worker rasterizes from freed memory. A no-op when nothing is queued.
-		if (!pixels_.empty()) {
+		if (!_pixels.empty()) {
 			SwRaster::Flush();
 		}
-		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		_pixels.assign(std::size_t(_strideBytes) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
 		// The store content changed; the counter is process-global so a stamp is never repeated, even by
 		// a different texture object reusing this one's address
-		contentVersion_ = ++nextContentVersion_;
+		_contentVersion = ++_nextContentVersion;
 	}
 
 	void SwTexture::SetRenderTarget(bool isRenderTarget)
 	{
-		isRenderTarget_ = isRenderTarget;
-		if (isRenderTarget && format_ != PixelFormat::Unknown && bytesPerPixel_ != 4) {
+		_isRenderTarget = isRenderTarget;
+		if (isRenderTarget && _format != PixelFormat::Unknown && _bytesPerPixel != 4) {
 			// Widen a native R8/RG8 store to RGBA8 (the rasterizer composites 4 bytes per pixel). The texels
 			// are discarded - a render target is always fully drawn or cleared before it is read - and
-			// Allocate keeps uploadFormat_ at the originally requested format and re-widens because
-			// isRenderTarget_ is already set.
-			Allocate(uploadFormat_, width_, height_);
+			// Allocate keeps _uploadFormat at the originally requested format and re-widens because
+			// _isRenderTarget is already set.
+			Allocate(_uploadFormat, _width, _height);
 		}
 	}
 
 	bool SwTexture::Bind(std::uint32_t textureUnit) const
 	{
-		textureUnit_ = textureUnit;
+		_textureUnit = textureUnit;
 		SwDevice::BindTexture(textureUnit, this);
 		return true;
 	}
 
 	bool SwTexture::Unbind() const
 	{
-		SwDevice::BindTexture(textureUnit_, nullptr);
+		SwDevice::BindTexture(_textureUnit, nullptr);
 		return true;
 	}
 
@@ -133,36 +133,36 @@ namespace nCine::RHI::Software
 			return;
 		}
 		Allocate(format, width, height);
-		if (data != nullptr && !pixels_.empty()) {
-			// `format_` may be wider than the upload (RGB8, or a render-target-widened R8/RG8), so copy
+		if (data != nullptr && !_pixels.empty()) {
+			// `_format` may be wider than the upload (RGB8, or a render-target-widened R8/RG8), so copy
 			// against the source's own bpp and let CopyExpandRow widen each row when the two differ; for
 			// the native R8/RG8 stores the two match and the copy is a plain memcpy
 			const std::int32_t srcBpp = BytesPerPixel(format);
-			const std::int32_t dstBpp = BytesPerPixel(format_);
+			const std::int32_t dstBpp = BytesPerPixel(_format);
 			if (srcBpp == dstBpp) {
-				std::memcpy(pixels_.data(), data, pixels_.size());
+				std::memcpy(_pixels.data(), data, _pixels.size());
 			} else {
 				const std::uint8_t* src = static_cast<const std::uint8_t*>(data);
-				for (std::int32_t y = 0; y < height_; y++) {
-					CopyExpandRow(pixels_.data() + std::size_t(y) * strideBytes_,
-						dstBpp, src + std::size_t(y) * std::size_t(width_) * srcBpp, srcBpp, width_);
+				for (std::int32_t y = 0; y < _height; y++) {
+					CopyExpandRow(_pixels.data() + std::size_t(y) * _strideBytes,
+						dstBpp, src + std::size_t(y) * std::size_t(_width) * srcBpp, srcBpp, _width);
 				}
 			}
-			contentVersion_ = ++nextContentVersion_;
+			_contentVersion = ++_nextContentVersion;
 		}
 	}
 
 	void SwTexture::TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data)
 	{
 		static_cast<void>(bgr);
-		if (level != 0 || data == nullptr || pixels_.empty()) {
+		if (level != 0 || data == nullptr || _pixels.empty()) {
 			return;
 		}
 		const std::int32_t srcBpp = BytesPerPixel(format);
-		const std::int32_t dstBpp = BytesPerPixel(format_);
+		const std::int32_t dstBpp = BytesPerPixel(_format);
 		for (std::int32_t y = 0; y < height; y++) {
 			const std::int32_t dstY = yoffset + y;
-			if (dstY < 0 || dstY >= height_) {
+			if (dstY < 0 || dstY >= _height) {
 				continue;
 			}
 			// Clamp the destination span to the texture so a sub-rect running past an edge can never write
@@ -175,17 +175,17 @@ namespace nCine::RHI::Software
 				copyW += dstX;
 				dstX = 0;
 			}
-			if (dstX + copyW > width_) {
-				copyW = width_ - dstX;
+			if (dstX + copyW > _width) {
+				copyW = _width - dstX;
 			}
 			if (copyW <= 0) {
 				continue;
 			}
 			const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
-			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
+			std::uint8_t* dstRow = _pixels.data() + std::size_t(dstY) * _strideBytes + std::size_t(dstX) * dstBpp;
 			CopyExpandRow(dstRow, dstBpp, srcRow, srcBpp, copyW);
 		}
-		contentVersion_ = ++nextContentVersion_;
+		_contentVersion = ++_nextContentVersion;
 	}
 
 	void SwTexture::TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height)
@@ -220,23 +220,23 @@ namespace nCine::RHI::Software
 	{
 		static_cast<void>(level);
 		static_cast<void>(bgr);
-		if (pixels == nullptr || pixels_.empty()) {
+		if (pixels == nullptr || _pixels.empty()) {
 			return;
 		}
 		const std::int32_t dstBpp = BytesPerPixel(format);
-		if (dstBpp <= 0 || dstBpp == bytesPerPixel_) {
+		if (dstBpp <= 0 || dstBpp == _bytesPerPixel) {
 			// The store already matches the requested layout (the common case - native R8/RG8 reads back
 			// exactly the bytes that were uploaded, which the promoted store never did)
-			std::memcpy(pixels, pixels_.data(), pixels_.size());
+			std::memcpy(pixels, _pixels.data(), _pixels.size());
 			return;
 		}
 		// A widened store read back at the original format (RGB8 upload, or a render-target-widened
 		// R8/RG8): narrow each texel to the requested channel count (or widen with 255, matching the
 		// samplers' expansion, if the caller asks for more channels than are stored)
-		const std::size_t count = std::size_t(width_) * std::size_t(height_ > 0 ? height_ : 0);
-		const std::uint8_t* src = pixels_.data();
+		const std::size_t count = std::size_t(_width) * std::size_t(_height > 0 ? _height : 0);
+		const std::uint8_t* src = _pixels.data();
 		std::uint8_t* dst = static_cast<std::uint8_t*>(pixels);
-		const std::int32_t shared = (bytesPerPixel_ < dstBpp ? bytesPerPixel_ : dstBpp);
+		const std::int32_t shared = (_bytesPerPixel < dstBpp ? _bytesPerPixel : dstBpp);
 		for (std::size_t i = 0; i < count; i++) {
 			std::int32_t c = 0;
 			for (; c < shared; c++) {
@@ -245,32 +245,32 @@ namespace nCine::RHI::Software
 			for (; c < dstBpp; c++) {
 				dst[c] = 255;
 			}
-			src += bytesPerPixel_;
+			src += _bytesPerPixel;
 			dst += dstBpp;
 		}
 	}
 
 	void SwTexture::SetMinFiltering(nCine::SamplerFilter filter)
 	{
-		minFilter_ = filter;
+		_minFilter = filter;
 	}
 
 	void SwTexture::SetMagFiltering(nCine::SamplerFilter filter)
 	{
-		magFilter_ = filter;
+		_magFilter = filter;
 	}
 
 	void SwTexture::SetWrap(SamplerWrapping wrap)
 	{
-		wrap_ = wrap;
+		_wrap = wrap;
 	}
 
 	void SwTexture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		swizzle_[0] = r;
-		swizzle_[1] = g;
-		swizzle_[2] = b;
-		swizzle_[3] = a;
+		_swizzle[0] = r;
+		_swizzle[1] = g;
+		_swizzle[2] = b;
+		_swizzle[3] = a;
 	}
 
 	void SwTexture::SetMaxLevel(std::int32_t maxLevel)

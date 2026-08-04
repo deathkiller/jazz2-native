@@ -34,11 +34,11 @@ namespace nCine
 
 		/** @brief Returns whether the animation is paused */
 		inline bool isPaused() const {
-			return isPaused_;
+			return _isPaused;
 		}
 		/** @brief Sets the pause flag */
 		inline void setPaused(bool isPaused) {
-			isPaused_ = isPaused;
+			_isPaused = isPaused;
 		}
 
 		/** @brief Advances the current frame by the time elapsed since the last update */
@@ -46,27 +46,27 @@ namespace nCine
 
 		/** @brief Returns the current frame index */
 		inline std::uint32_t frame() const {
-			return currentFrame_;
+			return _currentFrame;
 		}
 		/** @brief Sets the current frame index */
 		void setFrame(std::uint32_t frameNum);
 
 		/** @brief Returns the default frame duration in seconds */
 		float defaultFrameDuration() const {
-			return defaultFrameDuration_;
+			return _defaultFrameDuration;
 		}
 		/** @brief Sets the default frame duration in seconds */
 		inline void setDefaultFrameDuration(float defaultFrameDuration) {
-			defaultFrameDuration_ = defaultFrameDuration;
+			_defaultFrameDuration = defaultFrameDuration;
 		}
 
 		/** @brief Returns the loop mode */
 		LoopMode loopMode() const {
-			return loopMode_;
+			return _loopMode;
 		}
 		/** @brief Sets the loop mode */
 		inline void setLoopMode(LoopMode loopMode) {
-			loopMode_ = loopMode;
+			_loopMode = loopMode;
 		}
 
 		/** @brief Appends a rectangle with the specified frame duration */
@@ -76,58 +76,58 @@ namespace nCine
 
 		/** @brief Appends a rectangle with the default frame duration */
 		inline void addRect(const Recti& rect) {
-			addRect(rect, defaultFrameDuration_);
+			addRect(rect, _defaultFrameDuration);
 		}
 		/** @brief Creates a rectangle from origin and size and appends it with the default frame duration */
 		inline void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h) {
-			addRect(x, y, w, h, defaultFrameDuration_);
+			addRect(x, y, w, h, _defaultFrameDuration);
 		}
 
 		/** @brief Returns the current rectangle */
 		inline const Recti& rect() const {
-			return rects_[currentFrame_];
+			return _rects[_currentFrame];
 		}
 		/** @brief Returns the current frame duration in seconds */
 		inline float frameDuration() const {
-			return frameDurations_[currentFrame_];
+			return _frameDurations[_currentFrame];
 		}
 
 		/** @brief Returns the array of all rectangles */
 		inline SmallVectorImpl<Recti>& rectangles() {
-			return rects_;
+			return _rects;
 		}
 		/** @brief Returns the array of all rectangles (read-only) */
 		inline const SmallVectorImpl<Recti>& rectangles() const {
-			return rects_;
+			return _rects;
 		}
 
 		/** @brief Returns the array of all frame durations */
 		inline SmallVectorImpl<float>& frameDurations() {
-			return frameDurations_;
+			return _frameDurations;
 		}
 		/** @brief Returns the array of all frame durations (read-only) */
 		inline const SmallVectorImpl<float>& frameDurations() const {
-			return frameDurations_;
+			return _frameDurations;
 		}
 
 	private:
 		/** @brief Default frame duration used when a custom one is not specified when adding a rectangle */
-		float defaultFrameDuration_;
+		float _defaultFrameDuration;
 		/** @brief Looping mode */
-		LoopMode loopMode_;
+		LoopMode _loopMode;
 
 		/** @brief Array of frame rectangles */
-		SmallVector<Recti, 0> rects_;
+		SmallVector<Recti, 0> _rects;
 		/** @brief Array of per-frame durations */
-		SmallVector<float, 0> frameDurations_;
+		SmallVector<float, 0> _frameDurations;
 		/** @brief Current frame index */
-		std::uint32_t currentFrame_;
+		std::uint32_t _currentFrame;
 		/** @brief Elapsed time since the last frame change */
-		float elapsedFrameTime_;
+		float _elapsedFrameTime;
 		/** @brief Whether the animation is currently advancing forward (for @ref LoopMode::Backward) */
-		bool goingForward_;
+		bool _goingForward;
 		/** @brief Pause flag */
-		bool isPaused_;
+		bool _isPaused;
 	};
 
 }

@@ -9,9 +9,9 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-	IInputEventHandler* IInputManager::inputEventHandler_ = nullptr;
-	IInputManager::Cursor IInputManager::cursor_ = IInputManager::Cursor::Arrow;
-	JoyMapping IInputManager::joyMapping_;
+	IInputEventHandler* IInputManager::_inputEventHandler = nullptr;
+	IInputManager::Cursor IInputManager::_cursor = IInputManager::Cursor::Arrow;
+	JoyMapping IInputManager::_joyMapping;
 
 	JoystickGuid::JoystickGuid()
 	{
@@ -77,8 +77,8 @@ namespace nCine
 
 	void IInputManager::setHandler(IInputEventHandler* inputEventHandler)
 	{
-		inputEventHandler_ = inputEventHandler;
-		joyMapping_.SetHandler(inputEventHandler);
+		_inputEventHandler = inputEventHandler;
+		_joyMapping.SetHandler(inputEventHandler);
 	}
 
 	String IInputManager::getClipboardText() const
@@ -212,42 +212,42 @@ namespace nCine
 	/** @note A joystick stays mapped in the `OnJoyConnected()` and `OnJoyDisconnected()` callbacks */
 	bool IInputManager::isJoyMapped(int joyId) const
 	{
-		return joyMapping_.IsJoyMapped(joyId);
+		return _joyMapping.IsJoyMapped(joyId);
 	}
 
 	const JoyMappedState& IInputManager::joyMappedState(int joyId) const
 	{
-		return joyMapping_.GetMappedState(joyId);
+		return _joyMapping.GetMappedState(joyId);
 	}
 
 	void IInputManager::deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const
 	{
-		return joyMapping_.DeadZoneNormalize(joyVector, deadZoneValue);
+		return _joyMapping.DeadZoneNormalize(joyVector, deadZoneValue);
 	}
 
 	void IInputManager::addJoyMappingsFromFile(StringView path)
 	{
-		joyMapping_.AddMappingsFromFile(path);
+		_joyMapping.AddMappingsFromFile(path);
 	}
 
 	void IInputManager::addJoyMappingsFromString(StringView mappingString)
 	{
-		joyMapping_.AddMappingsFromString(mappingString);
+		_joyMapping.AddMappingsFromString(mappingString);
 	}
 
 	unsigned int IInputManager::numJoyMappings() const
 	{
-		return joyMapping_.numMappings();
+		return _joyMapping.numMappings();
 	}
 
 	bool IInputManager::hasMappingByGuid(const JoystickGuid& guid) const
 	{
-		return (joyMapping_.FindMappingByGuid(guid) != -1);
+		return (_joyMapping.FindMappingByGuid(guid) != -1);
 	}
 
 	bool IInputManager::hasMappingByName(const char* name) const
 	{
-		return (joyMapping_.FindMappingByName(name) != -1);
+		return (_joyMapping.FindMappingByName(name) != -1);
 	}
 
 	void IInputManager::setCursor(Cursor cursor)

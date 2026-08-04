@@ -8,14 +8,14 @@ namespace nCine
 	/** @param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent, float x, float y)
 		: Object(ObjectType::SceneNode),
-		updateEnabled_(true), drawEnabled_(true), parent_(nullptr),
-		childOrderIndex_(0), withVisitOrder_(true),
-		visitOrderState_(VisitOrderState::SameAsParent), visitOrderIndex_(0),
-		position_(x, y), anchorPoint_(0.0f, 0.0f), scaleFactor_(1.0f, 1.0f), rotation_(0.0f),
-		color_(Colorf::White), layer_(0), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f),
-		absRotation_(0.0f), absColor_(Colorf::White), absLayer_(0),
-		worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
-		shouldDeleteChildrenOnDestruction_(true), dirtyBits_(0xFF), lastFrameUpdated_(0)
+		_updateEnabled(true), _drawEnabled(true), _parent(nullptr),
+		_childOrderIndex(0), _withVisitOrder(true),
+		_visitOrderState(VisitOrderState::SameAsParent), _visitOrderIndex(0),
+		_position(x, y), _anchorPoint(0.0f, 0.0f), _scaleFactor(1.0f, 1.0f), _rotation(0.0f),
+		_color(Colorf::White), _layer(0), _absPosition(0.0f, 0.0f), _absScaleFactor(1.0f, 1.0f),
+		_absRotation(0.0f), _absColor(Colorf::White), _absLayer(0),
+		_worldMatrix(Matrix4x4f::Identity), _localMatrix(Matrix4x4f::Identity),
+		_shouldDeleteChildrenOnDestruction(true), _dirtyBits(0xFF), _lastFrameUpdated(0)
 	{
 		setParent(parent);
 	}
@@ -39,13 +39,13 @@ namespace nCine
 
 	SceneNode::~SceneNode()
 	{
-		if (shouldDeleteChildrenOnDestruction_) {
-			for (SceneNode* child : children_) {
+		if (_shouldDeleteChildrenOnDestruction) {
+			for (SceneNode* child : _children) {
 				delete child;
 			}
 		} else {
-			for (SceneNode* child : children_) {
-				child->parent_ = nullptr;
+			for (SceneNode* child : _children) {
+				child->_parent = nullptr;
 			}
 		}
 
@@ -53,14 +53,14 @@ namespace nCine
 	}
 
 	SceneNode::SceneNode(SceneNode&& other) noexcept
-		: Object(std::move(other)), updateEnabled_(other.updateEnabled_), drawEnabled_(other.drawEnabled_), parent_(other.parent_),
-			children_(std::move(other.children_)), visitOrderState_(other.visitOrderState_), position_(other.position_), anchorPoint_(other.anchorPoint_),
-			scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_), layer_(other.layer_),
-			shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(other.dirtyBits_), lastFrameUpdated_(other.lastFrameUpdated_)
+		: Object(std::move(other)), _updateEnabled(other._updateEnabled), _drawEnabled(other._drawEnabled), _parent(other._parent),
+			_children(std::move(other._children)), _visitOrderState(other._visitOrderState), _position(other._position), _anchorPoint(other._anchorPoint),
+			_scaleFactor(other._scaleFactor), _rotation(other._rotation), _color(other._color), _layer(other._layer),
+			_shouldDeleteChildrenOnDestruction(other._shouldDeleteChildrenOnDestruction), _dirtyBits(other._dirtyBits), _lastFrameUpdated(other._lastFrameUpdated)
 	{
 		swapChildPointer(this, &other);
-		for (SceneNode* child : children_) {
-			child->parent_ = this;
+		for (SceneNode* child : _children) {
+			child->_parent = this;
 		}
 	}
 
@@ -68,24 +68,24 @@ namespace nCine
 	{
 		Object::operator=(std::move(other));
 
-		updateEnabled_ = other.updateEnabled_;
-		drawEnabled_ = other.drawEnabled_;
-		parent_ = other.parent_;
-		children_ = std::move(other.children_);
-		visitOrderState_ = other.visitOrderState_;
-		position_ = other.position_;
-		anchorPoint_ = other.anchorPoint_;
-		scaleFactor_ = other.scaleFactor_;
-		rotation_ = other.rotation_;
-		color_ = other.color_;
-		layer_ = other.layer_;
-		shouldDeleteChildrenOnDestruction_ = other.shouldDeleteChildrenOnDestruction_;
-		dirtyBits_ = other.dirtyBits_;
-		lastFrameUpdated_ = other.lastFrameUpdated_;
+		_updateEnabled = other._updateEnabled;
+		_drawEnabled = other._drawEnabled;
+		_parent = other._parent;
+		_children = std::move(other._children);
+		_visitOrderState = other._visitOrderState;
+		_position = other._position;
+		_anchorPoint = other._anchorPoint;
+		_scaleFactor = other._scaleFactor;
+		_rotation = other._rotation;
+		_color = other._color;
+		_layer = other._layer;
+		_shouldDeleteChildrenOnDestruction = other._shouldDeleteChildrenOnDestruction;
+		_dirtyBits = other._dirtyBits;
+		_lastFrameUpdated = other._lastFrameUpdated;
 
 		swapChildPointer(this, &other);
-		for (SceneNode* child : children_) {
-			child->parent_ = this;
+		for (SceneNode* child : _children) {
+			child->_parent = this;
 		}
 		return *this;
 	}
@@ -94,21 +94,21 @@ namespace nCine
 	bool SceneNode::setParent(SceneNode* parentNode)
 	{
 		// Can't set yourself or your parent as parent
-		if (parentNode == this || parentNode == parent_) {
+		if (parentNode == this || parentNode == _parent) {
 			return false;
 		}
 
-		if (parent_ != nullptr) {
-			parent_->removeChildNode(this);
+		if (_parent != nullptr) {
+			_parent->removeChildNode(this);
 		}
 		if (parentNode != nullptr) {
-			parentNode->children_.push_back(this);
-			childOrderIndex_ = (unsigned int)parentNode->children_.size() - 1;
+			parentNode->_children.push_back(this);
+			_childOrderIndex = (unsigned int)parentNode->_children.size() - 1;
 		}
-		parent_ = parentNode;
+		_parent = parentNode;
 
-		dirtyBits_.set(DirtyBitPositions::TransformationBit);
-		dirtyBits_.set(DirtyBitPositions::AabbBit);
+		_dirtyBits.set(DirtyBitPositions::TransformationBit);
+		_dirtyBits.set(DirtyBitPositions::AabbBit);
 
 		return true;
 	}
@@ -117,16 +117,16 @@ namespace nCine
 	bool SceneNode::addChildNode(SceneNode* childNode)
 	{
 		// Can't add yourself or one of your children as a child
-		if (childNode == this || (childNode != nullptr && childNode->parent_ == this)) {
+		if (childNode == this || (childNode != nullptr && childNode->_parent == this)) {
 			return false;
 		}
 
-		if (childNode->parent_ != nullptr) {
-			childNode->parent_->removeChildNode(childNode);
+		if (childNode->_parent != nullptr) {
+			childNode->_parent->removeChildNode(childNode);
 		}
-		children_.push_back(childNode);
-		childNode->childOrderIndex_ = (unsigned int)children_.size() - 1;
-		childNode->parent_ = this;
+		_children.push_back(childNode);
+		childNode->_childOrderIndex = (unsigned int)_children.size() - 1;
+		childNode->_parent = this;
 
 		return true;
 	}
@@ -140,11 +140,11 @@ namespace nCine
 		}
 
 		bool hasBeenRemoved = false;
-		if (!children_.empty() &&			// Avoid checking if this node has no children
-			childNode->parent_ == this)		// Avoid checking if the child doesn't belong to this node
+		if (!_children.empty() &&			// Avoid checking if this node has no children
+			childNode->_parent == this)		// Avoid checking if the child doesn't belong to this node
 		{
-			for (unsigned int i = 0; i < children_.size(); i++) {
-				if (children_[i] == childNode) {
+			for (unsigned int i = 0; i < _children.size(); i++) {
+				if (_children[i] == childNode) {
 					hasBeenRemoved = removeChildNodeAt(i);
 					break;
 				}
@@ -158,33 +158,33 @@ namespace nCine
 	bool SceneNode::removeChildNodeAt(std::uint32_t index)
 	{
 		// Can't remove at an index past the number of children
-		if (children_.empty() || index > children_.size() - 1) {
+		if (_children.empty() || index > _children.size() - 1) {
 			return false;
 		}
 
-		children_[index]->parent_ = nullptr;
-		dirtyBits_.set(DirtyBitPositions::TransformationBit);
-		dirtyBits_.set(DirtyBitPositions::AabbBit);
-		children_.eraseUnordered(&children_[index]);
+		_children[index]->_parent = nullptr;
+		_dirtyBits.set(DirtyBitPositions::TransformationBit);
+		_dirtyBits.set(DirtyBitPositions::AabbBit);
+		_children.eraseUnordered(&_children[index]);
 		// The last child has been moved to this index position
-		if (children_.size() > index)
-			children_[index]->childOrderIndex_ = index;
+		if (_children.size() > index)
+			_children[index]->_childOrderIndex = index;
 		return true;
 	}
 
 	/** @return `true` if there was at least one node to remove */
 	bool SceneNode::removeAllChildrenNodes()
 	{
-		if (children_.empty()) {
+		if (_children.empty()) {
 			return false;
 		}
 
-		for (unsigned int i = 0; i < children_.size(); i++) {
-			children_[i]->parent_ = nullptr;
-			dirtyBits_.set(DirtyBitPositions::TransformationBit);
-			dirtyBits_.set(DirtyBitPositions::AabbBit);
+		for (unsigned int i = 0; i < _children.size(); i++) {
+			_children[i]->_parent = nullptr;
+			_dirtyBits.set(DirtyBitPositions::TransformationBit);
+			_dirtyBits.set(DirtyBitPositions::AabbBit);
 		}
-		children_.clear();
+		_children.clear();
 
 		return true;
 	}
@@ -199,13 +199,13 @@ namespace nCine
 
 		bool hasBeenUnlinked = false;
 
-		if (!children_.empty() &&			// Avoid checking if this node has no children
-			childNode->parent_ == this)		// Avoid checking if the child doesn't belong to this node
+		if (!_children.empty() &&			// Avoid checking if this node has no children
+			childNode->_parent == this)		// Avoid checking if the child doesn't belong to this node
 		{
 			removeChildNode(childNode);
 
 			// Nephews reparenting
-			for (SceneNode* child : childNode->children_) {
+			for (SceneNode* child : childNode->_children) {
 				addChildNode(child);
 			}
 			hasBeenUnlinked = true;
@@ -218,9 +218,9 @@ namespace nCine
 	std::uint32_t SceneNode::childOrderIndex() const
 	{
 		std::uint32_t index = 0;
-		if (parent_ != nullptr) {
-			DEATH_ASSERT(parent_->children_[childOrderIndex_] == this);
-			index = childOrderIndex_;
+		if (_parent != nullptr) {
+			DEATH_ASSERT(_parent->_children[_childOrderIndex] == this);
+			index = _childOrderIndex;
 		}
 
 		return index;
@@ -230,58 +230,58 @@ namespace nCine
 	bool SceneNode::swapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex)
 	{
 		// Check if there are at least two children and if the indices are different and valid
-		const std::uint32_t numChildren = std::uint32_t(children_.size());
+		const std::uint32_t numChildren = std::uint32_t(_children.size());
 		if (numChildren < 2 || firstIndex == secondIndex ||
 			firstIndex > numChildren - 1 || secondIndex > numChildren - 1) {
 			return false;
 		}
 
-		std::swap(children_[firstIndex], children_[secondIndex]);
-		std::swap(children_[firstIndex]->childOrderIndex_, children_[secondIndex]->childOrderIndex_);
+		std::swap(_children[firstIndex], _children[secondIndex]);
+		std::swap(_children[firstIndex]->_childOrderIndex, _children[secondIndex]->_childOrderIndex);
 		return true;
 	}
 
 	/** @return `true` if the node has been moved one position forward */
 	bool SceneNode::swapNodeForward()
 	{
-		if (parent_ == nullptr) {
+		if (_parent == nullptr) {
 			return false;
 		}
 
-		return parent_->swapChildrenNodes(childOrderIndex_, childOrderIndex_ + 1);
+		return _parent->swapChildrenNodes(_childOrderIndex, _childOrderIndex + 1);
 	}
 
 	/** @return `true` if the node has been moved one position back */
 	bool SceneNode::swapNodeBack()
 	{
-		if (parent_ == nullptr || childOrderIndex_ == 0) {
+		if (_parent == nullptr || _childOrderIndex == 0) {
 			return false;
 		}
 
-		return parent_->swapChildrenNodes(childOrderIndex_, childOrderIndex_ - 1);
+		return _parent->swapChildrenNodes(_childOrderIndex, _childOrderIndex - 1);
 	}
 
 	void SceneNode::OnUpdate(float timeMult)
 	{
 		// Early return not needed, the first call to this method is on the root node
 
-		if (updateEnabled_) {
+		if (_updateEnabled) {
 			transform();
 
-			for (unsigned int i = 0; i < (unsigned int)children_.size(); i++) {
-				children_[i]->OnUpdate(timeMult);
+			for (unsigned int i = 0; i < (unsigned int)_children.size(); i++) {
+				_children[i]->OnUpdate(timeMult);
 			}
 
-			dirtyBits_.reset(DirtyBitPositions::TransformationBit);
-			dirtyBits_.reset(DirtyBitPositions::ColorBit);
+			_dirtyBits.reset(DirtyBitPositions::TransformationBit);
+			_dirtyBits.reset(DirtyBitPositions::ColorBit);
 
 			// A non-drawable scenenode does not have the `updateRenderCommand()` method to reset the flags
 			if (_type == ObjectType::SceneNode || _type == ObjectType::ParticleSystem) {
-				dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
-				dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
+				_dirtyBits.reset(DirtyBitPositions::TransformationUploadBit);
+				_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
 			}
 
-			lastFrameUpdated_ = theApplication().GetFrameCount();
+			_lastFrameUpdated = theApplication().GetFrameCount();
 		}
 	}
 
@@ -289,47 +289,47 @@ namespace nCine
 	{
 		// Early return not needed, the first call to this method is on the root node
 
-		if (drawEnabled_) {
+		if (_drawEnabled) {
 			// Increment the index without knowing if the node is going to be rendered or not.
 			// It avoids both a one frame delay when the value changes and calling `DrawableNode::setVisitOrder()` from this function.
-			visitOrderIndex_ = (_type != ObjectType::Particle ? visitOrderIndex + 1 : visitOrderIndex);
+			_visitOrderIndex = (_type != ObjectType::Particle ? visitOrderIndex + 1 : visitOrderIndex);
 			const bool rendered = OnDraw(renderQueue);
 
-			visitOrderIndex_ = visitOrderIndex;
+			_visitOrderIndex = visitOrderIndex;
 			// Visit order index only incremented for rendered nodes
 			// Particles get their index incremented only once by their parent particle system
 			const bool incrementIndex = ((rendered && _type != ObjectType::Particle) || _type == ObjectType::ParticleSystem);
-			visitOrderIndex_ = incrementIndex ? visitOrderIndex++ : visitOrderIndex;
+			_visitOrderIndex = incrementIndex ? visitOrderIndex++ : visitOrderIndex;
 
-			for (SceneNode* child : children_) {
+			for (SceneNode* child : _children) {
 				child->OnVisit(renderQueue, visitOrderIndex);
 			}
 		}
 	}
 
 	SceneNode::SceneNode(const SceneNode& other)
-		: Object(other), updateEnabled_(other.updateEnabled_), drawEnabled_(other.drawEnabled_), parent_(nullptr), childOrderIndex_(0),
-			withVisitOrder_(true), visitOrderState_(other.visitOrderState_), visitOrderIndex_(0), position_(other.position_),
-			anchorPoint_(other.anchorPoint_), scaleFactor_(other.scaleFactor_), rotation_(other.rotation_), color_(other.color_),
-			layer_(other.layer_), absPosition_(0.0f, 0.0f), absScaleFactor_(1.0f, 1.0f), absRotation_(0.0f), absColor_(Colorf::White),
-			absLayer_(0), worldMatrix_(Matrix4x4f::Identity), localMatrix_(Matrix4x4f::Identity),
-			shouldDeleteChildrenOnDestruction_(other.shouldDeleteChildrenOnDestruction_), dirtyBits_(0xFF)
+		: Object(other), _updateEnabled(other._updateEnabled), _drawEnabled(other._drawEnabled), _parent(nullptr), _childOrderIndex(0),
+			_withVisitOrder(true), _visitOrderState(other._visitOrderState), _visitOrderIndex(0), _position(other._position),
+			_anchorPoint(other._anchorPoint), _scaleFactor(other._scaleFactor), _rotation(other._rotation), _color(other._color),
+			_layer(other._layer), _absPosition(0.0f, 0.0f), _absScaleFactor(1.0f, 1.0f), _absRotation(0.0f), _absColor(Colorf::White),
+			_absLayer(0), _worldMatrix(Matrix4x4f::Identity), _localMatrix(Matrix4x4f::Identity),
+			_shouldDeleteChildrenOnDestruction(other._shouldDeleteChildrenOnDestruction), _dirtyBits(0xFF)
 	{
-		setParent(other.parent_);
+		setParent(other._parent);
 	}
 
 	/** @note Faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
 	void SceneNode::swapChildPointer(SceneNode* first, SceneNode* second)
 	{
-		DEATH_ASSERT(first->parent_ == second->parent_);
+		DEATH_ASSERT(first->_parent == second->_parent);
 
-		SceneNode* parent = first->parent_;
+		SceneNode* parent = first->_parent;
 		if (parent != nullptr) {
-			for (unsigned int i = 0; i < parent->children_.size(); i++) {
-				if (parent->children_[i] == second) {
-					parent->children_[i] = this;
-					childOrderIndex_ = i;
-					second->parent_ = nullptr;
+			for (unsigned int i = 0; i < parent->_children.size(); i++) {
+				if (parent->_children[i] == second) {
+					parent->_children[i] = this;
+					_childOrderIndex = i;
+					second->_parent = nullptr;
 					break;
 				}
 			}
@@ -340,72 +340,72 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		if (parent_ != nullptr && layer_ == 0) {
-			absLayer_ = parent_->absLayer_;
+		if (_parent != nullptr && _layer == 0) {
+			_absLayer = _parent->_absLayer;
 		} else {
-			absLayer_ = layer_;
+			_absLayer = _layer;
 		}
 
-		switch (visitOrderState_) {
-			case VisitOrderState::Enabled: withVisitOrder_ = true; break;
-			case VisitOrderState::SameAsParent: withVisitOrder_ = (parent_ == nullptr || parent_->withVisitOrder_); break;
-			default: withVisitOrder_ = false; break;
+		switch (_visitOrderState) {
+			case VisitOrderState::Enabled: _withVisitOrder = true; break;
+			case VisitOrderState::SameAsParent: _withVisitOrder = (_parent == nullptr || _parent->_withVisitOrder); break;
+			default: _withVisitOrder = false; break;
 		}
 
-		const bool parentHasDirtyColor = (parent_ != nullptr && parent_->dirtyBits_.test(DirtyBitPositions::ColorBit));
+		const bool parentHasDirtyColor = (_parent != nullptr && _parent->_dirtyBits.test(DirtyBitPositions::ColorBit));
 		if (parentHasDirtyColor) {
-			dirtyBits_.set(DirtyBitPositions::ColorBit);
+			_dirtyBits.set(DirtyBitPositions::ColorBit);
 		}
-		if (dirtyBits_.test(DirtyBitPositions::ColorBit)) {
-			absColor_ = (parent_ != nullptr ? color_ * parent_->absColor_ : color_);
-			dirtyBits_.set(DirtyBitPositions::ColorUploadBit);
+		if (_dirtyBits.test(DirtyBitPositions::ColorBit)) {
+			_absColor = (_parent != nullptr ? _color * _parent->_absColor : _color);
+			_dirtyBits.set(DirtyBitPositions::ColorUploadBit);
 		}
-		const bool parentHasDirtyTransformation = parent_ && parent_->dirtyBits_.test(DirtyBitPositions::TransformationBit);
+		const bool parentHasDirtyTransformation = _parent && _parent->_dirtyBits.test(DirtyBitPositions::TransformationBit);
 		if (parentHasDirtyTransformation) {
-			dirtyBits_.set(DirtyBitPositions::TransformationBit);
-			dirtyBits_.set(DirtyBitPositions::AabbBit);
+			_dirtyBits.set(DirtyBitPositions::TransformationBit);
+			_dirtyBits.set(DirtyBitPositions::AabbBit);
 		}
 
-		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
+		if (_dirtyBits.test(DirtyBitPositions::TransformationBit)) {
 			// Calculating world and local matrices, the local matrix is equivalent to
 			// Translation(position) * RotateZ(rotation) * Scale(scale) * Translation(-anchor)
 			float c = 1.0f, s = 0.0f;
-			if (rotation_ != 0.0f) {
-				c = cosf(rotation_);
-				s = sinf(rotation_);
+			if (_rotation != 0.0f) {
+				c = cosf(_rotation);
+				s = sinf(_rotation);
 			}
-			const float m00 = c * scaleFactor_.X;
-			const float m01 = s * scaleFactor_.X;
-			const float m10 = -s * scaleFactor_.Y;
-			const float m11 = c * scaleFactor_.Y;
-			const float tx = position_.X - anchorPoint_.X * m00 - anchorPoint_.Y * m10;
-			const float ty = position_.Y - anchorPoint_.X * m01 - anchorPoint_.Y * m11;
+			const float m00 = c * _scaleFactor.X;
+			const float m01 = s * _scaleFactor.X;
+			const float m10 = -s * _scaleFactor.Y;
+			const float m11 = c * _scaleFactor.Y;
+			const float tx = _position.X - _anchorPoint.X * m00 - _anchorPoint.Y * m10;
+			const float ty = _position.Y - _anchorPoint.X * m01 - _anchorPoint.Y * m11;
 
-			localMatrix_[0].Set(m00, m01, 0.0f, 0.0f);
-			localMatrix_[1].Set(m10, m11, 0.0f, 0.0f);
-			localMatrix_[2].Set(0.0f, 0.0f, 1.0f, 0.0f);
-			localMatrix_[3].Set(tx, ty, 0.0f, 1.0f);
+			_localMatrix[0].Set(m00, m01, 0.0f, 0.0f);
+			_localMatrix[1].Set(m10, m11, 0.0f, 0.0f);
+			_localMatrix[2].Set(0.0f, 0.0f, 1.0f, 0.0f);
+			_localMatrix[3].Set(tx, ty, 0.0f, 1.0f);
 
-			absScaleFactor_ = scaleFactor_;
-			absRotation_ = rotation_;
+			_absScaleFactor = _scaleFactor;
+			_absRotation = _rotation;
 
-			if (parent_ != nullptr) {
-				// Equivalent to parent_->worldMatrix_ * localMatrix_, but the two zero columns of the local matrix are skipped
-				const Matrix4x4f& pm = parent_->worldMatrix_;
-				worldMatrix_[0] = pm[0] * m00 + pm[1] * m01;
-				worldMatrix_[1] = pm[0] * m10 + pm[1] * m11;
-				worldMatrix_[2] = pm[2];
-				worldMatrix_[3] = pm[0] * tx + pm[1] * ty + pm[3];
+			if (_parent != nullptr) {
+				// Equivalent to _parent->_worldMatrix * _localMatrix, but the two zero columns of the local matrix are skipped
+				const Matrix4x4f& pm = _parent->_worldMatrix;
+				_worldMatrix[0] = pm[0] * m00 + pm[1] * m01;
+				_worldMatrix[1] = pm[0] * m10 + pm[1] * m11;
+				_worldMatrix[2] = pm[2];
+				_worldMatrix[3] = pm[0] * tx + pm[1] * ty + pm[3];
 
-				absScaleFactor_ *= parent_->absScaleFactor_;
-				absRotation_ += parent_->absRotation_;
+				_absScaleFactor *= _parent->_absScaleFactor;
+				_absRotation += _parent->_absRotation;
 			} else {
-				worldMatrix_ = localMatrix_;
+				_worldMatrix = _localMatrix;
 			}
-			absPosition_.X = worldMatrix_[3][0];
-			absPosition_.Y = worldMatrix_[3][1];
+			_absPosition.X = _worldMatrix[3][0];
+			_absPosition.Y = _worldMatrix[3][1];
 
-			dirtyBits_.set(DirtyBitPositions::TransformationUploadBit);
+			_dirtyBits.set(DirtyBitPositions::TransformationUploadBit);
 		}
 	}
 }

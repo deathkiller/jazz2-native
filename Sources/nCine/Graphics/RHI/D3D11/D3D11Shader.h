@@ -37,9 +37,9 @@ namespace nCine::RHI::D3D11
 		};
 
 		explicit D3D11Shader(std::uint32_t type)
-			: type_(type), status_(Status::Compiled) {}
+			: _type(type), _status(Status::Compiled) {}
 		D3D11Shader(std::uint32_t type, StringView filename)
-			: type_(type), status_(Status::Compiled) {
+			: _type(type), _status(Status::Compiled) {
 			static_cast<void>(filename);
 		}
 
@@ -47,7 +47,7 @@ namespace nCine::RHI::D3D11
 			return 0;
 		}
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 
 		bool LoadFromString(StringView string) {
@@ -78,7 +78,7 @@ namespace nCine::RHI::D3D11
 		}
 
 	private:
-		std::uint32_t type_;
-		Status status_;
+		std::uint32_t _type;
+		Status _status;
 	};
 }

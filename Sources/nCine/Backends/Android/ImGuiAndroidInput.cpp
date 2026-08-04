@@ -12,8 +12,8 @@
 
 namespace nCine::Backends
 {
-	ANativeWindow* ImGuiAndroidInput::window_ = nullptr;
-	bool ImGuiAndroidInput::inputEnabled_ = true;
+	ANativeWindow* ImGuiAndroidInput::_window = nullptr;
+	bool ImGuiAndroidInput::_inputEnabled = true;
 
 	namespace
 	{
@@ -150,7 +150,7 @@ namespace nCine::Backends
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 
-		window_ = window;
+		_window = window;
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendPlatformName = "nCine_Android";
@@ -175,8 +175,8 @@ namespace nCine::Backends
 		io.DeltaTime = theApplication().interval();
 
 		// Setup display size (every frame to accommodate for window resizing)
-		const int32_t windowWidth = ANativeWindow_getWidth(window_);
-		const int32_t windowHeight = ANativeWindow_getHeight(window_);
+		const int32_t windowWidth = ANativeWindow_getWidth(_window);
+		const int32_t windowHeight = ANativeWindow_getHeight(_window);
 		if (windowWidth > 0 && windowHeight > 0) {
 			const int displayWidth = windowWidth;
 			const int displayHeight = windowHeight;
@@ -195,7 +195,7 @@ namespace nCine::Backends
 
 	bool ImGuiAndroidInput::processEvent(const AInputEvent* event)
 	{
-		if (!inputEnabled_) {
+		if (!_inputEnabled) {
 			return false;
 		}
 

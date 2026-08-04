@@ -41,18 +41,18 @@ namespace nCine::Backends
 		AndroidKeyboardState()
 		{
 			for (unsigned int i = 0; i < NumKeys; i++) {
-				keys_[i] = 0;
+				_keys[i] = 0;
 			}
 		}
 
 		inline bool isKeyDown(Keys key) const override
 		{
-			return (key != Keys::Unknown && keys_[static_cast<unsigned int>(key)] != 0);
+			return (key != Keys::Unknown && _keys[static_cast<unsigned int>(key)] != 0);
 		}
 
 	private:
 		static const unsigned int NumKeys = static_cast<unsigned int>(Keys::Count);
-		unsigned char keys_[NumKeys];
+		unsigned char _keys[NumKeys];
 
 		friend class AndroidInputManager;
 	};
@@ -68,7 +68,7 @@ namespace nCine::Backends
 		bool isButtonDown(MouseButton button) const override;
 
 	private:
-		int buttonState_;
+		int _buttonState;
 
 		friend class AndroidInputManager;
 	};
@@ -96,29 +96,29 @@ namespace nCine::Backends
 		static constexpr int NumAxesToMap = 12;
 		static const int AxesToMap[NumAxesToMap];
 
-		int deviceId_;
-		JoystickGuid guid_;
-		char name_[MaxNameLength];
+		int _deviceId;
+		JoystickGuid _guid;
+		char _name[MaxNameLength];
 
-		int numButtons_;
-		int numHats_;
-		int numAxes_;
-		int numAxesMapped_;
-		bool hasDPad_;
-		bool hasHatAxes_;
-		short int buttonsMapping_[MaxButtons];
-		short int axesMapping_[MaxAxes];
-		bool buttons_[MaxButtons];
+		int _numButtons;
+		int _numHats;
+		int _numAxes;
+		int _numAxesMapped;
+		bool _hasDPad;
+		bool _hasHatAxes;
+		short int _buttonsMapping[MaxButtons];
+		short int _axesMapping[MaxAxes];
+		bool _buttons[MaxButtons];
 		/** @brief Normalized value in the -1..1 range for every available axis */
-		float axesValues_[MaxAxes];
+		float _axesValues[MaxAxes];
 		/** @brief Minimum value for every available axis (used for -1..1 range remapping) */
-		float axesMinValues_[MaxAxes];
+		float _axesMinValues[MaxAxes];
 		/** @brief Range value for every available axis (used for -1..1 range remapping) */
-		float axesRangeValues_[MaxAxes];
-		unsigned char hatState_; // no more than one hat is supported
-		int numVibrators_;
-		int vibratorsIds_[MaxVibrators];
-		AndroidJniClass_Vibrator vibrators_[MaxVibrators];
+		float _axesRangeValues[MaxAxes];
+		unsigned char _hatState; // no more than one hat is supported
+		int _numVibrators;
+		int _vibratorsIds[MaxVibrators];
+		AndroidJniClass_Vibrator _vibrators[MaxVibrators];
 
 		friend class AndroidInputManager;
 	};
@@ -146,10 +146,10 @@ namespace nCine::Backends
 		static void enableAccelerometer(bool enabled);
 
 		inline const MouseState& mouseState() const override {
-			return mouseState_;
+			return _mouseState;
 		}
 		inline const KeyboardState& keyboardState() const override {
-			return keyboardState_;
+			return _keyboardState;
 		}
 
 		/** @brief Parses an Android sensor event related to the accelerometer */
@@ -168,37 +168,37 @@ namespace nCine::Backends
 		bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) override;
 
 		void setCursor(Cursor cursor) override {
-			cursor_ = cursor;
+			_cursor = cursor;
 		}
 
 	private:
 		static constexpr int MaxNumJoysticks = 8;
 
-		static ASensorManager* sensorManager_;
-		static const ASensor* accelerometerSensor_;
-		static ASensorEventQueue* sensorEventQueue_;
-		static bool accelerometerEnabled_;
+		static ASensorManager* _sensorManager;
+		static const ASensor* _accelerometerSensor;
+		static ASensorEventQueue* _sensorEventQueue;
+		static bool _accelerometerEnabled;
 
-		static AccelerometerEvent accelerometerEvent_;
-		static TouchEvent touchEvent_;
-		static AndroidKeyboardState keyboardState_;
-		static KeyboardEvent keyboardEvent_;
-		static TextInputEvent textInputEvent_;
-		static AndroidMouseState mouseState_;
-		static MouseEvent mouseEvent_;
-		static ScrollEvent scrollEvent_;
+		static AccelerometerEvent _accelerometerEvent;
+		static TouchEvent _touchEvent;
+		static AndroidKeyboardState _keyboardState;
+		static KeyboardEvent _keyboardEvent;
+		static TextInputEvent _textInputEvent;
+		static AndroidMouseState _mouseState;
+		static MouseEvent _mouseEvent;
+		static ScrollEvent _scrollEvent;
 		/** @brief Back and forward key events triggered by the mouse, simulated as right and middle button */
-		static int simulatedMouseButtonState_;
+		static int _simulatedMouseButtonState;
 
-		static AndroidJoystickState nullJoystickState_;
-		static AndroidJoystickState joystickStates_[MaxNumJoysticks];
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
-		static JoyConnectionEvent joyConnectionEvent_;
+		static AndroidJoystickState _nullJoystickState;
+		static AndroidJoystickState _joystickStates[MaxNumJoysticks];
+		static JoyButtonEvent _joyButtonEvent;
+		static JoyHatEvent _joyHatEvent;
+		static JoyAxisEvent _joyAxisEvent;
+		static JoyConnectionEvent _joyConnectionEvent;
 		/** @brief Update rate of @ref updateJoystickConnections() in seconds */
 		static constexpr float JoyCheckRateSecs = 2.0f;
-		static Timer joyCheckTimer_;
+		static Timer _joyCheckTimer;
 
 		/** @brief Processes a gamepad event */
 		static bool processGamepadEvent(const AInputEvent* event);

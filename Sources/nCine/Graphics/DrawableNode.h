@@ -67,11 +67,11 @@ namespace nCine
 
 		/** @brief Returns the width of the node area */
 		inline virtual float width() const {
-			return width_ * scaleFactor_.X;
+			return _width * _scaleFactor.X;
 		}
 		/** @brief Returns the height of the node area */
 		inline virtual float height() const {
-			return height_ * scaleFactor_.Y;
+			return _height * _scaleFactor.Y;
 		}
 		/** @brief Returns the size of the node area */
 		inline Vector2f size() const {
@@ -80,11 +80,11 @@ namespace nCine
 
 		/** @brief Returns the absolute width of the node area */
 		inline virtual float absWidth() const {
-			return width_ * absScaleFactor_.X;
+			return _width * _absScaleFactor.X;
 		}
 		/** @brief Returns the absolute height of the node area */
 		inline virtual float absHeight() const {
-			return height_ * absScaleFactor_.Y;
+			return _height * _absScaleFactor.Y;
 		}
 		/** @brief Returns the absolute size of the node area */
 		inline Vector2f absSize() const {
@@ -93,7 +93,7 @@ namespace nCine
 
 		/** @brief Returns the transformation anchor point */
 		inline Vector2f anchorPoint() const {
-			return (anchorPoint_ / size()) + 0.5f;
+			return (_anchorPoint / size()) + 0.5f;
 		}
 		/** @brief Sets the transformation anchor point */
 		void setAnchorPoint(float xx, float yy);
@@ -119,26 +119,26 @@ namespace nCine
 
 		/** @brief Returns the last frame in which any viewport rendered this node (i.e. it was not culled) */
 		inline std::uint32_t lastFrameRendered() const {
-			return lastFrameRendered_;
+			return _lastFrameRendered;
 		}
 		/** @brief Returns the axis-aligned bounding box of the node area in the last frame */
 		inline Rectf aabb() const {
-			return aabb_;
+			return _aabb;
 		}
 
 	protected:
 		/** @brief Node width in pixels */
-		float width_;
+		float _width;
 		/** @brief Node height in pixels */
-		float height_;
+		float _height;
 
 		/** @brief The render command associated with this node */
-		RenderCommand renderCommand_;
+		RenderCommand _renderCommand;
 
 		/** @brief The last frame in which any viewport rendered this node */
-		std::uint32_t lastFrameRendered_;
+		std::uint32_t _lastFrameRendered;
 		/** @brief Axis-aligned bounding box of the node area */
-		Rectf aabb_;
+		Rectf _aabb;
 		/** @brief Recalculates the axis-aligned bounding box */
 		virtual void updateAabb();
 		/** @brief Called by each viewport update to refresh this node's culling state */

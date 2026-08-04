@@ -13,42 +13,42 @@ namespace nCine
 	ScreenViewport::ScreenViewport()
 		: Viewport()
 	{
-		width_ = theApplication().GetWidth();
-		height_ = theApplication().GetHeight();
-		viewportRect_.Set(0, 0, width_, height_);
+		_width = theApplication().GetWidth();
+		_height = theApplication().GetHeight();
+		_viewportRect.Set(0, 0, _width, _height);
 
 		const DisplayMode displayMode = theApplication().GetGfxDevice().displayMode();
 		if (displayMode.depthBits() == 16) {
-			depthStencilFormat_ = DepthStencilFormat::Depth16;
+			_depthStencilFormat = DepthStencilFormat::Depth16;
 		} else if (displayMode.depthBits() == 24) {
-			depthStencilFormat_ = (displayMode.stencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
+			_depthStencilFormat = (displayMode.stencilBits() == 8 ? DepthStencilFormat::Depth24_Stencil8 : DepthStencilFormat::Depth24);
 		}
-		rootNode_ = &theApplication().GetRootNode();
-		type_ = Type::Screen;
+		_rootNode = &theApplication().GetRootNode();
+		_type = Type::Screen;
 	}
 
 	void ScreenViewport::Resize(std::int32_t width, std::int32_t height)
 	{
-		if (width == width_ && height == height_) {
+		if (width == _width && height == _height) {
 			return;
 		}
 
-		viewportRect_.Set(0, 0, width, height);
+		_viewportRect.Set(0, 0, width, height);
 
-		if (camera_ != nullptr) {
-			camera_->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
+		if (_camera != nullptr) {
+			_camera->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
 		}
-		RenderResources::defaultCamera_->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
+		RenderResources::_defaultCamera->SetOrthoProjection(0.0f, float(width), 0.0f, float(height));
 
-		width_ = width;
-		height_ = height;
+		_width = width;
+		_height = height;
 	}
 
 	void ScreenViewport::Update()
 	{
-		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::UpdatedBit)) {
-				chain_[i]->Update();
+		for (std::int32_t i = std::int32_t(_chain.size()) - 1; i >= 0; i--) {
+			if (_chain[i] && !_chain[i]->_stateBits.test(StateBitPositions::UpdatedBit)) {
+				_chain[i]->Update();
 			}
 		}
 		Viewport::Update();
@@ -56,9 +56,9 @@ namespace nCine
 
 	void ScreenViewport::Visit()
 	{
-		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::VisitedBit)) {
-				chain_[i]->Visit();
+		for (std::int32_t i = std::int32_t(_chain.size()) - 1; i >= 0; i--) {
+			if (_chain[i] && !_chain[i]->_stateBits.test(StateBitPositions::VisitedBit)) {
+				_chain[i]->Visit();
 			}
 		}
 		Viewport::Visit();
@@ -71,9 +71,9 @@ namespace nCine
 		RenderStatistics::Reset();
 #endif
 
-		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {
-			if (chain_[i] && !chain_[i]->stateBits_.test(StateBitPositions::CommittedBit)) {
-				chain_[i]->SortAndCommitQueue();
+		for (std::int32_t i = std::int32_t(_chain.size()) - 1; i >= 0; i--) {
+			if (_chain[i] && !_chain[i]->_stateBits.test(StateBitPositions::CommittedBit)) {
+				_chain[i]->SortAndCommitQueue();
 			}
 		}
 		Viewport::SortAndCommitQueue();
@@ -87,14 +87,14 @@ namespace nCine
 		// Recursive calls into the chain
 		Viewport::Draw(0);
 
-		for (std::size_t i = 0; i < chain_.size(); i++) {
-			if (chain_[i]) {
-				chain_[i]->renderQueue_.Clear();
-				chain_[i]->stateBits_.reset();
+		for (std::size_t i = 0; i < _chain.size(); i++) {
+			if (_chain[i]) {
+				_chain[i]->_renderQueue.Clear();
+				_chain[i]->_stateBits.reset();
 			}
 		}
-		renderQueue_.Clear();
-		stateBits_.reset();
+		_renderQueue.Clear();
+		_stateBits.reset();
 
 		RenderResources::GetBuffersManager().Remap();
 		RenderResources::GetRenderCommandPool().Reset();

@@ -52,27 +52,27 @@ namespace nCine::RHI::Vulkan
 		}
 	}
 
-	std::uint32_t VulkanTexture::nextHandle_ = 1;
+	std::uint32_t VulkanTexture::_nextHandle = 1;
 
 	VulkanTexture::VulkanTexture(TextureTarget target)
-		: handle_(nextHandle_++), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
-			width_(0), height_(0), strideBytes_(0),
-			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
-			textureUnit_(0), isRenderTarget_(false),
-			gpuImage_(0), gpuMemory_(0), gpuView_(0), gpuSampler_(0),
-			currentLayout_(VK_IMAGE_LAYOUT_UNDEFINED), gpuFormat_(VK_FORMAT_R8G8B8A8_UNORM),
-			contentsDirty_(false), viewDirty_(false), hasCpuData_(false),
-			samplerFilter_(nCine::SamplerFilter::Unknown), samplerWrap_(SamplerWrapping::Unknown)
+		: _handle(_nextHandle++), _target(target), _format(PixelFormat::Unknown), _uploadFormat(PixelFormat::Unknown),
+			_width(0), _height(0), _strideBytes(0),
+			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest), _wrap(SamplerWrapping::ClampToEdge),
+			_textureUnit(0), _isRenderTarget(false),
+			_gpuImage(0), _gpuMemory(0), _gpuView(0), _gpuSampler(0),
+			_currentLayout(VK_IMAGE_LAYOUT_UNDEFINED), _gpuFormat(VK_FORMAT_R8G8B8A8_UNORM),
+			_contentsDirty(false), _viewDirty(false), _hasCpuData(false),
+			_samplerFilter(nCine::SamplerFilter::Unknown), _samplerWrap(SamplerWrapping::Unknown)
 	{
-		swizzle_[0] = SwizzleChannel::Red;
-		swizzle_[1] = SwizzleChannel::Green;
-		swizzle_[2] = SwizzleChannel::Blue;
-		swizzle_[3] = SwizzleChannel::Alpha;
+		_swizzle[0] = SwizzleChannel::Red;
+		_swizzle[1] = SwizzleChannel::Green;
+		_swizzle[2] = SwizzleChannel::Blue;
+		_swizzle[3] = SwizzleChannel::Alpha;
 	}
 
 	VulkanTexture::~VulkanTexture()
 	{
-		// Unbind from the device first so a later draw can't dereference this freed texture via boundTextures_
+		// Unbind from the device first so a later draw can't dereference this freed texture via _boundTextures
 		VulkanDevice::UnbindTexture(this);
 		ReleaseGpu();
 	}
@@ -84,15 +84,15 @@ namespace nCine::RHI::Vulkan
 		// freeing now would be a GPU use-after-free that loses the device (the level->menu freeze). The device frees
 		// them once every frame that could reference them has completed; VkEnqueueDestroy no-ops if the device is
 		// already gone (teardown) - vkDestroyDevice implicitly destroys these handles then.
-		VkEnqueueDestroy(VkDeferredResource::ImageView, gpuView_);
-		VkEnqueueDestroy(VkDeferredResource::Sampler, gpuSampler_);
-		VkEnqueueDestroy(VkDeferredResource::Image, gpuImage_);
-		VkEnqueueDestroy(VkDeferredResource::DeviceMemory, gpuMemory_);
-		gpuView_ = 0;
-		gpuSampler_ = 0;
-		gpuImage_ = 0;
-		gpuMemory_ = 0;
-		currentLayout_ = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkEnqueueDestroy(VkDeferredResource::ImageView, _gpuView);
+		VkEnqueueDestroy(VkDeferredResource::Sampler, _gpuSampler);
+		VkEnqueueDestroy(VkDeferredResource::Image, _gpuImage);
+		VkEnqueueDestroy(VkDeferredResource::DeviceMemory, _gpuMemory);
+		_gpuView = 0;
+		_gpuSampler = 0;
+		_gpuImage = 0;
+		_gpuMemory = 0;
+		_currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 
 	std::int32_t VulkanTexture::BytesPerPixel(PixelFormat format)
@@ -109,30 +109,30 @@ namespace nCine::RHI::Vulkan
 	void VulkanTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height)
 	{
 		// Promote the narrower runtime formats (RGB8 render targets, palette-index R8 / RG8) to an RGBA8 store
-		uploadFormat_ = format;
-		format_ = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
-		width_ = width;
-		height_ = height;
-		const std::int32_t bpp = BytesPerPixel(format_);
-		strideBytes_ = width * bpp;
-		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		_uploadFormat = format;
+		_format = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
+		_width = width;
+		_height = height;
+		const std::int32_t bpp = BytesPerPixel(_format);
+		_strideBytes = width * bpp;
+		_pixels.assign(std::size_t(_strideBytes) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
 		// The size/format changed, so the GPU image must be rebuilt on the next bind
 		ReleaseGpu();
-		contentsDirty_ = true;
-		viewDirty_ = true;
+		_contentsDirty = true;
+		_viewDirty = true;
 	}
 
 	void VulkanTexture::EnsureGpu() const
 	{
 		VkDevice device = VkDeviceHandle();
-		if (device == VK_NULL_HANDLE || width_ <= 0 || height_ <= 0) {
+		if (device == VK_NULL_HANDLE || _width <= 0 || _height <= 0) {
 			return;
 		}
 
-		if (gpuImage_ == 0) {
-			gpuFormat_ = std::uint32_t(MapVkFormat(format_));
+		if (_gpuImage == 0) {
+			_gpuFormat = std::uint32_t(MapVkFormat(_format));
 			VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-			if (isRenderTarget_) {
+			if (_isRenderTarget) {
 				usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			} else {
 				usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -141,8 +141,8 @@ namespace nCine::RHI::Vulkan
 			VkImageCreateInfo ici = {};
 			ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			ici.imageType = VK_IMAGE_TYPE_2D;
-			ici.format = VkFormat(gpuFormat_);
-			ici.extent = { std::uint32_t(width_), std::uint32_t(height_), 1 };
+			ici.format = VkFormat(_gpuFormat);
+			ici.extent = { std::uint32_t(_width), std::uint32_t(_height), 1 };
 			ici.mipLevels = 1;
 			ici.arrayLayers = 1;
 			ici.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -168,12 +168,12 @@ namespace nCine::RHI::Vulkan
 				return;
 			}
 			vkBindImageMemory(device, image, memory, 0);
-			gpuImage_ = reinterpret_cast<std::uint64_t>(image);
-			gpuMemory_ = reinterpret_cast<std::uint64_t>(memory);
-			currentLayout_ = VK_IMAGE_LAYOUT_UNDEFINED;
-			viewDirty_ = true;
+			_gpuImage = reinterpret_cast<std::uint64_t>(image);
+			_gpuMemory = reinterpret_cast<std::uint64_t>(memory);
+			_currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			_viewDirty = true;
 
-			if (isRenderTarget_) {
+			if (_isRenderTarget) {
 				// Bring the fresh attachment to COLOR_ATTACHMENT_OPTIMAL so the device's LOAD-op render pass
 				// (initialLayout == COLOR_ATTACHMENT_OPTIMAL) is valid on first use; contents stay undefined
 				// until the engine clears / overwrites them.
@@ -192,7 +192,7 @@ namespace nCine::RHI::Vulkan
 					vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 						0, 0, nullptr, 0, nullptr, 1, &b);
 					VkEndOneTimeCommands(cmd);
-					currentLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					_currentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				}
 			}
 		}
@@ -200,42 +200,42 @@ namespace nCine::RHI::Vulkan
 		// NOTE: CPU texel uploads are NOT recorded here anymore. EnsureGpu() only materializes the image / view /
 		// sampler; the staging copy is recorded into the current FRAME's command buffer by RecordStreamingUpload()
 		// (driven from the device's pre-draw phase, outside any render pass), so per-frame texture streaming (the
-		// palette) no longer forces a vkQueueWaitIdle stall every frame. contentsDirty_ stays set until then.
+		// palette) no longer forces a vkQueueWaitIdle stall every frame. _contentsDirty stays set until then.
 
-		if (viewDirty_ || gpuView_ == 0) {
-			if (gpuView_ != 0) {
+		if (_viewDirty || _gpuView == 0) {
+			if (_gpuView != 0) {
 				// Defer: an in-flight frame's descriptor set may still sample through the old view (see ReleaseGpu)
-				VkEnqueueDestroy(VkDeferredResource::ImageView, gpuView_);
-				gpuView_ = 0;
+				VkEnqueueDestroy(VkDeferredResource::ImageView, _gpuView);
+				_gpuView = 0;
 			}
 			VkImageViewCreateInfo ivci = {};
 			ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			ivci.image = reinterpret_cast<VkImage>(gpuImage_);
+			ivci.image = reinterpret_cast<VkImage>(_gpuImage);
 			ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			ivci.format = VkFormat(gpuFormat_);
+			ivci.format = VkFormat(_gpuFormat);
 			// The sampling swizzle is applied here (no texel baking) - e.g. RG8 palette textures map A<-Green
-			ivci.components.r = MapSwizzle(swizzle_[0], VK_COMPONENT_SWIZZLE_R);
-			ivci.components.g = MapSwizzle(swizzle_[1], VK_COMPONENT_SWIZZLE_G);
-			ivci.components.b = MapSwizzle(swizzle_[2], VK_COMPONENT_SWIZZLE_B);
-			ivci.components.a = MapSwizzle(swizzle_[3], VK_COMPONENT_SWIZZLE_A);
+			ivci.components.r = MapSwizzle(_swizzle[0], VK_COMPONENT_SWIZZLE_R);
+			ivci.components.g = MapSwizzle(_swizzle[1], VK_COMPONENT_SWIZZLE_G);
+			ivci.components.b = MapSwizzle(_swizzle[2], VK_COMPONENT_SWIZZLE_B);
+			ivci.components.a = MapSwizzle(_swizzle[3], VK_COMPONENT_SWIZZLE_A);
 			ivci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			VkImageView view = VK_NULL_HANDLE;
 			if (vkCreateImageView(device, &ivci, nullptr, &view) == VK_SUCCESS) {
-				gpuView_ = reinterpret_cast<std::uint64_t>(view);
+				_gpuView = reinterpret_cast<std::uint64_t>(view);
 			}
-			viewDirty_ = false;
+			_viewDirty = false;
 		}
 
-		if (gpuSampler_ == 0 || samplerFilter_ != magFilter_ || samplerWrap_ != wrap_) {
-			if (gpuSampler_ != 0) {
+		if (_gpuSampler == 0 || _samplerFilter != _magFilter || _samplerWrap != _wrap) {
+			if (_gpuSampler != 0) {
 				// Defer: an in-flight frame's descriptor set may still use the old sampler (see ReleaseGpu)
-				VkEnqueueDestroy(VkDeferredResource::Sampler, gpuSampler_);
-				gpuSampler_ = 0;
+				VkEnqueueDestroy(VkDeferredResource::Sampler, _gpuSampler);
+				_gpuSampler = 0;
 			}
-			const bool linear = (magFilter_ == nCine::SamplerFilter::Linear ||
-				magFilter_ == nCine::SamplerFilter::LinearMipmapNearest || magFilter_ == nCine::SamplerFilter::LinearMipmapLinear);
+			const bool linear = (_magFilter == nCine::SamplerFilter::Linear ||
+				_magFilter == nCine::SamplerFilter::LinearMipmapNearest || _magFilter == nCine::SamplerFilter::LinearMipmapLinear);
 			VkSamplerAddressMode address;
-			switch (wrap_) {
+			switch (_wrap) {
 				case SamplerWrapping::Repeat: address = VK_SAMPLER_ADDRESS_MODE_REPEAT; break;
 				case SamplerWrapping::MirroredRepeat: address = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT; break;
 				default: address = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE; break;
@@ -252,10 +252,10 @@ namespace nCine::RHI::Vulkan
 			sci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 			VkSampler sampler = VK_NULL_HANDLE;
 			if (vkCreateSampler(device, &sci, nullptr, &sampler) == VK_SUCCESS) {
-				gpuSampler_ = reinterpret_cast<std::uint64_t>(sampler);
+				_gpuSampler = reinterpret_cast<std::uint64_t>(sampler);
 			}
-			samplerFilter_ = magFilter_;
-			samplerWrap_ = wrap_;
+			_samplerFilter = _magFilter;
+			_samplerWrap = _wrap;
 		}
 	}
 
@@ -266,18 +266,18 @@ namespace nCine::RHI::Vulkan
 			return;
 		}
 		EnsureGpu();	// materialize the image / view / sampler (no upload)
-		if (gpuImage_ == 0 || !contentsDirty_ || !hasCpuData_ || isRenderTarget_ || pixels_.empty()) {
+		if (_gpuImage == 0 || !_contentsDirty || !_hasCpuData || _isRenderTarget || _pixels.empty()) {
 			return;
 		}
 		VkCommandBuffer cmd = reinterpret_cast<VkCommandBuffer>(cmdBuffer);
-		VkImage image = reinterpret_cast<VkImage>(gpuImage_);
+		VkImage image = reinterpret_cast<VkImage>(_gpuImage);
 
 		// Host-visible staging buffer holding the whole level-0 store; the device frees it once the frame's fence signals
 		VkBuffer staging = VK_NULL_HANDLE;
 		VkDeviceMemory stagingMem = VK_NULL_HANDLE;
 		VkBufferCreateInfo bci = {};
 		bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bci.size = pixels_.size();
+		bci.size = _pixels.size();
 		bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		if (vkCreateBuffer(device, &bci, nullptr, &staging) != VK_SUCCESS) {
@@ -298,14 +298,14 @@ namespace nCine::RHI::Vulkan
 		vkBindBufferMemory(device, staging, stagingMem, 0);
 		void* mapped = nullptr;
 		vkMapMemory(device, stagingMem, 0, VK_WHOLE_SIZE, 0, &mapped);
-		std::memcpy(mapped, pixels_.data(), pixels_.size());
+		std::memcpy(mapped, _pixels.data(), _pixels.size());
 		vkUnmapMemory(device, stagingMem);
 
 		// Barrier into TRANSFER_DST. On a re-upload of a texture the OTHER in-flight frame sampled
-		// (currentLayout_ == SHADER_READ_ONLY), the source scope is FRAGMENT_SHADER / SHADER_READ so this write
+		// (_currentLayout == SHADER_READ_ONLY), the source scope is FRAGMENT_SHADER / SHADER_READ so this write
 		// waits (via queue submission order) for that frame's samples - the shared-image WAR guard for streaming
 		// textures like the palette. A fresh image is UNDEFINED (its contents are discarded, no wait needed).
-		const VkImageLayout oldLayout = VkImageLayout(currentLayout_);
+		const VkImageLayout oldLayout = VkImageLayout(_currentLayout);
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkAccessFlags srcAccess = 0;
 		if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
@@ -330,7 +330,7 @@ namespace nCine::RHI::Vulkan
 		region.bufferImageHeight = 0;
 		region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { std::uint32_t(width_), std::uint32_t(height_), 1 };
+		region.imageExtent = { std::uint32_t(_width), std::uint32_t(_height), 1 };
 		vkCmdCopyBufferToImage(cmd, staging, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 		VkImageMemoryBarrier toRead = {};
@@ -346,44 +346,44 @@ namespace nCine::RHI::Vulkan
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0, 0, nullptr, 0, nullptr, 1, &toRead);
 
-		currentLayout_ = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		contentsDirty_ = false;
+		_currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		_contentsDirty = false;
 		VkRegisterFrameStaging(reinterpret_cast<std::uint64_t>(staging), reinterpret_cast<std::uint64_t>(stagingMem));
 	}
 
 	std::uint64_t VulkanTexture::GpuImage() const
 	{
 		EnsureGpu();
-		return gpuImage_;
+		return _gpuImage;
 	}
 
 	std::uint64_t VulkanTexture::GpuView() const
 	{
 		EnsureGpu();
-		return gpuView_;
+		return _gpuView;
 	}
 
 	std::uint64_t VulkanTexture::GpuSampler() const
 	{
 		EnsureGpu();
-		return gpuSampler_;
+		return _gpuSampler;
 	}
 
 	std::uint32_t VulkanTexture::GpuFormat() const
 	{
-		return gpuFormat_;
+		return _gpuFormat;
 	}
 
 	bool VulkanTexture::Bind(std::uint32_t textureUnit) const
 	{
-		textureUnit_ = textureUnit;
+		_textureUnit = textureUnit;
 		VulkanDevice::BindTexture(textureUnit, this);
 		return true;
 	}
 
 	bool VulkanTexture::Unbind() const
 	{
-		VulkanDevice::BindTexture(textureUnit_, nullptr);
+		VulkanDevice::BindTexture(_textureUnit, nullptr);
 		return true;
 	}
 
@@ -400,17 +400,17 @@ namespace nCine::RHI::Vulkan
 			return;
 		}
 		Allocate(format, width, height);
-		if (data != nullptr && !pixels_.empty()) {
-			hasCpuData_ = true;
+		if (data != nullptr && !_pixels.empty()) {
+			_hasCpuData = true;
 			const std::int32_t srcBpp = BytesPerPixel(format);
-			const std::int32_t dstBpp = BytesPerPixel(format_);
+			const std::int32_t dstBpp = BytesPerPixel(_format);
 			if (srcBpp == dstBpp) {
-				std::memcpy(pixels_.data(), data, pixels_.size());
+				std::memcpy(_pixels.data(), data, _pixels.size());
 			} else {
 				const std::uint8_t* src = static_cast<const std::uint8_t*>(data);
-				for (std::int32_t y = 0; y < height_; y++) {
-					CopyExpandRow(pixels_.data() + std::size_t(y) * strideBytes_,
-						dstBpp, src + std::size_t(y) * std::size_t(width_) * srcBpp, srcBpp, width_);
+				for (std::int32_t y = 0; y < _height; y++) {
+					CopyExpandRow(_pixels.data() + std::size_t(y) * _strideBytes,
+						dstBpp, src + std::size_t(y) * std::size_t(_width) * srcBpp, srcBpp, _width);
 				}
 			}
 		}
@@ -419,16 +419,16 @@ namespace nCine::RHI::Vulkan
 	void VulkanTexture::TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data)
 	{
 		static_cast<void>(bgr);
-		if (level != 0 || data == nullptr || pixels_.empty()) {
+		if (level != 0 || data == nullptr || _pixels.empty()) {
 			return;
 		}
-		hasCpuData_ = true;
-		contentsDirty_ = true;
+		_hasCpuData = true;
+		_contentsDirty = true;
 		const std::int32_t srcBpp = BytesPerPixel(format);
-		const std::int32_t dstBpp = BytesPerPixel(format_);
+		const std::int32_t dstBpp = BytesPerPixel(_format);
 		for (std::int32_t y = 0; y < height; y++) {
 			const std::int32_t dstY = yoffset + y;
-			if (dstY < 0 || dstY >= height_) {
+			if (dstY < 0 || dstY >= _height) {
 				continue;
 			}
 			std::int32_t dstX = xoffset;
@@ -439,14 +439,14 @@ namespace nCine::RHI::Vulkan
 				copyW += dstX;
 				dstX = 0;
 			}
-			if (dstX + copyW > width_) {
-				copyW = width_ - dstX;
+			if (dstX + copyW > _width) {
+				copyW = _width - dstX;
 			}
 			if (copyW <= 0) {
 				continue;
 			}
 			const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
-			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
+			std::uint8_t* dstRow = _pixels.data() + std::size_t(dstY) * _strideBytes + std::size_t(dstX) * dstBpp;
 			CopyExpandRow(dstRow, dstBpp, srcRow, srcBpp, copyW);
 		}
 	}
@@ -491,10 +491,10 @@ namespace nCine::RHI::Vulkan
 		// A render target's contents only exist on the GPU (draws never touch the host store), so read them
 		// back through a staging buffer with a one-time submit + queue-idle wait. Readback is a screenshot-rate
 		// operation, so the synchronous wait is acceptable.
-		if (isRenderTarget_ && gpuImage_ != 0 && width_ > 0 && height_ > 0 && vkCmdCopyImageToBuffer != nullptr) {
+		if (_isRenderTarget && _gpuImage != 0 && _width > 0 && _height > 0 && vkCmdCopyImageToBuffer != nullptr) {
 			VkDevice device = VkDeviceHandle();
 			if (device != VK_NULL_HANDLE) {
-				const VkDeviceSize byteSize = VkDeviceSize(width_) * VkDeviceSize(height_) * 4;
+				const VkDeviceSize byteSize = VkDeviceSize(_width) * VkDeviceSize(_height) * 4;
 				VkBuffer staging = VK_NULL_HANDLE;
 				VkDeviceMemory stagingMem = VK_NULL_HANDLE;
 				VkBufferCreateInfo bci = {};
@@ -516,8 +516,8 @@ namespace nCine::RHI::Vulkan
 
 						VkCommandBuffer cmd = VkBeginOneTimeCommands();
 						if (cmd != VK_NULL_HANDLE) {
-							VkImage image = reinterpret_cast<VkImage>(gpuImage_);
-							const VkImageLayout oldLayout = VkImageLayout(currentLayout_);
+							VkImage image = reinterpret_cast<VkImage>(_gpuImage);
+							const VkImageLayout oldLayout = VkImageLayout(_currentLayout);
 
 							// Conservative full-scope barriers: this is a synchronous, out-of-frame submit
 							VkImageMemoryBarrier toSrc = {};
@@ -535,7 +535,7 @@ namespace nCine::RHI::Vulkan
 
 							VkBufferImageCopy region = {};
 							region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-							region.imageExtent = { std::uint32_t(width_), std::uint32_t(height_), 1 };
+							region.imageExtent = { std::uint32_t(_width), std::uint32_t(_height), 1 };
 							vkCmdCopyImageToBuffer(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging, 1, &region);
 
 							VkImageMemoryBarrier restore = toSrc;
@@ -564,34 +564,34 @@ namespace nCine::RHI::Vulkan
 			}
 		}
 
-		if (!pixels_.empty()) {
-			std::memcpy(pixels, pixels_.data(), pixels_.size());
+		if (!_pixels.empty()) {
+			std::memcpy(pixels, _pixels.data(), _pixels.size());
 		}
 	}
 
 	void VulkanTexture::SetMinFiltering(nCine::SamplerFilter filter)
 	{
-		minFilter_ = filter;
+		_minFilter = filter;
 	}
 
 	void VulkanTexture::SetMagFiltering(nCine::SamplerFilter filter)
 	{
-		magFilter_ = filter;
+		_magFilter = filter;
 	}
 
 	void VulkanTexture::SetWrap(SamplerWrapping wrap)
 	{
-		wrap_ = wrap;
+		_wrap = wrap;
 	}
 
 	void VulkanTexture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		swizzle_[0] = r;
-		swizzle_[1] = g;
-		swizzle_[2] = b;
-		swizzle_[3] = a;
+		_swizzle[0] = r;
+		_swizzle[1] = g;
+		_swizzle[2] = b;
+		_swizzle[3] = a;
 		// Applied through the image view's component mapping, so a change rebuilds the view (not the texels)
-		viewDirty_ = true;
+		_viewDirty = true;
 	}
 
 	void VulkanTexture::SetMaxLevel(std::int32_t maxLevel)

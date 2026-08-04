@@ -15,11 +15,11 @@ namespace nCine
 	const Vector2f DrawableNode::AnchorTopRight(1.0f, 1.0f);
 
 	DrawableNode::DrawableNode(SceneNode* parent, float xx, float yy)
-		: SceneNode(parent, xx, yy), width_(0.0f), height_(0.0f),
-		renderCommand_(),
-		lastFrameRendered_(0)
+		: SceneNode(parent, xx, yy), _width(0.0f), _height(0.0f),
+		_renderCommand(),
+		_lastFrameRendered(0)
 	{
-		renderCommand_.SetIdSortKey(id());
+		_renderCommand.SetIdSortKey(id());
 	}
 
 	DrawableNode::DrawableNode(SceneNode* parent, Vector2f position)
@@ -46,25 +46,25 @@ namespace nCine
 	bool DrawableNode::OnDraw(RenderQueue& renderQueue)
 	{
 		// Skip rendering a zero area drawable node
-		if (width_ == 0.0f || height_ == 0.0f)
+		if (_width == 0.0f || _height == 0.0f)
 			return false;
 
 		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
 
 		bool overlaps = false;
-		if (cullingEnabled && lastFrameRendered_ == theApplication().GetFrameCount()) {
+		if (cullingEnabled && _lastFrameRendered == theApplication().GetFrameCount()) {
 			// This frame one of the viewports in the chain might overlap this node
 			const Viewport* viewport = RenderResources::GetCurrentViewport();
-			overlaps = aabb_.Overlaps(viewport->GetCullingRect());
+			overlaps = _aabb.Overlaps(viewport->GetCullingRect());
 		}
 
 		if (!cullingEnabled || overlaps) {
-			renderCommand_.SetLayer(absLayer_);
-			renderCommand_.SetVisitOrder(withVisitOrder_ ? visitOrderIndex_ : 0);
+			_renderCommand.SetLayer(_absLayer);
+			_renderCommand.SetVisitOrder(_withVisitOrder ? _visitOrderIndex : 0);
 			updateRenderCommand();
-			dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
-			dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
-			renderQueue.AddCommand(&renderCommand_);
+			_dirtyBits.reset(DirtyBitPositions::TransformationUploadBit);
+			_dirtyBits.reset(DirtyBitPositions::ColorUploadBit);
+			renderQueue.AddCommand(&_renderCommand);
 		} else {
 #if defined(NCINE_PROFILING)
 			RenderStatistics::AddCulledNode();
@@ -83,53 +83,53 @@ namespace nCine
 	{
 		const float clampedX = std::clamp(xx, 0.0f, 1.0f);
 		const float clampedY = std::clamp(yy, 0.0f, 1.0f);
-		anchorPoint_.Set((clampedX - 0.5f) * width(), (clampedY - 0.5f) * height());
+		_anchorPoint.Set((clampedX - 0.5f) * width(), (clampedY - 0.5f) * height());
 	}
 
 	bool DrawableNode::isBlendingEnabled() const
 	{
-		return renderCommand_.GetMaterial().IsBlendingEnabled();
+		return _renderCommand.GetMaterial().IsBlendingEnabled();
 	}
 
 	void DrawableNode::setBlendingEnabled(bool blendingEnabled)
 	{
-		renderCommand_.GetMaterial().SetBlendingEnabled(blendingEnabled);
+		_renderCommand.GetMaterial().SetBlendingEnabled(blendingEnabled);
 	}
 
 	BlendingFactor DrawableNode::srcBlendingFactor() const
 	{
-		return renderCommand_.GetMaterial().GetSrcBlendingFactor();
+		return _renderCommand.GetMaterial().GetSrcBlendingFactor();
 	}
 
 	BlendingFactor DrawableNode::destBlendingFactor() const
 	{
-		return renderCommand_.GetMaterial().GetDestBlendingFactor();
+		return _renderCommand.GetMaterial().GetDestBlendingFactor();
 	}
 
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
 		switch (blendingPreset) {
 			case BlendingPreset::DISABLED:
-				renderCommand_.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::Zero);
+				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::Zero);
 				break;
 			case BlendingPreset::ALPHA:
-				renderCommand_.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 				break;
 			case BlendingPreset::PREMULTIPLIED_ALPHA:
-				renderCommand_.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 				break;
 			case BlendingPreset::ADDITIVE:
-				renderCommand_.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
+				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
 				break;
 			case BlendingPreset::MULTIPLY:
-				renderCommand_.GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero);
+				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero);
 				break;
 		}
 	}
 
 	void DrawableNode::setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
 	{
-		renderCommand_.GetMaterial().SetBlendingFactors(srcBlendingFactor, destBlendingFactor);
+		_renderCommand.GetMaterial().SetBlendingFactors(srcBlendingFactor, destBlendingFactor);
 	}
 
 	void DrawableNode::updateAabb()
@@ -139,38 +139,38 @@ namespace nCine
 		const float width = absWidth();
 		const float height = absHeight();
 
-		if (absRotation_ > MinRotation || absRotation_ < -MinRotation) {
+		if (_absRotation > MinRotation || _absRotation < -MinRotation) {
 			// Calculate max size for any rotation angle, this will create larger bounding boxes but avoids using sin/cos
 			const float maxSize = width + height;
-			aabb_ = Rectf(absPosition_.X - maxSize, absPosition_.Y - maxSize, maxSize * 2, maxSize * 2);
+			_aabb = Rectf(_absPosition.X - maxSize, _absPosition.Y - maxSize, maxSize * 2, maxSize * 2);
 		} else {
-			aabb_ = Rectf(absPosition_.X, absPosition_.Y, width, height);
+			_aabb = Rectf(_absPosition.X, _absPosition.Y, width, height);
 		}
 	}
 
 	void DrawableNode::updateCulling()
 	{
 		const bool cullingEnabled = theApplication().GetRenderingSettings().cullingEnabled;
-		if (drawEnabled_ && cullingEnabled && width_ > 0 && height_ > 0) {
-			if (dirtyBits_.test(DirtyBitPositions::AabbBit)) {
+		if (_drawEnabled && cullingEnabled && _width > 0 && _height > 0) {
+			if (_dirtyBits.test(DirtyBitPositions::AabbBit)) {
 				updateAabb();
-				dirtyBits_.reset(DirtyBitPositions::AabbBit);
+				_dirtyBits.reset(DirtyBitPositions::AabbBit);
 			}
 
 			// Check if at least one viewport in the chain overlaps with this node
-			if (lastFrameRendered_ < theApplication().GetFrameCount()) {
+			if (_lastFrameRendered < theApplication().GetFrameCount()) {
 				const Viewport* viewport = RenderResources::GetCurrentViewport();
-				const bool overlaps = aabb_.Overlaps(viewport->GetCullingRect());
+				const bool overlaps = _aabb.Overlaps(viewport->GetCullingRect());
 				if (overlaps)
-					lastFrameRendered_ = theApplication().GetFrameCount();
+					_lastFrameRendered = theApplication().GetFrameCount();
 			}
 		}
 	}
 
 	DrawableNode::DrawableNode(const DrawableNode& other)
-		: SceneNode(other), width_(other.width_), height_(other.height_), renderCommand_(), lastFrameRendered_(0)
+		: SceneNode(other), _width(other._width), _height(other._height), _renderCommand(), _lastFrameRendered(0)
 	{
-		renderCommand_.SetIdSortKey(id());
+		_renderCommand.SetIdSortKey(id());
 		setBlendingEnabled(other.isBlendingEnabled());
 		setBlendingFactors(other.srcBlendingFactor(), other.destBlendingFactor());
 		setLayer(other.layer());

@@ -31,7 +31,7 @@ namespace nCine
 
 		/** @brief Returns the texture object */
 		inline const Texture* texture() const {
-			return texture_;
+			return _texture;
 		}
 		/** @brief Sets the texture object */
 		void setTexture(Texture* texture);
@@ -40,27 +40,27 @@ namespace nCine
 
 		/** @brief Returns the texture source rectangle used for blitting */
 		inline Recti texRect() const {
-			return texRect_;
+			return _texRect;
 		}
 		/** @brief Sets the texture source rectangle used for blitting */
 		void setTexRect(const Recti& rect);
 
 		/** @brief Returns whether the sprite texture is horizontally flipped */
 		inline bool isFlippedX() const {
-			return flippedX_;
+			return _flippedX;
 		}
 		/** @brief Flips the texture rectangle horizontally */
 		void setFlippedX(bool flippedX);
 		/** @brief Returns whether the sprite texture is vertically flipped */
 		inline bool isFlippedY() const {
-			return flippedY_;
+			return _flippedY;
 		}
 		/** @brief Flips the texture rectangle vertically */
 		void setFlippedY(bool flippedY);
 
 		/** @brief Returns the flat palette offset added to the per-pixel index by palette shaders */
 		inline float paletteOffset() const {
-			return paletteOffset_;
+			return _paletteOffset;
 		}
 		/** @brief Sets the flat palette offset used by palette shaders (no effect on non-palette shaders) */
 		void setPaletteOffset(float paletteOffset);
@@ -68,16 +68,16 @@ namespace nCine
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief The sprite texture */
-		Texture* texture_;
+		Texture* _texture;
 		/** @brief The texture source rectangle */
-		Recti texRect_;
+		Recti _texRect;
 
 		/** @brief Whether the sprite texture is horizontally flipped */
-		bool flippedX_;
+		bool _flippedX;
 		/** @brief Whether the sprite texture is vertically flipped */
-		bool flippedY_;
+		bool _flippedY;
 		/** @brief Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row) */
-		float paletteOffset_;
+		float _paletteOffset;
 #endif
 
 		/** @brief Protected constructor accessible only by derived sprite classes */

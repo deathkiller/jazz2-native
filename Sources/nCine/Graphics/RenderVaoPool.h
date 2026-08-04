@@ -40,9 +40,9 @@ namespace nCine
 		};
 #endif
 
-		SmallVector<VaoBinding, 0> vaoPool_;
+		SmallVector<VaoBinding, 0> _vaoPool;
 		// Monotonically increasing counter, incremented on every BindVao() call
-		std::uint64_t bindIndex_ = 0;
+		std::uint64_t _bindIndex = 0;
 
 		void InsertGLDebugMessage(const VaoBinding& binding);
 	};

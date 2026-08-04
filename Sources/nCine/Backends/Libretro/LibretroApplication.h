@@ -62,15 +62,15 @@ namespace nCine::Backends
 
 		/** @brief Returns the directories advertised by the frontend */
 		inline const HostPaths& GetHostPaths() const {
-			return hostPaths_;
+			return _hostPaths;
 		}
 		/** @brief Sets the directories advertised by the frontend, must be called before @ref Init() */
 		inline void SetHostPaths(HostPaths&& hostPaths) {
-			hostPaths_ = std::move(hostPaths);
+			_hostPaths = std::move(hostPaths);
 		}
 
 	private:
-		HostPaths hostPaths_;
+		HostPaths _hostPaths;
 	};
 
 	/** @brief Returns the application instance driven by the libretro frontend */

@@ -35,15 +35,15 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the buffer object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 		/** @brief Returns the target this buffer is bound to (e.g., `GL_ARRAY_BUFFER`) */
 		inline GLenum GetTarget() const {
-			return target_;
+			return _target;
 		}
 		/** @brief Returns the size in bytes of the data store, as last set by @ref BufferData() or @ref BufferStorage() */
 		inline GLsizeiptr GetSize() const {
-			return size_;
+			return _size;
 		}
 
 		/**
@@ -104,15 +104,15 @@ namespace nCine::RHI::GL
 
 		/** @brief Drops the cached bindings so the next binds re-apply (external code changed them) */
 		static void InvalidateCachedBindings() {
-			boundBuffers_.SetAll(~0u);
+			_boundBuffers.SetAll(~0u);
 			for (std::int32_t i = 0; i < MaxIndexBufferRange; i++) {
-				boundIndexBase_[i] = ~0u;
-				boundBufferRange_[i].glHandle = ~0u;
+				_boundIndexBase[i] = ~0u;
+				_boundBufferRange[i].glHandle = ~0u;
 			}
 		}
 
 	private:
-		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;
+		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> _boundBuffers;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -127,16 +127,16 @@ namespace nCine::RHI::GL
 		};
 #endif
 
-		GLuint glHandle_;
-		GLenum target_;
-		GLsizeiptr size_;
-		bool mapped_;
+		GLuint _glHandle;
+		GLenum _target;
+		GLsizeiptr _size;
+		bool _mapped;
 
 		static const std::int32_t MaxIndexBufferRange = 128;
 		/** @brief Handle bound at each base binding point index, or 0 if none */
-		static GLuint boundIndexBase_[MaxIndexBufferRange];
+		static GLuint _boundIndexBase[MaxIndexBufferRange];
 		/** @brief Handle, offset and size bound at each ranged binding point index */
-		static BufferRange boundBufferRange_[MaxIndexBufferRange];
+		static BufferRange _boundBufferRange[MaxIndexBufferRange];
 
 		/** @brief Deleted copy constructor */
 		GLBufferObject(const GLBufferObject&) = delete;
@@ -147,7 +147,7 @@ namespace nCine::RHI::GL
 
 		static GLuint GetBoundHandle(GLenum target);
 		inline static void SetBoundHandle(GLenum target, GLuint glHandle) {
-			boundBuffers_[target] = glHandle;
+			_boundBuffers[target] = glHandle;
 		}
 	};
 

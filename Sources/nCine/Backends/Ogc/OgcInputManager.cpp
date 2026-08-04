@@ -36,10 +36,10 @@ namespace nCine::Backends
 		constexpr std::int32_t ButtonRShoulder = 10;
 
 		// Event scratch (single-threaded poll, mirroring the UWP backend's static event objects)
-		JoyButtonEvent joyButtonEvent_;
-		JoyHatEvent joyHatEvent_;
-		JoyAxisEvent joyAxisEvent_;
-		JoyConnectionEvent joyConnectionEvent_;
+		JoyButtonEvent _joyButtonEvent;
+		JoyHatEvent _joyHatEvent;
+		JoyAxisEvent _joyAxisEvent;
+		JoyConnectionEvent _joyConnectionEvent;
 
 		inline float NormalizeStick(std::int8_t value)
 		{
@@ -52,36 +52,36 @@ namespace nCine::Backends
 		}
 	}
 
-	OgcInputManager::PadInfo OgcInputManager::pads_[OgcInputManager::MaxJoysticks];
+	OgcInputManager::PadInfo OgcInputManager::_pads[OgcInputManager::MaxJoysticks];
 
 	OgcJoystickState::OgcJoystickState()
-		: joyId_(-1), hatState_(HatState::Centered)
+		: _joyId(-1), _hatState(HatState::Centered)
 	{
-		std::memset(buttonsState_, 0, sizeof(buttonsState_));
-		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
+		std::memset(_buttonsState, 0, sizeof(_buttonsState));
+		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
 	bool OgcJoystickState::isButtonPressed(int buttonId) const
 	{
-		return (buttonId >= 0 && buttonId < MaxNumButtons && buttonsState_[buttonId]);
+		return (buttonId >= 0 && buttonId < MaxNumButtons && _buttonsState[buttonId]);
 	}
 
 	unsigned char OgcJoystickState::hatState(int hatId) const
 	{
-		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::Centered));
+		return (hatId == 0 ? _hatState : static_cast<unsigned char>(HatState::Centered));
 	}
 
 	float OgcJoystickState::axisValue(int axisId) const
 	{
-		return (axisId >= 0 && axisId < MaxNumAxes ? axesValuesState_[axisId] : 0.0f);
+		return (axisId >= 0 && axisId < MaxNumAxes ? _axesValuesState[axisId] : 0.0f);
 	}
 
 	void OgcJoystickState::resetJoystickState(int joyId)
 	{
-		joyId_ = joyId;
-		hatState_ = HatState::Centered;
-		std::memset(buttonsState_, 0, sizeof(buttonsState_));
-		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
+		_joyId = joyId;
+		_hatState = HatState::Centered;
+		std::memset(_buttonsState, 0, sizeof(_buttonsState));
+		std::memset(_axesValuesState, 0, sizeof(_axesValuesState));
 	}
 
 	void OgcJoystickState::simulateButtonEvent(int buttonId, bool pressed)
@@ -89,30 +89,30 @@ namespace nCine::Backends
 		if (buttonId < 0 || buttonId >= MaxNumButtons) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && buttonsState_[buttonId] != pressed) {
-			joyButtonEvent_.joyId = joyId_;
-			joyButtonEvent_.buttonId = buttonId;
+		if (IInputManager::handler() != nullptr && _buttonsState[buttonId] != pressed) {
+			_joyButtonEvent.joyId = _joyId;
+			_joyButtonEvent.buttonId = buttonId;
 			if (pressed) {
-				OgcInputManager::joyMapping_.OnJoyButtonPressed(joyButtonEvent_);
-				IInputManager::handler()->OnJoyButtonPressed(joyButtonEvent_);
+				OgcInputManager::_joyMapping.OnJoyButtonPressed(_joyButtonEvent);
+				IInputManager::handler()->OnJoyButtonPressed(_joyButtonEvent);
 			} else {
-				OgcInputManager::joyMapping_.OnJoyButtonReleased(joyButtonEvent_);
-				IInputManager::handler()->OnJoyButtonReleased(joyButtonEvent_);
+				OgcInputManager::_joyMapping.OnJoyButtonReleased(_joyButtonEvent);
+				IInputManager::handler()->OnJoyButtonReleased(_joyButtonEvent);
 			}
 		}
-		buttonsState_[buttonId] = pressed;
+		_buttonsState[buttonId] = pressed;
 	}
 
 	void OgcJoystickState::simulateHatEvent(unsigned char state)
 	{
-		if (IInputManager::handler() != nullptr && hatState_ != state) {
-			joyHatEvent_.joyId = joyId_;
-			joyHatEvent_.hatId = 0;
-			joyHatEvent_.hatState = state;
-			OgcInputManager::joyMapping_.OnJoyHatMoved(joyHatEvent_);
-			IInputManager::handler()->OnJoyHatMoved(joyHatEvent_);
+		if (IInputManager::handler() != nullptr && _hatState != state) {
+			_joyHatEvent.joyId = _joyId;
+			_joyHatEvent.hatId = 0;
+			_joyHatEvent.hatState = state;
+			OgcInputManager::_joyMapping.OnJoyHatMoved(_joyHatEvent);
+			IInputManager::handler()->OnJoyHatMoved(_joyHatEvent);
 		}
-		hatState_ = state;
+		_hatState = state;
 	}
 
 	void OgcJoystickState::simulateAxisEvent(int axisId, float value)
@@ -120,22 +120,22 @@ namespace nCine::Backends
 		if (axisId < 0 || axisId >= MaxNumAxes) {
 			return;
 		}
-		if (IInputManager::handler() != nullptr && std::abs(axesValuesState_[axisId] - value) > AxisEventTolerance) {
-			joyAxisEvent_.joyId = joyId_;
-			joyAxisEvent_.axisId = axisId;
-			joyAxisEvent_.value = value;
-			OgcInputManager::joyMapping_.OnJoyAxisMoved(joyAxisEvent_);
-			IInputManager::handler()->OnJoyAxisMoved(joyAxisEvent_);
+		if (IInputManager::handler() != nullptr && std::abs(_axesValuesState[axisId] - value) > AxisEventTolerance) {
+			_joyAxisEvent.joyId = _joyId;
+			_joyAxisEvent.axisId = axisId;
+			_joyAxisEvent.value = value;
+			OgcInputManager::_joyMapping.OnJoyAxisMoved(_joyAxisEvent);
+			IInputManager::handler()->OnJoyAxisMoved(_joyAxisEvent);
 		}
-		axesValuesState_[axisId] = value;
+		_axesValuesState[axisId] = value;
 	}
 
 	OgcInputManager::OgcInputManager()
 	{
-		joyMapping_.Init(this);
+		_joyMapping.Init(this);
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			pads_[i].State.resetJoystickState(i);
+			_pads[i].State.resetJoystickState(i);
 		}
 		// PAD_Init()/WPAD_Init() ran in MainApplication::Run(); poll once so an already-plugged pad
 		// connects before the first frame
@@ -158,7 +158,7 @@ namespace nCine::Backends
 
 	bool OgcInputManager::isJoyPresent(int joyId) const
 	{
-		return (joyId >= 0 && joyId < MaxJoysticks && pads_[joyId].Connected);
+		return (joyId >= 0 && joyId < MaxJoysticks && _pads[joyId].Connected);
 	}
 
 	const char* OgcInputManager::joyName(int joyId) const
@@ -200,7 +200,7 @@ namespace nCine::Backends
 	{
 		static OgcJoystickState nullJoystickState;
 		if (isJoyPresent(joyId)) {
-			return pads_[joyId].State;
+			return _pads[joyId].State;
 		}
 		return nullJoystickState;
 	}
@@ -208,7 +208,7 @@ namespace nCine::Backends
 	bool OgcInputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
 		// GameCube pads only expose an on/off motor; treat any nonzero request as on for the poll period
-		if (joyId < 0 || joyId >= MaxJoysticks || !pads_[joyId].Connected) {
+		if (joyId < 0 || joyId >= MaxJoysticks || !_pads[joyId].Connected) {
 			return false;
 		}
 		PAD_ControlMotor(joyId, (lowFrequency > 0.0f || highFrequency > 0.0f) ? PAD_MOTOR_RUMBLE : PAD_MOTOR_STOP);
@@ -227,22 +227,22 @@ namespace nCine::Backends
 
 	void OgcInputManager::handleConnection(std::int32_t joyId, bool connected)
 	{
-		if (pads_[joyId].Connected == connected) {
+		if (_pads[joyId].Connected == connected) {
 			return;
 		}
-		pads_[joyId].Connected = connected;
-		joyConnectionEvent_.joyId = joyId;
+		_pads[joyId].Connected = connected;
+		_joyConnectionEvent.joyId = joyId;
 		if (connected) {
-			joyMapping_.OnJoyConnected(joyConnectionEvent_);
-			if (inputEventHandler_ != nullptr) {
-				inputEventHandler_->OnJoyConnected(joyConnectionEvent_);
+			_joyMapping.OnJoyConnected(_joyConnectionEvent);
+			if (_inputEventHandler != nullptr) {
+				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
-			pads_[joyId].State.resetJoystickState(joyId);
-			if (inputEventHandler_ != nullptr) {
-				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
+			_pads[joyId].State.resetJoystickState(joyId);
+			if (_inputEventHandler != nullptr) {
+				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
 			}
-			joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
+			_joyMapping.OnJoyDisconnected(_joyConnectionEvent);
 		}
 	}
 
@@ -266,11 +266,11 @@ namespace nCine::Backends
 			connected |= wpadPresent;
 #endif
 			handleConnection(i, connected);
-			if (!pads_[i].Connected) {
+			if (!_pads[i].Connected) {
 				continue;
 			}
 
-			OgcJoystickState& state = pads_[i].State;
+			OgcJoystickState& state = _pads[i].State;
 
 			if (useGcPad) {
 				const std::uint16_t held = PAD_ButtonsHeld(i);

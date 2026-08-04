@@ -10,57 +10,57 @@ namespace nCine
 	}
 
 	ServiceLocator::ServiceLocator()
-		: audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), rhiCapabilities_(&nullRhiCapabilities_)
+		: _audioDevice(&_nullAudioDevice), _threadPool(&_nullThreadPool), _rhiCapabilities(&_nullRhiCapabilities)
 	{
 	}
 
 	void ServiceLocator::RegisterAudioDevice(std::unique_ptr<IAudioDevice> service)
 	{
-		registeredAudioDevice_ = std::move(service);
-		audioDevice_ = registeredAudioDevice_.get();
+		_registeredAudioDevice = std::move(service);
+		_audioDevice = _registeredAudioDevice.get();
 	}
 
 	void ServiceLocator::UnregisterAudioDevice()
 	{
-		registeredAudioDevice_ = nullptr;
-		audioDevice_ = &nullAudioDevice_;
+		_registeredAudioDevice = nullptr;
+		_audioDevice = &_nullAudioDevice;
 	}
 
 	void ServiceLocator::RegisterThreadPool(std::unique_ptr<IThreadPool> service)
 	{
-		registeredThreadPool_ = std::move(service);
-		threadPool_ = registeredThreadPool_.get();
+		_registeredThreadPool = std::move(service);
+		_threadPool = _registeredThreadPool.get();
 	}
 
 	void ServiceLocator::UnregisterThreadPool()
 	{
-		registeredThreadPool_ = nullptr;
-		threadPool_ = &nullThreadPool_;
+		_registeredThreadPool = nullptr;
+		_threadPool = &_nullThreadPool;
 	}
 
 	void ServiceLocator::RegisterRhiCapabilities(std::unique_ptr<RHI::IRhiCapabilities> service)
 	{
-		registeredRhiCapabilities_ = std::move(service);
-		rhiCapabilities_ = registeredRhiCapabilities_.get();
+		_registeredRhiCapabilities = std::move(service);
+		_rhiCapabilities = _registeredRhiCapabilities.get();
 	}
 
 	void ServiceLocator::UnregisterRhiCapabilities()
 	{
-		registeredRhiCapabilities_ = nullptr;
-		rhiCapabilities_ = &nullRhiCapabilities_;
+		_registeredRhiCapabilities = nullptr;
+		_rhiCapabilities = &_nullRhiCapabilities;
 	}
 
 	void ServiceLocator::UnregisterAll()
 	{
 		LOGI("Unregistering all services");
 
-		registeredAudioDevice_ = nullptr;
-		audioDevice_ = &nullAudioDevice_;
+		_registeredAudioDevice = nullptr;
+		_audioDevice = &_nullAudioDevice;
 
-		registeredThreadPool_ = nullptr;
-		threadPool_ = &nullThreadPool_;
+		_registeredThreadPool = nullptr;
+		_threadPool = &_nullThreadPool;
 
-		registeredRhiCapabilities_ = nullptr;
-		rhiCapabilities_ = &nullRhiCapabilities_;
+		_registeredRhiCapabilities = nullptr;
+		_rhiCapabilities = &_nullRhiCapabilities;
 	}
 }

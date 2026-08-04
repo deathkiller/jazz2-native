@@ -42,9 +42,9 @@ namespace nCine
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
-		CRITICAL_SECTION handle_;
+		CRITICAL_SECTION _handle;
 #else
-		pthread_mutex_t mutex_;
+		pthread_mutex_t _mutex;
 #endif
 	};
 
@@ -73,13 +73,13 @@ namespace nCine
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
-		HANDLE events_[2];
-		unsigned int waitersCount_;
-		CRITICAL_SECTION waitersCountLock_;
+		HANDLE _events[2];
+		unsigned int _waitersCount;
+		CRITICAL_SECTION _waitersCountLock;
 
 		void WaitEvents();
 #else
-		pthread_cond_t cond_;
+		pthread_cond_t _cond;
 #endif
 	};
 
@@ -101,57 +101,57 @@ namespace nCine
 		/** @brief Acquires the lock for shared (read) access, blocking until available */
 		inline void EnterReadLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			::AcquireSRWLockShared(&rwlock_);
+			::AcquireSRWLockShared(&_rwlock);
 #else
-			pthread_rwlock_rdlock(&rwlock_);
+			pthread_rwlock_rdlock(&_rwlock);
 #endif
 		}
 		/** @brief Acquires the lock for exclusive (write) access, blocking until available */
 		inline void EnterWriteLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			::AcquireSRWLockExclusive(&rwlock_);
+			::AcquireSRWLockExclusive(&_rwlock);
 #else
-			pthread_rwlock_wrlock(&rwlock_);
+			pthread_rwlock_wrlock(&_rwlock);
 #endif
 		}
 		/** @brief Tries to acquire shared (read) access without blocking */
 		inline int TryEnterReadLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			return ::TryAcquireSRWLockShared(&rwlock_);
+			return ::TryAcquireSRWLockShared(&_rwlock);
 #else
-			return pthread_rwlock_tryrdlock(&rwlock_);
+			return pthread_rwlock_tryrdlock(&_rwlock);
 #endif
 		}
 		/** @brief Tries to acquire exclusive (write) access without blocking */
 		inline int TryEnterWriteLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			return ::TryAcquireSRWLockExclusive(&rwlock_);
+			return ::TryAcquireSRWLockExclusive(&_rwlock);
 #else
-			return pthread_rwlock_trywrlock(&rwlock_);
+			return pthread_rwlock_trywrlock(&_rwlock);
 #endif
 		}
 		/** @brief Releases shared (read) access */
 		inline void ExitReadLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			::ReleaseSRWLockShared(&rwlock_);
+			::ReleaseSRWLockShared(&_rwlock);
 #else
-			pthread_rwlock_unlock(&rwlock_);
+			pthread_rwlock_unlock(&_rwlock);
 #endif
 		}
 		/** @brief Releases exclusive (write) access */
 		inline void ExitWriteLock() {
 #if defined(DEATH_TARGET_WINDOWS)
-			::ReleaseSRWLockExclusive(&rwlock_);
+			::ReleaseSRWLockExclusive(&_rwlock);
 #else
-			pthread_rwlock_unlock(&rwlock_);
+			pthread_rwlock_unlock(&_rwlock);
 #endif
 		}
 
 	private:
 #if defined(DEATH_TARGET_WINDOWS)
-		SRWLOCK rwlock_;
+		SRWLOCK _rwlock;
 #else
-		pthread_rwlock_t rwlock_;
+		pthread_rwlock_t _rwlock;
 #endif
 	};
 
@@ -176,11 +176,11 @@ namespace nCine
 
 		/** @brief Blocks the calling thread until the required number of threads have arrived */
 		inline std::int32_t Wait() {
-			return pthread_barrier_wait(&barrier_);
+			return pthread_barrier_wait(&_barrier);
 		}
 
 	private:
-		pthread_barrier_t barrier_;
+		pthread_barrier_t _barrier;
 	};
 
 #endif

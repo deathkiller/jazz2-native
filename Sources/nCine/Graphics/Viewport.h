@@ -80,14 +80,14 @@ namespace nCine
 
 		/** @brief Returns the viewport type */
 		inline Type GetType() const {
-			return type_;
+			return _type;
 		}
 
 		/** @brief Returns the texture at the specified FBO color attachment index, or `nullptr` if none */
 		Texture* GetTexture(std::uint32_t index);
 		/** @brief Returns the texture at the first FBO color attachment index */
 		inline Texture* GetTexture() {
-			return textures_[0];
+			return _textures[0];
 		}
 		/** @brief Adds or removes a texture at the specified FBO color attachment index */
 		bool SetTexture(std::uint32_t index, Texture* texture);
@@ -98,7 +98,7 @@ namespace nCine
 
 		/** @brief Returns the depth and stencil format of the FBO renderbuffer */
 		inline DepthStencilFormat GetDepthStencilFormat() const {
-			return depthStencilFormat_;
+			return _depthStencilFormat;
 		}
 		/** @brief Sets the depth and stencil format of the FBO renderbuffer */
 		bool SetDepthStencilFormat(DepthStencilFormat depthStencilFormat);
@@ -108,101 +108,101 @@ namespace nCine
 
 		/** @brief Returns the FBO size, or a zero vector if no texture is present */
 		inline Vector2i GetSize() const {
-			return Vector2i(width_, height_);
+			return Vector2i(_width, _height);
 		}
 		/** @brief Returns the FBO width, or zero if no texture is present */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the FBO height, or zero if no texture is present */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 
 		/** @brief Returns the number of color attachments of the FBO */
 		inline std::uint32_t GetColorAttachmentCount() const {
-			return numColorAttachments_;
+			return _numColorAttachments;
 		}
 
 		/** @brief Returns the OpenGL viewport rectangle */
 		inline Recti GetViewportRect() const {
-			return viewportRect_;
+			return _viewportRect;
 		}
 		/** @brief Sets the OpenGL viewport rectangle */
 		inline void SetViewportRect(const Recti& viewportRect) {
-			viewportRect_ = viewportRect;
+			_viewportRect = viewportRect;
 		}
 
 		/** @brief Returns the OpenGL scissor test rectangle */
 		inline Recti GetScissorRect() const {
-			return scissorRect_;
+			return _scissorRect;
 		}
 		/** @brief Sets the OpenGL scissor test rectangle */
 		inline void SetScissorRect(const Recti& scissorRect) {
-			scissorRect_ = scissorRect;
+			_scissorRect = scissorRect;
 		}
 
 		/** @brief Returns the rectangle used for screen culling */
 		inline Rectf GetCullingRect() const {
-			return cullingRect_;
+			return _cullingRect;
 		}
 
 		/** @brief Returns the last frame this viewport was cleared */
 		inline unsigned long int GetLastFrameCleared() const {
-			return lastFrameCleared_;
+			return _lastFrameCleared;
 		}
 
 		/** @brief Returns the viewport clear mode */
 		inline ClearMode GetClearMode() const {
-			return clearMode_;
+			return _clearMode;
 		}
 		/** @brief Sets the viewport clear mode */
 		inline void SetClearMode(ClearMode clearMode) {
-			clearMode_ = clearMode;
+			_clearMode = clearMode;
 		}
 
 		/** @brief Returns the viewport clear color */
 		inline Colorf GetClearColor() const {
-			return clearColor_;
+			return _clearColor;
 		}
 		/** @brief Sets the viewport clear color through four float components */
 		inline void SetClearColor(float red, float green, float blue, float alpha) {
-			clearColor_.Set(red, green, blue, alpha);
+			_clearColor.Set(red, green, blue, alpha);
 		}
 		/** @brief Sets the viewport clear color through a `Colorf` object */
 		inline void SetClearColor(const Colorf& color) {
-			clearColor_ = color;
+			_clearColor = color;
 		}
 
 		/** @brief Returns the scene root node as constant */
 		inline const SceneNode* GetRootNode() const {
-			return rootNode_;
+			return _rootNode;
 		}
 		/** @brief Returns the scene root node */
 		inline SceneNode* GetRootNode() {
-			return rootNode_;
+			return _rootNode;
 		}
 		/** @brief Sets the scene root node */
 		inline void SetRootNode(SceneNode* rootNode) {
-			rootNode_ = rootNode;
+			_rootNode = rootNode;
 		}
 
 		/** @brief Returns the reverse-ordered array of viewports to be drawn before the screen */
 		static SmallVectorImpl<Viewport*>& GetChain() {
-			return chain_;
+			return _chain;
 		}
 
 		/** @brief Returns the camera used for rendering as constant */
 		inline const Camera* GetCamera() const {
-			return camera_;
+			return _camera;
 		}
 		/** @brief Returns the camera used for rendering */
 		inline Camera* GetCamera() {
-			return camera_;
+			return _camera;
 		}
 		/** @brief Sets the camera to be used for rendering */
 		inline void SetCamera(Camera* camera) {
-			camera_ = camera;
+			_camera = camera;
 		}
 
 		/** @brief Sets the debug object label for the viewport's render target */
@@ -219,43 +219,43 @@ namespace nCine
 		};
 
 		/** @brief Reverse-ordered array of viewports to be drawn before the screen */
-		static SmallVector<Viewport*> chain_;
+		static SmallVector<Viewport*> _chain;
 
-		Type type_;
+		Type _type;
 
-		std::int32_t width_;
-		std::int32_t height_;
-		Recti viewportRect_;
-		Recti scissorRect_;
-		Rectf cullingRect_;
+		std::int32_t _width;
+		std::int32_t _height;
+		Recti _viewportRect;
+		Recti _scissorRect;
+		Rectf _cullingRect;
 
-		DepthStencilFormat depthStencilFormat_;
+		DepthStencilFormat _depthStencilFormat;
 
 		/** @brief Last frame this viewport was cleared */
-		std::uint32_t lastFrameCleared_;
-		ClearMode clearMode_;
-		Colorf clearColor_;
+		std::uint32_t _lastFrameCleared;
+		ClearMode _clearMode;
+		Colorf _clearColor;
 
 		/** @brief Render queue of commands for this viewport or render target */
-		RenderQueue renderQueue_;
+		RenderQueue _renderQueue;
 
-		std::unique_ptr<RHI::RenderTarget> fbo_;
+		std::unique_ptr<RHI::RenderTarget> _fbo;
 
 		static const std::uint32_t MaxNumTextures = 4;
-		Texture* textures_[MaxNumTextures];
+		Texture* _textures[MaxNumTextures];
 
 		/** @brief Root scene node for this viewport or render target */
-		SceneNode* rootNode_;
+		SceneNode* _rootNode;
 
 		/**
 		 * @brief Camera used by this viewport
 		 *
 		 * @note If set to `nullptr` the default camera is used.
 		 */
-		Camera* camera_;
+		Camera* _camera;
 
 		/** @brief Bitset that stores the various state bits */
-		BitSet<std::uint8_t> stateBits_;
+		BitSet<std::uint8_t> _stateBits;
 #endif
 
 		void CalculateCullingRect();
@@ -266,7 +266,7 @@ namespace nCine
 		void Draw(std::uint32_t nextIndex);
 
 	private:
-		std::uint32_t numColorAttachments_;
+		std::uint32_t _numColorAttachments;
 
 		void UpdateCulling(SceneNode* node);
 	};

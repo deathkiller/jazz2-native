@@ -17,7 +17,7 @@ namespace nCine
 	public:
 		/** @brief Returns reference to the current audio device instance */
 		IAudioDevice& GetAudioDevice() {
-			return *audioDevice_;
+			return *_audioDevice;
 		}
 		/** @brief Registers an audio device provider */
 		void RegisterAudioDevice(std::unique_ptr<IAudioDevice> service);
@@ -26,7 +26,7 @@ namespace nCine
 
 		/** @brief Returns reference to the current thread pool instance */
 		IThreadPool& GetThreadPool() {
-			return *threadPool_;
+			return *_threadPool;
 		}
 		/** @brief Registers a thread pool provider */
 		void RegisterThreadPool(std::unique_ptr<IThreadPool> service);
@@ -35,7 +35,7 @@ namespace nCine
 
 		/** @brief Returns reference to the current RHI capabilities instance */
 		const RHI::IRhiCapabilities& GetRhiCapabilities() {
-			return *rhiCapabilities_;
+			return *_rhiCapabilities;
 		}
 		/** @brief Registers an RHI capabilities provider */
 		void RegisterRhiCapabilities(std::unique_ptr<RHI::IRhiCapabilities> service);
@@ -46,17 +46,17 @@ namespace nCine
 		void UnregisterAll();
 
 	private:
-		IAudioDevice* audioDevice_;
-		std::unique_ptr<IAudioDevice> registeredAudioDevice_;
-		NullAudioDevice nullAudioDevice_;
+		IAudioDevice* _audioDevice;
+		std::unique_ptr<IAudioDevice> _registeredAudioDevice;
+		NullAudioDevice _nullAudioDevice;
 
-		IThreadPool* threadPool_;
-		std::unique_ptr<IThreadPool> registeredThreadPool_;
-		NullThreadPool nullThreadPool_;
+		IThreadPool* _threadPool;
+		std::unique_ptr<IThreadPool> _registeredThreadPool;
+		NullThreadPool _nullThreadPool;
 
-		RHI::IRhiCapabilities* rhiCapabilities_;
-		std::unique_ptr<RHI::IRhiCapabilities> registeredRhiCapabilities_;
-		RHI::NullRhiCapabilities nullRhiCapabilities_;
+		RHI::IRhiCapabilities* _rhiCapabilities;
+		std::unique_ptr<RHI::IRhiCapabilities> _registeredRhiCapabilities;
+		RHI::NullRhiCapabilities _nullRhiCapabilities;
 
 		ServiceLocator();
 

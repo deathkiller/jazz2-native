@@ -94,20 +94,20 @@ namespace nCine
 #endif
 
 		/** @brief OpenAL device */
-		ALCdevice* device_;
+		ALCdevice* _device;
 		/** @brief OpenAL context for the device */
-		ALCcontext* context_;
+		ALCcontext* _context;
 		/** @brief Array of all audio sources */
-		ALuint sources_[MaxSources];
+		ALuint _sources[MaxSources];
 		/** @brief Native device sample frequency */
-		std::int32_t nativeFreq_;
+		std::int32_t _nativeFreq;
 
 		/** @brief OpenAL device name */
-		const char* deviceName_;
+		const char* _deviceName;
 
 #if defined(OPENAL_FILTERS_SUPPORTED)
 		/** @brief Low-pass filter of each source, created on first use, `0` when the source has none */
-		ALuint filters_[MaxSources];
+		ALuint _filters[MaxSources];
 
 		/** @brief Returns a reference to the filter slot of the specified source, or `nullptr` if unknown */
 		ALuint* filterForSource(std::uint32_t sourceId);
@@ -117,17 +117,17 @@ namespace nCine
 
 #if defined(WITH_LIBRETRO)
 		/** @brief `alcRenderSamplesSOFT()` of the `ALC_SOFT_loopback` extension, `nullptr` when unavailable */
-		LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT_;
+		LPALCRENDERSAMPLESSOFT _alcRenderSamplesSOFT;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::uint64_t DeviceChangeLimitMs = 250;
 
-		LPALCREOPENDEVICESOFT alcReopenDeviceSOFT_;
-		IMMDeviceEnumerator* pEnumerator_;
-		std::uint64_t lastDeviceChangeTime_;
-		String lastDeviceId_;
-		bool shouldRecreate_;
+		LPALCREOPENDEVICESOFT _alcReopenDeviceSOFT;
+		IMMDeviceEnumerator* _pEnumerator;
+		std::uint64_t _lastDeviceChangeTime;
+		String _lastDeviceId;
+		bool _shouldRecreate;
 
 		void recreateAudioDevice();
 		void registerAudioEvents();

@@ -149,12 +149,12 @@ namespace nCine::RHI::GL
 		static void Init(const IRhiCapabilities& caps);
 		/** @brief Resets the running debug group id counter */
 		static inline void Reset() {
-			debugGroupId_ = 0;
+			_debugGroupId = 0;
 		}
 
 		/** @brief Returns whether OpenGL debug output is available */
 		static inline bool IsAvailable() {
-			return debugAvailable_;
+			return _debugAvailable;
 		}
 
 		/** @brief Pushes a named debug group */
@@ -185,13 +185,13 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the maximum supported object label length */
 		static inline std::int32_t GetMaxLabelLength() {
-			return maxLabelLength_;
+			return _maxLabelLength;
 		}
 
 	private:
-		static bool debugAvailable_;
-		static GLuint debugGroupId_;
-		static std::int32_t maxLabelLength_;
+		static bool _debugAvailable;
+		static GLuint _debugGroupId;
+		static std::int32_t _maxLabelLength;
 
 		/**
 		 * @brief Enables OpenGL debug output and registers the logging callback

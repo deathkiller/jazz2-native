@@ -32,10 +32,10 @@ namespace nCine::Backends
 		void simulateAxisEvent(int axisId, float value);
 
 	private:
-		int joyId_;
-		bool buttonsState_[MaxNumButtons];
-		unsigned char hatState_;
-		float axesValuesState_[MaxNumAxes];
+		int _joyId;
+		bool _buttonsState[MaxNumButtons];
+		unsigned char _hatState;
+		float _axesValuesState[MaxNumAxes];
 
 		friend class DcInputManager;
 	};
@@ -78,11 +78,11 @@ namespace nCine::Backends
 			DcJoystickState State;
 		};
 
-		static PadInfo pads_[MaxJoysticks];
+		static PadInfo _pads[MaxJoysticks];
 
 		static void handleConnection(std::int32_t joyId, bool connected);
 
-		// The per-pad state objects dispatch through the protected shared joyMapping_/inputEventHandler_
+		// The per-pad state objects dispatch through the protected shared _joyMapping/_inputEventHandler
 		friend class DcJoystickState;
 	};
 }

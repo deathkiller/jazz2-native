@@ -33,7 +33,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns whether face culling is enabled */
 		static bool IsEnabled() {
-			return state_.enabled;
+			return _state.enabled;
 		}
 		/** @brief Enables face culling */
 		static void Enable();
@@ -48,7 +48,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the whole cached face culling state */
 		static State GetState() {
-			return state_;
+			return _state;
 		}
 		/** @brief Restores the whole face culling state */
 		static void SetState(State newState);
@@ -57,7 +57,7 @@ namespace nCine::RHI::GL
 		static void Reapply();
 
 	private:
-		static State state_;
+		static State _state;
 	};
 
 }

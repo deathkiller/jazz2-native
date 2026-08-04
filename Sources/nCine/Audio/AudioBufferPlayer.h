@@ -40,7 +40,7 @@ namespace nCine
 
 		/** @brief Returns the audio buffer used for playback */
 		inline const AudioBuffer* audioBuffer() const {
-			return audioBuffer_;
+			return _audioBuffer;
 		}
 		/** @brief Sets the audio buffer used for playback */
 		void setAudioBuffer(AudioBuffer* audioBuffer);
@@ -59,6 +59,6 @@ namespace nCine
 		}
 
 	private:
-		AudioBuffer* audioBuffer_;
+		AudioBuffer* _audioBuffer;
 	};
 }

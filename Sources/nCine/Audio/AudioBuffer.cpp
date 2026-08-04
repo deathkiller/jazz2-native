@@ -29,12 +29,12 @@ namespace nCine
 #endif
 
 	AudioBuffer::AudioBuffer()
-		: Object(ObjectType::AudioBuffer), bufferId_(0), bytesPerSample_(0), numChannels_(0), frequency_(0),
-			numSamples_(0), duration_(0.0f)
+		: Object(ObjectType::AudioBuffer), _bufferId(0), _bytesPerSample(0), _numChannels(0), _frequency(0),
+			_numSamples(0), _duration(0.0f)
 	{
 #if defined(WITH_AUDIO)
-		bufferId_ = theServiceLocator().GetAudioDevice().createBuffer(IAudioDevice::BufferUsage::Static);
-		if DEATH_UNLIKELY(bufferId_ == 0) {
+		_bufferId = theServiceLocator().GetAudioDevice().createBuffer(IAudioDevice::BufferUsage::Static);
+		if DEATH_UNLIKELY(_bufferId == 0) {
 			LOGW("Cannot create audio buffer");
 		}
 #endif
@@ -79,7 +79,7 @@ namespace nCine
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		// Moved out objects have their buffer id set to zero
-		if (bufferId_ != 0) {
+		if (_bufferId != 0) {
 			// Stop any player that still uses this buffer, otherwise the buffer stays attached to its
 			// source, the backend refuses to destroy it and the buffer leaks. This also clears the
 			// players' pointer to this buffer, which is dangling from now on.
@@ -95,29 +95,29 @@ namespace nCine
 			}
 		}
 
-		device.deleteBuffer(bufferId_);
+		device.deleteBuffer(_bufferId);
 #endif
 	}
 
 	AudioBuffer::AudioBuffer(AudioBuffer&& other) noexcept
-		: Object(std::move(other)), bufferId_(other.bufferId_), bytesPerSample_(other.bytesPerSample_), numChannels_(other.numChannels_),
-			frequency_(other.frequency_), numSamples_(other.numSamples_), duration_(other.duration_)
+		: Object(std::move(other)), _bufferId(other._bufferId), _bytesPerSample(other._bytesPerSample), _numChannels(other._numChannels),
+			_frequency(other._frequency), _numSamples(other._numSamples), _duration(other._duration)
 	{
-		other.bufferId_ = 0;
+		other._bufferId = 0;
 	}
 
 	AudioBuffer& AudioBuffer::operator=(AudioBuffer&& other) noexcept
 	{
 		Object::operator=(std::move(other));
 
-		bufferId_ = other.bufferId_;
-		bytesPerSample_ = other.bytesPerSample_;
-		numChannels_ = other.numChannels_;
-		frequency_ = other.frequency_;
-		numSamples_ = other.numSamples_;
-		duration_ = other.duration_;
+		_bufferId = other._bufferId;
+		_bytesPerSample = other._bytesPerSample;
+		_numChannels = other._numChannels;
+		_frequency = other._frequency;
+		_numSamples = other._numSamples;
+		_duration = other._duration;
 
-		other.bufferId_ = 0;
+		other._bufferId = 0;
 		return *this;
 	}
 
@@ -126,23 +126,23 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		switch (format) {
 			case Format::Mono8:
-				bytesPerSample_ = 1;
-				numChannels_ = 1;
+				_bytesPerSample = 1;
+				_numChannels = 1;
 				break;
 			case Format::Stereo8:
-				bytesPerSample_ = 1;
-				numChannels_ = 2;
+				_bytesPerSample = 1;
+				_numChannels = 2;
 				break;
 			case Format::Mono16:
-				bytesPerSample_ = 2;
-				numChannels_ = 1;
+				_bytesPerSample = 2;
+				_numChannels = 1;
 				break;
 			case Format::Stereo16:
-				bytesPerSample_ = 2;
-				numChannels_ = 2;
+				_bytesPerSample = 2;
+				_numChannels = 2;
 				break;
 		}
-		frequency_ = frequency;
+		_frequency = frequency;
 
 		loadFromSamples(nullptr, 0);
 #endif
@@ -184,16 +184,16 @@ namespace nCine
 	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize)
 	{
 #if defined(WITH_AUDIO)
-		if (bytesPerSample_ != 0 && numChannels_ != 0 && frequency_ != 0) {
-			if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
+		if (_bytesPerSample != 0 && _numChannels != 0 && _frequency != 0) {
+			if (bufferSize % (_bytesPerSample * _numChannels) != 0) {
 				LOGW("Buffer size is incompatible with format");
 			}
-			const Format format = bufferFormat(bytesPerSample_, numChannels_);
-			const bool uploaded = theServiceLocator().GetAudioDevice().uploadBuffer(bufferId_, format, bufferPtr, bufferSize, frequency_);
+			const Format format = bufferFormat(_bytesPerSample, _numChannels);
+			const bool uploaded = theServiceLocator().GetAudioDevice().uploadBuffer(_bufferId, format, bufferPtr, bufferSize, _frequency);
 			DEATH_ASSERT(uploaded, "Cannot upload samples to audio buffer", false);
 
-			numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
-			duration_ = float(numSamples_) / frequency_;
+			_numSamples = bufferSize / (_numChannels * _bytesPerSample);
+			_duration = float(_numSamples) / _frequency;
 
 			return uploaded;
 		}
@@ -209,9 +209,9 @@ namespace nCine
 		DEATH_ASSERT(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
 		    ("Unsupported number of channels: {}", audioLoader.numChannels()), false);
 
-		bytesPerSample_ = audioLoader.bytesPerSample();
-		numChannels_ = audioLoader.numChannels();
-		frequency_ = audioLoader.frequency();
+		_bytesPerSample = audioLoader.bytesPerSample();
+		_numChannels = audioLoader.numChannels();
+		_frequency = audioLoader.frequency();
 
 		// Buffer size calculated as samples * channels * bytes per samples
 		const std::int32_t bufferSize = std::int32_t(audioLoader.bufferSize());

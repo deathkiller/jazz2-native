@@ -66,17 +66,17 @@ namespace nCine::Backends
 		 */
 		static inline bool isMainWindow(std::uint32_t windowId) {
 			SDL_Window* windowHandle = SDL_GetWindowFromID(windowId);
-			return (windowHandle == windowHandle_);
+			return (windowHandle == _windowHandle);
 		}
 
 		/** @brief Returns the SDL2 handle of the main window */
 		static inline SDL_Window* windowHandle() {
-			return windowHandle_;
+			return _windowHandle;
 		}
 
 		/** @brief Returns the SDL2 OpenGL context handle */
 		static inline SDL_GLContext glContextHandle() {
-			return glContextHandle_;
+			return _glContextHandle;
 		}
 
 		/**
@@ -95,9 +95,9 @@ namespace nCine::Backends
 
 	private:
 		/** @brief SDL2 window handle */
-		static SDL_Window* windowHandle_;
+		static SDL_Window* _windowHandle;
 		/** @brief SDL2 OpenGL context handle */
-		static SDL_GLContext glContextHandle_;
+		static SDL_GLContext _glContextHandle;
 
 		/** @brief Deleted copy constructor */
 		SdlGfxDevice(const SdlGfxDevice&) = delete;
@@ -111,13 +111,13 @@ namespace nCine::Backends
 
 #if defined(WITH_RHI_SOFTWARE)
 		/** @brief SDL2 renderer used to present the CPU framebuffer (software backend, no GL context) */
-		SDL_Renderer* softwareRenderer_ = nullptr;
+		SDL_Renderer* _softwareRenderer = nullptr;
 		/** @brief Streaming texture the software backend's screen framebuffer is uploaded into each frame */
-		SDL_Texture* softwareTexture_ = nullptr;
-		/** @brief Current width of @ref softwareTexture_ and the backend screen framebuffer */
-		std::int32_t softwareTextureWidth_ = 0;
-		/** @brief Current height of @ref softwareTexture_ and the backend screen framebuffer */
-		std::int32_t softwareTextureHeight_ = 0;
+		SDL_Texture* _softwareTexture = nullptr;
+		/** @brief Current width of @ref _softwareTexture and the backend screen framebuffer */
+		std::int32_t _softwareTextureWidth = 0;
+		/** @brief Current height of @ref _softwareTexture and the backend screen framebuffer */
+		std::int32_t _softwareTextureHeight = 0;
 
 		/** @brief Creates the SDL2 renderer and the initial streaming target for the software present path */
 		void initSoftwarePresent(bool hasVSync);

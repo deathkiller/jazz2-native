@@ -39,10 +39,10 @@ namespace nCine
 		bool HideScreenKeyboard() override;
 
 	private:
-		bool wasSuspended_;
+		bool _wasSuspended;
 
 #if defined(WITH_QT5)
-		Qt5Widget* qt5Widget_;
+		Qt5Widget* _qt5Widget;
 #endif
 
 		/** @brief Must be called at the beginning to initialize the application */
@@ -61,9 +61,9 @@ namespace nCine
 			:
 			Application(),
 #if defined(WITH_QT5)
-			qt5Widget_(nullptr),
+			_qt5Widget(nullptr),
 #endif
-			wasSuspended_(false)
+			_wasSuspended(false)
 		{
 		}
 

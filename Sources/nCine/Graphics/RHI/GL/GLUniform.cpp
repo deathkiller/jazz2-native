@@ -7,20 +7,20 @@
 namespace nCine::RHI::GL
 {
 	GLUniform::GLUniform()
-		: index_(0), blockIndex_(-1), location_(-1), size_(0), type_(GL_FLOAT), offset_(0)
+		: _index(0), _blockIndex(-1), _location(-1), _size(0), _type(GL_FLOAT), _offset(0)
 	{
-		name_[0] = '\0';
+		_name[0] = '\0';
 	}
 
 	GLUniform::GLUniform(GLuint program, GLuint index)
 		: GLUniform()
 	{
 		GLsizei length;
-		glGetActiveUniform(program, index, MaxNameLength, &length, &size_, &type_, name_);
+		glGetActiveUniform(program, index, MaxNameLength, &length, &_size, &_type, _name);
 		DEATH_ASSERT(length <= MaxNameLength);
 
 		if (!HasReservedPrefix()) {
-			location_ = glGetUniformLocation(program, name_);
+			_location = glGetUniformLocation(program, _name);
 		}
 		GL_LOG_ERRORS();
 	}
@@ -30,22 +30,22 @@ namespace nCine::RHI::GL
 	{
 		std::size_t length = strnlen(name, MaxNameLength);
 		DEATH_ASSERT(length < MaxNameLength);
-		std::memcpy(name_, name, length);
-		name_[length] = '\0';
+		std::memcpy(_name, name, length);
+		_name[length] = '\0';
 
-		type_ = type;
-		size_ = (arraySize > 0 ? arraySize : 1);
+		_type = type;
+		_size = (arraySize > 0 ? arraySize : 1);
 
 		if (!HasReservedPrefix()) {
 			// A location of -1 means the uniform was optimized out by the driver - committing it is a silent no-op
-			location_ = glGetUniformLocation(program, name_);
+			_location = glGetUniformLocation(program, _name);
 		}
 		GL_LOG_ERRORS();
 	}
 
 	GLenum GLUniform::GetBasicType() const
 	{
-		switch (type_) {
+		switch (_type) {
 			case GL_FLOAT:
 			case GL_FLOAT_VEC2:
 			case GL_FLOAT_VEC3:
@@ -87,14 +87,14 @@ namespace nCine::RHI::GL
 #endif
 				return GL_INT;
 			default:
-				LOGW("No available case to handle type: {}", type_);
-				return type_;
+				LOGW("No available case to handle type: {}", _type);
+				return _type;
 		}
 	}
 
 	std::uint32_t GLUniform::GetComponentCount() const
 	{
-		switch (type_) {
+		switch (_type) {
 			case GL_FLOAT:
 			case GL_INT:
 #if !defined(DEATH_TARGET_VITA)
@@ -142,14 +142,14 @@ namespace nCine::RHI::GL
 #endif
 				return 1;
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("No available case to handle type: {}", _type);
 				return 0;
 		}
 	}
 
 	ShaderCompiler::UniformType GLUniform::GetType() const
 	{
-		switch (type_) {
+		switch (_type) {
 			case GL_FLOAT: return ShaderCompiler::UniformType::Float;
 			case GL_INT: return ShaderCompiler::UniformType::Int;
 			case GL_UNSIGNED_INT: return ShaderCompiler::UniformType::UInt;
@@ -179,13 +179,13 @@ namespace nCine::RHI::GL
 #endif
 			case GL_SAMPLER_CUBE: return ShaderCompiler::UniformType::SamplerCube;
 			default:
-				LOGW("No available case to handle GL type: {}", type_);
+				LOGW("No available case to handle GL type: {}", _type);
 				return ShaderCompiler::UniformType::Float;
 		}
 	}
 
 	bool GLUniform::HasReservedPrefix() const
 	{
-		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
+		return (MaxNameLength >= 3 && _name[0] == 'g' && _name[1] == 'l' && _name[2] == '_');
 	}
 }

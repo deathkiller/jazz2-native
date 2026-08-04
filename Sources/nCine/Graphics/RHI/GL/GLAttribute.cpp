@@ -7,46 +7,46 @@
 namespace nCine::RHI::GL
 {
 	GLAttribute::GLAttribute()
-		: location_(-1), size_(0), type_(GL_FLOAT)
+		: _location(-1), _size(0), _type(GL_FLOAT)
 	{
-		name_[0] = '\0';
+		_name[0] = '\0';
 	}
 
 	GLAttribute::GLAttribute(GLuint program, GLuint index)
-		: location_(-1), size_(0), type_(GL_FLOAT)
+		: _location(-1), _size(0), _type(GL_FLOAT)
 	{
 		GLsizei length;
-		glGetActiveAttrib(program, index, MaxNameLength, &length, &size_, &type_, name_);
+		glGetActiveAttrib(program, index, MaxNameLength, &length, &_size, &_type, _name);
 		DEATH_ASSERT(length <= MaxNameLength);
 
 		if (!HasReservedPrefix()) {
-			location_ = glGetAttribLocation(program, name_);
-			if (location_ == -1) {
-				LOGW("Attribute location not found for attribute \"{}\" ({}) in shader program {}", name_, index, program);
+			_location = glGetAttribLocation(program, _name);
+			if (_location == -1) {
+				LOGW("Attribute location not found for attribute \"{}\" ({}) in shader program {}", _name, index, program);
 			}
 		}
 		GL_LOG_ERRORS();
 	}
 
 	GLAttribute::GLAttribute(GLuint program, const char* name, GLenum type)
-		: location_(-1), size_(1), type_(type)
+		: _location(-1), _size(1), _type(type)
 	{
 		std::size_t length = strnlen(name, MaxNameLength);
 		DEATH_ASSERT(length < MaxNameLength);
-		std::memcpy(name_, name, length);
-		name_[length] = '\0';
+		std::memcpy(_name, name, length);
+		_name[length] = '\0';
 
 		if (!HasReservedPrefix()) {
 			// Unlike GL introspection, reflection also lists attributes the driver optimized out,
 			// so a location of -1 is expected here and the attribute is simply never enabled
-			location_ = glGetAttribLocation(program, name_);
+			_location = glGetAttribLocation(program, _name);
 		}
 		GL_LOG_ERRORS();
 	}
 
 	GLenum GLAttribute::GetBasicType() const
 	{
-		switch (type_) {
+		switch (_type) {
 			case GL_FLOAT:
 			case GL_FLOAT_VEC2:
 			case GL_FLOAT_VEC3:
@@ -72,14 +72,14 @@ namespace nCine::RHI::GL
 #endif
 				return GL_UNSIGNED_INT;
 			default:
-				LOGW("No available case to handle type: {}", type_);
-				return type_;
+				LOGW("No available case to handle type: {}", _type);
+				return _type;
 		}
 	}
 
 	std::int32_t GLAttribute::GetComponentCount() const
 	{
-		switch (type_) {
+		switch (_type) {
 			case GL_BYTE:
 			case GL_UNSIGNED_BYTE:
 			case GL_SHORT:
@@ -114,13 +114,13 @@ namespace nCine::RHI::GL
 #endif
 				return 4;
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("No available case to handle type: {}", _type);
 				return 0;
 		}
 	}
 
 	bool GLAttribute::HasReservedPrefix() const
 	{
-		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');
+		return (MaxNameLength >= 3 && _name[0] == 'g' && _name[1] == 'l' && _name[2] == '_');
 	}
 }

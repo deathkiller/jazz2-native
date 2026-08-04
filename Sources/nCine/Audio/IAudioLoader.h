@@ -23,34 +23,34 @@ namespace nCine
 
 		/** @brief Returns `true` if the audio file was loaded successfully */
 		inline bool hasLoaded() const {
-			return hasLoaded_;
+			return _hasLoaded;
 		}
 
 		/** @brief Returns the number of bytes per sample */
 		inline std::int32_t bytesPerSample() const {
-			return bytesPerSample_;
+			return _bytesPerSample;
 		}
 		/** @brief Returns the number of channels */
 		inline std::int32_t numChannels() const {
-			return numChannels_;
+			return _numChannels;
 		}
 		/** @brief Returns the sample frequency */
 		inline std::int32_t frequency() const {
-			return frequency_;
+			return _frequency;
 		}
 
 		/** @brief Returns the total number of samples */
 		inline std::int32_t numSamples() const {
-			return numSamples_;
+			return _numSamples;
 		}
 		/** @brief Returns the duration in seconds */
 		inline float duration() const {
-			return duration_;
+			return _duration;
 		}
 
 		/** @brief Returns the decoded buffer size in bytes */
 		inline std::int32_t bufferSize() const {
-			return numSamples_ * numChannels_ * bytesPerSample_;
+			return _numSamples * _numChannels * _bytesPerSample;
 		}
 
 		/** @brief Creates the loader matching the extension of the specified file */
@@ -64,21 +64,21 @@ namespace nCine
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Whether the loading process was successful */
-		bool hasLoaded_;
+		bool _hasLoaded;
 		/** @brief Audio file handle */
-		std::unique_ptr<Death::IO::Stream> fileHandle_;
+		std::unique_ptr<Death::IO::Stream> _fileHandle;
 
 		/** @brief Number of bytes per sample */
-		std::int32_t bytesPerSample_;
+		std::int32_t _bytesPerSample;
 		/** @brief Number of channels */
-		std::int32_t numChannels_;
+		std::int32_t _numChannels;
 		/** @brief Sample frequency */
-		std::int32_t frequency_;
+		std::int32_t _frequency;
 
 		/** @brief Number of samples */
-		std::int32_t numSamples_;
+		std::int32_t _numSamples;
 		/** @brief Duration in seconds */
-		float duration_;
+		float _duration;
 #endif
 
 		explicit IAudioLoader(std::unique_ptr<Death::IO::Stream> fileHandle);

@@ -2,13 +2,13 @@
 
 namespace nCine::RHI::GL
 {
-	GLClearColor::State GLClearColor::state_;
+	GLClearColor::State GLClearColor::_state;
 
 	void GLClearColor::SetColor(const Colorf& color)
 	{
-		if (color.R != state_.color.R || color.G != state_.color.G || color.B != state_.color.B || color.A != state_.color.A) {
+		if (color.R != _state.color.R || color.G != _state.color.G || color.B != _state.color.B || color.A != _state.color.A) {
 			glClearColor(color.R, color.G, color.B, color.A);
-			state_.color = color;
+			_state.color = color;
 		}
 	}
 
@@ -19,12 +19,12 @@ namespace nCine::RHI::GL
 
 	void GLClearColor::Reapply()
 	{
-		glClearColor(state_.color.R, state_.color.G, state_.color.B, state_.color.A);
+		glClearColor(_state.color.R, _state.color.G, _state.color.B, _state.color.A);
 	}
 
 	void GLClearColor::SetState(State newState)
 	{
 		SetColor(newState.color);
-		state_ = newState;
+		_state = newState;
 	}
 }

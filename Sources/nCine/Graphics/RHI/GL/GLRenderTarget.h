@@ -48,6 +48,6 @@ namespace nCine::RHI::GL
 		void SetObjectLabel(StringView label);
 
 	private:
-		GLFramebuffer fbo_;
+		GLFramebuffer _fbo;
 	};
 }

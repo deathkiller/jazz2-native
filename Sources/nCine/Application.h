@@ -120,28 +120,28 @@ namespace nCine
 		/** @} */
 
 		/** @brief Returns the configuration used to initialize the application */
-		inline const AppConfiguration& GetAppConfiguration() const { return appCfg_; }
+		inline const AppConfiguration& GetAppConfiguration() const { return _appCfg; }
 		/** @brief Returns the run-time rendering settings */
-		inline RenderingSettings& GetRenderingSettings() { return renderingSettings_; }
+		inline RenderingSettings& GetRenderingSettings() { return _renderingSettings; }
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns run-time GUI settings */
-		inline GuiSettings& GetGuiSettings() { return guiSettings_; }
+		inline GuiSettings& GetGuiSettings() { return _guiSettings; }
 		/** @brief Returns debug overlay settings */
-		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->GetSettings() : debugOverlayNullSettings_); }
+		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (_debugOverlay != nullptr ? _debugOverlay->GetSettings() : _debugOverlayNullSettings); }
 #endif
 #if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns all timings */
-		inline StaticArrayView<(std::int32_t)Timings::Count, const float> GetTimings() const { return timings_; }
+		inline StaticArrayView<(std::int32_t)Timings::Count, const float> GetTimings() const { return _timings; }
 #endif
 
 		/** @brief Returns the graphics device instance */
-		inline IGfxDevice& GetGfxDevice() { return *gfxDevice_; }
+		inline IGfxDevice& GetGfxDevice() { return *_gfxDevice; }
 		/** @brief Returns the root of the transformation graph */
-		inline SceneNode& GetRootNode() { return *rootNode_; }
+		inline SceneNode& GetRootNode() { return *_rootNode; }
 		/** @brief Returns the screen viewport */
 		Viewport& GetScreenViewport();
 		/** @brief Returns the input manager instance */
-		inline IInputManager& GetInputManager() { return *inputManager_; }
+		inline IInputManager& GetInputManager() { return *_inputManager; }
 
 		/** @brief Returns the total number of frames already rendered */
 		std::uint32_t GetFrameCount() const;
@@ -151,11 +151,11 @@ namespace nCine
 		const FrameTimer& GetFrameTimer() const;
 
 		/** @brief Returns the drawable screen width as an integer number */
-		inline std::int32_t GetWidth() const { return gfxDevice_->drawableWidth(); }
+		inline std::int32_t GetWidth() const { return _gfxDevice->drawableWidth(); }
 		/** @brief Returns the drawable screen height as an integer number */
-		inline std::int32_t GetHeight() const { return gfxDevice_->drawableHeight(); }
+		inline std::int32_t GetHeight() const { return _gfxDevice->drawableHeight(); }
 		/** @brief Returns the drawable screen resolution as a `Vector2i` object */
-		inline Vector2i GetResolution() const { return gfxDevice_->drawableResolution(); }
+		inline Vector2i GetResolution() const { return _gfxDevice->drawableResolution(); }
 
 		/** @brief Resizes the screen viewport, if exists */
 		void ResizeScreenViewport(std::int32_t width, std::int32_t height);
@@ -165,11 +165,11 @@ namespace nCine
 
 		/** @brief Returns the value of the auto-suspension flag (the application will be suspended when it loses focus) */
 		inline bool GetAutoSuspension() const {
-			return autoSuspension_;
+			return _autoSuspension;
 		}
 		/** @brief Sets the auto-suspension flag value */
 		inline void SetAutoSuspension(bool autoSuspension) {
-			autoSuspension_ = autoSuspension;
+			_autoSuspension = autoSuspension;
 		}
 
 		/** @brief Raises the quit flag */
@@ -177,17 +177,17 @@ namespace nCine
 
 		/** @brief Returns the quit flag value */
 		inline bool ShouldQuit() const {
-			return shouldQuit_;
+			return _shouldQuit;
 		}
 
 		/** @brief Returns the focus flag value */
 		inline bool HasFocus() const {
-			return hasFocus_;
+			return _hasFocus;
 		}
 
 		/** @brief Returns the path for the application to load data from */
 		inline const String& GetDataPath() const {
-			return appCfg_.dataPath();
+			return _appCfg.dataPath();
 		}
 
 		/** @brief Switches PS4 and PS5 controllers to use extended protocol which enables rumble and other features */
@@ -222,33 +222,33 @@ namespace nCine
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		AppConfiguration appCfg_;
-		RenderingSettings renderingSettings_;
-		bool isSuspended_;
-		bool autoSuspension_;
-		bool hasFocus_;
-		bool shouldQuit_;
+		AppConfiguration _appCfg;
+		RenderingSettings _renderingSettings;
+		bool _isSuspended;
+		bool _autoSuspension;
+		bool _hasFocus;
+		bool _shouldQuit;
 #if defined(WITH_IMGUI)
-		GuiSettings guiSettings_;
-		IDebugOverlay::DisplaySettings debugOverlayNullSettings_;
+		GuiSettings _guiSettings;
+		IDebugOverlay::DisplaySettings _debugOverlayNullSettings;
 #endif
 #if defined(NCINE_PROFILING)
-		float timings_[(std::int32_t)Timings::Count];
+		float _timings[(std::int32_t)Timings::Count];
 #endif
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _waitableTimer;
 #endif
 
-		TimeStamp profileStartTime_;
-		std::unique_ptr<FrameTimer> frameTimer_;
-		std::unique_ptr<IGfxDevice> gfxDevice_;
-		std::unique_ptr<SceneNode> rootNode_;
-		std::unique_ptr<ScreenViewport> screenViewport_;
-		std::unique_ptr<IInputManager> inputManager_;
-		std::unique_ptr<IAppEventHandler> appEventHandler_;
+		TimeStamp _profileStartTime;
+		std::unique_ptr<FrameTimer> _frameTimer;
+		std::unique_ptr<IGfxDevice> _gfxDevice;
+		std::unique_ptr<SceneNode> _rootNode;
+		std::unique_ptr<ScreenViewport> _screenViewport;
+		std::unique_ptr<IInputManager> _inputManager;
+		std::unique_ptr<IAppEventHandler> _appEventHandler;
 #if defined(WITH_IMGUI)
-		std::unique_ptr<IDebugOverlay> debugOverlay_;
-		std::unique_ptr<ImGuiDrawing> imguiDrawing_;
+		std::unique_ptr<IDebugOverlay> _debugOverlay;
+		std::unique_ptr<ImGuiDrawing> _imguiDrawing;
 #endif
 #if defined(DEATH_TRACE)
 		std::uint32_t _mainThreadId;

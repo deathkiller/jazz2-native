@@ -37,9 +37,9 @@ namespace nCine::RHI::GL
 	}
 
 	GLShader::GLShader(GLenum type)
-		: glHandle_(0), status_(Status::NotCompiled)
+		: _glHandle(0), _status(Status::NotCompiled)
 	{
-		glHandle_ = glCreateShader(type);
+		_glHandle = glCreateShader(type);
 	}
 
 	GLShader::GLShader(GLenum type, StringView filename)
@@ -50,7 +50,7 @@ namespace nCine::RHI::GL
 
 	GLShader::~GLShader()
 	{
-		glDeleteShader(glHandle_);
+		glDeleteShader(_glHandle);
 	}
 
 	bool GLShader::LoadFromString(StringView string)
@@ -105,7 +105,7 @@ namespace nCine::RHI::GL
 		}
 
 		std::size_t count = sourceStrings.size();
-		glShaderSource(glHandle_, GLsizei(count), sourceStrings.data(), sourceLengths.data());
+		glShaderSource(_glHandle, GLsizei(count), sourceStrings.data(), sourceLengths.data());
 		return (count > 1);
 	}
 	
@@ -116,32 +116,32 @@ namespace nCine::RHI::GL
 
 	bool GLShader::Compile(ErrorChecking errorChecking, bool logOnErrors)
 	{
-		glCompileShader(glHandle_);
+		glCompileShader(_glHandle);
 
 		if (errorChecking == ErrorChecking::Immediate) {
 			return CheckCompilation(logOnErrors);
 		} else {
-			status_ = Status::CompiledWithDeferredChecks;
+			_status = Status::CompiledWithDeferredChecks;
 			return true;
 		}
 	}
 
 	bool GLShader::CheckCompilation(bool logOnErrors)
 	{
-		if (status_ == Status::Compiled) {
+		if (_status == Status::Compiled) {
 			return true;
 		}
 
 		GLint status = GL_FALSE;
-		glGetShaderiv(glHandle_, GL_COMPILE_STATUS, &status);
+		glGetShaderiv(_glHandle, GL_COMPILE_STATUS, &status);
 		if (status == GL_FALSE) {
 #if defined(DEATH_TRACE)
 			if (logOnErrors) {
 				GLint length = 0;
-				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				glGetShaderiv(_glHandle, GL_INFO_LOG_LENGTH, &length);
 				if (length > 0) {
 					static char buffer[2048];
-					glGetShaderInfoLog(glHandle_, sizeof(buffer), &length, buffer);
+					glGetShaderInfoLog(_glHandle, sizeof(buffer), &length, buffer);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
 					*(MutableStringView(buffer).trimmed().end()) = '\0';
 					LOGW("Shader: {}", buffer);
@@ -154,16 +154,16 @@ namespace nCine::RHI::GL
 #endif
 			}
 #endif
-			status_ = Status::CompilationFailed;
+			_status = Status::CompilationFailed;
 			return false;
 		}
 
-		status_ = Status::Compiled;
+		_status = Status::Compiled;
 		return true;
 	}
 
 	void GLShader::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Shader, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Shader, _glHandle, label);
 	}
 }

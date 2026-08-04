@@ -110,7 +110,7 @@ namespace nCine::RHI
 			return 0;
 		}
 		inline const InfoStrings& GetInfoStrings() const override {
-			return infoStrings_;
+			return _infoStrings;
 		}
 		inline std::int32_t GetValue(IntValues valueName) const override {
 			return 0;
@@ -123,7 +123,7 @@ namespace nCine::RHI
 		}
 
 	private:
-		InfoStrings infoStrings_;
+		InfoStrings _infoStrings;
 	};
 #endif
 }

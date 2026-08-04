@@ -19,38 +19,38 @@ namespace nCine::RHI::GL
 		if (version != nullptr) {
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 #	if defined(DEATH_TARGET_MSVC)
-			sscanf_s(version, "OpenGL ES %2d.%2d", &majorVersion_, &minorVersion_);
+			sscanf_s(version, "OpenGL ES %2d.%2d", &_majorVersion, &_minorVersion);
 #	else
-			sscanf(version, "OpenGL ES %2d.%2d", &majorVersion_, &minorVersion_);
+			sscanf(version, "OpenGL ES %2d.%2d", &_majorVersion, &_minorVersion);
 #	endif
 #else
 #	if defined(DEATH_TARGET_MSVC)
-			sscanf_s(version, "%2d.%2d.%2d", &majorVersion_, &minorVersion_, &releaseVersion_);
+			sscanf_s(version, "%2d.%2d.%2d", &_majorVersion, &_minorVersion, &_releaseVersion);
 #	else
-			sscanf(version, "%2d.%2d.%2d", &majorVersion_, &minorVersion_, &releaseVersion_);
+			sscanf(version, "%2d.%2d.%2d", &_majorVersion, &_minorVersion, &_releaseVersion);
 #	endif
 #endif
 		}
 
-		infoStrings_.vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
-		infoStrings_.renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-		infoStrings_.apiVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		infoStrings_.shadingLanguageVersion = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+		_infoStrings.vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+		_infoStrings.renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+		_infoStrings.apiVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+		_infoStrings.shadingLanguageVersion = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &intValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);
-		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &intValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS]);
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &_intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &_intValues[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS]);
 #if defined(RHI_GL_PROFILE_ES2)
 		// ES2 has no uniform buffer objects, MRT or the related glGet enums (all ES 3.0) - querying them would
 		// raise GL_INVALID_ENUM and leave the values at 0 (a zero UNIFORM_BUFFER_OFFSET_ALIGNMENT would even
 		// divide-by-zero in RenderBuffersManager). Publish safe synthetic values for the pipeline code that reads
 		// them before its ES2 arms skip the UBO work, and log the real ES2 uniform-vector limits instead
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 16 * 1024;
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 16 * 1024;
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 0;
-		intValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 0;
-		intValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 0;
-		intValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
-		intValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = 1;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 16 * 1024;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 16 * 1024;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 0;
+		_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 0;
+		_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 0;
+		_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
+		_intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = 1;
 
 		GLint maxVertexUniformVectors = 0, maxFragmentUniformVectors = 0, maxVaryingVectors = 0;
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &maxVertexUniformVectors);
@@ -59,15 +59,15 @@ namespace nCine::RHI::GL
 		LOGI("GL_MAX_VERTEX_UNIFORM_VECTORS: {}, GL_MAX_FRAGMENT_UNIFORM_VECTORS: {}, GL_MAX_VARYING_VECTORS: {}",
 			maxVertexUniformVectors, maxFragmentUniformVectors, maxVaryingVectors);
 #else
-		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE]);
-		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
-		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &intValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
-		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &intValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
-		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &intValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE]);
+		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
+		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
+		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
+		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
 #	if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_1)
-		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &intValues_[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &_intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #	endif
-		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &intValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS]);
+		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &_intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS]);
 
 		// MAX_UNIFORM_BLOCK_SIZE is sometimes not reported correctly, so try to adjust it here
 		NormalizeUniformBlockSize();
@@ -91,7 +91,7 @@ namespace nCine::RHI::GL
 		};
 		static_assert(std::int32_t(arraySize(ExtensionNames)) == (std::int32_t)Extensions::Count, "Extensions count mismatch");
 
-		CheckGLExtensions(ExtensionNames, extensions_, (std::int32_t)Extensions::Count);
+		CheckGLExtensions(ExtensionNames, _extensions, (std::int32_t)Extensions::Count);
 
 		// PS Vita's vitaGL exposes no program-binary format enums (neither the ARB `GL_PROGRAM_BINARY_FORMATS` nor
 		// the OES spelling) and does not support shader binary caching, so this query is skipped there,
@@ -99,15 +99,15 @@ namespace nCine::RHI::GL
 #if !defined(DEATH_TARGET_VITA)
 #	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		if (HasExtension(Extensions::OES_GET_PROGRAM_BINARY)) {
-			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
-			DEATH_ASSERT(intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
-			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, programBinaryFormats_);
+			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
+			DEATH_ASSERT(_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
+			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, _programBinaryFormats);
 		} else
 #	endif
 		if (HasExtension(Extensions::ARB_GET_PROGRAM_BINARY)) {
-			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
-			DEATH_ASSERT(intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
-			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
+			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
+			DEATH_ASSERT(_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
+			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, _programBinaryFormats);
 		}
 #endif
 
@@ -117,21 +117,21 @@ namespace nCine::RHI::GL
 #if defined(DEATH_TRACE)
 		// Program binary formats and extension availability, both of which only this backend has. A zero
 		// format count is worth logging rather than hiding, because it is why BinaryShaderCache stays off.
-		LOGI("Program binary formats: {}", intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
-		LOGI("GL_KHR_debug: {}", extensions_[(std::int32_t)Extensions::KHR_DEBUG]);
-		LOGI("GL_ARB_texture_storage: {}", extensions_[(std::int32_t)Extensions::ARB_TEXTURE_STORAGE]);
-		LOGI("GL_ARB_buffer_storage: {}", extensions_[(std::int32_t)Extensions::ARB_BUFFER_STORAGE]);
-		LOGI("GL_ARB_get_program_binary: {}", extensions_[(std::int32_t)Extensions::ARB_GET_PROGRAM_BINARY]);
+		LOGI("Program binary formats: {}", _intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
+		LOGI("GL_KHR_debug: {}", _extensions[(std::int32_t)Extensions::KHR_DEBUG]);
+		LOGI("GL_ARB_texture_storage: {}", _extensions[(std::int32_t)Extensions::ARB_TEXTURE_STORAGE]);
+		LOGI("GL_ARB_buffer_storage: {}", _extensions[(std::int32_t)Extensions::ARB_BUFFER_STORAGE]);
+		LOGI("GL_ARB_get_program_binary: {}", _extensions[(std::int32_t)Extensions::ARB_GET_PROGRAM_BINARY]);
 #	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		LOGI("GL_OES_get_program_binary: {}", extensions_[(std::int32_t)Extensions::OES_GET_PROGRAM_BINARY]);
+		LOGI("GL_OES_get_program_binary: {}", _extensions[(std::int32_t)Extensions::OES_GET_PROGRAM_BINARY]);
 #	endif
-		LOGI("GL_EXT_texture_compression_s3tc: {}", extensions_[(std::int32_t)Extensions::EXT_TEXTURE_COMPRESSION_S3TC]);
+		LOGI("GL_EXT_texture_compression_s3tc: {}", _extensions[(std::int32_t)Extensions::EXT_TEXTURE_COMPRESSION_S3TC]);
 #	if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		LOGI("GL_OES_compressed_ETC1_RGB8_texture: {}", extensions_[(std::int32_t)Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE]);
+		LOGI("GL_OES_compressed_ETC1_RGB8_texture: {}", _extensions[(std::int32_t)Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE]);
 #	endif
-		LOGI("GL_AMD_compressed_ATC_texture: {}", extensions_[(std::int32_t)Extensions::AMD_COMPRESSED_ATC_TEXTURE]);
-		LOGI("GL_IMG_texture_compression_pvrtc: {}", extensions_[(std::int32_t)Extensions::IMG_TEXTURE_COMPRESSION_PVRTC]);
-		LOGI("GL_KHR_texture_compression_astc_ldr: {}", extensions_[(std::int32_t)Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
+		LOGI("GL_AMD_compressed_ATC_texture: {}", _extensions[(std::int32_t)Extensions::AMD_COMPRESSED_ATC_TEXTURE]);
+		LOGI("GL_IMG_texture_compression_pvrtc: {}", _extensions[(std::int32_t)Extensions::IMG_TEXTURE_COMPRESSION_PVRTC]);
+		LOGI("GL_KHR_texture_compression_astc_ldr: {}", _extensions[(std::int32_t)Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
 		LOGI("---");
 
 		// Every extension the driver advertises, not just the ones the engine looks for

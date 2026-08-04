@@ -66,7 +66,7 @@ namespace nCine
 		}
 	}
 
-	std::uint8_t TextureLoaderKtx::fileIdentifier_[] = {
+	std::uint8_t TextureLoaderKtx::_fileIdentifier[] = {
 		0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
 	}; // "«KTX 11»\r\n\x1A\n"};
 
@@ -75,7 +75,7 @@ namespace nCine
 	{
 		KtxHeader header;
 
-		if (!fileHandle_->IsValid()) {
+		if (!_fileHandle->IsValid()) {
 			return;
 		}
 
@@ -84,7 +84,7 @@ namespace nCine
 		const bool formatParsed = parseFormat(header);
 		DEATH_ASSERT(formatParsed, "KTX format cannot be parsed", );
 
-		hasLoaded_ = true;
+		_hasLoaded = true;
 	}
 
 	bool TextureLoaderKtx::readHeader(KtxHeader& header)
@@ -92,10 +92,10 @@ namespace nCine
 		bool checkPassed = true;
 
 		// KTX header is 64 bytes long
-		fileHandle_->Read(&header, 64);
+		_fileHandle->Read(&header, 64);
 
 		for (int i = 0; i < KtxIdentifierLength; i++) {
-			if (header.identifier[i] != fileIdentifier_[i]) {
+			if (header.identifier[i] != _fileIdentifier[i]) {
 				checkPassed = false;
 			}
 		}
@@ -105,10 +105,10 @@ namespace nCine
 		DEATH_ASSERT(header.endianess != 0x01020304, "File endianess doesn't match machine one", false);
 
 		// Accounting for key-value data and `UInt32 imageSize` from first MIP level
-		headerSize_ = 64 + AsLE(header.bytesOfKeyValueData) + 4;
-		width_ = AsLE(header.pixelWidth);
-		height_ = AsLE(header.pixelHeight);
-		mipMapCount_ = AsLE(header.numberOfMipmapLevels);
+		_headerSize = 64 + AsLE(header.bytesOfKeyValueData) + 4;
+		_width = AsLE(header.pixelWidth);
+		_height = AsLE(header.pixelHeight);
+		_mipMapCount = AsLE(header.numberOfMipmapLevels);
 
 		return true;
 	}
@@ -119,21 +119,21 @@ namespace nCine
 
 		loadPixels(format);
 
-		if (mipMapCount_ > 1) {
-			LOGI("MIP Maps: {}", mipMapCount_);
-			mipDataOffsets_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
-			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
-			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(format, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
+		if (_mipMapCount > 1) {
+			LOGI("MIP Maps: {}", _mipMapCount);
+			_mipDataOffsets = std::make_unique<std::uint32_t[]>(_mipMapCount);
+			_mipDataSizes = std::make_unique<std::uint32_t[]>(_mipMapCount);
+			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(format, _width, _height, _mipMapCount, _mipDataOffsets.get(), _mipDataSizes.get());
 
 			// HACK: accounting for `UInt32 imageSize` on top of each MIP level
 			// Excluding the first one, already taken into account in header size
-			for (std::int32_t i = 1; i < mipMapCount_; i++) {
-				mipDataOffsets_[i] += 4 * i;
+			for (std::int32_t i = 1; i < _mipMapCount; i++) {
+				_mipDataOffsets[i] += 4 * i;
 			}
-			dataSizesSum += 4 * mipMapCount_;
+			dataSizesSum += 4 * _mipMapCount;
 
-			if (dataSizesSum != dataSize_) {
-				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, dataSize_);
+			if (dataSizesSum != _dataSize) {
+				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, _dataSize);
 			}
 		}
 

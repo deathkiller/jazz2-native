@@ -4,48 +4,48 @@
 namespace nCine
 {
 	RectAnimation::RectAnimation(float defaultFrameDuration, LoopMode loopMode)
-		: defaultFrameDuration_(defaultFrameDuration), loopMode_(loopMode), rects_(4), frameDurations_(4),
-			currentFrame_(0), elapsedFrameTime_(0.0f), goingForward_(true), isPaused_(true)
+		: _defaultFrameDuration(defaultFrameDuration), _loopMode(loopMode), _rects(4), _frameDurations(4),
+			_currentFrame(0), _elapsedFrameTime(0.0f), _goingForward(true), _isPaused(true)
 	{
 	}
 
 	void RectAnimation::updateFrame(float timeMult)
 	{
 		// No frame calculation if the animation is paused or has only one rect
-		if (isPaused_ || rects_.size() < 2) {
+		if (_isPaused || _rects.size() < 2) {
 			return;
 		}
 
-		elapsedFrameTime_ += timeMult;
+		_elapsedFrameTime += timeMult;
 		// Determine the next frame rectangle
-		while (elapsedFrameTime_ >= frameDurations_[currentFrame_]) {
-			elapsedFrameTime_ -= frameDurations_[currentFrame_];
+		while (_elapsedFrameTime >= _frameDurations[_currentFrame]) {
+			_elapsedFrameTime -= _frameDurations[_currentFrame];
 
-			if (goingForward_) {
-				if (currentFrame_ == rects_.size() - 1) {
-					if (loopMode_ == LoopMode::Backward) {
-						goingForward_ = false;
-						currentFrame_--;
+			if (_goingForward) {
+				if (_currentFrame == _rects.size() - 1) {
+					if (_loopMode == LoopMode::Backward) {
+						_goingForward = false;
+						_currentFrame--;
 					} else {
-						if (loopMode_ == LoopMode::NoRepeat) {
-							isPaused_ = true;
+						if (_loopMode == LoopMode::NoRepeat) {
+							_isPaused = true;
 						} else {
-							currentFrame_ = 0;
+							_currentFrame = 0;
 						}
 					}
 				} else {
-					currentFrame_++;
+					_currentFrame++;
 				}
 			} else {
-				if (currentFrame_ == 0) {
-					if (loopMode_ == LoopMode::NoRepeat) {
-						isPaused_ = true;
+				if (_currentFrame == 0) {
+					if (_loopMode == LoopMode::NoRepeat) {
+						_isPaused = true;
 					} else {
-						goingForward_ = true;
-						currentFrame_++;
+						_goingForward = true;
+						_currentFrame++;
 					}
 				} else {
-					currentFrame_--;
+					_currentFrame--;
 				}
 			}
 		}
@@ -53,19 +53,19 @@ namespace nCine
 
 	void RectAnimation::setFrame(std::uint32_t frameNum)
 	{
-		DEATH_ASSERT(frameNum < rects_.size());
-		currentFrame_ = frameNum;
+		DEATH_ASSERT(frameNum < _rects.size());
+		_currentFrame = frameNum;
 	}
 
 	void RectAnimation::addRect(const Recti& rect, float frameDuration)
 	{
-		rects_.push_back(rect);
-		frameDurations_.push_back(frameDuration);
+		_rects.push_back(rect);
+		_frameDurations.push_back(frameDuration);
 	}
 
 	void RectAnimation::addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameDuration)
 	{
-		rects_.push_back(Recti(x, y, w, h));
-		frameDurations_.push_back(frameDuration);
+		_rects.push_back(Recti(x, y, w, h));
+		_frameDurations.push_back(frameDuration);
 	}
 }

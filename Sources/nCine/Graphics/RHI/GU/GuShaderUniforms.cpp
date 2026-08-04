@@ -39,7 +39,7 @@ namespace nCine::RHI::GU
 	}
 
 	GuShaderUniforms::GuShaderUniforms()
-		: shaderProgram_(nullptr), maybeDirty_(true)
+		: _shaderProgram(nullptr), _maybeDirty(true)
 	{
 	}
 
@@ -57,24 +57,24 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniforms::SetProgram(GuShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformCaches_.clear();
-		maybeDirty_ = true;
+		_shaderProgram = shaderProgram;
+		_uniformCaches.clear();
+		_maybeDirty = true;
 
-		if (shaderProgram_->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
 		}
 	}
 
 	void GuShaderUniforms::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = true;
+		_maybeDirty = true;
 		std::uint32_t offset = 0;
-		for (GuUniformCache& cache : uniformCaches_) {
+		for (GuUniformCache& cache : _uniformCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.GetUniform()->GetMemorySize();
 		}
@@ -82,18 +82,18 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
-		maybeDirty_ = isDirty;
-		for (GuUniformCache& cache : uniformCaches_) {
+		_maybeDirty = isDirty;
+		for (GuUniformCache& cache : _uniformCaches) {
 			cache.SetDirty(isDirty);
 		}
 	}
 
 	bool GuShaderUniforms::HasUniform(const char* name) const
 	{
-		for (const GuUniformCache& cache : uniformCaches_) {
+		for (const GuUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
 				return true;
 			}
@@ -103,9 +103,9 @@ namespace nCine::RHI::GU
 
 	GuUniformCache* GuShaderUniforms::GetUniform(const char* name)
 	{
-		for (GuUniformCache& cache : uniformCaches_) {
+		for (GuUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
-				maybeDirty_ = true;
+				_maybeDirty = true;
 				return &cache;
 			}
 		}
@@ -114,38 +114,38 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ == nullptr) {
+		if (_shaderProgram == nullptr) {
 			return;
 		}
-		if (maybeDirty_ && shaderProgram_->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
-			shaderProgram_->Use();
-			for (GuUniformCache& cache : uniformCaches_) {
+		if (_maybeDirty && _shaderProgram->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
+			_shaderProgram->Use();
+			for (GuUniformCache& cache : _uniformCaches) {
 				cache.CommitValue();
 			}
-			maybeDirty_ = false;
+			_maybeDirty = false;
 		}
 	}
 
 	void GuShaderUniforms::ImportUniforms(const char* includeOnly, const char* exclude)
 	{
-		for (const GuUniform& uniform : shaderProgram_->uniforms_) {
+		for (const GuUniform& uniform : _shaderProgram->_uniforms) {
 			if (ShouldImport(uniform.GetName(), includeOnly, exclude)) {
-				uniformCaches_.push_back(GuUniformCache(&uniform));
+				_uniformCaches.push_back(GuUniformCache(&uniform));
 			}
 		}
 	}
 
 	// -------------------------------------------------------------------------------------------------
 
-	GuShaderUniformBlocks::UniformRangeAllocator GuShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
+	GuShaderUniformBlocks::UniformRangeAllocator GuShaderUniformBlocks::_uniformRangeAllocator = nullptr;
 
 	void GuShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
 	{
-		uniformRangeAllocator_ = allocator;
+		_uniformRangeAllocator = allocator;
 	}
 
 	GuShaderUniformBlocks::GuShaderUniformBlocks()
-		: shaderProgram_(nullptr), dataPointer_(nullptr)
+		: _shaderProgram(nullptr), _dataPointer(nullptr)
 	{
 	}
 
@@ -163,23 +163,23 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniformBlocks::SetProgram(GuShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformBlockCaches_.clear();
+		_shaderProgram = shaderProgram;
+		_uniformBlockCaches.clear();
 
-		if (shaderProgram_->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == GuShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniformBlocks(includeOnly, exclude);
 		}
 	}
 
 	void GuShaderUniformBlocks::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		dataPointer_ = dataPointer;
+		_dataPointer = dataPointer;
 		std::int32_t offset = 0;
-		for (GuUniformBlockCache& cache : uniformBlockCaches_) {
+		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
 		}
@@ -187,7 +187,7 @@ namespace nCine::RHI::GU
 
 	bool GuShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
-		for (const GuUniformBlockCache& cache : uniformBlockCaches_) {
+		for (const GuUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
@@ -197,7 +197,7 @@ namespace nCine::RHI::GU
 
 	GuUniformBlockCache* GuShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
-		for (GuUniformBlockCache& cache : uniformBlockCaches_) {
+		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
@@ -207,30 +207,30 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		std::int32_t totalUsedSize = 0;
 		bool hasMemoryGaps = false;
-		for (GuUniformBlockCache& cache : uniformBlockCaches_) {
-			if (cache.GetDataPointer() != dataPointer_ + totalUsedSize) {
+		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
+			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
 				hasMemoryGaps = true;
 			}
 			totalUsedSize += cache.usedSize();
 		}
 
-		if (totalUsedSize > 0 && uniformRangeAllocator_ != nullptr) {
-			uboParams_ = uniformRangeAllocator_(std::uint32_t(totalUsedSize));
-			if (uboParams_.mapBase != nullptr) {
+		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
+			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
+			if (_uboParams.mapBase != nullptr) {
 				if (hasMemoryGaps) {
 					std::int32_t offset = 0;
-					for (GuUniformBlockCache& cache : uniformBlockCaches_) {
-						std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, cache.GetDataPointer(), cache.usedSize());
+					for (GuUniformBlockCache& cache : _uniformBlockCaches) {
+						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
 						offset += cache.usedSize();
 					}
 				} else {
-					std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
 				}
 			}
 		}
@@ -238,25 +238,25 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniformBlocks::Bind()
 	{
-		if (uboParams_.object == nullptr) {
+		if (_uboParams.object == nullptr) {
 			return;
 		}
 
-		uboParams_.object->Bind();
+		_uboParams.object->Bind();
 		std::size_t moreOffset = 0;
-		for (GuUniformBlockCache& cache : uniformBlockCaches_) {
+		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(uboParams_.offset) + moreOffset;
-			uboParams_.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
+			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
+			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
 			moreOffset += std::size_t(cache.usedSize());
 		}
 	}
 
 	void GuShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)
 	{
-		for (GuUniformBlock& block : shaderProgram_->uniformBlocks_) {
+		for (GuUniformBlock& block : _shaderProgram->_uniformBlocks) {
 			if (ShouldImport(block.GetName(), includeOnly, exclude)) {
-				uniformBlockCaches_.push_back(GuUniformBlockCache(&block));
+				_uniformBlockCaches.push_back(GuUniformBlockCache(&block));
 			}
 		}
 	}

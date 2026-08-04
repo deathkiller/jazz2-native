@@ -35,11 +35,11 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns whether the scissor test is enabled */
 		static bool IsEnabled() {
-			return state_.enabled;
+			return _state.enabled;
 		}
 		/** @brief Returns the current scissor rectangle */
 		static Recti GetRect() {
-			return state_.rect;
+			return _state.rect;
 		}
 		/**
 		 * @brief Enables the scissor test with the specified rectangle
@@ -63,7 +63,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the whole cached scissor test state */
 		static State GetState() {
-			return state_;
+			return _state;
 		}
 		/** @brief Restores the whole scissor test state */
 		static void SetState(State newState);
@@ -72,7 +72,7 @@ namespace nCine::RHI::GL
 		static void Reapply();
 
 	private:
-		static State state_;
+		static State _state;
 	};
 
 }

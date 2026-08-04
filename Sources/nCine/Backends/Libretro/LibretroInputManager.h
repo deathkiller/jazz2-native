@@ -30,10 +30,10 @@ namespace nCine::Backends
 		void processFrame();
 
 		const MouseState& mouseState() const override {
-			return mouseState_;
+			return _mouseState;
 		}
 		const KeyboardState& keyboardState() const override {
-			return keyState_;
+			return _keyState;
 		}
 
 		bool isJoyPresent(int joyId) const override {
@@ -53,7 +53,7 @@ namespace nCine::Backends
 			return NumAxes;
 		}
 		const JoystickState& joystickState(int joyId) const override {
-			return joyStates_[(joyId >= 0 && joyId < NumPads) ? joyId : 0];
+			return _joyStates[(joyId >= 0 && joyId < NumPads) ? joyId : 0];
 		}
 		bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) override {
 			return false;
@@ -97,9 +97,9 @@ namespace nCine::Backends
 			}
 		};
 
-		RetroMouseState mouseState_;
-		RetroKeyboardState keyState_;
-		RetroJoystickState joyStates_[NumPads];
+		RetroMouseState _mouseState;
+		RetroKeyboardState _keyState;
+		RetroJoystickState _joyStates[NumPads];
 	};
 }
 

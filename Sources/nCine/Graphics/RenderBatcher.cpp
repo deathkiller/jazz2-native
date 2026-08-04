@@ -105,7 +105,7 @@ namespace nCine
 	void RenderBatcher::Reset()
 	{
 		// Reset managed buffers
-		for (ManagedBuffer& buffer : buffers_) {
+		for (ManagedBuffer& buffer : _buffers) {
 			buffer.freeSpace = buffer.size;
 		}
 	}
@@ -377,7 +377,7 @@ namespace nCine
 
 		std::uint8_t* ptr = nullptr;
 
-		for (ManagedBuffer& buffer : buffers_) {
+		for (ManagedBuffer& buffer : _buffers) {
 			if (buffer.freeSpace >= bytes) {
 				const std::uint32_t offset = buffer.size - buffer.freeSpace;
 				ptr = buffer.buffer.get() + offset;
@@ -388,8 +388,8 @@ namespace nCine
 
 		if (ptr == nullptr) {
 			CreateBuffer(UboMaxSize);
-			ptr = buffers_.back().buffer.get();
-			buffers_.back().freeSpace -= bytes;
+			ptr = _buffers.back().buffer.get();
+			_buffers.back().freeSpace -= bytes;
 		}
 
 		return ptr;
@@ -397,7 +397,7 @@ namespace nCine
 
 	void RenderBatcher::CreateBuffer(std::uint32_t size)
 	{
-		ManagedBuffer& managedBuffer = buffers_.emplace_back();
+		ManagedBuffer& managedBuffer = _buffers.emplace_back();
 		managedBuffer.size = size;
 		managedBuffer.freeSpace = size;
 		managedBuffer.buffer = std::make_unique<std::uint8_t[]>(size);

@@ -39,7 +39,7 @@ namespace nCine::RHI::Vulkan
 	}
 
 	VulkanShaderUniforms::VulkanShaderUniforms()
-		: shaderProgram_(nullptr), maybeDirty_(true)
+		: _shaderProgram(nullptr), _maybeDirty(true)
 	{
 	}
 
@@ -57,24 +57,24 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniforms::SetProgram(VulkanShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformCaches_.clear();
-		maybeDirty_ = true;
+		_shaderProgram = shaderProgram;
+		_uniformCaches.clear();
+		_maybeDirty = true;
 
-		if (shaderProgram_->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
 		}
 	}
 
 	void VulkanShaderUniforms::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = true;
+		_maybeDirty = true;
 		std::uint32_t offset = 0;
-		for (VulkanUniformCache& cache : uniformCaches_) {
+		for (VulkanUniformCache& cache : _uniformCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.GetUniform()->GetMemorySize();
 		}
@@ -82,18 +82,18 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
-		maybeDirty_ = isDirty;
-		for (VulkanUniformCache& cache : uniformCaches_) {
+		_maybeDirty = isDirty;
+		for (VulkanUniformCache& cache : _uniformCaches) {
 			cache.SetDirty(isDirty);
 		}
 	}
 
 	bool VulkanShaderUniforms::HasUniform(const char* name) const
 	{
-		for (const VulkanUniformCache& cache : uniformCaches_) {
+		for (const VulkanUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
 				return true;
 			}
@@ -103,9 +103,9 @@ namespace nCine::RHI::Vulkan
 
 	VulkanUniformCache* VulkanShaderUniforms::GetUniform(const char* name)
 	{
-		for (VulkanUniformCache& cache : uniformCaches_) {
+		for (VulkanUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
-				maybeDirty_ = true;
+				_maybeDirty = true;
 				return &cache;
 			}
 		}
@@ -114,38 +114,38 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ == nullptr) {
+		if (_shaderProgram == nullptr) {
 			return;
 		}
-		if (maybeDirty_ && shaderProgram_->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
-			shaderProgram_->Use();
-			for (VulkanUniformCache& cache : uniformCaches_) {
+		if (_maybeDirty && _shaderProgram->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
+			_shaderProgram->Use();
+			for (VulkanUniformCache& cache : _uniformCaches) {
 				cache.CommitValue();
 			}
-			maybeDirty_ = false;
+			_maybeDirty = false;
 		}
 	}
 
 	void VulkanShaderUniforms::ImportUniforms(const char* includeOnly, const char* exclude)
 	{
-		for (const VulkanUniform& uniform : shaderProgram_->uniforms_) {
+		for (const VulkanUniform& uniform : _shaderProgram->_uniforms) {
 			if (ShouldImport(uniform.GetName(), includeOnly, exclude)) {
-				uniformCaches_.push_back(VulkanUniformCache(&uniform));
+				_uniformCaches.push_back(VulkanUniformCache(&uniform));
 			}
 		}
 	}
 
 	// -------------------------------------------------------------------------------------------------
 
-	VulkanShaderUniformBlocks::UniformRangeAllocator VulkanShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
+	VulkanShaderUniformBlocks::UniformRangeAllocator VulkanShaderUniformBlocks::_uniformRangeAllocator = nullptr;
 
 	void VulkanShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
 	{
-		uniformRangeAllocator_ = allocator;
+		_uniformRangeAllocator = allocator;
 	}
 
 	VulkanShaderUniformBlocks::VulkanShaderUniformBlocks()
-		: shaderProgram_(nullptr), dataPointer_(nullptr)
+		: _shaderProgram(nullptr), _dataPointer(nullptr)
 	{
 	}
 
@@ -163,23 +163,23 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniformBlocks::SetProgram(VulkanShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformBlockCaches_.clear();
+		_shaderProgram = shaderProgram;
+		_uniformBlockCaches.clear();
 
-		if (shaderProgram_->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniformBlocks(includeOnly, exclude);
 		}
 	}
 
 	void VulkanShaderUniformBlocks::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		dataPointer_ = dataPointer;
+		_dataPointer = dataPointer;
 		std::int32_t offset = 0;
-		for (VulkanUniformBlockCache& cache : uniformBlockCaches_) {
+		for (VulkanUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
 		}
@@ -187,7 +187,7 @@ namespace nCine::RHI::Vulkan
 
 	bool VulkanShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
-		for (const VulkanUniformBlockCache& cache : uniformBlockCaches_) {
+		for (const VulkanUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
@@ -197,7 +197,7 @@ namespace nCine::RHI::Vulkan
 
 	VulkanUniformBlockCache* VulkanShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
-		for (VulkanUniformBlockCache& cache : uniformBlockCaches_) {
+		for (VulkanUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
@@ -207,30 +207,30 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != VulkanShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		std::int32_t totalUsedSize = 0;
 		bool hasMemoryGaps = false;
-		for (VulkanUniformBlockCache& cache : uniformBlockCaches_) {
-			if (cache.GetDataPointer() != dataPointer_ + totalUsedSize) {
+		for (VulkanUniformBlockCache& cache : _uniformBlockCaches) {
+			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
 				hasMemoryGaps = true;
 			}
 			totalUsedSize += cache.usedSize();
 		}
 
-		if (totalUsedSize > 0 && uniformRangeAllocator_ != nullptr) {
-			uboParams_ = uniformRangeAllocator_(std::uint32_t(totalUsedSize));
-			if (uboParams_.mapBase != nullptr) {
+		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
+			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
+			if (_uboParams.mapBase != nullptr) {
 				if (hasMemoryGaps) {
 					std::int32_t offset = 0;
-					for (VulkanUniformBlockCache& cache : uniformBlockCaches_) {
-						std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, cache.GetDataPointer(), cache.usedSize());
+					for (VulkanUniformBlockCache& cache : _uniformBlockCaches) {
+						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
 						offset += cache.usedSize();
 					}
 				} else {
-					std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
 				}
 			}
 		}
@@ -238,25 +238,25 @@ namespace nCine::RHI::Vulkan
 
 	void VulkanShaderUniformBlocks::Bind()
 	{
-		if (uboParams_.object == nullptr) {
+		if (_uboParams.object == nullptr) {
 			return;
 		}
 
-		uboParams_.object->Bind();
+		_uboParams.object->Bind();
 		std::size_t moreOffset = 0;
-		for (VulkanUniformBlockCache& cache : uniformBlockCaches_) {
+		for (VulkanUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(uboParams_.offset) + moreOffset;
-			uboParams_.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
+			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
+			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
 			moreOffset += std::size_t(cache.usedSize());
 		}
 	}
 
 	void VulkanShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)
 	{
-		for (VulkanUniformBlock& block : shaderProgram_->uniformBlocks_) {
+		for (VulkanUniformBlock& block : _shaderProgram->_uniformBlocks) {
 			if (ShouldImport(block.GetName(), includeOnly, exclude)) {
-				uniformBlockCaches_.push_back(VulkanUniformBlockCache(&block));
+				_uniformBlockCaches.push_back(VulkanUniformBlockCache(&block));
 			}
 		}
 	}

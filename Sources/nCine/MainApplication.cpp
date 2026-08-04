@@ -319,7 +319,7 @@ namespace nCine
 		emscripten_set_main_loop(MainApplication::EmscriptenStep, 0, 1);
 		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
 #else
-		while (!app.shouldQuit_) {
+		while (!app._shouldQuit) {
 			app.ProcessStep();
 #	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 			if (ogcShutdownRequested) {
@@ -554,16 +554,16 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 #if defined(NCINE_PROFILING)
-		profileStartTime_ = TimeStamp::now();
+		_profileStartTime = TimeStamp::now();
 #endif
-		wasSuspended_ = ShouldSuspend();
+		_wasSuspended = ShouldSuspend();
 
 		// Only `OnPreInit()` can modify the application configuration
 		if (argc > 1) {
 #if defined(DEATH_TARGET_WINDOWS)
-			appCfg_.argv_ = Array<String>(ValueInit, argc - 1);
+			_appCfg._argv = Array<String>(ValueInit, argc - 1);
 			for (std::int32_t i = 1; i < argc; i++) {
-				appCfg_.argv_[i - 1] = Utf8::FromUtf16(argv[i]);
+				_appCfg._argv[i - 1] = Utf8::FromUtf16(argv[i]);
 			}
 #elif defined(DEATH_TARGET_APPLE)
 			// Cocoa supports -Key value options which set the user defaults key "Key" to the value "value",
@@ -581,7 +581,7 @@ namespace nCine
 			}
 
 			if (count > 0) {
-				appCfg_.argv_ = Array<StringView>(ValueInit, count);
+				_appCfg._argv = Array<StringView>(ValueInit, count);
 				count = 0;
 				i = 1;
 				while (i < argc) {
@@ -589,22 +589,22 @@ namespace nCine
 					if (arg[0] == '-' && arg[1] == 'N' && arg[2] == 'S') {
 						i += 2; // Skip key and value
 					} else {
-						appCfg_.argv_[count++] = arg;
+						_appCfg._argv[count++] = arg;
 						i++;
 					}
 				}
 			}
 #else
-			appCfg_.argv_ = Array<StringView>(ValueInit, argc - 1);
+			_appCfg._argv = Array<StringView>(ValueInit, argc - 1);
 			for (std::int32_t i = 1; i < argc; i++) {
-				appCfg_.argv_[i - 1] = argv[i];
+				_appCfg._argv[i - 1] = argv[i];
 			}
 #endif
 		}
 
 		PreInitCommon(createAppEventHandler());
 
-		if (shouldQuit_) {
+		if (_shouldQuit) {
 			// If the app was quit from OnPreInit(), skip further initialization
 			return;
 		}
@@ -615,7 +615,7 @@ namespace nCine
 #	define INIT_MESSAGE_SUFFIX ""
 #endif
 
-		if (appCfg_.withGraphics) {
+		if (_appCfg.withGraphics) {
 #if defined(WITH_GLFW)
 			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing" INIT_MESSAGE_SUFFIX "...");
 #elif defined(WITH_SDL3)
@@ -629,8 +629,8 @@ namespace nCine
 			LOGB("Initializing graphics device and input manager...");
 
 			// Graphics device should always be created before the input manager
-			IGfxDevice::ContextInfo contextInfo(appCfg_);
-			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
+			IGfxDevice::ContextInfo contextInfo(_appCfg);
+			const DisplayMode::VSync vSyncMode = (_appCfg.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 #if defined(RHI_USE_FB16) && defined(WITH_RHI_GL)
 			// 16-bit screen framebuffer (`NCINE_RHI_USE_FB16`): ask the window system for a 5/6/5 visual with no
 			// destination alpha, halving the memory and the present bandwidth of the default framebuffer. The
@@ -642,45 +642,45 @@ namespace nCine
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 #endif
 
-			const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X,
-				appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
+			const IGfxDevice::WindowMode windowMode(_appCfg.resolution.X, _appCfg.resolution.Y, _appCfg.windowPosition.X,
+				_appCfg.windowPosition.Y, _appCfg.fullscreen, _appCfg.resizable, _appCfg.windowScaling);
 
 #if (defined(WITH_SDL2) || defined(WITH_SDL3))
-			gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, contextInfo, displayMode);
-			inputManager_ = std::make_unique<SdlInputManager>();
+			_gfxDevice = std::make_unique<SdlGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<SdlInputManager>();
 #elif defined(WITH_GLFW)
-			gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, contextInfo, displayMode);
-			inputManager_ = std::make_unique<GlfwInputManager>();
+			_gfxDevice = std::make_unique<GlfwGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<GlfwInputManager>();
 #elif defined(WITH_QT5)
-			FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
-			gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, contextInfo, displayMode, *qt5Widget_);
-			inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
+			FATAL_ASSERT_MSG(_qt5Widget, "The Qt5 widget has not been assigned");
+			_gfxDevice = std::make_unique<Qt5GfxDevice>(windowMode, contextInfo, displayMode, *_qt5Widget);
+			_inputManager = std::make_unique<Qt5InputManager>(*_qt5Widget);
 #elif defined(WITH_OGC)
-			gfxDevice_ = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
-			inputManager_ = std::make_unique<OgcInputManager>();
+			_gfxDevice = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<OgcInputManager>();
 #elif defined(WITH_DC)
-			gfxDevice_ = std::make_unique<DcGfxDevice>(windowMode, contextInfo, displayMode);
-			inputManager_ = std::make_unique<DcInputManager>();
+			_gfxDevice = std::make_unique<DcGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<DcInputManager>();
 #elif defined(WITH_PSP)
-			gfxDevice_ = std::make_unique<PspGfxDevice>(windowMode, contextInfo, displayMode);
-			inputManager_ = std::make_unique<PspInputManager>();
+			_gfxDevice = std::make_unique<PspGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<PspInputManager>();
 #endif
-			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
-			if (!appCfg_.windowIconFilename.empty()) {
-				String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
+			_gfxDevice->setWindowTitle(_appCfg.windowTitle.data());
+			if (!_appCfg.windowIconFilename.empty()) {
+				String windowIconFilePath = fs::CombinePath(GetDataPath(), _appCfg.windowIconFilename);
 				if (fs::IsReadableFile(windowIconFilePath)) {
-					gfxDevice_->setWindowIcon(windowIconFilePath);
+					_gfxDevice->setWindowIcon(windowIconFilePath);
 				}
 			}
 		} else {
 			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing" INIT_MESSAGE_SUFFIX "...");
 
-			gfxDevice_ = std::make_unique<NullGfxDevice>();
-			inputManager_ = std::make_unique<NullInputManager>();
+			_gfxDevice = std::make_unique<NullGfxDevice>();
+			_inputManager = std::make_unique<NullInputManager>();
 		}
 
 #if defined(NCINE_PROFILING)
-		timings_[(std::int32_t)Timings::PreInit] = profileStartTime_.secondsSince();
+		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.secondsSince();
 #endif
 #if !defined(WITH_QT5)
 		// Common initialization on Qt5 is performed later, when OpenGL can be used
@@ -690,11 +690,11 @@ namespace nCine
 
 	void MainApplication::ProcessStep()
 	{
-		if (appCfg_.withGraphics) {
+		if (_appCfg.withGraphics) {
 #if defined(WITH_GLFW) || (defined(WITH_SDL2) || defined(WITH_SDL3))
 			ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
-			static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
+			static_cast<Qt5InputManager&>(*_inputManager).updateJoystickStates();
 #elif defined(WITH_OGC)
 			// No window events on a console; polling the controller ports is the whole event pump
 			OgcInputManager::updateJoystickStates();
@@ -708,13 +708,13 @@ namespace nCine
 		}
 
 		const bool suspended = ShouldSuspend();
-		if (wasSuspended_ != suspended) {
+		if (_wasSuspended != suspended) {
 			if (suspended) {
 				Suspend();
 			} else {
 				Resume();
 			}
-			wasSuspended_ = suspended;
+			_wasSuspended = suspended;
 		}
 
 		if (!suspended) {
@@ -745,7 +745,7 @@ namespace nCine
 			switch (event.type) {
 				case SDL_EVENT_QUIT:
 					if (SdlInputManager::shouldQuitOnRequest()) {
-						shouldQuit_ = true;
+						_shouldQuit = true;
 					}
 					break;
 				case SDL_EVENT_WINDOW_FOCUS_GAINED:
@@ -764,15 +764,15 @@ namespace nCine
 						SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
 						int logicalWidth = 0, logicalHeight = 0;
 						SDL_GetWindowSize(windowHandle, &logicalWidth, &logicalHeight);
-						gfxDevice_->width_ = logicalWidth;
-						gfxDevice_->height_ = logicalHeight;
-						gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+						_gfxDevice->_width = logicalWidth;
+						_gfxDevice->_height = logicalHeight;
+						_gfxDevice->_isFullscreen = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
 						// Query the pixel size the way the active backend measures it, then resize the backend
 						// swap chain to match (no-op on OpenGL / software); see the SDL2 branch for the rationale
 						SdlGfxDevice::queryDrawableSize(windowHandle, logicalWidth, logicalHeight,
-							gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-						RHI::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-						ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+							_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
+						RHI::Device::ResizeSwapchain(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
+						ResizeScreenViewport(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 					}
 					break;
 				case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -781,13 +781,13 @@ namespace nCine
 					// main window), so the main window's close button is honored here. The event still falls through
 					// to the input manager below, which is how ImGui closes a window of its own.
 					if (SdlGfxDevice::isMainWindow(event.window.windowID) && SdlInputManager::shouldQuitOnRequest()) {
-						shouldQuit_ = true;
+						_shouldQuit = true;
 					}
 					DEATH_FALLTHROUGH
 				default:
 					if (event.type >= SDL_EVENT_DISPLAY_FIRST && event.type <= SDL_EVENT_DISPLAY_LAST) {
-						gfxDevice_->updateMonitors();
-					} else if (appCfg_.withGraphics) {
+						_gfxDevice->updateMonitors();
+					} else if (_appCfg.withGraphics) {
 						SdlInputManager::parseEvent(event);
 					}
 					break;
@@ -815,11 +815,11 @@ namespace nCine
 			switch (event.type) {
 				case SDL_QUIT:
 					if (SdlInputManager::shouldQuitOnRequest()) {
-						shouldQuit_ = true;
+						_shouldQuit = true;
 					}
 					break;
 				case SDL_DISPLAYEVENT:
-					gfxDevice_->updateMonitors();
+					_gfxDevice->updateMonitors();
 					break;
 				case SDL_WINDOWEVENT: {
 					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
@@ -835,14 +835,14 @@ namespace nCine
 								// stops being true as soon as another window exists (ImGui opens one per panel
 								// dragged out of the main window), so the main window's close button is honored here
 								if (SdlInputManager::shouldQuitOnRequest()) {
-									shouldQuit_ = true;
+									_shouldQuit = true;
 								}
 								break;
 							case SDL_WINDOWEVENT_SIZE_CHANGED: {
-								gfxDevice_->width_ = event.window.data1;
-								gfxDevice_->height_ = event.window.data2;
+								_gfxDevice->_width = event.window.data1;
+								_gfxDevice->_height = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
-								gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+								_gfxDevice->_isFullscreen = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
 								// Query the pixel size the way the active backend measures it, then resize the
 								// backend swap chain to match (no-op on OpenGL / software). The explicit resize
 								// is deterministic on Vulkan: some drivers never report OUT_OF_DATE for a
@@ -850,9 +850,9 @@ namespace nCine
 								// leave the swap chain stuck at the old size; ResizeSwapchain re-queries the
 								// surface caps for the authoritative extent (this value is the hint/fallback).
 								SdlGfxDevice::queryDrawableSize(windowHandle, event.window.data1, event.window.data2,
-									gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-								RHI::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+									_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
+								RHI::Device::ResizeSwapchain(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
+								ResizeScreenViewport(_gfxDevice->_drawableWidth, _gfxDevice->_drawableHeight);
 								break;
 							}
 						}
@@ -860,13 +860,13 @@ namespace nCine
 					// Unlike every other event type, these were not reaching the input manager at all - and ImGui
 					// drives its platform windows off them (closing, moving, focusing, entering one), so a window
 					// it owns could not even be closed. Nothing in the engine's own input handling reads them.
-					if (appCfg_.withGraphics) {
+					if (_appCfg.withGraphics) {
 						SdlInputManager::parseEvent(event);
 					}
 					break;
 				}
 				default:
-					if (appCfg_.withGraphics) {
+					if (_appCfg.withGraphics) {
 						SdlInputManager::parseEvent(event);
 					}
 					break;
@@ -887,7 +887,7 @@ namespace nCine
 			glfwPollEvents();
 		}
 
-		if (appCfg_.withGraphics) {
+		if (_appCfg.withGraphics) {
 			GlfwInputManager::updateJoystickStates();
 		}
 	}

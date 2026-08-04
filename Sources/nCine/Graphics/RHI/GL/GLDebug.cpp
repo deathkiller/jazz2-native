@@ -59,19 +59,19 @@ namespace nCine::RHI::GL
 	}
 #endif
 
-	bool GLDebug::debugAvailable_ = false;
-	GLuint GLDebug::debugGroupId_ = 0;
-	std::int32_t GLDebug::maxLabelLength_ = 0;
+	bool GLDebug::_debugAvailable = false;
+	GLuint GLDebug::_debugGroupId = 0;
+	std::int32_t GLDebug::_maxLabelLength = 0;
 
 	void GLDebug::Init(const IRhiCapabilities& caps)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		debugAvailable_ = caps.HasExtension(IRhiCapabilities::Extensions::KHR_DEBUG) &&
+		_debugAvailable = caps.HasExtension(IRhiCapabilities::Extensions::KHR_DEBUG) &&
 			theApplication().GetGfxDevice().contextInfo().debugContext;
 
-		glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLabelLength_);
+		glGetIntegerv(GL_MAX_LABEL_LENGTH, &_maxLabelLength);
 
-		if (debugAvailable_) {
+		if (_debugAvailable) {
 			EnableDebugOutput();
 		}
 #endif
@@ -80,8 +80,8 @@ namespace nCine::RHI::GL
 	void GLDebug::PushGroup(StringView message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
-			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, GLsizei(message.size()), message.data());
+		if (_debugAvailable) {
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, _debugGroupId++, GLsizei(message.size()), message.data());
 		}
 #endif
 	}
@@ -89,7 +89,7 @@ namespace nCine::RHI::GL
 	void GLDebug::PopGroup()
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
+		if (_debugAvailable) {
 			glPopDebugGroup();
 		}
 #endif
@@ -98,8 +98,8 @@ namespace nCine::RHI::GL
 	void GLDebug::MessageInsert(StringView message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
-			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, GLsizei(message.size()), message.data());
+		if (_debugAvailable) {
+			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, _debugGroupId++, GL_DEBUG_SEVERITY_NOTIFICATION, GLsizei(message.size()), message.data());
 		}
 #endif
 	}
@@ -107,7 +107,7 @@ namespace nCine::RHI::GL
 	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, StringView label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
+		if (_debugAvailable) {
 			glObjectLabel(static_cast<GLenum>(identifier), name, GLsizei(label.size()), label.data());
 		}
 #endif
@@ -116,7 +116,7 @@ namespace nCine::RHI::GL
 	void GLDebug::GetObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
+		if (_debugAvailable) {
 			glGetObjectLabel(static_cast<GLenum>(identifier), name, bufSize, length, label);
 		}
 #endif

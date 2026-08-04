@@ -37,60 +37,60 @@ namespace nCine
 			: DisplayMode(0, 0, 0, 0, depthBits, stencilBits, dbMode, vsMode) {}
 		DisplayMode(std::uint8_t redBits, std::uint8_t greenBits, std::uint8_t blueBits, std::uint8_t alphaBits,
 					std::uint8_t depthBits, std::uint8_t stencilBits, DoubleBuffering dbMode, VSync vsMode)
-			: redBits_(redBits), greenBits_(greenBits), blueBits_(blueBits), alphaBits_(alphaBits),
-			depthBits_(depthBits), stencilBits_(stencilBits), isDoubleBuffered_(dbMode == DoubleBuffering::Enabled),
-			hasVSync_(vsMode == VSync::Enabled) {}
+			: _redBits(redBits), _greenBits(greenBits), _blueBits(blueBits), _alphaBits(alphaBits),
+			_depthBits(depthBits), _stencilBits(stencilBits), _isDoubleBuffered(dbMode == DoubleBuffering::Enabled),
+			_hasVSync(vsMode == VSync::Enabled) {}
 
 		/** @brief Returns the number of bits for the red channel */
 		inline std::uint8_t redBits() const {
-			return redBits_;
+			return _redBits;
 		}
 		/** @brief Returns the number of bits for the green channel */
 		inline std::uint8_t greenBits() const {
-			return greenBits_;
+			return _greenBits;
 		}
 		/** @brief Returns the number of bits for the blue channel */
 		inline std::uint8_t blueBits() const {
-			return blueBits_;
+			return _blueBits;
 		}
 		/** @brief Returns the number of bits for the alpha channel */
 		inline std::uint8_t alphaBits() const {
-			return alphaBits_;
+			return _alphaBits;
 		}
 		/** @brief Returns the number of bits for the depth buffer */
 		inline std::uint8_t depthBits() const {
-			return depthBits_;
+			return _depthBits;
 		}
 		/** @brief Returns the number of bits for the stencil buffer */
 		inline std::uint8_t stencilBits() const {
-			return stencilBits_;
+			return _stencilBits;
 		}
 		/** @brief Returns whether the display is double buffered */
 		inline bool isDoubleBuffered() const {
-			return isDoubleBuffered_;
+			return _isDoubleBuffered;
 		}
 		/** @brief Returns whether the display has vertical sync enabled */
 		inline bool hasVSync() const {
-			return hasVSync_;
+			return _hasVSync;
 		}
 
 	private:
 		/** @brief Red channel bits */
-		std::uint8_t redBits_;
+		std::uint8_t _redBits;
 		/** @brief Green channel bits */
-		std::uint8_t greenBits_;
+		std::uint8_t _greenBits;
 		/** @brief Blue channel bits */
-		std::uint8_t blueBits_;
+		std::uint8_t _blueBits;
 		/** @brief Alpha channel bits */
-		std::uint8_t alphaBits_;
+		std::uint8_t _alphaBits;
 		/** @brief Depth buffer size in bits */
-		std::uint8_t depthBits_;
+		std::uint8_t _depthBits;
 		/** @brief Stencil buffer size in bits */
-		std::uint8_t stencilBits_;
+		std::uint8_t _stencilBits;
 		/** @brief Whether double buffering is enabled */
-		bool isDoubleBuffered_;
+		bool _isDoubleBuffered;
 		/** @brief Whether vertical sync is enabled */
-		bool hasVSync_;
+		bool _hasVSync;
 	};
 
 }

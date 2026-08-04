@@ -46,84 +46,84 @@ namespace nCine::RHI::GX
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the linear host store (native, like the software backend) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format (R8/RG8 kept so the palette path can tell them apart) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of the linear host store */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/** @brief Returns the base pointer of the linear host store (may be `nullptr` before an upload) */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns a writable base pointer of the linear host store (for render-target readback) */
 		inline std::uint8_t* MutablePixels() {
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default; informational on GX) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Alias of @ref GetMagFiltering() */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target (EFB copy destination) */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/** @brief Marks the texture as (or no longer as) a color render target; becoming one allocates an RGBA8 tiled store to copy the EFB into */
 		void SetRenderTarget(bool isRenderTarget);
 		/** @brief Returns a globally monotonic stamp of the texel store, advanced by every allocation or upload */
 		inline std::uint32_t GetContentVersion() const {
-			return contentVersion_;
+			return _contentVersion;
 		}
 
 		/** @brief Returns `true` when the tiled store is a CI8 index texture (draws need a TLUT bound) */
 		inline bool IsIndexed() const {
-			return (uploadFormat_ == PixelFormat::R8);
+			return (_uploadFormat == PixelFormat::R8);
 		}
 		/** @brief Returns `true` when the texture needs the per-palette-row CPU bake (RG8 index + alpha) */
 		inline bool NeedsPaletteBake() const {
-			return (uploadFormat_ == PixelFormat::RG8);
+			return (_uploadFormat == PixelFormat::RG8);
 		}
 		/** @brief Returns `true` when this is the intercepted shared palette texture (rows become TLUTs) */
 		inline bool IsPaletteTexture() const {
-			return isPaletteTexture_;
+			return _isPaletteTexture;
 		}
 
 		/**
@@ -202,36 +202,36 @@ namespace nCine::RHI::GX
 
 		/** @brief Returns the base pointer of the tiled render-target store the EFB is copied into (render targets only) */
 		inline std::uint8_t* GetRenderTargetStore() {
-			return tiledStore_;
+			return _tiledStore;
 		}
 
 	private:
-		static std::uint32_t nextHandle_;
-		static std::uint32_t nextContentVersion_;
+		static std::uint32_t _nextHandle;
+		static std::uint32_t _nextContentVersion;
 
-		std::uint32_t handle_;
-		std::uint32_t contentVersion_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		std::int32_t bytesPerPixel_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		std::vector<std::uint8_t> pixels_;
-		bool isRenderTarget_;
-		bool isPaletteTexture_;
+		std::uint32_t _handle;
+		std::uint32_t _contentVersion;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		std::int32_t _bytesPerPixel;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		std::vector<std::uint8_t> _pixels;
+		bool _isRenderTarget;
+		bool _isPaletteTexture;
 
-		// Tiled GX store (32-byte aligned main memory) + its texture object, valid when tiledStore_ != nullptr
-		std::uint8_t* tiledStore_;
-		std::size_t tiledStoreSize_;
-		GXTexObj texObj_;
-		bool texObjValid_;
+		// Tiled GX store (32-byte aligned main memory) + its texture object, valid when _tiledStore != nullptr
+		std::uint8_t* _tiledStore;
+		std::size_t _tiledStoreSize;
+		GXTexObj _texObj;
+		bool _texObjValid;
 
 		// Per-palette-row baked RGBA8 copies of an RG8 store (see EnsureBakedRgba). One copy is kept per
 		// palette row: the GX FIFO consumes draws asynchronously, so rebaking a row that an already
@@ -248,8 +248,8 @@ namespace nCine::RHI::GX
 			std::uint32_t LastUsedFrame;
 			const void* Palette;
 		};
-		BakedSlot bakedSlots_[BakedSlotCount];
-		std::int32_t nextBakedSlot_;
+		BakedSlot _bakedSlots[BakedSlotCount];
+		std::int32_t _nextBakedSlot;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshTiledStore();

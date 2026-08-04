@@ -41,61 +41,61 @@ namespace nCine::RHI::Software
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		/** @brief Returns the texture target */
 		inline TextureTarget GetTarget() const {
-			return target_;
+			return _target;
 		}
 
 		/** @brief Returns the width of level 0 in texels */
 		inline std::int32_t GetWidth() const {
-			return width_;
+			return _width;
 		}
 		/** @brief Returns the height of level 0 in texels */
 		inline std::int32_t GetHeight() const {
-			return height_;
+			return _height;
 		}
 		/** @brief Returns the pixel format of the stored texels (native for R8/RG8; RGBA8 after the RGB8 or render-target widening) */
 		inline PixelFormat GetFormat() const {
-			return format_;
+			return _format;
 		}
 		/** @brief Returns the original upload format before any widening (R8/RG8/RGB8 kept, so the palette path can tell an R8 index texture from an RG8 index+alpha one even after a render-target promotion) */
 		inline PixelFormat GetUploadFormat() const {
-			return uploadFormat_;
+			return _uploadFormat;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of level 0 */
 		inline std::int32_t GetStrideBytes() const {
-			return strideBytes_;
+			return _strideBytes;
 		}
 		/** @brief Returns the byte size of one stored texel (1 for R8, 2 for RG8, 4 for RGBA8 and widened stores) */
 		inline std::int32_t GetBytesPerPixel() const {
-			return bytesPerPixel_;
+			return _bytesPerPixel;
 		}
 		/** @brief Returns the base pointer of the level-0 texel store (may be `nullptr` before an upload); the single-level store ignores @p level */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode (used by the rasterizer sampler) */
 		inline SamplerWrapping GetWrapS() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the vertical texture-coordinate wrap mode (single stored mode, same as @ref GetWrapS()) */
 		inline SamplerWrapping GetWrapT() const {
-			return wrap_;
+			return _wrap;
 		}
 		/** @brief Returns the four-channel sampling swizzle (identity by default; the palette path maps `.a` to green for RG8 index textures) */
 		inline const SwizzleChannel* GetSwizzle() const {
-			return swizzle_;
+			return _swizzle;
 		}
 		/** @brief Returns the magnification filter (alias of @ref GetMagFiltering() the rasterizer samples with) */
 		inline nCine::SamplerFilter GetMagFilter() const {
-			return magFilter_;
+			return _magFilter;
 		}
 		/** @brief Returns `true` if the texture is bound as a color render target (its store is treated as bottom-up by the fast blit) */
 		inline bool IsRenderTarget() const {
-			return isRenderTarget_;
+			return _isRenderTarget;
 		}
 		/**
 		 * @brief Marks the texture as (or no longer as) a color render target
@@ -107,11 +107,11 @@ namespace nCine::RHI::Software
 		void SetRenderTarget(bool isRenderTarget);
 		/** @brief Returns a writable base pointer of the level-0 texel store (for render-target output) */
 		inline std::uint8_t* MutablePixels() {
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return _pixels.empty() ? nullptr : _pixels.data();
 		}
 		/** @brief Returns a globally monotonic stamp of the texel store, advanced by every allocation or upload (used to key content-derived caches; render-target writes bypass it) */
 		inline std::uint32_t GetContentVersion() const {
-			return contentVersion_;
+			return _contentVersion;
 		}
 
 		/** @brief Binds the texture to the specified texture unit on the device */
@@ -156,7 +156,7 @@ namespace nCine::RHI::Software
 
 		/** @brief Returns the magnification filter, for the effect to choose nearest vs. bilinear */
 		inline nCine::SamplerFilter GetMagFiltering() const {
-			return magFilter_;
+			return _magFilter;
 		}
 
 		static bool SupportsImmutableStorage() {
@@ -177,25 +177,25 @@ namespace nCine::RHI::Software
 		static std::int32_t BytesPerPixel(PixelFormat format);
 
 	private:
-		static std::uint32_t nextHandle_;
-		static std::uint32_t nextContentVersion_;
+		static std::uint32_t _nextHandle;
+		static std::uint32_t _nextContentVersion;
 
-		std::uint32_t handle_;
-		std::uint32_t contentVersion_;
-		TextureTarget target_;
-		PixelFormat format_;
-		PixelFormat uploadFormat_;
-		std::int32_t width_;
-		std::int32_t height_;
-		std::int32_t strideBytes_;
-		std::int32_t bytesPerPixel_;
-		nCine::SamplerFilter minFilter_;
-		nCine::SamplerFilter magFilter_;
-		SamplerWrapping wrap_;
-		SwizzleChannel swizzle_[4];
-		mutable std::uint32_t textureUnit_;
-		std::vector<std::uint8_t> pixels_;
-		bool isRenderTarget_;
+		std::uint32_t _handle;
+		std::uint32_t _contentVersion;
+		TextureTarget _target;
+		PixelFormat _format;
+		PixelFormat _uploadFormat;
+		std::int32_t _width;
+		std::int32_t _height;
+		std::int32_t _strideBytes;
+		std::int32_t _bytesPerPixel;
+		nCine::SamplerFilter _minFilter;
+		nCine::SamplerFilter _magFilter;
+		SamplerWrapping _wrap;
+		SwizzleChannel _swizzle[4];
+		mutable std::uint32_t _textureUnit;
+		std::vector<std::uint8_t> _pixels;
+		bool _isRenderTarget;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 	};

@@ -29,34 +29,34 @@ namespace nCine
 
 		/** @brief Returns the backend id of the currently playing buffer, or `0` if none */
 		inline std::uint32_t bufferId() const {
-			return currentBufferId_;
+			return _currentBufferId;
 		}
 
 		/** @brief Returns the number of bytes per sample */
 		inline std::int32_t bytesPerSample() const {
-			return bytesPerSample_;
+			return _bytesPerSample;
 		}
 		/** @brief Returns the number of audio channels */
 		inline std::int32_t numChannels() const {
-			return numChannels_;
+			return _numChannels;
 		}
 		/** @brief Returns the sample frequency */
 		inline std::int32_t frequency() const {
-			return frequency_;
+			return _frequency;
 		}
 
 		/** @brief Returns the total number of samples, or `-1` if unknown */
 		inline std::int32_t numSamples() const {
-			return numSamples_;
+			return _numSamples;
 		}
 		/** @brief Returns the duration in seconds */
 		inline float duration() const {
-			return duration_;
+			return _duration;
 		}
 
 		/** @brief Returns the total decoded size in bytes, or `-1` if unknown */
 		inline std::int32_t bufferSize() const {
-			return (numSamples_ == -1 ? -1 : (numSamples_ * numChannels_ * bytesPerSample_));
+			return (_numSamples == -1 ? -1 : (_numSamples * _numChannels * _bytesPerSample));
 		}
 
 		/** @brief Returns the number of samples held by a single streaming buffer */
@@ -77,7 +77,7 @@ namespace nCine
 
 		/** @brief Returns `true` if the stream is looping */
 		inline bool isLooping() const {
-			return isLooping_;
+			return _isLooping;
 		}
 		/** @brief Sets whether the stream should loop */
 		void setLooping(bool value);
@@ -86,9 +86,9 @@ namespace nCine
 		/** @brief Number of buffers used for streaming */
 		static const std::int32_t NumBuffers = 3;
 		/** @brief Backend buffer queue used for streaming */
-		SmallVector<std::uint32_t, NumBuffers> buffersIds_;
+		SmallVector<std::uint32_t, NumBuffers> _buffersIds;
 		/** @brief Index of the next available buffer, which is also the number of buffers currently queued */
-		std::int32_t nextAvailableBufferIndex_;
+		std::int32_t _nextAvailableBufferIndex;
 
 		/** @brief Size in bytes of each streaming buffer */
 #if defined(DEATH_TARGET_PSP)
@@ -104,30 +104,30 @@ namespace nCine
 		static const std::int32_t BufferSize = 16 * 1024;
 #endif
 		/** @brief Reusable decode request holding the intermediate buffer, executed ahead of time on the decoding thread when available */
-		std::shared_ptr<StreamDecodeRequest> decodeRequest_;
+		std::shared_ptr<StreamDecodeRequest> _decodeRequest;
 
 		/** @brief Backend id of the currently playing buffer, or 0 if none */
-		std::uint32_t currentBufferId_;
+		std::uint32_t _currentBufferId;
 
 		/** @brief Number of bytes per sample */
-		std::int32_t bytesPerSample_;
+		std::int32_t _bytesPerSample;
 		/** @brief Number of channels */
-		std::int32_t numChannels_;
+		std::int32_t _numChannels;
 		/** @brief Sample frequency */
-		std::int32_t frequency_;
+		std::int32_t _frequency;
 
 		/** @brief Number of samples */
-		std::int32_t numSamples_;
+		std::int32_t _numSamples;
 		/** @brief Duration in seconds */
-		float duration_;
+		float _duration;
 
 		/** @brief Whether the stream loops */
-		bool isLooping_;
+		bool _isLooping;
 
 		/** @brief Sample format of the decoded data */
-		IAudioDevice::BufferFormat format_;
-		/** @brief Reader that continuously streams decoded data, shared with @ref decodeRequest_ */
-		std::shared_ptr<IAudioReader> audioReader_;
+		IAudioDevice::BufferFormat _format;
+		/** @brief Reader that continuously streams decoded data, shared with @ref _decodeRequest */
+		std::shared_ptr<IAudioReader> _audioReader;
 
 		// Private constructors called only by AudioStreamPlayer
 		AudioStream();

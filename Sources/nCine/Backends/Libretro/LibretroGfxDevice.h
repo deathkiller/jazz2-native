@@ -47,7 +47,7 @@ namespace nCine::Backends
 		void setWindowSize(int width, int height) override {}
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override {
-			return currentVideoMode_;
+			return _currentVideoMode;
 		}
 
 	protected:

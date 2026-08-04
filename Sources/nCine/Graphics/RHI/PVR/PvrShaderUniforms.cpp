@@ -39,7 +39,7 @@ namespace nCine::RHI::PVR
 	}
 
 	PvrShaderUniforms::PvrShaderUniforms()
-		: shaderProgram_(nullptr), maybeDirty_(true)
+		: _shaderProgram(nullptr), _maybeDirty(true)
 	{
 	}
 
@@ -57,24 +57,24 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniforms::SetProgram(PvrShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformCaches_.clear();
-		maybeDirty_ = true;
+		_shaderProgram = shaderProgram;
+		_uniformCaches.clear();
+		_maybeDirty = true;
 
-		if (shaderProgram_->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
 		}
 	}
 
 	void PvrShaderUniforms::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		maybeDirty_ = true;
+		_maybeDirty = true;
 		std::uint32_t offset = 0;
-		for (PvrUniformCache& cache : uniformCaches_) {
+		for (PvrUniformCache& cache : _uniformCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.GetUniform()->GetMemorySize();
 		}
@@ -82,18 +82,18 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniforms::SetDirty(bool isDirty)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
-		maybeDirty_ = isDirty;
-		for (PvrUniformCache& cache : uniformCaches_) {
+		_maybeDirty = isDirty;
+		for (PvrUniformCache& cache : _uniformCaches) {
 			cache.SetDirty(isDirty);
 		}
 	}
 
 	bool PvrShaderUniforms::HasUniform(const char* name) const
 	{
-		for (const PvrUniformCache& cache : uniformCaches_) {
+		for (const PvrUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
 				return true;
 			}
@@ -103,9 +103,9 @@ namespace nCine::RHI::PVR
 
 	PvrUniformCache* PvrShaderUniforms::GetUniform(const char* name)
 	{
-		for (PvrUniformCache& cache : uniformCaches_) {
+		for (PvrUniformCache& cache : _uniformCaches) {
 			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
-				maybeDirty_ = true;
+				_maybeDirty = true;
 				return &cache;
 			}
 		}
@@ -114,38 +114,38 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ == nullptr) {
+		if (_shaderProgram == nullptr) {
 			return;
 		}
-		if (maybeDirty_ && shaderProgram_->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
-			shaderProgram_->Use();
-			for (PvrUniformCache& cache : uniformCaches_) {
+		if (_maybeDirty && _shaderProgram->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
+			_shaderProgram->Use();
+			for (PvrUniformCache& cache : _uniformCaches) {
 				cache.CommitValue();
 			}
-			maybeDirty_ = false;
+			_maybeDirty = false;
 		}
 	}
 
 	void PvrShaderUniforms::ImportUniforms(const char* includeOnly, const char* exclude)
 	{
-		for (const PvrUniform& uniform : shaderProgram_->uniforms_) {
+		for (const PvrUniform& uniform : _shaderProgram->_uniforms) {
 			if (ShouldImport(uniform.GetName(), includeOnly, exclude)) {
-				uniformCaches_.push_back(PvrUniformCache(&uniform));
+				_uniformCaches.push_back(PvrUniformCache(&uniform));
 			}
 		}
 	}
 
 	// -------------------------------------------------------------------------------------------------
 
-	PvrShaderUniformBlocks::UniformRangeAllocator PvrShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
+	PvrShaderUniformBlocks::UniformRangeAllocator PvrShaderUniformBlocks::_uniformRangeAllocator = nullptr;
 
 	void PvrShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
 	{
-		uniformRangeAllocator_ = allocator;
+		_uniformRangeAllocator = allocator;
 	}
 
 	PvrShaderUniformBlocks::PvrShaderUniformBlocks()
-		: shaderProgram_(nullptr), dataPointer_(nullptr)
+		: _shaderProgram(nullptr), _dataPointer(nullptr)
 	{
 	}
 
@@ -163,23 +163,23 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniformBlocks::SetProgram(PvrShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		shaderProgram_ = shaderProgram;
-		uniformBlockCaches_.clear();
+		_shaderProgram = shaderProgram;
+		_uniformBlockCaches.clear();
 
-		if (shaderProgram_->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniformBlocks(includeOnly, exclude);
 		}
 	}
 
 	void PvrShaderUniformBlocks::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		dataPointer_ = dataPointer;
+		_dataPointer = dataPointer;
 		std::int32_t offset = 0;
-		for (PvrUniformBlockCache& cache : uniformBlockCaches_) {
+		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetDataPointer(dataPointer + offset);
 			offset += cache.uniformBlock()->GetSize() - cache.uniformBlock()->GetAlignAmount();
 		}
@@ -187,7 +187,7 @@ namespace nCine::RHI::PVR
 
 	bool PvrShaderUniformBlocks::HasUniformBlock(const char* name) const
 	{
-		for (const PvrUniformBlockCache& cache : uniformBlockCaches_) {
+		for (const PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return true;
 			}
@@ -197,7 +197,7 @@ namespace nCine::RHI::PVR
 
 	PvrUniformBlockCache* PvrShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
-		for (PvrUniformBlockCache& cache : uniformBlockCaches_) {
+		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			if (std::strcmp(cache.uniformBlock()->GetName(), name) == 0) {
 				return &cache;
 			}
@@ -207,30 +207,30 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (shaderProgram_ == nullptr || shaderProgram_->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
 		std::int32_t totalUsedSize = 0;
 		bool hasMemoryGaps = false;
-		for (PvrUniformBlockCache& cache : uniformBlockCaches_) {
-			if (cache.GetDataPointer() != dataPointer_ + totalUsedSize) {
+		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
+			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
 				hasMemoryGaps = true;
 			}
 			totalUsedSize += cache.usedSize();
 		}
 
-		if (totalUsedSize > 0 && uniformRangeAllocator_ != nullptr) {
-			uboParams_ = uniformRangeAllocator_(std::uint32_t(totalUsedSize));
-			if (uboParams_.mapBase != nullptr) {
+		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
+			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
+			if (_uboParams.mapBase != nullptr) {
 				if (hasMemoryGaps) {
 					std::int32_t offset = 0;
-					for (PvrUniformBlockCache& cache : uniformBlockCaches_) {
-						std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, cache.GetDataPointer(), cache.usedSize());
+					for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
+						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
 						offset += cache.usedSize();
 					}
 				} else {
-					std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
 				}
 			}
 		}
@@ -238,25 +238,25 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniformBlocks::Bind()
 	{
-		if (uboParams_.object == nullptr) {
+		if (_uboParams.object == nullptr) {
 			return;
 		}
 
-		uboParams_.object->Bind();
+		_uboParams.object->Bind();
 		std::size_t moreOffset = 0;
-		for (PvrUniformBlockCache& cache : uniformBlockCaches_) {
+		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(uboParams_.offset) + moreOffset;
-			uboParams_.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
+			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
+			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
 			moreOffset += std::size_t(cache.usedSize());
 		}
 	}
 
 	void PvrShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)
 	{
-		for (PvrUniformBlock& block : shaderProgram_->uniformBlocks_) {
+		for (PvrUniformBlock& block : _shaderProgram->_uniformBlocks) {
 			if (ShouldImport(block.GetName(), includeOnly, exclude)) {
-				uniformBlockCaches_.push_back(PvrUniformBlockCache(&block));
+				_uniformBlockCaches.push_back(PvrUniformBlockCache(&block));
 			}
 		}
 	}

@@ -49,7 +49,7 @@ namespace nCine::RHI::GX
 	public:
 		/** @brief Monotonic count of presented frames, used to detect "still referenced by the in-flight FIFO" resources */
 		static std::uint32_t GetFrameCounter() {
-			return frameCounter_;
+			return _frameCounter;
 		}
 
 		/**
@@ -250,41 +250,41 @@ namespace nCine::RHI::GX
 			std::uint16_t* Data = nullptr;		// 256 RGB5A3 entries, 32-byte aligned
 		};
 
-		static BlendingState blending_;
-		static DepthTestState depthTest_;
-		static CullFaceState cullFace_;
-		static ScissorState scissor_;
-		static Recti viewport_;
-		static Colorf clearColor_;
+		static BlendingState _blending;
+		static DepthTestState _depthTest;
+		static CullFaceState _cullFace;
+		static ScissorState _scissor;
+		static Recti _viewport;
+		static Colorf _clearColor;
 
-		static GxShaderProgram* currentProgram_;
-		static const GxTexture* boundTextures_[MaxTextureUnits];
-		static UniformRange boundUniformRanges_[MaxUniformBindings];
-		static GxRenderTarget* currentRenderTarget_;
+		static GxShaderProgram* _currentProgram;
+		static const GxTexture* _boundTextures[MaxTextureUnits];
+		static UniformRange _boundUniformRanges[MaxUniformBindings];
+		static GxRenderTarget* _currentRenderTarget;
 
-		static GXRModeObj* rmode_;
-		static void* gxFifo_;
-		static bool gxInitialized_;
-		static std::int32_t logicalWidth_;
-		static std::int32_t logicalHeight_;
+		static GXRModeObj* _rmode;
+		static void* _gxFifo;
+		static bool _gxInitialized;
+		static std::int32_t _logicalWidth;
+		static std::int32_t _logicalHeight;
 
-		static GxTexture* paletteTexture_;
-		static std::uint32_t paletteGeneration_;
-		static TlutSlot tlutSlots_[MaxTlutSlots];
-		static std::uint32_t tlutUseCounter_;
-		static std::uint32_t frameCounter_;
+		static GxTexture* _paletteTexture;
+		static std::uint32_t _paletteGeneration;
+		static TlutSlot _tlutSlots[MaxTlutSlots];
+		static std::uint32_t _tlutUseCounter;
+		static std::uint32_t _frameCounter;
 
-		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
+		static std::vector<PendingSoftwareLight> _pendingSoftwareLights;
 
 		// Lightmap combine texture (rebuilt per Combine draw from the queued float lightmap)
-		static std::uint8_t* lightmapStore_;
-		static std::size_t lightmapStoreSize_;
-		static GXTexObj lightmapTexObj_;
+		static std::uint8_t* _lightmapStore;
+		static std::size_t _lightmapStoreSize;
+		static GXTexObj _lightmapTexObj;
 		// Linear staging buffer the lightmap texels are combined into before tiling; persists across
 		// frames and grows monotonically, because reallocating (and zero-filling) it per lit frame is
 		// wasted work - every byte is overwritten anyway
-		static std::uint8_t* lightmapLinear_;
-		static std::size_t lightmapLinearSize_;
+		static std::uint8_t* _lightmapLinear;
+		static std::size_t _lightmapLinearSize;
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);

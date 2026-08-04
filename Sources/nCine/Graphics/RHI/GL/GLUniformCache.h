@@ -30,15 +30,15 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the uniform described by this cache */
 		inline const GLUniform* GetUniform() const {
-			return uniform_;
+			return _uniform;
 		}
 		/** @brief Returns the host-side data pointer holding the cached value */
 		inline const GLubyte* GetDataPointer() const {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		/** @brief Sets the host-side data pointer holding the cached value */
 		inline void SetDataPointer(GLubyte* dataPointer) {
-			dataPointer_ = dataPointer;
+			_dataPointer = dataPointer;
 		}
 
 		/** @brief Returns the cached value as a float vector, or `nullptr` if unavailable */
@@ -73,11 +73,11 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns whether the cached value still needs to be committed to the GL */
 		inline bool IsDirty() const {
-			return isDirty_;
+			return _isDirty;
 		}
 		/** @brief Sets the dirty flag controlling whether the value is committed */
 		inline void SetDirty(bool isDirty) {
-			isDirty_ = isDirty;
+			_isDirty = isDirty;
 		}
 		/**
 		 * @brief Uploads the cached value to the shader if it is dirty
@@ -89,10 +89,10 @@ namespace nCine::RHI::GL
 		bool CommitValue();
 
 	private:
-		const GLUniform* uniform_;
-		GLubyte* dataPointer_;
+		const GLUniform* _uniform;
+		GLubyte* _dataPointer;
 		// A flag to signal if the uniform needs to be committed
-		bool isDirty_;
+		bool _isDirty;
 
 		bool CheckFloat() const;
 		bool CheckInt() const;

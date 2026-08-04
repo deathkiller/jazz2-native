@@ -79,22 +79,22 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys; also keys the Vulkan pipeline/descriptor caches) */
 		inline std::uint32_t GetUniqueId() const {
-			return handle_;
+			return _handle;
 		}
 		inline Status GetStatus() const {
-			return status_;
+			return _status;
 		}
 		inline Introspection GetIntrospection() const {
-			return introspection_;
+			return _introspection;
 		}
 		inline QueryPhase GetQueryPhase() const {
-			return queryPhase_;
+			return _queryPhase;
 		}
 		inline std::uint32_t GetBatchSize() const {
-			return batchSize_;
+			return _batchSize;
 		}
 		inline void SetBatchSize(std::uint32_t value) {
-			batchSize_ = value;
+			_batchSize = value;
 		}
 
 		bool IsLinked() const;
@@ -107,10 +107,10 @@ namespace nCine::RHI::Vulkan
 		}
 
 		inline std::uint32_t GetUniformsSize() const {
-			return uniformsSize_;
+			return _uniformsSize;
 		}
 		inline std::uint32_t GetUniformBlocksSize() const {
-			return uniformBlocksSize_;
+			return _uniformBlocksSize;
 		}
 
 		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
@@ -120,7 +120,7 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
-			reflection_ = reflection;
+			_reflection = reflection;
 		}
 		/**
 			@brief Records the true (program, variant) identity of the loaded shader
@@ -143,7 +143,7 @@ namespace nCine::RHI::Vulkan
 		bool FinalizeAfterLinking(Introspection introspection);
 
 		inline std::uint32_t GetAttributeCount() const {
-			return std::uint32_t(attributes_.size());
+			return std::uint32_t(_attributes.size());
 		}
 		bool HasAttribute(const char* name) const;
 		VulkanVertexFormat::Attribute* GetAttribute(const char* name);
@@ -160,10 +160,10 @@ namespace nCine::RHI::Vulkan
 		void SetObjectLabel(StringView label);
 
 		inline bool GetLogOnErrors() const {
-			return shouldLogOnErrors_;
+			return _shouldLogOnErrors;
 		}
 		inline void SetLogOnErrors(bool shouldLogOnErrors) {
-			shouldLogOnErrors_ = shouldLogOnErrors;
+			_shouldLogOnErrors = shouldLogOnErrors;
 		}
 
 		// -- Backend extensions (used by the uniform caches and the device draw path) --
@@ -175,15 +175,15 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns `true` if the vertex shader reads vertex attributes (needs vertex input state + a vertex buffer) */
 		inline bool HasVertexAttributes() const {
-			return !attributes_.empty();
+			return !_attributes.empty();
 		}
 		/** @brief Returns the vertex buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const VulkanBufferObject* GetBoundVbo() const {
-			return boundVbo_;
+			return _boundVbo;
 		}
 		/** @brief Returns the index buffer bound by @ref DefineVertexFormat(), or `nullptr` */
 		inline const VulkanBufferObject* GetBoundIbo() const {
-			return boundIbo_;
+			return _boundIbo;
 		}
 
 		// -- SPIR-V modules, descriptor-set layout and the reflection metadata the device uses to
@@ -209,24 +209,24 @@ namespace nCine::RHI::Vulkan
 
 		/** @brief Returns `true` if the SPIR-V modules and layouts were built successfully (draws are skipped otherwise) */
 		inline bool HasPipelineState() const {
-			return (vsModule_ != 0 && fsModule_ != 0 && pipelineLayout_ != 0);
+			return (_vsModule != 0 && _fsModule != 0 && _pipelineLayout != 0);
 		}
 		/** @brief The vertex-stage `VkShaderModule` (as `std::uint64_t`) */
-		inline std::uint64_t GetVsModule() const { return vsModule_; }
+		inline std::uint64_t GetVsModule() const { return _vsModule; }
 		/** @brief The fragment-stage `VkShaderModule` */
-		inline std::uint64_t GetFsModule() const { return fsModule_; }
+		inline std::uint64_t GetFsModule() const { return _fsModule; }
 		/** @brief The `VkPipelineLayout` (one descriptor set, set 0) */
-		inline std::uint64_t GetPipelineLayout() const { return pipelineLayout_; }
+		inline std::uint64_t GetPipelineLayout() const { return _pipelineLayout; }
 		/** @brief The `VkDescriptorSetLayout` for set 0 */
-		inline std::uint64_t GetDescriptorSetLayout() const { return descriptorSetLayout_; }
+		inline std::uint64_t GetDescriptorSetLayout() const { return _descriptorSetLayout; }
 		/** @brief The descriptor bindings (in reflection order) the device writes each draw */
-		inline const std::vector<DescriptorBinding>& GetDescriptorBindings() const { return descriptorBindings_; }
+		inline const std::vector<DescriptorBinding>& GetDescriptorBindings() const { return _descriptorBindings; }
 		/** @brief The loose uniforms gathered into "_Globals" (empty if the program has none) */
-		inline const std::vector<LooseUniform>& GetLooseUniforms() const { return looseUniforms_; }
+		inline const std::vector<LooseUniform>& GetLooseUniforms() const { return _looseUniforms; }
 		/** @brief std140 byte size of the "_Globals" UBO (0 if the program has no loose uniforms) */
-		inline std::uint32_t GetGlobalsSize() const { return globalsSize_; }
+		inline std::uint32_t GetGlobalsSize() const { return _globalsSize; }
 		/** @brief The binding number of the "_Globals" UBO (always 0 when present) */
-		inline bool HasGlobals() const { return globalsSize_ > 0; }
+		inline bool HasGlobals() const { return _globalsSize > 0; }
 
 		/** @brief A vertex attribute for building the pipeline's vertex input state */
 		struct VertexAttrib
@@ -246,42 +246,42 @@ namespace nCine::RHI::Vulkan
 		std::uint32_t GetVertexInput(VertexAttrib* outAttribs, std::uint32_t maxAttribs, std::uint32_t& outStride) const;
 
 	private:
-		static std::uint32_t nextHandle_;
+		static std::uint32_t _nextHandle;
 
-		std::uint32_t handle_;
-		Status status_;
-		Introspection introspection_;
-		QueryPhase queryPhase_;
-		std::uint32_t batchSize_;
-		bool shouldLogOnErrors_;
-		std::uint32_t uniformsSize_;
-		std::uint32_t uniformBlocksSize_;
+		std::uint32_t _handle;
+		Status _status;
+		Introspection _introspection;
+		QueryPhase _queryPhase;
+		std::uint32_t _batchSize;
+		bool _shouldLogOnErrors;
+		std::uint32_t _uniformsSize;
+		std::uint32_t _uniformBlocksSize;
 
-		std::vector<VulkanUniform> uniforms_;
-		std::vector<VulkanUniformBlock> uniformBlocks_;
-		std::vector<VulkanAttribute> attributes_;
+		std::vector<VulkanUniform> _uniforms;
+		std::vector<VulkanUniformBlock> _uniformBlocks;
+		std::vector<VulkanAttribute> _attributes;
 
-		const ShaderCompiler::ProgramVariant* reflection_;
+		const ShaderCompiler::ProgramVariant* _reflection;
 
-		VulkanVertexFormat vertexFormat_;
-		const VulkanBufferObject* boundVbo_;
-		const VulkanBufferObject* boundIbo_;
+		VulkanVertexFormat _vertexFormat;
+		const VulkanBufferObject* _boundVbo;
+		const VulkanBufferObject* _boundIbo;
 
 		struct ResolvedUniform
 		{
 			String Name;
 			const std::uint8_t* Data;
 		};
-		std::vector<ResolvedUniform> resolvedUniforms_;
+		std::vector<ResolvedUniform> _resolvedUniforms;
 
 		// GPU objects (opaque integers; see the getters above)
-		std::uint64_t vsModule_;
-		std::uint64_t fsModule_;
-		std::uint64_t descriptorSetLayout_;
-		std::uint64_t pipelineLayout_;
-		std::vector<DescriptorBinding> descriptorBindings_;
-		std::vector<LooseUniform> looseUniforms_;
-		std::uint32_t globalsSize_;
+		std::uint64_t _vsModule;
+		std::uint64_t _fsModule;
+		std::uint64_t _descriptorSetLayout;
+		std::uint64_t _pipelineLayout;
+		std::vector<DescriptorBinding> _descriptorBindings;
+		std::vector<LooseUniform> _looseUniforms;
+		std::uint32_t _globalsSize;
 
 		void PerformIntrospection();
 		void ImportReflection();

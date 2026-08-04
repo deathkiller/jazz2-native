@@ -90,31 +90,31 @@ namespace nCine
 		};
 #endif
 
-		bool lockOverlayPositions_;
-		bool showTopLeftOverlay_;
-		bool showTopRightOverlay_;
-		bool showBottomLeftOverlay_;
-		bool showBottomRightOverlay_;
+		bool _lockOverlayPositions;
+		bool _showTopLeftOverlay;
+		bool _showTopRightOverlay;
+		bool _showBottomLeftOverlay;
+		bool _showBottomRightOverlay;
 
-		std::uint32_t numValues_;
-		std::unique_ptr<float[]> plotValues_[ValuesType::Count];
-		float maxFrameTime_;
-		float maxUpdateVisitDraw_;
-		std::uint32_t index_;
-		bool plotAdditionalFrameValues_;
-		bool plotOverlayValues_;
-		String comboVideoModes_;
+		std::uint32_t _numValues;
+		std::unique_ptr<float[]> _plotValues[ValuesType::Count];
+		float _maxFrameTime;
+		float _maxUpdateVisitDraw;
+		std::uint32_t _index;
+		bool _plotAdditionalFrameValues;
+		bool _plotOverlayValues;
+		String _comboVideoModes;
 
-		SmallVector<LogMessage, 0> logBuffer_;
+		SmallVector<LogMessage, 0> _logBuffer;
 
 #if defined(WITH_RENDERDOC)
 		static constexpr std::uint32_t MaxRenderDocPathLength = 128;
 		static constexpr std::uint32_t MaxRenderDocCommentsLength = 512;
 
-		String renderDocPathTemplate_;
-		String renderDocFileComments_;
-		String renderDocCapturePath_;
-		std::uint32_t renderDocLastNumCaptures_;
+		String _renderDocPathTemplate;
+		String _renderDocFileComments;
+		String _renderDocCapturePath;
+		std::uint32_t _renderDocLastNumCaptures;
 #endif
 
 		void guiWindow();

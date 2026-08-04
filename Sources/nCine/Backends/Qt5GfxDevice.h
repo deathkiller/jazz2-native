@@ -56,8 +56,8 @@ namespace nCine::Backends
 		void setResolutionInternal(int width, int height) override;
 
 	private:
-		Qt5Widget& widget_;
-		bool isResizable_;
+		Qt5Widget& _widget;
+		bool _isResizable;
 
 		/** @brief Deleted copy constructor */
 		Qt5GfxDevice(const Qt5GfxDevice&) = delete;

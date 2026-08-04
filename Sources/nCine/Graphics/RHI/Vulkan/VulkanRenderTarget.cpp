@@ -8,11 +8,11 @@
 namespace nCine::RHI::Vulkan
 {
 	VulkanRenderTarget::VulkanRenderTarget()
-		: numDrawBuffers_(1), framebuffer_(0), framebufferViewCount_(0)
+		: _numDrawBuffers(1), _framebuffer(0), _framebufferViewCount(0)
 	{
 		for (std::uint32_t i = 0; i < MaxColorAttachments; i++) {
-			colorTextures_[i] = nullptr;
-			framebufferViews_[i] = 0;
+			_colorTextures[i] = nullptr;
+			_framebufferViews[i] = 0;
 		}
 	}
 
@@ -29,18 +29,18 @@ namespace nCine::RHI::Vulkan
 		// (up to MaxFramesInFlight frames run concurrently), and this also runs on an attachment rebuild; freeing
 		// now would be a GPU use-after-free. The device frees it once every referencing frame has completed.
 		// VkEnqueueDestroy no-ops if the device is already gone (teardown).
-		VkEnqueueDestroy(VkDeferredResource::Framebuffer, framebuffer_);
-		framebuffer_ = 0;
+		VkEnqueueDestroy(VkDeferredResource::Framebuffer, _framebuffer);
+		_framebuffer = 0;
 		for (std::uint32_t i = 0; i < MaxColorAttachments; i++) {
-			framebufferViews_[i] = 0;
+			_framebufferViews[i] = 0;
 		}
-		framebufferViewCount_ = 0;
+		_framebufferViewCount = 0;
 	}
 
 	std::uint32_t VulkanRenderTarget::GetAttachedCount() const
 	{
 		std::uint32_t count = 0;
-		while (count < MaxColorAttachments && colorTextures_[count] != nullptr) {
+		while (count < MaxColorAttachments && _colorTextures[count] != nullptr) {
 			count++;
 		}
 		return count;
@@ -48,7 +48,7 @@ namespace nCine::RHI::Vulkan
 
 	std::uint64_t VulkanRenderTarget::GetFramebuffer()
 	{
-		VulkanTexture* color = colorTextures_[0];
+		VulkanTexture* color = _colorTextures[0];
 		VkDevice device = VkDeviceHandle();
 		if (color == nullptr || device == VK_NULL_HANDLE || color->GetWidth() <= 0 || color->GetHeight() <= 0) {
 			return 0;
@@ -61,16 +61,16 @@ namespace nCine::RHI::Vulkan
 		VkImageView attachments[MaxColorAttachments];
 		VkFormat formats[MaxColorAttachments];
 		for (std::uint32_t i = 0; i < count; i++) {
-			views[i] = colorTextures_[i]->GpuView();
+			views[i] = _colorTextures[i]->GpuView();
 			if (views[i] == 0) {
 				return 0;
 			}
 			attachments[i] = reinterpret_cast<VkImageView>(views[i]);
-			formats[i] = VkFormat(colorTextures_[i]->GpuFormat());
+			formats[i] = VkFormat(_colorTextures[i]->GpuFormat());
 		}
-		if (framebuffer_ != 0 && framebufferViewCount_ == count &&
-			std::memcmp(framebufferViews_, views, count * sizeof(std::uint64_t)) == 0) {
-			return framebuffer_;
+		if (_framebuffer != 0 && _framebufferViewCount == count &&
+			std::memcmp(_framebufferViews, views, count * sizeof(std::uint64_t)) == 0) {
+			return _framebuffer;
 		}
 		ReleaseFramebuffer();
 
@@ -90,18 +90,18 @@ namespace nCine::RHI::Vulkan
 		if (vkCreateFramebuffer(device, &fci, nullptr, &framebuffer) != VK_SUCCESS) {
 			return 0;
 		}
-		framebuffer_ = reinterpret_cast<std::uint64_t>(framebuffer);
+		_framebuffer = reinterpret_cast<std::uint64_t>(framebuffer);
 		for (std::uint32_t i = 0; i < count; i++) {
-			framebufferViews_[i] = views[i];
+			_framebufferViews[i] = views[i];
 		}
-		framebufferViewCount_ = count;
-		return framebuffer_;
+		_framebufferViewCount = count;
+		return _framebuffer;
 	}
 
 	void VulkanRenderTarget::AttachColorTexture(VulkanTexture& texture, std::uint32_t index)
 	{
 		if (index < MaxColorAttachments) {
-			colorTextures_[index] = &texture;
+			_colorTextures[index] = &texture;
 			texture.SetRenderTarget(true);
 			// Any attachment is (potentially) part of the framebuffer now, so a change to any slot rebuilds it
 			ReleaseFramebuffer();
@@ -111,7 +111,7 @@ namespace nCine::RHI::Vulkan
 	void VulkanRenderTarget::DetachColorTexture(std::uint32_t index)
 	{
 		if (index < MaxColorAttachments) {
-			colorTextures_[index] = nullptr;
+			_colorTextures[index] = nullptr;
 			ReleaseFramebuffer();
 		}
 	}
@@ -140,13 +140,13 @@ namespace nCine::RHI::Vulkan
 
 	bool VulkanRenderTarget::SetDrawBuffers(std::uint32_t numColorAttachments)
 	{
-		numDrawBuffers_ = numColorAttachments;
+		_numDrawBuffers = numColorAttachments;
 		return true;
 	}
 
 	bool VulkanRenderTarget::IsStatusComplete()
 	{
-		return (colorTextures_[0] != nullptr);
+		return (_colorTextures[0] != nullptr);
 	}
 
 	void VulkanRenderTarget::InvalidateDepthStencil(DepthStencilFormat format)

@@ -15,25 +15,25 @@ namespace nCine::RHI
 #endif
 
 	RhiCapabilitiesBase::RhiCapabilitiesBase()
-		: majorVersion_(0), minorVersion_(0), releaseVersion_(0)
+		: _majorVersion(0), _minorVersion(0), _releaseVersion(0)
 	{
 		for (std::int32_t i = 0; i < (std::int32_t)IntValues::Count; i++) {
-			intValues_[i] = 0;
+			_intValues[i] = 0;
 		}
 		for (std::int32_t i = 0; i < (std::int32_t)Extensions::Count; i++) {
-			extensions_[i] = false;
+			_extensions[i] = false;
 		}
 		for (std::int32_t i = 0; i < MaxProgramBinaryFormats; i++) {
-			programBinaryFormats_[i] = -1;
+			_programBinaryFormats[i] = -1;
 		}
 	}
 
 	std::int32_t RhiCapabilitiesBase::GetApiVersion(IRhiCapabilities::ApiVersion version) const
 	{
 		switch (version) {
-			case ApiVersion::Major: return majorVersion_;
-			case ApiVersion::Minor: return minorVersion_;
-			case ApiVersion::Release: return releaseVersion_;
+			case ApiVersion::Major: return _majorVersion;
+			case ApiVersion::Minor: return _minorVersion;
+			case ApiVersion::Release: return _releaseVersion;
 			default: return 0;
 		}
 	}
@@ -42,7 +42,7 @@ namespace nCine::RHI
 	{
 		std::int32_t value = 0;
 		if (valueName >= (IntValues)0 && valueName < IntValues::Count) {
-			value = intValues_[(std::int32_t)valueName];
+			value = _intValues[(std::int32_t)valueName];
 		}
 		return value;
 	}
@@ -50,8 +50,8 @@ namespace nCine::RHI
 	std::int32_t RhiCapabilitiesBase::GetArrayValue(ArrayIntValues valueName, std::uint32_t index) const
 	{
 		std::int32_t value = 0;
-		if (valueName == ArrayIntValues::PROGRAM_BINARY_FORMATS && index < std::uint32_t(intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS])) {
-			value = programBinaryFormats_[index];
+		if (valueName == ArrayIntValues::PROGRAM_BINARY_FORMATS && index < std::uint32_t(_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS])) {
+			value = _programBinaryFormats[index];
 		}
 		return value;
 	}
@@ -60,7 +60,7 @@ namespace nCine::RHI
 	{
 		bool extensionAvailable = false;
 		if (extensionName >= (Extensions)0 && extensionName < Extensions::Count) {
-			extensionAvailable = extensions_[(std::int32_t)extensionName];
+			extensionAvailable = _extensions[(std::int32_t)extensionName];
 		}
 		return extensionAvailable;
 	}
@@ -68,55 +68,55 @@ namespace nCine::RHI
 	void RhiCapabilitiesBase::SetDeviceCapabilities(const char* renderer, std::int32_t maxTextureSize, std::int32_t maxTextureImageUnits,
 		std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments)
 	{
-		majorVersion_ = 3;
-		minorVersion_ = 3;
-		releaseVersion_ = 0;
-		infoStrings_.vendor = nullptr;
-		infoStrings_.renderer = renderer;
-		infoStrings_.apiVersion = "3.3";
-		infoStrings_.shadingLanguageVersion = nullptr;
+		_majorVersion = 3;
+		_minorVersion = 3;
+		_releaseVersion = 0;
+		_infoStrings.vendor = nullptr;
+		_infoStrings.renderer = renderer;
+		_infoStrings.apiVersion = "3.3";
+		_infoStrings.shadingLanguageVersion = nullptr;
 
-		intValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = maxTextureSize;
-		intValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = maxTextureImageUnits;
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = maxUniformBlockSize;
-		intValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = uniformBufferOffsetAlignment;
-		intValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = maxColorAttachments;
+		_intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = maxTextureSize;
+		_intValues[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = maxTextureImageUnits;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = maxUniformBlockSize;
+		_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = uniformBufferOffsetAlignment;
+		_intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = maxColorAttachments;
 
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 8;
-		intValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 8;
-		intValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 8;
-		intValues_[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] = 2048;
-		intValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] = 0;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 8;
+		_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 8;
+		_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 8;
+		_intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] = 2048;
+		_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] = 0;
 
 		NormalizeUniformBlockSize();
 	}
 
 	void RhiCapabilitiesBase::NormalizeUniformBlockSize()
 	{
-		std::int32_t normalized = intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
+		std::int32_t normalized = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
 		if (normalized > 64 * 1024) {
 			normalized = 64 * 1024;
 		} else if (normalized <= 0) {
 			normalized = 16 * 1024;
 		}
-		intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = normalized;
+		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = normalized;
 	}
 
 	void RhiCapabilitiesBase::LogCapabilities() const
 	{
 #if defined(DEATH_TRACE)
 		LOGI("--- Rendering device info ---");
-		if (!IsInfoStringEmpty(infoStrings_.vendor)) {
-			LOGI("Vendor: {}", infoStrings_.vendor);
+		if (!IsInfoStringEmpty(_infoStrings.vendor)) {
+			LOGI("Vendor: {}", _infoStrings.vendor);
 		}
-		if (!IsInfoStringEmpty(infoStrings_.renderer)) {
-			LOGI("Renderer: {}", infoStrings_.renderer);
+		if (!IsInfoStringEmpty(_infoStrings.renderer)) {
+			LOGI("Renderer: {}", _infoStrings.renderer);
 		}
-		if (!IsInfoStringEmpty(infoStrings_.apiVersion)) {
-			LOGI("API version: {}", infoStrings_.apiVersion);
+		if (!IsInfoStringEmpty(_infoStrings.apiVersion)) {
+			LOGI("API version: {}", _infoStrings.apiVersion);
 		}
-		if (!IsInfoStringEmpty(infoStrings_.shadingLanguageVersion)) {
-			LOGI("Shading language version: {}", infoStrings_.shadingLanguageVersion);
+		if (!IsInfoStringEmpty(_infoStrings.shadingLanguageVersion)) {
+			LOGI("Shading language version: {}", _infoStrings.shadingLanguageVersion);
 		}
 
 		// The tier the pipeline runs on this backend, which is what most of the guarded rendering code keys on
@@ -147,27 +147,27 @@ namespace nCine::RHI
 #	endif
 
 		LOGI("--- Rendering device capabilities ---");
-		LOGI("Max texture size: {}", intValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);
-		LOGI("Max texture image units: {}", intValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS]);
-		LOGI("Max color attachments: {}", intValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS]);
+		LOGI("Max texture size: {}", _intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);
+		LOGI("Max texture image units: {}", _intValues[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS]);
+		LOGI("Max color attachments: {}", _intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS]);
 		// Not queryable on every target (ES 3.0 and below, WebGL, Apple ARM), where it stays 0
-		if (intValues_[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] > 0) {
-			LOGI("Max vertex attribute stride: {}", intValues_[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+		if (_intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] > 0) {
+			LOGI("Max vertex attribute stride: {}", _intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 		}
 
-		const std::int32_t blockSize = intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
-		const std::int32_t blockSizeUsed = intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED];
+		const std::int32_t blockSize = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
+		const std::int32_t blockSizeUsed = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED];
 		if (blockSize != blockSizeUsed) {
 			LOGI("Max uniform block size: {} ({} used)", blockSize, blockSizeUsed);
 		} else {
 			LOGI("Max uniform block size: {}", blockSize);
 		}
-		if (intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] > 0) {
+		if (_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] > 0) {
 			LOGI("Max uniform buffer bindings: {} (vertex {}, fragment {}), offset alignment: {}",
-				intValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS],
-				intValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS],
-				intValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS],
-				intValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+				_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS],
+				_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS],
+				_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS],
+				_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
 		} else {
 			LOGI("Uniform buffer objects: not available, uniforms are set individually");
 		}

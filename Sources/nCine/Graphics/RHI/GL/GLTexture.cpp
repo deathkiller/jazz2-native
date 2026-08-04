@@ -84,21 +84,21 @@ namespace nCine::RHI::GL
 #endif
 	}
 
-	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::boundTextures_[MaxTextureUnits];
-	std::uint32_t GLTexture::boundUnit_ = 0;
+	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::_boundTextures[MaxTextureUnits];
+	std::uint32_t GLTexture::_boundUnit = 0;
 
 	void GLTexture::InvalidateCachedBindings()
 	{
 		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
-			boundTextures_[i].SetAll(~0u);
+			_boundTextures[i].SetAll(~0u);
 		}
-		boundUnit_ = ~0u;
+		_boundUnit = ~0u;
 	}
 
 	GLTexture::GLTexture(TextureTarget target)
-		: glHandle_(0), target_(TextureTargetToGL(target)), textureUnit_(0)
+		: _glHandle(0), _target(TextureTargetToGL(target)), _textureUnit(0)
 	{
-		glGenTextures(1, &glHandle_);
+		glGenTextures(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
@@ -108,27 +108,27 @@ namespace nCine::RHI::GL
 		// currently active one - otherwise the freed handle lingers in the cache and a later texture that reuses
 		// the same GL handle would be considered already bound (its bind skipped -> wrong texture sampled).
 		for (std::uint32_t textureUnit = 0; textureUnit < MaxTextureUnits; textureUnit++) {
-			if (boundTextures_[textureUnit][target_] == glHandle_) {
-				BindHandle(target_, 0, textureUnit);
+			if (_boundTextures[textureUnit][_target] == _glHandle) {
+				BindHandle(_target, 0, textureUnit);
 			}
 		}
 
-		glDeleteTextures(1, &glHandle_);
+		glDeleteTextures(1, &_glHandle);
 		GL_LOG_ERRORS();
 	}
 
 	bool GLTexture::Bind(std::uint32_t textureUnit) const
 	{
-		const bool hasBound = BindHandle(target_, glHandle_, textureUnit);
+		const bool hasBound = BindHandle(_target, _glHandle, textureUnit);
 		if (hasBound) {
-			textureUnit_ = textureUnit;
+			_textureUnit = textureUnit;
 		}
 		return hasBound;
 	}
 
 	bool GLTexture::Unbind() const
 	{
-		return BindHandle(target_, 0, textureUnit_);
+		return BindHandle(_target, 0, _textureUnit);
 	}
 
 	bool GLTexture::Unbind(GLenum target, std::uint32_t textureUnit)
@@ -149,7 +149,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, bgr, internalFormat, externalFormat, dataType);
-		glTexImage2D(target_, level, internalFormat, width, height, 0, externalFormat, dataType, data);
+		glTexImage2D(_target, level, internalFormat, width, height, 0, externalFormat, dataType, data);
 		GL_LOG_ERRORS();
 	}
 
@@ -160,7 +160,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, bgr, internalFormat, externalFormat, dataType);
-		glTexSubImage2D(target_, level, xoffset, yoffset, width, height, externalFormat, dataType, data);
+		glTexSubImage2D(_target, level, xoffset, yoffset, width, height, externalFormat, dataType, data);
 		GL_LOG_ERRORS();
 	}
 
@@ -172,7 +172,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
-		glCompressedTexImage2D(target_, level, internalFormat, width, height, 0, imageSize, data);
+		glCompressedTexImage2D(_target, level, internalFormat, width, height, 0, imageSize, data);
 		GL_LOG_ERRORS();
 	}
 
@@ -186,7 +186,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
-		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, internalFormat, imageSize, data);
+		glCompressedTexSubImage2D(_target, level, xoffset, yoffset, width, height, internalFormat, imageSize, data);
 #endif
 		GL_LOG_ERRORS();
 	}
@@ -203,7 +203,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
-		glTexStorage2D(target_, levels, internalFormat, width, height);
+		glTexStorage2D(_target, levels, internalFormat, width, height);
 #else
 		static_cast<void>(levels);
 		static_cast<void>(width);
@@ -220,7 +220,7 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, bgr, internalFormat, externalFormat, dataType);
-		glGetTexImage(target_, level, externalFormat, dataType, pixels);
+		glGetTexImage(_target, level, externalFormat, dataType, pixels);
 		GL_LOG_ERRORS();
 #endif
 	}
@@ -278,20 +278,20 @@ namespace nCine::RHI::GL
 	void GLTexture::TexParameterf(GLenum pname, GLfloat param)
 	{
 		Bind();
-		glTexParameterf(target_, pname, param);
+		glTexParameterf(_target, pname, param);
 		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::TexParameteri(GLenum pname, GLint param)
 	{
 		Bind();
-		glTexParameteri(target_, pname, param);
+		glTexParameteri(_target, pname, param);
 		GL_LOG_ERRORS();
 	}
 
 	void GLTexture::SetObjectLabel(StringView label)
 	{
-		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
+		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Texture, _glHandle, label);
 	}
 
 	bool GLTexture::SupportsImmutableStorage()
@@ -337,15 +337,15 @@ namespace nCine::RHI::GL
 	{
 		FATAL_ASSERT(textureUnit < MaxTextureUnits);
 
-		if (boundTextures_[textureUnit][target] != glHandle) {
-			if (boundUnit_ != textureUnit) {
+		if (_boundTextures[textureUnit][target] != glHandle) {
+			if (_boundUnit != textureUnit) {
 				glActiveTexture(GL_TEXTURE0 + textureUnit);
-				boundUnit_ = textureUnit;
+				_boundUnit = textureUnit;
 			}
 
 			glBindTexture(target, glHandle);
 			GL_LOG_ERRORS();
-			boundTextures_[textureUnit][target] = glHandle;
+			_boundTextures[textureUnit][target] = glHandle;
 			return true;
 		}
 		return false;
@@ -354,6 +354,6 @@ namespace nCine::RHI::GL
 	GLuint GLTexture::GetBoundHandle(GLenum target, unsigned int textureUnit)
 	{
 		FATAL_ASSERT(textureUnit < MaxTextureUnits);
-		return boundTextures_[textureUnit][target];
+		return _boundTextures[textureUnit][target];
 	}
 }

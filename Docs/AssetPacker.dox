@@ -29,6 +29,17 @@ target. It links only the base layer and the original-data converters, deliberat
 engine, so it has no renderer, no window backend and no networking. After a regular
 @ref building "desktop build" the binary is at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
 
+On Windows the tool is also a project of @cpp "Jazz2.sln" @ce
+(@cpp "Sources/Utilities/AssetPacker/AssetPacker.vcxproj" @ce, in the `Utilities` solution folder
+next to `ShaderCompiler`), for when the solution is more convenient than a CMake configure. CMake
+remains the primary build; the project file mirrors the CMake target's source set and its
+@cpp CMAKE_BUILD @ce / @cpp DEATH_NO_THREADS @ce / @cpp DEATH_TRACE @ce / @cpp WITH_ZLIB @ce
+definitions, and expects the prebuilt dependencies in the repository's @cpp "Libs" @ce directory
+(@cpp "Libs/Includes" @ce and @cpp "Libs/Windows/x64" @ce or @cpp "x86" @ce) the same way the game
+project does --- it links @cpp "zlib.lib" @ce explicitly rather than through the shared headers'
+@cpp #pragma comment(lib, ...) @ce auto-linking, whose relative paths only resolve for a project
+sitting directly in @cpp "Sources" @ce.
+
 @section asset-packer-usage Command-line reference
 
 @code{.sh}

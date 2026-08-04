@@ -37,7 +37,7 @@ namespace nCine
 
 		/** @brief Sets the input event handler that receives mapped events */
 		inline void SetHandler(IInputEventHandler* inputEventHandler) {
-			inputEventHandler_ = inputEventHandler;
+			_inputEventHandler = inputEventHandler;
 		}
 
 		/** @brief Adds mapping configurations from a string and returns `true` on success */
@@ -47,7 +47,7 @@ namespace nCine
 
 		/** @brief Returns the current number of loaded mappings */
 		inline std::int32_t numMappings() const {
-			return (std::int32_t)mappings_.size();
+			return (std::int32_t)_mappings.size();
 		}
 
 		/** @brief Translates a raw button press and dispatches the mapped event */
@@ -139,16 +139,16 @@ namespace nCine
 		static const char* AxesStrings[];
 		static const char* ButtonsStrings[];
 
-		SmallVector<MappedJoystick, 0> mappings_;
-		AssignedMapping assignedMappings_[MaxNumJoysticks];
+		SmallVector<MappedJoystick, 0> _mappings;
+		AssignedMapping _assignedMappings[MaxNumJoysticks];
 
-		static JoyMappedState nullMappedJoyState_;
-		static SmallVector<JoyMappedState, MaxNumJoysticks> mappedJoyStates_;
-		static JoyMappedButtonEvent mappedButtonEvent_;
-		static JoyMappedAxisEvent mappedAxisEvent_;
+		static JoyMappedState _nullMappedJoyState;
+		static SmallVector<JoyMappedState, MaxNumJoysticks> _mappedJoyStates;
+		static JoyMappedButtonEvent _mappedButtonEvent;
+		static JoyMappedAxisEvent _mappedAxisEvent;
 
-		const IInputManager* inputManager_;
-		IInputEventHandler* inputEventHandler_;
+		const IInputManager* _inputManager;
+		IInputEventHandler* _inputEventHandler;
 
 		bool AddMappingsFromStringInternal(StringView mappingString, StringView traceSource);
 		void CheckConnectedJoystics();

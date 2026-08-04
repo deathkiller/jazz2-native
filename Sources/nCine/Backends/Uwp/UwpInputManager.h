@@ -72,17 +72,17 @@ namespace nCine::Backends
 		/** @brief Minimum difference between two axis readings in order to trigger an event */
 		static constexpr float AxisEventTolerance = 0.001f;
 
-		static JoyButtonEvent joyButtonEvent_;
-		static JoyHatEvent joyHatEvent_;
-		static JoyAxisEvent joyAxisEvent_;
+		static JoyButtonEvent _joyButtonEvent;
+		static JoyHatEvent _joyHatEvent;
+		static JoyAxisEvent _joyAxisEvent;
 
-		int joyId_;
+		int _joyId;
 		/** @brief Old state used to simulate joystick buttons events */
-		bool buttonsState_[MaxNumButtons];
+		bool _buttonsState[MaxNumButtons];
 		/** @brief Old state used to simulate joystick hats events */
-		unsigned char hatsState_[MaxNumHats];
+		unsigned char _hatsState[MaxNumHats];
 		/** @brief Old state used to simulate joystick axes events */
-		float axesValuesState_[MaxNumAxes];
+		float _axesValuesState[MaxNumAxes];
 	};
 
 	/**
@@ -102,8 +102,8 @@ namespace nCine::Backends
 		/** @brief Updates joystick state structures and simulates events */
 		static void updateJoystickStates();
 
-		const MouseState& mouseState() const override { return mouseState_; }
-		inline const KeyboardState& keyboardState() const override { return keyboardState_; }
+		const MouseState& mouseState() const override { return _mouseState; }
+		inline const KeyboardState& keyboardState() const override { return _keyboardState; }
 
 		bool isJoyPresent(int joyId) const override
 		{
@@ -122,7 +122,7 @@ namespace nCine::Backends
 			if (isJoyPresent(joyId)) {
 				return _gamepads[joyId].State;
 			} else {
-				return nullJoystickState_;
+				return _nullJoystickState;
 			}
 		}
 		
@@ -154,12 +154,12 @@ namespace nCine::Backends
 		};
 #endif
 
-		static UwpMouseState mouseState_;
-		static UwpKeyboardState keyboardState_;
-		static KeyboardEvent keyboardEvent_;
-		static TextInputEvent textInputEvent_;
-		static UwpJoystickState nullJoystickState_;
-		static JoyConnectionEvent joyConnectionEvent_;
+		static UwpMouseState _mouseState;
+		static UwpKeyboardState _keyboardState;
+		static KeyboardEvent _keyboardEvent;
+		static TextInputEvent _textInputEvent;
+		static UwpJoystickState _nullJoystickState;
+		static JoyConnectionEvent _joyConnectionEvent;
 
 		//static winrtWUTC::CoreTextEditContext _editContext;
 		static UwpGamepadInfo _gamepads[MaxNumJoysticks];

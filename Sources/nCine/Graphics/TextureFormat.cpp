@@ -5,7 +5,7 @@ namespace nCine
 {
 	bool TextureFormat::isCompressed() const
 	{
-		switch (pixelFormat_) {
+		switch (_pixelFormat) {
 			case PixelFormat::DXT1RGB:
 			case PixelFormat::DXT1RGBA:
 			case PixelFormat::DXT3:
@@ -45,7 +45,7 @@ namespace nCine
 
 	std::uint32_t TextureFormat::numChannels() const
 	{
-		switch (pixelFormat_) {
+		switch (_pixelFormat) {
 			case PixelFormat::R8:
 			case PixelFormat::EAC_R11:
 				return 1;
@@ -70,7 +70,7 @@ namespace nCine
 
 	void TextureFormat::bgrFormat()
 	{
-		bgr_ = true;
+		_bgr = true;
 	}
 
 	std::uint32_t TextureFormat::calculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)

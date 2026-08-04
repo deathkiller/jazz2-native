@@ -7,62 +7,62 @@
 namespace nCine
 {
 	Geometry::Geometry()
-		: primitiveType_(PrimitiveType::Triangles), firstVertex_(0), numVertices_(0), numElementsPerVertex_(2), firstIndex_(0), numIndices_(0),
-			hostVertexPointer_(nullptr), hostIndexPointer_(nullptr), vboUsageFlags_(BufferUsage::StaticDraw), sharedVboParams_(nullptr),
-			iboUsageFlags_(BufferUsage::StaticDraw), sharedIboParams_(nullptr), hasDirtyVertices_(true), hasDirtyIndices_(true)
+		: _primitiveType(PrimitiveType::Triangles), _firstVertex(0), _numVertices(0), _numElementsPerVertex(2), _firstIndex(0), _numIndices(0),
+			_hostVertexPointer(nullptr), _hostIndexPointer(nullptr), _vboUsageFlags(BufferUsage::StaticDraw), _sharedVboParams(nullptr),
+			_iboUsageFlags(BufferUsage::StaticDraw), _sharedIboParams(nullptr), _hasDirtyVertices(true), _hasDirtyIndices(true)
 	{
 	}
 
 	Geometry::~Geometry()
 	{
 #if defined(NCINE_PROFILING)
-		if (vbo_ != nullptr) {
-			RenderStatistics::RemoveCustomVbo(vbo_->GetSize());
+		if (_vbo != nullptr) {
+			RenderStatistics::RemoveCustomVbo(_vbo->GetSize());
 		}
-		if (ibo_ != nullptr) {
-			RenderStatistics::RemoveCustomIbo(ibo_->GetSize());
+		if (_ibo != nullptr) {
+			RenderStatistics::RemoveCustomIbo(_ibo->GetSize());
 		}
 #endif
 	}
 
 	void Geometry::SetDrawParameters(PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		primitiveType_ = primitiveType;
-		firstVertex_ = firstVertex;
-		numVertices_ = numVertices;
+		_primitiveType = primitiveType;
+		_firstVertex = firstVertex;
+		_numVertices = numVertices;
 	}
 
 	void Geometry::CreateCustomVbo(std::uint32_t numFloats, BufferUsage usage)
 	{
-		vbo_ = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
-		vbo_->BufferData(numFloats * sizeof(float), nullptr, usage);
+		_vbo = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
+		_vbo->BufferData(numFloats * sizeof(float), nullptr, usage);
 
-		vboUsageFlags_ = usage;
-		vboParams_.object = vbo_.get();
-		vboParams_.size = vbo_->GetSize();
-		vboParams_.offset = 0;
-		vboParams_.mapBase = nullptr;
+		_vboUsageFlags = usage;
+		_vboParams.object = _vbo.get();
+		_vboParams.size = _vbo->GetSize();
+		_vboParams.offset = 0;
+		_vboParams.mapBase = nullptr;
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::AddCustomVbo(vbo_->GetSize());
+		RenderStatistics::AddCustomVbo(_vbo->GetSize());
 #endif
 	}
 
 	float* Geometry::AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment)
 	{
-		DEATH_ASSERT(vbo_ == nullptr);
-		hasDirtyVertices_ = true;
+		DEATH_ASSERT(_vbo == nullptr);
+		_hasDirtyVertices = true;
 
-		if (sharedVboParams_ != nullptr) {
-			vboParams_ = *sharedVboParams_;
+		if (_sharedVboParams != nullptr) {
+			_vboParams = *_sharedVboParams;
 		} else {
 			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Array;
-			if (vboParams_.mapBase == nullptr) {
-				vboParams_ = RenderResources::GetBuffersManager().AcquireMemory(bufferType, numFloats * sizeof(float), numFloatsAlignment * sizeof(float));
+			if (_vboParams.mapBase == nullptr) {
+				_vboParams = RenderResources::GetBuffersManager().AcquireMemory(bufferType, numFloats * sizeof(float), numFloatsAlignment * sizeof(float));
 			}
 		}
 
-		return reinterpret_cast<float*>(vboParams_.mapBase + vboParams_.offset);
+		return reinterpret_cast<float*>(_vboParams.mapBase + _vboParams.offset);
 	}
 
 	/**
@@ -72,75 +72,75 @@ namespace nCine
 	 */
 	float* Geometry::AcquireVertexPointer()
 	{
-		DEATH_ASSERT(vbo_ != nullptr);
-		hasDirtyVertices_ = true;
+		DEATH_ASSERT(_vbo != nullptr);
+		_hasDirtyVertices = true;
 
-		if (vboParams_.mapBase == nullptr) {
+		if (_vboParams.mapBase == nullptr) {
 			const MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags != MapFlags::None, "Buffer mapping is not available");
-			vboParams_.mapBase = static_cast<std::uint8_t*>(vbo_->MapBufferRange(0, vbo_->GetSize(), mapFlags));
+			_vboParams.mapBase = static_cast<std::uint8_t*>(_vbo->MapBufferRange(0, _vbo->GetSize(), mapFlags));
 		}
 
-		return reinterpret_cast<float*>(vboParams_.mapBase);
+		return reinterpret_cast<float*>(_vboParams.mapBase);
 	}
 
 	void Geometry::ReleaseVertexPointer()
 	{
 		// Don't flush and unmap if the VBO is not custom
-		if (vbo_ != nullptr && vboParams_.mapBase != nullptr) {
-			vboParams_.object->FlushMappedBufferRange(vboParams_.offset, vboParams_.size);
-			vboParams_.object->Unmap();
+		if (_vbo != nullptr && _vboParams.mapBase != nullptr) {
+			_vboParams.object->FlushMappedBufferRange(_vboParams.offset, _vboParams.size);
+			_vboParams.object->Unmap();
 		}
-		vboParams_.mapBase = nullptr;
+		_vboParams.mapBase = nullptr;
 	}
 
 	void Geometry::SetHostVertexPointer(const float* vertexPointer)
 	{
-		hasDirtyVertices_ = true;
-		hostVertexPointer_ = vertexPointer;
+		_hasDirtyVertices = true;
+		_hostVertexPointer = vertexPointer;
 	}
 
 	void Geometry::ShareVbo(const Geometry* geometry)
 	{
 		if (geometry == nullptr) {
-			sharedVboParams_ = nullptr;
+			_sharedVboParams = nullptr;
 		} else if (geometry != this) {
-			vbo_.reset(nullptr);
-			sharedVboParams_ = &geometry->vboParams_;
+			_vbo.reset(nullptr);
+			_sharedVboParams = &geometry->_vboParams;
 		}
 	}
 
 	void Geometry::CreateCustomIbo(std::uint32_t numIndices, BufferUsage usage)
 	{
-		ibo_ = std::make_unique<RHI::Buffer>(BufferTarget::Index);
-		ibo_->BufferData(numIndices * sizeof(std::uint16_t), nullptr, usage);
+		_ibo = std::make_unique<RHI::Buffer>(BufferTarget::Index);
+		_ibo->BufferData(numIndices * sizeof(std::uint16_t), nullptr, usage);
 
-		iboUsageFlags_ = usage;
-		iboParams_.object = ibo_.get();
-		iboParams_.size = ibo_->GetSize();
-		iboParams_.offset = 0;
-		iboParams_.mapBase = nullptr;
+		_iboUsageFlags = usage;
+		_iboParams.object = _ibo.get();
+		_iboParams.size = _ibo->GetSize();
+		_iboParams.offset = 0;
+		_iboParams.mapBase = nullptr;
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::AddCustomIbo(ibo_->GetSize());
+		RenderStatistics::AddCustomIbo(_ibo->GetSize());
 #endif
 	}
 
 	std::uint16_t* Geometry::AcquireIndexPointer(std::uint32_t numIndices)
 	{
-		DEATH_ASSERT(ibo_ == nullptr);
-		hasDirtyIndices_ = true;
+		DEATH_ASSERT(_ibo == nullptr);
+		_hasDirtyIndices = true;
 
-		if (sharedIboParams_ != nullptr) {
-			iboParams_ = *sharedIboParams_;
+		if (_sharedIboParams != nullptr) {
+			_iboParams = *_sharedIboParams;
 		} else {
 			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::ElementArray;
-			if (iboParams_.mapBase == nullptr) {
-				iboParams_ = RenderResources::GetBuffersManager().AcquireMemory(bufferType, numIndices * sizeof(std::uint16_t));
+			if (_iboParams.mapBase == nullptr) {
+				_iboParams = RenderResources::GetBuffersManager().AcquireMemory(bufferType, numIndices * sizeof(std::uint16_t));
 			}
 		}
 
-		return reinterpret_cast<std::uint16_t*>(iboParams_.mapBase + iboParams_.offset);
+		return reinterpret_cast<std::uint16_t*>(_iboParams.mapBase + _iboParams.offset);
 	}
 
 	/**
@@ -150,118 +150,118 @@ namespace nCine
 	 */
 	std::uint16_t* Geometry::AcquireIndexPointer()
 	{
-		DEATH_ASSERT(ibo_ != nullptr);
-		hasDirtyIndices_ = true;
+		DEATH_ASSERT(_ibo != nullptr);
+		_hasDirtyIndices = true;
 
-		if (iboParams_.mapBase == nullptr) {
+		if (_iboParams.mapBase == nullptr) {
 			const MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags != MapFlags::None, "Buffer mapping is not available");
-			iboParams_.mapBase = static_cast<std::uint8_t*>(ibo_->MapBufferRange(0, ibo_->GetSize(), mapFlags));
+			_iboParams.mapBase = static_cast<std::uint8_t*>(_ibo->MapBufferRange(0, _ibo->GetSize(), mapFlags));
 		}
 
-		return reinterpret_cast<std::uint16_t*>(iboParams_.mapBase);
+		return reinterpret_cast<std::uint16_t*>(_iboParams.mapBase);
 	}
 
 	void Geometry::ReleaseIndexPointer()
 	{
 		// Don't flush and unmap if the IBO is not custom
-		if (ibo_ != nullptr && iboParams_.mapBase != nullptr) {
-			iboParams_.object->FlushMappedBufferRange(iboParams_.offset, iboParams_.size);
-			iboParams_.object->Unmap();
+		if (_ibo != nullptr && _iboParams.mapBase != nullptr) {
+			_iboParams.object->FlushMappedBufferRange(_iboParams.offset, _iboParams.size);
+			_iboParams.object->Unmap();
 		}
-		iboParams_.mapBase = nullptr;
+		_iboParams.mapBase = nullptr;
 	}
 
 	void Geometry::SetHostIndexPointer(const std::uint16_t* indexPointer)
 	{
-		hasDirtyIndices_ = true;
-		hostIndexPointer_ = indexPointer;
+		_hasDirtyIndices = true;
+		_hostIndexPointer = indexPointer;
 	}
 
 	void Geometry::ShareIbo(const Geometry* geometry)
 	{
 		if (geometry == nullptr) {
-			sharedIboParams_ = nullptr;
+			_sharedIboParams = nullptr;
 		} else if (geometry != this) {
-			ibo_.reset(nullptr);
-			sharedIboParams_ = &geometry->iboParams_;
+			_ibo.reset(nullptr);
+			_sharedIboParams = &geometry->_iboParams;
 		}
 	}
 
 	void Geometry::Bind()
 	{
-		if (vboParams_.object != nullptr) {
-			vboParams_.object->Bind();
+		if (_vboParams.object != nullptr) {
+			_vboParams.object->Bind();
 		}
 	}
 
 	void Geometry::Draw(std::int32_t numInstances)
 	{
-		const std::int32_t baseVertex = std::int32_t(GetVboParams().offset / numElementsPerVertex_ / sizeof(float)) + firstVertex_;
+		const std::int32_t baseVertex = std::int32_t(GetVboParams().offset / _numElementsPerVertex / sizeof(float)) + _firstVertex;
 
 		std::uintptr_t indexOffset = 0;
-		if (numIndices_ > 0) {
-			indexOffset = GetIboParams().offset + firstIndex_ * sizeof(std::uint16_t);
+		if (_numIndices > 0) {
+			indexOffset = GetIboParams().offset + _firstIndex * sizeof(std::uint16_t);
 		}
 
 		if (numInstances == 0) {
-			if (numIndices_ > 0) {
-				RHI::Device::DrawElements(primitiveType_, numIndices_, indexOffset, baseVertex);
+			if (_numIndices > 0) {
+				RHI::Device::DrawElements(_primitiveType, _numIndices, indexOffset, baseVertex);
 			} else {
-				RHI::Device::DrawArrays(primitiveType_, baseVertex, numVertices_);
+				RHI::Device::DrawArrays(_primitiveType, baseVertex, _numVertices);
 			}
 		} else if (numInstances > 0) {
-			if (numIndices_ > 0) {
-				RHI::Device::DrawElementsInstanced(primitiveType_, numIndices_, indexOffset, numInstances, baseVertex);
+			if (_numIndices > 0) {
+				RHI::Device::DrawElementsInstanced(_primitiveType, _numIndices, indexOffset, numInstances, baseVertex);
 			} else {
-				RHI::Device::DrawArraysInstanced(primitiveType_, baseVertex, numVertices_, numInstances);
+				RHI::Device::DrawArraysInstanced(_primitiveType, baseVertex, _numVertices, numInstances);
 			}
 		}
 	}
 
 	void Geometry::CommitVertices()
 	{
-		if (hostVertexPointer_ != nullptr && hasDirtyVertices_) {
+		if (_hostVertexPointer != nullptr && _hasDirtyVertices) {
 			// Checking if the common VBO is allowed to use mapping and do the same for the custom one
 			const MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
-			const std::uint32_t numFloats = numVertices_ * numElementsPerVertex_;
+			const std::uint32_t numFloats = _numVertices * _numElementsPerVertex;
 
-			if (mapFlags == MapFlags::None && vbo_ != nullptr) {
+			if (mapFlags == MapFlags::None && _vbo != nullptr) {
 				// Using buffer orphaning + a subdata upload when having a custom VBO with no mapping available
-				vbo_->BufferData(vboParams_.size, nullptr, vboUsageFlags_);
-				vbo_->BufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
+				_vbo->BufferData(_vboParams.size, nullptr, _vboUsageFlags);
+				_vbo->BufferSubData(_vboParams.offset, _vboParams.size, _hostVertexPointer);
 			} else {
-				float* vertices = vbo_ ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, numElementsPerVertex_);
-				memcpy(vertices, hostVertexPointer_, numFloats * sizeof(float));
+				float* vertices = _vbo ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, _numElementsPerVertex);
+				memcpy(vertices, _hostVertexPointer, numFloats * sizeof(float));
 				ReleaseVertexPointer();
 			}
 
 			// The dirty flag is only useful with a custom VBO. If the render command uses the common one, it must always copy vertices.
-			if (vbo_ != nullptr) {
-				hasDirtyVertices_ = false;
+			if (_vbo != nullptr) {
+				_hasDirtyVertices = false;
 			}
 		}
 	}
 
 	void Geometry::CommitIndices()
 	{
-		if (hostIndexPointer_ != nullptr && hasDirtyIndices_) {
+		if (_hostIndexPointer != nullptr && _hasDirtyIndices) {
 			// Checking if the common IBO is allowed to use mapping and do the same for the custom one
 			const MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 
-			if (mapFlags == MapFlags::None && ibo_ != nullptr) {
+			if (mapFlags == MapFlags::None && _ibo != nullptr) {
 				// Using buffer orphaning + a subdata upload when having a custom IBO with no mapping available
-				ibo_->BufferData(iboParams_.size, nullptr, iboUsageFlags_);
-				ibo_->BufferSubData(iboParams_.offset, iboParams_.size, hostIndexPointer_);
+				_ibo->BufferData(_iboParams.size, nullptr, _iboUsageFlags);
+				_ibo->BufferSubData(_iboParams.offset, _iboParams.size, _hostIndexPointer);
 			} else {
-				std::uint16_t* indices = ibo_ ? AcquireIndexPointer() : AcquireIndexPointer(numIndices_);
-				memcpy(indices, hostIndexPointer_, numIndices_ * sizeof(std::uint16_t));
+				std::uint16_t* indices = _ibo ? AcquireIndexPointer() : AcquireIndexPointer(_numIndices);
+				memcpy(indices, _hostIndexPointer, _numIndices * sizeof(std::uint16_t));
 				ReleaseIndexPointer();
 			}
 
 			// The dirty flag is only useful with a custom IBO. If the render command uses the common one, it must always copy indices.
-			if (ibo_ != nullptr) {
-				hasDirtyIndices_ = false;
+			if (_ibo != nullptr) {
+				_hasDirtyIndices = false;
 			}
 		}
 	}

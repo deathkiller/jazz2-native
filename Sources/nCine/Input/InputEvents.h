@@ -301,10 +301,10 @@ namespace nCine
 		JoyMappedState()
 		{
 			for (std::uint32_t i = 0; i < NumButtons; i++)
-				buttons_[i] = false;
+				_buttons[i] = false;
 			for (std::uint32_t i = 0; i < NumAxes; i++)
-				axesValues_[i] = 0.0f;
-			lastHatState_ = HatState::Centered;
+				_axesValues[i] = 0.0f;
+			_lastHatState = HatState::Centered;
 		}
 
 		/** @brief Returns `true` if the specified mapped button is pressed */
@@ -312,7 +312,7 @@ namespace nCine
 		{
 			bool pressed = false;
 			if (name != ButtonName::Unknown)
-				pressed = buttons_[static_cast<std::int32_t>(name)];
+				pressed = _buttons[static_cast<std::int32_t>(name)];
 			return pressed;
 		}
 
@@ -321,14 +321,14 @@ namespace nCine
 		{
 			float value = 0.0f;
 			if (name != AxisName::Unknown)
-				value = axesValues_[static_cast<std::int32_t>(name)];
+				value = _axesValues[static_cast<std::int32_t>(name)];
 			return value;
 		}
 
 	private:
-		bool buttons_[JoyMappedState::NumButtons];
-		float axesValues_[JoyMappedState::NumAxes];
-		unsigned char lastHatState_;
+		bool _buttons[JoyMappedState::NumButtons];
+		float _axesValues[JoyMappedState::NumAxes];
+		unsigned char _lastHatState;
 	};
 
 	/** @brief Mapped joystick button event */

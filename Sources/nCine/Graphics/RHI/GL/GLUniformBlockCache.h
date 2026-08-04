@@ -31,7 +31,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the uniform block described by this cache */
 		inline const GLUniformBlock* uniformBlock() const {
-			return uniformBlock_;
+			return _uniformBlock;
 		}
 		/** @brief Wrapper around @ref GLUniformBlock::GetIndex() */
 		GLuint GetIndex() const;
@@ -44,18 +44,18 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the host-side data buffer mirroring the block */
 		inline GLubyte* GetDataPointer() {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		/** @brief Returns the host-side data buffer mirroring the block */
 		inline const GLubyte* GetDataPointer() const {
-			return dataPointer_;
+			return _dataPointer;
 		}
 		/** @brief Sets the host-side data buffer and repoints each member uniform cache into it */
 		void SetDataPointer(GLubyte* dataPointer);
 
 		/** @brief Returns how many bytes of the cache are uploaded to the UBO */
 		inline GLint usedSize() const {
-			return usedSize_;
+			return _usedSize;
 		}
 		/** @brief Sets how many bytes of the cache are uploaded to the UBO */
 		void SetUsedSize(GLint usedSize);
@@ -64,7 +64,7 @@ namespace nCine::RHI::GL
 		bool CopyData(std::uint32_t destIndex, const GLubyte* src, std::uint32_t numBytes);
 		/** @brief Copies the whole used size from the source into the data buffer */
 		inline bool CopyData(const GLubyte* src) {
-			return CopyData(0, src, usedSize_);
+			return CopyData(0, src, _usedSize);
 		}
 
 		/** @brief Returns the member uniform cache with the specified name, or `nullptr` if not found */
@@ -83,13 +83,13 @@ namespace nCine::RHI::GL
 #endif
 
 	private:
-		GLUniformBlock* uniformBlock_;
-		GLubyte* dataPointer_;
+		GLUniformBlock* _uniformBlock;
+		GLubyte* _dataPointer;
 		// Keeps tracks of how much of the cache needs to be uploaded to the UBO
-		GLint usedSize_;
+		GLint _usedSize;
 
 		static const std::uint32_t UniformHashSize = 8;
-		StaticHashMap<String, GLUniformCache, UniformHashSize> uniformCaches_;
+		StaticHashMap<String, GLUniformCache, UniformHashSize> _uniformCaches;
 	};
 
 }

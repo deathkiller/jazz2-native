@@ -55,14 +55,14 @@ namespace nCine::Backends
 		if (initialWidth < 1) { initialWidth = 1; }
 		if (initialHeight < 1) { initialHeight = 1; }
 
-		width_ = initialWidth;
-		height_ = initialHeight;
-		drawableWidth_ = initialWidth;
-		drawableHeight_ = initialHeight;
+		_width = initialWidth;
+		_height = initialHeight;
+		_drawableWidth = initialWidth;
+		_drawableHeight = initialHeight;
 
 		// The CoreWindow is passed as its raw ABI (IUnknown-compatible) pointer; CreateSwapChainForCoreWindow
 		// keeps its own reference, and `_window` owns the CoreWindow for the device's lifetime.
-		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, displayMode_.hasVSync());
+		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, _displayMode.hasVSync());
 		FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and CoreWindow swap chain");
 #elif defined(RHI_GL_PROFILE_ES)
 #	if defined(WITH_ANGLE)
@@ -244,7 +244,7 @@ namespace nCine::Backends
 		EGLBoolean result = eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext);
 		FATAL_ASSERT_MSG(result != EGL_FALSE, "eglMakeCurrent() failed");
 
-		const int interval = (displayMode_.hasVSync() ? 1 : 0);
+		const int interval = (_displayMode.hasVSync() ? 1 : 0);
 		eglSwapInterval(_eglDisplay, interval);
 #endif
 	}
@@ -265,13 +265,13 @@ namespace nCine::Backends
 
 			if (currentWidth > 0 && currentHeight > 0) {
 				_sizeChanged--;
-				if (currentWidth != width_ || currentHeight != height_) {
-					width_ = currentWidth;
-					height_ = currentHeight;
-					drawableWidth_ = width_;
-					drawableHeight_ = height_;
-					RHI::D3D11::D3D11Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
-					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
+				if (currentWidth != _width || currentHeight != _height) {
+					_width = currentWidth;
+					_height = currentHeight;
+					_drawableWidth = _width;
+					_drawableHeight = _height;
+					RHI::D3D11::D3D11Device::ResizeSwapchain(_drawableWidth, _drawableHeight);
+					theApplication().ResizeScreenViewport(_drawableWidth, _drawableHeight);
 				}
 			}
 		}
@@ -303,12 +303,12 @@ namespace nCine::Backends
 
 			if (currentWidth > 0 && currentHeight > 0) {
 				_sizeChanged--;
-				if (currentWidth != width_ || currentHeight != height_) {
-					width_ = currentWidth;
-					height_ = currentHeight;
-					drawableWidth_ = width_;
-					drawableHeight_ = height_;
-					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
+				if (currentWidth != _width || currentHeight != _height) {
+					_width = currentWidth;
+					_height = currentHeight;
+					_drawableWidth = _width;
+					_drawableHeight = _height;
+					theApplication().ResizeScreenViewport(_drawableWidth, _drawableHeight);
 				}
 			}
 		}
@@ -331,7 +331,7 @@ namespace nCine::Backends
 			}
 		//});
 
-		isFullscreen_ = fullscreen;
+		_isFullscreen = fullscreen;
 		_sizeChanged = 10;
 	}
 
@@ -358,8 +358,8 @@ namespace nCine::Backends
 	{
 		auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
 
-		numMonitors_ = 1;
-		auto& monitor = monitors_[0];
+		_numMonitors = 1;
+		auto& monitor = _monitors[0];
 		monitor.name = nullptr;
 		monitor.position = Vector2i::Zero;
 

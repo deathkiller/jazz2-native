@@ -26,7 +26,7 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the OpenGL handle of the vertex array object */
 		inline GLuint GetGLHandle() const {
-			return glHandle_;
+			return _glHandle;
 		}
 
 		/**
@@ -47,12 +47,12 @@ namespace nCine::RHI::GL
 
 		/** @brief Drops the cached bound VAO so the next bind re-applies (external code changed it) */
 		static void InvalidateCachedBinding() {
-			boundVAO_ = ~0u;
+			_boundVAO = ~0u;
 		}
 
 	private:
-		static GLuint boundVAO_;
+		static GLuint _boundVAO;
 
-		GLuint glHandle_;
+		GLuint _glHandle;
 	};
 }

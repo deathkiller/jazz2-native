@@ -57,8 +57,8 @@ namespace nCine
 	}
 
 	AndroidApplication::AndroidApplication()
-		: Application(), isInitialized_(false), isBackInvoked_(false), isScreenRound_(false), state_(nullptr),
-			createAppEventHandler_(nullptr)
+		: Application(), _isInitialized(false), _isBackInvoked(false), _isScreenRound(false), _state(nullptr),
+			_createAppEventHandler(nullptr)
 	{
 	}
 
@@ -71,8 +71,8 @@ namespace nCine
 		DEATH_ASSERT(state != nullptr);
 		DEATH_ASSERT(createAppEventHandler != nullptr);
 		AndroidApplication& app = theAndroidApplication();
-		app.state_ = state;
-		app.createAppEventHandler_ = createAppEventHandler;
+		app._state = state;
+		app._createAppEventHandler = createAppEventHandler;
 
 		state->onAppCmd = AndroidApplication::ProcessCommand;
 
@@ -104,9 +104,9 @@ namespace nCine
 				}
 			}
 
-			if (app.isBackInvoked_) {
-				app.isBackInvoked_ = false;
-				app.appEventHandler_->OnBackInvoked();
+			if (app._isBackInvoked) {
+				app._isBackInvoked = false;
+				app._appEventHandler->OnBackInvoked();
 			}
 
 			if (app.IsInitialized() && !app.ShouldSuspend()) {
@@ -206,7 +206,7 @@ namespace nCine
 			case APP_CMD_RESUME: {
 				LOGI("APP_CMD_RESUME event received");
 				AndroidApplication& app = theAndroidApplication();
-				app.isSuspended_ = false;
+				app._isSuspended = false;
 				if (isSuspended && !app.ShouldSuspend()) {
 					isSuspended = false;
 					app.Resume();
@@ -220,7 +220,7 @@ namespace nCine
 			case APP_CMD_PAUSE: {
 				LOGI("APP_CMD_PAUSE event received");
 				AndroidApplication& app = theAndroidApplication();
-				app.isSuspended_ = true;
+				app._isSuspended = true;
 				if (!isSuspended && app.ShouldSuspend()) {
 					isSuspended = true;
 					app.Suspend();
@@ -246,7 +246,7 @@ namespace nCine
 
 	void AndroidApplication::HandleBackInvoked()
 	{
-		isBackInvoked_ = true;
+		_isBackInvoked = true;
 	}
 
 	void AndroidApplication::HandleIntent(StringView action, StringView uri)
@@ -261,12 +261,12 @@ namespace nCine
 	
 	bool AndroidApplication::CanShowScreenKeyboard()
 	{
-		return isInitialized_;
+		return _isInitialized;
 	}
 
 	bool AndroidApplication::ToggleScreenKeyboard()
 	{
-		if (isInitialized_) {
+		if (_isInitialized) {
 			AndroidJniWrap_InputMethodManager::toggleSoftInput();
 			return true;
 		} else {
@@ -276,45 +276,45 @@ namespace nCine
 
 	bool AndroidApplication::ShowScreenKeyboard()
 	{
-		return isInitialized_ && AndroidJniWrap_InputMethodManager::showSoftInput();
+		return _isInitialized && AndroidJniWrap_InputMethodManager::showSoftInput();
 	}
 
 	bool AndroidApplication::HideScreenKeyboard()
 	{
-		return isInitialized_ && AndroidJniWrap_InputMethodManager::hideSoftInput();
+		return _isInitialized && AndroidJniWrap_InputMethodManager::hideSoftInput();
 	}
 
 	void AndroidApplication::Vibrate(std::int32_t milliseconds)
 	{
-		if (isInitialized_) {
+		if (_isInitialized) {
 			AndroidJniWrap_Activity::vibrate(milliseconds);
 		}
 	}
 
 	void AndroidApplication::ShowStatusBar()
 	{
-		if (isInitialized_) {
+		if (_isInitialized) {
 			AndroidJniWrap_Activity::showStatusBar();
 		}
 	}
 
 	void AndroidApplication::HideStatusBar()
 	{
-		if (isInitialized_) {
+		if (_isInitialized) {
 			AndroidJniWrap_Activity::hideStatusBar();
 		}
 	}
 
 	void AndroidApplication::PreInit()
 	{
-		profileStartTime_ = TimeStamp::now();
+		_profileStartTime = TimeStamp::now();
 
-		AndroidJniHelper::AttachJVM(state_);
-		AndroidAssetStream::InitializeAssetManager(state_);
+		AndroidJniHelper::AttachJVM(_state);
+		AndroidAssetStream::InitializeAssetManager(_state);
 
-		isScreenRound_ = AndroidJniWrap_Activity::isScreenRound();
+		_isScreenRound = AndroidJniWrap_Activity::isScreenRound();
 		
-		PreInitCommon(createAppEventHandler_());
+		PreInitCommon(_createAppEventHandler());
 
 #if defined(DEATH_DEBUG)
 #	define INIT_MESSAGE_SUFFIX " in debug configuration"
@@ -341,7 +341,7 @@ namespace nCine
 #endif
 		LOGI("Android API version - NDK: {}, JNI: {}", __ANDROID_API__, AndroidJniHelper::SdkVersion());
 
-		if (isScreenRound_) {
+		if (_isScreenRound) {
 			LOGI("Using round screen layout");
 		}
 	}
@@ -352,31 +352,31 @@ namespace nCine
 		// Graphics device should always be created before the input manager!
 		const DisplayMode displayMode32(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
 		const DisplayMode displayMode16(5, 6, 5, 0, 16, 0, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
-		IGfxDevice::ContextInfo contextInfo(appCfg_);
+		IGfxDevice::ContextInfo contextInfo(_appCfg);
 
-		if (EglGfxDevice::isModeSupported(state_, contextInfo, displayMode32)) {
-			gfxDevice_ = std::make_unique<EglGfxDevice>(state_, contextInfo, displayMode32);
-		} else if (EglGfxDevice::isModeSupported(state_, contextInfo, displayMode16)) {
-			gfxDevice_ = std::make_unique<EglGfxDevice>(state_, contextInfo, displayMode16);
+		if (EglGfxDevice::isModeSupported(_state, contextInfo, displayMode32)) {
+			_gfxDevice = std::make_unique<EglGfxDevice>(_state, contextInfo, displayMode32);
+		} else if (EglGfxDevice::isModeSupported(_state, contextInfo, displayMode16)) {
+			_gfxDevice = std::make_unique<EglGfxDevice>(_state, contextInfo, displayMode16);
 		} else {
 			LOGF("Cannot find a suitable EGL configuration, graphics device not created");
 			exit(EXIT_FAILURE);
 		}
 		
-		inputManager_ = std::make_unique<AndroidInputManager>(state_);
+		_inputManager = std::make_unique<AndroidInputManager>(_state);
 
 #if defined(NCINE_PROFILING)
-		timings_[(std::int32_t)Timings::PreInit] = profileStartTime_.secondsSince();
+		_timings[(std::int32_t)Timings::PreInit] = _profileStartTime.secondsSince();
 #endif
 
 		Application::InitCommon();
-		isInitialized_ = true;
+		_isInitialized = true;
 	}
 
 	void AndroidApplication::Shutdown()
 	{
 		Application::ShutdownCommon();
 		AndroidJniHelper::DetachJVM();
-		isInitialized_ = false;
+		_isInitialized = false;
 	}
 }

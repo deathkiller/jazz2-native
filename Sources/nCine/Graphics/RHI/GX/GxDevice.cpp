@@ -870,52 +870,52 @@ namespace nCine::RHI::GX
 		return nullptr;
 	}
 
-	GxDevice::BlendingState GxDevice::blending_;
-	GxDevice::DepthTestState GxDevice::depthTest_;
-	GxDevice::CullFaceState GxDevice::cullFace_;
-	GxDevice::ScissorState GxDevice::scissor_;
-	Recti GxDevice::viewport_(0, 0, 0, 0);
-	Colorf GxDevice::clearColor_(0.0f, 0.0f, 0.0f, 1.0f);
+	GxDevice::BlendingState GxDevice::_blending;
+	GxDevice::DepthTestState GxDevice::_depthTest;
+	GxDevice::CullFaceState GxDevice::_cullFace;
+	GxDevice::ScissorState GxDevice::_scissor;
+	Recti GxDevice::_viewport(0, 0, 0, 0);
+	Colorf GxDevice::_clearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	GxShaderProgram* GxDevice::currentProgram_ = nullptr;
-	const GxTexture* GxDevice::boundTextures_[GxDevice::MaxTextureUnits] = {};
-	GxDevice::UniformRange GxDevice::boundUniformRanges_[GxDevice::MaxUniformBindings] = {};
-	GxRenderTarget* GxDevice::currentRenderTarget_ = nullptr;
+	GxShaderProgram* GxDevice::_currentProgram = nullptr;
+	const GxTexture* GxDevice::_boundTextures[GxDevice::MaxTextureUnits] = {};
+	GxDevice::UniformRange GxDevice::_boundUniformRanges[GxDevice::MaxUniformBindings] = {};
+	GxRenderTarget* GxDevice::_currentRenderTarget = nullptr;
 
-	GXRModeObj* GxDevice::rmode_ = nullptr;
-	void* GxDevice::gxFifo_ = nullptr;
-	bool GxDevice::gxInitialized_ = false;
-	std::int32_t GxDevice::logicalWidth_ = 0;
-	std::int32_t GxDevice::logicalHeight_ = 0;
+	GXRModeObj* GxDevice::_rmode = nullptr;
+	void* GxDevice::_gxFifo = nullptr;
+	bool GxDevice::_gxInitialized = false;
+	std::int32_t GxDevice::_logicalWidth = 0;
+	std::int32_t GxDevice::_logicalHeight = 0;
 
-	GxTexture* GxDevice::paletteTexture_ = nullptr;
-	std::uint32_t GxDevice::paletteGeneration_ = 1;
-	GxDevice::TlutSlot GxDevice::tlutSlots_[GxDevice::MaxTlutSlots] = {};
-	std::uint32_t GxDevice::tlutUseCounter_ = 0;
-	std::uint32_t GxDevice::frameCounter_ = 0;
+	GxTexture* GxDevice::_paletteTexture = nullptr;
+	std::uint32_t GxDevice::_paletteGeneration = 1;
+	GxDevice::TlutSlot GxDevice::_tlutSlots[GxDevice::MaxTlutSlots] = {};
+	std::uint32_t GxDevice::_tlutUseCounter = 0;
+	std::uint32_t GxDevice::_frameCounter = 0;
 
-	std::vector<GxDevice::PendingSoftwareLight> GxDevice::pendingSoftwareLights_;
+	std::vector<GxDevice::PendingSoftwareLight> GxDevice::_pendingSoftwareLights;
 
-	std::uint8_t* GxDevice::lightmapStore_ = nullptr;
-	std::size_t GxDevice::lightmapStoreSize_ = 0;
-	GXTexObj GxDevice::lightmapTexObj_;
-	std::uint8_t* GxDevice::lightmapLinear_ = nullptr;
-	std::size_t GxDevice::lightmapLinearSize_ = 0;
+	std::uint8_t* GxDevice::_lightmapStore = nullptr;
+	std::size_t GxDevice::_lightmapStoreSize = 0;
+	GXTexObj GxDevice::_lightmapTexObj;
+	std::uint8_t* GxDevice::_lightmapLinear = nullptr;
+	std::size_t GxDevice::_lightmapLinearSize = 0;
 
 	// ------------------------------------------------------------------ session
 
 	void GxDevice::InitializeGx(GXRModeObj* rmode)
 	{
-		if (gxInitialized_) {
-			rmode_ = rmode;
+		if (_gxInitialized) {
+			_rmode = rmode;
 			return;
 		}
-		rmode_ = rmode;
+		_rmode = rmode;
 
 		// The FIFO must be accessed through the uncached alias, so the GP sees the commands immediately
-		gxFifo_ = MEM_K0_TO_K1(memalign(32, GxFifoSize));
-		std::memset(gxFifo_, 0, GxFifoSize);
-		GX_Init(gxFifo_, GxFifoSize);
+		_gxFifo = MEM_K0_TO_K1(memalign(32, GxFifoSize));
+		std::memset(_gxFifo, 0, GxFifoSize);
+		GX_Init(_gxFifo, GxFifoSize);
 
 		GXColor background = { 0, 0, 0, 255 };
 		GX_SetCopyClear(background, GX_MAX_Z24);
@@ -940,15 +940,15 @@ namespace nCine::RHI::GX
 		SetVertexModeTextured(false);
 		InvalidateAppliedState();
 
-		logicalWidth_ = rmode->fbWidth;
-		logicalHeight_ = rmode->efbHeight;
+		_logicalWidth = rmode->fbWidth;
+		_logicalHeight = rmode->efbHeight;
 
-		gxInitialized_ = true;
+		_gxInitialized = true;
 	}
 
 	void GxDevice::ShutdownGx()
 	{
-		if (!gxInitialized_) {
+		if (!_gxInitialized) {
 			return;
 		}
 
@@ -959,26 +959,26 @@ namespace nCine::RHI::GX
 		GX_DrawDone();
 
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].Data != nullptr) {
-				free(tlutSlots_[i].Data);
-				tlutSlots_[i].Data = nullptr;
+			if (_tlutSlots[i].Data != nullptr) {
+				free(_tlutSlots[i].Data);
+				_tlutSlots[i].Data = nullptr;
 			}
-			tlutSlots_[i].PaletteOffset = -1;
-			tlutSlots_[i].Palette = nullptr;
+			_tlutSlots[i].PaletteOffset = -1;
+			_tlutSlots[i].Palette = nullptr;
 		}
 
-		if (gxFifo_ != nullptr) {
-			free(MEM_K1_TO_K0(gxFifo_));
-			gxFifo_ = nullptr;
+		if (_gxFifo != nullptr) {
+			free(MEM_K1_TO_K0(_gxFifo));
+			_gxFifo = nullptr;
 		}
 
-		rmode_ = nullptr;
-		gxInitialized_ = false;
+		_rmode = nullptr;
+		_gxInitialized = false;
 	}
 
 	void GxDevice::PresentToXfb(void* xfb)
 	{
-		if (!gxInitialized_) {
+		if (!_gxInitialized) {
 			return;
 		}
 		FlushCurrentRenderTarget();
@@ -988,7 +988,7 @@ namespace nCine::RHI::GX
 		GX_SetColorUpdate(GX_TRUE);
 		GX_CopyDisp(xfb, GX_TRUE);	// The copy also clears the EFB for the next frame (GX_SetCopyClear)
 		GX_DrawDone();
-		frameCounter_++;
+		_frameCounter++;
 		// Nothing is assumed applied across the frame boundary - the first draw of the next frame
 		// reissues projection and render state from scratch
 		InvalidateAppliedState();
@@ -997,8 +997,8 @@ namespace nCine::RHI::GX
 	void GxDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
 	{
 		if (width > 0 && height > 0) {
-			logicalWidth_ = width;
-			logicalHeight_ = height;
+			_logicalWidth = width;
+			_logicalHeight = height;
 			// The logical size feeds both the ortho projection and the scissor scaling
 			InvalidateAppliedState();
 		}
@@ -1006,49 +1006,49 @@ namespace nCine::RHI::GX
 
 	// ------------------------------------------------------------------ state
 
-	void GxDevice::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
+	void GxDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void GxDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
-		blending_.SrcRgb = srcRgb;
-		blending_.DstRgb = dstRgb;
-		blending_.SrcAlpha = srcAlpha;
-		blending_.DstAlpha = dstAlpha;
+		_blending.SrcRgb = srcRgb;
+		_blending.DstRgb = dstRgb;
+		_blending.SrcAlpha = srcAlpha;
+		_blending.DstAlpha = dstAlpha;
 	}
-	GxDevice::BlendingState GxDevice::GetBlendingState() { return blending_; }
-	void GxDevice::SetBlendingState(const BlendingState& state) { blending_ = state; }
+	GxDevice::BlendingState GxDevice::GetBlendingState() { return _blending; }
+	void GxDevice::SetBlendingState(const BlendingState& state) { _blending = state; }
 
-	void GxDevice::SetDepthTestEnabled(bool enabled) { depthTest_.TestEnabled = enabled; }
-	void GxDevice::SetDepthMaskEnabled(bool enabled) { depthTest_.MaskEnabled = enabled; }
-	GxDevice::DepthTestState GxDevice::GetDepthTestState() { return depthTest_; }
-	void GxDevice::SetDepthTestState(const DepthTestState& state) { depthTest_ = state; }
+	void GxDevice::SetDepthTestEnabled(bool enabled) { _depthTest.TestEnabled = enabled; }
+	void GxDevice::SetDepthMaskEnabled(bool enabled) { _depthTest.MaskEnabled = enabled; }
+	GxDevice::DepthTestState GxDevice::GetDepthTestState() { return _depthTest; }
+	void GxDevice::SetDepthTestState(const DepthTestState& state) { _depthTest = state; }
 
-	void GxDevice::SetCullFaceEnabled(bool enabled) { cullFace_.Enabled = enabled; }
-	GxDevice::CullFaceState GxDevice::GetCullFaceState() { return cullFace_; }
-	void GxDevice::SetCullFaceState(const CullFaceState& state) { cullFace_ = state; }
+	void GxDevice::SetCullFaceEnabled(bool enabled) { _cullFace.Enabled = enabled; }
+	GxDevice::CullFaceState GxDevice::GetCullFaceState() { return _cullFace; }
+	void GxDevice::SetCullFaceState(const CullFaceState& state) { _cullFace = state; }
 
-	GxDevice::ScissorState GxDevice::GetScissorState() { return scissor_; }
-	void GxDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
+	GxDevice::ScissorState GxDevice::GetScissorState() { return _scissor; }
+	void GxDevice::SetScissorState(const ScissorState& state) { _scissor = state; }
 	void GxDevice::SetScissor(const Recti& rect)
 	{
 		// Same contract as the GL device: setting a rect also enables the test (callers like
 		// RenderCommand and Viewport rely on it and restore via SetScissorState afterwards)
-		scissor_.Enabled = true;
-		scissor_.Rect = rect;
+		_scissor.Enabled = true;
+		_scissor.Rect = rect;
 	}
-	void GxDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
+	void GxDevice::SetScissorTestEnabled(bool enabled) { _scissor.Enabled = enabled; }
 
-	Recti GxDevice::GetViewport() { return viewport_; }
-	void GxDevice::SetViewport(const Recti& rect) { viewport_ = rect; }
+	Recti GxDevice::GetViewport() { return _viewport; }
+	void GxDevice::SetViewport(const Recti& rect) { _viewport = rect; }
 	void GxDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		viewport_ = Recti(x, y, width, height);
+		_viewport = Recti(x, y, width, height);
 	}
 
-	Colorf GxDevice::GetClearColor() { return clearColor_; }
+	Colorf GxDevice::GetClearColor() { return _clearColor; }
 	void GxDevice::SetClearColor(const Colorf& color)
 	{
-		clearColor_ = color;
-		if (gxInitialized_) {
+		_clearColor = color;
+		if (_gxInitialized) {
 			GXColor c = { QuantizeChannel(color.R), QuantizeChannel(color.G), QuantizeChannel(color.B), QuantizeChannel(color.A) };
 			GX_SetCopyClear(c, GX_MAX_Z24);
 		}
@@ -1057,7 +1057,7 @@ namespace nCine::RHI::GX
 	void GxDevice::Clear(ClearFlags flags)
 	{
 		static_cast<void>(flags);
-		if (!gxInitialized_) {
+		if (!_gxInitialized) {
 			return;
 		}
 		// Immediate clear: a full-target flat quad (the EFB copy-clear only applies at copy time)
@@ -1065,11 +1065,11 @@ namespace nCine::RHI::GX
 		// The direct blend-mode write below bypasses ApplyRenderState(), so its cache no longer matches
 		g_appliedBlendValid = false;
 		GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
-		const std::int32_t w = (currentRenderTarget_ != nullptr ? viewport_.W : logicalWidth_);
-		const std::int32_t h = (currentRenderTarget_ != nullptr ? viewport_.H : logicalHeight_);
+		const std::int32_t w = (_currentRenderTarget != nullptr ? _viewport.W : _logicalWidth);
+		const std::int32_t h = (_currentRenderTarget != nullptr ? _viewport.H : _logicalHeight);
 		SetVertexModeTextured(false);
-		const std::uint8_t r = QuantizeChannel(clearColor_.R), g = QuantizeChannel(clearColor_.G);
-		const std::uint8_t b = QuantizeChannel(clearColor_.B), a = QuantizeChannel(clearColor_.A);
+		const std::uint8_t r = QuantizeChannel(_clearColor.R), g = QuantizeChannel(_clearColor.G);
+		const std::uint8_t b = QuantizeChannel(_clearColor.B), a = QuantizeChannel(_clearColor.A);
 		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 			GX_Position3f32(0.0f, 0.0f, 0.0f);				GX_Color4u8(r, g, b, a);
 			GX_Position3f32(float(w), 0.0f, 0.0f);			GX_Color4u8(r, g, b, a);
@@ -1086,26 +1086,26 @@ namespace nCine::RHI::GX
 		// the screen (that maps the logical resolution onto the display copy = free upscale) and the target
 		// rect for a render-target pass (rendered 1:1 into the EFB corner, then copied out)
 		std::int32_t w, h;
-		if (currentRenderTarget_ != nullptr) {
-			GxTexture* texture = currentRenderTarget_->GetColorTexture(0);
-			w = (texture != nullptr ? texture->GetWidth() : viewport_.W);
-			h = (texture != nullptr ? texture->GetHeight() : viewport_.H);
+		if (_currentRenderTarget != nullptr) {
+			GxTexture* texture = _currentRenderTarget->GetColorTexture(0);
+			w = (texture != nullptr ? texture->GetWidth() : _viewport.W);
+			h = (texture != nullptr ? texture->GetHeight() : _viewport.H);
 		} else {
-			w = (logicalWidth_ > 0 ? logicalWidth_ : (rmode_ != nullptr ? rmode_->fbWidth : 640));
-			h = (logicalHeight_ > 0 ? logicalHeight_ : (rmode_ != nullptr ? rmode_->efbHeight : 480));
+			w = (_logicalWidth > 0 ? _logicalWidth : (_rmode != nullptr ? _rmode->fbWidth : 640));
+			h = (_logicalHeight > 0 ? _logicalHeight : (_rmode != nullptr ? _rmode->efbHeight : 480));
 		}
 
 		// The projection, viewport and position matrix only depend on the target and its logical size,
 		// which are identical for whole runs of consecutive draws - skip the reissue when nothing changed
-		if (g_appliedProjectionValid && g_appliedProjectionTarget == currentRenderTarget_ &&
+		if (g_appliedProjectionValid && g_appliedProjectionTarget == _currentRenderTarget &&
 			g_appliedProjectionW == w && g_appliedProjectionH == h) {
 			return;
 		}
 
-		if (currentRenderTarget_ != nullptr) {
+		if (_currentRenderTarget != nullptr) {
 			GX_SetViewport(0.0f, 0.0f, float(w), float(h), 0.0f, 1.0f);
-		} else if (rmode_ != nullptr) {
-			GX_SetViewport(0.0f, 0.0f, float(rmode_->fbWidth), float(rmode_->efbHeight), 0.0f, 1.0f);
+		} else if (_rmode != nullptr) {
+			GX_SetViewport(0.0f, 0.0f, float(_rmode->fbWidth), float(_rmode->efbHeight), 0.0f, 1.0f);
 		}
 		Mtx44 proj;
 		guOrtho(proj, 0.0f, float(h), 0.0f, float(w), 0.0f, 1.0f);
@@ -1117,7 +1117,7 @@ namespace nCine::RHI::GX
 		GX_SetCurrentMtx(GX_PNMTX0);
 
 		g_appliedProjectionValid = true;
-		g_appliedProjectionTarget = currentRenderTarget_;
+		g_appliedProjectionTarget = _currentRenderTarget;
 		g_appliedProjectionW = w;
 		g_appliedProjectionH = h;
 	}
@@ -1126,58 +1126,58 @@ namespace nCine::RHI::GX
 	{
 		// The blend factors only matter while blending is enabled, so a disabled state always matches a
 		// cached disabled one whatever factors it carries
-		if (!g_appliedBlendValid || g_appliedBlendEnabled != blending_.Enabled ||
-			(blending_.Enabled && (g_appliedBlendSrc != blending_.SrcRgb || g_appliedBlendDst != blending_.DstRgb))) {
-			if (blending_.Enabled) {
-				GX_SetBlendMode(GX_BM_BLEND, MapBlendGx(blending_.SrcRgb), MapBlendGx(blending_.DstRgb), GX_LO_CLEAR);
+		if (!g_appliedBlendValid || g_appliedBlendEnabled != _blending.Enabled ||
+			(_blending.Enabled && (g_appliedBlendSrc != _blending.SrcRgb || g_appliedBlendDst != _blending.DstRgb))) {
+			if (_blending.Enabled) {
+				GX_SetBlendMode(GX_BM_BLEND, MapBlendGx(_blending.SrcRgb), MapBlendGx(_blending.DstRgb), GX_LO_CLEAR);
 			} else {
 				GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
 			}
 			g_appliedBlendValid = true;
-			g_appliedBlendEnabled = blending_.Enabled;
-			g_appliedBlendSrc = blending_.SrcRgb;
-			g_appliedBlendDst = blending_.DstRgb;
+			g_appliedBlendEnabled = _blending.Enabled;
+			g_appliedBlendSrc = _blending.SrcRgb;
+			g_appliedBlendDst = _blending.DstRgb;
 		}
 
 		// The scissor mapping depends on the target (the flip and the EFB scale), so the target pointer is
 		// part of the cache key; a disabled state always maps to the same full-EFB rect
-		if (g_appliedScissorValid && g_appliedScissorEnabled == scissor_.Enabled &&
-			g_appliedScissorTarget == currentRenderTarget_ &&
-			(!scissor_.Enabled || g_appliedScissorRect == scissor_.Rect)) {
+		if (g_appliedScissorValid && g_appliedScissorEnabled == _scissor.Enabled &&
+			g_appliedScissorTarget == _currentRenderTarget &&
+			(!_scissor.Enabled || g_appliedScissorRect == _scissor.Rect)) {
 			return;
 		}
 
 		// The engine hands scissor rectangles in bottom-up (OpenGL) window coordinates of the logical
 		// space; GX scissors in top-down EFB pixels, so flip and scale
-		std::int32_t targetW = logicalWidth_, targetH = logicalHeight_;
+		std::int32_t targetW = _logicalWidth, targetH = _logicalHeight;
 		float scaleX = 1.0f, scaleY = 1.0f;
-		if (currentRenderTarget_ == nullptr && rmode_ != nullptr && targetW > 0 && targetH > 0) {
-			scaleX = float(rmode_->fbWidth) / float(targetW);
-			scaleY = float(rmode_->efbHeight) / float(targetH);
+		if (_currentRenderTarget == nullptr && _rmode != nullptr && targetW > 0 && targetH > 0) {
+			scaleX = float(_rmode->fbWidth) / float(targetW);
+			scaleY = float(_rmode->efbHeight) / float(targetH);
 		}
-		if (scissor_.Enabled && targetH > 0) {
+		if (_scissor.Enabled && targetH > 0) {
 			// Screen passes mirror NDC (see Dispatch), so the engine's bottom-up scissor maps to raster
 			// rows directly; render-to-texture passes keep the unmirrored top-down store and flip it
-			const std::int32_t rasterY = (currentRenderTarget_ == nullptr
-				? scissor_.Rect.Y : targetH - scissor_.Rect.Y - scissor_.Rect.H);
-			GX_SetScissor(std::uint32_t(float(scissor_.Rect.X) * scaleX), std::uint32_t(float(rasterY) * scaleY),
-				std::uint32_t(float(scissor_.Rect.W) * scaleX), std::uint32_t(float(scissor_.Rect.H) * scaleY));
-		} else if (rmode_ != nullptr) {
-			GX_SetScissor(0, 0, rmode_->fbWidth, rmode_->efbHeight);
+			const std::int32_t rasterY = (_currentRenderTarget == nullptr
+				? _scissor.Rect.Y : targetH - _scissor.Rect.Y - _scissor.Rect.H);
+			GX_SetScissor(std::uint32_t(float(_scissor.Rect.X) * scaleX), std::uint32_t(float(rasterY) * scaleY),
+				std::uint32_t(float(_scissor.Rect.W) * scaleX), std::uint32_t(float(_scissor.Rect.H) * scaleY));
+		} else if (_rmode != nullptr) {
+			GX_SetScissor(0, 0, _rmode->fbWidth, _rmode->efbHeight);
 		}
 
 		g_appliedScissorValid = true;
-		g_appliedScissorEnabled = scissor_.Enabled;
-		g_appliedScissorRect = scissor_.Rect;
-		g_appliedScissorTarget = currentRenderTarget_;
+		g_appliedScissorEnabled = _scissor.Enabled;
+		g_appliedScissorRect = _scissor.Rect;
+		g_appliedScissorTarget = _currentRenderTarget;
 	}
 
 	void GxDevice::FlushCurrentRenderTarget()
 	{
-		if (currentRenderTarget_ == nullptr) {
+		if (_currentRenderTarget == nullptr) {
 			return;
 		}
-		GxTexture* texture = currentRenderTarget_->GetColorTexture(0);
+		GxTexture* texture = _currentRenderTarget->GetColorTexture(0);
 		if (texture == nullptr || texture->GetRenderTargetStore() == nullptr) {
 			return;
 		}
@@ -1237,72 +1237,72 @@ namespace nCine::RHI::GX
 
 	void GxDevice::SetupInitialState()
 	{
-		blending_ = BlendingState();
-		depthTest_ = DepthTestState();
-		cullFace_ = CullFaceState();
-		scissor_ = ScissorState();
+		_blending = BlendingState();
+		_depthTest = DepthTestState();
+		_cullFace = CullFaceState();
+		_scissor = ScissorState();
 	}
 
 	// ------------------------------------------------------------------ extensions
 
-	void GxDevice::BindProgram(GxShaderProgram* program) { currentProgram_ = program; }
-	GxShaderProgram* GxDevice::CurrentProgram() { return currentProgram_; }
+	void GxDevice::BindProgram(GxShaderProgram* program) { _currentProgram = program; }
+	GxShaderProgram* GxDevice::CurrentProgram() { return _currentProgram; }
 
 	void GxDevice::BindTexture(std::uint32_t unit, const GxTexture* texture)
 	{
 		if (unit < MaxTextureUnits) {
-			boundTextures_[unit] = texture;
+			_boundTextures[unit] = texture;
 		}
 	}
 
 	void GxDevice::UnbindTexture(const GxTexture* texture)
 	{
 		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
-			if (boundTextures_[i] == texture) {
-				boundTextures_[i] = nullptr;
+			if (_boundTextures[i] == texture) {
+				_boundTextures[i] = nullptr;
 			}
 		}
-		if (paletteTexture_ == texture) {
-			paletteTexture_ = nullptr;
+		if (_paletteTexture == texture) {
+			_paletteTexture = nullptr;
 		}
 		// Drop TLUTs built from the destroyed palette so a stale pointer can never match
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].Palette == texture) {
-				tlutSlots_[i].PaletteOffset = -1;
-				tlutSlots_[i].Palette = nullptr;
+			if (_tlutSlots[i].Palette == texture) {
+				_tlutSlots[i].PaletteOffset = -1;
+				_tlutSlots[i].Palette = nullptr;
 			}
 		}
 	}
 
 	const GxTexture* GxDevice::GetBoundTexture(std::uint32_t unit)
 	{
-		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
+		return (unit < MaxTextureUnits ? _boundTextures[unit] : nullptr);
 	}
 
 	void GxDevice::BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size)
 	{
 		if (index < MaxUniformBindings) {
-			boundUniformRanges_[index].Data = data;
-			boundUniformRanges_[index].Size = size;
+			_boundUniformRanges[index].Data = data;
+			_boundUniformRanges[index].Size = size;
 		}
 	}
 
 	void GxDevice::SetRenderTarget(GxRenderTarget* renderTarget)
 	{
-		if (renderTarget == currentRenderTarget_) {
+		if (renderTarget == _currentRenderTarget) {
 			return;
 		}
 		// Leaving a target resolves it into its texture before anything else renders over the EFB
 		FlushCurrentRenderTarget();
-		currentRenderTarget_ = renderTarget;
+		_currentRenderTarget = renderTarget;
 		// The projection space and the scissor mapping are keyed on the target
 		InvalidateAppliedState();
 	}
 
 	void GxDevice::UnbindRenderTarget(const GxRenderTarget* renderTarget)
 	{
-		if (currentRenderTarget_ == renderTarget) {
-			currentRenderTarget_ = nullptr;
+		if (_currentRenderTarget == renderTarget) {
+			_currentRenderTarget = nullptr;
 		}
 	}
 
@@ -1310,19 +1310,19 @@ namespace nCine::RHI::GX
 
 	void GxDevice::RegisterPaletteTexture(GxTexture* texture)
 	{
-		paletteTexture_ = texture;
+		_paletteTexture = texture;
 		NotifyPaletteTextureChanged(texture, 0, texture != nullptr ? texture->GetHeight() : 0);
 	}
 
 	void GxDevice::NotifyPaletteTextureChanged(GxTexture* texture, std::int32_t firstRow, std::int32_t rowCount)
 	{
-		if (texture != paletteTexture_) {
+		if (texture != _paletteTexture) {
 			return;
 		}
-		paletteGeneration_++;
+		_paletteGeneration++;
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].PaletteOffset >= (firstRow - 1) * 256 && tlutSlots_[i].PaletteOffset < (firstRow + rowCount) * 256) {
-				tlutSlots_[i].PaletteOffset = -1;
+			if (_tlutSlots[i].PaletteOffset >= (firstRow - 1) * 256 && _tlutSlots[i].PaletteOffset < (firstRow + rowCount) * 256) {
+				_tlutSlots[i].PaletteOffset = -1;
 			}
 		}
 	}
@@ -1340,7 +1340,7 @@ namespace nCine::RHI::GX
 			return -1;
 		}
 
-		tlutUseCounter_++;
+		_tlutUseCounter++;
 
 		// Reuse a slot already holding this row of this palette (and its current content), or evict the
 		// least recently used one
@@ -1348,20 +1348,20 @@ namespace nCine::RHI::GX
 		std::uint32_t oldestUse = UINT32_MAX;
 		std::int32_t oldestSlot = 0;
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].PaletteOffset == paletteOffset && tlutSlots_[i].Palette == palette &&
-				tlutSlots_[i].PaletteVersion == palette->GetContentVersion()) {
+			if (_tlutSlots[i].PaletteOffset == paletteOffset && _tlutSlots[i].Palette == palette &&
+				_tlutSlots[i].PaletteVersion == palette->GetContentVersion()) {
 				slot = std::int32_t(i);
 				break;
 			}
-			if (tlutSlots_[i].LastUse < oldestUse) {
-				oldestUse = tlutSlots_[i].LastUse;
+			if (_tlutSlots[i].LastUse < oldestUse) {
+				oldestUse = _tlutSlots[i].LastUse;
 				oldestSlot = std::int32_t(i);
 			}
 		}
 
 		if (slot < 0) {
 			slot = oldestSlot;
-			TlutSlot& s = tlutSlots_[slot];
+			TlutSlot& s = _tlutSlots[slot];
 			if (s.Data == nullptr) {
 				s.Data = static_cast<std::uint16_t*>(memalign(32, 256 * sizeof(std::uint16_t)));
 				if (s.Data == nullptr) {
@@ -1383,7 +1383,7 @@ namespace nCine::RHI::GX
 			s.PaletteVersion = palette->GetContentVersion();
 		}
 
-		tlutSlots_[slot].LastUse = tlutUseCounter_;
+		_tlutSlots[slot].LastUse = _tlutUseCounter;
 		return slot;
 	}
 
@@ -1409,28 +1409,28 @@ namespace nCine::RHI::GX
 		light.WaterLevelPx = waterLevelPx;
 		light.WaterTime = waterTime;
 		light.WaterCamY = waterCamY;
-		pendingSoftwareLights_.push_back(light);
+		_pendingSoftwareLights.push_back(light);
 	}
 
 	void GxDevice::EndFrame()
 	{
-		if (!pendingSoftwareLights_.empty()) {
+		if (!_pendingSoftwareLights.empty()) {
 			static bool warnedLeftoverLights = false;
 			if (!warnedLeftoverLights) {
 				warnedLeftoverLights = true;
-				LOGW("Dropping {} unconsumed software-lighting entries", pendingSoftwareLights_.size());
+				LOGW("Dropping {} unconsumed software-lighting entries", _pendingSoftwareLights.size());
 			}
-			pendingSoftwareLights_.clear();
+			_pendingSoftwareLights.clear();
 		}
 	}
 
 	void GxDevice::ApplyPendingSoftwareLighting()
 	{
-		if (pendingSoftwareLights_.empty()) {
+		if (_pendingSoftwareLights.empty()) {
 			return;
 		}
-		const PendingSoftwareLight light = pendingSoftwareLights_.front();
-		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
+		const PendingSoftwareLight light = _pendingSoftwareLights.front();
+		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
 		const bool hasWater = light.WaterActive;
@@ -1453,24 +1453,24 @@ namespace nCine::RHI::GX
 			const std::int32_t w = light.LmW, h = light.LmH;
 			const std::size_t linearSize = std::size_t(w) * std::size_t(h) * 4;
 			const std::size_t tiledSize = std::size_t((w + 3) & ~3) * std::size_t((h + 3) & ~3) * 4;
-			if (lightmapStore_ == nullptr || lightmapStoreSize_ < tiledSize) {
-				if (lightmapStore_ != nullptr) {
-					free(lightmapStore_);
+			if (_lightmapStore == nullptr || _lightmapStoreSize < tiledSize) {
+				if (_lightmapStore != nullptr) {
+					free(_lightmapStore);
 				}
-				lightmapStore_ = static_cast<std::uint8_t*>(memalign(32, tiledSize));
-				lightmapStoreSize_ = tiledSize;
+				_lightmapStore = static_cast<std::uint8_t*>(memalign(32, tiledSize));
+				_lightmapStoreSize = tiledSize;
 			}
 			// The linear staging buffer persists across frames like the tiled store above - allocating
 			// (and zero-initializing) it per lit frame is wasted work, every byte is written below
-			if (lightmapLinear_ == nullptr || lightmapLinearSize_ < linearSize) {
-				if (lightmapLinear_ != nullptr) {
-					free(lightmapLinear_);
+			if (_lightmapLinear == nullptr || _lightmapLinearSize < linearSize) {
+				if (_lightmapLinear != nullptr) {
+					free(_lightmapLinear);
 				}
-				lightmapLinear_ = static_cast<std::uint8_t*>(malloc(linearSize));
-				lightmapLinearSize_ = (lightmapLinear_ != nullptr ? linearSize : 0);
+				_lightmapLinear = static_cast<std::uint8_t*>(malloc(linearSize));
+				_lightmapLinearSize = (_lightmapLinear != nullptr ? linearSize : 0);
 			}
-			if (lightmapStore_ != nullptr && lightmapLinear_ != nullptr) {
-				std::uint8_t* const linear = lightmapLinear_;
+			if (_lightmapStore != nullptr && _lightmapLinear != nullptr) {
+				std::uint8_t* const linear = _lightmapLinear;
 				for (std::int32_t y = 0; y < h; y++) {
 					const float* src = light.Lightmap + std::size_t(y) * w * 2;
 					std::uint8_t* dst = linear + std::size_t(y) * w * 4;
@@ -1492,7 +1492,7 @@ namespace nCine::RHI::GX
 				const std::int32_t tilesY = (h + 3) / 4;
 				for (std::int32_t ty = 0; ty < tilesY; ty++) {
 					for (std::int32_t tx = 0; tx < tilesX; tx++) {
-						std::uint8_t* tile = lightmapStore_ + std::size_t(ty * tilesX + tx) * 64;
+						std::uint8_t* tile = _lightmapStore + std::size_t(ty * tilesX + tx) * 64;
 						for (std::int32_t row = 0; row < 4; row++) {
 							for (std::int32_t col = 0; col < 4; col++) {
 								const std::int32_t x = tx * 4 + col;
@@ -1511,12 +1511,12 @@ namespace nCine::RHI::GX
 						}
 					}
 				}
-				DCFlushRange(lightmapStore_, std::uint32_t(tiledSize));
+				DCFlushRange(_lightmapStore, std::uint32_t(tiledSize));
 				GX_InvalidateTexAll();
 
-				GX_InitTexObj(&lightmapTexObj_, lightmapStore_, std::uint16_t(w), std::uint16_t(h), GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
-				GX_InitTexObjFilterMode(&lightmapTexObj_, GX_LINEAR, GX_LINEAR);
-				GX_LoadTexObj(&lightmapTexObj_, GX_TEXMAP0);
+				GX_InitTexObj(&_lightmapTexObj, _lightmapStore, std::uint16_t(w), std::uint16_t(h), GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+				GX_InitTexObjFilterMode(&_lightmapTexObj, GX_LINEAR, GX_LINEAR);
+				GX_LoadTexObj(&_lightmapTexObj, GX_TEXMAP0);
 
 				SetVertexModeTextured(true);
 				GX_SetBlendMode(GX_BM_BLEND, GX_BL_DSTCLR, GX_BL_ZERO, GX_LO_CLEAR);	// out = dst * src
@@ -1571,11 +1571,11 @@ namespace nCine::RHI::GX
 			return;
 		}
 
-		const GxBuffer* vbo = currentProgram_->GetBoundVbo();
+		const GxBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1583,7 +1583,7 @@ namespace nCine::RHI::GX
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GxUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GxUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1591,18 +1591,18 @@ namespace nCine::RHI::GX
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		GxTexture* texture = const_cast<GxTexture*>(boundTextures_[0]);
+		GxTexture* texture = const_cast<GxTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedViewMatrix();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -1618,12 +1618,12 @@ namespace nCine::RHI::GX
 		// global palette is the fallback (mirrors the sprite path). TileMapMeshPalette binds
 		// uTexturePalette in its reflection, which is exactly what UsesPalette() reports - the remap
 		// intent needs no effect identity of its own.
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const GxTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed()) {
-			paletteTex = boundTextures_[1];
+			paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
 
@@ -1653,7 +1653,7 @@ namespace nCine::RHI::GX
 			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
 				paletteTex->GetPixels()) + paletteOffset;
 			texObj = texture->EnsureBakedRgba(entries, paletteOffset,
-				(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+				(paletteTex == _paletteTexture ? _paletteGeneration : paletteTex->GetContentVersion()), paletteTex);
 		} else {
 			texObj = texture->GetTexObj();
 		}
@@ -1667,9 +1667,9 @@ namespace nCine::RHI::GX
 		SetTevMode(TevMode::Modulate);
 		GX_LoadTexObj(texObj, GX_TEXMAP0);
 
-		const bool screenPass = (currentRenderTarget_ == nullptr);
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const bool screenPass = (_currentRenderTarget == nullptr);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
 		// transform once instead of being reapplied per vertex - every vertex then costs one multiply-add
@@ -1769,11 +1769,11 @@ namespace nCine::RHI::GX
 			return;
 		}
 
-		const GxBuffer* vbo = currentProgram_->GetBoundVbo();
+		const GxBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
 			return;
 		}
-		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
 		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
 		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
@@ -1781,7 +1781,7 @@ namespace nCine::RHI::GX
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GxUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GxUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
 			return;
 		}
@@ -1789,18 +1789,18 @@ namespace nCine::RHI::GX
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		GxTexture* texture = const_cast<GxTexture*>(boundTextures_[0]);
+		GxTexture* texture = const_cast<GxTexture*>(_boundTextures[0]);
 		if (texture == nullptr) {
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedViewMatrix();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -1819,9 +1819,9 @@ namespace nCine::RHI::GX
 		// The strip shares one texture; indexed assets read through the base TLUT row like the fonts do
 		GXTexObj* texObj = nullptr;
 		if (texture->IsIndexed()) {
-			const GxTexture* paletteTex = boundTextures_[1];
+			const GxTexture* paletteTex = _boundTextures[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 			const std::int32_t slot = AcquireTlutForRow(paletteTex, 0);
 			texObj = texture->GetTexObj();
@@ -1843,9 +1843,9 @@ namespace nCine::RHI::GX
 		// Width is in sixths of a pixel, so 6 matches the 1-wide GL lines this stands in for
 		GX_SetLineWidth(6, GX_TO_ZERO);
 
-		const bool screenPass = (currentRenderTarget_ == nullptr);
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const bool screenPass = (_currentRenderTarget == nullptr);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
 		const float rasterScaleX = 0.5f * float(viewport.W);
@@ -1871,7 +1871,7 @@ namespace nCine::RHI::GX
 
 	void GxDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		if (currentProgram_ == nullptr || numVertices <= 0 || !gxInitialized_) {
+		if (_currentProgram == nullptr || numVertices <= 0 || !_gxInitialized) {
 			return;
 		}
 
@@ -1879,10 +1879,10 @@ namespace nCine::RHI::GX
 		// true (program, variant) the loaders plumbed in - a program without an entry has no
 		// fixed_function block in its .shader file (Lighting, Blur, the Resize* family,
 		// runtime-compiled shaders, ...) and keeps the logged, skipped draw.
-		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
+		const FixedFunctionGeneratedEffect* generated = _currentProgram->GetGeneratedEffect();
 		if (generated == nullptr) {
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1904,8 +1904,8 @@ namespace nCine::RHI::GX
 		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
 			if (primitive == PrimitiveType::LineStrip) {
 				DispatchLineStrip(firstVertex, numVertices);
-			} else if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the GX dispatch", currentProgram_->GetObjectLabel());
+			} else if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the GX dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
@@ -1915,20 +1915,20 @@ namespace nCine::RHI::GX
 		// since phase 4)
 		const bool isQuadFamily = (generated->Fn != nullptr);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
-			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Effect not supported by the GX dispatch", currentProgram_->GetObjectLabel());
+			if (!_currentProgram->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Effect not supported by the GX dispatch", _currentProgram->GetObjectLabel());
 			}
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
-		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedViewMatrix();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const GxUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		const GxUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
 		if (block == nullptr) {
-			block = currentProgram_->FindBlock("InstancesBlock");
+			block = _currentProgram->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
 			return;
@@ -1937,12 +1937,12 @@ namespace nCine::RHI::GX
 		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
 			binding = 0;
 		}
-		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
 			return;
 		}
 
-		const ShaderCompiler::ProgramVariant* reflection = currentProgram_->GetReflection();
+		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
 		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
 			if (reflection != nullptr) {
 				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
@@ -2011,9 +2011,9 @@ namespace nCine::RHI::GX
 		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette
 		// in its reflection, which is what UsesPalette() reports (PaletteRemap and the "...Palette"
 		// variants of the actor state effects alike)
-		const bool isPaletteRemap = currentProgram_->UsesPalette();
+		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
-		const GxTexture* texture = (hasTexture ? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
+		const GxTexture* texture = (hasTexture ? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
 			return;
 		}
@@ -2023,9 +2023,9 @@ namespace nCine::RHI::GX
 		const GxTexture* paletteTex = nullptr;
 		if (isPaletteRemap) {
 			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
-			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
+			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? _boundTextures[paletteUnit] : nullptr);
 			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = paletteTexture_;
+				paletteTex = _paletteTexture;
 			}
 		}
 
@@ -2034,7 +2034,7 @@ namespace nCine::RHI::GX
 		SetVertexModeTextured(hasTexture);
 
 		// Bounds guard, mirroring the software device
-		const std::uint32_t rangeSize = boundUniformRanges_[binding].Size;
+		const std::uint32_t rangeSize = _boundUniformRanges[binding].Size;
 		if (batched && rangeSize > 0 && std::uint32_t(numInstances) * instanceStride > rangeSize) {
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
@@ -2044,10 +2044,10 @@ namespace nCine::RHI::GX
 		// present time; the EFB is scanned out top-down directly, so screen passes mirror NDC here instead
 		// (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is what the
 		// sampling passes already expect.
-		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const bool screenPass = (_currentRenderTarget == nullptr);
 
-		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
-			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
+			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner;
 		// the screen-pass NDC mirror is just the sign of the Y scale
@@ -2078,9 +2078,9 @@ namespace nCine::RHI::GX
 		// The material blend arguments, mirroring what ApplyRenderState() issued above, so
 		// EffectContext::SubmitQuad can restore them after a pass-level blend override. The override
 		// flag outlives one instance because the material state does too.
-		const std::uint8_t materialBlendOp = std::uint8_t(blending_.Enabled ? GX_BM_BLEND : GX_BM_NONE);
-		const std::uint8_t materialBlendSrc = (blending_.Enabled ? MapBlendGx(blending_.SrcRgb) : std::uint8_t(GX_BL_ONE));
-		const std::uint8_t materialBlendDst = (blending_.Enabled ? MapBlendGx(blending_.DstRgb) : std::uint8_t(GX_BL_ZERO));
+		const std::uint8_t materialBlendOp = std::uint8_t(_blending.Enabled ? GX_BM_BLEND : GX_BM_NONE);
+		const std::uint8_t materialBlendSrc = (_blending.Enabled ? MapBlendGx(_blending.SrcRgb) : std::uint8_t(GX_BL_ONE));
+		const std::uint8_t materialBlendDst = (_blending.Enabled ? MapBlendGx(_blending.DstRgb) : std::uint8_t(GX_BL_ZERO));
 		bool blendOverridden = false;
 
 		for (std::int32_t k = 0; k < numInstances; k++) {
@@ -2121,7 +2121,7 @@ namespace nCine::RHI::GX
 					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
 						paletteTex->GetPixels()) + paletteOffset;
 					texObj = mutableTexture->EnsureBakedRgba(entries, paletteOffset,
-						(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+						(paletteTex == _paletteTexture ? _paletteGeneration : paletteTex->GetContentVersion()), paletteTex);
 				} else {
 					texObj = mutableTexture->GetTexObj();
 				}
@@ -2184,7 +2184,7 @@ namespace nCine::RHI::GX
 			}
 			// Resolved uniforms are the only thing the context needs the program for, so effects
 			// without the facility get no program plumbed at all (no resolution can ever run)
-			ctx.Program = (needsUniforms ? currentProgram_ : nullptr);
+			ctx.Program = (needsUniforms ? _currentProgram : nullptr);
 			if (needsStripBuilder) {
 				// GX textures are not padded, so strip UVs pass through 1:1 (contract parity with the PVR)
 				ctx.UvScaleU = 1.0f;

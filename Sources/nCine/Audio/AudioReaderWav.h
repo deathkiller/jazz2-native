@@ -26,7 +26,7 @@ namespace nCine
 		void rewind() const override;
 
 	private:
-		std::unique_ptr<Death::IO::Stream> fileHandle_;
-		std::int32_t bytesPerSample_;
+		std::unique_ptr<Death::IO::Stream> _fileHandle;
+		std::int32_t _bytesPerSample;
 	};
 }

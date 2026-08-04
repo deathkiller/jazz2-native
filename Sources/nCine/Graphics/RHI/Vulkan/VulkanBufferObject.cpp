@@ -6,11 +6,11 @@
 
 namespace nCine::RHI::Vulkan
 {
-	std::uint32_t VulkanBufferObject::nextHandle_ = 1;
+	std::uint32_t VulkanBufferObject::_nextHandle = 1;
 
 	VulkanBufferObject::VulkanBufferObject(BufferTarget target)
-		: handle_(nextHandle_++), target_(target),
-			gpuBuffer_(0), gpuMemory_(0), gpuMapped_(nullptr), gpuCapacity_(0), gpuDirty_(true)
+		: _handle(_nextHandle++), _target(target),
+			_gpuBuffer(0), _gpuMemory(0), _gpuMapped(nullptr), _gpuCapacity(0), _gpuDirty(true)
 	{
 	}
 
@@ -23,43 +23,43 @@ namespace nCine::RHI::Vulkan
 	{
 		// Unmapping is a CPU-side operation (it does not disturb an in-flight GPU read of the buffer), so do it now.
 		VkDevice device = VkDeviceHandle();
-		if (device != VK_NULL_HANDLE && gpuMapped_ != nullptr) {
-			vkUnmapMemory(device, reinterpret_cast<VkDeviceMemory>(gpuMemory_));
+		if (device != VK_NULL_HANDLE && _gpuMapped != nullptr) {
+			vkUnmapMemory(device, reinterpret_cast<VkDeviceMemory>(_gpuMemory));
 		}
-		gpuMapped_ = nullptr;
+		_gpuMapped = nullptr;
 		// Defer the buffer / memory frees: an in-flight frame's command buffer may still bind this buffer as a
 		// vertex/index source (up to MaxFramesInFlight frames run concurrently), and this also runs on a mid-frame
 		// grow-realloc; freeing now would be a GPU use-after-free. The device frees them once every referencing
 		// frame has completed. VkEnqueueDestroy no-ops if the device is already gone (teardown).
-		VkEnqueueDestroy(VkDeferredResource::Buffer, gpuBuffer_);
-		VkEnqueueDestroy(VkDeferredResource::DeviceMemory, gpuMemory_);
-		gpuBuffer_ = 0;
-		gpuMemory_ = 0;
-		gpuCapacity_ = 0;
+		VkEnqueueDestroy(VkDeferredResource::Buffer, _gpuBuffer);
+		VkEnqueueDestroy(VkDeferredResource::DeviceMemory, _gpuMemory);
+		_gpuBuffer = 0;
+		_gpuMemory = 0;
+		_gpuCapacity = 0;
 	}
 
 	std::uint64_t VulkanBufferObject::GetVkBuffer() const
 	{
 		// Only the geometry (Vertex/Index) targets get a real VkBuffer; uniform data is routed through the
 		// device's per-frame device-aligned uniform ring instead (see VulkanDevice draw path).
-		if (target_ == BufferTarget::Uniform) {
+		if (_target == BufferTarget::Uniform) {
 			return 0;
 		}
 
 		VkDevice device = VkDeviceHandle();
-		if (device == VK_NULL_HANDLE || storage_.empty()) {
+		if (device == VK_NULL_HANDLE || _storage.empty()) {
 			return 0;
 		}
 
 		// (Re)create when missing or too small (grow-only). Safe mid-frame: the device waits on the previous
 		// frame's fence before any draw records, so the old buffer is no longer read by the GPU.
-		if (gpuBuffer_ == 0 || gpuCapacity_ < storage_.size()) {
+		if (_gpuBuffer == 0 || _gpuCapacity < _storage.size()) {
 			ReleaseGpu();
 
 			VkBufferCreateInfo bci = {};
 			bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bci.size = storage_.size();
-			bci.usage = (target_ == BufferTarget::Index) ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			bci.size = _storage.size();
+			bci.usage = (_target == BufferTarget::Index) ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			VkBuffer buffer = VK_NULL_HANDLE;
 			if (vkCreateBuffer(device, &bci, nullptr, &buffer) != VK_SUCCESS) {
@@ -83,18 +83,18 @@ namespace nCine::RHI::Vulkan
 			void* mapped = nullptr;
 			vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &mapped);
 
-			gpuBuffer_ = reinterpret_cast<std::uint64_t>(buffer);
-			gpuMemory_ = reinterpret_cast<std::uint64_t>(memory);
-			gpuMapped_ = mapped;
-			gpuCapacity_ = storage_.size();
-			gpuDirty_ = true;
+			_gpuBuffer = reinterpret_cast<std::uint64_t>(buffer);
+			_gpuMemory = reinterpret_cast<std::uint64_t>(memory);
+			_gpuMapped = mapped;
+			_gpuCapacity = _storage.size();
+			_gpuDirty = true;
 		}
 
-		if (gpuDirty_ && gpuMapped_ != nullptr) {
-			std::memcpy(gpuMapped_, storage_.data(), storage_.size());
-			gpuDirty_ = false;
+		if (_gpuDirty && _gpuMapped != nullptr) {
+			std::memcpy(_gpuMapped, _storage.data(), _storage.size());
+			_gpuDirty = false;
 		}
-		return gpuBuffer_;
+		return _gpuBuffer;
 	}
 
 	bool VulkanBufferObject::Bind() const
@@ -110,69 +110,69 @@ namespace nCine::RHI::Vulkan
 	void VulkanBufferObject::BufferData(std::size_t size, const void* data, BufferUsage usage)
 	{
 		static_cast<void>(usage);
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
-		gpuDirty_ = true;
+		_gpuDirty = true;
 	}
 
 	void VulkanBufferObject::BufferSubData(std::size_t offset, std::size_t size, const void* data)
 	{
-		if (data == nullptr || size == 0 || offset + size > storage_.size()) {
+		if (data == nullptr || size == 0 || offset + size > _storage.size()) {
 			return;
 		}
-		std::memcpy(storage_.data() + offset, data, size);
-		gpuDirty_ = true;
+		std::memcpy(_storage.data() + offset, data, size);
+		_gpuDirty = true;
 	}
 
 	void VulkanBufferObject::BufferStorage(std::size_t size, const void* data, MapFlags flags)
 	{
 		// The host store is a plain resizable buffer, so "immutable storage" is just a (re)allocation
 		static_cast<void>(flags);
-		storage_.assign(size, std::uint8_t(0));
+		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(storage_.data(), data, size);
+			std::memcpy(_storage.data(), data, size);
 		}
-		gpuDirty_ = true;
+		_gpuDirty = true;
 	}
 
 	void VulkanBufferObject::BindBufferBase(std::uint32_t index)
 	{
-		BindBufferRange(index, 0, storage_.size());
+		BindBufferRange(index, 0, _storage.size());
 	}
 
 	void VulkanBufferObject::BindBufferRange(std::uint32_t index, std::size_t offset, std::size_t size)
 	{
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return;
 		}
-		if (offset + size > storage_.size()) {
-			size = storage_.size() - offset;
+		if (offset + size > _storage.size()) {
+			size = _storage.size() - offset;
 		}
-		VulkanDevice::BindUniformRange(index, storage_.data() + offset, std::uint32_t(size));
+		VulkanDevice::BindUniformRange(index, _storage.data() + offset, std::uint32_t(size));
 	}
 
 	void* VulkanBufferObject::MapBufferRange(std::size_t offset, std::size_t length, MapFlags access)
 	{
 		static_cast<void>(length);
 		static_cast<void>(access);
-		if (offset > storage_.size()) {
+		if (offset > _storage.size()) {
 			return nullptr;
 		}
-		return storage_.data() + offset;
+		return _storage.data() + offset;
 	}
 
 	void VulkanBufferObject::FlushMappedBufferRange(std::size_t offset, std::size_t length)
 	{
 		static_cast<void>(offset);
 		static_cast<void>(length);
-		gpuDirty_ = true;
+		_gpuDirty = true;
 	}
 
 	bool VulkanBufferObject::Unmap()
 	{
-		gpuDirty_ = true;
+		_gpuDirty = true;
 		return true;
 	}
 

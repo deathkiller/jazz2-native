@@ -92,40 +92,40 @@ namespace nCine
 
 		/** @brief Returns `true` if the OpenGL profile is going to be core */
 		inline bool glCoreProfile() const {
-			return glCoreProfile_;
+			return _glCoreProfile;
 		}
 		/** @brief Returns `true` if the OpenGL context is going to be forward compatible */
 		inline bool glForwardCompatible() const {
-			return glForwardCompatible_;
+			return _glForwardCompatible;
 		}
 		/** @brief Returns major version number of the OpenGL context */
 		inline std::uint32_t glMajorVersion() const {
-			return glMajorVersion_;
+			return _glMajorVersion;
 		}
 		/** @brief Returns minor version number of the OpenGL context */
 		inline std::uint32_t glMinorVersion() const {
-			return glMinorVersion_;
+			return _glMinorVersion;
 		}
 
 		/** @brief Returns number of arguments passed on the command-line */
 		inline std::size_t argc() const {
-			return argv_.size();
+			return _argv.size();
 		}
 		/** @brief Returns selected argument from the ones passed on the command-line */
 		const StringView argv(std::size_t index) const;
 
 	private:
 		// Pre-configured compile-time variables
-		const bool glCoreProfile_;
-		const bool glForwardCompatible_;
-		const std::uint32_t glMajorVersion_;
-		const std::uint32_t glMinorVersion_;
+		const bool _glCoreProfile;
+		const bool _glForwardCompatible;
+		const std::uint32_t _glMajorVersion;
+		const std::uint32_t _glMinorVersion;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		Array<String> argv_;
+		Array<String> _argv;
 #else
-		Array<StringView> argv_;
+		Array<StringView> _argv;
 #endif
-		String dataPath_;
+		String _dataPath;
 	};
 }

@@ -23,20 +23,20 @@ namespace nCine::Backends
 		static void endFrame();
 
 		static inline void setInputEnabled(bool inputEnabled) {
-			inputEnabled_ = inputEnabled;
+			_inputEnabled = inputEnabled;
 		}
 
 	private:
-		static bool inputEnabled_;
+		static bool _inputEnabled;
 
-		static GLFWwindow* window_;
-		static GLFWwindow* mouseWindow_;
-		static double time_;
-		static GLFWcursor* mouseCursors_[ImGuiMouseCursor_COUNT];
-		static ImVec2 lastValidMousePos_;
-		static bool installedCallbacks_;
-		static bool wantUpdateMonitors_;
-		static GLFWwindow* keyOwnerWindows_[GLFW_KEY_LAST];
+		static GLFWwindow* _window;
+		static GLFWwindow* _mouseWindow;
+		static double _time;
+		static GLFWcursor* _mouseCursors[ImGuiMouseCursor_COUNT];
+		static ImVec2 _lastValidMousePos;
+		static bool _installedCallbacks;
+		static bool _wantUpdateMonitors;
+		static GLFWwindow* _keyOwnerWindows[GLFW_KEY_LAST];
 
 		static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 		static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);

@@ -59,20 +59,20 @@ namespace nCine
 
 		/** @brief Returns the number of animations */
 		inline std::uint32_t numAnimations() {
-			return std::uint32_t(anims_.size());
+			return std::uint32_t(_anims.size());
 		}
 		/** @brief Returns the array of all animations */
 		inline SmallVectorImpl<RectAnimation>& animations() {
-			return anims_;
+			return _anims;
 		}
 		/** @brief Returns the array of all animations (read-only) */
 		inline const SmallVectorImpl<RectAnimation>& animations() const {
-			return anims_;
+			return _anims;
 		}
 
 		/** @brief Returns the index of the current animation */
 		std::uint32_t animationIndex() const {
-			return currentAnimIndex_;
+			return _currentAnimIndex;
 		}
 		/** @brief Sets the current animation by index and resets its frame number */
 		void setAnimationIndex(std::uint32_t animIndex);
@@ -96,8 +96,8 @@ namespace nCine
 		AnimatedSprite(const AnimatedSprite& other);
 
 	private:
-		SmallVector<RectAnimation, 0> anims_;
-		std::uint32_t currentAnimIndex_;
+		SmallVector<RectAnimation, 0> _anims;
+		std::uint32_t _currentAnimIndex;
 	};
 
 }

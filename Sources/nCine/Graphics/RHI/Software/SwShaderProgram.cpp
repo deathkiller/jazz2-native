@@ -102,7 +102,7 @@ namespace nCine::RHI::Software
 #endif
 	}
 
-	std::uint32_t SwShaderProgram::nextHandle_ = 1;
+	std::uint32_t SwShaderProgram::_nextHandle = 1;
 
 	SwShaderProgram::SwShaderProgram()
 		: SwShaderProgram(QueryPhase::Immediate)
@@ -110,10 +110,10 @@ namespace nCine::RHI::Software
 	}
 
 	SwShaderProgram::SwShaderProgram(QueryPhase queryPhase)
-		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
-			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
-			reflection_(nullptr), effectReflection_(nullptr), effect_(SwEffect::Unknown), ditherVariant_(false),
-			boundVbo_(nullptr), boundIbo_(nullptr)
+		: _handle(_nextHandle++), _status(Status::NotLinked), _introspection(Introspection::Disabled), _queryPhase(queryPhase),
+			_batchSize(DefaultBatchSize), _shouldLogOnErrors(true), _uniformsSize(0), _uniformBlocksSize(0),
+			_reflection(nullptr), _effectReflection(nullptr), _effect(SwEffect::Unknown), _ditherVariant(false),
+			_boundVbo(nullptr), _boundIbo(nullptr)
 	{
 	}
 
@@ -144,7 +144,7 @@ namespace nCine::RHI::Software
 
 	bool SwShaderProgram::IsLinked() const
 	{
-		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
+		return (_status == Status::Linked || _status == Status::LinkedWithDeferredQueries || _status == Status::LinkedWithIntrospection);
 	}
 
 	bool SwShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
@@ -183,7 +183,7 @@ namespace nCine::RHI::Software
 
 	bool SwShaderProgram::FinalizeAfterLinking(Introspection introspection)
 	{
-		introspection_ = introspection;
+		_introspection = introspection;
 		PerformIntrospection();
 		return true;
 	}
@@ -195,38 +195,38 @@ namespace nCine::RHI::Software
 
 	void SwShaderProgram::PerformIntrospection()
 	{
-		if (introspection_ != Introspection::Disabled && status_ != Status::LinkedWithIntrospection) {
-			uniformsSize_ = 0;
-			uniformBlocksSize_ = 0;
+		if (_introspection != Introspection::Disabled && _status != Status::LinkedWithIntrospection) {
+			_uniformsSize = 0;
+			_uniformBlocksSize = 0;
 
-			if (reflection_ != nullptr) {
-				effectReflection_ = reflection_;
+			if (_reflection != nullptr) {
+				_effectReflection = _reflection;
 				ImportReflection();
 			}
-			status_ = Status::LinkedWithIntrospection;
+			_status = Status::LinkedWithIntrospection;
 		}
-		// The reflection is consumed by introspection (a copy of its layout is kept in effectReflection_)
-		reflection_ = nullptr;
+		// The reflection is consumed by introspection (a copy of its layout is kept in _effectReflection)
+		_reflection = nullptr;
 	}
 
 	void SwShaderProgram::ImportReflection()
 	{
-		const ShaderCompiler::ProgramVariant& reflection = *reflection_;
+		const ShaderCompiler::ProgramVariant& reflection = *_reflection;
 		std::int32_t nextLocation = 0;
 
 		// Loose uniforms - samplers are kept in a separate reflection list but treated as loose uniforms here
 		for (std::size_t i = 0; i < reflection.UniformCount; i++) {
 			const ShaderCompiler::Uniform& u = reflection.Uniforms[i];
-			uniforms_.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, u.Name, u.Type, std::int32_t(u.ArraySize), nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 		for (std::size_t i = 0; i < reflection.TextureCount; i++) {
 			const ShaderCompiler::TextureBinding& t = reflection.Textures[i];
-			uniforms_.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
-			uniformsSize_ += uniforms_.back().GetMemorySize();
+			_uniforms.emplace_back(this, t.Name, ShaderCompiler::UniformType::Sampler2D, 1, nextLocation++);
+			_uniformsSize += _uniforms.back().GetMemorySize();
 		}
 
-		uniformBlocks_.reserve(reflection.BlockCount);
+		_uniformBlocks.reserve(reflection.BlockCount);
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
 			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
 
@@ -235,18 +235,18 @@ namespace nCine::RHI::Software
 			std::uint32_t effectiveBatchSize = 0;
 			std::uint32_t dataSize = b.BaseSize;
 			if (b.InstanceStride > 0) {
-				effectiveBatchSize = (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0)
-					? batchSize_ : (64u * 1024u) / b.InstanceStride;
+				effectiveBatchSize = (_batchSize != std::uint32_t(DefaultBatchSize) && _batchSize > 0)
+					? _batchSize : (64u * 1024u) / b.InstanceStride;
 				dataSize += b.InstanceStride * effectiveBatchSize;
 			}
 
-			const std::uint32_t blockIndex = std::uint32_t(uniformBlocks_.size());
-			uniformBlocks_.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
-			SwUniformBlock& block = uniformBlocks_.back();
-			uniformBlocksSize_ += block.GetSize();
+			const std::uint32_t blockIndex = std::uint32_t(_uniformBlocks.size());
+			_uniformBlocks.emplace_back(blockIndex, b.Name, std::int32_t(dataSize));
+			SwUniformBlock& block = _uniformBlocks.back();
+			_uniformBlocksSize += block.GetSize();
 
-			if (introspection_ != Introspection::NoUniformsInBlocks) {
-				block.members_.reserve(b.MemberCount);
+			if (_introspection != Introspection::NoUniformsInBlocks) {
+				block._members.reserve(b.MemberCount);
 				for (std::size_t j = 0; j < b.MemberCount; j++) {
 					const ShaderCompiler::BlockMember& m = b.Members[j];
 					if (m.Type == ShaderCompiler::UniformType::Struct) {
@@ -255,14 +255,14 @@ namespace nCine::RHI::Software
 					}
 					SwUniform member;
 					member.SetName(m.Name);
-					member.type_ = m.Type;
-					member.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
+					member._type = m.Type;
+					member._size = (m.ArraySize == ShaderCompiler::SymbolicArraySize)
 						? std::int32_t(effectiveBatchSize)
 						: (m.ArraySize > 0 ? std::int32_t(m.ArraySize) : 1);
-					member.blockIndex_ = std::int32_t(blockIndex);
-					member.offset_ = std::int32_t(m.Offset);
-					member.owner_ = this;
-					block.members_.push_back(member);
+					member._blockIndex = std::int32_t(blockIndex);
+					member._offset = std::int32_t(m.Offset);
+					member._owner = this;
+					block._members.push_back(member);
 				}
 			}
 		}
@@ -270,14 +270,14 @@ namespace nCine::RHI::Software
 		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
 			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
 			const std::int32_t location = (a.Location >= 0 ? a.Location : std::int32_t(i));
-			attributes_.emplace_back(a.Name, a.Type, location);
-			vertexFormat_[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
+			_attributes.emplace_back(a.Name, a.Type, location);
+			_vertexFormat[std::uint32_t(location)].Init(std::uint32_t(location), std::int32_t(UniformTypeInfo::ComponentCount(a.Type)), 0);
 		}
 	}
 
 	bool SwShaderProgram::HasAttribute(const char* name) const
 	{
-		for (const SwAttribute& a : attributes_) {
+		for (const SwAttribute& a : _attributes) {
 			if (std::strcmp(a.GetName(), name) == 0) {
 				return true;
 			}
@@ -287,9 +287,9 @@ namespace nCine::RHI::Software
 
 	SwVertexFormat::Attribute* SwShaderProgram::GetAttribute(const char* name)
 	{
-		for (const SwAttribute& a : attributes_) {
+		for (const SwAttribute& a : _attributes) {
 			if (std::strcmp(a.GetName(), name) == 0 && a.GetLocation() >= 0) {
-				return &vertexFormat_[std::uint32_t(a.GetLocation())];
+				return &_vertexFormat[std::uint32_t(a.GetLocation())];
 			}
 		}
 		return nullptr;
@@ -297,31 +297,31 @@ namespace nCine::RHI::Software
 
 	void SwShaderProgram::DefineVertexFormat(const SwBuffer* vbo, const SwBuffer* ibo, std::uint32_t vboOffset)
 	{
-		boundVbo_ = vbo;
-		boundIbo_ = ibo;
+		_boundVbo = vbo;
+		_boundIbo = ibo;
 		if (vbo != nullptr) {
-			for (const SwAttribute& a : attributes_) {
+			for (const SwAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {
-					SwVertexFormat::Attribute& attr = vertexFormat_[std::uint32_t(a.GetLocation())];
+					SwVertexFormat::Attribute& attr = _vertexFormat[std::uint32_t(a.GetLocation())];
 					attr.setVbo(vbo);
 					attr.SetBaseOffset(vboOffset);
 				}
 			}
-			vertexFormat_.SetIbo(ibo);
+			_vertexFormat.SetIbo(ibo);
 		}
 	}
 
 	void SwShaderProgram::Reset()
 	{
-		uniforms_.clear();
-		uniformBlocks_.clear();
-		attributes_.clear();
-		resolvedUniforms_.clear();
-		vertexFormat_.Reset();
-		status_ = Status::NotLinked;
-		batchSize_ = DefaultBatchSize;
-		reflection_ = nullptr;
-		effectReflection_ = nullptr;
+		_uniforms.clear();
+		_uniformBlocks.clear();
+		_attributes.clear();
+		_resolvedUniforms.clear();
+		_vertexFormat.Reset();
+		_status = Status::NotLinked;
+		_batchSize = DefaultBatchSize;
+		_reflection = nullptr;
+		_effectReflection = nullptr;
 	}
 
 	void SwShaderProgram::SetObjectLabel(StringView label)
@@ -329,27 +329,27 @@ namespace nCine::RHI::Software
 		// The effect is looked up by the program's exact object label (the shader name registered by
 		// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
 		// Labels with no table entry stay Unknown and take the generated-fragment path.
-		label_ = label;
-		const EffectMapping* mapping = FindEffectMapping(label_.data());
-		effect_ = (mapping != nullptr ? mapping->Effect : SwEffect::Unknown);
-		ditherVariant_ = (mapping != nullptr && mapping->Dither);
+		_label = label;
+		const EffectMapping* mapping = FindEffectMapping(_label.data());
+		_effect = (mapping != nullptr ? mapping->Effect : SwEffect::Unknown);
+		_ditherVariant = (mapping != nullptr && mapping->Dither);
 #if defined(DEATH_DEBUG)
 		// Migration parity check (Docs/FixedFunctionShaderDesign.md, phase 1): the table must reproduce
 		// the substring classification for every label either side classifies. Ships for one release,
 		// then ClassifyEffectBySubstrings() is deleted.
 		SwEffect bySubstrings = ClassifyEffectBySubstrings(label);
 		if (mapping != nullptr || bySubstrings != SwEffect::Unknown) {
-			DEATH_DEBUG_ASSERT(effect_ == bySubstrings,
-				("Effect table disagrees with the substring classifier for shader label \"{}\"", label_.data()));
-			DEATH_DEBUG_ASSERT(ditherVariant_ == label.contains("Dither"),
-				("Dither flag disagrees with the substring derivation for shader label \"{}\"", label_.data()));
+			DEATH_DEBUG_ASSERT(_effect == bySubstrings,
+				("Effect table disagrees with the substring classifier for shader label \"{}\"", _label.data()));
+			DEATH_DEBUG_ASSERT(_ditherVariant == label.contains("Dither"),
+				("Dither flag disagrees with the substring derivation for shader label \"{}\"", _label.data()));
 		}
 #endif
 	}
 
 	const SwUniformBlock* SwShaderProgram::FindBlock(const char* name) const
 	{
-		for (const SwUniformBlock& block : uniformBlocks_) {
+		for (const SwUniformBlock& block : _uniformBlocks) {
 			if (std::strcmp(block.GetName(), name) == 0) {
 				return &block;
 			}
@@ -359,18 +359,18 @@ namespace nCine::RHI::Software
 
 	void SwShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
-		for (ResolvedUniform& r : resolvedUniforms_) {
+		for (ResolvedUniform& r : _resolvedUniforms) {
 			if (r.Name == name) {
 				r.Data = data;
 				return;
 			}
 		}
-		resolvedUniforms_.push_back({name, data});
+		_resolvedUniforms.push_back({name, data});
 	}
 
 	const std::uint8_t* SwShaderProgram::ResolveUniform(const char* name) const
 	{
-		for (const ResolvedUniform& r : resolvedUniforms_) {
+		for (const ResolvedUniform& r : _resolvedUniforms) {
 			if (r.Name == name) {
 				return r.Data;
 			}
