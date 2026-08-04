@@ -4,7 +4,7 @@
 #include "../../BinaryShaderCache.h"
 #include "../../RenderResources.h"
 #include "../../RenderVaoPool.h"
-#include "../../IGfxCapabilities.h"
+#include "../IRhiCapabilities.h"
 #include "../../../ServiceLocator.h"
 #include "../../../Base/StaticHashMapIterator.h"
 #include "../../../tracy.h"

@@ -82,7 +82,7 @@ namespace nCine::RHI::GL
 			case PixelFormat::DXT1RGB:
 				internalFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
 
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 			// Compressed OpenGL ES formats (external pixel type is always GL_UNSIGNED_BYTE)
 			case PixelFormat::ATC_RGBA_Explicit:
 				internalFormat = GL_ATC_RGBA_EXPLICIT_ALPHA_AMD; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
@@ -98,7 +98,7 @@ namespace nCine::RHI::GL
 			case PixelFormat::ETC2RGB8A1:
 				internalFormat = GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
 #	endif
-#	if ((!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)) && !defined(DEATH_TARGET_VITA)
+#	if ((!defined(DEATH_TARGET_ANDROID) && defined(RHI_GL_PROFILE_ES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)) && !defined(DEATH_TARGET_VITA)
 			case PixelFormat::ASTC_4x4:
 				internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::ASTC_5x4:
@@ -163,13 +163,13 @@ namespace nCine::RHI::GL
 				// (ES2 core mandates internal == external), unlike ES3 where only the external format changes
 				externalFormat = GL_BGRA_EXT;
 				internalFormat = GL_BGRA_EXT;
-#elif !defined(WITH_OPENGLES)
+#elif defined(RHI_GL_PROFILE_CORE)
 				externalFormat = GL_BGRA;
 #else
 				externalFormat = GL_BGRA_EXT;
 #endif
 			}
-#if !defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_CORE)
 			else if (externalFormat == GL_RGB) {
 				externalFormat = GL_BGR;
 			}
@@ -179,26 +179,26 @@ namespace nCine::RHI::GL
 
 	void GLTextureFormat::CheckSupport(PixelFormat format)
 	{
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
+		const IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 
 		switch (format) {
 			case PixelFormat::DXT1RGB:
 			case PixelFormat::DXT3:
 			case PixelFormat::DXT5: {
-				const bool hasS3tc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC);
+				const bool hasS3tc = caps.HasExtension(IRhiCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC);
 				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
 				break;
 			}
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 			case PixelFormat::ETC1: {
-				const bool hasEct1 = gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
+				const bool hasEct1 = caps.HasExtension(IRhiCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
 				FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
 				break;
 			}
 			case PixelFormat::ATC_RGB:
 			case PixelFormat::ATC_RGBA_Explicit:
 			case PixelFormat::ATC_RGBA_Interpolated: {
-				const bool hasAtc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE);
+				const bool hasAtc = caps.HasExtension(IRhiCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE);
 				FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
 				break;
 			}
@@ -206,11 +206,11 @@ namespace nCine::RHI::GL
 			case PixelFormat::PVRTC_2BPP_RGBA:
 			case PixelFormat::PVRTC_4BPP_RGB:
 			case PixelFormat::PVRTC_4BPP_RGBA: {
-				const bool hasPvr = gfxCaps.HasExtension(IGfxCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC);
+				const bool hasPvr = caps.HasExtension(IRhiCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC);
 				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(RHI_GL_PROFILE_ES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case PixelFormat::ASTC_4x4:
 			case PixelFormat::ASTC_5x4:
 			case PixelFormat::ASTC_5x5:
@@ -225,7 +225,7 @@ namespace nCine::RHI::GL
 			case PixelFormat::ASTC_10x10:
 			case PixelFormat::ASTC_12x10:
 			case PixelFormat::ASTC_12x12: {
-				const bool hasAstc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
+				const bool hasAstc = caps.HasExtension(IRhiCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
 				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
 				break;
 			}

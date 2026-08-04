@@ -2,10 +2,10 @@
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
+#include "../../../CommonHeaders.h"
 #endif
 
-#include "../../Main.h"
+#include "../../../../Main.h"
 
 /**
  * @brief Logs any pending OpenAL error

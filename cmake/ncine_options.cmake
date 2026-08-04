@@ -41,7 +41,7 @@ if(NCINE_BUILD_LIBRETRO)
 	if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 		# The hardware core targets OpenGL|ES 3.0 only - the common denominator of RetroArch's
 		# GPU platforms (KMS/GLES boards like Recalbox on Pi, desktop Mesa via EGL)
-		set(NCINE_WITH_OPENGLES ON)
+		set(_NCINE_RHI_GL_PROFILE_FORCED "ES3")
 	endif()
 endif()
 
@@ -82,18 +82,25 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation Portable (expected GU)")
 		endif()
 	elseif(VITA)
-		# PS Vita (the VitaSDK toolchain sets VITA): the OpenGL family runs through vitaGL, which is an
-		# OpenGL|ES 2.0 implementation - selecting "OpenGL" therefore force-enables the GLES path and the
-		# strict ES 2.0 profile below. The CPU software renderer is the only alternative. Direct3D 11 and
-		# Vulkan do not exist on the platform. The window backend is always SDL2 on Vita.
-		set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend on PS Vita: OpenGL (ES 2.0 via vitaGL) or Software")
-		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software")
+		# PS Vita (the VitaSDK toolchain sets VITA): three backends are possible. "GXM" drives the console's
+		# own graphics API (sceGxm) directly, which is the same idea as the PVR/GX/GU backends on the older
+		# consoles - except that the Vita's PowerVR SGX is a fully programmable part, so GXM is a SHADER
+		# backend and keeps the whole post-processing chain; it only removes the OpenGL translation layer.
+		# That makes it the default. "OpenGL" runs through vitaGL, an OpenGL|ES 2.0 implementation layered on
+		# that very same sceGxm, so selecting it pins NCINE_RHI_GL_PROFILE to ES2 below. Note that the
+		# "libshacccg.suprx" firmware module is a requirement of the *platform* rather than of either backend:
+		# both compile their shaders on the console through SceShaccCg (GXM the generated Cg for sceGxm,
+		# vitaGL the GLSL handed to glCompileShader), so neither runs without it. The CPU software renderer is
+		# the third alternative. Direct3D 11 and Vulkan do not exist on the platform. The window backend is
+		# always SDL2 on Vita.
+		set(NCINE_PREFERRED_RHI "GXM" CACHE STRING "Rendering backend on PS Vita: GXM (native sceGxm), OpenGL (ES 2.0 via vitaGL) or Software")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GXM;OpenGL;Software")
 
 		if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
-			set(NCINE_WITH_OPENGLES ON)
-			set(_NCINE_RHI_GL_PROFILE_ES2_FORCE ON)
-		elseif(NOT NCINE_PREFERRED_RHI STREQUAL "Software")
-			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PS Vita (expected OpenGL or Software)")
+			# vitaGL IS an OpenGL|ES 2.0 implementation, so the ES2 profile is not a choice here
+			set(_NCINE_RHI_GL_PROFILE_FORCED "ES2")
+		elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(GXM|Software)$")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PS Vita (expected GXM, OpenGL or Software)")
 		endif()
 	else()
 		# Rendering backend (RHI) selection. OpenGL is the default; the software (CPU), Direct3D 11, and Vulkan
@@ -118,10 +125,6 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		endif()
 	endif()
 
-	# Optional 16-bit (RGB565) screen framebuffer for the software renderer: half the framebuffer memory
-	# and present bandwidth at the cost of color depth (intended for low-memory targets; render-target
-	# textures stay RGBA8, destination alpha reads as opaque). Ignored by the other backends.
-	cmake_dependent_option(NCINE_RHI_SOFTWARE_FB16 "Use a 16-bit (RGB565) screen framebuffer with the software renderer" OFF "NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 endif()
 
 if(EMSCRIPTEN)
@@ -177,39 +180,87 @@ else()
 		endif()
 		option(NCINE_WITH_ANGLE "Enable Google ANGLE library support" ${_NCINE_WITH_ANGLE_DEFAULT})
 	elseif(UNIX AND NOT APPLE AND NOT ANDROID AND NOT NINTENDO_SWITCH)
-		set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (or \"native\" for current CPU)") 
+		set(NCINE_ARCH_EXTENSIONS "" CACHE STRING "Specifies architecture for code generation (or \"native\" for current CPU)")
 		option(NCINE_BUILD_FLATPAK "Build Flatpak version of the game" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_DEB "Assemble DEB package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
 		cmake_dependent_option(NCINE_ASSEMBLE_RPM "Assemble RPM package of the game" OFF "NOT NCINE_BUILD_FLATPAK" OFF)
-		# Prefer OpenGL|ES on ARM/aarch64 (embedded-oriented default), OpenGL elsewhere
-		if(NCINE_ARM_PROCESSOR)
-			option(NCINE_WITH_OPENGLES "Use OpenGL|ES 2 library instead of OpenGL" ON)
-		else()
-			option(NCINE_WITH_OPENGLES "Use OpenGL|ES 2 library instead of OpenGL" OFF)
-		endif()
-	endif()
-	
-	if((WIN32 OR NOT NCINE_WITH_OPENGLES) AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)
-		option(NCINE_WITH_GLEW "Use GLEW library" ON)
 	endif()
 endif()
 
-# OpenGL|ES 2.0 profile of the GL backend. Requests a real ES 2.0 context (ESSL 100 shaders, no uniform
-# buffer objects, no gl_VertexID) instead of the ES 3.0 context the ANGLE/GLES path otherwise uses. This
-# targets the PS Vita (ES 2.0). It defaults ON when building against ANGLE for desktop testing and is only
-# available on OpenGL|ES builds - it is force-OFF (and thus must never affect) the desktop GL 3.3 and the
-# software (NCINE_PREFERRED_RHI=Software) builds.
-if(_NCINE_RHI_GL_PROFILE_ES2_FORCE)
-	# PS Vita: vitaGL IS an OpenGL|ES 2.0 implementation, so the strict profile is not optional there
-	set(NCINE_RHI_GL_PROFILE_ES2 ON)
-else()
-	if(NCINE_WITH_ANGLE)
-		set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT ON)
-	else()
-		set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT OFF)
-	endif()
-	cmake_dependent_option(NCINE_RHI_GL_PROFILE_ES2 "Request OpenGL|ES 2.0 profile (ESSL 100, no UBOs, no gl_VertexID)" ${_NCINE_RHI_GL_PROFILE_ES2_DEFAULT} "NCINE_WITH_ANGLE OR NCINE_WITH_OPENGLES" OFF)
+# The Android host build never runs the platform selection above (it only drives the on-device build through
+# Gradle), but it still has to decide the profile it passes down, and Android is a GL-only platform here
+if(NCINE_BUILD_ANDROID AND NOT NCINE_PREFERRED_RHI)
+	set(NCINE_PREFERRED_RHI "OpenGL")
 endif()
+
+# ── OpenGL family profile ─────────────────────────────────────────────────────────────────────────────
+# Which profile of the OpenGL family the GL backend targets. This is the single switch that used to be two
+# (an "is this a GLES build" flag plus a separate "strict ES 2.0" flag), and it drives everything downstream:
+# which client library is imported (desktop GL / GLES2+EGL), which headers `CommonHeaders.h` includes, the
+# context version `AppConfiguration` requests, and the shader dialect the GL backend consumes.
+#
+#   Core  OpenGL 3.3 core profile - desktop GL, GLSL 330, UBOs, gl_VertexID
+#   ES3   OpenGL|ES 3.0 (and WebGL 2 on Emscripten) - ESSL 300 es, UBOs, gl_VertexID
+#   ES2   OpenGL|ES 2.0 - ESSL 100, no UBOs, no gl_VertexID, no buffer mapping, no MRT
+#
+# Only the OpenGL backend has a profile; the other `NCINE_PREFERRED_RHI` values ignore this and the variable
+# is not offered for them. Every profile is buildable on every platform that can provide the corresponding
+# client library, so an ES2 (or ES3) build on desktop or Android is a normal configuration and not a special
+# case - it is how the low-end paths get tested without the target hardware.
+if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+	if(DEFINED _NCINE_RHI_GL_PROFILE_FORCED)
+		# Platforms whose only GL implementation fixes the profile (PS Vita's vitaGL is ES 2.0, the
+		# libretro core targets ES 3.0): not a choice, so it is set rather than offered.
+		set(NCINE_RHI_GL_PROFILE "${_NCINE_RHI_GL_PROFILE_FORCED}")
+	else()
+		if(EMSCRIPTEN)
+			# WebGL 2 is OpenGL|ES 3.0; WebGL 1 (ES2) is below what the pipeline needs from a browser
+			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
+		elseif(ANDROID OR NCINE_BUILD_ANDROID OR NINTENDO_SWITCH OR NCINE_WITH_ANGLE)
+			# GLES-only platforms, and ANGLE (which is an OpenGL|ES implementation on top of D3D/Vulkan)
+			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
+		elseif(NCINE_ARM_PROCESSOR AND UNIX AND NOT APPLE)
+			# ARM/aarch64 Linux boards: GLES is the implementation that is actually accelerated there
+			set(_NCINE_RHI_GL_PROFILE_DEFAULT "ES3")
+		else()
+			set(_NCINE_RHI_GL_PROFILE_DEFAULT "Core")
+		endif()
+		set(NCINE_RHI_GL_PROFILE "${_NCINE_RHI_GL_PROFILE_DEFAULT}" CACHE STRING "OpenGL family profile: Core (OpenGL 3.3), ES3 (OpenGL|ES 3.0) or ES2 (OpenGL|ES 2.0)")
+		set_property(CACHE NCINE_RHI_GL_PROFILE PROPERTY STRINGS "Core;ES3;ES2")
+
+		if(NOT NCINE_RHI_GL_PROFILE MATCHES "^(Core|ES3|ES2)$")
+			message(FATAL_ERROR "Invalid NCINE_RHI_GL_PROFILE \"${NCINE_RHI_GL_PROFILE}\" (expected Core, ES3 or ES2)")
+		endif()
+
+		# The GLES-only platforms above have no desktop GL to fall back to
+		if(NCINE_RHI_GL_PROFILE STREQUAL "Core" AND (EMSCRIPTEN OR ANDROID OR NCINE_BUILD_ANDROID OR NINTENDO_SWITCH OR NCINE_WITH_ANGLE))
+			message(FATAL_ERROR "NCINE_RHI_GL_PROFILE=Core is not available on this platform (no desktop OpenGL; use ES3 or ES2)")
+		endif()
+	endif()
+endif()
+
+# GLEW loads desktop OpenGL entry points, so it is only relevant to a Core profile build (on Windows it is
+# also how the desktop GL functions beyond 1.1 are reached at all)
+if(NCINE_RHI_GL_PROFILE STREQUAL "Core" AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT EMSCRIPTEN)
+	option(NCINE_WITH_GLEW "Use GLEW library" ON)
+endif()
+
+# ── 16-bit color surfaces ─────────────────────────────────────────────────────────────────────────────
+# Trades color depth for memory and bandwidth: RGB565 instead of RGBA8, with no destination alpha (blend
+# factors reading it see opaque). This is a performance option, so each backend applies it as far as it pays
+# off there, which is not the same depth in both:
+#
+#   OpenGL   every color surface it can - a 5/6/5 default framebuffer is requested from the window system
+#            AND the scene, blur and rescale render targets become RGB565 (see Texture::ColorTargetFormat),
+#            which halves the bandwidth each post-processing pass reads and writes them with
+#   Software  the screen buffer only, where it halves the per-frame upload to the present surface. Its
+#            render targets stay 4-byte RGBA on purpose: the rasterizer's inner loops work on RGBA8 either
+#            way, so packed targets would only add a pack/unpack per span and cost time rather than save it
+#
+# The console backends present through a format their hardware fixes - the Dreamcast's PowerVR is RGB565
+# either way, GX copies out to a YUV XFB - so there is nothing to switch there, and a D3D11/Vulkan swap
+# chain in 5/6/5 is not something drivers reliably offer.
+cmake_dependent_option(NCINE_RHI_USE_FB16 "Use 16-bit (RGB565) color surfaces instead of RGBA8" OFF "NCINE_PREFERRED_RHI STREQUAL Software OR NCINE_PREFERRED_RHI STREQUAL OpenGL" OFF)
 
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
@@ -366,7 +417,12 @@ cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each ti
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
 # sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP" OFF)
+# PS Vita is excluded for a different reason than the other consoles: it has threads and it has sockets, but
+# the bundled ENet has no Vita arm - its POSIX branch includes <sys/ioctl.h>, which VitaSDK does not ship at
+# all - so the transport cannot compile there as it stands. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
+# TODO: Give ENet a Vita arm (sceNet has the equivalent of the ioctl the non-blocking setup needs) and drop
+# the exclusion again.
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT VITA" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).

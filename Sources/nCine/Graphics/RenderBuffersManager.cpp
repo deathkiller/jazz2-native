@@ -2,7 +2,7 @@
 #include "RenderStatistics.h"
 #include "RHI/Rhi.h"
 #include "../ServiceLocator.h"
-#include "IGfxCapabilities.h"
+#include "RHI/IRhiCapabilities.h"
 #include "../../Main.h"
 #include "../tracy.h"
 
@@ -12,7 +12,7 @@ using namespace Death::Containers::Literals;
 // Persistently mapped immutable buffer storage requires desktop OpenGL 4.4 or `GL_ARB_buffer_storage`,
 // availability is checked at runtime so the required context version doesn't change. Emscripten has to be
 // excluded explicitly, its GL headers declare `glBufferStorage()` even though WebGL cannot provide it.
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && defined(GL_MAP_PERSISTENT_BIT)
+#if !defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && defined(GL_MAP_PERSISTENT_BIT)
 #	define NCINE_HAS_PERSISTENT_MAPPING
 #endif
 
@@ -23,12 +23,12 @@ namespace nCine
 	{
 		buffers_.reserve(4);
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
+		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
-		const std::int32_t glMajor = gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Major);
-		const std::int32_t glMinor = gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Minor);
-		const bool hasBufferStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_BUFFER_STORAGE) ||
+		const std::int32_t glMajor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Major);
+		const std::int32_t glMinor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Minor);
+		const bool hasBufferStorage = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_BUFFER_STORAGE) ||
 			(glMajor > 4 || (glMajor == 4 && glMinor >= 4));
 		usePersistentMapping_ = (useBufferStorage && hasBufferStorage);
 		if (usePersistentMapping_) {
@@ -56,8 +56,8 @@ namespace nCine
 		iboSpecs.alignment = sizeof(std::uint16_t);
 		iboSpecs.persistent = usePersistentMapping_;
 
-		const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		const std::int32_t uboMaxSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		const std::int32_t uboMaxSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;

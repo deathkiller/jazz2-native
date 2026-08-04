@@ -8,15 +8,16 @@ namespace nCine
 {
 	/**
 		@brief Interface for an audio player
-		
-		Common base for @ref AudioBufferPlayer and @ref AudioStreamPlayer. Wraps a single OpenAL
-		source and exposes playback control together with gain, pitch, low-pass and 3D positioning.
+
+		Common base for @ref AudioBufferPlayer and @ref AudioStreamPlayer. Wraps a single source
+		of the current @ref IAudioDevice and exposes playback control together with gain, pitch,
+		low-pass and 3D positioning.
 	*/
 	class IAudioPlayer : public Object
 	{
 		DEATH_RUNTIME_OBJECT();
 
-		friend class ALAudioDevice;
+		friend class AudioDeviceBase;
 
 	public:
 		/** @brief Playback state */
@@ -33,12 +34,12 @@ namespace nCine
 		IAudioPlayer(IAudioPlayer&&) = default;
 		IAudioPlayer& operator=(IAudioPlayer&&) = default;
 
-		/** @brief Returns the OpenAL id of the source */
+		/** @brief Returns the backend id of the source */
 		inline std::uint32_t sourceId() const {
 			return sourceId_;
 		}
 
-		/** @brief Returns the OpenAL id of the currently playing buffer */
+		/** @brief Returns the backend id of the currently playing buffer */
 		virtual std::uint32_t bufferId() const = 0;
 
 		/** @brief Returns the number of bytes per sample */
@@ -148,7 +149,7 @@ namespace nCine
 
 		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
-		/** @brief OpenAL source id */
+		/** @brief Backend source id */
 		std::uint32_t sourceId_;
 		/** @brief Current playback state */
 		PlayerState state_;
@@ -162,8 +163,6 @@ namespace nCine
 		float lowPass_;
 		/** @brief Position in space */
 		Vector3f position_;
-		/** @brief OpenAL low-pass filter handle */
-		std::uint32_t filterHandle_;
 
 		constexpr bool GetFlags(PlayerFlags flag) const noexcept {
 			return (flags_ & flag) == flag;

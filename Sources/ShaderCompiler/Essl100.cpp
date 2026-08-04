@@ -1,4 +1,5 @@
 #include "Essl100.h"
+#include "VertexIdRewrite.h"
 
 #include <string>
 
@@ -505,42 +506,12 @@ namespace ShaderCompiler
 			given the runtime supplies aQuadCorner = {(1,0),(1,1),(0,0),(0,1)} for the 4-vertex strip. The
 			batched corner + instance index are fixed expressions replaced wholesale.
 		*/
+		// The rewrite itself lives in VertexIdRewrite.h: the Cg dialect emitted for the PS Vita's sceGxm
+		// backend needs the identical substitution (GXM has no vertex-index semantic either), and having one
+		// implementation is what keeps the two profiles agreeing on the attribute contract the runtime feeds
 		String RewriteVertexId(StringView src, bool& usedCorner, bool& usedInstance)
 		{
-			String text{src.data(), src.size()};
-			// Batched per-instance index (before the batched corner terms, which also contain gl_VertexID)
-			if (FindStr(text, "gl_VertexID / 6"_s) != Npos) {
-				text = ReplaceAll(text, "gl_VertexID / 6"_s, "int(aInstanceIndex)"_s);
-				usedInstance = true;
-			}
-			// Batched six-vertex corner terms (two triangles). Both forms in use — "1.0 - <term>" (sprites)
-			// and "-0.5 + <term>" (BatchedLighting) — are functions of these, so substituting the terms with
-			// (1 - aQuadCorner.{x,y}) reproduces either corner after folding, given the runtime's batched
-			// aQuadCorner = {(1,1),(0,1),(0,0),(0,0),(1,0),(1,1)}.
-			if (FindStr(text, "float(((gl_VertexID + 2) / 3) % 2)"_s) != Npos) {
-				text = ReplaceAll(text, "float(((gl_VertexID + 2) / 3) % 2)"_s, "(1.0 - aQuadCorner.x)"_s);
-				usedCorner = true;
-			}
-			if (FindStr(text, "float(((gl_VertexID + 1) / 3) % 2)"_s) != Npos) {
-				text = ReplaceAll(text, "float(((gl_VertexID + 1) / 3) % 2)"_s, "(1.0 - aQuadCorner.y)"_s);
-				usedCorner = true;
-			}
-			// Single-quad corner terms
-			if (FindStr(text, "float(gl_VertexID >> 1)"_s) != Npos) {
-				text = ReplaceAll(text, "float(gl_VertexID >> 1)"_s, "(1.0 - aQuadCorner.x)"_s);
-				usedCorner = true;
-			}
-			if (FindStr(text, "float(gl_VertexID % 2)"_s) != Npos) {
-				text = ReplaceAll(text, "float(gl_VertexID % 2)"_s, "aQuadCorner.y"_s);
-				usedCorner = true;
-			}
-			// Batched-mesh instance index: "uint aMeshIndex" is an integer vertex attribute, which ES2 forbids —
-			// the declaration is remapped to "float" by the interface rewrite (MapEs2AttributeType), so wrap its
-			// array-index uses in int() here so "instances[aMeshIndex]" stays a valid integer index under ES2.
-			if (FindStr(text, "[aMeshIndex]"_s) != Npos) {
-				text = ReplaceAll(text, "[aMeshIndex]"_s, "[int(aMeshIndex)]"_s);
-			}
-			return text;
+			return VertexIdRewrite::Apply(src, usedCorner, usedInstance);
 		}
 
 		/** Maps an ES2-illegal integer vertex-attribute type (int/uint/ivecN/uvecN) to its float equivalent */

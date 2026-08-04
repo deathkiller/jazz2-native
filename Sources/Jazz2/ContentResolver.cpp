@@ -99,7 +99,9 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 		return "romfs:/"_s;
 #elif defined(DEATH_TARGET_VITA)
-		return "ux0:/data/jazz2/Content/"_s;
+		// Packed inside the VPK, so it's part of the application's own read-only directory
+		// ("ux0:/app/<titleid>/", which the firmware mounts as "app0:")
+		return "app0:/Content/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -1413,7 +1415,7 @@ namespace Jazz2
 		// texture-size limit (a 4096-limit desktop always gets a single texture - identical to before; a
 		// 1024-limit console splits e.g. a 2790-tile set into 4 chunks). Bands are aligned to whole padded
 		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
-		const std::int32_t maxTextureSize = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
+		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MAX_TEXTURE_SIZE);
 		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
 
 		// The fixed-function consoles round every texture up to a power of two, so chunking right at their
@@ -2046,9 +2048,9 @@ namespace Jazz2
 		}
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
+		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp<std::int32_t>(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp<std::int32_t>(caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		bool batchSizeComputed = false;
@@ -2070,7 +2072,7 @@ namespace Jazz2
 				if (instanceStride > 0) {
 					// The whole per-batch block is suballocated from a uniform buffer, so its size has to respect
 					// the uniform buffer offset alignment, exactly like the introspected block size did before
-					const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+					const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 					std::int32_t alignedStride = instanceStride;
 					if (offsetAlignment > 0) {
 						alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;

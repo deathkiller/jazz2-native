@@ -178,7 +178,7 @@ namespace nCine::RHI::Vulkan
 		/** @brief Hands the texture holding a secondary window's contents over to the next @ref PresentFrame() */
 		static void QueueSecondaryPresent(void* handle, const VulkanTexture* source);
 
-		// -- Physical-device limits (consumed by GfxCapabilities to publish the backend's real values) --
+		// -- Physical-device limits (consumed by VulkanRhiCapabilities to publish the backend's real values) --
 
 		/** @brief Returns the device's largest supported 2D image dimension (`maxImageDimension2D`); a safe default before device creation */
 		static std::int32_t GetMaxTextureDimension();

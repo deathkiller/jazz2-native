@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IAudioDevice.h"
 #include "../Base/Object.h"
 
 #include <Containers/StringView.h>
@@ -12,23 +13,20 @@ namespace nCine
 	class IAudioLoader;
 
 	/**
-		@brief Fully decoded OpenAL audio buffer
-		
+		@brief Fully decoded audio buffer
+
 		Holds an entire sound effect decoded into memory. Inherits from @ref Object so a single
-		buffer can be shared by multiple @ref AudioBufferPlayer instances.
+		buffer can be shared by multiple @ref AudioBufferPlayer instances. The samples live in
+		a buffer object owned by the current @ref IAudioDevice, which on some backends means
+		dedicated sound memory rather than the main heap.
 	*/
 	class AudioBuffer : public Object
 	{
 	public:
 		/** @brief Sample format */
-		enum class Format {
-			Mono8,		/**< 8-bit, single channel */
-			Stereo8,	/**< 8-bit, two channels */
-			Mono16,		/**< 16-bit, single channel */
-			Stereo16	/**< 16-bit, two channels */
-		};
+		using Format = IAudioDevice::BufferFormat;
 
-		/** @brief Creates an empty OpenAL buffer */
+		/** @brief Creates an empty buffer */
 		AudioBuffer();
 		/** @brief Creates a buffer and loads it from the specified file */
 		explicit AudioBuffer(StringView filename);
@@ -51,7 +49,7 @@ namespace nCine
 		/** @brief Loads samples in raw PCM format from a memory buffer */
 		bool loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize);
 
-		/** @brief Returns the OpenAL buffer id */
+		/** @brief Returns the backend buffer id */
 		inline std::uint32_t bufferId() const {
 			return bufferId_;
 		}
@@ -89,7 +87,7 @@ namespace nCine
 		}
 
 	private:
-		/** @brief OpenAL buffer id */
+		/** @brief Backend buffer id */
 		std::uint32_t bufferId_;
 
 		/** @brief Number of bytes per sample */

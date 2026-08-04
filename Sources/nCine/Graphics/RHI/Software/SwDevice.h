@@ -20,7 +20,7 @@ namespace nCine::RHI::Software
 		`[R, G, B, A]` per texel, rows are stored top to bottom and @ref strideBytes is the byte
 		distance between two consecutive rows (allowing padded rows or rendering into a sub-window of a
 		larger surface). The device never allocates or frees this memory (except the screen back-buffer it
-		owns through @ref SwDevice::ResizeScreenFramebuffer()). With the optional `RHI_SOFTWARE_FB16` mode
+		owns through @ref SwDevice::ResizeScreenFramebuffer()). With the optional `RHI_USE_FB16` mode
 		the screen back-buffer instead stores native-endian RGB565 (2 bytes per texel, `strideBytes` follows);
 		render-target surfaces stay RGBA8 - see the staging helpers in SwRaster.h.
 	*/

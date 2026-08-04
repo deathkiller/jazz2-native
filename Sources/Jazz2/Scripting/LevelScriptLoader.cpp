@@ -96,8 +96,8 @@ namespace Jazz2::Scripting
 			{ "TARGET_BIG_ENDIAN"_s, true },
 #endif
 
-#if defined(WITH_OPENGLES)
-			{ "WITH_OPENGLES"_s, true },
+#if defined(RHI_GL_PROFILE_ES)
+			{ "RHI_GL_PROFILE_ES"_s, true },
 #endif
 #if defined(WITH_AUDIO)
 			{ "WITH_AUDIO"_s, true },

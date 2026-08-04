@@ -53,7 +53,7 @@ namespace nCine::RHI::Software
 			std::int32_t  bufferHeight = 0;
 			// When true the buffer is a render-target texture and rows are written bottom-up (GL convention)
 			bool          isFboTarget = false;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 			// When true the buffer is the RGB565 screen framebuffer (only the screen is ever 16-bit; render
 			// targets stay RGBA8). Touched rows are staged through g_fbRowStage as RGBA8, see SwRaster.h.
 			bool          is16Bit = false;
@@ -92,7 +92,7 @@ namespace nCine::RHI::Software
 		constexpr std::int32_t MaxScanBuf = 4096;
 		alignas(32) std::uint8_t g_scanBuf[MaxScanBuf * 4];
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 		// RGBA8 staging row for the 16-bit screen framebuffer: each rasterizer row-loop iteration loads the
 		// touched span (565 -> RGBA8), runs its unchanged inner loop against it, and stores it back. Distinct
 		// from g_scanBuf, which holds gathered SOURCE texels concurrently within the same row. Main-thread-only
@@ -1306,7 +1306,7 @@ namespace nCine::RHI::Software
 			if (ctx.vertexData != nullptr) return false;
 			if (ctx.fragmentShader != nullptr) return false;
 			if (ctx.scissorEnabled) return false;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 			// The blit copies 4-byte rows verbatim; a 16-bit destination falls through to the axis-aligned
 			// quad rasterizer, whose row staging converts (fullscreen blits are rare on the direct tier)
 			if (g_state.is16Bit) return false;
@@ -1580,7 +1580,7 @@ namespace nCine::RHI::Software
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
 				std::uint8_t* dstRow;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				std::uint8_t* fbRow16 = nullptr;
 				if (g_state.is16Bit) {
 					// Stage the touched 565 span as RGBA8; stored back at the end of the row (see SwRaster.h)
@@ -1769,7 +1769,7 @@ namespace nCine::RHI::Software
 					}
 				}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				if (fbRow16 != nullptr) {
 					SwStoreFbSpan565(fbRow16, g_fbRowStage, scanWidth);
 				}
@@ -1856,7 +1856,7 @@ namespace nCine::RHI::Software
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
 				std::uint8_t* dstRow;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				std::uint8_t* fbRow16 = nullptr;
 				if (g_state.is16Bit) {
 					// Stage the bounding-box 565 span as RGBA8; the lossless round trip leaves untouched
@@ -1957,7 +1957,7 @@ namespace nCine::RHI::Software
 					}
 				}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				if (fbRow16 != nullptr) {
 					SwStoreFbSpan565(fbRow16, g_fbRowStage, maxX - minX + 1);
 				}
@@ -2211,7 +2211,7 @@ namespace nCine::RHI::Software
 
 					// Blend or copy to framebuffer
 					std::uint8_t* dstRow;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					std::uint8_t* fbRow16 = nullptr;
 					if (g_state.is16Bit) {
 						fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 2;
@@ -2227,7 +2227,7 @@ namespace nCine::RHI::Software
 					} else {
 						std::memcpy(dstRow, scanBuf, static_cast<std::size_t>(scanWidth) * 4);
 					}
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					if (fbRow16 != nullptr) {
 						SwStoreFbSpan565(fbRow16, g_fbRowStage, scanWidth);
 					}
@@ -2235,7 +2235,7 @@ namespace nCine::RHI::Software
 				} else {
 					// Per-pixel path (generic blend modes or no texture)
 					std::uint8_t* dstRow;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					std::uint8_t* fbRow16 = nullptr;
 					if (g_state.is16Bit) {
 						fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 2;
@@ -2321,7 +2321,7 @@ namespace nCine::RHI::Software
 						}
 					}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					if (fbRow16 != nullptr) {
 						SwStoreFbSpan565(fbRow16, g_fbRowStage, xRight - xLeft + 1);
 					}
@@ -2444,7 +2444,7 @@ namespace nCine::RHI::Software
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
 				std::uint8_t* dstPx;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				std::uint8_t fbPxStage[4];
 				std::uint8_t* fbPx16 = nullptr;
 				if (g_state.is16Bit) {
@@ -2487,7 +2487,7 @@ namespace nCine::RHI::Software
 					dstPx[3] = static_cast<std::uint8_t>(sA);
 				}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				if (fbPx16 != nullptr) {
 					const std::uint16_t fbPx = SwPack565(fbPxStage);
 					std::memcpy(fbPx16, &fbPx, 2);
@@ -2572,7 +2572,7 @@ namespace nCine::RHI::Software
 		g_state.bufferWidth = width;
 		g_state.bufferHeight = height;
 		g_state.isFboTarget = isFboTarget;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 		// On the software backend a non-FBO target is the screen framebuffer, which is the only 16-bit
 		// surface in this mode (render-target textures stay RGBA8)
 		g_state.is16Bit = !isFboTarget;
@@ -2630,7 +2630,7 @@ namespace nCine::RHI::Software
 		const std::uint8_t bb = static_cast<std::uint8_t>(b * 255.0f);
 		const std::uint8_t ab = static_cast<std::uint8_t>(a * 255.0f);
 		const std::int32_t totalPixels = g_state.bufferWidth * g_state.bufferHeight;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 		if (g_state.is16Bit) {
 			const std::uint8_t rgba[4] = { rb, gb, bb, ab };
 			const std::uint16_t pattern16 = SwPack565(rgba);

@@ -41,18 +41,19 @@ The tool is plain C++17 with zero dependencies beyond the standard library and i
 
 Every backend consumes one artifact, and every artifact is produced by one mode of the tool. The
 per-shader header carries the modern GLSL plus its three per-backend lowerings side by side, so a
-single header serves GL, ES2, D3D11 and Vulkan; the two other tiers get their own aggregate headers.
+single header serves GL, ES2, D3D11 and Vulkan; the other tiers get their own aggregate headers.
 
 Backend | Artifact it consumes | Produced by
 ------- | -------------------- | -----------
 OpenGL 3.3, OpenGL\|ES 3.0, WebGL 2.0 | `VsSource` / `FsSource` of the per-shader header @m_span{m-text m-dim} (the `#version` header and platform defines are injected by the engine at runtime) @m_endspan | primary mode
-OpenGL\|ES 2.0 profile (`NCINE_RHI_GL_PROFILE_ES2`) | `VsSource100` / `FsSource100` --- the ESSL 100 lowering baked into the same header | primary mode
+OpenGL\|ES 2.0 profile (`NCINE_RHI_GL_PROFILE=ES2`) | `VsSource100` / `FsSource100` --- the ESSL 100 lowering baked into the same header | primary mode
 Direct3D 11 | `HlslVsSource` / `HlslFsSource` --- Shader Model 4/5 HLSL baked into the same header | primary mode
 Vulkan | `VkVsSpirv` / `VkFsSpirv` --- SPIR-V words compiled offline through `glslangValidator` | primary mode + glslang
 Software renderer | @cpp "SwGeneratedShaders.h" @ce --- transpiled C++ fragment functions | `--emit-sw-generated`
 Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function pvr`
 Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gx`
 PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function psp`
+PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources compiled on the console | `--emit-cg`
 
 @m_class{m-noindent}
 
@@ -92,9 +93,10 @@ caught early.
 
 @code{.sh}
 ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--glslang <path>]
-ShaderCompiler <input.shader> --check | --essl100-check | --hlsl | --vulkan
+ShaderCompiler <input.shader> --check | --essl100-check | --hlsl | --cg | --vulkan
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
+ShaderCompiler --emit-cg <output.h> <input.shader ...>
 ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
@@ -102,7 +104,7 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 
 @m_class{m-noindent}
 
-The five `--emit-*` / `*-check` **standalone modes** are recognized only as the first argument;
+The six `--emit-*` / `*-check` **standalone modes** are recognized only as the first argument;
 everywhere else they are rejected as an unknown option. Everything else is the primary per-shader
 mode, which takes exactly one input file.
 
@@ -114,9 +116,11 @@ Mode or option | Meaning
 `--check` | Human-readable reflection dump of every program and variant --- structs with std140 offsets, uniforms, blocks with `BaseSize`/`InstanceStride`, texture units, attribute locations. The test suite compares these dumps against @cpp "tests/expected" @ce
 `--essl100-check`, `--target essl100` | ESSL 100 (OpenGL\|ES 2.0) transform of every variant's stage sources. `essl100` is the only accepted `--target` value
 `--hlsl` | HLSL (Shader Model 4/5) transform of every stage
+`--cg` | Cg transform of every stage, in the dialect the PS Vita's sceGxm backend compiles @m_span{m-text m-dim} (the same emitter as `--hlsl`, see @ref shader-compiler-cg "below") @m_endspan
 `--vulkan` | Vulkan GLSL (@cpp "#version 450" @ce) transform of every stage @m_span{m-text m-dim} (does not require glslang) @m_endspan
 `--emit-types <output.h>` | Writes the shared reflection-types header and nothing else
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
+`--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
 `--emit-fixed-function <pvr\|gx\|psp> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
 `--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
@@ -124,9 +128,9 @@ Mode or option | Meaning
 
 @m_class{m-noindent}
 
-The four dump switches **write nothing** --- they print to stdout and never touch the committed
+The five dump switches **write nothing** --- they print to stdout and never touch the committed
 artifacts. They are not mutually exclusive, but they are ordered: when several are combined, the
-first of `--essl100-check`, `--hlsl`, `--vulkan`, `--check` wins and the others are silently
+first of `--essl100-check`, `--hlsl`, `--cg`, `--vulkan`, `--check` wins and the others are silently
 ignored. `--glslang` is ignored by every dump path.
 
 Diagnostics go to stderr in three shapes: @cpp "<file>:<line>: error: <message>" @ce for anything
@@ -153,6 +157,14 @@ headers generated with different data namespaces can be included together.
 **declined** and simply omitted, and the printed summary lists each one with its reason. It is also
 the only path that builds stage sources with `SOFTWARE_RENDERER` defined, see
 @ref shader-compiler-input-preprocessor "the conditionals below".
+
+`--emit-cg` is an aggregate for a different reason than the other two: its output *could* have been
+two more fields on the per-shader header, but rewriting those headers requires Windows (that is where
+the DXBC and SPIR-V blobs in them come from), so a Cg regeneration on any other host would silently
+drop them. A separate header keeps the two independent --- a Cg run touches nothing else. Like
+`--emit-sw-generated` it never fails on unsupported input: a variant the transform declines is
+omitted and listed in the printed summary, and the backend then reports that shader as unavailable at
+load time.
 
 `--emit-fixed-function` is the opposite: an invalid block is a **hard error** that fails the whole
 run, because a block is authored intent, see @ref shader-compiler-fixed-function "below".
@@ -698,13 +710,49 @@ their exact `--check` dumps in @cpp "tests/expected" @ce, inputs that must fail 
 @cpp "tests/errors" @ce, ESSL 100 fixtures in @cpp "tests/essl100" @ce, and `tests/RunTests.ps1` to
 run everything including emitted-header shape assertions.
 
+@section shader-compiler-cg The Cg dialect (PS Vita)
+
+The PS Vita's `sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline
+compiler for them --- the only Cg compiler for the platform is `libshacccg.suprx`, a firmware module
+on the console itself. The tool therefore emits Cg **source**, which the backend compiles at load
+time through vitaShaRK, and that is what @cpp "CgGeneratedShaders.h" @ce carries: two stage strings
+per program variant, looked up by the same program identity the fixed-function console tables use.
+
+Cg is the same language family as HLSL --- `floatN`, `mul()`, `lerp` / `frac` / `ddx`, `TEXCOORD<i>`
+interpolants --- so it is emitted by the *same* emitter (@ref ShaderCompiler::HlslEmitter, selected
+with @ref ShaderCompiler::HlslEmitter::Dialect "Dialect::Cg") rather than one of its own. The deltas
+are these:
+
+-   Both entry points are named `main`, not `VSMain` / `PSMain`.
+-   The system semantics are the fixed-function-era Cg set: `POSITION` for the clip position, `WPOS`
+    for the fragment position and `COLOR` for the colour output, in place of `SV_Position` /
+    `SV_Target`.
+-   There is no `cbuffer`: uniforms are plain `uniform` declarations, and a std140 block's members are
+    hoisted to top-level uniforms. Samplers are combined `sampler2D` / `sampler3D` objects carrying
+    the GXM `TEXUNIT<n>` semantic and are read with `tex2D()` / `tex2Dlod()`.
+-   There is **no vertex-ID or instance-ID input at all** --- the GXM parameter semantics have no
+    counterpart --- so the same `VertexIdRewrite` the ESSL 100 profile uses turns
+    the engine's `gl_VertexID` quad synthesis into reads of the `aQuadCorner` / `aInstanceIndex`
+    attributes. A stage still referencing either built-in after that rewrite is rejected with a
+    diagnostic rather than mis-emitted.
+-   A batched shader's `BATCH_SIZE` is baked into the emitted source as a plain `#define`, because a
+    Cg source is compiled as one string with no place to inject a define ahead of it. The backend
+    rewrites that number when the runtime settles on a different batch size.
+
+@m_class{m-block m-info}
+
+@par Why Cg lives in its own header
+The Cg sources *could* have been two more fields on the per-shader header, but the DXBC and SPIR-V
+blobs in those headers can only be produced on Windows, so regenerating them anywhere else would
+silently drop both. A separate aggregate header keeps a Cg run from touching anything else.
+
 @section shader-compiler-platforms Platform notes
 
 -   **OpenGL|ES 2.0** has neither uniform buffer objects nor @cpp gl_VertexID @ce, and the shared
     sprite template uses both, so the ESSL 100 lowering rewrites std140 blocks into loose uniforms or
     a uniform struct array and replaces the quad corner and batched instance index with the
     `aQuadCorner` / `aInstanceIndex` vertex attributes. The profile is selected with
-    `NCINE_RHI_GL_PROFILE_ES2`, compiles with @cpp "#version 100" @ce, and prefers the baked
+    `NCINE_RHI_GL_PROFILE=ES2`, compiles with @cpp "#version 100" @ce, and prefers the baked
     `*100` sources; a construct outside the emitter's subset leaves them null.
 -   **Direct3D 11** consumes the baked HLSL --- `VSMain` / `PSMain` entry points, std140 blocks as
     cbuffers, separate `Texture2D` + `SamplerState` objects and `mul()`-based matrix algebra.
@@ -715,13 +763,17 @@ run everything including emitted-header shape assertions.
 -   **Dreamcast, Wii/GameCube and PlayStation Portable** include their aggregate effect header from
     the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU`, and resolve their
     table entry from the program identity at link time.
+-   **PlayStation Vita** is the one console with real shaders: under `WITH_RHI_GXM` it resolves its Cg
+    stage sources from the same kind of identity lookup and compiles them on the console, see
+    @ref shader-compiler-cg "above".
 
 @m_class{m-noindent}
 
 Console content is fully preprocessed --- see @ref asset-packer "AssetPacker" for the asset side of
 the same principle --- which is why runtime-compiled shaders are a desktop-tier feature: there is no
-C++ JIT on a console, so a shader that arrives at runtime has no fixed-function effect to run. See
-@ref consoles "Building for consoles" for how those three backends are built and run.
+C++ JIT on a console, so a shader that arrives at runtime has no fixed-function effect to run --- and
+on the Vita it has no Cg source, which is the same restriction wearing a different hat. See
+@ref consoles "Building for consoles" for how those backends are built and run.
 
 @section shader-compiler-pitfalls Pitfalls
 

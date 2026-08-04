@@ -159,7 +159,7 @@ namespace nCine::RHI::Vulkan
 		std::uint32_t s_graphicsFamily = 0;
 		std::uint32_t s_presentFamily = 0;
 		VkDeviceSize s_minUboAlign = 256;
-		// Physical-device limits published through GfxCapabilities (safe pre-creation defaults)
+		// Physical-device limits published through VulkanRhiCapabilities (safe pre-creation defaults)
 		std::uint32_t s_maxImageDim2D = 16384;
 		std::uint32_t s_maxUniformRange = 64 * 1024;
 		bool s_depthClamp = false;

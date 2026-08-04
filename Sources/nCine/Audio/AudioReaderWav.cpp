@@ -4,14 +4,16 @@
 
 #include <cstring>
 
+#include <Base/Memory.h>
 #include <IO/FileStream.h>
 
 using namespace Death::IO;
+using namespace Death::Memory;
 
 namespace nCine
 {
-	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle)
-		: fileHandle_(std::move(fileHandle))
+	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle, std::int32_t bytesPerSample)
+		: fileHandle_(std::move(fileHandle)), bytesPerSample_(bytesPerSample)
 	{
 		DEATH_ASSERT(fileHandle_->IsValid());
 	}
@@ -26,9 +28,20 @@ namespace nCine
 
 		do {
 			// Read up to a buffer's worth of decoded sound data
-			bytes = fileHandle_->Read(buffer, bufferSize);
+			bytes = fileHandle_->Read(static_cast<std::uint8_t*>(buffer) + bufferSeek, bufferSize - bufferSeek);
 			bufferSeek += bytes;
 		} while (bytes > 0 && bufferSize - bufferSeek > 0);
+
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		// The samples are stored little-endian in the file, but the buffer formats of IAudioDevice are
+		// native-endian, so 16-bit data has to be swapped here (8-bit data is unaffected)
+		if (bytesPerSample_ == 2) {
+			std::uint16_t* samples = static_cast<std::uint16_t*>(buffer);
+			for (std::int32_t i = 0, n = bufferSeek / 2; i < n; i++) {
+				samples[i] = SwapBytes(samples[i]);
+			}
+		}
+#endif
 
 		return bufferSeek;
 	}

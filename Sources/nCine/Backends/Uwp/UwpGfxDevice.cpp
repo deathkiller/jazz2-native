@@ -27,7 +27,7 @@ namespace nCine::Backends
 {
 	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
 		: IGfxDevice(windowMode, contextInfo, displayMode), _window(window),
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 		  _renderSurface{EGL_NO_SURFACE},
 #endif
 		  _sizeChanged(2)
@@ -64,7 +64,7 @@ namespace nCine::Backends
 		// keeps its own reference, and `_window` owns the CoreWindow for the device's lifetime.
 		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, displayMode_.hasVSync());
 		FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and CoreWindow swap chain");
-#elif defined(WITH_OPENGLES)
+#elif defined(RHI_GL_PROFILE_ES)
 #	if defined(WITH_ANGLE)
 		static const EGLint configAttributes[] = {
 			EGL_RED_SIZE, 8,
@@ -214,7 +214,7 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(_renderSurface != EGL_NO_SURFACE, "Failed to create EGL surface");
 #	endif
 #else
-#	error "For DEATH_TARGET_WINDOWS_RT, either the Direct3D 11 (WITH_RHI_D3D11) or OpenGL|ES (WITH_OPENGLES) renderer must be selected"
+#	error "For DEATH_TARGET_WINDOWS_RT, either the Direct3D 11 (WITH_RHI_D3D11) or OpenGL|ES (RHI_GL_PROFILE_ES) renderer must be selected"
 #endif
 	}
 
@@ -222,7 +222,7 @@ namespace nCine::Backends
 	{
 #if defined(WITH_RHI_D3D11)
 		RHI::D3D11::D3D11Device::DestroySwapchain();
-#elif defined(WITH_OPENGLES)
+#elif defined(RHI_GL_PROFILE_ES)
 		if (_renderSurface != EGL_NO_SURFACE) {
 			eglDestroySurface(_eglDisplay, _renderSurface);
 			_renderSurface = EGL_NO_SURFACE;
@@ -240,7 +240,7 @@ namespace nCine::Backends
 
 	void UwpGfxDevice::MakeCurrent()
 	{
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 		EGLBoolean result = eglMakeCurrent(_eglDisplay, _renderSurface, _renderSurface, _eglContext);
 		FATAL_ASSERT_MSG(result != EGL_FALSE, "eglMakeCurrent() failed");
 
@@ -275,7 +275,7 @@ namespace nCine::Backends
 				}
 			}
 		}
-#elif defined(WITH_OPENGLES)
+#elif defined(RHI_GL_PROFILE_ES)
 		eglSwapBuffers(_eglDisplay, _renderSurface);
 
 		if (_sizeChanged > 0) {

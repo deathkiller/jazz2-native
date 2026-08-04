@@ -247,7 +247,7 @@ namespace nCine::RHI::GL
 			case GL_FLOAT_MAT4:
 				glUniformMatrix4fv(location, 1, GL_FALSE, reinterpret_cast<const GLfloat*>(dataPointer_));
 				break;
-#if !defined(WITH_OPENGLES) // not available in OpenGL ES
+#if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
@@ -255,7 +255,7 @@ namespace nCine::RHI::GL
 			case GL_SAMPLER_3D:
 #endif
 			case GL_SAMPLER_CUBE:
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 			case GL_SAMPLER_BUFFER:
 #endif
 				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
@@ -285,7 +285,7 @@ namespace nCine::RHI::GL
 #if !defined(DEATH_TARGET_VITA)	// vitaGL declares neither GL_BOOL nor GL_SAMPLER_3D
 			uniform_->GetBasicType() != GL_BOOL &&
 #endif
-#if !defined(WITH_OPENGLES) // not available in OpenGL ES
+#if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 			uniform_->GetBasicType() != GL_SAMPLER_1D &&
 #endif
 			uniform_->GetBasicType() != GL_SAMPLER_2D &&
@@ -293,7 +293,7 @@ namespace nCine::RHI::GL
 			uniform_->GetBasicType() != GL_SAMPLER_3D &&
 #endif
 			uniform_->GetBasicType() != GL_SAMPLER_CUBE
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 			&& uniform_->GetBasicType() != GL_SAMPLER_BUFFER
 #endif
 		) {

@@ -31,6 +31,7 @@
 #include "GL/GLClearColor.h"
 #include "GL/GLViewport.h"
 #include "GL/GLDebug.h"
+#include "GL/GLRhiCapabilities.h"
 
 #elif defined(WITH_RHI_SOFTWARE)
 
@@ -46,6 +47,7 @@
 #include "Software/SwRenderTarget.h"
 #include "Software/SwRaster.h"
 #include "Software/SwDevice.h"
+#include "Software/SwRhiCapabilities.h"
 
 #elif defined(WITH_RHI_GX)
 
@@ -60,6 +62,7 @@
 #include "GX/GxShaderProgram.h"
 #include "GX/GxRenderTarget.h"
 #include "GX/GxDevice.h"
+#include "GX/GxRhiCapabilities.h"
 
 #elif defined(WITH_RHI_PVR)
 
@@ -74,6 +77,7 @@
 #include "PVR/PvrShaderProgram.h"
 #include "PVR/PvrRenderTarget.h"
 #include "PVR/PvrDevice.h"
+#include "PVR/PvrRhiCapabilities.h"
 
 #elif defined(WITH_RHI_GU)
 
@@ -88,6 +92,23 @@
 #include "GU/GuShaderProgram.h"
 #include "GU/GuRenderTarget.h"
 #include "GU/GuDevice.h"
+#include "GU/GuRhiCapabilities.h"
+
+#elif defined(WITH_RHI_GXM)
+
+#include "GXM/GxmDebug.h"
+#include "GXM/GxmShader.h"
+#include "GXM/GxmMemory.h"
+#include "GXM/GxmBufferObject.h"
+#include "GXM/GxmTexture.h"
+#include "GXM/GxmVertexFormat.h"
+#include "GXM/GxmShaderTypes.h"
+#include "GXM/GxmUniformCache.h"
+#include "GXM/GxmShaderUniforms.h"
+#include "GXM/GxmShaderProgram.h"
+#include "GXM/GxmRenderTarget.h"
+#include "GXM/GxmDevice.h"
+#include "GXM/GxmRhiCapabilities.h"
 
 #elif defined(WITH_RHI_D3D11)
 
@@ -102,6 +123,7 @@
 #include "D3D11/D3D11ShaderProgram.h"
 #include "D3D11/D3D11RenderTarget.h"
 #include "D3D11/D3D11Device.h"
+#include "D3D11/D3D11RhiCapabilities.h"
 
 #elif defined(WITH_RHI_VULKAN)
 
@@ -116,5 +138,6 @@
 #include "Vulkan/VulkanShaderProgram.h"
 #include "Vulkan/VulkanRenderTarget.h"
 #include "Vulkan/VulkanDevice.h"
+#include "Vulkan/VulkanRhiCapabilities.h"
 
 #endif

@@ -67,7 +67,7 @@ namespace nCine::RHI::GL
 		}
 		/** @brief Updates a subset of the data store starting at the given byte offset */
 		void BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		/** @brief Allocates an immutable data store with the given size, optional data and storage flags */
 		void BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
 		/** @brief Allocates an immutable data store with backend-neutral storage flags */
@@ -94,7 +94,7 @@ namespace nCine::RHI::GL
 		 * @return `GL_FALSE` if the buffer contents became corrupt while mapped
 		 */
 		GLboolean Unmap();
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 		/** @brief Attaches the buffer storage to the active texture as a texture buffer with the given internal format */
 		void TexBuffer(GLenum internalformat);
 #endif

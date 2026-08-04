@@ -297,9 +297,6 @@
     <ClInclude Include="Main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\IGfxCapabilities.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Graphics\IGfxDevice.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
@@ -345,7 +342,13 @@
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\IRhiCapabilities.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\Rhi.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\RhiCapabilitiesBase.h">
       <Filter>Header Files\nCine\Graphics\RHI</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\RhiFwd.h">
@@ -454,6 +457,9 @@
       <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\GL\GLRenderTarget.h">
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\GL\GLRhiCapabilities.h">
       <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\GL\GLScissorTest.h">
@@ -587,9 +593,6 @@
     </ClInclude>
     <ClInclude Include="nCine\Threading\IThreadCommand.h">
       <Filter>Header Files\nCine\Threading</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\Graphics\GfxCapabilities.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Base\BitSet.h">
       <Filter>Header Files\nCine\Base</Filter>
@@ -1931,9 +1934,6 @@
     <ClCompile Include="nCine\Graphics\Geometry.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
     </ClCompile>
@@ -2863,6 +2863,12 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderTarget.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLRhiCapabilities.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\RhiCapabilitiesBase.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>

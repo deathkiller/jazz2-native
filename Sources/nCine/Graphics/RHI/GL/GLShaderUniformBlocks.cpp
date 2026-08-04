@@ -1,7 +1,7 @@
 #include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
 #include "GLBufferObject.h"
-#include "../../IGfxCapabilities.h"
+#include "../IRhiCapabilities.h"
 #include "../../../ServiceLocator.h"
 #include "../../../../Main.h"
 
@@ -44,7 +44,7 @@ namespace nCine::RHI::GL
 		// whose definition this GL translation unit does not include, and the pipeline never calls this here
 #elif !defined(WITH_RHI_SOFTWARE)
 #if defined(DEATH_DEBUG)
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
 			uboParams_.object->Bind();

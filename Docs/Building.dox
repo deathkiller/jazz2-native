@@ -199,23 +199,38 @@ The following parameters can be used to customize the build:
     -   Ignored on **Android**, **UWP** and the @ref consoles "consoles with a bespoke window backend"
 -   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce) --- Preferred rendering backend (RHI)
     -   Possible values:
-        - `OpenGL` --- Uses OpenGL 3.3, OpenGL|ES 3.0 or WebGL 2.0 depending on platform (use `NCINE_RHI_GL_PROFILE_ES2` to force OpenGL|ES 2.0 profile)
+        - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
         - `D3D11` --- Uses Direct3D 11 (Windows only)
         - `Vulkan` --- Uses Vulkan
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Pinned to the console's only rendering backend on **Sega Dreamcast** (`PVR`), **Nintendo Wii**
         and **Nintendo GameCube** (`GX`) and **PlayStation Portable** (`GU`); any other value is a
         configure error there, see @ref consoles
--   `NCINE_RHI_GL_PROFILE_ES2` (default @cpp OFF @ce, @cpp ON @ce on **PS Vita**) --- Request the **OpenGL|ES** 2.0 profile
-    -   Requires `NCINE_WITH_OPENGLES` or `NCINE_WITH_ANGLE`; compiles the ESSL 100 shader variants, which have no uniform buffer objects
--   `NCINE_RHI_SOFTWARE_FB16` (default @cpp OFF @ce) --- Use a 16-bit (RGB565) screen framebuffer with the software renderer
-    -   Halves framebuffer memory and present bandwidth at the cost of color depth; ignored by the other backends
+-   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
+    -   Possible values:
+        - `Core` --- OpenGL 3.3 core profile (GLSL 330, uniform buffer objects, `gl_VertexID`)
+        - `ES3` --- **OpenGL|ES** 3.0, and **WebGL** 2.0 on **Emscripten** (ESSL 300 es)
+        - `ES2` --- **OpenGL|ES** 2.0 (ESSL 100, no uniform buffer objects, no `gl_VertexID`, no buffer mapping)
+    -   Defaults to `ES3` on **Android**, **Emscripten**, **Nintendo Switch**, ARM Linux and **ANGLE** builds,
+        and to `Core` elsewhere; pinned to `ES2` on **PS Vita** (vitaGL is an **OpenGL|ES** 2.0 implementation)
+        and to `ES3` for the libretro core
+    -   Every profile builds on every platform that can provide the matching client library, so an `ES2` build
+        on Android or on the desktop is a normal configuration --- it is how the low-end paths are tested
+        without the target hardware
+-   `NCINE_RHI_USE_FB16` (default @cpp OFF @ce) --- Use 16-bit (RGB565) color surfaces instead of RGBA8
+    -   Trades color depth (and destination alpha, which reads as opaque) for memory and bandwidth. Being a
+        performance option, each backend applies it as deep as it pays off there: the `OpenGL` backend uses it
+        for every color surface it can --- a 5/6/5 default framebuffer *and* RGB565 scene, blur and rescale
+        render targets --- while the `Software` backend uses it for the screen buffer only, since its
+        rasterizer works on RGBA8 internally either way and packed render targets would only add a conversion
+        per span
+    -   Only offered for the `Software` and `OpenGL` backends; the consoles present through a format their
+        hardware fixes, and 5/6/5 swap chains are not reliably available on D3D11/Vulkan
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
 -   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten** and **PlayStation Portable**) --- Allow to use multiple threads for better performance
     -   Multiplayer requires threads, so it's compiled out where they are unavailable
--   `NCINE_WITH_OPENGLES` (default @cpp OFF @ce) --- Use **OpenGL|ES** library instead of **OpenGL**
 -   `NCINE_WITH_ANGLE` (default @cpp OFF @ce except on UWP) --- Enable Google **ANGLE** library support
--   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library
+-   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library, only offered for `NCINE_RHI_GL_PROFILE=Core`
 -   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, Emscripten and UWP) --- Enable better exception handling
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library

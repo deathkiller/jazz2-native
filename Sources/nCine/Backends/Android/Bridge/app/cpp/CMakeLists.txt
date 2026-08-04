@@ -43,7 +43,7 @@ add_library(jnicall_functions STATIC jnicall_functions.cpp)
 # because the Android build resets all the toolchain-provided compiler flags.
 set_target_properties(${NCINE_APP} ncine_main jnicall_functions PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_link_libraries(${NCINE_APP} PRIVATE ${ANDROID_LIBRARY} ${EGL_LIBRARY} ${GLES3_LIBRARY} ${LOG_LIBRARY})
+target_link_libraries(${NCINE_APP} PRIVATE ${ANDROID_LIBRARY} ${EGL_LIBRARY} ${GLES_LIBRARY} ${LOG_LIBRARY})
 if(ANDROID_PLATFORM GREATER_EQUAL 30)
 	target_link_libraries(${NCINE_APP} PRIVATE ${NATIVEWINDOW_LIBRARY})
 endif()

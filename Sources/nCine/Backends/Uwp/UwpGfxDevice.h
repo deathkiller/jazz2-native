@@ -7,7 +7,7 @@
 #include <winrt/base.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 #	if !defined(EGL_EGL_PROTOTYPES)
 #		define EGL_EGL_PROTOTYPES 1
 #	endif
@@ -37,7 +37,7 @@ namespace nCine::Backends
 		@brief The UWP graphics device
 		
 		Renders through OpenGL ES via ANGLE/Mesa using an EGL surface bound to the UWP `CoreWindow`.
-		The EGL/OpenGL ES code paths are guarded by the `WITH_OPENGLES` build option.
+		The EGL/OpenGL ES code paths are guarded by the `RHI_GL_PROFILE_ES` build option.
 	*/
 	class UwpGfxDevice : public IGfxDevice
 	{
@@ -73,7 +73,7 @@ namespace nCine::Backends
 		void MakeCurrent();
 
 		winrtWUC::CoreWindow _window;
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 		EGLSurface _renderSurface;
 		EGLDisplay _eglDisplay;
 		EGLContext _eglContext;

@@ -268,7 +268,7 @@ namespace nCine::Backends
 		glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 #endif
 		glfwSetErrorCallback(errorCallback);
-		FATAL_ASSERT_MSG(glfwInit() == GL_TRUE, "glfwInit() failed");
+		FATAL_ASSERT_MSG(glfwInit() == GLFW_TRUE, "glfwInit() failed");
 	}
 
 	void GlfwGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling)
@@ -309,7 +309,7 @@ namespace nCine::Backends
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
-#elif defined(WITH_OPENGLES)
+#elif defined(RHI_GL_PROFILE_ES)
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 #else
@@ -338,7 +338,7 @@ namespace nCine::Backends
 
 		if (!windowHandle_ && contextInfo_.minorVersion > 0) {
 			// Retry with lower minor version
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("glfwCreateWindow() with OpenGL|ES {}.{} failed, retrying with lower version",
 				contextInfo_.majorVersion, contextInfo_.minorVersion);
 #else
@@ -350,7 +350,7 @@ namespace nCine::Backends
 			goto Retry;
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() with OpenGL|ES {}.{} failed",
 			contextInfo_.majorVersion, contextInfo_.minorVersion);
 #else

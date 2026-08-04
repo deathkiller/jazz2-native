@@ -1,10 +1,6 @@
 #include "AudioBufferPlayer.h"
 #include "AudioBuffer.h"
-#include "ALDebug.h"
 #include "../ServiceLocator.h"
-
-#define NCINE_INCLUDE_OPENAL
-#include "../CommonHeaders.h"
 
 namespace nCine
 {
@@ -85,70 +81,62 @@ namespace nCine
 				}
 				sourceId_ = source;
 
-				alSourcei(sourceId_, AL_BUFFER, audioBuffer_->bufferId());
-				// Setting OpenAL source looping only if not streaming
-				alSourcei(sourceId_, AL_LOOPING, GetFlags(PlayerFlags::Looping));
+				device.setSourceBuffer(sourceId_, audioBuffer_->bufferId());
+				// Setting source looping only if not streaming
+				device.setSourceLooping(sourceId_, GetFlags(PlayerFlags::Looping));
 
-				alSourcef(sourceId_, AL_GAIN, gain_);
-				alSourcef(sourceId_, AL_PITCH, pitch_);
+				device.setSourceGain(sourceId_, gain_);
+				device.setSourcePitch(sourceId_, pitch_);
 
 				updateFilters();
 
 				bool isSourceRelative = GetFlags(PlayerFlags::SourceRelative);
 				bool isAs2D = GetFlags(PlayerFlags::As2D);
 
-				alSourcei(sourceId_, AL_SOURCE_RELATIVE, isSourceRelative || isAs2D ? AL_TRUE : AL_FALSE);
-				alSourcef(sourceId_, AL_REFERENCE_DISTANCE, IAudioDevice::ReferenceDistance);
-				alSourcef(sourceId_, AL_MAX_DISTANCE, IAudioDevice::MaxDistance);
+				device.setSourceRelative(sourceId_, isSourceRelative || isAs2D);
 				setPositionInternal(getAdjustedPosition(device, position_, isSourceRelative, isAs2D));
 
-				alSourcePlay(sourceId_);
+				device.playSource(sourceId_);
 				state_ = PlayerState::Playing;
 				break;
 			}
 			case PlayerState::Paused: {
 				updateFilters();
 
-				alSourcePlay(sourceId_);
+				device.playSource(sourceId_);
 				state_ = PlayerState::Playing;
 				break;
 			}
 		}
-		AL_LOG_ERRORS();
 	}
 
 	void AudioBufferPlayer::pause()
 	{
 		switch (state_) {
 			case PlayerState::Playing: {
-				alSourcePause(sourceId_);
+				theServiceLocator().GetAudioDevice().pauseSource(sourceId_);
 				state_ = PlayerState::Paused;
 				break;
 			}
 		}
-		AL_LOG_ERRORS();
 	}
 
 	void AudioBufferPlayer::stop()
 	{
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+
 		switch (state_) {
 			case PlayerState::Playing:
 			case PlayerState::Paused: {
-				alSourceStop(sourceId_);
+				device.stopSource(sourceId_);
 				// Detach the buffer from source
-				alSourcei(sourceId_, AL_BUFFER, 0);
-#if defined(OPENAL_FILTERS_SUPPORTED)
-				if (filterHandle_ != 0) {
-					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
-				}
-#endif
+				device.setSourceBuffer(sourceId_, 0);
+				device.setSourceLowPass(sourceId_, 1.0f);
 				state_ = PlayerState::Stopped;
 				break;
 			}
 		}
-		AL_LOG_ERRORS();
 
-		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		device.unregisterPlayer(this);
 	}
 
@@ -158,8 +146,7 @@ namespace nCine
 			IAudioPlayer::setLooping(value);
 			// Applying the change immediately, so the per-frame update doesn't have to re-set it
 			if (sourceId_ != IAudioDevice::UnavailableSource) {
-				alSourcei(sourceId_, AL_LOOPING, value ? AL_TRUE : AL_FALSE);
-				AL_LOG_ERRORS();
+				theServiceLocator().GetAudioDevice().setSourceLooping(sourceId_, value);
 			}
 		}
 	}
@@ -167,23 +154,15 @@ namespace nCine
 	void AudioBufferPlayer::updateState()
 	{
 		if (state_ == PlayerState::Playing) {
-			ALenum alState;
-			alGetSourcei(sourceId_, AL_SOURCE_STATE, &alState);
-
-			if (alState != AL_PLAYING) {
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
+			if (!device.isSourcePlaying(sourceId_)) {
 				// Detach the buffer from source
-				alSourcei(sourceId_, AL_BUFFER, 0);
-#if defined(OPENAL_FILTERS_SUPPORTED)
-				if (filterHandle_ != 0) {
-					alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
-				}
-#endif
+				device.setSourceBuffer(sourceId_, 0);
+				device.setSourceLowPass(sourceId_, 1.0f);
 				state_ = PlayerState::Stopped;
 
-				IAudioDevice& device = theServiceLocator().GetAudioDevice();
 				device.unregisterPlayer(this);
 			}
-			AL_LOG_ERRORS();
 		}
 	}
 }

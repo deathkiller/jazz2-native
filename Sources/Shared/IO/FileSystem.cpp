@@ -164,7 +164,7 @@ namespace Death { namespace IO {
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 			// Switch mount points: romfs:, sdmc:, etc.
-			// Vita mount points: ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
+			// Vita mount points: app0:, ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
 			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
 #		if defined(DEATH_TARGET_PSP)
 			// "flash0" is one character longer than anything the other two platforms mount
@@ -861,7 +861,7 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-#if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 	String FileSystem::FindPathCaseInsensitive(StringView path)
 	{
 		if (path.empty() || Exists(path)) {
@@ -1725,7 +1725,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+#		if defined(DEATH_TARGET_VITA)
+			return true;	// This platform doesn't have a concept of file permissions
+#		else
 			return ((sb.st_mode & S_IRUSR) != 0);
+#		endif
 		}
 		return false;
 #endif
@@ -1755,7 +1759,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+#		if defined(DEATH_TARGET_VITA)
+			return true;	// This platform doesn't have a concept of file permissions
+#		else
 			return ((sb.st_mode & S_IWUSR) != 0);
+#		endif
 		}
 		return false;
 #endif
@@ -1824,7 +1832,11 @@ namespace Death { namespace IO {
 #	else
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+#		if defined(DEATH_TARGET_VITA)
+			return true;	// This platform doesn't have a concept of file permissions
+#		else
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR) != 0);
+#		endif
 		}
 #	endif
 #endif
@@ -1855,7 +1867,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+#		if defined(DEATH_TARGET_VITA)
+			return true;	// This platform doesn't have a concept of file permissions
+#		else
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR) != 0);
+#		endif
 		}
 #endif
 		return false;
@@ -2473,7 +2489,7 @@ namespace Death { namespace IO {
 	End:
 #	endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;

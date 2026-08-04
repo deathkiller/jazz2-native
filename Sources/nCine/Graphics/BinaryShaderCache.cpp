@@ -1,5 +1,5 @@
 #include "BinaryShaderCache.h"
-#include "IGfxCapabilities.h"
+#include "RHI/IRhiCapabilities.h"
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
 #include "../Base/HashFunctions.h"
@@ -41,20 +41,20 @@ namespace nCine
 			return;
 		}
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-#	if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||
-								 gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY);
+		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
+#	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
+		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||
+								 caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_GET_PROGRAM_BINARY);
 #	else
-		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY);
+		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_GET_PROGRAM_BINARY);
 #	endif
 		if (!isSupported) {
 			LOGW("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
 			return;
 		}
 
-#	if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
-		if (gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY)) {
+#	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
+		if (caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_GET_PROGRAM_BINARY)) {
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH_OES;
@@ -64,7 +64,7 @@ namespace nCine
 #if defined(RHI_GL_PROFILE_ES2)
 			// The core program-binary entry points (glGetProgramBinary/glProgramBinary) and GL_PROGRAM_BINARY_LENGTH
 			// are ES 3.0 / ARB - strict ES 2.0 only has the OES_get_program_binary spelling, which isSupported()
-			// above already requires on WITH_OPENGLES, so this core/ARB fallback is unreachable on this profile
+			// above already requires on RHI_GL_PROFILE_ES, so this core/ARB fallback is unreachable on this profile
 			LOGW("Program binary retrieval is unavailable without OES_get_program_binary, binary shader cache is disabled");
 			return;
 #else
@@ -74,7 +74,7 @@ namespace nCine
 #endif
 		}
 
-		const auto& infoStrings = gfxCaps.GetInfoStrings();
+		const auto& infoStrings = caps.GetInfoStrings();
 
 		platformHash_ =
 			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer),

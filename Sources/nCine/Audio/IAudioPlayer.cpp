@@ -1,9 +1,3 @@
-#if defined(WITH_AUDIO)
-#	define NCINE_INCLUDE_OPENAL
-#	include "../CommonHeaders.h"
-#	include "ALDebug.h"
-#endif
-
 #include "IAudioPlayer.h"
 #include "IAudioDevice.h"
 #include "../CommonConstants.h"
@@ -14,80 +8,56 @@ namespace nCine
 {
 	IAudioPlayer::IAudioPlayer(ObjectType type)
 		: Object(type), sourceId_(IAudioDevice::UnavailableSource), state_(PlayerState::Stopped), flags_(PlayerFlags::None),
-			gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f), filterHandle_(0)
+			gain_(1.0f), pitch_(1.0f), lowPass_(1.0f), position_(0.0f, 0.0f, 0.0f)
 	{
 	}
 
 	IAudioPlayer::~IAudioPlayer()
 	{
-#if defined(WITH_AUDIO) && defined(OPENAL_FILTERS_SUPPORTED)
-		if (filterHandle_ != 0) {
-			alDeleteFilters(1, &filterHandle_);
-			filterHandle_ = 0;
-		}
-#endif
 	}
 
 	std::int32_t IAudioPlayer::sampleOffset() const
 	{
-#if defined(WITH_AUDIO)
-		ALint byteOffset = 0;
 		if (sourceId_ != IAudioDevice::UnavailableSource) {
-			alGetSourcei(sourceId_, AL_SAMPLE_OFFSET, &byteOffset);
-			AL_LOG_ERRORS();
+			return theServiceLocator().GetAudioDevice().sourceSampleOffset(sourceId_);
 		}
-		return byteOffset;
-#else
 		return 0;
-#endif
 	}
 
-	void IAudioPlayer::setSampleOffset(std::int32_t byteOffset)
+	void IAudioPlayer::setSampleOffset(std::int32_t offset)
 	{
-#if defined(WITH_AUDIO)
 		if (sourceId_ != IAudioDevice::UnavailableSource) {
-			alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
-			AL_LOG_ERRORS();
+			theServiceLocator().GetAudioDevice().setSourceSampleOffset(sourceId_, offset);
 		}
-#endif
 	}
 
-	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
+	// The change is applied to the backend source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setSourceRelative(bool value)
 	{
 		if (GetFlags(PlayerFlags::SourceRelative) != value) {
 			SetFlags(PlayerFlags::SourceRelative, value);
-#if defined(WITH_AUDIO)
 			if (sourceId_ != IAudioDevice::UnavailableSource) {
-				alSourcei(sourceId_, AL_SOURCE_RELATIVE, value ? AL_TRUE : AL_FALSE);
-				AL_LOG_ERRORS();
+				theServiceLocator().GetAudioDevice().setSourceRelative(sourceId_, value);
 			}
-#endif
 		}
 	}
 
-	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
+	// The change is applied to the backend source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setGain(float gain)
 	{
 		gain_ = gain;
-#if defined(WITH_AUDIO)
 		if (sourceId_ != IAudioDevice::UnavailableSource) {
-			alSourcef(sourceId_, AL_GAIN, gain_);
-			AL_LOG_ERRORS();
+			theServiceLocator().GetAudioDevice().setSourceGain(sourceId_, gain_);
 		}
-#endif
 	}
 
-	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
+	// The change is applied to the backend source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setPitch(float pitch)
 	{
 		pitch_ = pitch;
-#if defined(WITH_AUDIO)
 		if (sourceId_ != IAudioDevice::UnavailableSource) {
-			alSourcef(sourceId_, AL_PITCH, pitch_);
-			AL_LOG_ERRORS();
+			theServiceLocator().GetAudioDevice().setSourcePitch(sourceId_, pitch_);
 		}
-#endif
 	}
 
 	void IAudioPlayer::setLowPass(float value)
@@ -100,7 +70,7 @@ namespace nCine
 		}
 	}
 
-	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
+	// The change is applied to the backend source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setPosition(const Vector3f& position)
 	{
 		position_ = position;
@@ -112,33 +82,12 @@ namespace nCine
 
 	void IAudioPlayer::updateFilters()
 	{
-#if defined(WITH_AUDIO) && defined(OPENAL_FILTERS_SUPPORTED)
-		if (lowPass_ < 1.0f) {
-			if (filterHandle_ == 0) {
-				alGenFilters(1, &filterHandle_);
-				alFilteri(filterHandle_, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-				alFilterf(filterHandle_, AL_LOWPASS_GAIN, 1.0f);
-			}
-			if (filterHandle_ != 0) {
-				alFilterf(filterHandle_, AL_LOWPASS_GAINHF, lowPass_);
-				alSourcei(sourceId_, AL_DIRECT_FILTER, filterHandle_);
-			}
-		} else {
-			if (filterHandle_ != 0) {
-				alFilterf(filterHandle_, AL_LOWPASS_GAINHF, 1.0f);
-			}
-			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
-		}
-		AL_LOG_ERRORS();
-#endif
+		theServiceLocator().GetAudioDevice().setSourceLowPass(sourceId_, lowPass_);
 	}
 
 	void IAudioPlayer::setPositionInternal(const Vector3f& position)
 	{
-#if defined(WITH_AUDIO)
-		alSource3f(sourceId_, AL_POSITION, position.X, position.Y, position.Z);
-		AL_LOG_ERRORS();
-#endif
+		theServiceLocator().GetAudioDevice().setSourcePosition(sourceId_, position);
 	}
 
 	Vector3f IAudioPlayer::getAdjustedPosition(IAudioDevice& device, const Vector3f& pos, bool isSourceRelative, bool isAs2D)

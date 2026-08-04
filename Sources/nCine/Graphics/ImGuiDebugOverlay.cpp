@@ -3,7 +3,7 @@
 #include "ImGuiDebugOverlay.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
-#include "../Graphics/IGfxCapabilities.h"
+#include "RHI/IRhiCapabilities.h"
 #include "../Input/IInputManager.h"
 #include "../Input/InputEvents.h"
 #include "../Primitives/Vector2.h"
@@ -85,7 +85,7 @@ namespace nCine
 			}
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const char* openglApiName = "OpenGL ES";
 #else
 		const char* openglApiName = "OpenGL";
@@ -525,45 +525,54 @@ namespace nCine
 	void ImGuiDebugOverlay::guiGraphicsCapabilities()
 	{
 		if (ImGui::CollapsingHeader("Graphics Capabilities")) {
-			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
+			const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 
-			const IGfxCapabilities::InfoStrings& glInfoStrings = gfxCaps.GetInfoStrings();
-			ImGui::Text("%s Vendor: %s", openglApiName, glInfoStrings.vendor);
-			ImGui::Text("%s Renderer: %s", openglApiName, glInfoStrings.renderer);
-			ImGui::Text("%s Version: %s", openglApiName, glInfoStrings.apiVersion);
-			ImGui::Text("GLSL Version: %s", glInfoStrings.shadingLanguageVersion);
+			const RHI::IRhiCapabilities::InfoStrings& glInfoStrings = caps.GetInfoStrings();
+			const auto hasInfoString = [](const char* value) { return (value != nullptr && value[0] != '\0'); };
+			if (hasInfoString(glInfoStrings.vendor)) {
+				ImGui::Text("%s Vendor: %s", openglApiName, glInfoStrings.vendor);
+			}
+			if (hasInfoString(glInfoStrings.renderer)) {
+				ImGui::Text("%s Renderer: %s", openglApiName, glInfoStrings.renderer);
+			}
+			if (hasInfoString(glInfoStrings.apiVersion)) {
+				ImGui::Text("%s Version: %s", openglApiName, glInfoStrings.apiVersion);
+			}
+			if (hasInfoString(glInfoStrings.shadingLanguageVersion)) {
+				ImGui::Text("GLSL Version: %s", glInfoStrings.shadingLanguageVersion);
+			}
 
 			ImGui::Text("%s parsed version: %d.%d.%d", openglApiName,
-						gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Major),
-						gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Minor),
-						gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Release));
+						caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Major),
+						caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Minor),
+						caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Release));
 
 			ImGui::Separator();
-			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE));
-			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_IMAGE_UNITS));
-			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE));
-			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BUFFER_BINDINGS));
-			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_VERTEX_UNIFORM_BLOCKS));
-			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
-			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE));
+			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_TEXTURE_SIZE));
+			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_TEXTURE_IMAGE_UNITS));
+			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE));
+			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BUFFER_BINDINGS));
+			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_VERTEX_UNIFORM_BLOCKS));
+			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
+			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(RHI_GL_PROFILE_ES) || (defined(RHI_GL_PROFILE_ES) && GL_ES_VERSION_3_1))
+			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE));
 #endif
-			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_COLOR_ATTACHMENTS));
+			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_COLOR_ATTACHMENTS));
 
 			ImGui::Separator();
-			ImGui::Text("GL_KHR_debug: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_DEBUG));
-			ImGui::Text("GL_ARB_texture_storage: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE));
-			ImGui::Text("GL_ARB_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY));
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-			ImGui::Text("GL_OES_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY));
+			ImGui::Text("GL_KHR_debug: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::KHR_DEBUG));
+			ImGui::Text("GL_ARB_texture_storage: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_TEXTURE_STORAGE));
+			ImGui::Text("GL_ARB_get_program_binary: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_GET_PROGRAM_BINARY));
+#if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
+			ImGui::Text("GL_OES_get_program_binary: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_GET_PROGRAM_BINARY));
 #endif
-			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC));
-			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE));
-			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC));
-			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
+			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC));
+			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE));
+			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC));
+			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
+			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
 #endif
 		}
 	}
@@ -572,7 +581,7 @@ namespace nCine
 	{
 		if (ImGui::CollapsingHeader("Application Configuration")) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			ImGui::Text("OpenGL Core: %s", appCfg.glCoreProfile() ? "true" : "false");
 			ImGui::Text("OpenGL Forward: %s", appCfg.glForwardCompatible() ? "true" : "false");
 #endif

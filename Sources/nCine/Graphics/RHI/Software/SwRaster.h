@@ -107,11 +107,11 @@ namespace nCine::RHI::Software
 	/** @brief Optional per-pixel fragment callback; runs after sampling, before blending */
 	using FragmentShaderFn = void (*)(const FragmentShaderInput& input);
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 	/**
 		@brief Packs one 4-byte RGBA working pixel into an RGB565 framebuffer texel (alpha is dropped)
 
-		Part of the optional 16-bit screen-framebuffer mode (`NCINE_RHI_SOFTWARE_FB16`): the screen buffer
+		Part of the optional 16-bit screen-framebuffer mode (`NCINE_RHI_USE_FB16`): the screen buffer
 		stores native-endian RGB565 (2 bytes per pixel - half the memory and present bandwidth of RGBA8),
 		while render-target textures and all intermediate rasterization stay 4-byte RGBA. The rasterizers
 		stage each touched framebuffer row through @ref SwLoadFbSpan565 / @ref SwStoreFbSpan565, so their

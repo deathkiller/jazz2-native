@@ -1,14 +1,6 @@
-#if defined(WITH_AUDIO)
-#	define NCINE_INCLUDE_OPENAL
-#	include "../CommonHeaders.h"
-#endif
-
 #include "AudioStream.h"
 #include "IAudioLoader.h"
 #include "IAudioReader.h"
-#if defined(WITH_AUDIO)
-#	include "ALDebug.h"
-#endif
 #include "../ServiceLocator.h"
 
 #include <Containers/String.h>
@@ -18,20 +10,15 @@ namespace nCine
 	// Private constructor called only by AudioStreamPlayer
 	AudioStream::AudioStream()
 		: nextAvailableBufferIndex_(0), currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
-			frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
+			frequency_(0), numSamples_(0), duration_(0.0f), format_(IAudioDevice::BufferFormat::Mono16), buffersIds_(NumBuffers)
 	{
 #if defined(WITH_AUDIO)
-		alGetError();
-		// Through locals of OpenAL's own type, for the same reason as in AudioBuffer: `ALuint` and
-		// `std::uint32_t` are not the same type everywhere, so the array cannot simply be handed over
-		ALuint bufferIds[NumBuffers] {};
-		alGenBuffers(NumBuffers, bufferIds);
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		for (std::int32_t i = 0; i < NumBuffers; i++) {
-			buffersIds_[i] = bufferIds[i];
-		}
-		const ALenum error = alGetError();
-		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
-			LOGW("alGenBuffers() failed with error 0x{:x}", error);
+			buffersIds_[i] = device.createBuffer(IAudioDevice::BufferUsage::Streaming);
+			if DEATH_UNLIKELY(buffersIds_[i] == 0) {
+				LOGW("Cannot create streaming audio buffer");
+			}
 		}
 		decodeRequest_ = std::make_shared<StreamDecodeRequest>();
 		decodeRequest_->buffer = std::make_unique<char[]>(BufferSize);
@@ -56,12 +43,10 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		// Don't delete buffers if this is a moved out object
 		if (buffersIds_.size() == NumBuffers) {
-			ALuint bufferIds[NumBuffers];
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
 			for (std::int32_t i = 0; i < NumBuffers; i++) {
-				bufferIds[i] = buffersIds_[i];
+				device.deleteBuffer(buffersIds_[i]);
 			}
-			alDeleteBuffers(NumBuffers, bufferIds);
-			AL_LOG_ERRORS();
 		}
 #endif
 	}
@@ -87,23 +72,23 @@ namespace nCine
 			return false;
 		}
 
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+
 		// Set to false when the queue is empty and there is no more data to decode
 		bool shouldKeepPlaying = true;
 
-		ALint numProcessedBuffers;
-		alGetSourcei(source, AL_BUFFERS_PROCESSED, &numProcessedBuffers);
+		const std::int32_t numProcessedBuffers = device.numProcessedBuffers(source);
 
 		// Unqueueing all processed buffers with a single call
 		if (numProcessedBuffers > 0) {
-			ALuint unqueuedAlBuffers[NumBuffers];
-			alSourceUnqueueBuffers(source, numProcessedBuffers, unqueuedAlBuffers);
-			for (ALint i = 0; i < numProcessedBuffers; i++) {
+			std::uint32_t unqueuedBuffers[NumBuffers];
+			device.unqueueBuffers(source, numProcessedBuffers, unqueuedBuffers);
+			for (std::int32_t i = 0; i < numProcessedBuffers; i++) {
 				nextAvailableBufferIndex_--;
-				buffersIds_[nextAvailableBufferIndex_] = unqueuedAlBuffers[i];
+				buffersIds_[nextAvailableBufferIndex_] = unqueuedBuffers[i];
 			}
 		}
 
-		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		bool reachedEndOfData = false;
 
 		// Queueing until all available buffers are filled, so the queue is primed
@@ -131,10 +116,8 @@ namespace nCine
 			// If it is still decoding data then enqueue
 			if (bytes > 0) {
 				currentBufferId_ = buffersIds_[nextAvailableBufferIndex_];
-				// On iOS `alBufferDataStatic()` could be used instead
-				alBufferData(currentBufferId_, format_, decodeRequest_->buffer.get(), bytes, frequency_);
-				const ALuint currentBufferId = currentBufferId_;
-				alSourceQueueBuffers(source, 1, &currentBufferId);
+				device.uploadBuffer(currentBufferId_, format_, decodeRequest_->buffer.get(), bytes, frequency_);
+				device.queueBuffer(source, currentBufferId_);
 				nextAvailableBufferIndex_++;
 			} else {
 				reachedEndOfData = true;
@@ -158,19 +141,12 @@ namespace nCine
 			}
 		}
 
-		ALenum state;
-		alGetSourcei(source, AL_SOURCE_STATE, &state);
-
-		// Handle buffer underrun case
-		if (state != AL_PLAYING) {
-			ALint numQueuedBuffers = 0;
-			alGetSourcei(source, AL_BUFFERS_QUEUED, &numQueuedBuffers);
-			if (numQueuedBuffers > 0) {
-				// Need to restart play
-				alSourcePlay(source);
-			}
+		// Handle buffer underrun case: `nextAvailableBufferIndex_` is the number of buffers currently
+		// queued on the source, tracked here instead of queried from the backend
+		if (nextAvailableBufferIndex_ > 0 && !device.isSourcePlaying(source)) {
+			// Need to restart play
+			device.playSource(source);
 		}
-		AL_LOG_ERRORS();
 
 		return shouldKeepPlaying;
 #else
@@ -181,26 +157,27 @@ namespace nCine
 	void AudioStream::stop(std::uint32_t source)
 	{
 #if defined(WITH_AUDIO)
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+
 		// The reader can't be rewound while the decoding thread is using it,
 		// any chunk decoded ahead of time is stale after the rewind anyway
 		if (decodeRequest_ != nullptr) {
-			theServiceLocator().GetAudioDevice().drainStreamDecode(decodeRequest_);
+			device.drainStreamDecode(decodeRequest_);
 			decodeRequest_->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
 		}
 
 		// In order to unqueue all the buffers, the source must be stopped first
-		alSourceStop(source);
+		device.stopSource(source);
 
-		ALint numProcessedBuffers;
-		alGetSourcei(source, AL_BUFFERS_PROCESSED, &numProcessedBuffers);
+		const std::int32_t numProcessedBuffers = device.numProcessedBuffers(source);
 
 		// Unqueueing all processed buffers with a single call
 		if (numProcessedBuffers > 0) {
-			ALuint unqueuedAlBuffers[NumBuffers];
-			alSourceUnqueueBuffers(source, numProcessedBuffers, unqueuedAlBuffers);
-			for (ALint i = 0; i < numProcessedBuffers; i++) {
+			std::uint32_t unqueuedBuffers[NumBuffers];
+			device.unqueueBuffers(source, numProcessedBuffers, unqueuedBuffers);
+			for (std::int32_t i = 0; i < numProcessedBuffers; i++) {
 				nextAvailableBufferIndex_--;
-				buffersIds_[nextAvailableBufferIndex_] = unqueuedAlBuffers[i];
+				buffersIds_[nextAvailableBufferIndex_] = unqueuedBuffers[i];
 			}
 		}
 
@@ -208,7 +185,6 @@ namespace nCine
 			audioReader_->rewind();
 		}
 		currentBufferId_ = 0;
-		AL_LOG_ERRORS();
 #endif
 	}
 
@@ -255,9 +231,9 @@ namespace nCine
 		numChannels_ = audioLoader.numChannels();
 
 		if (numChannels_ == 1) {
-			format_ = (bytesPerSample_ == 2 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8);
+			format_ = (bytesPerSample_ == 2 ? IAudioDevice::BufferFormat::Mono16 : IAudioDevice::BufferFormat::Mono8);
 		} else if (numChannels_ == 2) {
-			format_ = (bytesPerSample_ == 2 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
+			format_ = (bytesPerSample_ == 2 ? IAudioDevice::BufferFormat::Stereo16 : IAudioDevice::BufferFormat::Stereo8);
 		} else {
 			bytesPerSample_ = 0;
 			numChannels_ = 0;

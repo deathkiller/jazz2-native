@@ -2,6 +2,7 @@
 #include "GlslTypedAst.h"
 #include "ShaderParser.h"
 #include "ConstFold.h"
+#include "VertexIdRewrite.h"
 
 #include <map>
 #include <memory>
@@ -51,6 +52,24 @@ namespace ShaderCompiler
 				case Ty::SamplerCube: return "TextureCube"_s;
 				case Ty::Struct: return t.S;
 				default: return "float"_s;
+			}
+		}
+
+		/**
+			Type name of the Cg dialect. Cg (as the GXM profile speaks it) has no unsigned integer types at
+			all, so they take an ESSL-100-style substitution: `float`. That is exactly what the data already
+			is - the only unsigned declaration in the shader set is the batched-mesh index attribute, which the
+			backend feeds as a 32-bit float stream, and @ref ShaderCompiler::VertexIdRewrite already wraps its
+			uses in `int()` for that same reason on the ES 2.0 profile.
+		*/
+		String CgType(const TyRef& t)
+		{
+			switch (t.T) {
+				case Ty::UInt: return "float"_s;
+				case Ty::UVec2: return "float2"_s;
+				case Ty::UVec3: return "float3"_s;
+				case Ty::UVec4: return "float4"_s;
+				default: return HlslType(t);
 			}
 		}
 
@@ -115,8 +134,10 @@ namespace ShaderCompiler
 		class Emitter
 		{
 		public:
-			Emitter(Parser& parser, bool vertexStage, const StageReflection& reflection)
-				: _p(parser), _vertexStage(vertexStage), _reflection(reflection)
+			Emitter(Parser& parser, bool vertexStage, const StageReflection& reflection,
+					HlslEmitter::Dialect dialect = HlslEmitter::Dialect::Hlsl)
+				: _p(parser), _vertexStage(vertexStage), _reflection(reflection),
+					_cg(dialect == HlslEmitter::Dialect::Cg)
 			{
 				for (const StructDecl& s : _p.Structs) _structByName[s.Name] = &s;
 				for (const BlockDecl& b : _p.Blocks) {
@@ -157,7 +178,9 @@ namespace ShaderCompiler
 				if (!_ok) return {};
 
 				String out;
-				out += "// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.\n"_s;
+				out += (_cg
+					? "// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.\n"_s
+					: "// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.\n"_s);
 				if (_hasSymbolicArray) {
 					out += "#define BATCH_SIZE "_s + Death::format("{}", BatchSize()) + "\n\n"_s;
 				}
@@ -166,35 +189,46 @@ namespace ShaderCompiler
 				for (const StructDecl& s : _p.Structs) {
 					out += "struct "_s + s.Name + "\n{\n"_s;
 					for (const Field& f : s.Fields) {
-						out += "\t"_s + HlslType(f.Type) + " "_s + f.Name + ArraySuffix(f) + ";\n"_s;
+						out += "\t"_s + TypeName(f.Type) + " "_s + f.Name + ArraySuffix(f) + ";\n"_s;
 					}
 					out += "};\n\n"_s;
 				}
 
-				// Uniforms: loose ones gather into a globals cbuffer, each block becomes its own cbuffer
+				// Uniforms. HLSL gathers the loose ones into a globals cbuffer and gives each block its own;
+				// Cg has no cbuffer at all - everything is a plain `uniform`, which SceShaccCg places in the
+				// program's default uniform buffer (or a numbered one it decides on), and the backend reaches
+				// each by name through sceGxmProgramFindParameterByName(). Block members are file-scope names
+				// in both dialects, which is what makes the member accesses below identical.
 				std::int32_t cbSlot = 0;
 				if (!_p.Uniforms.empty()) {
-					out += "cbuffer _Globals : register(b"_s + Death::format("{}", cbSlot++) + ")\n{\n"_s;
+					if (!_cg) out += "cbuffer _Globals : register(b"_s + Death::format("{}", cbSlot++) + ")\n{\n"_s;
 					for (const UniformDecl& u : _p.Uniforms) {
-						out += "\t"_s + HlslType(u.Type) + " "_s + u.Name +
+						out += (_cg ? "uniform "_s : "\t"_s) + TypeName(u.Type) + " "_s + u.Name +
 							(u.ArraySize > 0 ? String("["_s + Death::format("{}", u.ArraySize) + "]"_s) : String{}) + ";\n"_s;
 					}
-					out += "};\n\n"_s;
+					out += (_cg ? "\n"_s : "};\n\n"_s);
 				}
 				for (const BlockDecl& b : _p.Blocks) {
-					out += "cbuffer "_s + b.Name + " : register(b"_s + Death::format("{}", cbSlot++) + ")\n{\n"_s;
+					if (!_cg) out += "cbuffer "_s + b.Name + " : register(b"_s + Death::format("{}", cbSlot++) + ")\n{\n"_s;
 					for (const Field& m : b.Members) {
-						out += "\t"_s + HlslType(m.Type) + " "_s + m.Name + ArraySuffix(m) + ";\n"_s;
+						out += (_cg ? "uniform "_s : "\t"_s) + TypeName(m.Type) + " "_s + m.Name + ArraySuffix(m) + ";\n"_s;
 					}
-					out += "};\n\n"_s;
+					out += (_cg ? "\n"_s : "};\n\n"_s);
 				}
 
-				// Textures + separate sampler state objects
+				// Textures. HLSL keeps the texture and its sampler state as separate objects; Cg uses the
+				// combined sampler objects of the older model, tagged with the GXM TEXUNIT<n> semantic that
+				// binds them to the texture unit the reflection assigned.
 				for (std::size_t i = 0; i < _p.Samplers.size(); i++) {
 					const SamplerDecl& s = _p.Samplers[i];
 					std::int32_t unit = ReflectedUnit(s.Name, static_cast<std::int32_t>(i));
-					out += HlslType({ s.Type, {} }) + " "_s + s.Name + " : register(t"_s + Death::format("{}", unit) + ");\n"_s;
-					out += "SamplerState "_s + s.Name + "_sampler : register(s"_s + Death::format("{}", unit) + ");\n"_s;
+					if (_cg) {
+						out += "uniform "_s + CgSamplerType(s.Type) + " "_s + s.Name + " : TEXUNIT"_s +
+							Death::format("{}", unit) + ";\n"_s;
+					} else {
+						out += TypeName({ s.Type, {} }) + " "_s + s.Name + " : register(t"_s + Death::format("{}", unit) + ");\n"_s;
+						out += "SamplerState "_s + s.Name + "_sampler : register(s"_s + Death::format("{}", unit) + ");\n"_s;
+					}
 				}
 				if (!_p.Samplers.empty()) out += "\n"_s;
 
@@ -202,7 +236,7 @@ namespace ShaderCompiler
 				for (const GlobalVarDecl& g : _p.GlobalVars) {
 					_locals.clear();
 					_arrayVars.clear();
-					out += "static "_s + (g.IsConst ? String("const ") : String{}) + HlslType(g.Type) + " "_s + g.Name;
+					out += "static "_s + (g.IsConst ? String("const ") : String{}) + TypeName(g.Type) + " "_s + g.Name;
 					if (g.Init != nullptr) out += " = "_s + EmitExpr(g.Init.get(), 0);
 					out += ";\n"_s;
 				}
@@ -224,6 +258,8 @@ namespace ShaderCompiler
 			Parser& _p;
 			bool _vertexStage;
 			const StageReflection& _reflection;
+			/** @brief Emitting the Cg dialect for the PS Vita's sceGxm backend rather than Direct3D 11 HLSL */
+			bool _cg;
 			bool _ok = true;
 			String _reason;
 			bool _hasSymbolicArray = false;
@@ -285,18 +321,37 @@ namespace ShaderCompiler
 				if (_vertexStage) {
 					if (_usedVertexID) out += "static uint gl_VertexID;\n"_s;
 					if (_usedInstanceID) out += "static uint gl_InstanceID;\n"_s;
-					for (const AttributeDecl& a : _p.Attributes) out += "static "_s + HlslType(a.Type) + " "_s + a.Name + ";\n"_s;
+					for (const AttributeDecl& a : _p.Attributes) out += "static "_s + TypeName(a.Type) + " "_s + a.Name + ";\n"_s;
 					out += "static float4 gl_Position;\n"_s;
-					for (const VaryingDecl& v : _p.Varyings) out += "static "_s + HlslType(v.Type) + " "_s + v.Name + ";\n"_s;
+					for (const VaryingDecl& v : _p.Varyings) out += "static "_s + TypeName(v.Type) + " "_s + v.Name + ";\n"_s;
 				} else {
 					if (_usedFragCoord) out += "static float4 gl_FragCoord;\n"_s;
-					for (const VaryingDecl& v : _p.Varyings) out += "static "_s + HlslType(v.Type) + " "_s + v.Name + ";\n"_s;
+					for (const VaryingDecl& v : _p.Varyings) out += "static "_s + TypeName(v.Type) + " "_s + v.Name + ";\n"_s;
 					for (const Parser::FragOutputDecl& o : _p.FragOutputs) {
-						out += "static "_s + HlslType(o.Type) + " "_s + o.Name + ";\n"_s;
+						out += "static "_s + TypeName(o.Type) + " "_s + o.Name + ";\n"_s;
 					}
 				}
 				out += "\n"_s;
 				return out;
+			}
+
+			/** @brief Type name for the dialect being emitted */
+			String TypeName(const TyRef& t) const {
+				return (_cg ? CgType(t) : HlslType(t));
+			}
+
+			/**
+				Combined-sampler type of the Cg dialect. Deliberately separate from HlslType(), which maps
+				both sampler2D and sampler3D onto `Texture2D` for Direct3D 11 - the engine binds no real 3D
+				texture, and changing that mapping would alter the committed HLSL of every shader.
+			*/
+			static String CgSamplerType(Ty t)
+			{
+				switch (t) {
+					case Ty::Sampler3D: return "sampler3D"_s;
+					case Ty::SamplerCube: return "samplerCUBE"_s;
+					default: return "sampler2D"_s;
+				}
 			}
 
 			// TEXCOORD interpolant semantic; "nointerpolation" for flat / integer varyings
@@ -315,7 +370,7 @@ namespace ShaderCompiler
 					if (_usedVertexID) out += "\tuint _vertexID : SV_VertexID;\n"_s;
 					if (_usedInstanceID) out += "\tuint _instanceID : SV_InstanceID;\n"_s;
 					for (std::size_t i = 0; i < _p.Attributes.size(); i++) {
-						out += "\t"_s + HlslType(_p.Attributes[i].Type) + " "_s + _p.Attributes[i].Name +
+						out += "\t"_s + TypeName(_p.Attributes[i].Type) + " "_s + _p.Attributes[i].Name +
 							" : TEXCOORD"_s + Death::format("{}", i) + ";\n"_s;
 					}
 					if (!_usedVertexID && !_usedInstanceID && _p.Attributes.empty()) {
@@ -323,16 +378,17 @@ namespace ShaderCompiler
 					}
 					out += "};\n\n"_s;
 
-					out += "struct VsOutput\n{\n\tfloat4 _clipPosition : SV_Position;\n"_s;
+					out += "struct VsOutput\n{\n\tfloat4 _clipPosition : "_s + (_cg ? "POSITION"_s : "SV_Position"_s) + ";\n"_s;
 					for (std::size_t i = 0; i < _p.Varyings.size(); i++) {
-						out += "\t"_s + InterpQualifier(_p.Varyings[i]) + HlslType(_p.Varyings[i].Type) + " "_s +
+						out += "\t"_s + InterpQualifier(_p.Varyings[i]) + TypeName(_p.Varyings[i].Type) + " "_s +
 							_p.Varyings[i].Name + " : TEXCOORD"_s + Death::format("{}", i) + ";\n"_s;
 					}
 					out += "};\n\n"_s;
 				} else {
-					out += "struct PsInput\n{\n\tfloat4 _fragCoord : SV_Position;\n"_s;
+					// Cg names the fragment position WPOS (SceShaccCg's spelling of the window-position input)
+					out += "struct PsInput\n{\n\tfloat4 _fragCoord : "_s + (_cg ? "WPOS"_s : "SV_Position"_s) + ";\n"_s;
 					for (std::size_t i = 0; i < _p.Varyings.size(); i++) {
-						out += "\t"_s + InterpQualifier(_p.Varyings[i]) + HlslType(_p.Varyings[i].Type) + " "_s +
+						out += "\t"_s + InterpQualifier(_p.Varyings[i]) + TypeName(_p.Varyings[i].Type) + " "_s +
 							_p.Varyings[i].Name + " : TEXCOORD"_s + Death::format("{}", i) + ";\n"_s;
 					}
 					out += "};\n\n"_s;
@@ -341,8 +397,8 @@ namespace ShaderCompiler
 					if (_p.FragOutputs.size() > 1) {
 						out += "struct PsOutput\n{\n"_s;
 						for (std::size_t i = 0; i < _p.FragOutputs.size(); i++) {
-							out += "\t"_s + HlslType(_p.FragOutputs[i].Type) + " "_s + _p.FragOutputs[i].Name +
-								" : SV_Target"_s + Death::format("{}", i) + ";\n"_s;
+							out += "\t"_s + TypeName(_p.FragOutputs[i].Type) + " "_s + _p.FragOutputs[i].Name +
+								(_cg ? " : COLOR"_s : " : SV_Target"_s) + Death::format("{}", i) + ";\n"_s;
 						}
 						out += "};\n\n"_s;
 					}
@@ -386,13 +442,24 @@ namespace ShaderCompiler
 
 				String out;
 				if (_vertexStage) {
-					out += "VsOutput VSMain(VsInput _input)\n{\n"_s;
+					// Cg has no vertex-ID or instance-ID input at all (the GXM semantics are the
+					// fixed-function-era set), so anything still referencing them after the substitution in
+					// Transform() cannot be expressed and is refused rather than silently mis-emitted
+					if (_cg && (_usedVertexID || _usedInstanceID)) {
+						Fail(_usedVertexID
+							? "Cg has no vertex-ID input and the stage still uses gl_VertexID after the quad-synthesis substitution"_s
+							: "Cg has no instance-ID input and the stage uses gl_InstanceID"_s);
+						return {};
+					}
+					out += (_cg ? "VsOutput main(VsInput _input)\n{\n"_s : "VsOutput VSMain(VsInput _input)\n{\n"_s);
 					if (_usedVertexID) out += "\tgl_VertexID = _input._vertexID;\n"_s;
 					if (_usedInstanceID) out += "\tgl_InstanceID = _input._instanceID;\n"_s;
 					for (const AttributeDecl& a : _p.Attributes) out += "\t"_s + a.Name + " = _input."_s + a.Name + ";\n"_s;
 				} else {
 					if (_p.FragOutputs.size() > 1) {
-						out += "PsOutput PSMain(PsInput _input)\n{\n"_s;
+						out += (_cg ? "PsOutput main(PsInput _input)\n{\n"_s : "PsOutput PSMain(PsInput _input)\n{\n"_s);
+					} else if (_cg) {
+						out += "float4 main(PsInput _input) : COLOR\n{\n"_s;
 					} else {
 						out += "float4 PSMain(PsInput _input) : SV_Target\n{\n"_s;
 					}
@@ -414,11 +481,11 @@ namespace ShaderCompiler
 					if (p.ArraySize > 0) _arrayVars.insert(p.Name);
 				}
 				String out;
-				out += HlslType(fn.RetType) + " "_s + SanitizeIdent(fn.Name) + "("_s;
+				out += TypeName(fn.RetType) + " "_s + SanitizeIdent(fn.Name) + "("_s;
 				for (std::size_t i = 0; i < fn.Params.size(); i++) {
 					if (i != 0) out += ", "_s;
 					const Param& pp = fn.Params[i];
-					out += (pp.Qualifier.empty() ? String{} : pp.Qualifier + " "_s) + HlslType(pp.Type) + " "_s + SanitizeIdent(pp.Name) +
+					out += (pp.Qualifier.empty() ? String{} : pp.Qualifier + " "_s) + TypeName(pp.Type) + " "_s + SanitizeIdent(pp.Name) +
 						(pp.ArraySize > 0 ? String("["_s + Death::format("{}", pp.ArraySize) + "]"_s) : String{});
 				}
 				out += ")\n{\n"_s;
@@ -454,13 +521,13 @@ namespace ShaderCompiler
 					case StmtKind::VarDecl:
 						_locals[s->DeclName] = s->DeclType;
 						if (s->DeclArraySize > 0) _arrayVars.insert(s->DeclName);
-						out += indent + (s->DeclConst ? String("const ") : String{}) + HlslType(s->DeclType) + " "_s + SanitizeIdent(s->DeclName) +
+						out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName) +
 							(s->DeclArraySize > 0 ? String("["_s + Death::format("{}", s->DeclArraySize) + "]"_s) : String{});
 						if (s->Init != nullptr) out += " = "_s + EmitExpr(s->Init.get(), 0);
 						out += ";\n"_s;
 						for (const std::pair<String, ExprPtr>& d : s->ExtraDecls) {
 							_locals[d.first] = s->DeclType;
-							out += indent + (s->DeclConst ? String("const ") : String{}) + HlslType(s->DeclType) + " "_s + SanitizeIdent(d.first);
+							out += indent + (s->DeclConst ? String("const ") : String{}) + TypeName(s->DeclType) + " "_s + SanitizeIdent(d.first);
 							if (d.second != nullptr) out += " = "_s + EmitExpr(d.second.get(), 0);
 							out += ";\n"_s;
 						}
@@ -500,7 +567,7 @@ namespace ShaderCompiler
 				if (s == nullptr) return {};
 				if (s->Kind == StmtKind::VarDecl) {
 					_locals[s->DeclName] = s->DeclType;
-					String r = HlslType(s->DeclType) + " "_s + SanitizeIdent(s->DeclName);
+					String r = TypeName(s->DeclType) + " "_s + SanitizeIdent(s->DeclName);
 					if (s->Init != nullptr) r += " = "_s + EmitExpr(s->Init.get(), 0);
 					for (const std::pair<String, ExprPtr>& d : s->ExtraDecls) {
 						_locals[d.first] = s->DeclType;
@@ -733,9 +800,9 @@ namespace ShaderCompiler
 					// A single-argument vector/matrix constructor is a GLSL splat/convert: emit an HLSL cast so
 					// "vec4(0.5)" (splat) and "vec3(someVec4)" (truncate) both compile.
 					if ((IsVector(ct) || IsMatrix(ct)) && e->Args.size() == 1) {
-						return "(("_s + HlslType({ ct, {} }) + ")"_s + EmitExpr(e->Args[0].get(), 90) + ")"_s;
+						return "(("_s + TypeName({ ct, {} }) + ")"_s + EmitExpr(e->Args[0].get(), 90) + ")"_s;
 					}
-					return HlslType({ ct, {} }) + "("_s + EmitArgs(e) + ")"_s;
+					return TypeName({ ct, {} }) + "("_s + EmitArgs(e) + ")"_s;
 				}
 				if (_structByName.find(String{name}) != _structByName.end()) {
 					return String{name} + "("_s + EmitArgs(e) + ")"_s;
@@ -748,8 +815,19 @@ namespace ShaderCompiler
 						Fail("first argument to texture() must be a sampler uniform"_s);
 						return {};
 					}
+					String uv = EmitExpr(e->Args[1].get(), 0);
+					if (_cg) {
+						// Combined samplers of the older model: tex2D(s, uv), and the explicit-LOD form takes
+						// the level in the w component of a float4 rather than as a separate argument
+						if (name == "textureLod") {
+							if (e->Args.size() < 3) { Fail("textureLod() needs (sampler, uv, lod)"_s); return {}; }
+							return "tex2Dlod("_s + sampler->Text + ", float4("_s + uv + ", 0.0, "_s +
+								EmitExpr(e->Args[2].get(), 0) + "))"_s;
+						}
+						return "tex2D("_s + sampler->Text + ", "_s + uv + ")"_s;
+					}
 					String method = (name == "textureLod" ? "SampleLevel"_s : "Sample"_s);
-					String args = EmitExpr(e->Args[1].get(), 0);
+					String args = uv;
 					for (std::size_t i = 2; i < e->Args.size(); i++) args += ", "_s + EmitExpr(e->Args[i].get(), 0);
 					return sampler->Text + "."_s + method + "("_s + sampler->Text + "_sampler, "_s + args + ")"_s;
 				}
@@ -815,6 +893,16 @@ namespace ShaderCompiler
 							TyRef a = InferTy(e->A.get());
 							TyRef b = InferTy(e->B.get());
 							if (NeedsMul(a.T, b.T)) {
+								// Cg lays a matrix out row-major, where HLSL packs a constant buffer column-major - so the
+								// very same OpenGL-convention (column-major) bytes the engine uploads arrive as the
+								// TRANSPOSE of the intended matrix under Cg. Reversing the operands undoes exactly that:
+								// mul(v, Mt) == mul(M, v), and mul(Bt, At) == (A*B)t for a matrix product - which keeps
+								// every intermediate in the same transposed form, so a chain like P * V * M * position
+								// still folds correctly. Transposing on upload instead would cost a shuffle per matrix per
+								// draw, and a batched draw carries hundreds of them.
+								if (_cg) {
+									return "mul("_s + EmitExpr(e->B.get(), 0) + ", "_s + EmitExpr(e->A.get(), 0) + ")"_s;
+								}
 								return "mul("_s + EmitExpr(e->A.get(), 0) + ", "_s + EmitExpr(e->B.get(), 0) + ")"_s;
 							}
 						}
@@ -846,8 +934,33 @@ namespace ShaderCompiler
 	}
 
 	bool HlslEmitter::Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
-		String& out, Diagnostic& diag)
+		String& out, Diagnostic& diag, Dialect dialect)
 	{
+		const bool cg = (dialect == Dialect::Cg);
+		const StringView what = (cg ? "Cg emit: "_s : "HLSL emit: "_s);
+
+		// The Cg dialect has no vertex-ID input, so the engine's quad-synthesis expressions are substituted
+		// with reads of the attributes the runtime supplies - the very same rewrite the ES 2.0 profile uses,
+		// which is what makes the two agree on the vertex layout (see VertexIdRewrite.h). The substituted
+		// attributes are declared as ordinary attributes so the parser below sees them like any other one.
+		// They go in FRONT because GLSL wants a declaration before its use in main(), which shifts the
+		// TEXCOORD index of the pre-existing attributes - harmless here, since the GXM backend resolves every
+		// attribute through sceGxmProgramParameterGetResourceIndex() by name rather than by slot.
+		String prepared;
+		if (cg) {
+			bool usedCorner = false, usedInstance = false;
+			prepared = VertexIdRewrite::Apply(modernSource, usedCorner, usedInstance);
+			// Declared the way the lowered stage source spells a vertex input (modern GLSL "in", not the
+			// legacy "attribute" keyword the ES 2.0 profile emits after its own interface rewrite)
+			String extra;
+			if (usedCorner) extra += "in vec2 aQuadCorner;\n"_s;
+			if (usedInstance) extra += "in float aInstanceIndex;\n"_s;
+			if (!extra.empty()) {
+				prepared = extra + prepared;
+			}
+			modernSource = prepared;
+		}
+
 		std::vector<GlslToken> tokens;
 		String reason;
 		if (!TokenizeStage(modernSource, tokens, reason)) {
@@ -858,14 +971,14 @@ namespace ShaderCompiler
 		Parser parser(tokens, vertexStage);
 		parser.Run();
 		if (!parser.Ok()) {
-			diag.Message = "HLSL emit: "_s + parser.Reason();
+			diag.Message = what + parser.Reason();
 			diag.Line = 1;
 			return false;
 		}
-		Emitter emitter(parser, vertexStage, reflection);
+		Emitter emitter(parser, vertexStage, reflection, dialect);
 		String code = emitter.Emit();
 		if (!emitter.Ok()) {
-			diag.Message = "HLSL emit: "_s + emitter.Reason();
+			diag.Message = what + emitter.Reason();
 			diag.Line = 1;
 			return false;
 		}

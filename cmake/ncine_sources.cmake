@@ -76,8 +76,8 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Camera.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiCapabilitiesBase.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Material.cpp
@@ -122,11 +122,11 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.cpp
 )
 
-if(NCINE_RHI_GL_PROFILE_ES2)
+if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
 	# The OpenGL|ES 2.0 profile additionally links the offline ShaderCompiler's ESSL 100 emitter into the
 	# engine, so runtime-compiled (".shader") shaders get the same lowering the precompiled ones receive
-	# offline (Shader.cpp calls Essl100Emitter::Transform under RHI_GL_PROFILE_ES2). The GL 3.3 / other RHI
-	# builds never define the profile and therefore never reference or compile this file.
+	# offline (Shader.cpp calls Essl100Emitter::Transform under RHI_GL_PROFILE_ES2). The other profiles and
+	# the non-GL backends never reference or compile this file.
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/ShaderCompiler/Essl100.cpp)
 endif()
 
@@ -177,6 +177,18 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
+	# PS Vita native sceGxm rendering backend
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmMemory.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Direct3D 11 rendering backend
 	list(APPEND SOURCES
@@ -213,6 +225,7 @@ else()
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLFramebuffer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRhiCapabilities.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.cpp

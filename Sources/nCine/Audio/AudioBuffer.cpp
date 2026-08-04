@@ -1,12 +1,6 @@
-#if defined(WITH_AUDIO)
-#	define NCINE_INCLUDE_OPENAL
-#	include "../CommonHeaders.h"
-#endif
-
 #include "AudioBuffer.h"
 #include "IAudioLoader.h"
 #if defined(WITH_AUDIO)
-#	include "ALDebug.h"
 #	include "AudioBufferPlayer.h"
 #	include "../ServiceLocator.h"
 #endif
@@ -19,15 +13,15 @@ namespace nCine
 #if defined(WITH_AUDIO)
 	namespace
 	{
-		ALenum alFormat(int bytesPerSample, int numChannels)
+		AudioBuffer::Format bufferFormat(std::int32_t bytesPerSample, std::int32_t numChannels)
 		{
-			ALenum format = AL_FORMAT_MONO8;
+			AudioBuffer::Format format = AudioBuffer::Format::Mono8;
 			if (bytesPerSample == 1 && numChannels == 2) {
-				format = AL_FORMAT_STEREO8;
+				format = AudioBuffer::Format::Stereo8;
 			} else if (bytesPerSample == 2 && numChannels == 1) {
-				format = AL_FORMAT_MONO16;
+				format = AudioBuffer::Format::Mono16;
 			} else if (bytesPerSample == 2 && numChannels == 2) {
-				format = AL_FORMAT_STEREO16;
+				format = AudioBuffer::Format::Stereo16;
 			}
 			return format;
 		}
@@ -39,16 +33,9 @@ namespace nCine
 			numSamples_(0), duration_(0.0f)
 	{
 #if defined(WITH_AUDIO)
-		alGetError();
-		// Through a local of OpenAL's own type: `ALuint` is `unsigned int` while `std::uint32_t` can be
-		// `long unsigned int` (it is on MIPS), and taking the address of the member would then hand the
-		// library a pointer to the wrong type even though both are 32 bits wide
-		ALuint bufferId = 0;
-		alGenBuffers(1, &bufferId);
-		bufferId_ = bufferId;
-		const ALenum error = alGetError();
-		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
-			LOGW("alGenBuffers() failed with error 0x{:x}", error);
+		bufferId_ = theServiceLocator().GetAudioDevice().createBuffer(IAudioDevice::BufferUsage::Static);
+		if DEATH_UNLIKELY(bufferId_ == 0) {
+			LOGW("Cannot create audio buffer");
 		}
 #endif
 	}
@@ -89,12 +76,13 @@ namespace nCine
 	AudioBuffer::~AudioBuffer()
 	{
 #if defined(WITH_AUDIO)
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+
 		// Moved out objects have their buffer id set to zero
 		if (bufferId_ != 0) {
 			// Stop any player that still uses this buffer, otherwise the buffer stays attached to its
-			// source, `alDeleteBuffers()` fails with AL_INVALID_OPERATION and the buffer leaks. This
-			// also clears the players' pointer to this buffer, which is dangling from now on.
-			IAudioDevice& device = theServiceLocator().GetAudioDevice();
+			// source, the backend refuses to destroy it and the buffer leaks. This also clears the
+			// players' pointer to this buffer, which is dangling from now on.
 			// Iterating backwards because a stopped player unregisters itself, erasing it from the device
 			for (std::uint32_t i = device.numPlayers(); i > 0; i--) {
 				IAudioPlayer* player = device.player(i - 1);
@@ -107,9 +95,7 @@ namespace nCine
 			}
 		}
 
-		const ALuint bufferId = bufferId_;
-		alDeleteBuffers(1, &bufferId);
-		AL_LOG_ERRORS();
+		device.deleteBuffer(bufferId_);
 #endif
 	}
 
@@ -202,18 +188,14 @@ namespace nCine
 			if (bufferSize % (bytesPerSample_ * numChannels_) != 0) {
 				LOGW("Buffer size is incompatible with format");
 			}
-			const ALenum format = alFormat(bytesPerSample_, numChannels_);
-			alGetError();
-
-			// On iOS `alBufferDataStatic()` could be used instead
-			alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
-			const ALenum error = alGetError();
-			DEATH_ASSERT(error == AL_NO_ERROR, ("alBufferData() failed with error 0x{:x}", error), false);
+			const Format format = bufferFormat(bytesPerSample_, numChannels_);
+			const bool uploaded = theServiceLocator().GetAudioDevice().uploadBuffer(bufferId_, format, bufferPtr, bufferSize, frequency_);
+			DEATH_ASSERT(uploaded, "Cannot upload samples to audio buffer", false);
 
 			numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
 			duration_ = float(numSamples_) / frequency_;
 
-			return (error == AL_NO_ERROR);
+			return uploaded;
 		}
 #endif
 		return false;

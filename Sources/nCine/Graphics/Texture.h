@@ -35,6 +35,26 @@ namespace nCine
 		/** @brief Pixel formats for an empty texture */
 		using Format = PixelFormat;
 
+		/**
+			@brief Pixel format the engine's opaque color render targets are created with
+
+			`RHI_USE_FB16` (the `NCINE_RHI_USE_FB16` option) is a performance switch, so on the OpenGL family
+			backend it covers every color surface it can rather than only the presented one: the scene, blur
+			and rescale targets become RGB565, which halves both their memory and the bandwidth each
+			post-processing pass reads and writes them with.
+
+			Targets that carry alpha keep 8 bits per channel regardless - the only 16-bit RGBA layout is
+			RGBA4, and 16 levels per channel band visibly in the UI overlay and in the light falloff. The
+			software rasterizer also keeps 4-byte RGBA render targets: its inner loops work on RGBA8 either
+			way, so a packed target would only add a pack/unpack per span, which is why its 16-bit mode stays
+			confined to the screen buffer - there it halves the per-frame upload and pays off.
+		*/
+#if defined(RHI_USE_FB16) && defined(WITH_RHI_GL)
+		static constexpr Format ColorTargetFormat = Format::RGB565;
+#else
+		static constexpr Format ColorTargetFormat = Format::RGB8;
+#endif
+
 		/** @brief Creates an OpenGL texture name */
 		Texture();
 

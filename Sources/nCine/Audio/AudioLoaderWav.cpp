@@ -40,6 +40,6 @@ namespace nCine
 
 	std::unique_ptr<IAudioReader> AudioLoaderWav::createReader()
 	{
-		return std::make_unique<AudioReaderWav>(std::move(fileHandle_));
+		return std::make_unique<AudioReaderWav>(std::move(fileHandle_), bytesPerSample_);
 	}
 }

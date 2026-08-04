@@ -15,8 +15,8 @@ namespace nCine
 	class IAudioLoader;
 
 	/**
-		@brief Streams audio decoded on the fly into a rotating set of OpenAL buffers
-		
+		@brief Streams audio decoded on the fly into a rotating set of backend buffers
+
 		Used for long sounds such as music, where decoding the whole file into memory would be
 		wasteful. Owned by @ref AudioStreamPlayer, which feeds it through @ref enqueue().
 	*/
@@ -27,7 +27,7 @@ namespace nCine
 	public:
 		~AudioStream();
 
-		/** @brief Returns the OpenAL id of the currently playing buffer, or `0` if none */
+		/** @brief Returns the backend id of the currently playing buffer, or `0` if none */
 		inline std::uint32_t bufferId() const {
 			return currentBufferId_;
 		}
@@ -85,9 +85,9 @@ namespace nCine
 	private:
 		/** @brief Number of buffers used for streaming */
 		static const std::int32_t NumBuffers = 3;
-		/** @brief OpenAL buffer queue used for streaming */
+		/** @brief Backend buffer queue used for streaming */
 		SmallVector<std::uint32_t, NumBuffers> buffersIds_;
-		/** @brief Index of the next available OpenAL buffer */
+		/** @brief Index of the next available buffer, which is also the number of buffers currently queued */
 		std::int32_t nextAvailableBufferIndex_;
 
 		/** @brief Size in bytes of each streaming buffer */
@@ -106,7 +106,7 @@ namespace nCine
 		/** @brief Reusable decode request holding the intermediate buffer, executed ahead of time on the decoding thread when available */
 		std::shared_ptr<StreamDecodeRequest> decodeRequest_;
 
-		/** @brief OpenAL id of the currently playing buffer, or 0 if none */
+		/** @brief Backend id of the currently playing buffer, or 0 if none */
 		std::uint32_t currentBufferId_;
 
 		/** @brief Number of bytes per sample */
@@ -124,8 +124,8 @@ namespace nCine
 		/** @brief Whether the stream loops */
 		bool isLooping_;
 
-		/** @brief OpenAL channel format enumeration */
-		std::int32_t format_;
+		/** @brief Sample format of the decoded data */
+		IAudioDevice::BufferFormat format_;
 		/** @brief Reader that continuously streams decoded data, shared with @ref decodeRequest_ */
 		std::shared_ptr<IAudioReader> audioReader_;
 

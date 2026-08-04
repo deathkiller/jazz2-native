@@ -199,7 +199,7 @@ namespace nCine::RHI::D3D11
 		static ID3D11Device* GetD3DDevice();
 		/** @brief Returns the D3D11 immediate context, or `nullptr` before creation */
 		static ID3D11DeviceContext* GetD3DContext();
-		/** @brief Returns the largest supported 2D texture dimension of the obtained feature level (16384 on 11_0, 8192 on 10.x; consumed by GfxCapabilities) */
+		/** @brief Returns the largest supported 2D texture dimension of the obtained feature level (16384 on 11_0, 8192 on 10.x; consumed by D3D11RhiCapabilities) */
 		static std::int32_t GetMaxTextureDimension();
 
 	private:

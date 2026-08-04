@@ -60,13 +60,41 @@ namespace nCine
 
 	/**
 		@brief Interface for an audio device backend
-		
-		Manages the listener, the pool of audio sources and all active players. Implemented by
-		@ref ALAudioDevice on top of OpenAL and by @ref NullAudioDevice as a silent fallback.
+
+		Manages the listener, the pool of audio sources and all active players, and owns the
+		backend objects (buffers and sources) the shared player classes drive through it. Exactly
+		one implementation is compiled into a binary, each living in `nCine/Audio/Backends/`:
+		@ref ALAudioDevice on top of OpenAL, @ref AsndAudioDevice on top of the Wii/GameCube DSP
+		mixer, @ref AicaAudioDevice on top of the Dreamcast sound processor, and
+		@ref NullAudioDevice as a silent fallback.
+
+		@ref AudioBuffer, @ref IAudioPlayer and @ref AudioStream contain no backend calls of
+		their own - they refer to buffers and sources by the opaque ids handed out here.
 	*/
 	class IAudioDevice
 	{
 	public:
+		/** @brief Sample format of an audio buffer */
+		enum class BufferFormat {
+			Mono8,		/**< 8-bit unsigned, single channel */
+			Stereo8,	/**< 8-bit unsigned, two channels */
+			Mono16,		/**< 16-bit signed, single channel */
+			Stereo16	/**< 16-bit signed, two channels */
+		};
+
+		/**
+		 * @brief What a buffer is going to be used for
+		 *
+		 * Most backends ignore this, but where sample memory is not one uniform pool the two kinds
+		 * have to live in different places: the Dreamcast plays a fully loaded sound out of the
+		 * AICA's own sound RAM, while a streamed one stays in main memory and is transferred into
+		 * the sound processor's ring buffer a chunk at a time.
+		 */
+		enum class BufferUsage {
+			Static,		/**< Loaded once and played as a whole, by @ref AudioBuffer */
+			Streaming	/**< Refilled continuously and played through a queue, by @ref AudioStream */
+		};
+
 		/** @{ @name Constants */
 
 		/** @brief Value returned by @ref registerPlayer() when no source is available */
@@ -156,6 +184,65 @@ namespace nCine
 		/** @brief Returns the native sample rate of the device */
 		virtual std::int32_t nativeFrequency() = 0;
 
+		/** @{ @name Buffers */
+
+		/** @brief Creates an empty backend buffer, returning its id or `0` on failure */
+		virtual std::uint32_t createBuffer(BufferUsage usage) = 0;
+		/** @brief Destroys a buffer previously returned by @ref createBuffer() */
+		virtual void deleteBuffer(std::uint32_t bufferId) = 0;
+		/** @brief Replaces the contents of a buffer with the specified samples */
+		virtual bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) = 0;
+
+		/** @} */
+
+		/** @{ @name Sources */
+
+		/** @brief Attaches a buffer to a source for non-streamed playback, `0` detaches the current one */
+		virtual void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) = 0;
+		/** @brief Sets the gain of a source */
+		virtual void setSourceGain(std::uint32_t sourceId, float gain) = 0;
+		/** @brief Sets the pitch of a source, as a multiplier of its natural playback rate */
+		virtual void setSourcePitch(std::uint32_t sourceId, float pitch) = 0;
+		/** @brief Sets whether a source repeats its attached buffer */
+		virtual void setSourceLooping(std::uint32_t sourceId, bool looping) = 0;
+		/** @brief Sets whether the position of a source is relative to the listener */
+		virtual void setSourceRelative(std::uint32_t sourceId, bool relative) = 0;
+		/** @brief Sets the position of a source, in physical units */
+		virtual void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) = 0;
+		/** @brief Sets the low-pass amount of a source, `1.0f` disables the filter */
+		virtual void setSourceLowPass(std::uint32_t sourceId, float value) = 0;
+
+		/** @brief Returns the playback position of a source in samples */
+		virtual std::int32_t sourceSampleOffset(std::uint32_t sourceId) = 0;
+		/** @brief Sets the playback position of a source in samples */
+		virtual void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) = 0;
+
+		/** @brief Starts or resumes a source */
+		virtual void playSource(std::uint32_t sourceId) = 0;
+		/** @brief Pauses a source at its current position */
+		virtual void pauseSource(std::uint32_t sourceId) = 0;
+		/** @brief Stops a source */
+		virtual void stopSource(std::uint32_t sourceId) = 0;
+		/** @brief Returns `true` if a source is still producing sound */
+		virtual bool isSourcePlaying(std::uint32_t sourceId) = 0;
+
+		/** @} */
+
+		/** @{ @name Streaming */
+
+		/** @brief Appends a buffer to the streaming queue of a source */
+		virtual void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) = 0;
+		/** @brief Returns the number of queued buffers a source has finished playing */
+		virtual std::int32_t numProcessedBuffers(std::uint32_t sourceId) = 0;
+		/**
+		 * @brief Removes the specified number of played buffers from the front of the queue
+		 *
+		 * @param bufferIds Receives the ids of the removed buffers, must hold @p count entries
+		 */
+		virtual void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) = 0;
+
+		/** @} */
+
 #if defined(WITH_LIBRETRO)
 		/**
 		 * @brief Renders the next block of mixed audio into the caller's buffer (16-bit interleaved stereo)
@@ -220,6 +307,28 @@ namespace nCine
 		const Vector3f& getListenerPosition() const override { return Vector3f::Zero; }
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		std::int32_t nativeFrequency() override { return 0; }
+
+		std::uint32_t createBuffer(BufferUsage usage) override { return 0; }
+		void deleteBuffer(std::uint32_t bufferId) override { }
+		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override { return false; }
+
+		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override { }
+		void setSourceGain(std::uint32_t sourceId, float gain) override { }
+		void setSourcePitch(std::uint32_t sourceId, float pitch) override { }
+		void setSourceLooping(std::uint32_t sourceId, bool looping) override { }
+		void setSourceRelative(std::uint32_t sourceId, bool relative) override { }
+		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override { }
+		void setSourceLowPass(std::uint32_t sourceId, float value) override { }
+		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override { return 0; }
+		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override { }
+		void playSource(std::uint32_t sourceId) override { }
+		void pauseSource(std::uint32_t sourceId) override { }
+		void stopSource(std::uint32_t sourceId) override { }
+		bool isSourcePlaying(std::uint32_t sourceId) override { return false; }
+
+		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override { }
+		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override { return 0; }
+		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override { }
 
 #if defined(WITH_LIBRETRO)
 		bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) override { return false; }
