@@ -137,7 +137,7 @@ namespace nCine
 						}
 
 						if (is24Bit) {
-							for (std::int32_t i = 0; i < srcStride; i++) {
+							for (std::int32_t i = 0; i < width_; i++) {
 								std::memcpy(&pixels_[y * dstStride + 4 * i], &bufferRow[3 * i], 3);
 								pixels_[y * dstStride + 4 * i + 3] = 255;
 							}
