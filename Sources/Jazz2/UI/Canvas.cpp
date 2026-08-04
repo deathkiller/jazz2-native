@@ -2,8 +2,6 @@
 #include "Font.h"
 #include "../ContentResolver.h"
 
-#include "../../nCine/Application.h"
-#include "../../nCine/Base/FrameTimer.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
@@ -28,21 +26,6 @@ namespace Jazz2::UI
 
 		_renderCommandsCount = 0;
 		_currentRenderQueue = &renderQueue;
-
-#if defined(DEATH_TARGET_VITA)
-		static std::uint32_t lastFrame = 0;
-		const std::uint32_t frame = theApplication().GetFrameCount();
-		if (frame != lastFrame) {
-			lastFrame = frame;
-			if (Font* font = ContentResolver::Get().GetFont(FontType::Small)) {
-				const auto& frameTimer = theApplication().GetFrameTimer();
-				String performanceText = format("FPS {:.0f}  {:.1f} ms", frameTimer.GetAverageFps(), frameTimer.GetLastFrameDuration() * 1000.0f);
-				font->DrawString(this, performanceText, _renderCommandsCount, 8.0f, 18.0f, 65000,
-					Alignment::TopLeft, Colorf::White, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
-			}
-		}
-#endif
-
 		return false;
 	}
 
