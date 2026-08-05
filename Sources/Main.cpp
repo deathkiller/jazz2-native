@@ -1989,7 +1989,8 @@ void GameEventHandler::CheckUpdates()
 	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	if (auto session = WebSession::GetDefault()) {
 		auto request = session.CreateRequest(url);
-		if (auto result = request.Execute()) {
+		auto result = request.Execute();
+		if (result) {
 			auto s = request.GetResponse().AsString();
 			constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 			std::uint64_t latestVersion = parseVersion(s);
@@ -1998,9 +1999,8 @@ void GameEventHandler::CheckUpdates()
 			}
 			return;
 		}
+		LOGW("Failed to check for updates: {}", result.error);
 	}
-
-	LOGW("Failed to check for updates: {}", result.error);
 #	endif
 }
 #endif
