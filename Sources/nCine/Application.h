@@ -29,6 +29,9 @@ namespace nCine
 #if defined(WITH_IMGUI)
 	class ImGuiDrawing;
 #endif
+#if defined(WITH_QT5)
+	namespace Backends { class Qt5Widget; }
+#endif
 
 	/**
 		@brief Delegate that creates an instance of @ref IAppEventHandler
@@ -288,6 +291,10 @@ namespace nCine
 		friend class MainApplication;
 #if defined(DEATH_TARGET_ANDROID)
 		friend class AndroidApplication;
+#endif
+#if defined(WITH_QT5)
+		// The widget drives the loop and the lifetime of the embedded application, like MainApplication does
+		friend class Backends::Qt5Widget;
 #endif
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		friend class IGfxDevice;

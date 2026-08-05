@@ -11,11 +11,6 @@
 
 using namespace Death::Containers;
 
-namespace nCine
-{
-	class Qt5GfxDevice;
-}
-
 namespace nCine::RHI::GL
 {
 	class GLRenderbuffer;
@@ -31,8 +26,6 @@ namespace nCine::RHI::GL
 	*/
 	class GLFramebuffer
 	{
-		friend class nCine::Qt5GfxDevice;
-
 	public:
 		/** @brief Maximum number of color draw buffers */
 		static const std::uint32_t MaxDrawbuffers = 8;

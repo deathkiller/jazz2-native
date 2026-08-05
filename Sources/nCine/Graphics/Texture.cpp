@@ -270,7 +270,7 @@ namespace nCine
 	void Texture::Initialize(const ITextureLoader& texLoader)
 	{
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
-		const std::int32_t maxTextureSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_TEXTURE_SIZE);
+		const std::int32_t maxTextureSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
 #if defined(WITH_RHI_GU)
 		// The PSP's GE tops out at 512 texels per axis, which is what the backend reports so the tileset
 		// atlases get chunked to fit it - but a few prebaked assets are taller anyway (the small font atlas

@@ -161,8 +161,8 @@ namespace nCine::RHI::GU
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		GuUniformBlock()

@@ -161,8 +161,8 @@ namespace nCine::RHI::Software
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		SwUniformBlock()

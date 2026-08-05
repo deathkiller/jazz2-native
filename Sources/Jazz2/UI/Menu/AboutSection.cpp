@@ -319,7 +319,18 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		float padding = (contentBounds.W > 450.0f ? 60.0f : 20.0f);
+		// A small panel (the PSP's 480x272) is wide enough to pass the inset threshold below, yet spending
+		// 60 px per side on margins would leave the wrapped credits three quarters of a 480 px screen, and
+		// at the full text size a line like "Pattern-defeating quicksort · <url>" would then break after a
+		// word or two while barely three of them fit the short viewport at once. The inset and the text
+		// scale down together there; the threshold is the one the other sections use. Set every frame so a
+		// resized window relays out - both blocks keep the same scale, because the header one is what the
+		// glow below is positioned from, and SetScale() is a no-op unless the value actually changes.
+		bool compactLayout = (_root->GetViewSize().Y < 300);
+		float padding = (compactLayout ? 24.0f : (contentBounds.W > 450.0f ? 60.0f : 20.0f));
+		float textScale = (compactLayout ? 0.7f : 0.8f);
+		_textBlock.SetScale(textScale);
+		_textBlockHeaderOnly.SetScale(textScale);
 
 		Vector2f headerSize = _textBlockHeaderOnly.MeasureSize(Vector2f(contentBounds.W - padding * 2.0f, 1000000.0f));
 		_root->DrawElement(MenuGlow, 0, centerX, topLine + viewHeight + headerSize.Y + 14.0f + 2.0f - roundf(_scrollOffset),

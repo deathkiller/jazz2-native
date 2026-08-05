@@ -12,7 +12,7 @@ namespace nCine
 #endif
 
 #if defined(WITH_QT5)
-	class Qt5Widget;
+	namespace Backends { class Qt5Widget; }
 #endif
 
 	/**
@@ -42,7 +42,7 @@ namespace nCine
 		bool _wasSuspended;
 
 #if defined(WITH_QT5)
-		Qt5Widget* _qt5Widget;
+		Backends::Qt5Widget* _qt5Widget;
 #endif
 
 		/** @brief Must be called at the beginning to initialize the application */
@@ -74,7 +74,7 @@ namespace nCine
 
 		friend Application& theApplication();
 #if defined(WITH_QT5)
-		friend class Qt5Widget;
+		friend class Backends::Qt5Widget;
 #endif
 	};
 

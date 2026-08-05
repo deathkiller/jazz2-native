@@ -73,7 +73,7 @@ namespace nCine
 		}
 
 		if (_type != Type::NoTexture) {
-			static const std::int32_t MaxColorAttachments = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MAX_COLOR_ATTACHMENTS);
+			static const std::int32_t MaxColorAttachments = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxColorAttachments);
 			const bool indexOutOfRange = (index >= std::uint32_t(MaxColorAttachments) || index >= MaxNumTextures);
 			const bool widthDiffers = texture != nullptr && (_width > 0 && texture->GetWidth() != _width);
 			const bool heightDiffers = texture != nullptr && (_height > 0 && texture->GetHeight() != _height);

@@ -158,7 +158,7 @@ namespace nCine
 		_bytesPerVertex = (_texture != nullptr ? sizeof(Vertex) : sizeof(VertexNoTexture));
 		Vector2f min(0.0f, 0.0f);
 
-		if (cutMode == TextureCutMode::CROP) {
+		if (cutMode == TextureCutMode::Crop) {
 			min = points[0];
 			Vector2f max(min);
 			for (std::uint32_t i = 1; i < numVertices; i++) {
@@ -210,7 +210,7 @@ namespace nCine
 
 	void MeshSprite::createVerticesFromTexels(std::uint32_t numVertices, const Vector2f* points)
 	{
-		createVerticesFromTexels(numVertices, points, TextureCutMode::RESIZE);
+		createVerticesFromTexels(numVertices, points, TextureCutMode::Resize);
 	}
 
 	void MeshSprite::copyIndices(std::uint32_t numIndices, const std::uint16_t* indices)

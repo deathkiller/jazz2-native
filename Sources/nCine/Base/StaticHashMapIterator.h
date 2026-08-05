@@ -53,12 +53,12 @@ namespace nCine
 		 */
 		enum class SentinelTagInit
 		{
-			BEGINNING,	/**< Iterator before the first element; the next element is the first one */
-			END			/**< Iterator past the last element; the previous element is the last one */
+			Beginning,	/**< Iterator before the first element; the next element is the first one */
+			End			/**< Iterator past the last element; the previous element is the last one */
 		};
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, std::uint32_t bucketIndex)
-			: _hashMap(hashMap), _bucketIndex(bucketIndex), _tag(SentinelTag::REGULAR) {}
+			: _hashMap(hashMap), _bucketIndex(bucketIndex), _tag(SentinelTag::Regular) {}
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, SentinelTagInit tag);
 
@@ -82,7 +82,7 @@ namespace nCine
 		/** @brief Returns `true` if both iterators point to the same element */
 		friend inline bool operator==(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs._tag == SentinelTag::REGULAR && rhs._tag == SentinelTag::REGULAR) {
+			if (lhs._tag == SentinelTag::Regular && rhs._tag == SentinelTag::Regular) {
 				return (lhs._hashMap == rhs._hashMap && lhs._bucketIndex == rhs._bucketIndex);
 			} else {
 				return (lhs._tag == rhs._tag);
@@ -92,7 +92,7 @@ namespace nCine
 		/** @brief Returns `true` if the iterators point to different elements */
 		friend inline bool operator!=(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
-			if (lhs._tag == SentinelTag::REGULAR && rhs._tag == SentinelTag::REGULAR) {
+			if (lhs._tag == SentinelTag::Regular && rhs._tag == SentinelTag::Regular) {
 				return (lhs._hashMap != rhs._hashMap || lhs._bucketIndex != rhs._bucketIndex);
 			} else {
 				return (lhs._tag != rhs._tag);
@@ -111,9 +111,9 @@ namespace nCine
 	private:
 		// Sentinel tag used to detect the begin and end conditions
 		enum SentinelTag {
-			REGULAR,	// Iterator pointing to a real element
-			BEGINNING,	// Iterator before the first element
-			END			// Iterator past the last element
+			Regular,	// Iterator pointing to a real element
+			Beginning,	// Iterator before the first element
+			End			// Iterator past the last element
 		};
 
 		typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr _hashMap;
@@ -170,8 +170,8 @@ namespace nCine
 		: _hashMap(hashMap), _bucketIndex(0)
 	{
 		switch (tag) {
-			case SentinelTagInit::BEGINNING: _tag = SentinelTag::BEGINNING; break;
-			case SentinelTagInit::END: _tag = SentinelTag::END; break;
+			case SentinelTagInit::Beginning: _tag = SentinelTag::Beginning; break;
+			case SentinelTagInit::End: _tag = SentinelTag::End; break;
 		}
 	}
 
@@ -240,17 +240,17 @@ namespace nCine
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	void StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::next()
 	{
-		if (_tag == SentinelTag::REGULAR) {
+		if (_tag == SentinelTag::Regular) {
 			if (_bucketIndex >= _hashMap->capacity() - 1) {
-				_tag = SentinelTag::END;
+				_tag = SentinelTag::End;
 				return;
 			} else {
 				_bucketIndex++;
 			}
-		} else if (_tag == SentinelTag::BEGINNING) {
-			_tag = SentinelTag::REGULAR;
+		} else if (_tag == SentinelTag::Beginning) {
+			_tag = SentinelTag::Regular;
 			_bucketIndex = 0;
-		} else if (_tag == SentinelTag::END) {
+		} else if (_tag == SentinelTag::End) {
 			return;
 		}
 		// Search the first non empty index starting from the current one
@@ -258,24 +258,24 @@ namespace nCine
 			_bucketIndex++;
 		}
 		if (_hashMap->_hashes[_bucketIndex] == NullHash) {
-			_tag = SentinelTag::END;
+			_tag = SentinelTag::End;
 		}
 	}
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	void StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::previous()
 	{
-		if (_tag == SentinelTag::REGULAR) {
+		if (_tag == SentinelTag::Regular) {
 			if (_bucketIndex == 0) {
-				_tag = SentinelTag::BEGINNING;
+				_tag = SentinelTag::Beginning;
 				return;
 			} else {
 				_bucketIndex--;
 			}
-		} else if (_tag == SentinelTag::END) {
-			_tag = SentinelTag::REGULAR;
+		} else if (_tag == SentinelTag::End) {
+			_tag = SentinelTag::Regular;
 			_bucketIndex = _hashMap->capacity() - 1;
-		} else if (_tag == SentinelTag::BEGINNING) {
+		} else if (_tag == SentinelTag::Beginning) {
 			return;
 		}
 		// Search the first non empty index starting from the current one
@@ -283,7 +283,7 @@ namespace nCine
 			_bucketIndex--;
 		}
 		if (_hashMap->_hashes[_bucketIndex] == NullHash) {
-			_tag = SentinelTag::BEGINNING;
+			_tag = SentinelTag::Beginning;
 		}
 	}
 }

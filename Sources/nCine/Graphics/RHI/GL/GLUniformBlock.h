@@ -18,7 +18,7 @@ namespace nCine::RHI::GL
 		Holds the metadata queried for a single active uniform block of a linked shader program,
 		such as its index, byte size (padded to the uniform buffer offset alignment), current
 		binding index and the @ref GLUniform members it contains. Member uniforms are discovered
-		only when @ref DiscoverUniforms::ENABLED is requested.
+		only when @ref DiscoverUniforms::Enabled is requested.
 	*/
 	class GLUniformBlock
 	{
@@ -32,8 +32,8 @@ namespace nCine::RHI::GL
 		/** @brief Whether the member uniforms of a block should be queried on construction */
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		/** @brief Creates an empty, unbound uniform block */

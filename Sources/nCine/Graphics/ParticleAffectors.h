@@ -31,11 +31,11 @@ namespace nCine
 		 */
 		enum class Type
 		{
-			COLOR,		/**< Affects the particle color */
-			SIZE,		/**< Affects the particle scale */
-			ROTATION,	/**< Affects the particle rotation */
-			POSITION,	/**< Affects the particle position */
-			VELOCITY	/**< Affects the particle velocity */
+			Color,		/**< Affects the particle color */
+			Size,		/**< Affects the particle scale */
+			Rotation,	/**< Affects the particle rotation */
+			Position,	/**< Affects the particle position */
+			Velocity	/**< Affects the particle velocity */
 		};
 
 		ParticleAffector(Type type)
@@ -92,7 +92,7 @@ namespace nCine
 		};
 
 		ColorAffector()
-			: ParticleAffector(Type::COLOR), _colorSteps(StepsInitialSize) {}
+			: ParticleAffector(Type::Color), _colorSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		ColorAffector(ColorAffector&&) = default;
@@ -164,7 +164,7 @@ namespace nCine
 			: SizeAffector(baseScale, baseScale) {}
 		/** @brief Constructs a size affector with a horizontal and a vertical base scale factor */
 		SizeAffector(float baseScaleX, float baseScaleY)
-			: ParticleAffector(Type::SIZE), _sizeSteps(StepsInitialSize), _baseScale(baseScaleX, baseScaleY) {}
+			: ParticleAffector(Type::Size), _sizeSteps(StepsInitialSize), _baseScale(baseScaleX, baseScaleY) {}
 		/** @brief Constructs a size affector with a vector base scale factor */
 		explicit SizeAffector(Vector2f baseScale)
 			: SizeAffector(baseScale.X, baseScale.Y) {}
@@ -267,7 +267,7 @@ namespace nCine
 		};
 
 		RotationAffector()
-			: ParticleAffector(Type::ROTATION), _rotationSteps(StepsInitialSize) {}
+			: ParticleAffector(Type::Rotation), _rotationSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		RotationAffector(RotationAffector&&) = default;
@@ -328,7 +328,7 @@ namespace nCine
 		};
 
 		PositionAffector()
-			: ParticleAffector(Type::POSITION), _positionSteps(StepsInitialSize) {}
+			: ParticleAffector(Type::Position), _positionSteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		PositionAffector(PositionAffector&&) = default;
@@ -393,7 +393,7 @@ namespace nCine
 		};
 
 		VelocityAffector()
-			: ParticleAffector(Type::VELOCITY), _velocitySteps(StepsInitialSize) {}
+			: ParticleAffector(Type::Velocity), _velocitySteps(StepsInitialSize) {}
 
 		/** @brief Default move constructor */
 		VelocityAffector(VelocityAffector&&) = default;

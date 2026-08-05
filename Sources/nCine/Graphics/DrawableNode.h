@@ -42,11 +42,11 @@ namespace nCine
 		 */
 		enum class BlendingPreset
 		{
-			DISABLED,					/**< Uses `BlendingFactor::One` and `BlendingFactor::Zero` */
-			ALPHA,						/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::OneMinusSrcAlpha` */
-			PREMULTIPLIED_ALPHA,		/**< Uses `BlendingFactor::One` and `BlendingFactor::OneMinusSrcAlpha` */
-			ADDITIVE,					/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::One` */
-			MULTIPLY					/**< Uses `BlendingFactor::DstColor` and `BlendingFactor::Zero` */
+			Disabled,					/**< Uses `BlendingFactor::One` and `BlendingFactor::Zero` */
+			Alpha,						/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::OneMinusSrcAlpha` */
+			PremultipliedAlpha,			/**< Uses `BlendingFactor::One` and `BlendingFactor::OneMinusSrcAlpha` */
+			Additive,					/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::One` */
+			Multiply					/**< Uses `BlendingFactor::DstColor` and `BlendingFactor::Zero` */
 		};
 
 		/** @brief Creates a node as a child of @p parent at the relative position (@p xx, @p yy) */

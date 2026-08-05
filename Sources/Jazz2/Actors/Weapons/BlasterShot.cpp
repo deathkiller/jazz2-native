@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Weapons
 
 		SetAnimation(state);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
+		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
 
 		async_return true;
 	}

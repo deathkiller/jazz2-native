@@ -38,7 +38,7 @@ namespace Jazz2::Actors::Weapons
 		SetAnimation(state);
 		PlaySfx("Fire"_s);
 
-		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::ADDITIVE);
+		_renderer.setBlendingPreset(DrawableNode::BlendingPreset::Additive);
 
 		async_return true;
 	}

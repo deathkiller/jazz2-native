@@ -242,19 +242,19 @@ namespace nCine
 		for (std::uint32_t i = 0; i < other._affectors.size(); i++) {
 			const ParticleAffector& affector = *other._affectors[i];
 			switch (affector.type()) {
-				case ParticleAffector::Type::COLOR:
+				case ParticleAffector::Type::Color:
 					_affectors.push_back(new ColorAffector(static_cast<const ColorAffector&>(affector).clone()));
 					break;
-				case ParticleAffector::Type::SIZE:
+				case ParticleAffector::Type::Size:
 					_affectors.push_back(new SizeAffector(static_cast<const SizeAffector&>(affector).clone()));
 					break;
-				case ParticleAffector::Type::ROTATION:
+				case ParticleAffector::Type::Rotation:
 					_affectors.push_back(new RotationAffector(static_cast<const RotationAffector&>(affector).clone()));
 					break;
-				case ParticleAffector::Type::POSITION:
+				case ParticleAffector::Type::Position:
 					_affectors.push_back(new PositionAffector(static_cast<const PositionAffector&>(affector).clone()));
 					break;
-				case ParticleAffector::Type::VELOCITY:
+				case ParticleAffector::Type::Velocity:
 					_affectors.push_back(new VelocityAffector(static_cast<const VelocityAffector&>(affector).clone()));
 					break;
 			}

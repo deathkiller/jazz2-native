@@ -401,8 +401,8 @@ namespace nCine::RHI::GL
 				ImportReflection();
 			} else {
 				const GLUniformBlock::DiscoverUniforms discover = (_introspection == Introspection::NoUniformsInBlocks)
-					? GLUniformBlock::DiscoverUniforms::DISABLED
-					: GLUniformBlock::DiscoverUniforms::ENABLED;
+					? GLUniformBlock::DiscoverUniforms::Disabled
+					: GLUniformBlock::DiscoverUniforms::Enabled;
 
 				DiscoverUniforms();
 				DiscoverUniformBlocks(discover);

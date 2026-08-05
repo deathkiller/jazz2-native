@@ -305,7 +305,7 @@ namespace nCine::RHI::GL
 		return true;
 #else
 		const IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
-		return caps.HasExtension(IRhiCapabilities::Extensions::ARB_TEXTURE_STORAGE);
+		return caps.HasExtension(IRhiCapabilities::Extensions::ArbTextureStorage);
 #endif
 	}
 

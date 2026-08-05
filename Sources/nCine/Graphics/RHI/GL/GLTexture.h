@@ -9,7 +9,6 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	class Qt5GfxDevice;
 	class ImGuiDrawing;
 }
 
@@ -29,7 +28,6 @@ namespace nCine::RHI::GL
 	class GLTexture
 	{
 		friend class GLFramebuffer;
-		friend class nCine::Qt5GfxDevice;
 		friend class nCine::ImGuiDrawing;
 
 	public:

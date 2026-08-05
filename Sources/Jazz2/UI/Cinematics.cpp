@@ -6,6 +6,7 @@
 #include "../Input/ControlScheme.h"
 
 #include "../../nCine/Application.h"
+#include "../../nCine/ServiceLocator.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Input/JoyMapping.h"
 #include "../../nCine/Audio/AudioBufferPlayer.h"
@@ -277,6 +278,34 @@ namespace Jazz2::UI
 		return false;
 	}
 
+	void Cinematics::SetupFrameTextureSize(std::uint32_t downscale)
+	{
+		_videoDownscale = (downscale > 0 ? downscale : 1);
+
+		// A frame that doesn't fit a single hardware texture is halved until it does. Backends that page
+		// an oversized image (the PSP's GE addresses at most 512 texels per axis) select the page per
+		// primitive, and one quad covering the whole frame samples only the page its left edge is in - the
+		// overhang then repeats that page's last column, which showed the right 128 columns of a 640x480
+		// video as a horizontal smear across the last ~100 px of the panel. Halving is also the trade the
+		// Dreamcast already makes above for bandwidth, and every platform whose limit this hits is one
+		// that would struggle with the full-resolution upload anyway.
+		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities()
+			.GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
+		if (maxTextureSize > 0) {
+			const std::uint32_t limit = (std::uint32_t)maxTextureSize;
+			while ((_width / _videoDownscale) > limit || (_height / _videoDownscale) > limit) {
+				_videoDownscale *= 2;
+			}
+			if (_videoDownscale != downscale) {
+				LOGI("Video {}x{} exceeds the maximum texture size {}, playing it downscaled {}x",
+					_width, _height, maxTextureSize, _videoDownscale);
+			}
+		}
+
+		_textureWidth = _width / _videoDownscale;
+		_textureHeight = _height / _videoDownscale;
+	}
+
 	bool Cinematics::LoadLegacyVideo(std::unique_ptr<Stream>&& s, StringView path)
 	{
 		_nativeFormat = false;
@@ -293,12 +322,10 @@ namespace Jazz2::UI
 		// apply, texture copy, then the conversion and twiddling into video memory). Videos that were already
 		// downscaled offline by the AssetPacker are played as they are - halving them twice would throw away
 		// detail the platform can afford to show.
-		_videoDownscale = (_width > 400 ? 2 : 1);
+		SetupFrameTextureSize(_width > 400 ? 2 : 1);
 #else
-		_videoDownscale = 1;
+		SetupFrameTextureSize(1);
 #endif
-		_textureWidth = _width / _videoDownscale;
-		_textureHeight = _height / _videoDownscale;
 
 		// Frames are palette indices. Where the hardware can sample those directly they are uploaded as they
 		// are; where a paletted texture would have to be twiddled every frame they are converted instead (see
@@ -398,10 +425,9 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		// Frames are already stored at the size they are shown at, so nothing is downscaled here
-		_videoDownscale = 1;
-		_textureWidth = _width;
-		_textureHeight = _height;
+		// Frames are already stored at the size they are shown at, so nothing is downscaled here beyond
+		// what the hardware forces
+		SetupFrameTextureSize(1);
 
 		// Frames are palette indices. Where the hardware can sample those directly they are uploaded as they
 		// are; where a paletted texture would have to be twiddled every frame they are converted instead (see

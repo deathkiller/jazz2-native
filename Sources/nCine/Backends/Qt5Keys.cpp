@@ -11,20 +11,20 @@ namespace nCine::Backends
 			case Qt::Key_unknown:			return Keys::Unknown;
 			case Qt::Key_Backspace:		return Keys::Backspace;
 			case Qt::Key_Tab:				return Keys::Tab;
-			case Qt::Key_Clear:				return Keys::CLEAR;
+			case Qt::Key_Clear:				return Keys::Clear;
 			case Qt::Key_Return:			return Keys::Return;
 			case Qt::Key_Pause:				return Keys::Pause;
 			case Qt::Key_Escape:			return Keys::Escape;
 			case Qt::Key_Space:				return Keys::Space;
-			case Qt::Key_Exclam:			return Keys::EXCLAIM;
-			case Qt::Key_QuoteDbl:			return Keys::QuoteDBL;
-			case Qt::Key_NumberSign:		return Keys::HASH;
-			case Qt::Key_Dollar:			return Keys::DOLLAR;
-			case Qt::Key_Ampersand:			return Keys::AMPERSAND;
+			case Qt::Key_Exclam:			return Keys::Exclaim;
+			case Qt::Key_QuoteDbl:			return Keys::QuoteDbl;
+			case Qt::Key_NumberSign:		return Keys::Hash;
+			case Qt::Key_Dollar:			return Keys::Dollar;
+			case Qt::Key_Ampersand:			return Keys::Ampersand;
 			case Qt::Key_Apostrophe:		return Keys::Quote; // TEST
-			case Qt::Key_ParenLeft:			return Keys::LeftPAREN;
-			case Qt::Key_ParenRight:		return Keys::RightPAREN;
-			case Qt::Key_Asterisk:			return Keys::ASTERISK;
+			case Qt::Key_ParenLeft:			return Keys::LeftParen;
+			case Qt::Key_ParenRight:		return Keys::RightParen;
+			case Qt::Key_Asterisk:			return Keys::Asterisk;
 			case Qt::Key_Plus:				return Keys::Plus;
 			case Qt::Key_Comma:				return Keys::Comma;
 			case Qt::Key_Minus:				return Keys::Minus;
@@ -40,19 +40,19 @@ namespace nCine::Backends
 			case Qt::Key_7:					return Keys::D7;
 			case Qt::Key_8:					return Keys::D8;
 			case Qt::Key_9:					return Keys::D9;
-			case Qt::Key_Colon:				return Keys::COLON;
+			case Qt::Key_Colon:				return Keys::Colon;
 			case Qt::Key_Semicolon:			return Keys::Semicolon;
-			case Qt::Key_Less:				return Keys::LESS;
+			case Qt::Key_Less:				return Keys::Less;
 			case Qt::Key_Equal:				return Keys::Equals;
-			case Qt::Key_Greater:			return Keys::GREATER;
-			case Qt::Key_Question:			return Keys::QUESTION;
-			case Qt::Key_At:				return Keys::AT;
+			case Qt::Key_Greater:			return Keys::Greater;
+			case Qt::Key_Question:			return Keys::Question;
+			case Qt::Key_At:				return Keys::At;
 
 			case Qt::Key_BracketLeft:		return Keys::LeftBracket;
 			case Qt::Key_Backslash:			return Keys::Backslash;
 			case Qt::Key_BracketRight:		return Keys::RightBracket;
-			case Qt::Key_AsciiCircum:		return Keys::CARET; // TEST
-			case Qt::Key_Underscore:		return Keys::UNDERSCORE;
+			case Qt::Key_AsciiCircum:		return Keys::Caret; // TEST
+			case Qt::Key_Underscore:		return Keys::Underscore;
 			case Qt::Key_QuoteLeft:			return Keys::Backquote;
 			case Qt::Key_A:					return Keys::A;
 			case Qt::Key_B:					return Keys::B;
@@ -121,15 +121,15 @@ namespace nCine::Backends
 			case Qt::Key_Alt:				return Keys::LAlt;
 			case Qt::Key_Super_R:			return Keys::RSuper;
 			case Qt::Key_Super_L:			return Keys::LSuper;
-			case Qt::Key_Mode_switch:		return Keys::MODE;
-			case Qt::Key_ApplicationLeft:	return Keys::APPLICATION;
+			case Qt::Key_Mode_switch:		return Keys::Mode;
+			case Qt::Key_ApplicationLeft:	return Keys::Application;
 
-			case Qt::Key_Help:				return Keys::HELP;
+			case Qt::Key_Help:				return Keys::Help;
 			case Qt::Key_Print:				return Keys::PrintScreen;
-			case Qt::Key_SysReq:			return Keys::SYSREQ;
+			case Qt::Key_SysReq:			return Keys::SysReq;
 			case Qt::Key_Menu:				return Keys::Menu;
-			case Qt::Key_PowerOff:			return Keys::POWER;
-			case Qt::Key_Undo:				return Keys::UNDO;
+			case Qt::Key_PowerOff:			return Keys::Power;
+			case Qt::Key_Undo:				return Keys::Undo;
 
 			default:					return Keys::Unknown;
 		}
@@ -141,17 +141,17 @@ namespace nCine::Backends
 		int result = 0;
 
 		if (keymod != Qt::NoModifier) {
-			result |= (keymod & Qt::ShiftModifier) ? KeyMod::LSHIFT : 0;
-			result |= (keymod & Qt::ShiftModifier) ? KeyMod::RSHIFT : 0;
-			result |= (keymod & Qt::ControlModifier) ? KeyMod::LCTRL : 0;
-			result |= (keymod & Qt::ControlModifier) ? KeyMod::RCTRL : 0;
-			result |= (keymod & Qt::AltModifier) ? KeyMod::LALT : 0;
-			result |= (keymod & Qt::AltModifier) ? KeyMod::RALT : 0;
-			result |= (keymod & Qt::MetaModifier) ? KeyMod::LSUPER : 0;
-			result |= (keymod & Qt::MetaModifier) ? KeyMod::RSUPER : 0;
-			result |= (keymod & Qt::KeypadModifier) ? KeyMod::NUM : 0;
-			//result |= (keymod & KMOD_CAPS) ? KeyMod::CAPS : 0;
-			result |= (keymod & Qt::GroupSwitchModifier) ? KeyMod::MODE : 0;
+			result |= (keymod & Qt::ShiftModifier) ? KeyMod::LShift : 0;
+			result |= (keymod & Qt::ShiftModifier) ? KeyMod::RShift : 0;
+			result |= (keymod & Qt::ControlModifier) ? KeyMod::LCtrl : 0;
+			result |= (keymod & Qt::ControlModifier) ? KeyMod::RCtrl : 0;
+			result |= (keymod & Qt::AltModifier) ? KeyMod::LAlt : 0;
+			result |= (keymod & Qt::AltModifier) ? KeyMod::RAlt : 0;
+			result |= (keymod & Qt::MetaModifier) ? KeyMod::LSuper : 0;
+			result |= (keymod & Qt::MetaModifier) ? KeyMod::RSuper : 0;
+			result |= (keymod & Qt::KeypadModifier) ? KeyMod::NumLock : 0;
+			//result |= (keymod & KMOD_CAPS) ? KeyMod::CapsLock : 0;
+			result |= (keymod & Qt::GroupSwitchModifier) ? KeyMod::Mode : 0;
 		}
 
 		return result;
@@ -167,20 +167,20 @@ namespace nCine::Backends
 			case Keys::Unknown:			return Qt::Key_UNKNOWN;
 			case Keys::Backspace:			return Qt::Key_BACKSPACE;
 			case Keys::Tab:				return Qt::Key_TAB;
-			case Keys::CLEAR:				return Qt::Key_CLEAR;
+			case Keys::Clear:				return Qt::Key_CLEAR;
 			case Keys::Return:			return Qt::Key_RETURN;
 			case Keys::Pause:				return Qt::Key_PAUSE;
 			case Keys::Escape:			return Qt::Key_ESCAPE;
 			case Keys::Space:				return Qt::Key_SPACE;
-			case Keys::EXCLAIM:			return Qt::Key_EXCLAIM;
-			case Keys::QuoteDBL:			return Qt::Key_QUOTEDBL;
-			case Keys::HASH:				return Qt::Key_HASH;
-			case Keys::DOLLAR:			return Qt::Key_DOLLAR;
-			case Keys::AMPERSAND:			return Qt::Key_AMPERSAND;
+			case Keys::Exclaim:			return Qt::Key_EXCLAIM;
+			case Keys::QuoteDbl:			return Qt::Key_QUOTEDBL;
+			case Keys::Hash:				return Qt::Key_HASH;
+			case Keys::Dollar:			return Qt::Key_DOLLAR;
+			case Keys::Ampersand:			return Qt::Key_AMPERSAND;
 			case Keys::Quote:				return Qt::Key_QUOTE;
-			case Keys::LeftPAREN:			return Qt::Key_LEFTPAREN;
-			case Keys::RightPAREN:		return Qt::Key_RIGHTPAREN;
-			case Keys::ASTERISK:			return Qt::Key_ASTERISK;
+			case Keys::LeftParen:			return Qt::Key_LEFTPAREN;
+			case Keys::RightParen:		return Qt::Key_RIGHTPAREN;
+			case Keys::Asterisk:			return Qt::Key_ASTERISK;
 			case Keys::Plus:				return Qt::Key_PLUS;
 			case Keys::Comma:				return Qt::Key_COMMA;
 			case Keys::Minus:				return Qt::Key_MINUS;
@@ -196,19 +196,19 @@ namespace nCine::Backends
 			case Keys::D7:				return Qt::Key_7;
 			case Keys::D8:				return Qt::Key_8;
 			case Keys::D9:				return Qt::Key_9;
-			case Keys::COLON:				return Qt::Key_COLON;
+			case Keys::Colon:				return Qt::Key_COLON;
 			case Keys::Semicolon:			return Qt::Key_SEMICOLON;
-			case Keys::LESS:				return Qt::Key_LESS;
+			case Keys::Less:				return Qt::Key_LESS;
 			case Keys::Equals:			return Qt::Key_EQUALS;
-			case Keys::GREATER:			return Qt::Key_GREATER;
-			case Keys::QUESTION:			return Qt::Key_QUESTION;
-			case Keys::AT:				return Qt::Key_AT;
+			case Keys::Greater:			return Qt::Key_GREATER;
+			case Keys::Question:			return Qt::Key_QUESTION;
+			case Keys::At:				return Qt::Key_AT;
 
 			case Keys::LeftBracket:		return Qt::Key_LEFTBRACKET;
 			case Keys::Backslash:			return Qt::Key_BACKSLASH;
 			case Keys::RightBracket:		return Qt::Key_RIGHTBRACKET;
-			case Keys::CARET:				return Qt::Key_CARET;
-			case Keys::UNDERSCORE:		return Qt::Key_UNDERSCORE;
+			case Keys::Caret:				return Qt::Key_CARET;
+			case Keys::Underscore:		return Qt::Key_UNDERSCORE;
 			case Keys::Backquote:			return Qt::Key_BACKQUOTE;
 			case Keys::A:					return Qt::Key_a;
 			case Keys::B:					return Qt::Key_b;
@@ -293,15 +293,15 @@ namespace nCine::Backends
 			case Keys::LAlt:				return Qt::Key_LALT;
 			case Keys::RSuper:			return Qt::Key_RGUI;
 			case Keys::LSuper:			return Qt::Key_LGUI;
-			case Keys::MODE:				return Qt::Key_MODE;
-			case Keys::APPLICATION:		return Qt::Key_APPLICATION;
+			case Keys::Mode:				return Qt::Key_MODE;
+			case Keys::Application:		return Qt::Key_APPLICATION;
 
-			case Keys::HELP:				return Qt::Key_HELP;
+			case Keys::Help:				return Qt::Key_HELP;
 			case Keys::PrintScreen:		return Qt::Key_PRINTSCREEN;
-			case Keys::SYSREQ:			return Qt::Key_SYSREQ;
+			case Keys::SysReq:			return Qt::Key_SYSREQ;
 			case Keys::Menu:				return Qt::Key_MENU;
-			case Keys::POWER:				return Qt::Key_POWER;
-			case Keys::UNDO:				return Qt::Key_UNDO;
+			case Keys::Power:				return Qt::Key_POWER;
+			case Keys::Undo:				return Qt::Key_UNDO;
 
 			default:						return Qt::Key_UNKNOWN;
 		}
@@ -316,20 +316,20 @@ namespace nCine::Backends
 			case Keys::Unknown:			return SDL_SCANCODE_UNKNOWN;
 			case Keys::Backspace:			return SDL_SCANCODE_BACKSPACE;
 			case Keys::Tab:				return SDL_SCANCODE_TAB;
-			case Keys::CLEAR:				return SDL_SCANCODE_CLEAR;
+			case Keys::Clear:				return SDL_SCANCODE_CLEAR;
 			case Keys::Return:			return SDL_SCANCODE_RETURN;
 			case Keys::Pause:				return SDL_SCANCODE_PAUSE;
 			case Keys::Escape:			return SDL_SCANCODE_ESCAPE;
 			case Keys::Space:				return SDL_SCANCODE_SPACE;
-			case Keys::EXCLAIM:			return SDL_SCANCODE_1; // not a scancode
-			case Keys::QuoteDBL:			return SDL_SCANCODE_APOSTROPHE; // not a scancode
-			case Keys::HASH:				return SDL_SCANCODE_3; // not a scancode
-			case Keys::DOLLAR:			return SDL_SCANCODE_4; // not a scancode
-			case Keys::AMPERSAND:			return SDL_SCANCODE_7; // not a scancode
+			case Keys::Exclaim:			return SDL_SCANCODE_1; // not a scancode
+			case Keys::QuoteDbl:			return SDL_SCANCODE_APOSTROPHE; // not a scancode
+			case Keys::Hash:				return SDL_SCANCODE_3; // not a scancode
+			case Keys::Dollar:			return SDL_SCANCODE_4; // not a scancode
+			case Keys::Ampersand:			return SDL_SCANCODE_7; // not a scancode
 			case Keys::Quote:				return SDL_SCANCODE_APOSTROPHE; // not a scancode
-			case Keys::LeftPAREN:			return SDL_SCANCODE_9; // not a scancode
-			case Keys::RightPAREN:		return SDL_SCANCODE_0; // not a scancode
-			case Keys::ASTERISK:			return SDL_SCANCODE_8; // not a scancode
+			case Keys::LeftParen:			return SDL_SCANCODE_9; // not a scancode
+			case Keys::RightParen:		return SDL_SCANCODE_0; // not a scancode
+			case Keys::Asterisk:			return SDL_SCANCODE_8; // not a scancode
 			case Keys::Plus:				return SDL_SCANCODE_EQUALS; // not a scancode
 			case Keys::Comma:				return SDL_SCANCODE_COMMA;
 			case Keys::Minus:				return SDL_SCANCODE_MINUS;
@@ -345,19 +345,19 @@ namespace nCine::Backends
 			case Keys::D7:				return SDL_SCANCODE_7;
 			case Keys::D8:				return SDL_SCANCODE_8;
 			case Keys::D9:				return SDL_SCANCODE_9;
-			case Keys::COLON:				return SDL_SCANCODE_SEMICOLON; // not a scancode
+			case Keys::Colon:				return SDL_SCANCODE_SEMICOLON; // not a scancode
 			case Keys::Semicolon:			return SDL_SCANCODE_SEMICOLON;
-			case Keys::LESS:				return SDL_SCANCODE_COMMA; // not a scancode
+			case Keys::Less:				return SDL_SCANCODE_COMMA; // not a scancode
 			case Keys::Equals:			return SDL_SCANCODE_EQUALS;
-			case Keys::GREATER:			return SDL_SCANCODE_PERIOD; // not a scancode
-			case Keys::QUESTION:			return SDL_SCANCODE_SLASH; // not a scancode
-			case Keys::AT:				return SDL_SCANCODE_2; // not a scancode
+			case Keys::Greater:			return SDL_SCANCODE_PERIOD; // not a scancode
+			case Keys::Question:			return SDL_SCANCODE_SLASH; // not a scancode
+			case Keys::At:				return SDL_SCANCODE_2; // not a scancode
 
 			case Keys::LeftBracket:		return SDL_SCANCODE_LEFTBRACKET;
 			case Keys::Backslash:			return SDL_SCANCODE_BACKSLASH;
 			case Keys::RightBracket:		return SDL_SCANCODE_RIGHTBRACKET;
-			case Keys::CARET:				return SDL_SCANCODE_6; // not a scancode
-			case Keys::UNDERSCORE:		return SDL_SCANCODE_MINUS; // not a scancode
+			case Keys::Caret:				return SDL_SCANCODE_6; // not a scancode
+			case Keys::Underscore:		return SDL_SCANCODE_MINUS; // not a scancode
 			case Keys::Backquote:			return SDL_SCANCODE_GRAVE; // not a scancode
 			case Keys::A:					return SDL_SCANCODE_A;
 			case Keys::B:					return SDL_SCANCODE_B;
@@ -442,15 +442,15 @@ namespace nCine::Backends
 			case Keys::LAlt:				return SDL_SCANCODE_LALT;
 			case Keys::RSuper:			return SDL_SCANCODE_RGUI;
 			case Keys::LSuper:			return SDL_SCANCODE_LGUI;
-			case Keys::MODE:				return SDL_SCANCODE_MODE;
-			case Keys::APPLICATION:		return SDL_SCANCODE_APPLICATION;
+			case Keys::Mode:				return SDL_SCANCODE_MODE;
+			case Keys::Application:		return SDL_SCANCODE_APPLICATION;
 
-			case Keys::HELP:				return SDL_SCANCODE_HELP;
+			case Keys::Help:				return SDL_SCANCODE_HELP;
 			case Keys::PrintScreen:		return SDL_SCANCODE_PRINTSCREEN;
-			case Keys::SYSREQ:			return SDL_SCANCODE_SYSREQ;
+			case Keys::SysReq:			return SDL_SCANCODE_SYSREQ;
 			case Keys::Menu:				return SDL_SCANCODE_MENU;
-			case Keys::POWER:				return SDL_SCANCODE_POWER;
-			case Keys::UNDO:				return SDL_SCANCODE_UNDO;
+			case Keys::Power:				return SDL_SCANCODE_POWER;
+			case Keys::Undo:				return SDL_SCANCODE_UNDO;
 
 			default:						return SDL_SCANCODE_UNKNOWN;
 		}

@@ -44,6 +44,40 @@ namespace nCine
 			ButtonName::Down,
 			ButtonName::Left
 		};
+#elif defined(WITH_QT5)
+		// Qt5Gamepad reports an already normalized gamepad and no device identity to match a mapping
+		// against, so every gamepad gets this fixed layout. The order of both arrays is the contract with
+		// Backends::Qt5JoystickState::isButtonPressed() and axisValue().
+		constexpr AxisName Qt5AxisNameMapping[] = {
+			AxisName::LeftX,
+			AxisName::LeftY,
+			AxisName::RightX,
+			AxisName::RightY,
+			AxisName::LeftTrigger,
+			AxisName::RightTrigger
+		};
+
+		constexpr ButtonName Qt5ButtonNameMapping[] = {
+			ButtonName::LeftBumper,
+			ButtonName::LeftStick,
+			ButtonName::RightBumper,
+			ButtonName::RightStick,
+			ButtonName::A,
+			ButtonName::B,
+			ButtonName::Unknown,	// Center, which the engine has no name for
+			ButtonName::Guide,
+			ButtonName::Back,
+			ButtonName::Start,
+			ButtonName::X,
+			ButtonName::Y
+		};
+
+		constexpr ButtonName Qt5DpadButtonNameMapping[] = {
+			ButtonName::Up,
+			ButtonName::Right,
+			ButtonName::Down,
+			ButtonName::Left
+		};
 #endif
 
 		// TODO: Implement CRC
@@ -574,6 +608,36 @@ namespace nCine
 
 			for (std::int32_t i = 0; i < std::int32_t(arraySize(AndroidDpadButtonNameMapping)); i++) {
 				mapping.desc.hats[i] = AndroidDpadButtonNameMapping[i];
+			}
+		}
+#elif defined(WITH_QT5)
+		// Qt5Gamepad has already mapped the device, and reports neither a GUID nor a name that could be
+		// matched against the database, so its fixed layout is assigned to every gamepad it reports
+		if (!mapping.isValid) {
+			LOGI("Gamepad mapping not found for \"{}\" ({}), using Qt5Gamepad default mapping", joyName, event.joyId);
+
+			mapping.isValid = true;
+
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(Qt5AxisNameMapping)); i++) {
+				mapping.desc.axes[i].name = Qt5AxisNameMapping[i];
+				if (mapping.desc.axes[i].name == AxisName::LeftTrigger || mapping.desc.axes[i].name == AxisName::RightTrigger) {
+					mapping.desc.axes[i].min = 0.0f;
+				} else {
+					mapping.desc.axes[i].min = -1.0f;
+				}
+				mapping.desc.axes[i].max = 1.0f;
+				// Full physical input range (the assigned mapping is reused across reconnects, so set explicitly)
+				mapping.desc.axes[i].inMin = -1.0f;
+				mapping.desc.axes[i].inMax = 1.0f;
+			}
+
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(mapping.desc.buttons)); i++) {
+				mapping.desc.buttons[i] = (i < std::int32_t(arraySize(Qt5ButtonNameMapping))
+					? Qt5ButtonNameMapping[i] : ButtonName::Unknown);
+			}
+
+			for (std::int32_t i = 0; i < std::int32_t(arraySize(Qt5DpadButtonNameMapping)); i++) {
+				mapping.desc.hats[i] = Qt5DpadButtonNameMapping[i];
 			}
 		}
 #elif !defined(DEATH_TARGET_EMSCRIPTEN)

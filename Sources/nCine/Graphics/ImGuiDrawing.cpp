@@ -10,12 +10,12 @@
 
 #include <IO/FileSystem.h>
 
+// A backend without an ImGui input glue (Qt5, every console) simply has no branch here, and the
+// overlay then draws without receiving input
 #if defined(WITH_GLFW)
 #	include "../Backends/ImGuiGlfwInput.h"
 #elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 #	include "../Backends/ImGuiSdlInput.h"
-#elif defined(WITH_QT5)
-#	include "../Backends/ImGuiQt5Input.h"
 #elif defined(DEATH_TARGET_ANDROID)
 #	include "../Backends/Android/ImGuiAndroidInput.h"
 #endif
@@ -231,8 +231,6 @@ namespace nCine
 		ImGuiGlfwInput::newFrame();
 #elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 		ImGuiSdlInput::newFrame();
-#elif defined(WITH_QT5)
-		ImGuiQt5Input::newFrame();
 #elif defined(DEATH_TARGET_ANDROID)
 		ImGuiAndroidInput::newFrame();
 #endif

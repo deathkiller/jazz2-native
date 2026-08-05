@@ -43,10 +43,10 @@ namespace nCine
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 #	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||
-								 caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_GET_PROGRAM_BINARY);
+		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ArbGetProgramBinary) ||
+								 caps.HasExtension(RHI::IRhiCapabilities::Extensions::OesGetProgramBinary);
 #	else
-		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_GET_PROGRAM_BINARY);
+		const bool isSupported = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ArbGetProgramBinary);
 #	endif
 		if (!isSupported) {
 			LOGW("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
@@ -54,7 +54,7 @@ namespace nCine
 		}
 
 #	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
-		if (caps.HasExtension(RHI::IRhiCapabilities::Extensions::OES_GET_PROGRAM_BINARY)) {
+		if (caps.HasExtension(RHI::IRhiCapabilities::Extensions::OesGetProgramBinary)) {
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH_OES;

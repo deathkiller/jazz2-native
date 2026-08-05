@@ -161,8 +161,8 @@ namespace nCine::RHI::PVR
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		PvrUniformBlock()

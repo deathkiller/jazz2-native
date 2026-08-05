@@ -113,7 +113,9 @@ namespace Jazz2::UI
 		// Every frame is decoded at full resolution (the delta encoding requires it), but the texture can
 		// be built from every n-th pixel of every n-th row. Uploading a 640x480 frame costs several
 		// megabytes of memory traffic per frame, which platforms without the bandwidth for it cannot
-		// sustain, so they trade sharpness for a video that plays at its intended speed.
+		// sustain, so they trade sharpness for a video that plays at its intended speed. It is also what
+		// keeps a frame within one hardware texture where that is smaller than the video (see
+		// SetupFrameTextureSize()).
 		std::uint32_t _videoDownscale;
 		std::uint32_t _textureWidth, _textureHeight;
 		float _frameDelay, _frameProgress;
@@ -284,6 +286,8 @@ namespace Jazz2::UI
 		void PrepareNextFrame();
 		bool LoadLegacyVideo(std::unique_ptr<Stream>&& s, StringView path);
 		bool LoadNativeVideo(std::unique_ptr<Stream>&& s, StringView path);
+		/** @brief Derives @ref _textureWidth / @ref _textureHeight from the platform's starting @p downscale */
+		void SetupFrameTextureSize(std::uint32_t downscale);
 		/** @brief Decodes one frame of the original format into @ref _buffer */
 		void DecodeFrameLegacy();
 		/** @brief Decodes one frame of the game's own format into @ref _buffer */

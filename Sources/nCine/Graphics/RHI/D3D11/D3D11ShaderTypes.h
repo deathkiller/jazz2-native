@@ -164,8 +164,8 @@ namespace nCine::RHI::D3D11
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		D3D11UniformBlock()

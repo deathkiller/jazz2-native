@@ -161,8 +161,8 @@ namespace nCine::RHI::Vulkan
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		VulkanUniformBlock()

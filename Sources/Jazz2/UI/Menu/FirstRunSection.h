@@ -13,11 +13,17 @@ namespace Jazz2::UI::Menu
 	class FirstRunSection : public WidgetSection
 	{
 	public:
+		FirstRunSection();
+
 		Recti GetClipRectangle(const Recti& contentBounds) override;
 		void OnShow(IMenuContainer* root) override;
 		void OnDraw(Canvas* canvas) override;
 
 	protected:
 		void OnBackPressed() override;
+
+	private:
+		/** @brief The preset rows, kept so their height can follow the view size (see @ref OnDraw()) */
+		CanvasWidget* _presetItems[2];
 	};
 }

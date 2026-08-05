@@ -176,54 +176,54 @@ namespace nCine
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::Iterator StaticHashMap<K, T, Capacity, HashFunc>::begin()
 	{
-		Iterator iterator(this, Iterator::SentinelTagInit::BEGINNING);
+		Iterator iterator(this, Iterator::SentinelTagInit::Beginning);
 		return ++iterator;
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rbegin()
 	{
-		Iterator iterator(this, Iterator::SentinelTagInit::END);
+		Iterator iterator(this, Iterator::SentinelTagInit::End);
 		return ReverseIterator(--iterator);
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::Iterator StaticHashMap<K, T, Capacity, HashFunc>::end()
 	{
-		return Iterator(this, Iterator::SentinelTagInit::END);
+		return Iterator(this, Iterator::SentinelTagInit::End);
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rend()
 	{
-		Iterator iterator(this, Iterator::SentinelTagInit::BEGINNING);
+		Iterator iterator(this, Iterator::SentinelTagInit::Beginning);
 		return ReverseIterator(iterator);
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	inline typename StaticHashMap<K, T, Capacity, HashFunc>::ConstIterator StaticHashMap<K, T, Capacity, HashFunc>::begin() const
 	{
-		ConstIterator iterator(this, ConstIterator::SentinelTagInit::BEGINNING);
+		ConstIterator iterator(this, ConstIterator::SentinelTagInit::Beginning);
 		return ++iterator;
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ConstReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rbegin() const
 	{
-		ConstIterator iterator(this, ConstIterator::SentinelTagInit::END);
+		ConstIterator iterator(this, ConstIterator::SentinelTagInit::End);
 		return ConstReverseIterator(--iterator);
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	inline typename StaticHashMap<K, T, Capacity, HashFunc>::ConstIterator StaticHashMap<K, T, Capacity, HashFunc>::end() const
 	{
-		return ConstIterator(this, ConstIterator::SentinelTagInit::END);
+		return ConstIterator(this, ConstIterator::SentinelTagInit::End);
 	}
 
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	typename StaticHashMap<K, T, Capacity, HashFunc>::ConstReverseIterator StaticHashMap<K, T, Capacity, HashFunc>::rend() const
 	{
-		ConstIterator iterator(this, ConstIterator::SentinelTagInit::BEGINNING);
+		ConstIterator iterator(this, ConstIterator::SentinelTagInit::Beginning);
 		return ConstReverseIterator(iterator);
 	}
 

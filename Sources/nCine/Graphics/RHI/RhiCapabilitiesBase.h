@@ -39,7 +39,7 @@ namespace nCine::RHI
 		std::int32_t _intValues[std::int32_t(IRhiCapabilities::IntValues::Count)];
 		/** @brief Cached availability flags of the queryable OpenGL extensions */
 		bool _extensions[std::int32_t(IRhiCapabilities::Extensions::Count)];
-		/** @brief Cached program binary formats, the first @ref IntValues::NUM_PROGRAM_BINARY_FORMATS are valid */
+		/** @brief Cached program binary formats, the first @ref IntValues::NumProgramBinaryFormats are valid */
 		std::int32_t _programBinaryFormats[MaxProgramBinaryFormats];
 
 		RhiCapabilitiesBase();
@@ -70,7 +70,7 @@ namespace nCine::RHI
 			std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments);
 
 		/**
-		 * @brief Derives @ref IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED from the raw block size
+		 * @brief Derives @ref IntValues::MaxUniformBlockSizeNormalized from the raw block size
 		 *
 		 * The raw limit is sometimes not reported correctly (and is unbounded on backends that decode uniforms
 		 * on the host), so the pipeline sizes its buffers from the value clamped into the [16 KB, 64 KB] window

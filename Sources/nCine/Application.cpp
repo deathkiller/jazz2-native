@@ -480,6 +480,38 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 }
 
 #if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
+// Appends a part of a function name, rewriting the compiler-specific spelling of an anonymous namespace to the
+// "{anonymous}" notation of GCC, so a log entry reads the same on every platform. Every compiler emits only its own
+// spelling, so only that one is ever searched for - and GCC, which already uses the target notation, does no work at
+// all. The order of the checks follows __DEATH_CURRENT_FUNCTION in Asserts.h: Clang-CL defines both compiler macros
+// and reports __PRETTY_FUNCTION__, so it belongs to the Clang case.
+static void AppendFunctionNamePart(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
+{
+#	if defined(DEATH_TARGET_CLANG) || defined(DEATH_TARGET_MSVC)
+	static constexpr StringView AnonymousNamespace = "{anonymous}"_s;
+#		if defined(DEATH_TARGET_CLANG)
+	// Appears in the middle of __PRETTY_FUNCTION__, e.g. "void nCine::(anonymous namespace)::Function()"
+	static constexpr StringView AnonymousNamespaceForeign = "(anonymous namespace)"_s;
+#		elif defined(DEATH_TARGET_MSVC)
+	// Appears in the middle of __FUNCTION__ and is spelled with a hyphen, e.g. "nCine::`anonymous-namespace'::Function"
+	static constexpr StringView AnonymousNamespaceForeign = "`anonymous-namespace'"_s;
+#		endif
+
+	// A name can carry more than one such segment, because on some compilers it includes the return type as well
+	StringView remaining = StringView(functionName, functionNameLength);
+	while (auto found = remaining.find(AnonymousNamespaceForeign)) {
+		AppendPart(dest, length, remaining.data(), (std::int32_t)(found.begin() - remaining.data()));
+		AppendPart(dest, length, AnonymousNamespace.data(), (std::int32_t)AnonymousNamespace.size());
+		remaining = remaining.suffix(found.end());
+	}
+
+	AppendPart(dest, length, remaining.data(), (std::int32_t)remaining.size());
+#	else
+	// GCC already uses the target notation, and the remaining compilers report only the bare function name
+	AppendPart(dest, length, functionName, functionNameLength);
+#	endif
+}
+
 static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const char* functionName, std::int32_t functionNameLength)
 {
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
@@ -554,13 +586,13 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		if (i > 0 && functionName[i] == '*') {
 			i++;
 		}
-		AppendPart(dest, length, &functionName[i], end - i);
+		AppendFunctionNamePart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 		if (isLambda) {
 			AppendPart(dest, length, LambdaSuffix.data(), (std::int32_t)LambdaSuffix.size());
 		}
 	} else {
-		AppendPart(dest, length, functionName, functionNameLength);
+		AppendFunctionNamePart(dest, length, functionName, functionNameLength);
 	}
 #	else
 	// Try to shorten lambda function names, for example "FunctionName::<lambda_fdcd1e49ba268f6f79b01fbdc7d2a72f>::operator ()()"
@@ -572,13 +604,13 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 	if (auto lambdaPrefix = functionNameView.find(LambdaPrefixMsvc)) {
 		if (functionNameView.suffix(lambdaPrefix.end()).hasSuffix(LambdaSuffixMsvc)) {
 			auto functionNamePrefix = functionNameView.prefix(lambdaPrefix.begin());
-			AppendPart(dest, length, functionNamePrefix.data(), (std::int32_t)functionNamePrefix.size());
+			AppendFunctionNamePart(dest, length, functionNamePrefix.data(), (std::int32_t)functionNamePrefix.size());
 			AppendPart(dest, length, LambdaSuffix.data(), (std::int32_t)LambdaSuffix.size());
 			return;
 		}
 	}
 
-	AppendPart(dest, length, functionName, functionNameLength);
+	AppendFunctionNamePart(dest, length, functionName, functionNameLength);
 #	endif
 }
 #endif

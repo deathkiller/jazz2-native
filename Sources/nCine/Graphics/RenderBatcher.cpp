@@ -16,7 +16,7 @@ namespace nCine
 	RenderBatcher::RenderBatcher()
 	{
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
-		UboMaxSize = std::uint32_t(caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+		UboMaxSize = std::uint32_t(caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxUniformBlockSizeNormalized));
 
 		// Create the first buffer right away
 		CreateBuffer(UboMaxSize);

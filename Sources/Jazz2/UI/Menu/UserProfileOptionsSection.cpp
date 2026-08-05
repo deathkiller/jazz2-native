@@ -303,25 +303,46 @@ namespace Jazz2::UI::Menu
 		if (_previewPalette[0] != nullptr && _previewMetadata != nullptr) {
 			// One animation state per character, in the same order as the palettes above
 			std::int32_t available = 0;
+			float widestFrame = 0.0f;
 			for (std::int32_t i = 0; i < PreviewCount; i++) {
-				if (_previewMetadata->FindAnimation((AnimState)i) != nullptr) {
+				auto* res = _previewMetadata->FindAnimation((AnimState)i);
+				if (_previewPalette[i] != nullptr && res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr) {
 					available++;
+					widestFrame = std::max(widestFrame, (float)res->Base->FrameDimensions.X);
 				}
 			}
 
 			if (available > 0) {
-				constexpr float scale = 1.0f;
-				constexpr float step = 32.0f;
-				float rowY = (topLine + bottomLine) * 0.5f;
-				float slotX = centerX + 200.0f - step * (available - 1) * 0.5f;
+				// The row is placed in absolute pixels next to the option column, which only a full-size
+				// panel has room for: on a view as narrow as the PSP's 480x272 a fixed +200 offset pushed
+				// the characters off the right edge. Fit the row into the space between the option column
+				// (the arrows of a selected row reach to about +115) and the panel edge instead, shrinking
+				// the previews when that space is narrower than the row, and dropping them altogether if
+				// it gets too small for them to be recognizable.
+				constexpr float stepAtFullSize = 32.0f;
+				float leftEdge = centerX + 130.0f;
+				float rightEdge = std::min(centerX + 340.0f, (float)(contentBounds.X + contentBounds.W) - 8.0f);
+				float rowWidth = stepAtFullSize * (available - 1) + widestFrame;
+				float scale = std::min(1.0f, (rightEdge - leftEdge) / rowWidth);
 
-				for (std::int32_t i = 0; i < PreviewCount; i++) {
-					if (_previewPalette[i] == nullptr) {
-						continue;
-					}
+				if (scale >= 0.5f) {
+					float step = stepAtFullSize * scale;
+					// Anchored at the right end of the free space, but never further right than the original
+					// full-size placement, so a large panel keeps exactly the layout it had
+					float rowCenterX = std::min(centerX + 200.0f, rightEdge - rowWidth * scale * 0.5f);
+					float rowY = (topLine + bottomLine) * 0.5f;
+					float slotX = rowCenterX - step * (available - 1) * 0.5f;
 
-					auto* res = _previewMetadata->FindAnimation((AnimState)i);
-					if (res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr) {
+					for (std::int32_t i = 0; i < PreviewCount; i++) {
+						if (_previewPalette[i] == nullptr) {
+							continue;
+						}
+
+						auto* res = _previewMetadata->FindAnimation((AnimState)i);
+						if (res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
+							continue;
+						}
+
 						GenericGraphicResource* base = res->Base;
 						std::int32_t frameCount = (res->FrameCount > 0 ? res->FrameCount : 1);
 						float animDuration = (res->AnimDuration > 0.0f ? res->AnimDuration : 1.0f);
@@ -342,9 +363,9 @@ namespace Jazz2::UI::Menu
 							base->FrameDimensions.As<float>() * scale);
 						pos += Vector2f(frameOffset.X * scale, frameOffset.Y * scale);
 						canvas->DrawTextureWithPalette(*base->TextureDiffuse, *_previewPalette[i], pos, IMenuContainer::MainLayer, size, texCoords, Colorf::White);
-					}
 
-					slotX += step;
+						slotX += step;
+					}
 				}
 			}
 		}

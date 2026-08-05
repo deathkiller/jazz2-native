@@ -66,9 +66,9 @@ namespace nCine::Backends
 	private:
 		enum class GamepadMode
 		{
-			AUTO_FIRST,
-			AUTO_ALL,
-			MANUAL
+			AutoFirst,
+			AutoAll,
+			Manual
 		};
 
 		static bool _inputEnabled;

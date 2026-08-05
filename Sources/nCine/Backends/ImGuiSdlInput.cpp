@@ -393,7 +393,7 @@ namespace nCine::Backends
 	bool ImGuiSdlInput::_mouseCanUseGlobalState = false;
 
 	ImVector<SDL_GameController*> ImGuiSdlInput::_gamepads;
-	ImGuiSdlInput::GamepadMode ImGuiSdlInput::_gamepadMode = ImGuiSdlInput::GamepadMode::AUTO_FIRST;
+	ImGuiSdlInput::GamepadMode ImGuiSdlInput::_gamepadMode = ImGuiSdlInput::GamepadMode::AutoFirst;
 	bool ImGuiSdlInput::_wantUpdateGamepadsList = false;
 
 	void ImGuiSdlInput::init(SDL_Window* window, SDL_GLContext glContextHandle)
@@ -440,7 +440,7 @@ namespace nCine::Backends
 #endif
 
 		// Gamepad handling
-		_gamepadMode = GamepadMode::AUTO_FIRST;
+		_gamepadMode = GamepadMode::AutoFirst;
 		_wantUpdateGamepadsList = true;
 
 		// Load mouse cursors
@@ -987,7 +987,7 @@ namespace nCine::Backends
 
 	void ImGuiSdlInput::closeGamepads()
 	{
-		if (_gamepadMode != GamepadMode::MANUAL) {
+		if (_gamepadMode != GamepadMode::Manual) {
 			for (SDL_GameController* gamepad : _gamepads) {
 				SDL_GameControllerClose(gamepad);
 			}
@@ -998,7 +998,7 @@ namespace nCine::Backends
 	void ImGuiSdlInput::setGamepadMode(GamepadMode mode, SDL_GameController** manualGamepadsArray, unsigned int manualGamepadsCount)
 	{
 		closeGamepads();
-		if (mode == GamepadMode::MANUAL) {
+		if (mode == GamepadMode::Manual) {
 			IM_ASSERT(manualGamepadsArray != nullptr && manualGamepadsCount > 0);
 			for (unsigned int n = 0; n < manualGamepadsCount; n++) {
 				_gamepads.push_back(manualGamepadsArray[n]);
@@ -1015,7 +1015,7 @@ namespace nCine::Backends
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Update list of controller(s) to use
-		if (_wantUpdateGamepadsList && _gamepadMode != GamepadMode::MANUAL) {
+		if (_wantUpdateGamepadsList && _gamepadMode != GamepadMode::Manual) {
 			closeGamepads();
 #if defined(WITH_SDL3)
 			// SDL3 enumerates already-gamepad-capable devices directly (as instance IDs), so no SDL_IsGamepad check
@@ -1024,7 +1024,7 @@ namespace nCine::Backends
 			for (int n = 0; n < gamepadCount; n++) {
 				if (SDL_GameController* gamepad = SDL_GameControllerOpen(gamepadIds[n])) {
 					_gamepads.push_back(gamepad);
-					if (_gamepadMode == GamepadMode::AUTO_FIRST)
+					if (_gamepadMode == GamepadMode::AutoFirst)
 						break;
 				}
 			}
@@ -1035,7 +1035,7 @@ namespace nCine::Backends
 				if (SDL_IsGameController(n)) {
 					if (SDL_GameController* gamepad = SDL_GameControllerOpen(n)) {
 						_gamepads.push_back(gamepad);
-						if (_gamepadMode == GamepadMode::AUTO_FIRST)
+						if (_gamepadMode == GamepadMode::AutoFirst)
 							break;
 					}
 				}

@@ -9,8 +9,9 @@ namespace nCine::RHI
 
 		Abstracts access to the version numbers, information strings, integer limits and extension availability
 		flags of the active rendering device, so renderer code can adapt to it without issuing backend queries
-		directly. The value and extension names are the OpenGL ones the render pipeline has always read; a
-		backend that has no OpenGL context publishes the equivalent limit of its own API under the same name.
+		directly. The values and extensions are the OpenGL ones the render pipeline has always read, named
+		after their `GL_` constants (@ref IntValues::MaxTextureSize is `GL_MAX_TEXTURE_SIZE`); a backend that
+		has no OpenGL context publishes the equivalent limit of its own API under the same name.
 		@ref RhiCapabilitiesBase is the shared implementation every backend derives from, aliased as
 		@ref RHI::Capabilities for the backend selected at compile time.
 	*/
@@ -37,17 +38,17 @@ namespace nCine::RHI
 		/** @brief Queryable runtime integer value */
 		enum class IntValues
 		{
-			MAX_TEXTURE_SIZE = 0,
-			MAX_TEXTURE_IMAGE_UNITS,
-			MAX_UNIFORM_BLOCK_SIZE,
-			MAX_UNIFORM_BLOCK_SIZE_NORMALIZED,
-			MAX_UNIFORM_BUFFER_BINDINGS,
-			MAX_VERTEX_UNIFORM_BLOCKS,
-			MAX_FRAGMENT_UNIFORM_BLOCKS,
-			UNIFORM_BUFFER_OFFSET_ALIGNMENT,
-			MAX_VERTEX_ATTRIB_STRIDE,
-			MAX_COLOR_ATTACHMENTS,
-			NUM_PROGRAM_BINARY_FORMATS,
+			MaxTextureSize = 0,
+			MaxTextureImageUnits,
+			MaxUniformBlockSize,
+			MaxUniformBlockSizeNormalized,
+			MaxUniformBufferBindings,
+			MaxVertexUniformBlocks,
+			MaxFragmentUniformBlocks,
+			UniformBufferOffsetAlignment,
+			MaxVertexAttribStride,
+			MaxColorAttachments,
+			NumProgramBinaryFormats,
 
 			Count
 		};
@@ -55,7 +56,7 @@ namespace nCine::RHI
 		/** @brief Queryable runtime integer array value */
 		enum class ArrayIntValues
 		{
-			PROGRAM_BINARY_FORMATS = 0,
+			ProgramBinaryFormats = 0,
 
 			Count
 		};
@@ -63,19 +64,19 @@ namespace nCine::RHI
 		/** @brief Queryable OpenGL extension, only ever available with the OpenGL family backend */
 		enum class Extensions
 		{
-			KHR_DEBUG = 0,
-			ARB_TEXTURE_STORAGE,
-			ARB_BUFFER_STORAGE,
-			ARB_GET_PROGRAM_BINARY,
+			KhrDebug = 0,
+			ArbTextureStorage,
+			ArbBufferStorage,
+			ArbGetProgramBinary,
 #if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-			OES_GET_PROGRAM_BINARY,
+			OesGetProgramBinary,
 #endif
-			EXT_TEXTURE_COMPRESSION_S3TC,
-			AMD_COMPRESSED_ATC_TEXTURE,
-			IMG_TEXTURE_COMPRESSION_PVRTC,
-			KHR_TEXTURE_COMPRESSION_ASTC_LDR,
+			ExtTextureCompressionS3tc,
+			AmdCompressedAtcTexture,
+			ImgTextureCompressionPvrtc,
+			KhrTextureCompressionAstcLdr,
 #if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
-			OES_COMPRESSED_ETC1_RGB8_TEXTURE,
+			OesCompressedEtc1Rgb8Texture,
 #endif
 			Count
 		};

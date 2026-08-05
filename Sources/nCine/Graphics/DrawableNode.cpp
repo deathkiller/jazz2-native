@@ -109,19 +109,19 @@ namespace nCine
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
 		switch (blendingPreset) {
-			case BlendingPreset::DISABLED:
+			case BlendingPreset::Disabled:
 				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::Zero);
 				break;
-			case BlendingPreset::ALPHA:
+			case BlendingPreset::Alpha:
 				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 				break;
-			case BlendingPreset::PREMULTIPLIED_ALPHA:
+			case BlendingPreset::PremultipliedAlpha:
 				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 				break;
-			case BlendingPreset::ADDITIVE:
+			case BlendingPreset::Additive:
 				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
 				break;
-			case BlendingPreset::MULTIPLY:
+			case BlendingPreset::Multiply:
 				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero);
 				break;
 		}

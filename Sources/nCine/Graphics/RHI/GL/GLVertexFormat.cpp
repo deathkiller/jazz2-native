@@ -51,7 +51,7 @@ namespace nCine::RHI::GL
 	void GLVertexFormat::Attribute::SetVboParameters(GLsizei stride, const GLvoid* pointer)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_1)
-		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE);
+		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::MaxVertexAttribStride);
 
 		if (stride > MaxVertexAttribStride) {
 			_stride = MaxVertexAttribStride;

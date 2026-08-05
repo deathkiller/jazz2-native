@@ -243,7 +243,7 @@ namespace nCine
 		};
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
-		std::int32_t maxUniformBlockSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		std::int32_t maxUniformBlockSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxUniformBlockSizeNormalized);
 
 		char sourceString[64];
 		StringView vertexStrings[2];
@@ -294,7 +294,7 @@ namespace nCine
 					if (instanceStride > 0) {
 						// The whole per-batch block is suballocated from a uniform buffer, so its size has to
 						// respect the uniform buffer offset alignment, exactly like the introspected size did
-						const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+						const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UniformBufferOffsetAlignment);
 						std::int32_t alignedStride = instanceStride;
 						if (offsetAlignment > 0) {
 							alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;

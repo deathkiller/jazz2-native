@@ -3,25 +3,19 @@
 #if defined(WITH_QT5)
 
 #include "../../Main.h"
+#include "../MainApplication.h"
+
 #include <QOpenGLWidget>
 
 #if defined(DEATH_TARGET_WINDOWS) && defined(ERROR)
 #	undef ERROR
 #endif
 
-namespace nCine
-{
-	class MainApplication;
-	class IAppEventHandler;
-}
-
-class QWindow;
-
 namespace nCine::Backends
 {
 	/**
 		@brief `QOpenGLWidget`-derived widget that hosts the engine
-		
+
 		Embeds an nCine `MainApplication` inside a Qt5 OpenGL widget, driving the
 		engine from the widget's GL callbacks and forwarding Qt5 events to it.
 	*/
@@ -30,11 +24,11 @@ namespace nCine::Backends
 		Q_OBJECT
 
 	public:
-		explicit Qt5Widget(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)())
+		explicit Qt5Widget(CreateAppEventHandlerDelegate createAppEventHandler)
 			: Qt5Widget(nullptr, createAppEventHandler, 0, nullptr) {}
-		Qt5Widget(std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv)
+		Qt5Widget(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv)
 			: Qt5Widget(nullptr, createAppEventHandler, argc, argv) {}
-		Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv);
+		Qt5Widget(QWidget* parent, CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv);
 		~Qt5Widget();
 
 		/** @brief If set to `false` the widget will stop automatically updating each frame */
@@ -61,7 +55,7 @@ namespace nCine::Backends
 
 	private:
 		MainApplication& _application;
-		std::unique_ptr<IAppEventHandler>(*_createAppEventHandler)();
+		CreateAppEventHandlerDelegate _createAppEventHandler;
 		bool _isInitialized;
 		bool _shouldUpdate;
 

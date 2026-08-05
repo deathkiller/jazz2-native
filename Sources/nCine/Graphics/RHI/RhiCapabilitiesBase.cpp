@@ -50,7 +50,7 @@ namespace nCine::RHI
 	std::int32_t RhiCapabilitiesBase::GetArrayValue(ArrayIntValues valueName, std::uint32_t index) const
 	{
 		std::int32_t value = 0;
-		if (valueName == ArrayIntValues::PROGRAM_BINARY_FORMATS && index < std::uint32_t(_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS])) {
+		if (valueName == ArrayIntValues::ProgramBinaryFormats && index < std::uint32_t(_intValues[(std::int32_t)IntValues::NumProgramBinaryFormats])) {
 			value = _programBinaryFormats[index];
 		}
 		return value;
@@ -76,30 +76,30 @@ namespace nCine::RHI
 		_infoStrings.apiVersion = "3.3";
 		_infoStrings.shadingLanguageVersion = nullptr;
 
-		_intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = maxTextureSize;
-		_intValues[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = maxTextureImageUnits;
-		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = maxUniformBlockSize;
-		_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = uniformBufferOffsetAlignment;
-		_intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = maxColorAttachments;
+		_intValues[(std::int32_t)IntValues::MaxTextureSize] = maxTextureSize;
+		_intValues[(std::int32_t)IntValues::MaxTextureImageUnits] = maxTextureImageUnits;
+		_intValues[(std::int32_t)IntValues::MaxUniformBlockSize] = maxUniformBlockSize;
+		_intValues[(std::int32_t)IntValues::UniformBufferOffsetAlignment] = uniformBufferOffsetAlignment;
+		_intValues[(std::int32_t)IntValues::MaxColorAttachments] = maxColorAttachments;
 
-		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 8;
-		_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 8;
-		_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 8;
-		_intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] = 2048;
-		_intValues[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] = 0;
+		_intValues[(std::int32_t)IntValues::MaxUniformBufferBindings] = 8;
+		_intValues[(std::int32_t)IntValues::MaxVertexUniformBlocks] = 8;
+		_intValues[(std::int32_t)IntValues::MaxFragmentUniformBlocks] = 8;
+		_intValues[(std::int32_t)IntValues::MaxVertexAttribStride] = 2048;
+		_intValues[(std::int32_t)IntValues::NumProgramBinaryFormats] = 0;
 
 		NormalizeUniformBlockSize();
 	}
 
 	void RhiCapabilitiesBase::NormalizeUniformBlockSize()
 	{
-		std::int32_t normalized = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
+		std::int32_t normalized = _intValues[(std::int32_t)IntValues::MaxUniformBlockSize];
 		if (normalized > 64 * 1024) {
 			normalized = 64 * 1024;
 		} else if (normalized <= 0) {
 			normalized = 16 * 1024;
 		}
-		_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = normalized;
+		_intValues[(std::int32_t)IntValues::MaxUniformBlockSizeNormalized] = normalized;
 	}
 
 	void RhiCapabilitiesBase::LogCapabilities() const
@@ -147,27 +147,27 @@ namespace nCine::RHI
 		LOGI("Rendering tier: {}{}{}{}", tier, palettedTextures, streamingTextures, framebufferFormat);
 
 		LOGI("--- Rendering device capabilities ---");
-		LOGI("Max texture size: {}", _intValues[(std::int32_t)IntValues::MAX_TEXTURE_SIZE]);
-		LOGI("Max texture image units: {}", _intValues[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS]);
-		LOGI("Max color attachments: {}", _intValues[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS]);
+		LOGI("Max texture size: {}", _intValues[(std::int32_t)IntValues::MaxTextureSize]);
+		LOGI("Max texture image units: {}", _intValues[(std::int32_t)IntValues::MaxTextureImageUnits]);
+		LOGI("Max color attachments: {}", _intValues[(std::int32_t)IntValues::MaxColorAttachments]);
 		// Not queryable on every target (ES 3.0 and below, WebGL, Apple ARM), where it stays 0
-		if (_intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] > 0) {
-			LOGI("Max vertex attribute stride: {}", _intValues[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+		if (_intValues[(std::int32_t)IntValues::MaxVertexAttribStride] > 0) {
+			LOGI("Max vertex attribute stride: {}", _intValues[(std::int32_t)IntValues::MaxVertexAttribStride]);
 		}
 
-		const std::int32_t blockSize = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE];
-		const std::int32_t blockSizeUsed = _intValues[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED];
+		const std::int32_t blockSize = _intValues[(std::int32_t)IntValues::MaxUniformBlockSize];
+		const std::int32_t blockSizeUsed = _intValues[(std::int32_t)IntValues::MaxUniformBlockSizeNormalized];
 		if (blockSize != blockSizeUsed) {
 			LOGI("Max uniform block size: {} ({} used)", blockSize, blockSizeUsed);
 		} else {
 			LOGI("Max uniform block size: {}", blockSize);
 		}
-		if (_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] > 0) {
+		if (_intValues[(std::int32_t)IntValues::MaxUniformBufferBindings] > 0) {
 			LOGI("Max uniform buffer bindings: {} (vertex {}, fragment {}), offset alignment: {}",
-				_intValues[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS],
-				_intValues[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS],
-				_intValues[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS],
-				_intValues[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+				_intValues[(std::int32_t)IntValues::MaxUniformBufferBindings],
+				_intValues[(std::int32_t)IntValues::MaxVertexUniformBlocks],
+				_intValues[(std::int32_t)IntValues::MaxFragmentUniformBlocks],
+				_intValues[(std::int32_t)IntValues::UniformBufferOffsetAlignment]);
 		} else {
 			LOGI("Uniform buffer objects: not available, uniforms are set individually");
 		}

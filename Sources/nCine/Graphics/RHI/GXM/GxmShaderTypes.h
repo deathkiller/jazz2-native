@@ -164,8 +164,8 @@ namespace nCine::RHI::GXM
 
 		enum class DiscoverUniforms
 		{
-			ENABLED,
-			DISABLED
+			Enabled,
+			Disabled
 		};
 
 		GxmUniformBlock()

@@ -28,7 +28,7 @@ namespace nCine
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		const std::int32_t glMajor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Major);
 		const std::int32_t glMinor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Minor);
-		const bool hasBufferStorage = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ARB_BUFFER_STORAGE) ||
+		const bool hasBufferStorage = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ArbBufferStorage) ||
 			(glMajor > 4 || (glMajor == 4 && glMinor >= 4));
 		_usePersistentMapping = (useBufferStorage && hasBufferStorage);
 		if (_usePersistentMapping) {
@@ -56,8 +56,8 @@ namespace nCine
 		iboSpecs.alignment = sizeof(std::uint16_t);
 		iboSpecs.persistent = _usePersistentMapping;
 
-		const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		const std::int32_t uboMaxSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UniformBufferOffsetAlignment);
+		const std::int32_t uboMaxSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxUniformBlockSizeNormalized);
 
 		BufferSpecifications& uboSpecs = _specs[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;

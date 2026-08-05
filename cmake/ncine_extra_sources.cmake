@@ -221,7 +221,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			target_link_libraries(${NCINE_APP} PRIVATE Qt5::Gamepad)
 		endif()
 
-		qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Qt5Widget.h)
+		qt5_wrap_cpp(MOC_SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.h)
 
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5Widget.h
@@ -235,9 +235,6 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Qt5GfxDevice.cpp
 			${MOC_SOURCES}
 		)
-
-		list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
-		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5JoyMapping.cpp)
 	endif()
 endif()
 

@@ -185,20 +185,20 @@ namespace nCine::RHI::GL
 			case PixelFormat::DXT1RGB:
 			case PixelFormat::DXT3:
 			case PixelFormat::DXT5: {
-				const bool hasS3tc = caps.HasExtension(IRhiCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC);
+				const bool hasS3tc = caps.HasExtension(IRhiCapabilities::Extensions::ExtTextureCompressionS3tc);
 				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
 				break;
 			}
 #if defined(RHI_GL_PROFILE_ES)
 			case PixelFormat::ETC1: {
-				const bool hasEct1 = caps.HasExtension(IRhiCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
+				const bool hasEct1 = caps.HasExtension(IRhiCapabilities::Extensions::OesCompressedEtc1Rgb8Texture);
 				FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
 				break;
 			}
 			case PixelFormat::ATC_RGB:
 			case PixelFormat::ATC_RGBA_Explicit:
 			case PixelFormat::ATC_RGBA_Interpolated: {
-				const bool hasAtc = caps.HasExtension(IRhiCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE);
+				const bool hasAtc = caps.HasExtension(IRhiCapabilities::Extensions::AmdCompressedAtcTexture);
 				FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
 				break;
 			}
@@ -206,7 +206,7 @@ namespace nCine::RHI::GL
 			case PixelFormat::PVRTC_2BPP_RGBA:
 			case PixelFormat::PVRTC_4BPP_RGB:
 			case PixelFormat::PVRTC_4BPP_RGBA: {
-				const bool hasPvr = caps.HasExtension(IRhiCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC);
+				const bool hasPvr = caps.HasExtension(IRhiCapabilities::Extensions::ImgTextureCompressionPvrtc);
 				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
@@ -225,7 +225,7 @@ namespace nCine::RHI::GL
 			case PixelFormat::ASTC_10x10:
 			case PixelFormat::ASTC_12x10:
 			case PixelFormat::ASTC_12x12: {
-				const bool hasAstc = caps.HasExtension(IRhiCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
+				const bool hasAstc = caps.HasExtension(IRhiCapabilities::Extensions::KhrTextureCompressionAstcLdr);
 				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
 				break;
 			}

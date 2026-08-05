@@ -38,7 +38,7 @@ namespace nCine::RHI::GL
 		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, _name);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &uniformCount);
 
-		if (discover == DiscoverUniforms::ENABLED && uniformCount > 0) {
+		if (discover == DiscoverUniforms::Enabled && uniformCount > 0) {
 			DEATH_ASSERT(uniformCount <= MaxNumBlockUniforms);
 			GLuint uniformIndices[MaxNumBlockUniforms];
 			GLint uniformTypes[MaxNumBlockUniforms];
@@ -86,14 +86,14 @@ namespace nCine::RHI::GL
 		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UniformBufferOffsetAlignment);
 		_alignAmount = (offsetAlignment - _size % offsetAlignment) % offsetAlignment;
 		_size += _alignAmount;
 #endif
 	}
 
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index)
-		: GLUniformBlock(program, index, DiscoverUniforms::ENABLED)
+		: GLUniformBlock(program, index, DiscoverUniforms::Enabled)
 	{
 	}
 
@@ -110,7 +110,7 @@ namespace nCine::RHI::GL
 		_name[length] = '\0';
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UniformBufferOffsetAlignment);
 		_alignAmount = (offsetAlignment - _size % offsetAlignment) % offsetAlignment;
 		_size += _alignAmount;
 	}

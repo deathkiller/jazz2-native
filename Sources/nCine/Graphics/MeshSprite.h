@@ -55,8 +55,8 @@ namespace nCine
 		 */
 		enum class TextureCutMode
 		{
-			RESIZE,									/**< Sizes the sprite from the texture rectangle */
-			CROP									/**< Sizes the sprite from the bounding box of the supplied points */
+			Resize,									/**< Sizes the sprite from the texture rectangle */
+			Crop									/**< Sizes the sprite from the bounding box of the supplied points */
 		};
 
 		/** @brief Default constructor for a sprite with no parent and no texture, positioned in the origin */
