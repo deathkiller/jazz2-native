@@ -85,6 +85,22 @@
 		defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_RGB_LIGHTS
 #endif
+/**
+	@brief Whether the current platform can convert the original game data into a cache of its own
+
+	The Dreamcast plays from a disc and the GameCube has nowhere to put a cache the size of a converted
+	installation, and the web build is prepared entirely ahead of time - none of the three can write one,
+	so they consume a content tree prebaked with @ref asset-packer "AssetPacker", skip the conversion
+	altogether and never look for the original game files, which are not there in the first place.
+
+	Everywhere else the first-run conversion exists, including the PlayStation Portable and the Wii,
+	where the content sits on a writable memory stick or SD card. Those two are usually given a prebaked
+	tree as well, which is recognized at runtime rather than assumed here, see
+	@relativeref{Jazz2,ContentResolver::IsContentPrebaked()}.
+*/
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE)
+#	define NCINE_HAS_WRITABLE_CACHE
+#endif
 
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)

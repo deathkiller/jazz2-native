@@ -245,7 +245,7 @@ namespace nCine::RHI::PVR
 		}
 
 		// DefaultBatchedSpritesNoTexture - from DefaultBatchedSpritesNoTexture.shader:fixed_function()
-		// Shared by: DefaultBatchedSpritesNoTexture, DefaultSpriteNoTexture [DefaultSpriteNoTexture.shader:fixed_function()], DefaultSprite [DefaultSprite.shader:fixed_function()], DefaultBatchedSprites [DefaultSprite.shader:fixed_function()], PaletteRemap [PaletteRemap.shader:fixed_function()], BatchedPaletteRemap [PaletteRemap.shader:fixed_function()]
+		// Shared by: DefaultBatchedSpritesNoTexture, DefaultSprite [DefaultSprite.shader:fixed_function()], DefaultBatchedSprites [DefaultSprite.shader:fixed_function()], DefaultSpriteNoTexture [DefaultSpriteNoTexture.shader:fixed_function()], PaletteRemap [PaletteRemap.shader:fixed_function()], BatchedPaletteRemap [PaletteRemap.shader:fixed_function()]
 		void DefaultBatchedSpritesNoTexture_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -273,9 +273,9 @@ namespace nCine::RHI::PVR
 			}
 		}
 
-		// OutlinePalette - from OutlinePalette.shader:fixed_function()
-		// Shared by: OutlinePalette, BatchedOutlinePalette, Outline [Outline.shader:fixed_function()], BatchedOutline [Outline.shader:fixed_function()]
-		void OutlinePalette_Effect(EffectContext& ctx)
+		// Outline - from Outline.shader:fixed_function()
+		// Shared by: Outline, BatchedOutline, OutlinePalette [OutlinePalette.shader:fixed_function()], BatchedOutlinePalette [OutlinePalette.shader:fixed_function()]
+		void Outline_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
 			const vec4 COLOR = LoadColor(ctx.Color());
@@ -311,9 +311,9 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackgroundCircle - from TexturedBackgroundCircle.shader:fixed_function(pvr, psp)
-		// Shared by: TexturedBackgroundCircle, TexturedBackgroundCircle (DITHER), TexturedBackground [TexturedBackground.shader:fixed_function(pvr, psp)], TexturedBackground (DITHER) [TexturedBackground.shader:fixed_function(pvr, psp)]
-		void TexturedBackgroundCircle_Effect(EffectContext& ctx)
+		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, psp)
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, psp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, psp)]
+		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
 			if (!ctx.HasUniform("uViewSize") || !ctx.HasUniform("uShift") || !ctx.HasUniform("uHorizonColor")) {
@@ -482,21 +482,21 @@ namespace nCine::RHI::PVR
 			{ "Colorized", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "BatchedColorized", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "Combine", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
-			{ "CombineWithWaterLow", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
 			{ "CombineWithWater", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
+			{ "CombineWithWaterLow", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
 			{ "DefaultBatchedSpritesNoTexture", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "DefaultMeshSprite", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LineStripMesh, nullptr },
-			{ "DefaultSpriteNoTexture", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "DefaultSprite", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "DefaultBatchedSprites", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "DefaultSpriteNoTexture", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "FrozenMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
 			{ "FrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
 			{ "BatchedFrozenMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
 			{ "BatchedFrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
-			{ "OutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &OutlinePalette_Effect },
-			{ "BatchedOutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &OutlinePalette_Effect },
-			{ "Outline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &OutlinePalette_Effect },
-			{ "BatchedOutline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &OutlinePalette_Effect },
+			{ "Outline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "BatchedOutline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "OutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "BatchedOutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
 			{ "PaletteRemap", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "BatchedPaletteRemap", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "PartialWhiteMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
@@ -505,12 +505,12 @@ namespace nCine::RHI::PVR
 			{ "BatchedPartialWhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
 			{ "ShieldFire", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
 			{ "ShieldLightning", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
-			{ "TexturedBackgroundCircle", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackgroundCircle_Effect },
-			{ "TexturedBackgroundCircle", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackgroundCircle_Effect },
-			{ "TexturedBackground", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackgroundCircle_Effect },
-			{ "TexturedBackground", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackgroundCircle_Effect },
-			{ "TileMapMeshPalette", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
+			{ "TexturedBackground", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackground", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCircle", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCircle", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
 			{ "TileMapMesh", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
+			{ "TileMapMeshPalette", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
 			{ "Transition", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &Transition_Effect },
 			{ "WhiteMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
 			{ "WhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },

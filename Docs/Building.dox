@@ -152,19 +152,18 @@ See @ref building-config-params-uwp for more details.
 @subsection building-consoles Building for consoles
 
 Six consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
-The build is configured the same way as above --- @cpp "Build<Platform>.sh" @ce scripts in the
-repository root wrap it --- but every one of them also needs its toolchain installed, its own
-packaging step and, on four of them, a game content tree prepared in advance with
-@ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
+The build is configured the same way as above, but every one of them also needs its toolchain
+installed, its own packaging step and, on four of them, a game content tree prepared in advance
+with @ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
 
-Console | Toolchain | Build script | Details
-------- | --------- | ------------ | -------
-Sega Dreamcast | KallistiOS | @cpp "BuildDreamcast.sh" @ce | @ref consoles-dreamcast
-PlayStation Portable | pspdev | @cpp "BuildPsp.sh" @ce | @ref consoles-psp
-Nintendo Wii | devkitPPC + libogc | @cpp "BuildWii.sh" @ce | @ref consoles-wii
-Nintendo GameCube | devkitPPC + libogc | @cpp "BuildGameCube.sh" @ce | @ref consoles-gamecube
-PS Vita | VitaSDK | @cpp "BuildVita.sh" @ce | @ref consoles-vita
-Nintendo Switch | devkitA64 | --- | @ref consoles-switch
+Console | Toolchain | Details
+------- | --------- | -------
+Sega Dreamcast | KallistiOS | @ref consoles-dreamcast
+Nintendo Wii | devkitPPC + libogc | @ref consoles-wii
+Nintendo GameCube | devkitPPC + libogc | @ref consoles-gamecube
+Nintendo Switch | devkitA64 | @ref consoles-switch
+PlayStation Portable | pspdev | @ref consoles-psp
+PlayStation Vita | VitaSDK | @ref consoles-vita
 
 @m_class{m-noindent}
 
@@ -197,15 +196,17 @@ The following parameters can be used to customize the build:
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita** and **Nintendo Switch**) --- Preferred core backend
     -   Possible values: `GLFW`, `SDL2`, `SDL3`
     -   Ignored on **Android**, **UWP** and the @ref consoles "consoles with a bespoke window backend"
--   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce) --- Preferred rendering backend (RHI)
+-   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce, @cpp "GXM" @ce on **PS Vita**) --- Preferred rendering backend (RHI)
     -   Possible values:
         - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
         - `D3D11` --- Uses Direct3D 11 (Windows only)
         - `Vulkan` --- Uses Vulkan
+        - `GXM` --- Uses **sceGxm** directly (**PS Vita** only), see @ref consoles-vita
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
+    -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
+        available on **PS Vita**
     -   Pinned to the console's only rendering backend on **Sega Dreamcast** (`PVR`), **Nintendo Wii**
-        and **Nintendo GameCube** (`GX`) and **PlayStation Portable** (`GU`); any other value is a
-        configure error there, see @ref consoles
+        and **Nintendo GameCube** (`GX`) and **PlayStation Portable** (`GU`), see @ref consoles
 -   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
     -   Possible values:
         - `Core` --- OpenGL 3.3 core profile (GLSL 330, uniform buffer objects, `gl_VertexID`)
@@ -224,7 +225,7 @@ The following parameters can be used to customize the build:
         render targets --- while the `Software` backend uses it for the screen buffer only, since its
         rasterizer works on RGBA8 internally either way and packed render targets would only add a conversion
         per span
-    -   Only offered for the `Software` and `OpenGL` backends; the consoles present through a format their
+    -   Only offered for the `Software` and `OpenGL` backends --- the consoles present through a format their
         hardware fixes, and 5/6/5 swap chains are not reliably available on D3D11/Vulkan
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
 -   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten** and **PlayStation Portable**) --- Allow to use multiple threads for better performance

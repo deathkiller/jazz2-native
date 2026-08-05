@@ -4,8 +4,8 @@ set(GENERATED_SOURCE_DIR "${CMAKE_BINARY_DIR}/Generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_SOURCE_DIR}")
 
 # Shader sources are preprocessed offline by ShaderCompiler into committed headers under
-# "Sources/Shaders/Generated/" (see Sources/Utilities/ShaderCompiler/GenerateAll.ps1), so no shader
-# embedding or file installation happens at build time anymore
+# "Sources/Shaders/Generated/" (see "ShaderCompiler --generate-all"), so no shader embedding or file
+# installation happens at build time anymore
 
 if(WIN32)
 	if(DEDICATED_SERVER)

@@ -205,9 +205,12 @@ namespace
 		LOGI("                         Convert only levels that belong to an episode");
 		LOGI("");
 		LOGI("  pack-font <source .png> <target .font>");
-		LOGI("    Packs a grid image and the character list next to it (<source .png>.font) into a single file");
+		LOGI("    Packs a grid image and the character list next to it into a single file. The list is read from");
+		LOGI("    <source .png>.json, or from the binary <source .png>.font if there is no JSON next to the image");
 		LOGI("  unpack-font <source .font> <target .png>");
-		LOGI("    Unpacks a font back into a grid image and a character list, ready to be edited and packed again");
+		LOGI("    Unpacks a font back into a grid image and a character list, ready to be edited and packed again.");
+		LOGI("    The list is written both as <target .png>.json, which is the one to edit, and as the binary");
+		LOGI("    <target .png>.font");
 		LOGI("  apply-palette <source .png> <target .png>");
 		LOGI("    Replaces the palette indices of an image with the colors they stand for, so it can be edited");
 		LOGI("  to-indices <source .png> <target .png>");
@@ -305,8 +308,12 @@ namespace
 		return layout;
 	}
 
-	/** @brief Copies a directory tree, adding to whatever is already at the target */
-	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath)
+	/**
+		@brief Copies a directory tree, adding to whatever is already at the target
+
+		@param skippedNames	Entries of the top level that are not copied at all
+	*/
+	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath, ArrayView<const StringView> skippedNames = {})
 	{
 		if (!fs::CreateDirectories(targetPath)) {
 			return false;
@@ -314,11 +321,52 @@ namespace
 
 		bool success = true;
 		for (auto item : fs::Directory(sourcePath)) {
-			String targetItem = fs::CombinePath(targetPath, fs::GetFileName(item));
+			StringView itemName = fs::GetFileName(item);
+			bool skipped = false;
+			for (StringView skippedName : skippedNames) {
+				if (itemName == skippedName) {
+					skipped = true;
+					break;
+				}
+			}
+			if (skipped) {
+				continue;
+			}
+
+			String targetItem = fs::CombinePath(targetPath, itemName);
 			if (fs::DirectoryExists(item)) {
 				success &= CopyDirectoryRecursive(item, targetItem);
 			} else if (!fs::Copy(item, targetItem)) {
 				LOGW("Cannot copy \"{}\" to \"{}\"", item, targetItem);
+				success = false;
+			}
+		}
+		return success;
+	}
+
+	/**
+		@brief Adds a directory tree to a package under the specified path
+
+		A file the package already carries is left out --- the conversion runs first, so what the original data
+		provides is what a path present in both resolves to, exactly as it does when the two are separate.
+	*/
+	bool AddDirectoryToPak(PakWriter& pakWriter, StringView sourcePath, StringView targetPath)
+	{
+		bool success = true;
+		for (auto item : fs::Directory(sourcePath)) {
+			String targetItem = fs::CombinePath(targetPath, fs::GetFileName(item));
+			if (fs::DirectoryExists(item)) {
+				success &= AddDirectoryToPak(pakWriter, item, targetItem);
+				continue;
+			}
+
+			if (pakWriter.FileExists(targetItem)) {
+				continue;
+			}
+
+			auto s = fs::Open(item, FileAccess::Read);
+			if (!s->IsValid() || !pakWriter.AddFile(*s, targetItem, PakPreferredCompression::Deflate)) {
+				LOGW("Cannot add \"{}\" to the package", item);
 				success = false;
 			}
 		}
@@ -403,24 +451,51 @@ int main(int argc, char** argv)
 
 	LOGI("Converting \"{}\" to \"{}\"...", layout.OriginalsPath, outputPath);
 
-	// The game's own content (fonts, metadata, translations, shaders) is not derived from anything in the
-	// original data, so a target that has to be self-contained needs it copied in alongside
-	if (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop) {
+	// The two directories the game reads through the package layer go inside the package instead of next to
+	// it, which is one file to open rather than a few hundred - the difference a console actually pays for.
+	// Everything else the tree carries is read as a loose file and has to stay one.
+	static const StringView PackedContentDirectories[] = { "Animations"_s, "Metadata"_s };
+
+	// The game's own content (fonts, animations, metadata, translations) is not derived from anything in the
+	// original data, so a target that has to be self-contained needs it carried over alongside
+	const bool selfContained = (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop);
+	if (selfContained) {
 		LOGI("Copying \"{}\"...", layout.ContentPath);
-		CopyDirectoryRecursive(layout.ContentPath, outputPath);
+		CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories);
+	}
+
+	// A tree that is loaded as it is gets the package name the game recognizes as "already converted", so it
+	// never tries to rebuild a cache of its own from original files that are not deployed with it
+	StringView packageName = (options.Profile == TargetProfile::Desktop
+		? Compatibility::AssetConverter::SourcePackage
+		: Compatibility::AssetConverter::PrebakedPackage);
+
+	PakWriter pakWriter(fs::CombinePath(outputPath, packageName), true);
+	if (!pakWriter.IsValid()) {
+		LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, packageName));
+		return 1;
 	}
 
 	Compatibility::JJ2Version version;
-	switch (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, outputPath, version)) {
-		case Compatibility::AssetConverter::Result::CannotWriteTarget:
-			LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, "Source.pak"_s));
-			return 1;
-		case Compatibility::AssetConverter::Result::UnsupportedVersion:
-			LOGE("Provided Jazz Jackrabbit 2 version is not supported");
-			return 1;
-		default:
-			break;
+	if (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, pakWriter, version) ==
+			Compatibility::AssetConverter::Result::UnsupportedVersion) {
+		LOGE("Provided Jazz Jackrabbit 2 version is not supported");
+		return 1;
 	}
+
+	// Added after the conversion, so a path both of them have resolves to what the original data provided,
+	// which is what it does when the two are kept apart
+	if (selfContained) {
+		for (StringView packedDirectory : PackedContentDirectories) {
+			String packedPath = fs::CombinePath(layout.ContentPath, packedDirectory);
+			if (fs::DirectoryExists(packedPath)) {
+				LOGI("Packing \"{}\"...", packedPath);
+				AddDirectoryToPak(pakWriter, packedPath, packedDirectory);
+			}
+		}
+	}
+
+	pakWriter.Finalize();
 
 	SmallVector<String, 0> skippedLevels;
 	Compatibility::AssetConverter::ConversionOptions conversionOptions;

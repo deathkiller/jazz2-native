@@ -27,6 +27,10 @@ set(SOURCES
 	# deliberately not linked, so the tool has no renderer and no window backend
 	${ASSET_PACKER_SHARED_SOURCES}
 	${CONVERTER_SOURCES}
+	# Reads the JSON font descriptions, the same library the game parses its own JSON with
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/reader.cpp
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/value.cpp
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/writer.cpp
 )
 
 ncine_assign_source_group(PATH_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../../ ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

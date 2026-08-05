@@ -136,23 +136,30 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	AssetConverter::Result AssetConverter::ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath, JJ2Version& version)
+	AssetConverter::Result AssetConverter::ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath,
+		JJ2Version& version, StringView packageName)
 	{
 		version = JJ2Version::Unknown;
 
-		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(targetPath, "Source.pak"_s), true);
-		if (!pakWriter->IsValid()) {
+		PakWriter pakWriter(fs::CombinePath(targetPath, packageName), true);
+		if (!pakWriter.IsValid()) {
 			return Result::CannotWriteTarget;
 		}
 
-		version = JJ2Anims::Convert(animsPath, *pakWriter);
+		return ConvertSourceAssets(animsPath, sourcePath, pakWriter, version);
+	}
+
+	AssetConverter::Result AssetConverter::ConvertSourceAssets(StringView animsPath, StringView sourcePath,
+		PakWriter& pakWriter, JJ2Version& version)
+	{
+		version = JJ2Anims::Convert(animsPath, pakWriter);
 		if (version == JJ2Version::Unknown) {
 			return Result::UnsupportedVersion;
 		}
 
 		JJ2Data data;
 		if (data.Open(fs::CombinePath(sourcePath, "Data.j2d"_s), false)) {
-			data.Convert(*pakWriter, version);
+			data.Convert(pakWriter, version);
 		}
 
 		return Result::Success;

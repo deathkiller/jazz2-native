@@ -119,8 +119,9 @@ namespace Jazz2::UI::Menu
 			fs::LaunchDirectoryAsync(sourcePath);
 		});
 #endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (!isInGame) {
+#if defined(NCINE_HAS_WRITABLE_CACHE)
+		// A prepared content tree is loaded as it is, so there is no cache of converted files to refresh
+		if (!isInGame && !ContentResolver::Get().IsContentPrebaked()) {
 			// TRANSLATORS: Menu item in Options > Gameplay section
 			list->Add<ListItem>(_("Refresh Cache"), [root]() { root->SwitchToSection<RefreshCacheSection>(); });
 		}

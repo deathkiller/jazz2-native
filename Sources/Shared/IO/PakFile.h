@@ -178,6 +178,13 @@ namespace Death { namespace IO {
 
 		/** @brief Adds a file to the `.pak` container */
 		bool AddFile(Stream& stream, Containers::StringView path, PakPreferredCompression preferredCompression = PakPreferredCompression::None);
+		/**
+			@brief Returns `true` if the container already contains a file at the specified path
+
+			For merging two sets of files into one container, where the one added first is the one that should
+			be kept --- @ref AddFile() cannot report that, a hashed index stores no paths to compare against.
+		*/
+		bool FileExists(Containers::StringView path) const;
 		/** @brief Writes file index and finalizes the `.pak` containers */
 		void Finalize();
 

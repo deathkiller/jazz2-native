@@ -1411,6 +1411,9 @@ namespace Death { namespace IO {
 		}
 		::CoTaskMemFree(pathW);
 		return result;
+#else
+		// Other platforms have no per-user configuration directory
+		return {};
 #endif
 	}
 
@@ -2192,24 +2195,25 @@ namespace Death { namespace IO {
 		String fullPath = String{nullTerminatedPath};
 		bool slashWasLast = true;
 		struct stat sb;
-		for (std::size_t i = 0; i < fullPath.size(); i++) {
+		// Skip the path root, it always exists and cannot be created. On consoles it's a mount point
+		// (e.g., "ms0:"), which is not a valid path on its own, so it would be resolved against the current
+		// working directory instead, trying to create "<cwd>/ms0:"
+		for (std::size_t i = GetPathRootLength(fullPath); i < fullPath.size(); i++) {
 			if (fullPath[i] == '\0') {
 				break;
 			}
 
 			if (fullPath[i] == '/' || fullPath[i] == '\\') {
-				if (i > 0) {
-					fullPath[i] = '\0';
-					if (::lstat(fullPath.data(), &sb) != 0) {
-						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
+				fullPath[i] = '\0';
+				if (::lstat(fullPath.data(), &sb) != 0) {
+					if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"{}\" with error {}{}", fullPath, errno, __GetUnixErrorSuffix(errno));
+						LOGW("Cannot create directory \"{}\" with error {}{}", fullPath.prefix(i), errno, __GetUnixErrorSuffix(errno));
 #	endif
-							return false;
-						}
+						return false;
 					}
-					fullPath[i] = '/';
 				}
+				fullPath[i] = '/';
 				slashWasLast = true;
 			} else {
 				slashWasLast = false;

@@ -20,9 +20,17 @@ jobs:
         include:
         - BuildType: Release
           Platform: ARM
-
+          GLProfile: ES3
         - BuildType: Release
           Platform: x64
+          GLProfile: ES3
+
+        - BuildType: Release
+          Platform: ARM
+          GLProfile: ES2
+        - BuildType: Release
+          Platform: x64
+          GLProfile: ES2
 
     runs-on: 'ubuntu-latest'
 
@@ -50,7 +58,7 @@ jobs:
         rm -f ./Content/Translations/*.po
         
         export JAVA_HOME=$JAVA_HOME_17_X64
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture"
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_BUILD_ANDROID=ON -D NCINE_UNIVERSAL_APK="$universalApk" -D NCINE_NDK_ARCHITECTURES="$architecture" -D NCINE_RHI_GL_PROFILE=${{ matrix.GLProfile }}
 
     - name: 'Build'
       run: |
@@ -88,5 +96,5 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v7
       with:
-        name: Jazz2_Android_${{ matrix.Platform }}
+        name: Jazz2_Android_${{ matrix.Platform }}${{ matrix.GLProfile != 'ES3' && format('_{0}', matrix.GLProfile) || '' }}
         path: ./_package/

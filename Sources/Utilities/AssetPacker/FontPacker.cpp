@@ -9,15 +9,21 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
+#include <string_view>
 
+#include <Base/Format.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
 #include <Core/Logger.h>
 #include <IO/FileStream.h>
+#include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 #include <Utf8.h>
+
+#include <jsoncpp/json.h>
 
 using namespace Death;
 using namespace Death::Containers;
@@ -175,6 +181,348 @@ namespace Jazz2::AssetPacker
 			}
 
 			return s.IsValid();
+		}
+
+		/** @brief Appends a whole number to a description being assembled */
+		void AppendNumber(std::string& target, std::int64_t value)
+		{
+			char buffer[24];
+			target.append(buffer, formatInto(buffer, "{}", value));
+		}
+
+		/**
+			@brief Whether a character can be written into a description as itself
+
+			Every character a font holds has a codepoint, but not every codepoint has a spelling that survives
+			being written into a text file and read back: control characters are invisible, surrogates are not
+			characters at all, and anything past the last plane cannot be encoded. Those are written as bare
+			numbers instead.
+		*/
+		bool HasVisibleSpelling(char32_t codepoint)
+		{
+			return (codepoint >= 0x20 && codepoint != 0x7F && (codepoint < 0x80 || codepoint > 0x9F)
+				&& (codepoint < 0xD800 || codepoint > 0xDFFF) && codepoint <= 0x10FFFF);
+		}
+
+		/** @brief Appends a JSON string holding a single character */
+		void AppendCharacterLiteral(std::string& target, char32_t codepoint)
+		{
+			char encoded[4];
+			const std::size_t length = Utf8::FromCodePoint(codepoint, encoded);
+
+			target += '"';
+			for (std::size_t i = 0; i < length; i++) {
+				// Only the two characters JSON gives a meaning of their own need escaping - everything that
+				// would take more than a backslash is kept out of here by the caller
+				if (encoded[i] == '"' || encoded[i] == '\\') {
+					target += '\\';
+				}
+				target += encoded[i];
+			}
+			target += '"';
+		}
+
+		/**
+			@brief Writes the character list as the JSON description a font is edited through
+
+			Holds the same as @ref WriteCharacterList, spelled out: the cell size and the metrics as named
+			fields, then every character on a line of its own, written as the character itself wherever it has
+			a spelling. Assembled by hand rather than handed to a JSON writer, which would spread every
+			character over four lines - a font has hundreds of them, and being editable is the whole point of
+			the file.
+		*/
+		bool WriteCharacterListJson(StringView path, const FontData& font, std::int32_t cellWidth, std::int32_t cellHeight, std::int32_t columns)
+		{
+			std::string text;
+			text.reserve(font.Glyphs.size() * 40 + 256);
+
+			text += "{\n\t\"CellWidth\": ";
+			AppendNumber(text, cellWidth);
+			text += ",\n\t\"CellHeight\": ";
+			AppendNumber(text, cellHeight);
+			text += ",\n\t\"Columns\": ";
+			AppendNumber(text, columns);
+			text += ",\n\t\"LineHeight\": ";
+			AppendNumber(text, font.LineHeight);
+			text += ",\n\t\"BaseSpacing\": ";
+			AppendNumber(text, font.BaseSpacing);
+			text += ",\n\t\"AsciiFirst\": ";
+			AppendNumber(text, font.AsciiFirst);
+			text += ",\n\t\"AsciiCount\": ";
+			AppendNumber(text, font.AsciiCount);
+			text += ",\n\t\"Characters\": [";
+
+			for (std::size_t i = 0; i < font.Glyphs.size(); i++) {
+				const Glyph& glyph = font.Glyphs[i];
+				text += (i > 0 ? ",\n\t\t{ " : "\n\t\t{ ");
+				if (glyph.Codepoint == FontFormat::FallbackCodepoint) {
+					text += "\"Fallback\": true";
+				} else if (HasVisibleSpelling(glyph.Codepoint)) {
+					text += "\"Char\": ";
+					AppendCharacterLiteral(text, glyph.Codepoint);
+				} else {
+					text += "\"Codepoint\": ";
+					AppendNumber(text, std::int64_t(glyph.Codepoint));
+				}
+				text += ", \"Advance\": ";
+				AppendNumber(text, glyph.Advance);
+				text += " }";
+			}
+
+			text += "\n\t]\n}\n";
+
+			FileStream s(path, FileAccess::Write);
+			if (!s.IsValid()) {
+				LOGE("Cannot open \"{}\" for writing", path);
+				return false;
+			}
+
+			s.Write(text.data(), std::int64_t(text.size()));
+			return s.IsValid();
+		}
+
+		/**
+			@brief Reads one whole-number field of a JSON description
+
+			Fails on a field that is there but unusable, which is a mistake worth stopping for. A field that
+			isn't there at all leaves @p value alone and succeeds, so whatever it was initialized with is what
+			says the field was missing - and whether it had to be there is the caller's to decide.
+		*/
+		bool TryReadNumber(StringView path, const Json::Value& parent, const char* name,
+			std::int32_t min, std::int32_t max, std::int32_t& value)
+		{
+			const Json::Value& item = parent[name];
+			if (item.isNull()) {
+				return true;
+			}
+
+			std::int64_t result;
+			if (item.get(result) != Json::SUCCESS) {
+				LOGE("\"{}\" has \"{}\" that is not a whole number", path, name);
+				return false;
+			}
+			if (result < min || result > max) {
+				LOGE("\"{}\" has \"{}\" of {}, outside the {} to {} it may be", path, name, result, min, max);
+				return false;
+			}
+
+			value = std::int32_t(result);
+			return true;
+		}
+
+		/**
+			@brief Reads one entry of the character list of a JSON description
+
+			A character is named the way it is easiest to write down: as itself wherever it has a spelling, as
+			a bare codepoint where it hasn't, and as @cpp "Fallback": true @ce for the one entry that stands
+			for no character at all - what is drawn in place of anything the font doesn't have.
+		*/
+		bool ReadCharacter(StringView path, const Json::Value& item, std::int32_t index, Glyph& glyph)
+		{
+			if (!item.isObject()) {
+				LOGE("\"{}\" has a character at position {} that is not an object", path, index);
+				return false;
+			}
+
+			bool isFallback = false;
+			const Json::Value& fallbackItem = item["Fallback"];
+			if (!fallbackItem.isNull() && fallbackItem.get(isFallback) != Json::SUCCESS) {
+				LOGE("\"{}\" has a character at position {} whose \"Fallback\" is not true or false", path, index);
+				return false;
+			}
+
+			std::string_view spelled;
+			const Json::Value& charItem = item["Char"];
+			if (!charItem.isNull() && charItem.get(spelled) != Json::SUCCESS) {
+				LOGE("\"{}\" has a character at position {} whose \"Char\" is not a string", path, index);
+				return false;
+			}
+
+			std::int64_t codepoint = -1;
+			const Json::Value& codepointItem = item["Codepoint"];
+			if (!codepointItem.isNull() && (codepointItem.get(codepoint) != Json::SUCCESS
+					|| codepoint < 0 || codepoint > UINT32_MAX)) {
+				LOGE("\"{}\" has a character at position {} whose \"Codepoint\" is not a codepoint", path, index);
+				return false;
+			}
+
+			if (isFallback) {
+				glyph.Codepoint = FontFormat::FallbackCodepoint;
+			} else if (!charItem.isNull()) {
+				if (spelled.empty()) {
+					LOGE("\"{}\" has a character at position {} whose \"Char\" is empty; the entry standing for "
+						"no character at all is written as \"Fallback\": true", path, index);
+					return false;
+				}
+				auto next = Utf8::NextChar(ArrayView<const char>(spelled.data(), spelled.size()), 0);
+				if (next.first() == U'\xffffffff' || next.second() != spelled.size()) {
+					LOGE("\"{}\" has a character at position {} whose \"Char\" is not a single character", path, index);
+					return false;
+				}
+				glyph.Codepoint = next.first();
+			} else if (codepoint >= 0) {
+				glyph.Codepoint = char32_t(codepoint);
+			} else {
+				LOGE("\"{}\" has a character at position {} with no \"Char\", \"Codepoint\" or \"Fallback\"", path, index);
+				return false;
+			}
+
+			std::int32_t advance = -1;
+			if (!TryReadNumber(path, item, "Advance", 0, UINT8_MAX, advance)) {
+				return false;
+			}
+			if (advance < 0) {
+				LOGE("\"{}\" has a character at position {} with no \"Advance\"", path, index);
+				return false;
+			}
+
+			glyph.Advance = advance;
+			return true;
+		}
+
+		/**
+			@brief Reads the JSON description a font is edited through
+
+			The same content @ref ReadCharacterList reads out of the binary form, in the form meant to be
+			edited by hand - which is why so little of it is required. Only the cell size and the character
+			list have to be there: the line height defaults to the cell height, the base spacing to none, and
+			where the ASCII range starts and how far it reaches is worked out from the list itself unless the
+			description says otherwise.
+		*/
+		bool ReadCharacterListJson(StringView path, FontData& font, std::int32_t& cellWidth, std::int32_t& cellHeight, std::int32_t& columns)
+		{
+			FileStream s(path, FileAccess::Read);
+			if (!s.IsValid()) {
+				LOGE("Cannot open \"{}\" for reading", path);
+				return false;
+			}
+
+			const std::int64_t fileSize = s.GetSize();
+			if (fileSize <= 0 || fileSize > 16 * 1024 * 1024) {
+				LOGE("\"{}\" has an unexpected size of {} bytes", path, fileSize);
+				return false;
+			}
+
+			auto buffer = std::make_unique<char[]>(std::size_t(fileSize));
+			if (s.Read(buffer.get(), fileSize) != fileSize) {
+				LOGE("Cannot read \"{}\"", path);
+				return false;
+			}
+
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (!reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
+				LOGE("\"{}\" cannot be parsed: {}", path, StringView(errors.data(), errors.size()).trimmed());
+				return false;
+			}
+			if (!doc.isObject()) {
+				LOGE("\"{}\" does not describe a font", path);
+				return false;
+			}
+
+			cellWidth = cellHeight = columns = 0;
+			std::int32_t lineHeight = 0, baseSpacing = 0, asciiFirst = -1, asciiCount = -1;
+			if (!TryReadNumber(path, doc, "CellWidth", 1, UINT16_MAX, cellWidth)
+					|| !TryReadNumber(path, doc, "CellHeight", 1, UINT16_MAX, cellHeight)
+					|| !TryReadNumber(path, doc, "Columns", 1, UINT8_MAX, columns)
+					|| !TryReadNumber(path, doc, "LineHeight", 1, UINT16_MAX, lineHeight)
+					|| !TryReadNumber(path, doc, "BaseSpacing", INT16_MIN, INT16_MAX, baseSpacing)
+					|| !TryReadNumber(path, doc, "AsciiFirst", 0, UINT8_MAX, asciiFirst)
+					|| !TryReadNumber(path, doc, "AsciiCount", 0, UINT8_MAX, asciiCount)) {
+				return false;
+			}
+
+			if (cellWidth <= 0 || cellHeight <= 0 || columns <= 0) {
+				LOGE("\"{}\" has to specify \"CellWidth\", \"CellHeight\" and \"Columns\"", path);
+				return false;
+			}
+
+			// How far one line of text sits below the previous one belongs to the font rather than to the grid
+			// it is authored in, so it can be set on its own - it just rarely is anything but the cell height
+			font.LineHeight = (lineHeight > 0 ? lineHeight : cellHeight);
+			font.BaseSpacing = baseSpacing;
+
+			const Json::Value& characters = doc["Characters"];
+			if (!characters.isArray() || characters.empty()) {
+				LOGE("\"{}\" has to list at least one character in \"Characters\"", path);
+				return false;
+			}
+
+			// The order the characters are listed in is the order of the cells they are authored in, so it is
+			// kept as it is read
+			const std::int32_t count = std::int32_t(characters.size());
+			font.Glyphs.reserve(count);
+			for (std::int32_t i = 0; i < count; i++) {
+				if (!ReadCharacter(path, characters[Json::ArrayIndex(i)], i, font.Glyphs.emplace_back())) {
+					return false;
+				}
+			}
+
+			// The packed font keeps the ASCII characters as one run it indexes straight into and everything
+			// else keyed by codepoint, so where that run begins and how far it reaches has to be known. A list
+			// written out by this tool starts with the run, so both are read off the list unless spelled out.
+			if (asciiFirst < 0) {
+				asciiFirst = (font.Glyphs[0].Codepoint <= UINT8_MAX ? std::int32_t(font.Glyphs[0].Codepoint) : 0);
+			}
+			if (asciiCount < 0) {
+				const std::int32_t longestRun = std::min<std::int32_t>(count, std::min<std::int32_t>(UINT8_MAX, 256 - asciiFirst));
+				asciiCount = 0;
+				while (asciiCount < longestRun && font.Glyphs[asciiCount].Codepoint == char32_t(asciiFirst + asciiCount)) {
+					asciiCount++;
+				}
+			}
+
+			if (asciiCount > count) {
+				LOGE("\"{}\" says its ASCII range is {} characters long, but lists only {}", path, asciiCount, count);
+				return false;
+			}
+			if (asciiFirst + asciiCount > 256) {
+				LOGE("\"{}\" has an ASCII range of {} characters starting at U+{:.4X}, reaching past the U+00FF "
+					"it has to end at", path, asciiCount, std::uint32_t(asciiFirst));
+				return false;
+			}
+			for (std::int32_t i = 0; i < asciiCount; i++) {
+				if (font.Glyphs[i].Codepoint != char32_t(asciiFirst + i)) {
+					LOGE("\"{}\" has to list the ASCII range first, one character after another from U+{:.4X}, but "
+						"the character at position {} is U+{:.4X} where U+{:.4X} was expected", path,
+						std::uint32_t(asciiFirst), i, std::uint32_t(font.Glyphs[i].Codepoint), std::uint32_t(asciiFirst + i));
+					return false;
+				}
+				font.Glyphs[i].IsAscii = true;
+			}
+
+			font.AsciiFirst = std::uint8_t(asciiFirst);
+			font.AsciiCount = std::uint8_t(asciiCount);
+
+			// The game looks every character below U+0080 up in the ASCII range and nowhere else, so one that
+			// isn't part of it is never drawn - and a range reaching past U+007F is kept only that far
+			if (asciiFirst + asciiCount > 0x80) {
+				LOGW("\"{}\" has an ASCII range reaching U+{:.4X}, but only the part of it below U+0080 is kept",
+					path, std::uint32_t(asciiFirst + asciiCount - 1));
+			}
+			for (std::int32_t i = asciiCount; i < count; i++) {
+				const char32_t codepoint = font.Glyphs[i].Codepoint;
+				if (codepoint != FontFormat::FallbackCodepoint && codepoint < 0x80) {
+					LOGW("\"{}\" lists U+{:.4X} outside its ASCII range, where the game will not look for it - "
+						"extend \"AsciiFirst\" and \"AsciiCount\" to cover it", path, std::uint32_t(codepoint));
+				}
+			}
+
+			// A codepoint listed twice would otherwise quietly become a glyph that is never drawn
+			SmallVector<char32_t, 0> codepoints;
+			codepoints.reserve(font.Glyphs.size());
+			for (const Glyph& glyph : font.Glyphs) {
+				codepoints.push_back(glyph.Codepoint);
+			}
+			std::sort(codepoints.begin(), codepoints.end());
+			for (std::size_t i = 1; i < codepoints.size(); i++) {
+				if (codepoints[i] == codepoints[i - 1] && (i < 2 || codepoints[i] != codepoints[i - 2])) {
+					LOGW("\"{}\" lists U+{:.4X} more than once", path, std::uint32_t(codepoints[i]));
+				}
+			}
+
+			return true;
 		}
 
 		/**
@@ -339,9 +687,30 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 
+		// The JSON description is the one meant to be edited, so it is preferred wherever it exists; the binary
+		// form is read only when there is none, which is what an older unpack left behind
+		String descriptionPath = String(sourcePath + ".json"_s);
+		const bool isJsonDescription = fs::IsReadableFile(descriptionPath);
+		if (!isJsonDescription) {
+			descriptionPath = String(sourcePath + ".font"_s);
+		}
+
+		LOGI("Reading the character list from \"{}\"", descriptionPath);
+
 		FontData font;
 		std::int32_t cellWidth, cellHeight, columns;
-		if (!ReadCharacterList(String(sourcePath + ".font"_s), font, cellWidth, cellHeight, columns)) {
+		const bool descriptionRead = (isJsonDescription
+			? ReadCharacterListJson(descriptionPath, font, cellWidth, cellHeight, columns)
+			: ReadCharacterList(descriptionPath, font, cellWidth, cellHeight, columns));
+		if (!descriptionRead) {
+			return false;
+		}
+
+		// What the ASCII range doesn't cover is stored keyed by codepoint, behind a 16-bit count
+		const std::int32_t unicodeCount = std::int32_t(font.Glyphs.size()) - font.AsciiCount;
+		if (unicodeCount > UINT16_MAX) {
+			LOGE("The font has {} characters outside its ASCII range, more than the {} it may have",
+				unicodeCount, UINT16_MAX);
 			return false;
 		}
 
@@ -442,7 +811,7 @@ namespace Jazz2::AssetPacker
 			co.WriteValueAsLE<std::int16_t>(std::int16_t(font.BaseSpacing));
 			co.WriteValue<std::uint8_t>(font.AsciiFirst);
 			co.WriteValue<std::uint8_t>(font.AsciiCount);
-			co.WriteValueAsLE<std::uint16_t>(std::uint16_t(font.Glyphs.size() - font.AsciiCount));
+			co.WriteValueAsLE<std::uint16_t>(std::uint16_t(unicodeCount));
 
 			for (std::int32_t i = 0; i < std::int32_t(font.Glyphs.size()); i++) {
 				const Glyph& glyph = font.Glyphs[i];
@@ -592,7 +961,12 @@ namespace Jazz2::AssetPacker
 		if (!PngCodec::Write(targetPath, image)) {
 			return false;
 		}
+		// Both forms of the character list are written: the JSON one to edit, which is also what packing the
+		// result back takes, and the binary one the game's own content has always been kept in
 		if (!WriteCharacterList(String(targetPath + ".font"_s), font, cellWidth, cellHeight, columns)) {
+			return false;
+		}
+		if (!WriteCharacterListJson(String(targetPath + ".json"_s), font, cellWidth, cellHeight, columns)) {
 			return false;
 		}
 

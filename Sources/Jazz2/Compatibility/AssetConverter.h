@@ -5,8 +5,10 @@
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
+#include <IO/PakFile.h>
 
 using namespace Death::Containers;
+using namespace Death::Containers::Literals;
 
 namespace Jazz2::Compatibility
 {
@@ -55,7 +57,7 @@ namespace Jazz2::Compatibility
 				alongside - and it wins if both are set. The custom-levels entry is still kept, so a build that
 				lets the player bring their own data (see `ImportSection`) does not lose the menu item for it.
 
-				Note that this cannot narrow `Source.pak`: sprites and sounds are shared across every episode, so
+				Note that this cannot narrow the sprite and sound package: they are shared across every episode, so
 				what ends up in there is decided by which `Anims.j2a` the source directory has.
 			*/
 			bool SharewareOnly = false;
@@ -73,8 +75,34 @@ namespace Jazz2::Compatibility
 			SmallVectorImpl<String>* SkippedLevels = nullptr;
 		};
 
-		/** @brief Converts @cb{.cpp} Anims.j2a @ce (and @cb{.cpp} Data.j2d @ce, if present) into @cb{.cpp} Source.pak @ce */
-		static Result ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath, JJ2Version& version);
+		/** @brief Name of the package the first-run conversion writes its sprites and sounds into */
+		static constexpr StringView SourcePackage = "Source.pak"_s;
+		/**
+			@brief Name of the same package in a content tree prepared ahead of time
+
+			A tree prepared by @ref asset-packer "AssetPacker" is loaded instead of being converted, and this
+			is how the game tells one apart from a `Cache` it built itself: the name is the marker, so it is
+			what a prepared tree gets instead of @ref SourcePackage. See
+			@relativeref{Jazz2,ContentResolver::IsContentPrebaked()}.
+		*/
+		static constexpr StringView PrebakedPackage = "Prebaked.pak"_s;
+
+		/**
+			@brief Converts @cb{.cpp} Anims.j2a @ce (and @cb{.cpp} Data.j2d @ce, if present) into a package
+
+			@param packageName	Which package to write, @ref SourcePackage or @ref PrebakedPackage
+		*/
+		static Result ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath,
+			JJ2Version& version, StringView packageName = SourcePackage);
+		/**
+			@brief Converts the same into a package that is already open, and is not finalized here
+
+			For a caller that has more to put in the same package --- @ref asset-packer "AssetPacker" embeds the
+			game's own assets alongside the converted ones, after these, so that what the original data provides
+			is what a path present in both resolves to.
+		*/
+		static Result ConvertSourceAssets(StringView animsPath, StringView sourcePath,
+			Death::IO::PakWriter& pakWriter, JJ2Version& version);
 
 		/** @brief Converts every episode, level and used tileset into the output directory */
 		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll);

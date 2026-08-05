@@ -1,14 +1,14 @@
 namespace Jazz2 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-/** @page asset-packer AssetPacker
+/** @page asset-packer Asset packing
 @brief Offline data conversion tool of Jazz² Resurrection
 
 @tableofcontents
 
 @m_class{m-noindent}
 
-**AssetPacker** is a standalone command-line tool in @cpp "Sources/Utilities/AssetPacker" @ce that
+AssetPacker is a standalone command-line tool in @cpp "Sources/Utilities/AssetPacker" @ce that
 converts original Jazz Jackrabbit 2 data into the layout a given platform loads. The game
 performs the same conversion on its first run @m_span{m-text m-dim} (see
 `GameEventHandler::RefreshCache`, which forwards to the shared
@@ -28,17 +28,6 @@ The tool is host-only --- it is built by default as part of the desktop CMake bu
 target. It links only the base layer and the original-data converters, deliberately not the
 engine, so it has no renderer, no window backend and no networking. After a regular
 @ref building "desktop build" the binary is at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
-
-On Windows the tool is also a project of @cpp "Jazz2.sln" @ce
-(@cpp "Sources/Utilities/AssetPacker/AssetPacker.vcxproj" @ce, in the `Utilities` solution folder
-next to `ShaderCompiler`), for when the solution is more convenient than a CMake configure. CMake
-remains the primary build; the project file mirrors the CMake target's source set and its
-@cpp CMAKE_BUILD @ce / @cpp DEATH_NO_THREADS @ce / @cpp DEATH_TRACE @ce / @cpp WITH_ZLIB @ce
-definitions, and expects the prebuilt dependencies in the repository's @cpp "Libs" @ce directory
-(@cpp "Libs/Includes" @ce and @cpp "Libs/Windows/x64" @ce or @cpp "x86" @ce) the same way the game
-project does --- it links @cpp "zlib.lib" @ce explicitly rather than through the shared headers'
-@cpp #pragma comment(lib, ...) @ce auto-linking, whose relative paths only resolve for a project
-sitting directly in @cpp "Sources" @ce.
 
 @section asset-packer-usage Command-line reference
 
@@ -66,9 +55,11 @@ The command may be omitted, in which case `convert` is assumed:
     -   `--all-videos` --- Deploy every cinematic found, not just the two the game plays
     -   `--skip-non-episode-levels` --- Convert only levels that belong to an episode
 -   `pack-font <source .png> <target .font>` --- Packs a grid image and the character list
-    next to it (`<source .png>.font`) into a single file
+    next to it into a single file. The list is read from `<source .png>.json`, or from the
+    binary `<source .png>.font` if there is no JSON next to the image
 -   `unpack-font <source .font> <target .png>` --- Unpacks a font back into a grid image and
-    a character list, ready to be edited and packed again
+    a character list, ready to be edited and packed again. The list is written both as
+    `<target .png>.json`, which is the one to edit, and as the binary `<target .png>.font`
 -   `apply-palette <source .png> <target .png>` --- Replaces the palette indices of an image
     with the colors they stand for, so it can be edited
 -   `to-indices <source .png> <target .png>` --- Resolves the colors of an edited image back
@@ -85,12 +76,13 @@ The source can be either a directory of original game files or a whole game inst
 which keeps them in a `Source` subdirectory next to the `Content` the game ships and the
 `Cache` it converts into. Pointing the tool at the installation is the convenient thing to
 do, so it looks for both layouts --- and when the source turns out to be an installation and
-the target is not the desktop profile, the installation's own `Content` (fonts, metadata,
-translations, shaders --- nothing of which is derived from the original data) is copied into
-the target first, which is what makes the output a complete self-contained tree. The tool
+the target is not the desktop profile, the installation's own `Content` (fonts, animations,
+metadata, translations --- nothing of which is derived from the original data) is carried over
+as well, which is what makes the output a complete self-contained tree. The tool
 requires `Anims.j2a` (or the shareware `AnimsSw.j2a`) to be present; sprites and sounds are
-converted from it into `Source.pak`, and the levels, tilesets, episodes and music follow via
-@ref Jazz2::Compatibility::AssetConverter.
+converted from it into a package --- `Source.pak` for the desktop profile, `Prebaked.pak` for the
+others, which is what tells the game the tree needs no conversion --- and the levels, tilesets,
+episodes and music follow via @ref Jazz2::Compatibility::AssetConverter.
 
 @subsection asset-packer-convert-profiles Target profiles
 
@@ -106,13 +98,28 @@ What the output directory is going to be loaded by decides its layout:
     `Content/Music`, and cinematics are left alone, because the game reads the originals
     where they are.
 -   **console** (also selected by `dreamcast`, `wii`, `gamecube` and `psp`) --- A staged `Content`
-    tree written directly into the target, for the consoles which cannot rewrite a cache of
-    their own. The consoles all consume the same staged tree, so they share one profile ---
-    only the cinematics are decided per platform, which is why `dreamcast` is tracked
-    separately (see below). No index is written, deliberately: the consoles never rewrite
-    their data, and an index there would only invite the game to try.
+    tree written directly into the target, holding everything the console loads. The consoles all
+    consume the same staged tree, so they share one profile --- only the cinematics are decided per
+    platform, which is why `dreamcast` is tracked separately (see below). The sprite and sound package
+    is named `Prebaked.pak` here, and that name is the marker: a console that *can* convert (the PSP
+    and the Wii, whose content is on writable storage) finds it and skips the conversion instead of
+    looking for original files that were never deployed --- see
+    @ref Jazz2::ContentResolver::IsContentPrebaked(). No index is written, deliberately: a prepared
+    tree is never rewritten, and an index there would only invite the game to try.
 -   **emscripten** --- Likewise a tree prepared entirely ahead of time for the web build,
-    without an index.
+    with `Prebaked.pak` and without an index.
+
+@m_class{m-noindent}
+
+Both non-desktop profiles also put the game's own `Animations` and `Metadata` **inside**
+`Prebaked.pak` instead of next to it --- a few hundred small files become part of one, which is what
+a console pays for on a memory card, a memory stick or a disc. They are the two directories the game
+reads through the package layer, everything else the tree carries @m_span{m-text m-dim} (the
+translations, the levels, the tilesets, the music and the cinematics) @m_endspan is read as a loose
+file and stays one. The conversion writes its own files first, so an asset the original data provides
+is what a path present in both resolves to, exactly as when the two are kept apart. The desktop
+profile is untouched by this: its `Source.pak` holds only what was converted, and the game reads its
+`Content` from where it is installed.
 
 @subsection asset-packer-convert-filters Level filters
 
@@ -173,13 +180,20 @@ conversion, which is the way to experiment with resolutions per target.
 @section asset-packer-fonts Font packing
 
 A font is authored as a grid image --- one equally sized cell per character --- next to a
-small sidecar file (`<image>.png.font`) listing the cell size, the character set and how far
-the pen moves for each character, with characters outside the ASCII range spelled out in
-UTF-8. The game instead loads a single self-contained `.font` file (version 2, described by
-@ref Jazz2::UI::FontFormat) in which every glyph has been measured down to the pixels it
-actually inks, packed against its neighbours and stored as palette indices. `pack-font` and
-`unpack-font` are the two directions of that conversion, so a shipped font can be opened up,
-changed and packed again without the grid form having to be kept around in the repository.
+sidecar description listing the cell size, the character set and how far the pen moves for
+each character. The game instead loads a single self-contained `.font` file (version 2,
+described by @ref Jazz2::UI::FontFormat) in which every glyph has been measured down to the
+pixels it actually inks, packed against its neighbours and stored as palette indices.
+`pack-font` and `unpack-font` are the two directions of that conversion, so a shipped font can
+be opened up, changed and packed again without the grid form having to be kept around in the
+repository.
+
+The description comes in two interchangeable forms. `<image>.png.json` is the one meant to be
+edited; `<image>.png.font` is the binary form the sidecar has always been kept in, holding the
+same fields packed into a few bytes with the characters outside the ASCII range spelled out in
+UTF-8. `unpack-font` writes both, and `pack-font` reads the JSON wherever it finds one next to
+the image and falls back to the binary form only when there is none --- so editing the JSON is
+enough, and a font unpacked by an older build still packs. Which one was used is printed.
 
 What `pack-font` does:
 
@@ -204,9 +218,12 @@ What `pack-font` does:
     spacing and character counts, then a 9-byte glyph record per character
     @m_span{m-text m-dim} (position, size, bearings, advance --- with a 32-bit codepoint
     prefix for the non-ASCII ones) @m_endspan, then the atlas itself as one palette index per
-    pixel in the same QOI-based encoding every other image asset uses.
+    pixel in the same QOI-based encoding every other image asset uses. The ASCII range is
+    described by two bytes (where it starts and how long it is) and everything else by a 16-bit
+    count, so a font may have at most 255 characters in the range and 65535 outside it ---
+    exceeding either is an error.
 
-`unpack-font` rebuilds the grid image and the sidecar from a packed font --- the glyphs are
+`unpack-font` rebuilds the grid image and both sidecars from a packed font --- the glyphs are
 placed back into cells at their bearings, so packing the result again measures the pixels
 afresh and arrives back at the same font. Because the unpacked atlas holds palette indices,
 it looks like near-black noise in an image editor; `apply-palette` and `to-indices` are the
@@ -215,17 +232,87 @@ stand for, the second resolves an edited image back to the nearest palette entri
 when a color had no exact match). The tool carries its own minimal PNG codec
 (@ref Jazz2::AssetPacker::PngCodec) precisely because it does not link the renderer.
 
+@subsection asset-packer-fonts-json The JSON description
+
+@code{.json}
+{
+    "CellWidth": 15,
+    "CellHeight": 20,
+    "Columns": 19,
+    "LineHeight": 20,
+    "BaseSpacing": -2,
+    "AsciiFirst": 32,
+    "AsciiCount": 95,
+    "Characters": [
+        { "Char": " ", "Advance": 5 },
+        { "Char": "!", "Advance": 4 },
+        { "Char": "\"", "Advance": 6 },
+        { "Char": "é", "Advance": 8 },
+        { "Codepoint": 120071, "Advance": 11 },
+        { "Fallback": true, "Advance": 8 }
+    ]
+}
+@endcode
+
+-   **`CellWidth`, `CellHeight`, `Columns`** --- The grid the image is read as: the size of one
+    cell and how many of them sit in a row. Required, as is `Characters`, everything else has
+    a default.
+-   **`LineHeight`** --- How far one line of text sits below the previous one. Belongs to the
+    font rather than to the grid it is authored in, so it can be set on its own, defaults to
+    the cell height, which is what it almost always is.
+-   **`BaseSpacing`** --- Pixels added between characters on top of each advance, negative to
+    tighten. Defaults to none.
+-   **`AsciiFirst`, `AsciiCount`** --- Where the contiguous run the packed font indexes
+    directly starts and how far it reaches. Both are worked out from the list itself when
+    omitted --- the leading run of consecutive characters, which is how one is written out ---
+    and the first `AsciiCount` characters have to be exactly that run, since that is the order
+    the packed file stores them in. The run is described by two bytes, so it has to end by
+    `U+00FF`, and the game keeps only the part of it below `U+0080`.
+-   **`Characters`** --- One entry per cell, **in the order the cells are laid out in the
+    image**, and at least one. `Char` names the character as itself, `Codepoint` as a bare
+    number for the ones without a spelling that survives a text file, and `Fallback` marks the
+    single entry drawn in place of anything the font doesn't have @m_span{m-text m-dim} (the
+    same thing as @cpp "Codepoint": 0 @ce) @m_endspan. `Advance` is how far the pen moves after
+    drawing the character and is required; the glyph's size and bearings are not listed at all,
+    being measured from the image every time it is packed.
+
+Every field is checked against what the packed file can hold --- the cell up to 65535 pixels in
+either direction, `Columns` and every `Advance` up to 255, `BaseSpacing` a signed 16-bit value ---
+and one that is out of range, missing where it is required, or not the type it should be is an
+error naming the field and, inside the list, the position. So is a list that doesn't begin with the
+ASCII range it claims, which is also how a character repeated *inside* that range is caught:
+
+@code{.shell-session}
+Error: "font_small.png.json" has to list the ASCII range first, one character after another
+from U+0020, but the character at position 34 is U+0041 where U+0042 was expected
+@endcode
+
+What still describes a loadable font is a warning rather than an error --- a codepoint listed
+twice outside the ASCII range @m_span{m-text m-dim} (only one of the two is ever drawn)
+@m_endspan, and a character below `U+0080` left out of the range, where the game never looks for
+it. Both cost a glyph quietly, so they are worth reading:
+
+@code{.shell-session}
+Warning: "font_small.png.json" lists U+0104 more than once
+@endcode
+
+The file is otherwise read leniently: comments, trailing commas and a byte order mark are all
+tolerated, so it can be annotated while it is worked on and saved by any editor. It is written
+as UTF-8 without one.
+
 @section asset-packer-platforms Platform notes
 
 -   **Desktop** builds do not need the tool at all --- the game converts on first run.
     Running it is still useful to prepare the cache in a build pipeline, or to pre-downscale
     cinematics with `--video-downscale`.
--   **Dreamcast, PlayStation Portable, Wii and GameCube** cannot convert anything themselves, so
-    their build scripts consume a tree prepared with `--target=dreamcast` / `psp` / `wii` /
-    `gamecube`. All four share the same layout; the target name only decides the cinematics --- the
-    Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat, the others get the smaller
-    originals copied. Where each console expects that tree, and how it gets there, is described in
-    @ref consoles-common-content "Building for consoles".
+-   **Dreamcast, PlayStation Portable, Wii and GameCube** all consume a tree prepared with
+    `--target=dreamcast` / `psp` / `wii` / `gamecube`. All four share the same layout; the target name
+    only decides the cinematics --- the Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat,
+    the others get the smaller originals copied. Where each console expects that tree, and how it gets
+    there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
+    GameCube have no conversion compiled in at all and *require* the prepared tree; the PSP and the
+    Wii would convert an installation left in their `Source` directory, which is slow on both and is
+    why they are given a prepared tree as well.
 -   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
     only a way to skip that wait there.
 -   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically
@@ -242,8 +329,10 @@ when a color had no exact match). The tool carries its own minimal PNG codec
     and the build version --- and the game silently reconverts everything on startup when any
     field disagrees. Prepare the cache with a tool built from the same sources as the game.
 -   **Never write an index for the console or web profiles.** The tool deliberately omits it
-    there; those platforms cannot rewrite their data, and an index would only invite the game
-    to try.
+    there; a prepared tree is never rewritten, and an index would only invite the game to try.
+-   **Do not rename `Prebaked.pak` in a prepared tree.** Its name is what marks the tree as already
+    converted, so a renamed package leaves the game looking for original files it does not have --- and
+    finding none, showing a main menu with nothing to play.
 -   **The source must contain a supported version of the game data.** The tool looks for
     `Anims.j2a` (or `AnimsSw.j2a`) at the top of the source directory or in its `Source`
     subdirectory and refuses to run without it.

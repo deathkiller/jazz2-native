@@ -655,116 +655,6 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "CombineWithWaterLow", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-static float2 aQuadCorner;
-static float4 gl_Position;
-static float2 vTexCoords;
-static float2 vViewSizeInv;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vViewSizeInv = ((float2)1.0) / spriteSize;
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	_output.vViewSizeInv = vViewSizeInv;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4 uAmbientColor;
-uniform float uTime;
-uniform float2 uCameraPos;
-uniform float uWaterLevel;
-
-uniform sampler2D uTexture : TEXUNIT0;
-uniform sampler2D uTextureLighting : TEXUNIT1;
-uniform sampler2D uTextureBlurHalf : TEXUNIT2;
-uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
-
-static float2 vTexCoords;
-static float2 vViewSizeInv;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-	float2 vViewSizeInv : TEXCOORD1;
-};
-
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float2 noiseTexCoords(float2 position)
-{
-	float2 seed = position + frac(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	vViewSizeInv = _input.vViewSizeInv;
-	float3 waterColor = float3(0.4, 0.6, 0.8);
-	float2 uvLocal = vTexCoords;
-	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
-	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = clamp(uvLocal + float2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
-	float4 main = tex2D(uTexture, uv);
-	float topDist = abs(uvLocal.y - uWaterLevel);
-	float topGradient = max(1.0 - topDist, 0.0);
-	float isNearTop = 0.2 * topGradient * topGradient;
-	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
-	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
-	float4 blur1 = tex2D(uTextureBlurHalf, uv);
-	float4 blur2 = tex2D(uTextureBlurQuarter, uv);
-	float4 light = tex2D(uTextureLighting, noiseTexCoords(uv));
-	float4 blur = (blur1 + blur2) * ((float4)0.5);
-	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
-	blur = float4(gray, gray, gray, blur.w);
-	float darknessStrength = 1.0 - light.x;
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
-	COLOR.w = 1.0;
-	return COLOR;
-}
-)" },
 			{ "CombineWithWater", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -929,66 +819,113 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "DefaultBatchedMeshSpritesNoTexture", "",
+			{ "CombineWithWaterLow", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 682
-
-struct Instance
-{
-	float4x4 modelMatrix;
-	float4 color;
-	float2 spriteSize;
-};
-
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
 
-uniform Instance instances[BATCH_SIZE];
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
 
-static float2 aPosition;
-static float aMeshIndex;
+static float2 aQuadCorner;
 static float4 gl_Position;
-static float4 vColor;
+static float2 vTexCoords;
+static float2 vViewSizeInv;
 
 struct VsInput
 {
-	float2 aPosition : TEXCOORD0;
-	float aMeshIndex : TEXCOORD1;
+	float2 aQuadCorner : TEXCOORD0;
 };
 
 struct VsOutput
 {
 	float4 _clipPosition : POSITION;
-	float4 vColor : TEXCOORD0;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
 };
 
 VsOutput main(VsInput _input)
 {
-	aPosition = _input.aPosition;
-	aMeshIndex = _input.aMeshIndex;
-	float4 position = float4(aPosition.x * instances[int(aMeshIndex)].spriteSize.x, aPosition.y * instances[int(aMeshIndex)].spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(instances[int(aMeshIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vColor = instances[int(aMeshIndex)].color;
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = ((float2)1.0) / spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
-	_output.vColor = vColor;
+	_output.vTexCoords = vTexCoords;
+	_output.vViewSizeInv = vViewSizeInv;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
+uniform float4 uAmbientColor;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
+
+uniform sampler2D uTexture : TEXUNIT0;
+uniform sampler2D uTextureLighting : TEXUNIT1;
+uniform sampler2D uTextureBlurHalf : TEXUNIT2;
+uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
+
+static float2 vTexCoords;
+static float2 vViewSizeInv;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
-	float4 vColor : TEXCOORD0;
+	float2 vTexCoords : TEXCOORD0;
+	float2 vViewSizeInv : TEXCOORD1;
 };
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+}
+
+float2 noiseTexCoords(float2 position)
+{
+	float2 seed = position + frac(uTime * 0.01);
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
+}
 
 float4 main(PsInput _input) : COLOR
 {
-	vColor = _input.vColor;
-	COLOR = vColor;
+	vTexCoords = _input.vTexCoords;
+	vViewSizeInv = _input.vViewSizeInv;
+	float3 waterColor = float3(0.4, 0.6, 0.8);
+	float2 uvLocal = vTexCoords;
+	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
+	float2 uvWorld = uvLocal + uvWorldCenter;
+	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
+	float isTexelAbove = 1.0 - isTexelBelow;
+	float2 uv = clamp(uvLocal + float2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
+	float4 main = tex2D(uTexture, uv);
+	float topDist = abs(uvLocal.y - uWaterLevel);
+	float topGradient = max(1.0 - topDist, 0.0);
+	float isNearTop = 0.2 * topGradient * topGradient;
+	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
+	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
+	float4 blur1 = tex2D(uTextureBlurHalf, uv);
+	float4 blur2 = tex2D(uTextureBlurQuarter, uv);
+	float4 light = tex2D(uTextureLighting, noiseTexCoords(uv));
+	float4 blur = (blur1 + blur2) * ((float4)0.5);
+	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
+	blur = float4(gray, gray, gray, blur.w);
+	float darknessStrength = 1.0 - light.x;
+	if (uWaterLevel < 0.4) {
+		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
+		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
+	}
+	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR.w = 1.0;
 	return COLOR;
 }
 )" },
@@ -1065,6 +1002,69 @@ float4 main(PsInput _input) : COLOR
 	vTexCoords = _input.vTexCoords;
 	vColor = _input.vColor;
 	COLOR = tex2D(uTexture, vTexCoords) * vColor;
+	return COLOR;
+}
+)" },
+			{ "DefaultBatchedMeshSpritesNoTexture", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+#define BATCH_SIZE 682
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float2 spriteSize;
+};
+
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform Instance instances[BATCH_SIZE];
+
+static float2 aPosition;
+static float aMeshIndex;
+static float4 gl_Position;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aPosition : TEXCOORD0;
+	float aMeshIndex : TEXCOORD1;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float4 vColor : TEXCOORD0;
+};
+
+VsOutput main(VsInput _input)
+{
+	aPosition = _input.aPosition;
+	aMeshIndex = _input.aMeshIndex;
+	float4 position = float4(aPosition.x * instances[int(aMeshIndex)].spriteSize.x, aPosition.y * instances[int(aMeshIndex)].spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(instances[int(aMeshIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vColor = instances[int(aMeshIndex)].color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float4 vColor : TEXCOORD0;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vColor = _input.vColor;
+	COLOR = vColor;
 	return COLOR;
 }
 )" },
@@ -1195,59 +1195,6 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "DefaultMeshSpriteNoTexture", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float2 spriteSize;
-
-static float2 aPosition;
-static float4 gl_Position;
-static float4 vColor;
-
-struct VsInput
-{
-	float2 aPosition : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float4 vColor : TEXCOORD0;
-};
-
-VsOutput main(VsInput _input)
-{
-	aPosition = _input.aPosition;
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vColor = color;
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vColor = vColor;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-static float4 vColor;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float4 vColor : TEXCOORD0;
-};
-
-float4 main(PsInput _input) : COLOR
-{
-	vColor = _input.vColor;
-	COLOR = vColor;
-	return COLOR;
-}
-)" },
 			{ "DefaultMeshSprite", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -1314,7 +1261,7 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "DefaultSpriteNoTexture", "",
+			{ "DefaultMeshSpriteNoTexture", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
@@ -1323,13 +1270,13 @@ uniform float4x4 modelMatrix;
 uniform float4 color;
 uniform float2 spriteSize;
 
-static float2 aQuadCorner;
+static float2 aPosition;
 static float4 gl_Position;
 static float4 vColor;
 
 struct VsInput
 {
-	float2 aQuadCorner : TEXCOORD0;
+	float2 aPosition : TEXCOORD0;
 };
 
 struct VsOutput
@@ -1340,8 +1287,7 @@ struct VsOutput
 
 VsOutput main(VsInput _input)
 {
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	aPosition = _input.aPosition;
 	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vColor = color;
@@ -1507,6 +1453,60 @@ float4 main(PsInput _input) : COLOR
 	vColor = _input.vColor;
 	COLOR = vColor;
 	COLOR = tex2D(uTexture, vTexCoords) * COLOR;
+	return COLOR;
+}
+)" },
+			{ "DefaultSpriteNoTexture", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float2 spriteSize;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float4 vColor : TEXCOORD0;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float4 vColor : TEXCOORD0;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vColor = _input.vColor;
+	COLOR = vColor;
 	return COLOR;
 }
 )" },
@@ -2098,6 +2098,200 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
+			{ "Outline", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float aastep(float threshold, float value)
+{
+	float afwidth = length(float2(ddx(value), ddy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float2 size = COLOR.xy;
+	float outline = tex2D(uTexture, vTexCoords + float2(-size.x, 0)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(0, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, 0)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(0, -size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(-size.x, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(-size.x, -size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, -size.y)).w;
+	outline = aastep(1.0, outline);
+	float outline2 = tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 0)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(0, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 0)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(0, -2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, -2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, -2.0 * size.y)).w;
+	outline2 = aastep(1.0, outline2);
+	float4 color = tex2D(uTexture, vTexCoords);
+	COLOR = lerp(color, lerp(float4(0.0, 0.0, 0.0, COLOR.w * 0.5), float4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.w);
+	return COLOR;
+}
+)" },
+			{ "BatchedOutline", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+#define BATCH_SIZE 585
+
+struct Instance
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform Instance instances[BATCH_SIZE];
+
+static float2 aQuadCorner;
+static float aInstanceIndex;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+	float aInstanceIndex : TEXCOORD1;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	aInstanceIndex = _input.aInstanceIndex;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	float4 position = float4(aPosition.x * instances[int(aInstanceIndex)].spriteSize.x, aPosition.y * instances[int(aInstanceIndex)].spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(instances[int(aInstanceIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * instances[int(aInstanceIndex)].texRect.x + instances[int(aInstanceIndex)].texRect.y, aPosition.y * instances[int(aInstanceIndex)].texRect.z + instances[int(aInstanceIndex)].texRect.w);
+	vColor = instances[int(aInstanceIndex)].color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float aastep(float threshold, float value)
+{
+	float afwidth = length(float2(ddx(value), ddy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = vColor;
+	float2 size = COLOR.xy;
+	float outline = tex2D(uTexture, vTexCoords + float2(-size.x, 0)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(0, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, 0)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(0, -size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(-size.x, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(-size.x, -size.y)).w;
+	outline += tex2D(uTexture, vTexCoords + float2(size.x, -size.y)).w;
+	outline = aastep(1.0, outline);
+	float outline2 = tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 0)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(0, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 0)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(0, -2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, -2.0 * size.y)).w;
+	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, -2.0 * size.y)).w;
+	outline2 = aastep(1.0, outline2);
+	float4 color = tex2D(uTexture, vTexCoords);
+	COLOR = lerp(color, lerp(float4(0.0, 0.0, 0.0, COLOR.w * 0.5), float4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.w);
+	return COLOR;
+}
+)" },
 			{ "OutlinePalette", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -2342,200 +2536,6 @@ float4 main(PsInput _input) : COLOR
 	outline2 += alphaAt(vTexCoords + float2(2.0 * size.x, -2.0 * size.y));
 	outline2 = aastep(1.0, outline2);
 	float4 color = palette(vTexCoords);
-	COLOR = lerp(color, lerp(float4(0.0, 0.0, 0.0, COLOR.w * 0.5), float4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.w);
-	return COLOR;
-}
-)" },
-			{ "Outline", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
-static float2 aQuadCorner;
-static float4 gl_Position;
-static float2 vTexCoords;
-static float4 vColor;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	vColor = color;
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	_output.vColor = vColor;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 vTexCoords;
-static float4 vColor;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-float aastep(float threshold, float value)
-{
-	float afwidth = length(float2(ddx(value), ddy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	vColor = _input.vColor;
-	COLOR = vColor;
-	float2 size = COLOR.xy;
-	float outline = tex2D(uTexture, vTexCoords + float2(-size.x, 0)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(0, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, 0)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(0, -size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(-size.x, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(-size.x, -size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, -size.y)).w;
-	outline = aastep(1.0, outline);
-	float outline2 = tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 0)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(0, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 0)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(0, -2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, -2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, -2.0 * size.y)).w;
-	outline2 = aastep(1.0, outline2);
-	float4 color = tex2D(uTexture, vTexCoords);
-	COLOR = lerp(color, lerp(float4(0.0, 0.0, 0.0, COLOR.w * 0.5), float4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.w);
-	return COLOR;
-}
-)" },
-			{ "BatchedOutline", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-#define BATCH_SIZE 585
-
-struct Instance
-{
-	float4x4 modelMatrix;
-	float4 color;
-	float4 texRect;
-	float2 spriteSize;
-	float palOffset;
-};
-
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform Instance instances[BATCH_SIZE];
-
-static float2 aQuadCorner;
-static float aInstanceIndex;
-static float4 gl_Position;
-static float2 vTexCoords;
-static float4 vColor;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-	float aInstanceIndex : TEXCOORD1;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	aInstanceIndex = _input.aInstanceIndex;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
-	float4 position = float4(aPosition.x * instances[int(aInstanceIndex)].spriteSize.x, aPosition.y * instances[int(aInstanceIndex)].spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(instances[int(aInstanceIndex)].modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * instances[int(aInstanceIndex)].texRect.x + instances[int(aInstanceIndex)].texRect.y, aPosition.y * instances[int(aInstanceIndex)].texRect.z + instances[int(aInstanceIndex)].texRect.w);
-	vColor = instances[int(aInstanceIndex)].color;
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	_output.vColor = vColor;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 vTexCoords;
-static float4 vColor;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-float aastep(float threshold, float value)
-{
-	float afwidth = length(float2(ddx(value), ddy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	vColor = _input.vColor;
-	COLOR = vColor;
-	float2 size = COLOR.xy;
-	float outline = tex2D(uTexture, vTexCoords + float2(-size.x, 0)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(0, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, 0)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(0, -size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(-size.x, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(-size.x, -size.y)).w;
-	outline += tex2D(uTexture, vTexCoords + float2(size.x, -size.y)).w;
-	outline = aastep(1.0, outline);
-	float outline2 = tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 0)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(0, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 0)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(0, -2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, 2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(-2.0 * size.x, -2.0 * size.y)).w;
-	outline2 += tex2D(uTexture, vTexCoords + float2(2.0 * size.x, -2.0 * size.y)).w;
-	outline2 = aastep(1.0, outline2);
-	float4 color = tex2D(uTexture, vTexCoords);
 	COLOR = lerp(color, lerp(float4(0.0, 0.0, 0.0, COLOR.w * 0.5), float4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.w);
 	return COLOR;
 }
@@ -3059,6 +3059,325 @@ float4 main(PsInput _input) : COLOR
 	float4 tex = maskSample(vTexCoords);
 	float color = min((0.299 * tex.x + 0.587 * tex.y + 0.114 * tex.z) * 2.5, 1.0);
 	COLOR = float4(color, color, color, tex.w) * COLOR;
+	return COLOR;
+}
+)" },
+			{ "Resize3xBrz", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+static const float one_third = 1.0 / 3.0;
+static const float two_third = 2.0 / 3.0;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vPixelCoords;
+static float4 vTexCoords1;
+static float4 vTexCoords2;
+static float4 vTexCoords3;
+static float4 vTexCoords4;
+static float4 vTexCoords5;
+static float4 vTexCoords6;
+static float4 vTexCoords7;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vPixelCoords : TEXCOORD0;
+	float4 vTexCoords1 : TEXCOORD1;
+	float4 vTexCoords2 : TEXCOORD2;
+	float4 vTexCoords3 : TEXCOORD3;
+	float4 vTexCoords4 : TEXCOORD4;
+	float4 vTexCoords5 : TEXCOORD5;
+	float4 vTexCoords6 : TEXCOORD6;
+	float4 vTexCoords7 : TEXCOORD7;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	float dx = 1.0 / texRect.x;
+	float dy = 1.0 / texRect.y;
+	float2 texCoord = aPosition + float2(0.0000001, 0.0000001);
+	vPixelCoords = texCoord * texRect.xy;
+	vTexCoords1 = texCoord.xxxy + float4(-dx, 0, dx, -2.0 * dy);
+	vTexCoords2 = texCoord.xxxy + float4(-dx, 0, dx, -dy);
+	vTexCoords3 = texCoord.xxxy + float4(-dx, 0, dx, 0);
+	vTexCoords4 = texCoord.xxxy + float4(-dx, 0, dx, dy);
+	vTexCoords5 = texCoord.xxxy + float4(-dx, 0, dx, 2.0 * dy);
+	vTexCoords6 = texCoord.xyyy + float4(-2.0 * dx, -dy, 0, dy);
+	vTexCoords7 = texCoord.xyyy + float4(2.0 * dx, -dy, 0, dy);
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vPixelCoords = vPixelCoords;
+	_output.vTexCoords1 = vTexCoords1;
+	_output.vTexCoords2 = vTexCoords2;
+	_output.vTexCoords3 = vTexCoords3;
+	_output.vTexCoords4 = vTexCoords4;
+	_output.vTexCoords5 = vTexCoords5;
+	_output.vTexCoords6 = vTexCoords6;
+	_output.vTexCoords7 = vTexCoords7;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static const float one_third = 1.0 / 3.0;
+static const float two_third = 2.0 / 3.0;
+
+static float2 vPixelCoords;
+static float4 vTexCoords1;
+static float4 vTexCoords2;
+static float4 vTexCoords3;
+static float4 vTexCoords4;
+static float4 vTexCoords5;
+static float4 vTexCoords6;
+static float4 vTexCoords7;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vPixelCoords : TEXCOORD0;
+	float4 vTexCoords1 : TEXCOORD1;
+	float4 vTexCoords2 : TEXCOORD2;
+	float4 vTexCoords3 : TEXCOORD3;
+	float4 vTexCoords4 : TEXCOORD4;
+	float4 vTexCoords5 : TEXCOORD5;
+	float4 vTexCoords6 : TEXCOORD6;
+	float4 vTexCoords7 : TEXCOORD7;
+};
+
+float Reduce(float3 color)
+{
+	return dot(color, float3(65536.0, 256.0, 1.0));
+}
+
+float DistYCbCr(float3 pixA, float3 pixB)
+{
+	const float3 w = float3(0.2627, 0.6780, 0.0593);
+	const float scaleB = 0.5 / (1.0 - w.z);
+	const float scaleR = 0.5 / (1.0 - w.x);
+	float3 diff = pixA - pixB;
+	float Y = dot(diff, w);
+	float Cb = scaleB * (diff.z - Y);
+	float Cr = scaleR * (diff.x - Y);
+	return sqrt(1.0 * Y * (1.0 * Y) + Cb * Cb + Cr * Cr);
+}
+
+bool IsPixEqual(float3 pixA, float3 pixB)
+{
+	return DistYCbCr(pixA, pixB) < 30.0 / 255.0;
+}
+
+bool IsBlendingNeeded(int4 blend)
+{
+	return any((blend != ((int4)0)));
+}
+
+void ScalePixel(int4 blend, float3 k[9], inout float3 dst[9])
+{
+	float v0 = Reduce(k[0]);
+	float v4 = Reduce(k[4]);
+	float v5 = Reduce(k[5]);
+	float v7 = Reduce(k[7]);
+	float v8 = Reduce(k[8]);
+	float dist_01_04 = DistYCbCr(k[1], k[4]);
+	float dist_03_08 = DistYCbCr(k[3], k[8]);
+	bool haveShallowLine = 2.2 * dist_01_04 <= dist_03_08 && v0 != v4 && v5 != v4;
+	bool haveSteepLine = 2.2 * dist_03_08 <= dist_01_04 && v0 != v8 && v7 != v8;
+	bool needBlend = blend[2] != 0;
+	bool doLineBlend = blend[2] >= 2 || !(blend[1] != 0 && !IsPixEqual(k[0], k[4]) || blend[3] != 0 && !IsPixEqual(k[0], k[8]) || IsPixEqual(k[4], k[3]) && IsPixEqual(k[3], k[2]) && IsPixEqual(k[2], k[1]) && IsPixEqual(k[1], k[8]) && !IsPixEqual(k[0], k[2]));
+	float3 blendPix = DistYCbCr(k[0], k[1]) <= DistYCbCr(k[0], k[3]) ? k[1] : k[3];
+	dst[1] = lerp(dst[1], blendPix, needBlend && doLineBlend ? (haveSteepLine ? 0.750 : haveShallowLine ? 0.250 : 0.125) : 0.000);
+	dst[2] = lerp(dst[2], blendPix, needBlend ? (doLineBlend ? (!haveShallowLine && !haveSteepLine ? 0.875 : 1.000) : 0.4545939598) : 0.000);
+	dst[3] = lerp(dst[3], blendPix, needBlend && doLineBlend ? (haveShallowLine ? 0.750 : haveSteepLine ? 0.250 : 0.125) : 0.000);
+	dst[4] = lerp(dst[4], blendPix, needBlend && doLineBlend && haveShallowLine ? 0.250 : 0.000);
+	dst[8] = lerp(dst[8], blendPix, needBlend && doLineBlend && haveSteepLine ? 0.250 : 0.000);
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vPixelCoords = _input.vPixelCoords;
+	vTexCoords1 = _input.vTexCoords1;
+	vTexCoords2 = _input.vTexCoords2;
+	vTexCoords3 = _input.vTexCoords3;
+	vTexCoords4 = _input.vTexCoords4;
+	vTexCoords5 = _input.vTexCoords5;
+	vTexCoords6 = _input.vTexCoords6;
+	vTexCoords7 = _input.vTexCoords7;
+	float2 f = frac(vPixelCoords);
+	float3 src[25];
+	src[21] = tex2D(uTexture, vTexCoords1.xw).xyz;
+	src[22] = tex2D(uTexture, vTexCoords1.yw).xyz;
+	src[23] = tex2D(uTexture, vTexCoords1.zw).xyz;
+	src[6] = tex2D(uTexture, vTexCoords2.xw).xyz;
+	src[7] = tex2D(uTexture, vTexCoords2.yw).xyz;
+	src[8] = tex2D(uTexture, vTexCoords2.zw).xyz;
+	src[5] = tex2D(uTexture, vTexCoords3.xw).xyz;
+	src[0] = tex2D(uTexture, vTexCoords3.yw).xyz;
+	src[1] = tex2D(uTexture, vTexCoords3.zw).xyz;
+	src[4] = tex2D(uTexture, vTexCoords4.xw).xyz;
+	src[3] = tex2D(uTexture, vTexCoords4.yw).xyz;
+	src[2] = tex2D(uTexture, vTexCoords4.zw).xyz;
+	src[15] = tex2D(uTexture, vTexCoords5.xw).xyz;
+	src[14] = tex2D(uTexture, vTexCoords5.yw).xyz;
+	src[13] = tex2D(uTexture, vTexCoords5.zw).xyz;
+	src[19] = tex2D(uTexture, vTexCoords6.xy).xyz;
+	src[18] = tex2D(uTexture, vTexCoords6.xz).xyz;
+	src[17] = tex2D(uTexture, vTexCoords6.xw).xyz;
+	src[9] = tex2D(uTexture, vTexCoords7.xy).xyz;
+	src[10] = tex2D(uTexture, vTexCoords7.xz).xyz;
+	src[11] = tex2D(uTexture, vTexCoords7.xw).xyz;
+	float v[9];
+	v[0] = Reduce(src[0]);
+	v[1] = Reduce(src[1]);
+	v[2] = Reduce(src[2]);
+	v[3] = Reduce(src[3]);
+	v[4] = Reduce(src[4]);
+	v[5] = Reduce(src[5]);
+	v[6] = Reduce(src[6]);
+	v[7] = Reduce(src[7]);
+	v[8] = Reduce(src[8]);
+	int4 blendResult = ((int4)0);
+	if (!(v[0] == v[1] && v[3] == v[2] || v[0] == v[3] && v[1] == v[2])) {
+		float dist_03_01 = DistYCbCr(src[4], src[0]) + DistYCbCr(src[0], src[8]) + DistYCbCr(src[14], src[2]) + DistYCbCr(src[2], src[10]) + 4.0 * DistYCbCr(src[3], src[1]);
+		float dist_00_02 = DistYCbCr(src[5], src[3]) + DistYCbCr(src[3], src[13]) + DistYCbCr(src[7], src[1]) + DistYCbCr(src[1], src[11]) + 4.0 * DistYCbCr(src[0], src[2]);
+		bool dominantGradient = 3.6 * dist_03_01 < dist_00_02;
+		blendResult[2] = dist_03_01 < dist_00_02 && v[0] != v[1] && v[0] != v[3] ? (dominantGradient ? 2 : 1) : 0;
+	}
+	if (!(v[5] == v[0] && v[4] == v[3] || v[5] == v[4] && v[0] == v[3])) {
+		float dist_04_00 = DistYCbCr(src[17], src[5]) + DistYCbCr(src[5], src[7]) + DistYCbCr(src[15], src[3]) + DistYCbCr(src[3], src[1]) + 4.0 * DistYCbCr(src[4], src[0]);
+		float dist_05_03 = DistYCbCr(src[18], src[4]) + DistYCbCr(src[4], src[14]) + DistYCbCr(src[6], src[0]) + DistYCbCr(src[0], src[2]) + 4.0 * DistYCbCr(src[5], src[3]);
+		bool dominantGradient = 3.6 * dist_05_03 < dist_04_00;
+		blendResult[3] = dist_04_00 > dist_05_03 && v[0] != v[5] && v[0] != v[3] ? (dominantGradient ? 2 : 1) : 0;
+	}
+	if (!(v[7] == v[8] && v[0] == v[1] || v[7] == v[0] && v[8] == v[1])) {
+		float dist_00_08 = DistYCbCr(src[5], src[7]) + DistYCbCr(src[7], src[23]) + DistYCbCr(src[3], src[1]) + DistYCbCr(src[1], src[9]) + 4.0 * DistYCbCr(src[0], src[8]);
+		float dist_07_01 = DistYCbCr(src[6], src[0]) + DistYCbCr(src[0], src[2]) + DistYCbCr(src[22], src[8]) + DistYCbCr(src[8], src[10]) + 4.0 * DistYCbCr(src[7], src[1]);
+		bool dominantGradient = 3.6 * dist_07_01 < dist_00_08;
+		blendResult[1] = dist_00_08 > dist_07_01 && v[0] != v[7] && v[0] != v[1] ? (dominantGradient ? 2 : 1) : 0;
+	}
+	if (!(v[6] == v[7] && v[5] == v[0] || v[6] == v[5] && v[7] == v[0])) {
+		float dist_05_07 = DistYCbCr(src[18], src[6]) + DistYCbCr(src[6], src[22]) + DistYCbCr(src[4], src[0]) + DistYCbCr(src[0], src[8]) + 4.0 * DistYCbCr(src[5], src[7]);
+		float dist_06_00 = DistYCbCr(src[19], src[5]) + DistYCbCr(src[5], src[3]) + DistYCbCr(src[21], src[7]) + DistYCbCr(src[7], src[1]) + 4.0 * DistYCbCr(src[6], src[0]);
+		bool dominantGradient = 3.6 * dist_05_07 < dist_06_00;
+		blendResult[0] = dist_05_07 < dist_06_00 && v[0] != v[5] && v[0] != v[7] ? (dominantGradient ? 2 : 1) : 0;
+	}
+	float3 dst[9];
+	dst[0] = src[0];
+	dst[1] = src[0];
+	dst[2] = src[0];
+	dst[3] = src[0];
+	dst[4] = src[0];
+	dst[5] = src[0];
+	dst[6] = src[0];
+	dst[7] = src[0];
+	dst[8] = src[0];
+	if (IsBlendingNeeded(blendResult)) {
+		float3 k[9];
+		float3 tempDst8;
+		float3 tempDst7;
+		k[8] = src[8];
+		k[7] = src[7];
+		k[6] = src[6];
+		k[5] = src[5];
+		k[4] = src[4];
+		k[3] = src[3];
+		k[2] = src[2];
+		k[1] = src[1];
+		k[0] = src[0];
+		ScalePixel(blendResult.xyzw, k, dst);
+		k[8] = src[6];
+		k[7] = src[5];
+		k[6] = src[4];
+		k[5] = src[3];
+		k[4] = src[2];
+		k[3] = src[1];
+		k[2] = src[8];
+		k[1] = src[7];
+		tempDst8 = dst[8];
+		tempDst7 = dst[7];
+		dst[8] = dst[6];
+		dst[7] = dst[5];
+		dst[6] = dst[4];
+		dst[5] = dst[3];
+		dst[4] = dst[2];
+		dst[3] = dst[1];
+		dst[2] = tempDst8;
+		dst[1] = tempDst7;
+		ScalePixel(blendResult.wxyz, k, dst);
+		k[8] = src[4];
+		k[7] = src[3];
+		k[6] = src[2];
+		k[5] = src[1];
+		k[4] = src[8];
+		k[3] = src[7];
+		k[2] = src[6];
+		k[1] = src[5];
+		tempDst8 = dst[8];
+		tempDst7 = dst[7];
+		dst[8] = dst[6];
+		dst[7] = dst[5];
+		dst[6] = dst[4];
+		dst[5] = dst[3];
+		dst[4] = dst[2];
+		dst[3] = dst[1];
+		dst[2] = tempDst8;
+		dst[1] = tempDst7;
+		ScalePixel(blendResult.zwxy, k, dst);
+		k[8] = src[2];
+		k[7] = src[1];
+		k[6] = src[8];
+		k[5] = src[7];
+		k[4] = src[6];
+		k[3] = src[5];
+		k[2] = src[4];
+		k[1] = src[3];
+		tempDst8 = dst[8];
+		tempDst7 = dst[7];
+		dst[8] = dst[6];
+		dst[7] = dst[5];
+		dst[6] = dst[4];
+		dst[5] = dst[3];
+		dst[4] = dst[2];
+		dst[3] = dst[1];
+		dst[2] = tempDst8;
+		dst[1] = tempDst7;
+		ScalePixel(blendResult.yzwx, k, dst);
+		tempDst8 = dst[8];
+		tempDst7 = dst[7];
+		dst[8] = dst[6];
+		dst[7] = dst[5];
+		dst[6] = dst[4];
+		dst[5] = dst[3];
+		dst[4] = dst[2];
+		dst[3] = dst[1];
+		dst[2] = tempDst8;
+		dst[1] = tempDst7;
+	}
+	float3 res = lerp(lerp(dst[6], lerp(dst[7], dst[8], step(two_third, f.x)), step(one_third, f.x)), lerp(lerp(dst[5], lerp(dst[0], dst[1], step(two_third, f.x)), step(one_third, f.x)), lerp(dst[4], lerp(dst[3], dst[2], step(two_third, f.x)), step(one_third, f.x)), step(two_third, f.y)), step(one_third, f.y));
+	COLOR = float4(res, 1.0);
 	return COLOR;
 }
 )" },
@@ -4417,325 +4736,6 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
-			{ "Resize3xBrz", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-static const float one_third = 1.0 / 3.0;
-static const float two_third = 2.0 / 3.0;
-
-static float2 aQuadCorner;
-static float4 gl_Position;
-static float2 vPixelCoords;
-static float4 vTexCoords1;
-static float4 vTexCoords2;
-static float4 vTexCoords3;
-static float4 vTexCoords4;
-static float4 vTexCoords5;
-static float4 vTexCoords6;
-static float4 vTexCoords7;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vPixelCoords : TEXCOORD0;
-	float4 vTexCoords1 : TEXCOORD1;
-	float4 vTexCoords2 : TEXCOORD2;
-	float4 vTexCoords3 : TEXCOORD3;
-	float4 vTexCoords4 : TEXCOORD4;
-	float4 vTexCoords5 : TEXCOORD5;
-	float4 vTexCoords6 : TEXCOORD6;
-	float4 vTexCoords7 : TEXCOORD7;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	float dx = 1.0 / texRect.x;
-	float dy = 1.0 / texRect.y;
-	float2 texCoord = aPosition + float2(0.0000001, 0.0000001);
-	vPixelCoords = texCoord * texRect.xy;
-	vTexCoords1 = texCoord.xxxy + float4(-dx, 0, dx, -2.0 * dy);
-	vTexCoords2 = texCoord.xxxy + float4(-dx, 0, dx, -dy);
-	vTexCoords3 = texCoord.xxxy + float4(-dx, 0, dx, 0);
-	vTexCoords4 = texCoord.xxxy + float4(-dx, 0, dx, dy);
-	vTexCoords5 = texCoord.xxxy + float4(-dx, 0, dx, 2.0 * dy);
-	vTexCoords6 = texCoord.xyyy + float4(-2.0 * dx, -dy, 0, dy);
-	vTexCoords7 = texCoord.xyyy + float4(2.0 * dx, -dy, 0, dy);
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vPixelCoords = vPixelCoords;
-	_output.vTexCoords1 = vTexCoords1;
-	_output.vTexCoords2 = vTexCoords2;
-	_output.vTexCoords3 = vTexCoords3;
-	_output.vTexCoords4 = vTexCoords4;
-	_output.vTexCoords5 = vTexCoords5;
-	_output.vTexCoords6 = vTexCoords6;
-	_output.vTexCoords7 = vTexCoords7;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-
-uniform sampler2D uTexture : TEXUNIT0;
-
-static const float one_third = 1.0 / 3.0;
-static const float two_third = 2.0 / 3.0;
-
-static float2 vPixelCoords;
-static float4 vTexCoords1;
-static float4 vTexCoords2;
-static float4 vTexCoords3;
-static float4 vTexCoords4;
-static float4 vTexCoords5;
-static float4 vTexCoords6;
-static float4 vTexCoords7;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vPixelCoords : TEXCOORD0;
-	float4 vTexCoords1 : TEXCOORD1;
-	float4 vTexCoords2 : TEXCOORD2;
-	float4 vTexCoords3 : TEXCOORD3;
-	float4 vTexCoords4 : TEXCOORD4;
-	float4 vTexCoords5 : TEXCOORD5;
-	float4 vTexCoords6 : TEXCOORD6;
-	float4 vTexCoords7 : TEXCOORD7;
-};
-
-float Reduce(float3 color)
-{
-	return dot(color, float3(65536.0, 256.0, 1.0));
-}
-
-float DistYCbCr(float3 pixA, float3 pixB)
-{
-	const float3 w = float3(0.2627, 0.6780, 0.0593);
-	const float scaleB = 0.5 / (1.0 - w.z);
-	const float scaleR = 0.5 / (1.0 - w.x);
-	float3 diff = pixA - pixB;
-	float Y = dot(diff, w);
-	float Cb = scaleB * (diff.z - Y);
-	float Cr = scaleR * (diff.x - Y);
-	return sqrt(1.0 * Y * (1.0 * Y) + Cb * Cb + Cr * Cr);
-}
-
-bool IsPixEqual(float3 pixA, float3 pixB)
-{
-	return DistYCbCr(pixA, pixB) < 30.0 / 255.0;
-}
-
-bool IsBlendingNeeded(int4 blend)
-{
-	return any((blend != ((int4)0)));
-}
-
-void ScalePixel(int4 blend, float3 k[9], inout float3 dst[9])
-{
-	float v0 = Reduce(k[0]);
-	float v4 = Reduce(k[4]);
-	float v5 = Reduce(k[5]);
-	float v7 = Reduce(k[7]);
-	float v8 = Reduce(k[8]);
-	float dist_01_04 = DistYCbCr(k[1], k[4]);
-	float dist_03_08 = DistYCbCr(k[3], k[8]);
-	bool haveShallowLine = 2.2 * dist_01_04 <= dist_03_08 && v0 != v4 && v5 != v4;
-	bool haveSteepLine = 2.2 * dist_03_08 <= dist_01_04 && v0 != v8 && v7 != v8;
-	bool needBlend = blend[2] != 0;
-	bool doLineBlend = blend[2] >= 2 || !(blend[1] != 0 && !IsPixEqual(k[0], k[4]) || blend[3] != 0 && !IsPixEqual(k[0], k[8]) || IsPixEqual(k[4], k[3]) && IsPixEqual(k[3], k[2]) && IsPixEqual(k[2], k[1]) && IsPixEqual(k[1], k[8]) && !IsPixEqual(k[0], k[2]));
-	float3 blendPix = DistYCbCr(k[0], k[1]) <= DistYCbCr(k[0], k[3]) ? k[1] : k[3];
-	dst[1] = lerp(dst[1], blendPix, needBlend && doLineBlend ? (haveSteepLine ? 0.750 : haveShallowLine ? 0.250 : 0.125) : 0.000);
-	dst[2] = lerp(dst[2], blendPix, needBlend ? (doLineBlend ? (!haveShallowLine && !haveSteepLine ? 0.875 : 1.000) : 0.4545939598) : 0.000);
-	dst[3] = lerp(dst[3], blendPix, needBlend && doLineBlend ? (haveShallowLine ? 0.750 : haveSteepLine ? 0.250 : 0.125) : 0.000);
-	dst[4] = lerp(dst[4], blendPix, needBlend && doLineBlend && haveShallowLine ? 0.250 : 0.000);
-	dst[8] = lerp(dst[8], blendPix, needBlend && doLineBlend && haveSteepLine ? 0.250 : 0.000);
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vPixelCoords = _input.vPixelCoords;
-	vTexCoords1 = _input.vTexCoords1;
-	vTexCoords2 = _input.vTexCoords2;
-	vTexCoords3 = _input.vTexCoords3;
-	vTexCoords4 = _input.vTexCoords4;
-	vTexCoords5 = _input.vTexCoords5;
-	vTexCoords6 = _input.vTexCoords6;
-	vTexCoords7 = _input.vTexCoords7;
-	float2 f = frac(vPixelCoords);
-	float3 src[25];
-	src[21] = tex2D(uTexture, vTexCoords1.xw).xyz;
-	src[22] = tex2D(uTexture, vTexCoords1.yw).xyz;
-	src[23] = tex2D(uTexture, vTexCoords1.zw).xyz;
-	src[6] = tex2D(uTexture, vTexCoords2.xw).xyz;
-	src[7] = tex2D(uTexture, vTexCoords2.yw).xyz;
-	src[8] = tex2D(uTexture, vTexCoords2.zw).xyz;
-	src[5] = tex2D(uTexture, vTexCoords3.xw).xyz;
-	src[0] = tex2D(uTexture, vTexCoords3.yw).xyz;
-	src[1] = tex2D(uTexture, vTexCoords3.zw).xyz;
-	src[4] = tex2D(uTexture, vTexCoords4.xw).xyz;
-	src[3] = tex2D(uTexture, vTexCoords4.yw).xyz;
-	src[2] = tex2D(uTexture, vTexCoords4.zw).xyz;
-	src[15] = tex2D(uTexture, vTexCoords5.xw).xyz;
-	src[14] = tex2D(uTexture, vTexCoords5.yw).xyz;
-	src[13] = tex2D(uTexture, vTexCoords5.zw).xyz;
-	src[19] = tex2D(uTexture, vTexCoords6.xy).xyz;
-	src[18] = tex2D(uTexture, vTexCoords6.xz).xyz;
-	src[17] = tex2D(uTexture, vTexCoords6.xw).xyz;
-	src[9] = tex2D(uTexture, vTexCoords7.xy).xyz;
-	src[10] = tex2D(uTexture, vTexCoords7.xz).xyz;
-	src[11] = tex2D(uTexture, vTexCoords7.xw).xyz;
-	float v[9];
-	v[0] = Reduce(src[0]);
-	v[1] = Reduce(src[1]);
-	v[2] = Reduce(src[2]);
-	v[3] = Reduce(src[3]);
-	v[4] = Reduce(src[4]);
-	v[5] = Reduce(src[5]);
-	v[6] = Reduce(src[6]);
-	v[7] = Reduce(src[7]);
-	v[8] = Reduce(src[8]);
-	int4 blendResult = ((int4)0);
-	if (!(v[0] == v[1] && v[3] == v[2] || v[0] == v[3] && v[1] == v[2])) {
-		float dist_03_01 = DistYCbCr(src[4], src[0]) + DistYCbCr(src[0], src[8]) + DistYCbCr(src[14], src[2]) + DistYCbCr(src[2], src[10]) + 4.0 * DistYCbCr(src[3], src[1]);
-		float dist_00_02 = DistYCbCr(src[5], src[3]) + DistYCbCr(src[3], src[13]) + DistYCbCr(src[7], src[1]) + DistYCbCr(src[1], src[11]) + 4.0 * DistYCbCr(src[0], src[2]);
-		bool dominantGradient = 3.6 * dist_03_01 < dist_00_02;
-		blendResult[2] = dist_03_01 < dist_00_02 && v[0] != v[1] && v[0] != v[3] ? (dominantGradient ? 2 : 1) : 0;
-	}
-	if (!(v[5] == v[0] && v[4] == v[3] || v[5] == v[4] && v[0] == v[3])) {
-		float dist_04_00 = DistYCbCr(src[17], src[5]) + DistYCbCr(src[5], src[7]) + DistYCbCr(src[15], src[3]) + DistYCbCr(src[3], src[1]) + 4.0 * DistYCbCr(src[4], src[0]);
-		float dist_05_03 = DistYCbCr(src[18], src[4]) + DistYCbCr(src[4], src[14]) + DistYCbCr(src[6], src[0]) + DistYCbCr(src[0], src[2]) + 4.0 * DistYCbCr(src[5], src[3]);
-		bool dominantGradient = 3.6 * dist_05_03 < dist_04_00;
-		blendResult[3] = dist_04_00 > dist_05_03 && v[0] != v[5] && v[0] != v[3] ? (dominantGradient ? 2 : 1) : 0;
-	}
-	if (!(v[7] == v[8] && v[0] == v[1] || v[7] == v[0] && v[8] == v[1])) {
-		float dist_00_08 = DistYCbCr(src[5], src[7]) + DistYCbCr(src[7], src[23]) + DistYCbCr(src[3], src[1]) + DistYCbCr(src[1], src[9]) + 4.0 * DistYCbCr(src[0], src[8]);
-		float dist_07_01 = DistYCbCr(src[6], src[0]) + DistYCbCr(src[0], src[2]) + DistYCbCr(src[22], src[8]) + DistYCbCr(src[8], src[10]) + 4.0 * DistYCbCr(src[7], src[1]);
-		bool dominantGradient = 3.6 * dist_07_01 < dist_00_08;
-		blendResult[1] = dist_00_08 > dist_07_01 && v[0] != v[7] && v[0] != v[1] ? (dominantGradient ? 2 : 1) : 0;
-	}
-	if (!(v[6] == v[7] && v[5] == v[0] || v[6] == v[5] && v[7] == v[0])) {
-		float dist_05_07 = DistYCbCr(src[18], src[6]) + DistYCbCr(src[6], src[22]) + DistYCbCr(src[4], src[0]) + DistYCbCr(src[0], src[8]) + 4.0 * DistYCbCr(src[5], src[7]);
-		float dist_06_00 = DistYCbCr(src[19], src[5]) + DistYCbCr(src[5], src[3]) + DistYCbCr(src[21], src[7]) + DistYCbCr(src[7], src[1]) + 4.0 * DistYCbCr(src[6], src[0]);
-		bool dominantGradient = 3.6 * dist_05_07 < dist_06_00;
-		blendResult[0] = dist_05_07 < dist_06_00 && v[0] != v[5] && v[0] != v[7] ? (dominantGradient ? 2 : 1) : 0;
-	}
-	float3 dst[9];
-	dst[0] = src[0];
-	dst[1] = src[0];
-	dst[2] = src[0];
-	dst[3] = src[0];
-	dst[4] = src[0];
-	dst[5] = src[0];
-	dst[6] = src[0];
-	dst[7] = src[0];
-	dst[8] = src[0];
-	if (IsBlendingNeeded(blendResult)) {
-		float3 k[9];
-		float3 tempDst8;
-		float3 tempDst7;
-		k[8] = src[8];
-		k[7] = src[7];
-		k[6] = src[6];
-		k[5] = src[5];
-		k[4] = src[4];
-		k[3] = src[3];
-		k[2] = src[2];
-		k[1] = src[1];
-		k[0] = src[0];
-		ScalePixel(blendResult.xyzw, k, dst);
-		k[8] = src[6];
-		k[7] = src[5];
-		k[6] = src[4];
-		k[5] = src[3];
-		k[4] = src[2];
-		k[3] = src[1];
-		k[2] = src[8];
-		k[1] = src[7];
-		tempDst8 = dst[8];
-		tempDst7 = dst[7];
-		dst[8] = dst[6];
-		dst[7] = dst[5];
-		dst[6] = dst[4];
-		dst[5] = dst[3];
-		dst[4] = dst[2];
-		dst[3] = dst[1];
-		dst[2] = tempDst8;
-		dst[1] = tempDst7;
-		ScalePixel(blendResult.wxyz, k, dst);
-		k[8] = src[4];
-		k[7] = src[3];
-		k[6] = src[2];
-		k[5] = src[1];
-		k[4] = src[8];
-		k[3] = src[7];
-		k[2] = src[6];
-		k[1] = src[5];
-		tempDst8 = dst[8];
-		tempDst7 = dst[7];
-		dst[8] = dst[6];
-		dst[7] = dst[5];
-		dst[6] = dst[4];
-		dst[5] = dst[3];
-		dst[4] = dst[2];
-		dst[3] = dst[1];
-		dst[2] = tempDst8;
-		dst[1] = tempDst7;
-		ScalePixel(blendResult.zwxy, k, dst);
-		k[8] = src[2];
-		k[7] = src[1];
-		k[6] = src[8];
-		k[5] = src[7];
-		k[4] = src[6];
-		k[3] = src[5];
-		k[2] = src[4];
-		k[1] = src[3];
-		tempDst8 = dst[8];
-		tempDst7 = dst[7];
-		dst[8] = dst[6];
-		dst[7] = dst[5];
-		dst[6] = dst[4];
-		dst[5] = dst[3];
-		dst[4] = dst[2];
-		dst[3] = dst[1];
-		dst[2] = tempDst8;
-		dst[1] = tempDst7;
-		ScalePixel(blendResult.yzwx, k, dst);
-		tempDst8 = dst[8];
-		tempDst7 = dst[7];
-		dst[8] = dst[6];
-		dst[7] = dst[5];
-		dst[6] = dst[4];
-		dst[5] = dst[3];
-		dst[4] = dst[2];
-		dst[3] = dst[1];
-		dst[2] = tempDst8;
-		dst[1] = tempDst7;
-	}
-	float3 res = lerp(lerp(dst[6], lerp(dst[7], dst[8], step(two_third, f.x)), step(one_third, f.x)), lerp(lerp(dst[5], lerp(dst[0], dst[1], step(two_third, f.x)), step(one_third, f.x)), lerp(dst[4], lerp(dst[3], dst[2], step(two_third, f.x)), step(one_third, f.x)), step(two_third, f.y)), step(one_third, f.y));
-	COLOR = float4(res, 1.0);
-	return COLOR;
-}
-)" },
 			{ "ShieldFire", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -4940,244 +4940,6 @@ float4 main(PsInput _input) : COLOR
 		float maskSum = max(maskNormalized, isVeryNearBorder);
 		COLOR = float4(lerp(float3(0.1, 1.0, 0.0), float3(1.0, 1.0, 1.0), max(maskSum * 2.0 - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
 	}
-	return COLOR;
-}
-)" },
-			{ "TexturedBackgroundCircle", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
-static float2 aQuadCorner;
-static float4 gl_Position;
-static float2 vTexCoords;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
-uniform float2 uCameraPos;
-uniform float4 uHorizonColor;
-uniform float2 uShift;
-
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 vTexCoords;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-};
-
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)1.0);
-	targetCoord.x *= uViewSize.x / uViewSize.y;
-	float distance_ = length(targetCoord);
-	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
-	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
-	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
-	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
-	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
-	COLOR.w = 1.0;
-	return COLOR;
-}
-)" },
-			{ "TexturedBackgroundCircle", "DITHER",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
-static float2 aQuadCorner;
-static float4 gl_Position;
-static float2 vTexCoords;
-
-struct VsInput
-{
-	float2 aQuadCorner : TEXCOORD0;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-};
-
-VsOutput main(VsInput _input)
-{
-	aQuadCorner = _input.aQuadCorner;
-	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uViewSize;
-uniform float2 uCameraPos;
-uniform float4 uHorizonColor;
-uniform float2 uShift;
-
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 vTexCoords;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-};
-
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)1.0);
-	targetCoord.x *= uViewSize.x / uViewSize.y;
-	float distance_ = length(targetCoord);
-	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
-	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
-	float4 texColor = tex2D(uTexture, texturePos);
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
-	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
-	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
-	COLOR.w = 1.0;
 	return COLOR;
 }
 )" },
@@ -5419,6 +5181,313 @@ float4 main(PsInput _input) : COLOR
 	return COLOR;
 }
 )" },
+			{ "TexturedBackgroundCircle", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+};
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+}
+
+float3 voronoi(float2 p)
+{
+	float2 n = floor(p);
+	float2 f = frac(p);
+	float2 mg;
+	float2 mr;
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			float2 g = float2(float(i), float(j));
+			float2 o = hash2D(n + g);
+			float2 r = g + o - f;
+			float d = dot(r, r);
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return float3(md, mr);
+}
+
+float addStarField(float2 samplePosition, float threshold)
+{
+	float3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - starValue.x / threshold;
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)1.0);
+	targetCoord.x *= uViewSize.x / uViewSize.y;
+	float distance_ = length(targetCoord);
+	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
+	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
+	float4 texColor = tex2D(uTexture, texturePos);
+	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
+		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
+	}
+	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
+	COLOR.w = 1.0;
+	return COLOR;
+}
+)" },
+			{ "TexturedBackgroundCircle", "DITHER",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aQuadCorner;
+static float4 gl_Position;
+static float2 vTexCoords;
+
+struct VsInput
+{
+	float2 aQuadCorner : TEXCOORD0;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+};
+
+VsOutput main(VsInput _input)
+{
+	aQuadCorner = _input.aQuadCorner;
+	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float2 uViewSize;
+uniform float2 uCameraPos;
+uniform float4 uHorizonColor;
+uniform float2 uShift;
+
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+};
+
+float2 hash2D(float2 p)
+{
+	float h = dot(p, float2(12.9898, 78.233));
+	float h2 = dot(p, float2(37.271, 377.632));
+	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+}
+
+float3 voronoi(float2 p)
+{
+	float2 n = floor(p);
+	float2 f = frac(p);
+	float2 mg;
+	float2 mr;
+	float md = 8.0;
+	for (int j = -1; j <= 1; ++j) {
+		for (int i = -1; i <= 1; ++i) {
+			float2 g = float2(float(i), float(j));
+			float2 o = hash2D(n + g);
+			float2 r = g + o - f;
+			float d = dot(r, r);
+			if (d < md) {
+				md = d;
+				mr = r;
+				mg = g;
+			}
+		}
+	}
+	return float3(md, mr);
+}
+
+float addStarField(float2 samplePosition, float threshold)
+{
+	float3 starValue = voronoi(samplePosition);
+	if (starValue.x < threshold) {
+		float power = 1.0 - starValue.x / threshold;
+		return min(power * power * power, 0.5);
+	}
+	return 0.0;
+}
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	float2 targetCoord = ((float2)2.0) * vTexCoords - ((float2)1.0);
+	targetCoord.x *= uViewSize.x / uViewSize.y;
+	float distance_ = length(targetCoord);
+	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
+	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
+	float4 texColor = tex2D(uTexture, texturePos);
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
+	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
+		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
+	}
+	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
+	COLOR.w = 1.0;
+	return COLOR;
+}
+)" },
+			{ "TileMapMesh", "",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform float4x4 uProjectionMatrix;
+uniform float4x4 uViewMatrix;
+
+uniform float4x4 modelMatrix;
+uniform float4 color;
+uniform float4 texRect;
+uniform float2 spriteSize;
+uniform float palOffset;
+
+static float2 aPosition;
+static float2 aTexCoords;
+static float4 aColor;
+static float4 gl_Position;
+static float2 vTexCoords;
+static float4 vColor;
+
+struct VsInput
+{
+	float2 aPosition : TEXCOORD0;
+	float2 aTexCoords : TEXCOORD1;
+	float4 aColor : TEXCOORD2;
+};
+
+struct VsOutput
+{
+	float4 _clipPosition : POSITION;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+VsOutput main(VsInput _input)
+{
+	aPosition = _input.aPosition;
+	aTexCoords = _input.aTexCoords;
+	aColor = _input.aColor;
+	gl_Position = mul(float4(aPosition.x, aPosition.y, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+	VsOutput _output = (VsOutput)0;
+	_output._clipPosition = gl_Position;
+	_output.vTexCoords = vTexCoords;
+	_output.vColor = vColor;
+	return _output;
+}
+)",
+				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
+uniform sampler2D uTexture : TEXUNIT0;
+
+static float2 vTexCoords;
+static float4 vColor;
+static float4 COLOR;
+
+struct PsInput
+{
+	float4 _fragCoord : WPOS;
+	float2 vTexCoords : TEXCOORD0;
+	float4 vColor : TEXCOORD1;
+};
+
+float4 main(PsInput _input) : COLOR
+{
+	vTexCoords = _input.vTexCoords;
+	vColor = _input.vColor;
+	COLOR = tex2D(uTexture, vTexCoords) * vColor;
+	return COLOR;
+}
+)" },
 			{ "TileMapMeshPalette", "",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
@@ -5504,75 +5573,6 @@ float4 main(PsInput _input) : COLOR
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float4 color = tex2D(uTexturePalette, float2(palX, palY));
 	COLOR = float4(color.xyz, color.w * src.w) * vColor;
-	return COLOR;
-}
-)" },
-			{ "TileMapMesh", "",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float4x4 uProjectionMatrix;
-uniform float4x4 uViewMatrix;
-
-uniform float4x4 modelMatrix;
-uniform float4 color;
-uniform float4 texRect;
-uniform float2 spriteSize;
-uniform float palOffset;
-
-static float2 aPosition;
-static float2 aTexCoords;
-static float4 aColor;
-static float4 gl_Position;
-static float2 vTexCoords;
-static float4 vColor;
-
-struct VsInput
-{
-	float2 aPosition : TEXCOORD0;
-	float2 aTexCoords : TEXCOORD1;
-	float4 aColor : TEXCOORD2;
-};
-
-struct VsOutput
-{
-	float4 _clipPosition : POSITION;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-VsOutput main(VsInput _input)
-{
-	aPosition = _input.aPosition;
-	aTexCoords = _input.aTexCoords;
-	aColor = _input.aColor;
-	gl_Position = mul(float4(aPosition.x, aPosition.y, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = aTexCoords;
-	vColor = aColor * color;
-	VsOutput _output = (VsOutput)0;
-	_output._clipPosition = gl_Position;
-	_output.vTexCoords = vTexCoords;
-	_output.vColor = vColor;
-	return _output;
-}
-)",
-				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform sampler2D uTexture : TEXUNIT0;
-
-static float2 vTexCoords;
-static float4 vColor;
-static float4 COLOR;
-
-struct PsInput
-{
-	float4 _fragCoord : WPOS;
-	float2 vTexCoords : TEXCOORD0;
-	float4 vColor : TEXCOORD1;
-};
-
-float4 main(PsInput _input) : COLOR
-{
-	vTexCoords = _input.vTexCoords;
-	vColor = _input.vColor;
-	COLOR = tex2D(uTexture, vTexCoords) * vColor;
 	return COLOR;
 }
 )" },

@@ -55,6 +55,18 @@
     <Filter Include="Source Files\nCine\Base">
       <UniqueIdentifier>{7e648915-b10d-a8a5-ff79-687fc3cc8de5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Dependencies">
+      <UniqueIdentifier>{6d3e5a02-1c47-4b8f-9a1e-3f7c5d9b2e64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Dependencies\jsoncpp">
+      <UniqueIdentifier>{c81f4b6a-2d59-4e13-8b7d-91a6f0c3d582}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Dependencies">
+      <UniqueIdentifier>{2a94d7e1-6f38-4c25-a0b9-7d1e8c4f5063}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Dependencies\jsoncpp">
+      <UniqueIdentifier>{f57b2c90-8a41-4d6e-b3c8-05e9d726a1f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -171,6 +183,15 @@
     <ClCompile Include="..\..\Shared\Threading\Implementation\WaitOnAddress.cpp">
       <Filter>Source Files\Shared\Threading\Implementation</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Dependencies\jsoncpp\reader.cpp">
+      <Filter>Source Files\Dependencies\jsoncpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Dependencies\jsoncpp\value.cpp">
+      <Filter>Source Files\Dependencies\jsoncpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Dependencies\jsoncpp\writer.cpp">
+      <Filter>Source Files\Dependencies\jsoncpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FontPacker.h">
@@ -229,6 +250,42 @@
     </ClInclude>
     <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Version.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\allocator.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\assertions.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\config.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\forwards.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\json.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\json_features.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\json_tool.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\json_valueiterator.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\reader.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\value.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\version.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dependencies\jsoncpp\writer.h">
+      <Filter>Header Files\Dependencies\jsoncpp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

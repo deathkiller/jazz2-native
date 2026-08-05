@@ -27,8 +27,10 @@
 #include "GlslToCpp.h"
 #include "ConsoleFixedFunction.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <string>
@@ -43,6 +45,11 @@
 #	define NOMINMAX
 #	include <windows.h>
 #	include <d3dcompiler.h>
+#else
+#	include <dirent.h>
+#	include <sys/stat.h>
+#	include <sys/types.h>
+#	include <unistd.h>
 #endif
 
 using namespace ShaderCompiler;
@@ -81,6 +88,202 @@ namespace
 		return !file.fail();
 	}
 
+	// --- Small portable path/directory layer (used by the --generate-all driver) ------------------
+
+#if defined(_WIN32)
+	constexpr StringView PathSeparator = "\\"_s;
+#else
+	constexpr StringView PathSeparator = "/"_s;
+#endif
+
+	/** True when @p path names an existing file (not a directory) */
+	bool PathIsFile(const char* path)
+	{
+#if defined(_WIN32)
+		DWORD attributes = GetFileAttributesA(path);
+		return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0);
+#else
+		struct stat info;
+		return (::stat(path, &info) == 0 && S_ISREG(info.st_mode));
+#endif
+	}
+
+	/** True when @p path names an existing directory */
+	bool PathIsDirectory(const char* path)
+	{
+#if defined(_WIN32)
+		DWORD attributes = GetFileAttributesA(path);
+		return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+#else
+		struct stat info;
+		return (::stat(path, &info) == 0 && S_ISDIR(info.st_mode));
+#endif
+	}
+
+	/** Returns the file name part of @p path (everything after the last slash or backslash) */
+	StringView FileNameOf(StringView path)
+	{
+		const char* begin = path.begin();
+		StringView slash = path.findLast('/');
+		if (!slash.empty()) {
+			begin = slash.end();
+		}
+		StringView backslash = path.findLast('\\');
+		if (!backslash.empty() && backslash.end() > begin) {
+			begin = backslash.end();
+		}
+		return path.suffix(begin);
+	}
+
+	/** Returns @p fileName without its extension */
+	StringView StemOf(StringView fileName)
+	{
+		StringView dot = fileName.findLast('.');
+		return (dot.empty() ? fileName : fileName.prefix(dot.begin()));
+	}
+
+	/** Returns @p path without its last component (empty when there is none left to strip) */
+	String ParentOf(StringView path)
+	{
+		StringView name = FileNameOf(path);
+		if (name.begin() == path.begin()) {
+			return {};
+		}
+		// Drop the separator too, but keep a trailing "C:\" / "/" root intact
+		StringView parent = path.prefix(name.begin() - 1);
+		return (parent.empty() ? String{path.prefix(name.begin())} : String{parent});
+	}
+
+	/** Joins @p directory and @p leaf with the platform separator, tolerating a trailing separator */
+	String PathJoin(StringView directory, StringView leaf)
+	{
+		if (directory.empty()) {
+			return String{leaf};
+		}
+		char last = directory[directory.size() - 1];
+		if (last == '/' || last == '\\') {
+			return directory + leaf;
+		}
+		return directory + PathSeparator + leaf;
+	}
+
+	/**
+		Collects the names (not paths) of the files in @p directory whose name ends with @p extension,
+		sorted by a plain byte-wise comparison so the enumeration order — and therefore every aggregate
+		artifact built from it — is identical on every machine, shell and locale.
+	*/
+	bool ListFilesInDirectory(const char* directory, StringView extension, std::vector<String>& outNames)
+	{
+#if defined(_WIN32)
+		String pattern = PathJoin(directory, "*"_s);
+		WIN32_FIND_DATAA data;
+		HANDLE handle = FindFirstFileA(pattern.data(), &data);
+		if (handle == INVALID_HANDLE_VALUE) {
+			return false;
+		}
+		do {
+			if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+				continue;
+			}
+			StringView name = data.cFileName;
+			if (name.hasSuffix(extension)) {
+				outNames.emplace_back(name);
+			}
+		} while (FindNextFileA(handle, &data));
+		FindClose(handle);
+#else
+		DIR* handle = ::opendir(directory);
+		if (handle == nullptr) {
+			return false;
+		}
+		while (const dirent* entry = ::readdir(handle)) {
+			StringView name = entry->d_name;
+			if (!name.hasSuffix(extension)) {
+				continue;
+			}
+			String full = PathJoin(directory, name);
+			if (PathIsFile(full.data())) {
+				outNames.emplace_back(name);
+			}
+		}
+		::closedir(handle);
+#endif
+		std::sort(outNames.begin(), outNames.end(), [](const String& a, const String& b) {
+			return std::strcmp(a.data(), b.data()) < 0;
+		});
+		return true;
+	}
+
+	/** Creates @p path when it does not exist yet (one level only - the parent has to be there) */
+	bool EnsureDirectoryExists(const char* path)
+	{
+		if (PathIsDirectory(path)) {
+			return true;
+		}
+#if defined(_WIN32)
+		return (CreateDirectoryA(path, nullptr) != FALSE);
+#else
+		return (::mkdir(path, 0755) == 0);
+#endif
+	}
+
+	void DeleteFileAtPath(const char* path)
+	{
+#if defined(_WIN32)
+		DeleteFileA(path);
+#else
+		::remove(path);
+#endif
+	}
+
+	void DeleteDirectoryAtPath(const char* path)
+	{
+#if defined(_WIN32)
+		RemoveDirectoryA(path);
+#else
+		::rmdir(path);
+#endif
+	}
+
+	/** Creates a fresh, empty directory below the system temp location for the staleness guard */
+	bool CreateTemporaryDirectory(String& outPath)
+	{
+#if defined(_WIN32)
+		char temp[MAX_PATH];
+		DWORD length = GetTempPathA(MAX_PATH, temp);
+		if (length == 0 || length >= MAX_PATH) {
+			return false;
+		}
+		for (unsigned attempt = 0; attempt < 64; attempt++) {
+			char leaf[64];
+			std::snprintf(leaf, sizeof(leaf), "Jazz2-ShaderCheck-%08X", static_cast<unsigned>(GetCurrentProcessId()) + attempt * 7919u);
+			String candidate = String{temp, length} + leaf;
+			if (CreateDirectoryA(candidate.data(), nullptr) != FALSE) {
+				outPath = std::move(candidate);
+				return true;
+			}
+		}
+		return false;
+#else
+		char pattern[] = "/tmp/Jazz2-ShaderCheck-XXXXXX";
+		if (::mkdtemp(pattern) == nullptr) {
+			return false;
+		}
+		outPath = String{pattern};
+		return true;
+#endif
+	}
+
+	/** Byte-compares two files; false when either cannot be read or their contents differ */
+	bool FilesHaveEqualContent(const char* a, const char* b)
+	{
+		String left, right;
+		if (!ReadFileToString(a, left) || !ReadFileToString(b, right)) {
+			return false;
+		}
+		return (left.size() == right.size() && std::memcmp(left.data(), right.data(), left.size()) == 0);
+	}
+
 	bool IsValidNamespace(StringView ns)
 	{
 		if (ns.empty() || (ns[0] >= '0' && ns[0] <= '9')) {
@@ -116,6 +319,12 @@ namespace
 			"  --target <t>      Selects an inspection target for the transform dump (only: essl100)\n"
 			"\n"
 			"Standalone modes:\n"
+			"  --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>]\n"
+			"                                                    Regenerate every committed artifact (the shared types, one\n"
+			"                                                    header per shader, the umbrella and the five aggregates)\n"
+			"                                                    from one enumeration of the shader directory; --check only\n"
+			"                                                    compares and never writes into the tree. Both directories\n"
+			"                                                    are auto-detected\n"
 			"  --hlsl-check <input.shader ...>                    Emit + D3DCompile each stage as HLSL; print a pass/fail table\n"
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
@@ -446,9 +655,16 @@ namespace
 		return true;
 	}
 
-	/** Loads one ".shader" file and reflects every variant of every program it declares (offline flow) */
+	/**
+		Loads one ".shader" file and reflects every variant of every program it declares (offline flow).
+		With @p strictTextureUnits a "texture_unit(N)" hint that matches no sampler is an error instead of
+		being ignored — the aggregate emitters stay lenient (they only decline that one shader), while the
+		header emission behind --generate-all rejects it exactly like the single-file mode does.
+		@p outErrorLine receives the source line of a failure when the caller wants to report it.
+	*/
 	bool LoadProgramsForFile(const char* inputPath, std::vector<ShaderDocument>& documents,
-		std::vector<ProgramReflection>& programs, String& errorMsg)
+		std::vector<ProgramReflection>& programs, String& errorMsg, bool strictTextureUnits = false,
+		std::int32_t* outErrorLine = nullptr)
 	{
 		String content;
 		if (!ReadFileToString(inputPath, content)) {
@@ -468,6 +684,9 @@ namespace
 		Diagnostic diag;
 		if (!ShaderParser::ParseDocuments(content, documents, diag)) {
 			errorMsg = diag.Message;
+			if (outErrorLine != nullptr) {
+				*outErrorLine = diag.Line;
+			}
 			return false;
 		}
 		programs.reserve(documents.size());
@@ -484,24 +703,33 @@ namespace
 			for (VariantReflection& v : program.Variants) {
 				StageReflection vertex, fragment;
 				if (!ReflectVariantStage(document, true, v.Define, vertex, diag) ||
-					!ReflectVariantStage(document, false, v.Define, fragment, diag)) {
+					!ReflectVariantStage(document, false, v.Define, fragment, diag) ||
+					!GlslReflector::MergeStages(vertex, fragment, v.Reflection, diag)) {
 					errorMsg = diag.Message;
-					return false;
-				}
-				if (!GlslReflector::MergeStages(vertex, fragment, v.Reflection, diag)) {
-					errorMsg = diag.Message;
+					if (outErrorLine != nullptr) {
+						*outErrorLine = diag.Line;
+					}
 					return false;
 				}
 			}
-			// Apply "texture_unit(N)" hints (leniently - an unmatched hint just leaves the sampler unassigned,
-			// which makes the transpiler decline that shader rather than fail the whole aggregate run)
+			// Apply "texture_unit(N)" hints. Leniently by default - an unmatched hint just leaves the sampler
+			// unassigned, which makes the transpiler decline that shader rather than fail the whole aggregate run
 			for (const TextureDirective& directive : document.Textures) {
+				bool found = false;
 				for (VariantReflection& v : program.Variants) {
 					for (TextureInfo& t : v.Reflection.Textures) {
 						if (t.Name == directive.Name) {
 							t.Unit = directive.Unit;
+							found = true;
 						}
 					}
+				}
+				if (!found && strictTextureUnits) {
+					errorMsg = "texture unit assignment \"" + directive.Name + "\" does not match any sampler uniform";
+					if (outErrorLine != nullptr) {
+						*outErrorLine = directive.Line;
+					}
+					return false;
 				}
 			}
 			programs.push_back(std::move(program));
@@ -573,17 +801,122 @@ namespace
 	/** True when @p path names an existing file (not a directory) */
 	bool FileExistsAt(const char* path)
 	{
-		DWORD attributes = GetFileAttributesA(path);
-		return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0);
+		return PathIsFile(path);
+	}
+
+	/** Matches @p name against @p pattern, where the pattern may contain "*" and "?" wildcards */
+	bool MatchesWildcard(StringView pattern, StringView name)
+	{
+		constexpr std::size_t Npos = ~std::size_t{0};
+		std::size_t p = 0, n = 0, star = Npos, mark = 0;
+		while (n < name.size()) {
+			if (p < pattern.size() && (pattern[p] == '?' || pattern[p] == name[n])) {
+				p++;
+				n++;
+			} else if (p < pattern.size() && pattern[p] == '*') {
+				star = p++;
+				mark = n;
+			} else if (star != Npos) {
+				p = star + 1;
+				n = ++mark;
+			} else {
+				return false;
+			}
+		}
+		while (p < pattern.size() && pattern[p] == '*') {
+			p++;
+		}
+		return (p == pattern.size());
+	}
+
+	/**
+		Resolves the first existing file matching @p pattern, whose components may contain wildcards
+		("C:\...\Microsoft Visual Studio\*\*\...\glslangValidator.exe"). Only needed to dig the copy that
+		ships inside a Visual Studio installation out of its version/edition/extension-id directories.
+	*/
+	bool ResolveWildcardPath(StringView pattern, String& outPath)
+	{
+		std::vector<String> pending;
+		std::size_t start = 0;
+		// Split off the (wildcard-free) root so the walk starts from a real directory
+		for (std::size_t i = 0; i < pattern.size(); i++) {
+			if (pattern[i] == '\\' || pattern[i] == '/') {
+				StringView component = pattern.slice(start, i);
+				if (component.contains('*') || component.contains('?')) {
+					break;
+				}
+				start = i + 1;
+			}
+		}
+		if (start == 0) {
+			return false;
+		}
+		pending.emplace_back(pattern.prefix(start - 1));
+
+		while (start < pattern.size()) {
+			std::size_t end = start;
+			while (end < pattern.size() && pattern[end] != '\\' && pattern[end] != '/') {
+				end++;
+			}
+			StringView component = pattern.slice(start, end);
+			const bool lastComponent = (end >= pattern.size());
+
+			std::vector<String> next;
+			for (const String& directory : pending) {
+				if (!component.contains('*') && !component.contains('?')) {
+					String candidate = PathJoin(directory, component);
+					if (lastComponent ? PathIsFile(candidate.data()) : PathIsDirectory(candidate.data())) {
+						next.push_back(std::move(candidate));
+					}
+					continue;
+				}
+#if defined(_WIN32)
+				String search = PathJoin(directory, "*"_s);
+				WIN32_FIND_DATAA data;
+				HANDLE handle = FindFirstFileA(search.data(), &data);
+				if (handle == INVALID_HANDLE_VALUE) {
+					continue;
+				}
+				do {
+					StringView name = data.cFileName;
+					if (name == "."_s || name == ".."_s || !MatchesWildcard(component, name)) {
+						continue;
+					}
+					const bool isDirectory = ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+					if (isDirectory != lastComponent) {
+						next.push_back(PathJoin(directory, name));
+					}
+				} while (FindNextFileA(handle, &data));
+				FindClose(handle);
+#endif
+			}
+			if (next.empty()) {
+				return false;
+			}
+			// Deterministic pick when several installations match
+			std::sort(next.begin(), next.end(), [](const String& a, const String& b) {
+				return std::strcmp(a.data(), b.data()) < 0;
+			});
+			pending = std::move(next);
+			start = end + 1;
+		}
+
+		if (pending.empty()) {
+			return false;
+		}
+		outPath = pending.front();
+		return true;
 	}
 
 	/**
 		Locates the offline SPIR-V compiler (glslangValidator). An explicit @p overridePath wins (and is an
-		error when it does not exist); otherwise "%VULKAN_SDK%\Bin[32]\glslangValidator.exe" then the executable
-		search PATH are tried. Returns false when none is found — SPIR-V is then omitted (the Vulkan backend is
-		not buildable), which the callers handle gracefully. glslang is only ever a BUILD-TIME dependency.
+		error when it does not exist); otherwise "%VULKAN_SDK%\Bin[32]\glslangValidator.exe", the executable
+		search PATH, a Visual Studio-bundled copy and finally a repo-local build-tree copy below
+		@p searchRoot are tried. Returns false when none is found — SPIR-V is then omitted (the Vulkan
+		backend is not buildable), which the callers handle gracefully. glslang is only ever a BUILD-TIME
+		dependency.
 	*/
-	bool LocateGlslang(StringView overridePath, String& outPath)
+	bool LocateGlslang(StringView overridePath, String& outPath, StringView searchRoot = {})
 	{
 		if (!overridePath.empty()) {
 			String candidate = overridePath;
@@ -609,6 +942,28 @@ namespace
 		if (SearchPathA(nullptr, "glslangValidator.exe", nullptr, MAX_PATH, found, nullptr) > 0) {
 			outPath = String{found};
 			return true;
+		}
+		// Visual Studio ships a copy with its shader tooling extension
+		const char* const programFilesVariables[] = { "ProgramW6432", "ProgramFiles", "ProgramFiles(x86)" };
+		for (const char* variable : programFilesVariables) {
+			char programFiles[MAX_PATH];
+			DWORD length = GetEnvironmentVariableA(variable, programFiles, MAX_PATH);
+			if (length == 0 || length >= MAX_PATH) {
+				continue;
+			}
+			String pattern = String{programFiles, length} +
+				"\\Microsoft Visual Studio\\*\\*\\Common7\\IDE\\Extensions\\*\\external\\glslangValidator.exe";
+			if (ResolveWildcardPath(pattern, outPath)) {
+				return true;
+			}
+		}
+		// Repo-local build-tree copy (may be transient)
+		if (!searchRoot.empty()) {
+			String candidate = PathJoin(searchRoot, ".fake\\_legacy\\.fake\\glsl\\glslangValidator.exe"_s);
+			if (FileExistsAt(candidate.data())) {
+				outPath = std::move(candidate);
+				return true;
+			}
 		}
 		return false;
 	}
@@ -716,7 +1071,7 @@ namespace
 	bool LoadD3DCompiler(String& error) { error = "D3DCompile is only available on Windows"; return false; }
 	bool CompileHlslToDxbc(const String&, const char*, const char*, std::vector<std::uint8_t>&, String&) { return false; }
 	bool CompileHlsl(const String&, const char*, const char*, String&) { return false; }
-	bool LocateGlslang(StringView, String&) { return false; }
+	bool LocateGlslang(StringView, String&, StringView = {}) { return false; }
 	bool CompileSpirvWithGlslang(const String&, const String&, bool, std::vector<std::uint32_t>&, String& log)
 	{
 		log = "glslang integration is only implemented on Windows";
@@ -1535,6 +1890,366 @@ namespace
 		}
 		return 0;
 	}
+
+	// --- Whole-directory regeneration (--generate-all) --------------------------------------------
+
+	/**
+		Options of the --generate-all driver, which produces every committed artifact under
+		"Sources/Shaders/Generated" in one process, from one enumeration of the shader directory. Doing it
+		here rather than from a shell script is what makes a regeneration all-or-nothing: a partial run
+		(some aggregate written from an older shader list, one header emitted without SPIR-V) cannot leave
+		the committed set internally inconsistent, and the file order no longer depends on the shell's
+		locale-sensitive sorting.
+	*/
+	struct GenerateAllOptions
+	{
+		String ShadersDirectory;		// Empty: auto-detected from the executable, then the working directory
+		String OutputDirectory;			// Empty: "<ShadersDirectory>/Generated"
+		const char* GlslangOverride = nullptr;
+		bool Check = false;
+		bool NoDxbc = false;
+	};
+
+	/**
+		Finds the "Sources/Shaders" directory by walking up from the executable (the tool normally lives in
+		"Sources/Utilities/ShaderCompiler/x64/Release") and then from the working directory. Any build layout
+		this does not cover is served by an explicit --shaders-dir.
+	*/
+	bool AutoDetectShadersDirectory(String& outPath)
+	{
+		String starts[2];
+		std::size_t startCount = 0;
+#if defined(_WIN32)
+		char buffer[MAX_PATH];
+		DWORD length = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+		if (length > 0 && length < MAX_PATH) {
+			starts[startCount++] = ParentOf(StringView{buffer, length});
+		}
+		length = GetCurrentDirectoryA(MAX_PATH, buffer);
+		if (length > 0 && length < MAX_PATH) {
+			starts[startCount++] = String{buffer, length};
+		}
+#else
+		char buffer[4096];
+		ssize_t length = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+		if (length > 0) {
+			starts[startCount++] = ParentOf(StringView{buffer, static_cast<std::size_t>(length)});
+		}
+		if (::getcwd(buffer, sizeof(buffer)) != nullptr) {
+			starts[startCount++] = String{buffer};
+		}
+#endif
+		for (std::size_t i = 0; i < startCount; i++) {
+			String directory = starts[i];
+			for (std::int32_t level = 0; level < 10 && !directory.empty(); level++) {
+				String candidates[] = {
+					PathJoin(PathJoin(directory, "Sources"_s), "Shaders"_s),
+					PathJoin(directory, "Shaders"_s)
+				};
+				for (String& candidate : candidates) {
+					if (PathIsDirectory(candidate.data())) {
+						outPath = std::move(candidate);
+						return true;
+					}
+				}
+				directory = ParentOf(directory);
+			}
+		}
+		return false;
+	}
+
+	/**
+		Builds the umbrella header: one include per generated program header plus the per-namespace
+		AllPrograms[] index arrays, so runtime code has a single include and can enumerate the programs.
+		A canvas_item file with a "batched" directive contributes two program symbols from one header.
+	*/
+	String BuildUmbrellaHeader(const std::vector<String>& includeStems,
+		const std::vector<String>& jazz2Programs, const std::vector<String>& ncinePrograms)
+	{
+		String out;
+		out += "// Generated by ShaderCompiler (--generate-all). Do not edit manually.\n";
+		out += "#pragma once\n\n";
+		for (const String& stem : includeStems) {
+			out += "#include \"" + stem + ".h\"\n";
+		}
+		out += "\n";
+		// The generated shader data namespaces carry no public API and are excluded from the API
+		// documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping this header out of it
+		out += "#ifndef DOXYGEN_GENERATING_OUTPUT\n";
+		const struct { const char* Namespace; const char* Comment; const std::vector<String>* Programs; } sections[] = {
+			{ "Jazz2::ShadersGen", "All generated Jazz2 shader programs, sorted by name", &jazz2Programs },
+			{ "nCine::ShadersGen", "All generated nCine default shader programs, sorted by name", &ncinePrograms }
+		};
+		for (const auto& section : sections) {
+			out += "namespace ";
+			out += section.Namespace;
+			out += "\n{\n\t// ";
+			out += section.Comment;
+			out += "\n\tinline constexpr const ShaderCompiler::Program* AllPrograms[] = {\n";
+			for (const String& name : *section.Programs) {
+				out += "\t\t&" + name + ",\n";
+			}
+			out += "\t};\n}\n";
+			if (&section == &sections[0]) {
+				out += "\n";
+			}
+		}
+		out += "#endif\n";
+		return out;
+	}
+
+	/**
+		Writes the whole artifact set into @p outputDirectory and appends the name of every file it wrote to
+		@p writtenNames. Split out of RunGenerateAll so that the caller owns the temporary directory of the
+		staleness guard and can clean it up on every path.
+	*/
+	int GenerateAllArtifacts(StringView shadersDirectory, const std::vector<String>& shaderNames,
+		StringView outputDirectory, const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc,
+		std::vector<String>& writtenNames)
+	{
+		// The shared reflection types every generated header includes
+		{
+			String path = PathJoin(outputDirectory, "ShaderCompilerTypes.h"_s);
+			if (!WriteStringToFile(path.data(), Emitter::BuildTypesHeader())) {
+				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
+				return 1;
+			}
+			writtenNames.emplace_back("ShaderCompilerTypes.h"_s);
+		}
+
+		// One header per shader; "Default*.shader" are the nCine default programs, everything else is Jazz2
+		std::vector<String> includeStems, jazz2Programs, ncinePrograms;
+		for (const String& shaderName : shaderNames) {
+			StringView stem = StemOf(shaderName);
+			const bool isDefault = stem.hasPrefix("Default"_s);
+			const char* ns = (isDefault ? "nCine::ShadersGen" : "Jazz2::ShadersGen");
+			String inputPath = PathJoin(shadersDirectory, shaderName);
+
+			std::vector<ShaderDocument> documents;
+			std::vector<ProgramReflection> programs;
+			String errorMsg;
+			std::int32_t errorLine = 0;
+			if (!LoadProgramsForFile(inputPath.data(), documents, programs, errorMsg, /*strictTextureUnits*/ true, &errorLine)) {
+				std::fprintf(stderr, "%s:%d: error: %s\n", inputPath.data(), errorLine, errorMsg.data());
+				return 1;
+			}
+
+			String output;
+			Diagnostic diag;
+			if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, diag)) {
+				std::fprintf(stderr, "%s:%d: error: %s\n", inputPath.data(), diag.Line, diag.Message.data());
+				return 1;
+			}
+			String headerName = stem + ".h"_s;
+			String headerPath = PathJoin(outputDirectory, headerName);
+			if (!WriteStringToFile(headerPath.data(), output)) {
+				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", headerPath.data());
+				return 1;
+			}
+
+			writtenNames.push_back(headerName);
+			includeStems.emplace_back(stem);
+			for (const ProgramReflection& program : programs) {
+				(isDefault ? ncinePrograms : jazz2Programs).push_back(program.Document->ProgramName);
+			}
+			std::fprintf(stdout, "ok: %s -> %s [%s]\n", shaderName.data(), headerName.data(), ns);
+		}
+
+		// The umbrella header (includes sorted by name, index arrays in shader order)
+		std::sort(includeStems.begin(), includeStems.end(), [](const String& a, const String& b) {
+			return std::strcmp(a.data(), b.data()) < 0;
+		});
+		{
+			String path = PathJoin(outputDirectory, "ShadersGen.h"_s);
+			if (!WriteStringToFile(path.data(), BuildUmbrellaHeader(includeStems, jazz2Programs, ncinePrograms))) {
+				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
+				return 1;
+			}
+			writtenNames.emplace_back("ShadersGen.h"_s);
+			std::fprintf(stdout, "ok: umbrella -> ShadersGen.h (%zu Jazz2 + %zu nCine programs)\n",
+				jazz2Programs.size(), ncinePrograms.size());
+		}
+
+		// The aggregates reuse the standalone modes verbatim, so both entry points stay one implementation
+		std::vector<String> inputPaths;
+		inputPaths.reserve(shaderNames.size());
+		for (const String& shaderName : shaderNames) {
+			inputPaths.push_back(PathJoin(shadersDirectory, shaderName));
+		}
+		std::vector<char*> inputArgs;
+		inputArgs.reserve(inputPaths.size());
+		for (String& inputPath : inputPaths) {
+			inputArgs.push_back(inputPath.data());
+		}
+		const int inputCount = static_cast<int>(inputArgs.size());
+
+		{
+			String path = PathJoin(outputDirectory, "SwGeneratedShaders.h"_s);
+			if (RunEmitSwGenerated(path.data(), inputArgs.data(), inputCount) != 0) {
+				return 1;
+			}
+			writtenNames.emplace_back("SwGeneratedShaders.h"_s);
+			std::fprintf(stdout, "ok: software fragments -> SwGeneratedShaders.h\n");
+		}
+		{
+			String path = PathJoin(outputDirectory, "CgGeneratedShaders.h"_s);
+			if (RunEmitCg(path.data(), inputArgs.data(), inputCount) != 0) {
+				return 1;
+			}
+			writtenNames.emplace_back("CgGeneratedShaders.h"_s);
+			std::fprintf(stdout, "ok: Cg stage sources -> CgGeneratedShaders.h\n");
+		}
+
+		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
+			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "psp", "GuGeneratedEffects.h" }
+		};
+		for (const auto& target : fixedFunctionTargets) {
+			String path = PathJoin(outputDirectory, target.FileName);
+			if (RunEmitFixedFunction(target.Backend, path.data(), inputArgs.data(), inputCount) != 0) {
+				return 1;
+			}
+			writtenNames.emplace_back(target.FileName);
+			std::fprintf(stdout, "ok: fixed-function effects (%s) -> %s\n", target.Backend, target.FileName);
+		}
+		return 0;
+	}
+
+	int RunGenerateAll(const GenerateAllOptions& options)
+	{
+		String shadersDirectory = options.ShadersDirectory;
+		if (shadersDirectory.empty() && !AutoDetectShadersDirectory(shadersDirectory)) {
+			std::fprintf(stderr, "error: cannot locate the shader directory - pass --shaders-dir <dir>\n");
+			return 1;
+		}
+		if (!PathIsDirectory(shadersDirectory.data())) {
+			std::fprintf(stderr, "error: shader directory \"%s\" does not exist\n", shadersDirectory.data());
+			return 1;
+		}
+		String committedDirectory = (options.OutputDirectory.empty()
+			? PathJoin(shadersDirectory, "Generated"_s) : options.OutputDirectory);
+
+		std::vector<String> shaderNames;
+		if (!ListFilesInDirectory(shadersDirectory.data(), ".shader"_s, shaderNames) || shaderNames.empty()) {
+			std::fprintf(stderr, "error: no .shader files found in \"%s\"\n", shadersDirectory.data());
+			return 1;
+		}
+
+		// SPIR-V is embedded when a glslang is around; without it the fields stay null and the headers still
+		// build (see LocateGlslang). The repo-local fallback is looked for next to "<shaders>/../..".
+		SpirvCompileFn compileSpirv;
+		{
+			String glslang;
+			StringView override = (options.GlslangOverride != nullptr ? StringView{options.GlslangOverride} : StringView{});
+			if (LocateGlslang(override, glslang, ParentOf(ParentOf(shadersDirectory)))) {
+				std::fprintf(stdout, "using glslang: %s\n", glslang.data());
+				compileSpirv = [glslang](StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log) {
+					return CompileSpirvWithGlslang(glslang, String{vulkanGlsl}, vertexStage, spirv, log);
+				};
+			} else if (!override.empty()) {
+				std::fprintf(stderr, "warning: glslangValidator not found at \"%s\" - Vulkan SPIR-V will be omitted\n",
+					options.GlslangOverride);
+			} else {
+				std::fprintf(stderr, "warning: glslangValidator not found - Vulkan SPIR-V will be omitted "
+					"(install the Vulkan SDK for the Vulkan backend)\n");
+			}
+		}
+
+		DxbcCompileFn compileDxbc;
+		if (options.NoDxbc) {
+			std::fprintf(stdout, "DXBC embedding disabled (--no-dxbc) - HLSL sources will be embedded instead\n");
+		} else {
+			String loadError;
+			if (LoadD3DCompiler(loadError)) {
+				compileDxbc = [](StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log) {
+					bool ok = CompileHlslToDxbc(String{hlsl}, vertexStage ? "VSMain" : "PSMain",
+						vertexStage ? "vs_4_0" : "ps_4_0", dxbc, log);
+					if (!ok) {
+						std::fprintf(stderr, "warning: D3DCompile (%s) failed - embedding the HLSL source instead: %s\n",
+							vertexStage ? "vs_4_0" : "ps_4_0", FirstLine(log).data());
+					}
+					return ok;
+				};
+			}
+#if defined(_WIN32)
+			else {
+				std::fprintf(stderr, "warning: %s - DXBC will be omitted (HLSL sources embedded instead)\n", loadError.data());
+			}
+#endif
+		}
+
+		// --check never touches the tree: everything is generated into a temporary directory and compared
+		String outputDirectory = committedDirectory;
+		String temporaryDirectory;
+		if (options.Check) {
+			if (!CreateTemporaryDirectory(temporaryDirectory)) {
+				std::fprintf(stderr, "error: cannot create a temporary directory for --check\n");
+				return 1;
+			}
+			outputDirectory = temporaryDirectory;
+			if (!compileSpirv) {
+				std::fprintf(stderr, "warning: --check without glslang - committed headers with embedded SPIR-V will be reported stale\n");
+			}
+			if (options.NoDxbc) {
+				std::fprintf(stderr, "warning: --check with --no-dxbc - committed headers with embedded DXBC will be reported stale\n");
+			}
+		} else if (!EnsureDirectoryExists(outputDirectory.data())) {
+			std::fprintf(stderr, "error: cannot create output directory \"%s\"\n", outputDirectory.data());
+			return 1;
+		}
+
+		std::vector<String> writtenNames;
+		int result = GenerateAllArtifacts(shadersDirectory, shaderNames, outputDirectory, compileSpirv,
+			compileDxbc, writtenNames);
+
+		if (!options.Check) {
+			if (result == 0) {
+				std::fprintf(stdout, "All %zu shaders generated successfully.\n", shaderNames.size());
+			}
+			return result;
+		}
+
+		// Byte-compare the fresh artifacts against the committed ones; missing and extra files count as stale
+		std::vector<String> stale;
+		if (result == 0) {
+			for (const String& name : writtenNames) {
+				String fresh = PathJoin(outputDirectory, name);
+				String committed = PathJoin(committedDirectory, name);
+				if (!PathIsFile(committed.data())) {
+					stale.push_back(name + " (missing from Generated)"_s);
+				} else if (!FilesHaveEqualContent(fresh.data(), committed.data())) {
+					stale.push_back(name);
+				}
+			}
+			std::vector<String> committedNames;
+			ListFilesInDirectory(committedDirectory.data(), ".h"_s, committedNames);
+			for (const String& name : committedNames) {
+				const bool generated = std::any_of(writtenNames.begin(), writtenNames.end(),
+					[&name](const String& written) { return written == name; });
+				if (!generated) {
+					stale.push_back(name + " (committed but no longer generated)"_s);
+				}
+			}
+		}
+
+		for (const String& name : writtenNames) {
+			String path = PathJoin(outputDirectory, name);
+			DeleteFileAtPath(path.data());
+		}
+		DeleteDirectoryAtPath(outputDirectory.data());
+
+		if (result != 0) {
+			return result;
+		}
+		if (!stale.empty()) {
+			std::fprintf(stderr, "error: %zu generated header(s) are STALE - re-run --generate-all and commit:\n", stale.size());
+			for (const String& name : stale) {
+				std::fprintf(stderr, "  %s\n", name.data());
+			}
+			return 1;
+		}
+		std::fprintf(stdout, "All %zu shaders verified up to date.\n", shaderNames.size());
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -1552,6 +2267,39 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return 0;
+	}
+
+	// Standalone mode: regenerate every committed artifact of "Sources/Shaders/Generated" in one run - the
+	// shared types, the per-shader headers, the umbrella and the five aggregates. Usage:
+	//   ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>]
+	if (argc >= 2 && StringView(argv[1]) == "--generate-all") {
+		GenerateAllOptions options;
+		for (int i = 2; i < argc; i++) {
+			StringView arg = argv[i];
+			if (arg == "--shaders-dir" || arg == "--out-dir" || arg == "--glslang") {
+				if (i + 1 >= argc) {
+					std::fprintf(stderr, "error: %s requires a path argument\n", arg.data());
+					return 2;
+				}
+				const char* value = argv[++i];
+				if (arg == "--shaders-dir") {
+					options.ShadersDirectory = value;
+				} else if (arg == "--out-dir") {
+					options.OutputDirectory = value;
+				} else {
+					options.GlslangOverride = value;
+				}
+			} else if (arg == "--check") {
+				options.Check = true;
+			} else if (arg == "--no-dxbc") {
+				options.NoDxbc = true;
+			} else {
+				std::fprintf(stderr, "error: unknown --generate-all option \"%s\"\n", arg.data());
+				PrintUsage();
+				return 2;
+			}
+		}
+		return RunGenerateAll(options);
 	}
 
 	// Standalone mode: transpile every input shader's fragment stage to C++ and write the aggregate

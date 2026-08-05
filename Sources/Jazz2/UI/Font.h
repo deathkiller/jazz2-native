@@ -7,6 +7,8 @@
 #include "../../nCine/Base/HashMap.h"
 #include "../../nCine/Graphics/Texture.h"
 
+#include <IO/Stream.h>
+
 using namespace nCine;
 
 namespace Jazz2::UI
@@ -48,10 +50,11 @@ namespace Jazz2::UI
 		/**
 		 * @brief Creates a new instance by loading a bitmap font from the specified path
 		 *
-		 * @param path     Path to the bitmap font file
+		 * @param s        Stream the bitmap font is read from, which can also be a file inside a `.pak`
+		 * @param path     Path the stream was opened from, used in messages and as the texture name
 		 * @param palette  Palette used to colorize the font
 		 */
-		Font(StringView path, const std::uint32_t* palette);
+		Font(const std::unique_ptr<Death::IO::Stream>& s, StringView path, const std::uint32_t* palette);
 
 		/** @brief Returns font size in pixels */
 		std::int32_t GetSizeInPixels() const;

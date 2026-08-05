@@ -1,6 +1,6 @@
 ﻿#include "RefreshCacheSection.h"
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 
 #include "MenuResources.h"
 #include "MainMenu.h"

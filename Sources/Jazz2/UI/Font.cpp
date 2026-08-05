@@ -15,10 +15,9 @@ using namespace Death::IO::Compression;
 
 namespace Jazz2::UI
 {
-	Font::Font(StringView path, const std::uint32_t* palette)
+	Font::Font(const std::unique_ptr<Stream>& s, StringView path, const std::uint32_t* palette)
 		: _asciiChars{}, _lineHeight(0), _baseSpacing(0)
 	{
-		auto s = fs::Open(path, FileAccess::Read);
 		if (!s->IsValid()) {
 			// A font that can't be opened at all used to fail silently here, which then looked like a
 			// rendering problem instead of a missing file: every string measures to nothing and draws

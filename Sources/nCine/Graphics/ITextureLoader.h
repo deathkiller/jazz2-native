@@ -92,6 +92,16 @@ namespace nCine
 		 * @param filename  Path of the texture file to load
 		 */
 		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView filename);
+		/**
+		 * @brief Returns the proper texture loader for a texture that is already open
+		 *
+		 * @param fileHandle  Stream the texture is read from
+		 * @param path        Path the stream was opened from, only its extension is used
+		 *
+		 * For a texture that has no file of its own to open --- one inside a `.pak` container above all,
+		 * where @ref createFromFile() has no path that would reach it.
+		 */
+		static std::unique_ptr<ITextureLoader> createFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT

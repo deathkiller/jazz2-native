@@ -68,15 +68,15 @@ using namespace Jazz2::Multiplayer;
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
 #include <IO/WebRequest.h>
-
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))
-// The update check needs a WebRequest HTTP backend (WinHTTP or curl)
-#	define WITH_UPDATE_CHECK
-#endif
 #include <Utf8.h>
 
 #if defined(WITH_THREADS)
 #	include <mutex>
+#endif
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))
+// The update check needs a WebRequest HTTP backend (WinHTTP or curl)
+#	define WITH_UPDATE_CHECK
 #endif
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
@@ -159,7 +159,7 @@ public:
 		return _newestVersion;
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 	void RefreshCacheLevels(bool recreateAll) override;
 #else
 	void RefreshCacheLevels(bool recreateAll) override {}
@@ -186,7 +186,7 @@ private:
 	void SetStateHandler(std::shared_ptr<IStateHandler>&& handler);
 	void ReleasePreviousHandler();
 	void WaitForVerify();
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 	void RefreshCache();
 #endif
 #if defined(WITH_UPDATE_CHECK)
@@ -1759,12 +1759,12 @@ void GameEventHandler::OnAfterInitialize()
 		}
 	}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-	// All required files are already included in the prebaked "Content" directory of the Emscripten and
-	// console versions, so nothing is verified
-	_flags |= Flags::IsVerified | Flags::IsPlayable;
-#else
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 	RefreshCache();
+#else
+	// These platforms cannot write a cache at all, so their "Content" directory is always prebaked and
+	// there is nothing to verify
+	_flags |= Flags::IsVerified | Flags::IsPlayable;
 #endif
 }
 
@@ -1818,7 +1818,7 @@ void GameEventHandler::WaitForVerify()
 	}
 }
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 void GameEventHandler::RefreshCache()
 {
 	ZoneScopedC(0x888888);
@@ -1829,9 +1829,16 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
+	auto& resolver = ContentResolver::Get();
+	if (resolver.IsContentPrebaked()) {
+		// The content tree already holds everything the conversion would produce, so there is nothing to
+		// convert - and no original game files to ask for, they are not deployed with such a tree
+		_flags |= Flags::IsVerified | Flags::IsPlayable;
+		return;
+	}
+
 	constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
-	auto& resolver = ContentResolver::Get();
 	auto cachePath = fs::CombinePath(resolver.GetCachePath(), "Source.idx"_s);
 
 	// Check cache state
@@ -1971,29 +1978,31 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 	auto& resolver = ContentResolver::Get();
 	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll);
 }
+#endif
 
 #if defined(WITH_UPDATE_CHECK)
 void GameEventHandler::CheckUpdates()
 {
-#if !defined(DEATH_DEBUG)
+#	if !defined(DEATH_DEBUG)
 	ZoneScopedC(0x888888);
 
 	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
-	auto request = WebSession::GetDefault().CreateRequest(url);
-	auto result = request.Execute();
-	if (result) {
-		auto s = request.GetResponse().AsString();
-		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
-		std::uint64_t latestVersion = parseVersion(s);
-		if (currentVersion < latestVersion) {
-			_newestVersion = s;
+	if (auto session = WebSession::GetDefault()) {
+		auto request = session.CreateRequest(url);
+		if (auto result = request.Execute()) {
+			auto s = request.GetResponse().AsString();
+			constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
+			std::uint64_t latestVersion = parseVersion(s);
+			if (currentVersion < latestVersion) {
+				_newestVersion = s;
+			}
+			return;
 		}
-	} else {
-		LOGW("Failed to check for updates: {}", result.error);
 	}
-#endif
+
+	LOGW("Failed to check for updates: {}", result.error);
+#	endif
 }
-#endif
 #endif
 
 bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)

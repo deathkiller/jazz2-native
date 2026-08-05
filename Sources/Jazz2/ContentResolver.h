@@ -136,6 +136,16 @@ namespace Jazz2
 		/** @brief Sets whether the application is running in headless mode */
 		void SetHeadless(bool value);
 
+		/**
+		 * @brief Returns `true` if the `"Content"` directory was prepared ahead of time
+		 *
+		 * Such a tree is created by @ref asset-packer "AssetPacker" and already contains everything the
+		 * first-run conversion would produce, so the game has nothing to convert, never looks for the
+		 * original game files and leaves the `"Cache"` directory alone. It is recognized by the package
+		 * the tool names @ref Compatibility::AssetConverter::PrebakedPackage.
+		 */
+		bool IsContentPrebaked() const;
+
 #if defined(WITH_LIBRETRO)
 		/** @brief Overrides `"Content"`, `"Source"` and `"Cache"` directories (used by the libretro core, which cannot rely on the working directory of the frontend process) */
 		void OverridePaths(StringView contentPath, StringView sourcePath, StringView cachePath);
@@ -318,6 +328,8 @@ namespace Jazz2
 		ContentResolver& operator=(const ContentResolver&) = delete;
 
 		void InitializePaths();
+		// Looks for the package that marks a prepared content tree, has to run again if the paths change
+		void DetectPrebakedContent();
 
 		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
 		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
@@ -377,6 +389,7 @@ namespace Jazz2
 
 		bool _isHeadless;
 		bool _isLoading;
+		bool _isContentPrebaked;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		// Shared palette texture (256x256: one palette per row). Rows changed since the last upload are tracked by
 		// the dirty range below and re-uploaded lazily. Dynamically allocated per-player rows are reference-counted

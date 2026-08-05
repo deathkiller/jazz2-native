@@ -1,28 +1,24 @@
-# Runs ShaderCompiler.exe over every Sources/Shaders/*.shader and emits the generated C++ headers
-# into Sources/Shaders/Generated/<Name>.h.
+# Thin wrapper around "ShaderCompiler --generate-all", which regenerates every committed artifact in
+# Sources/Shaders/Generated: the shared reflection types, one header per Sources/Shaders/*.shader, the
+# umbrella ShadersGen.h and the five aggregates (software renderer, Cg for the Vita, and the three
+# console fixed-function tables).
 #
-# Namespace convention:
-#   Default*.shader (nCine default shader programs) -> nCine::ShadersGen
-#   everything else (Jazz2 PrecompiledShader programs) -> Jazz2::ShadersGen
+# The whole flow lives in the tool itself (Main.cpp, --generate-all) so a regeneration is all-or-nothing
+# and its file order comes from one byte-wise sort inside the tool instead of the shell's locale-
+# sensitive one. This script only locates the executable and forwards its arguments, so it stays usable
+# from muscle memory and CI; running the tool directly does exactly the same thing:
 #
-# Fails with a non-zero exit code if any shader fails to process.
+#   ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>]
 #
-# SPIR-V for the Vulkan backend is embedded when a glslangValidator can be found (VULKAN_SDK, PATH, a
-# repo-local build-tree copy, or a Visual Studio-bundled copy) or supplied with -Glslang <path>. glslang
-# is a BUILD-TIME-only dependency: when it is unavailable the SPIR-V fields are emitted as nullptr/0 and a
-# warning is printed (the headers still build; the Vulkan backend is then not buildable).
-#
-# DXBC for the Direct3D 11 backend (desktop and UWP/Xbox) is embedded automatically: the tool loads
-# d3dcompiler_47.dll (ships with every Windows) and precompiles each variant's HLSL stages offline, so
-# the generated headers carry only the bytecode blobs (no HLSL text) and the runtime creates its shader
-# objects directly from them - no startup D3DCompile, no on-disk shader cache. -NoDxbc (or generating on
-# a non-Windows machine) embeds the HLSL sources instead; the backend then falls back to runtime
-# compilation, exactly as before.
-#
-# -Check: staleness guard. Generates into a temporary directory instead and byte-compares the result
-# against the committed Sources/Shaders/Generated headers; exits non-zero (listing the stale files) if
-# they differ, without modifying the tree. Run it after editing a .shader (or in CI) to catch a
-# forgotten regeneration - the build itself never detects stale committed headers.
+# -Glslang <path>  glslangValidator for the offline SPIR-V compilation. Discovered automatically
+#                  (VULKAN_SDK, PATH, a Visual Studio-bundled copy, a repo-local build-tree copy) when
+#                  not given; without one the SPIR-V fields are emitted as nullptr/0 and a warning is
+#                  printed (the headers still build; the Vulkan backend is then not buildable).
+# -NoDxbc          Embed the HLSL sources instead of the precompiled DXBC bytecode.
+# -Check           Staleness guard: generates into a temporary directory, byte-compares against the
+#                  committed headers and exits non-zero (listing them) if any differ, without modifying
+#                  the tree. Run it after editing a .shader, or in CI - the build itself never detects
+#                  stale committed headers.
 
 param([string]$Glslang = '', [switch]$Check, [switch]$NoDxbc)
 
@@ -31,12 +27,6 @@ $ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourcesDir = Split-Path -Parent (Split-Path -Parent $scriptDir)		# .../Sources (the tool lives in Sources/Utilities/ShaderCompiler)
 $shadersDir = Join-Path $sourcesDir 'Shaders'
-$committedDir = Join-Path $shadersDir 'Generated'
-if ($Check) {
-    $outDir = Join-Path ([System.IO.Path]::GetTempPath()) ("Jazz2-ShaderCheck-" + [System.IO.Path]::GetRandomFileName())
-} else {
-    $outDir = $committedDir
-}
 $tool = Join-Path $scriptDir 'x64\Release\ShaderCompiler.exe'
 
 if (-not (Test-Path $tool)) {
@@ -48,213 +38,12 @@ if (-not (Test-Path $shadersDir)) {
     exit 1
 }
 
-# Locate glslangValidator for offline SPIR-V compilation (build-time only; see the header comment)
-function Find-Glslang([string]$override) {
-    if ($override -and (Test-Path $override)) { return (Resolve-Path $override).Path }
-    if ($env:VULKAN_SDK) {
-        foreach ($sub in @('Bin\glslangValidator.exe', 'Bin32\glslangValidator.exe')) {
-            $p = Join-Path $env:VULKAN_SDK $sub
-            if (Test-Path $p) { return $p }
-        }
-    }
-    $cmd = Get-Command glslangValidator.exe -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    # Visual Studio-bundled copy (best-effort glob)
-    $vs = Get-ChildItem 'C:\Program Files*\Microsoft Visual Studio\*\*\Common7\IDE\Extensions\*\external\glslangValidator.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($vs) { return $vs.FullName }
-    # Repo-local build-tree copy (may be transient)
-    $repoRoot = Split-Path -Parent $sourcesDir
-    $repoCopy = Join-Path $repoRoot '.fake\_legacy\.fake\glsl\glslangValidator.exe'
-    if (Test-Path $repoCopy) { return $repoCopy }
-    return $null
-}
+# Passed explicitly rather than relying on the tool's auto-detection, so the script works from any
+# working directory and always targets the shaders next to itself
+$toolArgs = @('--generate-all', '--shaders-dir', $shadersDir)
+if ($Check) { $toolArgs += '--check' }
+if ($NoDxbc) { $toolArgs += '--no-dxbc' }
+if ($Glslang) { $toolArgs += @('--glslang', $Glslang) }
 
-$glslangPath = Find-Glslang $Glslang
-$glslangArgs = @()
-if ($glslangPath) {
-    Write-Host "using glslang: $glslangPath"
-    $glslangArgs = @('--glslang', $glslangPath)
-} else {
-    Write-Host "warning: glslangValidator not found - Vulkan SPIR-V will be omitted (install the Vulkan SDK for the Vulkan backend)"
-}
-
-$dxbcArgs = @()
-if ($NoDxbc) {
-    Write-Host "DXBC embedding disabled (-NoDxbc) - HLSL sources will be embedded instead"
-    $dxbcArgs = @('--no-dxbc')
-}
-
-New-Item -ItemType Directory -Force $outDir | Out-Null
-
-# Shared reflection types included by every generated header (and by engine code that consumes reflection)
-& $tool --emit-types (Join-Path $outDir 'ShaderCompilerTypes.h')
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: failed to emit ShaderCompilerTypes.h"
-    exit 1
-}
-
-$shaders = @(Get-ChildItem (Join-Path $shadersDir '*.shader') | Sort-Object Name)
-if ($shaders.Count -eq 0) {
-    Write-Host "error: No .shader files found in '$shadersDir'"
-    exit 1
-}
-
-$failed = 0
-foreach ($shader in $shaders) {
-    $name = $shader.BaseName
-    if ($name -like 'Default*') {
-        $ns = 'nCine::ShadersGen'
-    } else {
-        $ns = 'Jazz2::ShadersGen'
-    }
-    $outPath = Join-Path $outDir ($name + '.h')
-
-    & $tool $shader.FullName -o $outPath -n $ns @glslangArgs @dxbcArgs
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "error: '$($shader.Name)' failed with exit code $LASTEXITCODE"
-        $failed++
-    } else {
-        Write-Host "ok: $($shader.Name) -> Generated\$name.h [$ns]"
-    }
-}
-
-if ($failed -gt 0) {
-    Write-Host "error: $failed of $($shaders.Count) shader(s) failed"
-    exit 1
-}
-
-# Emit the umbrella header including every generated program plus per-namespace index arrays,
-# so runtime code has a single include and can enumerate the programs.
-# A canvas_item file with a "batched" directive carries TWO programs in one header, so the
-# program symbols come from the directives, not from the file names.
-function Get-ProgramNames($shaderFile) {
-    $names = @()
-    foreach ($line in Get-Content $shaderFile.FullName) {
-        if ($line -cmatch '^\s*(?:program|batched)\s+(\w+)\s*;') {
-            $names += $Matches[1]
-        }
-    }
-    return $names
-}
-
-$jazz2Names = @($shaders | Where-Object { $_.BaseName -notlike 'Default*' } | ForEach-Object { Get-ProgramNames $_ })
-$ncineNames = @($shaders | Where-Object { $_.BaseName -like 'Default*' } | ForEach-Object { Get-ProgramNames $_ })
-
-$sb = New-Object System.Text.StringBuilder
-[void]$sb.AppendLine('// Generated by GenerateAll.ps1. Do not edit manually.')
-[void]$sb.AppendLine('#pragma once')
-[void]$sb.AppendLine('')
-foreach ($name in ($shaders | ForEach-Object { $_.BaseName } | Sort-Object)) {
-    [void]$sb.AppendLine("#include `"$name.h`"")
-}
-[void]$sb.AppendLine('')
-# The generated shader data namespaces carry no public API and are excluded from the API
-# documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping this header out of it.
-[void]$sb.AppendLine('#ifndef DOXYGEN_GENERATING_OUTPUT')
-[void]$sb.AppendLine('namespace Jazz2::ShadersGen')
-[void]$sb.AppendLine('{')
-[void]$sb.AppendLine("`t// All generated Jazz2 shader programs, sorted by name")
-[void]$sb.AppendLine("`tinline constexpr const ShaderCompiler::Program* AllPrograms[] = {")
-foreach ($name in $jazz2Names) {
-    [void]$sb.AppendLine("`t`t&$name,")
-}
-[void]$sb.AppendLine("`t};")
-[void]$sb.AppendLine('}')
-[void]$sb.AppendLine('')
-[void]$sb.AppendLine('namespace nCine::ShadersGen')
-[void]$sb.AppendLine('{')
-[void]$sb.AppendLine("`t// All generated nCine default shader programs, sorted by name")
-[void]$sb.AppendLine("`tinline constexpr const ShaderCompiler::Program* AllPrograms[] = {")
-foreach ($name in $ncineNames) {
-    [void]$sb.AppendLine("`t`t&$name,")
-}
-[void]$sb.AppendLine("`t};")
-[void]$sb.AppendLine('}')
-[void]$sb.AppendLine('#endif')
-
-$umbrellaPath = Join-Path $outDir 'ShadersGen.h'
-[System.IO.File]::WriteAllText($umbrellaPath, $sb.ToString().Replace("`r`n", "`n").Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host "ok: umbrella -> Generated\ShadersGen.h ($($jazz2Names.Count) Jazz2 + $($ncineNames.Count) nCine programs)"
-
-# Emit the aggregate SwGeneratedShaders.h consumed by the CPU software renderer: the GLSL-to-C++
-# transpiler lowers each program variant's fragment stage into a C++ fragment function the software
-# device runs for shaders that have no hand-written effect. Shaders outside the supported subset are
-# declined and simply omitted (they keep the previous skipped behaviour), so this step never fails.
-$swGenPath = Join-Path $outDir 'SwGeneratedShaders.h'
-& $tool --emit-sw-generated $swGenPath @($shaders | ForEach-Object { $_.FullName })
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: failed to emit SwGeneratedShaders.h"
-    exit 1
-}
-Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
-
-# Emit the aggregate CgGeneratedShaders.h consumed by the PS Vita's native sceGxm backend: the Cg dialect
-# of the HLSL emitter translates both stages of every program variant, and the backend compiles them on
-# the console through SceShaccCg. Kept out of the per-shader headers on purpose - those carry the
-# precompiled DXBC and SPIR-V blobs, which only a Windows run can produce, so a machine without them
-# would write nulls over that binary data; Cg needs no external compiler and regenerates anywhere.
-$cgGenPath = Join-Path $outDir 'CgGeneratedShaders.h'
-& $tool --emit-cg $cgGenPath @($shaders | ForEach-Object { $_.FullName })
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: failed to emit CgGeneratedShaders.h"
-    exit 1
-}
-Write-Host "ok: Cg stage sources -> Generated\CgGeneratedShaders.h"
-
-# Emit the aggregate fixed-function effect headers consumed by the console backends: the
-# fixed-function transpiler lowers each program variant's void fixed_function([pvr|gx|psp]) block
-# into a C++ effect function over the EffectContext contract (FixedFunctionPass.h). A
-# backend-specific block overrides the generic void fixed_function() block for that backend.
-# Programs without a block are simply absent from the emitted table; an INVALID block is a hard
-# error (unlike the software transpiler's declines), so this step fails the run.
-foreach ($ff in @(@('pvr', 'PvrGeneratedEffects.h'), @('gx', 'GxGeneratedEffects.h'), @('psp', 'GuGeneratedEffects.h'))) {
-    $ffPath = Join-Path $outDir $ff[1]
-    & $tool --emit-fixed-function $ff[0] $ffPath @($shaders | ForEach-Object { $_.FullName })
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "error: failed to emit $($ff[1])"
-        exit 1
-    }
-    Write-Host "ok: fixed-function effects ($($ff[0])) -> Generated\$($ff[1])"
-}
-
-if ($Check) {
-    # Compare the freshly generated headers against the committed ones; any difference means the committed
-    # artifacts are stale (or were edited by hand). Missing/extra files count as stale too.
-    if (-not $glslangPath) {
-        Write-Host "warning: -Check without glslang - committed headers with embedded SPIR-V will be reported stale"
-    }
-    if ($NoDxbc) {
-        Write-Host "warning: -Check with -NoDxbc - committed headers with embedded DXBC will be reported stale"
-    }
-    $stale = @()
-    $freshFiles = @(Get-ChildItem (Join-Path $outDir '*.h') | Sort-Object Name)
-    foreach ($fresh in $freshFiles) {
-        $committed = Join-Path $committedDir $fresh.Name
-        if (-not (Test-Path $committed)) {
-            $stale += "$($fresh.Name) (missing from Generated)"
-        } else {
-            $a = [System.IO.File]::ReadAllBytes($fresh.FullName)
-            $b = [System.IO.File]::ReadAllBytes($committed)
-            if ($a.Length -ne $b.Length -or -not [System.Linq.Enumerable]::SequenceEqual($a, $b)) {
-                $stale += $fresh.Name
-            }
-        }
-    }
-    $freshNames = @($freshFiles | ForEach-Object { $_.Name })
-    foreach ($committed in @(Get-ChildItem (Join-Path $committedDir '*.h'))) {
-        if ($freshNames -notcontains $committed.Name) {
-            $stale += "$($committed.Name) (committed but no longer generated)"
-        }
-    }
-    Remove-Item -Recurse -Force $outDir
-    if ($stale.Count -gt 0) {
-        Write-Host "error: $($stale.Count) generated header(s) are STALE - re-run GenerateAll.ps1 and commit:"
-        foreach ($s in $stale) { Write-Host "  $s" }
-        exit 1
-    }
-    Write-Host "All $($shaders.Count) shaders verified up to date."
-    exit 0
-}
-
-Write-Host "All $($shaders.Count) shaders generated successfully."
-exit 0
+& $tool @toolArgs
+exit $LASTEXITCODE

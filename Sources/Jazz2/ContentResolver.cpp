@@ -4,6 +4,7 @@
 #include "LevelFlags.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
+#include "Compatibility/AssetConverter.h"
 #include "Compatibility/JJ2Anims.h"
 
 #include "../nCine/Application.h"
@@ -59,7 +60,7 @@ namespace Jazz2
 	}
 
 	ContentResolver::ContentResolver()
-		: _isHeadless(false), _isLoading(false), _cachedMetadata(64), _cachedGraphics(256),
+		: _isHeadless(false), _isLoading(false), _isContentPrebaked(false), _cachedMetadata(64), _cachedGraphics(256),
 #if defined(WITH_AUDIO)
 			_cachedSounds(192),
 #endif
@@ -178,12 +179,18 @@ namespace Jazz2
 		_isHeadless = value;
 	}
 
+	bool ContentResolver::IsContentPrebaked() const
+	{
+		return _isContentPrebaked;
+	}
+
 #if defined(WITH_LIBRETRO)
 	void ContentResolver::OverridePaths(StringView contentPath, StringView sourcePath, StringView cachePath)
 	{
 		_contentPath = contentPath;
 		_sourcePath = sourcePath;
 		_cachePath = cachePath;
+		DetectPrebakedContent();
 		// The constructor already mounted .paks from the default paths, remount from the new ones
 		RemountPaks();
 	}
@@ -350,9 +357,21 @@ namespace Jazz2
 		_contentPath = "Content\\"_s;
 #endif
 
+		DetectPrebakedContent();
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		RemountPaks();
 #endif
+	}
+
+	void ContentResolver::DetectPrebakedContent()
+	{
+		// The package of a prepared tree is named differently from the one the first-run conversion writes
+		// into `Cache` precisely so the two can be told apart --- see `AssetConverter::PrebakedPackage`
+		_isContentPrebaked = fs::FileExists(fs::CombinePath(GetContentPath(), Compatibility::AssetConverter::PrebakedPackage));
+		if (_isContentPrebaked) {
+			LOGI("Content in \"{}\" was prepared ahead of time", GetContentPath());
+		}
 	}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -556,7 +575,7 @@ namespace Jazz2
 		}
 
 		// Try to load it
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Metadata"_s, String(pathNormalized + ".res"_s) }), FileAccess::Read);
+		auto s = OpenContentFile(fs::CombinePath("Metadata"_s, String(pathNormalized + ".res"_s)));
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
@@ -749,7 +768,7 @@ namespace Jazz2
 			return RequestGraphicsAura(pathNormalized, paletteOffset, keepIndexed);
 		}
 
-		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(pathNormalized + ".res"_s) }), FileAccess::Read);
+		auto s = OpenContentFile(fs::CombinePath("Animations"_s, String(pathNormalized + ".res"_s)));
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
@@ -771,8 +790,8 @@ namespace Jazz2
 			std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 			graphics->Flags |= GenericGraphicResourceFlags::Referenced;
 
-			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, pathNormalized });
-			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
+			String fullPath = fs::CombinePath("Animations"_s, pathNormalized);
+			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromStream(OpenContentFile(fullPath), fullPath);
 			if (texLoader->hasLoaded()) {
 				auto texFormat = texLoader->texFormat().pixelFormat();
 				if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
@@ -1876,16 +1895,16 @@ namespace Jazz2
 
 		auto& font = _fonts[(std::int32_t)fontType];
 		if (font == nullptr) {
+			StringView fontName;
 			switch (fontType) {
-				case FontType::Small: font = std::make_unique<UI::Font>(fs::CombinePath(
-					{ GetContentPath(), "Animations"_s, "UI"_s, "font_small.font"_s }), _palettes);
-					break;
-				case FontType::Medium: font = std::make_unique<UI::Font>(fs::CombinePath(
-					{ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.font"_s }), _palettes);
-					break;
+				case FontType::Small: fontName = "font_small.font"_s; break;
+				case FontType::Medium: fontName = "font_medium.font"_s; break;
 				default:
 					return nullptr;
 			}
+
+			String fontPath = fs::CombinePath({ "Animations"_s, "UI"_s, fontName });
+			font = std::make_unique<UI::Font>(OpenContentFile(fontPath), fontPath, _palettes);
 		}
 
 		return font.get();

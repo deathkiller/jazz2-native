@@ -1025,6 +1025,58 @@ namespace Death { namespace IO {
 		return true;
 	}
 
+	bool PakWriter::FileExists(StringView path) const
+	{
+		if (_useHashIndex) {
+			// Only the hash of each path is kept, so that's what has to be compared. The items are sorted
+			// by Finalize(), which hasn't run yet, so this is a linear search.
+			std::uint64_t hash = FileNameToHash(path);
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			// The hash bytes are always stored in little-endian order
+			hash = Memory::SwapBytes(hash);
+#endif
+			for (const PakFile::Item& item : _rootItems) {
+				if (std::memcmp(item.Name.data(), &hash, HashIndexLength) == 0) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// Otherwise the index is a tree of directory items, so the parent has to be found first
+		const Array<PakFile::Item>* items = &_rootItems;
+		StringView remaining = path.trimmedPrefix("/\\"_s);
+		while (true) {
+			auto separator = remaining.findAny("/\\"_s);
+			if (separator == nullptr) {
+				break;
+			}
+
+			auto name = remaining.prefix(separator.begin());
+			const PakFile::Item* foundItem = nullptr;
+			for (const PakFile::Item& item : *items) {
+				if (item.Name == name) {
+					foundItem = &item;
+					break;
+				}
+			}
+
+			if (foundItem == nullptr) {
+				return false;
+			}
+
+			remaining = remaining.suffix(separator.end());
+			items = &foundItem->ChildItems;
+		}
+
+		for (const PakFile::Item& item : *items) {
+			if (item.Name == remaining) {
+				return ((item.Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory);
+			}
+		}
+		return false;
+	}
+
 	void PakWriter::Finalize()
 	{
 		if (_finalized) {

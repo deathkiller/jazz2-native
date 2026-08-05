@@ -1,14 +1,14 @@
 namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-/** @page shader-compiler ShaderCompiler
+/** @page shader-compiler Shader compilation
 @brief Offline shader preprocessing tool of Jazz² Resurrection
 
 @tableofcontents
 
 @m_class{m-noindent}
 
-**ShaderCompiler** is a standalone command-line tool in @cpp "Sources/Utilities/ShaderCompiler" @ce.
+ShaderCompiler is a standalone command-line tool in @cpp "Sources/Utilities/ShaderCompiler" @ce.
 It reads annotated `.shader` files from @cpp "Sources/Shaders" @ce, expands their variants,
 performs GLSL declaration reflection **offline**, and emits self-contained C++ headers with the
 sources and reflection data, so the runtime no longer needs `glGetActiveUniform` introspection or
@@ -31,8 +31,8 @@ A `.shader` file therefore describes an effect on **two tiers**:
     @cpp "Docs/FixedFunctionShaderDesign.md" @ce; the runtime contract in
     @cpp "Sources/nCine/Graphics/RHI/FixedFunctionPass.h" @ce.
 
-The tool is plain C++17 with zero dependencies beyond the standard library and is portable across
-**MSVC**, **GCC** and **Clang**. All of its outputs are **committed to the repository** under
+The tool is plain C++17 with zero dependencies beyond the standard library and is portable
+across **MSVC**, **GCC** and **Clang**. All of its outputs are **committed to the repository** under
 @cpp "Sources/Shaders/Generated" @ce --- the game's build never runs the tool and never embeds a
 `.shader` file, so the headers have to be regenerated manually after editing a shader, see
 @ref shader-compiler-workflow "the workflow section".
@@ -42,6 +42,9 @@ The tool is plain C++17 with zero dependencies beyond the standard library and i
 Every backend consumes one artifact, and every artifact is produced by one mode of the tool. The
 per-shader header carries the modern GLSL plus its three per-backend lowerings side by side, so a
 single header serves GL, ES2, D3D11 and Vulkan; the other tiers get their own aggregate headers.
+The modes named below are the individual steps --- a regeneration runs all of them at once through
+@ref shader-compiler-workflow "`--generate-all`", and that is the only way the committed set should
+ever be produced.
 
 Backend | Artifact it consumes | Produced by
 ------- | -------------------- | -----------
@@ -60,13 +63,13 @@ PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources co
 Fields whose lowering was unavailable are emitted as null: a construct outside the HLSL or ESSL 100
 subset leaves those sources null, and a generation run without glslang leaves the SPIR-V null. A
 program whose `fixed_function` block is missing is simply absent from the console tables and is
-skipped at runtime with a one-time warning; a shader the software transpiler declines is likewise
+skipped at runtime with a one-time warning, a shader the software transpiler declines is likewise
 absent from @cpp "SwGeneratedShaders.h" @ce.
 
 Runtime-compiled `.shader` files @m_span{m-text m-dim} (the engine links the parser, reflection and
 `CompileRuntimeProgram` --- see @ref ShaderCompiler::RuntimeProgram) @m_endspan only ever produce
 GLSL plus reflection. Under the ES2 profile the engine additionally runs the very same ESSL 100
-emitter at load time, so runtime shaders get the same lowering; they have no HLSL, no SPIR-V and no
+emitter at load time, so runtime shaders get the same lowering, they have no HLSL, no SPIR-V and no
 fixed-function effect, which is why external shaders are unavailable on the consoles.
 
 @section shader-compiler-building Building the tool
@@ -81,19 +84,12 @@ cmake -S Sources/Utilities/ShaderCompiler -B build-shadercompiler
 cmake --build build-shadercompiler
 @endcode
 
-@m_class{m-noindent}
-
-On Windows, `GenerateAll.ps1` expects the executable at
-@cpp "Sources/Utilities/ShaderCompiler/x64/Release/ShaderCompiler.exe" @ce, which is where the included
-`ShaderCompiler.vcxproj` puts it. The tool target also compiles `RuntimeShader.cpp` --- the runtime
-facade that is built into the game as well --- so drift between the offline and the runtime path is
-caught early.
-
 @section shader-compiler-usage Command-line reference
 
 @code{.sh}
 ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--glslang <path>]
 ShaderCompiler <input.shader> --check | --essl100-check | --hlsl | --cg | --vulkan
+ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>]
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
@@ -104,13 +100,15 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 
 @m_class{m-noindent}
 
-The six `--emit-*` / `*-check` **standalone modes** are recognized only as the first argument;
-everywhere else they are rejected as an unknown option. Everything else is the primary per-shader
-mode, which takes exactly one input file.
+The seven `--generate-all` / `--emit-*` / `*-check` **standalone modes** are recognized only as the
+first argument; everywhere else they are rejected as an unknown option. Everything else is the
+primary per-shader mode, which takes exactly one input file. `--generate-all` is the one that
+produces the committed tree --- the others are the individual steps it drives, kept separately
+usable for debugging a single artifact.
 
 Mode or option | Meaning
 -------------- | -------
-`-o <output.h>` | Path of the generated C++ header. Required unless one of the four dump switches is given
+`-o <output.h>` | Path of the generated C++ header. Required unless one of the five dump switches is given
 `-n <namespace>` | Namespace for the generated program **data** (default `ShaderArtifacts`); `::` nesting is allowed, an empty name, a leading digit or any character outside `[A-Za-z0-9_:]` is an error
 `--glslang <path>` | `glslangValidator` used to compile the embedded SPIR-V; otherwise discovered via `VULKAN_SDK\Bin`, `VULKAN_SDK\Bin32` and `PATH`
 `--check` | Human-readable reflection dump of every program and variant --- structs with std140 offsets, uniforms, blocks with `BaseSize`/`InstanceStride`, texture units, attribute locations. The test suite compares these dumps against @cpp "tests/expected" @ce
@@ -118,6 +116,7 @@ Mode or option | Meaning
 `--hlsl` | HLSL (Shader Model 4/5) transform of every stage
 `--cg` | Cg transform of every stage, in the dialect the PS Vita's sceGxm backend compiles @m_span{m-text m-dim} (the same emitter as `--hlsl`, see @ref shader-compiler-cg "below") @m_endspan
 `--vulkan` | Vulkan GLSL (@cpp "#version 450" @ce) transform of every stage @m_span{m-text m-dim} (does not require glslang) @m_endspan
+`--generate-all` | Regenerates **every** committed artifact from one enumeration of the shader directory, see @ref shader-compiler-workflow "below". Both directories are auto-detected; `--shaders-dir` and `--out-dir` override them, `--check` compares instead of writing, `--no-dxbc` and `--glslang` are forwarded to the header emission
 `--emit-types <output.h>` | Writes the shared reflection-types header and nothing else
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
 `--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
@@ -593,7 +592,7 @@ used as a variable either.
 
 Unlike the software transpiler, which **declines** shaders outside its subset --- they simply stay
 absent from its table --- a `fixed_function` block is authored intent: anything outside the grammar
-is a **hard error** with the offending file and line, and it fails the whole `GenerateAll.ps1` run,
+is a **hard error** with the offending file and line, and it fails the whole `--generate-all` run,
 so a mistake surfaces on the dev machine instead of silently dropping a console effect. Common ones:
 
 -   `unknown pass field '.<name>' (fields: color, offset_color, screen_offset, blend, tev, luma_gain)`
@@ -665,8 +664,7 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
 
 @section shader-compiler-workflow Regenerating the committed headers
 
-`GenerateAll.ps1` in @cpp "Sources/Utilities/ShaderCompiler" @ce runs the tool over every
-@cpp "Sources/Shaders/*.shader" @ce and writes everything into
+`--generate-all` enumerates every @cpp "Sources/Shaders/*.shader" @ce and writes everything into
 @cpp "Sources/Shaders/Generated" @ce, in this order:
 
 1.  @cpp "ShaderCompilerTypes.h" @ce --- the shared reflection types (`--emit-types`)
@@ -677,33 +675,58 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
     `batched` directives, so a file with a batched twin contributes two entries
 4.  @cpp "SwGeneratedShaders.h" @ce --- the software-renderer fragment functions
     (`--emit-sw-generated`)
-5.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce and
+5.  @cpp "CgGeneratedShaders.h" @ce --- the PS Vita's Cg stage sources (`--emit-cg`)
+6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce and
     @cpp "GuGeneratedEffects.h" @ce --- the console fixed-function effects
     (`--emit-fixed-function pvr` / `gx` / `psp`)
 
 The typical workflow after editing a `.shader` file is therefore:
 
 @code{.bat}
-cd Sources\Utilities\ShaderCompiler
-powershell .\GenerateAll.ps1
-git add ..\..\Shaders ..\..\Shaders\Generated
+Sources\Utilities\ShaderCompiler\x64\Release\ShaderCompiler.exe --generate-all
+git add Sources\Shaders Sources\Shaders\Generated
 @endcode
 
 @m_class{m-noindent}
 
-SPIR-V for the Vulkan backend is embedded when a `glslangValidator` can be found: an explicit
-`-Glslang <path>`, then `VULKAN_SDK\Bin` and `VULKAN_SDK\Bin32`, then `PATH`, then a Visual
-Studio-bundled copy, then a repo-local build-tree copy. glslang is a **generation-time-only**
-dependency: when it is unavailable a warning is printed and the SPIR-V fields are emitted as null,
-so the headers still build but the Vulkan backend is not buildable from them.
+Neither directory has to be named: the shader directory is found by walking up from the executable
+(which normally lives in @cpp "Sources/Utilities/ShaderCompiler/x64/Release" @ce) and then from the
+working directory, looking for a @cpp "Sources/Shaders" @ce, and the output directory is its
+@cpp "Generated" @ce subdirectory. `--shaders-dir` and `--out-dir` cover any layout the walk misses.
 
-`GenerateAll.ps1 -Check` is the **staleness guard**: it generates into a temporary directory
+`GenerateAll.ps1` in @cpp "Sources/Utilities/ShaderCompiler" @ce is a thin wrapper that forwards
+`-Glslang`, `-NoDxbc` and `-Check` to the same mode, so the older invocation keeps working:
+
+@code{.bat}
+cd Sources\Utilities\ShaderCompiler
+powershell .\GenerateAll.ps1
+@endcode
+
+@m_class{m-block m-info}
+
+@par Why the driver lives in the tool
+Keeping the whole flow in one process, behind one enumeration of the shader directory, is what makes
+a regeneration all-or-nothing. Driven from a shell script it is easy to leave the committed set
+internally **inconsistent** --- one aggregate written from an older shader list, a single header
+re-emitted on a machine without glslang, everything else untouched --- and nothing detects it until
+a backend is built from headers that disagree with each other. The enumeration is also sorted with a
+plain byte-wise comparison rather than the shell's culture-sensitive one, so the entry order baked
+into the aggregates is identical on every machine, shell and locale.
+
+SPIR-V for the Vulkan backend is embedded when a `glslangValidator` can be found: an explicit
+`--glslang <path>`, then `VULKAN_SDK\Bin` and `VULKAN_SDK\Bin32`, then `PATH`, then a Visual
+Studio-bundled copy (globbed out of its version, edition and extension-id directories), then a
+repo-local build-tree copy. glslang is a **generation-time-only** dependency: when it is unavailable
+a warning is printed and the SPIR-V fields are emitted as null, so the headers still build but the
+Vulkan backend is not buildable from them.
+
+`--generate-all --check` is the **staleness guard**: it generates into a temporary directory
 instead, byte-compares the result against the committed headers, removes the temporary directory
 and then either reports every stale file and exits non-zero, or confirms that everything is up to
 date --- without ever modifying the tree. Missing and extra files count as stale too, and running
-`-Check` without glslang warns up front that every header with embedded SPIR-V will be reported
-stale. Run it after editing a shader, or in CI: the build itself never detects stale committed
-headers.
+`--check` without glslang (or with `--no-dxbc`) warns up front that every header with embedded
+SPIR-V or DXBC will be reported stale. Run it after editing a shader, or in CI: the build itself
+never detects stale committed headers.
 
 The tool also ships a test suite in @cpp "Sources/Utilities/ShaderCompiler/tests" @ce --- sample inputs with
 their exact `--check` dumps in @cpp "tests/expected" @ce, inputs that must fail to parse in
@@ -986,16 +1009,16 @@ on the Vita it has no Cg source, which is the same restriction wearing a differe
 @section shader-compiler-pitfalls Pitfalls
 
 -   **Committed generated headers are never rebuilt by the build.** Editing a `.shader` file does
-    nothing until `GenerateAll.ps1` is re-run and the regenerated headers are committed; use
-    `-Check` to catch it.
--   **Do not edit anything in** @cpp "Sources/Shaders/Generated" @ce **by hand** --- `-Check` treats
+    nothing until `--generate-all` is re-run and the regenerated headers are committed; use
+    `--check` to catch it.
+-   **Do not edit anything in** @cpp "Sources/Shaders/Generated" @ce **by hand** --- `--check` treats
     a hand-edited header as stale, and the next regeneration overwrites it. That includes the
     aggregate console headers: the effect they contain belongs in the shader file.
 -   **SPIR-V requires glslangValidator at generation time**, and the glslang and `D3DCompile`
-    integrations are Windows-only, so a full regeneration has to happen on Windows. A `-Check` run
+    integrations are Windows-only, so a full regeneration has to happen on Windows. A `--check` run
     elsewhere disagrees with headers that were generated with SPIR-V.
 -   **A layout change of** @cpp "ShaderCompilerTypes.h" @ce invalidates all committed generated
-    headers at once --- one regeneration commit, guarded by `-Check`.
+    headers at once --- one regeneration commit, guarded by `--check`.
 -   **An error in a** @cpp fixed_function @ce **block fails the whole run by design**, while a
     shader the software transpiler cannot handle is merely listed as declined. Read the summary
     lines: a silently missing console effect is a missing block, not a failure.

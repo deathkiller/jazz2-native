@@ -94,9 +94,9 @@ namespace Jazz2
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
 	bool PreferencesCache::ToggleRunAction = false;
-#if defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
@@ -207,7 +207,7 @@ namespace Jazz2
 #	endif
 
 #	if defined(WITH_LIBRETRO)
-		// The frontend owns the save directory, so use it instead of the common path for current user;
+		// The frontend owns the save directory, so use it instead of the common path for current user,
 		// the portable config is skipped as well, the working directory belongs to the frontend
 		if (!overrideConfigPath) {
 			StringView saveDir = Backends::theLibretroApplication().GetHostPaths().Save;
@@ -226,7 +226,7 @@ namespace Jazz2
 			// The game runs from a disc, so the only writable storage is a memory card. KallistiOS mounts
 			// each one as "/vmu/<port><unit>", buffers the whole file in RAM and commits it to the card when
 			// the handle closes, so it can be streamed like any other file. VMU names are limited to twelve
-			// characters. The first attached card wins; with none inserted there is nowhere to save and the
+			// characters. The first attached card wins, with none inserted there is nowhere to save and the
 			// path is left on the disc, where opening it for writing simply fails as before.
 			if (maple_device_t* memoryCard = maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
 				char vmuPath[] = "/vmu/a1/JAZZ2CFG";
@@ -238,8 +238,9 @@ namespace Jazz2
 				auto& resolver = ContentResolver::Get();
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-			// Save config file next to `Source` directory (on the SD card the content is read from)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+			// Save config file next to `Source` directory (on the storage device the content is read from)
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 #	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
@@ -275,7 +276,8 @@ namespace Jazz2
 		// (Apple, Unix, Windows) it also forces tracing to the file even without
 		// using any command-line argument
 #	if defined(DEATH_TRACE)
-#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || \
+			defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
@@ -567,36 +569,39 @@ namespace Jazz2
 
 			fs::CreateDirectories(configDir);
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-			// Create "Source" directory on the first launch
+#if defined(NCINE_HAS_WRITABLE_CACHE)
+			// Create "Source" directory on the first launch, so there is somewhere to put the original files.
+			// A platform that cannot convert them has no use for it, prepared content is all it ever loads.
 			auto& resolver = ContentResolver::Get();
 			fs::CreateDirectories(resolver.GetSourcePath());
+#endif
 
-#	if defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
 			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
-#	elif defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_SWITCH)
 			// Use Switch button labels
 			GamepadButtonLabels = GamepadType::Switch;
-#	elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 			// Use PlayStation button labels on the PlayStation consoles
 			GamepadButtonLabels = GamepadType::PlayStation;
-#	elif defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");
 			if (isSteamDeck == "1"_s) {
 				GamepadButtonLabels = GamepadType::Steam;
 			}
-#	elif defined(DEATH_TARGET_WINDOWS)
+#elif defined(DEATH_TARGET_WINDOWS)
 			wchar_t envSteamDeck[2] = {};
 			DWORD envLength = ::GetEnvironmentVariable(L"SteamDeck", envSteamDeck, 2);
 			if (envLength == 1 && envSteamDeck[0] == L'1') {
 				GamepadButtonLabels = GamepadType::Steam;
 			}
-#	endif
 #endif
 		}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PSP) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -819,6 +824,8 @@ namespace Jazz2
 		std::int32_t arch = 3;
 #elif defined(DEATH_TARGET_RISCV)
 		std::int32_t arch = 5;
+#elif defined(DEATH_TARGET_MIPS)
+		std::int32_t arch = 6;
 #elif defined(DEATH_TARGET_WASM)
 		std::int32_t arch = 4;
 		Cpu::Features cpuFeatures = Cpu::runtimeFeatures();

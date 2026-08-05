@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include <CommonBase.h>
+#include "../../../Main.h"
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(NCINE_HAS_WRITABLE_CACHE)
 
 #include "MenuSection.h"
 

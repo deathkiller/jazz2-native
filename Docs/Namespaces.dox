@@ -29,7 +29,7 @@ matches the current implementation.
 - **Linux** and other Unix-like systems
 - **macOS**
 - **Windows**
-- **Xbox** (Universal Windows Platform) using ANGLE/Mesa
+- **Xbox** (Universal Windows Platform)
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
 - **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman),
   see @ref consoles-switch
@@ -39,17 +39,19 @@ matches the current implementation.
   fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
 - **PlayStation Portable** using [pspdev](https://github.com/pspdev/pspdev) and a fixed-function
   GU rendering backend, see @ref consoles-psp
-- **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and vitaGL, see @ref consoles-vita
+- **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and a native **sceGxm** rendering
+  backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
 - **libretro** core for RetroArch, see @ref consoles-libretro
 
 The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced
-instruction sets. Additionally, **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 is usually
-required to run the application --- Google ANGLE or Mesa can be used to translate OpenGL calls to
-the native graphics API, and Direct3D 11, Vulkan and a CPU software rasterizer are available as
-alternative rendering backends. The consoles above are the exception: four of them have no
-programmable shaders at all and are driven by a rendering backend written for their fixed-function
-graphics hardware. See also @ref consoles-common-features "the list of features each console
-supports", which is where the platform differences are the largest.
+instruction sets. Additionally, the application requires a rendering backend --- **OpenGL** 3.3,
+**OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer are
+all fully supported and interchangeable, so any of them can be used depending on the target
+platform. The consoles above are the exception: four of them have no programmable shaders at all
+and are driven by a rendering backend written for their fixed-function graphics hardware, and the
+PlayStation Vita can drive **sceGxm**, its own shader API, directly. See also
+@ref consoles-common-features "the list of features each console supports", which is where the
+platform differences are the largest.
 	
 @section mainpage-license License
 
@@ -114,6 +116,12 @@ See also @ref third-party for the licenses of the libraries used.
 	here (e.g. @ref nCine::RHI::Device, @ref nCine::RHI::Texture), so each backend only has to provide
 	the same set of names with the same surface.
 */
+/** @file nCine/Graphics/RHI/Rhi.h
+	@brief Definitions of the classes aliased in @ref nCine::RHI for the selected backend
+*/
+/** @file nCine/Graphics/RHI/RhiFwd.h
+	@brief Compile-time backend selection, forward declarations and the backend-neutral aliases of @ref nCine::RHI
+*/
 /** @dir nCine/Graphics/RHI/GL
 	@brief Namespace @ref nCine::RHI::GL
 */
@@ -128,6 +136,9 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace nCine::RHI::Software::sw
 	@brief Runtime support types for the transpiled (GLSL→C++) software shaders
+*/
+/** @namespace nCine::RHI::Software::sw::detail
+	@brief Implementation details of the software shader runtime
 */
 /** @namespace nCine::RHI::Software::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
@@ -148,6 +159,55 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Vulkan backend, selected by `WITH_RHI_VULKAN`
 */
 /** @namespace nCine::RHI::Vulkan::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/GX
+	@brief Namespace @ref nCine::RHI::GX
+*/
+/** @namespace nCine::RHI::GX
+	@brief Nintendo Wii and GameCube fixed-function GX backend, selected by `WITH_RHI_GX`
+
+	Has off-screen render targets but no programmable shaders, so every effect is submitted as a list of
+	@ref nCine::RHI::FixedFunctionPass that the device turns into a TEV and blending setup.
+*/
+/** @namespace nCine::RHI::GX::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/PVR
+	@brief Namespace @ref nCine::RHI::PVR
+*/
+/** @namespace nCine::RHI::PVR
+	@brief Sega Dreamcast fixed-function PowerVR backend on top of KallistiOS, selected by `WITH_RHI_PVR`
+
+	Like @ref nCine::RHI::GX it has render targets but no programmable shaders and consumes
+	@ref nCine::RHI::FixedFunctionPass, here translated into tile accelerator polygon headers.
+*/
+/** @namespace nCine::RHI::PVR::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/GU
+	@brief Namespace @ref nCine::RHI::GU
+*/
+/** @namespace nCine::RHI::GU
+	@brief PlayStation Portable fixed-function GU backend, selected by `WITH_RHI_GU`
+
+	Drives the Graphics Engine through `sceGu`, again with render targets, no programmable shaders and
+	effects described by @ref nCine::RHI::FixedFunctionPass.
+*/
+/** @namespace nCine::RHI::GU::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/GXM
+	@brief Namespace @ref nCine::RHI::GXM
+*/
+/** @namespace nCine::RHI::GXM
+	@brief PlayStation Vita backend driving `sceGxm` natively, selected by `WITH_RHI_GXM`
+
+	Unlike the fixed-function console backends this is a full-pipeline backend, because the console's
+	PowerVR SGX is a unified-shader part --- compared to the OpenGL path on the same console it only
+	removes vitaGL, the OpenGL|ES 2.0 layer that would otherwise sit in between.
+*/
+/** @namespace nCine::RHI::GXM::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
 
@@ -242,7 +302,15 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Jazz2::Multiplayer
 	@brief Multiplayer-related classes, compiled only if `WITH_MULTIPLAYER`
-	
+
+	@experimental
+*/
+/** @dir Jazz2/Multiplayer/GameModes
+	@brief Namespace @ref Jazz2::Multiplayer::GameModes
+*/
+/** @namespace Jazz2::Multiplayer::GameModes
+	@brief Rules and HUD of the particular multiplayer game modes, compiled only if `WITH_MULTIPLAYER`
+
 	@experimental
 */
 /** @dir Jazz2/Rendering
@@ -293,8 +361,25 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Jazz2::UI::Multiplayer
 	@brief Multiplayer-related user interface, compiled only if `WITH_MULTIPLAYER`
-	
+
 	@experimental
+*/
+
+/** @dir Utilities/AssetPacker
+	@brief Namespace @ref Jazz2::AssetPacker
+*/
+/** @namespace Jazz2::AssetPacker
+	@brief Offline data conversion tool, see @ref asset-packer
+*/
+/** @dir Utilities/ShaderCompiler
+	@brief Namespace @ref ShaderCompiler
+*/
+/** @namespace ShaderCompiler
+	@brief Offline shader preprocessing tool, see @ref shader-compiler
+
+	Shared with the game at runtime: the reflection types the tool writes into the generated shader
+	headers (`Sources/Shaders/Generated`) live in this namespace as well, and that is how the backends
+	of @ref nCine::RHI learn the uniforms and vertex inputs of a compiled shader.
 */
 
 }
