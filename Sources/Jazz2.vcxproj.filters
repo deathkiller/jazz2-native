@@ -2540,9 +2540,6 @@
     <ClCompile Include="nCine\Backends\Qt5InputManager.cpp">
       <Filter>Source Files\nCine\Backends</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Backends\Qt5JoyMapping.cpp">
-      <Filter>Source Files\nCine\Backends</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Backends\Qt5Keys.cpp">
       <Filter>Source Files\nCine\Backends</Filter>
     </ClCompile>

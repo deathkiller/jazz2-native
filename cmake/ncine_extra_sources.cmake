@@ -920,8 +920,10 @@ else()
 		file(MAKE_DIRECTORY "${PSP_EBOOT_DIR}")
 		create_pbp_file(
 			TARGET ${NCINE_APP}
-			TITLE "${NCINE_APP_NAME}"
-			VERSION "${NCINE_VERSION}"
+			#TITLE "${NCINE_APP_NAME}"
+			TITLE "${NCINE_APP}"
+			#VERSION "${NCINE_VERSION}"
+			VERSION "01.00"
 			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
 			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
 			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"

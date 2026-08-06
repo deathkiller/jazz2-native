@@ -1431,6 +1431,9 @@ msgid ""
 "\n"
 "{} won the championship!"
 msgstr ""
+"\n"
+"\n"
+"{} vince il campionato!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2463
 #, c++-format
@@ -1603,7 +1606,7 @@ msgstr "Spettatore"
 #: Sources/Jazz2/UI/InGameConsole.cpp:210
 #| msgid "Scoreboard"
 msgid "Keyboard"
-msgstr ""
+msgstr "Tastiera"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:497
 msgid "Unknown command"

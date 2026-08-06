@@ -1,0 +1,78 @@
+name: 'PlayStation 2'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container:
+      # Contains the mips64r5900el-ps2-elf toolchain and PS2SDK, including the ports the build links
+      # against - but no CMake, unlike the PSP image, so the step below adds it
+      image: ps2dev/ps2dev:latest
+      options: --user root
+
+    steps:
+    # Runs BEFORE the checkout, because the image ships neither git (which actions/checkout needs for
+    # a full-depth clone) nor bash (which every later step's default shell is). Explicitly `sh` for the
+    # same reason - the default would already be the bash this step installs.
+    - name: 'Install Dependencies'
+      shell: sh
+      run: |
+        # cmake/make build it; git is for the checkout and the version string; xorriso provides the
+        # xorrisofs the PLATFORM_PS2 arm uses to author the bootable disc image (without it the build
+        # still succeeds and just skips the ISO, which would make this workflow silently useless)
+        apk add --no-cache cmake make git bash xorriso
+
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        # $PS2DEV/ee/bin is not on PATH in this image, not even under a login shell, so CMake's compiler
+        # check fails with "mips64r5900el-ps2-elf-g++ is not a full path and was not found"
+        echo "${PS2DEV}/ee/bin" >> $GITHUB_PATH
+        echo "${PS2DEV}/bin" >> $GITHUB_PATH
+        echo "${PS2SDK}/bin" >> $GITHUB_PATH
+
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${PS2SDK}/ps2dev.cmake
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The ISO is a plain ISO9660 disc whose root carries the SYSTEM.CNF boot stanza and the game
+        # content, so it boots in an emulator or burnt to a disc as it is. The bare ELF ships alongside
+        # it because PCSX2 can boot one directly with `-elf`, which is how the port is developed.
+        mkdir ./_package/
+        cp -f ./_build/jazz2.iso ./_package/Jazz2.iso
+        cp -f ./_build/jazz2.elf ./_package/Jazz2.elf
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_PS2
+        path: ./_package/

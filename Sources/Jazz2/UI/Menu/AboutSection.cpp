@@ -14,6 +14,8 @@
 #	define _i1a "\nVulkan"
 #elif defined(WITH_RHI_GXM)
 #	define _i1a "\nGXM"
+#elif defined(WITH_RHI_GS)
+#	define _i1a "\nGS (fixed-function)"
 #elif defined(WITH_RHI_GX)
 #	define _i1a "\nGX (fixed-function)"
 #elif defined(WITH_RHI_PVR)

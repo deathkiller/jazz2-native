@@ -1117,7 +1117,6 @@
     <ClCompile Include="nCine\Input\ImGuiJoyMappedInput.cpp" />
     <ClCompile Include="nCine\Input\JoyMapping.cpp" />
     <ClCompile Include="nCine\Backends\Qt5InputManager.cpp" />
-    <ClCompile Include="nCine\Backends\Qt5JoyMapping.cpp" />
     <ClCompile Include="nCine\Backends\Qt5Keys.cpp" />
     <ClCompile Include="nCine\Backends\SdlInputManager.cpp" />
     <ClCompile Include="nCine\Backends\SdlKeys.cpp" />
