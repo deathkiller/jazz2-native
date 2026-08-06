@@ -931,9 +931,12 @@ namespace Jazz2
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Switch {}.{}.{}{}||9|{}",
 			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, arch);
+#elif defined(DEATH_TARGET_PS2)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 2||11|{}", arch);
 #elif defined(DEATH_TARGET_VITA)
 		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Vita||10|{}", arch);
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Vita||10|{}", arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;

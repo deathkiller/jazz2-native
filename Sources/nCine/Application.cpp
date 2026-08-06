@@ -1181,6 +1181,25 @@ namespace nCine
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_PS2)
+		// A bare ELF has no connected stdout - its file descriptor is only wired up when the program was
+		// launched through ps2client - so the message goes to the EE's SIO transmit register instead.
+		// PCSX2 captures that as EE console output (with "EnableEEConsole" turned on) and it reaches a
+		// serial cable on real hardware, which is the same trade the Dreamcast makes with dbgio above.
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		{
+			volatile std::uint8_t* const sioTx = reinterpret_cast<volatile std::uint8_t*>(0x1000F180);
+			for (std::int32_t i = 0; i < length2; i++) {
+				*sioTx = std::uint8_t(logEntryWithColors[i]);
+			}
+		}
 #elif defined(DEATH_TARGET_PSP)
 		// Write the message to stdout, which PSPSDK routes to the host through sceIoWrite on fd 1: the
 		// PPSSPP emulator prints it into its log and psplink shows it in its console. On real hardware
@@ -1811,10 +1830,10 @@ namespace nCine
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
 #		elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || \
-				defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
+				defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-		// TODO: Hostname is not implemented on Vita, libogc, KOS and PSPSDK
+		// TODO: Hostname is not implemented on Vita, libogc, KOS, PSPSDK and PS2SDK
 		char hostName[32] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN)

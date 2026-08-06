@@ -162,12 +162,14 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 				return AndroidAssetStream::Prefix.size();
 			}
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+			defined(DEATH_TARGET_VITA)
 			// Switch mount points: romfs:, sdmc:, etc.
-			// Vita mount points: app0:, ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
+			// PS2 mount points: cdfs:, cdrom0:, mc0:, mass:, host:, etc.
 			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
-#		if defined(DEATH_TARGET_PSP)
-			// "flash0" is one character longer than anything the other two platforms mount
+			// Vita mount points: app0:, ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
+#		if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+			// "flash0" and "cdrom0" are one character longer than anything the other platforms mount
 			constexpr std::size_t MaxMountPointLength = 7;
 #		else
 			constexpr std::size_t MaxMountPointLength = 5;
@@ -318,15 +320,107 @@ namespace Death { namespace IO {
 #	endif
 		}
 #else
+		// Not every platform fills in the permission bits of `st_mode`, and the ones that don't have no
+		// permission model to expose in the first place: the PS2's cdfs leaves the whole mode except the
+		// file type at zero, the Vita's newlib clears `struct stat` and copies only the file type over
+		// from SceIoStat, the PSP reports a constant 0444/0555 even for a file it has just created on the
+		// memory card, and KOS answers with the bare file type whenever a filesystem has no native stat().
+		// Testing S_IRUSR there rejects everything that exists, so on those platforms the file type is all
+		// that is tested and a refused access only surfaces when it is actually attempted.
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+		defined(DEATH_TARGET_VITA)
+		static constexpr bool HasFilePermissions = false;
+#	else
+		static constexpr bool HasFilePermissions = true;
+#	endif
+
+		static bool IsModeReadable(std::uint32_t nativeMode)
+		{
+			return (!HasFilePermissions || (nativeMode & S_IRUSR) != 0);
+		}
+
+		static bool IsModeWritable(std::uint32_t nativeMode)
+		{
+			return (!HasFilePermissions || (nativeMode & S_IWUSR) != 0);
+		}
+
+		static bool IsModeExecutable(std::uint32_t nativeMode)
+		{
+			// Without permission bits only directories can be answered, and those are always searchable
+			return (HasFilePermissions ? (nativeMode & S_IXUSR) != 0 : (nativeMode & S_IFMT) == S_IFDIR);
+		}
+
+		// Two platforms cannot answer with ::stat() at all, so everything they report is reconstructed by
+		// opening the path instead. On the PS2 cdfs returns 0 for paths that don't exist, filling the
+		// structure with the leftovers of an earlier lookup, so its stat() can neither prove that a path
+		// exists nor that it doesn't. On the Dreamcast it does detect a missing path, but the mode it
+		// reports is KOS's own file type (1 for a file, 2 for a directory) rather than POSIX mode bits and
+		// the size is always zero - and its VMU filesystem fails with ENOTDIR for everything below the
+		// mount point anyway, which is where every save file lives.
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		static constexpr bool HasReliableFileStatus = false;
+#	else
+		static constexpr bool HasReliableFileStatus = true;
+#	endif
+
+		/** @brief Describes @p path the same way @cpp ::stat() @ce does, but also on platforms where it can't */
+		static bool TryGetFileStatus(const char* path, struct stat& sb, bool followLinks = true)
+		{
+			if constexpr (HasReliableFileStatus) {
+				return ((followLinks ? ::stat(path, &sb) : ::lstat(path, &sb)) == 0);
+			} else {
+				// Neither platform has symbolic links, so there is nothing to follow or not to follow
+				static_cast<void>(followLinks);
+
+				// Opening the path is the one answer that cannot be wrong on either platform, and it is
+				// also what tells a file from a directory: the PS2 opens directories as well and describes
+				// them correctly through fstat(), while KOS resolves a name without O_DIR as a file only
+				std::int32_t fd = ::open(path, O_RDONLY);
+				if (fd >= 0) {
+					struct stat fb;
+					bool isDirectory = (::fstat(fd, &fb) == 0 && (fb.st_mode & S_IFMT) == S_IFDIR);
+					// Seeking to the end is used instead of `fb.st_size` because that is one of the fields
+					// the Dreamcast leaves at zero
+					std::int64_t fileSize = (isDirectory ? 0 : std::int64_t(::lseek(fd, 0, SEEK_END)));
+					::close(fd);
+					std::memset(&sb, 0, sizeof(sb));
+					// These permission bits are invented, which is why `HasFilePermissions` is false here
+					sb.st_mode = (isDirectory ? (S_IFDIR | S_IRUSR | S_IXUSR) : (S_IFREG | S_IRUSR | S_IWUSR));
+					sb.st_size = fileSize;
+					return true;
+				}
+				if (DIR* d = ::opendir(path)) {
+					::closedir(d);
+					std::memset(&sb, 0, sizeof(sb));
+					sb.st_mode = S_IFDIR | S_IRUSR | S_IXUSR;
+					return true;
+				}
+				return false;
+			}
+		}
+
+		/** @brief Returns the last component of @p path, which must be writable and null-terminated */
+		static const char* GetBaseName(char* path)
+		{
+#	if defined(DEATH_TARGET_PS2)
+			// PS2SDK's newlib declares no basename(), and the callers only need the last path component,
+			// for which the trailing-slash handling POSIX basename() adds makes no difference
+			const char* lastSeparator = std::strrchr(path, '/');
+			return (lastSeparator != nullptr ? lastSeparator + 1 : path);
+#	else
+			return ::basename(path);
+#	endif
+		}
+
 		static FileSystem::Permission NativeModeToEnum(std::uint32_t nativeMode)
 		{
 			FileSystem::Permission mode = FileSystem::Permission::None;
 
-			if (nativeMode & S_IRUSR)
+			if (IsModeReadable(nativeMode))
 				mode |= FileSystem::Permission::Read;
-			if (nativeMode & S_IWUSR)
+			if (IsModeWritable(nativeMode))
 				mode |= FileSystem::Permission::Write;
-			if (nativeMode & S_IXUSR)
+			if (IsModeExecutable(nativeMode))
 				mode |= FileSystem::Permission::Execute;
 
 			return mode;
@@ -356,7 +450,9 @@ namespace Death { namespace IO {
 			return currentMode;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
+		!defined(DEATH_TARGET_DREAMCAST)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -365,9 +461,13 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-			// nftw() is missing in libnx, Vita, libogc and KOS, and on PSPSDK it is only declared (there is
-			// no implementation behind it), so the walk is done by hand everywhere on the consoles
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_DREAMCAST)
+			// nftw() is missing in libnx, Vita, libogc and KOS, and on PSPSDK and PS2SDK it is only declared
+			// (there is no implementation behind it), so the walk is done by hand everywhere on the consoles.
+			// On the PS2 the declaration is additionally unusable: its callback takes `int` parameters, and
+			// `std::int32_t` is `long` on the EE, so the handler below would not even convert to it.
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
 			std::int32_t r = -1;
@@ -381,7 +481,7 @@ namespace Death { namespace IO {
 
 					String fileName = FileSystem::CombinePath(path, p->d_name);
 					struct stat sb;
-					if (::lstat(fileName.data(), &sb) == 0) { // Don't follow symbolic links
+					if (TryGetFileStatus(fileName.data(), sb, false)) { // Don't follow symbolic links
 						if (S_ISDIR(sb.st_mode)) {
 							DeleteDirectoryInternal(fileName);
 						} else {
@@ -1174,8 +1274,8 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST)
-		// realpath() is missing in libnx and Vita, and unreliable in KOS (lstat() fails on iso9660)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		// realpath() is missing in libnx, Vita and PS2SDK, and unreliable in KOS (lstat() fails on iso9660)
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
@@ -1248,8 +1348,11 @@ namespace Death { namespace IO {
 			result[resultLength] = '\0';
 
 			struct stat sb;
-			if (::lstat(result, &sb) != 0) {
-				if (errno == ENOENT && p == nullptr) {
+			if (!TryGetFileStatus(result, sb, false)) {
+				// The last component is allowed not to exist yet, anything before it is a hard error.
+				// `errno` is only meaningful where ::stat() itself is, i.e. not where the status above
+				// had to be reconstructed by opening the path.
+				if (p == nullptr && (!HasReliableFileStatus || errno == ENOENT)) {
 					return String{result, resultLength};
 				}
 				return {};
@@ -1625,19 +1728,8 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenDirectory(strippedPath);
 		}
 #	endif
-#	if defined(DEATH_TARGET_DREAMCAST)
-		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the directory instead
-		if (DIR* d = ::opendir(nullTerminatedPath.data())) {
-			::closedir(d);
-			return true;
-		}
-#	else
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-			return ((sb.st_mode & S_IFMT) == S_IFDIR);
-		}
-#	endif
-		return false;
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) && (sb.st_mode & S_IFMT) == S_IFDIR);
 #endif
 	}
 
@@ -1662,20 +1754,8 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
-#	if defined(DEATH_TARGET_DREAMCAST)
-		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the file instead
-		std::int32_t fd = ::open(nullTerminatedPath.data(), O_RDONLY);
-		if (fd >= 0) {
-			::close(fd);
-			return true;
-		}
-#	else
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-			return ((sb.st_mode & S_IFMT) == S_IFREG);
-		}
-#	endif
-		return false;
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) && (sb.st_mode & S_IFMT) == S_IFREG);
 #endif
 	}
 
@@ -1701,7 +1781,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		return (::lstat(nullTerminatedPath.data(), &sb) == 0);
+		return TryGetFileStatus(nullTerminatedPath.data(), sb, false);
 #endif
 	}
 
@@ -1727,14 +1807,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-#		if defined(DEATH_TARGET_VITA)
-			return true;	// This platform doesn't have a concept of file permissions
-#		else
-			return ((sb.st_mode & S_IRUSR) != 0);
-#		endif
-		}
-		return false;
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) && IsModeReadable(sb.st_mode));
 #endif
 	}
 
@@ -1761,14 +1834,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-#		if defined(DEATH_TARGET_VITA)
-			return true;	// This platform doesn't have a concept of file permissions
-#		else
-			return ((sb.st_mode & S_IWUSR) != 0);
-#		endif
-		}
-		return false;
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) && IsModeWritable(sb.st_mode));
 #endif
 	}
 
@@ -1800,7 +1866,10 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenDirectory(strippedPath);
 		}
 #	endif
-		return (::access(nullTerminatedPath.data(), X_OK) == 0);
+		// Tested through the mode bits like IsReadable()/IsWritable() are, and not with ::access(), which
+		// KOS declares but doesn't implement at all
+		struct stat sb;
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) && IsModeExecutable(sb.st_mode));
 #endif
 	}
 
@@ -1825,25 +1894,10 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
-#	if defined(DEATH_TARGET_DREAMCAST)
-		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the file instead
-		std::int32_t fd = ::open(nullTerminatedPath.data(), O_RDONLY);
-		if (fd >= 0) {
-			::close(fd);
-			return true;
-		}
-#	else
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-#		if defined(DEATH_TARGET_VITA)
-			return true;	// This platform doesn't have a concept of file permissions
-#		else
-			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR) != 0);
-#		endif
-		}
-#	endif
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) &&
+			(sb.st_mode & S_IFMT) == S_IFREG && IsModeReadable(sb.st_mode));
 #endif
-		return false;
 	}
 
 	bool FileSystem::IsWritableFile(StringView path)
@@ -1869,15 +1923,9 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
-#		if defined(DEATH_TARGET_VITA)
-			return true;	// This platform doesn't have a concept of file permissions
-#		else
-			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR) != 0);
-#		endif
-		}
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb) &&
+			(sb.st_mode & S_IFMT) == S_IFREG && IsModeWritable(sb.st_mode));
 #endif
-		return false;
 	}
 
 	bool FileSystem::IsSymbolicLink(StringView path)
@@ -1902,11 +1950,8 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::lstat(nullTerminatedPath.data(), &sb) == 0) {
-			return ((sb.st_mode & S_IFMT) == S_IFLNK);
-		}
+		return (TryGetFileStatus(nullTerminatedPath.data(), sb, false) && (sb.st_mode & S_IFMT) == S_IFLNK);
 #endif
-		return false;
 	}
 
 	bool FileSystem::IsHidden(StringView path)
@@ -1938,7 +1983,7 @@ namespace Death { namespace IO {
 		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, path.data(), pathLength);
 		buffer[pathLength] = '\0';
-		const char* baseName = ::basename(buffer);
+		const char* baseName = GetBaseName(buffer);
 		return (baseName != nullptr && baseName[0] == '.');
 #endif
 	}
@@ -2002,7 +2047,7 @@ namespace Death { namespace IO {
 		std::size_t pathLength = std::min((std::size_t)MaxPathLength - 1, path.size());
 		strncpy(buffer, nullTerminatedPath.data(), pathLength);
 		buffer[pathLength] = '\0';
-		const char* baseName = ::basename(buffer);
+		const char* baseName = GetBaseName(buffer);
 		if (hidden && baseName != nullptr && baseName[0] != '.') {
 			String newPath = CombinePath(GetDirectoryName(nullTerminatedPath), String("."_s + baseName));
 			return (::rename(nullTerminatedPath.data(), newPath.data()) == 0);
@@ -2205,7 +2250,7 @@ namespace Death { namespace IO {
 
 			if (fullPath[i] == '/' || fullPath[i] == '\\') {
 				fullPath[i] = '\0';
-				if (::lstat(fullPath.data(), &sb) != 0) {
+				if (!TryGetFileStatus(fullPath.data(), sb, false)) {
 					if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 						LOGW("Cannot create directory \"{}\" with error {}{}", fullPath.prefix(i), errno, __GetUnixErrorSuffix(errno));
@@ -2398,7 +2443,9 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && \
+		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -2534,7 +2581,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return -1;
 		}
 		return static_cast<std::int64_t>(sb.st_size);
@@ -2574,7 +2621,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+		if (TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			// Creation time is not available on Linux, return the last change of inode instead
 			date = DateTime(sb.st_ctime);
 		}
@@ -2615,7 +2662,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+		if (TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			date = DateTime(sb.st_mtime);
 		}
 #endif
@@ -2655,7 +2702,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+		if (TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			date = DateTime(sb.st_atime);
 		}
 #endif
@@ -2692,7 +2739,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return Permission::None;
 		}
 		return NativeModeToEnum(sb.st_mode);
@@ -2728,7 +2775,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;
@@ -2762,7 +2809,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;
@@ -2796,7 +2843,7 @@ namespace Death { namespace IO {
 		}
 #	endif
 		struct stat sb;
-		if (::stat(nullTerminatedPath.data(), &sb) != 0) {
+		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
 		}
 		const std::uint32_t currentMode = sb.st_mode;

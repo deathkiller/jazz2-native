@@ -94,6 +94,22 @@
 #include "GU/GuDevice.h"
 #include "GU/GuRhiCapabilities.h"
 
+#elif defined(WITH_RHI_GS)
+
+#include "GS/GsDebug.h"
+#include "GS/GsShader.h"
+#include "GS/GsVram.h"
+#include "GS/GsBuffer.h"
+#include "GS/GsTexture.h"
+#include "GS/GsVertexFormat.h"
+#include "GS/GsShaderTypes.h"
+#include "GS/GsUniformCache.h"
+#include "GS/GsShaderUniforms.h"
+#include "GS/GsShaderProgram.h"
+#include "GS/GsRenderTarget.h"
+#include "GS/GsDevice.h"
+#include "GS/GsRhiCapabilities.h"
+
 #elif defined(WITH_RHI_GXM)
 
 #include "GXM/GxmDebug.h"

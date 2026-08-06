@@ -713,13 +713,14 @@ namespace nCine
 
 	StringView I18n::GetLanguageName(StringView langId)
 	{
-		StringView baseLanguage = TryRemoveLanguageSpecifiers(langId);
+		String baseLanguage = TryRemoveLanguageSpecifiers(langId);
+		StringUtils::lowercaseInPlace(baseLanguage);
 
 		std::size_t bottom = 0;
 		std::size_t top = arraySize(SupportedLanguages);
 		while (bottom < top) {
 			std::size_t index = (bottom + top) / 2;
-			std::int32_t cmpVal = strncmp(langId.data(), SupportedLanguages[index].Identifier, baseLanguage.size());
+			std::int32_t cmpVal = strncmp(baseLanguage.data(), SupportedLanguages[index].Identifier, baseLanguage.size());
 			if (cmpVal < 0) {
 				top = index;
 			} else if (cmpVal > 0) {

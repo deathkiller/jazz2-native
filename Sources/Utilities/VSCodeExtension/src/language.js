@@ -84,7 +84,7 @@ const ENTRY_POINTS = [
 		name: 'fixed_function',
 		insert: 'void fixed_function() {\n\tpass ${1:p};\n\t${1:p}.color = ${2:COLOR};\n\tsubmit_quad(${1:p});\n}',
 		detail: 'void fixed_function([<target>[, <target>]]) { ... }',
-		doc: 'The console fixed-function implementation of the effect, transpiled to C++ by `--emit-fixed-function`. Never part of the GLSL stages.\n\nEmpty parentheses declare the generic block; `pvr` (Dreamcast), `gx` (Wii/GameCube) and `psp` (PlayStation Portable) override it for one backend, and a comma-separated target list (`void fixed_function(pvr, psp)`) declares one implementation shared by several. Every target belongs to exactly one block per file.'
+		doc: 'The console fixed-function implementation of the effect, transpiled to C++ by `--emit-fixed-function`. Never part of the GLSL stages.\n\nEmpty parentheses declare the generic block; `pvr` (Dreamcast), `gx` (Wii/GameCube), `psp` (PlayStation Portable) and `gs` (PlayStation 2) override it for one backend, and a comma-separated target list (`void fixed_function(pvr, psp, gs)`) declares one implementation shared by several. Every target belongs to exactly one block per file.'
 	}
 ];
 
@@ -125,7 +125,8 @@ const UNIFORM_HINTS = [
 const FIXED_FUNCTION_TARGETS = [
 	{ name: 'pvr', doc: 'The Dreamcast\'s PowerVR2 only.' },
 	{ name: 'gx', doc: 'The Wii / GameCube GX only.' },
-	{ name: 'psp', doc: 'The PlayStation Portable\'s Graphics Engine (sceGu) only.' }
+	{ name: 'psp', doc: 'The PlayStation Portable\'s Graphics Engine (sceGu) only.' },
+	{ name: 'gs', doc: 'The PlayStation 2\'s Graphics Synthesizer only.' }
 ];
 
 /** Canvas-mode built-ins (and `COLOR`, which is the fragment output in both modes) */

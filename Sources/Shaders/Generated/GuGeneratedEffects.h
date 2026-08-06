@@ -225,7 +225,7 @@ namespace nCine::RHI::GU
 			ctx.SubmitQuad(p);
 		}
 
-		// Colorized - from Colorized.shader:fixed_function(pvr, psp)
+		// Colorized - from Colorized.shader:fixed_function(pvr, psp, gs)
 		// Shared by: Colorized, BatchedColorized
 		void Colorized_Effect(EffectContext& ctx)
 		{
@@ -255,7 +255,7 @@ namespace nCine::RHI::GU
 			ctx.SubmitQuad(p);
 		}
 
-		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, psp)
+		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, psp, gs)
 		// Shared by: FrozenMask, FrozenMask (USE_PALETTE), BatchedFrozenMask, BatchedFrozenMask (USE_PALETTE)
 		void FrozenMask_Effect(EffectContext& ctx)
 		{
@@ -298,7 +298,7 @@ namespace nCine::RHI::GU
 			ctx.SubmitQuad(sprite);
 		}
 
-		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(pvr, psp)
+		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(pvr, psp, gs)
 		// Shared by: PartialWhiteMask, PartialWhiteMask (USE_PALETTE), BatchedPartialWhiteMask, BatchedPartialWhiteMask (USE_PALETTE)
 		void PartialWhiteMask_Effect(EffectContext& ctx)
 		{
@@ -311,8 +311,8 @@ namespace nCine::RHI::GU
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, psp)
-		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, psp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, psp)]
+		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, psp, gs)
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, psp, gs)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, psp, gs)]
 		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -417,7 +417,7 @@ namespace nCine::RHI::GU
 			}
 		}
 
-		// Transition - from Transition.shader:fixed_function(gx, psp)
+		// Transition - from Transition.shader:fixed_function(gx, psp, gs)
 		void Transition_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

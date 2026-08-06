@@ -92,7 +92,13 @@ namespace
 	// Whether a state change releases the outgoing handler's assets before loading the incoming ones, instead
 	// of keeping both sets resident until the load finishes (see GameEventHandler::ChangeLevel). Trades some
 	// reloading of shared assets for a much lower peak, which the consoles with little main memory need.
-#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+	//
+	// The PlayStation 2 has 32 MB of main memory and does not need it for that - but its 4 MB of graphics
+	// memory is the tightest budget of the set, and an outgoing handler's textures hold pages of it until
+	// they are released. The intro cinematic's full-screen PSMCT32 frame alone is 140 of the 422 pages the
+	// texture cache has.
+#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2)
 	constexpr bool ReleaseAssetsBeforeLoading = true;
 #else
 	constexpr bool ReleaseAssetsBeforeLoading = false;

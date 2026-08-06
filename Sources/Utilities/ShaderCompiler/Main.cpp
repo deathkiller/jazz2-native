@@ -328,7 +328,7 @@ namespace
 			"  --hlsl-check <input.shader ...>                    Emit + D3DCompile each stage as HLSL; print a pass/fail table\n"
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
-			"  --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
+			"  --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
 	int ReportError(const char* inputPath, const Diagnostic& diag)
@@ -1432,13 +1432,14 @@ namespace
 		return String{path.exceptPrefix(begin)};
 	}
 
-	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" contents from the transpiled effects */
+	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" contents from the transpiled effects */
 	String BuildFixedFunctionHeader(FixedFunctionBackend backend, const std::vector<GeneratedEffectEntry>& entries,
 		const std::vector<GeneratedEffectFunction>& functions)
 	{
 		// The mode argument, the build guard and the namespace of one backend. The PSP's is spelled "GU"
 		// on the engine side (the sceGu library that drives its Graphics Engine) while the block target
-		// and the mode argument are the platform name "psp", exactly as "pvr" names the Dreamcast's chip.
+		// and the mode argument are the platform name "psp"; the PlayStation 2 goes the other way and is
+		// "gs" on both sides, exactly as "pvr" names the Dreamcast's chip rather than its console.
 		const char* backendArg;
 		const char* guard;
 		const char* ns;
@@ -1448,6 +1449,9 @@ namespace
 				break;
 			case FixedFunctionBackend::Psp:
 				backendArg = "psp"; guard = "WITH_RHI_GU"; ns = "nCine::RHI::GU";
+				break;
+			case FixedFunctionBackend::Gs:
+				backendArg = "gs"; guard = "WITH_RHI_GS"; ns = "nCine::RHI::GS";
 				break;
 			default:
 				backendArg = "pvr"; guard = "WITH_RHI_PVR"; ns = "nCine::RHI::PVR";
@@ -1556,8 +1560,11 @@ namespace
 		} else if (StringView(backendName) == "psp") {
 			backend = FixedFunctionBackend::Psp;
 			overrideTarget = FixedFunctionTarget::Psp;
+		} else if (StringView(backendName) == "gs") {
+			backend = FixedFunctionBackend::Gs;
+			overrideTarget = FixedFunctionTarget::Gs;
 		} else {
-			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx or psp)\n", backendName);
+			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, psp or gs)\n", backendName);
 			return 2;
 		}
 
@@ -2101,7 +2108,8 @@ namespace
 		}
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
-			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "psp", "GuGeneratedEffects.h" }
+			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "psp", "GuGeneratedEffects.h" },
+			{ "gs", "GsGeneratedEffects.h" }
 		};
 		for (const auto& target : fixedFunctionTargets) {
 			String path = PathJoin(outputDirectory, target.FileName);
@@ -2327,10 +2335,10 @@ int main(int argc, char* argv[])
 
 	// Standalone mode: transpile every input shader's fixed_function block (once per program variant) to
 	// C++ and write the per-backend aggregate header consumed by the console fixed-function tier. Usage:
-	//   ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input1.shader> [input2.shader ...]
+	//   ShaderCompiler --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input1.shader> [input2.shader ...]
 	if (argc >= 2 && StringView(argv[1]) == "--emit-fixed-function") {
 		if (argc < 5) {
-			std::fprintf(stderr, "error: --emit-fixed-function requires <pvr|gx|psp>, <output.h> and at least one input .shader\n");
+			std::fprintf(stderr, "error: --emit-fixed-function requires <pvr|gx|psp|gs>, <output.h> and at least one input .shader\n");
 			return 2;
 		}
 		return RunEmitFixedFunction(argv[2], argv[3], &argv[4], argc - 4);

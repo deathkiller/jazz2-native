@@ -99,6 +99,15 @@ namespace Jazz2
 		return "assets:/"_s;
 #elif defined(DEATH_TARGET_SWITCH)
 		return "romfs:/"_s;
+#elif defined(DEATH_TARGET_PS2)
+		// The disc image built by the PS2 packaging carries "Content" at its root (see SYSTEM.CNF there);
+		// "cdrom0:" is the CDVD device PS2SDK's file I/O exposes, and ISO9660 names arrive uppercased.
+		return "cdfs:/Content/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		// Next to the EBOOT in the standard homebrew layout. Relative paths would work as well (the
+		// firmware makes the EBOOT's directory the current one), but the absolute form is what shows up in
+		// the trace log when a file is missing, and it also survives a loader that does not set it.
+		return "ms0:/PSP/GAME/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_VITA)
 		// Packed inside the VPK, so it's part of the application's own read-only directory
 		// ("ux0:/app/<titleid>/", which the firmware mounts as "app0:")
@@ -109,11 +118,6 @@ namespace Jazz2
 		return "carda:/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Content/"_s;
-#elif defined(DEATH_TARGET_PSP)
-		// Next to the EBOOT in the standard homebrew layout. Relative paths would work as well (the
-		// firmware makes the EBOOT's directory the current one), but the absolute form is what shows up in
-		// the trace log when a file is missing, and it also survives a loader that does not set it.
-		return "ms0:/PSP/GAME/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Content\\"_s;
 #else
@@ -136,6 +140,8 @@ namespace Jazz2
 		return "carda:/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Cache/"_s;
+#elif defined(DEATH_TARGET_PS2)
+		return "cdfs:/Cache/"_s;
 #elif defined(DEATH_TARGET_PSP)
 		return "ms0:/PSP/GAME/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -160,6 +166,8 @@ namespace Jazz2
 		return "carda:/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Source/"_s;
+#elif defined(DEATH_TARGET_PS2)
+		return "cdfs:/Source/"_s;
 #elif defined(DEATH_TARGET_PSP)
 		return "ms0:/PSP/GAME/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)

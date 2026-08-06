@@ -52,7 +52,7 @@
 #	include <limits>
 
 	// BoundedSPSCQueue includes
-#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
 #		include <malloc.h>
 #	else
 #		include <sys/mman.h>
@@ -216,7 +216,7 @@ namespace Death { namespace Trace {
 			// read at CNTFRQ special register.  We assume the OS has set up the virtual timer properly.
 			std::int64_t virtualTimerValue;
 			__asm__ volatile("mrs %0, cntvct_el0" : "=r"(virtualTimerValue));
-			return static_cast<uint64_t>(virtualTimerValue);
+			return static_cast<std::uint64_t>(virtualTimerValue);
 #	elif (defined(__ARM_ARCH) && !defined(DEATH_TARGET_MSVC))
 #		if (__ARM_ARCH >= 6)
 			// V6 is the earliest arch that has a standard cyclecount
@@ -229,12 +229,19 @@ namespace Death { namespace Trace {
 				__asm__ volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset));
 				if (pmcntenset & 0x80000000ul) {
 					__asm__ volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
-					return (static_cast<uint64_t>(pmccntr)) * 64u;
+					return (static_cast<std::uint64_t>(pmccntr)) * 64u;
 				}
 			}
 #		endif
 
-			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
+			// The PMU cycle counter is commonly not enabled for user mode, so this is the usual path on ARMv6/v7.
+			return static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
+#	elif defined(_M_ARM64)
+			// The same virtual counter the __aarch64__ arm above reads, spelled for MSVC
+			return static_cast<std::uint64_t>(_ReadStatusReg(ARM64_CNTVCT));
+#	elif defined(_M_ARM)
+			// No counter reachable from user mode on 32-bit MSVC ARM
+			return static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
 #	elif defined(__riscv)
 			std::uint64_t tsc;
 			__asm__ volatile("rdtime %0" : "=r"(tsc));
@@ -247,10 +254,28 @@ namespace Death { namespace Trace {
 			std::uint64_t tsc;
 			__asm__ volatile("stck %0" : "=Q" (tsc) : : "cc");
 			return tsc;
-#	elif (defined(_M_ARM) || defined(_M_ARM64) || defined(__PPC__) || defined(__PPC64__))
-			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
-#	else
+#	elif defined(__PPC64__) || defined(__powerpc64__)
+			// The PowerPC time base is a 64-bit monotonic counter, on 64-bit it reads atomically
+			std::uint64_t tsc;
+			__asm__ volatile("mftb %0" : "=r"(tsc));
+			return tsc;
+#	elif defined(__PPC__) || defined(__powerpc__)
+			// 32-bit PowerPC (the Wii and GameCube) reads the same time base as two halves, so the upper
+			// word is re-read to catch a carry landing between the two reads - without that the value
+			// jumps backwards by 2^32 roughly once every few minutes
+			std::uint32_t upper, lower, upperAgain;
+			do {
+				__asm__ volatile("mftbu %0" : "=r"(upper));
+				__asm__ volatile("mftb %0" : "=r"(lower));
+				__asm__ volatile("mftbu %0" : "=r"(upperAgain));
+			} while (upper != upperAgain);
+			return (static_cast<std::uint64_t>(upper) << 32) | lower;
+#	elif defined(DEATH_TARGET_X86)
 			return __rdtsc();
+#	else
+			// Any other architecture has no timestamp counter wired up here. This value only ever
+			// orders and interval-times log entries, so it has to be monotonic
+			return static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
 #	endif
 		}
 
@@ -495,7 +520,7 @@ namespace Death { namespace Trace {
 				void* p = _aligned_malloc(size, alignment);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
 				void* p = ::memalign(alignment, size);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
@@ -541,7 +566,7 @@ namespace Death { namespace Trace {
 			static void freeAligned(void* ptr) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
 				::free(ptr);
 #	else
 				// Retrieve the size and offset information from the metadata

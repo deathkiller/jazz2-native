@@ -104,7 +104,7 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, psp) {
+void fixed_function(pvr, psp, gs) {
 	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
 	// with TexturedBackground.shader). One block for both consoles for the same reason it is one there:
 	// neither has a combiner stage to fold the horizon tint into (the PVR only modulates and adds, and

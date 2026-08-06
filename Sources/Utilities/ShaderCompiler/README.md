@@ -43,7 +43,7 @@ ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] 
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 ```
@@ -54,7 +54,7 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 | `--emit-types` | Write the shared reflection-types header (`Generated/ShaderCompilerTypes.h`) and nothing else |
 | `--emit-sw-generated` | Transpile the fragment stage of every variant of every input to C++ and write the aggregate `SwGeneratedShaders.h` consumed by the software renderer. Shaders outside the supported subset are **declined** and omitted (the printed summary lists each with its reason), so this mode never fails on unsupported input. It is also the only path that builds stage sources with `SOFTWARE_RENDERER` defined |
 | `--emit-cg` | Transform every variant of every input to Cg and write the aggregate `CgGeneratedShaders.h` consumed by the PS Vita's sceGxm backend (see below). Like the software transpiler it never fails on unsupported input — a declined variant is omitted and listed in the summary |
-| `--emit-fixed-function` | Transpile the applicable `fixed_function` block of every variant of every input and write the aggregate `PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` (see below). Unlike the software transpiler, an invalid block is a **hard error** |
+| `--emit-fixed-function` | Transpile the applicable `fixed_function` block of every variant of every input and write the aggregate `PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` / `GsGeneratedEffects.h` (see below). Unlike the software transpiler, an invalid block is a **hard error** |
 | `--hlsl-check` | Emit the VS + PS HLSL of every variant and compile each stage via `D3DCompile` (`vs_5_0`/`ps_5_0`), printing a pass/fail table. Windows only (`d3dcompiler_47.dll`); writes nothing |
 | `--spirv-check` | Emit the Vulkan GLSL of every variant and compile each stage to SPIR-V via `glslangValidator`, printing a pass/fail table. Windows only; writes nothing |
 
@@ -320,8 +320,8 @@ void fixed_function() {
 
 `void fixed_function()` (empty parentheses) is the generic implementation — the spelling matches
 the `void vertex()` / `void fragment()` entry points; `void fixed_function(pvr)`,
-`void fixed_function(gx)` and `void fixed_function(psp)` override it for one backend, and a
-comma-separated **target list** overrides it for several at once:
+`void fixed_function(gx)`, `void fixed_function(psp)` and `void fixed_function(gs)` override it for
+one backend, and a comma-separated **target list** overrides it for several at once:
 
 | Spelling | Serves |
 | --- | --- |
@@ -329,8 +329,9 @@ comma-separated **target list** overrides it for several at once:
 | `void fixed_function(pvr) { ... }` | the Dreamcast only |
 | `void fixed_function(gx) { ... }` | the Wii/GameCube only |
 | `void fixed_function(psp) { ... }` | the PlayStation Portable only |
+| `void fixed_function(gs) { ... }` | the PlayStation 2 only |
 | `void fixed_function(pvr, psp) { ... }` | the Dreamcast **and** the PlayStation Portable, from one body |
-| `void fixed_function(gx, psp) { ... }` | the Wii/GameCube **and** the PlayStation Portable, from one body |
+| `void fixed_function(pvr, psp, gs) { ... }` | the three no-combiner consoles, from one body |
 | `void fixed_function(psp, gx, pvr) { ... }` | any subset in any order; whitespace is free (`(pvr,psp)` and `( pvr , psp )` are the same declaration) |
 
 A block that names a backend — on its own or inside a list — always wins over the generic block for
@@ -344,14 +345,15 @@ instead of two that can drift apart; when the bodies genuinely differ, write sep
 The standalone mode
 
 ```
-ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input.shader ...>
 ```
 
 transpiles the applicable block of every program variant into a
 `void <Program>[_<VARIANT>]_Effect(EffectContext&)` C++ function — the block is preprocessed **once
 per variant** with the variant define baked in, exactly like the fragment stage, so `#ifdef`s on
 variant names work inside it — and collects them into one aggregate header per backend
-(`Generated/PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h`, written by
+(`Generated/PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` /
+`GsGeneratedEffects.h`, written by
 `--generate-all`) with a
 `FixedFunctionGeneratedEffects[]` table of
 `{ program, variant, usesOffsetColor, requirements, intrinsic, &function }` entries.
@@ -481,8 +483,9 @@ list back into separate blocks) is obvious:
 ```
 error: LUMA_RAMP is a GX-only capability - it needs the programmable TEV combiner, so it is only
        available in a fixed_function(gx) block, not in one that also targets psp
-error: MODULATE_X2 has no GE equivalent - ... it cannot be expressed for the psp target this block
-       also names (write the boost as passes in a fixed_function(psp) block, e.g. an additive one)
+error: MODULATE_X2 cannot be expressed for the psp target - the PSP's texture environment has no
+       combiner output scale, which this block also names (write the boost as passes in a
+       fixed_function(psp) block, e.g. an additive one)
 error: vertex index 8 is outside the pvr strip builder's capacity of 8 vertices (the smallest
        capacity among the block's targets)
 ```
@@ -617,8 +620,9 @@ order:
    `AllPrograms[]` index arrays. Program symbols come from the `program` and `batched` directives, so
    a file with a batched twin contributes two entries.
 4. `SwGeneratedShaders.h` — the software-renderer fragment functions (`--emit-sw-generated`).
-5. `PvrGeneratedEffects.h`, `GxGeneratedEffects.h` and `GuGeneratedEffects.h` — the console
-   fixed-function effects (`--emit-fixed-function pvr` / `gx` / `psp`).
+5. `PvrGeneratedEffects.h`, `GxGeneratedEffects.h`, `GuGeneratedEffects.h` and
+   `GsGeneratedEffects.h` — the console fixed-function effects
+   (`--emit-fixed-function pvr` / `gx` / `psp` / `gs`).
 
 ```
 Sources\Utilities\ShaderCompiler\x64\Release\ShaderCompiler.exe --generate-all

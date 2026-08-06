@@ -568,8 +568,9 @@ namespace Death { namespace IO {
 			return;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP)
-		// (There is no flock() on the consoles: PSPSDK declares it but links nothing, the others lack it outright)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
+		!defined(DEATH_TARGET_DREAMCAST)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file

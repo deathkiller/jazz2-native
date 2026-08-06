@@ -138,7 +138,7 @@ namespace ShaderCompiler
 			return (BlendValueName(v) != nullptr || TevValueName(v) != nullptr);
 		}
 
-		// The two enums name the same three consoles - the parser's one describes what a block claims,
+		// The two enums name the same four consoles - the parser's one describes what a block claims,
 		// the emitter's which aggregate header is being written - so capability checks over a block's
 		// target list translate its entries into backends through this
 		FixedFunctionBackend BackendOfTarget(FixedFunctionTarget target)
@@ -146,18 +146,20 @@ namespace ShaderCompiler
 			switch (target) {
 				case FixedFunctionTarget::Gx: return FixedFunctionBackend::Gx;
 				case FixedFunctionTarget::Psp: return FixedFunctionBackend::Psp;
+				case FixedFunctionTarget::Gs: return FixedFunctionBackend::Gs;
 				default: return FixedFunctionBackend::Pvr;
 			}
 		}
 
 		// How many vertices the backend's strip-builder scratch holds (EffectContext::MaxStripVertices).
 		// The contract's floor is 8; the GX raises it to 16 so a radially subdivided iris wedge is one
-		// strip instead of three, and the GU matches it (the GE takes a strip of any length in one draw
-		// call, so there is nothing to gain from splitting the geometry into small pieces). Literal
-		// indices and counts are checked against it at generation time, because at runtime an
-		// out-of-range index is dropped and an oversized count clamped - which would silently draw the
-		// wrong geometry. A block serving several backends may only rely on the SMALLEST of their
-		// capacities, so a "pvr, gx" block is held to the PVR's 8 vertices.
+		// strip instead of three, and the GU and the GS match it (the GE takes a strip of any length in
+		// one draw call, and one GIF packet carries a triangle strip of any length, so there is nothing
+		// to gain from splitting the geometry into small pieces). Literal indices and counts are checked
+		// against it at generation time, because at runtime an out-of-range index is dropped and an
+		// oversized count clamped - which would silently draw the wrong geometry. A block serving several
+		// backends may only rely on the SMALLEST of their capacities, so a "pvr, gx" block is held to the
+		// PVR's 8 vertices.
 		std::int32_t StripCapacity(FixedFunctionBackend backend)
 		{
 			return (backend == FixedFunctionBackend::Pvr ? 8 : 16);
@@ -167,8 +169,18 @@ namespace ShaderCompiler
 			switch (backend) {
 				case FixedFunctionBackend::Gx: return "gx";
 				case FixedFunctionBackend::Psp: return "psp";
+				case FixedFunctionBackend::Gs: return "gs";
 				default: return "pvr";
 			}
+		}
+
+		// Whether @p backend's texture environment has a combiner output scale, which is what
+		// MODULATE_X2/MODULATE_X4 need. Only the GX does: the PVR always modulates, the GE's five texture
+		// functions combine one texel with the fragment colour and nothing else, and the GS's four
+		// (MODULATE/DECAL/HIGHLIGHT/HIGHLIGHT2) have no scale stage either.
+		bool HasCombinerOutputScale(FixedFunctionBackend backend)
+		{
+			return (backend == FixedFunctionBackend::Gx);
 		}
 
 		// --- Statement AST ---------------------------------------------------------------------------
@@ -638,7 +650,7 @@ namespace ShaderCompiler
 			bool RequireExtended(StringView what)
 			{
 				if (_targets.empty()) {
-					Fail(what + " is only available in a backend-specific fixed_function(pvr), fixed_function(gx) or fixed_function(psp) block (generic blocks keep the portable quad-only core)"_s);
+					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (psp), (gs) or a list of them (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;
@@ -661,24 +673,46 @@ namespace ShaderCompiler
 				return false;
 			}
 
-			// Rejects the combiner output scales for every block the PSP can reach: the GE's texture
-			// environment has no scale stage, so nothing it can be programmed to do reproduces them.
-			// Unlike the GX-only presets this is not a per-block capability - a pvr block may keep using
-			// them, since the PVR ignores tev entirely - but a target list naming psp, and a generic
-			// block (transpiled for every backend), would otherwise be honoured by only some of the
-			// backends they serve, which is exactly what these checks exist to prevent.
-			bool RejectOnPsp(StringView what)
+			// Rejects the combiner output scales for every block that reaches a backend without one: the
+			// GE's texture environment and the GS's texture function both lack a scale stage, so nothing
+			// either can be programmed to do reproduces them. Unlike the GX-only presets this is not a
+			// per-block capability - a pvr block may keep using them, since the PVR ignores tev entirely -
+			// but a target list naming psp or gs, and a generic block (transpiled for every backend),
+			// would otherwise be honoured by only some of the backends they serve, which is exactly what
+			// these checks exist to prevent.
+			bool RequireCombinerOutputScale(StringView what)
 			{
-				const bool listed = NamesTarget(FixedFunctionTarget::Psp);
-				if (!listed && _backend != FixedFunctionBackend::Psp) {
+				// A block with a target list is held to the intersection of its own targets; a generic one
+				// has no list, so the backend whose header is being emitted is what decides
+				FixedFunctionBackend lacking = _backend;
+				bool listed = false;
+				if (!_targets.empty()) {
+					for (FixedFunctionTarget target : _targets) {
+						if (!HasCombinerOutputScale(BackendOfTarget(target))) {
+							lacking = BackendOfTarget(target);
+							listed = true;
+							break;
+						}
+					}
+					if (!listed) {
+						return true;
+					}
+				} else if (HasCombinerOutputScale(_backend)) {
 					return true;
 				}
-				String why = what + " has no GE equivalent - the PSP's texture environment has no combiner output scale, so it cannot be expressed for the psp target"_s;
+
+				const char* name = BackendName(lacking);
+				String why = what + " cannot be expressed for the "_s + name + " target - "_s +
+					(lacking == FixedFunctionBackend::Gs
+						? "the Graphics Synthesizer's texture function has no combiner output scale"_s
+						: (lacking == FixedFunctionBackend::Psp
+							? "the PSP's texture environment has no combiner output scale"_s
+							: "that backend has no combiner output scale"_s));
 				if (listed && _targets.size() > 1) {
-					// The list form: the block would have been valid without the psp target in it
-					why += " this block also names"_s;
+					// The list form: the block would have been valid without that target in it
+					why += ", which this block also names"_s;
 				}
-				why += " (write the boost as passes in a fixed_function(psp) block, e.g. an additive one)"_s;
+				why += " (write the boost as passes in a fixed_function("_s + name + ") block, e.g. an additive one)"_s;
 				Fail(std::move(why));
 				return false;
 			}
@@ -1015,7 +1049,7 @@ namespace ShaderCompiler
 						if (IsGxOnlyTevValueName(rhs->Text) && !RequireGxOnly(rhs->Text)) {
 							return;
 						}
-						if (IsScaledModulateTevValueName(rhs->Text) && !RejectOnPsp(rhs->Text)) {
+						if (IsScaledModulateTevValueName(rhs->Text) && !RequireCombinerOutputScale(rhs->Text)) {
 							return;
 						}
 						out += indent + passName + ".Tev = FixedFunctionPass::TevPreset::"_s + value + ";\n"_s;

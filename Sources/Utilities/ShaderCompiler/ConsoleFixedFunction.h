@@ -101,7 +101,8 @@ namespace ShaderCompiler
 	{
 		Pvr,	/**< Dreamcast (CLX2 via KallistiOS) */
 		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
-		Psp		/**< PlayStation Portable (Graphics Engine via sceGu) */
+		Psp,	/**< PlayStation Portable (Graphics Engine via sceGu) */
+		Gs		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
 	};
 
 	/**

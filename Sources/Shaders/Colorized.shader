@@ -11,15 +11,16 @@ void fragment() {
 	COLOR = gray * dye;
 }
 
-void fixed_function(pvr, psp) {
+void fixed_function(pvr, psp, gs) {
 	// Console fixed-function tier: gray = (r + g + b) * 0.5 and COLOR = gray * dye with
 	// dye = 1 + (color - 0.5) * 4. The textures this runs on are grayscale (fonts), so r = g = b and
 	// that "average" is really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.
 	//
-	// This is the NO-COMBINER tier, which is why both of these consoles run the same code: a vertex
-	// colour cannot carry a multiplier above 1.0 on either, and neither has an output scale to make up
+	// This is the NO-COMBINER tier, which is why all three of these consoles run the same code: a vertex
+	// colour cannot carry a multiplier above 1.0 on any of them, and none has an output scale to make up
 	// the difference (the PVR always modulates; the GE's five texture functions combine one texel with
-	// the fragment colour and nothing else). Neither workaround alone is right - folding the excess into
+	// the fragment colour and nothing else; the GS's four do the same and its MODULATE shifts by exactly
+	// 7 bits, so 0x80 is its ceiling). Neither workaround alone is right - folding the excess into
 	// the offset colour adds a constant, which lifts a glyph's dark texels as much as its bright ones
 	// and blows the antialiased edges out, while simply clamping the multiplier leaves bright tints
 	// looking washed out. So the multiplier is split into whole units drawn as successive additive

@@ -166,6 +166,18 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GS")
+	# PlayStation 2 fixed-function Graphics Synthesizer rendering backend (PS2SDK)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GS/GsVram.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 	# PlayStation Portable fixed-function GE rendering backend (PSPSDK sceGu)
 	list(APPEND SOURCES

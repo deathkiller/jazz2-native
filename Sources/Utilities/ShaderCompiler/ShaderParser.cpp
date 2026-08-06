@@ -1295,8 +1295,10 @@ R"GLSL(void main()
 							targetKind = FixedFunctionTarget::Gx;
 						} else if (target == "psp") {
 							targetKind = FixedFunctionTarget::Psp;
+						} else if (target == "gs") {
+							targetKind = FixedFunctionTarget::Gs;
 						} else {
-							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, psp, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
+							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, psp, gs, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
 						}
 						for (FixedFunctionTarget listed : targets) {
 							if (listed == targetKind) {

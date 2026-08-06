@@ -7,7 +7,7 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GXM)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_GXM)
 #	define WITH_RHI_GL
 #endif
 
@@ -419,6 +419,101 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::GU::GuDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_GS)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The GS
+// backend (PlayStation 2 "Graphics Synthesizer" via PS2SDK) is a fixed-function hardware backend just like
+// GX, PVR and GU: a render target is nothing but an address written into `FRAME.FBP`, so off-screen render
+// targets are available (needed by the textured-background passes) and `RHI_CAP_FRAMEBUFFERS` is defined; but
+// the GS has one texture function and one blend equation per draw and no programmable stage at all, so
+// `RHI_CAP_SHADERS` stays undefined and the game runs the direct tier (the same tier as the software, GX, PVR
+// and GU backends: scene straight to the display at the logical resolution, CPU lightmap composited by the
+// device's lighting hook).
+//
+// `RHI_CAP_PALETTED_TEXTURES` means an R8 texture of palette indices is resolved through the palette by the
+// hardware itself, under every effect. The GS has exactly that in `PSMT8` plus a CLUT selected per draw
+// through `TEX0.CBP`, and the lookup belongs to the texture read rather than to any programmable stage, so
+// the meaning PVR and GU give this flag carries over verbatim.
+//
+// `RHI_CAP_STREAMING_TEXTURES` is deliberately NOT defined, and this is the one place the GS differs from the
+// other fixed-function consoles. The flag promises that a texture's storage can be written by the CPU in
+// place, so content regenerated every frame (the cinematics) can be produced straight into it. The PowerVR
+// and the GE both read textures out of ordinary addressable memory, but the Graphics Synthesizer's local
+// memory has no host mapping whatsoever - every texel arrives through a GIF transfer - so there is no pointer
+// to hand out and `GsTexture::MapStreamingTexels()` always fails. Callers take the copy-through-a-buffer path
+// instead.
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_PALETTED_TEXTURES
+
+namespace nCine::RHI::GS
+{
+	class GsDevice;
+	class GsTexture;
+	class GsBuffer;
+	class GsShader;
+	class GsShaderProgram;
+	class GsShaderUniforms;
+	class GsShaderUniformBlocks;
+	class GsUniform;
+	class GsUniformBlock;
+	class GsUniformCache;
+	class GsUniformBlockCache;
+	class GsAttribute;
+	class GsFramebuffer;
+	class GsRenderbuffer;
+	class GsRenderTarget;
+	class GsVertexArray;
+	class GsVertexFormat;
+	class GsRhiCapabilities;
+	class GsDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::GS::GsDevice;
+	using Texture = RHI::GS::GsTexture;
+	using Buffer = RHI::GS::GsBuffer;
+	using Shader = RHI::GS::GsShader;
+	using ShaderProgram = RHI::GS::GsShaderProgram;
+	using ShaderUniforms = RHI::GS::GsShaderUniforms;
+	using ShaderUniformBlocks = RHI::GS::GsShaderUniformBlocks;
+	using Uniform = RHI::GS::GsUniform;
+	using UniformBlock = RHI::GS::GsUniformBlock;
+	using UniformCache = RHI::GS::GsUniformCache;
+	using UniformBlockCache = RHI::GS::GsUniformBlockCache;
+	using Attribute = RHI::GS::GsAttribute;
+	using Framebuffer = RHI::GS::GsFramebuffer;
+	using Renderbuffer = RHI::GS::GsRenderbuffer;
+	using RenderTarget = RHI::GS::GsRenderTarget;
+	using VertexArray = RHI::GS::GsVertexArray;
+	using VertexFormat = RHI::GS::GsVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GS::GsRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::GS::GsDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

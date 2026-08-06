@@ -81,6 +81,12 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 	# environment links the PVR/maple libraries itself
 	message(STATUS "Rendering backend: PowerVR (Sega Dreamcast)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_PVR")
+elseif(NCINE_PREFERRED_RHI STREQUAL "GS")
+	# Selects the PlayStation 2 fixed-function Graphics Synthesizer backend in RhiFwd.h/Rhi.h. The GS is
+	# driven by GIF packets built on the EE, so there is no graphics library to link - PS2SDK's kernel and
+	# DMA libraries come in with the platform packaging below
+	message(STATUS "Rendering backend: GS (PlayStation 2)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GS")
 elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 	# Selects the PlayStation Portable fixed-function GE backend in RhiFwd.h/Rhi.h - the PSPSDK graphics
 	# libraries it calls into are linked with the platform packaging below
@@ -180,6 +186,32 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.cpp
 		)
+	elseif(PLATFORM_PS2)
+		# PS2SDK window/input backend. PS2SDK does package an SDL2, and the configure would otherwise pick it,
+		# but the shared SdlGfxDevice code passes `std::int32_t*` into SDL's `int*` parameters and
+		# `std::int32_t` is `long` on the Emotion Engine - so it cannot compile there without changing
+		# signatures every other platform depends on. A bespoke backend is the conventional answer on this
+		# tier anyway (see the Dc/Ogc/Psp arms above). The PS2 libraries are linked with the packaging below.
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS2")
+
+		# Bring-up shortcut: the intro cinematic takes about a minute under an emulator, which makes every
+		# menu-side test cycle a minute longer than it needs to be. Temporary - remove once the port works.
+		option(JAZZ2_PS2_SKIP_INTRO "Skip the intro cinematic on PlayStation 2 (development shortcut)" OFF)
+		if(JAZZ2_PS2_SKIP_INTRO)
+			message(STATUS "PlayStation 2: skipping the intro cinematic (development shortcut)")
+			target_compile_definitions(${NCINE_APP} PRIVATE "JAZZ2_PS2_SKIP_INTRO")
+		endif()
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.cpp
+		)
+		# The R5900 has no load-linked/store-conditional for sub-word sizes, so GCC lowers the engine's
+		# `std::atomic<bool>`/`<std::uint8_t>` operations to libatomic calls rather than inline instructions
+		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad cdvd kernel atomic)
 	elseif(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
 		target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
@@ -906,6 +938,61 @@ else()
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PSP_EBOOT_DIR}/Content"
 			COMMENT "Staging memory stick layout with game content"
 			VERBATIM)
+	elseif(PLATFORM_PS2)
+		# The ps2dev toolchain leaves the executable suffix empty; name it like the other console targets do
+		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
+
+		# ISO9660 names are uppercase, and the boot stanza, the staged file and the volume label all have to
+		# agree - so they are all derived from the target name rather than written out three times.
+		string(TOUPPER "${NCINE_APP}" _ps2DiscName)
+		# A PlayStation 2 disc is plain ISO9660 whose root carries a SYSTEM.CNF naming the executable to
+		# boot, so no format-specific tool is needed - any ISO author will do. `VMODE = NTSC` matches the
+		# 640x448 mode Ps2GfxDevice sets up; a PAL console runs an NTSC disc through its 60 Hz path, which is
+		# what the fixed display geometry in GsVram's layout assumes. `VER` is nominally the disc revision
+		# rather than the application version, but there is no separate source for it and the BIOS does not
+		# interpret it, so the project version is the honest thing to publish.
+		# Written outside the staging directory and copied in below: "cd/" is a build artifact, so anything
+		# generated straight into it at configure time silently goes missing if it is cleaned and only the
+		# build is re-run - which yields an ISO with no boot stanza that the BIOS refuses without a word.
+		file(WRITE "${CMAKE_BINARY_DIR}/ps2/SYSTEM.CNF"
+			"BOOT2 = cdrom0:\\${_ps2DiscName}.ELF;1\nVER = ${NCINE_VERSION_MAJOR}.${NCINE_VERSION_MINOR}\nVMODE = NTSC\n")
+
+		# The I/O stack the newlib port needs to see the disc as a filesystem. cdfs registers a "cdfs:" device
+		# with the original `ioman`, which is the I/O manager newlib's POSIX calls reach; it does not live in
+		# ROM, so it rides on the disc and is loaded by SifLoadModule() at startup - which reaches it through
+		# the IOP's own loadfile service, a different path from the POSIX open() that cannot resolve it.
+		add_custom_command(TARGET ${NCINE_APP} PRE_LINK
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				"${CMAKE_BINARY_DIR}/ps2/SYSTEM.CNF" "${CMAKE_BINARY_DIR}/cd/SYSTEM.CNF"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				"$ENV{PS2SDK}/iop/irx/cdfs.irx" "${CMAKE_BINARY_DIR}/cd/CDFS.IRX"
+			COMMENT "Staging SYSTEM.CNF and cdfs.irx onto the disc image"
+			VERBATIM)
+
+		# Prefer xorrisofs, fall back to the older mkisofs/genisoimage; all three take the same options here
+		find_program(PS2_MKISOFS_EXECUTABLE NAMES xorrisofs mkisofs genisoimage)
+		if(PS2_MKISOFS_EXECUTABLE)
+			# The content is staged as "cd/Content" first, so the directory on the disc is always named
+			# "Content" regardless of the source directory name (mirrors the Dreamcast arm above)
+			set(_ps2MarkPrebakedCommand "")
+			if(EXISTS "${NCINE_CONTENT_DIR}/Source.pak")
+				set(_ps2MarkPrebakedCommand COMMAND ${CMAKE_COMMAND} -E rename
+					"${CMAKE_BINARY_DIR}/cd/Content/Source.pak" "${CMAKE_BINARY_DIR}/cd/Content/Prebaked.pak")
+			else()
+				message(STATUS "No \"Source.pak\" in \"${NCINE_CONTENT_DIR}\", the disc image will not be marked as prebaked")
+			endif()
+
+			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/cd/Content"
+				${_ps2MarkPrebakedCommand}
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF"
+				COMMAND "${PS2_MKISOFS_EXECUTABLE}" -quiet -iso-level 2 -l -V "${_ps2DiscName}" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.iso" "${CMAKE_BINARY_DIR}/cd"
+				COMMENT "Creating bootable ISO image with game content"
+				VERBATIM)
+		else()
+			# Not fatal: PCSX2 boots a bare ELF with `-elf`, which is enough for development
+			message(STATUS "xorrisofs/mkisofs not found, bootable ISO image will not be created")
+		endif()
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 

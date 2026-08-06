@@ -360,7 +360,7 @@
 							"name": "meta.fixed-function-targets.deathshader",
 							"patterns": [
 								{
-									"match": "\\b(pvr|gx|psp)\\b",
+									"match": "\\b(pvr|gx|psp|gs)\\b",
 									"name": "constant.language.fixed-function-target.deathshader"
 								},
 								{

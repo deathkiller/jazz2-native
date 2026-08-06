@@ -103,7 +103,7 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, psp) {
+void fixed_function(pvr, psp, gs) {
 	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader). Both consoles
 	// take the include exactly as it is, with the tint macro left UNDEFINED, because neither can lerp a
 	// texel toward a colour: the PVR only modulates and adds, and the GE's GU_TFX_BLEND weighs by the

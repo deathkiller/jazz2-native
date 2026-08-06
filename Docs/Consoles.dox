@@ -11,7 +11,7 @@ namespace Death {
 Beside the desktop and mobile platforms the game runs on six consoles. Each of them is
 cross-compiled with its own SDK, most of them have a bespoke window/input backend instead of **SDL2**
 or **GLFW**, and four of them have no programmable shaders at all --- so they are driven by
-one of three rendering backends written for their fixed-function graphics hardware. This page covers the
+one of four rendering backends written for their fixed-function graphics hardware. This page covers the
 whole path for each one: installing the toolchain, configuring the build, packaging the result,
 copying it to the device and getting a log back out of it. For everything that is not
 console-specific see @ref building "Building the project".
@@ -20,6 +20,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 ------- | -------------------------------------------------------------- | ----------------- | -------------- | --------------
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
+@ref consoles-ps2 "PlayStation 2" | ps2dev @m_span{m-text m-dim} (`ps2dev.cmake`) @m_endspan | `GS` --- fixed-function | `Ps2` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-vita "PlayStation Vita" | VitaSDK @m_span{m-text m-dim} (`vita.toolchain.cmake`) @m_endspan | `GXM` @m_span{m-text m-dim} (native sceGxm, the default) @m_endspan, `OpenGL` via **vitaGL** @m_span{m-text m-dim} (ES 2.0 profile) @m_endspan or `Software` | SDL2 | `jazz2.vpk`
@@ -27,7 +28,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 
 @m_class{m-noindent}
 
-The rendering backend is not a choice on the first four --- `NCINE_PREFERRED_RHI` is pinned to the
+The rendering backend is not a choice on the first five --- `NCINE_PREFERRED_RHI` is pinned to the
 one backend the console has and any other value is a configure error. The PS Vita and the Switch are
 ordinary shader platforms that happen to be consoles, so most of what follows applies to them only
 in the deployment part.
@@ -112,19 +113,19 @@ pulling changes that touch the data formats, regenerate the tree with a freshly 
 Everything below is decided at configure time from the platform, not from a build parameter. The
 values are what a default `Release` configuration of each console produces.
 
-Feature | Dreamcast | PSP | Wii | GameCube | Vita | Switch
-------- | --------- | --- | --- | -------- | ---- | ------
-Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | **No** | Yes | Yes | Yes | Yes
-Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No
-Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
-Sound effects | Yes | Yes | Yes | Yes | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | Yes | Yes | SDK-dependent | SDK-dependent
-Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no `efx.h` in pspdev | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | SDK-dependent | Yes
-Local splitscreen | Yes | **No** --- needs threads | Yes | Yes | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | Yes | Yes
-Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | Yes | Yes
-External `.shader` files | **No** | **No** | **No** | **No** | Yes | Yes
-Converts the game data itself | **No** | **No** | **No** | **No** | Yes | Yes
+Feature | Dreamcast | PSP | PS2 | Wii | GameCube | Vita | Switch
+------- | --------- | --- | --- | --- | -------- | ---- | ------
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | **No** | **No** | Yes | Yes | Yes | Yes
+Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No
+Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | Yes | Yes | **No** | Yes | Yes | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes | Yes | SDK-dependent | SDK-dependent
+Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | SDK-dependent | Yes
+Local splitscreen | Yes | **No** --- needs threads | **No** --- needs threads | Yes | Yes | Yes | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | Yes | Yes
+External `.shader` files | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Converts the game data itself | **No** | **No** | **No** | **No** | **No** | Yes | Yes
 
 @subsection consoles-common-audio Audio backends
 
@@ -438,6 +439,95 @@ anything else can fail, so the console always has a way out even if initializati
     resident at a time, so the palette is part of the batch key.
 -   The GE has no post-texture additive term and no combiner output scale, which is why an
     `offset_color` pass expands into a modulated draw plus an additive silhouette, and why the
+    `MODULATE_X2`/`MODULATE_X4` presets are rejected for this target.
+
+- - -
+
+@section consoles-ps2 PlayStation 2
+
+A 294 MHz MIPS R5900 "Emotion Engine" with 32 MB of main memory and a Graphics Synthesizer holding
+**4 MB** of local memory that is at once the frame buffer, the texture cache and the palette store.
+The port renders through the `GS` backend @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/GS" @ce) @m_endspan,
+presented by the `Ps2` window backend in NTSC 640x448.
+
+@subsection consoles-ps2-toolchain Toolchain
+
+ps2dev is published as the `ps2dev/ps2dev` container image, which is the easiest way to get it and
+what the build recipe below assumes. The image ships no CMake, so derive one that has it:
+
+@code{.docker}
+FROM docker.io/ps2dev/ps2dev:latest
+RUN apk add --no-cache cmake make git python3 bash xorriso
+@endcode
+
+@m_class{m-block m-warning}
+
+@par $PS2DEV/ee/bin is not on PATH
+Not even under a login shell, so CMake fails its compiler check with
+"mips64r5900el-ps2-elf-g++ is not a full path and was not found". Export
+`PATH=$PS2DEV/ee/bin:$PS2DEV/bin:$PS2SDK/bin:$PATH` before configuring. `xorriso` is what authors the
+disc image in the packaging step, hence the `apk add` above.
+
+@subsection consoles-ps2-build Building
+
+@code{.sh}
+cmake -S . -B build/ps2 -DCMAKE_TOOLCHAIN_FILE=$PS2SDK/ps2dev.cmake \
+    -DCMAKE_BUILD_TYPE=Release -DNCINE_STRIP_BINARIES=ON \
+    -DNCINE_CONTENT_DIR=<path to the console content tree>
+cmake --build build/ps2 -j$(nproc)
+@endcode
+
+@m_class{m-noindent}
+
+The toolchain file defines `PLATFORM_PS2`, from which `NCINE_PREFERRED_RHI` is pinned to `GS`. The
+build produces a stripped `jazz2.elf` and stages a bootable `jazz2.iso` around it: `SYSTEM.CNF`
+@m_span{m-text m-dim} (`BOOT2 = cdrom0:\JAZZ2.ELF;1`, `VMODE = NTSC`) @m_endspan, the ELF as
+`JAZZ2.ELF`, `CDFS.IRX` from the SDK, and the content tree as **both** `Content/` and `Cache/` ---
+@ref nCine::ContentResolver "ContentResolver" reads prebaked assets from the cache root and packed
+content from the content root, so a read-only disc has to carry it twice.
+
+@subsection consoles-ps2-deploy Deploying and running
+
+Burn `jazz2.iso` to a disc, or load it in PCSX2. A headless run needs the emulator's setup wizard
+marked complete and a BIOS filename set in its INI, `EnableEEConsole` turned on to see any output at
+all, and a renderer the host GPU can actually create:
+
+@code{.sh}
+pcsx2-qt -batch -nogui -earlyconsolelog -logfile run.log jazz2.iso
+@endcode
+
+@m_class{m-noindent}
+
+A bare ELF has no connected stdout, so the trace goes to the Emotion Engine's **SIO transmit
+register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan instead of `printf`. PCSX2 captures that
+as EE console output and a serial cable picks it up on real hardware. The same channel carries the
+early messages the CDVD bring-up in @cpp MainApplication::Run() @ce emits, before the trace system
+exists.
+
+@subsection consoles-ps2-limits Limits and known issues
+
+-   **Local memory is the binding constraint.** 4 MB holds the display buffer, the render-target
+    reserve and the palette slab before any texture: a 640x448 `PSMCT16` buffer plus the reserve and
+    the CLUT slab leave about **2816 KB** of texture cache. A frame's working set fits comfortably
+    @m_span{m-text m-dim} (~856 KB measured) @m_endspan but a whole level's sheets do not, so
+    textures stream in and out on transitions and a busy level still reports allocation failures.
+    The allocator hands out whole 8 KB **pages**, because within a page the texel-to-block swizzle
+    depends on the pixel storage mode and two buffers of different modes sharing a page would
+    corrupt each other.
+-   **There is no audio backend yet.** `audsrv` is the intended path; until it exists the game runs
+    silent and `NCINE_WITH_OPENMPT` is forced off @m_span{m-text m-dim} (libopenmpt's
+    `to_chars(char*, char*, const double&)` is ambiguous against PS2SDK's newlib) @m_endspan.
+-   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
+    is compiled out and asset loading is synchronous.
+-   Two pipeline stages are still unimplemented: the weapon wheel's line strip
+    @m_span{m-text m-dim} (`line_strip_mesh`) @m_endspan and the CPU-lightmap compositor
+    @m_span{m-text m-dim} (`lighting_combine`, so a level renders unlit) @m_endspan.
+-   `Jazz2.config` cannot be written --- a disc is read-only and the PS2 has no working directory, so
+    preferences need a memory-card path @m_span{m-text m-dim} (`mc0:/`) @m_endspan.
+-   The GS has no post-texture additive term for a colour and no combiner output scale, so an
+    `offset_color` pass expands into a modulated draw plus an additive silhouette
+    @m_span{m-text m-dim} (which the GS reaches through a white-RGB CLUT --- see
+    @cpp GsDevice::AcquireCoverageClutForOffset() @ce) @m_endspan and the
     `MODULATE_X2`/`MODULATE_X4` presets are rejected for this target.
 
 - - -

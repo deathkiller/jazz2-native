@@ -50,7 +50,7 @@ void fragment() {
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }
 
-void fixed_function(pvr, psp) {
+void fixed_function(pvr, psp, gs) {
 	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, unused, transition). The GLSL is
 	// mix(tex, vec4(0.2*grey, 0.2+0.62*grey, 0.6+0.2*grey, 0.95*outline), transition) - two passes
 	// reproduce that mix: the untouched sprite carries the (1-t) side, then an ice silhouette blended
@@ -61,9 +61,10 @@ void fixed_function(pvr, psp) {
 	// on both. The tone is NOT scaled by t: the pass alpha already applies the transition weighting,
 	// and scaling both would darken quadratically.
 	//
-	// Both consoles share this block because both are stuck with a CONSTANT ice tone: neither can do
-	// per-texel arithmetic (the PVR modulates and adds, the GE has no combiner at all), so the ramp the
-	// gx block below uses is out of reach and the flat tone stands in for it. That constant is the GLSL
+	// All three consoles share this block because all three are stuck with a CONSTANT ice tone: none can
+	// do per-texel arithmetic (the PVR modulates and adds, the GE has no combiner at all, and the GS's
+	// only post-texture add is achromatic), so the ramp the gx block below uses is out of reach and the
+	// flat tone stands in for it. That constant is the GLSL
 	// target at grey = 1, which sprite interiors - grey is luma * 2.6, clamped - saturate almost
 	// everywhere, and it is the same value the gx ramp reaches at its high end.
 	float t = clamp(COLOR.a, 0.0, 1.0);

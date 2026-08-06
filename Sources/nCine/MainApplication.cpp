@@ -23,6 +23,9 @@
 #elif defined(WITH_PSP)
 #	include "Backends/Psp/PspGfxDevice.h"
 #	include "Backends/Psp/PspInputManager.h"
+#elif defined(WITH_PS2)
+#	include "Backends/Ps2/Ps2GfxDevice.h"
+#	include "Backends/Ps2/Ps2InputManager.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -50,6 +53,14 @@
 #	include <pspkernel.h>
 #	include <pspdebug.h>
 #	include <psppower.h>
+#elif defined(DEATH_TARGET_PS2)
+extern "C" {
+#	include <kernel.h>
+#	include <sifrpc.h>
+#	include <loadfile.h>
+#	include <libcdvd.h>
+}
+#	include <cstdio>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -63,7 +74,7 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2)
 using namespace nCine::Backends;
 #endif
 
@@ -251,6 +262,46 @@ namespace nCine
 		// DcGfxDevice switches dbgio back to the serial port when the real renderer takes over
 		dbgio_dev_select("fb");
 		printf("Application starting...\n");
+#elif defined(DEATH_TARGET_PS2)
+		// The CDVD device is not registered by default, so any "cdrom0:" path fails with EPERM until its IOP
+		// side is brought up - and ContentResolver opens one while the application is still being constructed,
+		// which is earlier than any backend's constructor runs. So it happens here, before Init().
+		//
+		// CDVDMAN is normally already resident, but loading it is harmless and makes the sequence independent
+		// of what the BIOS happened to leave behind; CDVDFSV is what actually serves file reads to the EE.
+		SifInitRpc(0);
+		SifLoadModule("rom0:CDVDMAN", 0, nullptr);
+		SifLoadModule("rom0:CDVDFSV", 0, nullptr);
+		sceCdInit(SCECdINIT);
+
+		// Wait for the disc to be ready before anything tries to read a module off it
+		while (sceCdDiskReady(0) != SCECdComplete) { }
+
+		// The BIOS "cdrom0:" handler is not reachable through the newlib port's open() - it answers ENODEV - so
+		// the disc is mounted as a filesystem by cdfs, which registers a "cdfs:" device with the ORIGINAL
+		// `ioman` - the same I/O manager newlib's POSIX calls reach. (Loading iomanX/fileXio alongside it was
+		// tried and is wrong: those route the POSIX calls to the *other* manager, where "cdfs" does not exist.)
+		// The module is loaded from the disc itself, which works because SifLoadModule() goes through the IOP's
+		// loadfile service rather than through the EE's file I/O - the reason this is not a chicken-and-egg.
+		{
+			static const char* const ps2Modules[] = {
+				"cdrom0:\\CDFS.IRX;1"
+			};
+			// This runs before the trace system exists, so the results go straight to the EE's serial port -
+			// the same channel Application::OnTraceReceived uses once tracing is up
+			const auto earlyPrint = [](const char* text) {
+				volatile std::uint8_t* const sioTx = reinterpret_cast<volatile std::uint8_t*>(0x1000F180);
+				for (const char* c = text; *c != '\0'; c++) {
+					*sioTx = std::uint8_t(*c);
+				}
+			};
+			for (const char* modulePath : ps2Modules) {
+				const int moduleId = SifLoadModule(modulePath, 0, nullptr);
+				char message[160];
+				std::snprintf(message, sizeof(message), "[ps2] SifLoadModule(\"%s\") = %d\n", modulePath, moduleId);
+				earlyPrint(message);
+			}
+		}
 #elif defined(DEATH_TARGET_PSP)
 		// The HOME button has to be answered by the application itself, so its callback goes up first -
 		// before anything can go wrong during initialization and leave the console with no way out
@@ -664,6 +715,9 @@ namespace nCine
 #elif defined(WITH_PSP)
 			_gfxDevice = std::make_unique<PspGfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<PspInputManager>();
+#elif defined(WITH_PS2)
+			_gfxDevice = std::make_unique<Ps2GfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<Ps2InputManager>();
 #endif
 			_gfxDevice->setWindowTitle(_appCfg.windowTitle.data());
 			if (!_appCfg.windowIconFilename.empty()) {
@@ -704,6 +758,9 @@ namespace nCine
 #elif defined(WITH_PSP)
 			// No window events on a console; polling the controller service is the whole event pump
 			PspInputManager::updateJoystickStates();
+#elif defined(WITH_PS2)
+			// No window events on a console; polling the pad ports is the whole event pump
+			Ps2InputManager::updateJoystickStates();
 #endif
 		}
 
