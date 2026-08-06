@@ -3,6 +3,7 @@
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 
 namespace Jazz2::UI::Menu
 {
@@ -56,7 +57,8 @@ namespace Jazz2::UI::Menu
 			if (fs::GetExtension(languageFile) != "mo"_s) {
 				return;
 			}
-			auto language = fs::GetFileNameWithoutExtension(languageFile);
+			String language = fs::GetFileNameWithoutExtension(languageFile);
+			StringUtils::lowercaseInPlace(language);
 			if (language.empty() || language.size() >= sizeof(PreferencesCache::Language)) {
 				return;
 			}

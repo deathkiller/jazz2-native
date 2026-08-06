@@ -96,7 +96,7 @@ namespace Jazz2
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
@@ -582,7 +582,7 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 			// Use Switch button labels
 			GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 			// Use PlayStation button labels on the PlayStation consoles
 			GamepadButtonLabels = GamepadType::PlayStation;
 #elif defined(DEATH_TARGET_UNIX)
@@ -600,8 +600,8 @@ namespace Jazz2
 		}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PSP) && \
-		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);

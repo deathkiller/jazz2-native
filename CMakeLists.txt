@@ -113,9 +113,12 @@ elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 elseif(PLATFORM_DREAMCAST)
 	# The Dreamcast uses the Dc window/input backend (KallistiOS), see Sources/nCine/Backends/Dc
 	message(STATUS "Compiling for Sega Dreamcast (KallistiOS backend)")
+elseif(PLATFORM_PS2)
+	# The PS2 uses the Ps2 window/input backend (PS2SDK), see Sources/nCine/Backends/Ps2
+	message(STATUS "Compiling for PlayStation 2")
 elseif(PLATFORM_PSP)
 	# The PSP uses the Psp window/input backend (PSPSDK), see Sources/nCine/Backends/Psp
-	message(STATUS "Compiling for PlayStation Portable (PSPSDK backend)")
+	message(STATUS "Compiling for PlayStation Portable")
 elseif(NCINE_BUILD_LIBRETRO)
 	message(STATUS "Compiling as a libretro core (no window backend)")
 else()

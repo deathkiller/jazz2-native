@@ -44,9 +44,9 @@ matches the current implementation.
 - **libretro** core for RetroArch, see @ref consoles-libretro
 
 The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced
-instruction sets. Additionally, the application requires a rendering backend --- **OpenGL** 3.3,
-**OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer are
-all fully supported and interchangeable, so any of them can be used depending on the target
+instruction sets. Additionally, the application requires a rendering backend --- **OpenGL**
+3.3, **OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer
+are all fully supported and interchangeable, so any of them can be used depending on the target
 platform. The consoles above are the exception: four of them have no programmable shaders at all
 and are driven by a rendering backend written for their fixed-function graphics hardware, and the
 PlayStation Vita can drive **sceGxm**, its own shader API, directly. See also
