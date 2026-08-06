@@ -390,7 +390,7 @@ Allegrex FPU is single-precision only.
 The build produces @cpp "build/psp/jazz2.elf" @ce and stages the complete memory-stick layout under
 @cpp "build/psp/ms0/" @ce:
 
-@code{shell-session}
+@code{.shell-session}
 build/psp/ms0/PSP/GAME/Jazz2/EBOOT.PBP
 build/psp/ms0/PSP/GAME/Jazz2/Content/…
 @endcode
@@ -569,7 +569,7 @@ make -j $(nproc) -C ./build/wii/
 Beside @cpp "build/wii/jazz2.dol" @ce the build stages the SD card layout the Homebrew
 Channel expects, so its contents can be copied to a card as they are:
 
-@code{shell-session}
+@code{.shell-session}
 build/wii/sd/apps/Jazz2/boot.dol
 build/wii/sd/apps/Jazz2/Content/…
 @endcode
@@ -666,7 +666,7 @@ make -j $(nproc) -C ./build/gamecube/
 The staged layout differs from the Wii's, because the GameCube has no Homebrew Channel
 and reads the card directly:
 
-@code{shell-session}
+@code{.shell-session}
 build/gamecube/sd/Jazz2/Jazz2.dol
 build/gamecube/sd/Jazz2/Content/…
 @endcode
