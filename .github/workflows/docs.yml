@@ -43,7 +43,7 @@ jobs:
       uses: ssciwr/doxygen-install@v1
       with:
         #version: "1.17.0"
-        version: "1.14.0"
+        version: "1.12.0"
     
     - name: 'Build'
       run: |
