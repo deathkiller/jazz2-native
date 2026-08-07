@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Enum @ref Death::IO::FileAccess
+*/
+
 #include "../Common.h"
 
 namespace Death { namespace IO {

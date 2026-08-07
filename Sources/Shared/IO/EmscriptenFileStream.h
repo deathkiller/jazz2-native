@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::EmscriptenFileStream, @ref Death::IO::EmscriptenFilePicker
+*/
+
 #include "../Common.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)

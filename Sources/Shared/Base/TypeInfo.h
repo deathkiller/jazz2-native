@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Function @ref Death::runtime_cast()
+*/
+
 #include "../Containers/StringView.h"
 
 #include <memory>

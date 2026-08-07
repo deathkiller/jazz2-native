@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::BoundedFileStream
+*/
+
 #include "FileStream.h"
 
 namespace Death { namespace IO {

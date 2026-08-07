@@ -1,5 +1,12 @@
 #pragma once
 
+/** @file
+	@brief Namespace @ref Death::Memory
+*/
+/** @namespace Death::Memory
+	@brief Memory-related utilities
+*/
+
 #include "../Common.h"
 #include "../Containers/GrowableArray.h"
 

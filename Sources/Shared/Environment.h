@@ -3,6 +3,9 @@
 /** @file
 	@brief Namespace @ref Death::Environment
 */
+/** @namespace Death::Environment
+	@brief Platform-specific environment helper functions
+*/
 
 #include "CommonWindows.h"
 

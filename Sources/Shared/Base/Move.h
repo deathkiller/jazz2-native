@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Function @ref Death::forward(), @ref Death::move(), @ref Death::swap()
+*/
+
 #include "../CommonBase.h"
 
 #include <type_traits>

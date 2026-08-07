@@ -3,6 +3,9 @@
 /** @file
 	@brief Namespace @ref Death::Utf8
 */
+/** @namespace Death::Utf8
+	@brief Unicode (UTF-8. UTF-16 and UTF-32) utilities
+*/
 
 #include "Containers/Array.h"
 #include "Containers/Pair.h"

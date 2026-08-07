@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::Function, @ref Death::Containers::FunctionData
+*/
+
 #include "../Asserts.h"
 #include "../Base/Move.h"
 

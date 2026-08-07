@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::FileSystem
+*/
+
 #include "Stream.h"
 #include "FileAccess.h"
 #include "../Containers/String.h"

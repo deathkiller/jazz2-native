@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Threading::Spinlock
+*/
+
 #include <atomic>
 
 namespace Death { namespace Threading {

@@ -1,5 +1,13 @@
 #pragma once
 
+/** @file
+	@brief Basic definitions
+
+	Some configuration-specific and platform-specific definitions, including `DEATH_TARGET_*`, are
+	@ref Death.dox "listed separately". Some of them are supplied via a compiler flag by CMake,
+	the rest of them also requires this header file to work properly.
+*/
+
 #if defined(__EMSCRIPTEN__)
 #	define DEATH_TARGET_EMSCRIPTEN
 // Since Emscripten 3.1.4 the version macros are no longer predefined by the compiler driver but declared in this header

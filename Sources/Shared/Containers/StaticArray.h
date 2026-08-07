@@ -23,6 +23,10 @@
 
 #pragma once 
 
+/** @file
+	@brief Class @ref Death::Containers::StaticArray
+*/
+
 #include "Array.h"
 #include "SequenceHelpers.h"
 

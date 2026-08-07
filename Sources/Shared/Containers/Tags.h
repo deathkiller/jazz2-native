@@ -23,6 +23,10 @@
 
 #pragma once 
 
+/** @file
+	@brief Tag @ref Death::Containers::DefaultInit, @ref Death::Containers::ValueInit, @ref Death::Containers::NoInit, @ref Death::Containers::NoCreate, @ref Death::Containers::DirectInit, @ref Death::Containers::InPlaceInit
+*/
+
 #include "../CommonBase.h"
 
 namespace Death { namespace Containers {

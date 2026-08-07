@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::ComPtr
+*/
+
 #include "../CommonWindows.h"
 #include "../Asserts.h"
 

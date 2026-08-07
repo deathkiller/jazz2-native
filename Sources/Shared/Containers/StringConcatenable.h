@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Efficient concatenation of @ref Death::Containers::String and @ref Death::Containers::StringView
+*/
+
 #include "GrowableArray.h"
 #include "String.h"
 

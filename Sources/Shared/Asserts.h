@@ -1,5 +1,13 @@
 #pragma once
 
+/** @file
+	@brief Assertions and event tracing
+
+	Most functions and macros for event tracing require `DEATH_TRACE` to be defined. Otherwise, no operation is performed.
+	In addition, assert statements can be suppressed with `DEATH_NO_ASSERT` define or redirected to the standard
+	@cpp assert() @ce with `DEATH_STANDARD_ASSERT` define. See also @ref Death::ITraceSink companion interface.
+*/
+
 #include "Common.h"		// for DEATH_HELPER_EXPAND/DEATH_HELPER_PICK/DEATH_REMOVE_PARENS
 #include "Base/Format.h"
 

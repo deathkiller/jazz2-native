@@ -3,6 +3,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::SmallVector
+*/
+
 #include "ArrayView.h"
 #include "Tags.h"
 #include "../Asserts.h"

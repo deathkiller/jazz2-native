@@ -24,6 +24,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::Pair
+*/
+
 #include "Tags.h"
 #include "../Base/Move.h"
 

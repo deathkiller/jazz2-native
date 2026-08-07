@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Interface @ref Death::ITraceSink
+*/
+
 #include "../Asserts.h"
 
 #if defined(DEATH_TRACE)

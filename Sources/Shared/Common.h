@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Common header file, includes also @ref CommonBase.h, `<cstddef>` and `<cstdint>`
+*/
+
 #include "CommonBase.h"
 
 // Always define fixed width integer types (std::int8_t, std::int16_t, std::int32_t, std::int64_t, ...)

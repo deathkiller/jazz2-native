@@ -22,6 +22,13 @@
 #ifndef BACKWARD_INCLUDED
 #define BACKWARD_INCLUDED
 
+/** @file
+	@brief Namespace @ref Death::Backward
+*/
+/** @namespace Death::Backward
+	@brief Exception handling and crash reporting implementation
+*/
+
 #include "../CommonBase.h"
 #include "../Containers/DateTime.h"
 #include "../IO/Stream.h"

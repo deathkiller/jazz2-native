@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::WebAuthChallenge @ref Death::IO::WebCredentials, @ref Death::IO::WebProxy, @ref Death::IO::WebRequest, @ref Death::IO::WebRequestAsync, @ref Death::IO::WebResponse, @ref Death::IO::WebSession, @ref Death::IO::WebSessionAsync
+*/
+
 #include "Stream.h"
 #include "../Containers/ComPtr.h"
 #include "../Containers/Function.h"

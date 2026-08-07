@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::BasicStringView, typedef @ref Death::Containers::StringView, @ref Death::Containers::MutableStringView
+*/
+
 #include "Containers.h"
 #include "../Asserts.h"
 #include "../Base/Move.h"

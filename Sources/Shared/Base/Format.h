@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Function @ref Death::format(), @ref Death::formatInto()
+*/
+
 #include "../Containers/Containers.h"
 #include "../Containers/Tags.h"
 

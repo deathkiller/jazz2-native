@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::DateTime, @ref Death::Containers::TimeSpan
+*/
+
 #include "Containers.h"
 #include "Tags.h"
 

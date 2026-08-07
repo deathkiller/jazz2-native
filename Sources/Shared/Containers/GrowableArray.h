@@ -23,6 +23,12 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::ArrayAllocator, @ref Death::Containers::ArrayNewAllocator, @ref Death::Containers::ArrayMallocAllocator, function @ref Death::Containers::arrayAllocatorCast(), @ref Death::Containers::arrayIsGrowable(), @ref Death::Containers::arrayCapacity(), @ref Death::Containers::arrayReserve(), @ref Death::Containers::arrayResize(), @ref Death::Containers::arrayAppend(), @ref Death::Containers::arrayInsert(), @ref Death::Containers::arrayRemove(), @ref Death::Containers::arrayRemoveUnordered(), @ref Death::Containers::arrayRemoveSuffix(), @ref Death::Containers::arrayClear(), @ref Death::Containers::arrayShrink()
+
+	See @ref Containers-Array-growable for more information.
+*/
+
 #include "Array.h"
 
 #include <cstdlib>

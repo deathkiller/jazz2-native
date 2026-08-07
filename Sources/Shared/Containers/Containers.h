@@ -26,6 +26,18 @@
 /** @file
 	@brief Forward declarations for the @ref Death::Containers namespace
 */
+/** @namespace Death::Containers
+	@brief Container implementations
+
+	Implementations for various containers which don't have direct equivalents in
+	STL or are better tailored to specific use cases than general standard
+	implementations.
+*/
+/** @namespace Death::Containers::Literals
+	@brief Container literals
+
+	Literals for easy construction of string views.
+*/
 
 #include "../Common.h"
 

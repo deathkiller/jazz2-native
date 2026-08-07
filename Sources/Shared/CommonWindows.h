@@ -1,5 +1,14 @@
 #pragma once
 
+/** @file
+	@brief Windows®-specific header file, falls back to @ref Common.h on other platforms
+
+	This file should be included instead of `<windows.h>` to avoid potential issues.
+	It automatically defines @cpp WIN32_LEAN_AND_MEAN @ce, @cpp WINRT_LEAN_AND_MEAN @ce and
+	@cpp NOMINMAX @ce to include only the smallest part of `<windows.h>` as possible.
+	Afterwards, it removes the definitions that cause the most collisions using @cpp #undef @ce.
+*/
+
 #include "Common.h"
 
 #if defined(DEATH_TARGET_WINDOWS)

@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Threading::Event, typedef @ref Death::Threading::AutoResetEvent, @ref Death::Threading::ManualResetEvent
+*/
+
 #include "../Common.h"
 #include "../Environment.h"
 #include "Implementation/WaitOnAddress.h"

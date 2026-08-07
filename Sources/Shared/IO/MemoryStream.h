@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::MemoryStream
+*/
+
 #include "Stream.h"
 #include "../Containers/Array.h"
 

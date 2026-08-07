@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::ArrayView, @ref Death::Containers::StaticArrayView
+*/
+
 #include "Containers.h"
 #include "../Asserts.h"
 #include "../Base/Move.h"

@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::PakFile
+*/
+
 #include "../Common.h"
 #include "../Containers/Array.h"
 #include "../Containers/String.h"

@@ -23,6 +23,13 @@
 
 #pragma once
 
+/** @file
+	@brief Namespace @ref Death::Containers::StringUtils
+*/
+/** @namespace Death::Containers::StringUtils
+	@brief String utilities
+*/
+
 #include "String.h"
 #include "StringView.h"
 

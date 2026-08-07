@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::Array
+*/
+
 #include "ArrayView.h"
 #include "Tags.h"
 

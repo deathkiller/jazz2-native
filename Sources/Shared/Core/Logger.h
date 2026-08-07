@@ -5,6 +5,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Trace::LoggerBackend, @ref Death::Trace::Logger
+*/
+
 #include "ITraceSink.h"
 
 #if defined(DEATH_TRACE)
@@ -52,7 +56,7 @@
 #	include <limits>
 
 	// BoundedSPSCQueue includes
-#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 #		include <malloc.h>
 #	else
 #		include <sys/mman.h>
@@ -520,7 +524,7 @@ namespace Death { namespace Trace {
 				void* p = _aligned_malloc(size, alignment);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 				void* p = ::memalign(alignment, size);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
@@ -566,7 +570,7 @@ namespace Death { namespace Trace {
 			static void freeAligned(void* ptr) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 				::free(ptr);
 #	else
 				// Retrieve the size and offset information from the metadata

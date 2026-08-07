@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::String, tag @ref Death::Containers::AllocatedInit
+*/
+
 #include "Containers.h"
 #include "StringView.h" /* needs to be included for comparison operators */
 #include "Tags.h"

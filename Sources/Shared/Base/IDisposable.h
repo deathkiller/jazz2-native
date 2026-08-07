@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Interface @ref Death::IDisposable
+*/
+
 #include "../CommonBase.h"
 
 namespace Death {

@@ -1,5 +1,9 @@
 #pragma once
 
+/** @file
+	@brief Class @ref Death::IO::Compression::ZstdStream
+*/
+
 #include "../../Common.h"
 #include "../Stream.h"
 

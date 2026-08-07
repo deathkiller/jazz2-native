@@ -23,6 +23,10 @@
 
 #pragma once
 
+/** @file
+	@brief Class @ref Death::Containers::Reference
+*/
+
 #include <type_traits>
 
 namespace Death { namespace Containers {
