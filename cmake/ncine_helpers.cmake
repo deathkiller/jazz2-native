@@ -288,9 +288,7 @@ function(ncine_apply_compiler_options target)
 	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release, but skip it for
 	# static libraries: an LTO static archive's slim objects don't resolve reliably when linked into the
 	# also-LTO executable (undefined references to its symbols), whereas plain objects link cleanly.
-	if(NCINE_LINKTIME_OPTIMIZATION AND NOT (target_type STREQUAL "STATIC_LIBRARY") AND NOT PLATFORM_DREAMCAST)
-		# LTO is also skipped on Sega Dreamcast: GCC 15.2 sh-elf crashes with an internal compiler error
-		# (gen_reg_rtx) when streaming some units back in during the LTO link
+	if(NCINE_LINKTIME_OPTIMIZATION AND NOT (target_type STREQUAL "STATIC_LIBRARY"))
 		set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 	endif()
 
@@ -390,6 +388,46 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	if(MSVC)
+		target_compile_options(${target} PRIVATE
+			# Enable extra warnings (similar to -Wall)
+			"/W4"
+			# Suppress linker warning about templates
+			"/wd4251"
+			# Suppress warnings about "conditional expression is constant"
+			"/wd4127"
+			# Suppress warnings about "conversion from '<bigger int type>' to '<smaller int type>'",
+			# "conversion from 'size_t' to '<smaller int type>', possible loss of data"
+			"/wd4244" "/wd4267"
+			# Suppress warnings about "structure was padded due to alignment specifier"
+			"/wd4324"
+			# Suppress warnings about "new behavior: elements of array will be default initialized"
+			"/wd4351"
+			# Suppress warnings about "previous versions of the compiler did not override when parameters
+			# only differed by const/volatile qualifiers"
+			"/wd4373"
+			# Suppress warnings about "default constructor could not be generated/can never be instantiated"
+			"/wd4510" "/wd4610"
+			# Suppress warnings about "assignment operator could not be generated"
+			"/wd4512"
+			# Suppress warnings about "no suitable definition for explicit template instantiation"
+			"/wd4661"
+			# Suppress warnings about "unreachable code"
+			"/wd4702"
+			# Suppress warnings about "assignment within conditional expression"
+			"/wd4706"
+			# Suppress warnings about "forcing value to bool 'true' or 'false' (performance warning)"
+			"/wd4800"
+			# Suppress warnings about "unreferenced formal parameter"
+			"/wd4100"
+			# Suppress warnings about "switch statement contains 'default' but no 'case' labels"
+			"/wd4065"
+			# Suppress warnings about "unreferenced local function has been removed"
+			"/wd4505"
+			# Suppress warnings about "local variable is initialized but not referenced"
+			"/wd4189"
+			# Suppress warnings about "cast truncates constant value"
+			"/wd4310")
+
 		# Enable parallel compilation and force UTF-8
 		target_compile_options(${target} PRIVATE "/MP" "/utf-8")
 		# Enable standards-conforming compiler behavior
@@ -468,34 +506,32 @@ function(ncine_apply_compiler_options target)
 		if(NCINE_AUTOVECTORIZATION_REPORT)
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/Qvec-report:2 /Qpar-report:2>)
 		endif()
-
-		# Suppress linker warning about templates
-		target_compile_options(${target} PRIVATE "/wd4251")
-		# Suppress warnings about "conversion from '<bigger int type>' to '<smaller int type>'",
-		# "conversion from 'size_t' to '<smaller int type>', possible loss of data"
-		target_compile_options(${target} PRIVATE "/wd4244" "/wd4267")
-
-		# Adjust incremental linking
-		#target_link_options(${target} PRIVATE $<IF:$<CONFIG:Debug>,/INCREMENTAL,/INCREMENTAL:NO>)
 		
 		if(NCINE_ADDRESS_SANITIZER)
 			target_compile_options(${target} PUBLIC "/fsanitize=address>")
 		endif()
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-			target_compile_options(${target} PRIVATE "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder-ctor" "-Wno-braced-scalar-init" "-Wno-deprecated-builtins")
+			target_compile_options(${target} PRIVATE "-Wno-switch" "-Wno-unknown-pragmas"
+				"-Wno-reorder-ctor" "-Wno-braced-scalar-init" "-Wno-deprecated-builtins")
 		endif()
 	else() # GCC and LLVM
+		target_compile_options(${target} PRIVATE 
+			"-Wall" "-Wextra"
+			"-Winit-self" "-Wno-old-style-cast" "-Wno-unused-parameter" "-Wno-variadic-macros"
+			"-Wno-multichar" "-Wno-switch" "-Wno-unknown-pragmas"
+			# `-Werror=return-type` doesn't work on nvcc, use it just for C and C++
+			"$<$<OR:$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,C>,$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,CXX>>:-Werror=return-type>"
+			"-Wmissing-declarations"
+			"-fvisibility=hidden" "-fvisibility-inlines-hidden"
+			"-fno-strict-aliasing")
+
 		if(ARGS_ALLOW_EXCEPTIONS)
 			target_compile_options(${target} PRIVATE "-fexceptions")
 		else()
 			target_compile_options(${target} PRIVATE "-fno-exceptions")
 		endif()
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
-
-		#if(NCINE_DYNAMIC_LIBRARY)
-		#	target_compile_options(${target} PRIVATE "-fvisibility=hidden" "-fvisibility-inlines-hidden")
-		#endif()
 
 		if(MINGW OR MSYS)
 			target_link_options(${target} PRIVATE "-municode")
@@ -568,13 +604,9 @@ function(ncine_apply_compiler_options target)
 
 		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 			target_compile_options(${target} PRIVATE "-fdiagnostics-color=auto")
-			target_compile_options(${target} PRIVATE "-Wall" "-Wno-old-style-cast" "-Wno-long-long" "-Wno-unused-parameter" "-Wno-ignored-qualifiers"
-				"-Wno-variadic-macros" "-Wcast-align" "-Wno-multichar" "-Wno-switch" "-Wno-unknown-pragmas" "-Wno-reorder" "-Wno-sign-compare")
-
-			target_link_options(${target} PRIVATE "-Wno-free-nonheap-object")
-			#if(NCINE_DYNAMIC_LIBRARY)
-			#	target_link_options(${target} PRIVATE -Wl,--no-undefined)
-			#endif()
+			target_compile_options(${target} PRIVATE "-Wno-long-long" "-Wno-ignored-qualifiers"
+				"-Wcast-align"  "-Wno-reorder" "-Wno-sign-compare" "-Wno-free-nonheap-object" "-Wdouble-promotion"
+				"$<$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,CXX>:-Wzero-as-null-pointer-constant>")
 
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-fvar-tracking-assignments>)
 
@@ -608,13 +640,9 @@ function(ncine_apply_compiler_options target)
 			endif()
 		elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 			target_compile_options(${target} PRIVATE "-fcolor-diagnostics")
-			target_compile_options(${target} PRIVATE "-Wall" "-Wno-old-style-cast" "-Wno-gnu-zero-variadic-macro-arguments" "-Wno-unused-parameter"
-				"-Wno-variadic-macros" "-Wno-c++11-long-long" "-Wno-missing-braces" "-Wno-multichar" "-Wno-switch" "-Wno-unknown-pragmas"
+			target_compile_options(${target} PRIVATE "-Wmissing-prototypes" "-Wno-shorten-64-to-32"
+				"-Wno-gnu-zero-variadic-macro-arguments" "-Wno-c++11-long-long" "-Wno-missing-braces"
 				"-Wno-reorder-ctor" "-Wno-braced-scalar-init")
-
-			#if(NCINE_DYNAMIC_LIBRARY)
-			#	target_link_options(${target} PRIVATE -Wl,-undefined,error)
-			#endif()
 
 			if(NOT EMSCRIPTEN)
 				# Extra optimizations in Release

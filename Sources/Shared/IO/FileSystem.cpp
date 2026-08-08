@@ -2152,7 +2152,7 @@ namespace Death { namespace IO {
 			return true;
 		}
 #	else
-		const DWORD attrs = ::GetFileAttributesW(fullPath.data());
+		DWORD attrs = ::GetFileAttributesW(fullPath.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
 		}
@@ -2189,7 +2189,7 @@ namespace Death { namespace IO {
 				if (!::GetFileAttributesExFromAppW(fullPath.data(), GetFileExInfoStandard, &lpFileInfo)) {
 					if (!::CreateDirectoryFromAppW(fullPath.data(), NULL)) {
 #	else
-				const DWORD attrs = ::GetFileAttributesW(fullPath.data());
+				attrs = ::GetFileAttributesW(fullPath.data());
 				if (attrs == INVALID_FILE_ATTRIBUTES) {
 					if (!::CreateDirectoryW(fullPath.data(), NULL)) {
 #	endif

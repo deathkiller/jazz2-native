@@ -18,7 +18,7 @@
 #	include <fcntl.h>
 #	include <sys/stat.h>
 #	include <unistd.h>
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PSP)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 #		include <sys/file.h>	// For flock()
 #	endif
 #endif
@@ -26,6 +26,8 @@
 using namespace Death::Containers;
 
 namespace Death { namespace IO {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	namespace
 	{
 #if defined(DEATH_TARGET_DREAMCAST)
@@ -46,7 +48,6 @@ namespace Death { namespace IO {
 		}
 #endif
 	}
-//###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 #if defined(DEATH_TARGET_WINDOWS)
 	const char* __GetWin32ErrorSuffix(DWORD error)
@@ -96,13 +97,15 @@ namespace Death { namespace IO {
 	}
 
 	FileStream::FileStream(String&& path, FileAccess mode, std::int32_t bufferSize)
-		: _path(Death::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferSize(bufferSize),
+		: _path(Death::move(path)), _size(Stream::Invalid), _filePos(0),
 #if defined(DEATH_TARGET_WINDOWS)
-			_fileHandle(INVALID_HANDLE_VALUE)
-
+			_fileHandle(INVALID_HANDLE_VALUE),
 #else
-			_fileDescriptor(-1)
+			_fileDescriptor(-1),
 #endif
+			_readPos(0), _readLength(0), _writePos(0),
+			// Anything below one byte can't be buffered, such a size is treated as a request for unbuffered access
+			_bufferSize(bufferSize > 0 ? bufferSize : 0)
 	{
 		Open(mode);
 	}
@@ -115,14 +118,18 @@ namespace Death { namespace IO {
 	void FileStream::Dispose()
 	{
 		FlushWriteBuffer();
+		_readPos = 0;
+		_readLength = 0;
+		_writePos = 0;
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (_fileHandle != INVALID_HANDLE_VALUE) {
-			if (::CloseHandle(_fileHandle)) {
+			void* fileHandle = _fileHandle;
+			_fileHandle = INVALID_HANDLE_VALUE;
+			if (::CloseHandle(fileHandle)) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGB("File \"{}\" closed", _path);
 #	endif
-				_fileHandle = INVALID_HANDLE_VALUE;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Failed to close file \"{}\"", _path);
@@ -131,11 +138,12 @@ namespace Death { namespace IO {
 		}
 #else
 		if (_fileDescriptor >= 0) {
-			if (::close(_fileDescriptor) >= 0) {
+			std::int32_t fileDescriptor = _fileDescriptor;
+			_fileDescriptor = -1;
+			if (::close(fileDescriptor) >= 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGB("File \"{}\" closed", _path);
 #	endif
-				_fileDescriptor = -1;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGW("Failed to close file \"{}\"", _path);
@@ -143,12 +151,21 @@ namespace Death { namespace IO {
 			}
 		}
 #endif
+
+		_buffer = nullptr;
+#if defined(DEATH_TARGET_DREAMCAST)
+		_bufferAligned = nullptr;
+#endif
 	}
 
 	std::int64_t FileStream::Seek(std::int64_t offset, SeekOrigin origin)
 	{
 		if (_writePos > 0) {
-			FlushWriteBuffer();
+			if DEATH_UNLIKELY(!FlushWriteBuffer()) {
+				// Bytes left in the write buffer belong to the current position, seeking away would flush
+				// them somewhere else entirely
+				return Stream::Invalid;
+			}
 		} else if (origin == SeekOrigin::Current) {
 			offset -= (_readLength - _readPos);
 		}
@@ -204,22 +221,26 @@ namespace Death { namespace IO {
 		std::int64_t n = (_readLength - _readPos);
 		if (n == 0) {
 			if (_writePos > 0) {
-				FlushWriteBuffer();
+				if DEATH_UNLIKELY(!FlushWriteBuffer()) {
+					// Bytes left in the write buffer belong to the current position, reading past them would
+					// return the content they are about to replace
+					return Stream::Invalid;
+				}
 			}
 			// A read at least as large as the buffer normally goes straight to the caller's memory, but
 			// some storage drivers only use their fast path for suitably aligned destinations - those fall
-			// back to the buffered path below, which copies through the aligned buffer
-			if (bytesToRead >= _bufferSize && IsDmaFriendly(&typedBuffer[n])) {
+			// back to the buffered path below, which copies through the aligned buffer (if there is one)
+			if (bytesToRead >= _bufferSize && (_bufferSize <= 0 || IsDmaFriendly(typedBuffer))) {
 				_readPos = 0;
 				_readLength = 0;
 
 				do {
 					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
 					std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
-					if DEATH_UNLIKELY(bytesRead < 0) {
-						return bytesRead;
-					} else if DEATH_UNLIKELY(bytesRead == 0) {
-						break;
+					if DEATH_UNLIKELY(bytesRead <= 0) {
+						// Bytes already delivered to the caller have to be reported, otherwise they would be
+						// lost - the failure (if any) is reported again by the next call
+						return (n > 0 ? n : bytesRead);
 					}
 					n += bytesRead;
 					bytesToRead -= bytesRead;
@@ -253,7 +274,7 @@ namespace Death { namespace IO {
 
 			while (bytesToRead > 0) {
 				std::int32_t bytesRead;
-				if (IsDmaFriendly(&typedBuffer[n])) {
+				if (_bufferSize <= 0 || IsDmaFriendly(&typedBuffer[n])) {
 					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
 					bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
 				} else {
@@ -274,9 +295,9 @@ namespace Death { namespace IO {
 						std::memcpy(&typedBuffer[n], BufferForIo(), std::size_t(bytesRead));
 					}
 				}
-				if DEATH_UNLIKELY(bytesRead < 0) {
-					return bytesRead;
-				} else if DEATH_UNLIKELY(bytesRead == 0) {
+				if DEATH_UNLIKELY(bytesRead <= 0) {
+					// Bytes already delivered to the caller have to be reported, otherwise they would be
+					// lost - the failure (if any) is reported again by the next call
 					break;
 				}
 				n += bytesRead;
@@ -321,23 +342,25 @@ namespace Death { namespace IO {
 				}
 			}
 
-			WriteInternal(BufferForIo(), _writePos);
-			_writePos = 0;
+			if DEATH_UNLIKELY(!FlushWriteBuffer()) {
+				// What couldn't be written is still held by the buffer, so it's counted as accepted and
+				// a subsequent flush can retry it, but nothing more can be appended after it
+				return (bytesWrittenTotal > 0 ? bytesWrittenTotal : std::int64_t(Stream::Invalid));
+			}
 		}
 
 		if (bytesToWrite >= _bufferSize) {
-			while DEATH_UNLIKELY(bytesToWrite > INT32_MAX) {
-				std::int32_t moreBytesRead = WriteInternal(typedBuffer, INT32_MAX);
-				if DEATH_UNLIKELY(moreBytesRead <= 0) {
-					return bytesWrittenTotal;
+			while (bytesToWrite > 0) {
+				std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? std::int32_t(bytesToWrite) : INT32_MAX);
+				std::int32_t bytesWritten = WriteInternal(typedBuffer, partialBytesToWrite);
+				if DEATH_UNLIKELY(bytesWritten <= 0) {
+					// Bytes already accepted by the file have to be reported, otherwise the caller would
+					// write them twice - the failure (if any) is reported again by the next call
+					return (bytesWrittenTotal > 0 ? bytesWrittenTotal : std::int64_t(bytesWritten));
 				}
-				typedBuffer += moreBytesRead;
-				bytesWrittenTotal += moreBytesRead;
-				bytesToWrite -= moreBytesRead;
-			}
-			if DEATH_LIKELY(bytesToWrite > 0) {
-				std::int32_t moreBytesRead = WriteInternal(typedBuffer, std::int32_t(bytesToWrite));
-				bytesWrittenTotal += moreBytesRead;
+				typedBuffer += bytesWritten;
+				bytesWrittenTotal += bytesWritten;
+				bytesToWrite -= bytesWritten;
 			}
 			return bytesWrittenTotal;
 		}
@@ -352,21 +375,28 @@ namespace Death { namespace IO {
 
 	bool FileStream::Flush()
 	{
+		bool result = true;
 		if (_writePos > 0) {
-			FlushWriteBuffer();
+			result = FlushWriteBuffer();
 		} else if (_readPos < _readLength) {
 			FlushReadBuffer();
 		}
 
 #if defined(DEATH_TARGET_WINDOWS)
-		return ::FlushFileBuffers(_fileHandle);
+		if (!::FlushFileBuffers(_fileHandle) && ::GetLastError() != ERROR_ACCESS_DENIED) {
+			// A handle opened for reading only has nothing to synchronize, and that's the sole reason it can
+			// be denied here - ignoring it keeps the result consistent with Unix, where fsync() on such
+			// a file descriptor succeeds
+			result = false;
+		}
+		return result;
 #elif defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
-		return ::fdatasync(_fileDescriptor) == 0;
+		return (::fdatasync(_fileDescriptor) == 0 && result);
 #elif defined(DEATH_TARGET_DREAMCAST)
 		// fsync() is not implemented in KOS
-		return true;
+		return result;
 #else
-		return ::fsync(_fileDescriptor) == 0;
+		return (::fsync(_fileDescriptor) == 0 && result);
 #endif
 	}
 
@@ -381,8 +411,13 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::GetSize() const
 	{
+		if DEATH_UNLIKELY(_size < 0) {
+			// The size is unknown (e.g., the file is not a regular file), buffered bytes can't make it known
+			return _size;
+		}
+
 		std::int64_t size = _size;
-		if DEATH_UNLIKELY(_writePos > 0 && _filePos + _writePos > _size) {
+		if DEATH_UNLIKELY(_writePos > 0 && _filePos + _writePos > size) {
 			size = _filePos + _writePos;
 		}
 		return size;
@@ -390,6 +425,16 @@ namespace Death { namespace IO {
 
 	std::int64_t FileStream::SetSize(std::int64_t size)
 	{
+		// Buffered bytes have to reach the file before it's resized, otherwise a pending write would be
+		// flushed only afterwards and grow the file again
+		if (_writePos > 0) {
+			if DEATH_UNLIKELY(!FlushWriteBuffer()) {
+				return Stream::Invalid;
+			}
+		} else if (_readPos < _readLength) {
+			FlushReadBuffer();
+		}
+
 #if defined(DEATH_TARGET_WINDOWS)
 		LARGE_INTEGER liSize;
 		liSize.QuadPart = size;
@@ -399,34 +444,31 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to resize file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
+			// Tracing above clobbers the thread's last error, restore it for callers that inspect it directly
+			::SetLastError(error);
 #	endif
 			return (error == ERROR_INVALID_PARAMETER ? Stream::OutOfRange : Stream::Invalid);
 		}
-		if (_filePos > size) {
-			_filePos = size;
-		}
-#elif !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP) // TODO: ftruncate() is not defined on VITA, KOS and PSPSDK
+#elif !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) // TODO: ftruncate() is not defined on PSPSDK, VITA and KOS
 		if (::ftruncate(_fileDescriptor, size) < 0) {
+			std::int32_t error = errno;
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to resize file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+			LOGE("Failed to resize file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+			// Tracing above can clobber errno, restore it for callers that inspect it directly
+			errno = error;
 #	endif
-			return (errno == EINVAL ? Stream::OutOfRange : Stream::Invalid);
-		}
-		// Also seek to the new end of file, as ftruncate() doesn't do that
-		if (_filePos > size) {
-			std::int64_t newPos = ::lseek(_fileDescriptor, size, SEEK_SET);
-			if (newPos < 0) {
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to change position in file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
-#	endif
-			} else {
-				_filePos = newPos;
-			}
+			return (error == EINVAL ? Stream::OutOfRange : Stream::Invalid);
 		}
 #else
 		// The file size cannot be changed on this platform
 		return Stream::Invalid;
 #endif
+
+		// Neither of the calls above moves the file pointer, so it has to be clamped explicitly - otherwise
+		// GetPosition() would report a position that is past the new end of file
+		if (_filePos > size) {
+			SeekInternal(size, SeekOrigin::Begin);
+		}
 
 		_size = size;
 		_readPos = 0;
@@ -445,7 +487,7 @@ namespace Death { namespace IO {
 		if DEATH_UNLIKELY(_buffer == nullptr) {
 #if defined(DEATH_TARGET_DREAMCAST)
 			// The buffer is the destination of every read, so it has to satisfy the alignment the storage
-			// driver needs for its fast path (see IsDmaFriendly); the padding leaves room to align it
+			// driver needs for its fast path (see IsDmaFriendly), the padding leaves room to align it
 			_buffer = std::make_unique<char[]>(_bufferSize + DmaAlignment);
 			const std::uintptr_t address = std::uintptr_t(_buffer.get());
 			_bufferAligned = _buffer.get() + ((DmaAlignment - (address & (DmaAlignment - 1))) & (DmaAlignment - 1));
@@ -465,12 +507,25 @@ namespace Death { namespace IO {
 		_readLength = 0;
 	}
 
-	void FileStream::FlushWriteBuffer()
+	bool FileStream::FlushWriteBuffer()
 	{
-		if (_writePos > 0) {
-			WriteInternal(BufferForIo(), _writePos);
-			_writePos = 0;
+		if (_writePos <= 0) {
+			return true;
 		}
+
+		std::int32_t bytesWritten = WriteInternal(BufferForIo(), _writePos);
+		if DEATH_UNLIKELY(bytesWritten < _writePos) {
+			// Whatever couldn't be written is moved to the front of the buffer, so a subsequent flush can
+			// retry it instead of dropping it silently
+			if (bytesWritten > 0) {
+				std::memmove(BufferForIo(), &BufferForIo()[bytesWritten], std::size_t(_writePos - bytesWritten));
+				_writePos -= bytesWritten;
+			}
+			return false;
+		}
+
+		_writePos = 0;
+		return true;
 	}
 
 	void FileStream::Open(FileAccess mode)
@@ -524,13 +579,17 @@ namespace Death { namespace IO {
 		_fileHandle = ::CreateFile(pathW.data(), desireAccess, shareMode, &securityAttribs, creationDisposition, fileFlags, NULL);
 #	endif
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
-			DWORD error = ::GetLastError();
 #		if defined(DEATH_TRACE_VERBOSE_IO)
+			DWORD error = ::GetLastError();
 			LOGE("Failed to open file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
+			// Tracing above clobbers the thread's last error, restore it for callers that inspect it directly
+			::SetLastError(error);
 #		endif
 			return;
 		}
 
+		// The size stays unknown for anything that is not a file on a disk, which is also what tells
+		// the transfer functions not to reissue a partial request (see IsRegularFile())
 		LARGE_INTEGER fileSize;
 		if (::GetFileSizeEx(_fileHandle, &fileSize)) {
 			_size = fileSize.QuadPart;
@@ -560,15 +619,20 @@ namespace Death { namespace IO {
 #	endif
 
 		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
-		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
+		do {
+			_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
+		} while (_fileDescriptor < 0 && errno == EINTR);
 		if (_fileDescriptor < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to open file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+			std::int32_t error = errno;
+			LOGE("Failed to open file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+			// Tracing above can clobber errno, restore it for callers that inspect it directly
+			errno = error;
 #	endif
 			return;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && \
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
 		!defined(DEATH_TARGET_DREAMCAST)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
@@ -577,11 +641,14 @@ namespace Death { namespace IO {
 			// description (released automatically on close). LOCK_NB fails immediately - similar to
 			// ERROR_SHARING_VIOLATION on Windows - instead of blocking when another process already holds the lock.
 			if (::flock(_fileDescriptor, LOCK_EX | LOCK_NB) < 0) {
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to exclusively lock file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
-#	endif
+				std::int32_t error = errno;
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("Failed to exclusively lock file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+#		endif
 				::close(_fileDescriptor);
 				_fileDescriptor = -1;
+				// Both the tracing above and close() clobber errno, restore what actually failed here
+				errno = error;
 				return;
 			}
 		}
@@ -594,13 +661,16 @@ namespace Death { namespace IO {
 		}
 #	endif
 
+		// The size stays unknown for anything that is not a regular file (a pipe, a socket, a terminal), which
+		// is also what tells the transfer functions not to reissue a partial request (see IsRegularFile())
 		struct stat sb;
 		if (::fstat(_fileDescriptor, &sb) == 0 && S_ISREG(sb.st_mode)) {
 			_size = std::int64_t(sb.st_size);
 		}
-#	if defined(DEATH_TARGET_DREAMCAST)
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 		else {
-			// fstat() is not fully supported by some KOS filesystems (e.g. iso9660), measure the size by seeking instead
+			// fstat() is not fully supported by some libfat/KOS filesystems (e.g., iso9660), measure the size
+			// by seeking instead - a successful seek also proves the file behaves like a regular one
 			off_t seekEnd = ::lseek(_fileDescriptor, 0, SEEK_END);
 			if (seekEnd >= 0) {
 				_size = std::int64_t(seekEnd);
@@ -631,6 +701,8 @@ namespace Death { namespace IO {
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to change position in file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
+				// Tracing above clobbers the thread's last error, restore it for callers that inspect it directly
+				::SetLastError(error);
 #	endif
 			}
 			return Stream::OutOfRange;
@@ -642,7 +714,10 @@ namespace Death { namespace IO {
 		std::int64_t newPos = ::lseek(_fileDescriptor, offset, std::int32_t(origin));
 		if (newPos < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to change position in file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+			std::int32_t error = errno;
+			LOGE("Failed to change position in file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+			// Tracing above can clobber errno, restore it for callers that inspect it directly
+			errno = error;
 #	endif
 			return Stream::OutOfRange;
 		}
@@ -653,101 +728,126 @@ namespace Death { namespace IO {
 
 	std::int32_t FileStream::ReadInternal(void* destination, std::int32_t bytesToRead)
 	{
-#if defined(DEATH_TARGET_WINDOWS)
-		DWORD bytesRead;
-		if (!::ReadFile(_fileHandle, destination, bytesToRead, &bytesRead, NULL)) {
-			DWORD error = ::GetLastError();
-			if (error != ERROR_BROKEN_PIPE) {
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to read from file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
-#	endif
-			}
-			return -1;
-		}
-
-		_filePos += std::int32_t(bytesRead);
-		return std::int32_t(bytesRead);
-#else
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-		// libfat and the KOS filesystems can return short reads in the middle of a file (e.g. on cluster
-		// boundaries), which the buffered caller treats as end-of-data, so keep reading until done
+		// A partial transfer means end of file only for a regular file. Everything else (a pipe, a socket,
+		// a terminal) has to return what is available right now, because waiting for the rest of the request
+		// would block until the other side happens to produce it. Regular files, on the other hand, can come
+		// up short for reasons that have nothing to do with the end of file (a signal delivered mid-transfer,
+		// a network/FUSE filesystem, or libfat/KOS returning at a cluster boundary) and the buffered caller
+		// would take any of those for end of data, so the request is reissued until it's satisfied
 		std::int32_t bytesRead = 0;
+		bool failed = false;
 		while (bytesRead < bytesToRead) {
-			std::int32_t partial = std::int32_t(::read(_fileDescriptor, static_cast<std::uint8_t*>(destination) + bytesRead, bytesToRead - bytesRead));
-			if (partial < 0) {
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
-#		endif
-				// Earlier iterations already advanced the kernel offset, so it has to be accounted for
-				// even on failure - GetPosition() would otherwise be wrong for the rest of the stream's life
-				_filePos += bytesRead;
-				return -1;
-			} else if (partial == 0) {
+#if defined(DEATH_TARGET_WINDOWS)
+			DWORD partialRead;
+			if DEATH_UNLIKELY(!::ReadFile(_fileHandle, static_cast<std::uint8_t*>(destination) + bytesRead, DWORD(bytesToRead - bytesRead), &partialRead, NULL)) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
+				DWORD error = ::GetLastError();
+				if (error != ERROR_BROKEN_PIPE) {
+					LOGE("Failed to read from file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
+					// Tracing above clobbers the thread's last error, restore it for callers that inspect it directly
+					::SetLastError(error);
+				}
+#	endif
+				failed = true;
 				break;
 			}
-			bytesRead += partial;
-		}
-#	else
-		std::int32_t bytesRead = std::int32_t(::read(_fileDescriptor, destination, bytesToRead));
-		if (bytesRead < 0) {
+			if DEATH_UNLIKELY(partialRead == 0) {
+				break;
+			}
+			bytesRead += std::int32_t(partialRead);
+#else
+			std::int32_t partialRead = std::int32_t(::read(_fileDescriptor, static_cast<std::uint8_t*>(destination) + bytesRead, std::size_t(bytesToRead - bytesRead)));
+			if DEATH_UNLIKELY(partialRead < 0) {
+				if DEATH_UNLIKELY(errno == EINTR) {
+					// A signal arrived before anything was transferred, the request can simply be reissued
+					continue;
+				}
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+				std::int32_t error = errno;
+				LOGE("Failed to read from file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+				// Tracing above can clobber errno, restore it for callers that inspect it directly
+				errno = error;
 #	endif
-			return -1;
-		}
-#	endif
-		_filePos += bytesRead;
-		return bytesRead;
+				failed = true;
+				break;
+			}
+			if DEATH_UNLIKELY(partialRead == 0) {
+				break;
+			}
+			bytesRead += partialRead;
 #endif
+			if DEATH_UNLIKELY(!IsRegularFile()) {
+				break;
+			}
+		}
+
+		// Earlier iterations already advanced the kernel offset, so it has to be accounted for even on
+		// failure - GetPosition() would otherwise be wrong for the rest of the stream's life
+		_filePos += bytesRead;
+		// Bytes that were already transferred have to be reported, the failure shows up again on the next call
+		return (failed && bytesRead == 0 ? -1 : bytesRead);
 	}
 
 	std::int32_t FileStream::WriteInternal(const void* source, std::int32_t bytesToWrite)
 	{
-#if defined(DEATH_TARGET_WINDOWS)
-		DWORD bytesWritten;
-		if (!::WriteFile(_fileHandle, source, bytesToWrite, &bytesWritten, NULL)) {
-			DWORD error = ::GetLastError();
-			if (error != ERROR_NO_DATA) {
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to write to file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
-#	endif
-			}
-			return -1;
-		}
-
-		_filePos += std::int32_t(bytesWritten);
-		return std::int32_t(bytesWritten);
-#else
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-		// libfat and the KOS filesystems can write fewer bytes than requested, so keep writing until done
+		// The request is reissued for the same reasons as in ReadInternal() - a signal delivered mid-transfer
+		// or a filesystem that accepts less than asked for would otherwise silently truncate the data
 		std::int32_t bytesWritten = 0;
+		bool failed = false;
 		while (bytesWritten < bytesToWrite) {
-			std::int32_t partial = std::int32_t(::write(_fileDescriptor, static_cast<const std::uint8_t*>(source) + bytesWritten, bytesToWrite - bytesWritten));
-			if (partial < 0) {
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
-#		endif
-				// Earlier iterations already advanced the kernel offset, so it has to be accounted for
-				// even on failure - GetPosition() would otherwise be wrong for the rest of the stream's life
-				_filePos += bytesWritten;
-				return -1;
-			} else if (partial == 0) {
+#if defined(DEATH_TARGET_WINDOWS)
+			DWORD partialRead;
+			if DEATH_UNLIKELY(!::WriteFile(_fileHandle, static_cast<const std::uint8_t*>(source) + bytesWritten, DWORD(bytesToWrite - bytesWritten), &partialRead, NULL)) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
+				DWORD error = ::GetLastError();
+				if (error != ERROR_NO_DATA) {
+					LOGE("Failed to write to file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
+					// Tracing above clobbers the thread's last error, restore it for callers that inspect it directly
+					::SetLastError(error);
+				}
+#	endif
+				failed = true;
 				break;
 			}
-			bytesWritten += partial;
-		}
-#	else
-		std::int32_t bytesWritten = std::int32_t(::write(_fileDescriptor, source, bytesToWrite));
-		if (bytesWritten < 0) {
+			if DEATH_UNLIKELY(partialRead == 0) {
+				break;
+			}
+			bytesWritten += std::int32_t(partialRead);
+#else
+			std::int32_t partialRead = std::int32_t(::write(_fileDescriptor, static_cast<const std::uint8_t*>(source) + bytesWritten, std::size_t(bytesToWrite - bytesWritten)));
+			if DEATH_UNLIKELY(partialRead < 0) {
+				if (errno == EINTR) {
+					// A signal arrived before anything was transferred, the request can simply be reissued
+					continue;
+				}
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+				std::int32_t error = errno;
+				LOGE("Failed to write to file \"{}\" with error {}{}", _path, error, __GetUnixErrorSuffix(error));
+				// Tracing above can clobber errno, restore it for callers that inspect it directly
+				errno = error;
 #	endif
-			return -1;
-		}
-#	endif
-		_filePos += bytesWritten;
-		return bytesWritten;
+				failed = true;
+				break;
+			}
+			if DEATH_UNLIKELY(partialRead == 0) {
+				break;
+			}
+			bytesWritten += partialRead;
 #endif
+			if DEATH_UNLIKELY(!IsRegularFile()) {
+				break;
+			}
+		}
+
+		// Earlier iterations already advanced the kernel offset, so it has to be accounted for even on
+		// failure - GetPosition() would otherwise be wrong for the rest of the stream's life
+		_filePos += bytesWritten;
+		if (_size >= 0 && _filePos > _size) {
+			// The file just grew, otherwise GetSize() would keep reporting the size measured when it was opened
+			_size = _filePos;
+		}
+		// Bytes that were already transferred have to be reported, the failure shows up again on the next call
+		return (failed && bytesWritten == 0 ? -1 : bytesWritten);
 	}
 
 }}

@@ -1756,11 +1756,70 @@ namespace nCine
 		SegaDreamcast = 117
 	};
 
+	// How the application version is stored in the TraceDigger metadata header, the values are part
+	// of the wire format, so they must never be reassigned
+	enum class MetadataVersionForm : std::uint32_t {
+		// The version doesn't match any of the known patterns, it's stored as the last string instead
+		Raw = 0,
+		// `<major>.<minor>.<patch>` --- stored as 3 variable-length integers
+		Numeric = 1,
+		// `<major>.<minor>.r<revision>-<hash>` --- stored as 3 variable-length integers, followed
+		// by the number of hexadecimal digits of the commit hash and the digits packed 2 per byte
+		GitRevision = 2
+	};
+
+	// How a single string is stored in the TraceDigger metadata header, the values are part of the wire
+	// format, so they must never be reassigned
+	enum class MetadataStringEncoding : std::uint32_t {
+		// UTF-8 bytes as they are, used if the string contains any multi-byte sequence
+		Raw = 0,
+		// 7 bits per character, used if the string fits neither of the two alphabets below
+		Ascii = 1,
+		// 6 bits per character according to `MetadataStringAlphabet`
+		LowercaseSet = 2,
+		// 6 bits per character according to `MetadataStringMixedCaseAlphabet`
+		MixedCaseSet = 3
+	};
+
+	// Characters that fit into 6 bits - lowercase text with any of the usual symbols, which covers versions,
+	// paths and command-line arguments
+	static constexpr char MetadataStringAlphabet[] = "abcdefghijklmnopqrstuvwxyz0123456789 .,-_:;/\\()[]{}=+*?!@#%&'\"<>";
+	static_assert(sizeof(MetadataStringAlphabet) == 64 + 1, "MetadataStringAlphabet must contain exactly 64 characters");
+
+	// Characters that fit into 6 bits when both letter cases are needed - all 52 letters leave room for the digits
+	// and 2 symbols only, which is still enough for file names and host names
+	static constexpr char MetadataStringMixedCaseAlphabet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-";
+	static_assert(sizeof(MetadataStringMixedCaseAlphabet) == 64 + 1, "MetadataStringMixedCaseAlphabet must contain exactly 64 characters");
+
 	void Application::AppendLogFileHeader(Stream& s)
 	{
-		// Write TraceDigger metadata header
+		// Write TraceDigger metadata header, the payload is encoded with URL-safe Base64 (without padding):
+		//
+		//   u8       Control --- bits 0-4: format version (1), bits 5-6: `MetadataVersionForm`,
+		//                        bit 7: reserved
+		//   varint   Flags
+		//   u8       Platform --- `MetadataPlatform`
+		//   varint   Timestamp --- Unix time in milliseconds
+		//   varint   Process ID
+		//   varint   Main thread ID as zig-zag delta from the process ID
+		//   ...      Application version according to `MetadataVersionForm`
+		//   ...      Strings in this order: executable name, host name, arguments, compatibility layer
+		//            (only if `HasAppCompatLayer` is set), application version (only if the form
+		//            is `MetadataVersionForm::Raw`); trailing empty strings are omitted, so any string
+		//            that is not there anymore is empty
+		//
+		// Each string begins with a variable-length integer --- the number of characters shifted left by 2 bits
+		// with `MetadataStringEncoding` in the lower 2 bits --- followed by the characters packed according
+		// to the encoding, the leftover bits of the last byte are always zero
+		//
+		// Everything that can be derived on the reader side is left out --- the main thread ID usually differs
+		// from the process ID only slightly and the version is mostly digits, so both of them compress well
+		// into the layout above
 
 		std::int64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
+		if (timestampMs < 0) {
+			timestampMs = 0;
+		}
 
 		std::uint32_t flags = 0;
 		if (Environment::GetCurrentElevation() == Environment::ElevationState::Full) {
@@ -1850,37 +1909,54 @@ namespace nCine
 		}
 #		endif
 
-		char buffer[256];
-		MemoryStream ms(buffer, sizeof(buffer));
-		ms.WriteVariableUint32(1);	// Version
-		ms.WriteVariableUint32(flags);
-		ms.WriteVariableUint32((std::uint32_t)platform);
-		ms.WriteVariableInt64(timestampMs);
-		ms.WriteVariableUint32(processId);
-		ms.WriteVariableUint32(_mainThreadId);
-
-		// The reader drops any string that doesn't fit in the header entirely, so clamp each one to the space
-		// that is left in the buffer instead of letting it be cut in half by the stream - `reserve` keeps room
-		// for the strings that are still to be written after it
-		auto writeLengthPrefixedString = [&ms](StringView value, std::int64_t reserve = 0) {
-			// Up to 4 bytes are needed for the length prefix itself
-			std::int64_t available = ms.GetSize() - ms.GetPosition() - reserve - 4;
-			std::int64_t length = (std::int64_t)value.size();
-			if (length > available) {
-				length = (available > 0 ? available : 0);
-				// Don't cut in the middle of a multi-byte UTF-8 sequence
-				while (length > 0 && (value[length] & 0xC0) == 0x80) {
-					length--;
+		// Try to store the application version numerically, the string form is used only as a fallback
+		auto parseDecimal = [](StringView value, std::uint32_t& result) {
+			if (value.empty() || value.size() > 9) {
+				return false;
+			}
+			std::uint32_t n = 0;
+			for (char c : value) {
+				if (c < '0' || c > '9') {
+					return false;
 				}
+				n = n * 10 + (std::uint32_t)(c - '0');
 			}
-			ms.WriteVariableUint32((std::uint32_t)length);
-			if (length > 0) {
-				ms.Write(value.data(), length);
-			}
+			result = n;
+			return true;
 		};
 
-		// Room the version, host name and compatibility layer need at the end of the header
-		constexpr std::int64_t ReservedForTrailingStrings = 64;
+		MetadataVersionForm versionForm = MetadataVersionForm::Raw;
+		std::uint32_t versionMajor = 0, versionMinor = 0, versionPatch = 0;
+		StringView versionHash;
+		StringView version = NCINE_VERSION;
+		if (StringView firstDot = version.find('.')) {
+			StringView rest = version.suffix(firstDot.end());
+			if (StringView secondDot = rest.find('.')) {
+				StringView patchPart = rest.suffix(secondDot.end());
+				if (parseDecimal(version.prefix(firstDot.begin()), versionMajor) &&
+					parseDecimal(rest.prefix(secondDot.begin()), versionMinor)) {
+					if (parseDecimal(patchPart, versionPatch)) {
+						versionForm = MetadataVersionForm::Numeric;
+					} else if (patchPart.hasPrefix('r')) {
+						StringView revisionPart = patchPart.exceptPrefix(1);
+						if (StringView dash = revisionPart.find('-')) {
+							StringView hash = revisionPart.suffix(dash.end());
+							bool isHex = (!hash.empty() && hash.size() <= 40);
+							for (char c : hash) {
+								if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
+									isHex = false;
+									break;
+								}
+							}
+							if (isHex && parseDecimal(revisionPart.prefix(dash.begin()), versionPatch)) {
+								versionHash = hash;
+								versionForm = MetadataVersionForm::GitRevision;
+							}
+						}
+					}
+				}
+			}
+		}
 
 #		if defined(DEATH_TARGET_ANDROID)
 		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
@@ -1891,8 +1967,8 @@ namespace nCine
 			executableFileName = NCINE_APP;
 		}
 #		endif
-		writeLengthPrefixedString(executableFileName, ReservedForTrailingStrings);
 
+		// The executable itself is not among the arguments, it's stripped when they are parsed
 		std::string arguments;
 		for (std::size_t i = 0; i < _appCfg.argc(); i++) {
 			if (i > 0) {
@@ -1900,20 +1976,145 @@ namespace nCine
 			}
 			arguments += _appCfg.argv(i);
 		}
-		writeLengthPrefixedString({arguments.data(), arguments.size()}, ReservedForTrailingStrings);
 
-		writeLengthPrefixedString(NCINE_VERSION);
-		writeLengthPrefixedString({hostName, (std::size_t)hostNameLength});
+		char buffer[256];
+		MemoryStream ms(buffer, sizeof(buffer));
+		ms.WriteValue<std::uint8_t>((std::uint8_t)(1 |					// Format version
+			((std::uint32_t)versionForm << 5)));
+		ms.WriteVariableUint32(flags);
+		ms.WriteValue<std::uint8_t>((std::uint8_t)platform);
+		ms.WriteVariableUint64((std::uint64_t)timestampMs);
+		ms.WriteVariableUint32(processId);
+		// Thread IDs are usually assigned close to the process ID, so the delta is much shorter than the ID itself
+		ms.WriteVariableInt64((std::int64_t)_mainThreadId - (std::int64_t)processId);
 
+		if (versionForm != MetadataVersionForm::Raw) {
+			ms.WriteVariableUint32(versionMajor);
+			ms.WriteVariableUint32(versionMinor);
+			ms.WriteVariableUint32(versionPatch);
+
+			if (versionForm == MetadataVersionForm::GitRevision) {
+				auto toNibble = [](char c) -> std::uint8_t {
+					return (std::uint8_t)(c <= '9' ? c - '0' : c - 'a' + 10);
+				};
+				ms.WriteValue<std::uint8_t>((std::uint8_t)versionHash.size());
+				for (std::size_t i = 0; i < versionHash.size(); i += 2) {
+					std::uint8_t packedNibbles = (std::uint8_t)(toNibble(versionHash[i]) << 4);
+					if (i + 1 < versionHash.size()) {
+						packedNibbles |= toNibble(versionHash[i + 1]);
+					}
+					ms.WriteValue<std::uint8_t>(packedNibbles);
+				}
+			}
+		}
+
+		// Each string is stored with the tightest encoding its characters allow - the reader drops any string
+		// that doesn't fit in the header entirely, so clamp each one to the space that is left in the buffer
+		// instead of letting it be cut in half by the stream, `reserve` keeps room for the strings after it
+		auto writeString = [&ms](StringView value, std::int64_t reserve) {
+			auto indexInAlphabet = [](const char* alphabet, char c) -> std::int32_t {
+				for (std::int32_t i = 0; i < 64; i++) {
+					if (alphabet[i] == c) {
+						return i;
+					}
+				}
+				return -1;
+			};
+
+			// Up to 4 bytes are needed for the header itself
+			std::int64_t available = ms.GetSize() - ms.GetPosition() - reserve - 4;
+			std::int64_t length = (std::int64_t)value.size();
+			if (length > available) {
+				length = (available > 0 ? available : 0);
+				// Don't cut in the middle of a multi-byte UTF-8 sequence
+				while (length > 0 && (value[length] & 0xC0) == 0x80) {
+					length--;
+				}
+			}
+
+			MetadataStringEncoding encoding = MetadataStringEncoding::Raw;
+			if (length > 0) {
+				bool fitsLowercase = true, fitsMixedCase = true, isAscii = true;
+				for (std::int64_t i = 0; i < length; i++) {
+					char c = value[i];
+					if ((std::uint8_t)c >= 0x80) {
+						isAscii = fitsLowercase = fitsMixedCase = false;
+						break;
+					}
+					if (fitsLowercase && indexInAlphabet(MetadataStringAlphabet, c) < 0) {
+						fitsLowercase = false;
+					}
+					if (fitsMixedCase && indexInAlphabet(MetadataStringMixedCaseAlphabet, c) < 0) {
+						fitsMixedCase = false;
+					}
+				}
+				encoding = (fitsLowercase ? MetadataStringEncoding::LowercaseSet
+					: (fitsMixedCase ? MetadataStringEncoding::MixedCaseSet
+						: (isAscii ? MetadataStringEncoding::Ascii : MetadataStringEncoding::Raw)));
+			}
+
+			ms.WriteVariableUint32((std::uint32_t)((length << 2) | (std::int64_t)encoding));
+
+			if (encoding == MetadataStringEncoding::Raw) {
+				if (length > 0) {
+					ms.Write(value.data(), length);
+				}
+			} else {
+				const char* alphabet = (encoding == MetadataStringEncoding::MixedCaseSet
+					? MetadataStringMixedCaseAlphabet : MetadataStringAlphabet);
+				std::int32_t bitsPerCharacter = (encoding == MetadataStringEncoding::Ascii ? 7 : 6);
+				std::uint32_t accumulator = 0; std::int32_t accumulatorBits = 0;
+				for (std::int64_t i = 0; i < length; i++) {
+					std::uint32_t code = (bitsPerCharacter == 7
+						? (std::uint32_t)(value[i] & 0x7F)
+						: (std::uint32_t)indexInAlphabet(alphabet, value[i]));
+					accumulator |= (code << accumulatorBits);
+					accumulatorBits += bitsPerCharacter;
+					while (accumulatorBits >= 8) {
+						ms.WriteValue<std::uint8_t>((std::uint8_t)(accumulator & 0xFF));
+						accumulator >>= 8;
+						accumulatorBits -= 8;
+					}
+				}
+				if (accumulatorBits > 0) {
+					ms.WriteValue<std::uint8_t>((std::uint8_t)(accumulator & 0xFF));
+				}
+			}
+		};
+
+		String compatLayer;
 #		if defined(DEATH_TARGET_WINDOWS)
 		if (compatLayerLength > 0) {
 			if (compatLayerLength > (std::uint32_t)arraySize(bufferW)) {
 				compatLayerLength = (std::uint32_t)arraySize(bufferW);
 			}
-			auto compatLayer = Utf8::FromUtf16(bufferW, compatLayerLength);
-			writeLengthPrefixedString(compatLayer);
+			compatLayer = Utf8::FromUtf16(bufferW, compatLayerLength);
 		}
 #		endif
+
+		StringView strings[5];
+		std::int32_t stringCount = 0;
+		strings[stringCount++] = executableFileName;
+		strings[stringCount++] = { hostName, (std::size_t)hostNameLength };
+		strings[stringCount++] = { arguments.data(), arguments.size() };
+		if ((flags & 0x1000) != 0) {	// HasAppCompatLayer
+			strings[stringCount++] = compatLayer;
+		}
+		if (versionForm == MetadataVersionForm::Raw) {
+			strings[stringCount++] = version;
+		}
+
+		// Trailing empty strings don't need to be stored at all
+		while (stringCount > 0 && strings[stringCount - 1].empty()) {
+			stringCount--;
+		}
+
+		// Room each of the strings that are still to be written needs at the end of the header
+		constexpr std::int64_t ReservedPerString = 24;
+
+		for (std::int32_t i = 0; i < stringCount; i++) {
+			writeString(strings[i], (std::int64_t)(stringCount - i - 1) * ReservedPerString);
+		}
 
 		auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
 

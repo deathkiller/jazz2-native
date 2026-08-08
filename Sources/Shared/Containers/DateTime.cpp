@@ -697,7 +697,7 @@ namespace Death { namespace Containers {
 							if (format2Length > 0) {
 								success2 = TryParseFormat(dt, input + j, inputLength - j, format2, format2Length, endIndex);
 								if (!success2) {
-									std::int32_t bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, int(arraySize(buffer)));
+									bufferLength = ::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SLONGDATE, buffer, int(arraySize(buffer)));
 									if (bufferLength > 0) {
 										if (buffer[bufferLength - 1] == '\0') {
 											bufferLength--;

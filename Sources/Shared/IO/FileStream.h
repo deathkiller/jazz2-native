@@ -19,6 +19,12 @@ namespace Death { namespace IO {
 		If a file is opened with @ref FileAccess::Read or @ref FileAccess::ReadWrite, it must already exist.
 		Otherwise the operation fails. If an existing file is opened with @ref FileAccess::Write, its content
 		is destroyed and its size is set to 0. If the file doesn't exist, it is created.
+
+		Reads and writes are buffered in blocks of @p bufferSize bytes. Specifying zero (or less) disables
+		the buffering entirely, so every call is passed directly to the underlying file --- this is preferable
+		if the caller already accumulates the data in a buffer of its own.
+
+		The class is not thread-safe, an instance must not be used by more than one thread at a time.
 	*/
 	class FileStream : public Stream
 	{
@@ -91,9 +97,20 @@ namespace Death { namespace IO {
 #endif
 		}
 
+		/**
+			@brief Returns whether the file behaves like a regular file
+
+			A known size is what distinguishes a regular file from a pipe, a socket or a terminal, because only
+			the former reports its length when it's opened. Such a file is also seekable and a partial transfer
+			means end of file instead of "no more data is available right now".
+		*/
+		DEATH_ALWAYS_INLINE bool IsRegularFile() const {
+			return (_size >= 0);
+		}
+
 		void InitializeBuffer();
 		void FlushReadBuffer();
-		void FlushWriteBuffer();
+		bool FlushWriteBuffer();
 
 		void Open(FileAccess mode);
 		std::int64_t SeekInternal(std::int64_t offset, SeekOrigin origin);

@@ -11,6 +11,10 @@
 #	include <Utf8.h>
 #endif
 
+#if !defined(ALC_EXT_EFX_NAME)
+#	define ALC_EXT_EFX_NAME "ALC_EXT_EFX"
+#endif
+
 using namespace Death;
 using namespace Death::Containers::Literals;
 
@@ -175,11 +179,7 @@ namespace nCine
 				}
 			}
 
-#	if defined(ALC_EXT_EFX_NAME)
 			bool hasExtEfx = alcIsExtensionPresent(_device, ALC_EXT_EFX_NAME);
-#	else
-			bool hasExtEfx = alcIsExtensionPresent(_device, "ALC_EXT_EFX");
-#	endif
 			if (hasExtEfx) {
 				LOGI("ALC_EXT_EFX Version: {}.{} ({} auxiliary sends)", efxVersionMajor, efxVersionMinor, efxAuxSends);
 			} else {

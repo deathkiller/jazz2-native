@@ -203,14 +203,14 @@ namespace Death {
 	@brief x86 target
 
 	Defined if the library is built for x86 platforms (32 or 64-bit). Note that
-	unlike other `DEATH_TARGET_*` variables, this variable,
-	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
-	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
-	instruction set variables are not exposed in CMake because the meaning is
-	unclear on platforms with multi-architecture binaries. If neither
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
-	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
-	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_ARM,
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_MIPS,
+	@ref DEATH_TARGET_WASM, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_X86
@@ -220,14 +220,14 @@ namespace Death {
 	@brief ARM target
 
 	Defined if the library is built for ARM platforms (32 or 64-bit). Note that
-	unlike other `DEATH_TARGET_*` variables, this variable,
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
-	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
-	instruction set variables are not exposed in CMake because the meaning is
-	unclear on platforms with multi-architecture binaries. If neither
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
-	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
-	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_MIPS,
+	@ref DEATH_TARGET_WASM, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_ARM
@@ -237,14 +237,14 @@ namespace Death {
 	@brief PowerPC target
 
 	Defined if the library is built for PowerPC platforms (32 or 64-bit). Note that
-	unlike other `DEATH_TARGET_*` variables, this variable,
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_WASM,
-	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
-	instruction set variables are not exposed in CMake because the meaning is
-	unclear on platforms with multi-architecture binaries. If neither
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
-	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
-	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_MIPS,
+	@ref DEATH_TARGET_WASM, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_POWERPC
@@ -254,31 +254,48 @@ namespace Death {
 	@brief RISC-V target
 
 	Defined if the library is built for RISC-V platforms (32 or 64-bit). Note that
-	unlike other `DEATH_TARGET_*` variables, this variable,
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_WASM,
-	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
-	instruction set variables are not exposed in CMake because the meaning is
-	unclear on platforms with multi-architecture binaries. If neither
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
-	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
-	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_MIPS,
+	@ref DEATH_TARGET_WASM, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_RISCV
 #undef DEATH_TARGET_RISCV
 
 /**
+	@brief MIPS target
+
+	Defined if the library is built for MIPS platforms (32 or 64-bit). Note that
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_WASM, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	library doesn't know about yet.
+*/
+#define DEATH_TARGET_MIPS
+#undef DEATH_TARGET_MIPS
+
+/**
 	@brief WebAssembly target
 
 	Defined if the library is built for WebAssembly (32 or 64-bit). Note that
-	unlike other `DEATH_TARGET_*` variables, this variable,
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
-	@ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
-	instruction set variables are not exposed in CMake because the meaning is
-	unclear on platforms with multi-architecture binaries. If neither
-	@ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV
-	nor @ref DEATH_TARGET_WASM is defined, the platform might be either a very
-	old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
+	unlike other `DEATH_TARGET_*` variables, this variable, @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS, @ref DEATH_TARGET_32BIT, @ref DEATH_TARGET_BIG_ENDIAN and derived
+	instruction set variables are not exposed in CMake because the meaning is unclear
+	on platforms with multi-architecture binaries. If neither @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV,
+	@ref DEATH_TARGET_MIPS nor @ref DEATH_TARGET_WASM is defined, the platform might
+	be either a very old pre-WebAssembly @ref DEATH_TARGET_EMSCRIPTEN or any other that the
 	library doesn't know about yet.
 */
 #define DEATH_TARGET_WASM
