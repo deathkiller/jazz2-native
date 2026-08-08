@@ -54,25 +54,36 @@ jobs:
         # Unlike x86_64, `Libs/Linux/` contains no prebuilt aarch64 libraries, so every dependency has to come
         # from the system. The `-dev` packages are required, because the runtime ones provide neither the headers
         # nor the unversioned `.so` symlinks that `find_package()` needs (without them no backend would be found).
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev rpm
 
-    - name: 'Configure CMake'
+    - name: 'Configure & Build Portable Version'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build_portable/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
 
-    - name: 'Build'
+        make -j $(nproc) -C ./_build_portable/
+
+    - name: 'Configure & Build System Packages (DEB/RPM)'
       run: |
-        make -j $(nproc) -C ./_build/
+        export CC=${{ matrix.CC }}
+        export CXX=${{ matrix.CXX }}
+        
+        cmake -B ./_build_packages/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_LINUX_PACKAGE=jazz2 -D CMAKE_INSTALL_PREFIX=/usr
+
+        make package -j $(nproc) -C ./_build_packages/
 
     - name: 'Create Package'
       run: |
         mkdir ./_package/
-        cp -f ./_build/jazz2 ./_package/jazz2
+        # Surová binárka se bere z čistého portable buildu
+        cp -f ./_build_portable/jazz2 ./_package/jazz2
+        # Balíčky bereme ze samostatného sestavení pro balíčky
+        cp -f ./_build_packages/*.deb ./_package/jazz2.deb || true
+        cp -f ./_build_packages/*.rpm ./_package/jazz2.rpm || true
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
         
