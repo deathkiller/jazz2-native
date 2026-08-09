@@ -119,6 +119,9 @@ elseif(PLATFORM_PS2)
 elseif(PLATFORM_PSP)
 	# The PSP uses the Psp window/input backend (PSPSDK), see Sources/nCine/Backends/Psp
 	message(STATUS "Compiling for PlayStation Portable")
+elseif(PLATFORM_PS3)
+	# The PS3 uses the Ps3 window/input backend (PSL1GHT), see Sources/nCine/Backends/Ps3
+	message(STATUS "Compiling for PlayStation 3")
 elseif(NCINE_BUILD_LIBRETRO)
 	message(STATUS "Compiling as a libretro core (no window backend)")
 else()
@@ -166,7 +169,7 @@ if(NCINE_BUILD_ASSET_PACKER AND NOT CMAKE_CROSSCOMPILING)
 endif()
 
 # Windows RT uses custom packaging, enable it only for other platforms
-if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT PLATFORM_PSP AND NOT NCINE_BUILD_LIBRETRO)
+if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT PLATFORM_PSP AND NOT PLATFORM_PS3 AND NOT NCINE_BUILD_LIBRETRO)
 	include(ncine_installation)
 endif()
 include(ncine_strip_binaries)

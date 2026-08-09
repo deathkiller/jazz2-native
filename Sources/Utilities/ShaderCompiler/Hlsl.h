@@ -75,8 +75,13 @@ namespace ShaderCompiler
 			result to @p out. @p vertexStage selects the vertex-vs-fragment lowering; @p reflection supplies
 			texture-unit register assignments and the batched instance-block stride (for the emitted array
 			size). Returns false and fills @p diag when the source uses a construct the emitter does not handle.
+
+			@p maxBatchSize caps the `BATCH_SIZE` baked into a batched shader. Zero, the default, means the
+			only bound is the 64 KB uniform block the desktop and Vita tiers have. The PlayStation 3 needs a
+			far smaller one: its batched instance array reaches the vertex program through constant
+			registers rather than a bindable buffer, so `--emit-rsx` passes the batch its backend supports.
 		*/
 		static bool Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
-			String& out, Diagnostic& diag, Dialect dialect = Dialect::Hlsl);
+			String& out, Diagnostic& diag, Dialect dialect = Dialect::Hlsl, std::int32_t maxBatchSize = 0);
 	};
 }

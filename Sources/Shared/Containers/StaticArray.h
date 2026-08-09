@@ -260,14 +260,14 @@ namespace Death { namespace Containers {
 		 * *exactly*. I.e., it's not possible to omit a suffix of the array to
 		 * implicitly value-initialize it.
 		 */
-#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 8
 		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #else
-		/* GCC 4.8 isn't able to figure out the size on its own. Which means
-		   there we use the type-provided size and lose the check for element
-		   count, but at least it compiles. */
+		/* GCC before 8 can't deduce the extent from a braced list whose elements need a conversion to T
+		   (a StaticArray<256, std::uint8_t> from int literals, say), so the type-provided size is used.
+		   That compiles, but the count check is lost: a short list value-initializes the rest instead. */
 		constexpr /*implicit*/ StaticArray(InPlaceInitT, const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
 #endif
 
@@ -283,14 +283,14 @@ namespace Death { namespace Containers {
 		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
 		*      compilers don't support moving arrays.
 		*/
-#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 8
 		template<std::size_t size> constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, Death::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
-		/* GCC 4.8 isn't able to figure out the size on its own. Which means
-		   there we use the type-provided size and lose the check for element
-		   count, but at least it compiles. */
+		/* GCC before 8 can't deduce the extent from a braced list whose elements need a conversion to T
+		   (a StaticArray<256, std::uint8_t> from int literals, say), so the type-provided size is used.
+		   That compiles, but the count check is lost: a short list value-initializes the rest instead. */
 		constexpr /*implicit*/ StaticArray(InPlaceInitT, T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, Death::move(data)} {}
 #	endif
 #endif
@@ -320,14 +320,14 @@ namespace Death { namespace Containers {
 		 *
 		 * Alias to @ref StaticArray(InPlaceInitT, const T(&)[size]).
 		 */
-#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+#if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 8
 		template<std::size_t size> constexpr /*implicit*/ StaticArray(const T(&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, data} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #else
-		/* GCC 4.8 isn't able to figure out the size on its own. Which means
-		   there we use the type-provided size and lose the check for element
-		   count, but at least it compiles. */
+		/* GCC before 8 can't deduce the extent from a braced list whose elements need a conversion to T
+		   (a StaticArray<256, std::uint8_t> from int literals, say), so the type-provided size is used.
+		   That compiles, but the count check is lost: a short list value-initializes the rest instead. */
 		constexpr /*implicit*/ StaticArray(const T(&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, data} {}
 #endif
 
@@ -341,14 +341,14 @@ namespace Death { namespace Containers {
 		*      @ref DEATH_MSVC2017_COMPATIBILITY "MSVC 2017" as these
 		*      compilers don't support moving arrays.
 		*/
-#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 5
+#	if !defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG) || __GNUC__ >= 8
 		template<std::size_t size> constexpr /*implicit*/ StaticArray(T(&&data)[size]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size>::Type{}, Death::move(data)} {
 			static_assert(size == size_, "Containers::StaticArray: Wrong number of initializers");
 		}
 #	else
-		/* GCC 4.8 isn't able to figure out the size on its own. Which means
-		   there we use the type-provided size and lose the check for element
-		   count, but at least it compiles. */
+		/* GCC before 8 can't deduce the extent from a braced list whose elements need a conversion to T
+		   (a StaticArray<256, std::uint8_t> from int literals, say), so the type-provided size is used.
+		   That compiles, but the count check is lost: a short list value-initializes the rest instead. */
 		constexpr /*implicit*/ StaticArray(T(&&data)[size_]) : Implementation::StaticArrayDataFor<size_, T>{InPlaceInit, typename Implementation::GenerateSequence<size_>::Type{}, Death::move(data)} {}
 #	endif
 #endif

@@ -560,6 +560,13 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			unset(OPENAL_INCLUDE_DIR CACHE)
 			unset(OPENAL_LIBRARY CACHE)
 			set(AICA_FOUND 1)
+		elseif(PLATFORM_PS3)
+			# PSL1GHT ships no OpenAL either. The console's audio path is libaudio's own ring of 256-sample
+			# blocks fed straight to the hardware mixer (see Ps3AudioDevice), and it comes with the SDK, so
+			# like the ASND and AICA arms above there is nothing to look for.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(PS3AUDIO_FOUND 1)
 		else()
 			find_package(OpenAL)
 
@@ -662,7 +669,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_INCLUDE_DIRECTORIES "${WEBP_INCLUDE_DIR}")
 	endif()
 
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR PS3AUDIO_FOUND)
 		if(OPENAL_FOUND AND NOT TARGET OpenAL::OpenAL)
 			add_library(OpenAL::OpenAL ${LIBRARY_LINKAGE} IMPORTED)
 			set_target_properties(OpenAL::OpenAL PROPERTIES

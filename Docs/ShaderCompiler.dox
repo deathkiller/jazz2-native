@@ -58,6 +58,7 @@ Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_func
 PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function psp`
 PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gs`
 PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources compiled on the console | `--emit-cg`
+PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from that same Cg | `--emit-rsx` + cgcomp
 
 @m_class{m-noindent}
 
@@ -121,6 +122,7 @@ Mode or option | Meaning
 `--emit-types <output.h>` | Writes the shared reflection-types header and nothing else
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
 `--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
+`--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header
 `--emit-fixed-function <pvr\|gx\|psp\|gs> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
 `--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
@@ -678,9 +680,22 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
 4.  @cpp "SwGeneratedShaders.h" @ce --- the software-renderer fragment functions
     (`--emit-sw-generated`)
 5.  @cpp "CgGeneratedShaders.h" @ce --- the PS Vita's Cg stage sources (`--emit-cg`)
-6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce and
-    @cpp "GuGeneratedEffects.h" @ce --- the console fixed-function effects
-    (`--emit-fixed-function pvr` / `gx` / `psp`)
+6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce,
+    @cpp "GuGeneratedEffects.h" @ce and @cpp "GsGeneratedEffects.h" @ce --- the console
+    fixed-function effects (`--emit-fixed-function pvr` / `gx` / `psp` / `gs`)
+
+7.  @cpp "RsxGeneratedShaders.h" @ce --- the PlayStation 3's RSX microcode (`--emit-rsx`), **only on a
+    host that has `cgcomp`**; see the note below
+
+@m_class{m-block m-info}
+
+@par The PlayStation 3 header is skipped rather than emptied
+Producing it needs `cgcomp` and NVIDIA's Cg Toolkit, which most machines do not have. Where the DXBC
+and SPIR-V fields degrade to nulls the backend falls back from, an empty microcode table would leave
+the RSX backend with no shaders and no way to make any --- so when `cgcomp` cannot be run
+`--generate-all` reports @cpp "skipped: RsxGeneratedShaders.h" @ce and leaves the committed file
+untouched, rather than overwriting it. Regenerate it on a machine with the PS3 toolchain, or point
+`--cgcomp` at one; see @ref shader-compiler-cg-rsx.
 
 The typical workflow after editing a `.shader` file is therefore:
 
@@ -943,13 +958,20 @@ contexts, the three diagnostic shapes, and every check together with the cases t
 in a proxy that throws on any member it does not define, so a mistyped API name fails in the test
 rather than in the editor.
 
-@section shader-compiler-cg The Cg dialect (PS Vita)
+@section shader-compiler-cg The Cg dialect (PS Vita and PlayStation 3)
+
+Two consoles want Cg, for opposite reasons, and both are served by the same emitted source.
 
 The PS Vita's `sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline
 compiler for them --- the only Cg compiler for the platform is `libshacccg.suprx`, a firmware module
 on the console itself. The tool therefore emits Cg **source**, which the backend compiles at load
 time through vitaShaRK, and that is what @cpp "CgGeneratedShaders.h" @ce carries: two stage strings
 per program variant, looked up by the same program identity the fixed-function console tables use.
+
+The PlayStation 3 is the mirror image: its RSX is an NV40-family part that Cg targets natively, but
+the console has no shader compiler of any kind, so the very same source has to be compiled **before**
+it ships. That step is @ref shader-compiler-cg-rsx "described below" and is deliberately not a mode
+of this tool.
 
 Cg is the same language family as HLSL --- `floatN`, `mul()`, `lerp` / `frac` / `ddx`, `TEXCOORD<i>`
 interpolants --- so it is emitted by the *same* emitter (@ref ShaderCompiler::HlslEmitter, selected
@@ -979,6 +1001,32 @@ The Cg sources *could* have been two more fields on the per-shader header, but t
 blobs in those headers can only be produced on Windows, so regenerating them anywhere else would
 silently drop both. A separate aggregate header keeps a Cg run from touching anything else.
 
+@subsection shader-compiler-cg-rsx Compiling that Cg for the PlayStation 3
+
+`--emit-rsx` emits the very same Cg the Vita gets and then compiles it, which is why it lives beside
+`--emit-cg` rather than in a tool of its own. Only two things about it are specific to the console:
+
+1.  **`BATCH_SIZE` is capped.** The Vita's value is derived from a 64 KB uniform-block budget, which is
+    what a shader-visible buffer holds there. The RSX has no such buffer --- a batched instance array
+    reaches the vertex program through its constant registers --- so the emitter is given the batch
+    the backend's corner stream covers, and bakes that in instead.
+2.  **Each stage is compiled by `cgcomp`**, PSL1GHT's offline Cg compiler, run as a child process with
+    the `vp40` / `fp40` profiles the RSX is --- the same way SPIR-V is produced by running
+    `glslangValidator`. It is found through `--cgcomp`, then `$PS3DEV/bin`, then `PATH`. Being a front
+    end over NVIDIA's `libCg.so`, it fails with "Unable to load Cg" when the Cg Toolkit is not on the
+    library path, which is reported like any other compile error.
+
+The result is a table of byte arrays with a lookup by (program, variant) shaped like the one
+`CgGeneratedShaders.h` has, so the two console backends resolve a program the same way. It also
+carries the built-in **present** shader, which has no `.shader` file behind it: the RSX backend needs
+one to flip its intermediate screen surface into the display buffer and no other backend does, so it
+is written as Cg directly in @cpp "Sources/Shaders/Rsx/" @ce.
+
+A stage the profiles reject is reported and left out of the table; the backend then fails that one
+program at load time with a message naming the variant, rather than mis-rendering silently. Because
+the result is committed, the console build never invokes `cgcomp` --- neither the PS3 toolchain nor
+the Cg Toolkit is a build dependency. See @ref consoles-ps3-shaders for the invocation.
+
 @section shader-compiler-platforms Platform notes
 
 -   **OpenGL|ES 2.0** has neither uniform buffer objects nor @cpp gl_VertexID @ce, and the shared
@@ -993,19 +1041,23 @@ silently drop both. A separate aggregate header keeps a Cg run from touching any
     the same reflection.
 -   **The software renderer** is the only tier built with `SOFTWARE_RENDERER` defined, and the only
     one that can decline a shader without failing generation.
--   **Dreamcast, Wii/GameCube and PlayStation Portable** include their aggregate effect header from
-    the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU`, and resolve their
-    table entry from the program identity at link time.
--   **PlayStation Vita** is the one console with real shaders: under `WITH_RHI_GXM` it resolves its Cg
-    stage sources from the same kind of identity lookup and compiles them on the console, see
-    @ref shader-compiler-cg "above".
+-   **Dreamcast, Wii/GameCube, PlayStation Portable and PlayStation 2** include their aggregate effect
+    header from the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU` /
+    `WITH_RHI_GS`, and resolve their table entry from the program identity at link time.
+-   **PlayStation Vita and PlayStation 3** are the two consoles with real shaders, and they resolve
+    them the same way --- an identity lookup into an aggregate header --- but what they find differs.
+    Under `WITH_RHI_GXM` the Vita finds Cg *source* and compiles it on the console; under
+    `WITH_RHI_RSX` the PS3 finds *microcode* that was compiled before it shipped, because it has no
+    compiler to run. See @ref shader-compiler-cg "above".
 
 @m_class{m-noindent}
 
 Console content is fully preprocessed --- see @ref asset-packer "AssetPacker" for the asset side of
 the same principle --- which is why runtime-compiled shaders are a desktop-tier feature: there is no
 C++ JIT on a console, so a shader that arrives at runtime has no fixed-function effect to run --- and
-on the Vita it has no Cg source, which is the same restriction wearing a different hat. See
+on the Vita it has no Cg source, which is the same restriction wearing a different hat. The PS3 makes
+the point plainest of all: even a *shipped* shader has to have been compiled on the build machine, so
+a variant the `vp40` / `fp40` profiles reject is a build-time fact the console cannot work around. See
 @ref consoles "Building for consoles" for how those backends are built and run.
 
 @section shader-compiler-pitfalls Pitfalls

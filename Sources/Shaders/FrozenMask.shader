@@ -63,17 +63,23 @@ void fixed_function(pvr, psp, gs) {
 	//
 	// All three consoles share this block because all three are stuck with a CONSTANT ice tone: none can
 	// do per-texel arithmetic (the PVR modulates and adds, the GE has no combiner at all, and the GS's
-	// only post-texture add is achromatic), so the ramp the gx block below uses is out of reach and the
-	// flat tone stands in for it. That constant is the GLSL
-	// target at grey = 1, which sprite interiors - grey is luma * 2.6, clamped - saturate almost
-	// everywhere, and it is the same value the gx ramp reaches at its high end.
+	// only post-texture add is achromatic), so the ramp the gx block below uses is out of reach.
+	//
+	// That constant is the MIDPOINT of the ramp (grey = 0.5), not its bright end. `grey` is luma * 2.6
+	// clamped, so it only saturates on sprites brighter than luma 0.385, and the cross blur feeding it
+	// pulls in the transparent texels around every edge - taking the high end made the ice read as pale
+	// cyan where the shader gives a deep ice blue.
+	//
+	// The pass alpha is below the shader's 0.95 on purpose. The GLSL `mix` REPLACES the sprite at t = 1,
+	// which a silhouette drawn over it cannot do; leaving more of the sprite showing reads as ice with
+	// something frozen inside it rather than as a flat painted-on block.
 	float t = clamp(COLOR.a, 0.0, 1.0);
 	pass sprite;
 	submit_quad(sprite);
 	if (t > 0.0) {
 		pass ice;
-		ice.color = vec4(0.0, 0.0, 0.0, 0.95 * t);
-		ice.offset_color = vec3(0.2, 0.82, 0.8);
+		ice.color = vec4(0.0, 0.0, 0.0, 0.8 * t);
+		ice.offset_color = vec3(0.1, 0.51, 0.7);
 		submit_quad(ice);
 	}
 }
@@ -96,6 +102,8 @@ void fixed_function(gx) {
 	// The backend still merges the two passes into ONE draw (the premultiplied fold at
 	// SubmitMergedSilhouetteOver); the ramp just makes it a six-stage TEV program instead of a
 	// two-stage one, which costs nothing per pixel on this hardware.
+	// The pass alpha matches the shared block rather than the shader's 0.95, so the frozen effect reads
+	// the same across the console tier; only the per-pixel tone differs, which is this block's whole point.
 	pass sprite;
 	submit_quad(sprite);
 	float t = clamp(COLOR.a, 0.0, 1.0);
@@ -103,7 +111,7 @@ void fixed_function(gx) {
 		pass ice;
 		ice.tev = LUMA_RAMP;
 		ice.luma_gain = 2.6;
-		ice.color = vec4(0.0, 0.2, 0.6, 0.95 * t);
+		ice.color = vec4(0.0, 0.2, 0.6, 0.8 * t);
 		ice.offset_color = vec3(0.2, 0.82, 0.8);
 		submit_quad(ice);
 	}

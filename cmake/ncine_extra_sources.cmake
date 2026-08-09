@@ -100,6 +100,15 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
 	# (the stubs are linked with the Vita packaging below, next to vitaGL's).
 	message(STATUS "Rendering backend: GXM (PS Vita, native sceGxm)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GXM")
+elseif(NCINE_PREFERRED_RHI STREQUAL "RSX")
+	# Selects the PlayStation 3's native RSX backend in RhiFwd.h/Rhi.h. Like GXM above - and unlike the
+	# fixed-function PVR/GX/GU/GS tier - the RSX is a programmable part (an NV47), so this is a full shader
+	# backend that keeps the whole post-processing chain. Its shaders are the same Cg the emitter produces
+	# for the Vita, but compiled to NV40 microcode OFFLINE by cgcomp (there is no runtime shader compiler on
+	# the console) and embedded per program-variant, which is what the RSX shader generation below does.
+	# PSL1GHT's librsx/libgcm_sys come in with the platform packaging further down.
+	message(STATUS "Rendering backend: RSX (PlayStation 3, native libgcm)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_RSX")
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")
@@ -194,13 +203,6 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		# tier anyway (see the Dc/Ogc/Psp arms above). The PS2 libraries are linked with the packaging below.
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS2")
 
-		# Bring-up shortcut: the intro cinematic takes about a minute under an emulator, which makes every
-		# menu-side test cycle a minute longer than it needs to be. Temporary - remove once the port works.
-		option(JAZZ2_PS2_SKIP_INTRO "Skip the intro cinematic on PlayStation 2 (development shortcut)" OFF)
-		if(JAZZ2_PS2_SKIP_INTRO)
-			message(STATUS "PlayStation 2: skipping the intro cinematic (development shortcut)")
-			target_compile_definitions(${NCINE_APP} PRIVATE "JAZZ2_PS2_SKIP_INTRO")
-		endif()
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.h
@@ -211,7 +213,23 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		)
 		# The R5900 has no load-linked/store-conditional for sub-word sizes, so GCC lowers the engine's
 		# `std::atomic<bool>`/`<std::uint8_t>` operations to libatomic calls rather than inline instructions
-		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad cdvd kernel atomic)
+		# `mc` is libmc: the memory card is read and written through ordinary POSIX paths (MCMAN registers
+		# with the same ioman the newlib port uses), but a slot has to be probed through libmc before MCMAN
+		# will answer for it at all - see the mcGetInfo() call in MainApplication
+		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd kernel atomic)
+	elseif(PLATFORM_PS3)
+		# PSL1GHT window/input backend (no SDL/GLFW: PSL1GHT ships neither, and the console's video output is
+		# configured through sysutil rather than through anything a windowing library would wrap). The RSX
+		# libraries the rendering backend calls into are linked with the platform packaging below.
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps3/Ps3InputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps3/Ps3GfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps3/Ps3InputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps3/Ps3GfxDevice.cpp
+		)
 	elseif(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
 		target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
@@ -271,7 +289,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR PS3AUDIO_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
@@ -314,6 +332,14 @@ if(NOT DEDICATED_SERVER)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.cpp)
+		elseif(PS3AUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "PS3 --- PSL1GHT libaudio mixer")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
+			# libaudio is the lv2 audio port itself; libsysmodule loads the SYSMODULE_AUDIO PRX it needs
+			target_link_libraries(${NCINE_APP} PRIVATE audio sysmodule)
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/PS3/Ps3AudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/PS3/Ps3AudioDevice.cpp)
 		endif()
 		message(STATUS "Audio backend: ${_NCINE_AUDIO_BACKEND}")
 
@@ -995,6 +1021,90 @@ else()
 			# Not fatal: PCSX2 boots a bare ELF with `-elf`, which is enough for development
 			message(STATUS "xorrisofs/mkisofs not found, bootable ISO image will not be created")
 		endif()
+	elseif(PLATFORM_PS3)
+		# The ps3toolchain leaves the executable suffix empty; name it like the other console targets do, so
+		# the intermediate ELF is recognizable next to the SELF and the package built from it
+		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
+
+		# The PSL1GHT libraries the engine calls into. librsx and libgcm_sys are the RSX backend's whole
+		# graphics stack (command FIFO plus the lv2 side of the GPU); libio is the pad/keyboard/mouse layer
+		# the input backend reads; libsysutil brings the video-mode configuration and the XMB event queue the
+		# window backend drives; libsysmodule loads the PRXs those need. librt is PSL1GHT's newlib syscall
+		# layer (open/read/stat and the heap), so it has to come after everything that calls into libc.
+		target_link_libraries(${NCINE_APP} PRIVATE
+			rsx
+			gcm_sys
+			io
+			sysutil
+			sysmodule
+			simdmath
+			rt
+			lv2
+			m
+		)
+
+		# Package layout. A PS3 title is a directory tree whose USRDIR holds the boot executable, so unlike
+		# the disc-image consoles above there is nothing to author - the tree is the deliverable. It is staged
+		# under "pkg/" in the build directory and additionally wrapped into a .pkg, which is what a real
+		# console installs; RPCS3 boots either the staged EBOOT.BIN directly or the installed package.
+		#
+		# APPID has to be exactly 9 characters (4 letters + 5 digits) or the firmware rejects PARAM.SFO, so
+		# it is derived from the application name the same way the PS Vita title ID is: padded with zeroes
+		# to the required length, and additionally uppercased because the PS3 accepts no lowercase. Appending
+		# the padding before taking the first 9 characters also truncates a name that is longer. Everything
+		# that has to agree on the ID - CONTENTID, PARAM.SFO and the writable path the game uses at runtime -
+		# is derived from this one value; set it explicitly to override the derivation.
+		if(NOT PS3_APPID)
+			string(TOUPPER "${NCINE_APP}" PS3_APPID)
+			string(SUBSTRING "${PS3_APPID}000000000" 0 9 PS3_APPID)
+		endif()
+		# Spelled out rather than using bounded repetition, which CMake's regex flavour does not support
+		if(NOT PS3_APPID MATCHES "^[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][0-9]$")
+			message(FATAL_ERROR "PS3_APPID \"${PS3_APPID}\" is not 4 letters followed by 5 digits, "
+				"which the firmware requires - set it explicitly to a conforming ID")
+		endif()
+		set(PS3_CONTENTID "UP0001-${PS3_APPID}_00-0000000000000000")
+		# The cache is the one thing that cannot go through the "/app_home" alias the content uses, because
+		# that alias is read-only; it has to name the title's own game-data directory, so the ID reaches the
+		# runtime rather than being written out a second time in ContentResolver
+		target_compile_definitions(${NCINE_APP} PRIVATE "PS3_APPID=\"${PS3_APPID}\"")
+		set(PS3_PKG_DIR "${CMAKE_BINARY_DIR}/pkg")
+		file(MAKE_DIRECTORY "${PS3_PKG_DIR}/USRDIR")
+
+		if(EXISTS "${NCINE_SOURCE_DIR}/Icons/128px.png")
+			# The XMB scales whatever it is given (nominally 320x176), so the existing square icon is reused
+			# instead of adding a PS3-shaped copy of it to the repository - the same trade the PSP arm makes
+			set(_ps3Icon "${NCINE_SOURCE_DIR}/Icons/128px.png")
+		else()
+			set(_ps3Icon "${PS3_ICON0}")
+		endif()
+
+		# The content is staged as "Content" next to the EBOOT, which is where the PS3 branch of
+		# ContentResolver::GetContentPath() looks for it
+		set(_ps3MarkPrebakedCommand "")
+		if(EXISTS "${NCINE_CONTENT_DIR}/Source.pak")
+			set(_ps3MarkPrebakedCommand COMMAND ${CMAKE_COMMAND} -E rename
+				"${PS3_PKG_DIR}/USRDIR/Content/Source.pak" "${PS3_PKG_DIR}/USRDIR/Content/Prebaked.pak")
+		else()
+			message(STATUS "No \"Source.pak\" in \"${NCINE_CONTENT_DIR}\", the package will not be marked as prebaked")
+		endif()
+
+		# sprxlinker rewrites the PRX import stubs the SDK's libraries left in the ELF into the form the lv2
+		# loader resolves; make_self_npdrm then wraps the result as the EBOOT.BIN a package boots from, and
+		# fself produces the unsigned SELF that RPCS3 and a CFW console will also run straight from disk.
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.stripped.elf"
+			COMMAND "${CMAKE_STRIP}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.stripped.elf"
+			COMMAND "${PS3_SPRXLINKER}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.stripped.elf"
+			COMMAND "${PS3_SELF_NPDRM}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.stripped.elf" "${PS3_PKG_DIR}/USRDIR/EBOOT.BIN" "${PS3_CONTENTID}"
+			COMMAND "${PS3_FSELF}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.stripped.elf" "${CMAKE_BINARY_DIR}/${NCINE_APP}.self"
+			COMMAND "${PS3_SFO}" --title "${NCINE_APP_NAME}" --appid "${PS3_APPID}" -f "${PS3_SFO_XML}" "${PS3_PKG_DIR}/PARAM.SFO"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_ps3Icon}" "${PS3_PKG_DIR}/ICON0.PNG"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PS3_PKG_DIR}/USRDIR/Content"
+			${_ps3MarkPrebakedCommand}
+			COMMAND "${PS3_PKG}" --contentid "${PS3_CONTENTID}" "${PS3_PKG_DIR}/" "${CMAKE_BINARY_DIR}/${NCINE_APP}.pkg"
+			COMMENT "Packaging EBOOT.BIN, SELF and NPDRM package with game content"
+			VERBATIM)
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 
@@ -1045,12 +1155,20 @@ else()
 		else()
 			set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
 		endif()
-		set(VITA_TITLEID ${NCINE_APP})
-		string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
-		while(_TITLEID_LEN LESS 9)
-			set(VITA_TITLEID "${VITA_TITLEID}0")
-			string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
-		endwhile()
+		# The title id has to be exactly 9 characters, which is the width of the PARAM.SFO field and of the
+		# "ux0:/app/<titleid>/" directory the firmware installs into. Unlike the PlayStation 3 the Vita does
+		# not additionally require 4 letters followed by 5 digits - homebrew of the likes of VitaShell ships
+		# as nine letters - so only the length is enforced here. Appending the padding before taking the
+		# first 9 characters pads a shorter name and truncates a longer one, which the SDK does not check:
+		# `vita_create_vpk()` validates the version but passes the id straight to `vita-mksfoex`.
+		# Set it explicitly to override the derivation.
+		if(NOT VITA_TITLEID)
+			string(SUBSTRING "${NCINE_APP}000000000" 0 9 VITA_TITLEID)
+		endif()
+		if(NOT VITA_TITLEID MATCHES "^[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]$")
+			message(FATAL_ERROR "VITA_TITLEID \"${VITA_TITLEID}\" is not 9 alphanumeric characters, "
+				"which the firmware requires - set it explicitly to a conforming id")
+		endif()
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
 		# The game content travels inside the VPK, next to the executable, so it ends up in the
 		# application's own read-only directory ("ux0:/app/<titleid>/", mounted as "app0:") and needs

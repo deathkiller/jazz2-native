@@ -24,7 +24,9 @@
 #	include <cstring>
 #	include <dirent.h>
 #	include <fcntl.h>
-#	include <ftw.h>
+#	if !defined(DEATH_TARGET_PS3)
+#		include <ftw.h>
+#	endif
 #	include <libgen.h>
 #	include <pwd.h>
 #	include <strings.h>
@@ -367,7 +369,14 @@ namespace Death { namespace IO {
 		static bool TryGetFileStatus(const char* path, struct stat& sb, bool followLinks = true)
 		{
 			if constexpr (HasReliableFileStatus) {
+#	if defined(DEATH_TARGET_PS3)
+				// PSL1GHT's newlib declares no lstat(), which costs nothing: lv2's filesystem has no
+				// symbolic links, so following them or not is the same question
+				static_cast<void>(followLinks);
+				return (::stat(path, &sb) == 0);
+#	else
 				return ((followLinks ? ::stat(path, &sb) : ::lstat(path, &sb)) == 0);
+#	endif
 			} else {
 				// Neither platform has symbolic links, so there is nothing to follow or not to follow
 				static_cast<void>(followLinks);
@@ -402,9 +411,10 @@ namespace Death { namespace IO {
 		/** @brief Returns the last component of @p path, which must be writable and null-terminated */
 		static const char* GetBaseName(char* path)
 		{
-#	if defined(DEATH_TARGET_PS2)
-			// PS2SDK's newlib declares no basename(), and the callers only need the last path component,
-			// for which the trailing-slash handling POSIX basename() adds makes no difference
+#	if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3)
+			// PS2SDK's newlib declares no basename(), and neither does the powerpc64-ps3-elf one behind
+			// PSL1GHT (<libgen.h> is present, but nothing implements the symbol). The callers only need the
+			// last path component, for which the trailing-slash handling POSIX basename() adds makes no difference
 			const char* lastSeparator = std::strrchr(path, '/');
 			return (lastSeparator != nullptr ? lastSeparator + 1 : path);
 #	else
@@ -452,7 +462,7 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST)
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -463,8 +473,9 @@ namespace Death { namespace IO {
 		{
 #	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_DREAMCAST)
-			// nftw() is missing in libnx, Vita, libogc and KOS, and on PSPSDK and PS2SDK it is only declared
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3)
+			// nftw() is missing in libnx, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
+			// all), and on PSPSDK and PS2SDK it is only declared
 			// (there is no implementation behind it), so the walk is done by hand everywhere on the consoles.
 			// On the PS2 the declaration is additionally unusable: its callback takes `int` parameters, and
 			// `std::int32_t` is `long` on the EE, so the handler below would not even convert to it.
@@ -961,7 +972,7 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-#if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#if !defined(DEATH_CASE_INSENSITIVE_FILESYSTEM)
 	String FileSystem::FindPathCaseInsensitive(StringView path)
 	{
 		if (path.empty() || Exists(path)) {
@@ -1404,7 +1415,13 @@ namespace Death { namespace IO {
 			return path;
 		}
 #	endif
-		char buffer[PATH_MAX]; // realpath() output parameter must be a pointer to a buffer with >= PATH_MAX bytes
+#	if defined(DEATH_TARGET_PS3)
+		// This newlib defines no PATH_MAX, the class's own bound is larger than lv2's real path limit
+		char buffer[MaxPathLength];
+#	else
+		// realpath() output parameter must be a pointer to a buffer with >= PATH_MAX bytes
+		char buffer[PATH_MAX];
+#	endif
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 		if (resolvedPath == nullptr) {
 			return {};
@@ -2415,8 +2432,9 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#	if defined(DEATH_TARGET_VITA)
-		// O_CLOEXEC is not supported on Vita
+#	if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3)
+		// O_CLOEXEC is not supported on Vita, and the PS3's newlib does not declare it - lv2 has no exec
+		// for a descriptor to survive into anyway
 		const std::int32_t commonFlags = 0;
 #	else
 		const std::int32_t commonFlags = O_CLOEXEC;
@@ -2445,7 +2463,8 @@ namespace Death { namespace IO {
 
 #if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && \
-		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
+		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
+		!defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -2540,8 +2559,11 @@ namespace Death { namespace IO {
 	End:
 #	endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS3)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
+		// PSL1GHT is excluded because its newlib declares fchmod() without implementing it - lv2 has only a
+		// path-based chmod - and the copy is no less correct for leaving the destination's own mode alone.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;
 		}

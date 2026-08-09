@@ -273,8 +273,10 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	target_compile_features(${target} PUBLIC cxx_std_17)
-	if(PLATFORM_DREAMCAST)
-		# KOS newlib hides C99 stdio (snprintf, strtoll) behind !__STRICT_ANSI__, so GNU extensions are required
+	if(PLATFORM_DREAMCAST OR PLATFORM_PS3)
+		# KOS newlib hides C99 stdio (snprintf, strtoll) behind !__STRICT_ANSI__, so GNU extensions are
+		# required; the powerpc64-ps3-elf newlib behind PSL1GHT does exactly the same, and libstdc++'s
+		# <cstdio> then fails to compile at all ("'::snprintf' has not been declared") under -std=c++17
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS ON)
 	else()
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
@@ -353,6 +355,9 @@ function(ncine_apply_compiler_options target)
 	elseif(PLATFORM_PSP)
 		# PSPSDK (the pspdev.cmake toolchain file sets PLATFORM_PSP)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_PSP")
+	elseif(PLATFORM_PS3)
+		# PSL1GHT (the project's own cmake/toolchains/ps3dev.cmake toolchain file sets PLATFORM_PS3, and __PS3__ with it)
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_PS3")
 	elseif(VITA)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_VITA")
 
@@ -614,10 +619,14 @@ function(ncine_apply_compiler_options target)
 			if(NINTENDO_SWITCH)
 				# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
-			elseif(NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP)
-				# Conservative optimization on the PowerPC consoles, Dreamcast and PSP: fast-math reordering is
-				# untested on Gekko/Broadway paired singles and on the Allegrex's single-precision-only FPU, and
-				# code size matters (24 MB GameCube, 16 MB Dreamcast, 24 MB usable of the PSP's 32 MB)
+			elseif(NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3)
+				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3: fast-math reordering
+				# is untested on Gekko/Broadway paired singles and on the Allegrex's single-precision-only FPU,
+				# and code size matters (24 MB GameCube, 16 MB Dreamcast, 24 MB usable of the PSP's 32 MB).
+				# The PS3 has memory to spare, but joins them for the other half of the reason: its compiler is
+				# a GCC 7.2 that no other target in this project uses, so -Ofast's reassociation on the Cell
+				# PPE's FPU is the least-tested combination in the build - and the console is also the hardest
+				# one to attach a debugger to when a fast-math difference does surface.
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
 			else()
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)

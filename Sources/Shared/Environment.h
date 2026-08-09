@@ -16,6 +16,9 @@
 #if !defined(DEATH_TARGET_WINDOWS)
 #	include <time.h>
 #endif
+#if defined(DEATH_TARGET_PS3)
+#	include <sys/systime.h>
+#endif
 
 namespace Death {
 #if defined(DEATH_TARGET_WINDOWS_RT)
@@ -183,6 +186,12 @@ namespace Death { namespace Environment {
 		return now;
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 100ULL;
+#elif defined(DEATH_TARGET_PS3)
+		// lv2's clock is the only monotonic source here. it reports seconds and nanoseconds separately,
+		// so the 100 ns unit this function returns is assembled from both
+		std::uint64_t sec = 0, nsec = 0;
+		sysGetCurrentTime(&sec, &nsec);
+		return sec * 10000000ULL + nsec / 100ULL;
 #else
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -211,6 +220,10 @@ namespace Death { namespace Environment {
 		return ::GetTickCount64();
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1000000ULL;
+#elif defined(DEATH_TARGET_PS3)
+		std::uint64_t sec = 0, nsec = 0;
+		sysGetCurrentTime(&sec, &nsec);
+		return sec * 1000ULL + nsec / 1000000ULL;
 #elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST)
 		// These platforms have no coarse clock (it is a Linux-specific one), so the precise monotonic clock stands in

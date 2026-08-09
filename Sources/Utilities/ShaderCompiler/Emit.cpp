@@ -309,29 +309,31 @@ namespace ShaderCompiler
 
 	namespace
 	{
-		/** Per-variant embedded-SPIR-V symbol names + word counts (or "nullptr"/0 when SPIR-V was not emitted) */
+		// Both backends' symbols are ALWAYS defined by their aggregate - as the real array when the
+		// compiler was there, as a null pointer otherwise - so the per-shader table can name them
+		// unconditionally. Sizes are named too (`<symbol>Size`) rather than baked in as literals here: an
+		// aggregate that is a generation behind then still describes the blobs it actually holds.
+
+		/** Per-variant embedded-SPIR-V symbol names */
 		struct VkSpirvSymbols
 		{
-			String VsSymbol = "nullptr";
-			std::size_t VsSize = 0;
-			String FsSymbol = "nullptr";
-			std::size_t FsSize = 0;
+			String VsSymbol;
+			String FsSymbol;
 		};
 
-		/** Per-variant HLSL artifact symbol names: either the source strings or the precompiled DXBC blobs */
+		/** Per-variant HLSL artifact symbol names: the source strings and the precompiled DXBC blobs */
 		struct HlslSymbols
 		{
-			String VsSource = "nullptr";
-			String FsSource = "nullptr";
-			String VsDxbc = "nullptr";
-			std::size_t VsDxbcSize = 0;
-			String FsDxbc = "nullptr";
-			std::size_t FsDxbcSize = 0;
+			String VsSource;
+			String FsSource;
+			String VsDxbc;
+			String FsDxbc;
 		};
 
 		/** Emits one program (per-variant sources, reflection arrays, variant list and Program descriptor) into @p output */
 		bool EmitProgram(const ShaderDocument& document, const std::vector<VariantReflection>& variants,
-			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag)
+			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+			BackendArtifacts& artifacts, Diagnostic& diag)
 		{
 			const String& program = document.ProgramName;
 
@@ -415,57 +417,62 @@ namespace ShaderCompiler
 						}
 					}
 
-					// Vulkan (SPIR-V) lowering of the same stage: emit the Vulkan GLSL and, when a
-					// glslang compiler was injected, compile it to SPIR-V and embed the words. A decline or a
-					// missing/failed compiler leaves the field null/0 (the Vulkan backend is then
-					// not buildable for this shader and falls back to runtime compilation).
-					if (compileSpirv) {
-						String vkSource;
-						Diagnostic vkDiag;
-						if (VulkanGlslEmitter::Transform(source, vertexStage, r, vkSource, vkDiag)) {
-							std::vector<std::uint32_t> words;
-							String log;
-							if (compileSpirv(vkSource, vertexStage, words, log) && !words.empty()) {
-								String sym = prefix + (vertexStage ? "_VkVs" : "_VkFs");
-								// Vulkan (SPIR-V) stage module — compiled only into the Vulkan backend build
-								output += "#if defined(WITH_RHI_VULKAN)\n";
-								EmitSpirvArray(output, sym, words);
-								output += "#endif\n";
-								if (vertexStage) { vk.VsSymbol = sym; vk.VsSize = words.size(); }
-								else { vk.FsSymbol = sym; vk.FsSize = words.size(); }
+					// Vulkan (SPIR-V) lowering of the same stage: emit the Vulkan GLSL and, when a glslang
+					// compiler was injected, compile it to SPIR-V. The words go to the Vulkan AGGREGATE, not
+					// here, so that a machine without glslang leaves the committed ones untouched - an absent
+					// module is not a graceful degradation, it makes the backend skip every draw of the
+					// program. A decline or a failed compile still defines the symbol, as a null.
+					{
+						String sym = prefix + (vertexStage ? "_VkVs" : "_VkFs");
+						std::vector<std::uint32_t> words;
+						if (compileSpirv) {
+							String vkSource;
+							Diagnostic vkDiag;
+							if (VulkanGlslEmitter::Transform(source, vertexStage, r, vkSource, vkDiag)) {
+								String log;
+								if (!compileSpirv(vkSource, vertexStage, words, log)) {
+									words.clear();
+								}
 							}
 						}
+						if (!words.empty()) {
+							EmitSpirvArray(artifacts.Vulkan, sym, words);
+						} else {
+							artifacts.Vulkan += "\tinline constexpr const std::uint32_t* " + sym + " = nullptr;\n";
+						}
+						artifacts.Vulkan += "\tinline constexpr std::size_t " + sym + "Size = " +
+							Death::format("{}", words.size()) + ";\n\n";
+						(vertexStage ? vk.VsSymbol : vk.FsSymbol) = std::move(sym);
 					}
 				}
-				// Direct3D 11 artifacts: when BOTH stages precompiled, embed only the DXBC blobs — the HLSL
-				// text stays out of the binary. Otherwise fall back to the HLSL source strings (whichever
-				// stages lowered) and the backend runtime-compiles them.
-				if (!hlslDxbc[0].empty() && !hlslDxbc[1].empty()) {
-					for (std::int32_t stage = 0; stage < 2; stage++) {
-						String sym = prefix + (stage == 0 ? "_VsDxbc" : "_FsDxbc");
-						// Direct3D 11 (DXBC) stage bytecode — compiled only into the Direct3D 11 backend build
-						output += "#if defined(WITH_RHI_D3D11)\n";
-						EmitDxbcArray(output, sym, hlslDxbc[stage]);
-						output += "#endif\n";
-						if (stage == 0) { hlsl.VsDxbc = std::move(sym); hlsl.VsDxbcSize = hlslDxbc[stage].size(); }
-						else { hlsl.FsDxbc = std::move(sym); hlsl.FsDxbcSize = hlslDxbc[stage].size(); }
+				// Direct3D 11 artifacts, all into the D3D11 AGGREGATE rather than here - D3DCompile is a
+				// Windows DLL entry point, so most machines that build this project cannot rebuild them and
+				// must not overwrite them. When BOTH stages precompiled, only the DXBC blobs carry content
+				// and the HLSL text stays out of the binary; otherwise the HLSL sources carry it (for
+				// whichever stages lowered) and the backend runtime-compiles them. Every symbol is defined
+				// either way, as a null when it holds nothing, so the table below can name all four.
+				const bool haveDxbc = (!hlslDxbc[0].empty() && !hlslDxbc[1].empty());
+				for (std::int32_t stage = 0; stage < 2; stage++) {
+					String dxbcSym = prefix + (stage == 0 ? "_VsDxbc" : "_FsDxbc");
+					if (haveDxbc) {
+						EmitDxbcArray(artifacts.D3d11, dxbcSym, hlslDxbc[stage]);
+					} else {
+						artifacts.D3d11 += "\tinline constexpr const std::uint8_t* " + dxbcSym + " = nullptr;\n";
 					}
-				} else {
-					for (std::int32_t stage = 0; stage < 2; stage++) {
-						if (hlslSources[stage].empty()) {
-							continue;
-						}
-						String sym = prefix + (stage == 0 ? "_VsHlsl" : "_FsHlsl");
-						// Direct3D 11 (HLSL) stage source — compiled only into the Direct3D 11 backend build
-						output += "#if defined(WITH_RHI_D3D11)\n";
-						output += "\tinline constexpr char " + sym + "[] =\n";
-						output += "R\"__SHDR__(";
-						output += hlslSources[stage];
-						output += ")__SHDR__\";\n";
-						output += "#endif\n";
-						output += "\n";
-						(stage == 0 ? hlsl.VsSource : hlsl.FsSource) = std::move(sym);
+					artifacts.D3d11 += "\tinline constexpr std::size_t " + dxbcSym + "Size = " +
+						Death::format("{}", haveDxbc ? hlslDxbc[stage].size() : std::size_t(0)) + ";\n\n";
+					(stage == 0 ? hlsl.VsDxbc : hlsl.FsDxbc) = std::move(dxbcSym);
+
+					String sourceSym = prefix + (stage == 0 ? "_VsHlsl" : "_FsHlsl");
+					if (!haveDxbc && !hlslSources[stage].empty()) {
+						artifacts.D3d11 += "\tinline constexpr char " + sourceSym + "[] =\n";
+						artifacts.D3d11 += "R\"__SHDR__(";
+						artifacts.D3d11 += hlslSources[stage];
+						artifacts.D3d11 += ")__SHDR__\";\n\n";
+					} else {
+						artifacts.D3d11 += "\tinline constexpr const char* " + sourceSym + " = nullptr;\n\n";
 					}
+					(stage == 0 ? hlsl.VsSource : hlsl.FsSource) = std::move(sourceSym);
 				}
 				hlslSymbols.push_back(std::move(hlsl));
 				vkSymbols.push_back(std::move(vk));
@@ -547,18 +554,18 @@ namespace ShaderCompiler
 				output += "#endif\n";
 				output += "#if defined(WITH_RHI_D3D11)\n";
 				output += "\t\t\t" + hlslSymbols[variantIndex].VsSource + ", " + hlslSymbols[variantIndex].FsSource + ",\n";
-				output += "\t\t\t" + hlslSymbols[variantIndex].VsDxbc + ", " + Death::format("{}", hlslSymbols[variantIndex].VsDxbcSize) + ", " +
-					hlslSymbols[variantIndex].FsDxbc + ", " + Death::format("{}", hlslSymbols[variantIndex].FsDxbcSize) + ",\n";
+				output += "\t\t\t" + hlslSymbols[variantIndex].VsDxbc + ", " + hlslSymbols[variantIndex].VsDxbc + "Size, " +
+					hlslSymbols[variantIndex].FsDxbc + ", " + hlslSymbols[variantIndex].FsDxbc + "Size,\n";
 				output += "#else\n";
 				output += "\t\t\tnullptr, nullptr,\n";
 				output += "\t\t\tnullptr, 0, nullptr, 0,\n";
 				output += "#endif\n";
 				output += "#if defined(WITH_RHI_VULKAN)\n";
-					output += "\t\t\t" + vkSymbols[variantIndex].VsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].VsSize) + ", " +
-					vkSymbols[variantIndex].FsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].FsSize) + " },\n";
-					output += "#else\n";
-					output += "\t\t\tnullptr, 0, nullptr, 0 },\n";
-					output += "#endif\n";
+				output += "\t\t\t" + vkSymbols[variantIndex].VsSymbol + ", " + vkSymbols[variantIndex].VsSymbol + "Size, " +
+					vkSymbols[variantIndex].FsSymbol + ", " + vkSymbols[variantIndex].FsSymbol + "Size },\n";
+				output += "#else\n";
+				output += "\t\t\tnullptr, 0, nullptr, 0 },\n";
+				output += "#endif\n";
 				variantIndex++;
 			}
 			output += "\t};\n";
@@ -570,7 +577,8 @@ namespace ShaderCompiler
 	}
 
 	bool Emitter::EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-		const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag)
+		const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+		BackendArtifacts& artifacts, Diagnostic& diag)
 	{
 		// Only the file name is embedded, so generated headers don't differ between machines
 		String inputName = inputFileName;
@@ -584,6 +592,15 @@ namespace ShaderCompiler
 		output += "#pragma once\n";
 		output += "\n";
 		output += "#include \"ShaderCompilerTypes.h\"\n";
+		// The two backends whose artifacts need a compiler this machine may not have live in their own
+		// aggregates, which this header only REFERENCES (see BackendArtifacts). Including them here rather
+		// than leaving it to the umbrella keeps a single generated header usable on its own.
+		output += "#if defined(WITH_RHI_D3D11)\n";
+		output += "#	include \"D3d11GeneratedShaders.h\"\n";
+		output += "#endif\n";
+		output += "#if defined(WITH_RHI_VULKAN)\n";
+		output += "#	include \"VulkanGeneratedShaders.h\"\n";
+		output += "#endif\n";
 		output += "\n";
 		// The generated shader data namespace carries no public API and is excluded from the API
 		// documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping these headers out of it.
@@ -595,7 +612,7 @@ namespace ShaderCompiler
 			if (i != 0) {
 				output += "\n";
 			}
-			if (!EmitProgram(*programs[i].Document, programs[i].Variants, compileSpirv, compileDxbc, output, diag)) {
+			if (!EmitProgram(*programs[i].Document, programs[i].Variants, compileSpirv, compileDxbc, output, artifacts, diag)) {
 				return false;
 			}
 		}

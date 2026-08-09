@@ -35,19 +35,6 @@ namespace nCine::RHI::GS
 		{
 			return (value + alignment - 1) / alignment * alignment;
 		}
-
-		/** @brief Rounds up to a power of two (1 for 0) */
-		std::uint32_t RoundUpPow2(std::uint32_t value)
-		{
-			if (value <= 1) {
-				return 1;
-			}
-			std::uint32_t result = 1;
-			while (result < value) {
-				result <<= 1;
-			}
-			return result;
-		}
 	}
 
 	void GsVram::GetPageGeometry(GsPsm psm, std::int32_t& width, std::int32_t& height)
@@ -196,14 +183,9 @@ namespace nCine::RHI::GS
 		return _displayPsm;
 	}
 
-	bool GsVram::IsRangeFree(std::uint32_t firstPage, std::uint32_t pageCount)
+	bool GsVram::IsPageFree(std::uint32_t page)
 	{
-		for (std::uint32_t page = firstPage; page < firstPage + pageCount; page++) {
-			if ((_pageBitmap[page >> 6] & (std::uint64_t(1) << (page & 63))) != 0) {
-				return false;
-			}
-		}
-		return true;
+		return ((_pageBitmap[page >> 6] & (std::uint64_t(1) << (page & 63))) == 0);
 	}
 
 	void GsVram::MarkRange(std::uint32_t firstPage, std::uint32_t pageCount, bool used)
@@ -224,19 +206,53 @@ namespace nCine::RHI::GS
 			return InvalidPage;
 		}
 
-		// A power-of-two run placed at a multiple of its own size can only ever recombine with its sibling,
-		// which is what keeps the window from fragmenting; past the cap the run just has to be page-aligned
-		const std::uint32_t alignment = (pageCount < PagesPerAlignment ? pageCount : PagesPerAlignment);
+		// Best fit: the shortest free run that still holds the request, lowest address among equals. First
+		// fit is the obvious alternative and is worse here for one specific reason - the working set mixes a
+		// handful of large atlases with dozens of one-page sheets, and first fit spends the head of the
+		// window (which after a drain is the only run long enough for an atlas) on whichever small sheet
+		// asked first. Best fit spends the short runs on the short requests, which is exactly what keeps the
+		// long ones available. The scan is over 512 bits and runs a few dozen times a frame.
 		const std::uint32_t windowEndPage = windowFirstPage + windowPageCount;
+		std::uint32_t bestPage = InvalidPage, bestLength = 0;
+		std::uint32_t runStart = 0, runLength = 0;
 
-		for (std::uint32_t page = AlignUp(windowFirstPage, alignment); page + pageCount <= windowEndPage; page += alignment) {
-			if (IsRangeFree(page, pageCount)) {
-				MarkRange(page, pageCount, true);
-				return page;
+		for (std::uint32_t page = windowFirstPage; page <= windowEndPage; page++) {
+			if (page < windowEndPage && IsPageFree(page)) {
+				if (runLength == 0) {
+					runStart = page;
+				}
+				runLength++;
+				continue;
 			}
+			// A used page (or the end of the window) closes the run that led up to it
+			if (runLength >= pageCount && (bestLength == 0 || runLength < bestLength)) {
+				bestPage = runStart;
+				bestLength = runLength;
+				if (runLength == pageCount) {
+					break;		// An exact fit cannot be improved on
+				}
+			}
+			runLength = 0;
 		}
 
-		return InvalidPage;
+		if (bestPage == InvalidPage) {
+			return InvalidPage;
+		}
+		MarkRange(bestPage, pageCount, true);
+		return bestPage;
+	}
+
+	std::uint32_t GsVram::LargestFreeRunWithin(std::uint32_t windowFirstPage, std::uint32_t windowPageCount)
+	{
+		const std::uint32_t windowEndPage = windowFirstPage + windowPageCount;
+		std::uint32_t longest = 0, runLength = 0;
+		for (std::uint32_t page = windowFirstPage; page < windowEndPage; page++) {
+			runLength = (IsPageFree(page) ? runLength + 1 : 0);
+			if (runLength > longest) {
+				longest = runLength;
+			}
+		}
+		return longest;
 	}
 
 	std::uint32_t GsVram::AllocatePages(std::uint32_t pageCount)
@@ -246,14 +262,13 @@ namespace nCine::RHI::GS
 			return InvalidPage;
 		}
 
-		const std::uint32_t rounded = RoundUpPow2(pageCount);
-		const std::uint32_t page = AllocateWithin(_cacheFirstPage, _cachePageCount, rounded);
+		const std::uint32_t page = AllocateWithin(_cacheFirstPage, _cachePageCount, pageCount);
 		if (page == InvalidPage) {
 			_failedAllocationCount++;
 			return InvalidPage;
 		}
 
-		_usedPageCount += rounded;
+		_usedPageCount += pageCount;
 		if (_usedPageCount > _peakUsedPageCount) {
 			_peakUsedPageCount = _usedPageCount;
 		}
@@ -266,10 +281,8 @@ namespace nCine::RHI::GS
 			return;
 		}
 
-		// Freed with the same rounding it was allocated with, so the caller can pass the logical count back
-		const std::uint32_t rounded = RoundUpPow2(pageCount);
-		MarkRange(firstPage, rounded, false);
-		_usedPageCount -= (rounded < _usedPageCount ? rounded : _usedPageCount);
+		MarkRange(firstPage, pageCount, false);
+		_usedPageCount -= (pageCount < _usedPageCount ? pageCount : _usedPageCount);
 	}
 
 	std::uint32_t GsVram::AllocateReservedPages(std::uint32_t pageCount)
@@ -279,22 +292,11 @@ namespace nCine::RHI::GS
 			return InvalidPage;
 		}
 
-		// Plain first fit at page granularity, deliberately NOT the power-of-two aligned placement the
-		// texture cache uses. The reserve is a small dedicated pool of non-evictable surfaces that are
-		// allocated once and never churn, so it has nothing to gain from anti-fragmentation alignment - and
-		// a great deal to lose: a 16-page target could not be placed in a 16-page reserve at all unless the
-		// reserve happened to start on a 16-page boundary, which is what the static layout ahead of it
-		// decides. That is exactly how a 256x256 render target failed to fit a reserve sized for it.
-		const std::uint32_t reserveEndPage = _reserveFirstPage + _reservePageCount;
-		for (std::uint32_t page = _reserveFirstPage; page + pageCount <= reserveEndPage; page++) {
-			if (IsRangeFree(page, pageCount)) {
-				MarkRange(page, pageCount, true);
-				return page;
-			}
+		const std::uint32_t page = AllocateWithin(_reserveFirstPage, _reservePageCount, pageCount);
+		if (page == InvalidPage) {
+			_failedAllocationCount++;
 		}
-
-		_failedAllocationCount++;
-		return InvalidPage;
+		return page;
 	}
 
 	void GsVram::FreeReservedPages(std::uint32_t firstPage, std::uint32_t pageCount)
@@ -302,7 +304,7 @@ namespace nCine::RHI::GS
 		if (firstPage == InvalidPage || pageCount == 0) {
 			return;
 		}
-		// Freed exactly as allocated - the reserve does not round up (see AllocateReservedPages)
+		// The reserve is outside the cache's usage accounting, so unlike FreePages() this only clears bits
 		MarkRange(firstPage, pageCount, false);
 	}
 
@@ -355,6 +357,11 @@ namespace nCine::RHI::GS
 	std::uint32_t GsVram::GetPeakUsedPageCount()
 	{
 		return _peakUsedPageCount;
+	}
+
+	std::uint32_t GsVram::GetLargestFreeRun()
+	{
+		return (_initialized ? LargestFreeRunWithin(_cacheFirstPage, _cachePageCount) : 0);
 	}
 
 	std::uint32_t GsVram::GetFailedAllocationCount()

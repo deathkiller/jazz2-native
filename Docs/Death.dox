@@ -192,12 +192,71 @@ namespace Death {
 #undef DEATH_TARGET_SWITCH
 
 /**
+	@brief PlayStation 2 target
+
+	Defined if the library is built for PlayStation 2. The Emotion Engine is a MIPS core, so
+	@ref DEATH_TARGET_MIPS and @ref DEATH_TARGET_32BIT are also defined.
+*/
+#define DEATH_TARGET_PS2
+#undef DEATH_TARGET_PS2
+
+/**
+	@brief PlayStation 3 target
+
+	Defined if the library is built for PlayStation 3. The Cell's PPE is a 64-bit PowerPC core, so
+	@ref DEATH_TARGET_POWERPC and @ref DEATH_TARGET_BIG_ENDIAN are also defined, and
+	@ref DEATH_TARGET_32BIT is not.
+*/
+#define DEATH_TARGET_PS3
+#undef DEATH_TARGET_PS3
+
+/**
+	@brief PlayStation Portable target
+
+	Defined if the library is built for PlayStation Portable. The Allegrex is a MIPS core, so
+	@ref DEATH_TARGET_MIPS and @ref DEATH_TARGET_32BIT are also defined.
+*/
+#define DEATH_TARGET_PSP
+#undef DEATH_TARGET_PSP
+
+/**
 	@brief PlayStation Vita target
 
 	Defined if the library is built for PlayStation Vita.
 */
 #define DEATH_TARGET_VITA
 #undef DEATH_TARGET_VITA
+
+/**
+	@brief Nintendo GameCube target
+
+	Defined if the library is built for Nintendo GameCube. Gekko is a PowerPC core, so
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined.
+*/
+#define DEATH_TARGET_GAMECUBE
+#undef DEATH_TARGET_GAMECUBE
+
+/**
+	@brief Nintendo Wii target
+
+	Defined if the library is built for Nintendo Wii. Broadway is a PowerPC core, so
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined.
+*/
+#define DEATH_TARGET_WII
+#undef DEATH_TARGET_WII
+
+/**
+	@brief Sega Dreamcast target
+
+	Defined if the library is built for Sega Dreamcast. Its SH-4 is the one supported architecture
+	that none of @ref DEATH_TARGET_X86, @ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC,
+	@ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_MIPS or @ref DEATH_TARGET_WASM matches, so code that
+	branches on those has to treat it as the unknown case.
+*/
+#define DEATH_TARGET_DREAMCAST
+#undef DEATH_TARGET_DREAMCAST
 
 /**
 	@brief x86 target

@@ -1,0 +1,20 @@
+// Built-in present shader of the RSX backend (vertex stage).
+//
+// Draws the intermediate screen surface as a full-screen quad into the display buffer. This is where the
+// engine's OpenGL bottom-up convention becomes the scan-out's top-down one - but the flip lives in the
+// quad's vertex data (see RsxDevice::CreateBuiltinResources), not here, so this stage stays a plain
+// pass-through and the one convention correction is in a single readable place.
+//
+// Not generated from a .shader file: it has no GLSL counterpart because no other backend needs it.
+void main
+(
+	float2 aPosition : POSITION,
+	float2 aTexCoords : TEXCOORD0,
+
+	out float4 ePosition : POSITION,
+	out float2 vTexCoords : TEXCOORD0
+)
+{
+	ePosition = float4(aPosition.x, aPosition.y, 0.0f, 1.0f);
+	vTexCoords = aTexCoords;
+}

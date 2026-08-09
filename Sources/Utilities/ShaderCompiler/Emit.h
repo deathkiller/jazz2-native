@@ -64,6 +64,31 @@ namespace ShaderCompiler
 	*/
 	using DxbcCompileFn = std::function<bool(StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log)>;
 
+	/**
+		@brief The stage artifacts only a platform-specific compiler can produce
+
+		Direct3D 11 bytecode needs `D3DCompile`, which exists on Windows alone, and SPIR-V needs a glslang
+		binary; neither is available on most machines that build this project. They are therefore kept OUT
+		of the per-shader header and written to one aggregate per backend, exactly as the console targets
+		already are - so a regeneration on a machine that cannot rebuild them leaves the committed ones
+		alone instead of replacing them with nulls.
+
+		That mattered more than it looks: an absent SPIR-V module does not degrade, it makes
+		@relativeref{nCine::RHI::Vulkan,VulkanShaderProgram} skip every draw that uses the program.
+
+		Each string is a complete namespace body defining, for every variant, the stage arrays and a size
+		constant beside each one. The sizes travel WITH the arrays rather than being baked into the
+		per-shader table, so an aggregate that is a generation behind stays self-consistent - it describes
+		the blobs it actually holds.
+	*/
+	struct BackendArtifacts
+	{
+		/** @brief Direct3D 11 stage artifacts: the DXBC blobs, or the HLSL sources when no DXBC compiler ran */
+		String D3d11;
+		/** @brief Vulkan stage modules: the SPIR-V words */
+		String Vulkan;
+	};
+
 	/** @brief One lowered program (document plus per-variant reflection) to be emitted into a generated header */
 	struct ProgramReflection
 	{
@@ -84,9 +109,15 @@ namespace ShaderCompiler
 			Emits the complete generated header, returns false and fills @p diag on error.
 			One input file yields one header, but it may carry multiple programs (a canvas_item
 			document plus its "batched" twin) — all of them are emitted into the same namespace.
+
+			The Direct3D 11 and Vulkan stage artifacts do not go into @p output — they are appended to
+			@p artifacts instead, for the caller to write into the per-backend aggregates (see
+			@ref BackendArtifacts). @p output references them by symbol, so it is complete and correct
+			whatever compilers were available when it was produced.
 		*/
 		static bool EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag);
+			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+			BackendArtifacts& artifacts, Diagnostic& diag);
 
 		/** Builds the human-readable reflection dump printed by "--check" (called once per program) */
 		static String BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);

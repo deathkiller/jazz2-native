@@ -75,6 +75,8 @@ extern "C"
 #		include "Audio/Backends/ASND/AsndAudioDevice.h"
 #	elif defined(WITH_AICA)
 #		include "Audio/Backends/AICA/AicaAudioDevice.h"
+#	elif defined(WITH_PS3AUDIO)
+#		include "Audio/Backends/PS3/Ps3AudioDevice.h"
 #	endif
 #endif
 
@@ -133,6 +135,8 @@ using namespace Death::IO;
 #		include <kos/dbgio.h>
 #	elif defined(DEATH_TARGET_PSP)
 #		include <pspdebug.h>
+#	elif defined(DEATH_TARGET_PS3)
+#		include <sys/tty.h>
 #	endif
 #endif
 
@@ -796,6 +800,8 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<AsndAudioDevice>());
 #	elif defined(WITH_AICA)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<AicaAudioDevice>());
+#	elif defined(WITH_PS3AUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<Ps3AudioDevice>());
 #	endif
 		}
 #endif
@@ -1225,6 +1231,24 @@ namespace nCine
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		logEntryWithColors[length2] = '\0';
 		sceClibPrintf("%s", logEntryWithColors);
+#elif defined(DEATH_TARGET_PS3)
+		// PSL1GHT's newlib routes fd 1 and 2 straight to the lv2 `sysTtyWrite` syscall rather than to a
+		// file, so an ordinary write reaches the console TTY on hardware and RPCS3's log in the emulator -
+		// no serial cable or on-screen fallback is needed the way the PS2 and PSP arms above need one.
+		// The write is issued directly instead of through stdio so a trace still gets out when the message
+		// comes from a thread that already holds stdio's lock (a fatal inside a printf, for instance).
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		{
+			std::uint32_t written = 0;
+			sysTtyWrite(STDOUT_FILENO, logEntryWithColors, std::uint32_t(length2), &written);
+		}
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
@@ -1889,10 +1913,11 @@ namespace nCine
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
 #		elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || \
-				defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+				defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
+				defined(DEATH_TARGET_PS3)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-		// TODO: Hostname is not implemented on Vita, libogc, KOS, PSPSDK and PS2SDK
+		// TODO: Hostname is not implemented on Vita, libogc, KOS, PSPSDK, PS2SDK and PSL1GHT
 		char hostName[32] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN)

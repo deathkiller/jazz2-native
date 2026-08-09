@@ -612,16 +612,24 @@ namespace Death { namespace IO {
 #	endif
 				return;
 		}
-#	if !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3)
+		// The PS3's newlib declares no O_CLOEXEC, and the flag would have nothing to do there anyway:
+		// lv2 has no exec, so a descriptor cannot outlive this process into another one
 		if ((mode & FileAccess::InheritHandle) != FileAccess::InheritHandle) {
 			openFlags |= O_CLOEXEC;
 		}
 #	endif
 
 		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
+#	if defined(DEATH_TARGET_PS2)
+		// No EINTR retry: the PS2 has no signals, and its newlib port negates the IOP's error into `errno`,
+		// so MCMAN's -4 ("no such file") arrives as EINTR (4) and the loop below would spin forever
+		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
+#	else
 		do {
 			_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
 		} while (_fileDescriptor < 0 && errno == EINTR);
+#	endif
 		if (_fileDescriptor < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			std::int32_t error = errno;
@@ -634,7 +642,7 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST)
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file

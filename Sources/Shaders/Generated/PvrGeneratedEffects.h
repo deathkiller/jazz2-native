@@ -266,8 +266,8 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(sprite);
 			if (t > 0.0f) {
 				FixedFunctionPass ice;
-				Store(ice.Color, vec4(0.0f, 0.0f, 0.0f, 0.95f * t));
-				Store(ice.OffsetColor, vec3(0.2f, 0.82f, 0.8f));
+				Store(ice.Color, vec4(0.0f, 0.0f, 0.0f, 0.8f * t));
+				Store(ice.OffsetColor, vec3(0.1f, 0.51f, 0.7f));
 				ice.HasOffsetColor = true;
 				ctx.SubmitQuad(ice);
 			}

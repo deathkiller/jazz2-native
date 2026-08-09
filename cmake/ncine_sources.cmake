@@ -189,6 +189,20 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "RSX")
+	# PlayStation 3 native RSX rendering backend (PSL1GHT librsx/libgcm_sys). A shader backend like GXM
+	# rather than a fixed-function one - RsxVram owns the GDDR3/XDR suballocation the way GsVram owns the
+	# Graphics Synthesizer's local memory, and RsxShaderProgram binds the microcode cgcomp produced offline.
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RSX/RsxVram.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
 	# PS Vita native sceGxm rendering backend
 	list(APPEND SOURCES

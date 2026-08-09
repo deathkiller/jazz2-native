@@ -11,6 +11,36 @@
 #include <memory>
 #include <optional>
 
+/**
+	@brief Whether the target's file system matches names case-insensitively
+
+	Decides whether @relativeref{Death::IO,FileSystem::FindPathCaseInsensitive()} has anything to do. Where
+	this is defined the answer is already "the path as given", so the function is a pass-through and costs
+	nothing; where it is not, the path has to be reconstructed one component at a time by enumerating each
+	directory and comparing without case.
+
+	The consoles belong here for the same reason Windows® does - not by assumption, but because the file
+	systems they actually read content from match without case:
+	- The PlayStation®2 mounts its disc through `cdfs`, whose names are plain uppercase ISO 9660 (the disc
+	  image carries neither Rock Ridge nor Joliet), and lower-case paths open on it perfectly well.
+	- The Dreamcast's `fs_iso9660` compares with @cpp tolower() @ce throughout and even lower-cases the
+	  names it reports back from a directory read.
+	- The PSP, the Wii and the GameCube read their content from FAT volumes, which are case-insensitive by
+	  definition, a UMD or a disc is ISO 9660 like the above.
+
+	Doing the enumeration anyway would not just be wasted work on those, it would be *expensive* work: the
+	walk only runs when the path was not found as given, which on a case-insensitive file system means it
+	is not there under any spelling -- and on optical media a lookup that misses costs a seek and a retry.
+
+	The PlayStation®3 is deliberately absent: nothing here establishes how its file system compares names,
+	and the pass-through is only safe where that is known.
+*/
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	define DEATH_CASE_INSENSITIVE_FILESYSTEM
+#endif
+
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -110,11 +140,15 @@ namespace Death { namespace IO {
 		FileSystem() = delete;
 		~FileSystem() = delete;
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_CASE_INSENSITIVE_FILESYSTEM)
 		/**
 		 * @brief Returns path with correct case on case-sensitive platforms (or `{}` if path not found)
-		 * 
-		 * Windows® is already case-insensitive by default, so no validation is performed.
+		 *
+		 * The target's file system already matches without case (see @ref DEATH_CASE_INSENSITIVE_FILESYSTEM),
+		 * so the path is returned unchanged and nothing is looked up. Note the difference in the "not found"
+		 * half of the contract: this form cannot report a missing path and never returns @cpp {} @ce,
+		 * so a caller that uses the result as an existence test only works on the platforms that take
+		 * the branch below. The callers that do so are all inside code those platforms do not build.
 		 */
 		DEATH_ALWAYS_INLINE static Containers::StringView FindPathCaseInsensitive(Containers::StringView path) {
 			return path;
@@ -127,6 +161,10 @@ namespace Death { namespace IO {
 #else
 		/**
 		 * @brief Returns path with correct case on case-sensitive platforms (or `{}` if path not found)
+		 *
+		 * Each component of the path is looked up in turn by enumerating its parent directory and comparing
+		 * without case, so a path that exists under a different spelling is returned with the spelling the
+		 * file system actually uses.
 		 */
 		static Containers::String FindPathCaseInsensitive(Containers::StringView path);
 

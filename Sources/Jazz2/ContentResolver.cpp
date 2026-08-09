@@ -112,6 +112,15 @@ namespace Jazz2
 		// Packed inside the VPK, so it's part of the application's own read-only directory
 		// ("ux0:/app/<titleid>/", which the firmware mounts as "app0:")
 		return "app0:/Content/"_s;
+#elif defined(DEATH_TARGET_PS3)
+		// Next to the EBOOT inside the package. "/app_home" is the alias the loader maps the running
+		// executable's OWN directory to - which is USRDIR, not the package root - so the content sits
+		// directly under it rather than under a second "USRDIR". That one path covers both ways the game
+		// is started: an installed package under "/dev_hdd0/game/<APPID>/USRDIR/", and the staged package
+		// directory booted straight from disk during development (which is how RPCS3 runs the build tree).
+		// Going through the alias rather than the title's real path also means the APPID can change without
+		// this string following it.
+		return "/app_home/Content/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -144,6 +153,13 @@ namespace Jazz2
 		return "cdfs:/Cache/"_s;
 #elif defined(DEATH_TARGET_PSP)
 		return "ms0:/PSP/GAME/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_PS3)
+		// Unlike the read-only trees the other consoles ship, the PS3 has a writable hard disk, so the cache
+		// goes to the title's own game-data directory rather than next to the (read-only) package content.
+		// "/dev_hdd0/game/<APPID>/USRDIR" is the one location a title may write to without a save-data API,
+		// so unlike the content path this one cannot avoid naming the ID - the build passes it in, because
+		// a copy that disagreed with the package would send the cache to a directory no title owns.
+		return "/dev_hdd0/game/" PS3_APPID "/USRDIR/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Cache\\"_s;
 #else
@@ -170,6 +186,8 @@ namespace Jazz2
 		return "cdfs:/Source/"_s;
 #elif defined(DEATH_TARGET_PSP)
 		return "ms0:/PSP/GAME/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_PS3)
+		return "/app_home/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Source\\"_s;
 #else
@@ -1859,7 +1877,11 @@ namespace Jazz2
 			}
 		}
 
-		return episode;
+		// Explicitly moved rather than relying on the implicit move of a returned local: `Episode` is
+		// move-only, and GCC before 8 only applies that implicit move when the return type matches the
+		// local's exactly - not through a conversion to `std::optional`, which is what this is. No copy
+		// elision is possible for a converting return anyway, so this is equivalent on every compiler.
+		return Death::move(episode);
 	}
 
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(StringView path)

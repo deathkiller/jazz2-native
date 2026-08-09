@@ -1,5 +1,6 @@
 #include "GsTexture.h"
 #include "GsDevice.h"
+#include "GsStagingBuffer.h"
 
 #include "../../../../Main.h"
 
@@ -68,10 +69,9 @@ namespace nCine::RHI::GS
 			@brief Staging buffer the transfers are issued from
 
 			A transfer reads main memory directly, so the source has to be a contiguous, qword-aligned image
-			in the destination's pitch - which is what this holds. It persists across uploads (the renderer is
-			single-threaded) and only ever grows.
+			in the destination's pitch - see @ref GsStagingBuffer for why an ordinary container is not that.
 		*/
-		alignas(64) SmallVector<std::uint8_t, 0> _staging;
+		GsStagingBuffer _staging;
 
 		/**
 			@brief GIF packet scratch for the transfers
@@ -106,6 +106,12 @@ namespace nCine::RHI::GS
 			// times a frame, and it is what made the picture flash and sprites take other sprites' pixels.
 			GsDevice::FlushPendingPackets();
 
+			// The chain below REFs the staging image rather than carrying it, so PS2SDK's own SyncDCache over
+			// the chain does not reach it and the CPU's writes have to be pushed out here (see the
+			// declaration of WritebackForDma - this is the intermittent-garbled-texture bug)
+			GsDevice::WritebackForDma(source,
+				(std::size_t(pitchTexels) * std::size_t(height) * std::size_t(PsmBitsPerTexel(psm))) / 8);
+
 			qword_t* q = _uploadPacket;
 			q = draw_texture_transfer(q, const_cast<void*>(source), pitchTexels, height, PsmToHardware(psm),
 				std::int32_t(page * WordsPerPage), pitchTexels);
@@ -126,7 +132,7 @@ namespace nCine::RHI::GS
 			_uploadFormat(PixelFormat::Unknown), _width(0), _height(0), _strideBytes(0), _bytesPerPixel(0),
 			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest),
 			_wrap(SamplerWrapping::ClampToEdge), _textureUnit(0), _isRenderTarget(false), _isPaletteTexture(false),
-			_page(GsVram::InvalidPage), _pageCount(0), _psm(GsPsm::Ct32), _bufferPitch(0),
+			_page(GsVram::InvalidPage), _pageCount(0), _pageFromReserve(false), _psm(GsPsm::Ct32), _bufferPitch(0),
 			_paddedWidth(0), _paddedHeight(0), _uScale(1.0f), _vScale(1.0f),
 			_bakedSlots{}, _nextBakedSlot(0), _livePrev(nullptr), _liveNext(nullptr), _lastUsedFrame(NeverUsed)
 	{
@@ -199,10 +205,34 @@ namespace nCine::RHI::GS
 			return result;
 		}
 
-		// Out of local memory: drop the stores of the textures that have gone unused the longest and try
-		// again. The first pass spares anything already drawn into the frame being assembled, because the
-		// GS may still be reading it - a GIF packet already handed to the DMA controller is not done yet.
 		const std::uint32_t currentFrame = GsDevice::GetFrameCounter();
+
+		// Out of local memory. Before dropping any STORE, drop the palette bakes that were not read this
+		// frame: a bake is a PSMCT32 expansion of an RG8 store - four bytes a texel where the source is two,
+		// and up to BakedSlotCount of them per texture - so it is by far the most local memory per texel in
+		// the cache, and it is the cheapest thing to lose. Rebuilding one costs a CPU pass over the texels;
+		// rebuilding a store costs that too, for every texture the store's eviction then displaces. Slots
+		// read this frame are spared for the reason the store walk below spares this frame's stores.
+		for (GsTexture* texture = _liveTail; texture != nullptr; texture = texture->_livePrev) {
+			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+				BakedSlot& slot = texture->_bakedSlots[i];
+				if (slot.Page == GsVram::InvalidPage || slot.LastUsedFrame == currentFrame) {
+					continue;
+				}
+				GsVram::FreePages(slot.Page, slot.PageCount);
+				slot.Page = GsVram::InvalidPage;
+				slot.PageCount = 0;
+				slot.Valid = false;
+
+				if (std::uint32_t result = GsVram::AllocatePages(pageCount); result != GsVram::InvalidPage) {
+					return result;
+				}
+			}
+		}
+
+		// Still short: drop the stores of the textures that have gone unused the longest and try again. The
+		// first pass spares anything already drawn into the frame being assembled, because the GS may still
+		// be reading it - a GIF packet already handed to the DMA controller is not done yet.
 		for (std::int32_t pass = 0; pass < 2; pass++) {
 			// Nothing outside the current frame was left to free. Rather than fail the allocation - which
 			// happens when a level's working set suddenly has to make room for the pause menu's - the second
@@ -213,8 +243,9 @@ namespace nCine::RHI::GS
 			GsTexture* victim = _liveTail;
 			while (victim != nullptr) {
 				GsTexture* next = victim->_livePrev;
-				// Render targets have no copy in main memory to rebuild from, so they are never evicted -
-				// and they live in the reserve rather than the cache anyway
+				// Render targets have no copy in main memory to rebuild from, so they are never evicted.
+				// Usually they are not in this window at all, but one too large for the reserve is (see
+				// SetRenderTarget), and that one has to be spared here rather than by where it happens to live
 				const bool evictable = (victim != keepAlive && !victim->_isRenderTarget &&
 					(!sparingCurrentFrame || victim->_lastUsedFrame != currentFrame));
 				if (evictable) {
@@ -300,6 +331,7 @@ namespace nCine::RHI::GS
 				return false;
 			}
 			_pageCount = pageCount;
+			_pageFromReserve = false;
 		}
 
 		_psm = psm;
@@ -327,12 +359,16 @@ namespace nCine::RHI::GS
 		// swizzling on the way in, so the source stays plain raster order - the Dreamcast's twiddling pass
 		// has no counterpart here. Only the padding is cleared; the image area is overwritten right after.
 		const std::size_t stagingSize = std::size_t(_bufferPitch) * std::size_t(storeHeight) * std::size_t(bytesPerTexel);
-		_staging.resize_for_overwrite(stagingSize);
+		std::uint8_t* const staging = _staging.Reserve(stagingSize);
+		if (staging == nullptr) {
+			LOGE("Out of main memory for a {}x{} texture upload ({} bytes)", _width, _height, stagingSize);
+			return;
+		}
 		const std::int32_t dstRowBytes = _bufferPitch * bytesPerTexel;
 
 		if (_uploadFormat == PixelFormat::R8) {
 			for (std::int32_t y = 0; y < _height; y++) {
-				std::uint8_t* dstRow = _staging.data() + std::size_t(y) * dstRowBytes;
+				std::uint8_t* dstRow = staging + std::size_t(y) * dstRowBytes;
 				std::memcpy(dstRow, _pixels.data() + std::size_t(y) * _strideBytes, std::size_t(_width));
 				std::memset(dstRow + _width, 0, std::size_t(dstRowBytes - _width));
 			}
@@ -340,7 +376,7 @@ namespace nCine::RHI::GS
 			// Expand 565 to the GS's PSMCT32; the low bits are replicated so that full-scale input stays
 			// full-scale output rather than topping out at 248/252
 			for (std::int32_t y = 0; y < _height; y++) {
-				std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(_staging.data() + std::size_t(y) * dstRowBytes);
+				std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(staging + std::size_t(y) * dstRowBytes);
 				const std::uint16_t* srcRow = reinterpret_cast<const std::uint16_t*>(_pixels.data() + std::size_t(y) * _strideBytes);
 				for (std::int32_t x = 0; x < _width; x++) {
 					const std::uint32_t texel = srcRow[x];
@@ -359,7 +395,7 @@ namespace nCine::RHI::GS
 			// RGB8 / RGBA8 expand to PSMCT32, which is what the GS samples
 			const std::int32_t srcBytes = _bytesPerPixel;
 			for (std::int32_t y = 0; y < _height; y++) {
-				std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(_staging.data() + std::size_t(y) * dstRowBytes);
+				std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(staging + std::size_t(y) * dstRowBytes);
 				const std::uint8_t* srcRow = _pixels.data() + std::size_t(y) * _strideBytes;
 				for (std::int32_t x = 0; x < _width; x++) {
 					const std::uint8_t* t = srcRow + std::size_t(x) * srcBytes;
@@ -373,11 +409,11 @@ namespace nCine::RHI::GS
 		}
 
 		if (_height < storeHeight) {
-			std::memset(_staging.data() + std::size_t(_height) * dstRowBytes, 0,
+			std::memset(staging + std::size_t(_height) * dstRowBytes, 0,
 				std::size_t(storeHeight - _height) * std::size_t(dstRowBytes));
 		}
 
-		TransferToLocalMemory(_staging.data(), _bufferPitch, storeHeight, _psm, _page);
+		TransferToLocalMemory(staging, _bufferPitch, storeHeight, _psm, _page);
 	}
 
 	std::uint32_t GsTexture::AcquireTexturePage()
@@ -394,13 +430,16 @@ namespace nCine::RHI::GS
 	void GsTexture::FreeStores()
 	{
 		if (_page != GsVram::InvalidPage) {
-			if (_isRenderTarget) {
+			// Which pool it came from, not which pool its kind prefers - a render target too large for the
+			// reserve is holding cache pages and returning those to the reserve would corrupt both
+			if (_pageFromReserve) {
 				GsVram::FreeReservedPages(_page, _pageCount);
 			} else {
 				GsVram::FreePages(_page, _pageCount);
 			}
 			_page = GsVram::InvalidPage;
 			_pageCount = 0;
+			_pageFromReserve = false;
 		}
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
 			if (_bakedSlots[i].Page != GsVram::InvalidPage) {
@@ -556,10 +595,8 @@ namespace nCine::RHI::GS
 		}
 
 		// A render target is a colour surface the rasterizer writes into, so it takes PSMCT16 pages out of
-		// the reserve. It has no host copy, which is why it must never be evicted - and why placing it in
-		// the reserve rather than the cache turns "it did not fit" into a startup-time configuration error
-		// instead of a level-dependent surprise (the Dreamcast's 256x256 TexturedBackground target used to
-		// fail its allocation only on certain levels).
+		// the reserve. It has no host copy, which is why it must never be evicted - and why it goes to the
+		// reserve rather than the cache: there it cannot be crowded out by streaming sheets.
 		_psm = GsPsm::Ct16;
 		_bufferPitch = GsVram::GetPaddedWidth(_psm, _paddedWidth);
 
@@ -569,10 +606,24 @@ namespace nCine::RHI::GS
 		_pageCount = GsVram::GetPageCount(_psm, _bufferPitch, storeHeight);
 
 		_page = GsVram::AllocateReservedPages(_pageCount);
-		if (_page == GsVram::InvalidPage) {
-			LOGE("The GS render-target reserve cannot fit a {}x{} target ({} pages); raise GsVramLayout::ReservedRttPages",
-				_paddedWidth, _paddedHeight, _pageCount);
-			_pageCount = 0;
+		_pageFromReserve = (_page != GsVram::InvalidPage);
+		if (!_pageFromReserve) {
+			// The reserve is sized for the target the levels usually ask for, and the size is not the
+			// backend's to choose: TexturedBackgroundPass makes its target as large as the level's textured
+			// layer, so a level with a 512x256 one wants 32 pages where an ordinary 256x256 wants 16.
+			// Failing here would silently drop the whole background, so a target too large for the reserve
+			// takes cache pages instead - evicting streaming sheets to get them if it has to. It is still
+			// exempt from the eviction walk afterwards (AllocatePages() spares render targets), which is the
+			// property that actually matters; all it loses is the guarantee of not competing for the window.
+			_page = AllocatePages(_pageCount, this);
+			if (_page == GsVram::InvalidPage) {
+				LOGE("No room in GS local memory for a {}x{} render target ({} pages)",
+					_paddedWidth, _paddedHeight, _pageCount);
+				_pageCount = 0;
+			} else {
+				LOGW("A {}x{} render target ({} pages) does not fit the GS reserve and took cache pages instead",
+					_paddedWidth, _paddedHeight, _pageCount);
+			}
 		}
 	}
 
@@ -638,9 +689,13 @@ namespace nCine::RHI::GS
 		// Resolve every index through the row, keeping the texel's own alpha - the reason this bake exists at
 		// all is that a PSMT8 texel could only take its alpha from the CLUT entry
 		const std::size_t stagingSize = std::size_t(bakedPitch) * std::size_t(storeHeight) * 4;
-		_staging.resize_for_overwrite(stagingSize);
+		std::uint8_t* const staging = _staging.Reserve(stagingSize);
+		if (staging == nullptr) {
+			target->Valid = false;
+			return GsVram::InvalidPage;
+		}
 		for (std::int32_t y = 0; y < _height; y++) {
-			std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(_staging.data() + std::size_t(y) * bakedPitch * 4);
+			std::uint32_t* dstRow = reinterpret_cast<std::uint32_t*>(staging + std::size_t(y) * bakedPitch * 4);
 			const std::uint8_t* srcRow = _pixels.data() + std::size_t(y) * _strideBytes;
 			for (std::int32_t x = 0; x < _width; x++) {
 				const std::uint32_t entry = paletteRow[srcRow[std::size_t(x) * 2]];
@@ -654,11 +709,11 @@ namespace nCine::RHI::GS
 			std::memset(dstRow + _width, 0, (std::size_t(bakedPitch) - std::size_t(_width)) * 4);
 		}
 		if (_height < storeHeight) {
-			std::memset(_staging.data() + std::size_t(_height) * bakedPitch * 4, 0,
+			std::memset(staging + std::size_t(_height) * bakedPitch * 4, 0,
 				std::size_t(storeHeight - _height) * std::size_t(bakedPitch) * 4);
 		}
 
-		TransferToLocalMemory(_staging.data(), bakedPitch, storeHeight, GsPsm::Ct32, target->Page);
+		TransferToLocalMemory(staging, bakedPitch, storeHeight, GsPsm::Ct32, target->Page);
 
 		target->Valid = true;
 		target->PaletteRow = paletteRowIndex;

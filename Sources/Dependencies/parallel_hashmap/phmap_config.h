@@ -314,7 +314,21 @@
     #endif
 #endif
 
-#if PHMAP_HAVE_CC17
+// Whether the standard library actually provides threading primitives. The header being present is not
+// enough to tell: a freestanding-ish libstdc++ built without gthread support (the powerpc64-ps3-elf
+// toolchain behind PSL1GHT, for one) still installs <mutex> and <shared_mutex>, but they declare no
+// std::mutex or std::shared_mutex at all - so a __has_include probe reports them and everything that
+// names those types then fails to compile.
+#if !defined(PHMAP_HAVE_THREAD_SUPPORT)
+    #if defined(__STDCPP_THREADS__) || defined(_MSC_VER) || defined(_GLIBCXX_HAS_GTHREADS) || \
+        defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || defined(_LIBCPP_HAS_THREAD_API_WIN32)
+        #define PHMAP_HAVE_THREAD_SUPPORT 1
+    #else
+        #define PHMAP_HAVE_THREAD_SUPPORT 0
+    #endif
+#endif
+
+#if PHMAP_HAVE_CC17 && PHMAP_HAVE_THREAD_SUPPORT
     #ifdef __has_include
        #if __has_include(<shared_mutex>)
            #define PHMAP_HAVE_SHARED_MUTEX 1

@@ -5,6 +5,7 @@
 #include "../../../Primitives/Colorf.h"
 #include "GsVram.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -35,10 +36,12 @@ namespace nCine::RHI::GS
 		- `texbuffer_t::width` and `framebuffer_t::width` are in **texels**, not `TBW` units.
 
 		Because the GS rasterizes as packets arrive rather than deferring a whole scene like the tile
-		accelerator, textures cannot safely be evicted in the middle of a frame - the pages a submitted
-		primitive samples may still be in use. The residency for a frame is therefore decided before any of it
-		is issued (see @ref PlanResidency()), and the draw path only ever re-transfers what the plan already
-		accounted for.
+		accelerator, a texture whose pages are reused mid-frame could be sampled by a primitive that was
+		already submitted. What makes that safe here is ORDER rather than planning: the GIF consumes
+		everything on its DMA path strictly in sequence, so as long as the re-upload is issued *after* the
+		draws that sample the previous contents - which @ref FlushPendingPackets() is what guarantees - the
+		GS has finished with those draws before the new texels land. A store may still be evicted while it is
+		resident, but never while a submitted primitive is still reading it.
 
 		Palette handling has no bank limit to work around: a CLUT is a 1 KB region of local memory selected
 		per draw through `TEX0.CBP`, so the layout's slab holds many at once and the PowerVR's four-bank LRU
@@ -210,25 +213,29 @@ namespace nCine::RHI::GS
 		*/
 		static void FlushPendingPackets();
 
+		/**
+			@brief Writes the EE data cache back so a DMA can read @p bytes bytes at @p start
+
+			The second thing every path that hands the GIF a packet of its own has to do, and the one with no
+			symptom until it bites. PS2SDK synchronises the buffer it is *handed* - `dma_channel_send_chain()`
+			calls `SyncDCache()` over the qwords of the chain itself - but `draw_texture_transfer()` builds a
+			chain whose `REF` tags point somewhere else entirely, at the staging image in main memory, and
+			nothing synchronises that. The EE's data cache is 8 KB and **write-back**, so the tail of an image
+			the CPU has just filled is still sitting in it, and the DMA - which reads memory directly, never
+			the cache - transfers whatever was in those addresses beforehand.
+
+			The corruption is therefore intermittent by nature: how much of the image is still dirty depends
+			on what ran between filling it and sending it, and the stale bytes are the *previous* upload
+			through the same staging buffer. A texture comes out garbled for as long as it stays resident and
+			is correct the next time it happens to be re-transferred, which is what it looked like - a frame
+			glitching at random and coming good by itself.
+		*/
+		static void WritebackForDma(const void* start, std::size_t bytes);
+
 		/** @brief Registers the intercepted shared palette texture (rows become CLUTs) */
 		static void RegisterPaletteTexture(GsTexture* texture);
 		/** @brief Invalidates the CLUT slots (and RG8 bakes) of the given palette rows after an upload */
 		static void NotifyPaletteTextureChanged(GsTexture* texture, std::int32_t firstRow, std::int32_t rowCount);
-
-		/**
-			@brief Decides which textures are resident for the frame about to be issued
-
-			Called by `RenderQueue::SortAndCommit()` once the frame's batches are known and before any of them
-			is issued. Because the GS rasterizes as packets arrive, evicting mid-frame can pull the pages out
-			from under a primitive that has already been submitted; deciding residency up front removes the
-			hazard, and it is also the only point at which the frame's whole working set is known.
-
-			When the set does not fit, the frame is split into residency *epochs*: the prefix that fits is
-			drawn, the GS is synchronised, the next set is transferred, and the rest follows. That is slower
-			but correct, unlike the PVR backend's fallback of evicting from the scene in flight and accepting
-			a frame of artifacts.
-		*/
-		static void PlanResidency(const GsTexture* const* textures, std::int32_t count);
 
 		/** @brief Queues the CPU lightmap/water combine for the next `Combine` draw (the direct-tier lighting contract) */
 		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
@@ -301,6 +308,14 @@ namespace nCine::RHI::GS
 		static const GsTexture* _boundTextures[MaxTextureUnits];
 		static UniformRange _boundUniformRanges[MaxUniformBindings];
 		static GsRenderTarget* _currentRenderTarget;
+		/**
+			@brief Whether the current render target has no colour surface in local memory
+
+			`FRAME` still points at whatever was bound before it, so every draw and clear of the pass has to
+			be dropped rather than issued - they would land on the previous target (the display, usually)
+			while being transformed and scissored for this one.
+		*/
+		static bool _renderTargetSurfaceMissing;
 
 		static bool _gsInitialized;
 		static std::int32_t _logicalWidth;

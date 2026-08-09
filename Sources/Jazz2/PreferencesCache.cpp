@@ -19,6 +19,10 @@
 #if defined(DEATH_TARGET_DREAMCAST)
 #	include <dc/maple.h>
 #	include <dc/maple/vmu.h>
+#elif defined(DEATH_TARGET_PS2)
+extern "C" {
+#	include <libmc.h>
+}
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -96,7 +100,8 @@ namespace Jazz2
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_PS3)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
@@ -220,8 +225,17 @@ namespace Jazz2
 		}
 #	endif
 
+		// A portable config next to the executable wins over the per-user path chosen below. The Dreamcast
+		// and the PlayStation 2 don't look for one: their whole tree is on the disc they booted from, so it
+		// could never be written back - and a miss there costs the drive a seek and a retry on every boot.
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		constexpr bool hasPortableConfig = false;
+#	else
+		const bool hasPortableConfig = fs::IsReadableFile(_configPath);
+#	endif
+
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
-		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
+		if (!overrideConfigPath && !hasPortableConfig) {
 #	if defined(DEATH_TARGET_DREAMCAST)
 			// The game runs from a disc, so the only writable storage is a memory card. KallistiOS mounts
 			// each one as "/vmu/<port><unit>", buffers the whole file in RAM and commits it to the card when
@@ -237,6 +251,54 @@ namespace Jazz2
 				LOGW("No memory card found, settings and progress cannot be saved");
 				auto& resolver = ContentResolver::Get();
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			}
+#	elif defined(DEATH_TARGET_PS2)
+			// Same situation as the Dreamcast: the game runs from a disc, so the only writable storage is a
+			// memory card. Once a slot has been probed, MCMAN serves it through the original `ioman` - the
+			// I/O manager the newlib port's POSIX calls reach - so a card is an ordinary "mc0:" / "mc1:"
+			// path and the config file needs no special-case I/O at all. The probe is not optional: before
+			// it, MCMAN answers for the slot as if it were empty and an mkdir on a good card returns ENOENT.
+			//
+			// The save lives in a directory of its own, as every PlayStation 2 save does. The first usable
+			// card wins, exactly as the Dreamcast takes the first attached VMU; with neither slot usable the
+			// path is left on the disc, where opening it for writing simply fails as before.
+			{
+				bool memoryCardFound = false;
+				// Plain `int`: PS2SDK takes `int*` here and `std::int32_t` is `long` on the Emotion Engine,
+				// so the two are distinct types even though they are the same width
+				for (int port = 0; port < 2 && !memoryCardFound; port++) {
+					int type = 0, freeClusters = 0, formatted = 0;
+					mcGetInfo(port, 0, &type, &freeClusters, &formatted);
+					int probe = -1;
+					mcSync(MC_WAIT, nullptr, &probe);
+
+					// The two halves of the answer have to be read together: `probe` reports what CHANGED
+					// since the last call (0 = the same card, -1 = a formatted one has been inserted since,
+					// -2 = an unformatted one, below that an access error), while `formatted` describes the
+					// card itself and is only filled in when the card is the same one as last time
+					if (probe < -2 || type != MC_TYPE_PS2) {
+						continue;	// Empty slot, a PlayStation 1 card, or the slot could not be read
+					}
+					if (probe == -2 || (probe >= -1 && formatted != MC_FORMATTED)) {
+						// Worth saying out loud rather than reporting as "no card": the fix is for the player
+						// to format it in the console's own browser, and formatting it here - which the
+						// hardware would happily do - would erase every other game's saves on that card
+						LOGW("The memory card in slot {} is not formatted, so nothing can be saved to it", port);
+						continue;
+					}
+
+					char saveDir[] = "mc0:/Jazz2";
+					saveDir[2] = char('0' + port);
+					if (fs::CreateDirectories(saveDir)) {
+						_configPath = fs::CombinePath(StringView(saveDir, sizeof(saveDir) - 1), "Jazz2.config"_s);
+						memoryCardFound = true;
+					}
+				}
+				if (!memoryCardFound) {
+					LOGW("No usable memory card found, settings and progress cannot be saved");
+					auto& resolver = ContentResolver::Get();
+					_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+				}
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
@@ -582,7 +644,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 			// Use Switch button labels
 			GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
+			defined(DEATH_TARGET_PS3)
 			// Use PlayStation button labels on the PlayStation consoles
 			GamepadButtonLabels = GamepadType::PlayStation;
 #elif defined(DEATH_TARGET_UNIX)
@@ -601,7 +664,8 @@ namespace Jazz2
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \
-		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST)
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS3)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -934,6 +998,9 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_PS2)
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 2||11|{}", arch);
+#elif defined(DEATH_TARGET_PS3)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 3||12|{}", arch);
 #elif defined(DEATH_TARGET_VITA)
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Vita||10|{}", arch);

@@ -1,0 +1,15 @@
+// Built-in present shader of the RSX backend (fragment stage).
+//
+// A straight texture read: the screen surface is already in the display's format and colour space, so the
+// present pass exists only to flip and scale it (see Present.vcg).
+void main
+(
+	float2 vTexCoords : TEXCOORD0,
+
+	uniform sampler2D uTexture : TEXUNIT0,
+
+	out float4 oColor : COLOR
+)
+{
+	oColor = tex2D(uTexture, vTexCoords);
+}

@@ -101,9 +101,9 @@ What the output directory is going to be loaded by decides its layout:
     tree written directly into the target, holding everything the console loads. The consoles all
     consume the same staged tree, so they share one profile --- only the cinematics are decided per
     platform, which is why `dreamcast` is tracked separately (see below). The sprite and sound package
-    is named `Prebaked.pak` here, and that name is the marker: a console that *can* convert (the PSP
-    and the Wii, whose content is on writable storage) finds it and skips the conversion instead of
-    looking for original files that were never deployed --- see
+    is named `Prebaked.pak` here, and that name is the marker: a console that *can* convert (the PSP,
+    the Wii and the PlayStation 3, whose content is on writable storage) finds it and skips the
+    conversion instead of looking for original files that were never deployed --- see
     @ref Jazz2::ContentResolver::IsContentPrebaked(). No index is written, deliberately: a prepared
     tree is never rewritten, and an index there would only invite the game to try.
 -   **emscripten** --- Likewise a tree prepared entirely ahead of time for the web build,
@@ -313,6 +313,11 @@ as UTF-8 without one.
     GameCube have no conversion compiled in at all and *require* the prepared tree; the PSP and the
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
     why they are given a prepared tree as well.
+-   **PlayStation 2 and PlayStation 3** consume the same tree under the generic `--target=console`
+    profile --- neither has a name of its own, because neither needs anything the profile does not
+    already do. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as
+    the Dreamcast does. The PS3 has a writable hard disk and could in principle convert, but is given
+    a prepared tree for the same reason the PSP is --- doing it on the console is slow.
 -   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
     only a way to skip that wait there.
 -   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically

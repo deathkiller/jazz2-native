@@ -107,7 +107,9 @@ namespace Death { namespace Memory {
 	*/
 	template<typename T, typename std::enable_if<std::is_trivially_copyable<T>::value, int>::type = 0>
 	inline constexpr T LoadUnaligned(const void* p) noexcept {
-		std::remove_const_t<T> v;
+		// Value-initialized rather than left indeterminate: GCC before 8 rejects an uninitialized variable
+		// inside a constexpr function outright.
+		std::remove_const_t<T> v{};
 		std::memcpy(&v, p, sizeof(T));
 		return v;
 	}

@@ -65,7 +65,18 @@ namespace nCine
 #else
 				: batchingEnabled(true),
 #endif
-				  batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) {}
+				  batchingWithIndices(false), cullingEnabled(true), minBatchSize(4),
+#if defined(WITH_RHI_RSX)
+				  // The PlayStation 3's batched shaders reach their instance array through the RSX's constant
+				  // registers rather than a uniform buffer, so the batch is bounded by what fits there and by
+				  // what the backend's batched corner stream covers - a far smaller number than the 585 a
+				  // 64 KB UBO holds, and one the microcode has baked in (see RsxDevice::MaxBatchSize). A
+				  // larger batch would draw its later sprites with instance data the shader cannot address.
+				  maxBatchSize(32)
+#else
+				  maxBatchSize(585)
+#endif
+				  {}
 
 			/** @brief Whether batching is enabled */
 			bool batchingEnabled;

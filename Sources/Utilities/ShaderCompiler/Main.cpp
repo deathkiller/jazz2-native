@@ -46,10 +46,16 @@
 #	include <windows.h>
 #	include <d3dcompiler.h>
 #else
+#	include <cerrno>
 #	include <dirent.h>
+#	include <spawn.h>
 #	include <sys/stat.h>
 #	include <sys/types.h>
+#	include <sys/wait.h>
 #	include <unistd.h>
+#	include <fcntl.h>
+// posix_spawn needs the caller's environment passed explicitly, and it is not declared by any header
+extern char** environ;
 #endif
 
 using namespace ShaderCompiler;
@@ -316,10 +322,11 @@ namespace
 			"                    d3dcompiler_47 when available, with the HLSL text left out of the header)\n"
 			"  --vulkan          Print the Vulkan GLSL (#version 450) transform of every stage to stdout\n"
 			"  --glslang <path>  glslangValidator to compile SPIR-V with (default: VULKAN_SDK / PATH)\n"
+			"  --cgcomp <path>   cgcomp to compile RSX microcode with (default: PS3DEV / PATH)\n"
 			"  --target <t>      Selects an inspection target for the transform dump (only: essl100)\n"
 			"\n"
 			"Standalone modes:\n"
-			"  --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>]\n"
+			"  --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] [--no-dxbc] [--glslang <path>] [--cgcomp <path>]\n"
 			"                                                    Regenerate every committed artifact (the shared types, one\n"
 			"                                                    header per shader, the umbrella and the five aggregates)\n"
 			"                                                    from one enumeration of the shader directory; --check only\n"
@@ -328,6 +335,7 @@ namespace
 			"  --hlsl-check <input.shader ...>                    Emit + D3DCompile each stage as HLSL; print a pass/fail table\n"
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
+			"  --emit-rsx <output.h> [--cgcomp <path>] <input.shader ...>  Compile every stage to RSX microcode (PlayStation 3)\n"
 			"  --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
@@ -1068,14 +1076,124 @@ namespace
 		return ok && !spirv.empty();
 	}
 #else
+	// D3DCompile is a Windows DLL entry point with no counterpart elsewhere, so the HLSL/DXBC paths stay
+	// unavailable; the child-process ones below do not have that excuse and are implemented for real.
 	bool LoadD3DCompiler(String& error) { error = "D3DCompile is only available on Windows"; return false; }
 	bool CompileHlslToDxbc(const String&, const char*, const char*, std::vector<std::uint8_t>&, String&) { return false; }
 	bool CompileHlsl(const String&, const char*, const char*, String&) { return false; }
-	bool LocateGlslang(StringView, String&, StringView = {}) { return false; }
-	bool CompileSpirvWithGlslang(const String&, const String&, bool, std::vector<std::uint32_t>&, String& log)
+
+	/** Runs @p argv with stdout+stderr redirected to @p logFile; false if the process could not start */
+	bool RunProcessCaptured(const std::vector<String>& argv, const char* logFile, int& exitCode)
 	{
-		log = "glslang integration is only implemented on Windows";
-		return false;
+		exitCode = -1;
+		if (argv.empty()) {
+			return false;
+		}
+
+		std::vector<char*> args;
+		args.reserve(argv.size() + 1);
+		for (const String& a : argv) {
+			args.push_back(const_cast<char*>(a.data()));
+		}
+		args.push_back(nullptr);
+
+		posix_spawn_file_actions_t actions;
+		if (posix_spawn_file_actions_init(&actions) != 0) {
+			return false;
+		}
+		// Both streams go to the same file, so a compiler that writes diagnostics to either is captured
+		posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, logFile,
+			O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		posix_spawn_file_actions_adddup2(&actions, STDOUT_FILENO, STDERR_FILENO);
+
+		pid_t pid = 0;
+		// posix_spawnp so a bare tool name is resolved against PATH, matching how the Windows arm behaves
+		const int spawned = ::posix_spawnp(&pid, args[0], &actions, nullptr, args.data(), ::environ);
+		posix_spawn_file_actions_destroy(&actions);
+		if (spawned != 0) {
+			return false;
+		}
+
+		int status = 0;
+		while (::waitpid(pid, &status, 0) < 0) {
+			if (errno != EINTR) {
+				return false;
+			}
+		}
+		exitCode = (WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+		return true;
+	}
+
+	/** Resolves `glslangValidator`, from @p explicitPath, then `$VULKAN_SDK/bin`, then `PATH` */
+	bool LocateGlslang(StringView explicitPath, String& outPath, StringView = {})
+	{
+		if (!explicitPath.empty()) {
+			outPath = String{explicitPath};
+			return PathIsFile(outPath.data());
+		}
+		if (const char* sdk = std::getenv("VULKAN_SDK")) {
+			String candidate = PathJoin(String{sdk}, "bin/glslangValidator"_s);
+			if (PathIsFile(candidate.data())) {
+				outPath = std::move(candidate);
+				return true;
+			}
+		}
+		// Left as a bare name for posix_spawnp to resolve against PATH
+		outPath = "glslangValidator"_s;
+		return true;
+	}
+
+	bool CompileSpirvWithGlslang(const String& glslangPath, const String& source, bool vertexStage,
+		std::vector<std::uint32_t>& spirv, String& log)
+	{
+		spirv.clear();
+		log = {};
+		static unsigned counter = 0;
+		String base = Death::format("/tmp/sc_vk_{}_{}", static_cast<unsigned>(::getpid()), counter++);
+		String inputPath = base + (vertexStage ? ".vert"_s : ".frag"_s);
+		String spirvPath = base + ".spv"_s;
+		String logPath = base + ".log"_s;
+
+		if (!WriteStringToFile(inputPath.data(), source)) {
+			log = "cannot write the temporary shader input";
+			return false;
+		}
+
+		std::vector<String> argv = { glslangPath, "-V"_s, "--target-env"_s, "vulkan1.0"_s, "-S"_s,
+			(vertexStage ? "vert"_s : "frag"_s), inputPath, "-o"_s, spirvPath };
+		int exitCode = -1;
+		const bool ran = RunProcessCaptured(argv, logPath.data(), exitCode);
+		{
+			String logContent;
+			if (ReadFileToString(logPath.data(), logContent)) {
+				log = std::move(logContent);
+			}
+		}
+		bool ok = ran && (exitCode == 0);
+		if (ok) {
+			String bytes;
+			if (ReadFileToString(spirvPath.data(), bytes) && bytes.size() >= 4 && (bytes.size() % 4) == 0) {
+				std::size_t words = bytes.size() / 4;
+				spirv.resize(words);
+				std::memcpy(spirv.data(), bytes.data(), words * 4);
+				if (spirv.empty() || spirv[0] != 0x07230203u) {		// SPIR-V magic number
+					spirv.clear();
+					ok = false;
+					if (log.empty()) {
+						log = "glslang output is not a SPIR-V module";
+					}
+				}
+			} else {
+				ok = false;
+				if (log.empty()) {
+					log = "glslang produced no SPIR-V output";
+				}
+			}
+		}
+		::remove(inputPath.data());
+		::remove(spirvPath.data());
+		::remove(logPath.data());
+		return ok && !spirv.empty();
 	}
 #endif
 
@@ -1820,6 +1938,336 @@ namespace
 		return 0;
 	}
 
+	// --- PlayStation 3 RSX microcode via a child cgcomp process -----------------------------------
+
+	/**
+		@brief Largest batch a PlayStation 3 shader is compiled for
+
+		Must match `RsxDevice::MaxBatchSize`. A batched instance array reaches the vertex program through
+		constant registers rather than a bindable buffer - the `vp40` profile allows a program 544 of them -
+		and the backend's batched corner stream, which supplies the instance index, covers exactly this many
+		sprites. Measured against the batched shaders they stop compiling somewhere above 40, so this is the
+		value they all accept with margin.
+	*/
+	constexpr std::int32_t RsxMaxBatchSize = 32;
+
+	/** One program-variant's pair of compiled RSX microcode blobs */
+	struct RsxShaderEntry
+	{
+		String ProgramName;
+		String VariantName;
+		std::vector<std::uint8_t> VertexUcode;
+		std::vector<std::uint8_t> FragmentUcode;
+	};
+
+	/** Resolves `cgcomp`, from @p explicitPath, then `$PS3DEV/bin`, then `PATH` */
+	bool LocateCgcomp(StringView explicitPath, String& outPath)
+	{
+		if (!explicitPath.empty()) {
+			outPath = String{explicitPath};
+			return PathIsFile(outPath.data());
+		}
+		if (const char* ps3dev = std::getenv("PS3DEV")) {
+#if defined(_WIN32)
+			String candidate = PathJoin(String{ps3dev}, "bin\\cgcomp.exe"_s);
+#else
+			String candidate = PathJoin(String{ps3dev}, "bin/cgcomp"_s);
+#endif
+			if (PathIsFile(candidate.data())) {
+				outPath = Death::move(candidate);
+				return true;
+			}
+		}
+		// Left as a bare name for the spawn to resolve against PATH
+		outPath = "cgcomp"_s;
+		return true;
+	}
+
+	/**
+		Compiles one Cg stage to NV40 microcode by running @p cgcompPath over it.
+
+		cgcomp is a front end over NVIDIA's `libCg.so`, so it fails with "Unable to load Cg" when the Cg
+		Toolkit is not on the library path - reported through @p log like any other compile error.
+	*/
+	bool CompileRsxMicrocode(const String& cgcompPath, const String& source, bool vertexStage,
+		std::vector<std::uint8_t>& ucode, String& log)
+	{
+		ucode.clear();
+		log = {};
+		static unsigned counter = 0;
+#if defined(_WIN32)
+		char tempDir[MAX_PATH];
+		DWORD tempLen = GetTempPathA(MAX_PATH, tempDir);
+		if (tempLen == 0 || tempLen >= MAX_PATH) {
+			log = "cannot resolve the temporary directory"_s;
+			return false;
+		}
+		String base = String{tempDir, tempLen} + "sc_rsx_" +
+			Death::format("{}_{}", static_cast<unsigned>(GetCurrentProcessId()), counter++);
+#else
+		String base = Death::format("/tmp/sc_rsx_{}_{}", static_cast<unsigned>(::getpid()), counter++);
+#endif
+		// cgcomp picks its profile from the flag rather than the extension, but naming the input the way
+		// the SDK does keeps a leftover temporary self-describing
+		String inputPath = base + (vertexStage ? ".vcg"_s : ".fcg"_s);
+		String outputPath = base + (vertexStage ? ".vpo"_s : ".fpo"_s);
+		String logPath = base + ".log"_s;
+
+		if (!WriteStringToFile(inputPath.data(), source)) {
+			log = "cannot write the temporary shader input"_s;
+			return false;
+		}
+
+		int exitCode = -1;
+		bool ran;
+#if defined(_WIN32)
+		String command = "\""_s + cgcompPath + "\" "_s + (vertexStage ? "-v"_s : "-f"_s) +
+			" \""_s + inputPath + "\" \""_s + outputPath + "\""_s;
+		DWORD win32ExitCode = ~DWORD{0};
+		ran = RunProcessCaptured(command, logPath.data(), win32ExitCode);
+		exitCode = static_cast<int>(win32ExitCode);
+#else
+		std::vector<String> argv = { cgcompPath, (vertexStage ? "-v"_s : "-f"_s), inputPath, outputPath };
+		ran = RunProcessCaptured(argv, logPath.data(), exitCode);
+#endif
+		{
+			String logContent;
+			if (ReadFileToString(logPath.data(), logContent)) {
+				log = Death::move(logContent);
+			}
+		}
+		bool ok = ran && (exitCode == 0);
+		if (ok) {
+			String bytes;
+			if (ReadFileToString(outputPath.data(), bytes) && !bytes.empty()) {
+				const std::uint8_t* first = reinterpret_cast<const std::uint8_t*>(bytes.data());
+				ucode.assign(first, first + bytes.size());
+			} else {
+				ok = false;
+				if (log.empty()) {
+					log = "cgcomp produced no microcode output"_s;
+				}
+			}
+		}
+#if defined(_WIN32)
+		DeleteFileA(inputPath.data());
+		DeleteFileA(outputPath.data());
+		DeleteFileA(logPath.data());
+#else
+		::remove(inputPath.data());
+		::remove(outputPath.data());
+		::remove(logPath.data());
+#endif
+		return ok && !ucode.empty();
+	}
+
+	/** Emits one microcode blob as a C++ byte-array initializer, wrapped so the header stays readable */
+	String RsxByteArrayLiteral(const std::vector<std::uint8_t>& data, StringView indent)
+	{
+		String out;
+		for (std::size_t i = 0; i < data.size(); i += 16) {
+			out += indent;
+			const std::size_t lineEnd = (i + 16 < data.size() ? i + 16 : data.size());
+			for (std::size_t j = i; j < lineEnd; j++) {
+				out += Death::format("0x{:.2x}", data[j]);
+				// The separator goes before the next byte on the same line, so a line never ends in
+				// trailing whitespace
+				if (j + 1 < lineEnd) {
+					out += ", "_s;
+				}
+			}
+			if (lineEnd < data.size()) {
+				out += ","_s;
+			}
+			out += "\n"_s;
+		}
+		return out;
+	}
+
+	/** Builds the aggregate microcode header the RSX backend binds */
+	String BuildRsxGeneratedHeader(const std::vector<RsxShaderEntry>& entries)
+	{
+		String out;
+		out += "// Generated by ShaderCompiler (--emit-rsx). Do not edit manually.\n"_s;
+		out += "#pragma once\n\n"_s;
+		out += "#if defined(WITH_RHI_RSX)\n\n"_s;
+		out += "#include <cstddef>\n"_s;
+		out += "#include <cstdint>\n"_s;
+		out += "#include <cstring>\n\n"_s;
+		out += "namespace nCine::RHI::RSX\n{\n"_s;
+		out += "\tnamespace\n\t{\n"_s;
+		out += "\t\t/** @brief NV40 microcode of one program variant, compiled offline by cgcomp */\n"_s;
+		out += "\t\tstruct GeneratedRsxShader\n\t\t{\n"_s;
+		out += "\t\t\tconst char* ProgramName;\n"_s;
+		out += "\t\t\tconst char* VariantName;\n"_s;
+		out += "\t\t\tconst std::uint8_t* VertexProgram;\n"_s;
+		out += "\t\t\tconst std::uint8_t* FragmentProgram;\n"_s;
+		out += "\t\t};\n\n"_s;
+
+		for (std::size_t i = 0; i < entries.size(); i++) {
+			const RsxShaderEntry& e = entries[i];
+			out += "\t\t// "_s + e.ProgramName;
+			if (!e.VariantName.empty()) {
+				out += " ("_s + e.VariantName + ")"_s;
+			}
+			out += "\n"_s;
+			// 16-byte aligned: the microcode headers are read as structures of 32-bit fields, and the
+			// fragment blob is copied into local memory the GPU fetches in aligned bursts
+			out += Death::format("\t\talignas(16) const std::uint8_t _rsxVs{}[] = {{\n", i);
+			out += RsxByteArrayLiteral(e.VertexUcode, "\t\t\t"_s);
+			out += "\t\t};\n"_s;
+			out += Death::format("\t\talignas(16) const std::uint8_t _rsxFs{}[] = {{\n", i);
+			out += RsxByteArrayLiteral(e.FragmentUcode, "\t\t\t"_s);
+			out += "\t\t};\n\n"_s;
+		}
+
+		out += "\t\tconstexpr GeneratedRsxShader GeneratedRsxShaders[] = {\n"_s;
+		for (std::size_t i = 0; i < entries.size(); i++) {
+			out += Death::format("\t\t\t{{ \"{}\", \"{}\", _rsxVs{}, _rsxFs{} }},\n",
+				entries[i].ProgramName, entries[i].VariantName, i, i);
+		}
+		out += "\t\t};\n\n"_s;
+		out += "\t\t/**\n"_s;
+		out += "\t\t\t@brief Looks up the microcode pair of one program variant\n\n"_s;
+		out += "\t\t\tReturns `nullptr` for a variant whose Cg the vp40/fp40 profiles could not express when\n"_s;
+		out += "\t\t\tthis table was generated; the backend reports that as a load-time failure of that one\n"_s;
+		out += "\t\t\tprogram, because there is no runtime compiler to fall back on.\n"_s;
+		out += "\t\t*/\n"_s;
+		out += "\t\tinline const GeneratedRsxShader* FindGeneratedRsxShader(const char* programName, const char* variantName)\n"_s;
+		out += "\t\t{\n"_s;
+		out += "\t\t\tif (programName == nullptr) return nullptr;\n"_s;
+		out += "\t\t\tif (variantName == nullptr) variantName = \"\";\n"_s;
+		out += "\t\t\tfor (const GeneratedRsxShader& s : GeneratedRsxShaders) {\n"_s;
+		out += "\t\t\t\tif (std::strcmp(s.ProgramName, programName) == 0 && std::strcmp(s.VariantName, variantName) == 0) {\n"_s;
+		out += "\t\t\t\t\treturn &s;\n"_s;
+		out += "\t\t\t\t}\n"_s;
+		out += "\t\t\t}\n"_s;
+		out += "\t\t\treturn nullptr;\n"_s;
+		out += "\t\t}\n"_s;
+		out += "\t}\n}\n\n"_s;
+		out += "#endif\n"_s;
+		return out;
+	}
+
+	/**
+		Compiles the built-in Cg shaders that have no `.shader` file behind them.
+
+		The RSX backend needs a present shader to flip its intermediate screen surface into the display
+		buffer, and no other backend does, so it has no GLSL counterpart to be lowered from - it is written
+		as Cg directly, next to the shaders it is generated alongside.
+	*/
+	bool AppendRsxBuiltinShaders(const String& cgcompPath, StringView shadersDir,
+		std::vector<RsxShaderEntry>& entries, String& error)
+	{
+		struct Builtin { const char* Name; const char* VertexFile; const char* FragmentFile; };
+		static const Builtin Builtins[] = {
+			{ "__Present", "Rsx/Present.vcg", "Rsx/Present.fcg" }
+		};
+
+		for (const Builtin& builtin : Builtins) {
+			String vertexPath = PathJoin(String{shadersDir}, String{builtin.VertexFile});
+			String fragmentPath = PathJoin(String{shadersDir}, String{builtin.FragmentFile});
+			String vertexSource, fragmentSource;
+			if (!ReadFileToString(vertexPath.data(), vertexSource) ||
+				!ReadFileToString(fragmentPath.data(), fragmentSource)) {
+				error = "cannot read the built-in shader \""_s + String{builtin.Name} + "\""_s;
+				return false;
+			}
+
+			RsxShaderEntry e;
+			e.ProgramName = String{builtin.Name};
+			String log;
+			if (!CompileRsxMicrocode(cgcompPath, vertexSource, true, e.VertexUcode, log) ||
+				!CompileRsxMicrocode(cgcompPath, fragmentSource, false, e.FragmentUcode, log)) {
+				error = "the built-in shader \""_s + String{builtin.Name} + "\" failed to compile: "_s + FirstLine(log);
+				return false;
+			}
+			entries.push_back(Death::move(e));
+		}
+		return true;
+	}
+
+	int RunEmitRsx(const char* outputPath, StringView cgcompOption, StringView shadersDir,
+		char** inputPaths, int inputCount)
+	{
+		String cgcompPath;
+		if (!LocateCgcomp(cgcompOption, cgcompPath)) {
+			std::fprintf(stderr, "error: cgcomp not found at \"%s\"\n", String{cgcompOption}.data());
+			return 1;
+		}
+
+		std::vector<RsxShaderEntry> entries;
+		std::vector<std::pair<String, String>> declined;	// (prefix, reason)
+
+		// The built-in present shader goes first, so a table that lost it is obvious at a glance
+		String builtinError;
+		if (!AppendRsxBuiltinShaders(cgcompPath, shadersDir, entries, builtinError)) {
+			std::fprintf(stderr, "error: %s\n", builtinError.data());
+			return 1;
+		}
+
+		for (int fi = 0; fi < inputCount; fi++) {
+			const char* inputPath = inputPaths[fi];
+			std::vector<ShaderDocument> documents;
+			std::vector<ProgramReflection> programs;
+			String errorMsg;
+			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
+				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
+				return 1;
+			}
+			for (const ProgramReflection& program : programs) {
+				const String& progName = program.Document->ProgramName;
+				for (const VariantReflection& v : program.Variants) {
+					String prefix = (v.Name.empty() ? progName : String(progName + "_" + v.Name));
+					RsxShaderEntry e;
+					e.ProgramName = progName;
+					e.VariantName = v.Name;
+					bool ok = true;
+					for (std::int32_t stage = 0; stage < 2 && ok; stage++) {
+						const bool vertexStage = (stage == 0);
+						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+						String cg;
+						Diagnostic diag;
+						// The same Cg the PS Vita gets, only with the batch capped to what the console's
+						// constant registers hold - the one thing that differs between the two
+						if (!HlslEmitter::Transform(modern, vertexStage, v.Reflection, cg, diag,
+								HlslEmitter::Dialect::Cg, RsxMaxBatchSize)) {
+							declined.emplace_back(prefix, diag.Message);
+							ok = false;
+							break;
+						}
+						String log;
+						std::vector<std::uint8_t>& ucode = (vertexStage ? e.VertexUcode : e.FragmentUcode);
+						if (!CompileRsxMicrocode(cgcompPath, cg, vertexStage, ucode, log)) {
+							declined.emplace_back(prefix, FirstLine(log));
+							ok = false;
+						}
+					}
+					if (ok) {
+						entries.push_back(Death::move(e));
+					}
+				}
+			}
+		}
+
+		String header = BuildRsxGeneratedHeader(entries);
+		if (!WriteStringToFile(outputPath, header)) {
+			std::fprintf(stderr, "error: cannot write output file \"%s\"\n", outputPath);
+			return 1;
+		}
+
+		std::size_t total = 0;
+		for (const RsxShaderEntry& e : entries) {
+			total += e.VertexUcode.size() + e.FragmentUcode.size();
+		}
+		std::fprintf(stdout, "[RSX] emitted %zu program-variant(s), %zu bytes of microcode, declined %zu\n",
+			entries.size(), total, declined.size());
+		for (const auto& d : declined) {
+			std::fprintf(stdout, "  declined %s: %s\n", d.first.data(), d.second.data());
+		}
+		return 0;
+	}
+
 	int RunEmitSwGenerated(const char* outputPath, char** inputPaths, int inputCount)
 	{
 		std::vector<GeneratedShaderEntry> supported;
@@ -1913,6 +2361,7 @@ namespace
 		String ShadersDirectory;		// Empty: auto-detected from the executable, then the working directory
 		String OutputDirectory;			// Empty: "<ShadersDirectory>/Generated"
 		const char* GlslangOverride = nullptr;
+		const char* CgcompPath = nullptr;	// Empty: "$PS3DEV/bin", then PATH
 		bool Check = false;
 		bool NoDxbc = false;
 	};
@@ -2010,9 +2459,44 @@ namespace
 		@p writtenNames. Split out of RunGenerateAll so that the caller owns the temporary directory of the
 		staleness guard and can clean it up on every path.
 	*/
+	/**
+		Wraps the bodies collected in BackendArtifacts into one complete aggregate header
+
+		@p guard is the `WITH_RHI_*` macro the whole file hides behind, so a build without that backend
+		compiles none of it. @p bodies pairs each namespace with the declarations belonging to it, in the
+		order the shaders were enumerated - the same order the per-shader headers were written in.
+	*/
+	String BuildBackendAggregate(StringView what, StringView guard,
+		const std::vector<std::pair<String, String>>& bodies)
+	{
+		String output;
+		output += "// Generated by ShaderCompiler (--generate-all). Do not edit manually.\n";
+		output += "//\n";
+		output += "// " + String{what} + " stage artifacts for every shader, kept apart from the per-shader headers because\n";
+		output += "// producing them needs a compiler that is not available everywhere. A regeneration on a machine\n";
+		output += "// without it leaves this file alone rather than replacing its contents with nulls.\n";
+		output += "#pragma once\n";
+		output += "\n";
+		output += "#include \"ShaderCompilerTypes.h\"\n";
+		output += "\n";
+		output += "#if defined(" + String{guard} + ")\n";
+		output += "#ifndef DOXYGEN_GENERATING_OUTPUT\n";
+		for (const auto& body : bodies) {
+			output += "\n";
+			output += "namespace " + body.first + "\n";
+			output += "{\n";
+			output += body.second;
+			output += "}\n";
+		}
+		output += "\n";
+		output += "#endif\n";
+		output += "#endif\n";
+		return output;
+	}
+
 	int GenerateAllArtifacts(StringView shadersDirectory, const std::vector<String>& shaderNames,
 		StringView outputDirectory, const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc,
-		std::vector<String>& writtenNames)
+		StringView cgcompOption, std::vector<String>& writtenNames)
 	{
 		// The shared reflection types every generated header includes
 		{
@@ -2026,6 +2510,9 @@ namespace
 
 		// One header per shader; "Default*.shader" are the nCine default programs, everything else is Jazz2
 		std::vector<String> includeStems, jazz2Programs, ncinePrograms;
+		// The Direct3D 11 and Vulkan stage artifacts of every shader, collected here and written as one
+		// aggregate each below - see BackendArtifacts for why they do not go into the per-shader headers
+		std::vector<std::pair<String, String>> d3d11Bodies, vulkanBodies;
 		for (const String& shaderName : shaderNames) {
 			StringView stem = StemOf(shaderName);
 			const bool isDefault = stem.hasPrefix("Default"_s);
@@ -2042,11 +2529,14 @@ namespace
 			}
 
 			String output;
+			BackendArtifacts artifacts;
 			Diagnostic diag;
-			if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, diag)) {
+			if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, artifacts, diag)) {
 				std::fprintf(stderr, "%s:%d: error: %s\n", inputPath.data(), diag.Line, diag.Message.data());
 				return 1;
 			}
+			d3d11Bodies.emplace_back(String{ns}, std::move(artifacts.D3d11));
+			vulkanBodies.emplace_back(String{ns}, std::move(artifacts.Vulkan));
 			String headerName = stem + ".h"_s;
 			String headerPath = PathJoin(outputDirectory, headerName);
 			if (!WriteStringToFile(headerPath.data(), output)) {
@@ -2060,6 +2550,54 @@ namespace
 				(isDefault ? ncinePrograms : jazz2Programs).push_back(program.Document->ProgramName);
 			}
 			std::fprintf(stdout, "ok: %s -> %s [%s]\n", shaderName.data(), headerName.data(), ns);
+		}
+
+		// The two aggregates. Each is written ONLY when the compiler that fills it actually ran: without it
+		// every blob in the file would come out null, and unlike a missing console effect table that is not
+		// a graceful degradation - the Vulkan backend skips every draw of a program with no SPIR-V module,
+		// and Direct3D 11 falls back to compiling HLSL text at runtime. The committed file stays valid
+		// until someone who can regenerate it does, which is the same bargain RsxGeneratedShaders.h makes.
+		{
+			// Whether the compiler WORKS, not whether a callback was installed. LocateGlslang() is happy to
+			// hand back a bare "glslangValidator" for PATH to resolve, which it then does not - so every
+			// compile failed, every module came out empty, and an aggregate written on that basis would be
+			// all nulls. Probing with a trivial shader is what the cgcomp path below already does.
+			std::vector<std::uint32_t> probeWords;
+			std::vector<std::uint8_t> probeBytes;
+			String probeLog;
+			const bool spirvWorks = compileSpirv &&
+				compileSpirv("#version 450\nvoid main() { gl_Position = vec4(0.0); }"_s, true, probeWords, probeLog) &&
+				!probeWords.empty();
+			const bool dxbcWorks = compileDxbc &&
+				compileDxbc("float4 VSMain() : SV_Position { return 0; }"_s, true, probeBytes, probeLog) &&
+				!probeBytes.empty();
+
+			const struct {
+				const char* What; const char* Guard; const char* FileName;
+				const std::vector<std::pair<String, String>>* Bodies; bool Rebuildable; const char* Missing;
+			} aggregates[] = {
+				{ "Direct3D 11", "WITH_RHI_D3D11", "D3d11GeneratedShaders.h", &d3d11Bodies,
+					dxbcWorks, "no working DXBC compiler (D3DCompile is Windows-only)" },
+				{ "Vulkan", "WITH_RHI_VULKAN", "VulkanGeneratedShaders.h", &vulkanBodies,
+					spirvWorks, "no working glslang" }
+			};
+			for (const auto& aggregate : aggregates) {
+				String path = PathJoin(outputDirectory, aggregate.FileName);
+				// An aggregate that does not exist yet is written even with nothing to put in it: the
+				// per-shader headers include it unconditionally under the backend's guard, so a missing file
+				// is a build error rather than a missing optimisation. A null one at least links, and the
+				// backend reports the empty program itself. Only an EXISTING file is protected.
+				if (!aggregate.Rebuildable && PathIsFile(path.data())) {
+					std::fprintf(stdout, "skipped: %s (%s)\n", aggregate.FileName, aggregate.Missing);
+					continue;
+				}
+				if (!WriteStringToFile(path.data(), BuildBackendAggregate(aggregate.What, aggregate.Guard, *aggregate.Bodies))) {
+					std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
+					return 1;
+				}
+				writtenNames.emplace_back(aggregate.FileName);
+				std::fprintf(stdout, "ok: %s stage artifacts -> %s\n", aggregate.What, aggregate.FileName);
+			}
 		}
 
 		// The umbrella header (includes sorted by name, index arrays in shader order)
@@ -2105,6 +2643,30 @@ namespace
 			}
 			writtenNames.emplace_back("CgGeneratedShaders.h"_s);
 			std::fprintf(stdout, "ok: Cg stage sources -> CgGeneratedShaders.h\n");
+		}
+		{
+			// The PlayStation 3 header needs cgcomp, which only a machine with the PS3 toolchain and
+			// NVIDIA's Cg Toolkit has. Unlike the DXBC and SPIR-V fields - which degrade to nulls the
+			// backend falls back from - an empty microcode table would leave the RSX backend with no
+			// shaders at all and no way to make any, so a missing compiler SKIPS the file rather than
+			// rewriting it. The committed one then stays valid until someone who can regenerate it does.
+			String cgcompPath;
+			String probeLog;
+			std::vector<std::uint8_t> probeUcode;
+			const bool haveCgcomp = LocateCgcomp(cgcompOption, cgcompPath) &&
+				CompileRsxMicrocode(cgcompPath, "void main(out float4 p : POSITION) { p = 0; }"_s,
+					true, probeUcode, probeLog);
+			if (haveCgcomp) {
+				String path = PathJoin(outputDirectory, "RsxGeneratedShaders.h"_s);
+				if (RunEmitRsx(path.data(), cgcompPath, shadersDirectory, inputArgs.data(), inputCount) != 0) {
+					return 1;
+				}
+				writtenNames.emplace_back("RsxGeneratedShaders.h"_s);
+				std::fprintf(stdout, "ok: RSX microcode -> RsxGeneratedShaders.h\n");
+			} else {
+				std::fprintf(stdout, "skipped: RsxGeneratedShaders.h (cgcomp unavailable: %s)\n",
+					FirstLine(probeLog).data());
+			}
 		}
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
@@ -2207,7 +2769,8 @@ namespace
 
 		std::vector<String> writtenNames;
 		int result = GenerateAllArtifacts(shadersDirectory, shaderNames, outputDirectory, compileSpirv,
-			compileDxbc, writtenNames);
+			compileDxbc, (options.CgcompPath != nullptr ? StringView{options.CgcompPath} : StringView{}),
+			writtenNames);
 
 		if (!options.Check) {
 			if (result == 0) {
@@ -2284,7 +2847,7 @@ int main(int argc, char* argv[])
 		GenerateAllOptions options;
 		for (int i = 2; i < argc; i++) {
 			StringView arg = argv[i];
-			if (arg == "--shaders-dir" || arg == "--out-dir" || arg == "--glslang") {
+			if (arg == "--shaders-dir" || arg == "--out-dir" || arg == "--glslang" || arg == "--cgcomp") {
 				if (i + 1 >= argc) {
 					std::fprintf(stderr, "error: %s requires a path argument\n", arg.data());
 					return 2;
@@ -2294,6 +2857,8 @@ int main(int argc, char* argv[])
 					options.ShadersDirectory = value;
 				} else if (arg == "--out-dir") {
 					options.OutputDirectory = value;
+				} else if (arg == "--cgcomp") {
+					options.CgcompPath = value;
 				} else {
 					options.GlslangOverride = value;
 				}
@@ -2331,6 +2896,40 @@ int main(int argc, char* argv[])
 			return 2;
 		}
 		return RunEmitCg(argv[2], &argv[3], argc - 3);
+	}
+
+	// Standalone mode: transform every input shader's stages into Cg, compile each to NV40 microcode with
+	// cgcomp and write the aggregate "RsxGeneratedShaders.h" the PlayStation 3's RSX backend binds --- the
+	// console has no shader compiler, so this is the only place its shaders can be produced. Usage:
+	//   ShaderCompiler --emit-rsx <output.h> [--cgcomp <path>] [--shaders-dir <dir>] <input1.shader> ...
+	if (argc >= 2 && StringView(argv[1]) == "--emit-rsx") {
+		if (argc < 4) {
+			std::fprintf(stderr, "error: --emit-rsx requires <output.h> and at least one input .shader\n");
+			return 2;
+		}
+		StringView cgcompOption, shadersDirOption;
+		std::vector<char*> inputs;
+		for (int i = 3; i < argc; i++) {
+			if (StringView(argv[i]) == "--cgcomp" && i + 1 < argc) {
+				cgcompOption = StringView(argv[++i]);
+			} else if (StringView(argv[i]) == "--shaders-dir" && i + 1 < argc) {
+				shadersDirOption = StringView(argv[++i]);
+			} else {
+				inputs.push_back(argv[i]);
+			}
+		}
+		if (inputs.empty()) {
+			std::fprintf(stderr, "error: --emit-rsx requires at least one input .shader\n");
+			return 2;
+		}
+		// The built-in present shader is read relative to the shader directory, so it has to be resolved
+		// even when every input was named explicitly
+		String shadersDirectory{shadersDirOption};
+		if (shadersDirectory.empty() && !AutoDetectShadersDirectory(shadersDirectory)) {
+			std::fprintf(stderr, "error: cannot locate the shaders directory, pass --shaders-dir\n");
+			return 1;
+		}
+		return RunEmitRsx(argv[2], cgcompOption, shadersDirectory, inputs.data(), static_cast<int>(inputs.size()));
 	}
 
 	// Standalone mode: transpile every input shader's fixed_function block (once per program variant) to
@@ -2585,12 +3184,21 @@ int main(int argc, char* argv[])
 	}
 
 	String output;
-	if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, diag)) {
+	BackendArtifacts artifacts;
+	if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, artifacts, diag)) {
 		return ReportError(inputPath, diag);
 	}
 	if (!WriteStringToFile(outputPath, output)) {
 		std::fprintf(stderr, "error: cannot write output file \"%s\"\n", outputPath);
 		return 1;
+	}
+	// This mode emits ONE shader, so it cannot write the aggregates - they hold every shader's artifacts
+	// and rewriting them from one input would drop the rest. The header it just wrote references symbols
+	// the committed aggregates already define, so it only links against a matching pair; regenerating a
+	// shader whose stage artifacts changed means running --generate-all on a machine that can rebuild them.
+	if (!artifacts.D3d11.empty() || !artifacts.Vulkan.empty()) {
+		std::fprintf(stdout, "note: Direct3D 11 / Vulkan stage artifacts were not written "
+			"(they live in the aggregates, which only --generate-all produces)\n");
 	}
 	return 0;
 }

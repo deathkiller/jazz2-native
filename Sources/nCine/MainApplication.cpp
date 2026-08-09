@@ -26,6 +26,9 @@
 #elif defined(WITH_PS2)
 #	include "Backends/Ps2/Ps2GfxDevice.h"
 #	include "Backends/Ps2/Ps2InputManager.h"
+#elif defined(WITH_PS3)
+#	include "Backends/Ps3/Ps3GfxDevice.h"
+#	include "Backends/Ps3/Ps3InputManager.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -59,6 +62,7 @@ extern "C" {
 #	include <sifrpc.h>
 #	include <loadfile.h>
 #	include <libcdvd.h>
+#	include <libmc.h>
 }
 #	include <cstdio>
 #elif defined(DEATH_TARGET_UNIX)
@@ -74,12 +78,30 @@ extern "C" {
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3)
 using namespace nCine::Backends;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
+#endif
+
+#if defined(DEATH_TARGET_PS2)
+/**
+	@brief Writes a line straight to the EE's serial port
+
+	The PlayStation 2 arm of Application::Init() brings up the I/O stack before anything else exists,
+	including the trace system, so its results have nowhere to go through the ordinary channels. This is the
+	same port Application::OnTraceReceived writes to once tracing is up, which is what an emulator shows in
+	its console and what a serial cable carries on real hardware.
+*/
+static void earlyPrintPs2(const char* text)
+{
+	volatile std::uint8_t* const sioTx = reinterpret_cast<volatile std::uint8_t*>(0x1000F180);
+	for (const char* c = text; *c != '\0'; c++) {
+		*sioTx = std::uint8_t(*c);
+	}
+}
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -287,21 +309,33 @@ namespace nCine
 			static const char* const ps2Modules[] = {
 				"cdrom0:\\CDFS.IRX;1"
 			};
-			// This runs before the trace system exists, so the results go straight to the EE's serial port -
-			// the same channel Application::OnTraceReceived uses once tracing is up
-			const auto earlyPrint = [](const char* text) {
-				volatile std::uint8_t* const sioTx = reinterpret_cast<volatile std::uint8_t*>(0x1000F180);
-				for (const char* c = text; *c != '\0'; c++) {
-					*sioTx = std::uint8_t(*c);
-				}
-			};
 			for (const char* modulePath : ps2Modules) {
 				const int moduleId = SifLoadModule(modulePath, 0, nullptr);
 				char message[160];
 				std::snprintf(message, sizeof(message), "[ps2] SifLoadModule(\"%s\") = %d\n", modulePath, moduleId);
-				earlyPrint(message);
+				earlyPrintPs2(message);
 			}
 		}
+
+		// The memory card is the only writable storage on this console, and once its IOP side is up it is an
+		// ordinary path: MCMAN registers a "mc" device with the SAME original `ioman` the newlib port's
+		// open() reaches, exactly as cdfs does above, so "mc0:/..." needs no special-case I/O anywhere. It
+		// has to be brought up here rather than lazily, because PreferencesCache::Initialize() chooses the
+		// config path during pre-initialization, before any backend exists to do it.
+		//
+		// SIO2MAN drives the controller ports, which the memory cards and the pads both hang off, so it goes
+		// first - and it is loaded HERE ONLY. Ps2InputManager used to load it as well; a device driver that
+		// registers twice fails the second time, and which of the two got the working one depended on
+		// construction order.
+		SifLoadModule("rom0:SIO2MAN", 0, nullptr);
+		SifLoadModule("rom0:MCMAN", 0, nullptr);
+		SifLoadModule("rom0:MCSERV", 0, nullptr);
+
+		// Loading the modules is not enough to reach a card. `mcInit()` is libmc's handshake with MCSERV, and
+		// nothing - not even MCMAN's own ioman entry points - answers for a slot before it has been probed
+		// through that: an mkdir on a perfectly good card comes back ENOENT until then. The probe itself, and
+		// the choice of which slot to save on, belong to PreferencesCache and are done there.
+		mcInit(MC_TYPE_MC);
 #elif defined(DEATH_TARGET_PSP)
 		// The HOME button has to be answered by the application itself, so its callback goes up first -
 		// before anything can go wrong during initialization and leave the console with no way out
@@ -718,6 +752,9 @@ namespace nCine
 #elif defined(WITH_PS2)
 			_gfxDevice = std::make_unique<Ps2GfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<Ps2InputManager>();
+#elif defined(WITH_PS3)
+			_gfxDevice = std::make_unique<Ps3GfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<Ps3InputManager>();
 #endif
 			_gfxDevice->setWindowTitle(_appCfg.windowTitle.data());
 			if (!_appCfg.windowIconFilename.empty()) {
@@ -761,6 +798,11 @@ namespace nCine
 #elif defined(WITH_PS2)
 			// No window events on a console; polling the pad ports is the whole event pump
 			Ps2InputManager::updateJoystickStates();
+#elif defined(WITH_PS3)
+			// The one console here that DOES have window events: the XMB can ask the game to quit or tell it
+			// that the user opened the in-game menu, and those arrive on the sysutil callback queue that
+			// updateJoystickStates() drains alongside polling the pads
+			Ps3InputManager::updateJoystickStates();
 #endif
 		}
 

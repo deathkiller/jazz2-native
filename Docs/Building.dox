@@ -15,7 +15,7 @@ The project requires following tools and libraries to build it successfully:
     should work, **MinGW** and **Clang-CL** toolchains should be also supported
 -   **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 library @m_span{m-text m-dim} (alternatively **ANGLE**
     or **Mesa** translation library, not required with the software renderer or on the
-    @ref consoles "consoles that have a fixed-function rendering backend") @m_endspan
+    @ref consoles "consoles that drive their own graphics hardware directly") @m_endspan
 -   **GLEW** library @m_span{m-text m-dim} (required only on **Windows**) @m_endspan
 -   **GLFW** or **SDL2** library @m_span{m-text m-dim} (not required on **Android**, **UWP** and most
     @ref consoles "consoles", because these platforms use a different backend) @m_endspan
@@ -151,9 +151,9 @@ See @ref building-config-params-uwp for more details.
 
 @subsection building-consoles Building for consoles
 
-Six consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
+Eight consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
 The build is configured the same way as above, but every one of them also needs its toolchain
-installed, its own packaging step and, on four of them, a game content tree prepared in advance
+installed, its own packaging step and, on most of them, a game content tree prepared in advance
 with @ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
 
 Console | Toolchain | Details
@@ -163,6 +163,8 @@ Nintendo Wii | devkitPPC + libogc | @ref consoles-wii
 Nintendo GameCube | devkitPPC + libogc | @ref consoles-gamecube
 Nintendo Switch | devkitA64 | @ref consoles-switch
 PlayStation Portable | pspdev | @ref consoles-psp
+PlayStation 2 | ps2dev | @ref consoles-ps2
+PlayStation 3 | ps3toolchain + PSL1GHT | @ref consoles-ps3
 PlayStation Vita | VitaSDK | @ref consoles-vita
 
 @m_class{m-noindent}
@@ -202,11 +204,15 @@ The following parameters can be used to customize the build:
         - `D3D11` --- Uses Direct3D 11 (Windows only)
         - `Vulkan` --- Uses Vulkan
         - `GXM` --- Uses **sceGxm** directly (**PS Vita** only), see @ref consoles-vita
+        - `RSX` --- Uses **libgcm** directly (**PlayStation 3** only), see @ref consoles-ps3
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
         available on **PS Vita**
     -   Pinned to the console's only rendering backend on **Sega Dreamcast** (`PVR`), **Nintendo Wii**
-        and **Nintendo GameCube** (`GX`) and **PlayStation Portable** (`GU`), see @ref consoles
+        and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`), **PlayStation 2** (`GS`)
+        and **PlayStation 3** (`RSX`), see @ref consoles
+    -   `RSX` is the only one of those pins that is a **shader** backend --- the RSX is a programmable
+        part, so the PlayStation 3 keeps the post-processing chain the fixed-function consoles lose
 -   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
     -   Possible values:
         - `Core` --- OpenGL 3.3 core profile (GLSL 330, uniform buffer objects, `gl_VertexID`)
@@ -228,17 +234,20 @@ The following parameters can be used to customize the build:
     -   Only offered for the `Software` and `OpenGL` backends --- the consoles present through a format their
         hardware fixes, and 5/6/5 swap chains are not reliably available on D3D11/Vulkan
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
--   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten** and **PlayStation Portable**) --- Allow to use multiple threads for better performance
+-   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten**, **PlayStation Portable**, **PlayStation 2** and **PlayStation 3**) --- Allow to use multiple threads for better performance
     -   Multiplayer requires threads, so it's compiled out where they are unavailable
+    -   Each of the three PlayStation consoles is off for its own reason, none of them a configuration
+        choice --- see @ref consoles-psp-limits, @ref consoles-ps2-limits and @ref consoles-ps3-limits
 -   `NCINE_WITH_ANGLE` (default @cpp OFF @ce except on UWP) --- Enable Google **ANGLE** library support
 -   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library, only offered for `NCINE_RHI_GL_PROFILE=Core`
 -   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, Emscripten and UWP) --- Enable better exception handling
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable**) --- Enable module music audio file support, requires **libopenmpt** library
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable**, **PlayStation 2** and **PlayStation 3**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce) --- Download and compile **libopenmpt** library from source automatically
-    -   See @ref consoles-psp-limits for why it's disabled on **PlayStation Portable**
+    -   See @ref consoles-psp-limits, @ref consoles-ps2-limits and @ref consoles-ps3-limits for why
+        it's disabled on each of them --- the reasons are unrelated to each other
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce is enabled
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support

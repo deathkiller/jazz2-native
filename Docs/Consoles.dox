@@ -8,10 +8,11 @@ namespace Death {
 
 @m_class{m-noindent}
 
-Beside the desktop and mobile platforms the game runs on six consoles. Each of them is
+Beside the desktop and mobile platforms the game runs on eight consoles. Each of them is
 cross-compiled with its own SDK, most of them have a bespoke window/input backend instead of **SDL2**
-or **GLFW**, and four of them have no programmable shaders at all --- so they are driven by
-one of four rendering backends written for their fixed-function graphics hardware. This page covers the
+or **GLFW**, and five of them have no programmable shaders at all --- so they are driven by
+one of four rendering backends written for their fixed-function graphics hardware
+@m_span{m-text m-dim} (the Wii and the GameCube share one) @m_endspan. This page covers the
 whole path for each one: installing the toolchain, configuring the build, packaging the result,
 copying it to the device and getting a log back out of it. For everything that is not
 console-specific see @ref building "Building the project".
@@ -21,6 +22,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
 @ref consoles-ps2 "PlayStation 2" | ps2dev @m_span{m-text m-dim} (`ps2dev.cmake`) @m_endspan | `GS` --- fixed-function | `Ps2` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan
+@ref consoles-ps3 "PlayStation 3" | ps3toolchain + PSL1GHT @m_span{m-text m-dim} (`cmake/toolchains/ps3dev.cmake`) @m_endspan | `RSX` @m_span{m-text m-dim} (native libgcm, **shaders**) @m_endspan | `Ps3` | `jazz2.pkg` @m_span{m-text m-dim} (and an unsigned `jazz2.self`) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-vita "PlayStation Vita" | VitaSDK @m_span{m-text m-dim} (`vita.toolchain.cmake`) @m_endspan | `GXM` @m_span{m-text m-dim} (native sceGxm, the default) @m_endspan, `OpenGL` via **vitaGL** @m_span{m-text m-dim} (ES 2.0 profile) @m_endspan or `Software` | SDL2 | `jazz2.vpk`
@@ -28,10 +30,13 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 
 @m_class{m-noindent}
 
-The rendering backend is not a choice on the first five --- `NCINE_PREFERRED_RHI` is pinned to the
-one backend the console has and any other value is a configure error. The PS Vita and the Switch are
-ordinary shader platforms that happen to be consoles, so most of what follows applies to them only
-in the deployment part.
+The rendering backend is not a choice on the first six --- `NCINE_PREFERRED_RHI` is pinned to the
+one backend the console has and any other value is a configure error. The PlayStation 3 is the
+exception among them: its pin is to `RSX`, which unlike the four fixed-function backends is a full
+shader backend, so it keeps the post-processing chain and differs from a desktop build mainly in
+*when* its shaders are compiled @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita
+and the Switch are ordinary shader platforms that happen to be consoles, so most of what follows
+applies to them only in the deployment part.
 
 @section consoles-common What every console build shares
 
@@ -82,12 +87,20 @@ Console | Content directory the game reads | Cache / save data
 ------- | -------------------------------- | -----------------
 Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
+PlayStation 2 | @cpp "cdfs:/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "cdfs:/Cache/" @ce --- read-only, and nothing is staged there
+PlayStation 3 | @cpp "/app_home/Content/" @ce @m_span{m-text m-dim} (next to the `EBOOT.BIN`, see below) @m_endspan | @cpp "/dev_hdd0/game/JAZZ20000/USRDIR/Cache/" @ce --- writable
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
 GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
 PS Vita | @cpp "app0:/Content/" @ce @m_span{m-text m-dim} (inside the VPK) @m_endspan | @cpp "ux0:/data/jazz2/Cache/" @ce
 Switch | @cpp "romfs:/" @ce @m_span{m-text m-dim} (embedded in the `.nro`) @m_endspan | @cpp "sdmc:/Games/Jazz2/Cache/" @ce
 
 @m_class{m-noindent}
+
+@cpp "/app_home" @ce on the PlayStation 3 is the alias the loader maps the **running executable's own
+directory** to, which is `USRDIR` rather than the package root. Going through it rather than through
+the title's real path means the same build runs both as an installed package and straight out of the
+staged package directory, which is how RPCS3 boots the build tree --- and the application id can
+change without any path following it.
 
 What marks the tree as prepared is the package the tool writes its sprites and sounds into: a
 prepared tree gets @cpp "Prebaked.pak" @ce, where a cache the game converted itself keeps
@@ -113,19 +126,19 @@ pulling changes that touch the data formats, regenerate the tree with a freshly 
 Everything below is decided at configure time from the platform, not from a build parameter. The
 values are what a default `Release` configuration of each console produces.
 
-Feature | Dreamcast | PSP | PS2 | Wii | GameCube | Vita | Switch
-------- | --------- | --- | --- | --- | -------- | ---- | ------
-Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | **No** | **No** | Yes | Yes | Yes | Yes
-Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No
-Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
-Sound effects | Yes | Yes | **No** | Yes | Yes | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes | Yes | SDK-dependent | SDK-dependent
-Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | SDK-dependent | Yes
-Local splitscreen | Yes | **No** --- needs threads | **No** --- needs threads | Yes | Yes | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | **No** | Yes | Yes
-Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | Yes | Yes
-External `.shader` files | **No** | **No** | **No** | **No** | **No** | Yes | Yes
-Converts the game data itself | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Feature | Dreamcast | PSP | PS2 | PS3 | Wii | GameCube | Vita | Switch
+------- | --------- | --- | --- | --- | --- | -------- | ---- | ------
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | **No** | **No** | **No** | Yes | Yes | Yes | Yes
+Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No
+Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | Yes | Yes | **No** | Yes | Yes | Yes | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps3-limits) @m_endspan | Yes | Yes | SDK-dependent | SDK-dependent
+Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | SDK-dependent | Yes
+Local splitscreen | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes | Yes | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | **No** --- fixed-function | **No** --- fixed-function | Yes | Yes
+External `.shader` files | **No** | **No** | **No** | **No** --- no runtime compiler | **No** | **No** | Yes | Yes
+Converts the game data itself | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
 
 @subsection consoles-common-audio Audio backends
 
@@ -143,7 +156,8 @@ Backend | `WITH_*` | What it drives
 @ref nCine::ALAudioDevice "AL" | `WITH_OPENAL` | The system OpenAL on desktop, and the SDK's own on the PSP, Switch and Vita
 @ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer, the only sound API devkitPro ships for PowerPC. Comes with the toolchain, so there is nothing to install
 @ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS, using its wavetable channels for sound effects and its `snd_stream` driver for music
-@ref nCine::NullAudioDevice "none" | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
+@ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio. The console offers no mixer at all --- only a ring of 256-sample blocks of interleaved floats that the hardware scans out --- so this backend **is** the mixer, on the PPE
+none | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
 
 Nothing has to be installed by hand for any of them --- each console's own SDK provides what its
 backend needs. `NCINE_WITH_AUDIO` is left at @cpp ON @ce everywhere and turns the whole subsystem
@@ -159,6 +173,19 @@ internal null buffer instead of detaching, @cpp "alSourcef(AL_GAIN)" @ce is stor
 applied so no volume setting has any effect, and its mixing thread sleeps ten milliseconds per live
 source while holding the context lock. Talking to the AICA through KallistiOS directly is both less
 code on our side and considerably better behaved.
+
+@m_class{m-block m-info}
+
+@par Why the PlayStation 3 mixes in software
+The other consoles all have something to hand a sound to: the Dreamcast has 64 wavetable channels, the
+Wii and GameCube have libogc's DSP mixer, the PSP has an OpenAL. lv2 gives a title one output ring and
+nothing else --- no voices, no per-source volume or pitch register --- so resampling, panning, looping
+and the streaming queues are all @ref nCine::Ps3AudioDevice on the PPE. Two consequences are worth
+knowing when reading it: the ring is topped up from `updatePlayers()` once per frame rather than from
+a callback @m_span{m-text m-dim} (PSL1GHT ships no threads, so there is no mixer thread to run one)
+@m_endspan, which is why it is deliberately long enough to survive a late frame; and the mix is
+**clamped** before it is written, because the hardware folds an out-of-range sample into the opposite
+polarity, which sounds far worse than clipping.
 
 @m_class{m-block m-info}
 
@@ -179,6 +206,8 @@ Console | Where the trace goes
 ------- | --------------------
 Dreamcast | `dbgio` --- the **framebuffer console** during startup @m_span{m-text m-dim} (visible on screen) @m_endspan, then the **SCIF serial port** once the renderer takes over. Emulators print it to their own log, `dc-tool` shows it in its console
 PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console, plus the **debug screen** on the display until the GU session takes the framebuffer over
+PlayStation 2 | The Emotion Engine's **SIO transmit register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan --- a bare ELF has no connected stdout. **PCSX2** captures it as EE console output with `EnableEEConsole` on, and a serial cable picks it up on hardware
+PlayStation 3 | `sysTtyWrite` --- PSL1GHT routes fd 1 and 2 straight to that lv2 syscall, so an ordinary write reaches the console TTY on hardware and **RPCS3**'s log in the emulator. No cable and no on-screen fallback are needed
 Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup, without the adapter nothing is written and the game runs normally
 PS Vita | `sceClibPrintf` --- picked up by the usual host-side console tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
 Switch | `svcOutputDebugString` --- picked up by a debug logger on the host, writing the trace to a file on the SD card is forced on this platform as well
@@ -482,9 +511,9 @@ cmake --build build/ps2 -j$(nproc)
 The toolchain file defines `PLATFORM_PS2`, from which `NCINE_PREFERRED_RHI` is pinned to `GS`. The
 build produces a stripped `jazz2.elf` and stages a bootable `jazz2.iso` around it: `SYSTEM.CNF`
 @m_span{m-text m-dim} (`BOOT2 = cdrom0:\JAZZ2.ELF;1`, `VMODE = NTSC`) @m_endspan, the ELF as
-`JAZZ2.ELF`, `CDFS.IRX` from the SDK, and the content tree as **both** `Content/` and `Cache/` ---
-@ref nCine::ContentResolver "ContentResolver" reads prebaked assets from the cache root and packed
-content from the content root, so a read-only disc has to carry it twice.
+`JAZZ2.ELF`, `CDFS.IRX` from the SDK, and the content tree as `Content/`, whose `Source.pak` is
+renamed to `Prebaked.pak` on the way in so the game recognizes it as a prepared tree. Nothing is
+staged into `Cache/`: a prepared tree needs none, and the disc is read-only anyway.
 
 @subsection consoles-ps2-deploy Deploying and running
 
@@ -529,6 +558,205 @@ exists.
     @m_span{m-text m-dim} (which the GS reaches through a white-RGB CLUT --- see
     @cpp GsDevice::AcquireCoverageClutForOffset() @ce) @m_endspan and the
     `MODULATE_X2`/`MODULATE_X4` presets are rejected for this target.
+
+- - -
+
+@section consoles-ps3 PlayStation 3
+
+A 3.2 GHz Cell "PPE" with **256 MB of XDR** main memory, and an RSX --- an NVIDIA NV47 --- with
+**256 MB of GDDR3** of its own. The port renders through the `RSX` backend
+@m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/RSX" @ce) @m_endspan, presented by the `Ps3`
+window backend at whatever mode the attached display accepts.
+
+This is the odd one out among the console ports. The RSX is a fully **programmable** part, so despite
+being a console backend it belongs with `GXM` and the desktop backends rather than with the
+fixed-function `PVR`/`GX`/`GU`/`GS` tier: it advertises shaders and off-screen render targets, runs
+the whole bloom / lighting / combine / rescale chain, and consumes none of the transpiled
+`fixed_function` effect tables. What separates it from the PS Vita --- which wants the same Cg --- is
+only *when* the shaders are compiled. The Vita has SceShaccCg on the console; the PS3 has no runtime
+shader compiler at all, so the same Cg is compiled to NV40 microcode **offline** and embedded in the
+executable, the arrangement the Vulkan backend uses for its SPIR-V.
+
+@subsection consoles-ps3-toolchain Toolchain
+
+Two pieces are needed, plus one that is not part of either.
+
+-   **ps3toolchain** provides the `powerpc64-ps3-elf` compilers. Building them from source takes
+    hours; the project's nightly releases ship a prebuilt `ps3dev-linux-X64.tar.gz` that only has to
+    be unpacked.
+-   **PSL1GHT** is the SDK proper --- librsx, libgcm_sys, libio, libaudio, libsysutil --- and the
+    host tools the packaging step runs @m_span{m-text m-dim} (`fself`, `make_self_npdrm`, `sfo`,
+    `pkg`, `sprxlinker`, and `cgcomp`) @m_endspan. It is built from source by step 8 of ps3toolchain,
+    which takes a few minutes.
+-   **NVIDIA's Cg Toolkit** is needed only to *regenerate* the shader table, not to build the game:
+    `cgcomp` is a thin front end over `libCg.so` and does nothing without it. See
+    @ref consoles-ps3-shaders.
+
+@code{.sh}
+export PS3DEV=<prefix>          # e.g. ~/sdk/ps3dev
+export PSL1GHT=$PS3DEV/psl1ght
+export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH
+
+# Prebuilt compilers
+curl -L -o ps3dev.tar.gz https://github.com/ps3dev/ps3toolchain/releases/download/<nightly>/ps3dev-linux-X64.tar.gz
+tar xzf ps3dev.tar.gz -C $(dirname $PS3DEV)
+
+# PSL1GHT and the host tools (step 8), then the portlibs (step 9)
+git clone --depth 1 https://github.com/ps3dev/ps3toolchain
+cd ps3toolchain && ./toolchain.sh 8 9
+@endcode
+
+@m_class{m-block m-warning}
+
+@par ppu-gcc reads $PSL1GHT itself
+The compiler driver fails outright with "environment variable 'PSL1GHT' not defined" if it is unset,
+so it has to be in the *environment* of every compile and not merely a CMake variable. The toolchain
+file exports both it and `PS3DEV` for the configure step and CMake's own compiler probes;
+`BuildPs3.sh` exports them for the build, because the build commands inherit the environment of
+`cmake --build`.
+
+@m_class{m-block m-info}
+
+@par Step 9 is worth running even though it is slow
+It builds the portlibs, of which **zlib** is a hard requirement --- without it
+@ref Death::IO::Compression::DeflateStream "DeflateStream" has no implementation and the game's
+compatibility layer does not link. It also brings **libogg** and **libvorbis**. It needs `libtool` on
+the host, which is the one dependency ps3toolchain does not check for.
+
+@subsection consoles-ps3-build Building
+
+@code{.sh}
+./BuildPs3.sh
+@endcode
+
+@m_class{m-noindent}
+
+The script exports the environment described above, validates that the compiler and PSL1GHT are where
+it expects, and configures with the project's own toolchain file. Doing it by hand is the same three
+lines:
+
+@code{.sh}
+cmake -S . -B build/ps3 -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/ps3dev.cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DNCINE_CONTENT_DIR=<path to the console content tree>
+cmake --build build/ps3 -j$(nproc)
+@endcode
+
+@m_class{m-block m-info}
+
+@par The toolchain file lives with the project
+Every other console points `CMAKE_TOOLCHAIN_FILE` at a file inside its SDK. PSL1GHT is purely
+Makefile-based @m_span{m-text m-dim} (`$PSL1GHT/ppu_rules`) @m_endspan and ships no CMake support at
+all, so @cpp "cmake/toolchains/ps3dev.cmake" @ce is the project's own. It reproduces what those rules
+set up: the cross compilers, the PSL1GHT include and library paths, and the machine flags the SDK
+builds its own libraries with.
+
+The toolchain file defines `PLATFORM_PS3`, from which `NCINE_PREFERRED_RHI` is pinned to `RSX`. The
+build produces `jazz2.elf`, then stages a package tree around a stripped copy of it: `sprxlinker`
+rewrites the PRX import stubs, `make_self_npdrm` wraps the result as the `EBOOT.BIN` a package boots
+from, `fself` produces an unsigned `jazz2.self` that RPCS3 and a CFW console will also run straight
+from disk, and `sfo` writes the `PARAM.SFO` carrying the title and the application id
+@m_span{m-text m-dim} (`JAZZ20000`) @m_endspan. The content tree is copied to `USRDIR/Content` with
+its `Source.pak` renamed to `Prebaked.pak`, and `pkg` wraps the whole tree into `jazz2.pkg`.
+
+The application id is not written down anywhere --- it is derived from the application name, padded
+with zeroes to the nine characters the firmware demands and uppercased, exactly as the PS Vita title
+id is derived @m_span{m-text m-dim} (see @ref consoles-vita) @m_endspan. The content id, `PARAM.SFO`
+and the writable path the game uses at runtime all follow from that one value, so they cannot drift
+apart. Configure with `-DPS3_APPID=<id>` to override it; a value that is not four letters followed by
+five digits fails configuration rather than producing a package the firmware would reject.
+
+@subsection consoles-ps3-shaders Shaders are compiled offline
+
+There is no shader compiler on the console, so the microcode is generated ahead of time and
+committed, exactly as the other generated shader headers are:
+
+@code{.sh}
+PS3DEV=<prefix> LD_LIBRARY_PATH=<Cg toolkit>/usr/lib64 \
+    ./build/Sources/Utilities/ShaderCompiler/ShaderCompiler --generate-all
+@endcode
+
+@m_class{m-noindent}
+
+It is a mode of @ref shader-compiler "ShaderCompiler" like every other generated artifact ---
+`--emit-rsx`, which `--generate-all` runs when it can find `cgcomp`. The tool emits the very same Cg
+it produces for the PS Vita, because the two consoles want the same language, and only caps
+`BATCH_SIZE` to what the RSX's constant registers hold before compiling each stage with the
+`vp40`/`fp40` profiles. `cgcomp` is found through `$PS3DEV/bin` or `PATH`, or named with `--cgcomp`;
+it needs NVIDIA's Cg Toolkit on the library path, which is what `LD_LIBRARY_PATH` above supplies.
+
+On a machine without `cgcomp`, `--generate-all` reports @cpp "skipped: RsxGeneratedShaders.h" @ce and
+leaves the committed header alone rather than emptying it --- so a regeneration elsewhere cannot
+silently strip the console of its shaders. Commit the result; the console build never invokes
+`cgcomp`, so neither the PS3 toolchain nor the Cg Toolkit is a build dependency.
+
+A stage the profiles reject is reported and left out of the table. The backend then fails that one
+program at load time with a message naming the variant, rather than mis-rendering silently; see
+@ref consoles-ps3-limits for which ones those currently are.
+
+@subsection consoles-ps3-deploy Deploying and running
+
+Install `jazz2.pkg` on a console with custom firmware, or run the staged tree directly:
+
+@code{.sh}
+rpcs3 --no-gui build/ps3/pkg/USRDIR/EBOOT.BIN
+@endcode
+
+@m_class{m-noindent}
+
+RPCS3 needs the PlayStation 3 firmware installed once @m_span{m-text m-dim} (**File &rarr; Install
+Firmware**, or `--installfw` with the `PS3UPDAT.PUP` Sony publishes) @m_endspan; without it the
+emulator stops at "Missing Firmware" before the title starts. Booting the `EBOOT.BIN` in place is
+what makes `/app_home` resolve to `USRDIR`, so the staged content is found with no install step.
+
+@m_class{m-block m-warning}
+
+@par Headless runs are not representative
+`--headless` suppresses the window, and with it the flip timing the emulator's RSX thread paces
+itself against. Its FIFO watchdog then fires after a while with "Dead FIFO commands queue state has
+been detected" on a title that is behaving perfectly. It is still the convenient way to capture a
+log; just do not read that particular message as a fault in the game. A host with no GPU
+@m_span{m-text m-dim} (software Vulkan through **llvmpipe**) @m_endspan or one under memory pressure
+provokes the same thing.
+
+@subsection consoles-ps3-limits Limits and known issues
+
+-   **Threads are off.** Unlike the PSP and the PS2, which at least ship a pthreads shim, PSL1GHT has
+    none: the newlib installs a `<pthread.h>` that declares symbols nothing implements, so
+    `pthread_create` does not even link. Threading here means lv2's own PPU threads
+    @m_span{m-text m-dim} (`sysThreadCreate`, `sys/mutex.h`, `sys/cond.h`) @m_endspan, which would be
+    a new backend in @cpp "Thread.cpp" @ce rather than a configuration change. Multiplayer
+    @m_span{m-text m-dim} (including local splitscreen) @m_endspan is therefore compiled out and
+    asset loading is synchronous.
+-   **Module music is off**, so the game has sound effects but no soundtrack --- which on this game
+    means no music at all, since every track is a `.j2b` module. libopenmpt compiles for this
+    toolchain once the C99 maths gap is papered over @m_span{m-text m-dim} (see below) @m_endspan but
+    then wants `std::mutex`, which a libstdc++ built without gthread support does not have. The
+    library *has* a single-threaded mode, but `mpt/base/detect_quirks.hpp` defines
+    `MPT_PLATFORM_MULTITHREADED` to 1 unconditionally and only un-defines it for a hardcoded list of
+    platforms, so no `-D` can select it. Adding the PS3 to that list upstream is a two-line change
+    and would turn the music on.
+-   **Three rescale filters have no microcode**: `ResizeCleanEdge` needs 92 temporary registers where
+    `fp40` has 64, `ResizeSabr` needs a ninth `TEXCOORD` output, and `ResizeMonochrome` indexes an
+    array the profile only allows indexing for texture coordinates. The other 58 program variants
+    compile. Each of the three reports itself at load time.
+-   **The batch is 32 sprites**, against 585 on a platform with uniform buffers. A batched instance
+    array reaches the vertex program through its constant registers --- there is no buffer to bind ---
+    and the `vp40` profile allows a program 544 of them. Measured against the batched shaders they
+    stop compiling somewhere above 40 instances, so 32 is the value they all accept with margin.
+-   The three resize filters aside, nothing else is knowingly unimplemented; the port has not had the
+    testing on real hardware that the older consoles have.
+
+@m_class{m-block m-info}
+
+@par What the toolchain's libstdc++ is missing
+`powerpc64-ps3-elf` was configured with `_GLIBCXX_USE_C99_MATH_TR1` undefined, so `<cmath>` declares
+none of the C99 maths functions in `std::` even though newlib provides them globally. Defining that
+macro is not the fix --- it also drags in the `long double` variants this newlib does not have, and
+`<cmath>` then fails to compile at all. @cpp "cmake/toolchains/ps3-libstdc++-c99.h" @ce pulls in the
+names one by one and is **force-included into every translation unit** by the toolchain file, so that
+third-party sources the build only fetches are covered too. It is a property of the compiler that was
+installed rather than of anything in this project, which is why it lives with the toolchain.
 
 - - -
 
@@ -612,7 +840,7 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
     CPU time is the limit; that is also the source count the engine advertises, well below the 64 it
     uses on desktop. Panning and distance attenuation are computed on the CPU and folded into the
     per-voice volume, because ASND has no notion of a listener --- see
-    @ref nCine::AsndAudioDevice::computeVolume.
+    @cpp AsndAudioDevice::computeVolume() @ce.
 -   ASND holds only two buffers per voice @m_span{m-text m-dim} (one playing, one queued) @m_endspan
     where a streaming player expects an OpenAL-style queue, so the queue itself is kept in the
     backend and fed into the voice one buffer at a time from
@@ -830,12 +1058,17 @@ Workflow | Container image | Artifact
 -------- | --------------- | --------
 `dreamcast.yml` | `pcercuei/dreamcast-toolchain` @m_span{m-text m-dim} (compilers only --- KOS, kos-ports and mkdcdisc are built in the job and cached) @m_endspan | `Jazz2.cdi` + `Jazz2.elf`
 `psp.yml` | `pspdev/pspdev` | the `ms0/` memory-stick tree with `EBOOT.PBP`
+`ps2.yml` | `ps2dev/ps2dev` | `Jazz2.iso` + `Jazz2.elf` @m_span{m-text m-dim} (the bare ELF because PCSX2 boots one with `-elf`) @m_endspan
 `wii.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `apps/Jazz2/boot.dol`
 `gamecube.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `Jazz2/Jazz2.dol`
 `vita.yml` | `vitasdk/vitasdk` | `Jazz2.vpk`
 `switch.yml` | `devkitpro/devkita64` | `Jazz2.nro`
 
 @m_class{m-noindent}
+
+The PlayStation 3 has **no workflow yet**. Unlike every other console here it has no official SDK
+container image to build inside, and the prebuilt compilers plus a PSL1GHT built from source are a
+larger setup step than the others need; @ref consoles-ps3-toolchain describes doing it by hand.
 
 The KallistiOS, kos-ports and mkdcdisc revisions in `dreamcast.yml` are **pinned to specific
 commits** and their build output is cached against those commits: an unpinned clone of KOS master
@@ -874,6 +1107,18 @@ boot into the main menu and need a content tree prepared as described in
 -   **Sound effects are noise on the Wii or GameCube.** The buffer formats are native-endian, so a
     reader that emits little-endian samples on a big-endian console produces exactly this, see
     @ref consoles-common-audio.
+-   **"Dead FIFO commands queue state" in RPCS3.** Most often the emulator rather than the game ---
+    a headless run, a host with no GPU or one that is swapping all provoke it, see
+    @ref consoles-ps3-deploy. When it is genuine it usually means memory the GPU is still reading was
+    reused, or the command ring wrapped without being flushed.
+-   **A shader reports "has no compiled RSX microcode" on the PlayStation 3.** That variant was
+    rejected by the `vp40`/`fp40` profiles when the table was generated, which is a build-time fact
+    and not something that can change on the console, see @ref consoles-ps3-limits.
+-   **`ppu-gcc` refuses to run**, with "environment variable 'PSL1GHT' not defined". It reads that
+    variable itself, so it has to be exported in the shell that runs the build, see
+    @ref consoles-ps3-toolchain.
+-   **The PlayStation 3 build does not link**, with `DeflateStream` unresolved. The portlibs were not
+    built --- zlib is a hard requirement, see @ref consoles-ps3-toolchain.
 
 */
 

@@ -162,12 +162,11 @@ namespace nCine::Backends
 	{
 		_joyMapping.Init(this);
 
-		// The pad libraries live in IRX modules; without them padInit() has nothing to talk to. Both are in
-		// ROM, so nothing has to be embedded in the ELF.
+		// The pad library lives in an IRX module; without it padInit() has nothing to talk to. It is in ROM,
+		// so nothing has to be embedded in the ELF. SIO2MAN - the controller-port driver PADMAN sits on top
+		// of - is deliberately NOT loaded here: MainApplication brings it up at startup because the memory
+		// card needs it too, and a device driver that registers a second time fails.
 		SifInitRpc(0);
-		if (SifLoadModule("rom0:SIO2MAN", 0, nullptr) < 0) {
-			LOGE("Cannot load rom0:SIO2MAN, gamepads will not work");
-		}
 		if (SifLoadModule("rom0:PADMAN", 0, nullptr) < 0) {
 			LOGE("Cannot load rom0:PADMAN, gamepads will not work");
 		}

@@ -126,6 +126,22 @@
 #include "GXM/GxmDevice.h"
 #include "GXM/GxmRhiCapabilities.h"
 
+#elif defined(WITH_RHI_RSX)
+
+#include "RSX/RsxDebug.h"
+#include "RSX/RsxShader.h"
+#include "RSX/RsxVram.h"
+#include "RSX/RsxBufferObject.h"
+#include "RSX/RsxTexture.h"
+#include "RSX/RsxVertexFormat.h"
+#include "RSX/RsxShaderTypes.h"
+#include "RSX/RsxUniformCache.h"
+#include "RSX/RsxShaderUniforms.h"
+#include "RSX/RsxShaderProgram.h"
+#include "RSX/RsxRenderTarget.h"
+#include "RSX/RsxDevice.h"
+#include "RSX/RsxRhiCapabilities.h"
+
 #elif defined(WITH_RHI_D3D11)
 
 #include "D3D11/D3D11Debug.h"

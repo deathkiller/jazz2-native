@@ -12,6 +12,9 @@
 #	endif
 #else
 #	include <time.h>		// for clock_gettime()
+#	if defined(DEATH_TARGET_PS3)
+#		include <sys/systime.h>	// lv2's clock, this newlib has no clock_gettime()
+#	endif
 #	include <sys/time.h>	// for gettimeofday()
 #endif
 
@@ -43,6 +46,11 @@ namespace nCine
 		mach_timebase_info(&info);
 		_frequency = (info.denom * 1.0e9L) / info.numer;
 #	endif
+#elif defined(DEATH_TARGET_PS3)
+		// The powerpc64-ps3-elf newlib defines _POSIX_TIMERS only for RTEMS, so there is no clock_getres()
+		// to ask; lv2's own clock reports nanoseconds and is always there, so the answer is known statically
+		_frequency = 1.0e9L;
+		_hasMonotonicClock = true;
 #else
 		struct timespec resolution;
 		if (clock_getres(CLOCK_MONOTONIC, &resolution) == 0) {
@@ -71,6 +79,10 @@ namespace nCine
 #	else
 		return mach_absolute_time();
 #	endif
+#elif defined(DEATH_TARGET_PS3)
+		std::uint64_t sec = 0, nsec = 0;
+		sysGetCurrentTime(&sec, &nsec);
+		return sec * static_cast<std::uint64_t>(_frequency) + nsec;
 #else
 		if (_hasMonotonicClock) {
 			struct timespec now;

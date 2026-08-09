@@ -22,6 +22,9 @@
 #include <utility>
 #include <mutex>
 
+// For PHMAP_HAVE_THREAD_SUPPORT, which decides whether the mutex-protected aliases below can be declared
+#include "phmap_config.h"
+
 #if defined(PHMAP_USE_ABSL_HASH) && !defined(ABSL_HASH_HASH_H_)
     namespace absl { template <class T> struct Hash; };
 #endif
@@ -131,6 +134,9 @@ namespace phmap {
     // -----------------------------------------------------------------------------
     // phmap::parallel_*_hash_* using std::mutex by default
     // -----------------------------------------------------------------------------
+#if PHMAP_HAVE_THREAD_SUPPORT
+    // The mutex-protected aliases name std::mutex directly, so they can only be declared where the
+    // standard library actually has one - see PHMAP_HAVE_THREAD_SUPPORT in phmap_config.h
     template <class T,
               class Hash  = phmap::priv::hash_default_hash<T>,
               class Eq    = phmap::priv::hash_default_eq<T>,
@@ -158,6 +164,7 @@ namespace phmap {
               class Alloc = phmap::priv::Allocator<phmap::priv::Pair<const K, V>>,
               size_t N     = 4>
     using parallel_node_hash_map_m = parallel_node_hash_map<K, V, Hash, Eq, Alloc, N, std::mutex>;
+#endif  // PHMAP_HAVE_THREAD_SUPPORT
 
     // ------------- forward declarations for btree containers ----------------------------------
     template <typename Key, typename Compare = phmap::Less<Key>,

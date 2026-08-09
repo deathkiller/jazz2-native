@@ -22,6 +22,8 @@
 #	define _i1a "\nPowerVR (fixed-function)"
 #elif defined(WITH_RHI_GU)
 #	define _i1a "\nGU (fixed-function)"
+#elif defined(WITH_RHI_RSX)
+#	define _i1a "\nRSX"
 #elif defined(RHI_GL_PROFILE_ES2)
 #	define _i1a "\nOpenGL│ES 2.0"
 #elif defined(RHI_GL_PROFILE_ES3)

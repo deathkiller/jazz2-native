@@ -261,7 +261,7 @@ namespace nCine::RHI::GX
 				FixedFunctionPass ice;
 				ice.Tev = FixedFunctionPass::TevPreset::LumaRamp;
 				ice.LumaGain = 2.6f;
-				Store(ice.Color, vec4(0.0f, 0.2f, 0.6f, 0.95f * t));
+				Store(ice.Color, vec4(0.0f, 0.2f, 0.6f, 0.8f * t));
 				Store(ice.OffsetColor, vec3(0.2f, 0.82f, 0.8f));
 				ice.HasOffsetColor = true;
 				ctx.SubmitQuad(ice);

@@ -95,6 +95,24 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GU")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation Portable (expected GU)")
 		endif()
+	elseif(PLATFORM_PS3)
+		# PlayStation 3 (the project's own cmake/toolchains/ps3dev.cmake toolchain file sets PLATFORM_PS3):
+		# the rendering backend is the native RSX one, driven by writing NV40 command packets into the GPU's
+		# FIFO through PSL1GHT's librsx/libgcm_sys, presented through the bespoke Ps3 window backend.
+		#
+		# Note where this sits relative to the other consoles. The RSX is an NV47 - a fully PROGRAMMABLE part
+		# with real vertex and fragment shaders - so despite being a console backend it belongs with GXM (and
+		# with OpenGL/D3D11/Vulkan) rather than with the fixed-function PVR/GX/GU/GS tier: it advertises
+		# RHI_CAP_SHADERS, runs the whole bloom / lighting / combine / rescale chain, and consumes no
+		# `fixed_function` effect tables at all. What differs from GXM is only WHEN the shaders are compiled:
+		# the Vita has SceShaccCg on the console, while the PS3 has no runtime shader compiler, so the same Cg
+		# the emitter already produces is compiled offline by cgcomp into RSX microcode and embedded in the
+		# executable - the arrangement the Vulkan backend uses for its SPIR-V.
+		set(NCINE_PREFERRED_RHI "RSX" CACHE STRING "Rendering backend on PlayStation 3: RSX")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "RSX")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "RSX")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation 3 (expected RSX)")
+		endif()
 	elseif(VITA)
 		# PS Vita (the VitaSDK toolchain sets VITA): three backends are possible. "GXM" drives the console's
 		# own graphics API (sceGxm) directly, which is the same idea as the PVR/GX/GU backends on the older
@@ -142,23 +160,20 @@ endif()
 
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
-elseif(PLATFORM_PSP)
-	# PlayStation Portable: pspdev does ship a pthreads implementation (pthread-embedded on top of the
-	# firmware's own threads), but the engine's threading layer wants more than the bare create/join -
-	# thread names, affinity and priorities, none of which map onto sceKernelCreateThread as they stand.
-	# The game is single-threaded everywhere those are unavailable (see the console arms in Thread.cpp),
-	# so it starts out that way here too rather than half-supported.
-	# TODO: Revisit once the engine's console threading arms cover the PSP; the Allegrex has a second core
-	# (the Media Engine) that a background asset loader could use.
-	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
-elseif(PLATFORM_PS2)
-	# PlayStation 2: PS2SDK ships libpthreadglue over the EE kernel's own threads and the engine links and
-	# runs against it, but a thread created through it does not appear to be scheduled - the asynchronous
-	# trace worker never drained its queue (DEATH_TRACE_ASYNC is excluded below for exactly that), and the
-	# content-verification thread never sets IsVerified, which leaves the game parked in its loading state
-	# with nothing to draw. Single-threaded is the honest configuration until that is understood.
-	# TODO: Find out whether this needs an explicit priority/stack setup through the EE kernel calls that
-	# pthreadglue does not expose, and revisit - the EE has cycles to spare for a background asset loader.
+elseif(PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
+	# The PlayStation consoles are single-threaded, each for its own reason, and none of them is a
+	# configuration change away from working:
+	#  - PSP: pspdev's pthread-embedded provides create/join, but not the thread names, affinity and
+	#    priorities the engine's threading layer expects of sceKernelCreateThread.
+	#  - PS2: the engine links against PS2SDK's libpthreadglue, but a thread created through it never
+	#    appears to be scheduled (the async trace worker never drained its queue - see the
+	#    DEATH_TRACE_ASYNC exclusion below - and the content verifier never set IsVerified, parking the
+	#    game in its loading state).
+	#  - PS3: PSL1GHT ships no pthreads at all. newlib installs a <pthread.h>, but nothing implements the
+	#    symbols, so `pthread_create` does not even link; threading means lv2's own PPU threads, which
+	#    would be a new backend in Thread.cpp and PosixThreadSync.cpp.
+	# TODO: All three have cycles to spare for a background asset loader - the Allegrex's Media Engine,
+	# the EE, and the Cell's second PPE thread (plus the six SPEs PSL1GHT exposes through libspurs).
 	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
 else()
 	option(NCINE_WITH_THREADS "Enable support for threads" ON)
@@ -290,29 +305,20 @@ cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward lib
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-if(PLATFORM_PSP)
-	# PlayStation Portable: sound effects work (see NCINE_WITH_AUDIO above - pspdev ships an OpenAL Soft
-	# whose output backend drives sceAudio), but the game's music is entirely tracker modules, and
-	# libopenmpt is not usable on this CPU yet. It does build for the platform and it does play - the
-	# soundtrack came out correctly in an emulator capture, and with the tuning in AudioLoaderMpt and
-	# AudioStream the steady-state cost is 0.2 FPS - but the FIRST module a process loads costs a fixed
-	# ~29 seconds inside the library (measured twice: 28.1 s when the intro loaded first, 29.8 s when the
-	# menu did, independent of which module it was), and every load after that only ~1.8 s. Something in
-	# there initialises once and does it at roughly 10000x the cost it has on a desktop, which points at
-	# the Allegrex having no double-precision unit; until that is found there is nowhere to hide a
-	# half-minute freeze on a handheld, so module music stays off.
-	# TODO: Either find that initialisation, or pre-render the modules to a streamable form offline (the
-	# AssetPacker already re-encodes cinematics for the Dreamcast, so it is the natural place for it).
-	# libmodplug, which pspdev does package, is not an alternative: its J2B loader is compiled out for want
-	# of zlib (`load_j2b.cpp.obj` in the archive is empty) so it cannot read one of the game's modules.
-	set(NCINE_WITH_OPENMPT OFF)
-elseif(PLATFORM_PS2)
-	# PlayStation 2: PS2SDK packages no libopenmpt either, and compiling it from sources does not get through
-	# the EE toolchain as it stands - `mpt/format/default_floatingpoint.hpp` calls `std::to_chars(char*, char*,
-	# const double&)`, which is ambiguous against newlib's overload set on GCC 15. Module music is therefore
-	# off for now, exactly as on the PSP and for a similarly external reason.
-	# TODO: Either patch that overload (the library only needs the shortest round-trip form) or take the same
-	# offline pre-render route the PSP note above proposes - the AssetPacker is the natural place for both.
+if(PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
+	# The game's music is entirely tracker modules, so these three consoles have sound effects and no
+	# soundtrack. Each is blocked by something outside the project:
+	#  - PSP: the library builds and plays correctly, but the FIRST module a process loads costs a fixed
+	#    ~29 s inside it (every later one ~1.8 s), which points at the Allegrex having no
+	#    double-precision unit. There is nowhere to hide that on a handheld.
+	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
+	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
+	#  - PS3: it compiles, then wants std::mutex, which PSL1GHT's gthread-less libstdc++ lacks. Its
+	#    single-threaded mode (MPT_MUTEX_NONE) is unreachable because `mpt/base/detect_quirks.hpp`
+	#    hardcodes MPT_PLATFORM_MULTITHREADED to 1 for everything not on its own platform list.
+	# TODO: The PS3 is a two-line upstream patch (add it to that list); the other two are open-ended, and
+	# the shared way out would be pre-rendering the modules offline - the AssetPacker already re-encodes
+	# cinematics for the Dreamcast, so it is the natural place for it.
 	set(NCINE_WITH_OPENMPT OFF)
 else()
 	cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)

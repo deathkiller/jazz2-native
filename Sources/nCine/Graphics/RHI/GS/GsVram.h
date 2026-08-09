@@ -74,17 +74,19 @@ namespace nCine::RHI::GS
 
 		@section GsVram-fragmentation Placement
 
-		Every request is rounded up to a power-of-two page count and placed at an address aligned to
-		`min(pageCount, PagesPerAlignment)` pages, lowest free run first. Aligning a power-of-two run to its
-		own size is what gives a buddy allocator its freedom from external fragmentation - a freed run always
-		recombines with its sibling into exactly the next size up - and doing it against a 512-bit page bitmap
-		gets the same guarantee without a tree, over a region whose length need not be a power of two. The
-		alignment is capped so that a texture larger than the cap is not forced into one of a handful of
-		addresses; runs that big are rare and the pages below them are already the coarsest allocations.
+		Every request takes **exactly** the pages it needs, placed in the shortest free run long enough to
+		hold it (best fit, lowest address first).
 
-		This is a good fit for the content because @ref Jazz2 sheets are power-of-two and (on the consoles)
-		8-bit indexed, so their page counts are powers of two to begin with: 128x64 is one page, 256x256 is
-		eight, 512x512 is thirty-two.
+		It used to round the request up to a power of two and align it to its own size, which buys a buddy
+		allocator's freedom from external fragmentation. That trade is wrong for a cache this small: the
+		rounding costs up to *twice* the pages a buffer actually needs, and the page counts it was assumed
+		to be free for - power-of-two sheets - are only half the content. The stores that are not
+		power-of-two are exactly the large ones, where the waste is measured in hundreds of kilobytes: a
+		640x448 `PSMCT32` cinematic frame is 140 pages and was rounded to 256, throwing away 928 KB of a
+		3.3 MB cache, and a level's own mix of sheets lost about a fifth of the window to the same rounding.
+		External fragmentation costs nothing like that here, because it is not fatal: a request that cannot
+		be placed makes the caller evict and retry (see @ref GsVram-residency), and best fit keeps the long
+		runs the big atlases need intact by consuming the short ones first.
 
 		@section GsVram-residency Residency
 
@@ -112,14 +114,6 @@ namespace nCine::RHI::GS
 		static constexpr std::int32_t BufferWidthUnit = 64;
 		/** @brief Bytes of one CLUT slot (256 entries of 32 bits) */
 		static constexpr std::uint32_t ClutSlotBytes = 1024;
-		/**
-			@brief Largest alignment, in pages, a run is placed at
-
-			32 pages is 256 KB, which is a 512x512 8-bit sheet - the largest the console asset profile emits.
-			Everything up to that keeps the full anti-fragmentation guarantee; a larger run only has to be
-			page-aligned like everything else.
-		*/
-		static constexpr std::uint32_t PagesPerAlignment = 32;
 
 		/** @brief Returned by the allocators when the request could not be placed */
 		static constexpr std::uint32_t InvalidPage = ~std::uint32_t(0);
@@ -172,10 +166,10 @@ namespace nCine::RHI::GS
 		static GsPsm GetDisplayPsm();
 
 		/**
-			@brief Allocates @p pageCount pages from the texture cache
+			@brief Allocates exactly @p pageCount pages from the texture cache
 
-			@p pageCount is rounded up to a power of two. Returns the first page, or @ref InvalidPage when
-			no run is free - the caller is expected to evict and retry rather than treat it as fatal.
+			Returns the first page, or @ref InvalidPage when no run that long is free - the caller is expected
+			to evict and retry rather than treat it as fatal.
 		*/
 		static std::uint32_t AllocatePages(std::uint32_t pageCount);
 		/** @brief Returns a run obtained from @ref AllocatePages() to the cache */
@@ -185,8 +179,10 @@ namespace nCine::RHI::GS
 			@brief Allocates pages from the render-target reserve
 
 			Kept apart from the texture cache so that a render target - which has no host copy and so cannot
-			be evicted and rebuilt - can never be crowded out by streaming textures, and so that failing to
-			place one is a configuration error visible at startup instead of a level-dependent surprise.
+			be evicted and rebuilt - can never be crowded out by streaming textures. A target that does not
+			fit here is not fatal either: @ref GsTexture::SetRenderTarget() falls back to the cache, where it
+			is still exempt from eviction. The reserve is what keeps the common case off the streaming
+			window, not a hard ceiling on render targets.
 		*/
 		static std::uint32_t AllocateReservedPages(std::uint32_t pageCount);
 		/** @brief Returns a run obtained from @ref AllocateReservedPages() */
@@ -212,6 +208,13 @@ namespace nCine::RHI::GS
 		/** @brief Returns the high-water mark of @ref GetUsedPageCount() */
 		static std::uint32_t GetPeakUsedPageCount();
 		/**
+			@brief Returns the length of the longest free run in the texture cache
+
+			The difference between this and `GetCachePageCount() - GetUsedPageCount()` is the fragmentation,
+			which is the number to look at when an allocation fails while the cache is not full.
+		*/
+		static std::uint32_t GetLargestFreeRun();
+		/**
 			@brief Returns how many allocations have failed since @ref Initialize()
 
 			The Dreamcast work used exactly this counter to tell a working set that fits from one that
@@ -223,12 +226,14 @@ namespace nCine::RHI::GS
 	private:
 		GsVram() = delete;
 
-		/** @brief Returns `true` when every page of the run is free */
-		static bool IsRangeFree(std::uint32_t firstPage, std::uint32_t pageCount);
+		/** @brief Returns `true` when the page is free */
+		static bool IsPageFree(std::uint32_t page);
 		/** @brief Marks every page of the run allocated or free */
 		static void MarkRange(std::uint32_t firstPage, std::uint32_t pageCount, bool used);
-		/** @brief Places a run inside an arbitrary page window, aligned to its own (capped) size */
+		/** @brief Places a run of exactly @p pageCount pages in the shortest free run of a page window that holds it */
 		static std::uint32_t AllocateWithin(std::uint32_t windowFirstPage, std::uint32_t windowPageCount, std::uint32_t pageCount);
+		/** @brief Returns the longest free run of a page window */
+		static std::uint32_t LargestFreeRunWithin(std::uint32_t windowFirstPage, std::uint32_t windowPageCount);
 
 		static constexpr std::uint32_t BitmapWords = TotalPages / 64;
 

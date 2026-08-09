@@ -306,6 +306,8 @@ namespace nCine::RHI::GS
 		std::uint32_t _page;
 		/** @brief Pages the store occupies (kept so it can be freed without recomputing) */
 		std::uint32_t _pageCount;
+		/** @brief Whether @ref _page came from the render-target reserve rather than the streaming cache */
+		bool _pageFromReserve;
 		GsPsm _psm;
 		/** @brief Buffer pitch of the store in texels (padded to the storage mode's page width) */
 		std::int32_t _bufferPitch;

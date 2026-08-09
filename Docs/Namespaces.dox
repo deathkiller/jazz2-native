@@ -113,8 +113,8 @@ See also @ref third-party for the licenses of the libraries used.
 
 	Exactly one backend is compiled into a binary, selected by a `WITH_RHI_*` macro (the OpenGL
 	family is the default). The render pipeline refers only to the backend-neutral aliases declared
-	here (e.g. @ref nCine::RHI::Device, @ref nCine::RHI::Texture), so each backend only has to provide
-	the same set of names with the same surface.
+	here (e.g. @cpp nCine::RHI::Device @ce, @cpp nCine::RHI::Texture @ce), so each backend only has to
+	provide the same set of names with the same surface.
 */
 /** @file nCine/Graphics/RHI/Rhi.h
 	@brief Definitions of the classes aliased in @ref nCine::RHI for the selected backend
@@ -197,6 +197,21 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace nCine::RHI::GU::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
+/** @dir nCine/Graphics/RHI/GS
+	@brief Namespace @ref nCine::RHI::GS
+*/
+/** @namespace nCine::RHI::GS
+	@brief PlayStation 2 fixed-function Graphics Synthesizer backend, selected by `WITH_RHI_GS`
+
+	Driven by writing GIF packets to the hardware directly, so there is no graphics library between
+	the engine and the GS. Render targets are available --- one is nothing but an address written into
+	`FRAME.FBP` --- but there is no programmable stage at all, so effects arrive as
+	@ref nCine::RHI::FixedFunctionPass. Its local memory is small enough to be the port's binding
+	constraint, which is why the backend has a suballocator of its own in @ref nCine::RHI::GS::GsVram.
+*/
+/** @namespace nCine::RHI::GS::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
 /** @dir nCine/Graphics/RHI/GXM
 	@brief Namespace @ref nCine::RHI::GXM
 */
@@ -209,6 +224,24 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace nCine::RHI::GXM::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/RSX
+	@brief Namespace @ref nCine::RHI::RSX
+*/
+/** @namespace nCine::RHI::RSX
+	@brief PlayStation 3 backend driving the RSX through libgcm natively, selected by `WITH_RHI_RSX`
+
+	The second console backend with real shaders, and like @ref nCine::RHI::GXM a full-pipeline one:
+	the RSX is an NV47, so the whole post-processing chain runs and no
+	@ref nCine::RHI::FixedFunctionPass is ever consumed. What separates it from the Vita is only when
+	its shaders are compiled --- the console has no compiler, so the same Cg the emitter produces there
+	arrives here as microcode compiled before it shipped.
+*/
+/** @namespace nCine::RHI::RSX::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @namespace nCine::RHI::RSX::RsxVram
+	@brief Suballocator for the two address windows the RSX reads --- local GDDR3 and mapped main memory
 */
 
 /** @dir Jazz2

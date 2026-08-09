@@ -135,9 +135,9 @@ namespace ShaderCompiler
 		{
 		public:
 			Emitter(Parser& parser, bool vertexStage, const StageReflection& reflection,
-					HlslEmitter::Dialect dialect = HlslEmitter::Dialect::Hlsl)
+					HlslEmitter::Dialect dialect = HlslEmitter::Dialect::Hlsl, std::int32_t maxBatchSize = 0)
 				: _p(parser), _vertexStage(vertexStage), _reflection(reflection),
-					_cg(dialect == HlslEmitter::Dialect::Cg)
+					_cg(dialect == HlslEmitter::Dialect::Cg), _maxBatchSize(maxBatchSize)
 			{
 				for (const StructDecl& s : _p.Structs) _structByName[s.Name] = &s;
 				for (const BlockDecl& b : _p.Blocks) {
@@ -260,6 +260,8 @@ namespace ShaderCompiler
 			const StageReflection& _reflection;
 			/** @brief Emitting the Cg dialect for the PS Vita's sceGxm backend rather than Direct3D 11 HLSL */
 			bool _cg;
+			/** @brief Upper bound on the emitted `BATCH_SIZE`, or 0 for the uniform-block budget alone */
+			std::int32_t _maxBatchSize;
 			bool _ok = true;
 			String _reason;
 			bool _hasSymbolicArray = false;
@@ -284,18 +286,21 @@ namespace ShaderCompiler
 
 			std::int32_t BatchSize() const
 			{
+				// An explicit cap replaces the uniform-block budget entirely rather than being applied on
+				// top of it: a target that asks for one has no uniform block for the budget to describe
+				const std::int32_t cap = (_maxBatchSize > 0 ? _maxBatchSize : 4096);
 				for (const BlockDecl& b : _p.Blocks) {
 					for (const Field& m : b.Members) {
 						if (!m.SymbolicArray) continue;
 						for (const BlockInfo& rb : _reflection.Blocks) {
 							if (rb.Name == b.Name && rb.InstanceStride > 0) {
 								std::int32_t n = static_cast<std::int32_t>(65536u / rb.InstanceStride);
-								return (n < 1 ? 1 : (n > 4096 ? 4096 : n));
+								return (n < 1 ? 1 : (n > cap ? cap : n));
 							}
 						}
 					}
 				}
-				return 512;		// safe default when the stride is not reflected
+				return (512 > cap ? cap : 512);		// safe default when the stride is not reflected
 			}
 
 			std::int32_t ReflectedUnit(StringView name, std::int32_t fallback) const
@@ -934,7 +939,7 @@ namespace ShaderCompiler
 	}
 
 	bool HlslEmitter::Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
-		String& out, Diagnostic& diag, Dialect dialect)
+		String& out, Diagnostic& diag, Dialect dialect, std::int32_t maxBatchSize)
 	{
 		const bool cg = (dialect == Dialect::Cg);
 		const StringView what = (cg ? "Cg emit: "_s : "HLSL emit: "_s);
@@ -975,7 +980,7 @@ namespace ShaderCompiler
 			diag.Line = 1;
 			return false;
 		}
-		Emitter emitter(parser, vertexStage, reflection, dialect);
+		Emitter emitter(parser, vertexStage, reflection, dialect, maxBatchSize);
 		String code = emitter.Emit();
 		if (!emitter.Ok()) {
 			diag.Message = what + emitter.Reason();

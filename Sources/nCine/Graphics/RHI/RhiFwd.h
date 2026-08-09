@@ -7,7 +7,7 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_GXM)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX)
 #	define WITH_RHI_GL
 #endif
 
@@ -597,6 +597,98 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::GXM::GxmDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_RSX)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The PlayStation
+// 3 backend drives the console's RSX through PSL1GHT's librsx/libgcm_sys, in the same spirit as the PVR/GX/GU/GS
+// backends of the older consoles - but the RSX is an NV47, a fully PROGRAMMABLE part with real vertex and
+// fragment shaders, so this is a full-pipeline backend like OpenGL, Direct3D 11 or GXM: both capabilities are
+// advertised and the whole bloom / lighting / combine / rescale chain runs.
+//
+// The one thing that separates it from GXM, which it otherwise mirrors closely, is where its shaders come from.
+// The Vita compiles the emitted Cg on the console through SceShaccCg; the PS3 has no runtime shader compiler at
+// all, so the very same Cg is compiled to NV40 microcode offline by cgcomp and embedded per program-variant -
+// the arrangement the Vulkan backend uses for its SPIR-V. A program whose Cg exceeded what the vp40/fp40
+// profiles can express therefore has no microcode to bind, which is a build-time fact rather than a runtime one
+// (see `RsxShaderProgram`).
+//
+// `RHI_CAP_STREAMING_TEXTURES` holds: RSX textures live in memory the PPE can address directly - either the
+// 256 MB of GDDR3 mapped through the GPU aperture or main XDR memory the GPU reads over the bus - so content
+// that is regenerated every frame (the cinematics) can be written straight into a texture's storage instead of
+// being copied through a staging buffer, exactly as on the PowerVR and the GE.
+#define RHI_CAP_SHADERS
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_STREAMING_TEXTURES
+
+namespace nCine::RHI::RSX
+{
+	class RsxDevice;
+	class RsxTexture;
+	class RsxBufferObject;
+	class RsxShader;
+	class RsxShaderProgram;
+	class RsxShaderUniforms;
+	class RsxShaderUniformBlocks;
+	class RsxUniform;
+	class RsxUniformBlock;
+	class RsxUniformCache;
+	class RsxUniformBlockCache;
+	class RsxAttribute;
+	class RsxFramebuffer;
+	class RsxRenderbuffer;
+	class RsxRenderTarget;
+	class RsxVertexArray;
+	class RsxVertexFormat;
+	class RsxRhiCapabilities;
+	class RsxDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::RSX::RsxDevice;
+	using Texture = RHI::RSX::RsxTexture;
+	using Buffer = RHI::RSX::RsxBufferObject;
+	using Shader = RHI::RSX::RsxShader;
+	using ShaderProgram = RHI::RSX::RsxShaderProgram;
+	using ShaderUniforms = RHI::RSX::RsxShaderUniforms;
+	using ShaderUniformBlocks = RHI::RSX::RsxShaderUniformBlocks;
+	using Uniform = RHI::RSX::RsxUniform;
+	using UniformBlock = RHI::RSX::RsxUniformBlock;
+	using UniformCache = RHI::RSX::RsxUniformCache;
+	using UniformBlockCache = RHI::RSX::RsxUniformBlockCache;
+	using Attribute = RHI::RSX::RsxAttribute;
+	using Framebuffer = RHI::RSX::RsxFramebuffer;
+	using Renderbuffer = RHI::RSX::RsxRenderbuffer;
+	using RenderTarget = RHI::RSX::RsxRenderTarget;
+	using VertexArray = RHI::RSX::RsxVertexArray;
+	using VertexFormat = RHI::RSX::RsxVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::RSX::RsxRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::RSX::RsxDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

@@ -352,11 +352,32 @@ namespace Death { namespace Containers {
 	};
 
 	/**
+		@brief Whether @p T is cheap enough to relocate with a bulk memory copy
+
+		GCC before 8 has a bug in `std::is_trivially_copy_constructible`: evaluating it instantiates the
+		copy constructor rather than only inspecting its declaration. A container of a move-only type is
+		then ill-formed merely for being asked the question - which is how `SmallVector<AnimSection>` fails
+		to compile on the PS3's GCC 7.2.
+
+		`std::is_trivially_copyable` answers the same question for the purposes below - it is exactly "this
+		type may be relocated with memcpy" - and is a whole-type property the compiler answers without
+		instantiating anything, so it is used on the affected compilers. It is marginally stricter (a type
+		with a deleted copy assignment but a trivial copy constructor is excluded), which can only move a
+		type onto the slower non-trivial path, never the other way round.
+	*/
+	template<typename T> struct SmallVectorIsTriviallyRelocatable
+#if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ < 8
+		: std::integral_constant<bool, std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value> {};
+#else
+		: std::integral_constant<bool, std::is_trivially_copy_constructible<T>::value &&
+			std::is_trivially_move_constructible<T>::value && std::is_trivially_destructible<T>::value> {};
+#endif
+
+	/**
 		@brief Template method specializations of @ref SmallVector depending on whether type is trivial or not
 		@tparam T   Element type
 	*/
-	template<typename T, bool = std::is_trivially_copy_constructible<T>::value &&
-		std::is_trivially_move_constructible<T>::value && std::is_trivially_destructible<T>::value>
+	template<typename T, bool = SmallVectorIsTriviallyRelocatable<T>::value>
 	class SmallVectorTemplate : public SmallVectorTemplateCommon<T>
 	{
 		friend class SmallVectorTemplateCommon<T>;

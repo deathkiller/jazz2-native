@@ -1,6 +1,7 @@
 #include "GsDevice.h"
 #include "GsShaderProgram.h"
 #include "GsRenderTarget.h"
+#include "GsStagingBuffer.h"
 #include "GsTexture.h"
 #include "GsBuffer.h"
 #include "../FixedFunctionPass.h"
@@ -16,6 +17,7 @@ extern "C" {
 #include <gif_tags.h>
 #include <gs_gp.h>
 #include <gs_psm.h>
+#include <kernel.h>
 }
 
 namespace nCine::RHI::GS
@@ -47,12 +49,12 @@ namespace nCine::RHI::GS
 
 			Allocated once and rewritten every frame (see @ref GsDevice::ApplyPendingSoftwareLighting()) - a
 			per-frame allocation would compete with the texture cache for pages exactly when a level is already
-			short of them. A GS transfer reads main memory directly, so the staging image has to be contiguous
-			and in the destination's pitch, which is what the vector holds.
+			short of them. A GS transfer reads main memory directly, so the staging image has to be contiguous,
+			qword-aligned and in the destination's pitch (see @ref GsStagingBuffer).
 		*/
 		std::uint32_t _lightmapPage = GsVram::InvalidPage;
 		std::uint32_t _lightmapPageCount = 0;
-		alignas(64) SmallVector<std::uint8_t, 0> _lightmapStaging;
+		GsStagingBuffer _lightmapStaging;
 
 		/** @brief Opaque white as a pass colour, for the passes whose colour carries no information */
 		constexpr float OpaqueWhite[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -114,6 +116,29 @@ namespace nCine::RHI::GS
 				FlushPackets();
 			}
 			return _packetCursor;
+		}
+
+		/**
+			@brief Queues a `TEXFLUSH` into the ordinary register packet
+
+			Deliberately hand-assembled instead of calling `draw_texture_flush()`, which looks like the
+			obvious way to do this and is not: that helper emits a DMA **END tag** ahead of its GIF tag,
+			because every one of its callers in `libdraw` is building a transfer CHAIN. Appended to a packet
+			that goes out with `dma_channel_send_normal()`, the tag reaches the GIF where a GIF tag is
+			expected, and the channel wedges with no error of any kind - the same trap
+			`draw_texture_transfer()` sets, documented at the top of GsDevice.h. What is actually wanted here
+			is two qwords: a packed A+D tag and the register write, exactly as the primitive path emits PRIM.
+		*/
+		void QueueTextureFlush()
+		{
+			qword_t* q = Reserve(4);
+			q->dw[0] = GIF_SET_TAG(1, 0, 0, 0, GIF_FLG_PACKED, 1);
+			q->dw[1] = GIF_REG_AD;
+			q++;
+			q->dw[0] = GS_SET_TEXFLUSH(0);
+			q->dw[1] = GS_REG_TEXFLUSH;
+			q++;
+			_packetCursor = q;
 		}
 
 		// The DefaultSprite / DefaultBatchedSprites instance layout is a hard contract of the shader family
@@ -445,22 +470,33 @@ namespace nCine::RHI::GS
 		/**
 			@brief Programs `TEX0` and `CLAMP` for @p state
 
-			Unchanged state is skipped - EXCEPT when a CLUT is involved, which is always restated. The block
-			address alone is not a sufficient cache key there: the CLUT slab reuses slots, so the same CBP can
-			hold *different* palette contents from one draw to the next (the cinematic player rewrites its
-			palette per frame), and the GS keeps a CLUT cache of its own, so skipping the write leaves it
-			sampling the previous palette - which is what turned the intro and the glow flat. TEX0 is two
-			qwords; restating it is cheaper than being wrong.
+			Unchanged state is skipped, CLUT or not. Getting this wrong is expensive in both directions and it
+			has been wrong both ways:
+
+			- Skipping on the block address ALONE is not safe. The slab reuses slots, so the same `CBP` can
+			  hold different palette contents from one draw to the next, and `TEX0` with `CLD = 1` is the only
+			  thing that reloads the GS's internal CLUT buffer - so a skipped write leaves it sampling the
+			  previous palette, which is what turned the intro and the glow flat.
+			- Restating unconditionally, which is what that was fixed with, costs far more than it looks. The
+			  write is two qwords, but `CLD = 1` makes the GS re-read a whole kilobyte of local memory into
+			  its CLUT buffer, and writing `TEX0` at all invalidates its texture cache. Doing that once per
+			  SPRITE - and on this content nearly every sprite is indexed - is a thousand CLUT reloads and a
+			  thousand texture-cache refills a frame, which is fill rate this hardware cannot spare.
+
+			The answer is to keep the state cache and invalidate it where the hazard actually is:
+			@ref GsDevice::AcquireClut() clears it whenever it overwrites a slot, which is the only way the
+			contents behind an unchanged `CBP` can change. Everything else - a different row, a different
+			store, an untextured draw in between - already differs in @ref DrawState and restates on its own.
 		*/
 		void ApplyTexture(const DrawState& state)
 		{
 			if (state.Page == GsVram::InvalidPage) {
 				return;		// Untextured primitive - TEX0 is not read at all
 			}
-			const bool hasClut = (state.ClutBlock != GsVram::InvalidBlock);
-			if (!hasClut && _appliedTextureValid && !(_appliedTexture != state)) {
+			if (_appliedTextureValid && !(_appliedTexture != state)) {
 				return;
 			}
+			const bool hasClut = (state.ClutBlock != GsVram::InvalidBlock);
 			_appliedTexture = state;
 			_appliedTextureValid = true;
 
@@ -658,9 +694,12 @@ namespace nCine::RHI::GS
 				ApplyTexture(state);
 			}
 
-			// A strip vertex is RGBAQ + (UV) + XYZ2, so one register-list qword per pair of registers
+			// Three qwords of header - the A+D GIF tag, the PRIM it carries, and the REGLIST tag - and then a
+			// strip vertex is RGBAQ + (UV) + XYZ2, one register-list qword per PAIR of registers. Reserving
+			// two for the header was one short, so a primitive submitted with the scratch nearly full wrote
+			// its last qword past the end of it
 			const std::int32_t regsPerVertex = (textured ? 3 : 2);
-			qword_t* q = Reserve(std::size_t(2 + (count * regsPerVertex + 1) / 2));
+			qword_t* q = Reserve(std::size_t(3 + (count * regsPerVertex + 1) / 2));
 
 			// PRIM, then a REGLIST of `regsPerVertex` registers repeated once per vertex. ABE comes from the
 			// same library-wide blending flag draw_enable_blending() set, so a strip blends like a quad.
@@ -746,25 +785,6 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	/** @brief Quad and triangle-strip passes the effects submitted this frame (diagnostic) */
-	std::uint32_t _quadsThisFrame = 0, _stripsThisFrame = 0;
-	/** @brief Why the dispatch declined a draw, so a silent frame can be explained (plus how many quads were rotated) */
-	std::uint32_t _dispatchCalls = 0, _bailNoProgram = 0, _bailPrimitive = 0, _bailNoBlock = 0,
-		_bailNoTexture = 0, _bailNoBound = 0, _rotatedQuads = 0, _bailNoPage = 0;
-	/** @brief Whether the render pipeline reaches the device at all, independently of the dispatch */
-	std::uint32_t _clearCalls = 0, _bindProgramCalls = 0, _bindTextureCalls = 0;
-	/** @brief What the most recent quad sampled, so the periodic report identifies what is on screen */
-	const char* _lastQuadProgram = "";
-	/** @brief Min/max quads across the reporting window - if the minimum is 0 the picture alternates */
-	std::uint32_t _minQuads = 0xFFFFFFFFu, _maxQuads = 0;
-	/** @brief How FRAME actually moves: render-target switches, and the addresses in play */
-	std::uint32_t _rtSwitches = 0;
-	std::uint32_t _lastRenderAddr = 0, _lastDisplayAddr = 0;
-	std::int32_t _lastQuadW = 0, _lastQuadH = 0;
-	/** @brief Which programs actually reach the dispatch, so a missing screen can be traced to its draws */
-	const char* _programsSeen[8] = {};
-	std::uint32_t _programsSeenCount = 0;
-
 	GsDevice::BlendingState GsDevice::_blending;
 	GsDevice::DepthTestState GsDevice::_depthTest;
 	GsDevice::CullFaceState GsDevice::_cullFace;
@@ -776,6 +796,7 @@ namespace nCine::RHI::GS
 	const GsTexture* GsDevice::_boundTextures[GsDevice::MaxTextureUnits] = {};
 	GsDevice::UniformRange GsDevice::_boundUniformRanges[GsDevice::MaxUniformBindings] = {};
 	GsRenderTarget* GsDevice::_currentRenderTarget = nullptr;
+	bool GsDevice::_renderTargetSurfaceMissing = false;
 
 	bool GsDevice::_gsInitialized = false;
 	std::int32_t GsDevice::_logicalWidth = DisplayWidth;
@@ -802,15 +823,19 @@ namespace nCine::RHI::GS
 		GsVramLayout layout;
 		layout.DisplayWidth = DisplayWidth;
 		layout.DisplayHeight = DisplayHeight;
-		// A 16-bit colour surface, and only ONE of them: PresentFrame() is single-buffered - the rasterizer
-		// and the display share a buffer and the vsync wait paces the frame - so a second one was 70 pages
-		// (560 KB) of local memory reserved for something nothing ever pointed at. With a level's working set
-		// already larger than the cache, being those 70 pages short meant the LRU thrashed at 100% occupancy
-		// and pulled stores out from under primitives that were already submitted, one frame in two: the
-		// symptom was the HUD and the lighting composite flashing. PSMCT32 would cost 1120 KB for the one
-		// buffer and leave the cache barely larger than a single level's biggest atlas.
+		// Two 16-bit colour surfaces. Single-buffering was tried, to hand the cache the 70 pages (560 KB) a
+		// second one costs - but the rasterizer and the CRT then share a buffer, and the CRT does not wait.
+		// A frame is cleared and redrawn starting at the vertical blank while the beam is already scanning
+		// the same memory, so whatever is drawn LAST only appears in the frames where the rasterizer beat the
+		// beam to those rows. That is the HUD, every time, because it is drawn last - and it flashed on and
+		// off frame to frame. (Not visible under an emulator, which presents a finished buffer at the vsync
+		// and has no beam, which is why it survived.) The pages come back out of the CPU lightmap instead:
+		// see CombineRenderer, where the PS2 now builds a quarter-resolution map like the other consoles.
+		//
+		// PSMCT32 would cost 1120 KB per buffer and leave the cache barely larger than a level's biggest
+		// atlas, so 16-bit it stays; the game's art is indexed and dithers into it without banding.
 		layout.DisplayPsm = GsPsm::Ct16;
-		layout.DisplayBufferCount = 1;
+		layout.DisplayBufferCount = 2;
 		layout.ReservedRttPages = 16;
 		layout.ClutSlotCount = MaxClutSlots;
 		if (!GsVram::Initialize(layout)) {
@@ -818,11 +843,13 @@ namespace nCine::RHI::GS
 			return;
 		}
 
-		LOGD("GS: layout placed, cache {} pages", GsVram::GetCachePageCount());
 		dma_channel_initialize(DMA_CHANNEL_GIF, nullptr, 0);
 		dma_channel_fast_waits(DMA_CHANNEL_GIF);
 
-		_frame.address = GsVram::GetDisplayBufferPage(0) * WordsPerPage;
+		// `_displayBufferIndex` is the buffer being RENDERED into, so the one handed to the read circuits
+		// below is the other one - blank for the first frame, and swapped for good by PresentFrame()
+		_displayBufferIndex = 0;
+		_frame.address = GsVram::GetDisplayBufferPage(_displayBufferIndex) * WordsPerPage;
 		_frame.width = DisplayWidth;
 		_frame.height = DisplayHeight;
 		_frame.psm = GS_PSM_16;
@@ -837,9 +864,12 @@ namespace nCine::RHI::GS
 		_zbuffer.zsm = GS_PSMZ_16;
 		_zbuffer.mask = 1;
 
-		LOGD("GS: DMA channel ready, initializing video mode");
-		graph_initialize(std::int32_t(_frame.address), DisplayWidth, DisplayHeight, _frame.psm, 0, 0);
-		LOGD("GS: video mode set");
+		// The read circuits get the buffer NOT being rendered into. `graph_initialize` and
+		// `graph_set_framebuffer_filtered` both take the address in the same 32-bit words `framebuffer_t`
+		// uses (they shift it down by 11 for `DISPFB.FBP`), so the two agree with `draw_framebuffer` and no
+		// unit conversion belongs between them.
+		graph_initialize(std::int32_t(GsVram::GetDisplayBufferPage(_displayBufferIndex ^ 1) * WordsPerPage),
+			DisplayWidth, DisplayHeight, _frame.psm, 0, 0);
 
 		// PS2SDK's primitive helpers bake the ABE bit of the PRIM register they emit from a LIBRARY-WIDE
 		// flag that starts out clear, so every `draw_rect_textured()` and `draw_rect_filled()` asks the
@@ -871,11 +901,11 @@ namespace nCine::RHI::GS
 		// ApplyBlending() and ApplyScissor() - what the environment left in them is not assumed to still hold
 		_appliedBlendValid = false;
 		_appliedScissorValid = false;
+		_appliedTextureValid = false;
 
 		q = draw_finish(q);
 		_packetCursor = q;
 		FlushPackets();
-		LOGD("GS: environment packet sent, waiting for FINISH");
 		draw_wait_finish();
 
 		_gsInitialized = true;
@@ -895,38 +925,25 @@ namespace nCine::RHI::GS
 
 		graph_wait_vsync();
 
-		// Single buffered (see InitializeGs): the rasterizer and the display share one buffer, so there is no
-		// flip and FRAME never has to be re-pointed here. The vsync wait above paces the frame.
-		_lastRenderAddr = _frame.address;
-		_lastDisplayAddr = GsVram::GetDisplayBufferPage(0) * WordsPerPage;
+		// The flip. The buffer just finished goes to the read circuits and the rasterizer moves to the other
+		// one, so nothing is ever drawn into memory the CRT is scanning (see InitializeGs for what that cost
+		// when there was only one). DISPFB is an EE register write rather than a GIF register, so it takes
+		// effect immediately - which is why it is done here, after the GS is known to be finished and right
+		// at the vertical blank, rather than queued in a packet.
+		graph_set_framebuffer_filtered(std::int32_t(GsVram::GetDisplayBufferPage(_displayBufferIndex) * WordsPerPage),
+			DisplayWidth, GS_PSM_16, 0, 0);
+
+		_displayBufferIndex ^= 1;
+		_frame.address = GsVram::GetDisplayBufferPage(_displayBufferIndex) * WordsPerPage;
+		// FRAME has to follow the flip. Skipped while a render target owns the colour buffer - it restores
+		// from `_frame` when it unbinds, which is now the new back buffer - though no frame ends that way.
+		if (_currentRenderTarget == nullptr) {
+			qword_t* qf = Reserve(32);
+			qf = draw_framebuffer(qf, 0, &_frame);
+			_packetCursor = qf;
+		}
 
 		_frameCounter++;
-		if (_quadsThisFrame < _minQuads) { _minQuads = _quadsThisFrame; }
-		if (_quadsThisFrame > _maxQuads) { _maxQuads = _quadsThisFrame; }
-		// Periodic proof-of-life for the render path: how much the bootstrap dispatch actually
-		// submitted, and whether the video-memory cache is coping
-		if ((_frameCounter % 120) == 0) {
-			// GsVram's counter is incremented on every placement attempt that did not fit, INCLUDING the ones
-			// GsTexture::AllocatePages then retries successfully after evicting - so it measures how hard the
-			// cache is being asked to stream, not how much was lost. `_bailNoPage` is the number that means
-			// something went missing: a draw skipped because no page could be found even after eviction.
-			LOGI("GS frame {}: {} quads (min {} max {}) + {} strips, {}/{} pages (peak {}), {} retries, {} draws lost",
-				_frameCounter, _quadsThisFrame, _minQuads, _maxQuads, _stripsThisFrame,
-				GsVram::GetUsedPageCount(), GsVram::GetCachePageCount(),
-				GsVram::GetPeakUsedPageCount(), GsVram::GetFailedAllocationCount(), _bailNoPage);
-			_minQuads = 0xFFFFFFFFu; _maxQuads = 0;
-			LOGI("GS present: render addr 0x{:x}, display addr 0x{:x}, {} render-target switches",
-				_lastRenderAddr, _lastDisplayAddr, _rtSwitches);
-			_rtSwitches = 0;
-			LOGI("GS dispatch: {} calls, bail prog {} prim {} block {} notex {} unbound {} | {} rotated",
-				_dispatchCalls, _bailNoProgram, _bailPrimitive, _bailNoBlock, _bailNoTexture,
-				_bailNoBound, _rotatedQuads);
-			LOGI("GS pipeline: {} clears, {} program binds, {} texture binds | last quad \"{}\" {}x{}",
-				_clearCalls, _bindProgramCalls, _bindTextureCalls,
-				_lastQuadProgram, _lastQuadW, _lastQuadH);
-		}
-		_quadsThisFrame = 0;
-		_stripsThisFrame = 0;
 	}
 
 	void GsDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
@@ -1026,8 +1043,7 @@ namespace nCine::RHI::GS
 	void GsDevice::Clear(ClearFlags flags)
 	{
 		static_cast<void>(flags);
-		_clearCalls++;
-		if (!_gsInitialized) {
+		if (!_gsInitialized || _renderTargetSurfaceMissing) {
 			return;
 		}
 
@@ -1113,29 +1129,12 @@ namespace nCine::RHI::GS
 
 	void GsDevice::BindProgram(GsShaderProgram* program)
 	{
-		_bindProgramCalls++;
-		// Programs that bind but never reach Dispatch() are the ones whose draws are being lost
-		// somewhere above the device
-		static const char* boundSeen[16] = {};
-		static std::uint32_t boundSeenCount = 0;
-		if (program != nullptr && boundSeenCount < 16) {
-			const char* label = program->GetObjectLabel();
-			bool known = false;
-			for (std::uint32_t i = 0; i < boundSeenCount; i++) {
-				if (boundSeen[i] == label) { known = true; break; }
-			}
-			if (!known) {
-				boundSeen[boundSeenCount++] = label;
-				LOGI("GS program bound: \"{}\"", label);
-			}
-		}
 		_currentProgram = program;
 	}
 	GsShaderProgram* GsDevice::CurrentProgram() { return _currentProgram; }
 
 	void GsDevice::BindTexture(std::uint32_t unit, const GsTexture* texture)
 	{
-		_bindTextureCalls++;
 		if (unit < MaxTextureUnits) {
 			_boundTextures[unit] = texture;
 		}
@@ -1184,19 +1183,30 @@ namespace nCine::RHI::GS
 		// draw_wait_finish() waits on the GS FINISH event, which is only ever raised by a draw_finish()
 		// in the packet - waiting without having asked for one blocks forever, which is exactly what hung
 		// the first time the menu (whose textured-background pass owns a render target) switched targets.
+		// TEXFLUSH first: a target that has just been rendered into is sampled as a texture by the pass that
+		// follows, and the GS's texture cache may still hold what was at those addresses before. The upload
+		// path flushes for the same reason, but a render target never goes through it - nothing transfers
+		// into it, the rasterizer writes it directly.
+		QueueTextureFlush();
 		qword_t* qf = Reserve(8);
 		qf = draw_finish(qf);
 		_packetCursor = qf;
 		FlushPackets();
 		draw_wait_finish();
-		_rtSwitches++;
 		_currentRenderTarget = renderTarget;
+		_renderTargetSurfaceMissing = false;
 
 		framebuffer_t target = _frame;
 		if (renderTarget != nullptr) {
 			GsTexture* texture = renderTarget->GetColorTexture(0);
 			if (texture == nullptr || texture->GetTexturePage() == GsVram::InvalidPage) {
-				return;		// No surface to render into; draws will be skipped
+				// Nothing to render into. FRAME is deliberately left where it was and the pass is dropped
+				// instead: returning while _currentRenderTarget is set used to leave the colour buffer
+				// pointing at the DISPLAY, so a target that failed to allocate did not lose its pass - it
+				// drew the pass over the screen, bottom-up and unscissored, because everything downstream
+				// reads _currentRenderTarget to decide the Y direction and the scissor extent
+				_renderTargetSurfaceMissing = true;
+				return;
 			}
 			target.address = texture->GetTexturePage() * WordsPerPage;
 			target.width = texture->GetBufferPitch();
@@ -1222,6 +1232,24 @@ namespace nCine::RHI::GS
 	void GsDevice::FlushPendingPackets()
 	{
 		FlushPackets();
+	}
+
+	void GsDevice::WritebackForDma(const void* start, std::size_t bytes)
+	{
+		if (start == nullptr || bytes == 0) {
+			return;
+		}
+
+		// At most the whole data cache can be dirty, so a range larger than it is cheaper to clear by
+		// walking the cache (128 lines) than by walking the range - which for a full-screen PSMCT32 upload
+		// would be sixteen thousand line operations to write back at most eight kilobytes
+		constexpr std::size_t DataCacheBytes = 8 * 1024;
+		if (bytes <= DataCacheBytes) {
+			void* first = const_cast<void*>(start);
+			SyncDCache(first, static_cast<std::uint8_t*>(first) + bytes);
+		} else {
+			FlushCache(WRITEBACK_DCACHE);
+		}
 	}
 
 	void GsDevice::RegisterPaletteTexture(GsTexture* texture)
@@ -1388,41 +1416,37 @@ namespace nCine::RHI::GS
 
 		// 256 entries of 32 bits transferred as a 16x16 PSMCT32 image - the form the GS's CSM1 layout
 		// expects, and the one the probe verified end to end. `draw_texture_transfer` builds a DMA CHAIN,
-		// so this cannot be appended to the ordinary register packet.
-		qword_t* q = _packetCursor;
+		// so this cannot be appended to the ordinary register packet - and the draws already queued there
+		// have to reach the GS first, or they would sample the palette this is about to overwrite.
 		FlushPackets();
-		q = _packet;
+		// ...and the 1 KB just written has to leave the data cache, or the DMA reads the previous palette
+		WritebackForDma(_clutStaging, sizeof(_clutStaging));
+		qword_t* q = _packet;
 		q = draw_texture_transfer(q, _clutStaging, 16, 16, GS_PSM_32,
 			std::int32_t(target->Block * WordsPerBlock), 16);
 		q = draw_texture_flush(q);
 		dma_channel_send_chain(DMA_CHANNEL_GIF, _packet, std::int32_t(q - _packet), 0, 0);
 		dma_wait_fast();
 		_packetCursor = _packet;
+		// The contents behind this slot's CBP have just changed, and TEX0 is what reloads the GS's internal
+		// CLUT buffer. A draw that is otherwise identical to the last one - same store, same block - would
+		// skip the write and keep sampling the palette that was there, so the state cache is dropped here.
+		// This is the ONLY place local memory behind a live CBP is rewritten, which is what lets ApplyTexture
+		// treat an unchanged DrawState as safe everywhere else.
+		_appliedTextureValid = false;
 
 		target->Palette = palette;
 		target->PaletteOffset = paletteOffset;
 		target->PaletteVersion = version;
+		// The payload KIND is part of the slot's identity, not an argument that only picks what to upload.
+		// Leaving it out meant the two forms of a row shared one cache key: a coverage payload - white in
+		// every entry - was stamped as that row's colours, so the next material draw of the row scored a hit
+		// on it and came out white, and every silhouette draw (the hit flash, the shield, the outline)
+		// poisoned one more slot. That is the "everything turns white after a while in a level" failure, and
+		// the reason it took a while is that it needed a silhouette pass per palette row to get there.
+		target->Coverage = coverage;
 		target->LastUse = _clutUseCounter;
 		return target->Block;
-	}
-
-	// ------------------------------------------------------------------ residency
-
-	void GsDevice::PlanResidency(const GsTexture* const* textures, std::int32_t count)
-	{
-		if (textures == nullptr || count <= 0) {
-			return;
-		}
-		// Transfer the frame's whole working set before any of it is drawn, so the draw path never has to
-		// evict a texture the GS may still be sampling. Epoch splitting (draw what fits, synchronise, swap)
-		// is not implemented yet - the measured frame set is ~30% of the cache, so it is not needed until a
-		// level proves otherwise, and GsVram's failed-allocation counter is what will say so.
-		for (std::int32_t i = 0; i < count; i++) {
-			if (textures[i] != nullptr) {
-				const_cast<GsTexture*>(textures[i])->AcquireTexturePage();
-			}
-		}
-
 	}
 
 	// ------------------------------------------------------------------ direct-tier lighting
@@ -1519,7 +1543,11 @@ namespace nCine::RHI::GS
 				_lightmapPageCount = 0;
 			}
 			if (_lightmapPage == GsVram::InvalidPage) {
-				_lightmapPage = GsVram::AllocatePages(pageCount);
+				// Through GsTexture's allocator rather than GsVram's, so a cache that is momentarily full
+				// evicts a sheet for it instead of refusing. The surface is one or two pages and the whole
+				// scene is unlit without it, which is a far worse trade than one sheet being re-uploaded -
+				// and because it is allocated once and held, the eviction is paid once too
+				_lightmapPage = GsTexture::AllocatePages(pageCount, nullptr);
 				if (_lightmapPage == GsVram::InvalidPage) {
 					return;		// No room for the compositor surface; the scene stays unlit this frame
 				}
@@ -1534,8 +1562,10 @@ namespace nCine::RHI::GS
 			// Luminance weights of the ambient colour, so the one channel carried is the perceptual factor
 			const float ambGray = 0.299f * light.AmbR + 0.587f * light.AmbG + 0.114f * light.AmbB;
 
-			_lightmapStaging.resize_for_overwrite(std::size_t(pitch) * std::size_t(storeHeight));
-			std::uint8_t* const surface = _lightmapStaging.data();
+			std::uint8_t* const surface = _lightmapStaging.Reserve(std::size_t(pitch) * std::size_t(storeHeight));
+			if (surface == nullptr) {
+				return;		// No main memory for the compositor surface; the scene stays unlit this frame
+			}
 			for (std::int32_t y = 0; y < light.LmH; y++) {
 				const float* DEATH_RESTRICT src = light.Lightmap + std::size_t(y) * light.LmW * 2;
 				std::uint8_t* DEATH_RESTRICT dst = surface + std::size_t(y) * pitch;
@@ -1568,8 +1598,10 @@ namespace nCine::RHI::GS
 					std::size_t(pitch));
 			}
 
-			// The transfer builds a DMA CHAIN, so it goes out on its own after the pending register packet
+			// The transfer builds a DMA CHAIN, so it goes out on its own after the pending register packet -
+			// and the surface the CPU has just filled has to be written back for the DMA to see it
 			FlushPackets();
+			WritebackForDma(surface, std::size_t(pitch) * std::size_t(storeHeight));
 			qword_t* qu = _packet;
 			qu = draw_texture_transfer(qu, surface, pitch, storeHeight, GS_PSM_8,
 				std::int32_t(_lightmapPage * WordsPerPage), pitch);
@@ -1604,7 +1636,6 @@ namespace nCine::RHI::GS
 			const float pu[4] = { uMax, uMax, 0.0f, 0.0f };
 			const float pv[4] = { vMax, 0.0f, vMax, 0.0f };
 			SubmitQuadPrimitive(state, px, py, pu, pv, PackPassColor(OpaqueWhite), 0.0f, 0.0f, true);
-			_quadsThisFrame++;
 		}
 
 		if (hasWater) {
@@ -1621,16 +1652,14 @@ namespace nCine::RHI::GS
 				const float py[4] = { waterTop, vpY + vpH, waterTop, vpY + vpH };
 				const float tint[4] = { 0.4f, 0.6f, 0.8f, 0.4f };
 				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackPassColor(tint), 0.0f, 0.0f, true);
-				_quadsThisFrame++;
-			}
+				}
 			const float waterLevelNorm = (light.VpH > 0 ? light.WaterLevelPx / float(light.VpH) : 1.0f);
 			if (waterLevelNorm < 0.4f && waterTop > vpY) {
 				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
 				const float py[4] = { vpY, waterTop, vpY, waterTop };
 				const float above[4] = { light.AmbR, light.AmbG, light.AmbB, 0.4f - waterLevelNorm };
 				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackPassColor(above), 0.0f, 0.0f, true);
-				_quadsThisFrame++;
-			}
+				}
 		}
 	}
 
@@ -1782,7 +1811,6 @@ namespace nCine::RHI::GS
 			ApplyBlendEquation(PassEquation(MaterialBlend, pass.Blend));
 			SubmitQuadPrimitive(*state, Px, Py, Pu, Pv, PackPassColor(pass.Color),
 				pass.ScreenOffset[0], pass.ScreenOffset[1], AxisAligned);
-			_quadsThisFrame++;
 		}
 
 		/*
@@ -1864,7 +1892,6 @@ namespace nCine::RHI::GS
 			ApplyBlendEquation(PassEquation(MaterialBlend, effective.Blend));
 			SubmitStripPrimitive(*state, StripX, StripY, StripU, StripV, nullptr,
 				PackPassColor(effective.Color), count, pass.ScreenOffset[0], pass.ScreenOffset[1]);
-			_stripsThisFrame++;
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: always UNTEXTURED - a gradient has no
@@ -1879,7 +1906,6 @@ namespace nCine::RHI::GS
 			ApplyBlendEquation(PassEquation(MaterialBlend, pass.Blend));
 			SubmitStripPrimitive(untextured, StripX, StripY, nullptr, nullptr, StripRgbaq,
 				color_t{}, count, pass.ScreenOffset[0], pass.ScreenOffset[1]);
-			_stripsThisFrame++;
 		}
 	};
 }
@@ -1912,9 +1938,12 @@ namespace nCine::RHI::GS
 	void GsDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		static_cast<void>(firstVertex);
-		_dispatchCalls++;
 		if (_currentProgram == nullptr || numVertices <= 0 || !_gsInitialized) {
-			_bailNoProgram++;
+			return;
+		}
+		if (_renderTargetSurfaceMissing) {
+			// The bound target has no colour surface, so FRAME is still on the previous one (see
+			// SetRenderTarget). Every entry point below funnels through here, so this is the one guard needed
 			return;
 		}
 
@@ -1924,7 +1953,6 @@ namespace nCine::RHI::GS
 		// CPU-lightmap tier's light quads stay off the screen rather than being matched by name here.
 		const FixedFunctionGeneratedEffect* generated = _currentProgram->GetGeneratedEffect();
 		if (generated == nullptr) {
-			_bailNoProgram++;
 			if (!_currentProgram->FetchUnsupportedWarned()) {
 				LOGW("Skipping draws of program \"{}\": it has no fixed_function block for the gs target",
 					_currentProgram->GetObjectLabel());
@@ -1945,7 +1973,6 @@ namespace nCine::RHI::GS
 		}
 
 		if (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles) {
-			_bailPrimitive++;
 			if (!_currentProgram->FetchUnsupportedWarned()) {
 				LOGW("Skipping draws of program \"{}\": the quad effect path takes only triangle primitives",
 					_currentProgram->GetObjectLabel());
@@ -1963,7 +1990,6 @@ namespace nCine::RHI::GS
 			block = _currentProgram->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
-			_bailNoBlock++;
 			return;
 		}
 		std::int32_t binding = block->GetBindingIndex();
@@ -1972,7 +1998,6 @@ namespace nCine::RHI::GS
 		}
 		const std::uint8_t* blockData = _boundUniformRanges[binding].Data;
 		if (blockData == nullptr) {
-			_bailNoBlock++;
 			return;
 		}
 
@@ -2010,14 +2035,11 @@ namespace nCine::RHI::GS
 
 		GsTexture* texture = (hasTexture ? const_cast<GsTexture*>(_boundTextures[0]) : nullptr);
 		if (hasTexture && texture == nullptr) {
-			_bailNoBound++;
 			return;
 		}
-		if (!hasTexture) {
-			// Flat-colour geometry (the menu dimmer, panels, separators). The same instance decode and
-			// corner synthesis as a textured draw, with an untextured primitive at the end of it.
-			_bailNoTexture++;
-		}
+		// A program with no `uTexture` draws flat-colour geometry (the menu dimmer, panels, separators). It
+		// takes the same instance decode and corner synthesis as a textured draw, with an untextured
+		// primitive at the end of it, so there is nothing to branch on here - only the DrawState differs.
 
 		const bool batched = (instanceStride > 0);
 		std::int32_t numInstances = 1;
@@ -2100,7 +2122,6 @@ namespace nCine::RHI::GS
 			// completely black.
 			const bool axisAligned = (px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]);
 			if (!axisAligned) {
-				_rotatedQuads++;
 			}
 
 			DrawState material;
@@ -2114,9 +2135,16 @@ namespace nCine::RHI::GS
 				// baked to PSMCT32 through one palette row instead, exactly as the PowerVR backend does.
 				const bool needsBake = texture->NeedsPaletteBake();
 				if (needsBake || texture->IsIndexed()) {
-					paletteTex = (_boundTextures[1] != nullptr && _boundTextures[1] != texture
-						? _boundTextures[1] : _paletteTexture);
+					// Unit 1 is only the palette when the PROGRAM says it samples one. `Material::Bind()`
+					// leaves units above the ones a material uses exactly as the previous material left
+					// them - which is correct for a shader that never reads them, and would have this
+					// backend take a leftover sheet for a palette on every indexed draw whose program has
+					// no palette sampler at all (the colorized HUD text is the common one).
+					paletteTex = _paletteTexture;
 					if (_currentProgram->UsesPalette()) {
+						if (_boundTextures[1] != nullptr && _boundTextures[1] != texture) {
+							paletteTex = _boundTextures[1];
+						}
 						float palOffset = 0.0f;
 						std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
 						paletteOffset = std::int32_t(palOffset + 0.5f);
@@ -2135,8 +2163,7 @@ namespace nCine::RHI::GS
 					page = texture->AcquireTexturePage();
 				}
 				if (page == GsVram::InvalidPage) {
-					_bailNoPage++;
-					continue;
+							continue;
 				}
 
 				material.Page = page;
@@ -2213,9 +2240,6 @@ namespace nCine::RHI::GS
 
 			generated->Fn(ctx);
 
-			_lastQuadProgram = _currentProgram->GetObjectLabel();
-			_lastQuadW = (texture != nullptr ? texture->GetWidth() : 0);
-			_lastQuadH = (texture != nullptr ? texture->GetHeight() : 0);
 		}
 	}
 
@@ -2278,9 +2302,9 @@ namespace nCine::RHI::GS
 		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const GsTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed() || texture->NeedsPaletteBake()) {
-			paletteTex = _boundTextures[1];
-			if (paletteTex == nullptr || paletteTex == texture) {
-				paletteTex = _paletteTexture;
+			paletteTex = _paletteTexture;
+			if (isPaletteRemap && _boundTextures[1] != nullptr && _boundTextures[1] != texture) {
+				paletteTex = _boundTextures[1];
 			}
 		}
 
@@ -2407,7 +2431,6 @@ namespace nCine::RHI::GS
 				SubmitTrianglePrimitive(state, sx, sy, tu, tv, packed, 0.0f, 0.0f);
 				triangle++;
 			}
-			_quadsThisFrame++;
 		}
 	}
 
@@ -2465,11 +2488,14 @@ namespace nCine::RHI::GS
 		std::memcpy(color, blockData + kColorOffset, sizeof(color));
 		const color_t packed = PackPassColor(color);
 
-		// The wheel's sheet is drawn at palette row 0 - it carries no per-instance palette offset
+		// The wheel's sheet is drawn at palette row 0 - it carries no per-instance palette offset. Unit 1 is
+		// only consulted when the program declares a palette sampler, for the reason spelled out in Dispatch
 		const GsTexture* paletteTex = nullptr;
 		if (texture->NeedsPaletteBake() || texture->IsIndexed()) {
-			paletteTex = (_boundTextures[1] != nullptr && _boundTextures[1] != texture
-				? _boundTextures[1] : _paletteTexture);
+			paletteTex = _paletteTexture;
+			if (_currentProgram->UsesPalette() && _boundTextures[1] != nullptr && _boundTextures[1] != texture) {
+				paletteTex = _boundTextures[1];
+			}
 		}
 
 		DrawState state;
@@ -2538,7 +2564,6 @@ namespace nCine::RHI::GS
 				tv[i] = src[3] * uvScaleV;
 			}
 			SubmitLineStripPrimitive(state, sx, sy, tu, tv, packed, count);
-			_stripsThisFrame++;
 			first += count - 1;
 		}
 	}
