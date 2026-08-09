@@ -41,7 +41,18 @@ namespace nCine::RHI::GL
 			case PixelFormat::RGB8:
 				internalFormat = GL_RGB8; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::RG8:
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+				// WebGL 2.0 leaves out GL_TEXTURE_SWIZZLE_* even though the ES 3.0 it is based on has them, so the
+				// palette pipeline's (R,G,B,G) swizzle cannot be applied - see GLTexture::SetSwizzle(). The ES2 way
+				// out works here too: LUMINANCE_ALPHA samples as (L,L,L,A), which is what the shaders read out of an
+				// (index, alpha) pair as .r/.a, so they stay profile-independent. Two consequences follow, both of
+				// which the ES2 profile already lives with: it is unsized, so glTexStorage2D() rejects it and
+				// GLTexture::TexStorage2D() allocates per level instead, and it is not color-renderable, so a
+				// two-channel render target has to be RGBA8 here.
+				internalFormat = GL_LUMINANCE_ALPHA; externalFormat = GL_LUMINANCE_ALPHA; dataType = GL_UNSIGNED_BYTE; break;
+#	else
 				internalFormat = GL_RG8; externalFormat = GL_RG; dataType = GL_UNSIGNED_BYTE; break;
+#	endif
 			case PixelFormat::R8:
 				internalFormat = GL_R8; externalFormat = GL_RED; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::Depth16:
@@ -174,6 +185,20 @@ namespace nCine::RHI::GL
 				externalFormat = GL_BGR;
 			}
 #endif
+		}
+	}
+
+	bool GLTextureFormat::IsUnsizedInternalFormat(GLint internalFormat)
+	{
+		switch (internalFormat) {
+			case GL_ALPHA:
+			case GL_LUMINANCE:
+			case GL_LUMINANCE_ALPHA:
+			case GL_RGB:
+			case GL_RGBA:
+				return true;
+			default:
+				return false;
 		}
 	}
 

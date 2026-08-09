@@ -78,7 +78,14 @@ namespace nCine::RHI::GL
 		void CompressedTexImage2D(std::int32_t level, PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t imageSize, const void* data);
 		/** @brief Updates a rectangular subregion of a compressed two-dimensional mipmap level */
 		void CompressedTexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, std::int32_t imageSize, const void* data);
-		/** @brief Allocates an immutable two-dimensional storage with the given number of mipmap levels */
+		/**
+			@brief Allocates an immutable two-dimensional storage with the given number of mipmap levels
+
+			A format that resolves to an unsized internal format is allocated per level through
+			@ref TexImage2D() instead, because immutable storage is defined for sized formats only --- the
+			texture stays mutable, which callers cannot tell apart, as the upload goes through
+			@ref TexSubImage2D() either way. See @ref GLTextureFormat::IsUnsizedInternalFormat().
+		*/
 		void TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height);
 
 		/** @brief Reads back a mipmap level of the texture into client memory (desktop only) */
@@ -90,7 +97,13 @@ namespace nCine::RHI::GL
 		void SetMagFiltering(SamplerFilter filter);
 		/** @brief Sets the wrapping mode for both `s` and `t` coordinates */
 		void SetWrap(SamplerWrapping wrap);
-		/** @brief Remaps the channels returned when the texture is sampled */
+		/**
+			@brief Remaps the channels returned when the texture is sampled
+
+			A no-op on the ES2 profile and on WebGL, neither of which exposes `GL_TEXTURE_SWIZZLE_*` --- there
+			@ref GLTextureFormat::Resolve() answers @ref PixelFormat::RG8 with `LUMINANCE_ALPHA` instead, which
+			samples as `(L,L,L,A)` without one, see @ref nCine::Texture::SetSwizzle().
+		*/
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 		/** @brief Sets the highest mipmap level that is defined */
 		void SetMaxLevel(std::int32_t maxLevel);

@@ -18,6 +18,8 @@ R"__SHDR__(#line 1
 
 out vec2 vPos;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+
 // The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
 layout (std140) uniform InstanceBlock
 {
@@ -47,6 +49,8 @@ R"__SHDR__(attribute vec2 aQuadCorner;
 
 varying vec2 vPos;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+
 // The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
 	uniform mat4 modelMatrix;
 	uniform vec4 color;
@@ -71,10 +75,16 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 #endif
 
 in vec2 vPos;
+
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 // The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
 layout (std140) uniform InstanceBlock
@@ -103,9 +113,15 @@ void main() {
 	inline constexpr char TouchCircle_Fs100[] =
 R"__SHDR__(#line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 
 varying vec2 vPos;
+
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 // The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
 	uniform mat4 modelMatrix;

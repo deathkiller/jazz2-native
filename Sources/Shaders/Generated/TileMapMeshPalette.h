@@ -24,6 +24,9 @@ out vec2 vTexCoords;
 out vec4 vColor;
 out highp float vPaletteOffset;
 
+// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
+// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -61,6 +64,9 @@ varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
 
+// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
+// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -88,12 +94,19 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 #endif
 
 in vec2 vTexCoords;
 in vec4 vColor;
 in highp float vPaletteOffset;
+
+// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
+// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
 
 layout (std140) uniform InstanceBlock
 {
@@ -129,11 +142,18 @@ void main() {
 	inline constexpr char TileMapMeshPalette_Fs100[] =
 R"__SHDR__(#line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
+
+// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
+// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
 
 	uniform mat4 modelMatrix;
 	uniform vec4 color;

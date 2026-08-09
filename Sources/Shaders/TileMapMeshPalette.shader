@@ -1,5 +1,9 @@
 program TileMapMeshPalette;
 
+// Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
+// disagree on precision between them does not link - so the fragment prologue keeps the vertex default
+precision highp;
+
 #include "Include/TileMapVs.inc"
 
 uniform sampler2D uTexture : texture_unit(0);

@@ -203,7 +203,19 @@ namespace nCine::RHI::GL
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
-		glTexStorage2D(_target, levels, internalFormat, width, height);
+		if (GLTextureFormat::IsUnsizedInternalFormat(internalFormat)) {
+			// Immutable storage is defined for sized internal formats only, so glTexStorage2D() answers an unsized
+			// one with INVALID_ENUM - which RG8 resolves to where the profile has no texture swizzle. Allocate
+			// those per level instead: the texture stays mutable, which callers cannot tell apart, as the upload
+			// that follows goes through glTexSubImage2D() either way. Every other format keeps immutable storage.
+			for (std::int32_t level = 0; level < levels; level++) {
+				glTexImage2D(_target, level, internalFormat, width, height, 0, externalFormat, dataType, nullptr);
+				width = (width > 1 ? width / 2 : 1);
+				height = (height > 1 ? height / 2 : 1);
+			}
+		} else {
+			glTexStorage2D(_target, levels, internalFormat, width, height);
+		}
 #else
 		static_cast<void>(levels);
 		static_cast<void>(width);
@@ -244,10 +256,12 @@ namespace nCine::RHI::GL
 
 	void GLTexture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-#if defined(RHI_GL_PROFILE_ES2)
-		// ES2 has no GL_TEXTURE_SWIZZLE_* (ES 3.0 feature). The only non-identity swizzle the engine uses is the
-		// palette pipeline's (R,G,B,G) on RG8 index textures, and GLTextureFormat maps RG8 to LUMINANCE_ALPHA on
-		// this profile, which natively samples (L,L,L,A) - identical for the channels the shaders read (.r/.a)
+#if defined(RHI_GL_PROFILE_ES2) || defined(DEATH_TARGET_EMSCRIPTEN)
+		// ES2 has no GL_TEXTURE_SWIZZLE_* (ES 3.0 feature), and WebGL 2.0 leaves them out as well even though the
+		// ES 3.0 it is based on has them - passing one to glTexParameteri() there is an INVALID_ENUM. The only
+		// non-identity swizzle the engine uses is the palette pipeline's (R,G,B,G) on RG8 index textures, and
+		// GLTextureFormat maps RG8 to LUMINANCE_ALPHA on both profiles, which natively samples (L,L,L,A) -
+		// identical for the channels the shaders read (.r/.a)
 		static_cast<void>(r); static_cast<void>(g); static_cast<void>(b); static_cast<void>(a);
 #else
 		// Channels are set individually because GL_TEXTURE_SWIZZLE_RGBA (a single glTexParameteriv) is desktop-only

@@ -189,7 +189,7 @@ Directive | Meaning
 `shader_type canvas_item;` `shader_type custom;` | Optional --- the default is `custom`. `canvas_item` opts into the sprite-template lowering
 `variant <NAME>;` | Declares an optional variant; may appear multiple times. The output contains the unnamed **base variant** (always `Variants[0]`, its name is empty) plus one entry per declaration, compiled with `#define <NAME> (1)` baked in. There are **no cross-products** --- each variant is exactly one define
 `render_mode <mode>[, <mode>];` | Zero or more of `blend_mix`, `blend_add`, `blend_sub`, `blend_mul`, `blend_premul_alpha`, `unshaded`, OR-ed into the `RenderModes` bitmask on the emitted program. May repeat
-`precision mediump;` `precision highp;` | Optional (default `mediump`), those two spellings only --- the float precision of the auto-emitted @cpp "#ifdef GL_ES" @ce fragment prologue. Only the two-token form is a directive; a real GLSL statement with a type (`precision highp float;`) passes through as ordinary GLSL
+`precision mediump;` `precision highp;` | Optional (default `mediump`), those two spellings only --- the float precision of the auto-emitted @cpp "#ifdef GL_ES" @ce fragment prologue. Only the two-token form is a directive; a real GLSL statement with a type (`precision highp float;`) passes through as ordinary GLSL. `highp` is emitted guarded by @cpp "GL_FRAGMENT_PRECISION_HIGH" @ce, because fragment `highp` is optional in GLSL ES 1.00 and a bare declaration fails to compile where it is unsupported --- ESSL 300 always defines the macro, so ES 3.0 and WebGL 2.0 keep the requested precision and only an ES 2.0 device without it falls back to `mediump`
 `batched <Name>;` | `canvas_item` only --- also emits the batched twin program (`InstancesBlock` + the 6-vertex corner formula) into the same header, sharing the fragment stage, the variants and the `fixed_function` blocks. An error in custom mode
 `#include "relative/path"` | Replaced **textually** before parsing, recursively up to depth 8, relative to the including file, so the generated artifacts stay self-contained. Line numbers in diagnostics refer to the include-expanded stream
 `void fixed_function([<target>[, <target>...]]) { ... }` | Console fixed-function implementation of the effect, see @ref shader-compiler-fixed-function "below". Empty parentheses declare the generic block, one target overrides it for that backend, a comma-separated list (`void fixed_function(pvr, gu, gs)`) declares one implementation shared by several. Never part of the GLSL stages --- a file that carries a block emits a byte-identical per-shader header
@@ -202,6 +202,19 @@ Element | Meaning
 `attribute [layout(location = N)] <declaration>;` | A vertex attribute --- emitted as an @cpp in @ce global in the **vertex stage only**. A leading `layout(...)` stays in front of the @cpp in @ce keyword and the location is honored by reflection
 `uniform <type> <name> : <hint>[, <hint>];` | `texture_unit(N)` assigns the texture unit (**0--31**) of a sampler uniform and is the **only** way to assign one explicitly; in the primary mode the name must match a sampler in at least one variant, and two hints naming the same uniform are an error. `source_color`, `hint_range(...)`, `filter_nearest`, `filter_linear`, `repeat_enable` and `repeat_disable` are parsed and dropped, anything else is an error. The hint list is stripped from the lowered declaration, so hints never reach the emitted sources
 everything else | Global scope --- uniforms, std140 blocks, consts, structs, helper functions --- is shared by both stages of every lowered document
+
+@m_class{m-block m-warning}
+
+@par Shared std140 blocks and precision
+    Because every global reaches **both** stages, a named `std140` block is declared in the fragment
+    stage as well --- whether that stage reads a member or not. GLSL ES requires the members of a
+    named uniform block to match in name, type **and precision** across the stages a program links
+    together @m_span{m-text m-dim} (ES 3.00 spec, §4.3.9) @m_endspan, and the fragment prologue is
+    the only thing that changes a default precision: the vertex stage has none and defaults `float`
+    to `highp`, so a `mediump` prologue leaves a shared block disagreeing with itself and the program
+    fails to link --- on WebGL 2.0 visibly, as a "precisions of uniform block member differ" log line
+    followed by an invalid program. Declare `precision highp;` in a shader whose block reaches both
+    stages, or qualify the block members explicitly.
 
 @subsection shader-compiler-input-custom Custom mode (the default)
 

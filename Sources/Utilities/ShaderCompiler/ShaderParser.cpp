@@ -3694,13 +3694,36 @@ R"GLSL(void main()
 			lines.push_back({ "}", 0 });
 		}
 
+		/**
+			Emits the "#ifdef GL_ES" float precision prologue of a fragment stage.
+
+			`highp` is guarded by GL_FRAGMENT_PRECISION_HIGH, because it is optional in the fragment stage of
+			GLSL ES 1.00 and a bare declaration fails to compile where it is unsupported - ESSL 300 always
+			defines the macro, so ES 3.0 and WebGL 2.0 keep the requested precision, and only an ES 2.0 device
+			without fragment `highp` falls back. The Essl100 transform unwraps the outer GL_ES guard and keeps
+			the inner one, so the fallback survives into the "#version 100" sources. `mediump` needs no guard:
+			it is the one precision every profile is required to support.
+		*/
+		void AppendFragmentPrecisionPrologue(const ParsedShader& src, SmallVectorImpl<SourceLine>& lines)
+		{
+			lines.push_back({ "#ifdef GL_ES", 0 });
+			if (src.FragmentPrecision == "highp"_s) {
+				lines.push_back({ "#\tifdef GL_FRAGMENT_PRECISION_HIGH", 0 });
+				lines.push_back({ "precision highp float;", 0 });
+				lines.push_back({ "#\telse", 0 });
+				lines.push_back({ "precision mediump float;", 0 });
+				lines.push_back({ "#\tendif", 0 });
+			} else {
+				lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
+			}
+			lines.push_back({ "#endif", 0 });
+		}
+
 		/** Builds the fragment stage of a lowered canvas_item document (prologue + "out vec4 COLOR;" + main() with the body spliced verbatim after the "COLOR = vColor;" default, which is omitted when provably dead) */
 		void BuildCanvasFragmentStage(const ParsedShader& src, bool implicitTexture, ShaderDocument& document)
 		{
 			SmallVectorImpl<SourceLine>& lines = document.FragmentLines;
-			lines.push_back({ "#ifdef GL_ES", 0 });
-			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
-			lines.push_back({ "#endif", 0 });
+			AppendFragmentPrecisionPrologue(src, lines);
 			lines.push_back({ "", 0 });
 			// The varyings come before the globals, so helper functions there can reference them
 			// (through the substituted built-in names, e.g. PALETTE_OFFSET)
@@ -3803,9 +3826,7 @@ R"GLSL(void main()
 		void BuildCustomFragmentStage(const ParsedShader& src, ShaderDocument& document)
 		{
 			SmallVectorImpl<SourceLine>& lines = document.FragmentLines;
-			lines.push_back({ "#ifdef GL_ES", 0 });
-			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
-			lines.push_back({ "#endif", 0 });
+			AppendFragmentPrecisionPrologue(src, lines);
 			lines.push_back({ "", 0 });
 			// The varyings come before the globals, so helper functions there can reference them
 			for (const VaryingDecl& varying : src.Varyings) {

@@ -1,5 +1,8 @@
 program TouchCircle;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+precision highp;
+
 // The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
 layout (std140) uniform InstanceBlock
 {

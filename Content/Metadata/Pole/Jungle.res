@@ -3,7 +3,7 @@
 
 	"Animations": {
 		"Pole": {
-			"Path": "Pole/Jungle.aura"
+			"Path": "Pole/jungle.aura"
 		}
 	},
 

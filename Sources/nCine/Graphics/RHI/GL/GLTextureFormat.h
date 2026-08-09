@@ -34,5 +34,14 @@ namespace nCine::RHI::GL
 
 		/** @brief Verifies that the device supports the given pixel format, aborting if it does not */
 		static void CheckSupport(PixelFormat format);
+
+		/**
+		 * @brief Returns `true` if the internal format is one of the unsized (ES 2.0 style) ones
+		 *
+		 * Immutable storage is defined for sized internal formats only, so a format that answers `true` here
+		 * has to be allocated per level even where @ref GLTexture::SupportsImmutableStorage() holds. Such a
+		 * format is not color-renderable either, so it cannot back a render target.
+		 */
+		static bool IsUnsizedInternalFormat(GLint internalFormat);
 	};
 }

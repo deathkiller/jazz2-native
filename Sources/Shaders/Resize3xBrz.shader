@@ -1,5 +1,8 @@
 program Resize3xBrz;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+precision highp;
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 

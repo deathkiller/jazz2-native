@@ -25,6 +25,8 @@ out vec4 vTexCoords5;
 out vec4 vTexCoords6;
 out vec4 vTexCoords7;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -79,6 +81,8 @@ varying vec4 vTexCoords5;
 varying vec4 vTexCoords6;
 varying vec4 vTexCoords7;
 
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -121,7 +125,11 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 #endif
 
 in vec2 vPixelCoords;
@@ -132,6 +140,8 @@ in vec4 vTexCoords4;
 in vec4 vTexCoords5;
 in vec4 vTexCoords6;
 in vec4 vTexCoords7;
+
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 layout (std140) uniform InstanceBlock
 {
@@ -388,7 +398,11 @@ void main() {
 	inline constexpr char Resize3xBrz_Fs100[] =
 R"__SHDR__(#line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#	else
 precision mediump float;
+#	endif
 
 varying vec2 vPixelCoords;
 varying vec4 vTexCoords1;
@@ -398,6 +412,8 @@ varying vec4 vTexCoords4;
 varying vec4 vTexCoords5;
 varying vec4 vTexCoords6;
 varying vec4 vTexCoords7;
+
+// Keeps InstanceBlock at one precision across both stages, see TileMapMeshPalette
 
 	uniform mat4 modelMatrix;
 	uniform vec4 color;

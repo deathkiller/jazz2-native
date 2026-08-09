@@ -521,20 +521,38 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 	// Strip function specifiers, return type and arguments from function name, because GCC/Clang includes full function signature
 	static constexpr StringView LambdaSuffix = "::<lambda()>"_s;
-	static constexpr StringView LambdaClangSuffix = "::(anonymous class)::operator()()"_s;
 	static constexpr StringView OperatorPrefix = "operator"_s;
 
+	// How the enclosing function is separated from the lambda's own call operator. Each compiler emits only
+	// its own spelling, so only that one is compiled in - the same reasoning as in AppendFunctionNamePart()
+	// above, including the order of the checks: Clang defines __GNUC__ as well and therefore also
+	// DEATH_TARGET_GCC, so it has to be tested first.
+	//  - GCC writes the closure inline, e.g. "Class::Method(bool)::<lambda(int)>"
+	//  - Clang appends the call operator of the closure type, e.g.
+	//    "auto Class::Method(bool)::(lambda)::operator()() const", and renamed that type from
+	//    "(anonymous class)" to "(lambda)" in LLVM 22 - the spelling every release up to 21 emits
+	// The marker deliberately stops at the opening parenthesis of the call operator and never covers the
+	// argument list behind it: a lambda that takes parameters ends with "operator()(int)" rather than
+	// "operator()()", and matching the arguments too would silently skip every such lambda. The same holds
+	// for GCC's "<lambda(int)>". The parenthesis scan below walks from the marker back to the enclosing
+	// function either way, so the arguments need no handling here.
+#		if defined(DEATH_TARGET_CLANG)
+#			if __clang_major__ >= 22
+	static constexpr StringView LambdaMarker = "::(lambda)::operator("_s;
+#			else
+	static constexpr StringView LambdaMarker = "::(anonymous class)::operator("_s;
+#			endif
+#		else
+	static constexpr StringView LambdaMarker = "::<lambda("_s;
+#		endif
+
 	StringView functionNameView = StringView(functionName, functionNameLength);
-	std::int32_t i; bool isLambda = false;
-	if (auto lambdaClang = functionNameView.find(LambdaClangSuffix)) {
-		i = lambdaClang.begin() - functionName;
+	std::int32_t i = functionNameLength - 1; bool isLambda = false;
+	// The first occurrence is the outermost closure, which is the enclosing function a nested lambda should
+	// be reported against as well
+	if (auto lambdaMarker = functionNameView.find(LambdaMarker)) {
+		i = std::int32_t(lambdaMarker.begin() - functionName);
 		isLambda = true;
-	} else {
-		i = functionNameLength - 1;
-		if (functionNameView.hasSuffix(LambdaSuffix)) {
-			i -= LambdaSuffix.size();
-			isLambda = true;
-		}
 	}
 
 	// Go backwards until we find the first opening parenthesis (arguments)

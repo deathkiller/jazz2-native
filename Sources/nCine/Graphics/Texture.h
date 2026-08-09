@@ -178,6 +178,14 @@ namespace nCine
 		 * The default mapping is `Red, Green, Blue, Alpha`. Swizzling lets a reduced-channel
 		 * texture (e.g., an RG8 sprite holding a palette index plus alpha) be sampled as if it
 		 * were RGBA8 in the shader.
+		 *
+		 * Two profiles cannot remap channels at all: OpenGL|ES 2.0 has no `GL_TEXTURE_SWIZZLE_*`,
+		 * and WebGL 2.0 leaves them out as well even though the ES 3.0 it is based on has them.
+		 * Both ignore the call and reach the same sampling by resolving @ref PixelFormat::RG8 to
+		 * `LUMINANCE_ALPHA`, which samples as `(L,L,L,A)` on its own, so shaders need no
+		 * per-profile handling. Two things follow for callers: a *new* non-identity swizzle would
+		 * silently do nothing there, and `RG8` cannot back a render target on those profiles,
+		 * because the substitute is not color-renderable.
 		 */
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 

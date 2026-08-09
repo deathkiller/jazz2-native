@@ -71,10 +71,12 @@ namespace Jazz2::Rendering
 		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->SetWrap(SamplerWrapping::ClampToEdge);
 
-#if defined(RHI_GL_PROFILE_ES2)
+#if defined(RHI_GL_PROFILE_ES2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// OpenGL|ES 2.0 cannot render into a two-channel texture (GL_RG8 is ES 3.0 and the profile's RG8
 		// substitute LUMINANCE_ALPHA is not color-renderable), so the lighting buffer is a full RGBA target
-		// there - the lighting shader writes all four channels and Combine only reads .r/.g either way
+		// there - the lighting shader writes all four channels and Combine only reads .r/.g either way.
+		// WebGL 2.0 substitutes RG8 the same way and for the same reason (it has no texture swizzle, see
+		// GLTextureFormat::Resolve()), so it inherits the substitution here as well
 		constexpr Texture::Format LightingBufferFormat = Texture::Format::RGBA8;
 #else
 		constexpr Texture::Format LightingBufferFormat = Texture::Format::RG8;
