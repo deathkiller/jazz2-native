@@ -201,10 +201,17 @@ The following parameters can be used to customize the build:
 -   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce, @cpp "GXM" @ce on **PS Vita**) --- Preferred rendering backend (RHI)
     -   Possible values:
         - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
-        - `D3D11` --- Uses Direct3D 11 (Windows only)
+        - `D3D11` --- Uses Direct3D 11 (**Windows** with the **MSVC** toolchain only)
         - `Vulkan` --- Uses Vulkan
-        - `GXM` --- Uses **sceGxm** directly (**PS Vita** only), see @ref consoles-vita
+        - `GXM` --- Uses **sceGxm** directly (**PlayStation Vita** only), see @ref consoles-vita
         - `RSX` --- Uses **libgcm** directly (**PlayStation 3** only), see @ref consoles-ps3
+        - `PVR` --- Fixed-function PowerVR backend on top of KallistiOS (**Sega Dreamcast** only), see @ref consoles-dreamcast
+        - `GX` --- Fixed-function GX backend for Flipper/Hollywood (**Nintendo Wii** and **Nintendo GameCube** only),
+          see @ref consoles-wii and @ref consoles-gamecube
+        - `GU` --- Fixed-function GU backend driving the Allegrex GE through `sceGu` (**PlayStation Portable** only),
+          see @ref consoles-psp
+        - `GS` --- Fixed-function Graphics Synthesizer backend writing GIF packets directly (**PlayStation 2** only),
+          see @ref consoles-ps2
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
         available on **PS Vita**

@@ -53,10 +53,10 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
-#include <vector>
 
+#include <Containers/Function.h>
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -98,7 +98,7 @@ namespace ShaderCompiler
 	{
 		Pvr,		/**< Dreamcast-specific override (wins over the generic block for that backend) */
 		Gx,			/**< Wii/GameCube-specific override (wins over the generic block for that backend) */
-		Psp,		/**< PlayStation Portable-specific override (wins over the generic block for that backend) */
+		Gu,			/**< PlayStation Portable-specific override (wins over the generic block for that backend) */
 		Gs			/**< PlayStation 2-specific override (wins over the generic block for that backend) */
 	};
 
@@ -107,20 +107,20 @@ namespace ShaderCompiler
 	{
 		switch (target) {
 			case FixedFunctionTarget::Gx: return "gx";
-			case FixedFunctionTarget::Psp: return "psp";
+			case FixedFunctionTarget::Gu: return "gu";
 			case FixedFunctionTarget::Gs: return "gs";
 			default: return "pvr";
 		}
 	}
 
 	/**
-		@brief The target list of a block, spelled the way the block declares it — e.g. `pvr, psp` (empty for the generic block)
+		@brief The target list of a block, spelled the way the block declares it — e.g. `pvr, gu` (empty for the generic block)
 
 		The canonical spelling (declaration order, one ", " between entries) rather than the raw
 		source text, so a provenance comment in a generated header cannot change just because
 		somebody reformatted the parentheses in the shader file.
 	*/
-	inline String FixedFunctionTargetList(const std::vector<FixedFunctionTarget>& targets)
+	inline String FixedFunctionTargetList(const SmallVectorImpl<FixedFunctionTarget>& targets)
 	{
 		String result;
 		for (std::size_t i = 0; i < targets.size(); i++) {
@@ -149,9 +149,9 @@ namespace ShaderCompiler
 			byte-identical copies. Capabilities are then validated against the INTERSECTION of the
 			listed targets, so a shared block can only use what every one of them can do.
 		*/
-		std::vector<FixedFunctionTarget> Targets;
+		SmallVector<FixedFunctionTarget, 0> Targets;
 		/** @brief Raw (unpreprocessed) statement lines of the block body */
-		std::vector<SourceLine> Lines;
+		SmallVector<SourceLine, 0> Lines;
 		/** @brief 1-based line number of the block header */
 		std::int32_t Line = 0;
 	};
@@ -173,17 +173,17 @@ namespace ShaderCompiler
 		/** @brief Program name from the "program" directive */
 		String ProgramName;
 		/** @brief Variant names; the unnamed base variant is always `Variants[0]` (empty name) */
-		std::vector<String> Variants;
+		SmallVector<String, 0> Variants;
 		/** @brief Sampler texture-unit assignments (explicit hints and the implicit canvas TEXTURE) */
-		std::vector<TextureDirective> Textures;
+		SmallVector<TextureDirective, 0> Textures;
 		/** @brief Shared globals emitted before both stage bodies */
-		std::vector<SourceLine> Prelude;
+		SmallVector<SourceLine, 0> Prelude;
 		/** @brief Raw (unpreprocessed) vertex-stage GLSL line stream */
-		std::vector<SourceLine> VertexLines;
+		SmallVector<SourceLine, 0> VertexLines;
 		/** @brief Raw (unpreprocessed) fragment-stage GLSL line stream */
-		std::vector<SourceLine> FragmentLines;
+		SmallVector<SourceLine, 0> FragmentLines;
 		/** @brief Captured "fixed_function" blocks (empty for shaders with no console fixed-function implementation); a batched twin shares its primary's blocks */
-		std::vector<FixedFunctionBlock> FixedFunctionBlocks;
+		SmallVector<FixedFunctionBlock, 0> FixedFunctionBlocks;
 		/** @brief Bitmask of @ref RenderModeMask flags (`0` when no "render_mode" is declared) */
 		std::uint32_t RenderModes = 0;
 		/** @brief Whether the document declares a vertex stage */
@@ -193,7 +193,7 @@ namespace ShaderCompiler
 	};
 
 	/** @brief Reads the content of the file at @p path into @p content, returns false on failure */
-	using FileReader = std::function<bool(StringView path, String& content)>;
+	using FileReader = Function<bool(StringView path, String& content)>;
 
 	/** @brief Parses and lowers the ".shader" input language */
 	class ShaderParser
@@ -205,13 +205,13 @@ namespace ShaderCompiler
 			exactly one document; "shader_type canvas_item;" files produce the primary document
 			plus, when "batched <Name>;" is present, its batched twin.
 		*/
-		static bool ParseDocuments(StringView content, std::vector<ShaderDocument>& documents, Diagnostic& diag);
+		static bool ParseDocuments(StringView content, SmallVectorImpl<ShaderDocument>& documents, Diagnostic& diag);
 
 		/** Splits raw file content into lines (handles CRLF/CR and backslash-newline continuations) */
-		static void SplitLines(StringView content, std::vector<SourceLine>& lines);
+		static void SplitLines(StringView content, SmallVectorImpl<SourceLine>& lines);
 
 		/** Removes line comments and block comments in place (newlines and line numbering are preserved) */
-		static void StripComments(std::vector<SourceLine>& lines);
+		static void StripComments(SmallVectorImpl<SourceLine>& lines);
 
 		/**
 			Expands `#include "relative/path"` lines recursively (textually), relative to @p baseDir,
@@ -220,7 +220,7 @@ namespace ShaderCompiler
 			and the emitted sources see the included text inlined. As a consequence, line numbers in
 			diagnostics refer to the include-expanded stream.
 		*/
-		static bool ExpandIncludes(String& content, StringView baseDir, const FileReader& reader, std::int32_t depth, String& error);
+		static bool ExpandIncludes(String& content, StringView baseDir, FileReader& reader, std::int32_t depth, String& error);
 
 		/**
 			Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared
@@ -245,7 +245,7 @@ namespace ShaderCompiler
 		void Define(StringView name, StringView body);
 
 		/** Runs the preprocessor, appending active (macro-expanded) lines to @p output */
-		bool Run(const std::vector<SourceLine>& input, std::vector<SourceLine>& output, Diagnostic& diag);
+		bool Run(const SmallVectorImpl<SourceLine>& input, SmallVectorImpl<SourceLine>& output, Diagnostic& diag);
 
 		/** Returns true if the macro is defined (BATCH_SIZE always reports as defined) */
 		bool IsDefined(StringView name) const;

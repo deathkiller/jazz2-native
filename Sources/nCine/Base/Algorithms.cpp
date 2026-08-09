@@ -307,7 +307,7 @@ namespace nCine
 
 		std::int64_t bytesRead;
 		while ((bytesRead = stream.Read(buffer, sizeof(buffer))) > 0) {
-			crc = ::crc32(crc, buffer, bytesRead);
+			crc = ::crc32(crc, buffer, static_cast<uInt>(bytesRead));
 		}
 
 		return crc;

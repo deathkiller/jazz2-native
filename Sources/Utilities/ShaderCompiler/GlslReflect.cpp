@@ -1,5 +1,6 @@
 #include "GlslReflect.h"
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -62,7 +63,7 @@ namespace ShaderCompiler
 			std::int32_t Line = 0;
 		};
 
-		void Tokenize(const std::vector<SourceLine>& lines, std::vector<Tok>& out)
+		void Tokenize(const SmallVectorImpl<SourceLine>& lines, SmallVectorImpl<Tok>& out)
 		{
 			std::int32_t lastLine = 1;
 			for (const SourceLine& line : lines) {
@@ -180,7 +181,7 @@ namespace ShaderCompiler
 		class Parser
 		{
 		public:
-			Parser(const std::vector<Tok>& tokens, bool vertexStage, StageReflection& result, Diagnostic& diag)
+			Parser(const SmallVectorImpl<Tok>& tokens, bool vertexStage, StageReflection& result, Diagnostic& diag)
 				: _tokens(tokens), _pos(0), _vertexStage(vertexStage), _result(result), _diag(diag)
 			{
 			}
@@ -232,7 +233,7 @@ namespace ShaderCompiler
 			}
 
 		private:
-			const std::vector<Tok>& _tokens;
+			const SmallVectorImpl<Tok>& _tokens;
 			std::size_t _pos;
 			bool _vertexStage;
 			StageReflection& _result;
@@ -400,7 +401,7 @@ namespace ShaderCompiler
 				return Expect("]");
 			}
 
-			bool ParseMemberList(std::vector<MemberInfo>& members, bool allowSymbolic)
+			bool ParseMemberList(SmallVectorImpl<MemberInfo>& members, bool allowSymbolic)
 			{
 				while (true) {
 					if (Accept("}")) {
@@ -452,7 +453,7 @@ namespace ShaderCompiler
 				}
 			}
 
-			bool ComputeStd140(std::vector<MemberInfo>& members, bool allowSymbolic, std::uint32_t& size, std::uint32_t& align, std::uint32_t& instanceStride, std::int32_t line)
+			bool ComputeStd140(SmallVectorImpl<MemberInfo>& members, bool allowSymbolic, std::uint32_t& size, std::uint32_t& align, std::uint32_t& instanceStride, std::int32_t line)
 			{
 				std::uint32_t offset = 0;
 				std::uint32_t maxAlign = 16;	// aggregates are aligned to at least 16 in std140
@@ -760,9 +761,9 @@ namespace ShaderCompiler
 		}
 	}
 
-	bool GlslReflector::ReflectStage(const std::vector<SourceLine>& lines, bool vertexStage, StageReflection& result, Diagnostic& diag)
+	bool GlslReflector::ReflectStage(const SmallVectorImpl<SourceLine>& lines, bool vertexStage, StageReflection& result, Diagnostic& diag)
 	{
-		std::vector<Tok> tokens;
+		SmallVector<Tok, 0> tokens;
 		Tokenize(lines, tokens);
 		Parser parser(tokens, vertexStage, result, diag);
 		return parser.Run();

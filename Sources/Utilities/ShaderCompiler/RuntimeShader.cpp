@@ -1,5 +1,6 @@
 #include "RuntimeShader.h"
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 namespace ShaderCompiler
@@ -21,8 +22,8 @@ namespace ShaderCompiler
 		bool ReflectVariantStage(const ShaderDocument& document, bool vertexStage, StringView define,
 			StageReflection& result, Diagnostic& diag)
 		{
-			std::vector<SourceLine> lines = document.Prelude;
-			const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
+			SmallVector<SourceLine, 0> lines = document.Prelude;
+			const SmallVectorImpl<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 			lines.insert(lines.end(), stage.begin(), stage.end());
 
 			ShaderParser::StripComments(lines);
@@ -31,7 +32,7 @@ namespace ShaderCompiler
 			if (!define.empty()) {
 				preprocessor.Define(define, "1");
 			}
-			std::vector<SourceLine> preprocessed;
+			SmallVector<SourceLine, 0> preprocessed;
 			if (!preprocessor.Run(lines, preprocessed, diag)) {
 				return false;
 			}
@@ -76,7 +77,7 @@ namespace ShaderCompiler
 			viewBlocks_[i].reserve(r.Blocks.size());
 			for (std::size_t j = 0; j < r.Blocks.size(); j++) {
 				const BlockInfo& b = r.Blocks[j];
-				std::vector<BlockMember>& members = viewBlockMembers_[i][j];
+				SmallVectorImpl<BlockMember>& members = viewBlockMembers_[i][j];
 				members.reserve(b.Members.size());
 				for (const MemberInfo& m : b.Members) {
 					members.push_back({ m.Name.data(), UniformType(m.Type), ToViewArraySize(m.ArraySize, m.SymbolicArray), m.Offset });
@@ -111,7 +112,7 @@ namespace ShaderCompiler
 		view_ = { Name.data(), RenderModes, viewVariants_.size(), viewVariants_.data() };
 	}
 
-	bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag)
+	bool CompileRuntimeProgram(StringView content, StringView baseDir, FileReader& reader, RuntimeProgram& out, Diagnostic& diag)
 	{
 		String expanded = content;
 		{
@@ -123,7 +124,7 @@ namespace ShaderCompiler
 			}
 		}
 
-		std::vector<ShaderDocument> documents;
+		SmallVector<ShaderDocument, 0> documents;
 		if (!ShaderParser::ParseDocuments(expanded, documents, diag)) {
 			return false;
 		}

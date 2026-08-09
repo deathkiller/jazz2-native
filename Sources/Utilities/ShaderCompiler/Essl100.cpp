@@ -1,9 +1,9 @@
 #include "Essl100.h"
 #include "VertexIdRewrite.h"
 
-#include <string>
 
 #include <Containers/GrowableArray.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -111,9 +111,9 @@ namespace ShaderCompiler
 			Splits @p source on '\n', keeping a trailing empty segment when the source ends with a
 			newline, so JoinLines() reproduces the input byte-for-byte (line insert/remove aside).
 		*/
-		std::vector<String> SplitLines(StringView source)
+		SmallVector<String, 0> SplitLines(StringView source)
 		{
-			std::vector<String> lines;
+			SmallVector<String, 0> lines;
 			std::size_t start = 0;
 			while (true) {
 				std::size_t nl = Find(source, '\n', start);
@@ -127,7 +127,7 @@ namespace ShaderCompiler
 			return lines;
 		}
 
-		String JoinLines(const std::vector<String>& lines)
+		String JoinLines(const SmallVectorImpl<String>& lines)
 		{
 			Array<char> out;
 			for (std::size_t i = 0; i < lines.size(); i++) {
@@ -140,15 +140,15 @@ namespace ShaderCompiler
 		}
 
 		/** Comment-free copy of @p lines (reuses the tool's block/line comment stripper; columns preserved) */
-		std::vector<String> StripComments(const std::vector<String>& lines)
+		SmallVector<String, 0> StripComments(const SmallVectorImpl<String>& lines)
 		{
-			std::vector<SourceLine> tmp;
+			SmallVector<SourceLine, 0> tmp;
 			tmp.reserve(lines.size());
 			for (const String& line : lines) {
 				tmp.push_back({ line, 0 });
 			}
 			ShaderParser::StripComments(tmp);
-			std::vector<String> out;
+			SmallVector<String, 0> out;
 			out.reserve(tmp.size());
 			for (const SourceLine& line : tmp) {
 				out.push_back(line.Text);
@@ -157,9 +157,9 @@ namespace ShaderCompiler
 		}
 
 		/** First whole-identifier occurrence of @p name across the comment-free @p stripped lines (1-based line, or -1) */
-		int FindIdentifierLine(const std::vector<String>& stripped, const char* name)
+		int FindIdentifierLine(const SmallVectorImpl<String>& stripped, StringView name)
 		{
-			const std::size_t nameLength = std::char_traits<char>::length(name);
+			const std::size_t nameLength = name.size();
 			for (std::size_t li = 0; li < stripped.size(); li++) {
 				const String& text = stripped[li];
 				char previous = '\0';
@@ -171,7 +171,7 @@ namespace ShaderCompiler
 						while (i < text.size() && IsIdentChar(text[i])) {
 							i++;
 						}
-						if (i - begin == nameLength && Substr(text, begin, nameLength) == StringView{name}) {
+						if (i - begin == nameLength && Substr(text, begin, nameLength) == name) {
 							return static_cast<int>(li) + 1;
 						}
 						previous = text[i - 1];
@@ -218,10 +218,10 @@ namespace ShaderCompiler
 			drops the guard directives (GL_ES is predefined under "#version 100"). Nesting-aware — a
 			non-GL_ES "#if*" inside the block is preserved with its own "#endif".
 		*/
-		std::vector<String> UnwrapGlEs(const std::vector<String>& lines)
+		SmallVector<String, 0> UnwrapGlEs(const SmallVectorImpl<String>& lines)
 		{
-			std::vector<String> stripped = StripComments(lines);
-			std::vector<String> result;
+			SmallVector<String, 0> stripped = StripComments(lines);
+			SmallVector<String, 0> result;
 			result.reserve(lines.size());
 			std::size_t i = 0;
 			while (i < lines.size()) {
@@ -357,7 +357,7 @@ namespace ShaderCompiler
 		*/
 		String RetargetReturns(StringView original, StringView code)
 		{
-			std::vector<std::size_t> insertAt;
+			SmallVector<std::size_t, 0> insertAt;
 			char previous = '\0';
 			std::size_t i = 0;
 			while (i < code.size()) {
@@ -392,7 +392,7 @@ namespace ShaderCompiler
 		}
 
 		/** Comment-aware whole-identifier rewrite of texture()/textureLod() to their ES2 spellings */
-		void RewriteTextureCalls(std::vector<String>& lines)
+		void RewriteTextureCalls(SmallVectorImpl<String>& lines)
 		{
 			bool inBlockComment = false;
 			for (String& line : lines) {
@@ -519,23 +519,23 @@ namespace ShaderCompiler
 		String MapEs2AttributeType(StringView tail)
 		{
 			// @p tail is the declaration after the "attribute" keyword, e.g. "uint aMeshIndex;" -> "float aMeshIndex;"
-			static const struct { const char* From; const char* To; } Map[] = {
-				{ "uint ", "float " }, { "int ", "float " },
-				{ "uvec2 ", "vec2 " }, { "ivec2 ", "vec2 " },
-				{ "uvec3 ", "vec3 " }, { "ivec3 ", "vec3 " },
-				{ "uvec4 ", "vec4 " }, { "ivec4 ", "vec4 " },
+			static const struct { StringView From; StringView To; } Map[] = {
+				{ "uint "_s, "float "_s }, { "int "_s, "float "_s },
+				{ "uvec2 "_s, "vec2 "_s }, { "ivec2 "_s, "vec2 "_s },
+				{ "uvec3 "_s, "vec3 "_s }, { "ivec3 "_s, "vec3 "_s },
+				{ "uvec4 "_s, "vec4 "_s }, { "ivec4 "_s, "vec4 "_s },
 			};
 			for (const auto& m : Map) {
-				std::size_t n = std::char_traits<char>::length(m.From);
-				if (tail.size() >= n && Substr(tail, 0, n) == StringView{m.From}) {
-					return StringView{m.To} + tail.exceptPrefix(n);
+				std::size_t n = m.From.size();
+				if (tail.size() >= n && Substr(tail, 0, n) == m.From) {
+					return m.To + tail.exceptPrefix(n);
 				}
 			}
 			return String{tail.data(), tail.size()};
 		}
 
 		/** 1-based index of the first comment-free line containing the operator char @p op, or -1 */
-		int FindCharLine(const std::vector<String>& lines, char op)
+		int FindCharLine(const SmallVectorImpl<String>& lines, char op)
 		{
 			for (std::size_t i = 0; i < lines.size(); i++) {
 				if (Find(lines[i], op) != Npos) {
@@ -546,7 +546,7 @@ namespace ShaderCompiler
 		}
 
 		/** 1-based index of the first comment-free line with an f/F-suffixed float literal (e.g. "1.0f"), or -1 */
-		int FindFloatSuffixLine(const std::vector<String>& lines)
+		int FindFloatSuffixLine(const SmallVectorImpl<String>& lines)
 		{
 			for (std::size_t li = 0; li < lines.size(); li++) {
 				const String& s = lines[li];
@@ -598,12 +598,12 @@ namespace ShaderCompiler
 			name, if any, is stripped from every "<instance>.<member>" access so the members are read
 			directly / through the array.
 		*/
-		void RewriteStd140Blocks(std::vector<String>& lines)
+		void RewriteStd140Blocks(SmallVectorImpl<String>& lines)
 		{
-			std::vector<String> stripped = StripComments(lines);
-			std::vector<String> result;
+			SmallVector<String, 0> stripped = StripComments(lines);
+			SmallVector<String, 0> result;
 			result.reserve(lines.size());
-			std::vector<String> instanceNames;
+			SmallVector<String, 0> instanceNames;
 			std::size_t i = 0;
 			while (i < lines.size()) {
 				const String& s = stripped[i];
@@ -688,7 +688,7 @@ namespace ShaderCompiler
 
 	bool Essl100Emitter::Transform(StringView modernSource, bool vertexStage, String& out, Diagnostic& diag)
 	{
-		std::vector<String> lines = SplitLines(modernSource);
+		SmallVector<String, 0> lines = SplitLines(modernSource);
 		bool fragmentOutSeen = false;
 
 		// --- 1. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ---------------
@@ -708,7 +708,7 @@ namespace ShaderCompiler
 		// leading "in" into "attribute". Their per-vertex data is supplied by the runtime (a static
 		// corner VBO, and the batched instance-index stream).
 		if (vertexStage && (usedCorner || usedInstance)) {
-			std::vector<String> decls;
+			SmallVector<String, 0> decls;
 			if (usedCorner) {
 				decls.push_back(String{"in vec2 aQuadCorner;"});
 			}
@@ -719,8 +719,8 @@ namespace ShaderCompiler
 		}
 
 		// --- 3. Interface rewrite + fragment COLOR/main lowering ------------------------------------
-		std::vector<String> stripped = StripComments(lines);
-		std::vector<String> result;
+		SmallVector<String, 0> stripped = StripComments(lines);
+		SmallVector<String, 0> result;
 		result.reserve(lines.size() + 4);
 		int braceDepth = 0;
 		bool inMain = false;
@@ -801,7 +801,7 @@ namespace ShaderCompiler
 		// --- 5. Derivatives (dFdx/dFdy/fwidth) are core in GLSL ES 3.00 but need an explicitly enabled
 		//        extension under ESSL 100 — prepend the pragma when the stage uses any of them ----------
 		{
-			std::vector<String> check = StripComments(SplitLines(out));
+			SmallVector<String, 0> check = StripComments(SplitLines(out));
 			if (FindIdentifierLine(check, "dFdx") >= 0 || FindIdentifierLine(check, "dFdy") >= 0 || FindIdentifierLine(check, "fwidth") >= 0) {
 				out = "#extension GL_OES_standard_derivatives : enable\n"_s + out;
 			}
@@ -811,7 +811,7 @@ namespace ShaderCompiler
 		// under "#version 100", so the offline check catches ES2 breakage that the strict compiler would.
 		// (int / ivecN are intentionally NOT flagged — signed integers and int() casts are valid in ESSL 100.)
 		{
-			std::vector<String> check = StripComments(SplitLines(out));
+			SmallVector<String, 0> check = StripComments(SplitLines(out));
 			const char* detail = nullptr;
 			int line = -1;
 			int l;

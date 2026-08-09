@@ -112,7 +112,7 @@ var CANVAS_SOURCE = [
 	'\tCOLOR = helper(texture(TEXTURE, UV));',
 	'}',
 	'',
-	'void fixed_function(pvr, psp) {',
+	'void fixed_function(pvr, gu) {',
 	'\tpass p;',
 	'\tp.color = COLOR;',
 	'\tsubmit_quad(p);',
@@ -150,7 +150,7 @@ var CANVAS_SOURCE = [
 	equal('fixed_function entry', scan.entryPoints[1].name, 'fixed_function');
 	equal('fixed_function target count', scan.entryPoints[1].targets.length, 2);
 	equal('fixed_function target 0', scan.entryPoints[1].targets[0], 'pvr');
-	equal('fixed_function target 1', scan.entryPoints[1].targets[1], 'psp');
+	equal('fixed_function target 1', scan.entryPoints[1].targets[1], 'gu');
 	equal('no includes', scan.hasIncludes, false);
 })();
 
@@ -415,7 +415,7 @@ function messagesOf(findings) {
 	// The render modes offered must be exactly the six the parser accepts
 	var modes = names(language.RENDER_MODES).sort().join(',');
 	equal('render mode set', modes, 'blend_add,blend_mix,blend_mul,blend_premul_alpha,blend_sub,unshaded');
-	equal('fixed function target set', names(language.FIXED_FUNCTION_TARGETS).sort().join(','), 'gs,gx,psp,pvr');
+	equal('fixed function target set', names(language.FIXED_FUNCTION_TARGETS).sort().join(','), 'gs,gu,gx,pvr');
 	equal('pass field set', names(language.FIXED_FUNCTION.passFields).sort().join(','),
 		'blend,color,luma_gain,offset_color,screen_offset,tev');
 	equal('blend mode set', language.FIXED_FUNCTION.blendModes.slice().sort().join(','), 'ADD,ALPHA,MATERIAL,OPAQUE');

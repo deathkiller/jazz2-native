@@ -1378,7 +1378,15 @@ namespace Jazz2
 		// the largest dimension the GE can address at all. A wider atlas has to be split into side-by-side
 		// pages and drawn one page at a time, which puts a per-tile page lookup into the tilemap's hot loop,
 		// keeping every atlas 510 px wide means the paged path is never taken by a tileset.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP)
+		//
+		// The PlayStation 2 has the same hard ceiling one octave up: `TEX0.TW`/`TH` are log2 fields capped
+		// at 10, so 1024 texels per axis is all the GS can ADDRESS. Keeping the source sheet's row width
+		// broke on the wider tilesets - secretf/04_haunted1 is laid out 32 tiles across, which is 1088 px
+		// padded, and the sampled extent silently clamped to 1024 while the texture coordinates still ran
+		// to 1088. That is not a dropped tileset, it is a wrapped one: every tile past the clamp sampled
+		// somebody else's pixels.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
 #else
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
@@ -1475,7 +1483,13 @@ namespace Jazz2
 		// than 512 texels per axis anyway), so it changes nothing there today - it is stated explicitly all
 		// the same, because the pairing with PreferredAtlasTilesPerRow above is what makes a chunk exactly one
 		// GE texture, and that should not silently depend on what the backend happens to report.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP)
+		//
+		// The PlayStation 2 does not round its storage up to a power of two (GsVram places the exact pages a
+		// buffer needs), so the argument there is only about the SIZE of the run: a 510x1020 8-bit chunk is
+		// 64 contiguous pages out of a 352-page cache, which is the first thing to fail once the window is
+		// broken up. Half-height chunks are 32 pages each for the same total.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2)
 		constexpr std::int32_t PreferredChunkHeight = 512;
 #else
 		constexpr std::int32_t PreferredChunkHeight = 0;

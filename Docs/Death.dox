@@ -184,9 +184,31 @@ namespace Death {
 #undef DEATH_TARGET_ANDROID
 
 /**
+	@brief Nintendo GameCube target
+
+	Defined if the library is built for Nintendo GameCube. Gekko is a PowerPC core, so
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined.
+*/
+#define DEATH_TARGET_GAMECUBE
+#undef DEATH_TARGET_GAMECUBE
+
+/**
+	@brief Nintendo Wii target
+
+	Defined if the library is built for Nintendo Wii. Broadway is a PowerPC core, so
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined.
+*/
+#define DEATH_TARGET_WII
+#undef DEATH_TARGET_WII
+
+/**
 	@brief Nintendo Switch target
 
-	Defined if the library is built for Nintendo Switch.
+	Defined if the library is built for Nintendo Switch. The Tegra X1's Cortex-A57 is a 64-bit ARM
+	core, so @ref DEATH_TARGET_ARM is also defined, @ref DEATH_TARGET_32BIT is not, and because NEON
+	is part of the base AArch64 instruction set, @ref DEATH_TARGET_NEON is defined as well.
 */
 #define DEATH_TARGET_SWITCH
 #undef DEATH_TARGET_SWITCH
@@ -222,30 +244,12 @@ namespace Death {
 /**
 	@brief PlayStation Vita target
 
-	Defined if the library is built for PlayStation Vita.
+	Defined if the library is built for PlayStation Vita. Its Cortex-A9 is a 32-bit ARM core, so
+	@ref DEATH_TARGET_ARM and @ref DEATH_TARGET_32BIT are also defined, and VitaSDK targets ARMv7-A
+	with NEON, so @ref DEATH_TARGET_NEON is defined as well.
 */
 #define DEATH_TARGET_VITA
 #undef DEATH_TARGET_VITA
-
-/**
-	@brief Nintendo GameCube target
-
-	Defined if the library is built for Nintendo GameCube. Gekko is a PowerPC core, so
-	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
-	defined.
-*/
-#define DEATH_TARGET_GAMECUBE
-#undef DEATH_TARGET_GAMECUBE
-
-/**
-	@brief Nintendo Wii target
-
-	Defined if the library is built for Nintendo Wii. Broadway is a PowerPC core, so
-	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
-	defined.
-*/
-#define DEATH_TARGET_WII
-#undef DEATH_TARGET_WII
 
 /**
 	@brief Sega Dreamcast target

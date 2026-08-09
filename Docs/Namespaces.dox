@@ -39,6 +39,10 @@ matches the current implementation.
   fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
 - **PlayStation Portable** using [pspdev](https://github.com/pspdev/pspdev) and a fixed-function
   GU rendering backend, see @ref consoles-psp
+- **PlayStation 2** using [ps2dev](https://github.com/ps2dev/ps2dev) and a fixed-function
+  Graphics Synthesizer rendering backend, see @ref consoles-ps2
+- **PlayStation 3** using [ps3toolchain](https://github.com/ps3dev/ps3toolchain) with **PSL1GHT**
+  and a native **libgcm** rendering backend for the RSX, see @ref consoles-ps3
 - **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and a native **sceGxm** rendering
   backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
 - **libretro** core for RetroArch, see @ref consoles-libretro
@@ -47,11 +51,12 @@ The code is mainly optimized to run on 64-bit **x86** and **ARM** processors inc
 instruction sets. Additionally, the application requires a rendering backend --- **OpenGL**
 3.3, **OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer
 are all fully supported and interchangeable, so any of them can be used depending on the target
-platform. The consoles above are the exception: four of them have no programmable shaders at all
-and are driven by a rendering backend written for their fixed-function graphics hardware, and the
-PlayStation Vita can drive **sceGxm**, its own shader API, directly. See also
-@ref consoles-common-features "the list of features each console supports", which is where the
-platform differences are the largest.
+platform. The consoles above are the exception: five of them have no programmable shaders at all
+and are driven by one of four rendering backends written for their fixed-function graphics hardware
+@m_span{m-text m-dim} (the Wii and the GameCube share one) @m_endspan, while the PlayStation Vita
+and the PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm**
+--- directly. See also @ref consoles-common-features "the list of features each console supports",
+which is where the platform differences are the largest.
 	
 @section mainpage-license License
 

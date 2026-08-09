@@ -82,12 +82,23 @@ namespace nCine::Backends
 		{
 			bool Connected = false;
 			bool PortOpen = false;
+			/**
+				@brief Whether this pad has already been asked to switch its sticks on
+
+				A DualShock powers up in DIGITAL mode and stays there until something asks otherwise, so the
+				request has to be made per pad and re-made for one plugged in later. Kept so it is made once
+				rather than every frame: `padSetMainMode()` is an asynchronous request to the controller
+				itself, not a local flag.
+			*/
+			bool AnalogRequested = false;
 			Ps2JoystickState State;
 		};
 
 		static PadInfo _pads[MaxJoysticks];
 
 		static void handleConnection(std::int32_t joyId, bool connected);
+		/** @brief Asks the pad in @p joyId for analogue mode, once it is ready to be asked */
+		static void RequestAnalogMode(std::int32_t joyId);
 
 		// The per-pad state objects dispatch through the protected shared _joyMapping/_inputEventHandler
 		friend class Ps2JoystickState;

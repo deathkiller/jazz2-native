@@ -675,10 +675,11 @@ namespace Death { namespace IO {
 		if (::fstat(_fileDescriptor, &sb) == 0 && S_ISREG(sb.st_mode)) {
 			_size = std::int64_t(sb.st_size);
 		}
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_PS2)
 		else {
 			// fstat() is not fully supported by some libfat/KOS filesystems (e.g., iso9660), measure the size
-			// by seeking instead - a successful seek also proves the file behaves like a regular one
+			// by seeking instead - a successful seek also proves the file behaves like a regular one.
 			off_t seekEnd = ::lseek(_fileDescriptor, 0, SEEK_END);
 			if (seekEnd >= 0) {
 				_size = std::int64_t(seekEnd);

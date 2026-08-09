@@ -29,6 +29,8 @@ set(SOURCES
 	Essl100.cpp
 	Essl100.h
 	GlslAst.h
+	GlslTypedAst.h
+	VertexIdRewrite.h
 	GlslReflect.cpp
 	GlslReflect.h
 	GlslToCpp.cpp
@@ -48,6 +50,13 @@ set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/String.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/StringView.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/StringView.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/StringUtils.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/StringUtils.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/SmallVector.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/SmallVector.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/GrowableArray.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/DateTime.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Containers/DateTime.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Base/Format.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Base/Format.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Asserts.h
@@ -55,6 +64,20 @@ set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/CommonBase.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Cpu.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Cpu.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Environment.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Environment.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Utf8.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/Utf8.h
+	# Death::IO dependency - the tool does all of its file and directory access through it
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/FileSystem.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/FileSystem.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/FileStream.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/FileStream.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/MemoryStream.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/MemoryStream.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/Stream.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/Stream.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/IO/FileAccess.h
 )
 
 ncine_assign_source_group(PATH_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../../ ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

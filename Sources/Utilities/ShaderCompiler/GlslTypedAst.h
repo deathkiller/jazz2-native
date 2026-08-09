@@ -28,8 +28,8 @@
 #include <memory>
 #include <set>
 #include <utility>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 #include "GlslAst.h"			// Expr / ExprKind / MakeExpr / TokenizeStage / IsQualifier / BinPrec
@@ -160,13 +160,13 @@ namespace ShaderCompiler
 	struct Stmt
 	{
 		StmtKind Kind;
-		std::vector<std::unique_ptr<Stmt>> Body;		// Block
+		SmallVector<std::unique_ptr<Stmt>, 0> Body;		// Block
 		TyRef DeclType;									// VarDecl
 		bool DeclConst = false;
 		std::int32_t DeclArraySize = 0;					// VarDecl: 0 = scalar, >0 = local array "T name[N]"
 		String DeclName;
 		ExprPtr Init;
-		std::vector<std::pair<String, ExprPtr>> ExtraDecls;
+		SmallVector<std::pair<String, ExprPtr>, 0> ExtraDecls;
 		ExprPtr E;										// ExprStmt / Return value
 		ExprPtr Cond;									// If
 		std::unique_ptr<Stmt> Then, Else;
@@ -182,13 +182,13 @@ namespace ShaderCompiler
 	}
 
 	struct Param { TyRef Type; String Name; std::int32_t ArraySize = 0; String Qualifier; };	// Qualifier: "" / "out" / "inout"
-	struct Function { TyRef RetType; String Name; std::vector<Param> Params; StmtPtr Body; };
+	struct Function { TyRef RetType; String Name; SmallVector<Param, 0> Params; StmtPtr Body; };
 
 	// --- Declaration records -------------------------------------------------------------------------
 
 	struct Field { String Name; TyRef Type; std::int32_t ArraySize = 0; bool SymbolicArray = false; };
-	struct StructDecl { String Name; std::vector<Field> Fields; };
-	struct BlockDecl { String Name; String Instance; std::vector<Field> Members; };
+	struct StructDecl { String Name; SmallVector<Field, 0> Fields; };
+	struct BlockDecl { String Name; String Instance; SmallVector<Field, 0> Members; };
 	struct UniformDecl { String Name; TyRef Type; std::int32_t ArraySize = 0; };
 	struct SamplerDecl { String Name; Ty Type = Ty::Sampler2D; };
 	struct VaryingDecl { String Name; TyRef Type; bool Flat = false; };
@@ -208,7 +208,7 @@ namespace ShaderCompiler
 	class Parser
 	{
 	public:
-		Parser(const std::vector<GlslToken>& tokens, bool vertexStage)
+		Parser(const SmallVectorImpl<GlslToken>& tokens, bool vertexStage)
 			: _toks(tokens), _vertexStage(vertexStage) {}
 
 		void Run()
@@ -222,21 +222,21 @@ namespace ShaderCompiler
 		bool Ok() const { return _ok; }
 		const String& Reason() const { return _reason; }
 
-		std::vector<StructDecl> Structs;
-		std::vector<BlockDecl> Blocks;
-		std::vector<UniformDecl> Uniforms;
-		std::vector<SamplerDecl> Samplers;
-		std::vector<VaryingDecl> Varyings;			// VS out / FS in
-		std::vector<AttributeDecl> Attributes;		// VS in
-		std::vector<GlobalVarDecl> GlobalVars;
-		std::vector<Function> Functions;
+		SmallVector<StructDecl, 0> Structs;
+		SmallVector<BlockDecl, 0> Blocks;
+		SmallVector<UniformDecl, 0> Uniforms;
+		SmallVector<SamplerDecl, 0> Samplers;
+		SmallVector<VaryingDecl, 0> Varyings;			// VS out / FS in
+		SmallVector<AttributeDecl, 0> Attributes;		// VS in
+		SmallVector<GlobalVarDecl, 0> GlobalVars;
+		SmallVector<Function, 0> Functions;
 		// FS "out" declarations in DECLARATION ORDER; index i renders to SV_Target<i>. A single output
 		// keeps the historical "PSMain(...) : SV_Target" shape; multiple emit a PsOutput struct.
 		struct FragOutputDecl { String Name; TyRef Type; };
-		std::vector<FragOutputDecl> FragOutputs;
+		SmallVector<FragOutputDecl, 0> FragOutputs;
 
 	private:
-		const std::vector<GlslToken>& _toks;
+		const SmallVectorImpl<GlslToken>& _toks;
 		bool _vertexStage;
 		std::size_t _pos = 0;
 		bool _ok = true;

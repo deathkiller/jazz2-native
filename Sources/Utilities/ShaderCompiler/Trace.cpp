@@ -6,6 +6,10 @@
 	simplest possible synchronous implementation: write every message straight to stderr. This is
 	only needed because the shared code the tool compiles uses DEATH_ASSERT, which funnels through
 	the trace sink when DEATH_TRACE is enabled.
+
+	Everything below Warning is dropped: Death::IO logs every file open and close, and the tool's
+	stderr is a diagnostic surface the build parses, not a place for per-file chatter. The tool's
+	own messages never go through DEATH_TRACE, they are written to stdout/stderr directly.
 */
 
 #include <Asserts.h>
@@ -22,8 +26,8 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message
 	const char* prefix;
 	switch (level) {
 		case TraceLevel::Debug:
-		case TraceLevel::Deferred:	prefix = "[DEBUG] "; break;
-		case TraceLevel::Info:		prefix = "[INFO] "; break;
+		case TraceLevel::Deferred:
+		case TraceLevel::Info:		return;
 		case TraceLevel::Warning:	prefix = "[WARN] "; break;
 		case TraceLevel::Error:		prefix = "[ERROR] "; break;
 		case TraceLevel::Assert:	prefix = "[ASSERT] "; break;

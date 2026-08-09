@@ -7,10 +7,10 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <vector>
 
 #include <Base/Format.h>
 #include <Containers/GrowableArray.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -966,7 +966,7 @@ namespace ShaderCompiler
 			modernSource = prepared;
 		}
 
-		std::vector<GlslToken> tokens;
+		SmallVector<GlslToken, 0> tokens;
 		String reason;
 		if (!TokenizeStage(modernSource, tokens, reason)) {
 			diag.Message = std::move(reason);

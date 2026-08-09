@@ -50,7 +50,7 @@ void fragment() {
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }
 
-void fixed_function(pvr, psp, gs) {
+void fixed_function(pvr, gu, gs) {
 	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, unused, transition). The GLSL is
 	// mix(tex, vec4(0.2*grey, 0.2+0.62*grey, 0.6+0.2*grey, 0.95*outline), transition) - two passes
 	// reproduce that mix: the untouched sprite carries the (1-t) side, then an ice silhouette blended

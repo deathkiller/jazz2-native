@@ -32,8 +32,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -108,7 +108,7 @@ namespace ShaderCompiler
 	{
 	public:
 		/** Appends the tokens of columns [begin, end) of @p text to @p out, tagging them with @p index (no End token is added) */
-		static void Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out);
+		static void Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, SmallVectorImpl<GlslToken>& out);
 	};
 
 	/** @brief Computes literal constant-folding rewrites for one fold unit */
@@ -121,6 +121,6 @@ namespace ShaderCompiler
 			Edits are sorted by (Index, Begin), never overlap and never span lines;
 			the caller applies them back to front.
 		*/
-		static void ComputeFolds(const std::vector<FoldInputLine>& lines, std::vector<FoldEdit>& edits);
+		static void ComputeFolds(const SmallVectorImpl<FoldInputLine>& lines, SmallVectorImpl<FoldEdit>& edits);
 	};
 }

@@ -35,7 +35,7 @@
 	- assignments to pass fields: `p.color = <vec4>;`, `p.offset_color = <vec3>;` (marks
 	  HasOffsetColor), `p.screen_offset = <vec2>;`, `p.blend = MATERIAL|ADD|OPAQUE|ALPHA;`,
 	  `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it;
-	  the two output scales have no GE form at all, so they are rejected for the psp target below),
+	  the two output scales have no GE form at all, so they are rejected for the gu target below),
 	  `p.luma_gain = <float>;` (parameterizes the GX-only LUMA_RAMP preset below)
 	- `submit_quad(p);`, locals of the GLSL scalar/vector subset (float/int/bool, vec2/3/4),
 	  `if`/`else`, C-style `for` with integer bounds, (compound) assignment, `++`/`--`
@@ -46,7 +46,7 @@
 	  and `has_texel_size()` (`ctx.HasTexelStep()` - whether that step is derivable at all)
 
 	The EXTENDED vocabulary is valid only in a block that NAMES its backends —
-	`void fixed_function(pvr)` … `void fixed_function(gx, psp)` — since a generic block stays in the
+	`void fixed_function(pvr)` … `void fixed_function(gx, gu)` — since a generic block stays in the
 	portable quad-only core, so a shared description can never silently depend on one console's
 	geometry synthesis (rejected with a hard error otherwise):
 
@@ -77,7 +77,7 @@
 	two-endpoint ramp by the texel's amplified luminance — FrozenMask's ice).
 
 	The GE's texture environment has no combiner output scale, so `MODULATE_X2`/`MODULATE_X4` are
-	rejected for every block the PSP reaches (a `psp` block, a target list naming `psp`, AND a generic
+	rejected for every block the GU reaches (a `gu` block, a target list naming `gu`, AND a generic
 	one, which is transpiled for every backend): the PVR silently ignores them, so a shared block using
 	one would be honoured by only some of the backends it serves - the "silently depends on one
 	console's feature" case the capability checks exist to prevent. Express the boost as passes instead
@@ -85,7 +85,6 @@
 */
 
 #include <cstdint>
-#include <vector>
 
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -101,7 +100,7 @@ namespace ShaderCompiler
 	{
 		Pvr,	/**< Dreamcast (CLX2 via KallistiOS) */
 		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
-		Psp,	/**< PlayStation Portable (Graphics Engine via sceGu) */
+		Gu,		/**< PlayStation Portable (Graphics Engine via sceGu) */
 		Gs		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
 	};
 

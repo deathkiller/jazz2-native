@@ -33,6 +33,8 @@
 
 #include "ShaderParser.h"
 
+#include <Containers/SmallVector.h>
+
 namespace ShaderCompiler
 {
 	/** @brief Data type of a uniform, block member or vertex attribute */
@@ -88,7 +90,7 @@ namespace ShaderCompiler
 		/** @brief Struct type name */
 		String Name;
 		/** @brief Struct members in declaration order */
-		std::vector<MemberInfo> Fields;
+		SmallVector<MemberInfo, 0> Fields;
 		/** @brief std140 size rounded up to the struct alignment */
 		std::uint32_t Size = 0;
 		/** @brief std140 base alignment (largest member alignment rounded up to 16) */
@@ -118,7 +120,7 @@ namespace ShaderCompiler
 		/** @brief Element stride of the symbolic `BATCH_SIZE` array, or `0` when the block has none */
 		std::uint32_t InstanceStride = 0;
 		/** @brief Block members in declaration order */
-		std::vector<MemberInfo> Members;
+		SmallVector<MemberInfo, 0> Members;
 	};
 
 	/** @brief Sampler uniform with its optional "texture_unit(N)" hint unit assignment */
@@ -149,15 +151,15 @@ namespace ShaderCompiler
 	struct StageReflection
 	{
 		/** @brief User struct declarations with their computed std140 layouts */
-		std::vector<StructInfo> Structs;
+		SmallVector<StructInfo, 0> Structs;
 		/** @brief Loose (non-block, non-sampler) uniforms */
-		std::vector<UniformInfo> Uniforms;
+		SmallVector<UniformInfo, 0> Uniforms;
 		/** @brief std140 uniform blocks */
-		std::vector<BlockInfo> Blocks;
+		SmallVector<BlockInfo, 0> Blocks;
 		/** @brief Sampler uniforms (texture bindings) */
-		std::vector<TextureInfo> Textures;
+		SmallVector<TextureInfo, 0> Textures;
 		/** @brief Vertex attributes (empty for the fragment stage) */
-		std::vector<AttributeInfo> Attributes;
+		SmallVector<AttributeInfo, 0> Attributes;
 	};
 
 	/** @brief Parses global-scope GLSL declarations and computes std140 layouts */
@@ -165,7 +167,7 @@ namespace ShaderCompiler
 	{
 	public:
 		/** Reflects one preprocessed stage, returns false and fills @p diag on error */
-		static bool ReflectStage(const std::vector<SourceLine>& lines, bool vertexStage, StageReflection& result, Diagnostic& diag);
+		static bool ReflectStage(const SmallVectorImpl<SourceLine>& lines, bool vertexStage, StageReflection& result, Diagnostic& diag);
 
 		/** Merges vertex and fragment reflection into a program-level view (GL-style, deduplicated by name) */
 		static bool MergeStages(const StageReflection& vertex, const StageReflection& fragment, StageReflection& merged, Diagnostic& diag);

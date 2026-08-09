@@ -288,6 +288,41 @@ namespace nCine::Backends
 		}
 	}
 
+	void Ps2InputManager::RequestAnalogMode(std::int32_t joyId)
+	{
+		PadInfo& pad = _pads[joyId];
+		if (pad.AnalogRequested) {
+			return;
+		}
+		// Any previous request has to have finished before another can be made; the pad is polled every
+		// frame anyway, so a busy one is simply retried on the next one rather than waited for here
+		if (padGetReqState(int(joyId), 0) != PAD_RSTAT_COMPLETE) {
+			return;
+		}
+
+		// Ask only a pad that says it can do it. A digital-only pad (or a third-party one that reports no
+		// mode table) would refuse anyway, but asking it every frame would keep the port negotiating
+		// forever - the request is what padGetReqState reports on.
+		const std::int32_t modeCount = padInfoMode(int(joyId), 0, PAD_MODETABLE, -1);
+		bool supportsDualShock = false;
+		for (std::int32_t mode = 0; mode < modeCount; mode++) {
+			if (padInfoMode(int(joyId), 0, PAD_MODETABLE, mode) == PAD_TYPE_DUALSHOCK) {
+				supportsDualShock = true;
+				break;
+			}
+		}
+		pad.AnalogRequested = true;
+		if (!supportsDualShock) {
+			LOGI("Gamepad in port {} has no analogue mode, its sticks stay centred", joyId);
+			return;
+		}
+
+		// LOCK so the analog button cannot drop the pad back to digital mid-game and take the sticks with
+		// it. The mode the pad ends up in is not assumed here - updateJoystickStates() keeps reading it out
+		// of every packet, which is also what covers the pad that was already analogue before this ran.
+		padSetMainMode(int(joyId), 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);
+	}
+
 	void Ps2InputManager::updateJoystickStates()
 	{
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
@@ -301,6 +336,7 @@ namespace nCine::Backends
 			const std::int32_t state = padGetState(int(i), 0);
 			if (state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1) {
 				handleConnection(i, false);
+				_pads[i].AnalogRequested = false;
 				continue;
 			}
 
@@ -310,6 +346,9 @@ namespace nCine::Backends
 				continue;
 			}
 			handleConnection(i, true);
+			// A DualShock reports digital until it is asked to do otherwise, which is why this is here and
+			// not only in the constructor: a pad plugged in mid-game has to be asked too
+			RequestAnalogMode(i);
 
 			// The button word is ACTIVE LOW - a pressed button reads 0 - so it is inverted once here and
 			// everything below tests it the obvious way round

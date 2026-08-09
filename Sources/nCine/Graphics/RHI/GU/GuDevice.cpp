@@ -470,7 +470,7 @@ namespace nCine::RHI::GU
 					break;
 				default:
 					// Modulate. The x2/x4 output scales have no GE equivalent (the texture environment has no
-					// scale stage at all) and the transpiler rejects them for the psp target, exactly as it
+					// scale stage at all) and the transpiler rejects them for the gu target, exactly as it
 					// rejects the GX-only TintMix/LumaRamp outside a gx block - so nothing but a Modulate
 					// pass can reach this arm from a generated effect.
 					state.Tfx = GU_TFX_MODULATE;
@@ -505,7 +505,7 @@ namespace nCine::RHI::GU
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this EffectContext -
 	// the structural contract documented in FixedFunctionPass.h, implemented here against the GE's
 	// batching submission helpers above. The per-effect functions themselves are GENERATED from the
-	// shaders' void fixed_function([psp]) blocks by the ShaderCompiler, exactly as on the PVR and the GX
+	// shaders' void fixed_function([gu]) blocks by the ShaderCompiler, exactly as on the PVR and the GX
 	// (Shaders/Generated/GuGeneratedEffects.h, included below), so this file contains no effect-specific
 	// code at all.
 
@@ -622,7 +622,7 @@ namespace nCine::RHI::GU
 			EXPANDED here, because the GE has no post-texture additive term: GU_TFX_ADD adds the texel to
 			the fragment colour rather than a third value, so `texel*colour + offset` is not any single
 			GE draw. Doing the expansion in the mechanism (rather than spelling both passes in every
-			shader's psp block) is what keeps the portable core portable - the same generic block still
+			shader's gu block) is what keeps the portable core portable - the same generic block still
 			describes the effect on all three consoles, exactly as the GX reinterprets an offset colour
 			as its silhouette form.
 

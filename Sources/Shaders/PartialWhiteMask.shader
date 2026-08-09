@@ -27,7 +27,7 @@ void fragment() {
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
 }
 
-void fixed_function(pvr, psp, gs) {
+void fixed_function(pvr, gu, gs) {
 	// Console fixed-function tier: brightened but still shaded (the shader's luma x2.5), which the
 	// consoles express in two ways - and these three share the same one. Keep the sprite and lift it by a
 	// constant through the post-texture offset colour: on the PVR that is one specular-enabled draw, and

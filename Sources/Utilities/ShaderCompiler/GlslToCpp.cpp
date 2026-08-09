@@ -6,9 +6,9 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <vector>
 
 #include <Base/Format.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -174,13 +174,13 @@ namespace ShaderCompiler
 		struct Stmt
 		{
 			StmtKind Kind;
-			std::vector<std::unique_ptr<Stmt>> Body;		// Block
+			SmallVector<std::unique_ptr<Stmt>, 0> Body;		// Block
 			Ty DeclType = Ty::Void;							// VarDecl
 			String DeclName;								// VarDecl (first declarator)
 			ExprPtr Init;									// VarDecl initializer (first declarator)
 			// Additional declarators of the same type sharing one statement ("vec2 a, b = c;"), emitted as
 			// separate C++ declarations of the shared DeclType
-			std::vector<std::pair<String, ExprPtr>> ExtraDecls;
+			SmallVector<std::pair<String, ExprPtr>, 0> ExtraDecls;
 			ExprPtr E;										// ExprStmt / Return value
 			ExprPtr Cond;									// If condition
 			std::unique_ptr<Stmt> Then, Else;				// If branches
@@ -196,7 +196,7 @@ namespace ShaderCompiler
 		}
 
 		struct Param { Ty Type; String Name; };
-		struct Function { Ty RetType = Ty::Void; String Name; std::vector<Param> Params; StmtPtr Body; };
+		struct Function { Ty RetType = Ty::Void; String Name; SmallVector<Param, 0> Params; StmtPtr Body; };
 
 		enum class SymKind { Varying, Sampler, Uniform, Output, GlobalConst };
 		struct Global { SymKind Kind; Ty Type = Ty::Void; std::int32_t Unit = -1; };
@@ -209,7 +209,7 @@ namespace ShaderCompiler
 			// @p vertexMode relaxes the grammar for the vertex stage: matrix uniforms, std140 uniform blocks
 			// and user structs are tolerated (recorded/skipped rather than declined), and array indexing is
 			// parsed. The fragment path keeps vertexMode false, so its supported subset is unchanged.
-			Parser(const std::vector<GlslToken>& tokens, const std::vector<SamplerBinding>& samplers, bool vertexMode = false)
+			Parser(const SmallVectorImpl<GlslToken>& tokens, const SmallVectorImpl<SamplerBinding>& samplers, bool vertexMode = false)
 				: _toks(tokens), _samplers(samplers), _vertexMode(vertexMode) {}
 
 			void Run()
@@ -224,22 +224,22 @@ namespace ShaderCompiler
 			const String& Reason() const { return _reason; }
 
 			std::map<String, Global>& Globals() { return _globals; }
-			std::vector<std::pair<String, Ty>>& Uniforms() { return _uniforms; }
+			SmallVectorImpl<std::pair<String, Ty>>& Uniforms() { return _uniforms; }
 			std::map<String, ExprPtr>& ConstInits() { return _constInits; }
-			std::vector<Function>& Functions() { return _functions; }
+			SmallVectorImpl<Function>& Functions() { return _functions; }
 
 		private:
-			const std::vector<GlslToken>& _toks;
-			const std::vector<SamplerBinding>& _samplers;
+			const SmallVectorImpl<GlslToken>& _toks;
+			const SmallVectorImpl<SamplerBinding>& _samplers;
 			bool _vertexMode = false;
 			std::size_t _pos = 0;
 			bool _ok = true;
 			String _reason;
 
 			std::map<String, Global> _globals;
-			std::vector<std::pair<String, Ty>> _uniforms;
+			SmallVector<std::pair<String, Ty>, 0> _uniforms;
 			std::map<String, ExprPtr> _constInits;
-			std::vector<Function> _functions;
+			SmallVector<Function, 0> _functions;
 
 			const GlslToken& Cur() const { return _toks[_pos]; }
 			const GlslToken& At(std::size_t p) const { return _toks[p < _toks.size() ? p : _toks.size() - 1]; }
@@ -735,8 +735,8 @@ namespace ShaderCompiler
 		class VertexAnalyzer
 		{
 		public:
-			VertexAnalyzer(Parser& parser, const std::vector<GlslInstanceMember>& instanceMembers,
-				const std::vector<std::pair<String, Ty>>& fragmentUniforms)
+			VertexAnalyzer(Parser& parser, const SmallVectorImpl<GlslInstanceMember>& instanceMembers,
+				const SmallVectorImpl<std::pair<String, Ty>>& fragmentUniforms)
 				: _globals(parser.Globals()), _functions(parser.Functions()),
 				  _instanceMembers(instanceMembers), _fragmentUniforms(fragmentUniforms) {}
 
@@ -785,9 +785,9 @@ namespace ShaderCompiler
 
 		private:
 			std::map<String, Global>& _globals;
-			std::vector<Function>& _functions;
-			const std::vector<GlslInstanceMember>& _instanceMembers;
-			const std::vector<std::pair<String, Ty>>& _fragmentUniforms;
+			SmallVectorImpl<Function>& _functions;
+			const SmallVectorImpl<GlslInstanceMember>& _instanceMembers;
+			const SmallVectorImpl<std::pair<String, Ty>>& _fragmentUniforms;
 
 			std::set<String> _tainted;					// locals derived from the per-vertex input
 			std::map<String, const Expr*> _localInit;	// untainted locals' initializer (for inlining)
@@ -1014,9 +1014,9 @@ namespace ShaderCompiler
 			/** @brief `true` once a fragment read of a constant varying required a `<Program>_ComputeVaryings` */
 			bool HasComputeVaryings() const { return !_usedVaryings.empty(); }
 			/** @brief Names of the constant-varying fields added to the struct (excluded from the loose-uniform list) */
-			std::vector<String> ConstVaryingNames() const
+			SmallVector<String, 0> ConstVaryingNames() const
 			{
-				std::vector<String> names;
+				SmallVector<String, 0> names;
 				for (const std::pair<const String, ConstVaryingInfo>& v : _usedVaryings) names.push_back(v.first);
 				return names;
 			}
@@ -1094,9 +1094,9 @@ namespace ShaderCompiler
 		private:
 			String _prog;
 			std::map<String, Global>& _globals;
-			std::vector<std::pair<String, Ty>>& _uniforms;
+			SmallVectorImpl<std::pair<String, Ty>>& _uniforms;
 			std::map<String, ExprPtr>& _constInits;
-			std::vector<Function>& _functions;
+			SmallVectorImpl<Function>& _functions;
 			const std::map<String, ConstVaryingInfo>& _constVaryings;	// all constant varyings found in the vertex
 			std::map<String, ConstVaryingInfo> _usedVaryings;			// the subset the fragment actually reads
 			bool _ok = true;
@@ -1413,12 +1413,12 @@ namespace ShaderCompiler
 	// --- Public entry point --------------------------------------------------------------------------
 
 	GlslToCppResult GlslToCpp::TranspileFragment(StringView programName, StringView fragmentGlsl,
-		StringView vertexGlsl, const std::vector<SamplerBinding>& samplers,
-		const std::vector<GlslInstanceMember>& instanceMembers)
+		StringView vertexGlsl, const SmallVectorImpl<SamplerBinding>& samplers,
+		const SmallVectorImpl<GlslInstanceMember>& instanceMembers)
 	{
 		GlslToCppResult result;
 
-		std::vector<GlslToken> fragTokens;
+		SmallVector<GlslToken, 0> fragTokens;
 		if (!TokenizeStage(fragmentGlsl, fragTokens, result.UnsupportedReason)) {
 			return result;
 		}
@@ -1432,7 +1432,7 @@ namespace ShaderCompiler
 		// Analyze the vertex stage for per-instance-constant varyings. A vertex parse/preprocess failure is
 		// tolerated (yields no constant varyings): it only matters if the fragment actually reads a varying,
 		// in which case the read is declined with a clear message.
-		std::vector<GlslToken> vertTokens;
+		SmallVector<GlslToken, 0> vertTokens;
 		{
 			String vertReason;
 			if (!TokenizeStage(vertexGlsl, vertTokens, vertReason)) {

@@ -1,5 +1,5 @@
 // Console rebuild of the TexturedBackground warp out of geometry, shared by the
-// void fixed_function(pvr, psp) AND void fixed_function(gx) blocks of
+// void fixed_function(pvr, gu, gs) AND void fixed_function(gx) blocks of
 // TexturedBackground.shader and TexturedBackgroundCircle.shader (the tunnel keeps the same planar
 // approximation on this tier, exactly as the handwritten backend code did).
 //

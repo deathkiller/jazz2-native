@@ -18,6 +18,8 @@
 #include "GlslReflect.h"
 #include "../../Shaders/Generated/ShaderCompilerTypes.h"
 
+#include <Containers/SmallVector.h>
+
 namespace ShaderCompiler
 {
 	/** @brief One variant of a runtime-compiled program: lowered stage sources plus merged reflection */
@@ -42,7 +44,7 @@ namespace ShaderCompiler
 	*/
 	class RuntimeProgram
 	{
-		friend bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
+		friend bool CompileRuntimeProgram(StringView content, StringView baseDir, FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
 
 	public:
 		RuntimeProgram() = default;
@@ -55,7 +57,7 @@ namespace ShaderCompiler
 		/** @brief "render_mode" flags (bitmask of ShaderCompiler::RenderMode; 0 when no render_mode is declared) */
 		std::uint32_t RenderModes = 0;
 		/** @brief Compiled variants (the unnamed base variant is `Variants[0]`) */
-		std::vector<RuntimeVariant> Variants;
+		SmallVector<RuntimeVariant, 0> Variants;
 
 		/** @brief Returns the variant with the given name, or `nullptr` if not found; an empty name returns the unnamed base variant (`Variants[0]`) */
 		const RuntimeVariant* FindVariant(StringView name) const;
@@ -67,12 +69,12 @@ namespace ShaderCompiler
 
 	private:
 		// Backing storage of the view — built once after Variants is final
-		std::vector<std::vector<Uniform>> viewUniforms_;
-		std::vector<std::vector<std::vector<BlockMember>>> viewBlockMembers_;
-		std::vector<std::vector<UniformBlock>> viewBlocks_;
-		std::vector<std::vector<TextureBinding>> viewTextures_;
-		std::vector<std::vector<Attribute>> viewAttributes_;
-		std::vector<ProgramVariant> viewVariants_;
+		SmallVector<SmallVector<Uniform, 0>, 0> viewUniforms_;
+		SmallVector<SmallVector<SmallVector<BlockMember, 0>, 0>, 0> viewBlockMembers_;
+		SmallVector<SmallVector<UniformBlock, 0>, 0> viewBlocks_;
+		SmallVector<SmallVector<TextureBinding, 0>, 0> viewTextures_;
+		SmallVector<SmallVector<Attribute, 0>, 0> viewAttributes_;
+		SmallVector<ProgramVariant, 0> viewVariants_;
 		Program view_ = {};
 
 		void BuildView();
@@ -87,5 +89,5 @@ namespace ShaderCompiler
 		@param out		Receives the compiled program
 		@param diag		Receives the error location and message on failure
 	*/
-	bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
+	bool CompileRuntimeProgram(StringView content, StringView baseDir, FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
 }

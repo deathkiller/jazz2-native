@@ -9,10 +9,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <string>
 #include <string_view>
 
 #include <Base/Format.h>
+#include <Containers/GrowableArray.h>
 #include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
@@ -184,10 +184,10 @@ namespace Jazz2::AssetPacker
 		}
 
 		/** @brief Appends a whole number to a description being assembled */
-		void AppendNumber(std::string& target, std::int64_t value)
+		void AppendNumber(Array<char>& target, std::int64_t value)
 		{
 			char buffer[24];
-			target.append(buffer, formatInto(buffer, "{}", value));
+			arrayAppend(target, StringView{buffer, formatInto(buffer, "{}", value)});
 		}
 
 		/**
@@ -205,21 +205,21 @@ namespace Jazz2::AssetPacker
 		}
 
 		/** @brief Appends a JSON string holding a single character */
-		void AppendCharacterLiteral(std::string& target, char32_t codepoint)
+		void AppendCharacterLiteral(Array<char>& target, char32_t codepoint)
 		{
 			char encoded[4];
 			const std::size_t length = Utf8::FromCodePoint(codepoint, encoded);
 
-			target += '"';
+			arrayAppend(target, '"');
 			for (std::size_t i = 0; i < length; i++) {
 				// Only the two characters JSON gives a meaning of their own need escaping - everything that
 				// would take more than a backslash is kept out of here by the caller
 				if (encoded[i] == '"' || encoded[i] == '\\') {
-					target += '\\';
+					arrayAppend(target, '\\');
 				}
-				target += encoded[i];
+				arrayAppend(target, encoded[i]);
 			}
-			target += '"';
+			arrayAppend(target, '"');
 		}
 
 		/**
@@ -233,43 +233,43 @@ namespace Jazz2::AssetPacker
 		*/
 		bool WriteCharacterListJson(StringView path, const FontData& font, std::int32_t cellWidth, std::int32_t cellHeight, std::int32_t columns)
 		{
-			std::string text;
-			text.reserve(font.Glyphs.size() * 40 + 256);
+			Array<char> text;
+			arrayReserve(text, font.Glyphs.size() * 40 + 256);
 
-			text += "{\n\t\"CellWidth\": ";
+			arrayAppend(text, "{\n\t\"CellWidth\": "_s);
 			AppendNumber(text, cellWidth);
-			text += ",\n\t\"CellHeight\": ";
+			arrayAppend(text, ",\n\t\"CellHeight\": "_s);
 			AppendNumber(text, cellHeight);
-			text += ",\n\t\"Columns\": ";
+			arrayAppend(text, ",\n\t\"Columns\": "_s);
 			AppendNumber(text, columns);
-			text += ",\n\t\"LineHeight\": ";
+			arrayAppend(text, ",\n\t\"LineHeight\": "_s);
 			AppendNumber(text, font.LineHeight);
-			text += ",\n\t\"BaseSpacing\": ";
+			arrayAppend(text, ",\n\t\"BaseSpacing\": "_s);
 			AppendNumber(text, font.BaseSpacing);
-			text += ",\n\t\"AsciiFirst\": ";
+			arrayAppend(text, ",\n\t\"AsciiFirst\": "_s);
 			AppendNumber(text, font.AsciiFirst);
-			text += ",\n\t\"AsciiCount\": ";
+			arrayAppend(text, ",\n\t\"AsciiCount\": "_s);
 			AppendNumber(text, font.AsciiCount);
-			text += ",\n\t\"Characters\": [";
+			arrayAppend(text, ",\n\t\"Characters\": ["_s);
 
 			for (std::size_t i = 0; i < font.Glyphs.size(); i++) {
 				const Glyph& glyph = font.Glyphs[i];
-				text += (i > 0 ? ",\n\t\t{ " : "\n\t\t{ ");
+				arrayAppend(text, (i > 0 ? ",\n\t\t{ "_s : "\n\t\t{ "_s));
 				if (glyph.Codepoint == FontFormat::FallbackCodepoint) {
-					text += "\"Fallback\": true";
+					arrayAppend(text, "\"Fallback\": true"_s);
 				} else if (HasVisibleSpelling(glyph.Codepoint)) {
-					text += "\"Char\": ";
+					arrayAppend(text, "\"Char\": "_s);
 					AppendCharacterLiteral(text, glyph.Codepoint);
 				} else {
-					text += "\"Codepoint\": ";
+					arrayAppend(text, "\"Codepoint\": "_s);
 					AppendNumber(text, std::int64_t(glyph.Codepoint));
 				}
-				text += ", \"Advance\": ";
+				arrayAppend(text, ", \"Advance\": "_s);
 				AppendNumber(text, glyph.Advance);
-				text += " }";
+				arrayAppend(text, " }"_s);
 			}
 
-			text += "\n\t]\n}\n";
+			arrayAppend(text, "\n\t]\n}\n"_s);
 
 			FileStream s(path, FileAccess::Write);
 			if (!s.IsValid()) {
@@ -331,12 +331,14 @@ namespace Jazz2::AssetPacker
 				return false;
 			}
 
-			std::string_view spelled;
+			// Json::Value hands strings out as std::string_view, so that is the only place it appears
+			std::string_view spelledRaw;
 			const Json::Value& charItem = item["Char"];
-			if (!charItem.isNull() && charItem.get(spelled) != Json::SUCCESS) {
+			if (!charItem.isNull() && charItem.get(spelledRaw) != Json::SUCCESS) {
 				LOGE("\"{}\" has a character at position {} whose \"Char\" is not a string", path, index);
 				return false;
 			}
+			StringView spelled{spelledRaw.data(), spelledRaw.size()};
 
 			std::int64_t codepoint = -1;
 			const Json::Value& codepointItem = item["Codepoint"];
@@ -354,7 +356,7 @@ namespace Jazz2::AssetPacker
 						"no character at all is written as \"Fallback\": true", path, index);
 					return false;
 				}
-				auto next = Utf8::NextChar(ArrayView<const char>(spelled.data(), spelled.size()), 0);
+				auto next = Utf8::NextChar(spelled, 0);
 				if (next.first() == U'\xffffffff' || next.second() != spelled.size()) {
 					LOGE("\"{}\" has a character at position {} whose \"Char\" is not a single character", path, index);
 					return false;

@@ -125,7 +125,7 @@ namespace Jazz2::Compatibility
 
 					// Complement of two, with variable bit length
 					std::int32_t highestBitValue = (1 << (param.second() - 1));
-					if (value >= highestBitValue) {
+					if (value >= (std::uint32_t)highestBitValue) {
 						value = (uint32_t)(-highestBitValue + (value - highestBitValue));
 					}
 					if (param.second() > 8) {

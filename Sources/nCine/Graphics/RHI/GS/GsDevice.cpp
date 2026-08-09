@@ -84,7 +84,7 @@ namespace nCine::RHI::GS
 			return std::uint8_t(v * 128.0f + 0.5f);
 		}
 
-		/** @brief A `FixedFunctionPass` colour packed into `RGBAQ` */
+		/** @brief A `FixedFunctionPass` colour packed into `RGBAQ` for a TEXTURED primitive */
 		color_t PackPassColor(const float* rgba)
 		{
 			color_t out;
@@ -93,6 +93,31 @@ namespace nCine::RHI::GS
 			out.b = QuantizePassChannel(rgba[2]);
 			out.a = QuantizePassChannel(rgba[3]);
 			// Unused under PRIM_MAP_UV, but it shares the register, so it is given the 1.0 every helper uses
+			out.q = 1.0f;
+			return out;
+		}
+
+		/**
+			@brief A `FixedFunctionPass` colour packed into `RGBAQ` for an UNTEXTURED primitive
+
+			The `>> 7` that makes 0x80 mean 1.0 belongs to the TEXTURE FUNCTION, and a primitive submitted with
+			`TME = 0` never reaches it: its interpolated RGB *is* the fragment colour, on the full 0..255 scale
+			@ref QuantizeChannel() packs - which is why @ref GsDevice::Clear(), the one untextured draw that was
+			always right, quantizes its rectangle that way. Packing an untextured colour like a modulating pass
+			instead halves it, and that is what left the horizon tint of the textured background and the fur
+			gradient swatches of the user-profile section visibly dark against every other backend.
+
+			ALPHA is the exception and stays on the 0..0x80 scale, because nothing about it is a colour: it is
+			the blender's `C` in `((A - B) * C >> 7) + D` and the alpha test's operand, and 0x80 is 1.0 to both
+			(it is also what every textured draw leaves in the frame buffer, so the two agree there too).
+		*/
+		color_t PackVertexColor(const float* rgba)
+		{
+			color_t out;
+			out.r = QuantizeChannel(rgba[0]);
+			out.g = QuantizeChannel(rgba[1]);
+			out.b = QuantizeChannel(rgba[2]);
+			out.a = QuantizePassChannel(rgba[3]);
 			out.q = 1.0f;
 			return out;
 		}
@@ -431,6 +456,18 @@ namespace nCine::RHI::GS
 					MagFilter != other.MagFilter || MinFilter != other.MinFilter);
 			}
 		};
+
+		/**
+			@brief A pass colour packed on whichever of the two scales the primitives of @p state read
+
+			The choice is exactly the one @ref SubmitVertexPrimitive() makes for `PRIM.TME`, and it is made
+			from the same field, so a pass cannot be packed for a texture function the primitive does not run
+			(see @ref PackVertexColor()).
+		*/
+		color_t PackStateColor(const DrawState& state, const float* rgba)
+		{
+			return (state.Page == GsVram::InvalidPage ? PackVertexColor(rgba) : PackPassColor(rgba));
+		}
 
 		DrawState _appliedTexture;
 		bool _appliedTextureValid = false;
@@ -1651,14 +1688,14 @@ namespace nCine::RHI::GS
 				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
 				const float py[4] = { waterTop, vpY + vpH, waterTop, vpY + vpH };
 				const float tint[4] = { 0.4f, 0.6f, 0.8f, 0.4f };
-				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackPassColor(tint), 0.0f, 0.0f, true);
+				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackVertexColor(tint), 0.0f, 0.0f, true);
 				}
 			const float waterLevelNorm = (light.VpH > 0 ? light.WaterLevelPx / float(light.VpH) : 1.0f);
 			if (waterLevelNorm < 0.4f && waterTop > vpY) {
 				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
 				const float py[4] = { vpY, waterTop, vpY, waterTop };
 				const float above[4] = { light.AmbR, light.AmbG, light.AmbB, 0.4f - waterLevelNorm };
-				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackPassColor(above), 0.0f, 0.0f, true);
+				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackVertexColor(above), 0.0f, 0.0f, true);
 				}
 		}
 	}
@@ -1765,11 +1802,13 @@ namespace nCine::RHI::GS
 				StripV[i] = v * UvScaleV;
 			}
 		}
+		// Per-vertex colours are only ever read by SubmitStripShaded(), whose strip is untextured by
+		// construction, so they are packed on the full-range scale that primitive's RGB reaches the blender on
 		void SetStripVertexColor(std::int32_t i, float r, float g, float b, float a)
 		{
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
 				const float rgba[4] = { r, g, b, a };
-				StripRgbaq[i] = PackPassColor(rgba).rgbaq;
+				StripRgbaq[i] = PackVertexColor(rgba).rgbaq;
 			}
 		}
 
@@ -1809,7 +1848,7 @@ namespace nCine::RHI::GS
 				}
 			}
 			ApplyBlendEquation(PassEquation(MaterialBlend, pass.Blend));
-			SubmitQuadPrimitive(*state, Px, Py, Pu, Pv, PackPassColor(pass.Color),
+			SubmitQuadPrimitive(*state, Px, Py, Pu, Pv, PackStateColor(*state, pass.Color),
 				pass.ScreenOffset[0], pass.ScreenOffset[1], AxisAligned);
 		}
 
@@ -1891,7 +1930,7 @@ namespace nCine::RHI::GS
 			const DrawState* state = (silhouette && Coverage != nullptr ? Coverage : Material);
 			ApplyBlendEquation(PassEquation(MaterialBlend, effective.Blend));
 			SubmitStripPrimitive(*state, StripX, StripY, StripU, StripV, nullptr,
-				PackPassColor(effective.Color), count, pass.ScreenOffset[0], pass.ScreenOffset[1]);
+				PackStateColor(*state, effective.Color), count, pass.ScreenOffset[0], pass.ScreenOffset[1]);
 		}
 
 		// Shaded (per-vertex-colour) strip out of the builder scratch: always UNTEXTURED - a gradient has no

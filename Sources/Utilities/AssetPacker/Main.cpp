@@ -22,6 +22,7 @@
 #include <Containers/StringConcatenable.h>
 #include <Core/Logger.h>
 #include <IO/FileSystem.h>
+#include <Utf8.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -219,18 +220,18 @@ namespace
 		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution");
 	}
 
-	bool ParseOptions(std::int32_t argc, char** argv, Options& options)
+	bool ParseOptions(ArrayView<const StringView> args, Options& options)
 	{
 		bool videoDownscaleSet = false;
 		bool isDreamcast = false;
 
-		std::int32_t firstArgument = 1;
-		if (argc > 1 && TryParseCommand(argv[1], options.Action)) {
+		std::size_t firstArgument = 1;
+		if (args.size() > 1 && TryParseCommand(args[1], options.Action)) {
 			firstArgument = 2;
 		}
 
-		for (std::int32_t i = firstArgument; i < argc; i++) {
-			StringView arg = argv[i];
+		for (std::size_t i = firstArgument; i < args.size(); i++) {
+			StringView arg = args[i];
 			if (arg.hasPrefix("--target="_s)) {
 				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, isDreamcast)) {
 					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
@@ -396,165 +397,202 @@ namespace
 	}
 }
 
-int main(int argc, char** argv)
+namespace
 {
-	ConsoleSink consoleSink;
-	Trace::AttachSink(&consoleSink);
+	/** Runs the tool over the already-decoded UTF-8 command line */
+	int RunAssetPacker(ArrayView<const StringView> args)
+	{
+		ConsoleSink consoleSink;
+		Trace::AttachSink(&consoleSink);
 
-	Options options;
-	if (!ParseOptions(argc, argv, options)) {
-		PrintUsage();
-		return 1;
-	}
-
-	// The asset-level commands work on single files and share nothing with the conversion below
-	if (options.Action != Command::Convert) {
-		bool success;
-		switch (options.Action) {
-			case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
-			case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
-			case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
-			case Command::RecompressVideo:
-				success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
-				if (success) {
-					LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
-						options.VideoDownscale, fs::GetFileSize(options.TargetPath));
-				}
-				break;
-			default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
-		}
-		if (!success) {
+		Options options;
+		if (!ParseOptions(args, options)) {
+			PrintUsage();
 			return 1;
 		}
+
+		// The asset-level commands work on single files and share nothing with the conversion below
+		if (options.Action != Command::Convert) {
+			bool success;
+			switch (options.Action) {
+				case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
+				case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
+				case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
+				case Command::RecompressVideo:
+					success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
+					if (success) {
+						LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
+							options.VideoDownscale, fs::GetFileSize(options.TargetPath));
+					}
+					break;
+				default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
+			}
+			if (!success) {
+				return 1;
+			}
+			LOGI("Done");
+			return 0;
+		}
+
+		if (!fs::DirectoryExists(options.SourcePath)) {
+			LOGE("Source directory \"{}\" does not exist", options.SourcePath);
+			return 1;
+		}
+
+		SourceLayout layout = ResolveSourceLayout(options.SourcePath);
+		String animsPath = FindAnimsFile(layout.OriginalsPath);
+		if (!fs::IsReadableFile(animsPath)) {
+			LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", options.SourcePath);
+			return 1;
+		}
+
+		// The desktop game keeps the converted data in a "Cache" subdirectory and looks for it there; the other
+		// profiles are consumed as a prepared content tree, so they are written directly into the target
+		String outputPath = (options.Profile == TargetProfile::Desktop
+			? String(fs::CombinePath(options.TargetPath, "Cache"_s))
+			: options.TargetPath);
+		fs::CreateDirectories(outputPath);
+
+		LOGI("Converting \"{}\" to \"{}\"...", layout.OriginalsPath, outputPath);
+
+		// The two directories the game reads through the package layer go inside the package instead of next to
+		// it, which is one file to open rather than a few hundred - the difference a console actually pays for.
+		// Everything else the tree carries is read as a loose file and has to stay one.
+		static const StringView PackedContentDirectories[] = { "Animations"_s, "Metadata"_s };
+
+		// The game's own content (fonts, animations, metadata, translations) is not derived from anything in the
+		// original data, so a target that has to be self-contained needs it carried over alongside
+		const bool selfContained = (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop);
+		if (selfContained) {
+			LOGI("Copying \"{}\"...", layout.ContentPath);
+			CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories);
+		}
+
+		// A tree that is loaded as it is gets the package name the game recognizes as "already converted", so it
+		// never tries to rebuild a cache of its own from original files that are not deployed with it
+		StringView packageName = (options.Profile == TargetProfile::Desktop
+			? Compatibility::AssetConverter::SourcePackage
+			: Compatibility::AssetConverter::PrebakedPackage);
+
+		PakWriter pakWriter(fs::CombinePath(outputPath, packageName), true);
+		if (!pakWriter.IsValid()) {
+			LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, packageName));
+			return 1;
+		}
+
+		Compatibility::JJ2Version version;
+		if (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, pakWriter, version) ==
+				Compatibility::AssetConverter::Result::UnsupportedVersion) {
+			LOGE("Provided Jazz Jackrabbit 2 version is not supported");
+			return 1;
+		}
+
+		// Added after the conversion, so a path both of them have resolves to what the original data provided,
+		// which is what it does when the two are kept apart
+		if (selfContained) {
+			for (StringView packedDirectory : PackedContentDirectories) {
+				String packedPath = fs::CombinePath(layout.ContentPath, packedDirectory);
+				if (fs::DirectoryExists(packedPath)) {
+					LOGI("Packing \"{}\"...", packedPath);
+					AddDirectoryToPak(pakWriter, packedPath, packedDirectory);
+				}
+			}
+		}
+
+		pakWriter.Finalize();
+
+		SmallVector<String, 0> skippedLevels;
+		Compatibility::AssetConverter::ConversionOptions conversionOptions;
+		conversionOptions.OriginalsOnly = options.OriginalsOnly;
+		conversionOptions.SharewareOnly = options.SharewareOnly;
+		conversionOptions.SkipNonEpisodeLevels = options.SkipNonEpisodeLevels;
+		// The desktop game reads music from its own content directory, not from the cache this writes
+		conversionOptions.CopyUsedMusic = (options.Profile != TargetProfile::Desktop);
+		conversionOptions.SkippedLevels = &skippedLevels;
+		Compatibility::AssetConverter::ConvertLevels(layout.OriginalsPath, outputPath, true, conversionOptions);
+
+		if (!skippedLevels.empty()) {
+			// Listed rather than only counted, because the list of levels the original game shipped is maintained
+			// by hand and this is how a name missing from it shows up
+			LOGI("{} levels were skipped:", skippedLevels.size());
+			for (String& levelName : skippedLevels) {
+				LOGI("  {}", levelName);
+			}
+		}
+
+		if (options.Videos != VideoHandling::None) {
+			// Only the first two are ever played (see the Cinematics handlers in Main.cpp); "Logo" is in the
+			// original data but nothing asks for it, so it is left out unless everything was asked for
+			static const StringView everyVideo[] = { "Intro"_s, "Ending"_s, "Logo"_s };
+			const ArrayView<const StringView> videoNames = ArrayView<const StringView>(everyVideo)
+				.prefix(options.AllVideos ? arraySize(everyVideo) : 2);
+
+			String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
+			fs::CreateDirectories(cinematicsPath);
+
+			if (options.Videos == VideoHandling::Recompress) {
+				LOGI("Recompressing cinematics...");
+			} else {
+				LOGI("Copying cinematics...");
+			}
+
+			for (StringView name : videoNames) {
+				String videoPath = fs::FindPathCaseInsensitive(fs::CombinePath(layout.OriginalsPath, String(name + ".j2v"_s)));
+				if (!fs::IsReadableFile(videoPath)) {
+					continue;
+				}
+
+				// The player looks the files up in lower case
+				String targetVideoPath = fs::CombinePath(cinematicsPath, StringUtils::lowercase(name + ".j2v"_s));
+				if (options.Videos == VideoHandling::Recompress) {
+					if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
+						LOGW("Cannot recompress \"{}\", skipping it", videoPath);
+					}
+				} else if (!fs::Copy(videoPath, targetVideoPath)) {
+					LOGW("Cannot copy \"{}\", skipping it", videoPath);
+				}
+			}
+		}
+
+		if (options.Profile == TargetProfile::Desktop) {
+			WriteCacheDescriptor(fs::CombinePath(outputPath, "Source.idx"_s),
+				fs::GetLastModificationTime(animsPath).ToUnixMilliseconds());
+		}
+
 		LOGI("Done");
 		return 0;
 	}
-
-	if (!fs::DirectoryExists(options.SourcePath)) {
-		LOGE("Source directory \"{}\" does not exist", options.SourcePath);
-		return 1;
-	}
-
-	SourceLayout layout = ResolveSourceLayout(options.SourcePath);
-	String animsPath = FindAnimsFile(layout.OriginalsPath);
-	if (!fs::IsReadableFile(animsPath)) {
-		LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", options.SourcePath);
-		return 1;
-	}
-
-	// The desktop game keeps the converted data in a "Cache" subdirectory and looks for it there; the other
-	// profiles are consumed as a prepared content tree, so they are written directly into the target
-	String outputPath = (options.Profile == TargetProfile::Desktop
-		? String(fs::CombinePath(options.TargetPath, "Cache"_s))
-		: options.TargetPath);
-	fs::CreateDirectories(outputPath);
-
-	LOGI("Converting \"{}\" to \"{}\"...", layout.OriginalsPath, outputPath);
-
-	// The two directories the game reads through the package layer go inside the package instead of next to
-	// it, which is one file to open rather than a few hundred - the difference a console actually pays for.
-	// Everything else the tree carries is read as a loose file and has to stay one.
-	static const StringView PackedContentDirectories[] = { "Animations"_s, "Metadata"_s };
-
-	// The game's own content (fonts, animations, metadata, translations) is not derived from anything in the
-	// original data, so a target that has to be self-contained needs it carried over alongside
-	const bool selfContained = (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop);
-	if (selfContained) {
-		LOGI("Copying \"{}\"...", layout.ContentPath);
-		CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories);
-	}
-
-	// A tree that is loaded as it is gets the package name the game recognizes as "already converted", so it
-	// never tries to rebuild a cache of its own from original files that are not deployed with it
-	StringView packageName = (options.Profile == TargetProfile::Desktop
-		? Compatibility::AssetConverter::SourcePackage
-		: Compatibility::AssetConverter::PrebakedPackage);
-
-	PakWriter pakWriter(fs::CombinePath(outputPath, packageName), true);
-	if (!pakWriter.IsValid()) {
-		LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, packageName));
-		return 1;
-	}
-
-	Compatibility::JJ2Version version;
-	if (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, pakWriter, version) ==
-			Compatibility::AssetConverter::Result::UnsupportedVersion) {
-		LOGE("Provided Jazz Jackrabbit 2 version is not supported");
-		return 1;
-	}
-
-	// Added after the conversion, so a path both of them have resolves to what the original data provided,
-	// which is what it does when the two are kept apart
-	if (selfContained) {
-		for (StringView packedDirectory : PackedContentDirectories) {
-			String packedPath = fs::CombinePath(layout.ContentPath, packedDirectory);
-			if (fs::DirectoryExists(packedPath)) {
-				LOGI("Packing \"{}\"...", packedPath);
-				AddDirectoryToPak(pakWriter, packedPath, packedDirectory);
-			}
-		}
-	}
-
-	pakWriter.Finalize();
-
-	SmallVector<String, 0> skippedLevels;
-	Compatibility::AssetConverter::ConversionOptions conversionOptions;
-	conversionOptions.OriginalsOnly = options.OriginalsOnly;
-	conversionOptions.SharewareOnly = options.SharewareOnly;
-	conversionOptions.SkipNonEpisodeLevels = options.SkipNonEpisodeLevels;
-	// The desktop game reads music from its own content directory, not from the cache this writes
-	conversionOptions.CopyUsedMusic = (options.Profile != TargetProfile::Desktop);
-	conversionOptions.SkippedLevels = &skippedLevels;
-	Compatibility::AssetConverter::ConvertLevels(layout.OriginalsPath, outputPath, true, conversionOptions);
-
-	if (!skippedLevels.empty()) {
-		// Listed rather than only counted, because the list of levels the original game shipped is maintained
-		// by hand and this is how a name missing from it shows up
-		LOGI("{} levels were skipped:", skippedLevels.size());
-		for (String& levelName : skippedLevels) {
-			LOGI("  {}", levelName);
-		}
-	}
-
-	if (options.Videos != VideoHandling::None) {
-		// Only the first two are ever played (see the Cinematics handlers in Main.cpp); "Logo" is in the
-		// original data but nothing asks for it, so it is left out unless everything was asked for
-		static const StringView everyVideo[] = { "Intro"_s, "Ending"_s, "Logo"_s };
-		const ArrayView<const StringView> videoNames = ArrayView<const StringView>(everyVideo)
-			.prefix(options.AllVideos ? arraySize(everyVideo) : 2);
-
-		String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
-		fs::CreateDirectories(cinematicsPath);
-
-		if (options.Videos == VideoHandling::Recompress) {
-			LOGI("Recompressing cinematics...");
-		} else {
-			LOGI("Copying cinematics...");
-		}
-
-		for (StringView name : videoNames) {
-			String videoPath = fs::FindPathCaseInsensitive(fs::CombinePath(layout.OriginalsPath, String(name + ".j2v"_s)));
-			if (!fs::IsReadableFile(videoPath)) {
-				continue;
-			}
-
-			// The player looks the files up in lower case
-			String targetVideoPath = fs::CombinePath(cinematicsPath, StringUtils::lowercase(name + ".j2v"_s));
-			if (options.Videos == VideoHandling::Recompress) {
-				if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
-					LOGW("Cannot recompress \"{}\", skipping it", videoPath);
-				}
-			} else if (!fs::Copy(videoPath, targetVideoPath)) {
-				LOGW("Cannot copy \"{}\", skipping it", videoPath);
-			}
-		}
-	}
-
-	if (options.Profile == TargetProfile::Desktop) {
-		WriteCacheDescriptor(fs::CombinePath(outputPath, "Source.idx"_s),
-			fs::GetLastModificationTime(animsPath).ToUnixMilliseconds());
-	}
-
-	LOGI("Done");
-	return 0;
 }
+
+#if defined(DEATH_TARGET_WINDOWS)
+/**
+	Windows transcodes the narrow argv through the active code page, mangling every path it cannot
+	represent, so the wide entry point is taken and the arguments are decoded to UTF-8 up front. The
+	views are only taken once the strings are all in place, as String stores short ones inline.
+*/
+int wmain(std::int32_t argc, wchar_t** argv)
+{
+	SmallVector<String, 8> decoded;
+	decoded.reserve(argc);
+	for (std::int32_t i = 0; i < argc; i++) {
+		decoded.push_back(Death::Utf8::FromUtf16(argv[i]));
+	}
+
+	SmallVector<StringView, 8> args;
+	args.reserve(decoded.size());
+	for (const String& arg : decoded) {
+		args.push_back(arg);
+	}
+	return RunAssetPacker(args);
+}
+#else
+int main(std::int32_t argc, char** argv)
+{
+	SmallVector<StringView, 8> args;
+	args.reserve(argc);
+	for (std::int32_t i = 0; i < argc; i++) {
+		args.push_back(argv[i]);
+	}
+	return RunAssetPacker(args);
+}
+#endif

@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include <Base/Format.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -144,8 +145,8 @@ namespace ShaderCompiler
 		class Folder
 		{
 		public:
-			Folder(const std::vector<FoldInputLine>& lines, const std::vector<GlslToken>& tokens,
-				const std::vector<bool>& allowed, std::vector<FoldEdit>& edits)
+			Folder(const SmallVectorImpl<FoldInputLine>& lines, const SmallVectorImpl<GlslToken>& tokens,
+				const SmallVectorImpl<bool>& allowed, SmallVectorImpl<FoldEdit>& edits)
 				: _lines(lines), _tokens(tokens), _allowed(allowed), _edits(edits), _pos(0)
 			{
 			}
@@ -163,10 +164,10 @@ namespace ShaderCompiler
 			}
 
 		private:
-			const std::vector<FoldInputLine>& _lines;
-			const std::vector<GlslToken>& _tokens;
-			const std::vector<bool>& _allowed;
-			std::vector<FoldEdit>& _edits;
+			const SmallVectorImpl<FoldInputLine>& _lines;
+			const SmallVectorImpl<GlslToken>& _tokens;
+			const SmallVectorImpl<bool>& _allowed;
+			SmallVectorImpl<FoldEdit>& _edits;
 			std::size_t _pos;
 
 			const GlslToken& Peek() const
@@ -548,7 +549,7 @@ namespace ShaderCompiler
 
 	// --- GlslExprTokenizer ----------------------------------------------------------------------
 
-	void GlslExprTokenizer::Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out)
+	void GlslExprTokenizer::Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, SmallVectorImpl<GlslToken>& out)
 	{
 		if (end > text.size()) {
 			end = text.size();
@@ -632,17 +633,17 @@ namespace ShaderCompiler
 
 	// --- ConstFolder ----------------------------------------------------------------------------
 
-	void ConstFolder::ComputeFolds(const std::vector<FoldInputLine>& lines, std::vector<FoldEdit>& edits)
+	void ConstFolder::ComputeFolds(const SmallVectorImpl<FoldInputLine>& lines, SmallVectorImpl<FoldEdit>& edits)
 	{
-		std::vector<GlslToken> tokens;
-		std::vector<bool> allowed;
+		SmallVector<GlslToken, 0> tokens;
+		SmallVector<bool, 0> allowed;
 
 		// Barrier scan: a preprocessor conditional that starts mid-statement suppresses folding
 		// until the next statement boundary (';', '{' or '}') in every branch it affects, so
 		// tokens from one #ifdef branch can never lend the other branch a bogus parse context
 		bool atBoundary = true;			// The last significant token ended a statement
 		bool suppressed = false;
-		std::vector<bool> conditionalStack;
+		SmallVector<bool, 0> conditionalStack;
 
 		for (const FoldInputLine& line : lines) {
 			const String& text = *line.Text;

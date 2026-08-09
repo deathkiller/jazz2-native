@@ -11,7 +11,7 @@ void fragment() {
 	COLOR = gray * dye;
 }
 
-void fixed_function(pvr, psp, gs) {
+void fixed_function(pvr, gu, gs) {
 	// Console fixed-function tier: gray = (r + g + b) * 0.5 and COLOR = gray * dye with
 	// dye = 1 + (color - 0.5) * 4. The textures this runs on are grayscale (fonts), so r = g = b and
 	// that "average" is really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.

@@ -26,8 +26,8 @@
 */
 
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -86,7 +86,7 @@ namespace ShaderCompiler
 			They live in the same struct as the loose uniforms but are filled by `<Program>_ComputeVaryings`
 			(not by `ResolveUniform`), so the caller excludes them from the loose-uniform field list.
 		*/
-		std::vector<String> ConstVaryingNames;
+		SmallVector<String, 0> ConstVaryingNames;
 	};
 
 	/** @brief Transpiles lowered fragment GLSL into a C++ software-renderer fragment function */
@@ -105,7 +105,7 @@ namespace ShaderCompiler
 			succeeded.
 		*/
 		static GlslToCppResult TranspileFragment(StringView programName, StringView fragmentGlsl,
-			StringView vertexGlsl, const std::vector<SamplerBinding>& samplers,
-			const std::vector<GlslInstanceMember>& instanceMembers);
+			StringView vertexGlsl, const SmallVectorImpl<SamplerBinding>& samplers,
+			const SmallVectorImpl<GlslInstanceMember>& instanceMembers);
 	};
 }

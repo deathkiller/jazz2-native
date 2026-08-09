@@ -1,9 +1,9 @@
 #include "Vulkan.h"
 #include "GlslTypedAst.h"
 
-#include <vector>
 
 #include <Base/Format.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -413,7 +413,7 @@ namespace ShaderCompiler
 	bool VulkanGlslEmitter::Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
 		String& out, Diagnostic& diag)
 	{
-		std::vector<GlslToken> tokens;
+		SmallVector<GlslToken, 0> tokens;
 		String reason;
 		if (!TokenizeStage(modernSource, tokens, reason)) {
 			diag.Message = std::move(reason);

@@ -19,7 +19,8 @@
 	vertex layout is the one the engine already produces.
 */
 
-#include <string>
+
+#include <cstring>
 
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
@@ -43,7 +44,7 @@ namespace ShaderCompiler
 				return Npos;
 			}
 			for (std::size_t i = 0; i + needle.size() <= haystack.size(); i++) {
-				if (std::char_traits<char>::compare(haystack.data() + i, needle.data(), needle.size()) == 0) {
+				if (std::memcmp(haystack.data() + i, needle.data(), needle.size()) == 0) {
 					return i;
 				}
 			}

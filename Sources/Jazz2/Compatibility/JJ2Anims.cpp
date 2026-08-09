@@ -540,7 +540,7 @@ namespace Jazz2::Compatibility
 			std::int32_t stride = sheetWidth;
 			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(sheetWidth * sheetHeight * 4);
 
-			for (std::int32_t j = 0; j < anim.Frames.size(); j++) {
+			for (std::int32_t j = 0; j < (std::int32_t)anim.Frames.size(); j++) {
 				auto& frame = anim.Frames[j];
 
 				std::int32_t offsetX = anim.NormalizedHotspotX + frame.HotspotX;

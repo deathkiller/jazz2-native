@@ -22,8 +22,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 #include "ConstFold.h"		// GlslToken, GlslTokenType, GlslExprTokenizer (+ String/StringView via Death::Containers)
@@ -79,7 +79,7 @@ namespace ShaderCompiler
 		/** @brief Operands (Index: A = base, B = index; Conditional: A ? B : C) */
 		std::unique_ptr<Expr> A, B, C;
 		/** @brief Call/constructor arguments */
-		std::vector<std::unique_ptr<Expr>> Args;
+		SmallVector<std::unique_ptr<Expr>, 0> Args;
 	};
 	using ExprPtr = std::unique_ptr<Expr>;
 
@@ -96,16 +96,16 @@ namespace ShaderCompiler
 		Splits, strips comments from, preprocesses and tokenizes a GLSL stage source, appending a trailing
 		@ref GlslTokenType::End token. Returns false (with a @p reason) only if preprocessing fails.
 	*/
-	inline bool TokenizeStage(StringView glsl, std::vector<GlslToken>& tokens, String& reason)
+	inline bool TokenizeStage(StringView glsl, SmallVectorImpl<GlslToken>& tokens, String& reason)
 	{
 		using namespace Death::Containers::Literals;
 
-		std::vector<SourceLine> lines;
+		SmallVector<SourceLine, 0> lines;
 		ShaderParser::SplitLines(glsl, lines);
 		ShaderParser::StripComments(lines);
 
 		Preprocessor preprocessor;
-		std::vector<SourceLine> preprocessed;
+		SmallVector<SourceLine, 0> preprocessed;
 		Diagnostic diag;
 		if (!preprocessor.Run(lines, preprocessed, diag)) {
 			reason = "preprocessing failed: "_s + diag.Message;

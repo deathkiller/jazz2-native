@@ -6,6 +6,7 @@
 #include <utility>
 
 #include <Base/Format.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -118,7 +119,7 @@ namespace ShaderCompiler
 		}
 
 		/** Emits an embedded DXBC blob as a "constexpr std::uint8_t <symbol>[] = { ... };" byte array */
-		void EmitDxbcArray(String& output, const String& symbol, const std::vector<std::uint8_t>& bytes)
+		void EmitDxbcArray(String& output, const String& symbol, const SmallVectorImpl<std::uint8_t>& bytes)
 		{
 			output += "\tinline constexpr std::uint8_t " + symbol + "[] = {\n";
 			for (std::size_t i = 0; i < bytes.size(); i++) {
@@ -133,7 +134,7 @@ namespace ShaderCompiler
 		}
 
 		/** Emits an embedded SPIR-V module as a "constexpr std::uint32_t <symbol>[] = { ... };" word array */
-		void EmitSpirvArray(String& output, const String& symbol, const std::vector<std::uint32_t>& words)
+		void EmitSpirvArray(String& output, const String& symbol, const SmallVectorImpl<std::uint32_t>& words)
 		{
 			output += "\tinline constexpr std::uint32_t " + symbol + "[] = {\n";
 			for (std::size_t i = 0; i < words.size(); i++) {
@@ -331,17 +332,17 @@ namespace ShaderCompiler
 		};
 
 		/** Emits one program (per-variant sources, reflection arrays, variant list and Program descriptor) into @p output */
-		bool EmitProgram(const ShaderDocument& document, const std::vector<VariantReflection>& variants,
-			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+		bool EmitProgram(const ShaderDocument& document, const SmallVectorImpl<VariantReflection>& variants,
+			SpirvCompileFn& compileSpirv, DxbcCompileFn& compileDxbc, String& output,
 			BackendArtifacts& artifacts, Diagnostic& diag)
 		{
 			const String& program = document.ProgramName;
 
 			// Per-variant HLSL artifact symbol names (source strings or DXBC blobs; "nullptr" when the HLSL
 			// lowering declined the stage), filled below and referenced by the ProgramVariant initializers.
-			std::vector<HlslSymbols> hlslSymbols;
+			SmallVector<HlslSymbols, 0> hlslSymbols;
 			// Per-variant embedded-SPIR-V symbol names + sizes (or "nullptr"/0 when no SPIR-V was emitted)
-			std::vector<VkSpirvSymbols> vkSymbols;
+			SmallVector<VkSpirvSymbols, 0> vkSymbols;
 
 			for (const VariantReflection& v : variants) {
 				// The unnamed base variant carries no infix ("Lighting_Vs"), named variants keep theirs ("Tinted_USE_PALETTE_Vs")
@@ -352,7 +353,7 @@ namespace ShaderCompiler
 				// no compiler or the compile failed), buffered so the emission below is all-or-nothing per
 				// variant: blobs replace the source text only when BOTH stages compiled.
 				String hlslSources[2];
-				std::vector<std::uint8_t> hlslDxbc[2];
+				SmallVector<std::uint8_t, 0> hlslDxbc[2];
 				VkSpirvSymbols vk;
 
 				for (std::int32_t stage = 0; stage < 2; stage++) {
@@ -424,7 +425,7 @@ namespace ShaderCompiler
 					// program. A decline or a failed compile still defines the symbol, as a null.
 					{
 						String sym = prefix + (vertexStage ? "_VkVs" : "_VkFs");
-						std::vector<std::uint32_t> words;
+						SmallVector<std::uint32_t, 0> words;
 						if (compileSpirv) {
 							String vkSource;
 							Diagnostic vkDiag;
@@ -576,8 +577,8 @@ namespace ShaderCompiler
 		}
 	}
 
-	bool Emitter::EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-		const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+	bool Emitter::EmitHeader(const SmallVectorImpl<ProgramReflection>& programs, StringView ns, StringView inputFileName,
+		SpirvCompileFn& compileSpirv, DxbcCompileFn& compileDxbc, String& output,
 		BackendArtifacts& artifacts, Diagnostic& diag)
 	{
 		// Only the file name is embedded, so generated headers don't differ between machines
@@ -622,7 +623,7 @@ namespace ShaderCompiler
 		return true;
 	}
 
-	String Emitter::BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants)
+	String Emitter::BuildCheckDump(const ShaderDocument& document, const SmallVectorImpl<VariantReflection>& variants)
 	{
 		String out;
 		out += "program " + document.ProgramName + "\n";

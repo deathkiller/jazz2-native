@@ -159,7 +159,7 @@ namespace Jazz2::Compatibility
 			DeflateStream ds(ms);
 			std::uint8_t buffer[16 * 1024];
 			while (true) {
-				std::int32_t bytesRead = ds.Read(buffer, sizeof(buffer));
+				std::int32_t bytesRead = (std::int32_t)ds.Read(buffer, sizeof(buffer));
 				if (bytesRead <= 0) {
 					break;
 				}

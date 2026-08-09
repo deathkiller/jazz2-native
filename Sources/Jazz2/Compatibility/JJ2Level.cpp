@@ -836,7 +836,7 @@ namespace Jazz2::Compatibility
 				if (isLevelToken) {
 					String adjustedText;
 					auto levelTokens = text.split('|');
-					for (int j = 0; j < levelTokens.size(); j++) {
+					for (std::int32_t j = 0; j < (std::int32_t)levelTokens.size(); j++) {
 						if (j != 0) {
 							adjustedText += "|"_s;
 						}
@@ -848,11 +848,11 @@ namespace Jazz2::Compatibility
 						adjustedText += token.Level;
 					}
 
-					co.WriteValueAsLE<std::uint16_t>(adjustedText.size());
+					co.WriteValueAsLE<std::uint16_t>((std::uint16_t)adjustedText.size());
 					co.Write(adjustedText.data(), adjustedText.size());
 				} else {
 					String formattedText = JJ2Strings::RecodeString(text);
-					co.WriteValueAsLE<std::uint16_t>(formattedText.size());
+					co.WriteValueAsLE<std::uint16_t>((std::uint16_t)formattedText.size());
 					co.Write(formattedText.data(), formattedText.size());
 				}
 			}
@@ -917,7 +917,7 @@ namespace Jazz2::Compatibility
 
 			// Layers
 			std::int32_t layerCount = 0;
-			for (std::int32_t i = 0; i < _layers.size(); i++) {
+			for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
 				auto& layer = _layers[i];
 				if (layer.Width == 0 || layer.Height == 0) {
 					layer.Used = false;
@@ -928,7 +928,7 @@ namespace Jazz2::Compatibility
 			}
 
 			co.WriteValue<std::uint8_t>(layerCount);
-			for (std::int32_t i = 0; i < _layers.size(); i++) {
+			for (std::int32_t i = 0; i < (std::int32_t)_layers.size(); i++) {
 				auto& layer = _layers[i];
 				if (layer.Used) {
 					bool isSky = (i == 7);

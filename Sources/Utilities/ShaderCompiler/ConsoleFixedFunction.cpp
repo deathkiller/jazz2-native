@@ -6,9 +6,9 @@
 #include <map>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include <Base/Format.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -125,8 +125,8 @@ namespace ShaderCompiler
 		// Presets the GE has no form of at all: its texture environment applies no output scale to the
 		// combined colour, so a x2/x4 modulate cannot be expressed by any single GE draw. The PVR
 		// silently IGNORES them (it always modulates), which is why they are not "gx-only" - but that
-		// also means a block shared with the psp target would be honoured by only some of the backends
-		// it serves, so any block that reaches the PSP (a psp block, a target list naming psp, or a
+		// also means a block shared with the gu target would be honoured by only some of the backends
+		// it serves, so any block that reaches the GU (a gu block, a target list naming gu, or a
 		// generic block) rejects them. Boosts belong in passes on this tier (the additive split
 		// Colorized uses on the PVR).
 		bool IsScaledModulateTevValueName(StringView v)
@@ -145,7 +145,7 @@ namespace ShaderCompiler
 		{
 			switch (target) {
 				case FixedFunctionTarget::Gx: return FixedFunctionBackend::Gx;
-				case FixedFunctionTarget::Psp: return FixedFunctionBackend::Psp;
+				case FixedFunctionTarget::Gu: return FixedFunctionBackend::Gu;
 				case FixedFunctionTarget::Gs: return FixedFunctionBackend::Gs;
 				default: return FixedFunctionBackend::Pvr;
 			}
@@ -168,7 +168,7 @@ namespace ShaderCompiler
 		{
 			switch (backend) {
 				case FixedFunctionBackend::Gx: return "gx";
-				case FixedFunctionBackend::Psp: return "psp";
+				case FixedFunctionBackend::Gu: return "gu";
 				case FixedFunctionBackend::Gs: return "gs";
 				default: return "pvr";
 			}
@@ -194,11 +194,11 @@ namespace ShaderCompiler
 		{
 			StmtKind Kind;
 			std::int32_t Line = 0;
-			std::vector<std::unique_ptr<Stmt>> Body;		// Block
+			SmallVector<std::unique_ptr<Stmt>, 0> Body;		// Block
 			Ty DeclType = Ty::Float;						// VarDecl
 			String DeclName;
 			ExprPtr Init;
-			std::vector<std::pair<String, ExprPtr>> ExtraDecls;
+			SmallVector<std::pair<String, ExprPtr>, 0> ExtraDecls;
 			ExprPtr E;										// ExprStmt
 			ExprPtr Cond;									// If
 			std::unique_ptr<Stmt> Then, Else;
@@ -221,7 +221,7 @@ namespace ShaderCompiler
 		class Parser
 		{
 		public:
-			explicit Parser(const std::vector<GlslToken>& tokens) : _toks(tokens) {}
+			explicit Parser(const SmallVectorImpl<GlslToken>& tokens) : _toks(tokens) {}
 
 			StmtPtr Run()
 			{
@@ -239,7 +239,7 @@ namespace ShaderCompiler
 			std::int32_t ErrorLine() const { return _errLine; }
 
 		private:
-			const std::vector<GlslToken>& _toks;
+			const SmallVectorImpl<GlslToken>& _toks;
 			std::size_t _pos = 0;
 			bool _ok = true;
 			String _reason;
@@ -553,8 +553,8 @@ namespace ShaderCompiler
 		class Emitter
 		{
 		public:
-			Emitter(FixedFunctionBackend backend, const std::vector<FixedFunctionTarget>& targets)
-				: _backend(backend), _targets(targets)
+			Emitter(FixedFunctionBackend backend, const SmallVectorImpl<FixedFunctionTarget>& targets)
+				: _backend(backend), _targets(InPlaceInit, targets.begin(), targets.end())
 			{
 				// The portable core emits identically for every backend; what varies is only which
 				// capabilities are reachable (GX-only TEV presets, the combiner output scales, the
@@ -591,8 +591,8 @@ namespace ShaderCompiler
 				them and silently ignored by the rest. The generic block, which serves every backend, is
 				the empty-list case and stays in the portable quad-only core.
 			*/
-			std::vector<FixedFunctionTarget> _targets;
-			std::vector<std::map<String, Ty>> _scopes;
+			SmallVector<FixedFunctionTarget, 0> _targets;
+			SmallVector<std::map<String, Ty>, 0> _scopes;
 			bool _ok = true;
 			String _reason;
 			std::int32_t _errLine = 0;
@@ -650,7 +650,7 @@ namespace ShaderCompiler
 			bool RequireExtended(StringView what)
 			{
 				if (_targets.empty()) {
-					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (psp), (gs) or a list of them (generic blocks keep the portable quad-only core)"_s);
+					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs) or a list of them (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;
@@ -677,7 +677,7 @@ namespace ShaderCompiler
 			// GE's texture environment and the GS's texture function both lack a scale stage, so nothing
 			// either can be programmed to do reproduces them. Unlike the GX-only presets this is not a
 			// per-block capability - a pvr block may keep using them, since the PVR ignores tev entirely -
-			// but a target list naming psp or gs, and a generic block (transpiled for every backend),
+			// but a target list naming gu or gs, and a generic block (transpiled for every backend),
 			// would otherwise be honoured by only some of the backends they serve, which is exactly what
 			// these checks exist to prevent.
 			bool RequireCombinerOutputScale(StringView what)
@@ -705,8 +705,8 @@ namespace ShaderCompiler
 				String why = what + " cannot be expressed for the "_s + name + " target - "_s +
 					(lacking == FixedFunctionBackend::Gs
 						? "the Graphics Synthesizer's texture function has no combiner output scale"_s
-						: (lacking == FixedFunctionBackend::Psp
-							? "the PSP's texture environment has no combiner output scale"_s
+						: (lacking == FixedFunctionBackend::Gu
+							? "the Graphics Engine's texture environment has no combiner output scale"_s
 							: "that backend has no combiner output scale"_s));
 				if (listed && _targets.size() > 1) {
 					// The list form: the block would have been valid without that target in it
@@ -1390,7 +1390,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			String EmitArgs(const Expr* call, std::vector<Ty>& types)
+			String EmitArgs(const Expr* call, SmallVectorImpl<Ty>& types)
 			{
 				String r;
 				for (std::size_t i = 0; i < call->Args.size(); i++) {
@@ -1468,7 +1468,7 @@ namespace ShaderCompiler
 
 				// Scalar conversion constructors
 				if (name == "float"_s || name == "int"_s) {
-					std::vector<Ty> argTypes;
+					SmallVector<Ty, 0> argTypes;
 					String args = EmitArgs(e, argTypes);
 					if (!_ok) return {};
 					if (argTypes.size() != 1 || !IsNumericScalar(argTypes[0])) {
@@ -1484,7 +1484,7 @@ namespace ShaderCompiler
 				// provide a constructor for every such shape up to vec4)
 				Ty ctorTy;
 				if (TryLocalType(name, ctorTy) && IsVec(ctorTy)) {
-					std::vector<Ty> argTypes;
+					SmallVector<Ty, 0> argTypes;
 					String args = EmitArgs(e, argTypes);
 					if (!_ok) return {};
 					if (argTypes.empty()) { Fail(name + "() needs arguments"_s); return {}; }
@@ -1503,7 +1503,7 @@ namespace ShaderCompiler
 				}
 
 				if (name == "min"_s || name == "max"_s) {
-					std::vector<Ty> a;
+					SmallVector<Ty, 0> a;
 					String args = EmitArgs(e, a);
 					if (!_ok) return {};
 					if (a.size() != 2) { Fail(name + "() takes 2 arguments"_s); return {}; }
@@ -1516,7 +1516,7 @@ namespace ShaderCompiler
 					return name + "("_s + args + ")"_s;
 				}
 				if (name == "clamp"_s) {
-					std::vector<Ty> a;
+					SmallVector<Ty, 0> a;
 					String args = EmitArgs(e, a);
 					if (!_ok) return {};
 					if (a.size() != 3) { Fail("clamp() takes 3 arguments"_s); return {}; }
@@ -1527,7 +1527,7 @@ namespace ShaderCompiler
 					return "clamp("_s + args + ")"_s;
 				}
 				if (name == "mix"_s) {
-					std::vector<Ty> a;
+					SmallVector<Ty, 0> a;
 					String args = EmitArgs(e, a);
 					if (!_ok) return {};
 					if (a.size() != 3) { Fail("mix() takes 3 arguments"_s); return {}; }
@@ -1537,7 +1537,7 @@ namespace ShaderCompiler
 					return "mix("_s + args + ")"_s;
 				}
 				if (name == "ceil"_s || name == "floor"_s) {
-					std::vector<Ty> a;
+					SmallVector<Ty, 0> a;
 					String args = EmitArgs(e, a);
 					if (!_ok) return {};
 					if (a.size() != 1 || (a[0] != Ty::Float && !IsVec(a[0]))) {
@@ -1550,7 +1550,7 @@ namespace ShaderCompiler
 				// Scalar transcendentals of the geometry effects (the iris fan directions, the circle
 				// radii); float-only - the handwritten code they transcribe only ever used floats
 				if (name == "abs"_s || name == "sqrt"_s || name == "sin"_s || name == "cos"_s) {
-					std::vector<Ty> a;
+					SmallVector<Ty, 0> a;
 					String args = EmitArgs(e, a);
 					if (!_ok) return {};
 					if (a.size() != 1 || a[0] != Ty::Float) {
@@ -1628,13 +1628,13 @@ namespace ShaderCompiler
 		// Resolve the variant define exactly like the fragment stage: comments stripped, then the
 		// mini preprocessor with "#define <VARIANT> (1)" baked in, so "#ifdef USE_PALETTE" inside
 		// the block selects per variant
-		std::vector<SourceLine> lines = block.Lines;
+		SmallVector<SourceLine, 0> lines = block.Lines;
 		ShaderParser::StripComments(lines);
 		Preprocessor preprocessor;
 		if (!define.empty()) {
 			preprocessor.Define(define, "1");
 		}
-		std::vector<SourceLine> preprocessed;
+		SmallVector<SourceLine, 0> preprocessed;
 		Diagnostic diag;
 		if (!preprocessor.Run(lines, preprocessed, diag)) {
 			result.Error = diag.Message;
@@ -1644,7 +1644,7 @@ namespace ShaderCompiler
 
 		// Tokenize per line, tagging each token with its ORIGINAL 1-based input line so every
 		// diagnostic downstream names a real location in the .shader file
-		std::vector<GlslToken> tokens;
+		SmallVector<GlslToken, 0> tokens;
 		for (const SourceLine& line : preprocessed) {
 			GlslExprTokenizer::Tokenize(line.Text, 0, line.Text.size(), static_cast<std::size_t>(line.Line), tokens);
 		}

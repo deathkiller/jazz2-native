@@ -3,10 +3,10 @@
 
 #include <algorithm>
 #include <cstring>
-#include <string>
 
 #include <Base/Format.h>
 #include <Containers/GrowableArray.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Death::Containers::Literals;
@@ -147,7 +147,7 @@ namespace ShaderCompiler
 			return true;
 		}
 
-		void SplitWords(StringView s, std::vector<String>& words)
+		void SplitWords(StringView s, SmallVectorImpl<String>& words)
 		{
 			std::size_t i = 0;
 			while (i < s.size()) {
@@ -232,7 +232,7 @@ namespace ShaderCompiler
 			std::int32_t _line;
 			std::int32_t _depth;
 			Diagnostic& _diag;
-			std::vector<ExprToken> _tokens;
+			SmallVector<ExprToken, 0> _tokens;
 			std::size_t _pos;
 
 			const ExprToken& Peek() const
@@ -546,9 +546,9 @@ namespace ShaderCompiler
 
 	// --- ShaderParser -------------------------------------------------------------------------------
 
-	void ShaderParser::SplitLines(StringView content, std::vector<SourceLine>& lines)
+	void ShaderParser::SplitLines(StringView content, SmallVectorImpl<SourceLine>& lines)
 	{
-		std::vector<SourceLine> raw;
+		SmallVector<SourceLine, 0> raw;
 		Array<char> current;
 		std::int32_t lineNumber = 1;
 		std::size_t i = 0;
@@ -591,7 +591,7 @@ namespace ShaderCompiler
 		}
 	}
 
-	void ShaderParser::StripComments(std::vector<SourceLine>& lines)
+	void ShaderParser::StripComments(SmallVectorImpl<SourceLine>& lines)
 	{
 		bool inBlockComment = false;
 		for (SourceLine& line : lines) {
@@ -667,9 +667,9 @@ namespace ShaderCompiler
 			return Substr(s, begin, pos - begin);
 		}
 
-		bool StartsWithWord(StringView s, const char* word)
+		bool StartsWithWord(StringView s, StringView word)
 		{
-			std::size_t length = std::char_traits<char>::length(word);
+			std::size_t length = word.size();
 			return (Substr(s, 0, length) == word && (s.size() == length || !IsIdentChar(s[length])));
 		}
 
@@ -700,15 +700,15 @@ namespace ShaderCompiler
 			String ProgramName;
 			String BatchedName;
 			String FragmentPrecision = "mediump";	// "precision mediump|highp;" directive (GL ES float precision of the fragment stage)
-			std::vector<String> Variants;
-			std::vector<TextureDirective> Textures;
+			SmallVector<String, 0> Variants;
+			SmallVector<TextureDirective, 0> Textures;
 			std::uint32_t RenderModes = 0;
-			std::vector<VaryingDecl> Varyings;
-			std::vector<AttributeDecl> Attributes;
-			std::vector<SourceLine> Globals;
-			std::vector<SourceLine> VertexBody;
-			std::vector<SourceLine> FragmentBody;
-			std::vector<FixedFunctionBlock> FixedFunctionBlocks;
+			SmallVector<VaryingDecl, 0> Varyings;
+			SmallVector<AttributeDecl, 0> Attributes;
+			SmallVector<SourceLine, 0> Globals;
+			SmallVector<SourceLine, 0> VertexBody;
+			SmallVector<SourceLine, 0> FragmentBody;
+			SmallVector<FixedFunctionBlock, 0> FixedFunctionBlocks;
 			std::int32_t BatchedLine = 0;
 			bool CanvasItem = false;		// "shader_type canvas_item;" seen ("custom" is the default)
 			bool HasVertexBody = false;
@@ -800,9 +800,9 @@ R"GLSL(void main()
 		constexpr char CanvasBatchedCorner[] = "vec2(1.0 - float(((gl_VertexID + 2) / 3) % 2), 1.0 - float(((gl_VertexID + 1) / 3) % 2))";
 
 		/** Appends the lines of a template raw string (with synthetic line number 0) to @p target */
-		void AppendTemplate(std::vector<SourceLine>& target, const char* text)
+		void AppendTemplate(SmallVectorImpl<SourceLine>& target, const char* text)
 		{
-			std::vector<SourceLine> lines;
+			SmallVector<SourceLine, 0> lines;
 			ShaderParser::SplitLines(text, lines);
 			// Raw-string templates end with a newline, so the final split line is empty — drop it
 			if (!lines.empty() && lines.back().Text.empty()) {
@@ -821,7 +821,7 @@ R"GLSL(void main()
 			the comment-stripped @p bare; sets @p done when the entry's closing brace is reached.
 		*/
 		bool CaptureBodyLine(StringView text, StringView bare, std::size_t bodyBegin, std::int32_t lineNumber,
-			std::vector<SourceLine>& body, std::int32_t& depth, bool& done, Diagnostic& diag)
+			SmallVectorImpl<SourceLine>& body, std::int32_t& depth, bool& done, Diagnostic& diag)
 		{
 			std::size_t pos = bodyBegin;
 			bool closed = false;
@@ -1020,7 +1020,7 @@ R"GLSL(void main()
 		}
 
 		/** Parses a ".shader" file into its intermediate representation */
-		bool ParseShaderSource(const std::vector<SourceLine>& lines, const std::vector<SourceLine>& stripped, ParsedShader& src, Diagnostic& diag)
+		bool ParseShaderSource(const SmallVectorImpl<SourceLine>& lines, const SmallVectorImpl<SourceLine>& stripped, ParsedShader& src, Diagnostic& diag)
 		{
 			bool seenProgram = false;
 			bool seenShaderType = false;
@@ -1050,7 +1050,7 @@ R"GLSL(void main()
 
 				// Inside a vertex()/fragment()/fixed_function() body — capture verbatim until the matching brace
 				if (capturing != 0) {
-					std::vector<SourceLine>& body = (capturing == 1 ? src.VertexBody :
+					SmallVectorImpl<SourceLine>& body = (capturing == 1 ? src.VertexBody :
 						capturing == 2 ? src.FragmentBody : src.FixedFunctionBlocks.back().Lines);
 					std::size_t bodyBegin = 0;
 					if (awaitingBrace) {
@@ -1245,7 +1245,7 @@ R"GLSL(void main()
 				if (word == "fixed_function") {
 					// The old standalone spelling — the block is an entry point like vertex()/fragment()
 					// and is written the same way since the "void" spelling landed
-					return Fail(diag, "fixed_function blocks are spelled \"void fixed_function([pvr|gx|psp]) { ... }\" now (like \"void vertex()\")", line.Line);
+					return Fail(diag, "fixed_function blocks are spelled \"void fixed_function([pvr|gx|gu]) { ... }\" now (like \"void vertex()\")", line.Line);
 				}
 
 				// "void fixed_function([<target>[, <target>...]]) { ... }" — the body is captured
@@ -1272,10 +1272,10 @@ R"GLSL(void main()
 						return Fail(diag, "usage: void fixed_function([<target>[, <target>...]]) { ... }", line.Line);
 					}
 					cursor++;
-					// The target list, whitespace-tolerant in every position ("(pvr,psp)" and
-					// "( pvr , psp )" are the same declaration). A comma commits to another entry, so
+					// The target list, whitespace-tolerant in every position ("(pvr,gu)" and
+					// "( pvr , gu )" are the same declaration). A comma commits to another entry, so
 					// a trailing one is rejected rather than silently dropped.
-					std::vector<FixedFunctionTarget> targets;
+					SmallVector<FixedFunctionTarget, 0> targets;
 					bool afterComma = false;
 					while (true) {
 						while (cursor < bare.size() && IsSpace(bare[cursor])) {
@@ -1293,12 +1293,12 @@ R"GLSL(void main()
 							targetKind = FixedFunctionTarget::Pvr;
 						} else if (target == "gx") {
 							targetKind = FixedFunctionTarget::Gx;
-						} else if (target == "psp") {
-							targetKind = FixedFunctionTarget::Psp;
+						} else if (target == "gu") {
+							targetKind = FixedFunctionTarget::Gu;
 						} else if (target == "gs") {
 							targetKind = FixedFunctionTarget::Gs;
 						} else {
-							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, psp, gs, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
+							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, gu, gs, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
 						}
 						for (FixedFunctionTarget listed : targets) {
 							if (listed == targetKind) {
@@ -1406,7 +1406,7 @@ R"GLSL(void main()
 						} else if (bare[cursor] == '{') {
 							awaitingBrace = false;
 							captureDepth = 1;
-							std::vector<SourceLine>& body = (isVertex ? src.VertexBody : src.FragmentBody);
+							SmallVectorImpl<SourceLine>& body = (isVertex ? src.VertexBody : src.FragmentBody);
 							bool done = false;
 							if (!CaptureBodyLine(text, bare, cursor + 1, line.Line, body, captureDepth, done, diag)) {
 								return false;
@@ -1496,7 +1496,7 @@ R"GLSL(void main()
 			Searches @p lines for a whole-identifier occurrence of @p name outside comments.
 			Returns true and sets @p foundLine on the first hit.
 		*/
-		bool FindIdentifier(const std::vector<SourceLine>& lines, const char* name, std::int32_t& foundLine)
+		bool FindIdentifier(const SmallVectorImpl<SourceLine>& lines, const char* name, std::int32_t& foundLine)
 		{
 			const std::size_t nameLength = std::strlen(name);
 			bool inBlockComment = false;
@@ -1550,9 +1550,9 @@ R"GLSL(void main()
 			(line-based scan on a comment-stripped copy; hint lists were already stripped
 			by the uniform-hint parsing, so a declaration ends with ';' on its line).
 		*/
-		bool DeclaresUniform(const std::vector<SourceLine>& globals, const char* name)
+		bool DeclaresUniform(const SmallVectorImpl<SourceLine>& globals, const char* name)
 		{
-			std::vector<SourceLine> stripped = globals;
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, globals.begin(), globals.end());
 			ShaderParser::StripComments(stripped);
 			for (const SourceLine& line : stripped) {
 				std::size_t cursor = 0;
@@ -1573,7 +1573,7 @@ R"GLSL(void main()
 			(COLOR stays — it is the fragment output variable), skipping comments. Custom mode runs
 			no substitutions at all.
 		*/
-		bool LowerCanvasFragmentBody(std::vector<SourceLine>& body, Diagnostic& diag)
+		bool LowerCanvasFragmentBody(SmallVectorImpl<SourceLine>& body, Diagnostic& diag)
 		{
 			bool inBlockComment = false;
 			for (SourceLine& line : body) {
@@ -1657,7 +1657,7 @@ R"GLSL(void main()
 			participate in brace counting. Returns false when the stream looks unbalanced —
 			the caller then skips elimination entirely.
 		*/
-		bool ScanFunctionDefinitions(const std::vector<SourceLine>& stripped, std::vector<FunctionDef>& defs)
+		bool ScanFunctionDefinitions(const SmallVectorImpl<SourceLine>& stripped, SmallVectorImpl<FunctionDef>& defs)
 		{
 			constexpr std::size_t NoLine = std::size_t(-1);
 			enum class Mode { TopLevel, Parens, AwaitBrace, Body };
@@ -1802,7 +1802,7 @@ R"GLSL(void main()
 		}
 
 		/** Returns true when position (@p line, @p col) lies inside one of the definitions in @p defs */
-		bool InsideDefinition(const std::vector<const FunctionDef*>& defs, std::size_t line, std::size_t col)
+		bool InsideDefinition(const SmallVectorImpl<const FunctionDef*>& defs, std::size_t line, std::size_t col)
 		{
 			for (const FunctionDef* def : defs) {
 				bool afterStart = (line > def->StartLine || (line == def->StartLine && col >= def->StartCol));
@@ -1815,8 +1815,8 @@ R"GLSL(void main()
 		}
 
 		/** Counts whole-identifier occurrences of @p name in @p stripped outside the definition ranges in @p ownDefs */
-		std::size_t CountExternalReferences(const std::vector<SourceLine>& stripped, StringView name,
-			const std::vector<const FunctionDef*>& ownDefs)
+		std::size_t CountExternalReferences(const SmallVectorImpl<SourceLine>& stripped, StringView name,
+			const SmallVectorImpl<const FunctionDef*>& ownDefs)
 		{
 			std::size_t count = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
@@ -1853,24 +1853,24 @@ R"GLSL(void main()
 			preprocessor branches). This is what makes stage guards around helper functions
 			unnecessary — an FS-only helper simply vanishes from the emitted vertex stage.
 		*/
-		void EliminateUnusedFunctions(std::vector<SourceLine>& lines)
+		void EliminateUnusedFunctions(SmallVectorImpl<SourceLine>& lines)
 		{
 			for (std::int32_t pass = 0; pass < 32; pass++) {
-				std::vector<SourceLine> stripped = lines;
+				SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 				ShaderParser::StripComments(stripped);
 
-				std::vector<FunctionDef> defs;
+				SmallVector<FunctionDef, 0> defs;
 				if (!ScanFunctionDefinitions(stripped, defs)) {
 					return;		// Unbalanced/unscannable stream — leave the text untouched
 				}
 
 				// Group definitions by name (overloads share fate)
-				std::map<String, std::vector<const FunctionDef*>> byName;
+				std::map<String, SmallVector<const FunctionDef*, 0>> byName;
 				for (const FunctionDef& def : defs) {
 					byName[def.Name].push_back(&def);
 				}
 
-				std::vector<const FunctionDef*> removable;
+				SmallVector<const FunctionDef*, 0> removable;
 				for (const auto& pair : byName) {
 					if (pair.first == "main" || pair.first == "vertex" || pair.first == "fragment") {
 						continue;
@@ -1926,8 +1926,8 @@ R"GLSL(void main()
 		struct InterfaceDecl
 		{
 			std::size_t LineIndex = 0;
-			std::vector<String> Names;										// All names declared on the line ("out vec2 a, b;")
-			std::vector<std::pair<std::size_t, std::size_t>> QualifierSpans;	// Column ranges of the qualifiers stripped on demotion
+			SmallVector<String, 0> Names;										// All names declared on the line ("out vec2 a, b;")
+			SmallVector<std::pair<std::size_t, std::size_t>, 0> QualifierSpans;	// Column ranges of the qualifiers stripped on demotion
 		};
 
 		/**
@@ -2024,7 +2024,7 @@ R"GLSL(void main()
 			(declarations inside conditional branches still count — conservative). Returns false
 			when the stream looks unbalanced — the caller then skips trimming entirely.
 		*/
-		bool CollectInterfaceDecls(const std::vector<SourceLine>& stripped, const char* direction, std::vector<InterfaceDecl>& decls)
+		bool CollectInterfaceDecls(const SmallVectorImpl<SourceLine>& stripped, const char* direction, SmallVectorImpl<InterfaceDecl>& decls)
 		{
 			std::int32_t depth = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
@@ -2059,7 +2059,7 @@ R"GLSL(void main()
 		}
 
 		/** Returns true when @p name occurs as a whole identifier on any line NOT listed in @p excludedLines */
-		bool IdentifierReadOutsideLines(const std::vector<SourceLine>& stripped, StringView name, const std::vector<std::size_t>& excludedLines)
+		bool IdentifierReadOutsideLines(const SmallVectorImpl<SourceLine>& stripped, StringView name, const SmallVectorImpl<std::size_t>& excludedLines)
 		{
 			for (std::size_t i = 0; i < stripped.size(); i++) {
 				if (std::find(excludedLines.begin(), excludedLines.end(), i) != excludedLines.end()) {
@@ -2125,7 +2125,7 @@ R"GLSL(void main()
 			crossing line breaks. Returns false at the end of the stream or when the cursor would
 			land on a preprocessor line — a directive inside a statement extent disqualifies it.
 		*/
-		bool SkipStatementWhitespace(const std::vector<SourceLine>& stripped, std::size_t& li, std::size_t& pos)
+		bool SkipStatementWhitespace(const SmallVectorImpl<SourceLine>& stripped, std::size_t& li, std::size_t& pos)
 		{
 			bool sameLine = true;
 			while (li < stripped.size()) {
@@ -2154,9 +2154,9 @@ R"GLSL(void main()
 			whitelisted type constructors and pure builtins — any other identifier followed by
 			'(' disqualifies. Preprocessor lines inside the extent disqualify too.
 		*/
-		bool ScanPureExpression(const std::vector<SourceLine>& stripped, std::size_t& li, std::size_t& pos, char terminator)
+		bool ScanPureExpression(const SmallVectorImpl<SourceLine>& stripped, std::size_t& li, std::size_t& pos, char terminator)
 		{
-			std::vector<bool> callArgs;		// One entry per open '('/'[' — true = whitelisted call argument list
+			SmallVector<bool, 0> callArgs;		// One entry per open '('/'[' — true = whitelisted call argument list
 			while (true) {
 				if (!SkipStatementWhitespace(stripped, li, pos)) {
 					return false;
@@ -2276,7 +2276,7 @@ R"GLSL(void main()
 			'}' or ';' — never an unbraced if/else/for body or an expression context — with no
 			preprocessor line in between.
 		*/
-		bool IsStandaloneStatementStart(const std::vector<SourceLine>& stripped, std::size_t li, std::size_t col)
+		bool IsStandaloneStatementStart(const SmallVectorImpl<SourceLine>& stripped, std::size_t li, std::size_t col)
 		{
 			std::size_t line = li;
 			std::size_t pos = col;
@@ -2307,7 +2307,7 @@ R"GLSL(void main()
 			right-hand side up to the terminating ';'. Returns true with (@p endLine, @p endCol)
 			at the ';'.
 		*/
-		bool ScanRemovableStoreTail(const std::vector<SourceLine>& stripped, std::size_t li, std::size_t pos,
+		bool ScanRemovableStoreTail(const SmallVectorImpl<SourceLine>& stripped, std::size_t li, std::size_t pos,
 			std::size_t& endLine, std::size_t& endCol)
 		{
 			while (true) {
@@ -2372,8 +2372,8 @@ R"GLSL(void main()
 			the declaration AND all stores; ANY failing occurrence keeps the demotion fallback
 			for the whole name (all-or-nothing — no partial removal).
 		*/
-		bool CollectRemovableStores(const std::vector<SourceLine>& stripped, StringView name,
-			std::size_t declLine, std::vector<StoreExtent>& stores)
+		bool CollectRemovableStores(const SmallVectorImpl<SourceLine>& stripped, StringView name,
+			std::size_t declLine, SmallVectorImpl<StoreExtent>& stores)
 		{
 			std::int32_t parenDepth = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
@@ -2448,19 +2448,19 @@ R"GLSL(void main()
 		{
 			// Fragment side — drop the unread "in" declarations
 			{
-				std::vector<SourceLine> stripped = document.FragmentLines;
+				SmallVector<SourceLine, 0> stripped = document.FragmentLines;
 				ShaderParser::StripComments(stripped);
-				std::vector<InterfaceDecl> decls;
+				SmallVector<InterfaceDecl, 0> decls;
 				if (!CollectInterfaceDecls(stripped, "in", decls)) {
 					return;
 				}
-				std::map<String, std::vector<std::size_t>> declLinesByName;
+				std::map<String, SmallVector<std::size_t, 0>> declLinesByName;
 				for (const InterfaceDecl& decl : decls) {
 					for (const String& name : decl.Names) {
 						declLinesByName[name].push_back(decl.LineIndex);
 					}
 				}
-				std::vector<std::size_t> removable;
+				SmallVector<std::size_t, 0> removable;
 				for (const InterfaceDecl& decl : decls) {
 					bool anyRead = false;
 					for (const String& name : decl.Names) {
@@ -2482,16 +2482,16 @@ R"GLSL(void main()
 			// never reads. Unread declarations are already gone from the fragment stream, so any
 			// occurrence left there (including a surviving declaration line) counts as a read.
 			{
-				std::vector<SourceLine> fragment = document.FragmentLines;
+				SmallVector<SourceLine, 0> fragment = document.FragmentLines;
 				ShaderParser::StripComments(fragment);
-				std::vector<SourceLine> stripped = document.VertexLines;
+				SmallVector<SourceLine, 0> stripped = document.VertexLines;
 				ShaderParser::StripComments(stripped);
-				std::vector<InterfaceDecl> decls;
+				SmallVector<InterfaceDecl, 0> decls;
 				if (!CollectInterfaceDecls(stripped, "out", decls)) {
 					return;
 				}
-				const std::vector<std::size_t> noExcludedLines;
-				std::vector<StoreExtent> removals;
+				const SmallVector<std::size_t, 0> noExcludedLines;
+				SmallVector<StoreExtent, 0> removals;
 				for (const InterfaceDecl& decl : decls) {
 					bool anyRead = false;
 					for (const String& name : decl.Names) {
@@ -2506,7 +2506,7 @@ R"GLSL(void main()
 					// Dead-store removal: when every occurrence of every declared name is provably
 					// a dead store, the declaration and all its stores are removed outright
 					{
-						std::vector<StoreExtent> stores;
+						SmallVector<StoreExtent, 0> stores;
 						bool removable = true;
 						for (const String& name : decl.Names) {
 							if (!CollectRemovableStores(stripped, name, decl.LineIndex, stores)) {
@@ -2530,7 +2530,7 @@ R"GLSL(void main()
 					// Demotion fallback — strip the qualifier spans back to front (positions computed
 					// on the stripped copy are valid in the original — comments only blank or truncate)
 					String& line = document.VertexLines[decl.LineIndex].Text;
-					std::vector<std::pair<std::size_t, std::size_t>> spans = decl.QualifierSpans;
+					SmallVector<std::pair<std::size_t, std::size_t>, 0> spans = decl.QualifierSpans;
 					std::sort(spans.begin(), spans.end());
 					bool valid = true;
 					for (const auto& span : spans) {
@@ -2553,7 +2553,7 @@ R"GLSL(void main()
 				std::sort(removals.begin(), removals.end(), [](const StoreExtent& a, const StoreExtent& b) {
 					return (a.StartLine > b.StartLine || (a.StartLine == b.StartLine && a.StartCol > b.StartCol));
 				});
-				std::vector<SourceLine>& lines = document.VertexLines;
+				SmallVectorImpl<SourceLine>& lines = document.VertexLines;
 				for (const StoreExtent& extent : removals) {
 					const String& startStripped = stripped[extent.StartLine].Text;
 					const String& endStripped = stripped[extent.EndLine].Text;
@@ -2597,8 +2597,8 @@ R"GLSL(void main()
 		struct GlobalDecl
 		{
 			GlobalDeclKind Kind = GlobalDeclKind::Define;
-			std::vector<String> DeclaredNames;		// Reflection-rule keys (uniform names / the block name); empty = exempt (defines, structs)
-			std::vector<String> ReferenceNames;	// Names whose external references pin the declaration
+			SmallVector<String, 0> DeclaredNames;		// Reflection-rule keys (uniform names / the block name); empty = exempt (defines, structs)
+			SmallVector<String, 0> ReferenceNames;	// Names whose external references pin the declaration
 			std::size_t StartLine = 0;
 			std::size_t EndLine = 0;
 		};
@@ -2608,7 +2608,7 @@ R"GLSL(void main()
 			stream or when the next token would sit on a preprocessor line — a declaration header
 			never continues across one.
 		*/
-		bool SkipDeclWhitespace(const std::vector<SourceLine>& lines, std::size_t& li, std::size_t& pos)
+		bool SkipDeclWhitespace(const SmallVectorImpl<SourceLine>& lines, std::size_t& li, std::size_t& pos)
 		{
 			bool sameLine = true;
 			while (li < lines.size()) {
@@ -2630,7 +2630,7 @@ R"GLSL(void main()
 		}
 
 		/** Reads the identifier at the cursor (empty when the next token is not an identifier) */
-		String ReadDeclWord(const std::vector<SourceLine>& lines, std::size_t& li, std::size_t& pos)
+		String ReadDeclWord(const SmallVectorImpl<SourceLine>& lines, std::size_t& li, std::size_t& pos)
 		{
 			if (!SkipDeclWhitespace(lines, li, pos)) {
 				return String{};
@@ -2644,7 +2644,7 @@ R"GLSL(void main()
 		}
 
 		/** Consumes the expected character at the cursor, returns false when something else follows */
-		bool ConsumeDeclChar(const std::vector<SourceLine>& lines, std::size_t& li, std::size_t& pos, char expected)
+		bool ConsumeDeclChar(const SmallVectorImpl<SourceLine>& lines, std::size_t& li, std::size_t& pos, char expected)
 		{
 			if (!SkipDeclWhitespace(lines, li, pos)) {
 				return false;
@@ -2657,7 +2657,7 @@ R"GLSL(void main()
 		}
 
 		/** Finds the '}' matching the '{' at (@p li, @p pos); preprocessor lines never participate in brace counting */
-		bool FindDeclClosingBrace(const std::vector<SourceLine>& lines, std::size_t li, std::size_t pos, std::size_t& endLine, std::size_t& endPos)
+		bool FindDeclClosingBrace(const SmallVectorImpl<SourceLine>& lines, std::size_t li, std::size_t pos, std::size_t& endLine, std::size_t& endPos)
 		{
 			std::int32_t depth = 0;
 			for (std::size_t j = li; j < lines.size(); j++) {
@@ -2691,7 +2691,7 @@ R"GLSL(void main()
 			symbolic size is never mistaken for the name. Returns false when parsing fails — the
 			caller then leaves the declaration untouched (conservative).
 		*/
-		bool ExtractDeclaratorNames(StringView list, std::vector<String>& names)
+		bool ExtractDeclaratorNames(StringView list, SmallVectorImpl<String>& names)
 		{
 			std::size_t start = 0;
 			bool firstChunk = true;
@@ -2783,7 +2783,7 @@ R"GLSL(void main()
 			preprocessor lines never participate in it. Returns false when the stream looks
 			unbalanced — the caller then skips trimming entirely.
 		*/
-		bool ScanGlobalDeclarations(const std::vector<SourceLine>& stripped, std::vector<GlobalDecl>& decls)
+		bool ScanGlobalDeclarations(const SmallVectorImpl<SourceLine>& stripped, SmallVectorImpl<GlobalDecl>& decls)
 		{
 			std::int32_t braceDepth = 0;
 			std::int32_t condDepth = 0;
@@ -3018,11 +3018,11 @@ R"GLSL(void main()
 		void TrimUnusedUniforms(ShaderDocument& document)
 		{
 			for (std::int32_t pass = 0; pass < 32; pass++) {
-				std::vector<SourceLine>* stageLines[2] = { &document.VertexLines, &document.FragmentLines };
-				std::vector<SourceLine> stripped[2];
-				std::vector<GlobalDecl> decls[2];
+				SmallVectorImpl<SourceLine>* stageLines[2] = { &document.VertexLines, &document.FragmentLines };
+				SmallVector<SourceLine, 0> stripped[2];
+				SmallVector<GlobalDecl, 0> decls[2];
 				for (std::int32_t s = 0; s < 2; s++) {
-					stripped[s] = *stageLines[s];
+					stripped[s].assign(*stageLines[s]);
 					ShaderParser::StripComments(stripped[s]);
 					if (!ScanGlobalDeclarations(stripped[s], decls[s])) {
 						return;		// Unbalanced/unscannable stream — leave both stages untouched
@@ -3030,11 +3030,11 @@ R"GLSL(void main()
 				}
 
 				// A declaration is a candidate when none of its names is referenced outside its own extent
-				std::vector<bool> candidate[2];
+				SmallVector<bool, 0> candidate[2];
 				for (std::int32_t s = 0; s < 2; s++) {
 					candidate[s].resize(decls[s].size());
 					for (std::size_t d = 0; d < decls[s].size(); d++) {
-						std::vector<std::size_t> excluded;
+						SmallVector<std::size_t, 0> excluded;
 						for (std::size_t l = decls[s][d].StartLine; l <= decls[s][d].EndLine; l++) {
 							excluded.push_back(l);
 						}
@@ -3052,7 +3052,7 @@ R"GLSL(void main()
 				// Names of uniform/block declarations that survive this pass, per stage and kind
 				// (the reflection-preservation rule checks against the OTHER stage's kept set)
 				auto keptNames = [&decls, &candidate](std::int32_t s, GlobalDeclKind kind) {
-					std::vector<String> kept;
+					SmallVector<String, 0> kept;
 					for (std::size_t d = 0; d < decls[s].size(); d++) {
 						if (decls[s][d].Kind == kind && !candidate[s][d]) {
 							kept.insert(kept.end(), decls[s][d].DeclaredNames.begin(), decls[s][d].DeclaredNames.end());
@@ -3064,7 +3064,7 @@ R"GLSL(void main()
 				bool anyRemoved = false;
 				for (std::int32_t s = 0; s < 2; s++) {
 					const std::int32_t other = 1 - s;
-					std::vector<std::pair<std::size_t, std::size_t>> extents;
+					SmallVector<std::pair<std::size_t, std::size_t>, 0> extents;
 					for (std::size_t d = 0; d < decls[s].size(); d++) {
 						if (!candidate[s][d]) {
 							continue;
@@ -3072,7 +3072,7 @@ R"GLSL(void main()
 						const GlobalDecl& decl = decls[s][d];
 						if (decl.Kind == GlobalDeclKind::LooseUniform || decl.Kind == GlobalDeclKind::Block) {
 							// Reflection-preservation rule — every declared name must survive in the other stage
-							const std::vector<String> kept = keptNames(other, decl.Kind);
+							const SmallVector<String, 0> kept = keptNames(other, decl.Kind);
 							bool allKept = true;
 							for (const String& name : decl.DeclaredNames) {
 								if (std::find(kept.begin(), kept.end(), name) == kept.end()) {
@@ -3092,7 +3092,7 @@ R"GLSL(void main()
 					anyRemoved = true;
 					// Remove in descending position order so earlier extents stay valid
 					std::sort(extents.begin(), extents.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
-					std::vector<SourceLine>& lines = *stageLines[s];
+					SmallVectorImpl<SourceLine>& lines = *stageLines[s];
 					for (const auto& extent : extents) {
 						lines.erase(lines.begin() + extent.first, lines.begin() + extent.second + 1);
 						// Collapse the blank seam the removed declaration leaves behind to a single blank line
@@ -3117,16 +3117,16 @@ R"GLSL(void main()
 			Fold positions are computed on the comment-stripped copy (position-identical to the
 			original); a span overlapping a comment is skipped.
 		*/
-		void FoldConstantExpressions(std::vector<SourceLine>& lines)
+		void FoldConstantExpressions(SmallVectorImpl<SourceLine>& lines)
 		{
-			std::vector<SourceLine> stripped = lines;
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
-			std::vector<FunctionDef> defs;
+			SmallVector<FunctionDef, 0> defs;
 			if (!ScanFunctionDefinitions(stripped, defs)) {
 				return;		// Unbalanced/unscannable stream — leave the text untouched
 			}
 			for (const FunctionDef& def : defs) {
-				std::vector<FoldInputLine> region;
+				SmallVector<FoldInputLine, 0> region;
 				for (std::size_t i = def.StartLine; i <= def.EndLine; i++) {
 					FoldInputLine line;
 					line.Text = &stripped[i].Text;
@@ -3135,7 +3135,7 @@ R"GLSL(void main()
 					line.Index = i;
 					region.push_back(line);
 				}
-				std::vector<FoldEdit> edits;
+				SmallVector<FoldEdit, 0> edits;
 				ConstFolder::ComputeFolds(region, edits);
 				for (auto it = edits.rbegin(); it != edits.rend(); ++it) {
 					String& original = lines[it->Index].Text;
@@ -3161,7 +3161,7 @@ R"GLSL(void main()
 			main() declares (e.g. a canvas vertex() prologue built-in) is a GLSL compile error,
 			which is intended — better than silent shadowing.
 		*/
-		void AppendEntryBody(std::vector<SourceLine>& lines, const std::vector<SourceLine>& body)
+		void AppendEntryBody(SmallVectorImpl<SourceLine>& lines, const SmallVectorImpl<SourceLine>& body)
 		{
 			for (const SourceLine& bodyLine : body) {
 				lines.push_back(bodyLine);
@@ -3235,7 +3235,7 @@ R"GLSL(void main()
 			preprocessor use of a stage macro (#if/#elif expressions, #define, #undef) is an
 			error — the emitted sources contain no stage macros at all.
 		*/
-		bool ResolveStageConditionals(std::vector<SourceLine>& lines, bool vertexStage, Diagnostic& diag)
+		bool ResolveStageConditionals(SmallVectorImpl<SourceLine>& lines, bool vertexStage, Diagnostic& diag)
 		{
 			struct Cond
 			{
@@ -3246,12 +3246,12 @@ R"GLSL(void main()
 			};
 
 			// Directives are detected on a comment-stripped copy (a block comment could hide a '#')
-			std::vector<SourceLine> stripped = lines;
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
 
-			std::vector<SourceLine> output;
+			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
-			std::vector<Cond> stack;
+			SmallVector<Cond, 0> stack;
 			bool removed = false;		// The previous input line was removed (a directive or a dropped block line)
 
 			auto dropping = [&stack]() {
@@ -3371,7 +3371,7 @@ R"GLSL(void main()
 			streams and carries no diagnostics: on a malformed conditional structure the stream is
 			left untouched (a leaked block is then caught by the generated-header staleness checks).
 		*/
-		void ResolveSoftwareRendererConditionals(std::vector<SourceLine>& lines, bool softwareRenderer)
+		void ResolveSoftwareRendererConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer)
 		{
 			struct Cond
 			{
@@ -3381,12 +3381,12 @@ R"GLSL(void main()
 			};
 
 			// Directives are detected on a comment-stripped copy (a block comment could hide a '#')
-			std::vector<SourceLine> stripped = lines;
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
 
-			std::vector<SourceLine> output;
+			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
-			std::vector<Cond> stack;
+			SmallVector<Cond, 0> stack;
 			bool removed = false;		// The previous input line was removed (a directive or a dropped block line)
 
 			auto dropping = [&stack]() {
@@ -3516,7 +3516,7 @@ R"GLSL(void main()
 			(a helper function could observe it), as does a body with no COLOR occurrence at
 			all (the default IS the documented output). Anything unexpected keeps the init.
 		*/
-		bool CanvasColorInitIsDead(const std::vector<SourceLine>& body, const std::vector<SourceLine>& globals)
+		bool CanvasColorInitIsDead(const SmallVectorImpl<SourceLine>& body, const SmallVectorImpl<SourceLine>& globals)
 		{
 			{
 				std::int32_t foundLine;
@@ -3525,7 +3525,7 @@ R"GLSL(void main()
 				}
 			}
 
-			std::vector<SourceLine> stripped = body;
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, body.begin(), body.end());
 			ShaderParser::StripComments(stripped);
 
 			std::int32_t braceDepth = 0;
@@ -3626,7 +3626,7 @@ R"GLSL(void main()
 			global-scope SOFTWARE_RENDERER conditional) is re-wrapped in the matching directive so
 			BuildStageSource resolves it per backend; an untagged one is emitted verbatim as before.
 		*/
-		void AppendVaryingDecl(std::vector<SourceLine>& lines, const VaryingDecl& varying, const char* prefix, const char* flatPrefix)
+		void AppendVaryingDecl(SmallVectorImpl<SourceLine>& lines, const VaryingDecl& varying, const char* prefix, const char* flatPrefix)
 		{
 			if (varying.SwMode == 1) {
 				lines.push_back({ "#ifdef SOFTWARE_RENDERER", 0 });
@@ -3642,7 +3642,7 @@ R"GLSL(void main()
 		/** Builds the vertex stage of a lowered canvas_item document (default template or vertex() epilogue form) */
 		void BuildCanvasVertexStage(const ParsedShader& src, bool batched, bool implicitTexture, ShaderDocument& document)
 		{
-			std::vector<SourceLine>& lines = document.VertexLines;
+			SmallVectorImpl<SourceLine>& lines = document.VertexLines;
 			AppendTemplate(lines, batched ? CanvasBatchedVsHead : CanvasSpriteVsHead);
 			for (const VaryingDecl& varying : src.Varyings) {
 				AppendVaryingDecl(lines, varying, "out ", "flat out ");
@@ -3697,7 +3697,7 @@ R"GLSL(void main()
 		/** Builds the fragment stage of a lowered canvas_item document (prologue + "out vec4 COLOR;" + main() with the body spliced verbatim after the "COLOR = vColor;" default, which is omitted when provably dead) */
 		void BuildCanvasFragmentStage(const ParsedShader& src, bool implicitTexture, ShaderDocument& document)
 		{
-			std::vector<SourceLine>& lines = document.FragmentLines;
+			SmallVectorImpl<SourceLine>& lines = document.FragmentLines;
 			lines.push_back({ "#ifdef GL_ES", 0 });
 			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
 			lines.push_back({ "#endif", 0 });
@@ -3772,7 +3772,7 @@ R"GLSL(void main()
 		/** Builds the vertex stage of a custom-mode document — no template, vertex() becomes main() verbatim */
 		void BuildCustomVertexStage(const ParsedShader& src, ShaderDocument& document)
 		{
-			std::vector<SourceLine>& lines = document.VertexLines;
+			SmallVectorImpl<SourceLine>& lines = document.VertexLines;
 			for (const AttributeDecl& attribute : src.Attributes) {
 				lines.push_back({ FormatAttributeDecl(attribute.Declaration), attribute.Line });
 			}
@@ -3802,7 +3802,7 @@ R"GLSL(void main()
 		/** Builds the fragment stage of a custom-mode document (prologue + "out vec4 COLOR;" + main() wrapping the body verbatim) */
 		void BuildCustomFragmentStage(const ParsedShader& src, ShaderDocument& document)
 		{
-			std::vector<SourceLine>& lines = document.FragmentLines;
+			SmallVectorImpl<SourceLine>& lines = document.FragmentLines;
 			lines.push_back({ "#ifdef GL_ES", 0 });
 			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
 			lines.push_back({ "#endif", 0 });
@@ -3864,11 +3864,11 @@ R"GLSL(void main()
 		}
 	}
 
-	bool ShaderParser::ParseDocuments(StringView content, std::vector<ShaderDocument>& documents, Diagnostic& diag)
+	bool ShaderParser::ParseDocuments(StringView content, SmallVectorImpl<ShaderDocument>& documents, Diagnostic& diag)
 	{
-		std::vector<SourceLine> lines;
+		SmallVector<SourceLine, 0> lines;
 		SplitLines(content, lines);
-		std::vector<SourceLine> stripped = lines;
+		SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 		StripComments(stripped);
 
 		ParsedShader src;
@@ -4020,7 +4020,7 @@ R"GLSL(void main()
 		return current;
 	}
 
-	bool Preprocessor::Run(const std::vector<SourceLine>& input, std::vector<SourceLine>& output, Diagnostic& diag)
+	bool Preprocessor::Run(const SmallVectorImpl<SourceLine>& input, SmallVectorImpl<SourceLine>& output, Diagnostic& diag)
 	{
 		struct Cond
 		{
@@ -4029,9 +4029,9 @@ R"GLSL(void main()
 			bool SeenElse;
 			std::int32_t Line;
 		};
-		std::vector<Cond> stack;
+		SmallVector<Cond, 0> stack;
 
-		auto allTaken = [](const std::vector<Cond>& s, std::size_t count) {
+		auto allTaken = [](const SmallVectorImpl<Cond>& s, std::size_t count) {
 			for (std::size_t j = 0; j < count; j++) {
 				if (!s[j].Taken) {
 					return false;
@@ -4178,7 +4178,7 @@ R"GLSL(void main()
 		return Substr(path, 0, pos);
 	}
 
-	bool ShaderParser::ExpandIncludes(String& content, StringView baseDir, const FileReader& reader, std::int32_t depth, String& error)
+	bool ShaderParser::ExpandIncludes(String& content, StringView baseDir, FileReader& reader, std::int32_t depth, String& error)
 	{
 		if (depth > 8) {
 			error = "include depth limit exceeded (a cycle between included files?)";
@@ -4239,12 +4239,12 @@ R"GLSL(void main()
 
 	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define, bool softwareRenderer)
 	{
-		const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
+		const SmallVectorImpl<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 
 		// Resolve "#ifdef/#ifndef SOFTWARE_RENDERER" blocks according to the backend the source is
 		// built for (see the header comment). Gated on a quick reference scan so every document
 		// without such a block keeps the verbatim fast path (and provably identical output).
-		auto referencesMacro = [](const std::vector<SourceLine>& lines) {
+		auto referencesMacro = [](const SmallVectorImpl<SourceLine>& lines) {
 			for (const SourceLine& line : lines) {
 				if (line.Text.contains("SOFTWARE_RENDERER"_s)) {
 					return true;
@@ -4252,7 +4252,7 @@ R"GLSL(void main()
 			}
 			return false;
 		};
-		std::vector<SourceLine> resolved;
+		SmallVector<SourceLine, 0> resolved;
 		bool useResolved = (referencesMacro(document.Prelude) || referencesMacro(stage));
 		if (useResolved) {
 			resolved.reserve(document.Prelude.size() + stage.size());

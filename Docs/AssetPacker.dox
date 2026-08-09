@@ -46,9 +46,9 @@ The command may be omitted, in which case `convert` is assumed:
     -   `<target directory>` --- Directory the converted data is written to (created if needed)
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
         `gamecube` | `psp` | `emscripten` (or `web`)
-    -   `--video-downscale=N` --- Downscale cinematics by N (1--4); 1 (the default) keeps
+    -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 (the default) keeps
         them as they are. Cinematics are re-encoded for `dreamcast` (or any N > 1) and
-        otherwise copied unchanged; `desktop` gets none, as the game reads the originals
+        otherwise copied unchanged, `desktop` gets none, as the game reads the originals
     -   `--originals-only` --- Convert only the episodes and levels the original game shipped
     -   `--shareware-only` --- Convert only what the Shareware Demo shipped
         @m_span{m-text m-dim} (implies `--originals-only`) @m_endspan
@@ -65,7 +65,7 @@ The command may be omitted, in which case `convert` is assumed:
 -   `to-indices <source .png> <target .png>` --- Resolves the colors of an edited image back
     to the nearest palette indices
 -   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N]` --- Re-encodes one
-    cinematic on its own; N defaults to 1, which keeps the original resolution
+    cinematic on its own, N defaults to 1, which keeps the original resolution
 
 Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
 on failure.
@@ -79,7 +79,7 @@ do, so it looks for both layouts --- and when the source turns out to be an inst
 the target is not the desktop profile, the installation's own `Content` (fonts, animations,
 metadata, translations --- nothing of which is derived from the original data) is carried over
 as well, which is what makes the output a complete self-contained tree. The tool
-requires `Anims.j2a` (or the shareware `AnimsSw.j2a`) to be present; sprites and sounds are
+requires `Anims.j2a` (or the shareware `AnimsSw.j2a`) to be present, sprites and sounds are
 converted from it into a package --- `Source.pak` for the desktop profile, `Prebaked.pak` for the
 others, which is what tells the game the tree needs no conversion --- and the levels, tilesets,
 episodes and music follow via @ref Jazz2::Compatibility::AssetConverter.
@@ -131,7 +131,7 @@ is maintained by hand, and this is how a name missing from it shows up.
 
 @section asset-packer-cinematics Cinematics
 
-Only two cinematics are ever played by the game (`Intro` and `Ending`); `Logo` is present in
+Only two cinematics are ever played by the game (`Intro` and `Ending`), `Logo` is present in
 the original data but nothing asks for it, so it is deployed only with `--all-videos`. The
 files land in a `Cinematics` subdirectory under lowercase names, which is how the player
 looks them up. What happens to them depends on the target:
@@ -168,7 +168,7 @@ flag byte @m_span{m-text m-dim} (bit 0 --- a 256-entry BGRA palette follows) @m_
 then commands until the end-of-frame marker: *literal* spans stored as they are, *runs* of
 one repeated byte, and *skips* that leave the previous frame's pixels in place --- which is
 what makes an unchanged region nearly free. Each command has a short single-byte form and a
-long form with a 16-bit count; the exact opcode ranges are documented on
+long form with a 16-bit count, the exact opcode ranges are documented on
 @ref Jazz2::VideoFormat.
 
 Note the recompressed file is substantially larger than the zlib-compressed original at the
@@ -189,7 +189,7 @@ be opened up, changed and packed again without the grid form having to be kept a
 repository.
 
 The description comes in two interchangeable forms. `<image>.png.json` is the one meant to be
-edited; `<image>.png.font` is the binary form the sidecar has always been kept in, holding the
+edited, `<image>.png.font` is the binary form the sidecar has always been kept in, holding the
 same fields packed into a few bytes with the characters outside the ASCII range spelled out in
 UTF-8. `unpack-font` writes both, and `pack-font` reads the JSON wherever it finds one next to
 the image and falls back to the binary form only when there is none --- so editing the JSON is
@@ -197,12 +197,12 @@ enough, and a font unpacked by an older build still packs. Which one was used is
 
 What `pack-font` does:
 
--   **Trimming** --- Every glyph is reduced to its inked bounding box; what is left of the
+-   **Trimming** --- Every glyph is reduced to its inked bounding box, what is left of the
     cell is recorded as the glyph's bearing, so drawing it at the trimmed size in the trimmed
     place puts every pixel exactly where the full cell used to put it. A glyph with no inked
     pixels at all (a space) has zero size and is only advanced over.
 -   **Index normalization** --- A font is entirely index based: every pixel either names a
-    palette color or is index 0 and draws nothing; there is no per-pixel coverage. Pixels
+    palette color or is index 0 and draws nothing, there is no per-pixel coverage. Pixels
     that say otherwise (transparent in one channel but not the other, or partially covered)
     are resolved to one of the two, with a warning listing how many were touched.
 -   **Packing** --- Shelf packing, tallest glyph first, with a margin of
@@ -226,7 +226,7 @@ What `pack-font` does:
 `unpack-font` rebuilds the grid image and both sidecars from a packed font --- the glyphs are
 placed back into cells at their bearings, so packing the result again measures the pixels
 afresh and arrives back at the same font. Because the unpacked atlas holds palette indices,
-it looks like near-black noise in an image editor; `apply-palette` and `to-indices` are the
+it looks like near-black noise in an image editor, `apply-palette` and `to-indices` are the
 two halves of making it editable --- the first replaces the indices with the colors they
 stand for, the second resolves an edited image back to the nearest palette entries (warning
 when a color had no exact match). The tool carries its own minimal PNG codec
@@ -273,7 +273,7 @@ when a color had no exact match). The tool carries its own minimal PNG codec
     number for the ones without a spelling that survives a text file, and `Fallback` marks the
     single entry drawn in place of anything the font doesn't have @m_span{m-text m-dim} (the
     same thing as @cpp "Codepoint": 0 @ce) @m_endspan. `Advance` is how far the pen moves after
-    drawing the character and is required; the glyph's size and bearings are not listed at all,
+    drawing the character and is required, the glyph's size and bearings are not listed at all,
     being measured from the image every time it is packed.
 
 Every field is checked against what the packed file can hold --- the cell up to 65535 pixels in
@@ -306,11 +306,11 @@ as UTF-8 without one.
     Running it is still useful to prepare the cache in a build pipeline, or to pre-downscale
     cinematics with `--video-downscale`.
 -   **Dreamcast, PlayStation Portable, Wii and GameCube** all consume a tree prepared with
-    `--target=dreamcast` / `psp` / `wii` / `gamecube`. All four share the same layout; the target name
+    `--target=dreamcast` / `psp` / `wii` / `gamecube`. All four share the same layout, the target name
     only decides the cinematics --- the Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat,
     the others get the smaller originals copied. Where each console expects that tree, and how it gets
     there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
-    GameCube have no conversion compiled in at all and *require* the prepared tree; the PSP and the
+    GameCube have no conversion compiled in at all and *require* the prepared tree, the PSP and the
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
     why they are given a prepared tree as well.
 -   **PlayStation 2 and PlayStation 3** consume the same tree under the generic `--target=console`
@@ -334,7 +334,7 @@ as UTF-8 without one.
     and the build version --- and the game silently reconverts everything on startup when any
     field disagrees. Prepare the cache with a tool built from the same sources as the game.
 -   **Never write an index for the console or web profiles.** The tool deliberately omits it
-    there; a prepared tree is never rewritten, and an index would only invite the game to try.
+    there, a prepared tree is never rewritten, and an index would only invite the game to try.
 -   **Do not rename `Prebaked.pak` in a prepared tree.** Its name is what marks the tree as already
     converted, so a renamed package leaves the game looking for original files it does not have --- and
     finding none, showing a main menu with nothing to play.
@@ -345,7 +345,7 @@ as UTF-8 without one.
     hand, so read the skipped-levels output after a `--originals-only` conversion --- a level
     that should have been kept shows up there by name.
 -   **Recompressed cinematics are larger than the originals.** Only re-encode where the
-    platform needs it (the tool's per-target defaults already do the right thing); everything
+    platform needs it (the tool's per-target defaults already do the right thing), everything
     else wants the original file.
 -   The game plays pre-downscaled cinematics as they are --- the player picks its runtime
     downscale from the actual frame width, so a file reduced by the tool is not halved a

@@ -26,8 +26,9 @@
 #include "GlslReflect.h"
 
 #include <cstdint>
-#include <functional>
-#include <vector>
+
+#include <Containers/Function.h>
+#include <Containers/SmallVector.h>
 
 namespace ShaderCompiler
 {
@@ -51,7 +52,7 @@ namespace ShaderCompiler
 		fields are emitted as nullptr/0). Injected by the caller so Emit stays free of the process-spawning
 		and glslang-locating code, which lives in the offline Main.cpp.
 	*/
-	using SpirvCompileFn = std::function<bool(StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log)>;
+	using SpirvCompileFn = Function<bool(StringView vulkanGlsl, bool vertexStage, SmallVectorImpl<std::uint32_t>& spirv, String& log)>;
 
 	/**
 		@brief Offline DXBC compiler callback injected into EmitHeader
@@ -62,7 +63,7 @@ namespace ShaderCompiler
 		emitted as nullptr/0 and the D3D11 backend runtime-compiles the text). Injected by the caller so Emit
 		stays free of the d3dcompiler_47-loading code, which lives in the offline Main.cpp.
 	*/
-	using DxbcCompileFn = std::function<bool(StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log)>;
+	using DxbcCompileFn = Function<bool(StringView hlsl, bool vertexStage, SmallVectorImpl<std::uint8_t>& dxbc, String& log)>;
 
 	/**
 		@brief The stage artifacts only a platform-specific compiler can produce
@@ -95,7 +96,7 @@ namespace ShaderCompiler
 		/** @brief The lowered source document this reflection was computed from */
 		const ShaderDocument* Document = nullptr;
 		/** @brief Per-variant merged reflection (the unnamed base variant is `Variants[0]`) */
-		std::vector<VariantReflection> Variants;
+		SmallVector<VariantReflection, 0> Variants;
 	};
 
 	/** @brief Emits the generated C++ header and the "--check" reflection dump */
@@ -115,11 +116,11 @@ namespace ShaderCompiler
 			@ref BackendArtifacts). @p output references them by symbol, so it is complete and correct
 			whatever compilers were available when it was produced.
 		*/
-		static bool EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output,
+		static bool EmitHeader(const SmallVectorImpl<ProgramReflection>& programs, StringView ns, StringView inputFileName,
+			SpirvCompileFn& compileSpirv, DxbcCompileFn& compileDxbc, String& output,
 			BackendArtifacts& artifacts, Diagnostic& diag);
 
 		/** Builds the human-readable reflection dump printed by "--check" (called once per program) */
-		static String BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);
+		static String BuildCheckDump(const ShaderDocument& document, const SmallVectorImpl<VariantReflection>& variants);
 	};
 }

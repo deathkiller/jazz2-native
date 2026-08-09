@@ -32,28 +32,26 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
-#include <string>
 #include <utility>
-#include <vector>
 
 #include <Base/Format.h>
+#include <Containers/GrowableArray.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
+#include <IO/FileSystem.h>
+#include <IO/Stream.h>
+#include <Utf8.h>
 
-#if defined(_WIN32)
-#	define WIN32_LEAN_AND_MEAN
-#	define NOMINMAX
-#	include <windows.h>
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <CommonWindows.h>
 #	include <d3dcompiler.h>
 #else
 #	include <cerrno>
-#	include <dirent.h>
+#	include <fcntl.h>
 #	include <spawn.h>
-#	include <sys/stat.h>
 #	include <sys/types.h>
 #	include <sys/wait.h>
 #	include <unistd.h>
-#	include <fcntl.h>
 // posix_spawn needs the caller's environment passed explicitly, and it is not declared by any header
 extern char** environ;
 #endif
@@ -61,116 +59,34 @@ extern char** environ;
 using namespace ShaderCompiler;
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace
 {
-	bool ReadFileToString(const char* path, String& content)
+	/** Reads the file at @p path in full; false when it cannot be opened or read to its end */
+	bool ReadFileToString(StringView path, String& content)
 	{
-		std::ifstream file(path, std::ios::in | std::ios::binary);
-		if (!file) {
+		std::unique_ptr<Stream> s = fs::Open(path, FileAccess::Read);
+		if (s == nullptr || !s->IsValid()) {
 			return false;
 		}
-		file.seekg(0, std::ios::end);
-		std::streampos size = file.tellg();
+		std::int64_t size = s->GetSize();
 		if (size < 0) {
 			return false;
 		}
 		content = String{NoInit, static_cast<std::size_t>(size)};
-		file.seekg(0, std::ios::beg);
-		if (size > 0) {
-			file.read(content.data(), static_cast<std::streamsize>(size));
-		}
-		return !file.fail();
+		return (size == 0 || s->Read(content.data(), size) == size);
 	}
 
-	bool WriteStringToFile(const char* path, const String& content)
+	/** Truncates the file at @p path to @p content, creating it when it does not exist yet */
+	bool WriteStringToFile(StringView path, StringView content)
 	{
-		std::ofstream file(path, std::ios::out | std::ios::binary | std::ios::trunc);
-		if (!file) {
+		std::unique_ptr<Stream> s = fs::Open(path, FileAccess::Write);
+		if (s == nullptr || !s->IsValid()) {
 			return false;
 		}
-		file.write(content.data(), static_cast<std::streamsize>(content.size()));
-		file.flush();
-		return !file.fail();
-	}
-
-	// --- Small portable path/directory layer (used by the --generate-all driver) ------------------
-
-#if defined(_WIN32)
-	constexpr StringView PathSeparator = "\\"_s;
-#else
-	constexpr StringView PathSeparator = "/"_s;
-#endif
-
-	/** True when @p path names an existing file (not a directory) */
-	bool PathIsFile(const char* path)
-	{
-#if defined(_WIN32)
-		DWORD attributes = GetFileAttributesA(path);
-		return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0);
-#else
-		struct stat info;
-		return (::stat(path, &info) == 0 && S_ISREG(info.st_mode));
-#endif
-	}
-
-	/** True when @p path names an existing directory */
-	bool PathIsDirectory(const char* path)
-	{
-#if defined(_WIN32)
-		DWORD attributes = GetFileAttributesA(path);
-		return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
-#else
-		struct stat info;
-		return (::stat(path, &info) == 0 && S_ISDIR(info.st_mode));
-#endif
-	}
-
-	/** Returns the file name part of @p path (everything after the last slash or backslash) */
-	StringView FileNameOf(StringView path)
-	{
-		const char* begin = path.begin();
-		StringView slash = path.findLast('/');
-		if (!slash.empty()) {
-			begin = slash.end();
-		}
-		StringView backslash = path.findLast('\\');
-		if (!backslash.empty() && backslash.end() > begin) {
-			begin = backslash.end();
-		}
-		return path.suffix(begin);
-	}
-
-	/** Returns @p fileName without its extension */
-	StringView StemOf(StringView fileName)
-	{
-		StringView dot = fileName.findLast('.');
-		return (dot.empty() ? fileName : fileName.prefix(dot.begin()));
-	}
-
-	/** Returns @p path without its last component (empty when there is none left to strip) */
-	String ParentOf(StringView path)
-	{
-		StringView name = FileNameOf(path);
-		if (name.begin() == path.begin()) {
-			return {};
-		}
-		// Drop the separator too, but keep a trailing "C:\" / "/" root intact
-		StringView parent = path.prefix(name.begin() - 1);
-		return (parent.empty() ? String{path.prefix(name.begin())} : String{parent});
-	}
-
-	/** Joins @p directory and @p leaf with the platform separator, tolerating a trailing separator */
-	String PathJoin(StringView directory, StringView leaf)
-	{
-		if (directory.empty()) {
-			return String{leaf};
-		}
-		char last = directory[directory.size() - 1];
-		if (last == '/' || last == '\\') {
-			return directory + leaf;
-		}
-		return directory + PathSeparator + leaf;
+		std::int64_t size = static_cast<std::int64_t>(content.size());
+		return (size == 0 || s->Write(content.data(), size) == size);
 	}
 
 	/**
@@ -178,110 +94,102 @@ namespace
 		sorted by a plain byte-wise comparison so the enumeration order — and therefore every aggregate
 		artifact built from it — is identical on every machine, shell and locale.
 	*/
-	bool ListFilesInDirectory(const char* directory, StringView extension, std::vector<String>& outNames)
+	bool ListFilesInDirectory(StringView directory, StringView extension, SmallVectorImpl<String>& outNames)
 	{
-#if defined(_WIN32)
-		String pattern = PathJoin(directory, "*"_s);
-		WIN32_FIND_DATAA data;
-		HANDLE handle = FindFirstFileA(pattern.data(), &data);
-		if (handle == INVALID_HANDLE_VALUE) {
+		if (!fs::DirectoryExists(directory)) {
 			return false;
 		}
-		do {
-			if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-				continue;
-			}
-			StringView name = data.cFileName;
+		for (StringView path : fs::Directory(directory, fs::EnumerationOptions::SkipDirectories | fs::EnumerationOptions::SkipSpecial)) {
+			StringView name = fs::GetFileName(path);
 			if (name.hasSuffix(extension)) {
 				outNames.emplace_back(name);
 			}
-		} while (FindNextFileA(handle, &data));
-		FindClose(handle);
-#else
-		DIR* handle = ::opendir(directory);
-		if (handle == nullptr) {
-			return false;
 		}
-		while (const dirent* entry = ::readdir(handle)) {
-			StringView name = entry->d_name;
-			if (!name.hasSuffix(extension)) {
-				continue;
-			}
-			String full = PathJoin(directory, name);
-			if (PathIsFile(full.data())) {
-				outNames.emplace_back(name);
-			}
-		}
-		::closedir(handle);
-#endif
 		std::sort(outNames.begin(), outNames.end(), [](const String& a, const String& b) {
 			return std::strcmp(a.data(), b.data()) < 0;
 		});
 		return true;
 	}
 
-	/** Creates @p path when it does not exist yet (one level only - the parent has to be there) */
-	bool EnsureDirectoryExists(const char* path)
+	/** Identifies the running process, so concurrent tool invocations cannot collide in the temp directory */
+	std::uint32_t CurrentProcessId()
 	{
-		if (PathIsDirectory(path)) {
-			return true;
-		}
-#if defined(_WIN32)
-		return (CreateDirectoryA(path, nullptr) != FALSE);
+#if defined(DEATH_TARGET_WINDOWS)
+		return static_cast<std::uint32_t>(::GetCurrentProcessId());
 #else
-		return (::mkdir(path, 0755) == 0);
-#endif
-	}
-
-	void DeleteFileAtPath(const char* path)
-	{
-#if defined(_WIN32)
-		DeleteFileA(path);
-#else
-		::remove(path);
-#endif
-	}
-
-	void DeleteDirectoryAtPath(const char* path)
-	{
-#if defined(_WIN32)
-		RemoveDirectoryA(path);
-#else
-		::rmdir(path);
+		return static_cast<std::uint32_t>(::getpid());
 #endif
 	}
 
 	/** Creates a fresh, empty directory below the system temp location for the staleness guard */
 	bool CreateTemporaryDirectory(String& outPath)
 	{
-#if defined(_WIN32)
-		char temp[MAX_PATH];
-		DWORD length = GetTempPathA(MAX_PATH, temp);
-		if (length == 0 || length >= MAX_PATH) {
+		String temp = fs::GetTempDirectory();
+		if (temp.empty()) {
 			return false;
 		}
-		for (unsigned attempt = 0; attempt < 64; attempt++) {
-			char leaf[64];
-			std::snprintf(leaf, sizeof(leaf), "Jazz2-ShaderCheck-%08X", static_cast<unsigned>(GetCurrentProcessId()) + attempt * 7919u);
-			String candidate = String{temp, length} + leaf;
-			if (CreateDirectoryA(candidate.data(), nullptr) != FALSE) {
-				outPath = std::move(candidate);
+		for (std::uint32_t attempt = 0; attempt < 64; attempt++) {
+			String candidate = fs::CombinePath(temp, Death::format("Jazz2-ShaderCheck-{:.8X}", CurrentProcessId() + attempt * 7919u));
+			if (fs::Exists(candidate)) {
+				continue;
+			}
+			if (fs::CreateDirectories(candidate)) {
+				outPath = Death::move(candidate);
 				return true;
 			}
 		}
 		return false;
-#else
-		char pattern[] = "/tmp/Jazz2-ShaderCheck-XXXXXX";
-		if (::mkdtemp(pattern) == nullptr) {
+	}
+
+	/**
+		Builds the shared path prefix of one scratch file set below the system temp directory, unique per
+		process and per @p serial. Empty when the temp directory cannot be resolved.
+	*/
+	String MakeTemporaryPathPrefix(StringView tag, unsigned serial)
+	{
+		String temp = fs::GetTempDirectory();
+		if (temp.empty()) {
+			return {};
+		}
+		return fs::CombinePath(temp, Death::format("{}_{}_{}", tag, CurrentProcessId(), serial));
+	}
+
+	/**
+		Reads the environment variable @p name as UTF-8; false when it is not set or is empty.
+
+		Windows keeps the environment in UTF-16, so the wide entry point is the only lossless one:
+		GetEnvironmentVariableA transcodes through the active code page and mangles (or outright
+		rejects) any path that is not representable in it, which the SDK and Program Files paths
+		this is used for very much can be.
+	*/
+	bool TryGetEnvironmentVariable(StringView name, String& outValue)
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		Array<wchar_t> nameW = Death::Utf8::ToUtf16(name);
+		SmallVector<wchar_t, MAX_PATH> valueW(DefaultInit, MAX_PATH);
+		DWORD length = ::GetEnvironmentVariableW(nameW, valueW.data(), DWORD(valueW.size()));
+		if (length >= valueW.size()) {
+			// The buffer was too small, the call reported how much is actually needed (including the terminator)
+			valueW.resize_for_overwrite(length);
+			length = ::GetEnvironmentVariableW(nameW, valueW.data(), DWORD(valueW.size()));
+		}
+		if (length == 0 || length >= valueW.size()) {
 			return false;
 		}
-		outPath = String{pattern};
+		outValue = Death::Utf8::FromUtf16(valueW.data(), std::int32_t(length));
+		return !outValue.empty();
+#else
+		const char* value = std::getenv(String::nullTerminatedView(name).data());
+		if (value == nullptr || value[0] == '\0') {
+			return false;
+		}
+		outValue = value;
 		return true;
 #endif
 	}
 
 	/** Byte-compares two files; false when either cannot be read or their contents differ */
-	bool FilesHaveEqualContent(const char* a, const char* b)
+	bool FilesHaveEqualContent(StringView a, StringView b)
 	{
 		String left, right;
 		if (!ReadFileToString(a, left) || !ReadFileToString(b, right)) {
@@ -336,7 +244,7 @@ namespace
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
 			"  --emit-rsx <output.h> [--cgcomp <path>] <input.shader ...>  Compile every stage to RSX microcode (PlayStation 3)\n"
-			"  --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
+			"  --emit-fixed-function <pvr|gx|gu|gs> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
 	int ReportError(const char* inputPath, const Diagnostic& diag)
@@ -349,8 +257,8 @@ namespace
 	bool ReflectVariantStage(const ShaderDocument& document, bool vertexStage, StringView define,
 		StageReflection& result, Diagnostic& diag)
 	{
-		std::vector<SourceLine> lines = document.Prelude;
-		const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
+		SmallVector<SourceLine, 0> lines = document.Prelude;
+		const SmallVectorImpl<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 		lines.insert(lines.end(), stage.begin(), stage.end());
 
 		ShaderParser::StripComments(lines);
@@ -359,7 +267,7 @@ namespace
 		if (!define.empty()) {
 			preprocessor.Define(define, "1");
 		}
-		std::vector<SourceLine> preprocessed;
+		SmallVector<SourceLine, 0> preprocessed;
 		if (!preprocessor.Run(lines, preprocessed, diag)) {
 			return false;
 		}
@@ -371,7 +279,7 @@ namespace
 		per program / variant / stage, with either the transformed source or an "unsupported"
 		diagnostic. Inspection-only — never touches the emitted header.
 	*/
-	String BuildEssl100Dump(const std::vector<ProgramReflection>& programs)
+	String BuildEssl100Dump(const SmallVectorImpl<ProgramReflection>& programs)
 	{
 		String dump;
 		for (const ProgramReflection& program : programs) {
@@ -403,7 +311,7 @@ namespace
 		variant / stage, with either the emitted HLSL or an "unsupported" diagnostic. Inspection-only.
 	*/
 	/** Dumps the HLSL (@p dialect Hlsl) or the Cg (@p dialect Cg) transform of every stage of every variant */
-	String BuildHlslDump(const std::vector<ProgramReflection>& programs,
+	String BuildHlslDump(const SmallVectorImpl<ProgramReflection>& programs,
 		HlslEmitter::Dialect dialect = HlslEmitter::Dialect::Hlsl)
 	{
 		const bool cg = (dialect == HlslEmitter::Dialect::Cg);
@@ -438,7 +346,7 @@ namespace
 		program / variant / stage, with either the emitted Vulkan GLSL or an "unsupported" diagnostic.
 		Inspection-only — never touches the emitted header, and does not require glslang.
 	*/
-	String BuildVulkanDump(const std::vector<ProgramReflection>& programs)
+	String BuildVulkanDump(const SmallVectorImpl<ProgramReflection>& programs)
 	{
 		String dump;
 		for (const ProgramReflection& program : programs) {
@@ -479,7 +387,7 @@ namespace
 	{
 		String Prefix;								// program prefix, e.g. "Colorized" or "Tinted_USE_PALETTE"
 		String Code;								// the transpiled struct + fragment function
-		std::vector<GeneratedUniformField> Fields;	// non-sampler uniform layout of the struct
+		SmallVector<GeneratedUniformField, 0> Fields;	// non-sampler uniform layout of the struct
 		bool HasComputeVaryings = false;			// a "<Prefix>_ComputeVaryings" was emitted (per-instance-constant varyings)
 	};
 
@@ -502,7 +410,7 @@ namespace
 		one instance's start - exactly what the device's per-instance block pointer addresses. Matrix members
 		(only used by gl_Position) are dropped.
 	*/
-	void BuildInstanceMembers(const StageReflection& reflection, std::vector<GlslInstanceMember>& out)
+	void BuildInstanceMembers(const StageReflection& reflection, SmallVectorImpl<GlslInstanceMember>& out)
 	{
 		for (const BlockInfo& block : reflection.Blocks) {
 			for (const MemberInfo& m : block.Members) {
@@ -540,7 +448,7 @@ namespace
 	}
 
 	/** Number of 4-byte components of an emitted C++ uniform field type (float/int/bool or vecN/ivecN/bvecN) */
-	std::uint32_t ComponentCountFromType(const std::string& type)
+	std::uint32_t ComponentCountFromType(StringView type)
 	{
 		if (type.empty()) {
 			return 1;
@@ -560,56 +468,38 @@ namespace
 		compiled layout exactly - the fragment source seen by the transpiler may drop uniforms the merged
 		reflection still lists (dead-code elimination keeps the reflection but strips unused per-stage decls).
 	*/
-	void ExtractUniformFields(StringView code, StringView prefix, std::vector<GeneratedUniformField>& out)
+	void ExtractUniformFields(StringView code, StringView prefix, SmallVectorImpl<GeneratedUniformField>& out)
 	{
-		std::string s(code.data(), code.size());
-		std::string marker = "struct ";
-		marker.append(prefix.data(), prefix.size());
-		marker += "_Uniforms";
-		std::size_t pos = s.find(marker);
-		if (pos == std::string::npos) {
+		constexpr StringView Blanks = " \t\r"_s;
+
+		const String marker = "struct "_s + prefix + "_Uniforms"_s;
+		StringView found = code.find(marker);
+		if (found.empty()) {
 			return;
 		}
-		std::size_t brace = s.find('{', pos);
-		if (brace == std::string::npos) {
+		StringView brace = code.suffix(found.end()).find('{');
+		if (brace.empty()) {
 			return;
 		}
-		auto trim = [](std::string& t) {
-			std::size_t a = t.find_first_not_of(" \t\r");
-			if (a == std::string::npos) { t.clear(); return; }
-			std::size_t b = t.find_last_not_of(" \t\r");
-			t = t.substr(a, b - a + 1);
-		};
-		std::size_t i = brace + 1;
-		while (i < s.size()) {
-			std::size_t eol = s.find('\n', i);
-			if (eol == std::string::npos) {
-				eol = s.size();
-			}
-			std::string line = s.substr(i, eol - i);
-			i = eol + 1;
-			trim(line);
+		for (StringView rawLine : code.suffix(brace.end()).split('\n')) {
+			StringView line = rawLine.trimmed(Blanks);
 			if (line.empty()) {
 				continue;
 			}
-			if (line[0] == '}') {
+			if (line.front() == '}') {
 				break;					// the closing "};"
 			}
 			if (line.back() != ';') {
 				continue;
 			}
-			line.pop_back();			// drop the trailing ';'
-			trim(line);
-			std::size_t sp = line.find_last_of(" \t");
-			if (sp == std::string::npos) {
+			line = line.exceptSuffix(1).trimmed(Blanks);	// drop the trailing ';'
+			StringView space = line.findLastAny(" \t"_s);
+			if (space.empty()) {
 				continue;
 			}
-			std::string type = line.substr(0, sp);
-			std::string name = line.substr(sp + 1);
-			trim(type);
 			GeneratedUniformField f;
-			f.Name = String{name.c_str()};
-			f.ComponentCount = ComponentCountFromType(type);
+			f.Name = line.suffix(space.end());
+			f.ComponentCount = ComponentCountFromType(line.prefix(space.begin()).trimmed(Blanks));
 			out.push_back(std::move(f));
 		}
 	}
@@ -629,34 +519,36 @@ namespace
 	bool EmittedFragmentIsCompilable(const String& code, StringView prefix, String& reason)
 	{
 		static_cast<void>(prefix);
-		std::string s(code.data(), code.size());
 
 		// vTexCoords lowered to vec2(in.u, in.v) must only be read with components sw::vec2 provides
-		const std::string needle = "vec2(in.u, in.v)";
-		const std::string swizzleChars = "xyzwrgbastpq";
-		std::size_t p = 0;
-		while ((p = s.find(needle, p)) != std::string::npos) {
-			std::size_t after = p + needle.size();
-			p = after;
-			if (after >= s.size() || s[after] != '.') {
+		constexpr StringView Needle = "vec2(in.u, in.v)"_s;
+		constexpr StringView SwizzleChars = "xyzwrgbastpq"_s;
+		StringView rest = code;
+		while (true) {
+			StringView found = rest.find(Needle);
+			if (found.empty()) {
+				break;
+			}
+			rest = rest.suffix(found.end());
+			if (rest.empty() || rest.front() != '.') {
 				continue;
 			}
-			std::string sw;
-			for (std::size_t i = after + 1; i < s.size() && swizzleChars.find(s[i]) != std::string::npos; i++) {
-				sw.push_back(s[i]);
+			std::size_t length = 1;
+			while (length < rest.size() && SwizzleChars.contains(rest[length])) {
+				length++;
 			}
+			StringView sw = rest.slice(1, length);
 			if (sw.empty()) {
 				continue;
 			}
 			bool ok;
 			if (sw.size() == 1) {
-				ok = (std::string("xyrgst").find(sw[0]) != std::string::npos);
+				ok = "xyrgst"_s.contains(sw[0]);
 			} else {
-				ok = (sw == "xy" || sw == "rg");		// the only swizzle methods sw::vec2 provides
+				ok = (sw == "xy"_s || sw == "rg"_s);	// the only swizzle methods sw::vec2 provides
 			}
 			if (!ok) {
-				std::string r = "reads '." + sw + "' of vTexCoords, which the software path only exposes as a 2D texture coordinate";
-				reason = String{r.c_str()};
+				reason = "reads '."_s + sw + "' of vTexCoords, which the software path only exposes as a 2D texture coordinate"_s;
 				return false;
 			}
 		}
@@ -670,8 +562,8 @@ namespace
 		header emission behind --generate-all rejects it exactly like the single-file mode does.
 		@p outErrorLine receives the source line of a failure when the caller wants to report it.
 	*/
-	bool LoadProgramsForFile(const char* inputPath, std::vector<ShaderDocument>& documents,
-		std::vector<ProgramReflection>& programs, String& errorMsg, bool strictTextureUnits = false,
+	bool LoadProgramsForFile(const char* inputPath, SmallVectorImpl<ShaderDocument>& documents,
+		SmallVectorImpl<ProgramReflection>& programs, String& errorMsg, bool strictTextureUnits = false,
 		std::int32_t* outErrorLine = nullptr)
 	{
 		String content;
@@ -682,7 +574,7 @@ namespace
 		{
 			String includeError;
 			FileReader reader = [](StringView path, String& out) {
-				return ReadFileToString(String::nullTerminatedView(path).data(), out);
+				return ReadFileToString(path, out);
 			};
 			if (!ShaderParser::ExpandIncludes(content, ShaderParser::DirectoryOf(inputPath), reader, 0, includeError)) {
 				errorMsg = includeError;
@@ -747,7 +639,7 @@ namespace
 
 	// --- HLSL validation via d3dcompiler_47's D3DCompile ------------------------------------------
 
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 	pD3DCompile g_D3DCompile = nullptr;
 
 	/** Loads d3dcompiler_47.dll (ships with Windows) and resolves D3DCompile; false if unavailable */
@@ -756,7 +648,7 @@ namespace
 		if (g_D3DCompile != nullptr) {
 			return true;
 		}
-		HMODULE mod = LoadLibraryA("d3dcompiler_47.dll");
+		HMODULE mod = ::LoadLibraryW(L"d3dcompiler_47.dll");
 		if (mod == nullptr) {
 			error = "cannot load d3dcompiler_47.dll";
 			return false;
@@ -776,7 +668,7 @@ namespace
 		OpenGL-convention uniform data verbatim) and strictness — but with full optimization, since this runs
 		offline where compile time doesn't matter.
 	*/
-	bool CompileHlslToDxbc(const String& source, const char* entry, const char* target, std::vector<std::uint8_t>& dxbc, String& log)
+	bool CompileHlslToDxbc(const String& source, const char* entry, const char* target, SmallVectorImpl<std::uint8_t>& dxbc, String& log)
 	{
 		ID3DBlob* code = nullptr;
 		ID3DBlob* errors = nullptr;
@@ -800,17 +692,11 @@ namespace
 	/** Compiles @p source as HLSL (entry @p entry, profile @p target); returns success + the compiler log */
 	bool CompileHlsl(const String& source, const char* entry, const char* target, String& log)
 	{
-		std::vector<std::uint8_t> dxbc;
+		SmallVector<std::uint8_t, 0> dxbc;
 		return CompileHlslToDxbc(source, entry, target, dxbc, log);
 	}
 
 	// --- Vulkan SPIR-V compilation via a child glslangValidator process ---------------------------
-
-	/** True when @p path names an existing file (not a directory) */
-	bool FileExistsAt(const char* path)
-	{
-		return PathIsFile(path);
-	}
 
 	/** Matches @p name against @p pattern, where the pattern may contain "*" and "?" wildcards */
 	bool MatchesWildcard(StringView pattern, StringView name)
@@ -844,7 +730,7 @@ namespace
 	*/
 	bool ResolveWildcardPath(StringView pattern, String& outPath)
 	{
-		std::vector<String> pending;
+		SmallVector<String, 0> pending;
 		std::size_t start = 0;
 		// Split off the (wildcard-free) root so the walk starts from a real directory
 		for (std::size_t i = 0; i < pattern.size(); i++) {
@@ -869,34 +755,24 @@ namespace
 			StringView component = pattern.slice(start, end);
 			const bool lastComponent = (end >= pattern.size());
 
-			std::vector<String> next;
+			SmallVector<String, 0> next;
 			for (const String& directory : pending) {
 				if (!component.contains('*') && !component.contains('?')) {
-					String candidate = PathJoin(directory, component);
-					if (lastComponent ? PathIsFile(candidate.data()) : PathIsDirectory(candidate.data())) {
+					String candidate = fs::CombinePath(directory, component);
+					if (lastComponent ? fs::FileExists(candidate) : fs::DirectoryExists(candidate)) {
 						next.push_back(std::move(candidate));
 					}
 					continue;
 				}
-#if defined(_WIN32)
-				String search = PathJoin(directory, "*"_s);
-				WIN32_FIND_DATAA data;
-				HANDLE handle = FindFirstFileA(search.data(), &data);
-				if (handle == INVALID_HANDLE_VALUE) {
-					continue;
+				// The last component names the file to find, every earlier one a directory to descend into
+				for (StringView entry : fs::Directory(directory, lastComponent
+						? fs::EnumerationOptions::SkipDirectories | fs::EnumerationOptions::SkipSpecial
+						: fs::EnumerationOptions::SkipFiles | fs::EnumerationOptions::SkipSpecial)) {
+					StringView name = fs::GetFileName(entry);
+					if (MatchesWildcard(component, name)) {
+						next.push_back(fs::CombinePath(directory, name));
+					}
 				}
-				do {
-					StringView name = data.cFileName;
-					if (name == "."_s || name == ".."_s || !MatchesWildcard(component, name)) {
-						continue;
-					}
-					const bool isDirectory = ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
-					if (isDirectory != lastComponent) {
-						next.push_back(PathJoin(directory, name));
-					}
-				} while (FindNextFileA(handle, &data));
-				FindClose(handle);
-#endif
 			}
 			if (next.empty()) {
 				return false;
@@ -928,47 +804,44 @@ namespace
 	{
 		if (!overridePath.empty()) {
 			String candidate = overridePath;
-			if (FileExistsAt(candidate.data())) {
+			if (fs::FileExists(candidate)) {
 				outPath = std::move(candidate);
 				return true;
 			}
 			return false;
 		}
-		char sdk[MAX_PATH];
-		DWORD sdkLen = GetEnvironmentVariableA("VULKAN_SDK", sdk, MAX_PATH);
-		if (sdkLen > 0 && sdkLen < MAX_PATH) {
-			const char* const relatives[] = { "\\Bin\\glslangValidator.exe", "\\Bin32\\glslangValidator.exe" };
-			for (const char* relative : relatives) {
-				String candidate = String{sdk, sdkLen} + relative;
-				if (FileExistsAt(candidate.data())) {
+		String sdk;
+		if (TryGetEnvironmentVariable("VULKAN_SDK"_s, sdk)) {
+			for (StringView relative : { "Bin\\glslangValidator.exe"_s, "Bin32\\glslangValidator.exe"_s }) {
+				String candidate = fs::CombinePath(sdk, relative);
+				if (fs::FileExists(candidate)) {
 					outPath = std::move(candidate);
 					return true;
 				}
 			}
 		}
-		char found[MAX_PATH];
-		if (SearchPathA(nullptr, "glslangValidator.exe", nullptr, MAX_PATH, found, nullptr) > 0) {
-			outPath = String{found};
+		wchar_t found[MAX_PATH];
+		DWORD foundLength = ::SearchPathW(nullptr, L"glslangValidator.exe", nullptr, MAX_PATH, found, nullptr);
+		if (foundLength > 0 && foundLength < MAX_PATH) {
+			outPath = Death::Utf8::FromUtf16(found, std::int32_t(foundLength));
 			return true;
 		}
 		// Visual Studio ships a copy with its shader tooling extension
-		const char* const programFilesVariables[] = { "ProgramW6432", "ProgramFiles", "ProgramFiles(x86)" };
-		for (const char* variable : programFilesVariables) {
-			char programFiles[MAX_PATH];
-			DWORD length = GetEnvironmentVariableA(variable, programFiles, MAX_PATH);
-			if (length == 0 || length >= MAX_PATH) {
+		for (StringView variable : { "ProgramW6432"_s, "ProgramFiles"_s, "ProgramFiles(x86)"_s }) {
+			String programFiles;
+			if (!TryGetEnvironmentVariable(variable, programFiles)) {
 				continue;
 			}
-			String pattern = String{programFiles, length} +
-				"\\Microsoft Visual Studio\\*\\*\\Common7\\IDE\\Extensions\\*\\external\\glslangValidator.exe";
+			String pattern = fs::CombinePath(programFiles,
+				"Microsoft Visual Studio\\*\\*\\Common7\\IDE\\Extensions\\*\\external\\glslangValidator.exe"_s);
 			if (ResolveWildcardPath(pattern, outPath)) {
 				return true;
 			}
 		}
 		// Repo-local build-tree copy (may be transient)
 		if (!searchRoot.empty()) {
-			String candidate = PathJoin(searchRoot, ".fake\\_legacy\\.fake\\glsl\\glslangValidator.exe"_s);
-			if (FileExistsAt(candidate.data())) {
+			String candidate = fs::CombinePath(searchRoot, ".fake\\_legacy\\.fake\\glsl\\glslangValidator.exe"_s);
+			if (fs::FileExists(candidate)) {
 				outPath = std::move(candidate);
 				return true;
 			}
@@ -976,28 +849,34 @@ namespace
 		return false;
 	}
 
-	/** Runs @p commandLine with stdout+stderr redirected to @p logFile; false if the process could not start */
-	bool RunProcessCaptured(const String& commandLine, const char* logFile, DWORD& exitCode)
+	/**
+		Runs @p commandLine with stdout+stderr redirected to @p logFile; false if the process could not start.
+		Both are widened first: an SDK or Program Files path outside the active code page would otherwise be
+		mangled on the way into the ANSI entry points.
+	*/
+	bool RunProcessCaptured(StringView commandLine, StringView logFile, DWORD& exitCode)
 	{
 		exitCode = ~DWORD{0};
 		SECURITY_ATTRIBUTES security = {};
 		security.nLength = sizeof(security);
 		security.bInheritHandle = TRUE;
-		HANDLE log = CreateFileA(logFile, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &security,
-			CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+		HANDLE log = ::CreateFileW(Death::Utf8::ToUtf16(logFile), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+			&security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 		if (log == INVALID_HANDLE_VALUE) {
 			return false;
 		}
-		STARTUPINFOA startup = {};
+		STARTUPINFOW startup = {};
 		startup.cb = sizeof(startup);
 		startup.dwFlags = STARTF_USESTDHANDLES;
-		startup.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+		startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
 		startup.hStdOutput = log;
 		startup.hStdError = log;
 		PROCESS_INFORMATION process = {};
-		std::vector<char> mutableCommand(commandLine.data(), commandLine.data() + commandLine.size());
-		mutableCommand.push_back('\0');
-		BOOL created = CreateProcessA(nullptr, mutableCommand.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
+		// CreateProcessW may modify the command line in place, so it cannot be the read-only conversion result
+		Array<wchar_t> commandLineW = Death::Utf8::ToUtf16(commandLine);
+		SmallVector<wchar_t, 0> mutableCommand(InPlaceInit, commandLineW.begin(), commandLineW.end());
+		mutableCommand.push_back(L'\0');
+		BOOL created = ::CreateProcessW(nullptr, mutableCommand.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
 			nullptr, nullptr, &startup, &process);
 		CloseHandle(log);
 		if (!created) {
@@ -1017,24 +896,21 @@ namespace
 		@p spirv on success; @p log receives the compiler output either way.
 	*/
 	bool CompileSpirvWithGlslang(const String& glslangPath, const String& source, bool vertexStage,
-		std::vector<std::uint32_t>& spirv, String& log)
+		SmallVectorImpl<std::uint32_t>& spirv, String& log)
 	{
 		spirv.clear();
 		log = {};
-		char tempDir[MAX_PATH];
-		DWORD tempLen = GetTempPathA(MAX_PATH, tempDir);
-		if (tempLen == 0 || tempLen >= MAX_PATH) {
-			log = "cannot resolve the temporary directory";
+		static unsigned counter = 0;
+		String base = MakeTemporaryPathPrefix("sc_vk"_s, counter++);
+		if (base.empty()) {
+			log = "cannot resolve the temporary directory"_s;
 			return false;
 		}
-		static unsigned counter = 0;
-		String base = String{tempDir, tempLen} + "sc_vk_" +
-			Death::format("{}_{}", static_cast<unsigned>(GetCurrentProcessId()), counter++);
 		String inputPath = base + (vertexStage ? ".vert" : ".frag");
 		String spirvPath = base + ".spv";
 		String logPath = base + ".log";
 
-		if (!WriteStringToFile(inputPath.data(), source)) {
+		if (!WriteStringToFile(inputPath, source)) {
 			log = "cannot write the temporary shader input";
 			return false;
 		}
@@ -1042,17 +918,17 @@ namespace
 		String command = "\""_s + glslangPath + "\" -V --target-env vulkan1.0 -S "_s +
 			(vertexStage ? "vert"_s : "frag"_s) + " \""_s + inputPath + "\" -o \""_s + spirvPath + "\""_s;
 		DWORD exitCode = ~DWORD{0};
-		bool ran = RunProcessCaptured(command, logPath.data(), exitCode);
+		bool ran = RunProcessCaptured(command, logPath, exitCode);
 		{
 			String logContent;
-			if (ReadFileToString(logPath.data(), logContent)) {
+			if (ReadFileToString(logPath, logContent)) {
 				log = std::move(logContent);
 			}
 		}
 		bool ok = ran && (exitCode == 0);
 		if (ok) {
 			String bytes;
-			if (ReadFileToString(spirvPath.data(), bytes) && bytes.size() >= 4 && (bytes.size() % 4) == 0) {
+			if (ReadFileToString(spirvPath, bytes) && bytes.size() >= 4 && (bytes.size() % 4) == 0) {
 				std::size_t words = bytes.size() / 4;
 				spirv.resize(words);
 				std::memcpy(spirv.data(), bytes.data(), words * 4);
@@ -1070,27 +946,27 @@ namespace
 				}
 			}
 		}
-		DeleteFileA(inputPath.data());
-		DeleteFileA(spirvPath.data());
-		DeleteFileA(logPath.data());
+		fs::RemoveFile(inputPath);
+		fs::RemoveFile(spirvPath);
+		fs::RemoveFile(logPath);
 		return ok && !spirv.empty();
 	}
 #else
 	// D3DCompile is a Windows DLL entry point with no counterpart elsewhere, so the HLSL/DXBC paths stay
 	// unavailable; the child-process ones below do not have that excuse and are implemented for real.
 	bool LoadD3DCompiler(String& error) { error = "D3DCompile is only available on Windows"; return false; }
-	bool CompileHlslToDxbc(const String&, const char*, const char*, std::vector<std::uint8_t>&, String&) { return false; }
+	bool CompileHlslToDxbc(const String&, const char*, const char*, SmallVectorImpl<std::uint8_t>&, String&) { return false; }
 	bool CompileHlsl(const String&, const char*, const char*, String&) { return false; }
 
 	/** Runs @p argv with stdout+stderr redirected to @p logFile; false if the process could not start */
-	bool RunProcessCaptured(const std::vector<String>& argv, const char* logFile, int& exitCode)
+	bool RunProcessCaptured(const SmallVectorImpl<String>& argv, StringView logFile, int& exitCode)
 	{
 		exitCode = -1;
 		if (argv.empty()) {
 			return false;
 		}
 
-		std::vector<char*> args;
+		SmallVector<char*, 0> args;
 		args.reserve(argv.size() + 1);
 		for (const String& a : argv) {
 			args.push_back(const_cast<char*>(a.data()));
@@ -1102,7 +978,7 @@ namespace
 			return false;
 		}
 		// Both streams go to the same file, so a compiler that writes diagnostics to either is captured
-		posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, logFile,
+		posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, String::nullTerminatedView(logFile).data(),
 			O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		posix_spawn_file_actions_adddup2(&actions, STDOUT_FILENO, STDERR_FILENO);
 
@@ -1129,11 +1005,12 @@ namespace
 	{
 		if (!explicitPath.empty()) {
 			outPath = String{explicitPath};
-			return PathIsFile(outPath.data());
+			return fs::FileExists(outPath);
 		}
-		if (const char* sdk = std::getenv("VULKAN_SDK")) {
-			String candidate = PathJoin(String{sdk}, "bin/glslangValidator"_s);
-			if (PathIsFile(candidate.data())) {
+		String sdk;
+		if (TryGetEnvironmentVariable("VULKAN_SDK"_s, sdk)) {
+			String candidate = fs::CombinePath({ sdk, "bin"_s, "glslangValidator"_s });
+			if (fs::FileExists(candidate)) {
 				outPath = std::move(candidate);
 				return true;
 			}
@@ -1144,35 +1021,39 @@ namespace
 	}
 
 	bool CompileSpirvWithGlslang(const String& glslangPath, const String& source, bool vertexStage,
-		std::vector<std::uint32_t>& spirv, String& log)
+		SmallVectorImpl<std::uint32_t>& spirv, String& log)
 	{
 		spirv.clear();
 		log = {};
 		static unsigned counter = 0;
-		String base = Death::format("/tmp/sc_vk_{}_{}", static_cast<unsigned>(::getpid()), counter++);
+		String base = MakeTemporaryPathPrefix("sc_vk"_s, counter++);
+		if (base.empty()) {
+			log = "cannot resolve the temporary directory"_s;
+			return false;
+		}
 		String inputPath = base + (vertexStage ? ".vert"_s : ".frag"_s);
 		String spirvPath = base + ".spv"_s;
 		String logPath = base + ".log"_s;
 
-		if (!WriteStringToFile(inputPath.data(), source)) {
+		if (!WriteStringToFile(inputPath, source)) {
 			log = "cannot write the temporary shader input";
 			return false;
 		}
 
-		std::vector<String> argv = { glslangPath, "-V"_s, "--target-env"_s, "vulkan1.0"_s, "-S"_s,
-			(vertexStage ? "vert"_s : "frag"_s), inputPath, "-o"_s, spirvPath };
+		SmallVector<String, 0> argv{InPlaceInit, { glslangPath, "-V"_s, "--target-env"_s, "vulkan1.0"_s, "-S"_s,
+			(vertexStage ? "vert"_s : "frag"_s), inputPath, "-o"_s, spirvPath }};
 		int exitCode = -1;
-		const bool ran = RunProcessCaptured(argv, logPath.data(), exitCode);
+		const bool ran = RunProcessCaptured(argv, logPath, exitCode);
 		{
 			String logContent;
-			if (ReadFileToString(logPath.data(), logContent)) {
+			if (ReadFileToString(logPath, logContent)) {
 				log = std::move(logContent);
 			}
 		}
 		bool ok = ran && (exitCode == 0);
 		if (ok) {
 			String bytes;
-			if (ReadFileToString(spirvPath.data(), bytes) && bytes.size() >= 4 && (bytes.size() % 4) == 0) {
+			if (ReadFileToString(spirvPath, bytes) && bytes.size() >= 4 && (bytes.size() % 4) == 0) {
 				std::size_t words = bytes.size() / 4;
 				spirv.resize(words);
 				std::memcpy(spirv.data(), bytes.data(), words * 4);
@@ -1190,9 +1071,9 @@ namespace
 				}
 			}
 		}
-		::remove(inputPath.data());
-		::remove(spirvPath.data());
-		::remove(logPath.data());
+		fs::RemoveFile(inputPath);
+		fs::RemoveFile(spirvPath);
+		fs::RemoveFile(logPath);
 		return ok && !spirv.empty();
 	}
 #endif
@@ -1222,12 +1103,12 @@ namespace
 
 		std::size_t stagesTotal = 0, stagesPassed = 0;
 		std::size_t variantsTotal = 0, variantsPassed = 0;
-		std::vector<String> failures;		// detailed "prefix STAGE: <reason>" lines
+		SmallVector<String, 0> failures;		// detailed "prefix STAGE: <reason>" lines
 
 		for (int fi = 0; fi < inputCount; fi++) {
 			const char* inputPath = inputPaths[fi];
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
 				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
@@ -1323,12 +1204,12 @@ namespace
 
 		std::size_t stagesTotal = 0, stagesPassed = 0;
 		std::size_t variantsTotal = 0, variantsPassed = 0;
-		std::vector<String> failures;
+		SmallVector<String, 0> failures;
 
 		for (int fi = start; fi < count; fi++) {
 			const char* inputPath = args[fi];
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
 				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
@@ -1355,7 +1236,7 @@ namespace
 							ok = false;
 							reason = diag.Message;
 						} else {
-							std::vector<std::uint32_t> spirv;
+							SmallVector<std::uint32_t, 0> spirv;
 							String log;
 							ok = CompileSpirvWithGlslang(glslang, vulkanGlsl, vertexStage, spirv, log);
 							if (!ok) {
@@ -1391,7 +1272,7 @@ namespace
 	}
 
 	/** Builds the aggregate "SwGeneratedShaders.h" contents from the accepted shaders */
-	String BuildSwGeneratedHeader(const std::vector<GeneratedShaderEntry>& supported)
+	String BuildSwGeneratedHeader(const SmallVectorImpl<GeneratedShaderEntry>& supported)
 	{
 		String out;
 		out += "// Generated by ShaderCompiler (--emit-sw-generated). Do not edit manually.\n";
@@ -1509,8 +1390,8 @@ namespace
 		String Name;			// function name, "<first prefix>_Effect"
 		String Body;			// the emitted body (statements at 3-tab indent, no signature) - the dedup key
 		String Provenance;		// "<File>:fixed_function(<target>)" of the first occurrence
-		std::vector<String> SharedBy;			// "<Program>" / "<Program> (<VARIANT>)" per sharing row, in table order
-		std::vector<String> SharedProvenance;	// each sharer's own provenance (programs from other files can share too)
+		SmallVector<String, 0> SharedBy;			// "<Program>" / "<Program> (<VARIANT>)" per sharing row, in table order
+		SmallVector<String, 0> SharedProvenance;	// each sharer's own provenance (programs from other files can share too)
 	};
 
 	/** Renders a requirements bitmask as the runtime enum's member spelling for the generated table */
@@ -1551,13 +1432,14 @@ namespace
 	}
 
 	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" contents from the transpiled effects */
-	String BuildFixedFunctionHeader(FixedFunctionBackend backend, const std::vector<GeneratedEffectEntry>& entries,
-		const std::vector<GeneratedEffectFunction>& functions)
+	String BuildFixedFunctionHeader(FixedFunctionBackend backend, const SmallVectorImpl<GeneratedEffectEntry>& entries,
+		const SmallVectorImpl<GeneratedEffectFunction>& functions)
 	{
-		// The mode argument, the build guard and the namespace of one backend. The PSP's is spelled "GU"
-		// on the engine side (the sceGu library that drives its Graphics Engine) while the block target
-		// and the mode argument are the platform name "psp"; the PlayStation 2 goes the other way and is
-		// "gs" on both sides, exactly as "pvr" names the Dreamcast's chip rather than its console.
+		// The mode argument, the build guard and the namespace of one backend. Every target is named
+		// after the RENDERING BACKEND rather than after the console it runs on, so the block target, the
+		// mode argument and the engine-side namespace always agree: "pvr" is the Dreamcast's chip, "gx"
+		// the Wii/GameCube one, "gu" the sceGu library that drives the PSP's Graphics Engine, and "gs"
+		// the PlayStation 2's Graphics Synthesizer.
 		const char* backendArg;
 		const char* guard;
 		const char* ns;
@@ -1565,8 +1447,8 @@ namespace
 			case FixedFunctionBackend::Gx:
 				backendArg = "gx"; guard = "WITH_RHI_GX"; ns = "nCine::RHI::GX";
 				break;
-			case FixedFunctionBackend::Psp:
-				backendArg = "psp"; guard = "WITH_RHI_GU"; ns = "nCine::RHI::GU";
+			case FixedFunctionBackend::Gu:
+				backendArg = "gu"; guard = "WITH_RHI_GU"; ns = "nCine::RHI::GU";
 				break;
 			case FixedFunctionBackend::Gs:
 				backendArg = "gs"; guard = "WITH_RHI_GS"; ns = "nCine::RHI::GS";
@@ -1660,7 +1542,7 @@ namespace
 	/**
 		Transpiles the applicable fixed_function block of every program variant across all @p inputPaths to
 		C++ and writes one per-backend aggregate header. Backend selection: a block naming this backend —
-		alone (`pvr`) or in a target list (`pvr, psp`) — overrides the generic fixed_function block for it;
+		alone (`pvr`) or in a target list (`pvr, gu`) — overrides the generic fixed_function block for it;
 		programs with no applicable block are simply absent from the emitted table. Unlike the software
 		transpiler (which declines unsupported shaders), any error inside a block is FATAL, reported as
 		"<file>:<line>: error: ..." — the block is authored intent.
@@ -1675,19 +1557,19 @@ namespace
 		} else if (StringView(backendName) == "gx") {
 			backend = FixedFunctionBackend::Gx;
 			overrideTarget = FixedFunctionTarget::Gx;
-		} else if (StringView(backendName) == "psp") {
-			backend = FixedFunctionBackend::Psp;
-			overrideTarget = FixedFunctionTarget::Psp;
+		} else if (StringView(backendName) == "gu") {
+			backend = FixedFunctionBackend::Gu;
+			overrideTarget = FixedFunctionTarget::Gu;
 		} else if (StringView(backendName) == "gs") {
 			backend = FixedFunctionBackend::Gs;
 			overrideTarget = FixedFunctionTarget::Gs;
 		} else {
-			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, psp or gs)\n", backendName);
+			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, gu or gs)\n", backendName);
 			return 2;
 		}
 
-		std::vector<GeneratedEffectEntry> entries;
-		std::vector<GeneratedEffectFunction> functions;
+		SmallVector<GeneratedEffectEntry, 0> entries;
+		SmallVector<GeneratedEffectFunction, 0> functions;
 		std::size_t programsWithBlock = 0, programsWithout = 0;
 
 		for (int fi = 0; fi < inputCount; fi++) {
@@ -1700,7 +1582,7 @@ namespace
 			{
 				String includeError;
 				FileReader reader = [](StringView path, String& out) {
-					return ReadFileToString(String::nullTerminatedView(path).data(), out);
+					return ReadFileToString(path, out);
 				};
 				if (!ShaderParser::ExpandIncludes(content, ShaderParser::DirectoryOf(inputPath), reader, 0, includeError)) {
 					std::fprintf(stderr, "%s: error: %s\n", inputPath, includeError.data());
@@ -1708,7 +1590,7 @@ namespace
 				}
 			}
 			Diagnostic diag;
-			std::vector<ShaderDocument> documents;
+			SmallVector<ShaderDocument, 0> documents;
 			if (!ShaderParser::ParseDocuments(content, documents, diag)) {
 				return ReportError(inputPath, diag);
 			}
@@ -1837,7 +1719,7 @@ namespace
 		external compiler, so its aggregate regenerates anywhere - the same reasoning that gives the
 		software renderer and the three console backends aggregates of their own.
 	*/
-	String BuildCgGeneratedHeader(const std::vector<CgShaderEntry>& entries)
+	String BuildCgGeneratedHeader(const SmallVectorImpl<CgShaderEntry>& entries)
 	{
 		String out;
 		out += "// Generated by ShaderCompiler (--emit-cg). Do not edit manually.\n";
@@ -1885,13 +1767,13 @@ namespace
 
 	int RunEmitCg(const char* outputPath, char** inputPaths, int inputCount)
 	{
-		std::vector<CgShaderEntry> entries;
-		std::vector<std::pair<String, String>> declined;	// (prefix, reason)
+		SmallVector<CgShaderEntry, 0> entries;
+		SmallVector<std::pair<String, String>, 0> declined;	// (prefix, reason)
 
 		for (int fi = 0; fi < inputCount; fi++) {
 			const char* inputPath = inputPaths[fi];
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
 				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
@@ -1956,8 +1838,8 @@ namespace
 	{
 		String ProgramName;
 		String VariantName;
-		std::vector<std::uint8_t> VertexUcode;
-		std::vector<std::uint8_t> FragmentUcode;
+		SmallVector<std::uint8_t, 0> VertexUcode;
+		SmallVector<std::uint8_t, 0> FragmentUcode;
 	};
 
 	/** Resolves `cgcomp`, from @p explicitPath, then `$PS3DEV/bin`, then `PATH` */
@@ -1965,15 +1847,16 @@ namespace
 	{
 		if (!explicitPath.empty()) {
 			outPath = String{explicitPath};
-			return PathIsFile(outPath.data());
+			return fs::FileExists(outPath);
 		}
-		if (const char* ps3dev = std::getenv("PS3DEV")) {
-#if defined(_WIN32)
-			String candidate = PathJoin(String{ps3dev}, "bin\\cgcomp.exe"_s);
+		String ps3dev;
+		if (TryGetEnvironmentVariable("PS3DEV"_s, ps3dev)) {
+#if defined(DEATH_TARGET_WINDOWS)
+			String candidate = fs::CombinePath({ ps3dev, "bin"_s, "cgcomp.exe"_s });
 #else
-			String candidate = PathJoin(String{ps3dev}, "bin/cgcomp"_s);
+			String candidate = fs::CombinePath({ ps3dev, "bin"_s, "cgcomp"_s });
 #endif
-			if (PathIsFile(candidate.data())) {
+			if (fs::FileExists(candidate)) {
 				outPath = Death::move(candidate);
 				return true;
 			}
@@ -1990,56 +1873,49 @@ namespace
 		Toolkit is not on the library path - reported through @p log like any other compile error.
 	*/
 	bool CompileRsxMicrocode(const String& cgcompPath, const String& source, bool vertexStage,
-		std::vector<std::uint8_t>& ucode, String& log)
+		SmallVectorImpl<std::uint8_t>& ucode, String& log)
 	{
 		ucode.clear();
 		log = {};
 		static unsigned counter = 0;
-#if defined(_WIN32)
-		char tempDir[MAX_PATH];
-		DWORD tempLen = GetTempPathA(MAX_PATH, tempDir);
-		if (tempLen == 0 || tempLen >= MAX_PATH) {
+		String base = MakeTemporaryPathPrefix("sc_rsx"_s, counter++);
+		if (base.empty()) {
 			log = "cannot resolve the temporary directory"_s;
 			return false;
 		}
-		String base = String{tempDir, tempLen} + "sc_rsx_" +
-			Death::format("{}_{}", static_cast<unsigned>(GetCurrentProcessId()), counter++);
-#else
-		String base = Death::format("/tmp/sc_rsx_{}_{}", static_cast<unsigned>(::getpid()), counter++);
-#endif
 		// cgcomp picks its profile from the flag rather than the extension, but naming the input the way
 		// the SDK does keeps a leftover temporary self-describing
 		String inputPath = base + (vertexStage ? ".vcg"_s : ".fcg"_s);
 		String outputPath = base + (vertexStage ? ".vpo"_s : ".fpo"_s);
 		String logPath = base + ".log"_s;
 
-		if (!WriteStringToFile(inputPath.data(), source)) {
+		if (!WriteStringToFile(inputPath, source)) {
 			log = "cannot write the temporary shader input"_s;
 			return false;
 		}
 
 		int exitCode = -1;
 		bool ran;
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		String command = "\""_s + cgcompPath + "\" "_s + (vertexStage ? "-v"_s : "-f"_s) +
 			" \""_s + inputPath + "\" \""_s + outputPath + "\""_s;
 		DWORD win32ExitCode = ~DWORD{0};
-		ran = RunProcessCaptured(command, logPath.data(), win32ExitCode);
+		ran = RunProcessCaptured(command, logPath, win32ExitCode);
 		exitCode = static_cast<int>(win32ExitCode);
 #else
-		std::vector<String> argv = { cgcompPath, (vertexStage ? "-v"_s : "-f"_s), inputPath, outputPath };
-		ran = RunProcessCaptured(argv, logPath.data(), exitCode);
+		SmallVector<String, 0> argv{InPlaceInit, { cgcompPath, (vertexStage ? "-v"_s : "-f"_s), inputPath, outputPath }};
+		ran = RunProcessCaptured(argv, logPath, exitCode);
 #endif
 		{
 			String logContent;
-			if (ReadFileToString(logPath.data(), logContent)) {
+			if (ReadFileToString(logPath, logContent)) {
 				log = Death::move(logContent);
 			}
 		}
 		bool ok = ran && (exitCode == 0);
 		if (ok) {
 			String bytes;
-			if (ReadFileToString(outputPath.data(), bytes) && !bytes.empty()) {
+			if (ReadFileToString(outputPath, bytes) && !bytes.empty()) {
 				const std::uint8_t* first = reinterpret_cast<const std::uint8_t*>(bytes.data());
 				ucode.assign(first, first + bytes.size());
 			} else {
@@ -2049,20 +1925,14 @@ namespace
 				}
 			}
 		}
-#if defined(_WIN32)
-		DeleteFileA(inputPath.data());
-		DeleteFileA(outputPath.data());
-		DeleteFileA(logPath.data());
-#else
-		::remove(inputPath.data());
-		::remove(outputPath.data());
-		::remove(logPath.data());
-#endif
+		fs::RemoveFile(inputPath);
+		fs::RemoveFile(outputPath);
+		fs::RemoveFile(logPath);
 		return ok && !ucode.empty();
 	}
 
 	/** Emits one microcode blob as a C++ byte-array initializer, wrapped so the header stays readable */
-	String RsxByteArrayLiteral(const std::vector<std::uint8_t>& data, StringView indent)
+	String RsxByteArrayLiteral(const SmallVectorImpl<std::uint8_t>& data, StringView indent)
 	{
 		String out;
 		for (std::size_t i = 0; i < data.size(); i += 16) {
@@ -2085,7 +1955,7 @@ namespace
 	}
 
 	/** Builds the aggregate microcode header the RSX backend binds */
-	String BuildRsxGeneratedHeader(const std::vector<RsxShaderEntry>& entries)
+	String BuildRsxGeneratedHeader(const SmallVectorImpl<RsxShaderEntry>& entries)
 	{
 		String out;
 		out += "// Generated by ShaderCompiler (--emit-rsx). Do not edit manually.\n"_s;
@@ -2157,7 +2027,7 @@ namespace
 		as Cg directly, next to the shaders it is generated alongside.
 	*/
 	bool AppendRsxBuiltinShaders(const String& cgcompPath, StringView shadersDir,
-		std::vector<RsxShaderEntry>& entries, String& error)
+		SmallVectorImpl<RsxShaderEntry>& entries, String& error)
 	{
 		struct Builtin { const char* Name; const char* VertexFile; const char* FragmentFile; };
 		static const Builtin Builtins[] = {
@@ -2165,11 +2035,11 @@ namespace
 		};
 
 		for (const Builtin& builtin : Builtins) {
-			String vertexPath = PathJoin(String{shadersDir}, String{builtin.VertexFile});
-			String fragmentPath = PathJoin(String{shadersDir}, String{builtin.FragmentFile});
+			String vertexPath = fs::CombinePath(String{shadersDir}, String{builtin.VertexFile});
+			String fragmentPath = fs::CombinePath(String{shadersDir}, String{builtin.FragmentFile});
 			String vertexSource, fragmentSource;
-			if (!ReadFileToString(vertexPath.data(), vertexSource) ||
-				!ReadFileToString(fragmentPath.data(), fragmentSource)) {
+			if (!ReadFileToString(vertexPath, vertexSource) ||
+				!ReadFileToString(fragmentPath, fragmentSource)) {
 				error = "cannot read the built-in shader \""_s + String{builtin.Name} + "\""_s;
 				return false;
 			}
@@ -2196,8 +2066,8 @@ namespace
 			return 1;
 		}
 
-		std::vector<RsxShaderEntry> entries;
-		std::vector<std::pair<String, String>> declined;	// (prefix, reason)
+		SmallVector<RsxShaderEntry, 0> entries;
+		SmallVector<std::pair<String, String>, 0> declined;	// (prefix, reason)
 
 		// The built-in present shader goes first, so a table that lost it is obvious at a glance
 		String builtinError;
@@ -2208,8 +2078,8 @@ namespace
 
 		for (int fi = 0; fi < inputCount; fi++) {
 			const char* inputPath = inputPaths[fi];
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
 				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
@@ -2237,7 +2107,7 @@ namespace
 							break;
 						}
 						String log;
-						std::vector<std::uint8_t>& ucode = (vertexStage ? e.VertexUcode : e.FragmentUcode);
+						SmallVectorImpl<std::uint8_t>& ucode = (vertexStage ? e.VertexUcode : e.FragmentUcode);
 						if (!CompileRsxMicrocode(cgcompPath, cg, vertexStage, ucode, log)) {
 							declined.emplace_back(prefix, FirstLine(log));
 							ok = false;
@@ -2270,13 +2140,13 @@ namespace
 
 	int RunEmitSwGenerated(const char* outputPath, char** inputPaths, int inputCount)
 	{
-		std::vector<GeneratedShaderEntry> supported;
-		std::vector<std::pair<String, String>> declined;	// (prefix, reason)
+		SmallVector<GeneratedShaderEntry, 0> supported;
+		SmallVector<std::pair<String, String>, 0> declined;	// (prefix, reason)
 
 		for (int fi = 0; fi < inputCount; fi++) {
 			const char* inputPath = inputPaths[fi];
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
 				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
@@ -2291,14 +2161,14 @@ namespace
 					// without changing any other backend's emitted output.
 					String fs = ShaderParser::BuildStageSource(*program.Document, false, v.Define, /*softwareRenderer*/ true);
 					String vs = ShaderParser::BuildStageSource(*program.Document, true, v.Define, /*softwareRenderer*/ true);
-					std::vector<SamplerBinding> samplers;
+					SmallVector<SamplerBinding, 0> samplers;
 					for (const TextureInfo& t : v.Reflection.Textures) {
 						SamplerBinding sb;
 						sb.Name = t.Name;
 						sb.Unit = t.Unit;
 						samplers.push_back(std::move(sb));
 					}
-					std::vector<GlslInstanceMember> instanceMembers;
+					SmallVector<GlslInstanceMember, 0> instanceMembers;
 					BuildInstanceMembers(v.Reflection, instanceMembers);
 					GlslToCppResult r = GlslToCpp::TranspileFragment(prefix, fs, vs, samplers, instanceMembers);
 					String rejectReason;
@@ -2373,42 +2243,24 @@ namespace
 	*/
 	bool AutoDetectShadersDirectory(String& outPath)
 	{
-		String starts[2];
-		std::size_t startCount = 0;
-#if defined(_WIN32)
-		char buffer[MAX_PATH];
-		DWORD length = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-		if (length > 0 && length < MAX_PATH) {
-			starts[startCount++] = ParentOf(StringView{buffer, length});
-		}
-		length = GetCurrentDirectoryA(MAX_PATH, buffer);
-		if (length > 0 && length < MAX_PATH) {
-			starts[startCount++] = String{buffer, length};
-		}
-#else
-		char buffer[4096];
-		ssize_t length = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-		if (length > 0) {
-			starts[startCount++] = ParentOf(StringView{buffer, static_cast<std::size_t>(length)});
-		}
-		if (::getcwd(buffer, sizeof(buffer)) != nullptr) {
-			starts[startCount++] = String{buffer};
-		}
-#endif
-		for (std::size_t i = 0; i < startCount; i++) {
-			String directory = starts[i];
+		const String starts[] = {
+			fs::GetDirectoryName(fs::GetExecutablePath()),
+			fs::GetWorkingDirectory()
+		};
+		for (const String& start : starts) {
+			String directory = start;
 			for (std::int32_t level = 0; level < 10 && !directory.empty(); level++) {
 				String candidates[] = {
-					PathJoin(PathJoin(directory, "Sources"_s), "Shaders"_s),
-					PathJoin(directory, "Shaders"_s)
+					fs::CombinePath({ directory, "Sources"_s, "Shaders"_s }),
+					fs::CombinePath(directory, "Shaders"_s)
 				};
 				for (String& candidate : candidates) {
-					if (PathIsDirectory(candidate.data())) {
+					if (fs::DirectoryExists(candidate)) {
 						outPath = std::move(candidate);
 						return true;
 					}
 				}
-				directory = ParentOf(directory);
+				directory = fs::GetDirectoryName(directory);
 			}
 		}
 		return false;
@@ -2419,8 +2271,8 @@ namespace
 		AllPrograms[] index arrays, so runtime code has a single include and can enumerate the programs.
 		A canvas_item file with a "batched" directive contributes two program symbols from one header.
 	*/
-	String BuildUmbrellaHeader(const std::vector<String>& includeStems,
-		const std::vector<String>& jazz2Programs, const std::vector<String>& ncinePrograms)
+	String BuildUmbrellaHeader(const SmallVectorImpl<String>& includeStems,
+		const SmallVectorImpl<String>& jazz2Programs, const SmallVectorImpl<String>& ncinePrograms)
 	{
 		String out;
 		out += "// Generated by ShaderCompiler (--generate-all). Do not edit manually.\n";
@@ -2432,7 +2284,7 @@ namespace
 		// The generated shader data namespaces carry no public API and are excluded from the API
 		// documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping this header out of it
 		out += "#ifndef DOXYGEN_GENERATING_OUTPUT\n";
-		const struct { const char* Namespace; const char* Comment; const std::vector<String>* Programs; } sections[] = {
+		const struct { const char* Namespace; const char* Comment; const SmallVectorImpl<String>* Programs; } sections[] = {
 			{ "Jazz2::ShadersGen", "All generated Jazz2 shader programs, sorted by name", &jazz2Programs },
 			{ "nCine::ShadersGen", "All generated nCine default shader programs, sorted by name", &ncinePrograms }
 		};
@@ -2467,7 +2319,7 @@ namespace
 		order the shaders were enumerated - the same order the per-shader headers were written in.
 	*/
 	String BuildBackendAggregate(StringView what, StringView guard,
-		const std::vector<std::pair<String, String>>& bodies)
+		const SmallVectorImpl<std::pair<String, String>>& bodies)
 	{
 		String output;
 		output += "// Generated by ShaderCompiler (--generate-all). Do not edit manually.\n";
@@ -2494,14 +2346,14 @@ namespace
 		return output;
 	}
 
-	int GenerateAllArtifacts(StringView shadersDirectory, const std::vector<String>& shaderNames,
-		StringView outputDirectory, const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc,
-		StringView cgcompOption, std::vector<String>& writtenNames)
+	int GenerateAllArtifacts(StringView shadersDirectory, const SmallVectorImpl<String>& shaderNames,
+		StringView outputDirectory, SpirvCompileFn& compileSpirv, DxbcCompileFn& compileDxbc,
+		StringView cgcompOption, SmallVectorImpl<String>& writtenNames)
 	{
 		// The shared reflection types every generated header includes
 		{
-			String path = PathJoin(outputDirectory, "ShaderCompilerTypes.h"_s);
-			if (!WriteStringToFile(path.data(), Emitter::BuildTypesHeader())) {
+			String path = fs::CombinePath(outputDirectory, "ShaderCompilerTypes.h"_s);
+			if (!WriteStringToFile(path, Emitter::BuildTypesHeader())) {
 				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
 				return 1;
 			}
@@ -2509,18 +2361,18 @@ namespace
 		}
 
 		// One header per shader; "Default*.shader" are the nCine default programs, everything else is Jazz2
-		std::vector<String> includeStems, jazz2Programs, ncinePrograms;
+		SmallVector<String, 0> includeStems, jazz2Programs, ncinePrograms;
 		// The Direct3D 11 and Vulkan stage artifacts of every shader, collected here and written as one
 		// aggregate each below - see BackendArtifacts for why they do not go into the per-shader headers
-		std::vector<std::pair<String, String>> d3d11Bodies, vulkanBodies;
+		SmallVector<std::pair<String, String>, 0> d3d11Bodies, vulkanBodies;
 		for (const String& shaderName : shaderNames) {
-			StringView stem = StemOf(shaderName);
+			StringView stem = fs::GetFileNameWithoutExtension(shaderName);
 			const bool isDefault = stem.hasPrefix("Default"_s);
 			const char* ns = (isDefault ? "nCine::ShadersGen" : "Jazz2::ShadersGen");
-			String inputPath = PathJoin(shadersDirectory, shaderName);
+			String inputPath = fs::CombinePath(shadersDirectory, shaderName);
 
-			std::vector<ShaderDocument> documents;
-			std::vector<ProgramReflection> programs;
+			SmallVector<ShaderDocument, 0> documents;
+			SmallVector<ProgramReflection, 0> programs;
 			String errorMsg;
 			std::int32_t errorLine = 0;
 			if (!LoadProgramsForFile(inputPath.data(), documents, programs, errorMsg, /*strictTextureUnits*/ true, &errorLine)) {
@@ -2538,8 +2390,8 @@ namespace
 			d3d11Bodies.emplace_back(String{ns}, std::move(artifacts.D3d11));
 			vulkanBodies.emplace_back(String{ns}, std::move(artifacts.Vulkan));
 			String headerName = stem + ".h"_s;
-			String headerPath = PathJoin(outputDirectory, headerName);
-			if (!WriteStringToFile(headerPath.data(), output)) {
+			String headerPath = fs::CombinePath(outputDirectory, headerName);
+			if (!WriteStringToFile(headerPath, output)) {
 				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", headerPath.data());
 				return 1;
 			}
@@ -2562,8 +2414,8 @@ namespace
 			// hand back a bare "glslangValidator" for PATH to resolve, which it then does not - so every
 			// compile failed, every module came out empty, and an aggregate written on that basis would be
 			// all nulls. Probing with a trivial shader is what the cgcomp path below already does.
-			std::vector<std::uint32_t> probeWords;
-			std::vector<std::uint8_t> probeBytes;
+			SmallVector<std::uint32_t, 0> probeWords;
+			SmallVector<std::uint8_t, 0> probeBytes;
 			String probeLog;
 			const bool spirvWorks = compileSpirv &&
 				compileSpirv("#version 450\nvoid main() { gl_Position = vec4(0.0); }"_s, true, probeWords, probeLog) &&
@@ -2574,7 +2426,7 @@ namespace
 
 			const struct {
 				const char* What; const char* Guard; const char* FileName;
-				const std::vector<std::pair<String, String>>* Bodies; bool Rebuildable; const char* Missing;
+				const SmallVectorImpl<std::pair<String, String>>* Bodies; bool Rebuildable; const char* Missing;
 			} aggregates[] = {
 				{ "Direct3D 11", "WITH_RHI_D3D11", "D3d11GeneratedShaders.h", &d3d11Bodies,
 					dxbcWorks, "no working DXBC compiler (D3DCompile is Windows-only)" },
@@ -2582,16 +2434,16 @@ namespace
 					spirvWorks, "no working glslang" }
 			};
 			for (const auto& aggregate : aggregates) {
-				String path = PathJoin(outputDirectory, aggregate.FileName);
+				String path = fs::CombinePath(outputDirectory, aggregate.FileName);
 				// An aggregate that does not exist yet is written even with nothing to put in it: the
 				// per-shader headers include it unconditionally under the backend's guard, so a missing file
 				// is a build error rather than a missing optimisation. A null one at least links, and the
 				// backend reports the empty program itself. Only an EXISTING file is protected.
-				if (!aggregate.Rebuildable && PathIsFile(path.data())) {
+				if (!aggregate.Rebuildable && fs::FileExists(path)) {
 					std::fprintf(stdout, "skipped: %s (%s)\n", aggregate.FileName, aggregate.Missing);
 					continue;
 				}
-				if (!WriteStringToFile(path.data(), BuildBackendAggregate(aggregate.What, aggregate.Guard, *aggregate.Bodies))) {
+				if (!WriteStringToFile(path, BuildBackendAggregate(aggregate.What, aggregate.Guard, *aggregate.Bodies))) {
 					std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
 					return 1;
 				}
@@ -2605,8 +2457,8 @@ namespace
 			return std::strcmp(a.data(), b.data()) < 0;
 		});
 		{
-			String path = PathJoin(outputDirectory, "ShadersGen.h"_s);
-			if (!WriteStringToFile(path.data(), BuildUmbrellaHeader(includeStems, jazz2Programs, ncinePrograms))) {
+			String path = fs::CombinePath(outputDirectory, "ShadersGen.h"_s);
+			if (!WriteStringToFile(path, BuildUmbrellaHeader(includeStems, jazz2Programs, ncinePrograms))) {
 				std::fprintf(stderr, "error: cannot write output file \"%s\"\n", path.data());
 				return 1;
 			}
@@ -2616,12 +2468,12 @@ namespace
 		}
 
 		// The aggregates reuse the standalone modes verbatim, so both entry points stay one implementation
-		std::vector<String> inputPaths;
+		SmallVector<String, 0> inputPaths;
 		inputPaths.reserve(shaderNames.size());
 		for (const String& shaderName : shaderNames) {
-			inputPaths.push_back(PathJoin(shadersDirectory, shaderName));
+			inputPaths.push_back(fs::CombinePath(shadersDirectory, shaderName));
 		}
-		std::vector<char*> inputArgs;
+		SmallVector<char*, 0> inputArgs;
 		inputArgs.reserve(inputPaths.size());
 		for (String& inputPath : inputPaths) {
 			inputArgs.push_back(inputPath.data());
@@ -2629,7 +2481,7 @@ namespace
 		const int inputCount = static_cast<int>(inputArgs.size());
 
 		{
-			String path = PathJoin(outputDirectory, "SwGeneratedShaders.h"_s);
+			String path = fs::CombinePath(outputDirectory, "SwGeneratedShaders.h"_s);
 			if (RunEmitSwGenerated(path.data(), inputArgs.data(), inputCount) != 0) {
 				return 1;
 			}
@@ -2637,7 +2489,7 @@ namespace
 			std::fprintf(stdout, "ok: software fragments -> SwGeneratedShaders.h\n");
 		}
 		{
-			String path = PathJoin(outputDirectory, "CgGeneratedShaders.h"_s);
+			String path = fs::CombinePath(outputDirectory, "CgGeneratedShaders.h"_s);
 			if (RunEmitCg(path.data(), inputArgs.data(), inputCount) != 0) {
 				return 1;
 			}
@@ -2652,12 +2504,12 @@ namespace
 			// rewriting it. The committed one then stays valid until someone who can regenerate it does.
 			String cgcompPath;
 			String probeLog;
-			std::vector<std::uint8_t> probeUcode;
+			SmallVector<std::uint8_t, 0> probeUcode;
 			const bool haveCgcomp = LocateCgcomp(cgcompOption, cgcompPath) &&
 				CompileRsxMicrocode(cgcompPath, "void main(out float4 p : POSITION) { p = 0; }"_s,
 					true, probeUcode, probeLog);
 			if (haveCgcomp) {
-				String path = PathJoin(outputDirectory, "RsxGeneratedShaders.h"_s);
+				String path = fs::CombinePath(outputDirectory, "RsxGeneratedShaders.h"_s);
 				if (RunEmitRsx(path.data(), cgcompPath, shadersDirectory, inputArgs.data(), inputCount) != 0) {
 					return 1;
 				}
@@ -2670,11 +2522,11 @@ namespace
 		}
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
-			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "psp", "GuGeneratedEffects.h" },
+			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "gu", "GuGeneratedEffects.h" },
 			{ "gs", "GsGeneratedEffects.h" }
 		};
 		for (const auto& target : fixedFunctionTargets) {
-			String path = PathJoin(outputDirectory, target.FileName);
+			String path = fs::CombinePath(outputDirectory, target.FileName);
 			if (RunEmitFixedFunction(target.Backend, path.data(), inputArgs.data(), inputCount) != 0) {
 				return 1;
 			}
@@ -2691,15 +2543,15 @@ namespace
 			std::fprintf(stderr, "error: cannot locate the shader directory - pass --shaders-dir <dir>\n");
 			return 1;
 		}
-		if (!PathIsDirectory(shadersDirectory.data())) {
+		if (!fs::DirectoryExists(shadersDirectory)) {
 			std::fprintf(stderr, "error: shader directory \"%s\" does not exist\n", shadersDirectory.data());
 			return 1;
 		}
 		String committedDirectory = (options.OutputDirectory.empty()
-			? PathJoin(shadersDirectory, "Generated"_s) : options.OutputDirectory);
+			? fs::CombinePath(shadersDirectory, "Generated"_s) : options.OutputDirectory);
 
-		std::vector<String> shaderNames;
-		if (!ListFilesInDirectory(shadersDirectory.data(), ".shader"_s, shaderNames) || shaderNames.empty()) {
+		SmallVector<String, 0> shaderNames;
+		if (!ListFilesInDirectory(shadersDirectory, ".shader"_s, shaderNames) || shaderNames.empty()) {
 			std::fprintf(stderr, "error: no .shader files found in \"%s\"\n", shadersDirectory.data());
 			return 1;
 		}
@@ -2710,9 +2562,9 @@ namespace
 		{
 			String glslang;
 			StringView override = (options.GlslangOverride != nullptr ? StringView{options.GlslangOverride} : StringView{});
-			if (LocateGlslang(override, glslang, ParentOf(ParentOf(shadersDirectory)))) {
+			if (LocateGlslang(override, glslang, fs::GetDirectoryName(fs::GetDirectoryName(shadersDirectory)))) {
 				std::fprintf(stdout, "using glslang: %s\n", glslang.data());
-				compileSpirv = [glslang](StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log) {
+				compileSpirv = [glslang](StringView vulkanGlsl, bool vertexStage, SmallVectorImpl<std::uint32_t>& spirv, String& log) {
 					return CompileSpirvWithGlslang(glslang, String{vulkanGlsl}, vertexStage, spirv, log);
 				};
 			} else if (!override.empty()) {
@@ -2730,7 +2582,7 @@ namespace
 		} else {
 			String loadError;
 			if (LoadD3DCompiler(loadError)) {
-				compileDxbc = [](StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log) {
+				compileDxbc = [](StringView hlsl, bool vertexStage, SmallVectorImpl<std::uint8_t>& dxbc, String& log) {
 					bool ok = CompileHlslToDxbc(String{hlsl}, vertexStage ? "VSMain" : "PSMain",
 						vertexStage ? "vs_4_0" : "ps_4_0", dxbc, log);
 					if (!ok) {
@@ -2740,7 +2592,7 @@ namespace
 					return ok;
 				};
 			}
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 			else {
 				std::fprintf(stderr, "warning: %s - DXBC will be omitted (HLSL sources embedded instead)\n", loadError.data());
 			}
@@ -2762,12 +2614,12 @@ namespace
 			if (options.NoDxbc) {
 				std::fprintf(stderr, "warning: --check with --no-dxbc - committed headers with embedded DXBC will be reported stale\n");
 			}
-		} else if (!EnsureDirectoryExists(outputDirectory.data())) {
+		} else if (!fs::CreateDirectories(outputDirectory)) {
 			std::fprintf(stderr, "error: cannot create output directory \"%s\"\n", outputDirectory.data());
 			return 1;
 		}
 
-		std::vector<String> writtenNames;
+		SmallVector<String, 0> writtenNames;
 		int result = GenerateAllArtifacts(shadersDirectory, shaderNames, outputDirectory, compileSpirv,
 			compileDxbc, (options.CgcompPath != nullptr ? StringView{options.CgcompPath} : StringView{}),
 			writtenNames);
@@ -2780,19 +2632,19 @@ namespace
 		}
 
 		// Byte-compare the fresh artifacts against the committed ones; missing and extra files count as stale
-		std::vector<String> stale;
+		SmallVector<String, 0> stale;
 		if (result == 0) {
 			for (const String& name : writtenNames) {
-				String fresh = PathJoin(outputDirectory, name);
-				String committed = PathJoin(committedDirectory, name);
-				if (!PathIsFile(committed.data())) {
+				String fresh = fs::CombinePath(outputDirectory, name);
+				String committed = fs::CombinePath(committedDirectory, name);
+				if (!fs::FileExists(committed)) {
 					stale.push_back(name + " (missing from Generated)"_s);
-				} else if (!FilesHaveEqualContent(fresh.data(), committed.data())) {
+				} else if (!FilesHaveEqualContent(fresh, committed)) {
 					stale.push_back(name);
 				}
 			}
-			std::vector<String> committedNames;
-			ListFilesInDirectory(committedDirectory.data(), ".h"_s, committedNames);
+			SmallVector<String, 0> committedNames;
+			ListFilesInDirectory(committedDirectory, ".h"_s, committedNames);
 			for (const String& name : committedNames) {
 				const bool generated = std::any_of(writtenNames.begin(), writtenNames.end(),
 					[&name](const String& written) { return written == name; });
@@ -2803,10 +2655,10 @@ namespace
 		}
 
 		for (const String& name : writtenNames) {
-			String path = PathJoin(outputDirectory, name);
-			DeleteFileAtPath(path.data());
+			String path = fs::CombinePath(outputDirectory, name);
+			fs::RemoveFile(path);
 		}
-		DeleteDirectoryAtPath(outputDirectory.data());
+		fs::RemoveDirectoryRecursive(outputDirectory);
 
 		if (result != 0) {
 			return result;
@@ -2908,7 +2760,7 @@ int main(int argc, char* argv[])
 			return 2;
 		}
 		StringView cgcompOption, shadersDirOption;
-		std::vector<char*> inputs;
+		SmallVector<char*, 0> inputs;
 		for (int i = 3; i < argc; i++) {
 			if (StringView(argv[i]) == "--cgcomp" && i + 1 < argc) {
 				cgcompOption = StringView(argv[++i]);
@@ -2934,10 +2786,10 @@ int main(int argc, char* argv[])
 
 	// Standalone mode: transpile every input shader's fixed_function block (once per program variant) to
 	// C++ and write the per-backend aggregate header consumed by the console fixed-function tier. Usage:
-	//   ShaderCompiler --emit-fixed-function <pvr|gx|psp|gs> <output.h> <input1.shader> [input2.shader ...]
+	//   ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs> <output.h> <input1.shader> [input2.shader ...]
 	if (argc >= 2 && StringView(argv[1]) == "--emit-fixed-function") {
 		if (argc < 5) {
-			std::fprintf(stderr, "error: --emit-fixed-function requires <pvr|gx|psp|gs>, <output.h> and at least one input .shader\n");
+			std::fprintf(stderr, "error: --emit-fixed-function requires <pvr|gx|gu|gs>, <output.h> and at least one input .shader\n");
 			return 2;
 		}
 		return RunEmitFixedFunction(argv[2], argv[3], &argv[4], argc - 4);
@@ -3046,7 +2898,7 @@ int main(int argc, char* argv[])
 	{
 		String includeError;
 		FileReader reader = [](StringView path, String& out) {
-			return ReadFileToString(String::nullTerminatedView(path).data(), out);
+			return ReadFileToString(path, out);
 		};
 		if (!ShaderParser::ExpandIncludes(content, ShaderParser::DirectoryOf(inputPath), reader, 0, includeError)) {
 			std::fprintf(stderr, "%s: error: %s\n", inputPath, includeError.data());
@@ -3056,12 +2908,12 @@ int main(int argc, char* argv[])
 
 	// Custom-mode files produce one document; canvas_item files may add the "batched" twin program
 	Diagnostic diag;
-	std::vector<ShaderDocument> documents;
+	SmallVector<ShaderDocument, 0> documents;
 	if (!ShaderParser::ParseDocuments(content, documents, diag)) {
 		return ReportError(inputPath, diag);
 	}
 
-	std::vector<ProgramReflection> programs;
+	SmallVector<ProgramReflection, 0> programs;
 	programs.reserve(documents.size());
 	for (const ShaderDocument& document : documents) {
 		ProgramReflection program;
@@ -3149,7 +3001,7 @@ int main(int argc, char* argv[])
 	{
 		String glslang;
 		if (LocateGlslang(glslangOverride != nullptr ? StringView(glslangOverride) : StringView{}, glslang)) {
-			compileSpirv = [glslang](StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log) {
+			compileSpirv = [glslang](StringView vulkanGlsl, bool vertexStage, SmallVectorImpl<std::uint32_t>& spirv, String& log) {
 				return CompileSpirvWithGlslang(glslang, String{vulkanGlsl}, vertexStage, spirv, log);
 			};
 		}
@@ -3164,7 +3016,7 @@ int main(int argc, char* argv[])
 	if (!noDxbc) {
 		String loadError;
 		if (LoadD3DCompiler(loadError)) {
-			compileDxbc = [](StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log) {
+			compileDxbc = [](StringView hlsl, bool vertexStage, SmallVectorImpl<std::uint8_t>& dxbc, String& log) {
 				bool ok = CompileHlslToDxbc(String{hlsl}, vertexStage ? "VSMain" : "PSMain",
 					vertexStage ? "vs_4_0" : "ps_4_0", dxbc, log);
 				if (!ok) {
@@ -3176,7 +3028,7 @@ int main(int argc, char* argv[])
 				return ok;
 			};
 		}
-#if defined(_WIN32)
+#if defined(DEATH_TARGET_WINDOWS)
 		else {
 			std::fprintf(stderr, "warning: %s - DXBC will be omitted (HLSL sources embedded instead)\n", loadError.data());
 		}
