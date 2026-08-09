@@ -3,6 +3,8 @@
 		"Target": "Jazz² Resurrection"
 	},
 
+	"Deferred": true,
+
 	"Animations": {
 		"MenuCarrot": {
 			"Path": "UI/logo.aura",
@@ -32,6 +34,31 @@
 		"EpisodeComplete": {
 			"Path": "UI/episode_complete.aura",
 			"States": [ 10 ]
+		},
+		"MenuDifficultyJazz": {
+			"Path": "UI/character_art_difficulty_jazz.aura",
+			"States": [ 11 ]
+		},
+		"MenuDifficultySpaz": {
+			"Path": "UI/character_art_difficulty_spaz.aura",
+			"States": [ 12 ]
+		},
+		"MenuDifficultyLori": {
+			"Path": "UI/character_art_difficulty_lori.aura",
+			"States": [ 13 ]
+		},
+		"CharacterPreviewJazz": {
+			"Path": "Jazz/idle.aura",
+			"States": [ 14 ]
+		},
+		"CharacterPreviewSpaz": {
+			"Path": "Spaz/idle.aura",
+			"States": [ 15 ]
+		},
+		"CharacterPreviewLori": {
+			"Path": "Lori/idle.aura",
+			"FrameRate": 5,
+			"States": [ 16 ]
 		},
 		"Uac": {
 			"Path": "UI/uac.aura",
@@ -331,22 +358,91 @@
 			"States": [ 102 ]
 		},
 		
+		"GamepadPslA": {
+			"Path": "UI/gamepad/psl_a.aura",
+			"States": [ 103 ]
+		},
+		"GamepadPslB": {
+			"Path": "UI/gamepad/psl_b.aura",
+			"States": [ 104 ]
+		},
+		"GamepadPslX": {
+			"Path": "UI/gamepad/psl_x.aura",
+			"States": [ 105 ]
+		},
+		"GamepadPslY": {
+			"Path": "UI/gamepad/psl_y.aura",
+			"States": [ 106 ]
+		},
+		"GamepadPslDPadLeft": {
+			"Path": "UI/gamepad/psl_left.aura",
+			"States": [ 107 ]
+		},
+		"GamepadPslDPadRight": {
+			"Path": "UI/gamepad/psl_right.aura",
+			"States": [ 108 ]
+		},
+		"GamepadPslDPadUp": {
+			"Path": "UI/gamepad/psl_up.aura",
+			"States": [ 109 ]
+		},
+		"GamepadPslDPadDown": {
+			"Path": "UI/gamepad/psl_down.aura",
+			"States": [ 110 ]
+		},
+		"GamepadPslGuide": {
+			"Path": "UI/gamepad/ps_guide.aura",
+			"States": [ 111 ]
+		},
+		"GamepadPslBack": {
+			"Path": "UI/gamepad/psl_back.aura",
+			"States": [ 112 ]
+		},
+		"GamepadPslStart": {
+			"Path": "UI/gamepad/psl_start.aura",
+			"States": [ 113 ]
+		},
+		"GamepadPslLeftShoulder": {
+			"Path": "UI/gamepad/ps_lb.aura",
+			"States": [ 114 ]
+		},
+		"GamepadPslLeftTrigger": {
+			"Path": "UI/gamepad/ps_lt.aura",
+			"States": [ 115 ]
+		},
+		"GamepadPslRightShoulder": {
+			"Path": "UI/gamepad/ps_rb.aura",
+			"States": [ 116 ]
+		},
+		"GamepadPslRightTrigger": {
+			"Path": "UI/gamepad/ps_rt.aura",
+			"States": [ 117 ]
+		},
+		"GamepadPslMisc1": {
+			"Path": "UI/gamepad/ps_misc1.aura",
+			"States": [ 118 ]
+		},
+		"GamepadPslTouchpad": {
+			"Path": "UI/gamepad/ps_touchpad.aura",
+			"States": [ 119 ]
+		},
+		
 		"Menu16": {
 			"Path": "UI/menu16.aura",
-			"States": [ 110 ]
+			"States": [ 120 ]
 		},
 		"Menu32": {
 			"Path": "UI/menu32.aura",
-			"States": [ 111 ]
+			"States": [ 121 ]
 		},
 		"Menu128": {
 			"Path": "UI/menu128.aura",
-			"States": [ 112 ]
+			"States": [ 122 ]
 		},
 		
 		"LoriExistsCheck": {
 			"Path": "Lori/corpse.aura",
-			"States": [ 120 ]
+			"States": [ 126 ]
 		},
 		
 		"TouchDpad": {

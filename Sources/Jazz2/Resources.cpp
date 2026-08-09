@@ -1,4 +1,5 @@
 ﻿#include "Resources.h"
+#include "ContentResolver.h"
 
 namespace Jazz2::Resources
 {
@@ -8,7 +9,7 @@ namespace Jazz2::Resources
 	}
 
 	GraphicResource::GraphicResource() noexcept
-		: PaletteOffset(0)
+		: Base(nullptr), PaletteOffset(0), DeferredIndex(NotDeferred)
 	{
 	}
 
@@ -31,13 +32,22 @@ namespace Jazz2::Resources
 	{
 	}
 
-	GraphicResource* Metadata::FindAnimation(AnimState state) noexcept
+	GraphicResource* Metadata::FindAnimation(AnimState state)
 	{
 		auto it = std::lower_bound(Animations.begin(), Animations.end(), state, [](const GraphicResource& x, AnimState value) {
 			return x.State < value;
 		});
 
-		return (it != Animations.end() && it->State == state ? it : nullptr);
+		if (it == Animations.end() || it->State != state) {
+			return nullptr;
+		}
+
+		// Everything that isn't deferred is loaded already, so the common case is a single predictable branch
+		if DEATH_UNLIKELY(it->Base == nullptr) {
+			return (ContentResolver::Get().ResolveAnimation(*this, *it) ? it : nullptr);
+		}
+
+		return it;
 	}
 
 	Episode::Episode() noexcept

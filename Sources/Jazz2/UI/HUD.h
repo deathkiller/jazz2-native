@@ -87,7 +87,7 @@ namespace Jazz2::UI
 			float Width;
 			float Height;
 
-			GraphicResource* Graphics;
+			AnimState State;
 			std::int32_t CurrentPointerId;
 			Alignment Align;
 		};

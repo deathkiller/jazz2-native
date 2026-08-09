@@ -190,6 +190,14 @@ namespace Jazz2
 		 * @param keepIndexed    Keep raw palette indices in the texture (don't bake the palette) for shader recoloring
 		 */
 		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
+		/**
+		 * @brief Loads the graphics of a deferred animation entry and returns whether they are ready to be drawn
+		 *
+		 * Called by @ref Metadata::FindAnimation() the first time a deferred animation (see @ref metadata-deferred)
+		 * is looked up --- there is no reason to call it directly. An entry whose graphics cannot be loaded is
+		 * marked so that the attempt is not repeated on the next lookup.
+		 */
+		bool ResolveAnimation(Metadata& metadata, GraphicResource& animation);
 
 		/**
 		 * @brief Builds a 256-color palette for a player from a packed 4-byte fur color

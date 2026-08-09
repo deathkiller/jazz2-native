@@ -177,13 +177,16 @@ namespace Jazz2::Resources
 	*/
 	struct GraphicResource
 	{
-		/** @brief Underlying generic resource */
+		/** @brief Value of @ref DeferredIndex of an entry that has no graphics to load (anymore), and the number of deferred animations a single metadata can describe */
+		static constexpr std::uint16_t NotDeferred = UINT16_MAX;
+
+		/** @brief Underlying generic resource, `nullptr` until a deferred entry is resolved */
 		GenericGraphicResource* Base;
 		/** @brief Animation state */
 		AnimState State;
-		/** @brief Animation duration (in normalized frames) */
+		/** @brief Animation duration (in normalized frames), valid only once @ref Base is loaded */
 		float AnimDuration;
-		/** @brief Frame count */
+		/** @brief Frame count, valid only once @ref Base is loaded */
 		std::int32_t FrameCount;
 		/** @brief Frame offset */
 		std::int32_t FrameOffset;
@@ -196,12 +199,47 @@ namespace Jazz2::Resources
 		 * (e.g., the gem gradient rows).
 		 */
 		std::uint16_t PaletteOffset;
+		/**
+		 * @brief Index into @ref Metadata::DeferredAnimations describing how to load @ref Base, or @ref NotDeferred
+		 *
+		 * Three states are encoded together with @ref Base: a loaded entry has `Base != nullptr`, a deferred one
+		 * has `Base == nullptr` and a valid index, and one whose graphics could not be loaded has `Base == nullptr`
+		 * and @ref NotDeferred --- which is what keeps a missing asset from being retried on every single lookup.
+		 *
+		 * Sits next to @ref PaletteOffset, and is only 16 bits wide, so that both fit in the padding the struct
+		 * has anyway (a level holds one of these per animation state of every object type it spawns).
+		 */
+		std::uint16_t DeferredIndex;
 
 		/** @brief Creates a new instance */
 		GraphicResource() noexcept;
 
 		/** @brief Compares two resources by animation state */
 		bool operator<(const GraphicResource& p) const noexcept;
+	};
+
+	/**
+		@brief Description of a graphic resource that is loaded on first use
+
+		Everything @ref ContentResolver needs to load the sheet behind a @ref GraphicResource that was declared
+		deferred (see @ref Metadata::DeferredAnimations), i.e., the part of a metadata entry that is otherwise
+		consumed during parsing and then thrown away. One description is shared by every animation state
+		declared on the same metadata entry.
+	*/
+	struct DeferredGraphicResource
+	{
+		/** @brief Relative path to the graphics asset */
+		String Path;
+		/** @brief Animation duration override (in normalized frames), used only if @ref HasAnimDuration */
+		float AnimDuration;
+		/** @brief Frame count override, used only if @ref HasFrameCount */
+		std::int32_t FrameCount;
+		/** @brief Whether the sheet keeps raw palette indices instead of baked colors */
+		bool KeepIndexed;
+		/** @brief Whether the metadata entry specified its own animation duration */
+		bool HasAnimDuration;
+		/** @brief Whether the metadata entry specified its own frame count */
+		bool HasFrameCount;
 	};
 
 	/**
@@ -280,6 +318,22 @@ namespace Jazz2::Resources
 		Loaded from a metadata file and cached by @ref ContentResolver, it groups the animations and sounds used by
 		one object type together with its bounding box, and resolves an @ref AnimState to the matching
 		@ref GraphicResource at runtime.
+
+		@section metadata-deferred Deferred animations
+
+		A metadata file that sets `"Deferred": true` (either for the whole file or on a single animation entry)
+		is parsed as usual, but none of its sheets are read until an animation is actually looked up --- the
+		descriptions needed to load them are kept in @ref DeferredAnimations and @ref FindAnimation() resolves
+		an entry the first time it is asked for. This is what a set of assets that are *declared* together but
+		*used* apart wants: the UI metadata describes every gamepad button label, touch button and menu icon in
+		the game, while a given run of the game only ever draws the labels of one gamepad type. Everything else
+		then costs a few dozen bytes of description instead of a decoded sheet and a texture, and the ordinary
+		mark-and-sweep of the resolver still releases whatever was loaded once the metadata itself goes away.
+
+		Deferral is opt-in because it trades a load that happens at a known time (a loading screen) for one that
+		happens at first draw, which is right for UI and wrong for an actor that must animate without hitching.
+		A deferred metadata cannot derive its @ref BoundingBox from its first sheet either, so one that needs a
+		bounding box has to declare it explicitly.
 	*/
 	struct Metadata
 	{
@@ -291,6 +345,8 @@ namespace Jazz2::Resources
 		MetadataFlags Flags;
 		/** @brief Animations */
 		SmallVector<GraphicResource, 0> Animations;
+		/** @brief Descriptions of the animations that are loaded on first use (see @ref metadata-deferred) */
+		SmallVector<DeferredGraphicResource, 0> DeferredAnimations;
 		/** @brief Sounds */
 		HashMap<String, SoundResource> Sounds;
 		/** @brief Bounding box */
@@ -299,8 +355,13 @@ namespace Jazz2::Resources
 		/** @brief Creates a new instance */
 		Metadata() noexcept;
 
-		/** @brief Finds specified animation state */
-		GraphicResource* FindAnimation(AnimState state) noexcept;
+		/**
+		 * @brief Finds specified animation state
+		 *
+		 * Loads the graphics of a deferred animation (see @ref metadata-deferred) if this is the first time it
+		 * is asked for, and returns `nullptr` if they cannot be loaded.
+		 */
+		GraphicResource* FindAnimation(AnimState state);
 	};
 	
 	/**

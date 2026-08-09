@@ -104,7 +104,7 @@ namespace Jazz2
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_PS3)
-	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStationLegacy;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
 #endif
@@ -721,7 +721,10 @@ namespace
 		_configPath = "Jazz2.config"_s;
 		bool overrideConfigPath = false;
 
-#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS3)
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
@@ -1174,8 +1177,8 @@ namespace
 			GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 			defined(DEATH_TARGET_PS3)
-			// Use PlayStation button labels on the PlayStation consoles
-			GamepadButtonLabels = GamepadType::PlayStation;
+			// Use PlayStation legacy button labels on the older PlayStation consoles
+			GamepadButtonLabels = GamepadType::PlayStationLegacy;
 #elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");
 			if (isSteamDeck == "1"_s) {

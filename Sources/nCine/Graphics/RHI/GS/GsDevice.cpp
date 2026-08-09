@@ -2160,8 +2160,6 @@ namespace nCine::RHI::GS
 			// skipped, which is what left the legacy menu background (three counter-rotating tiled layers)
 			// completely black.
 			const bool axisAligned = (px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]);
-			if (!axisAligned) {
-			}
 
 			DrawState material;
 			DrawState coverage;
@@ -2434,10 +2432,27 @@ namespace nCine::RHI::GS
 			// Tiles reach here as the six vertices of two triangles, of which the fourth and fifth repeat the
 			// first and third. Recognizing that pattern lets a tile go out as one quad.
 			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			const float* v0 = group;
+			const float* v1 = group + FloatsPerVertex;
+			const float* v2 = group + 2 * FloatsPerVertex;
+			const float* v3 = group + 5 * FloatsPerVertex;
 			const bool isQuad = (triangle + 2 <= triangleCount &&
-				group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
-				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
-				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+				group[3 * FloatsPerVertex + 0] == v0[0] && group[3 * FloatsPerVertex + 1] == v0[1] &&
+				group[4 * FloatsPerVertex + 0] == v2[0] && group[4 * FloatsPerVertex + 1] == v2[1]);
+			// Whether that quad is a rectangle is a separate question, and the answer is not always yes:
+			// the destructible debris is appended to this same stream with its spin folded into its four
+			// corners (see TileMap::AppendDebrisQuad). Rebuilding one of those from two OPPOSITE corners
+			// collapses it onto its bounding box, which does not turn - it stays upright and its width
+			// runs to zero and back as the diagonal sweeps through vertical, so a spinning particle reads
+			// as one being squashed flat.
+			//
+			// Tested on the source vertices, so a tile pays eight compares and no extra transforms. That
+			// is equivalent to testing the projected ones: the layer transform is affine, so a source
+			// rectangle stays a rectangle exactly when the layer carries no rotation or shear, which is
+			// what axisAligned already says.
+			const bool isRect = (isQuad && axisAligned &&
+				v1[1] == v0[1] && v2[0] == v1[0] && v3[0] == v0[0] && v3[1] == v2[1] &&
+				v1[3] == v0[3] && v2[2] == v1[2] && v3[2] == v0[2] && v3[3] == v2[3]);
 
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
 				lastColor[0] = group[4]; lastColor[1] = group[5]; lastColor[2] = group[6]; lastColor[3] = group[7];
@@ -2446,23 +2461,33 @@ namespace nCine::RHI::GS
 				packed = PackPassColor(modulated);
 			}
 
-			if (isQuad) {
-				// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
-				// 1 = (1,1), 2 = (0,0), 3 = (0,1) - so the tile's top-left (vertex 0) fills the ax/ay = 0
-				// slots and its bottom-right (vertex 2) the ax/ay = 1 ones. The duplicated corners keep the
-				// axis-aligned test inside it agreeing with the decision made above.
+			// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
+			// 1 = (1,1), 2 = (0,0), 3 = (0,1) - which the mesh's vertex order maps onto as v1, v2, v0, v3.
+			if (isRect) {
+				// Two opposite corners describe the whole of it, so only those are transformed. The
+				// duplicated ones keep the axis-aligned test inside SubmitQuadPrimitive agreeing with the
+				// decision made here, and it goes out as a single GS SPRITE.
 				float tlX, tlY, tlU, tlV, brX, brY, brU, brV;
-				project(group, tlX, tlY, tlU, tlV);
-				project(group + 2 * FloatsPerVertex, brX, brY, brU, brV);
+				project(v0, tlX, tlY, tlU, tlV);
+				project(v2, brX, brY, brU, brV);
 				const float px[4] = { brX, brX, tlX, tlX };
 				const float py[4] = { tlY, brY, tlY, brY };
 				const float pu[4] = { brU, brU, tlU, tlU };
 				const float pvv[4] = { tlV, brV, tlV, brV };
-				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, axisAligned);
+				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, true);
+				triangle += 2;
+			} else if (isQuad) {
+				// Turned, or sheared by the layer: every corner has to be carried through, and the two
+				// triangles of a strip are what can draw it
+				float px[4], py[4], pu[4], pvv[4];
+				project(v1, px[0], py[0], pu[0], pvv[0]);
+				project(v2, px[1], py[1], pu[1], pvv[1]);
+				project(v0, px[2], py[2], pu[2], pvv[2]);
+				project(v3, px[3], py[3], pu[3], pvv[3]);
+				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, false);
 				triangle += 2;
 			} else {
-				// A lone triangle (the debris stream mixes rotated particle quads into the same mesh) goes out
-				// as a three-vertex triangle list
+				// A lone triangle, from a mesh whose vertices do not pair up into quads at all
 				float sx[3], sy[3], tu[3], tv[3];
 				for (std::int32_t i = 0; i < 3; i++) {
 					project(group + std::size_t(i) * FloatsPerVertex, sx[i], sy[i], tu[i], tv[i]);

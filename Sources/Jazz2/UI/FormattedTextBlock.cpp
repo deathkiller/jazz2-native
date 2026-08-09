@@ -165,7 +165,9 @@ namespace Jazz2::UI
 			p.X += bounds.X;
 			p.Y += bounds.Y;
 
-			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
+			// A view, not a copy: DrawString takes one, and the part's text is already in _text, so
+			// building a String here heap-allocated and copied every part of every frame for nothing
+			StringView textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
 			_font->DrawString(canvas, textPart, charOffsetShadow, p.X, p.Y + 2.8f * _defaultScale, depth - 80, Alignment::Left,
 				Colorf(0.0f, 0.0f, 0.0f, 0.29f), it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
 
@@ -182,7 +184,9 @@ namespace Jazz2::UI
 			p.X += bounds.X;
 			p.Y += bounds.Y;
 
-			String textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
+			// A view, not a copy: DrawString takes one, and the part's text is already in _text, so
+			// building a String here heap-allocated and copied every part of every frame for nothing
+			StringView textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
 			_font->DrawString(canvas, textPart, charOffset, p.X, p.Y, depth, Alignment::Left,
 				it->CurrentColor, it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
 

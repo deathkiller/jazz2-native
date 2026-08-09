@@ -949,8 +949,10 @@ namespace Jazz2::UI
 					continue;
 				}
 #endif
-				if (button.Graphics != nullptr) {
-					texture = button.Graphics->Base->TextureDiffuse.get();
+				if (button.State != AnimState::Default) {
+					if (auto* anim = _metadata->FindAnimation(button.State)) {
+						texture = anim->Base->TextureDiffuse.get();
+					}
 				}
 			}
 
@@ -997,7 +999,7 @@ namespace Jazz2::UI
 
 		// The pause/menu button is touch button 9 (see RefreshTouchButtons())
 		const auto& button = _touchButtons[9];
-		if (button.Action != PlayerAction::Menu || button.Graphics == nullptr) {
+		if (button.Action != PlayerAction::Menu || button.State == AnimState::Default) {
 			return false;
 		}
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
@@ -1752,7 +1754,7 @@ namespace Jazz2::UI
 		info.Top = std::round(edgeY);
 		info.Width = std::round(w);
 		info.Height = std::round(h);
-		info.Graphics = (state != AnimState::Default ? _metadata->FindAnimation(state) : nullptr);
+		info.State = state;
 		info.CurrentPointerId = -1;
 		info.Align = align;
 		return info;
@@ -1766,7 +1768,7 @@ namespace Jazz2::UI
 		info.Top = std::round(y * LevelHandler::DefaultWidth * 0.5f);
 		info.Width = std::round(w * LevelHandler::DefaultWidth * 0.5f);
 		info.Height = std::round(h * LevelHandler::DefaultWidth * 0.5f);
-		info.Graphics = (state != AnimState::Default ? _metadata->FindAnimation(state) : nullptr);
+		info.State = state;
 		info.CurrentPointerId = -1;
 		info.Align = align;
 		return info;

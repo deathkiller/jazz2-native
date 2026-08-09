@@ -28,6 +28,12 @@ namespace Jazz2::UI::Menu::Resources
 	static constexpr AnimState MenuDifficultySpaz = (AnimState)12;
 	/** @brief Lori difficulty selection portrait */
 	static constexpr AnimState MenuDifficultyLori = (AnimState)13;
+	/** @brief Jazz idle animation shown as a player color preview */
+	static constexpr AnimState CharacterPreviewJazz = (AnimState)14;
+	/** @brief Spaz idle animation shown as a player color preview */
+	static constexpr AnimState CharacterPreviewSpaz = (AnimState)15;
+	/** @brief Lori idle animation shown as a player color preview */
+	static constexpr AnimState CharacterPreviewLori = (AnimState)16;
 	/** @brief UAC import icon */
 	static constexpr AnimState Uac = (AnimState)20;
 	/** @brief Storage icon */
@@ -178,15 +184,50 @@ namespace Jazz2::UI::Menu::Resources
 	/** @brief Steam gamepad miscellaneous button icon */
 	static constexpr AnimState GamepadSteamMisc1 = (AnimState)102;
 
+	/** @brief Legacy PlayStation gamepad A button icon */
+	static constexpr AnimState GamepadPslA = (AnimState)103;
+	/** @brief Legacy PlayStation gamepad B button icon */
+	static constexpr AnimState GamepadPslB = (AnimState)104;
+	/** @brief Legacy PlayStation gamepad X button icon */
+	static constexpr AnimState GamepadPslX = (AnimState)105;
+	/** @brief Legacy PlayStation gamepad Y button icon */
+	static constexpr AnimState GamepadPslY = (AnimState)106;
+	/** @brief Legacy PlayStation gamepad left D-pad button icon */
+	static constexpr AnimState GamepadPslDPadLeft = (AnimState)107;
+	/** @brief Legacy PlayStation gamepad right D-pad button icon */
+	static constexpr AnimState GamepadPslDPadRight = (AnimState)108;
+	/** @brief Legacy PlayStation gamepad up D-pad button icon */
+	static constexpr AnimState GamepadPslDPadUp = (AnimState)109;
+	/** @brief Legacy PlayStation gamepad down D-pad button icon */
+	static constexpr AnimState GamepadPslDPadDown = (AnimState)110;
+	/** @brief Legacy PlayStation gamepad Guide button icon */
+	static constexpr AnimState GamepadPslGuide = (AnimState)111;
+	/** @brief Legacy PlayStation gamepad Back button icon */
+	static constexpr AnimState GamepadPslBack = (AnimState)112;
+	/** @brief Legacy PlayStation gamepad Start button icon */
+	static constexpr AnimState GamepadPslStart = (AnimState)113;
+	/** @brief Legacy PlayStation gamepad left shoulder button icon */
+	static constexpr AnimState GamepadPslLeftShoulder = (AnimState)114;
+	/** @brief Legacy PlayStation gamepad left trigger icon */
+	static constexpr AnimState GamepadPslLeftTrigger = (AnimState)115;
+	/** @brief Legacy PlayStation gamepad right shoulder button icon */
+	static constexpr AnimState GamepadPslRightShoulder = (AnimState)116;
+	/** @brief Legacy PlayStation gamepad right trigger icon */
+	static constexpr AnimState GamepadPslRightTrigger = (AnimState)117;
+	/** @brief Legacy PlayStation gamepad miscellaneous button icon */
+	static constexpr AnimState GamepadPslMisc1 = (AnimState)118;
+	/** @brief Legacy PlayStation gamepad touchpad icon */
+	static constexpr AnimState GamepadPslTouchpad = (AnimState)119;
+
 	/** @brief 16×16 application icon */
-	static constexpr AnimState Menu16 = (AnimState)110;
+	static constexpr AnimState Menu16 = (AnimState)120;
 	/** @brief 32×32 application icon */
-	static constexpr AnimState Menu32 = (AnimState)111;
+	static constexpr AnimState Menu32 = (AnimState)121;
 	/** @brief 128×128 application icon */
-	static constexpr AnimState Menu128 = (AnimState)112;
+	static constexpr AnimState Menu128 = (AnimState)122;
 
 	/** @brief Resource used to check whether Lori graphics are available */
-	static constexpr AnimState LoriExistsCheck = (AnimState)120;
+	static constexpr AnimState LoriExistsCheck = (AnimState)126;
 
 	/** @brief Touch controls D-pad icon */
 	static constexpr AnimState TouchDpad = (AnimState)130;
@@ -224,6 +265,8 @@ namespace Jazz2::UI::Menu::Resources
 						return GamepadPsLeftTrigger;
 					case GamepadType::Switch:
 						return GamepadSwitchLeftTrigger;
+					case GamepadType::PlayStationLegacy:
+						return GamepadPslLeftTrigger;
 				}
 			case AxisName::RightTrigger:
 				switch (PreferencesCache::GamepadButtonLabels) {
@@ -235,6 +278,8 @@ namespace Jazz2::UI::Menu::Resources
 						return GamepadPsRightTrigger;
 					case GamepadType::Switch:
 						return GamepadSwitchRightTrigger;
+					case GamepadType::PlayStationLegacy:
+						return GamepadPslRightTrigger;
 				}
 
 			default: return AnimState::Default; break;
@@ -331,6 +376,28 @@ namespace Jazz2::UI::Menu::Resources
 					case ButtonName::Right: return GamepadSwitchDPadRight; break;
 					case ButtonName::Misc1: return GamepadSwitchMisc1; break;
 					case ButtonName::Touchpad: return GamepadPsTouchpad; break;				// Not valid for Switch - reuse PlayStation label
+					default: return AnimState::Default; break;
+				}
+			}
+			case GamepadType::PlayStationLegacy: {
+				switch (button) {
+					case ButtonName::A: return GamepadPslA; break;
+					case ButtonName::B: return GamepadPslB; break;
+					case ButtonName::X: return GamepadPslX; break;
+					case ButtonName::Y: return GamepadPslY; break;
+					case ButtonName::Back: return GamepadPslBack; break;
+					case ButtonName::Guide: return GamepadPslGuide; break;
+					case ButtonName::Start: return GamepadPslStart; break;
+					case ButtonName::LeftStick: return GamepadXboxLeftStick; break;			// Reuse Xbox label
+					case ButtonName::RightStick: return GamepadXboxRightStick; break;		// Reuse Xbox label
+					case ButtonName::LeftBumper: return GamepadPslLeftShoulder; break;
+					case ButtonName::RightBumper: return GamepadPslRightShoulder; break;
+					case ButtonName::Up: return GamepadPslDPadUp; break;
+					case ButtonName::Down: return GamepadPslDPadDown; break;
+					case ButtonName::Left: return GamepadPslDPadLeft; break;
+					case ButtonName::Right: return GamepadPslDPadRight; break;
+					case ButtonName::Misc1: return GamepadPslMisc1; break;
+					case ButtonName::Touchpad: return GamepadPslTouchpad; break;
 					default: return AnimState::Default; break;
 				}
 			}

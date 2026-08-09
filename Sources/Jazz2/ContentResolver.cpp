@@ -586,7 +586,11 @@ namespace Jazz2
 			it->second->Flags |= MetadataFlags::Referenced;
 
 			for (const auto& resource : it->second->Animations) {
-				resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+				// Deferred animations that were never looked up have nothing to mark yet, the ones that were
+				// must be marked, because the metadata keeps pointing at them for as long as it stays cached
+				if (resource.Base != nullptr) {
+					resource.Base->Flags |= GenericGraphicResourceFlags::Referenced;
+				}
 			}
 
 #if defined(WITH_AUDIO)
@@ -628,10 +632,18 @@ namespace Jazz2
 		if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 			metadata->BoundingBox = GetVector2iFromJson(doc["BoundingBox"], Vector2i(InvalidValue, InvalidValue));
 
+			// A file can declare all of its animations deferred at once, and any single entry can opt in or out
+			// of it (see the deferred animations section of `Metadata`)
+			bool deferredByDefault = false;
+			doc["Deferred"].get(deferredByDefault);
+
 			const auto& animations = doc["Animations"];
 			if (animations.isObject()) {
 				std::size_t count = animations.getMemberCount();
 				metadata->Animations.reserve(count);
+				if (deferredByDefault) {
+					metadata->DeferredAnimations.reserve(count);
+				}
 
 				for (auto it = animations.begin(); it != animations.end(); ++it) {
 					// TODO: Keys are not used
@@ -662,14 +674,9 @@ namespace Jazz2
 					if ((*it)["PaletteOffset"].get(paletteOffset) != Json::SUCCESS || paletteOffset < 0) {
 						paletteOffset = 0;
 					}
-
-					graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset, keepIndexed);
-						// Remember the palette offset so the renderer/manual draws sample the right palette region for
-						// an indexed sprite (0 = default sprite palette; gems use the gem-gradient rows)
-						graphics.PaletteOffset = (std::uint16_t)paletteOffset;
-					if (graphics.Base == nullptr) {
-						continue;
-					}
+					// Remember the palette offset so the renderer/manual draws sample the right palette region for
+					// an indexed sprite (0 = default sprite palette; gems use the gem-gradient rows)
+					graphics.PaletteOffset = (std::uint16_t)paletteOffset;
 
 					std::int64_t frameOffset;
 					if ((*it)["FrameOffset"].get(frameOffset) != Json::SUCCESS) {
@@ -677,26 +684,48 @@ namespace Jazz2
 					}
 					graphics.FrameOffset = (std::int32_t)frameOffset;
 
-					graphics.AnimDuration = graphics.Base->AnimDuration;
-					graphics.FrameCount = graphics.Base->FrameCount;
-
-					std::int64_t frameCount;
-					if ((*it)["FrameCount"].get(frameCount) == Json::SUCCESS) {
-						graphics.FrameCount = (std::int32_t)frameCount;
-					} else {
-						graphics.FrameCount -= graphics.FrameOffset;
-					}
+					std::int64_t frameCount = 0;
+					bool hasFrameCount = ((*it)["FrameCount"].get(frameCount) == Json::SUCCESS);
 
 					// TODO: Use AnimDuration instead
-					double frameRate;
-					if ((*it)["FrameRate"].get(frameRate) == Json::SUCCESS) {
-						graphics.AnimDuration = (frameRate <= 0 ? -1.0f : (1.0f / (float)frameRate) * 5.0f);
+					double frameRate = 0;
+					bool hasAnimDuration = ((*it)["FrameRate"].get(frameRate) == Json::SUCCESS);
+					float animDuration = (hasAnimDuration && frameRate > 0 ? (1.0f / (float)frameRate) * 5.0f : -1.0f);
+
+					bool deferred = deferredByDefault;
+					(*it)["Deferred"].get(deferred);
+
+					// The index has to stay addressable by GraphicResource::DeferredIndex - a metadata that
+					// describes more animations than that just loads the rest the usual way
+					if (deferred && metadata->DeferredAnimations.size() >= GraphicResource::NotDeferred) {
+						deferred = false;
 					}
 
-					// If no bounding box is provided, use the first sprite
-					if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
-						// TODO: Remove this bounding box reduction
-						metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
+					if (deferred) {
+						// Keep just the description; the sheet is read the first time the animation is looked up
+						graphics.DeferredIndex = (std::uint16_t)metadata->DeferredAnimations.size();
+						DeferredGraphicResource& deferredGraphics = metadata->DeferredAnimations.emplace_back();
+						deferredGraphics.Path = fs::ToNativeSeparators(assetPath);
+						deferredGraphics.AnimDuration = animDuration;
+						deferredGraphics.FrameCount = (std::int32_t)frameCount;
+						deferredGraphics.KeepIndexed = keepIndexed;
+						deferredGraphics.HasAnimDuration = hasAnimDuration;
+						deferredGraphics.HasFrameCount = hasFrameCount;
+					} else {
+						graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset, keepIndexed);
+						if (graphics.Base == nullptr) {
+							continue;
+						}
+
+						graphics.AnimDuration = (hasAnimDuration ? animDuration : graphics.Base->AnimDuration);
+						graphics.FrameCount = (hasFrameCount ? (std::int32_t)frameCount : graphics.Base->FrameCount - graphics.FrameOffset);
+
+						// If no bounding box is provided, use the first sprite (a fully deferred metadata has no
+						// sprite to take it from, so it has to declare one explicitly)
+						if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
+							// TODO: Remove this bounding box reduction
+							metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
+						}
 					}
 
 					const auto& states = (*it)["States"];
@@ -772,6 +801,31 @@ namespace Jazz2
 		}
 
 		return _cachedMetadata.emplace(metadata->CacheKey, std::move(metadata)).first->second.get();
+	}
+
+	bool ContentResolver::ResolveAnimation(Metadata& metadata, GraphicResource& animation)
+	{
+		if (animation.DeferredIndex == GraphicResource::NotDeferred) {
+			// The entry was already resolved and its graphics couldn't be loaded, don't try again on every lookup
+			return false;
+		}
+
+		const DeferredGraphicResource& deferred = metadata.DeferredAnimations[animation.DeferredIndex];
+		GenericGraphicResource* base = RequestGraphics(deferred.Path, animation.PaletteOffset, deferred.KeepIndexed);
+		if (base == nullptr) {
+			// An eagerly loaded entry would have been dropped during parsing, this is the deferred equivalent.
+			// Some assets are optional by design (e.g., the check for Lori's graphics), so this isn't an error.
+			LOGD("Cannot load animation \"{}\" of metadata \"{}\"", deferred.Path, metadata.Path);
+			animation.DeferredIndex = GraphicResource::NotDeferred;
+			return false;
+		}
+
+		// The description is intentionally kept, so the graphics can be released and loaded again later without
+		// having to reparse the metadata
+		animation.Base = base;
+		animation.AnimDuration = (deferred.HasAnimDuration ? deferred.AnimDuration : base->AnimDuration);
+		animation.FrameCount = (deferred.HasFrameCount ? deferred.FrameCount : base->FrameCount - animation.FrameOffset);
+		return true;
 	}
 
 	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed)

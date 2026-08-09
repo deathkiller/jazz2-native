@@ -27,12 +27,13 @@ namespace Jazz2::UI::Menu
 		// colors). 0x38 is intentionally omitted - it has no proper gradient in the original game.
 		static const std::uint8_t FurGradientStarts[] = { 0x00, 0x10, 0x18, 0x20, 0x28, 0x30, 0x40, 0x48, 0x50, 0x58 };
 
-		// Dedicated metadata holding nothing but the idle animation of each character, one animation state
-		// per character. The full player metadata pulls in every animation and sound that character has
-		// (70-ish each), which is far more than the Dreamcast's 16 MB of main RAM can hold next to the menu
-		// itself - it ran out of both RAM and video memory and aborted. These previews draw one idle frame.
-		static constexpr StringView PreviewMetadataPath = "UI/CharacterPreviews"_s;
-		static constexpr std::int32_t PreviewCount = 3;
+		// The previews point straight at each character's idle sheet, declared among the (deferred) menu
+		// elements, so they cost nothing until this section is drawn. Requesting the full player metadata
+		// instead would pull in every animation and sound that character has (70-ish each), which is far more
+		// than the Dreamcast's 16 MB of main RAM can hold next to the menu itself - it ran out of both RAM and
+		// video memory and aborted. These previews draw one idle frame.
+		static constexpr AnimState PreviewStates[] = { CharacterPreviewJazz, CharacterPreviewSpaz, CharacterPreviewLori };
+		static constexpr std::int32_t PreviewCount = std::int32_t(arraySize(PreviewStates));
 
 		static Colorf ColorFromPacked(std::uint32_t c, float alpha)
 		{
@@ -288,7 +289,7 @@ namespace Jazz2::UI::Menu
 		// panel, reflecting the chosen colors
 		if (!_previewLoaded) {
 			_previewLoaded = true;
-			_previewMetadata = ContentResolver::Get().RequestMetadata(PreviewMetadataPath, true);
+			_previewMetadata = ContentResolver::Get().RequestMetadata("UI/MainMenu"_s);
 		}
 
 		// Each character uses a different recolor scheme, so build one preview palette per character from the fur color
@@ -305,7 +306,7 @@ namespace Jazz2::UI::Menu
 			std::int32_t available = 0;
 			float widestFrame = 0.0f;
 			for (std::int32_t i = 0; i < PreviewCount; i++) {
-				auto* res = _previewMetadata->FindAnimation((AnimState)i);
+				auto* res = _previewMetadata->FindAnimation(PreviewStates[i]);
 				if (_previewPalette[i] != nullptr && res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr) {
 					available++;
 					widestFrame = std::max(widestFrame, (float)res->Base->FrameDimensions.X);
@@ -338,7 +339,7 @@ namespace Jazz2::UI::Menu
 							continue;
 						}
 
-						auto* res = _previewMetadata->FindAnimation((AnimState)i);
+						auto* res = _previewMetadata->FindAnimation(PreviewStates[i]);
 						if (res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
 							continue;
 						}

@@ -3,6 +3,8 @@
 		"Target": "Jazz² Resurrection"
 	},
 
+	"Deferred": true,
+
 	"Animations": {
 		"WeaponBlasterJazz": {
 			"Path": "Pickup/fast_fire_jazz.aura",

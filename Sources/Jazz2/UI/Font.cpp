@@ -282,7 +282,16 @@ namespace Jazz2::UI
 		// Maximum number of lines - center and right alignment starts to glitch if text has more lines, but it should be enough in most cases
 		constexpr std::int32_t MaxLines = 16;
 
-		// Preprocessing
+		// Preprocessing. Its whole output - the total extent and the per-line widths - exists to place
+		// text that is centred, right aligned or bottom aligned. Left/top aligned text reads none of it,
+		// so measuring for it means walking every character of the string a second time to compute
+		// numbers nothing goes on to use. The credits are one long left-aligned block redrawn every
+		// frame, which is exactly the case that pays for it.
+		const Alignment horizontalAlign = (align & Alignment::HorizontalMask);
+		const Alignment verticalAlign = (align & Alignment::VerticalMask);
+		const bool measureExtent = (horizontalAlign == Alignment::Center || horizontalAlign == Alignment::Right ||
+			verticalAlign == Alignment::Center || verticalAlign == Alignment::Bottom);
+
 		float totalWidth = 0.0f, lastWidth = 0.0f, totalHeight = 0.0f;
 		float lineWidths[MaxLines];
 		float charSpacingPre = charSpacing;
@@ -290,7 +299,7 @@ namespace Jazz2::UI
 
 		std::int32_t idx = 0;
 		std::int32_t line = 0;
-		do {
+		while (measureExtent) {
 			Pair<char32_t, std::size_t> cursor = Utf8::NextChar(text, idx);
 
 			if (cursor.first() == '\n') {
@@ -357,15 +366,21 @@ namespace Jazz2::UI
 			}
 
 			idx = std::int32_t(cursor.second());
-		} while (idx < textLength);
-
-		if (totalWidth < lastWidth) {
-			totalWidth = lastWidth;
+			if (idx >= textLength) {
+				break;
+			}
 		}
-		lineWidths[line & (MaxLines - 1)] = lastWidth;
-		totalHeight += (_lineHeight * scale * lineSpacing);
 
-		charSpacing = charSpacingPre;
+		if (measureExtent) {
+			if (totalWidth < lastWidth) {
+				totalWidth = lastWidth;
+			}
+			lineWidths[line & (MaxLines - 1)] = lastWidth;
+			totalHeight += (_lineHeight * scale * lineSpacing);
+
+			// Format tags inside the walk above move this; the render pass has to start where the caller left it
+			charSpacing = charSpacingPre;
+		}
 
 		// Rendering
 		Vector2f originPos = Vector2f(x, y);
@@ -518,62 +533,96 @@ namespace Jazz2::UI
 
 						Vector2f pos = Vector2f(originPos.X + glyph.BearingX * scale, originPos.Y + glyph.BearingY * scale);
 
-						if (angleOffset > 0.0f) {
-							float currentPhase = (phase + charOffset) * angleOffset * fPi;
-							if (speed > 0.0f && (charOffset % 2) == 1) {
-								currentPhase = -currentPhase;
+						// A glyph outside the view is laid out but not drawn. Nothing above depends on this
+						// and nothing below it does either - the pen, the character counter and the wobble
+						// phase all advance regardless - so the text lays out identically either way, and a
+						// glyph that cannot be seen costs neither the two trigonometric calls of the wobble
+						// nor a render command, a material setup and a draw. That is the difference between
+						// the cost of a screen of text and the cost of all the text there is: the credits
+						// are one long block scrolled past a small window, and every line of it, on screen
+						// or not, used to be submitted every frame.
+						//
+						// Tested before the wobble rather than after, which is where the saving mostly is -
+						// a sine and a cosine per glyph is the dearest thing in this loop. That costs
+						// nothing in accuracy: the wobble is bounded by the variance, so a glyph further
+						// out than that cannot be brought back into view by it, and it is carried here as
+						// a margin. The transform is the glyph's TOP-LEFT corner, not its centre - the
+						// canvas_item vertex stage spans the quad from the model origin by spriteSize.
+						//
+						// Tested against the whole view rather than the caller's clip rectangle, which is
+						// the conservative choice: a section that clips more tightly still gets everything
+						// it asks for. A canvas that never set its view size fails open and draws
+						// everything, since culling against a zero view would silently swallow the text.
+						const float layerScale = canvas->LayerScale;
+						const Vector2f unwobbled = pos * layerScale + canvas->LayerOffset;
+						const float glyphW = glyph.Width * scale * layerScale;
+						const float glyphH = glyph.Height * scale * layerScale;
+						// One extra pixel covers the rounding to whole pixels below
+						const float marginX = (angleOffset > 0.0f ? std::abs(varianceX) * scale * layerScale : 0.0f) + 1.0f;
+						const float marginY = (angleOffset > 0.0f ? std::abs(varianceY) * scale * layerScale : 0.0f) + 1.0f;
+						const bool boundsKnown = (canvas->ViewSize.X > 0 && canvas->ViewSize.Y > 0);
+						const bool onScreen = (!boundsKnown ||
+							(unwobbled.X + glyphW + marginX >= 0.0f && unwobbled.Y + glyphH + marginY >= 0.0f &&
+							 unwobbled.X - marginX <= float(canvas->ViewSize.X) &&
+							 unwobbled.Y - marginY <= float(canvas->ViewSize.Y)));
+						if (onScreen) {
+							if (angleOffset > 0.0f) {
+								float currentPhase = (phase + charOffset) * angleOffset * fPi;
+								if (speed > 0.0f && (charOffset % 2) == 1) {
+									currentPhase = -currentPhase;
+								}
+
+								pos.X += cosf(currentPhase) * varianceX * scale;
+								pos.Y += sinf(currentPhase) * varianceY * scale;
 							}
 
-							pos.X += cosf(currentPhase) * varianceX * scale;
-							pos.Y += sinf(currentPhase) * varianceY * scale;
-						}
+							// Apply the canvas-wide draw transform (menu section transitions; identity by default)
+							pos = pos * layerScale + canvas->LayerOffset;
+							float glyphScale = scale * layerScale;
+							Colorf glyphColor = color * canvas->LayerColor;
 
-						// Apply the canvas-wide draw transform (menu section transitions; identity by default)
-						pos = pos * canvas->LayerScale + canvas->LayerOffset;
-						float glyphScale = scale * canvas->LayerScale;
-						Colorf glyphColor = color * canvas->LayerColor;
+							pos.X = std::round(pos.X);
+							pos.Y = std::round(pos.Y);
 
-						pos.X = std::round(pos.X);
-						pos.Y = std::round(pos.Y);
+							Vector4f texCoords = Vector4f(
+								glyph.Width / float(texSize.X),
+								glyph.X / float(texSize.X),
+								glyph.Height / float(texSize.Y),
+								glyph.Y / float(texSize.Y)
+							);
 
-						Vector4f texCoords = Vector4f(
-							glyph.Width / float(texSize.X),
-							glyph.X / float(texSize.X),
-							glyph.Height / float(texSize.Y),
-							glyph.Y / float(texSize.Y)
-						);
+							auto command = canvas->RentRenderCommand();
+							command->SetType(RenderCommand::Type::Text);
+							bool shaderChanged = (colorizeShader
+								? command->GetMaterial().SetShader(colorizeShader)
+								: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+							if (shaderChanged) {
+								command->GetMaterial().ReserveUniformsDataMemory();
+								command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+								// Required to reset render command properly
+								//command->SetTransformation(command->transformation());
 
-						auto command = canvas->RentRenderCommand();
-						command->SetType(RenderCommand::Type::Text);
-						bool shaderChanged = (colorizeShader
-							? command->GetMaterial().SetShader(colorizeShader)
-							: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
-						if (shaderChanged) {
-							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
-							// Required to reset render command properly
-							//command->SetTransformation(command->transformation());
-
-							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-								textureUniform->SetIntValue(0); // GL_TEXTURE0
+								auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+								if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+									textureUniform->SetIntValue(0); // GL_TEXTURE0
+								}
 							}
+
+							// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
+							// when drawn into an RGBA render target, harmless for opaque/RGB targets
+							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+
+							auto* instanceBlock = command->GetInstanceBlock();
+							instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+							instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
+							instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
+
+							command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+							command->SetLayer(z - (charOffset & 1));
+							command->GetMaterial().SetTexture(*_texture.get());
+
+							canvas->_currentRenderQueue->AddCommand(command);
 						}
-
-						// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
-						// when drawn into an RGBA render target, harmless for opaque/RGB targets
-						command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
-
-						auto* instanceBlock = command->GetInstanceBlock();
-						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
-						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
-
-						command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
-						command->SetLayer(z - (charOffset & 1));
-						command->GetMaterial().SetTexture(*_texture.get());
-
-						canvas->_currentRenderQueue->AddCommand(command);
 					}
 
 					originPos.X += ((glyph.Advance + _baseSpacing) * scale * charSpacing);

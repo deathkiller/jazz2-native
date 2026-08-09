@@ -69,13 +69,14 @@ namespace Jazz2::UI::Menu
 					default:
 					case GamepadType::Xbox: return "Xbox"_s;
 					case GamepadType::PlayStation: return "PlayStation™"_s;
+					case GamepadType::PlayStationLegacy: return "PlayStation™ (Legacy)"_s;
 					case GamepadType::Steam: return "Steam Deck"_s;
 					case GamepadType::Switch: return "Switch"_s;
 				}
 			},
 			[this](std::int32_t direction) {
-				// 4 contiguous values; Left/Right step backward/forward with wraparound
-				PreferencesCache::GamepadButtonLabels = (GamepadType)(((std::int32_t)PreferencesCache::GamepadButtonLabels + direction + 4) % 4);
+				// 5 contiguous values; Left/Right step backward/forward with wraparound
+				PreferencesCache::GamepadButtonLabels = (GamepadType)(((std::int32_t)PreferencesCache::GamepadButtonLabels + direction + 5) % 5);
 				_isDirty = true;
 			});
 

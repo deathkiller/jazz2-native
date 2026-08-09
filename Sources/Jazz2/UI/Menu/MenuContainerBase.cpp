@@ -15,7 +15,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	MenuContainerBase::MenuContainerBase()
-		: _contentBounds(), _activeCanvas(ActiveCanvas::Background), _metadata(nullptr), _optionalMetadata(nullptr), _smallFont(nullptr),
+		: _contentBounds(), _activeCanvas(ActiveCanvas::Background), _metadata(nullptr), _smallFont(nullptr),
 			_mediumFont(nullptr), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll), _touchButtonsTimer(0.0f)
 	{
 	}
@@ -186,21 +186,12 @@ namespace Jazz2::UI::Menu
 
 	GraphicResource* MenuContainerBase::FindElement(AnimState state)
 	{
-		if (auto* res = _metadata->FindAnimation(state)) {
-			return res;
-		}
-
-		// The difficulty portraits are true-colour art of a few hundred kilobytes each - over two megabytes
-		// between them once the decode buffer and the texture copy are both counted. Only the start-game and
-		// create-game sections show them, so they live in their own metadata and load the first time one is
-		// drawn. The in-game menu never asks, which is what lets it open inside a level at all.
-		if (_optionalMetadata == nullptr) {
-			_optionalMetadata = ContentResolver::Get().RequestMetadata("UI/CharacterArt"_s);
-			if (_optionalMetadata == nullptr) {
-				return nullptr;
-			}
-		}
-		return _optionalMetadata->FindAnimation(state);
+		// The menu metadata is declared deferred, so an element costs nothing until it's actually drawn - which
+		// is what lets one file describe everything both containers can show. It matters most for the elements
+		// that are big (the difficulty portraits are true-colour art of a few hundred kilobytes each) or that
+		// come in mutually exclusive sets (only one gamepad's button labels are ever drawn), and for the in-game
+		// menu, which reloads this metadata inside a level and draws only a fraction of it.
+		return _metadata->FindAnimation(state);
 	}
 
 	void MenuContainerBase::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
