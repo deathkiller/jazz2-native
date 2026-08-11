@@ -26,8 +26,12 @@ jobs:
     runs-on: 'ubuntu-latest'
 
     env:
+      # PSL1GHT is deliberately NOT set here. Some portlibs (pthread-emb) include PSL1GHT's `base_rules`
+      # and derive the compiler as `$(PSL1GHT)/ppu/bin/ppu-gcc`, i.e. they assume PSL1GHT names the
+      # TOOLCHAIN prefix. Exporting the path the game build wants instead ($PS3DEV/psl1ght, which is where
+      # the SDK's headers end up) sends them looking for a compiler that is not there, and step 9 dies
+      # after most of the portlibs have already built. It is resolved for the CMake steps below instead.
       PS3DEV: /opt/ps3dev
-      PSL1GHT: /opt/ps3dev/psl1ght
 
     steps:
     - name: 'Checkout Repository'
@@ -108,11 +112,27 @@ jobs:
       run: |
         rm -f ./Content/Translations/*.po
 
-        # ppu-gcc reads $PSL1GHT out of the environment and refuses to run without it, and the packaging
-        # tools live in $PS3DEV/bin - both are exported for every later step through the job's `env`
+        # The packaging tools live in $PS3DEV/bin
         echo "${PS3DEV}/bin" >> $GITHUB_PATH
         echo "${PS3DEV}/ppu/bin" >> $GITHUB_PATH
         echo "${PS3DEV}/spu/bin" >> $GITHUB_PATH
+
+        # Now that the toolchain scripts have run and can no longer be confused by it, PSL1GHT is pinned
+        # to wherever step 8 actually put the SDK headers - which is what our toolchain file means by it.
+        # Both layouts are accepted because the historical one installs into the toolchain prefix itself.
+        # ppu-gcc reads this out of the environment and refuses to run without it, so it is exported for
+        # this step's configure and recorded for the build step, which runs in a fresh shell.
+        if [ -f "${PS3DEV}/psl1ght/ppu/include/ppu-lv2.h" ]; then
+          PSL1GHT="${PS3DEV}/psl1ght"
+        elif [ -f "${PS3DEV}/ppu/include/ppu-lv2.h" ]; then
+          PSL1GHT="${PS3DEV}"
+        else
+          echo "PSL1GHT not found: no ppu-lv2.h under ${PS3DEV}/psl1ght or ${PS3DEV}" >&2
+          exit 1
+        fi
+        export PSL1GHT
+        echo "PSL1GHT=${PSL1GHT}" >> $GITHUB_ENV
+        echo "Using PSL1GHT=${PSL1GHT}"
 
         git config --global --add safe.directory '*'
         # PSL1GHT is Makefile-based and ships no CMake toolchain file, so this one lives with the project.
