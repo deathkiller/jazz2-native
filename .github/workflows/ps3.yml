@@ -26,11 +26,8 @@ jobs:
     runs-on: 'ubuntu-latest'
 
     env:
-      # PSL1GHT is deliberately NOT set here. Some portlibs (pthread-emb) include PSL1GHT's `base_rules`
-      # and derive the compiler as `$(PSL1GHT)/ppu/bin/ppu-gcc`, i.e. they assume PSL1GHT names the
-      # TOOLCHAIN prefix. Exporting the path the game build wants instead ($PS3DEV/psl1ght, which is where
-      # the SDK's headers end up) sends them looking for a compiler that is not there, and step 9 dies
-      # after most of the portlibs have already built. It is resolved for the CMake steps below instead.
+      # PSL1GHT is deliberately NOT set job-wide, because the two halves of this workflow mean different
+      # things by it and one value cannot serve both - see the install and configure steps below.
       PS3DEV: /opt/ps3dev
 
     steps:
@@ -103,6 +100,14 @@ jobs:
         # host tools the packaging step runs - fself, make_self_npdrm, sfo, pkg, sprxlinker. Step 9 builds
         # the portlibs, of which zlib is a hard requirement: without it DeflateStream has no implementation
         # and the game's compatibility layer does not link.
+        #
+        # PSL1GHT must equal PS3DEV for these scripts, and both of their constraints say so: check-psl1ght.sh
+        # refuses to run unless it is set at all, while the portlibs that include PSL1GHT's `base_rules`
+        # (pthread-emb) resolve their compiler as `$(PSL1GHT)/ppu/bin/ppu-gcc` and so read it as the
+        # TOOLCHAIN prefix. That is the SDK's native layout - the headers land in $PS3DEV/ppu/include
+        # alongside newlib's - and it is what the configure step detects afterwards. Our CMake toolchain
+        # file means something narrower by the same name: the directory holding ppu-lv2.h.
+        export PSL1GHT="${PS3DEV}"
         export PATH="${PS3DEV}/bin:${PS3DEV}/ppu/bin:${PS3DEV}/spu/bin:${PATH}"
         git clone --depth 1 https://github.com/ps3dev/ps3toolchain /tmp/ps3toolchain
         cd /tmp/ps3toolchain
