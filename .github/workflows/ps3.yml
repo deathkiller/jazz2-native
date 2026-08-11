@@ -65,20 +65,35 @@ jobs:
 
     - name: 'Install Dependencies'
       run: |
-        # libtool is the one dependency ps3toolchain does not check for, and the portlibs in step 9 are
-        # autotools projects. cmake and ninja are already on the runner image.
+        # toolchain.sh runs EVERY one of its depends/check-*.sh up front, whichever steps are asked for,
+        # so all of them have to pass even though this job only builds PSL1GHT and the portlibs. This is
+        # the upstream Debian list minus what an ubuntu-latest runner already has (gcc, g++, make, patch,
+        # wget). Two of these are easy to get wrong: Debian splits libtool into the macros (`libtool`) and
+        # the binary that check-libtool.sh actually looks for (`libtool-bin`), and check-libelf.sh wants
+        # the headers from `libelf-dev`, not the runtime library.
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends autoconf automake libtool pkg-config texinfo
+        sudo apt-get install -y --no-install-recommends \
+          autoconf automake bison flex libelf-dev libgmp3-dev libncurses-dev libssl-dev \
+          libtool libtool-bin pkg-config python-is-python3 texinfo zlib1g-dev
 
     - name: 'Install Toolchain'
       if: steps.cache-ps3dev.outputs.cache-hit != 'true'
       run: |
-        # The prebuilt powerpc64-ps3-elf compilers - building them from source takes hours. The tarball
-        # carries its own "ps3dev" top-level directory, so it unpacks next to where PS3DEV points.
-        sudo mkdir -p /opt
+        # The prebuilt powerpc64-ps3-elf compilers - building them from source takes hours. The toolchain
+        # is relocatable (nothing bakes the prefix in), so it can live wherever PS3DEV points. Unpacked
+        # through a temporary directory because whether the asset carries its own top-level folder is not
+        # something to depend on, and getting it wrong would nest the tree one level too deep.
         curl -fsSL -o /tmp/ps3dev.tar.gz "${{ steps.toolchain.outputs.url }}"
-        sudo tar xzf /tmp/ps3dev.tar.gz -C /opt
-        sudo chown -R "$(id -u):$(id -g)" /opt/ps3dev
+        mkdir -p /tmp/ps3dev-extract
+        tar xzf /tmp/ps3dev.tar.gz -C /tmp/ps3dev-extract
+        SRC=/tmp/ps3dev-extract
+        if [ "$(ls -1 "${SRC}" | wc -l)" = "1" ] && [ -d "${SRC}/$(ls -1 "${SRC}")" ]; then
+          SRC="${SRC}/$(ls -1 "${SRC}")"
+        fi
+        sudo mkdir -p "${PS3DEV}"
+        sudo cp -a "${SRC}/." "${PS3DEV}/"
+        sudo chown -R "$(id -u):$(id -g)" "${PS3DEV}"
+        test -x "${PS3DEV}/ppu/bin/ppu-gcc" || { echo "ppu-gcc missing under ${PS3DEV} after unpacking" >&2; ls -la "${PS3DEV}"; exit 1; }
 
         # Step 8 builds PSL1GHT itself (librsx, libgcm_sys, libio, libaudio, libsysutil) together with the
         # host tools the packaging step runs - fself, make_self_npdrm, sfo, pkg, sprxlinker. Step 9 builds
