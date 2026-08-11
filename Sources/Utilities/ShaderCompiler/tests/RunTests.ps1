@@ -49,7 +49,7 @@ $errorCases = @{
     'FragColorInBody' = @(8, 'fragColor')
     'PrecisionInvalid' = @(2, 'unsupported precision')
     'VertexEarlyReturn' = @(9, 'not allowed in vertex()')
-    'StageIfDefined' = @(3, 'support only the "#ifdef"/"#ifndef" forms')
+    'StageDefine' = @(6, 'cannot be defined or undefined')
 }
 
 foreach ($shader in Get-ChildItem (Join-Path $testsDir 'errors\*.shader')) {
@@ -104,8 +104,9 @@ Assert ($h.Contains("{ `"`", `"`",`n#if defined(WITH_RHI_GL) && !defined(RHI_GL_
 $h = Emit 'PrecisionHighp'
 $fs = Get-Source $h 'PrecisionHighp_Fs'
 $vs = Get-Source $h 'PrecisionHighp_Vs'
-Assert ($fs.Contains("#ifdef GL_ES`nprecision highp float;`n#endif")) 'PrecisionHighp: FS prologue is not highp'
-Assert (-not $fs.Contains('precision mediump float;')) 'PrecisionHighp: FS still contains a mediump prologue'
+# A "highp" fragment prologue falls back to mediump where the ES implementation has no high
+# precision in the fragment stage, so the prologue is the GL_FRAGMENT_PRECISION_HIGH pair
+Assert ($fs.Contains("#ifdef GL_ES`n#	ifdef GL_FRAGMENT_PRECISION_HIGH`nprecision highp float;`n#	else`nprecision mediump float;`n#	endif`n#endif")) 'PrecisionHighp: FS prologue is not the highp/mediump GL_FRAGMENT_PRECISION_HIGH pair'
 Assert (([regex]::Matches($fs, [regex]::Escape('precision highp float;'))).Count -eq 2) 'PrecisionHighp: three-token passthrough missing from FS globals'
 Assert ($vs.Contains("precision highp float;")) 'PrecisionHighp: three-token passthrough missing from VS globals'
 
@@ -154,8 +155,10 @@ Assert ($vs.Contains("	vColor = COLOR;`n}")) 'CanvasVertex: epilogue shape after
 Assert ($vs.Contains('flat out highp vec2 vOrigin;')) 'CanvasVertex: read varying vOrigin lost its VS qualifiers'
 Assert ($fs.Contains('flat in highp vec2 vOrigin;')) 'CanvasVertex: read varying vOrigin lost its FS declaration'
 
-# StageGuards: compile-time resolution of #ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE (+#else),
-# nested in both directions; unknown conditionals (#ifdef TINT) pass through textually
+# StageGuards: compile-time resolution of #ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE (+#else) and
+# of the "#if" expression spelling, nested in both directions; unknown conditionals (#ifdef TINT)
+# pass through textually, and an expression mixing a stage macro with an unknown one keeps its
+# conditional and loses only the stage macro
 $h = Emit 'StageGuards'
 $vs = Get-Source $h 'StageGuards_Vs'
 $fs = Get-Source $h 'StageGuards_Fs'
@@ -170,6 +173,10 @@ Assert ($fs.Contains('uniform sampler2D uTexture;')) 'StageGuards: FS lost the #
 Assert (-not $fs.Contains('uVertexOnly')) 'StageGuards: #ifndef FRAGMENT_STAGE branch leaked into FS'
 Assert ($fs.Contains("#ifdef TINT`nuniform vec4 uTintColor;`nuniform float uTintStrength;`n#endif")) 'StageGuards: stage guard inside #ifdef TINT not resolved in FS'
 Assert (-not $fs.Contains('uTintShift')) 'StageGuards: VS-only block leaked into FS'
+Assert ($vs.Contains('uniform vec2 uVertexExpr;') -and -not $vs.Contains('#if VERTEX_STAGE')) 'StageGuards: "#if VERTEX_STAGE && !FRAGMENT_STAGE" not resolved in the VS'
+Assert (-not $fs.Contains('uVertexExpr')) 'StageGuards: "#if VERTEX_STAGE && !FRAGMENT_STAGE" block leaked into the FS'
+Assert ($fs.Contains("#ifdef TINT`nuniform vec3 uTintExpr;`n#endif")) 'StageGuards: "#if FRAGMENT_STAGE && TINT" not folded and lowered down to "#ifdef TINT" in the FS'
+Assert (-not $vs.Contains('uTintExpr')) 'StageGuards: "#if FRAGMENT_STAGE && TINT" block leaked into the VS'
 Assert (-not $fs.Contains('aPosition') -and -not $fs.Contains('aTexCoords')) 'StageGuards: attributes leaked into FS'
 Assert (-not $h.Contains('VERTEX_STAGE') -and -not $h.Contains('FRAGMENT_STAGE')) 'StageGuards: stage macros leaked into the emitted header'
 
@@ -433,10 +440,12 @@ Assert (-not $swText.Contains('swTexture(in, 0, vec2(in.u, in.v))')) 'SwEmission
 Assert ($swText.Contains('swTexture(in, 2, vec2(in.u, in.v))')) 'SwEmission: a non-primary sampler (TEXTURE, unit 2) must keep the generic swTexture()'
 Assert (($swText.IndexOf('swTexturePrimary') -eq $swText.LastIndexOf('swTexturePrimary'))) 'SwEmission: swTexturePrimary emitted for a sampler other than uTexture'
 
-# --- software-only varyings: global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" around varying
-# declarations selects per-backend declarations. The GL/ES2/HLSL/SPIR-V emissions must carry only
-# the non-software branch (and never the macro itself); the SW transpile must see the software
-# branch and lower the per-instance-constant varying through ComputeVaryings/the uniforms struct.
+# --- software-only varyings: a global-scope SOFTWARE_RENDERER conditional around varying
+# declarations selects per-backend declarations (spelled "#if !SOFTWARE_RENDERER" here, "#ifndef
+# SOFTWARE_RENDERER" in the bodies - both spellings must be recognized). The GL/ES2/HLSL/SPIR-V
+# emissions must carry only the non-software branch (and never the macro itself); the SW transpile
+# must see the software branch and lower the per-instance-constant varying through
+# ComputeVaryings/the uniforms struct.
 $h = Emit 'SwVarying'
 $vs = Get-Source $h 'SwVarying_Vs'
 $fs = Get-Source $h 'SwVarying_Fs'
@@ -451,6 +460,28 @@ $swText2 = [System.IO.File]::ReadAllText($swOut2)
 Assert ($swText2.Contains('io->vRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));')) 'SwVarying: SW ComputeVaryings does not fill the constant varying from the instance block'
 Assert ($swText2.Contains('unis->vRect.xy()')) 'SwVarying: SW fragment does not read the constant varying from the uniforms struct'
 Assert (-not $swText2.Contains('vPos')) 'SwVarying: non-software branch leaked into the SW transpile'
+
+# --- BackendConditionals: "#if"/"#elif" expressions over SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING.
+# An expression naming only those is RESOLVED (its directive lines disappear with the losing
+# branch); one that also names a macro the pass does not own keeps its conditional and loses only
+# the backend macros, so neither name can reach a compiler that would read it as undefined.
+$h = Emit 'BackendConditionals'
+$fs = Get-Source $h 'BackendConditionals_Fs'
+$fsDither = Get-Source $h 'BackendConditionals_DITHER_Fs'
+Assert ($null -ne $fs -and $null -ne $fsDither) 'BackendConditionals: sources missing'
+Assert ($fs.Contains("	if (uTint.w > 0.0) {")) 'BackendConditionals: "#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING" body missing from the GL FS'
+Assert (-not $fs.Contains('#if !')) 'BackendConditionals: the resolved conditional left its directive lines behind'
+Assert ($fs.Contains("#ifdef DITHER`n	c.rgb += vec3(0.01);`n#endif")) 'BackendConditionals: "#if DITHER && !SOFTWARE_RENDERER" not folded and lowered down to "#ifdef DITHER"'
+Assert ($fs.Contains("#if defined(DITHER) && defined(MISSING_FLAG)`n	c.rgb += vec3(0.02);`n#endif")) 'BackendConditionals: a two-flag expression must keep its shape with each flag wrapped in defined(...)'
+Assert (-not $fs.Contains('#if DITHER') -and -not $fs.Contains('&& MISSING_FLAG')) 'BackendConditionals: a bare flag left in an emitted #if - GLSL ES rejects an undefined macro there'
+Assert ($fs.Contains('c.rgb = c.rgb * c.rgb;') -and -not $fs.Contains('clamp')) 'BackendConditionals: "#if defined(SOFTWARE_RENDERER)" did not resolve to its #else side'
+Assert (-not $h.Contains('SOFTWARE_RENDERER') -and -not $h.Contains('NO_DYNAMIC_BRANCHING')) 'BackendConditionals: a backend macro leaked into the emitted header'
+$swOut3 = Join-Path $tempDir 'SwGeneratedBackend.h'
+& $tool --emit-sw-generated $swOut3 (Join-Path $testsDir 'BackendConditionals.shader') | Out-Null
+$swText3 = [System.IO.File]::ReadAllText($swOut3)
+Assert ($swText3.Contains('clamp')) 'BackendConditionals: the SW transpile did not take the "#if defined(SOFTWARE_RENDERER)" side'
+Assert (-not $swText3.Contains('0.01')) 'BackendConditionals: "#if DITHER && !SOFTWARE_RENDERER" survived into the SW transpile'
+Assert (-not $swText3.Contains('SOFTWARE_RENDERER')) 'BackendConditionals: a backend macro leaked into the SW transpile'
 
 # --- MultiOutput: multiple fragment outputs (MRT) across the offline targets ----------------------
 # The render-target contract: fragment "out" declarations map to render targets in DECLARATION ORDER

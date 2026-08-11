@@ -21,20 +21,12 @@ namespace nCine
 		windowScaling(true),
 		useBufferMapping(false),
 		useBufferStorage(true),
+		// Only the build-time override lives here. A batch size that follows from the rendering device is the
+		// device's own business and is published as IntValues::MaxBatchSize by the backend that knows it
+		// (GLRhiCapabilities for the ANGLE/Emscripten/WinRT targets, GxmRhiCapabilities, RsxRhiCapabilities);
+		// everything that sizes a batch consults that, so leaving this 0 is what lets the device speak.
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 		fixedBatchSize(WITH_FIXED_BATCH_SIZE),
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-		fixedBatchSize(24),
-#elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
-		fixedBatchSize(10),
-#elif defined(WITH_RHI_GXM)
-		// A batched draw's instance array lives in the sceGxm *default uniform buffer*, which is uploaded per
-		// draw and indexed dynamically by the shader. Sized from the 64 KB uniform-block budget the other
-		// profiles get, that array is 585 instances - 64 KB of per-draw uniform data for a PowerVR SGX543,
-		// which is not a shape this hardware is meant to be fed. The engine already forces a fixed batch on
-		// the PowerVR Rogue parts for the same reason (see Application::InitCommon()), one generation *newer*
-		// than the Vita's, so the same 10 is used here.
-		fixedBatchSize(10),
 #else
 		fixedBatchSize(0),
 #endif

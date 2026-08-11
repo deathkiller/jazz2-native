@@ -157,22 +157,40 @@
 		"body": "attribute ${1|vec2,vec3,vec4|} ${2:aValue};$0"
 	},
 	"stage conditional": {
-		"prefix": "ifdef-stage",
-		"description": "Compile-time stage conditional (rarely needed - only the #ifdef/#ifndef forms are legal)",
+		"prefix": "if-stage",
+		"description": "Compile-time stage conditional (rarely needed - the declaration is usually harmless when shared)",
 		"body": [
-			"#ifdef ${1|VERTEX_STAGE,FRAGMENT_STAGE|}",
+			"#if ${1|VERTEX_STAGE,FRAGMENT_STAGE|}",
 			"$0",
 			"#endif"
 		]
 	},
 	"software-renderer conditional": {
-		"prefix": "ifdef-software",
+		"prefix": "if-software",
 		"description": "Resolved when a stage source is built; only --emit-sw-generated defines it",
 		"body": [
-			"#ifndef SOFTWARE_RENDERER",
+			"#if !SOFTWARE_RENDERER",
 			"$0",
 			"#else",
 			"",
+			"#endif"
+		]
+	},
+	"backend conditional expression": {
+		"prefix": "if-backend",
+		"description": "One directive for several compile-time macros - resolved when a stage source is built",
+		"body": [
+			"#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING",
+			"$0",
+			"#endif"
+		]
+	},
+	"fallback define": {
+		"prefix": "ifndef-fallback",
+		"description": "A default the engine may override - a presence test of a macro that HAS a value, so #ifndef",
+		"body": [
+			"#ifndef ${1:BATCH_SIZE}",
+			"\t#define ${1:BATCH_SIZE} ${2:(585)}",
 			"#endif"
 		]
 	},

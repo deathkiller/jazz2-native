@@ -15,7 +15,7 @@ float triangleWave(float x, float period) {
 
 void fragment() {
 	vec2 scale = vColor.xy;
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 	vec2 shift1 = vTexCoords.xy;
 	vec2 shift2 = vTexCoords.zw;
 #else

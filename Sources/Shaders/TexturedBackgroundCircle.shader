@@ -72,14 +72,12 @@ void fragment() {
 
 	vec4 texColor = texture(TEXTURE, texturePos);
 
-#ifdef DITHER
-#ifndef SOFTWARE_RENDERER
+#if DITHER && !SOFTWARE_RENDERER
 	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
 #endif
-#endif
 
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 #else
 	// Software-renderer variant: the tunnel keeps its atan()-based warp geometry and the horizon
@@ -90,7 +88,7 @@ void fragment() {
 #endif
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING
 	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (UV * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));

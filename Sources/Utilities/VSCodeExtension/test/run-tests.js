@@ -301,10 +301,18 @@ function messagesOf(findings) {
 })();
 
 (function () {
-	var findings = analysis.builtinChecks('program P;\n#if defined(VERTEX_STAGE)\n#endif\nvoid vertex() {}\nvoid fragment() {}\n');
-	contains('#if defined(VERTEX_STAGE) reported', messagesOf(findings), 'only supported in the #ifdef');
+	var findings = analysis.builtinChecks('program P;\n#define VERTEX_STAGE 1\nvoid vertex() {}\nvoid fragment() {}\n');
+	contains('#define VERTEX_STAGE reported', messagesOf(findings), 'cannot be defined or undefined');
 	var good = analysis.builtinChecks('program P;\n#ifdef VERTEX_STAGE\n#endif\nvoid vertex() {}\nvoid fragment() {}\n');
 	equal('#ifdef VERTEX_STAGE is fine', good.length, 0, messagesOf(good));
+	// The expression forms are what one directive in place of a nest of them looks like
+	var expr = analysis.builtinChecks('program P;\n#if defined(VERTEX_STAGE)\n#endif\nvoid vertex() {}\nvoid fragment() {}\n');
+	equal('#if defined(VERTEX_STAGE) is fine', expr.length, 0, messagesOf(expr));
+	var both = analysis.builtinChecks('program P;\nvoid vertex() {}\nvoid fragment() {\n#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING\n#endif\n}\n');
+	equal('#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING is fine', both.length, 0, messagesOf(both));
+	// A variant define is written bare in an #if; the compiler lowers it to #ifdef on the way out
+	var bareVariant = analysis.builtinChecks('program P;\nvariant DITHER;\nvoid vertex() {}\nvoid fragment() {\n#if DITHER && !SOFTWARE_RENDERER\n#endif\n}\n');
+	equal('#if DITHER && !SOFTWARE_RENDERER is fine', bareVariant.length, 0, messagesOf(bareVariant));
 })();
 
 (function () {

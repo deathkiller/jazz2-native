@@ -73,6 +73,16 @@ namespace nCine::RHI::GL
 		NormalizeUniformBlockSize();
 #endif
 
+		// Targets whose batch size is a deliberate choice rather than a consequence of the block budget: the
+		// batch a 64 KB block allows is far more per-draw uniform data than these drivers want to move, and
+		// on ANGLE it is also what the D3D backend behind it has to translate every frame. Stated here rather
+		// than in AppConfiguration so the number sits with the device it describes (see IntValues::MaxBatchSize).
+#if defined(DEATH_TARGET_WINDOWS_RT)
+		_intValues[(std::int32_t)IntValues::MaxBatchSize] = 24;
+#elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
+		_intValues[(std::int32_t)IntValues::MaxBatchSize] = 10;
+#endif
+
 		const char* ExtensionNames[] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_buffer_storage", "GL_ARB_get_program_binary",
 #if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)

@@ -346,6 +346,9 @@ namespace Jazz2::UI
 		_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
 		_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		// The entries reach the texture as raw uint32 values (see NormalizePaletteByteOrder above), so the
+		// texel channel order follows the host's endianness exactly as it does for the shared palette
+		ContentResolver::ConfigurePaletteTextureChannels(*_paletteTexture);
 		_paletteDirty = true;
 		_textureIndex = 0;
 		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
@@ -448,6 +451,9 @@ namespace Jazz2::UI
 		_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
 		_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		// The entries reach the texture as raw uint32 values (see NormalizePaletteByteOrder above), so the
+		// texel channel order follows the host's endianness exactly as it does for the shared palette
+		ContentResolver::ConfigurePaletteTextureChannels(*_paletteTexture);
 		_paletteDirty = true;
 		_textureIndex = 0;
 		// No _lastBuffer here: the native codec deltas in place inside _buffer (skipped spans just leave

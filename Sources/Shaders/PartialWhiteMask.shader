@@ -4,13 +4,13 @@ variant USE_PALETTE;
 
 shader_type canvas_item;
 
-#ifdef USE_PALETTE
+#if USE_PALETTE
 uniform sampler2D uTexturePalette : texture_unit(1);
 #endif
 
 vec4 maskSample(vec2 uv) {
 	vec4 src = texture(TEXTURE, uv);
-#ifdef USE_PALETTE
+#if USE_PALETTE
 	highp float palIndex = floor(PALETTE_OFFSET + 0.5) + floor(src.r * 255.0 + 0.5);
 	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;

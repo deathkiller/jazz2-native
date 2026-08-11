@@ -509,14 +509,16 @@ function builtinChecks(rawText, scanned, options) {
 			"Referencing 'fragColor' is a parse error - write 'COLOR', it is the fragment output variable itself.");
 	}
 
-	// A stage macro is only legal in #ifdef / #ifndef
+	// A compile-time macro is resolved by the compiler and never defined in an emitted source, so
+	// #ifdef / #ifndef and #if / #elif expressions are all fine but defining one is not
 	var badStageForm = allMatches(
-		/^[ \t]*#[ \t]*(if|elif|define|undef)\b.*\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER)\b.*$/gm, scan.text);
+		/^[ \t]*#[ \t]*(define|undef)\b.*\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER|NO_DYNAMIC_BRANCHING)\b.*$/gm, scan.text);
 	for (i = 0; i < badStageForm.length; i++) {
 		var stageLine = lineOfOffset(scan.text, badStageForm[i].index);
 		report(stageLine, 0, lineLength(stageLine),
-			"'" + badStageForm[i].m[2] + "' is only supported in the #ifdef / #ifndef forms - #if defined(...), #elif, #define and #undef are errors.");
+			"'" + badStageForm[i].m[2] + "' cannot be defined or undefined - it is resolved at compile time and never defined in an emitted source. Use it in #ifdef / #ifndef or in an #if / #elif expression instead.");
 	}
+
 
 	if (scan.programs.length > 1) {
 		for (i = 1; i < scan.programs.length; i++) {

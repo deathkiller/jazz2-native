@@ -1,4 +1,4 @@
-#if defined(WITH_RHI_RSX)
+﻿#if defined(WITH_RHI_RSX)
 
 #include "RsxDevice.h"
 #include "RsxRenderTarget.h"
@@ -155,7 +155,6 @@ namespace nCine::RHI::RSX
 
 	RsxVram::Block RsxDevice::_quadCornerStream;
 	RsxVram::Block RsxDevice::_batchedCornerStream;
-
 	// -- Session lifecycle ------------------------------------------------------------------------
 
 	bool RsxDevice::ConfigureVideo()
@@ -430,6 +429,13 @@ namespace nCine::RHI::RSX
 			return;
 		}
 
+		// These program the hardware directly, so the caches that guard the setters have to be put back to
+		// what is about to be written - otherwise a device that comes back up after the pipeline has already
+		// touched this state keeps stale entries and silently drops the first request to change each of them
+		_blending = BlendingState{};
+		_depthTest = DepthTestState{};
+		_cullFace = CullFaceState{};
+
 		// The engine is a 2D renderer: nothing is culled (which one of a sprite's two triangles faces the
 		// camera follows from the winding the bottom-up viewport transform gives it, not from anything the
 		// pipeline controls), and the alpha test is unused because blending covers every case.
@@ -440,6 +446,10 @@ namespace nCine::RHI::RSX
 		rsxSetDepthFunc(_context, GCM_LEQUAL);
 		rsxSetBlendEnable(_context, GCM_FALSE);
 		rsxSetBlendEquation(_context, GCM_FUNC_ADD, GCM_FUNC_ADD);
+		// The factors have to be programmed too, not just the equation: `_blending` starts out claiming
+		// One/Zero, so without this the hardware keeps whatever it powered up with and the first material
+		// that genuinely asks for One/Zero is skipped by the setter's early-out
+		rsxSetBlendFunc(_context, GCM_ONE, GCM_ZERO, GCM_ONE, GCM_ZERO);
 		rsxSetColorMask(_context, GCM_COLOR_MASK_R | GCM_COLOR_MASK_G | GCM_COLOR_MASK_B | GCM_COLOR_MASK_A);
 		rsxSetShadeModel(_context, GCM_SHADE_MODEL_SMOOTH);
 		rsxSetFrontFace(_context, GCM_FRONTFACE_CCW);
@@ -458,6 +468,7 @@ namespace nCine::RHI::RSX
 
 	void RsxDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
 	{
+
 		if (_blending.SrcRgb == srcRgb && _blending.DstRgb == dstRgb &&
 			_blending.SrcAlpha == srcAlpha && _blending.DstAlpha == dstAlpha) {
 			return;
@@ -675,10 +686,20 @@ namespace nCine::RHI::RSX
 
 		rsxSetSurface(_context, &surface);
 		_surfaceDirty = false;
-		ApplyViewportAndScissor(targetHeight);
+		ApplyViewportAndScissor(targetWidth, targetHeight);
+		// Programming a surface resets the ROP state the caches think they own, so blending silently stops
+		// happening: the setters see their cached value already matching and skip the re-enable, and every
+		// sprite from then on draws opaque (a black box around every glyph). Re-assert it here rather than
+		// per draw - this runs once per target change, which is a handful of times a frame.
+		rsxSetBlendEnable(_context, _blending.Enabled ? GCM_TRUE : GCM_FALSE);
+		rsxSetBlendFunc(_context, TranslateBlendFactor(_blending.SrcRgb), TranslateBlendFactor(_blending.DstRgb),
+			TranslateBlendFactor(_blending.SrcAlpha), TranslateBlendFactor(_blending.DstAlpha));
+		rsxSetBlendEquation(_context, GCM_FUNC_ADD, GCM_FUNC_ADD);
+		rsxSetDepthTestEnable(_context, _depthTest.TestEnabled ? GCM_TRUE : GCM_FALSE);
+		rsxSetDepthWriteEnable(_context, _depthTest.MaskEnabled ? GCM_TRUE : GCM_FALSE);
 	}
 
-	void RsxDevice::ApplyViewportAndScissor(std::int32_t targetHeight)
+	void RsxDevice::ApplyViewportAndScissor(std::int32_t targetWidth, std::int32_t targetHeight)
 	{
 		if (_context == nullptr) {
 			return;
@@ -711,9 +732,29 @@ namespace nCine::RHI::RSX
 			0.0f, 1.0f, scale, offset);
 
 		if (_scissor.Enabled) {
-			const std::int32_t scissorY = targetHeight - (_scissor.Rect.Y + _scissor.Rect.H);
-			rsxSetScissor(_context, std::uint16_t(_scissor.Rect.X), std::uint16_t(scissorY),
-				std::uint16_t(_scissor.Rect.W), std::uint16_t(_scissor.Rect.H));
+			// Clamped into the target before anything is narrowed to 16 bits. A clip rectangle is allowed to
+			// hang off the edge of what it clips - the menu's does - and the flipped Y of one that starts
+			// above the target is NEGATIVE, which as an unsigned 16-bit field becomes ~65000 and puts the
+			// scissor somewhere the target does not reach, so the whole draw is clipped away. The hardware's
+			// fields are 12 bits wide as well, so nothing may exceed 4095 either.
+			// NOT flipped against the target. The vertical flip is already in the viewport transform above -
+			// a positive Y scale with the RSX's top-left origin is exactly what stores the surface bottom-up -
+			// so for a full-target viewport the engine's bottom-left Y maps to the same window Y:
+			//   window_y = (2Y/H - 1) * (H/2) + H/2 = Y
+			// Flipping here as well put the scissor on the opposite half of the target, which clipped away
+			// whatever the rectangle was meant to keep.
+			std::int32_t sx = _scissor.Rect.X;
+			std::int32_t sy = _scissor.Rect.Y;
+			std::int32_t sw = _scissor.Rect.W;
+			std::int32_t sh = _scissor.Rect.H;
+			if (sx < 0) { sw += sx; sx = 0; }
+			if (sy < 0) { sh += sy; sy = 0; }
+			if (sw > targetWidth - sx) { sw = targetWidth - sx; }
+			if (sh > targetHeight - sy) { sh = targetHeight - sy; }
+			if (sw < 0) { sw = 0; }
+			if (sh < 0) { sh = 0; }
+			rsxSetScissor(_context, std::uint16_t(std::min(sx, 4095)), std::uint16_t(std::min(sy, 4095)),
+				std::uint16_t(std::min(sw, 4095)), std::uint16_t(std::min(sh, 4095)));
 		} else {
 			// There is no scissor-enable bit on the RSX; a scissor covering the whole target is how it is
 			// turned off, and 4095 is the largest rectangle the command's 12-bit fields can express
@@ -801,9 +842,13 @@ namespace nCine::RHI::RSX
 
 	FenceHandle RsxDevice::InsertFence()
 	{
-		// The engine only uses fences to avoid overwriting a buffer the GPU may still be reading. The RSX
-		// has backend labels for exactly that, but this backend's ring buffers are sized so a frame never
-		// laps itself, so a fence is reported as immediately signalled rather than costing a real sync.
+		// The engine only uses fences to keep from overwriting a buffer the GPU may still be reading, and on
+		// this backend the ring is deep enough that the wait can never be the thing that saves it: the PPE is
+		// held to one frame ahead by the `gcmSetWaitFlip()` in PresentFrame() (there are two display buffers),
+		// while RenderBuffersManager cycles its streaming buffers through three sections. A section is
+		// therefore reused two frames after the GPU last read it. Reporting the fence signalled is honest
+		// under that invariant - but it is the RING that provides the safety, not this function, so a backend
+		// change that drops the sections or deepens the run-ahead has to give this a real backend label.
 		return FenceHandle{};
 	}
 
@@ -859,8 +904,13 @@ namespace nCine::RHI::RSX
 		rsxSetViewport(_context, 0, 0, std::uint16_t(_displayWidth), std::uint16_t(_displayHeight), 0.0f, 1.0f, scale, offset);
 		rsxSetScissor(_context, 0, 0, 4095, 4095);
 
-		rsxSetBlendEnable(_context, GCM_FALSE);
-		rsxSetDepthTestEnable(_context, GCM_FALSE);
+		// Through the cached setters, NOT rsxSetBlendEnable()/rsxSetDepthTestEnable() directly: those would
+		// change the hardware while `_blending`/`_depthTest` still claimed the pipeline's last values, and the
+		// early-out in those setters would then swallow the next frame's request to turn blending back on.
+		// The result is that only the first frame blends and every later one draws sprites opaque - which
+		// shows up as a black box around every glyph.
+		SetBlendingEnabled(false);
+		SetDepthTestEnabled(false);
 
 		if (_presentVertexProgram != nullptr && _presentFragmentProgram != nullptr && _presentVertices.IsValid()) {
 			rsxInvalidateTextureCache(_context, GCM_INVALIDATE_TEXTURE);
@@ -1037,7 +1087,6 @@ namespace nCine::RHI::RSX
 		if (program == nullptr || _context == nullptr) {
 			return;
 		}
-
 		// Loose uniforms: the value the uniform cache last committed, published through the program
 		for (const RsxUniformSlot& slot : program->GetVertexUniformSlots()) {
 			if (const std::uint8_t* data = program->ResolveUniform(slot.Name)) {
@@ -1045,6 +1094,7 @@ namespace nCine::RHI::RSX
 					reinterpret_cast<const float*>(data));
 			}
 		}
+
 		for (const RsxUniformSlot& slot : program->GetFragmentUniformSlots()) {
 			if (const std::uint8_t* data = program->ResolveUniform(slot.Name)) {
 				// A fragment constant is patched into the microcode, which is why this needs the program's
@@ -1125,10 +1175,19 @@ namespace nCine::RHI::RSX
 				}
 				std::memcpy(&scratch[field.RegisterOffset * 4], source + field.SourceOffset, field.ByteSize);
 			}
-			// The count is in FLOATS, not in constant registers - librsx splits it as `count >> 5` blocks of
-			// eight registers plus a remainder, so passing the register count uploads a quarter of the
-			// element and leaves the rest of it undefined
-			rsxSetVertexProgramConstants(_context, array.BaseRegister + element * registers, registers * 4, scratch);
+				// NOT rsxSetVertexProgramConstants(): that one writes through `RSX_CONTEXT_CURRENTP`, which is
+			// `context->current` itself rather than a local cursor, so it advances the write pointer as it
+			// goes AND THEN advances it again by its whole reservation in RSX_CONTEXT_CURRENT_END(). Every
+			// call therefore leaves a reservation-sized hole of untouched memory in the command stream. The
+			// hole is harmless on the first pass through a FIFO fragment (freshly zeroed memory decodes as
+			// no-ops) but not once the ring has cycled: the stale float payloads left there by the previous
+			// pass are then executed as commands, and a 1.0f (0x3f800000) has the old JUMP bit set, so the
+			// GPU jumps to 0x1f800000 and the FIFO dies.
+			//
+			// This sibling takes its count in constant REGISTERS rather than floats and writes through an
+			// index, so the pointer moves exactly once. It also copies the second half of each 32-float
+			// block from the right place, which the other one gets wrong for elements of 8+ registers.
+			rsxLoadVertexProgramParameterBlock(_context, array.BaseRegister + element * registers, registers, scratch);
 		}
 	}
 
@@ -1214,9 +1273,13 @@ namespace nCine::RHI::RSX
 			}
 
 			// The engine's attribute index is a location in the reflection's numbering; the register the
-			// compiled stage actually reads comes from the microcode's own table
-			const std::int32_t reg = std::int32_t(attribute.GetIndex());
+			// compiled stage actually reads comes from the microcode's own table. Falling back to the
+			// location keeps a stage whose attribute the reflection does not name working as before.
+			const std::int32_t resolved = program->GetAttributeRegisterForLocation(attribute.GetIndex());
+			const std::int32_t reg = (resolved >= 0 ? resolved : std::int32_t(attribute.GetIndex()));
 			const RsxBufferObject* vbo = attribute.GetVbo();
+
+
 			if (vbo == nullptr || vbo->GetGpuData() == nullptr) {
 				continue;
 			}
@@ -1228,6 +1291,7 @@ namespace nCine::RHI::RSX
 			offset += attribute.GetBaseOffset() +
 				std::uint32_t(reinterpret_cast<std::uintptr_t>(attribute.GetPointer())) +
 				std::uint32_t(baseVertex) * std::uint32_t(attribute.GetStride());
+
 
 			rsxBindVertexArrayAttrib(_context, std::uint8_t(reg), 0, offset,
 				std::uint8_t(attribute.GetStride()), std::uint8_t(attribute.GetSize()),
@@ -1258,7 +1322,6 @@ namespace nCine::RHI::RSX
 		if (_context == nullptr || program == nullptr || !program->IsLinked()) {
 			return;
 		}
-
 		if (_surfaceDirty) {
 			ApplySurface();
 		} else {
@@ -1266,7 +1329,7 @@ namespace nCine::RHI::RSX
 			// are re-programmed per draw while the surface is not
 			std::int32_t targetWidth, targetHeight;
 			GetCurrentTargetSize(targetWidth, targetHeight);
-			ApplyViewportAndScissor(targetHeight);
+			ApplyViewportAndScissor(targetWidth, targetHeight);
 		}
 
 		// The whole vertex microcode travels through the FIFO - the fragment side only sends a pointer, because
@@ -1285,6 +1348,7 @@ namespace nCine::RHI::RSX
 			// output and NOPs the shader, which is why the batched stages (mask 0x1c000, one bit wider than
 			// anything else here) drew nothing at all.
 			rsxSetVertexAttribOutputMask(_context, program->GetVertexProgram()->output_mask);
+
 			rsxFlushBuffer(_context);
 		}
 		if (_lastFragmentProgram != program->GetFragmentProgram()
@@ -1316,7 +1380,14 @@ namespace nCine::RHI::RSX
 		}
 
 		UploadUniforms();
-		ApplyVertexFormat(indexed ? baseVertex : 0);
+
+
+		// A non-indexed draw's first vertex is folded into the stream offsets rather than handed to
+		// `rsxDrawVertexArray()` as its start index: `NV40TCL_VTXBUF_ADDRESS` is a full byte offset, so the
+		// two are equivalent, and this keeps the one path the hardware fetches through identical for indexed
+		// and non-indexed draws. The engine puts every mesh in a shared per-frame array buffer and expresses
+		// its position in it as this first vertex (Geometry::Draw()), so it is anything but zero.
+		ApplyVertexFormat(indexed ? baseVertex : firstVertex);
 
 		const std::uint32_t type = TranslatePrimitive(primitive);
 		if (indexed) {
@@ -1333,8 +1404,9 @@ namespace nCine::RHI::RSX
 				indexFormat == IndexFormat::UInt32 ? GCM_INDEX_TYPE_32B : GCM_INDEX_TYPE_16B,
 				GCM_LOCATION_CELL);
 		} else {
-			rsxDrawVertexArray(_context, type, std::uint32_t(firstVertex), count);
+			rsxDrawVertexArray(_context, type, 0, count);
 		}
+
 
 		// Hand the commands written so far to the GPU. This is not an optimization but a requirement: the
 		// FIFO is a ring, and when the write pointer reaches the end librsx's context callback jumps back to
@@ -1344,6 +1416,7 @@ namespace nCine::RHI::RSX
 		// command 0x..." from RPCS3). A frame of this game emits far more than the ring holds, chiefly
 		// because a batched draw writes its whole instance array as constants.
 		rsxFlushBuffer(_context);
+
 	}
 
 	void RsxDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)

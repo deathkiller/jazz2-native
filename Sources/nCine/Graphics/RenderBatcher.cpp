@@ -26,6 +26,16 @@ namespace nCine
 	{
 		std::uint32_t minBatchSize, maxBatchSize;
 		std::uint32_t fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
+		if (fixedBatchSize == 0) {
+			// A backend that publishes a hard ceiling (IntValues::MaxBatchSize) is one whose shaders were
+			// compiled for exactly that count, so it wants every batch to be that size rather than a range:
+			// clamping only the maximum would let short runs form extra small batches, and each of those
+			// still costs a whole instance block out of a uniform pool that is tiny on such backends.
+			const std::int32_t deviceMaxBatchSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxBatchSize);
+			if (deviceMaxBatchSize > 0) {
+				fixedBatchSize = std::uint32_t(deviceMaxBatchSize);
+			}
+		}
 		if (fixedBatchSize > 0) {
 			minBatchSize = fixedBatchSize;
 			maxBatchSize = fixedBatchSize;

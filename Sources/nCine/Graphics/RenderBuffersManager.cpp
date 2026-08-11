@@ -16,6 +16,18 @@ using namespace Death::Containers::Literals;
 #	define NCINE_HAS_PERSISTENT_MAPPING
 #endif
 
+// The RSX's buffer objects already ARE a persistent mapping: they live in GPU-visible main memory the PPE
+// writes straight into, so mapping is the identity and there is nothing to flush. What they lack is the
+// section ring, and on this backend that is a correctness requirement rather than an optimization - no
+// driver renames a buffer behind us, so without it the CPU rewrites the very bytes the GPU is still
+// fetching for the frame in flight. Only the tile-layer and lighting MESHES stream through these buffers
+// (sprites take their geometry from the device's static corner stream), which is why they were the only
+// thing that flickered.
+#if defined(WITH_RHI_RSX)
+#	define NCINE_HAS_PERSISTENT_MAPPING
+#	define NCINE_ALWAYS_PERSISTENT_MAPPING
+#endif
+
 namespace nCine
 {
 	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, bool useBufferStorage, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize)
@@ -25,7 +37,13 @@ namespace nCine
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 
-#if defined(NCINE_HAS_PERSISTENT_MAPPING)
+#if defined(NCINE_ALWAYS_PERSISTENT_MAPPING)
+		// Not a preference: the section ring is what keeps the CPU off memory the GPU is still reading, so it
+		// is not left to the `useBufferStorage` toggle the way the OpenGL optimization is
+		static_cast<void>(useBufferStorage);
+		_usePersistentMapping = true;
+		LOGI("Streaming buffers use a {}-section ring so a frame cannot overwrite the one still in flight", NumPersistentSections);
+#elif defined(NCINE_HAS_PERSISTENT_MAPPING)
 		const std::int32_t glMajor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Major);
 		const std::int32_t glMinor = caps.GetApiVersion(RHI::IRhiCapabilities::ApiVersion::Minor);
 		const bool hasBufferStorage = caps.HasExtension(RHI::IRhiCapabilities::Extensions::ArbBufferStorage) ||

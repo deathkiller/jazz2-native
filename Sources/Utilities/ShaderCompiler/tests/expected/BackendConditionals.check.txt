@@ -1,0 +1,12 @@
+program BackendConditionals
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform vec4 uTint
+  texture uTexture unit=0
+  attribute vec2 aPosition location=0
+variant DITHER
+  define DITHER
+  uniform mat4 uProjectionMatrix
+  uniform vec4 uTint
+  texture uTexture unit=0
+  attribute vec2 aPosition location=0

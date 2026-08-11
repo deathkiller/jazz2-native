@@ -238,11 +238,12 @@ namespace nCine::RHI::RSX
 				// larger batch would read past it. The generated microcode bakes in the same bound.
 				if (effectiveBatchSize > RsxDevice::MaxBatchSize) {
 					// Clamping here only bounds what this program advertises; it cannot bound what the engine
-					// collects, which comes from AppConfiguration::fixedBatchSize. If the two disagree the
-					// batcher writes past the end of the instance array it was given, so say so loudly rather
-					// than clamping in silence - that silence is what hid exactly this mismatch before.
-					LOGE("Uniform block \"{}\" wants a batch of {} but the backend caps it at {} - set "
-						"AppConfiguration::fixedBatchSize to match, or the batcher will overrun the instance array",
+					// collects. That comes from the batch size the engine derived and passed to SetBatchSize(),
+					// which is capped by the IntValues::MaxBatchSize this backend publishes - so reaching here
+					// means the capability did not make it through, and the batcher will write past the end of
+					// the instance array. Say so loudly rather than clamping in silence.
+					LOGE("Uniform block \"{}\" wants a batch of {} but the backend caps it at {} - the "
+						"IntValues::MaxBatchSize capability was not applied, and the batcher will overrun the instance array",
 						b.Name, effectiveBatchSize, RsxDevice::MaxBatchSize);
 					effectiveBatchSize = RsxDevice::MaxBatchSize;
 				}
@@ -304,6 +305,29 @@ namespace nCine::RHI::RSX
 				name = lastDot + 1;
 			}
 			_stageAttributes.push_back({name, std::uint8_t(attribs[i].index)});
+		}
+
+		// Map every location the pipeline may bind to the register the compiled stage reads it from. The two
+		// numbering schemes are independent - the reflection's is the engine's, the other is cgcomp's - and
+		// binding a stream to the reflection's number leaves the stage fetching a register nothing filled,
+		// which draws nothing at all. Only the sprite shaders' synthetic corner attributes were resolved
+		// this way before, so the shaders that do supply real per-vertex data (the tile-layer meshes) were
+		// the ones left reading empty registers.
+		for (std::uint32_t i = 0; i < MaxAttributeLocations; i++) {
+			_attributeRegisterByLocation[i] = -1;
+		}
+		if (_reflection != nullptr) {
+			for (std::size_t i = 0; i < _reflection->AttributeCount; i++) {
+				const ShaderCompiler::Attribute& a = _reflection->Attributes[i];
+				const std::int32_t location = (a.Location >= 0 ? a.Location : std::int32_t(i));
+				if (location < 0 || std::uint32_t(location) >= MaxAttributeLocations) {
+					continue;
+				}
+				const std::int32_t reg = GetStageAttributeRegister(a.Name);
+				if (reg >= 0) {
+					_attributeRegisterByLocation[location] = std::int8_t(reg);
+				}
+			}
 		}
 
 		if (_fragmentProgram == nullptr || _reflection == nullptr) {

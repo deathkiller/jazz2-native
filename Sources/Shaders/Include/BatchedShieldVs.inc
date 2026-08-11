@@ -21,7 +21,7 @@ layout (std140) uniform InstancesBlock
 
 varying vec4 vTexCoords;
 varying vec4 vColor;
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 varying vec2 vPos;
 #else
 // Software-renderer variant: see Include/ShieldVs.inc - vTexCoords carries the quad-local position
@@ -36,7 +36,7 @@ void vertex() {
 	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
 	vTexCoords = i.texRect;
 	vColor = i.color;
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 	vPos = aPosition * vec2(2.0) - vec2(1.0);
 #else
 	vShieldRect = i.texRect;

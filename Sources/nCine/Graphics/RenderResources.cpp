@@ -64,8 +64,16 @@ namespace nCine
 
 	RHI::ShaderProgram* RenderResources::GetBatchedShader(const RHI::ShaderProgram* shader)
 	{
+#if !defined(RHI_CAP_BATCHING)
+		// The backend does not batch. Reporting no batched counterpart is the whole mechanism: RenderBatcher
+		// only collects a run when one exists, so every command then passes through on its own. Doing it here
+		// covers nCine's and the game's registrations alike, without touching either one's call sites.
+		static_cast<void>(shader);
+		return nullptr;
+#else
 		auto it = _batchedShaders.find(shader);
 		return (it != _batchedShaders.end() ? it->second : nullptr);
+#endif
 	}
 
 	bool RenderResources::RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader)
@@ -244,6 +252,9 @@ namespace nCine
 
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 		std::int32_t maxUniformBlockSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxUniformBlockSizeNormalized);
+		// A backend whose instance array is not a bindable buffer cannot address more instances than its
+		// shaders were compiled for, however much block space it publishes (see IntValues::MaxBatchSize)
+		const std::int32_t maxBatchSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxBatchSize);
 
 		char sourceString[64];
 		StringView vertexStrings[2];
@@ -259,11 +270,12 @@ namespace nCine
 			// The generated program name + variant name are the identity the fixed-function console
 			// backends resolve their generated effect tables from (the shaderName is only a label)
 			shaderToLoad.shaderProgram->SetProgramIdentity(shaderToLoad.program.Name, variant.Name);
-#if defined(RHI_GL_PROFILE_ES2)
-			// ES2 disables CPU batching (no UBOs), so the batched programs are never used. Their ESSL 100
-			// form is also not valid ES2 (a "uint aMeshIndex" integer attribute), so skip compiling them -
+#if !defined(RHI_CAP_BATCHING)
+			// Where the backend does not batch, the batched programs are never used, so skip compiling them -
 			// the program object stays created (RegisterDefaultBatchedShaders only stores its pointer) but
-			// unlinked, which is fine because nothing ever draws with it.
+			// unlinked, which is fine because nothing ever draws with it. NoUniformsInBlocks is what marks a
+			// batched program here. On ES2 this is not merely an optimization: their ESSL 100 form is not
+			// valid there at all (a "uint aMeshIndex" integer attribute), so compiling them would fail.
 			if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks) {
 				continue;
 			}
@@ -300,10 +312,19 @@ namespace nCine
 							alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;
 						}
 						batchSize = maxUniformBlockSize / alignedStride;
+						if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+							batchSize = maxBatchSize;
+						}
 						LOGI("Shader \"{}\" - instance stride: {} + {} align bytes, max batch size: {}", shaderToLoad.shaderName,
 							instanceStride, alignedStride - instanceStride, batchSize);
 						hasBatchSizeDefine = true;
 					}
+				}
+
+				// The explicitly configured size is bounded by the same ceiling
+				if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+					batchSize = maxBatchSize;
+					hasBatchSizeDefine = true;
 				}
 			}
 

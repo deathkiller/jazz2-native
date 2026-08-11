@@ -42,11 +42,14 @@ GLSL it knows the language's own vocabulary and colours it distinctly:
   `blend`, `tev`, `luma_gain`), their `MATERIAL`/`ADD`/… and `MODULATE`/`LUMA_RAMP`/… values, and the
   optional context facilities (`texel_size`, `quad_origin`, `has_uniform`, …)
 - the canvas built-ins `COLOR`, `UV`, `TEXTURE`, `PALETTE_OFFSET`, `VERTEX`
-- the compile-time stage macros `VERTEX_STAGE`, `FRAGMENT_STAGE`, `SOFTWARE_RENDERER`
+- the compile-time macros `VERTEX_STAGE`, `FRAGMENT_STAGE`, `SOFTWARE_RENDERER`,
+  `NO_DYNAMIC_BRANCHING` — in `#ifdef` / `#ifndef` and in `#if` / `#elif` expressions, where one
+  directive can name several of them (`#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING`), which is
+  how a `.shader` writes every conditional
 
 Things the language rejects are scoped as errors, so a theme paints them as mistakes on sight:
 `fragColor`, a `#version` line, an unsupported canvas built-in (`TIME`, `SCREEN_UV`, …), an unknown
-render mode or hint, and a stage macro used in `#if defined(...)` / `#elif` / `#define` / `#undef`.
+render mode or hint, and `#define` / `#undef` of a compile-time macro.
 
 ### Completion
 
@@ -84,7 +87,7 @@ Two independent layers:
 2. **A few checks the extension can prove on its own,** so a file still gets feedback with no
    executable around: a missing/duplicate `program`, a missing `void fragment()` (or `void vertex()`
    in custom mode), directives written before `program`, `batched` without `shader_type canvas_item`,
-   a `#version` line, a reference to `fragColor`, a stage macro in an illegal preprocessor form, a
+   a `#version` line, a reference to `fragColor`, `#define`/`#undef` of a compile-time macro, a
    `return;` in a canvas-mode `vertex()`, and an unsupported canvas built-in.
    Every structural check stands down for a file containing `#include`, because the includes are
    expanded textually before parsing and may legitimately carry the program or an entry point.

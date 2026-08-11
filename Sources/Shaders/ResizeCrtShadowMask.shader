@@ -17,7 +17,7 @@ program ResizeCrtShadowMask;
 
 uniform sampler2D uTexture : texture_unit(0);
 
-#ifdef SIMPLE_LINEAR_GAMMA
+#if SIMPLE_LINEAR_GAMMA
 	float ToLinear1(float c) {
 		return c;
 	}
@@ -50,7 +50,7 @@ uniform sampler2D uTexture : texture_unit(0);
 // Also zero's off screen.
 vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
-#ifdef SIMPLE_LINEAR_GAMMA
+#if SIMPLE_LINEAR_GAMMA
 	return ToLinear(vec3(brightboost) * pow(texture(uTexture,pos.xy).rgb, 2.2));
 #else
 	return ToLinear(vec3(brightboost) * texture(uTexture,pos.xy).rgb);

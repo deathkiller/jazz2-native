@@ -396,7 +396,7 @@ namespace nCine::RHI::RSX
 		/** @brief Programs the surface (colour + depth) the current target renders into, if it changed */
 		static void ApplySurface();
 		/** @brief Programs the viewport and scissor of the current target from the tracked engine state */
-		static void ApplyViewportAndScissor(std::int32_t targetHeight);
+		static void ApplyViewportAndScissor(std::int32_t targetWidth, std::int32_t targetHeight);
 		/** @brief Returns the dimensions of whatever the current target is */
 		static void GetCurrentTargetSize(std::int32_t& width, std::int32_t& height);
 		/** @brief Creates the static corner streams and the present shader's geometry */

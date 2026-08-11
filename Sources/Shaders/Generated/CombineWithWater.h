@@ -79,7 +79,11 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 #endif
 
 in vec2 vTexCoords;
@@ -225,7 +229,11 @@ void main() {
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 
 varying vec2 vTexCoords;
 varying vec2 vViewSizeInv;

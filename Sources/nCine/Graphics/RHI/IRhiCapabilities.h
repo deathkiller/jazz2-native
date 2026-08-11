@@ -49,6 +49,23 @@ namespace nCine::RHI
 			MaxVertexAttribStride,
 			MaxColorAttachments,
 			NumProgramBinaryFormats,
+			/**
+				@brief Instance batch size this backend requires, or 0 to let the uniform block budget decide
+
+				The block budget is normally what limits a batch, so most backends leave this at 0 and the
+				batcher sizes itself as "block size / instance stride". Where that derivation does not hold the
+				backend states the count here, and it is applied everywhere a batch is sized - both shader
+				compilation paths and @ref RenderBatcher, which pins its minimum and maximum to it.
+
+				Two kinds of backend publish one. On the RSX it is a hard ceiling: the instance array reaches
+				the vertex program through its constant registers rather than a bindable buffer, so every
+				batched variant is compiled offline for one fixed count and cannot address more however much
+				block space is published - exceeding it overruns the instance array. Elsewhere it is a
+				deliberate choice: a backend that copies the whole array into the draw rather than binding it
+				would otherwise be handed tens of KB of per-draw uniform data, which is not a shape the
+				hardware is meant to be fed.
+			*/
+			MaxBatchSize,
 
 			Count
 		};

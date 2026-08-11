@@ -64,8 +64,8 @@
 					}
 				},
 				{
-					"comment": "Stage conditionals resolved at compile time - only the #ifdef/#ifndef forms are legal",
-					"match": "^\\s*(#\\s*(?:ifdef|ifndef))\\s+(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER)\\b",
+					"comment": "Compile-time conditionals resolved by the compiler - the #ifdef/#ifndef form",
+					"match": "^\\s*(#\\s*(?:ifdef|ifndef))\\s+(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER|NO_DYNAMIC_BRANCHING)\\b",
 					"captures": {
 						"1": {
 							"name": "keyword.control.directive.conditional.deathshader"
@@ -76,8 +76,28 @@
 					}
 				},
 				{
-					"comment": "A stage macro in any other preprocessor construct is a hard error",
-					"match": "^\\s*(#\\s*(?:if|elif|define|undef))\\b.*\\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER)\\b.*$",
+					"comment": "The same macros in an #if/#elif expression, where several of them can share one directive",
+					"begin": "^\\s*(#\\s*(?:if|elif))\\b(?=.*\\b(?:VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER|NO_DYNAMIC_BRANCHING)\\b)",
+					"end": "$",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.control.directive.conditional.deathshader"
+						}
+					},
+					"patterns": [
+						{
+							"match": "\\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER|NO_DYNAMIC_BRANCHING)\\b",
+							"name": "support.constant.stage-macro.deathshader"
+						},
+						{
+							"match": "\\bdefined\\b",
+							"name": "keyword.control.directive.deathshader"
+						}
+					]
+				},
+				{
+					"comment": "Defining or undefining one of them is a hard error - the compiler resolves them",
+					"match": "^\\s*(#\\s*(?:define|undef))\\b.*\\b(VERTEX_STAGE|FRAGMENT_STAGE|SOFTWARE_RENDERER|NO_DYNAMIC_BRANCHING)\\b.*$",
 					"name": "invalid.illegal.stage-macro-form.deathshader",
 					"captures": {
 						"1": {

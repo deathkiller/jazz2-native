@@ -13,7 +13,9 @@ layout (std140) uniform InstanceBlock
 
 varying vec4 vTexCoords;
 varying vec4 vColor;
-#ifndef SOFTWARE_RENDERER
+// The "#if" expression spelling of the conditional, recognized at global scope exactly like the
+// "#ifndef" one the bodies below use -- otherwise both sides would be parsed as one varying set
+#if !SOFTWARE_RENDERER
 varying vec2 vPos;
 #else
 // Software-only constant varying: the SW transpiler reads it from the instance block; every

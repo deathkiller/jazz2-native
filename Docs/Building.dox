@@ -251,10 +251,11 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable**, **PlayStation 2** and **PlayStation 3**) --- Enable module music audio file support, requires **libopenmpt** library
-    -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce) --- Download and compile **libopenmpt** library from source automatically
-    -   See @ref consoles-psp-limits, @ref consoles-ps2-limits and @ref consoles-ps3-limits for why
-        it's disabled on each of them --- the reasons are unrelated to each other
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable** and **PlayStation 2**) --- Enable module music audio file support, requires **libopenmpt** library
+    -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has
+    -   See @ref consoles-psp-limits and @ref consoles-ps2-limits for why it's disabled on those two ---
+        the reasons are unrelated to each other. The **PlayStation 3** builds it from source in the
+        library's single-threaded mode @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce is enabled
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support

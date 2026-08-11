@@ -240,6 +240,16 @@ namespace Jazz2
 		 */
 		Texture* GetPaletteTexture();
 		/**
+		 * @brief Declares the channel order of a texture whose texels are palette entries
+		 *
+		 * A palette entry is a `std::uint32_t` VALUE with red in the lowest byte, and such an array is uploaded by
+		 * reinterpreting it as bytes - which is R,G,B,A only on a little-endian host. Any texture filled that way has
+		 * to say so, so that backends which SAMPLE it read the channels back correctly; see the definition for why the
+		 * bytes are described rather than reordered. Public because the cinematics player builds its own palette the
+		 * same way (@ref UI::Cinematics).
+		 */
+		static void ConfigurePaletteTextureChannels(Texture& texture);
+		/**
 		 * @brief Acquires a reference-counted palette offset for the given packed fur color
 		 *
 		 * The offset is the flat offset into the shared palette texture, passed to @ref ActorBase::ActorRenderer::SetPalette

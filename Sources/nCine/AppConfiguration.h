@@ -49,7 +49,13 @@ namespace nCine
 		bool useBufferMapping;
 		/** @brief Whether persistently mapped buffer storage is used for streaming buffers, if the device supports it */
 		bool useBufferStorage;
-		/** @brief Fixed size of render commands to be collected for batching on Emscripten and ANGLE */
+		/**
+			@brief Fixed size of render commands to be collected for batching, overriding what the device asks for
+
+			0 lets the rendering backend decide - either from its uniform block budget, or from the
+			`IRhiCapabilities::IntValues::MaxBatchSize` it publishes when the budget is not what limits it.
+			Set this only to override that from the build (`WITH_FIXED_BATCH_SIZE`) or as a driver workaround.
+		*/
 		std::uint32_t fixedBatchSize;
 		/** @brief Path for the binary shaders cache (or empty to disable binary shader cache) */
 		String shaderCachePath;

@@ -66,7 +66,8 @@ namespace nCine::RHI
 	}
 
 	void RhiCapabilitiesBase::SetDeviceCapabilities(const char* renderer, std::int32_t maxTextureSize, std::int32_t maxTextureImageUnits,
-		std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments)
+		std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments,
+		std::int32_t maxBatchSize)
 	{
 		_majorVersion = 3;
 		_minorVersion = 3;
@@ -81,6 +82,7 @@ namespace nCine::RHI
 		_intValues[(std::int32_t)IntValues::MaxUniformBlockSize] = maxUniformBlockSize;
 		_intValues[(std::int32_t)IntValues::UniformBufferOffsetAlignment] = uniformBufferOffsetAlignment;
 		_intValues[(std::int32_t)IntValues::MaxColorAttachments] = maxColorAttachments;
+		_intValues[(std::int32_t)IntValues::MaxBatchSize] = maxBatchSize;
 
 		_intValues[(std::int32_t)IntValues::MaxUniformBufferBindings] = 8;
 		_intValues[(std::int32_t)IntValues::MaxVertexUniformBlocks] = 8;
@@ -161,6 +163,10 @@ namespace nCine::RHI
 			LOGI("Max uniform block size: {} ({} used)", blockSize, blockSizeUsed);
 		} else {
 			LOGI("Max uniform block size: {}", blockSize);
+		}
+		// Only the backends that cannot let the block size decide the batch publish one
+		if (_intValues[(std::int32_t)IntValues::MaxBatchSize] > 0) {
+			LOGI("Max batch size: {}", _intValues[(std::int32_t)IntValues::MaxBatchSize]);
 		}
 		if (_intValues[(std::int32_t)IntValues::MaxUniformBufferBindings] > 0) {
 			LOGI("Max uniform buffer bindings: {} (vertex {}, fragment {}), offset alignment: {}",

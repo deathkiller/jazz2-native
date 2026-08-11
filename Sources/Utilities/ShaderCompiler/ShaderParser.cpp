@@ -1,10 +1,11 @@
-#include "ShaderParser.h"
+﻿#include "ShaderParser.h"
 #include "ConstFold.h"
 
 #include <algorithm>
 #include <cstring>
 
 #include <Base/Format.h>
+#include <Containers/ArrayView.h>
 #include <Containers/GrowableArray.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
@@ -1109,11 +1110,29 @@ R"GLSL(void main()
 							p++;
 						}
 						String directive = Substr(bare, nameBegin, p - nameBegin);
-						if ((directive == "ifdef" || directive == "ifndef") && FirstIdentifier(Substr(bare, p)) == "SOFTWARE_RENDERER") {
+						// Either spelling of the conditional selects the same two sides, so the "#if" form is
+						// recognized here as well - otherwise its varyings would be parsed as one undivided
+						// set (both sides at once) instead of being tagged per backend
+						std::int32_t mode = 0;
+						if (directive == "ifdef" || directive == "ifndef") {
+							if (FirstIdentifier(Substr(bare, p)) == "SOFTWARE_RENDERER") {
+								mode = (directive == "ifdef" ? 1 : 2);
+							}
+						} else if (directive == "if") {
+							String expression = Trim(Substr(bare, p));
+							bool negated = (!expression.empty() && expression[0] == '!');
+							if (negated) {
+								expression = Trim(Substr(expression, 1));
+							}
+							if (expression == "SOFTWARE_RENDERER") {
+								mode = (negated ? 2 : 1);
+							}
+						}
+						if (mode != 0) {
 							if (swVaryingMode != 0) {
 								return Fail(diag, "nested SOFTWARE_RENDERER conditionals are not supported at global scope", line.Line);
 							}
-							swVaryingMode = (directive == "ifdef" ? 1 : 2);
+							swVaryingMode = mode;
 							swVaryingSeenElse = false;
 							swVaryingLine = line.Line;
 							continue;
@@ -3199,8 +3218,34 @@ R"GLSL(void main()
 			return "in "_s + declaration + ";"_s;
 		}
 
-		/** Returns true when @p s contains a whole-identifier occurrence of VERTEX_STAGE or FRAGMENT_STAGE */
-		bool ContainsStageMacro(StringView s)
+		// --- Compile-time conditionals (stage macros and backend macros) --------------------------------
+
+		/**
+			@brief One macro a conditional resolver owns, together with the value it has in the pass being run
+
+			Two passes own two disjoint sets: ResolveStageConditionals owns VERTEX_STAGE/FRAGMENT_STAGE (at
+			assembly time) and ResolveBackendConditionals owns SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING (when a
+			stage source is built, per emission). A pass folds only its own macros and leaves everything else
+			alone, so the two compose: an expression naming macros of both is folded once by each.
+		*/
+		struct CompileTimeMacro
+		{
+			StringView Name;
+			bool Value;
+		};
+
+		/** @brief What folding the owned macros out of one "#if"/"#elif" expression left behind */
+		enum class FoldedCondition
+		{
+			Untouched,		// The expression names no owned macro - the conditional passes through verbatim
+			False,			// Determined: false whatever the macros this pass does not own turn out to be
+			True,			// Determined: true likewise
+			Rewritten		// Partially folded - the owned macros are gone, the rest of the expression survives
+		};
+
+		/** Invokes @p callback with the [begin, end) offsets of every whole-identifier occurrence in @p s */
+		template<class Callback>
+		void ForEachIdentifier(StringView s, Callback&& callback)
 		{
 			std::size_t i = 0;
 			char previous = '\0';
@@ -3211,32 +3256,296 @@ R"GLSL(void main()
 					while (i < s.size() && IsIdentChar(s[i])) {
 						i++;
 					}
-					StringView id = Substr(s, begin, i - begin);
-					if (id == "VERTEX_STAGE" || id == "FRAGMENT_STAGE") {
-						return true;
-					}
+					callback(begin, i);
 					previous = s[i - 1];
 					continue;
 				}
 				previous = c;
 				i++;
 			}
-			return false;
+		}
+
+		/** Returns the entry of @p macros that @p id names, or `nullptr` when @p id names none of them */
+		const CompileTimeMacro* FindCompileTimeMacro(ArrayView<const CompileTimeMacro> macros, StringView id)
+		{
+			for (const CompileTimeMacro& macro : macros) {
+				if (macro.Name == id) {
+					return &macro;
+				}
+			}
+			return nullptr;
+		}
+
+		/** Returns true when @p s contains a whole-identifier occurrence of one of @p macros */
+		bool ContainsCompileTimeMacro(StringView s, ArrayView<const CompileTimeMacro> macros)
+		{
+			bool found = false;
+			ForEachIdentifier(s, [&](std::size_t begin, std::size_t end) {
+				if (FindCompileTimeMacro(macros, Substr(s, begin, end - begin)) != nullptr) {
+					found = true;
+				}
+			});
+			return found;
+		}
+
+		/**
+			Returns true when every identifier in @p s is one of @p macros (or one of the "defined"/"true"/
+			"false" keywords), i.e. when the expression's value follows from this pass's macros alone and the
+			conditional can therefore be resolved rather than merely rewritten
+		*/
+		bool IsSelfContainedCondition(StringView s, ArrayView<const CompileTimeMacro> macros)
+		{
+			bool selfContained = true;
+			ForEachIdentifier(s, [&](std::size_t begin, std::size_t end) {
+				StringView id = Substr(s, begin, end - begin);
+				if (id != "defined" && id != "true" && id != "false" && FindCompileTimeMacro(macros, id) == nullptr) {
+					selfContained = false;
+				}
+			});
+			return selfContained;
+		}
+
+		/**
+			Replaces every occurrence of an owned macro in @p s - bare, or as the operand of "defined X" /
+			"defined(X)" - with its literal value, leaving the rest of the expression byte-for-byte. Used for
+			the terms a pass cannot resolve on its own ("DITHER || SOFTWARE_RENDERER"): the block has to
+			survive, but the macro name must not reach the emitted source, where it would be silently
+			undefined instead of resolved.
+		*/
+		String SubstituteCompileTimeMacros(StringView s, ArrayView<const CompileTimeMacro> macros)
+		{
+			Array<char> out;
+			std::size_t i = 0;
+			char previous = '\0';
+			while (i < s.size()) {
+				char c = s[i];
+				if (!IsIdentStart(c) || IsIdentChar(previous)) {
+					arrayAppend(out, c);
+					previous = c;
+					i++;
+					continue;
+				}
+				std::size_t begin = i;
+				while (i < s.size() && IsIdentChar(s[i])) {
+					i++;
+				}
+				StringView id = Substr(s, begin, i - begin);
+				const CompileTimeMacro* macro = FindCompileTimeMacro(macros, id);
+				if (macro == nullptr && id == "defined") {
+					// "defined X" and "defined(X)" fold as a whole - substituting just the operand would
+					// leave the nonsensical "defined(0)" behind
+					std::size_t p = i;
+					while (p < s.size() && IsSpace(s[p])) {
+						p++;
+					}
+					bool parenthesized = (p < s.size() && s[p] == '(');
+					if (parenthesized) {
+						p++;
+						while (p < s.size() && IsSpace(s[p])) {
+							p++;
+						}
+					}
+					std::size_t operandBegin = p;
+					while (p < s.size() && IsIdentChar(s[p])) {
+						p++;
+					}
+					const CompileTimeMacro* operand = FindCompileTimeMacro(macros, Substr(s, operandBegin, p - operandBegin));
+					if (parenthesized) {
+						while (p < s.size() && IsSpace(s[p])) {
+							p++;
+						}
+						if (p < s.size() && s[p] == ')') {
+							p++;
+						} else {
+							operand = nullptr;
+						}
+					}
+					if (operand != nullptr) {
+						arrayAppend(out, operand->Value ? '1' : '0');
+						previous = (operand->Value ? '1' : '0');
+						i = p;
+						continue;
+					}
+				}
+				if (macro != nullptr) {
+					arrayAppend(out, macro->Value ? '1' : '0');
+					previous = (macro->Value ? '1' : '0');
+				} else {
+					arrayAppend(out, id);
+					previous = id[id.size() - 1];
+				}
+			}
+			return String{out.data(), out.size()};
+		}
+
+		/**
+			Folds the macros a pass owns out of one "#if"/"#elif" expression. The expression is split into its
+			top-level "&&" terms, and each term that names an owned macro is either evaluated (when it names
+			nothing else) or has its macros substituted; a term evaluating to false settles the whole
+			expression, a term evaluating to true simply drops out of the chain. So
+			"!SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING" comes out determined, "DITHER && !SOFTWARE_RENDERER"
+			comes out as "DITHER" (or determined false), and an expression naming no owned macro is reported
+			untouched so that the overwhelmingly common case costs nothing.
+
+			A malformed expression is reported untouched as well - this runs on streams the GLSL compiler is
+			about to see anyway, and it is that compiler's diagnostics that should describe the mistake.
+		*/
+		FoldedCondition FoldCondition(StringView expression, ArrayView<const CompileTimeMacro> macros, String& rewritten)
+		{
+			if (!ContainsCompileTimeMacro(expression, macros)) {
+				return FoldedCondition::Untouched;
+			}
+
+			SmallVector<StringView, 0> terms;
+			std::int32_t parens = 0;
+			std::size_t start = 0;
+			for (std::size_t i = 0; i < expression.size(); i++) {
+				char c = expression[i];
+				if (c == '(') {
+					parens++;
+				} else if (c == ')') {
+					parens--;
+					if (parens < 0) {
+						return FoldedCondition::Untouched;
+					}
+				} else if (parens == 0 && c == '&' && i + 1 < expression.size() && expression[i + 1] == '&') {
+					terms.push_back(Substr(expression, start, i - start));
+					i++;
+					start = i + 1;
+				}
+			}
+			if (parens != 0) {
+				return FoldedCondition::Untouched;
+			}
+			terms.push_back(Substr(expression, start));
+
+			Preprocessor pp;
+			for (const CompileTimeMacro& macro : macros) {
+				if (macro.Value) {
+					pp.Define(macro.Name, "1"_s);
+				}
+			}
+
+			SmallVector<String, 0> kept;
+			for (StringView term : terms) {
+				String text = Trim(term);
+				if (text.empty()) {
+					return FoldedCondition::Untouched;
+				}
+				if (!ContainsCompileTimeMacro(text, macros)) {
+					kept.push_back(std::move(text));
+					continue;
+				}
+				if (IsSelfContainedCondition(text, macros)) {
+					std::int64_t value = 0;
+					Diagnostic ignored;
+					if (!pp.EvaluateExpression(text, 0, 0, value, ignored)) {
+						return FoldedCondition::Untouched;
+					}
+					if (value == 0) {
+						return FoldedCondition::False;
+					}
+					continue;
+				}
+				kept.push_back(SubstituteCompileTimeMacros(text, macros));
+			}
+			if (kept.empty()) {
+				return FoldedCondition::True;
+			}
+
+			String joined = kept[0];
+			for (std::size_t i = 1; i < kept.size(); i++) {
+				joined = joined + " && "_s + kept[i];
+			}
+			rewritten = std::move(joined);
+			return FoldedCondition::Rewritten;
+		}
+
+		/**
+			Splits the comment-stripped line @p bare into a preprocessor directive name and the rest of the
+			line, also reporting where the '#' sits so a rewritten line can keep the original indentation.
+			Returns false when the line is not a directive at all.
+		*/
+		bool SplitDirective(StringView bare, StringView& name, StringView& rest, std::size_t& hashPos)
+		{
+			std::size_t begin = FindFirstNotOf(bare, " \t"_s);
+			if (begin == Npos || bare[begin] != '#') {
+				return false;
+			}
+			std::size_t p = begin + 1;
+			while (p < bare.size() && IsSpace(bare[p])) {
+				p++;
+			}
+			std::size_t nameBegin = p;
+			while (p < bare.size() && IsIdentChar(bare[p])) {
+				p++;
+			}
+			name = Substr(bare, nameBegin, p - nameBegin);
+			rest = Substr(bare, p);
+			hashPos = begin;
+			return true;
+		}
+
+		/**
+			Rebuilds a directive line as "<original indentation>#<directive> <expression>". Only the
+			indentation of the original survives, so a trailing comment on a directive line that gets folded
+			(rather than resolved away) is dropped with the expression it annotated
+		*/
+		String FoldedDirectiveLine(StringView original, std::size_t hashPos, StringView directive, StringView expression)
+		{
+			return Substr(original, 0, hashPos) + "#"_s + directive + " "_s + expression;
+		}
+
+		/**
+			Flags, per line index, every "#if"/"#ifdef"/"#ifndef" opener whose conditional chain contains an
+			"#elif". Such a conditional cannot be resolved away even when its own expression is determined -
+			dropping its directive lines would strand the "#elif" branches - so its opener is rewritten to
+			"#if 1"/"#if 0" instead and the chain is left for the GLSL compiler to finish.
+		*/
+		void MarkElifChains(const SmallVectorImpl<SourceLine>& stripped, SmallVectorImpl<std::uint8_t>& hasElif)
+		{
+			SmallVector<std::size_t, 0> open;
+			for (std::size_t index = 0; index < stripped.size(); index++) {
+				hasElif.push_back(0);
+				StringView name, rest;
+				std::size_t hashPos;
+				if (!SplitDirective(stripped[index].Text, name, rest, hashPos)) {
+					continue;
+				}
+				if (name == "if" || name == "ifdef" || name == "ifndef") {
+					open.push_back(index);
+				} else if (name == "elif") {
+					if (!open.empty()) {
+						hasElif[open.back()] = 1;
+					}
+				} else if (name == "endif") {
+					if (!open.empty()) {
+						open.pop_back();
+					}
+				}
+			}
 		}
 
 		/**
 			Partial preprocessing of an assembled stage stream: resolves ONLY conditionals of the
 			exact forms "#ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE" (with an optional "#else" and
-			the matching "#endif"), keeping or dropping the enclosed lines according to the stage
-			being built. Every other preprocessor conditional passes through textually untouched.
-			Nesting works in both directions: an unknown conditional inside a resolved block is
-			kept/dropped with the block, and a stage conditional inside an unknown conditional is
-			still resolved in place (its truth does not depend on the outer condition). Any other
-			preprocessor use of a stage macro (#if/#elif expressions, #define, #undef) is an
-			error — the emitted sources contain no stage macros at all.
+			the matching "#endif") and of "#if"/"#elif" expressions built from them, keeping or
+			dropping the enclosed lines according to the stage being built. Every other preprocessor
+			conditional passes through textually untouched. Nesting works in both directions: an
+			unknown conditional inside a resolved block is kept/dropped with the block, and a stage
+			conditional inside an unknown conditional is still resolved in place (its truth does not
+			depend on the outer condition). An expression mixing a stage macro with macros this pass
+			does not own ("VERTEX_STAGE && DITHER") keeps its conditional and loses only the stage
+			macro, so the emitted sources contain no stage macros either way; "#define"/"#undef" of
+			one is still an error.
 		*/
 		bool ResolveStageConditionals(SmallVectorImpl<SourceLine>& lines, bool vertexStage, Diagnostic& diag)
 		{
+			const CompileTimeMacro macros[] = {
+				{ "VERTEX_STAGE"_s, vertexStage },
+				{ "FRAGMENT_STAGE"_s, !vertexStage }
+			};
+
 			struct Cond
 			{
 				bool Stage;			// true = resolved stage conditional (its directive lines are removed)
@@ -3248,6 +3557,9 @@ R"GLSL(void main()
 			// Directives are detected on a comment-stripped copy (a block comment could hide a '#')
 			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
+
+			SmallVector<std::uint8_t, 0> hasElif;
+			MarkElifChains(stripped, hasElif);
 
 			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
@@ -3263,50 +3575,45 @@ R"GLSL(void main()
 				return false;
 			};
 
-			constexpr char OnlyIfdefForms[] = "VERTEX_STAGE/FRAGMENT_STAGE are resolved at compile time and support only the \"#ifdef\"/\"#ifndef\" forms";
-
 			for (std::size_t index = 0; index < lines.size(); index++) {
-				StringView bare = stripped[index].Text;
 				const std::int32_t lineNumber = lines[index].Line;
-				std::size_t begin = FindFirstNotOf(bare, " \t"_s);
-				if (begin != Npos && bare[begin] == '#') {
-					std::size_t p = begin + 1;
-					while (p < bare.size() && IsSpace(bare[p])) {
-						p++;
-					}
-					std::size_t nameBegin = p;
-					while (p < bare.size() && IsIdentChar(bare[p])) {
-						p++;
-					}
-					String name = Substr(bare, nameBegin, p - nameBegin);
-					String rest = Substr(bare, p);
-
+				String replacement;			// The folded spelling of a directive line that has to survive
+				bool replaced = false;
+				StringView name, rest;
+				std::size_t hashPos = 0;
+				if (SplitDirective(stripped[index].Text, name, rest, hashPos)) {
 					if (name == "ifdef" || name == "ifndef") {
-						String id = FirstIdentifier(rest);
-						if (id == "VERTEX_STAGE" || id == "FRAGMENT_STAGE") {
-							bool value = ((id == "VERTEX_STAGE") == vertexStage);
-							if (name == "ifndef") {
-								value = !value;
+						const CompileTimeMacro* macro = FindCompileTimeMacro(macros, FirstIdentifier(rest));
+						if (macro != nullptr) {
+							const bool value = ((name == "ifdef") == macro->Value);
+							if (hasElif[index] == 0) {
+								stack.push_back({ true, value, false, lineNumber });
+								removed = true;
+								continue;
 							}
-							stack.push_back({ true, value, false, lineNumber });
-							removed = true;
-							continue;
+							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, "if"_s, value ? "1"_s : "0"_s);
+							replaced = true;
 						}
 						stack.push_back({ false, true, false, lineNumber });
-					} else if (name == "if") {
-						if (ContainsStageMacro(rest)) {
-							return Fail(diag, OnlyIfdefForms, lineNumber);
-						}
-						stack.push_back({ false, true, false, lineNumber });
-					} else if (name == "elif") {
-						if (stack.empty()) {
+					} else if (name == "if" || name == "elif") {
+						if (name == "elif" && stack.empty()) {
 							return Fail(diag, "#elif without matching #if", lineNumber);
 						}
-						if (stack.back().Stage) {
-							return Fail(diag, "#elif cannot follow #ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE (only #else and #endif can)", lineNumber);
+						String rewritten;
+						const FoldedCondition folded = FoldCondition(rest, macros, rewritten);
+						const bool determined = (folded == FoldedCondition::True || folded == FoldedCondition::False);
+						if (name == "if") {
+							if (determined && hasElif[index] == 0) {
+								stack.push_back({ true, folded == FoldedCondition::True, false, lineNumber });
+								removed = true;
+								continue;
+							}
+							stack.push_back({ false, true, false, lineNumber });
 						}
-						if (ContainsStageMacro(rest)) {
-							return Fail(diag, OnlyIfdefForms, lineNumber);
+						if (folded != FoldedCondition::Untouched) {
+							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, name,
+								determined ? (folded == FoldedCondition::True ? "1"_s : "0"_s) : StringView{rewritten});
+							replaced = true;
 						}
 					} else if (name == "else") {
 						if (stack.empty()) {
@@ -3333,7 +3640,7 @@ R"GLSL(void main()
 							continue;
 						}
 					} else if (name == "define" || name == "undef") {
-						if (ContainsStageMacro(rest)) {
+						if (ContainsCompileTimeMacro(rest, macros)) {
 							return Fail(diag, "VERTEX_STAGE/FRAGMENT_STAGE cannot be defined or undefined - they are resolved at compile time and never defined in the emitted sources", lineNumber);
 						}
 					}
@@ -3349,7 +3656,11 @@ R"GLSL(void main()
 					continue;
 				}
 				removed = false;
-				output.push_back(std::move(lines[index]));
+				if (replaced) {
+					output.push_back({ std::move(replacement), lineNumber });
+				} else {
+					output.push_back(std::move(lines[index]));
+				}
 			}
 
 			if (!stack.empty()) {
@@ -3360,29 +3671,43 @@ R"GLSL(void main()
 		}
 
 		/**
-			Partial preprocessing of an assembled stage stream (BuildStageSource): resolves ONLY
-			conditionals of the exact forms "#ifdef/#ifndef SOFTWARE_RENDERER" (with an optional
-			"#else" and the matching "#endif"), keeping or dropping the enclosed lines according
-			to @p softwareRenderer - the backend the source is being built for. Every other
+			Partial preprocessing of an assembled stage stream (BuildStageSource): resolves ONLY the
+			conditionals that name SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING - the "#ifdef"/"#ifndef"
+			forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif" expressions
+			built from them - keeping or dropping the enclosed lines according to @p softwareRenderer
+			and @p noDynamicBranching, the backend the source is being built for. Every other
 			preprocessor conditional passes through textually untouched (nesting works in both
 			directions, exactly like ResolveStageConditionals), so the built sources never contain
-			the SOFTWARE_RENDERER macro at all and shaders without such blocks come out byte-for-byte
-			unchanged. Unlike the stage-macro resolver this runs on already assembled/validated
-			streams and carries no diagnostics: on a malformed conditional structure the stream is
-			left untouched (a leaked block is then caught by the generated-header staleness checks).
+			either macro and shaders without such blocks come out byte-for-byte unchanged. An
+			expression that also names a macro this pass does not own ("DITHER && !SOFTWARE_RENDERER")
+			keeps its conditional and loses only the backend macros, which is what stops the name from
+			reaching a compiler that would silently read it as undefined rather than as resolved.
+
+			Unlike the stage-macro resolver this runs on already assembled/validated streams and
+			carries no diagnostics: on a malformed conditional structure the stream is left untouched
+			(a leaked block is then caught by the generated-header staleness checks).
 		*/
-		void ResolveSoftwareRendererConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer)
+		void ResolveBackendConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer,
+			bool noDynamicBranching)
 		{
+			const CompileTimeMacro macros[] = {
+				{ "SOFTWARE_RENDERER"_s, softwareRenderer },
+				{ "NO_DYNAMIC_BRANCHING"_s, noDynamicBranching }
+			};
+
 			struct Cond
 			{
-				bool Software;		// true = resolved SOFTWARE_RENDERER conditional (its directive lines are removed)
-				bool Keep;			// Software conditionals only - the current branch is the active one
+				bool Resolved;		// true = a resolved backend conditional (its directive lines are removed)
+				bool Keep;			// Resolved conditionals only - the current branch is the active one
 				bool SeenElse;
 			};
 
 			// Directives are detected on a comment-stripped copy (a block comment could hide a '#')
 			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
+
+			SmallVector<std::uint8_t, 0> hasElif;
+			MarkElifChains(stripped, hasElif);
 
 			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
@@ -3391,7 +3716,7 @@ R"GLSL(void main()
 
 			auto dropping = [&stack]() {
 				for (const Cond& c : stack) {
-					if (c.Software && !c.Keep) {
+					if (c.Resolved && !c.Keep) {
 						return true;
 					}
 				}
@@ -3399,44 +3724,52 @@ R"GLSL(void main()
 			};
 
 			for (std::size_t index = 0; index < lines.size(); index++) {
-				StringView bare = stripped[index].Text;
-				std::size_t begin = FindFirstNotOf(bare, " \t"_s);
-				if (begin != Npos && bare[begin] == '#') {
-					std::size_t p = begin + 1;
-					while (p < bare.size() && IsSpace(bare[p])) {
-						p++;
-					}
-					std::size_t nameBegin = p;
-					while (p < bare.size() && IsIdentChar(bare[p])) {
-						p++;
-					}
-					String name = Substr(bare, nameBegin, p - nameBegin);
-					String rest = Substr(bare, p);
-
+				String replacement;			// The folded spelling of a directive line that has to survive
+				bool replaced = false;
+				StringView name, rest;
+				std::size_t hashPos = 0;
+				if (SplitDirective(stripped[index].Text, name, rest, hashPos)) {
 					if (name == "ifdef" || name == "ifndef") {
-						String id = FirstIdentifier(rest);
-						if (id == "SOFTWARE_RENDERER") {
-							bool value = softwareRenderer;
-							if (name == "ifndef") {
-								value = !value;
+						const CompileTimeMacro* macro = FindCompileTimeMacro(macros, FirstIdentifier(rest));
+						if (macro != nullptr) {
+							const bool value = ((name == "ifdef") == macro->Value);
+							if (hasElif[index] == 0) {
+								stack.push_back({ true, value, false });
+								removed = true;
+								continue;
 							}
-							stack.push_back({ true, value, false });
-							removed = true;
-							continue;
+							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, "if"_s, value ? "1"_s : "0"_s);
+							replaced = true;
 						}
 						stack.push_back({ false, true, false });
-					} else if (name == "if") {
-						stack.push_back({ false, true, false });
-					} else if (name == "elif") {
-						if (stack.empty() || stack.back().Software) {
-							return;		// Malformed (or an unsupported #elif on a resolved conditional) - leave untouched
+					} else if (name == "if" || name == "elif") {
+						// MarkElifChains keeps a conditional with an "#elif" out of the resolved state, so the
+						// second half of this can only trip on malformed nesting
+						if (name == "elif" && (stack.empty() || stack.back().Resolved)) {
+							return;		// Malformed - leave untouched
+						}
+						String rewritten;
+						const FoldedCondition folded = FoldCondition(rest, macros, rewritten);
+						const bool determined = (folded == FoldedCondition::True || folded == FoldedCondition::False);
+						if (name == "if") {
+							if (determined && hasElif[index] == 0) {
+								stack.push_back({ true, folded == FoldedCondition::True, false });
+								removed = true;
+								continue;
+							}
+							stack.push_back({ false, true, false });
+						}
+						if (folded != FoldedCondition::Untouched) {
+							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, name,
+								determined ? (folded == FoldedCondition::True ? "1"_s : "0"_s) : StringView{rewritten});
+							replaced = true;
 						}
 					} else if (name == "else") {
 						if (stack.empty()) {
 							return;		// Malformed - leave untouched
 						}
 						Cond& top = stack.back();
-						if (top.Software) {
+						if (top.Resolved) {
 							if (top.SeenElse) {
 								return;	// Malformed - leave untouched
 							}
@@ -3449,9 +3782,9 @@ R"GLSL(void main()
 						if (stack.empty()) {
 							return;		// Malformed - leave untouched
 						}
-						bool wasSoftware = stack.back().Software;
+						bool wasBackend = stack.back().Resolved;
 						stack.pop_back();
-						if (wasSoftware) {
+						if (wasBackend) {
 							removed = true;
 							continue;
 						}
@@ -3468,13 +3801,218 @@ R"GLSL(void main()
 					continue;
 				}
 				removed = false;
-				output.push_back(lines[index]);	// A copy - a malformed stream must leave "lines" fully intact
+				if (replaced) {
+					output.push_back({ std::move(replacement), lines[index].Line });
+				} else {
+					output.push_back(lines[index]);	// A copy - a malformed stream must leave "lines" fully intact
+				}
 			}
 
 			if (!stack.empty()) {
 				return;					// Unterminated conditional - leave untouched
 			}
 			lines = std::move(output);
+		}
+
+		// --- Lowering the conditionals that survive into an emitted source ------------------------------
+
+		/**
+			Collects the macros an assembled stage stream defines with a NON-EMPTY body, i.e. the ones whose
+			VALUE can matter ("#define BATCH_SIZE (585)"). LowerEmittedCondition leaves those alone and may
+			rewrite every other identifier as a flag - see there for why that split is the safe one.
+		*/
+		void CollectValueMacros(const SmallVectorImpl<SourceLine>& lines, SmallVectorImpl<String>& names)
+		{
+			for (const SourceLine& line : lines) {
+				StringView name, rest;
+				std::size_t hashPos;
+				if (!SplitDirective(line.Text, name, rest, hashPos) || name != "define") {
+					continue;
+				}
+				std::size_t p = 0;
+				while (p < rest.size() && IsSpace(rest[p])) {
+					p++;
+				}
+				std::size_t begin = p;
+				while (p < rest.size() && IsIdentChar(rest[p])) {
+					p++;
+				}
+				if (p > begin && FindFirstNotOf(rest, " \t"_s, p) != Npos) {
+					names.push_back(Substr(rest, begin, p - begin));
+				}
+			}
+		}
+
+		/**
+			Returns true when @p expression is a pure BOOLEAN expression - identifiers (or "defined(...)")
+			combined with only "!", "&&", "||" and parentheses. No integer literal, comparison or arithmetic
+			may appear, because those are exactly what makes a macro's numeric value matter.
+		*/
+		bool IsBooleanCondition(StringView expression)
+		{
+			std::size_t i = 0;
+			char previous = '\0';
+			while (i < expression.size()) {
+				char c = expression[i];
+				if (IsIdentStart(c) && !IsIdentChar(previous)) {
+					while (i < expression.size() && IsIdentChar(expression[i])) {
+						i++;
+					}
+					previous = expression[i - 1];
+					continue;
+				}
+				if (IsDigit(c)) {
+					return false;
+				}
+				if (c == '&' || c == '|') {
+					// Only the doubled forms - "a & b" is arithmetic
+					if (i + 1 >= expression.size() || expression[i + 1] != c) {
+						return false;
+					}
+					i++;
+				} else if (c != '!' && c != '(' && c != ')' && !IsSpace(c)) {
+					return false;
+				}
+				previous = c;
+				i++;
+			}
+			return true;
+		}
+
+		/**
+			Lowers one "#if"/"#elif" that SURVIVES into an emitted source, so that every GLSL profile can
+			evaluate it. The problem it solves: GLSL ES rejects an undefined macro in an "#if" expression
+			("undefined macro in expression not allowed in es profile") while desktop GLSL substitutes 0 like
+			C, HLSL accepts it and the Vulkan transform is desktop GLSL - so "#if DITHER" on a variant that
+			does not define DITHER passes --hlsl-check AND --spirv-check and breaks only ES2/ES3/WebGL. A
+			macro with an empty body ("#define SLOPE") is a "bad expression" even on desktop.
+
+			The fix is to rewrite the identifiers of a purely BOOLEAN expression into "defined(...)", the
+			operator that consumes an identifier so nothing undefined is left to evaluate - and to collapse
+			the single-term case to the shorter "#ifdef"/"#ifndef" a reader expects. Restricting it to
+			boolean expressions is what makes the rewrite meaning-preserving rather than a guess: for a macro
+			used as a flag, "NAME" and "defined(NAME)" agree whenever it is absent or defined to anything
+			nonzero, which covers the variant defines (baked as "(1)"), the valueless markers a shader or an
+			includer sets, and the valueless "#define DEATH_TARGET_ANDROID"-style flags the engine injects at
+			runtime. The moment a literal, comparison or arithmetic appears the value itself is being asked
+			for, so the expression is left exactly as written - as are the identifiers @p valueMacros lists,
+			which the document defines with a real body.
+
+			Returns false when there is nothing to lower, so the line is emitted byte-for-byte as written.
+		*/
+		bool LowerEmittedCondition(StringView directive, StringView expression, ArrayView<const String> valueMacros,
+			String& loweredDirective, String& loweredExpression)
+		{
+			if (!IsBooleanCondition(expression)) {
+				return false;
+			}
+
+			auto isFlag = [&valueMacros](StringView id) -> bool {
+				if (id == "defined" || id == "true" || id == "false") {
+					return false;
+				}
+				for (const String& name : valueMacros) {
+					if (name == id) {
+						return false;
+					}
+				}
+				return true;
+			};
+
+			// "#if NAME" / "#if !NAME" collapse to the presence directives - but only for "#if", since an
+			// "#elif" has no such spelling
+			if (directive == "if") {
+				String text = Trim(expression);
+				bool negated = (!text.empty() && text[0] == '!');
+				if (negated) {
+					text = Trim(Substr(text, 1));
+				}
+				if (IsIdentifier(text) && isFlag(text)) {
+					loweredDirective = (negated ? "ifndef"_s : "ifdef"_s);
+					loweredExpression = std::move(text);
+					return true;
+				}
+			}
+
+			Array<char> out;
+			bool lowered = false;
+			std::size_t i = 0;
+			char previous = '\0';
+			while (i < expression.size()) {
+				char c = expression[i];
+				if (!IsIdentStart(c) || IsIdentChar(previous)) {
+					arrayAppend(out, c);
+					previous = c;
+					i++;
+					continue;
+				}
+				std::size_t begin = i;
+				while (i < expression.size() && IsIdentChar(expression[i])) {
+					i++;
+				}
+				StringView id = Substr(expression, begin, i - begin);
+				if (id == "defined") {
+					// Already consumed by the operator - copy the whole "defined X" / "defined(X)" across so
+					// its operand cannot be wrapped a second time
+					std::size_t p = i;
+					while (p < expression.size() && IsSpace(expression[p])) {
+						p++;
+					}
+					if (p < expression.size() && expression[p] == '(') {
+						p++;
+						while (p < expression.size() && expression[p] != ')') {
+							p++;
+						}
+						if (p < expression.size()) {
+							p++;
+						}
+					} else {
+						while (p < expression.size() && IsIdentChar(expression[p])) {
+							p++;
+						}
+					}
+					arrayAppend(out, Substr(expression, begin, p - begin));
+					previous = expression[p - 1];
+					i = p;
+					continue;
+				}
+				if (isFlag(id)) {
+					arrayAppend(out, "defined("_s);
+					arrayAppend(out, id);
+					arrayAppend(out, ')');
+					previous = ')';
+					lowered = true;
+				} else {
+					arrayAppend(out, id);
+					previous = id[id.size() - 1];
+				}
+			}
+			if (!lowered) {
+				return false;
+			}
+			loweredDirective = directive;
+			// Trimmed because the rebuilt line puts its own separator between directive and expression
+			loweredExpression = Trim(StringView{out.data(), out.size()});
+			return true;
+		}
+
+		/** Applies LowerEmittedCondition to every "#if"/"#elif" of an assembled stage stream */
+		void LowerEmittedConditionals(SmallVectorImpl<SourceLine>& lines, ArrayView<const String> valueMacros)
+		{
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
+			ShaderParser::StripComments(stripped);
+
+			for (std::size_t index = 0; index < lines.size(); index++) {
+				StringView name, rest;
+				std::size_t hashPos;
+				if (!SplitDirective(stripped[index].Text, name, rest, hashPos) || (name != "if" && name != "elif")) {
+					continue;
+				}
+				String loweredDirective, loweredExpression;
+				if (LowerEmittedCondition(name, rest, valueMacros, loweredDirective, loweredExpression)) {
+					lines[index].Text = FoldedDirectiveLine(lines[index].Text, hashPos, loweredDirective, loweredExpression);
+				}
+			}
 		}
 
 		/** Returns true when @p s contains a whole-identifier occurrence of @p name (member accesses excluded) */
@@ -4258,16 +4796,17 @@ R"GLSL(void main()
 		return true;
 	}
 
-	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define, bool softwareRenderer)
+	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define,
+		bool softwareRenderer, bool noDynamicBranching)
 	{
 		const SmallVectorImpl<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 
-		// Resolve "#ifdef/#ifndef SOFTWARE_RENDERER" blocks according to the backend the source is
-		// built for (see the header comment). Gated on a quick reference scan so every document
+		// Resolve the conditionals naming SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING according to the backend
+		// the source is built for (see the header comment). Gated on a quick reference scan so every document
 		// without such a block keeps the verbatim fast path (and provably identical output).
 		auto referencesMacro = [](const SmallVectorImpl<SourceLine>& lines) {
 			for (const SourceLine& line : lines) {
-				if (line.Text.contains("SOFTWARE_RENDERER"_s)) {
+				if (line.Text.contains("SOFTWARE_RENDERER"_s) || line.Text.contains("NO_DYNAMIC_BRANCHING"_s)) {
 					return true;
 				}
 			}
@@ -4275,11 +4814,37 @@ R"GLSL(void main()
 		};
 		SmallVector<SourceLine, 0> resolved;
 		bool useResolved = (referencesMacro(document.Prelude) || referencesMacro(stage));
-		if (useResolved) {
+
+		// Whatever "#if" survives the fold is real GLSL, so its flag macros still have to be lowered into a
+		// form every profile evaluates (see LowerEmittedCondition). Gated on a scan for a boolean "#if" so a
+		// document without one keeps the verbatim fast path.
+		SmallVector<String, 0> valueMacros;
+		CollectValueMacros(document.Prelude, valueMacros);
+		CollectValueMacros(stage, valueMacros);
+		auto hasBooleanCondition = [](const SmallVectorImpl<SourceLine>& lines) {
+			for (const SourceLine& line : lines) {
+				StringView name, rest;
+				std::size_t hashPos;
+				if (SplitDirective(line.Text, name, rest, hashPos) && (name == "if" || name == "elif") &&
+					IsBooleanCondition(rest)) {
+					return true;
+				}
+			}
+			return false;
+		};
+		bool lowerConditionals = (hasBooleanCondition(document.Prelude) || hasBooleanCondition(stage));
+
+		if (useResolved || lowerConditionals) {
 			resolved.reserve(document.Prelude.size() + stage.size());
 			resolved.insert(resolved.end(), document.Prelude.begin(), document.Prelude.end());
 			resolved.insert(resolved.end(), stage.begin(), stage.end());
-			ResolveSoftwareRendererConditionals(resolved, softwareRenderer);
+			if (useResolved) {
+				ResolveBackendConditionals(resolved, softwareRenderer, noDynamicBranching);
+			}
+			if (lowerConditionals) {
+				LowerEmittedConditionals(resolved, valueMacros);
+			}
+			useResolved = true;
 		}
 
 		Array<char> out;

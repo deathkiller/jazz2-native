@@ -11,7 +11,7 @@ layout (std140) uniform InstanceBlock
 
 varying vec4 vTexCoords;
 varying vec4 vColor;
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 varying vec2 vPos;
 #else
 // Software-renderer variant: the CPU fragment path cannot interpolate a per-vertex varying like vPos,
@@ -28,7 +28,7 @@ void vertex() {
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = texRect;
 	vColor = color;
-#ifndef SOFTWARE_RENDERER
+#if !SOFTWARE_RENDERER
 	vPos = aPosition * vec2(2.0) - vec2(1.0);
 #else
 	vShieldRect = texRect;

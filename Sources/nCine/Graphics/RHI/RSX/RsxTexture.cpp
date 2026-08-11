@@ -86,6 +86,25 @@ namespace nCine::RHI::RSX
 			}
 		}
 
+		/**
+			@brief Which hardware channel carries a logical RGBA8 channel of a GPU-WRITTEN surface
+
+			The rotation above exists only because the host store's bytes are read as a big-endian word: it
+			corrects a byte order, not a channel order. A render target never goes through that path - the ROP
+			writes it as an A8R8G8B8 word directly, with alpha already in the top byte - so sampling one needs
+			the identity mapping instead. This is the same remap @ref RsxDevice's own screen surface uses.
+		*/
+		inline std::uint32_t HardwareChannelForSurface(SwizzleChannel channel)
+		{
+			switch (channel) {
+				case SwizzleChannel::Red: return GCM_TEXTURE_REMAP_COLOR_R;
+				case SwizzleChannel::Green: return GCM_TEXTURE_REMAP_COLOR_G;
+				case SwizzleChannel::Blue: return GCM_TEXTURE_REMAP_COLOR_B;
+				case SwizzleChannel::Alpha: return GCM_TEXTURE_REMAP_COLOR_A;
+				default: return GCM_TEXTURE_REMAP_COLOR_R;
+			}
+		}
+
 		/** @brief Row-stride granularity of the GPU copy (see @ref RsxTexture) */
 		constexpr std::uint32_t TexturePitchAlignment = 64;
 	}
@@ -152,14 +171,20 @@ namespace nCine::RHI::RSX
 			}
 		};
 
+		// Host-uploaded texels need the byte-order rotation; a render target the GPU wrote itself does not.
+		// Confirmed empirically: forcing identity on host textures turns yellow (255,220,0) into blue-purple,
+		// i.e. it samples as (G,B,A,R) - so the rotation below is what puts every channel, alpha included,
+		// back where the engine expects it.
+		const auto channelOf = (_isRenderTarget ? &HardwareChannelForSurface : &HardwareChannelFor);
+
 		return ((typeOf(_swizzle[3]) << GCM_TEXTURE_REMAP_TYPE_A_SHIFT) |
 				(typeOf(_swizzle[0]) << GCM_TEXTURE_REMAP_TYPE_R_SHIFT) |
 				(typeOf(_swizzle[1]) << GCM_TEXTURE_REMAP_TYPE_G_SHIFT) |
 				(typeOf(_swizzle[2]) << GCM_TEXTURE_REMAP_TYPE_B_SHIFT) |
-				(HardwareChannelFor(_swizzle[3]) << GCM_TEXTURE_REMAP_COLOR_A_SHIFT) |
-				(HardwareChannelFor(_swizzle[0]) << GCM_TEXTURE_REMAP_COLOR_R_SHIFT) |
-				(HardwareChannelFor(_swizzle[1]) << GCM_TEXTURE_REMAP_COLOR_G_SHIFT) |
-				(HardwareChannelFor(_swizzle[2]) << GCM_TEXTURE_REMAP_COLOR_B_SHIFT));
+				(channelOf(_swizzle[3]) << GCM_TEXTURE_REMAP_COLOR_A_SHIFT) |
+				(channelOf(_swizzle[0]) << GCM_TEXTURE_REMAP_COLOR_R_SHIFT) |
+				(channelOf(_swizzle[1]) << GCM_TEXTURE_REMAP_COLOR_G_SHIFT) |
+				(channelOf(_swizzle[2]) << GCM_TEXTURE_REMAP_COLOR_B_SHIFT));
 	}
 
 	void RsxTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height)

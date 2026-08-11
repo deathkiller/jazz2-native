@@ -265,8 +265,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 		}
 
 		//cleanup slant transitions
-		#ifdef SLOPE
-		#ifdef CLEANUP
+		#if defined(SLOPE) && defined(CLEANUP)
 		if(!flip && similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff)){ //shallow
 			float dist2 = distToLine(point, center+vec2(1.5, 0.0)*pointDir, center+vec2(-0.5, 1.0)*pointDir, pointDir);
 			dist = max(dist, dist2);
@@ -276,7 +275,6 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 			float dist2 = distToLine(point, center+vec2(1.0, -0.5)*pointDir, center+vec2(0.0, 1.5)*pointDir, pointDir);
 			dist = max(dist, dist2);
 		}
-		#endif
 		#endif
 
 		dist -= (_lineWidth/2.0);
@@ -568,8 +566,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 		}
 
 		//cleanup slant transitions
-		#ifdef SLOPE
-		#ifdef CLEANUP
+		#if defined(SLOPE) && defined(CLEANUP)
 		if(!flip && similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff)){ //shallow
 			float dist2 = distToLine(point, center+vec2(1.5, 0.0)*pointDir, center+vec2(-0.5, 1.0)*pointDir, pointDir);
 			dist = max(dist, dist2);
@@ -579,7 +576,6 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 			float dist2 = distToLine(point, center+vec2(1.0, -0.5)*pointDir, center+vec2(0.0, 1.5)*pointDir, pointDir);
 			dist = max(dist, dist2);
 		}
-		#endif
 		#endif
 
 		dist -= (_lineWidth/2.0);

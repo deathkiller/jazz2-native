@@ -77,7 +77,11 @@ void main()
 R"__SHDR__(#line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 #endif
 
 in vec2 vTexCoords;
@@ -173,7 +177,11 @@ void main() {
 	inline constexpr char TexturedBackground_Fs100[] =
 R"__SHDR__(#line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 
 varying vec2 vTexCoords;
 
@@ -358,7 +366,11 @@ R"__SHDR__(#define DITHER (1)
 #line 1
 
 #ifdef GL_ES
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 #endif
 
 in vec2 vTexCoords;
@@ -455,7 +467,11 @@ void main() {
 R"__SHDR__(#define DITHER (1)
 #line 1
 
+#	ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#	else
+precision mediump float;
+#	endif
 
 varying vec2 vTexCoords;
 

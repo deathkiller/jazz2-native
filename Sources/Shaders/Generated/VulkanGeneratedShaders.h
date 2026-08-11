@@ -96,6 +96,7 @@ namespace Jazz2::ShadersGen
 		0x00000055u, 0x0000000au, 0x0000000au, 0x00050088u, 0x00000007u, 0x00000056u, 0x00000055u, 0x00000054u,
 		0x0003003eu, 0x00000051u, 0x00000056u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Antialiasing_VkVsSize = 653;
 
 	inline constexpr std::uint32_t Antialiasing_VkFs[] = {
@@ -366,6 +367,7 @@ namespace Jazz2::ShadersGen
 		0x00000056u, 0x00000049u, 0x00050081u, 0x00000007u, 0x00000057u, 0x00000055u, 0x00000056u, 0x000200feu,
 		0x00000057u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Antialiasing_VkFsSize = 2122;
 
 }
@@ -470,6 +472,7 @@ namespace Jazz2::ShadersGen
 		0x00000062u, 0x00000064u, 0x00050083u, 0x00000007u, 0x00000067u, 0x00000065u, 0x00000066u, 0x0003003eu,
 		0x00000061u, 0x00000067u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedShieldFire_VkVsSize = 764;
 
 	inline constexpr std::uint32_t BatchedShieldFire_VkFs[] = {
@@ -641,6 +644,7 @@ namespace Jazz2::ShadersGen
 		0x00000001u, 0x00000004u, 0x0000002eu, 0x00050085u, 0x00000006u, 0x00000031u, 0x0000002fu, 0x00000030u,
 		0x000200feu, 0x00000031u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedShieldFire_VkFsSize = 1331;
 
 }
@@ -745,6 +749,7 @@ namespace Jazz2::ShadersGen
 		0x00000062u, 0x00000064u, 0x00050083u, 0x00000007u, 0x00000067u, 0x00000065u, 0x00000066u, 0x0003003eu,
 		0x00000061u, 0x00000067u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedShieldLightning_VkVsSize = 764;
 
 	inline constexpr std::uint32_t BatchedShieldLightning_VkFs[] = {
@@ -906,6 +911,7 @@ namespace Jazz2::ShadersGen
 		0x0000002eu, 0x00050085u, 0x00000006u, 0x00000031u, 0x0000002fu, 0x00000030u, 0x000200feu, 0x00000031u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedShieldLightning_VkFsSize = 1249;
 
 }
@@ -1001,6 +1007,7 @@ namespace Jazz2::ShadersGen
 		0x00000006u, 0x00000059u, 0x00000055u, 0x00000058u, 0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu,
 		0x00000059u, 0x0003003eu, 0x00000047u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Blur_VkVsSize = 694;
 
 	inline constexpr std::uint32_t Blur_VkFs[] = {
@@ -1077,6 +1084,7 @@ namespace Jazz2::ShadersGen
 		0x00000054u, 0x0003003eu, 0x00000009u, 0x00000056u, 0x0004003du, 0x00000007u, 0x00000059u, 0x00000009u,
 		0x0003003eu, 0x00000058u, 0x00000059u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Blur_VkFsSize = 573;
 
 }
@@ -1173,6 +1181,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x0004003du, 0x00000018u, 0x0000005eu, 0x0000005du, 0x0003003eu, 0x0000005bu, 0x0000005eu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Colorized_VkVsSize = 698;
 
 	inline constexpr std::uint32_t Colorized_VkFs[] = {
@@ -1224,6 +1233,7 @@ namespace Jazz2::ShadersGen
 		0x0000000eu, 0x00050085u, 0x00000007u, 0x0000003du, 0x0000003bu, 0x0000003cu, 0x0003003eu, 0x00000009u,
 		0x0000003du, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Colorized_VkFsSize = 371;
 
 	inline constexpr std::uint32_t BatchedColorized_VkVs[] = {
@@ -1334,6 +1344,7 @@ namespace Jazz2::ShadersGen
 		0x00000075u, 0x00000076u, 0x0000002cu, 0x0000002du, 0x00000074u, 0x00000017u, 0x0004003du, 0x0000001eu,
 		0x00000077u, 0x00000076u, 0x0003003eu, 0x00000072u, 0x00000077u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedColorized_VkVsSize = 847;
 
 	inline constexpr std::uint32_t BatchedColorized_VkFs[] = {
@@ -1385,6 +1396,7 @@ namespace Jazz2::ShadersGen
 		0x0000000eu, 0x00050085u, 0x00000007u, 0x0000003du, 0x0000003bu, 0x0000003cu, 0x0003003eu, 0x00000009u,
 		0x0000003du, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedColorized_VkFsSize = 371;
 
 }
@@ -1484,6 +1496,7 @@ namespace Jazz2::ShadersGen
 		0x00050088u, 0x00000007u, 0x00000060u, 0x0000005cu, 0x0000005fu, 0x0003003eu, 0x0000005bu, 0x00000060u,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Combine_VkVsSize = 722;
 
 	inline constexpr std::uint32_t Combine_VkFs[] = {
@@ -1623,6 +1636,7 @@ namespace Jazz2::ShadersGen
 		0x00000007u, 0x00000049u, 0x0000003fu, 0x00000048u, 0x0008000cu, 0x00000007u, 0x0000004eu, 0x00000001u,
 		0x0000002bu, 0x00000049u, 0x0000004bu, 0x0000004du, 0x000200feu, 0x0000004eu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Combine_VkFsSize = 1079;
 
 }
@@ -1725,6 +1739,7 @@ namespace Jazz2::ShadersGen
 		0x00050088u, 0x00000007u, 0x00000060u, 0x0000005cu, 0x0000005fu, 0x0003003eu, 0x0000005bu, 0x00000060u,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t CombineWithWater_VkVsSize = 746;
 
 	inline constexpr std::uint32_t CombineWithWater_VkFs[] = {
@@ -2250,6 +2265,7 @@ namespace Jazz2::ShadersGen
 		0x00050094u, 0x00000006u, 0x00000156u, 0x00000154u, 0x00000155u, 0x00050085u, 0x00000006u, 0x00000157u,
 		0x00000153u, 0x00000156u, 0x000200feu, 0x00000157u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t CombineWithWater_VkFsSize = 4165;
 
 }
@@ -2352,6 +2368,7 @@ namespace Jazz2::ShadersGen
 		0x00050088u, 0x00000007u, 0x00000060u, 0x0000005cu, 0x0000005fu, 0x0003003eu, 0x0000005bu, 0x00000060u,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t CombineWithWaterLow_VkVsSize = 746;
 
 	inline constexpr std::uint32_t CombineWithWaterLow_VkFs[] = {
@@ -2575,6 +2592,7 @@ namespace Jazz2::ShadersGen
 		0x00050081u, 0x00000007u, 0x00000049u, 0x0000003fu, 0x00000048u, 0x0008000cu, 0x00000007u, 0x0000004eu,
 		0x00000001u, 0x0000002bu, 0x00000049u, 0x0000004bu, 0x0000004du, 0x000200feu, 0x0000004eu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t CombineWithWaterLow_VkFsSize = 1752;
 
 }
@@ -2677,6 +2695,7 @@ namespace nCine::ShadersGen
 		0x0004003du, 0x00000007u, 0x00000062u, 0x00000061u, 0x0003003eu, 0x0000005eu, 0x00000062u, 0x000100fdu,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedMeshSprites_VkVsSize = 745;
 
 	inline constexpr std::uint32_t DefaultBatchedMeshSprites_VkFs[] = {
@@ -2702,6 +2721,7 @@ namespace nCine::ShadersGen
 		0x0004003du, 0x00000007u, 0x00000016u, 0x00000015u, 0x00050085u, 0x00000007u, 0x00000017u, 0x00000013u,
 		0x00000016u, 0x0003003eu, 0x00000009u, 0x00000017u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedMeshSprites_VkFsSize = 166;
 
 }
@@ -2783,6 +2803,7 @@ namespace nCine::ShadersGen
 		0x0000001au, 0x00000044u, 0x00000037u, 0x0004003du, 0x00000007u, 0x00000047u, 0x00000046u, 0x0003003eu,
 		0x00000043u, 0x00000047u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedMeshSpritesNoTexture_VkVsSize = 580;
 
 	inline constexpr std::uint32_t DefaultBatchedMeshSpritesNoTexture_VkFs[] = {
@@ -2799,6 +2820,7 @@ namespace nCine::ShadersGen
 		0x00000000u, 0x00000003u, 0x000200f8u, 0x00000005u, 0x0004003du, 0x00000007u, 0x0000000cu, 0x0000000bu,
 		0x0003003eu, 0x00000009u, 0x0000000cu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedMeshSpritesNoTexture_VkFsSize = 93;
 
 }
@@ -2891,6 +2913,7 @@ namespace nCine::ShadersGen
 		0x0000002du, 0x00000057u, 0x00000017u, 0x0004003du, 0x0000001eu, 0x0000005au, 0x00000059u, 0x0003003eu,
 		0x00000055u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedSpritesNoTexture_VkVsSize = 668;
 
 	inline constexpr std::uint32_t DefaultBatchedSpritesNoTexture_VkFs[] = {
@@ -2907,6 +2930,7 @@ namespace nCine::ShadersGen
 		0x00000000u, 0x00000003u, 0x000200f8u, 0x00000005u, 0x0004003du, 0x00000007u, 0x0000000cu, 0x0000000bu,
 		0x0003003eu, 0x00000009u, 0x0000000cu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedSpritesNoTexture_VkFsSize = 93;
 
 }
@@ -2963,6 +2987,7 @@ namespace nCine::ShadersGen
 		0x00000027u, 0x00000029u, 0x0004003du, 0x00000007u, 0x0000002du, 0x0000002cu, 0x0003003eu, 0x0000002au,
 		0x0000002du, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultImGui_VkVsSize = 379;
 
 	inline constexpr std::uint32_t DefaultImGui_VkFs[] = {
@@ -2988,6 +3013,7 @@ namespace nCine::ShadersGen
 		0x00000007u, 0x00000016u, 0x00000011u, 0x00000015u, 0x00050085u, 0x00000007u, 0x00000017u, 0x0000000cu,
 		0x00000016u, 0x0003003eu, 0x00000009u, 0x00000017u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultImGui_VkFsSize = 166;
 
 }
@@ -3077,6 +3103,7 @@ namespace nCine::ShadersGen
 		0x00000051u, 0x00050041u, 0x00000053u, 0x00000054u, 0x00000015u, 0x00000030u, 0x0004003du, 0x00000007u,
 		0x00000055u, 0x00000054u, 0x0003003eu, 0x00000052u, 0x00000055u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultMeshSprite_VkVsSize = 647;
 
 	inline constexpr std::uint32_t DefaultMeshSprite_VkFs[] = {
@@ -3102,6 +3129,7 @@ namespace nCine::ShadersGen
 		0x0004003du, 0x00000007u, 0x00000016u, 0x00000015u, 0x00050085u, 0x00000007u, 0x00000017u, 0x00000013u,
 		0x00000016u, 0x0003003eu, 0x00000009u, 0x00000017u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultMeshSprite_VkFsSize = 166;
 
 }
@@ -3174,6 +3202,7 @@ namespace nCine::ShadersGen
 		0x00000030u, 0x0004003du, 0x00000007u, 0x0000003eu, 0x0000003du, 0x0003003eu, 0x0000003bu, 0x0000003eu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultMeshSpriteNoTexture_VkVsSize = 506;
 
 	inline constexpr std::uint32_t DefaultMeshSpriteNoTexture_VkFs[] = {
@@ -3190,6 +3219,7 @@ namespace nCine::ShadersGen
 		0x00000000u, 0x00000003u, 0x000200f8u, 0x00000005u, 0x0004003du, 0x00000007u, 0x0000000cu, 0x0000000bu,
 		0x0003003eu, 0x00000009u, 0x0000000cu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultMeshSpriteNoTexture_VkFsSize = 93;
 
 }
@@ -3286,6 +3316,7 @@ namespace nCine::ShadersGen
 		0x0000000fu, 0x0004003du, 0x00000018u, 0x0000005eu, 0x0000005du, 0x0003003eu, 0x0000005bu, 0x0000005eu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultSprite_VkVsSize = 698;
 
 	inline constexpr std::uint32_t DefaultSprite_VkFs[] = {
@@ -3312,6 +3343,7 @@ namespace nCine::ShadersGen
 		0x00000007u, 0x00000017u, 0x00000009u, 0x00050085u, 0x00000007u, 0x00000018u, 0x00000016u, 0x00000017u,
 		0x0003003eu, 0x00000009u, 0x00000018u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultSprite_VkFsSize = 173;
 
 	inline constexpr std::uint32_t DefaultBatchedSprites_VkVs[] = {
@@ -3422,6 +3454,7 @@ namespace nCine::ShadersGen
 		0x00000075u, 0x00000076u, 0x0000002cu, 0x0000002du, 0x00000074u, 0x00000017u, 0x0004003du, 0x0000001eu,
 		0x00000077u, 0x00000076u, 0x0003003eu, 0x00000072u, 0x00000077u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedSprites_VkVsSize = 847;
 
 	inline constexpr std::uint32_t DefaultBatchedSprites_VkFs[] = {
@@ -3448,6 +3481,7 @@ namespace nCine::ShadersGen
 		0x00000007u, 0x00000017u, 0x00000009u, 0x00050085u, 0x00000007u, 0x00000018u, 0x00000016u, 0x00000017u,
 		0x0003003eu, 0x00000009u, 0x00000018u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultBatchedSprites_VkFsSize = 173;
 
 }
@@ -3526,6 +3560,7 @@ namespace nCine::ShadersGen
 		0x00000042u, 0x00050041u, 0x00000046u, 0x00000047u, 0x00000023u, 0x0000000fu, 0x0004003du, 0x00000018u,
 		0x00000048u, 0x00000047u, 0x0003003eu, 0x00000045u, 0x00000048u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultSpriteNoTexture_VkVsSize = 559;
 
 	inline constexpr std::uint32_t DefaultSpriteNoTexture_VkFs[] = {
@@ -3542,6 +3577,7 @@ namespace nCine::ShadersGen
 		0x00000000u, 0x00000003u, 0x000200f8u, 0x00000005u, 0x0004003du, 0x00000007u, 0x0000000cu, 0x0000000bu,
 		0x0003003eu, 0x00000009u, 0x0000000cu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t DefaultSpriteNoTexture_VkFsSize = 93;
 
 }
@@ -3636,6 +3672,7 @@ namespace Jazz2::ShadersGen
 		0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu, 0x00000059u, 0x0003003eu, 0x00000047u, 0x0000005au,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Downsample_VkVsSize = 682;
 
 	inline constexpr std::uint32_t Downsample_VkFs[] = {
@@ -3694,6 +3731,7 @@ namespace Jazz2::ShadersGen
 		0x00050085u, 0x00000007u, 0x0000003fu, 0x0000003du, 0x0000003eu, 0x0003003eu, 0x0000003bu, 0x0000003fu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Downsample_VkFsSize = 426;
 
 }
@@ -3794,6 +3832,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t FrozenMask_VkVsSize = 733;
 
 	inline constexpr std::uint32_t FrozenMask_VkFs[] = {
@@ -3965,6 +4004,7 @@ namespace Jazz2::ShadersGen
 		0x00000028u, 0x0000002fu, 0x0004003du, 0x0000000fu, 0x00000030u, 0x00000028u, 0x000200feu, 0x00000030u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t FrozenMask_VkFsSize = 1329;
 
 	inline constexpr std::uint32_t FrozenMask_USE_PALETTE_VkVs[] = {
@@ -4061,6 +4101,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t FrozenMask_USE_PALETTE_VkVsSize = 733;
 
 	inline constexpr std::uint32_t FrozenMask_USE_PALETTE_VkFs[] = {
@@ -4262,6 +4303,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x0000000fu, 0x0000005fu, 0x0000005cu, 0x0000005du, 0x0000005eu, 0x0000005bu,
 		0x000200feu, 0x0000005fu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t FrozenMask_USE_PALETTE_VkFsSize = 1571;
 
 	inline constexpr std::uint32_t BatchedFrozenMask_VkVs[] = {
@@ -4378,6 +4420,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedFrozenMask_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedFrozenMask_VkFs[] = {
@@ -4549,6 +4592,7 @@ namespace Jazz2::ShadersGen
 		0x00000028u, 0x0000002fu, 0x0004003du, 0x0000000fu, 0x00000030u, 0x00000028u, 0x000200feu, 0x00000030u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedFrozenMask_VkFsSize = 1329;
 
 	inline constexpr std::uint32_t BatchedFrozenMask_USE_PALETTE_VkVs[] = {
@@ -4665,6 +4709,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedFrozenMask_USE_PALETTE_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedFrozenMask_USE_PALETTE_VkFs[] = {
@@ -4866,6 +4911,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x0000000fu, 0x0000005fu, 0x0000005cu, 0x0000005du, 0x0000005eu, 0x0000005bu,
 		0x000200feu, 0x0000005fu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedFrozenMask_USE_PALETTE_VkFsSize = 1571;
 
 }
@@ -4943,6 +4989,7 @@ namespace Jazz2::ShadersGen
 		0x00000030u, 0x00000034u, 0x0004003du, 0x00000007u, 0x00000038u, 0x00000037u, 0x0003003eu, 0x00000035u,
 		0x00000038u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t LightingMesh_VkVsSize = 547;
 
 	inline constexpr std::uint32_t LightingMesh_VkFs[] = {
@@ -5010,6 +5057,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x00000009u, 0x00050085u, 0x00000006u, 0x00000010u, 0x0000000eu, 0x0000000fu, 0x000200feu,
 		0x00000010u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t LightingMesh_VkFsSize = 498;
 
 }
@@ -5106,6 +5154,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x0004003du, 0x00000018u, 0x0000005eu, 0x0000005du, 0x0003003eu, 0x0000005bu, 0x0000005eu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Outline_VkVsSize = 698;
 
 	inline constexpr std::uint32_t Outline_VkFs[] = {
@@ -5300,6 +5349,7 @@ namespace Jazz2::ShadersGen
 		0x00000006u, 0x0000001eu, 0x00000001u, 0x00000031u, 0x00000019u, 0x0000001cu, 0x0000001du, 0x000200feu,
 		0x0000001eu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Outline_VkFsSize = 1514;
 
 	inline constexpr std::uint32_t BatchedOutline_VkVs[] = {
@@ -5410,6 +5460,7 @@ namespace Jazz2::ShadersGen
 		0x00000075u, 0x00000076u, 0x0000002cu, 0x0000002du, 0x00000074u, 0x00000017u, 0x0004003du, 0x0000001eu,
 		0x00000077u, 0x00000076u, 0x0003003eu, 0x00000072u, 0x00000077u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedOutline_VkVsSize = 847;
 
 	inline constexpr std::uint32_t BatchedOutline_VkFs[] = {
@@ -5604,6 +5655,7 @@ namespace Jazz2::ShadersGen
 		0x00000006u, 0x0000001eu, 0x00000001u, 0x00000031u, 0x00000019u, 0x0000001cu, 0x0000001du, 0x000200feu,
 		0x0000001eu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedOutline_VkFsSize = 1514;
 
 }
@@ -5704,6 +5756,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t OutlinePalette_VkVsSize = 733;
 
 	inline constexpr std::uint32_t OutlinePalette_VkFs[] = {
@@ -5968,6 +6021,7 @@ namespace Jazz2::ShadersGen
 		0x0004003du, 0x00000006u, 0x00000086u, 0x00000085u, 0x00050085u, 0x00000006u, 0x00000087u, 0x00000084u,
 		0x00000086u, 0x000200feu, 0x00000087u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t OutlinePalette_VkFsSize = 2076;
 
 	inline constexpr std::uint32_t BatchedOutlinePalette_VkVs[] = {
@@ -6084,6 +6138,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedOutlinePalette_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedOutlinePalette_VkFs[] = {
@@ -6348,6 +6403,7 @@ namespace Jazz2::ShadersGen
 		0x0004003du, 0x00000006u, 0x00000086u, 0x00000085u, 0x00050085u, 0x00000006u, 0x00000087u, 0x00000084u,
 		0x00000086u, 0x000200feu, 0x00000087u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedOutlinePalette_VkFsSize = 2076;
 
 }
@@ -6448,6 +6504,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t PaletteRemap_VkVsSize = 733;
 
 	inline constexpr std::uint32_t PaletteRemap_VkFs[] = {
@@ -6511,6 +6568,7 @@ namespace Jazz2::ShadersGen
 		0x00000007u, 0x0000004au, 0x00000009u, 0x00050085u, 0x00000007u, 0x0000004bu, 0x00000049u, 0x0000004au,
 		0x0003003eu, 0x00000009u, 0x0000004bu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t PaletteRemap_VkFsSize = 469;
 
 	inline constexpr std::uint32_t BatchedPaletteRemap_VkVs[] = {
@@ -6627,6 +6685,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPaletteRemap_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedPaletteRemap_VkFs[] = {
@@ -6690,6 +6749,7 @@ namespace Jazz2::ShadersGen
 		0x00000007u, 0x0000004au, 0x00000009u, 0x00050085u, 0x00000007u, 0x0000004bu, 0x00000049u, 0x0000004au,
 		0x0003003eu, 0x00000009u, 0x0000004bu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPaletteRemap_VkFsSize = 469;
 
 }
@@ -6790,6 +6850,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t PartialWhiteMask_VkVsSize = 733;
 
 	inline constexpr std::uint32_t PartialWhiteMask_VkFs[] = {
@@ -6847,6 +6908,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x00000016u, 0x0004003du, 0x00000009u, 0x00000017u, 0x0000000fu, 0x000200feu, 0x00000017u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t PartialWhiteMask_VkFsSize = 417;
 
 	inline constexpr std::uint32_t PartialWhiteMask_USE_PALETTE_VkVs[] = {
@@ -6943,6 +7005,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t PartialWhiteMask_USE_PALETTE_VkVsSize = 733;
 
 	inline constexpr std::uint32_t PartialWhiteMask_USE_PALETTE_VkFs[] = {
@@ -7030,6 +7093,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x00000009u, 0x00000047u, 0x00000044u, 0x00000045u, 0x00000046u, 0x00000043u,
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t PartialWhiteMask_USE_PALETTE_VkFsSize = 659;
 
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_VkVs[] = {
@@ -7146,6 +7210,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPartialWhiteMask_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_VkFs[] = {
@@ -7203,6 +7268,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x00000016u, 0x0004003du, 0x00000009u, 0x00000017u, 0x0000000fu, 0x000200feu, 0x00000017u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPartialWhiteMask_VkFsSize = 417;
 
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_USE_PALETTE_VkVs[] = {
@@ -7319,6 +7385,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPartialWhiteMask_USE_PALETTE_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_USE_PALETTE_VkFs[] = {
@@ -7406,6 +7473,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x00000009u, 0x00000047u, 0x00000044u, 0x00000045u, 0x00000046u, 0x00000043u,
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedPartialWhiteMask_USE_PALETTE_VkFsSize = 659;
 
 }
@@ -7554,6 +7622,7 @@ namespace Jazz2::ShadersGen
 		0x0000009au, 0x0000009cu, 0x0000002fu, 0x0000009du, 0x00050081u, 0x00000018u, 0x0000009fu, 0x00000098u,
 		0x0000009eu, 0x0003003eu, 0x00000096u, 0x0000009fu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Resize3xBrz_VkVsSize = 1118;
 
 	inline constexpr std::uint32_t Resize3xBrz_VkFs[] = {
@@ -8727,6 +8796,7 @@ namespace Jazz2::ShadersGen
 		0x0000018eu, 0x0000018fu, 0x00000196u, 0x00050041u, 0x00000008u, 0x00000198u, 0x00000026u, 0x00000086u,
 		0x0003003eu, 0x00000198u, 0x00000197u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Resize3xBrz_VkFsSize = 9349;
 
 }
@@ -8829,6 +8899,7 @@ namespace Jazz2::ShadersGen
 		0x00000010u, 0x00000058u, 0x0000004eu, 0x00050085u, 0x00000010u, 0x00000059u, 0x00000057u, 0x00000058u,
 		0x0003003eu, 0x00000056u, 0x00000059u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCleanEdge_VkVsSize = 749;
 
 	inline constexpr std::uint32_t ResizeCleanEdge_VkFs[] = {
@@ -10216,6 +10287,7 @@ namespace Jazz2::ShadersGen
 		0x00000444u, 0x000200f9u, 0x00000310u, 0x000200f8u, 0x00000310u, 0x000200f9u, 0x00000254u, 0x000200f8u,
 		0x00000254u, 0x000200f9u, 0x0000017cu, 0x000200f8u, 0x0000017cu, 0x000200feu, 0x0000015au, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCleanEdge_VkFsSize = 11064;
 
 }
@@ -10304,6 +10376,7 @@ namespace Jazz2::ShadersGen
 		0x0000004fu, 0x00000050u, 0x00000023u, 0x00000024u, 0x0004003du, 0x00000007u, 0x00000051u, 0x00000050u,
 		0x0003003eu, 0x0000004eu, 0x00000051u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtApertureGrille_VkVsSize = 637;
 
 	inline constexpr std::uint32_t ResizeCrtApertureGrille_VkFs[] = {
@@ -11014,6 +11087,7 @@ namespace Jazz2::ShadersGen
 		0x00050051u, 0x00000006u, 0x0000036eu, 0x0000036bu, 0x00000002u, 0x00070050u, 0x00000056u, 0x0000036fu,
 		0x0000036cu, 0x0000036du, 0x0000036eu, 0x000000fau, 0x000200feu, 0x0000036fu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtApertureGrille_VkFsSize = 5647;
 
 }
@@ -11102,6 +11176,7 @@ namespace Jazz2::ShadersGen
 		0x00000050u, 0x00000023u, 0x00000024u, 0x0004003du, 0x00000007u, 0x00000051u, 0x00000050u, 0x0003003eu,
 		0x0000004fu, 0x00000051u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtScanlines_VkVsSize = 636;
 
 	inline constexpr std::uint32_t ResizeCrtScanlines_VkFs[] = {
@@ -11206,6 +11281,7 @@ namespace Jazz2::ShadersGen
 		0x00000007u, 0x00000022u, 0x0000000du, 0x00050090u, 0x00000007u, 0x0000002eu, 0x00000022u, 0x0000002du,
 		0x000200feu, 0x0000002eu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtScanlines_VkFsSize = 795;
 
 }
@@ -11294,6 +11370,7 @@ namespace Jazz2::ShadersGen
 		0x0000004fu, 0x00000050u, 0x00000023u, 0x00000024u, 0x0004003du, 0x00000007u, 0x00000051u, 0x00000050u,
 		0x0003003eu, 0x0000004eu, 0x00000051u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtShadowMask_VkVsSize = 637;
 
 	inline constexpr std::uint32_t ResizeCrtShadowMask_VkFs[] = {
@@ -12012,6 +12089,7 @@ namespace Jazz2::ShadersGen
 		0x00070050u, 0x00000056u, 0x0000037au, 0x00000377u, 0x00000378u, 0x00000379u, 0x000000c2u, 0x000200feu,
 		0x0000037au, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeCrtShadowMask_VkFsSize = 5706;
 
 }
@@ -12159,6 +12237,7 @@ namespace Jazz2::ShadersGen
 		0x00000091u, 0x00000070u, 0x00050051u, 0x00000006u, 0x0000009fu, 0x0000009bu, 0x00000001u, 0x0003003eu,
 		0x0000009eu, 0x0000009fu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeHQ2x_VkVsSize = 1108;
 
 	inline constexpr std::uint32_t ResizeHQ2x_VkFs[] = {
@@ -12358,6 +12437,7 @@ namespace Jazz2::ShadersGen
 		0x00000113u, 0x00050041u, 0x0000010bu, 0x00000115u, 0x000000eeu, 0x00000114u, 0x0003003eu, 0x00000115u,
 		0x0000004cu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeHQ2x_VkFsSize = 1555;
 
 }
@@ -12457,6 +12537,7 @@ namespace Jazz2::ShadersGen
 		0x00000020u, 0x00000063u, 0x0000005eu, 0x00000062u, 0x0003003eu, 0x0000005du, 0x00000063u, 0x0004003du,
 		0x00000020u, 0x00000065u, 0x00000022u, 0x0003003eu, 0x00000064u, 0x00000065u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeMonochrome_VkVsSize = 728;
 
 	inline constexpr std::uint32_t ResizeMonochrome_VkFs[] = {
@@ -12571,6 +12652,7 @@ namespace Jazz2::ShadersGen
 		0x00000040u, 0x0000003du, 0x0000003eu, 0x0000003fu, 0x00050081u, 0x00000006u, 0x00000041u, 0x00000039u,
 		0x00000040u, 0x000200feu, 0x00000041u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeMonochrome_VkFsSize = 876;
 
 }
@@ -12735,6 +12817,7 @@ namespace Jazz2::ShadersGen
 		0x00050081u, 0x00000018u, 0x0000009eu, 0x00000097u, 0x0000009du, 0x0003003eu, 0x00000095u, 0x0000009eu,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeSabr_VkVsSize = 1242;
 
 	inline constexpr std::uint32_t ResizeSabr_VkFs[] = {
@@ -13486,6 +13569,7 @@ namespace Jazz2::ShadersGen
 		0x000000b8u, 0x000000b7u, 0x00050081u, 0x00000012u, 0x000000b9u, 0x000000b6u, 0x000000b8u, 0x000200feu,
 		0x000000b9u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ResizeSabr_VkFsSize = 5970;
 
 }
@@ -13575,6 +13659,7 @@ namespace Jazz2::ShadersGen
 		0x00000009u, 0x00050085u, 0x00000007u, 0x00000052u, 0x0000004fu, 0x00000051u, 0x00050083u, 0x00000007u,
 		0x00000054u, 0x00000052u, 0x00000053u, 0x0003003eu, 0x0000004eu, 0x00000054u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ShieldFire_VkVsSize = 648;
 
 	inline constexpr std::uint32_t ShieldFire_VkFs[] = {
@@ -13746,6 +13831,7 @@ namespace Jazz2::ShadersGen
 		0x00000001u, 0x00000004u, 0x0000002eu, 0x00050085u, 0x00000006u, 0x00000031u, 0x0000002fu, 0x00000030u,
 		0x000200feu, 0x00000031u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ShieldFire_VkFsSize = 1331;
 
 }
@@ -13835,6 +13921,7 @@ namespace Jazz2::ShadersGen
 		0x00000009u, 0x00050085u, 0x00000007u, 0x00000052u, 0x0000004fu, 0x00000051u, 0x00050083u, 0x00000007u,
 		0x00000054u, 0x00000052u, 0x00000053u, 0x0003003eu, 0x0000004eu, 0x00000054u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t ShieldLightning_VkVsSize = 648;
 
 	inline constexpr std::uint32_t ShieldLightning_VkFs[] = {
@@ -13996,6 +14083,7 @@ namespace Jazz2::ShadersGen
 		0x0000002eu, 0x00050085u, 0x00000006u, 0x00000031u, 0x0000002fu, 0x00000030u, 0x000200feu, 0x00000031u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t ShieldLightning_VkFsSize = 1249;
 
 }
@@ -14094,6 +14182,7 @@ namespace Jazz2::ShadersGen
 		0x00000059u, 0x00000055u, 0x00000058u, 0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu, 0x00000059u,
 		0x0003003eu, 0x00000047u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackground_VkVsSize = 717;
 
 	inline constexpr std::uint32_t TexturedBackground_VkFs[] = {
@@ -14328,6 +14417,7 @@ namespace Jazz2::ShadersGen
 		0x00000094u, 0x0007000cu, 0x00000006u, 0x00000097u, 0x00000001u, 0x00000025u, 0x00000095u, 0x00000096u,
 		0x000200feu, 0x00000097u, 0x000200f8u, 0x00000089u, 0x000200feu, 0x00000099u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackground_VkFsSize = 1839;
 
 	inline constexpr std::uint32_t TexturedBackground_DITHER_VkVs[] = {
@@ -14422,6 +14512,7 @@ namespace Jazz2::ShadersGen
 		0x00000059u, 0x00000055u, 0x00000058u, 0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu, 0x00000059u,
 		0x0003003eu, 0x00000047u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackground_DITHER_VkVsSize = 717;
 
 	inline constexpr std::uint32_t TexturedBackground_DITHER_VkFs[] = {
@@ -14674,6 +14765,7 @@ namespace Jazz2::ShadersGen
 		0x00000097u, 0x00000001u, 0x00000025u, 0x00000095u, 0x00000096u, 0x000200feu, 0x00000097u, 0x000200f8u,
 		0x00000089u, 0x000200feu, 0x00000099u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackground_DITHER_VkFsSize = 1980;
 
 }
@@ -14772,6 +14864,7 @@ namespace Jazz2::ShadersGen
 		0x00000059u, 0x00000055u, 0x00000058u, 0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu, 0x00000059u,
 		0x0003003eu, 0x00000047u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackgroundCircle_VkVsSize = 717;
 
 	inline constexpr std::uint32_t TexturedBackgroundCircle_VkFs[] = {
@@ -15007,6 +15100,7 @@ namespace Jazz2::ShadersGen
 		0x00000093u, 0x00000094u, 0x0007000cu, 0x00000006u, 0x00000097u, 0x00000001u, 0x00000025u, 0x00000095u,
 		0x00000096u, 0x000200feu, 0x00000097u, 0x000200f8u, 0x00000089u, 0x000200feu, 0x00000099u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackgroundCircle_VkFsSize = 1848;
 
 	inline constexpr std::uint32_t TexturedBackgroundCircle_DITHER_VkVs[] = {
@@ -15101,6 +15195,7 @@ namespace Jazz2::ShadersGen
 		0x00000059u, 0x00000055u, 0x00000058u, 0x00050050u, 0x00000007u, 0x0000005au, 0x0000004fu, 0x00000059u,
 		0x0003003eu, 0x00000047u, 0x0000005au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackgroundCircle_DITHER_VkVsSize = 717;
 
 	inline constexpr std::uint32_t TexturedBackgroundCircle_DITHER_VkFs[] = {
@@ -15354,6 +15449,7 @@ namespace Jazz2::ShadersGen
 		0x00000006u, 0x00000097u, 0x00000001u, 0x00000025u, 0x00000095u, 0x00000096u, 0x000200feu, 0x00000097u,
 		0x000200f8u, 0x00000089u, 0x000200feu, 0x00000099u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TexturedBackgroundCircle_DITHER_VkFsSize = 1989;
 
 }
@@ -15429,6 +15525,7 @@ namespace Jazz2::ShadersGen
 		0x0000001eu, 0x00000017u, 0x0004003du, 0x00000007u, 0x0000003au, 0x00000039u, 0x00050085u, 0x00000007u,
 		0x0000003bu, 0x00000037u, 0x0000003au, 0x0003003eu, 0x00000034u, 0x0000003bu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TileMapMesh_VkVsSize = 536;
 
 	inline constexpr std::uint32_t TileMapMesh_VkFs[] = {
@@ -15454,6 +15551,7 @@ namespace Jazz2::ShadersGen
 		0x0004003du, 0x00000007u, 0x00000016u, 0x00000015u, 0x00050085u, 0x00000007u, 0x00000017u, 0x00000013u,
 		0x00000016u, 0x0003003eu, 0x00000009u, 0x00000017u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TileMapMesh_VkFsSize = 166;
 
 }
@@ -15534,6 +15632,7 @@ namespace Jazz2::ShadersGen
 		0x0000003bu, 0x00050041u, 0x0000003fu, 0x00000040u, 0x0000001eu, 0x0000003eu, 0x0004003du, 0x00000006u,
 		0x00000041u, 0x00000040u, 0x0003003eu, 0x0000003du, 0x00000041u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TileMapMeshPalette_VkVsSize = 575;
 
 	inline constexpr std::uint32_t TileMapMeshPalette_VkFs[] = {
@@ -15609,6 +15708,7 @@ namespace Jazz2::ShadersGen
 		0x00000048u, 0x00050085u, 0x00000007u, 0x0000004au, 0x00000046u, 0x00000049u, 0x0003003eu, 0x00000039u,
 		0x0000004au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TileMapMeshPalette_VkFsSize = 563;
 
 }
@@ -15709,6 +15809,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Tinted_VkVsSize = 733;
 
 	inline constexpr std::uint32_t Tinted_VkFs[] = {
@@ -15757,6 +15858,7 @@ namespace Jazz2::ShadersGen
 		0x00000027u, 0x0000002au, 0x0000002du, 0x00000034u, 0x0003003eu, 0x00000009u, 0x00000035u, 0x000100fdu,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t Tinted_VkFsSize = 345;
 
 	inline constexpr std::uint32_t Tinted_USE_PALETTE_VkVs[] = {
@@ -15853,6 +15955,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Tinted_USE_PALETTE_VkVsSize = 733;
 
 	inline constexpr std::uint32_t Tinted_USE_PALETTE_VkFs[] = {
@@ -15928,6 +16031,7 @@ namespace Jazz2::ShadersGen
 		0x0000004fu, 0x00000052u, 0x00000055u, 0x0000005bu, 0x0003003eu, 0x00000009u, 0x0000005cu, 0x000100fdu,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t Tinted_USE_PALETTE_VkFsSize = 561;
 
 	inline constexpr std::uint32_t BatchedTinted_VkVs[] = {
@@ -16044,6 +16148,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedTinted_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedTinted_VkFs[] = {
@@ -16092,6 +16197,7 @@ namespace Jazz2::ShadersGen
 		0x00000027u, 0x0000002au, 0x0000002du, 0x00000034u, 0x0003003eu, 0x00000009u, 0x00000035u, 0x000100fdu,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedTinted_VkFsSize = 345;
 
 	inline constexpr std::uint32_t BatchedTinted_USE_PALETTE_VkVs[] = {
@@ -16208,6 +16314,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedTinted_USE_PALETTE_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedTinted_USE_PALETTE_VkFs[] = {
@@ -16283,6 +16390,7 @@ namespace Jazz2::ShadersGen
 		0x0000004fu, 0x00000052u, 0x00000055u, 0x0000005bu, 0x0003003eu, 0x00000009u, 0x0000005cu, 0x000100fdu,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedTinted_USE_PALETTE_VkFsSize = 561;
 
 }
@@ -16364,6 +16472,7 @@ namespace Jazz2::ShadersGen
 		0x00050083u, 0x00000007u, 0x0000004au, 0x00000047u, 0x00000049u, 0x0003003eu, 0x00000046u, 0x0000004au,
 		0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TouchCircle_VkVsSize = 578;
 
 	inline constexpr std::uint32_t TouchCircle_VkFs[] = {
@@ -16430,6 +16539,7 @@ namespace Jazz2::ShadersGen
 		0x00000006u, 0x00000049u, 0x0000003fu, 0x00000002u, 0x00070050u, 0x0000000fu, 0x0000004au, 0x00000047u,
 		0x00000048u, 0x00000049u, 0x00000046u, 0x0003003eu, 0x00000039u, 0x0000004au, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t TouchCircle_VkFsSize = 496;
 
 }
@@ -16533,6 +16643,7 @@ namespace Jazz2::ShadersGen
 		0x00000023u, 0x0000000fu, 0x00000056u, 0x0004003du, 0x00000006u, 0x00000069u, 0x00000068u, 0x0003003eu,
 		0x00000067u, 0x00000069u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Transition_VkVsSize = 756;
 
 	inline constexpr std::uint32_t Transition_VkFs[] = {
@@ -16609,6 +16720,7 @@ namespace Jazz2::ShadersGen
 		0x00000033u, 0x00000032u, 0x00000021u, 0x00050085u, 0x00000006u, 0x00000034u, 0x0000002eu, 0x00000033u,
 		0x000200feu, 0x00000034u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t Transition_VkFsSize = 571;
 
 }
@@ -16709,6 +16821,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t WhiteMask_VkVsSize = 733;
 
 	inline constexpr std::uint32_t WhiteMask_VkFs[] = {
@@ -16766,6 +16879,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x00000016u, 0x0004003du, 0x00000009u, 0x00000017u, 0x0000000fu, 0x000200feu, 0x00000017u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t WhiteMask_VkFsSize = 417;
 
 	inline constexpr std::uint32_t WhiteMask_USE_PALETTE_VkVs[] = {
@@ -16862,6 +16976,7 @@ namespace Jazz2::ShadersGen
 		0x00000025u, 0x00000062u, 0x00000023u, 0x00000061u, 0x0004003du, 0x00000006u, 0x00000063u, 0x00000062u,
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t WhiteMask_USE_PALETTE_VkVsSize = 733;
 
 	inline constexpr std::uint32_t WhiteMask_USE_PALETTE_VkFs[] = {
@@ -16949,6 +17064,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x00000009u, 0x00000047u, 0x00000044u, 0x00000045u, 0x00000046u, 0x00000043u,
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t WhiteMask_USE_PALETTE_VkFsSize = 659;
 
 	inline constexpr std::uint32_t BatchedWhiteMask_VkVs[] = {
@@ -17065,6 +17181,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedWhiteMask_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedWhiteMask_VkFs[] = {
@@ -17122,6 +17239,7 @@ namespace Jazz2::ShadersGen
 		0x0000000fu, 0x00000016u, 0x0004003du, 0x00000009u, 0x00000017u, 0x0000000fu, 0x000200feu, 0x00000017u,
 		0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedWhiteMask_VkFsSize = 417;
 
 	inline constexpr std::uint32_t BatchedWhiteMask_USE_PALETTE_VkVs[] = {
@@ -17238,6 +17356,7 @@ namespace Jazz2::ShadersGen
 		0x0000002cu, 0x0000002du, 0x0000007bu, 0x0000007cu, 0x0004003du, 0x00000006u, 0x0000007eu, 0x0000007du,
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedWhiteMask_USE_PALETTE_VkVsSize = 893;
 
 	inline constexpr std::uint32_t BatchedWhiteMask_USE_PALETTE_VkFs[] = {
@@ -17325,6 +17444,7 @@ namespace Jazz2::ShadersGen
 		0x00000002u, 0x00070050u, 0x00000009u, 0x00000047u, 0x00000044u, 0x00000045u, 0x00000046u, 0x00000043u,
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
+
 	inline constexpr std::size_t BatchedWhiteMask_USE_PALETTE_VkFsSize = 659;
 
 }

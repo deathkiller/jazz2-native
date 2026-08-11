@@ -1,4 +1,4 @@
-/**
+﻿/**
 	@file Main.cpp
 
 	Command-line entry point of ShaderCompiler — the offline shader preprocessor of
@@ -1917,6 +1917,12 @@ namespace
 			String bytes;
 			if (ReadFileToString(outputPath, bytes) && !bytes.empty()) {
 				const std::uint8_t* first = reinterpret_cast<const std::uint8_t*>(bytes.data());
+				// Emitted verbatim. A post-pass that rewrote the register type of every source slot cgcomp
+				// leaves encoded as 0 was tried here once, to stop RPCS3 abandoning the batched programs with
+				// "Src check failed"; it corrupted real constant fetches, because a type of 0 is not the
+				// "unused slot" it assumed. Batching is left undefined on the RSX instead (RHI_CAP_BATCHING in
+				// RhiFwd.h) - do not reach for a microcode patch again without first pinning the instruction
+				// encoding down against cgcomp's own `-d` assembly dump.
 				ucode.assign(first, first + bytes.size());
 			} else {
 				ok = false;
@@ -2095,7 +2101,11 @@ namespace
 					bool ok = true;
 					for (std::int32_t stage = 0; stage < 2 && ok; stage++) {
 						const bool vertexStage = (stage == 0);
-						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+						// The RSX is the one target built with NO_DYNAMIC_BRANCHING: a fragment stage whose
+						// control flow survives into NV40 IF/LOOP/BRK comes out corrupt, because the branch
+						// body reuses registers the surrounding code is still holding
+						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define,
+							/*softwareRenderer*/ false, /*noDynamicBranching*/ true);
 						String cg;
 						Diagnostic diag;
 						// The same Cg the PS Vita gets, only with the batch capped to what the console's

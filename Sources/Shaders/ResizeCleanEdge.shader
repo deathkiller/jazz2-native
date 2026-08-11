@@ -85,7 +85,7 @@ float distToLine(vec2 testPt, vec2 pt1, vec2 pt2, vec2 dir){
 
 vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf, vec4 uff, vec4 b, vec4 c, vec4 f, vec4 ff, vec4 db, vec4 d, vec4 df, vec4 dff, vec4 ddb, vec4 dd, vec4 ddf){
 	//clamped range prevents inacccurate identity (no change) result, feel free to disable if necessary
-	#ifdef SLOPE
+	#if SLOPE
 	float minWidth = 0.45;
 	float maxWidth = 1.142;
 	#else
@@ -114,7 +114,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 	bool flip = false;
 	vec2 center = vec2(0.5,0.5);
 
-	#ifdef SLOPE
+	#if SLOPE
 	if(similar3(f, d, db) && !similar3(f, d, b) && !similar(uf, db)){ //lower shallow 2:1 slant
 		if(similar(c, df) && higher(c, f)){ //single pixel wide diagonal, dont flip
 
@@ -135,7 +135,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 		}
 
 		//cleanup slant transitions
-		#ifdef CLEANUP
+		#if CLEANUP
 		if(!flip && similar(c, uf) && !(similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff))){ //shallow
 			float dist2 = distToLine(point, center+vec2(2.0, -1.0)*pointDir, center+vec2(-0.0, 1.0)*pointDir, pointDir);
 			dist = min(dist, dist2);
@@ -164,7 +164,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 		}
 
 		//cleanup slant transitions
-		#ifdef CLEANUP
+		#if CLEANUP
 		if(!flip && similar(c, db) && !(similar3(c, db, ddb) && !similar3(c, db, dd) && !similar(f, ddb))){ //steep
 			float dist2 = distToLine(point, center+vec2(1.0, 0.0)*pointDir, center+vec2(-1.0, 2.0)*pointDir, pointDir);
 			dist = min(dist, dist2);
@@ -201,8 +201,7 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 		}
 
 		//cleanup slant transitions
-		#ifdef SLOPE
-		#ifdef CLEANUP
+		#if SLOPE && CLEANUP
 		if(!flip && similar3(c, uf, uff) && !similar3(c, uf, ff) && !similar(d, uff)){ //shallow
 			float dist2 = distToLine(point, center+vec2(1.5, 0.0)*pointDir, center+vec2(-0.5, 1.0)*pointDir, pointDir);
 			dist = max(dist, dist2);
@@ -213,12 +212,11 @@ vec4 sliceDist(vec2 point, vec2 mainDir, vec2 pointDir, vec4 ub, vec4 u, vec4 uf
 			dist = max(dist, dist2);
 		}
 		#endif
-		#endif
 
 		dist -= (_lineWidth/2.0);
 		return dist <= 0.0 ? ((cd(c,f) <= cd(c,d)) ? f : d) : vec4(-1.0);
 	}
-	#ifdef SLOPE
+	#if SLOPE
 	else if(similar3(ff, df, d) && !similar3(ff, df, c) && !similar(uff, d)){ //far corner of shallow slant
 
 		if(similar(f, dff) && higher(f, ff)){ //single pixel wide diagonal, dont flip

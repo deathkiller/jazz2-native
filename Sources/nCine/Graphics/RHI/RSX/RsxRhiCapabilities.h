@@ -22,15 +22,17 @@ namespace nCine::RHI::RSX
 			// texture units (the backend exposes the 8 the pipeline uses, see RsxTexture::MaxTextureUnits).
 			// The uniform block budget is NOT the 64 KB the other backends publish: a block reaches the
 			// vertex program through its constant registers, of which the vp40 profile allows a program 544
-			// in total. What the batcher may build is bounded well below that anyway by
-			// RsxDevice::MaxBatchSize, so this is a deliberately conservative byte figure rather than a
-			// derivation - its only job is to keep the batcher from sizing a batch the shader cannot
-			// address. The offset alignment is one std140 vec4, as elsewhere.
+			// in total, so this is a deliberately conservative byte figure rather than a derivation. The
+			// offset alignment is one std140 vec4, as elsewhere.
+			// The block size alone cannot bound the batch here, though - it is only a byte budget, and
+			// dividing it by an instance stride yields more instances than the microcode can address (65 at
+			// a stride of 112 against the 32 every batched variant is compiled for). MaxBatchSize is what
+			// actually caps it, and the batcher has to be told rather than left to derive it.
 			// The RSX can bind four colour surfaces at once, but this backend uses one
 			// (RsxRenderTarget::MaxColorAttachments) - the pipeline never asks for MRT.
 			SetDeviceCapabilities("RSX", RsxDevice::GetMaxTextureDimension(), std::int32_t(RsxTexture::MaxTextureUnits),
 				RsxDevice::GetMaxUniformBlockSize(), RsxDevice::GetUniformBufferOffsetAlignment(),
-				std::int32_t(RsxRenderTarget::MaxColorAttachments));
+				std::int32_t(RsxRenderTarget::MaxColorAttachments), std::int32_t(RsxDevice::MaxBatchSize));
 
 			LogCapabilities();
 		}

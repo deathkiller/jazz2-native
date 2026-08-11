@@ -133,7 +133,7 @@ Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | Yes | Ye
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No
 Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | Yes | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps3-limits) @m_endspan | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | Yes | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (built from source, single-threaded) @m_endspan | SDK-dependent | SDK-dependent
 Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
@@ -890,39 +890,35 @@ provokes the same thing.
     a new backend in @cpp "Thread.cpp" @ce rather than a configuration change. Multiplayer
     @m_span{m-text m-dim} (including local splitscreen) @m_endspan is therefore compiled out and
     asset loading is synchronous.
--   **Module music is off**, so the game has sound effects but no soundtrack --- which on this game
-    means no music at all, since every track is a `.j2b` module. libopenmpt compiles for this
-    toolchain once the C99 maths gap is papered over @m_span{m-text m-dim} (see below) @m_endspan but
-    then wants `std::mutex`, which a libstdc++ built without gthread support does not have. The
-    library *has* a single-threaded mode, but `mpt/base/detect_quirks.hpp` defines
-    `MPT_PLATFORM_MULTITHREADED` to 1 unconditionally and only un-defines it for a hardcoded list of
-    platforms, so no `-D` can select it. Adding the PS3 to that list upstream is a two-line change
-    and would turn the music on.
 -   **Three rescale filters have no microcode**: `ResizeCleanEdge` needs 92 temporary registers where
     `fp40` has 64, `ResizeSabr` needs a ninth `TEXCOORD` output, and `ResizeMonochrome` indexes an
     array the profile only allows indexing for texture coordinates. The other 58 program variants
-    compile. Each of the three reports itself at load time.
--   **Sprite batching is turned off.** @cpp RenderResources::GetBatchedShader() @ce reports no batched
-    counterpart on this backend, which is how the batcher is told a run cannot be combined, so every
-    sprite is drawn individually. The batched stages themselves are the reason: the emulator reports
-    their vertex programs as aborting before their end instruction and NOPs them, so a batched draw
-    produces nothing and takes the command queue down with it. What is *not* the cause has been
-    established --- the microcode is well formed @m_span{m-text m-dim} (end bit on the last instruction
-    and nowhere else, no branches, constants in range) @m_endspan, it is uploaded complete
-    @m_span{m-text m-dim} (the byte counts match `rsxLoadVertexProgramBlock`'s own chunking) @m_endspan,
-    and shrinking the instance array from 32 elements to 4 changes nothing. The two structural
-    differences left against every stage that does work are the second input attribute
-    @m_span{m-text m-dim} (`aInstanceIndex`, giving `input_mask` 0x300 rather than 0x100) @m_endspan and
-    the wider `output_mask` @m_span{m-text m-dim} (0x1c000 against 0xc000) @m_endspan.
+    compile. The backend leaves `RHI_CAP_HEAVY_RESCALE_SHADERS` undefined, which drops those three
+    modes from *Options @m_span{m-text m-dim} > @m_endspan Graphics @m_span{m-text m-dim} > @m_endspan
+    Rescale Mode* and skips compiling them at all; a value stored by another backend needs no special
+    handling, because @cpp UpscaleRenderPass @ce already falls back to the plain sprite shader when a
+    mode resolves to no program, which is exactly the pixel-perfect mode.
+-   **Sprite batching is turned off.** The backend leaves `RHI_CAP_BATCHING` undefined, so
+    @cpp RenderResources::GetBatchedShader() @ce reports no batched counterpart --- which is how the
+    batcher is told a run cannot be combined --- and every sprite is drawn individually. That one
+    switch also skips *linking* the batched programs, keeping a dozen of them out of memory. The cause
+    is the microcode cgcomp emits for the instance indexing: a batched vertex program reaches the
+    instance array through the address register, and the emulator's decompiler demands a register type
+    in all three source slots of every instruction, abandoning the whole program when one is zero
+    @m_span{m-text m-dim} (`Src check failed. Aborting`) @m_endspan before the position output is ever
+    written --- so a batched draw renders nothing while unbatched ones are correct. Whether real
+    hardware would accept it is untested. Patching the emitted microcode to fill those slots was tried
+    and reverted: it silenced the complaint but turned real constant fetches into temporary reads,
+    so a type of zero is not the "unused slot" that attempt assumed.
 -   **The batch would be 32 sprites** when it is re-enabled, against 585 on a platform with uniform
     buffers, because a batched instance array reaches the vertex program through its constant registers
     rather than a buffer. Three places have to agree on that number and none can derive it from the
     others: the microcode bakes it in offline @m_span{m-text m-dim} (ShaderCompiler's `RsxMaxBatchSize`)
     @m_endspan, @cpp RsxDevice::MaxBatchSize @ce sizes the batched corner stream that supplies the
-    instance index, and @cpp AppConfiguration::fixedBatchSize @ce bounds what the engine collects per
-    draw. Left to derive itself from the uniform block budget the engine picks 65, which overruns both
-    the corner stream and the instance array, the backend says so at load time rather than clamping
-    quietly.
+    instance index, and the backend publishes it as @cpp IRhiCapabilities::IntValues::MaxBatchSize @ce
+    so that both the shader compilation paths and @cpp RenderBatcher @ce bound themselves by it. Left
+    to derive itself from the uniform block budget the engine picks 65, which overruns both the corner
+    stream and the instance array; the backend says so at load time rather than clamping quietly.
 -   **Stage attributes carry the Cg entry point's struct qualifier.** cgcomp records a generated stage's
     inputs as `_input.aQuadCorner` rather than `aQuadCorner`, because the emitter passes them in a
     struct, while the hand-written present shader's are unqualified. `rsxVertexProgramGetAttrib()` only
@@ -930,9 +926,11 @@ provokes the same thing.
     @m_span{m-text m-dim} (@cpp RsxDevice::FindVertexAttribute() @ce) @m_endspan. Asking for the bare name
     silently finds nothing, the stream is never bound, and every sprite reads whatever the previous draw
     left in that register --- which renders an entirely black frame with no error anywhere.
--   The three resize filters and batching aside, nothing else is knowingly unimplemented, the port has
-    not had the testing on real hardware that the older consoles have, and the emulator still shows a
-    magenta menu background and a black panel where the menu entries belong.
+-   The three resize filters and batching aside, nothing else is knowingly unimplemented. Under the
+    emulator the game runs at 60 FPS with tilemaps, sprites, HUD, menus and the textured backgrounds
+    all correct, and the command queue stays healthy @m_span{m-text m-dim} (no FIFO desync, no aborted
+    vertex programs) @m_endspan --- but the port has not had the testing on real hardware that the
+    older consoles have.
 
 @m_class{m-block m-info}
 
@@ -944,6 +942,15 @@ macro is not the fix --- it also drags in the `long double` variants this newlib
 names one by one and is **force-included into every translation unit** by the toolchain file, so that
 third-party sources the build only fetches are covered too. It is a property of the compiler that was
 installed rather than of anything in this project, which is why it lives with the toolchain.
+@par
+The same libstdc++ was also built without gthread support, so it has no `std::mutex` --- which is what
+kept **libopenmpt**, and therefore the soundtrack, off this console for a while. The library has a
+single-threaded mode that never includes `<mutex>`, but `mpt/base/detect_quirks.hpp` assigns
+`MPT_PLATFORM_MULTITHREADED` unconditionally before clearing it again for a hardcoded list of
+platforms @m_span{m-text m-dim} (DJGPP, Emscripten without pthreads) @m_endspan, so no `-D` can reach
+it. @cpp "cmake/Findlibopenmpt.cmake" @ce adds a block of the same shape to the fetched copy and
+selects it, which is why the PS3 sets `NCINE_COMPILE_OPENMPT` --- ps3dev packages no libopenmpt, and a
+console has no dynamic loader for the runtime fallback the desktop platforms use.
 
 - - -
 

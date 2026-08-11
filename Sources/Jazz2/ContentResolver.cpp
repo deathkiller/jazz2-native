@@ -2136,9 +2136,14 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", ShadersGen::ResizeCrtScanlines);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtShadowMask] = CompileShader("ResizeCrtShadowMask", ShadersGen::ResizeCrtShadowMask);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtApertureGrille] = CompileShader("ResizeCrtApertureGrille", ShadersGen::ResizeCrtApertureGrille);
+#	if defined(RHI_CAP_HEAVY_RESCALE_SHADERS)
+		// These three are skipped where the backend's offline shader profile rejected them (see
+		// RHI_CAP_HEAVY_RESCALE_SHADERS): the menu does not offer their modes there, so compiling them
+		// would only produce a program with nothing to bind - and one error line each, every launch
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeMonochrome] = CompileShader("ResizeMonochrome", ShadersGen::ResizeMonochrome);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeSabr] = CompileShader("ResizeSabr", ShadersGen::ResizeSabr);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCleanEdge] = CompileShader("ResizeCleanEdge", ShadersGen::ResizeCleanEdge);
+#	endif
 #endif
 #if !defined(DEATH_TARGET_VITA)
 		// vitaGL's runtime shader compiler (SceShaccCg) crashes while building the antialiasing resolve shader,
@@ -2171,6 +2176,16 @@ namespace Jazz2
 		std::unique_ptr shader = std::make_unique<Shader>();
 		// "render_mode" flags are program-level metadata applied by Material::SetShader()
 		shader->SetRenderModes(program.RenderModes);
+#if !defined(RHI_CAP_BATCHING)
+		// Where the backend does not batch, a batched program is never handed out (see
+		// RenderResources::GetBatchedShader), so there is nothing to gain by building it. The object is still
+		// returned - the caller registers it as a batched counterpart, and that registration is simply never
+		// consulted - but it stays unlinked, which on the RSX also keeps a dozen programs' worth of microcode
+		// out of memory. NoUniformsInBlocks is what marks a batched program, exactly as in RenderResources.
+		if (introspection == Shader::Introspection::NoUniformsInBlocks) {
+			return shader;
+		}
+#endif
 		// The program name + the variant's own name are the true identity the fixed-function console
 		// backends resolve their generated effect tables from - the shaderName label is only a label
 		if (shader->LoadFromCache(shaderName, ShadersVersion, introspection, *variant, program.Name)) {
@@ -2181,6 +2196,9 @@ namespace Jazz2
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		std::int32_t maxUniformBlockSize = std::clamp<std::int32_t>(caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxUniformBlockSize), 0, 64 * 1024);
+		// A backend whose instance array is not a bindable buffer cannot address more instances than its
+		// shaders were compiled for, however much block space it publishes (see IntValues::MaxBatchSize)
+		const std::int32_t maxBatchSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxBatchSize);
 
 		std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		bool batchSizeComputed = false;
@@ -2208,11 +2226,20 @@ namespace Jazz2
 						alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;
 					}
 					batchSize = maxUniformBlockSize / alignedStride;
+					if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+						batchSize = maxBatchSize;
+					}
 					LOGI("Shader \"{}\" - instance stride: {} + {} align bytes, max batch size: {}", shaderName,
 						instanceStride, alignedStride - instanceStride, batchSize);
 					batchSizeComputed = true;
 				}
 			}
+		}
+
+		// The explicitly configured size is bounded by the same ceiling
+		if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+			batchSize = maxBatchSize;
+			batchSizeComputed = true;
 		}
 
 		bool hasLinked;
@@ -2450,6 +2477,27 @@ namespace Jazz2
 		}
 	}
 
+	void ContentResolver::ConfigurePaletteTextureChannels(Texture& texture)
+	{
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		// A palette entry is a uint32 VALUE with red in the lowest byte (0xAABBGGRR) - the convention
+		// everything downstream extracts channels with, and what nCine::Color guarantees on both
+		// endiannesses by reordering its members. The upload reinterprets that array as bytes, and the GX
+		// backend depends on it doing exactly that: it reads the very same bytes back as uint32 entries to
+		// build its TLUTs and CPU-baked copies (GxDevice::AcquireTlutForRow, GxTexture::EnsureBakedRgba),
+		// so the two reinterprets cancel out whatever the host endianness is.
+		//
+		// A backend that instead SAMPLES the palette as an ordinary RGBA8 texture sees those raw bytes, and
+		// on a big-endian host the value above is laid out A,B,G,R rather than R,G,B,A - reversed channels,
+		// including an alpha that makes parts of an indexed sprite disappear. Declaring the order through
+		// the swizzle states it once, for every backend that samples, without touching the bytes the GX
+		// round-trip needs. Little-endian needs nothing: there the two layouts already coincide.
+		texture.SetSwizzle(SwizzleChannel::Alpha, SwizzleChannel::Blue, SwizzleChannel::Green, SwizzleChannel::Red);
+#else
+		static_cast<void>(texture);
+#endif
+	}
+
 	Texture* ContentResolver::ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor, PlayerType playerType)
 	{
 		if (_isHeadless) {
@@ -2463,6 +2511,7 @@ namespace Jazz2
 			texture = std::make_unique<Texture>("PlayerColorPalette", Texture::Format::RGBA8, ColorsPerPalette, 1);
 			texture->SetMinFiltering(SamplerFilter::Nearest);
 			texture->SetMagFiltering(SamplerFilter::Nearest);
+			ConfigurePaletteTextureChannels(*texture);
 		}
 		texture->LoadFromTexels((std::uint8_t*)palette, 0, 0, ColorsPerPalette, 1);
 		return texture.get();
@@ -2479,6 +2528,7 @@ namespace Jazz2
 			_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
 			_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
 			_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+			ConfigurePaletteTextureChannels(*_paletteTexture);
 			// Force a full upload on first use
 			_paletteDirtyFirstRow = 0;
 			_paletteDirtyLastRow = PaletteCount - 1;

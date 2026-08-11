@@ -76,6 +76,35 @@ if(NOT TARGET libopenmpt::libopenmpt AND (NCINE_DOWNLOAD_DEPENDENCIES OR NCINE_C
 
 	target_compile_definitions(Libopenmpt PRIVATE "LIBOPENMPT_BUILD" "MPT_CHECK_CXX_IGNORE_WARNING_FINITEMATH")
 
+	if(PLATFORM_PS3)
+		# PSL1GHT's libstdc++ is built without gthreads, so it has no std::mutex - and libopenmpt reaches for
+		# one unless it believes the platform is single-threaded. It decides that in `mpt/base/detect_quirks.hpp`,
+		# which sets MPT_PLATFORM_MULTITHREADED to 1 and then clears it again for the platforms it knows about
+		# (DJGPP, Emscripten without pthreads). The PS3 is not on that list and there is no way in from outside,
+		# because the header assigns the macro unconditionally before anything can override it - so the value is
+		# patched into the fetched copy, adding the same kind of block upstream already has for the others.
+		# `mpt/mutex/mutex.hpp` then selects MPT_MUTEX_NONE and <mutex> is never included. Nothing else is
+		# affected: decoding a module is single-threaded work anyway, and the engine only ever pulls from one
+		# thread (see AudioReaderMpt).
+		set(_quirksHeader "${libopenmptgit_SOURCE_DIR}/src/mpt/base/detect_quirks.hpp")
+		file(READ "${_quirksHeader}" _quirksSource)
+		if(NOT _quirksSource MATCHES "MPT_PLATFORM_SINGLETHREADED_OVERRIDE")
+			string(REPLACE
+				"#if (MPT_OS_EMSCRIPTEN && !defined(__EMSCRIPTEN_PTHREADS__))"
+				"#if defined(MPT_PLATFORM_SINGLETHREADED_OVERRIDE)\n#undef MPT_PLATFORM_MULTITHREADED\n#define MPT_PLATFORM_MULTITHREADED 0\n#endif\n\n#if (MPT_OS_EMSCRIPTEN && !defined(__EMSCRIPTEN_PTHREADS__))"
+				_quirksPatched "${_quirksSource}")
+			if(_quirksPatched STREQUAL _quirksSource)
+				message(FATAL_ERROR "Could not make libopenmpt single-threaded: the anchor in \"${_quirksHeader}\" changed, so the PlayStation 3 build would fail on the missing std::mutex")
+			endif()
+			file(WRITE "${_quirksHeader}" "${_quirksPatched}")
+			message(STATUS "Patched libopenmpt for single-threaded operation (no std::mutex on PSL1GHT)")
+		endif()
+		# The second define only silences the note the library emits when a single-threaded platform still has
+		# GCC's threadsafe static initialization, which is exactly this configuration and is harmless
+		target_compile_definitions(Libopenmpt PRIVATE "MPT_PLATFORM_SINGLETHREADED_OVERRIDE"
+			"MPT_CHECK_CXX_IGNORE_WARNING_SINGLETHREADED_THREADSAFE_STATICS")
+	endif()
+
 	if(EMSCRIPTEN)
 		target_compile_definitions(Libopenmpt PRIVATE "MPT_WITH_ZLIB" "MPT_WITH_MPG123" "MPT_WITH_VORBIS" "MPT_WITH_VORBISFILE" "MPT_BUILD_WASM")
 		

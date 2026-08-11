@@ -360,6 +360,17 @@ namespace nCine::RHI::RSX
 		}
 		/** @brief Returns the attribute register of the named compiled attribute, or -1 */
 		std::int32_t GetStageAttributeRegister(const char* name) const;
+		/**
+			@brief Returns the attribute register the compiled stage reads a reflection location from, or -1
+
+			The pipeline addresses a vertex attribute by its location in the reflection's numbering, but the
+			register the microcode actually fetches is cgcomp's own and need not match. Resolved by name once
+			at link time (see @ref ResolveStageInterface), because binding a stream to the reflection's number
+			leaves the stage reading a register nothing filled - which is a mesh that renders nothing at all.
+		*/
+		inline std::int32_t GetAttributeRegisterForLocation(std::uint32_t location) const {
+			return (location < MaxAttributeLocations ? _attributeRegisterByLocation[location] : -1);
+		}
 
 		/** @brief Returns the vertex format the pipeline last defined on this program */
 		inline RsxVertexFormat& GetVertexFormat() {
@@ -401,6 +412,10 @@ namespace nCine::RHI::RSX
 		RsxInstanceArray _instanceArray;
 		SmallVector<RsxSamplerBinding, 0> _fragmentSamplers;
 		SmallVector<RsxStageAttribute, 0> _stageAttributes;
+		/** @brief Largest reflection attribute location @ref _attributeRegisterByLocation covers */
+		static constexpr std::uint32_t MaxAttributeLocations = 16;
+		/** @brief Reflection location -> compiled attribute register, or -1 where the stage declares none */
+		std::int8_t _attributeRegisterByLocation[MaxAttributeLocations];
 
 		/** @brief Committed loose-uniform value pointers, published by the uniform caches */
 		SmallVector<std::pair<const char*, const std::uint8_t*>, 0> _resolvedUniforms;

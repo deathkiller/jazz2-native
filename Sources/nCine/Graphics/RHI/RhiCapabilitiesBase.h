@@ -65,9 +65,11 @@ namespace nCine::RHI
 		 * @param maxUniformBlockSize			Largest uniform block the backend accepts, normalized as well
 		 * @param uniformBufferOffsetAlignment	Alignment the engine has to suballocate uniform ranges at
 		 * @param maxColorAttachments			Color attachments a render target of this backend can hold
+		 * @param maxBatchSize					Hard ceiling on the instance batch, or 0 where only the block size limits it
 		 */
 		void SetDeviceCapabilities(const char* renderer, std::int32_t maxTextureSize, std::int32_t maxTextureImageUnits,
-			std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments);
+			std::int32_t maxUniformBlockSize, std::int32_t uniformBufferOffsetAlignment, std::int32_t maxColorAttachments,
+			std::int32_t maxBatchSize = 0);
 
 		/**
 		 * @brief Derives @ref IntValues::MaxUniformBlockSizeNormalized from the raw block size

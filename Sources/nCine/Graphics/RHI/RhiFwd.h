@@ -18,8 +18,27 @@
 // shaders cheap enough to drive full-screen post-processing (the bloom Blur/Downsample/Combine chain, the
 // shader lighting compositing and the rescale/antialiasing passes); `RHI_CAP_FRAMEBUFFERS` means off-screen
 // render targets are available. The OpenGL family backend provides both.
+//
+// `RHI_CAP_HEAVY_RESCALE_SHADERS` means the heaviest of the shipped rescale filters - CleanEdge, SABR and
+// Monochrome - are actually available. They are ordinary shaders everywhere a compiler runs at load time or
+// targets a modern profile, so every such backend advertises this; a backend that compiles its shaders
+// OFFLINE against a fixed profile may find one rejected, which is a build-time fact its menu has to respect
+// (see the RSX arm). Anything gated on it must also be reachable without it - the modes simply disappear.
+// `RHI_CAP_BATCHING` means CPU-side batching works: many sprites that share a material are collected into
+// one draw whose per-instance data travels in a uniform block, and the backend must be able to run the
+// batched twin of a shader (which indexes that block) for it to be worth anything. A backend that leaves it
+// undefined never receives a batched shader at all - @ref RenderResources::GetBatchedShader reports none, so
+// @ref RenderBatcher collects nothing and every command is submitted on its own. Correct, just more draws.
+// It is a build-time fact everywhere (a shader profile either expresses the indexing or it does not), which
+// is why it lives here rather than among the runtime @ref IRhiCapabilities values.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_HEAVY_RESCALE_SHADERS
+#if !defined(RHI_GL_PROFILE_ES2)
+// ES2 has no uniform buffer objects to put the instance array in, and the batched programs' ESSL 100 form is
+// not even valid there (a "uint aMeshIndex" integer attribute), so that profile does not batch
+#	define RHI_CAP_BATCHING
+#endif
 
 namespace nCine::RHI::GL
 {
@@ -101,6 +120,7 @@ namespace nCine::RHI
 // no-shader lighting path and renders the scene directly to the screen buffer instead of through the shader
 // combine/rescale passes.
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::Software
 {
@@ -182,6 +202,7 @@ namespace nCine::RHI
 // undefined and the game runs the direct tier (scene straight to the screen at the logical resolution,
 // CPU lightmap composited by the device's lighting hook - the same tier as the software backend).
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::GX
 {
@@ -275,6 +296,7 @@ namespace nCine::RHI
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::PVR
 {
@@ -369,6 +391,7 @@ namespace nCine::RHI
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::GU
 {
@@ -464,6 +487,7 @@ namespace nCine::RHI
 // instead.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::GS
 {
@@ -545,6 +569,8 @@ namespace nCine::RHI
 // OpenGL|ES 2.0 translation layer that sits between the engine and sceGxm.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_HEAVY_RESCALE_SHADERS
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::GXM
 {
@@ -630,7 +656,19 @@ namespace nCine::RHI
 // all, so the very same Cg is compiled to NV40 microcode offline by cgcomp and embedded per program-variant -
 // the arrangement the Vulkan backend uses for its SPIR-V. A program whose Cg exceeded what the vp40/fp40
 // profiles can express therefore has no microcode to bind, which is a build-time fact rather than a runtime one
-// (see `RsxShaderProgram`).
+// (see `RsxShaderProgram`). Three of the shipped rescale filters are in that position - CleanEdge wants 92
+// temporary registers against the profile's 64, SABR a TEXCOORD index the profile does not reach, and
+// Monochrome an indexed texcoord fetch it cannot express - so `RHI_CAP_HEAVY_RESCALE_SHADERS` is NOT defined
+// here and the menu leaves those three modes out instead of offering a mode that would bind nothing.
+//
+// `RHI_CAP_BATCHING` is NOT defined either, for the same class of reason. A batched shader indexes the
+// instance array through the vertex program's address register, and the microcode cgcomp emits for that is
+// rejected: RPCS3 demands a register type in all three source slots of every instruction and abandons the
+// program when one is zero ("Src check failed. Aborting"), returning before the position output is written,
+// so a batched draw renders nothing while unbatched ones are correct. Whether real hardware would accept it
+// is untested. Re-tested 2026-08-11 after the streaming-buffer race behind the invisible tilemap was fixed,
+// in case they shared a cause: they do not - text came back with letters missing and glyphs mangled. Do not
+// define this again without new information about the microcode encoding itself.
 //
 // `RHI_CAP_STREAMING_TEXTURES` holds: RSX textures live in memory the PPE can address directly - either the
 // 256 MB of GDDR3 mapped through the GPU aperture or main XDR memory the GPU reads over the bus - so content
@@ -717,6 +755,8 @@ namespace nCine::RHI
 // runs the whole bloom / lighting / combine / rescale chain exactly as it does on OpenGL.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_HEAVY_RESCALE_SHADERS
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::D3D11
 {
@@ -795,9 +835,12 @@ namespace nCine::RHI
 // full-pipeline hardware backend like the OpenGL family and Direct3D 11: it has programmable shaders (built
 // offline as SPIR-V, embedded per program-variant) and off-screen render targets, so both `RHI_CAP_SHADERS`
 // and `RHI_CAP_FRAMEBUFFERS` are defined and the pipeline runs the whole bloom / lighting / combine / rescale
-// chain exactly as it does on OpenGL.
+// chain exactly as it does on OpenGL. SPIR-V has no profile limits to trip over, so every rescale filter
+// compiles and `RHI_CAP_HEAVY_RESCALE_SHADERS` holds as well.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_HEAVY_RESCALE_SHADERS
+#define RHI_CAP_BATCHING
 
 namespace nCine::RHI::Vulkan
 {

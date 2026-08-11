@@ -144,11 +144,18 @@ const BUILTINS = [
 /** Built-ins the canvas lowering explicitly reports as unsupported */
 const UNSUPPORTED_BUILTINS = ['NORMAL', 'SCREEN_UV', 'SCREEN_PIXEL_SIZE', 'TIME', 'POINT_COORD'];
 
-/** Macros that are resolved during stage assembly (they never appear in an emitted source) */
+// Macros the compiler resolves itself, so that none of them ever appears in an emitted source. All
+// of them work in `#ifdef` / `#ifndef` and in `#if` / `#elif` expressions; only `#define` / `#undef`
+// of one is an error. The first two are resolved during stage assembly, the rest when a stage source
+// is built for a given emission. A `.shader` writes every conditional as `#if` - including the ones
+// on variant defines and other flags, which the compiler lowers to `#ifdef` / `defined(...)` on the
+// way out so the emitted GLSL stays legal on the ES profiles.
+const CONVENTION = ' Written `#if X` / `#if !X`, so a second condition can join the same directive.';
 const STAGE_MACROS = [
-	{ name: 'VERTEX_STAGE', doc: 'Kept for the vertex stage, dropped for the fragment stage. Only the `#ifdef` / `#ifndef` forms are supported — `#if defined(VERTEX_STAGE)`, `#elif`, `#define` and `#undef` are errors.' },
-	{ name: 'FRAGMENT_STAGE', doc: 'Kept for the fragment stage, dropped for the vertex stage. Only the `#ifdef` / `#ifndef` forms are supported.' },
-	{ name: 'SOFTWARE_RENDERER', doc: 'Resolved when a stage source is built. Only `--emit-sw-generated` builds with the macro defined; every other emission takes the `#ifndef` side.' }
+	{ name: 'VERTEX_STAGE', doc: 'Kept for the vertex stage, dropped for the fragment stage. Resolved during stage assembly — `#define` and `#undef` are errors.' + CONVENTION },
+	{ name: 'FRAGMENT_STAGE', doc: 'Kept for the fragment stage, dropped for the vertex stage. Resolved during stage assembly — `#define` and `#undef` are errors.' + CONVENTION },
+	{ name: 'SOFTWARE_RENDERER', doc: 'Resolved when a stage source is built. Only `--emit-sw-generated` builds with the macro defined; every other emission takes the undefined side.' + CONVENTION },
+	{ name: 'NO_DYNAMIC_BRANCHING', doc: 'Resolved when a stage source is built. Only `--emit-rsx` (PlayStation 3) builds with the macro defined — a fragment stage compiling to NV40 `IF`/`LOOP`/`BRK` control flow does not survive cgcomp, so gate any dynamically branching block on it.' + CONVENTION }
 ];
 
 /** The fixed-function DSL: statements, pass fields, context facilities and the allowed maths */

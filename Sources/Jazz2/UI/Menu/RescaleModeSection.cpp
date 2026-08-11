@@ -50,18 +50,28 @@ namespace Jazz2::UI::Menu
 		// The direct rendering tier has no rescale shader passes (see UpscaleRenderPass), only the default
 		// pixel-perfect mode works there - the section itself is already hidden in GraphicsOptionsSection,
 		// this is just defense in depth
+		// CleanEdge, SABR and Monochrome are left out on a backend whose offline shader profile rejected them
+		// (see RHI_CAP_HEAVY_RESCALE_SHADERS). Omitting them here is all that is needed: a value stored by
+		// another backend needs no fallback, because UpscaleRenderPass already falls back to the plain sprite
+		// shader whenever the mode resolves to no program, which is exactly the pixel-perfect mode.
+#if defined(RHI_CAP_HEAVY_RESCALE_SHADERS)
 		add(RescaleMode::CleanEdge, "CleanEdge"_s);
+#endif
 		add(RescaleMode::HQ2x, "HQ2×"_s);
 		add(RescaleMode::_3xBrz, "3×BRZ"_s);
+#if defined(RHI_CAP_HEAVY_RESCALE_SHADERS)
 		add(RescaleMode::Sabr, "SABR"_s);
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 		add(RescaleMode::CrtScanlines, _("CRT Scanlines"));
 		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 		add(RescaleMode::CrtShadowMask, _("CRT Shadow Mask"));
 		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 		add(RescaleMode::CrtApertureGrille, _("CRT Aperture Grille"));
+#	if defined(RHI_CAP_HEAVY_RESCALE_SHADERS)
 		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 		add(RescaleMode::Monochrome, _("Monochrome"));
+#	endif
 #endif
 
 		list->SetSelectedIndex(selectedIndex);

@@ -31,8 +31,9 @@
 	<NAME>;" adds one named variant per declaration. A canvas document that references TEXTURE without
 	declaring uTexture gets "uniform sampler2D uTexture;" auto-declared (with texture
 	unit 0) — explicit declarations, with or without a "texture_unit(N)" hint,
-	win. "#ifdef/#ifndef VERTEX_STAGE|FRAGMENT_STAGE"
-	conditionals around shared globals are resolved at assembly time — the emitted
+	win. Conditionals naming VERTEX_STAGE|FRAGMENT_STAGE around shared globals —
+	the "#ifdef"/"#ifndef" forms as well as "#if"/"#elif" expressions built from
+	them — are resolved at assembly time; the emitted
 	sources contain no stage macros at all; stage-specific helper functions need no
 	guards — unused functions are eliminated per stage after assembly (fixpoint; main
 	is the root), and unused uniforms/blocks/defines/structs are eliminated per stage
@@ -224,14 +225,30 @@ namespace ShaderCompiler
 
 		/**
 			Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared
-			prelude + stage body). "#ifdef/#ifndef SOFTWARE_RENDERER" conditionals (with an optional
-			"#else" and the matching "#endif") are resolved here according to @p softwareRenderer, like
-			the stage macros are at assembly time - the built sources never contain the macro itself.
-			Every emission passes false (the default); only the offline GLSL-to-C++ software-fragment
-			transpiler builds its input with true, so a shader can carry a cheaper software-renderer
-			variant of a too-expensive fragment path without affecting any other backend's output.
+			prelude + stage body). The conditionals naming SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING are
+			resolved here according to @p softwareRenderer and @p noDynamicBranching, like the stage macros
+			are at assembly time - the built sources never contain either macro itself. Both the
+			"#ifdef"/"#ifndef" forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif"
+			expressions built from them are recognized, so one directive can replace a nest of them
+			("#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING"). An expression that also names a macro this
+			resolver does not own ("#if DITHER && !SOFTWARE_RENDERER") keeps its conditional for the GLSL
+			compiler and loses only the backend macros.
+
+			Whatever conditional survives is then lowered for the GLSL preprocessor that will read it: a
+			purely boolean "#if" collapses to "#ifdef"/"#ifndef" or has its flags wrapped in "defined(...)",
+			because the ES profiles reject an undefined macro inside an "#if" expression - see
+			LowerEmittedCondition.
+
+			Both default to false, so an emission that passes neither comes out byte-for-byte unchanged.
+			Only the offline GLSL-to-C++ software-fragment transpiler sets @p softwareRenderer, so a shader
+			can carry a cheaper software-renderer variant of a too-expensive fragment path. Only the
+			PlayStation 3 emission sets @p noDynamicBranching: a fragment stage that compiles to NV40
+			IF/LOOP/BRK control flow does not survive that toolchain - the branch body overwrites registers
+			the surrounding code is still holding, which silently corrupted the textured background's
+			horizon tint - so a shader gates any dynamically branching block on it.
 		*/
-		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define, bool softwareRenderer = false);
+		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define,
+			bool softwareRenderer = false, bool noDynamicBranching = false);
 
 		/** Returns the directory part of @p path, or "." if it has none */
 		static String DirectoryOf(StringView path);

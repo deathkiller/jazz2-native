@@ -305,20 +305,18 @@ cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward lib
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-if(PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
-	# The game's music is entirely tracker modules, so these three consoles have sound effects and no
+if(PLATFORM_PSP OR PLATFORM_PS2)
+	# The game's music is entirely tracker modules, so these two consoles have sound effects and no
 	# soundtrack. Each is blocked by something outside the project:
 	#  - PSP: the library builds and plays correctly, but the FIRST module a process loads costs a fixed
 	#    ~29 s inside it (every later one ~1.8 s), which points at the Allegrex having no
 	#    double-precision unit. There is nowhere to hide that on a handheld.
 	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
 	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
-	#  - PS3: it compiles, then wants std::mutex, which PSL1GHT's gthread-less libstdc++ lacks. Its
-	#    single-threaded mode (MPT_MUTEX_NONE) is unreachable because `mpt/base/detect_quirks.hpp`
-	#    hardcodes MPT_PLATFORM_MULTITHREADED to 1 for everything not on its own platform list.
-	# TODO: The PS3 is a two-line upstream patch (add it to that list); the other two are open-ended, and
-	# the shared way out would be pre-rendering the modules offline - the AssetPacker already re-encodes
-	# cinematics for the Dreamcast, so it is the natural place for it.
+	# Both are open-ended; the shared way out would be pre-rendering the modules offline - the AssetPacker
+	# already re-encodes cinematics for the Dreamcast, so it is the natural place for it.
+	# (The PS3 used to be on this list. It is not any more - see Findlibopenmpt.cmake, which puts the
+	# library into its single-threaded mode so it never reaches the std::mutex PSL1GHT lacks.)
 	set(NCINE_WITH_OPENMPT OFF)
 else()
 	cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
@@ -329,11 +327,11 @@ option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 #option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
 cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
-if(PLATFORM_PSP AND NCINE_WITH_OPENMPT)
-	# pspdev packages no libopenmpt, and the fallback the other platforms take when the library is missing -
-	# resolving it at run time - cannot work on a console that has no dynamic loader. So if module music is
-	# turned back on here (see the note above), the library has to come from sources; it does cross-compile
-	# and link for the platform as it stands.
+if((PLATFORM_PSP OR PLATFORM_PS3) AND NCINE_WITH_OPENMPT)
+	# Neither pspdev nor ps3dev packages libopenmpt, and the fallback the other platforms take when the
+	# library is missing - resolving it at run time - cannot work on a console that has no dynamic loader.
+	# So the library has to come from sources; it cross-compiles and links for both platforms as it stands
+	# (the PS3 additionally needs the single-threaded switch, see Findlibopenmpt.cmake).
 	set(NCINE_COMPILE_OPENMPT ON)
 endif()
 

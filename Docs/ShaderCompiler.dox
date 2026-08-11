@@ -122,7 +122,7 @@ Mode or option | Meaning
 `--emit-types <output.h>` | Writes the shared reflection-types header and nothing else
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
 `--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
-`--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header
+`--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header. The only path that builds stage sources with `NO_DYNAMIC_BRANCHING` defined, see @ref shader-compiler-input-preprocessor "the conditionals below"
 `--emit-fixed-function <pvr\|gx\|gu\|gs> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
 `--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
@@ -272,32 +272,49 @@ special: `GL_ES` is never predefined (reflection is taken from the desktop GL vi
 `BATCH_SIZE` is symbolic --- it evaluates as 1 inside @cpp #if @ce expressions but stays symbolic
 when used as an array size.
 
-Three conditionals are resolved at compile time and therefore never survive into any emitted
-source:
+Four macros are resolved by the tool and therefore never survive into any emitted source:
 
--   @cpp "#ifdef VERTEX_STAGE" @ce / @cpp "#ifdef FRAGMENT_STAGE" @ce (with an optional
-    @cpp "#else" @ce) select which stage sees a shared global. They are rarely needed anymore ---
-    attributes and varyings have their own keywords, stage-specific helper functions need no guards
-    because unused functions are eliminated per stage, and everything else is harmless when shared.
--   @cpp "#ifdef SOFTWARE_RENDERER" @ce / @cpp "#ifndef SOFTWARE_RENDERER" @ce is resolved when the
-    stage source is built, and only the `--emit-sw-generated` path builds with it defined. A shader
-    can therefore carry a cheaper CPU variant of an expensive fragment path without changing any
-    other backend's output --- see @cpp "TexturedBackground.shader" @ce, whose software branch
-    approximates `pow(distance, 1.5)` and drops the per-pixel star field. Wrapped around **global-scope
-    `varying` declarations** it goes one step further and gives the software renderer
-    a different set of varyings: the tool consumes the directive lines while parsing, tags each
-    declaration and re-wraps it per stage, so a conditional there may contain nothing but `varying`
-    declarations (and no nested directives). @cpp "tests/SwVarying.shader" @ce is the worked example
-    --- `vPos` for the shader backends, `vRect` for the software one.
--   `#ifdef <VARIANT>` on a variant name resolves per variant, in the GLSL stages and inside a
-    @cpp fixed_function @ce block alike.
+-   `VERTEX_STAGE` / `FRAGMENT_STAGE` (with an optional @cpp "#else" @ce) select which stage sees a
+    shared global, and are resolved at assembly time. They are rarely needed anymore --- attributes
+    and varyings have their own keywords, stage-specific helper functions need no guards because
+    unused functions are eliminated per stage, and everything else is harmless when shared.
+-   `SOFTWARE_RENDERER` is resolved when the stage source is *built*, and only the
+    `--emit-sw-generated` path builds with it defined. A shader can therefore carry a cheaper CPU
+    variant of an expensive fragment path without changing any other backend's output --- see
+    @cpp "TexturedBackground.shader" @ce, whose software branch approximates `pow(distance, 1.5)` and
+    drops the per-pixel star field. Wrapped around **global-scope `varying` declarations** it goes one
+    step further and gives the software renderer a different set of varyings: the tool consumes the
+    directive lines while parsing, tags each declaration and re-wraps it per stage, so a conditional
+    there may contain nothing but `varying` declarations (and no nested directives).
+    @cpp "tests/SwVarying.shader" @ce is the worked example --- `vPos` for the shader backends,
+    `vRect` for the software one.
+-   `NO_DYNAMIC_BRANCHING` is likewise resolved when the stage source is built, and only `--emit-rsx`
+    builds with it defined: a fragment stage that compiles to NV40 `IF`/`LOOP`/`BRK` control flow does
+    not survive that toolchain --- the branch body overwrites registers the surrounding code is still
+    holding --- so a shader gates any dynamically branching block on it.
 
-@m_class{m-noindent}
+All four work in @cpp #ifdef @ce / @cpp #ifndef @ce **and** in @cpp #if @ce / @cpp #elif @ce
+expressions, which is what lets one directive replace a nest of them
+@m_span{m-text m-dim} (`#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING`) @m_endspan. Each family is
+folded by its own pass over the expression's top-level @cpp && @ce terms, so the two compose: a term
+naming only that pass's macros is evaluated, one naming anything else keeps its text. Defining or
+undefining one of them is still an error. A variant name resolves per variant in the same way, in the
+GLSL stages and inside a @cpp fixed_function @ce block alike.
 
-Only those exact @cpp #ifdef @ce / @cpp #ifndef @ce spellings are recognized: `#if defined(...)` is
-not a form any of the three resolvers accepts --- for the stage macros it is a hard error, and for
-`SOFTWARE_RENDERER` the macro name simply leaks into the emitted source. Every other conditional
-passes through textually, and nesting works in both directions.
+@m_class{m-block m-warning}
+
+@par Conditionals that survive into an emitted source
+Whatever @cpp #if @ce is left after that folding is real GLSL, and **GLSL ES rejects an undefined
+macro in an @cpp #if @ce expression** where desktop GLSL substitutes `0` like C does. HLSL accepts it
+too and the Vulkan transform is `#version 450` *desktop* GLSL, so a bare `#if SOME_VARIANT` passes
+both `--hlsl-check` and `--spirv-check` while breaking every ES2/ES3/WebGL target. A macro with an
+**empty** body is worse still: @cpp "#if SLOPE" @ce is a `bad expression` even on desktop. So a purely
+boolean surviving @cpp #if @ce is lowered on the way out --- one term collapses to
+@cpp #ifdef @ce / @cpp #ifndef @ce, anything longer keeps its shape with each flag wrapped in
+@cpp defined(...) @ce. Write @cpp "#if USE_PALETTE" @ce and the emitted source gets
+@cpp "#ifdef USE_PALETTE" @ce; write @cpp "#if DITHER && !SOFTWARE_RENDERER" @ce and it gets
+@cpp "#ifdef DITHER" @ce. `tests/GlslSweep.ps1` compiles every generated stage source in all three
+profiles the engine injects and is the check that catches one that slipped through.
 
 @subsection shader-compiler-input-cleanup Automatic cleanup passes
 

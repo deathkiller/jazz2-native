@@ -31,8 +31,20 @@ uniform vec2 uTintShift;
 #endif
 #endif
 
+// The "#if" expression spelling of the same guard, which is what lets one directive replace a
+// nest of them
+#if VERTEX_STAGE && !FRAGMENT_STAGE
+uniform vec2 uVertexExpr;
+#endif
+
+// An expression mixing a stage macro with one this pass does not own: only the stage macro folds
+// away, and what is left is lowered to "#ifdef TINT" for the GLSL compiler to finish
+#if FRAGMENT_STAGE && TINT
+uniform vec3 uTintExpr;
+#endif
+
 void vertex() {
-	vTexCoords = aTexCoords;
+	vTexCoords = aTexCoords + uVertexExpr;
 #ifdef TINT
 	gl_Position = uProjectionMatrix * vec4(aPosition + uTintShift, 0.0, 1.0);
 #else
@@ -44,6 +56,7 @@ void fragment() {
 	vec4 c = texture(uTexture, vTexCoords);
 #ifdef TINT
 	c = mix(c, uTintColor, uTintStrength);
+	c.rgb *= uTintExpr;
 #endif
 	COLOR = c;
 }
