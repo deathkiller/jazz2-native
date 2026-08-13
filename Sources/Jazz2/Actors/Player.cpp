@@ -68,6 +68,7 @@ namespace Jazz2::Actors
 		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
 		_levelExiting(LevelExitingState::None),
 		_isFreefall(false), _inWater(false), _isLifting(false), _isSpring(false),
+		_copterCheatActive(false),
 		_inShallowWater(-1),
 		_activeModifier(Modifier::None),
 		_externalForceCooldown(0.0f),
@@ -115,6 +116,14 @@ namespace Jazz2::Actors
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
 			_copterSound = nullptr;
+		}
+		if (_airboardSound != nullptr) {
+			_airboardSound->stop();
+			_airboardSound = nullptr;
+		}
+		if (_airboardTurnSound != nullptr) {
+			_airboardTurnSound->stop();
+			_airboardTurnSound = nullptr;
 		}
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
@@ -395,6 +404,20 @@ namespace Jazz2::Actors
 
 		OnUpdateTimers(timeMult);
 		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
+
+#if defined(WITH_AUDIO)
+		// Handle sequential airboard turn sounds
+		if (_airboardTurnSound != nullptr && !_airboardTurnSound->isPlaying()) {
+			// First sound finished, play the second sound now
+			auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
+			if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
+				AudioBuffer* buffer2 = &it->second.Buffers[1]->Buffer;
+				LOGD("Playing airboard_turn buffer 2 (sequential)");
+				_levelHandler->PlaySfx(this, "airboard_turn"_s, buffer2, Vector3f::Zero, true, 2.0f, 0.8f);
+				_airboardTurnSound = nullptr;  // Reset for next turn
+			}
+		}
+#endif
 
 		// Handle weapon switching
 		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
@@ -779,6 +802,14 @@ namespace Jazz2::Actors
 				_copterSound = nullptr;
 			}
 		}
+		if (_airboardSound != nullptr) {
+			if ((_currentAnimation->State & AnimState::Airboard) == AnimState::Airboard) {
+				_airboardSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			} else {
+				_airboardSound->stop();
+				_airboardSound = nullptr;
+			}
+		}
 #endif
 
 		// Trail
@@ -922,6 +953,19 @@ namespace Jazz2::Actors
 					SetFacingLeft(isFacingLeft);
 					// If player changed direction, reset push frames to prevent pushing animation
 					_pushFramesLeft = 0.0f;
+#if defined(WITH_AUDIO)
+					if (_activeModifier == Modifier::Airboard) {
+						// Play both turn sounds in sequence
+						auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
+						if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
+							AudioBuffer* buffer1 = &it->second.Buffers[0]->Buffer;
+							LOGD("Playing airboard_turn buffer 1 (start sequence)");
+							_airboardTurnSound = _levelHandler->PlaySfx(this, "airboard_turn"_s, buffer1, Vector3f::Zero, true, 2.0f, 0.8f);
+						} else {
+							LOGD("Failed to find airboard_turn or not enough buffers");
+						}
+					}
+#endif
 				}
 
 				_isActivelyPushing = _wasActivelyPushing = true;
@@ -3025,6 +3069,10 @@ namespace Jazz2::Actors
 			_copterSound->stop();
 			_copterSound = nullptr;
 		}
+		if (_airboardSound != nullptr) {
+			_airboardSound->stop();
+			_airboardSound = nullptr;
+		}
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
 			_weaponSound = nullptr;
@@ -4033,6 +4081,11 @@ namespace Jazz2::Actors
 		return _activeModifier;
 	}
 
+	void Player::EnableCopterCheat()
+	{
+		_copterCheatActive = true;
+	}
+
 	bool Player::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)
 	{
 		if (_activeModifier == modifier) {
@@ -4046,6 +4099,7 @@ namespace Jazz2::Actors
 
 		switch (modifier) {
 			case Modifier::Airboard: {
+				_copterCheatActive = false;
 				_controllable = true;
 				EndDamagingMove();
 				SetState(ActorState::ApplyGravitation, false);
@@ -4055,6 +4109,15 @@ namespace Jazz2::Actors
 				_internalForceY = 0.0f;
 
 				_activeModifier = Modifier::Airboard;
+
+#if defined(WITH_AUDIO)
+			if (_airboardSound == nullptr) {
+				_airboardSound = PlaySfx("airboard"_s, 0.6f, 1.0f);
+				if (_airboardSound != nullptr) {
+					_airboardSound->setLooping(true);
+				}
+			}
+#endif
 
 				MoveInstantly(Vector2f(0.0f, -16.0f), MoveType::Relative);
 				break;
@@ -4070,7 +4133,8 @@ namespace Jazz2::Actors
 
 				_activeModifier = Modifier::Copter;
 
-				_copterFramesLeft = 10.0f * FrameTimer::FramesPerSecond;
+				// If copter cheat is active, keep infinite duration; otherwise use default 10 seconds
+				_copterFramesLeft = _copterCheatActive ? 1e6f : (10.0f * FrameTimer::FramesPerSecond);
 
 #if defined(WITH_AUDIO)
 				if (_copterSound == nullptr) {
@@ -4083,6 +4147,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case Modifier::LizardCopter: {
+				_copterCheatActive = false;
 				_controllable = true;
 				EndDamagingMove();
 				SetState(ActorState::ApplyGravitation, false);
@@ -4095,12 +4160,23 @@ namespace Jazz2::Actors
 				_activeModifierDecor = decor;
 				_activeModifierDecor->OnDetach(this);
 
+
 				_copterFramesLeft = 3.0f * FrameTimer::FramesPerSecond;
 				break;
 			}
 
 			default: {
+				// No-wall cheat is only valid while flying: always restore tile collisions when modifier ends.
+				SetState(ActorState::CollideWithTileset | ActorState::CollideWithTilesetReduced, true);
+				_copterCheatActive = false;
 				_activeModifier = Modifier::None;
+
+#if defined(WITH_AUDIO)
+			if (_airboardSound != nullptr) {
+				_airboardSound->stop();
+				_airboardSound = nullptr;
+			}
+#endif
 
 				SetState(ActorState::CanJump | ActorState::ApplyGravitation, true);
 
@@ -4122,7 +4198,7 @@ namespace Jazz2::Actors
 		if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedgeClimb) {
 			ForceCancelTransition();
 			MoveInstantly(Vector2f(IsFacingLeft() ? 6.0f : -6.0f, 0.0f), MoveType::Relative | MoveType::Force);
-		} else if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) {
+		} else if ((_activeModifier == Modifier::Copter || _activeModifier == Modifier::LizardCopter) && !_copterCheatActive) {
 			SetModifier(Modifier::None);
 		}
 
@@ -4138,7 +4214,9 @@ namespace Jazz2::Actors
 		_speed.X = 0.0f;
 		_internalForceY = 0.0f;
 		_fireFramesLeft = 0.0f;
-		_copterFramesLeft = 0.0f;
+		if (!_copterCheatActive) {
+			_copterFramesLeft = 0.0f;
+		}
 		_pushFramesLeft = 0.0f;
 		SetState(ActorState::CanJump, false);
 		_isAttachedToPole = false;

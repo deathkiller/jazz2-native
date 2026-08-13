@@ -221,6 +221,8 @@ namespace Jazz2::Actors
 		Modifier GetModifier() const;
 		/** @brief Sets current modifier */
 		virtual bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
+		/** @brief Enables copter cheat behavior for the next cheat copter activation */
+		void EnableCopterCheat();
 		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */
@@ -433,6 +435,7 @@ namespace Jazz2::Actors
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		LevelExitingState _levelExiting;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
+		bool _copterCheatActive;
 		std::int32_t _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
@@ -457,6 +460,8 @@ namespace Jazz2::Actors
 		void ReleasePaletteOffset();
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardTurnSound;
 #endif
 
 		std::int32_t _lives, _score;

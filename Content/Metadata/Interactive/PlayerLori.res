@@ -368,6 +368,12 @@
 		"Die": {
 			"Paths": [ "Lori/die.wav" ]
 		},
+		"airboard": {
+			"Paths": [ "Common/char_airboard.wav" ]
+		},
+		"airboard_turn": {
+			"Paths": [ "Common/char_airboard_turn_1.wav", "Common/char_airboard_turn_2.wav" ]
+		},
 		"Copter": {
 			"Paths": [ "Common/copter_noise.wav" ]
 		},
