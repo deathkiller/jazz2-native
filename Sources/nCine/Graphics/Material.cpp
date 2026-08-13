@@ -15,7 +15,7 @@ namespace nCine
 	}
 
 	Material::Material(RHI::ShaderProgram* program, RHI::Texture* texture)
-		: _isBlendingEnabled(false), _sortKeyDirty(true), _usedTextureUnits(texture != nullptr ? 1 : 0),
+		: _isBlendingEnabled(false), _hasOpaqueContentHint(false), _sortKeyDirty(true), _usedTextureUnits(texture != nullptr ? 1 : 0),
 			_srcBlendingFactor(BlendingFactor::SrcAlpha), _destBlendingFactor(BlendingFactor::OneMinusSrcAlpha),
 			_srcAlphaBlendingFactor(BlendingFactor::One), _destAlphaBlendingFactor(BlendingFactor::OneMinusSrcAlpha),
 			_sortKey(0), _shaderChangeCounter(0),
@@ -275,6 +275,9 @@ namespace nCine
 			std::uint8_t destBlendingFactor;
 			std::uint8_t srcAlphaBlendingFactor;
 			std::uint8_t destAlphaBlendingFactor;
+			// A full 32-bit field so the struct stays padding-free (the hash runs over sizeof(SortHashData);
+			// a stray padding byte would feed uninitialized memory into it)
+			std::uint32_t opaqueContentHint;
 		};
 	}
 
@@ -296,6 +299,7 @@ namespace nCine
 		hashData.destBlendingFactor = blendingFactorToInt(_destBlendingFactor);
 		hashData.srcAlphaBlendingFactor = blendingFactorToInt(_srcAlphaBlendingFactor);
 		hashData.destAlphaBlendingFactor = blendingFactorToInt(_destAlphaBlendingFactor);
+		hashData.opaqueContentHint = (_hasOpaqueContentHint ? 1 : 0);
 
 		_sortKey = (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
 		_sortKeyDirty = false;

@@ -1268,7 +1268,11 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		}
 
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (_networkManager->GetPeerCount() > serverConfig.MaxPlayerCount) {
+		std::uint32_t peerCount = _networkManager->GetPeerCount();
+		if (peerCount >= serverConfig.MaxPlayerCount) {
+			// The connecting peer is not counted yet, so reject already when the count reaches the limit
+			LOGI("Peer kicked ({}) [{}]: Server is full ({}/{} players)", _networkManager->AddressToString(peer),
+				peer, peerCount, serverConfig.MaxPlayerCount);
 			return Reason::ServerIsFull;
 		}
 	} else {

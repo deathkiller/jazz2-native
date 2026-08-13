@@ -1084,6 +1084,24 @@ namespace Jazz2::Tiles
 			float x3 = x1 + (TileSet::DefaultTileSize * 2) + cullingRect.W;
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + cullingRect.H;
 
+#if defined(WITH_RHI_SOFTWARE)
+			// Whether every non-zero entry of the sprite palette (row 0, the one tile layers sample) is fully
+			// opaque. Combined with a tile's IsTileFilled() flag (no index-0 texel, the transparent base
+			// entry) this proves the tile draws all 32x32 pixels opaque, so it may go out with blending off
+			// (see below). Scanned per call because scripts can recolor the palette at any time; very few
+			// tilesets ship translucent palette entries, and those simply keep the blended path everywhere.
+			bool spritePaletteOpaque = true;
+			{
+				auto palettes = ContentResolver::Get().GetPalettes();
+				for (std::int32_t i = 1; i < ContentResolver::ColorsPerPalette; i++) {
+					if ((palettes[i] >> 24) != 255) {
+						spritePaletteOpaque = false;
+						break;
+					}
+				}
+			}
+#endif
+
 			// Standard tile layers backed by a single tileset are drawn as one mesh (one draw call for the whole
 			// visible layer, or one per texture chunk when the device texture-size limit split the tileset
 			// atlas). Other renderer types (tinted/solid) and multi-tileset levels fall back to one command
@@ -1132,6 +1150,12 @@ namespace Jazz2::Tiles
 					if (tileSet == nullptr) {
 						continue;
 					}
+
+#if defined(WITH_RHI_SOFTWARE)
+					// Whether every pixel this tile samples is provably opaque (see spritePaletteOpaque
+					// above). Read before ResolveTextureDiffuse(), which rebases the ID into its texture chunk
+					const bool tileFilled = tileSet->IsTileFilled(tileId) && (!tileSet->IsIndexed || spritePaletteOpaque);
+#endif
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 					// Which texture chunk holds this tile. Has to be read BEFORE ResolveTextureDiffuse(), which
@@ -1194,6 +1218,18 @@ namespace Jazz2::Tiles
 					color.W *= tile.Alpha / 255.0f;
 					commandUniforms->Color->SetFloatVector(color.Data());
 
+#if defined(WITH_RHI_SOFTWARE)
+					// A fully opaque, unfaded tile draws the exact same bytes with blending off (src-over of
+					// an opaque source is a copy), so hint it: the command keeps its painter's-order spot in
+					// the transparent queue, but the software rasterizer overwrites instead of blending - and
+					// culls every draw the tile hides (SwTileRenderer's reverse-painter cull: parallax layers
+					// and actors behind solid ground stop costing anything). Worth nothing to a GPU backend -
+					// it would only split its sprite batches - so it stays software-only.
+					if (tileFilled && color.W >= 1.0f && rendererType == LayerRendererType::Default) {
+						command->GetMaterial().SetOpaqueContentHint(true);
+					}
+#endif
+
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
 					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when
@@ -1253,6 +1289,9 @@ namespace Jazz2::Tiles
 			command->GetMaterial().SetBlendingEnabled(true);
 			freshSlot = true;
 		}
+		// Pool slots persist across frames and DrawLayer's opaque-tile fast path may have hinted a slot's
+		// content opaque; reset that on every rent (the tile path re-hints below when it still applies)
+		command->GetMaterial().SetOpaqueContentHint(false);
 		const std::int32_t slot = _renderCommandsCount - 1;
 		if (_renderCommandUniforms.size() < _renderCommands.size()) {
 			_renderCommandUniforms.resize(_renderCommands.size());

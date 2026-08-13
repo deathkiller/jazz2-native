@@ -109,6 +109,27 @@ namespace nCine
 		/** @brief Sets separate blending factors for color and alpha (alpha typically `One`/`OneMinusSrcAlpha` so RGBA render targets accumulate correct coverage) */
 		void SetBlendingFactors(BlendingFactor srcRgbBlendingFactor, BlendingFactor destRgbBlendingFactor, BlendingFactor srcAlphaBlendingFactor, BlendingFactor destAlphaBlendingFactor);
 
+		/** @brief Returns `true` when the drawn content was hinted fully opaque (see @ref SetOpaqueContentHint()) */
+		inline bool GetOpaqueContentHint() const {
+			return _hasOpaqueContentHint;
+		}
+		/**
+		 * @brief Hints that every pixel this material draws is fully opaque, making its blending an identity
+		 *
+		 * Unlike disabling blending - which moves the command to the front-to-back opaque queue and so
+		 * changes its draw order - a hinted command stays in the transparent queue in painter's order, but
+		 * a backend that gains from the knowledge (the software rasterizer: overwriting instead of
+		 * blending, and occlusion-culling every draw the content hides) may run the draw with blending
+		 * off, which is pixel-for-pixel identical for opaque content under src-over. The hint is part of
+		 * the material sort key, so hinted and unhinted draws never share a batch.
+		 */
+		inline void SetOpaqueContentHint(bool hasOpaqueContent) {
+			if (_hasOpaqueContentHint != hasOpaqueContent) {
+				_hasOpaqueContentHint = hasOpaqueContent;
+				_sortKeyDirty = true;
+			}
+		}
+
 		inline ShaderProgramType GetShaderProgramType() const {
 			return _shaderProgramType;
 		}
@@ -167,6 +188,8 @@ namespace nCine
 
 	private:
 		bool _isBlendingEnabled;
+		// Whether every drawn pixel was hinted fully opaque (see SetOpaqueContentHint())
+		bool _hasOpaqueContentHint;
 		// Whether the cached sort key has to be recomputed
 		bool _sortKeyDirty;
 		// Number of texture units in use, i.e. the highest unit with a texture plus one

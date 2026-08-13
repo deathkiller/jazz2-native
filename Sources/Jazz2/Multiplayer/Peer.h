@@ -62,8 +62,8 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			p._wsId = (std::uint64_t)0xFFFF0000u + (std::uint64_t)index;
 #else
-			// Both handles are set to a non-null sentinel: operator== falls back to comparing _ws when _enet is null,
-			// so a null _ws here would make the empty (host) Peer{} compare equal to Local(index) in one direction
+			// Both handles are set to a non-null sentinel, so a local splitscreen peer can never compare equal
+			// to the empty (host) Peer{} or to any WebSocket peer, and IsWebSocket() correctly returns false
 			p._enet = reinterpret_cast<_ENetPeer*>(static_cast<std::uintptr_t>(index));
 #	if defined(WITH_WEBSOCKET)
 			p._ws = reinterpret_cast<ix::WebSocket*>(static_cast<std::uintptr_t>(index));
@@ -106,12 +106,15 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 			return (_wsId == other._wsId);
 #else
+			// Both handles must be compared - comparing just one of them based on which one is null is not
+			// symmetric (an empty peer would compare equal to any ENet peer), and the peer hash map compares
+			// stored keys to queried keys in a fixed order, so an asymmetric equality can match the wrong
+			// entry on a hash collision and corrupt the map
+			return (_enet == other._enet)
 #	if defined(WITH_WEBSOCKET)
-			if DEATH_UNLIKELY(_enet == nullptr) {
-				return (_ws == other._ws);
-			}
+				&& (_ws == other._ws)
 #	endif
-			return (_enet == other._enet);
+				;
 #endif
 		}
 		inline bool operator!=(const Peer& other) const {

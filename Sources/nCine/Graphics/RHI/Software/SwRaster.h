@@ -134,20 +134,105 @@ namespace nCine::RHI::Software
 		rgba[3] = 255;
 	}
 
-	/** @brief Expands a run of RGB565 framebuffer texels into a 4-byte RGBA staging row */
+	/**
+		@brief Expands a run of RGB565 framebuffer texels into a 4-byte RGBA staging row
+
+		The SSE2 / NEON main loops widen 8 texels per iteration with exactly the scalar
+		@ref SwUnpack565 bit-replication (`(c << n) | (c >> m)` per channel, alpha 255), so every
+		variant produces identical bytes. These spans run on both sides of every 16-bit staging
+		round trip (tile copies, rasterizer rows, the lighting combine), which made the former
+		per-texel scalar loops the largest FB16-only cost.
+	*/
 	inline void SwLoadFbSpan565(std::uint8_t* DEATH_RESTRICT rgba, const std::uint8_t* DEATH_RESTRICT fb16, std::int32_t count)
 	{
-		for (std::int32_t i = 0; i < count; i++, rgba += 4, fb16 += 2) {
+		std::int32_t i = 0;
+#if defined(DEATH_TARGET_SSE2)
+		const __m128i zero = _mm_setzero_si128();
+		const __m128i mask1F = _mm_set1_epi32(0x1F);
+		const __m128i mask3F = _mm_set1_epi32(0x3F);
+		const __m128i alphaFF = _mm_set1_epi32(std::int32_t(0xFF000000));
+		for (; i + 8 <= count; i += 8, rgba += 32, fb16 += 16) {
+			const __m128i v16 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(fb16));
+			const __m128i lo = _mm_unpacklo_epi16(v16, zero);
+			const __m128i hi = _mm_unpackhi_epi16(v16, zero);
+			// Per 32-bit lane: extract the three fields and bit-replicate them to 8 bits
+			const __m128i r5lo = _mm_and_si128(_mm_srli_epi32(lo, 11), mask1F);
+			const __m128i g6lo = _mm_and_si128(_mm_srli_epi32(lo, 5), mask3F);
+			const __m128i b5lo = _mm_and_si128(lo, mask1F);
+			const __m128i r8lo = _mm_or_si128(_mm_slli_epi32(r5lo, 3), _mm_srli_epi32(r5lo, 2));
+			const __m128i g8lo = _mm_or_si128(_mm_slli_epi32(g6lo, 2), _mm_srli_epi32(g6lo, 4));
+			const __m128i b8lo = _mm_or_si128(_mm_slli_epi32(b5lo, 3), _mm_srli_epi32(b5lo, 2));
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(rgba), _mm_or_si128(
+				_mm_or_si128(r8lo, _mm_slli_epi32(g8lo, 8)), _mm_or_si128(_mm_slli_epi32(b8lo, 16), alphaFF)));
+			const __m128i r5hi = _mm_and_si128(_mm_srli_epi32(hi, 11), mask1F);
+			const __m128i g6hi = _mm_and_si128(_mm_srli_epi32(hi, 5), mask3F);
+			const __m128i b5hi = _mm_and_si128(hi, mask1F);
+			const __m128i r8hi = _mm_or_si128(_mm_slli_epi32(r5hi, 3), _mm_srli_epi32(r5hi, 2));
+			const __m128i g8hi = _mm_or_si128(_mm_slli_epi32(g6hi, 2), _mm_srli_epi32(g6hi, 4));
+			const __m128i b8hi = _mm_or_si128(_mm_slli_epi32(b5hi, 3), _mm_srli_epi32(b5hi, 2));
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(rgba + 16), _mm_or_si128(
+				_mm_or_si128(r8hi, _mm_slli_epi32(g8hi, 8)), _mm_or_si128(_mm_slli_epi32(b8hi, 16), alphaFF)));
+		}
+#elif defined(DEATH_TARGET_NEON)
+		for (; i + 8 <= count; i += 8, rgba += 32, fb16 += 16) {
+			// vld1/vst1 only require element (2-byte) alignment, which a u16 framebuffer always has
+			const uint16x8_t v = vld1q_u16(reinterpret_cast<const std::uint16_t*>(fb16));
+			const uint16x8_t r5 = vshrq_n_u16(v, 11);
+			const uint16x8_t g6 = vandq_u16(vshrq_n_u16(v, 5), vdupq_n_u16(0x3F));
+			const uint16x8_t b5 = vandq_u16(v, vdupq_n_u16(0x1F));
+			uint8x8x4_t out;
+			out.val[0] = vmovn_u16(vorrq_u16(vshlq_n_u16(r5, 3), vshrq_n_u16(r5, 2)));
+			out.val[1] = vmovn_u16(vorrq_u16(vshlq_n_u16(g6, 2), vshrq_n_u16(g6, 4)));
+			out.val[2] = vmovn_u16(vorrq_u16(vshlq_n_u16(b5, 3), vshrq_n_u16(b5, 2)));
+			out.val[3] = vdup_n_u8(255);
+			vst4_u8(rgba, out);
+		}
+#endif
+		for (; i < count; i++, rgba += 4, fb16 += 2) {
 			std::uint16_t px;
 			std::memcpy(&px, fb16, 2);
 			SwUnpack565(px, rgba);
 		}
 	}
 
-	/** @brief Packs a 4-byte RGBA staging row back into a run of RGB565 framebuffer texels */
+	/**
+		@brief Packs a 4-byte RGBA staging row back into a run of RGB565 framebuffer texels
+
+		The vector counterpart of the scalar @ref SwPack565 loop (see @ref SwLoadFbSpan565 for why);
+		SSE2 / NEON pack 8 texels per iteration with the identical truncation, so the output is
+		bit-identical to the scalar tail.
+	*/
 	inline void SwStoreFbSpan565(std::uint8_t* DEATH_RESTRICT fb16, const std::uint8_t* DEATH_RESTRICT rgba, std::int32_t count)
 	{
-		for (std::int32_t i = 0; i < count; i++, rgba += 4, fb16 += 2) {
+		std::int32_t i = 0;
+#if defined(DEATH_TARGET_SSE2)
+		const __m128i maskR = _mm_set1_epi32(0x000000F8);
+		const __m128i maskG = _mm_set1_epi32(0x0000FC00);
+		const __m128i maskB = _mm_set1_epi32(0x00F80000);
+		for (; i + 8 <= count; i += 8, rgba += 32, fb16 += 16) {
+			const __m128i px0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(rgba));
+			const __m128i px1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(rgba + 16));
+			__m128i v0 = _mm_or_si128(_mm_slli_epi32(_mm_and_si128(px0, maskR), 8),
+				_mm_or_si128(_mm_srli_epi32(_mm_and_si128(px0, maskG), 5), _mm_srli_epi32(_mm_and_si128(px0, maskB), 19)));
+			__m128i v1 = _mm_or_si128(_mm_slli_epi32(_mm_and_si128(px1, maskR), 8),
+				_mm_or_si128(_mm_srli_epi32(_mm_and_si128(px1, maskG), 5), _mm_srli_epi32(_mm_and_si128(px1, maskB), 19)));
+			// The 16-bit results ride in 32-bit lanes; sign-extend the low word so the SIGNED
+			// dword-to-word pack (all SSE2 has) passes every value through losslessly
+			v0 = _mm_srai_epi32(_mm_slli_epi32(v0, 16), 16);
+			v1 = _mm_srai_epi32(_mm_slli_epi32(v1, 16), 16);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(fb16), _mm_packs_epi32(v0, v1));
+		}
+#elif defined(DEATH_TARGET_NEON)
+		for (; i + 8 <= count; i += 8, rgba += 32, fb16 += 16) {
+			const uint8x8x4_t px = vld4_u8(rgba);
+			// Classic shift-right-insert chain: R lands in bits 11-15, G's top 6 in 5-10, B's top 5 in 0-4
+			const uint16x8_t r = vshll_n_u8(px.val[0], 8);
+			const uint16x8_t rg = vsriq_n_u16(r, vshll_n_u8(px.val[1], 8), 5);
+			const uint16x8_t rgb = vsriq_n_u16(rg, vshll_n_u8(px.val[2], 8), 11);
+			vst1q_u16(reinterpret_cast<std::uint16_t*>(fb16), rgb);
+		}
+#endif
+		for (; i < count; i++, rgba += 4, fb16 += 2) {
 			const std::uint16_t px = SwPack565(rgba);
 			std::memcpy(fb16, &px, 2);
 		}
@@ -295,6 +380,14 @@ namespace nCine::RHI::Software
 		std::int32_t indexByteOffset;
 		/** @brief Byte of the gathered texel carrying source alpha (swizzle `.a` source), or `-1` (constant 1) / `-2` (constant 0) */
 		std::int32_t alphaByteOffset;
+		/**
+		 * @brief Whether every one of the 256 @ref packed entries is fully opaque (alpha `255`)
+		 *
+		 * With a constant source alpha (@ref alphaByteOffset `== -1`) this proves the draw writes an opaque
+		 * pixel wherever it samples, whatever the texture holds - the submit-time opaque-overwrite
+		 * classification (reverse-painter cull) reads it.
+		 */
+		bool allOpaque;
 	};
 
 	/**

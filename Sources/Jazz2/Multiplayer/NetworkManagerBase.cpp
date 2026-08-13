@@ -1359,8 +1359,13 @@ namespace Jazz2::Multiplayer
 						std::unique_lock lock(_lock);
 						_connectedPeers.push_back(wsPeer);
 					} else {
-						// Reject the connection
-						ev.peer->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
+						// Reject the connection - close under the lock while the peer is confirmed present, so
+						// the socket can't be destroyed between the lookup and the close (the client may have
+						// already disconnected between queuing this event and processing it)
+						std::unique_lock<Spinlock> lock(_wsLock);
+						if DEATH_LIKELY(_wsPeers.find(ev.peer) != _wsPeers.end()) {
+							ev.peer->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
+						}
 					}
 					break;
 				}

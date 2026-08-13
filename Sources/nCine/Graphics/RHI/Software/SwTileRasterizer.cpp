@@ -346,6 +346,55 @@ namespace nCine::RHI::Software
 			}
 		}
 
+		// Fused gather + palette LUT + fast blend for one texel: FusedPaletteLutTexel's output blended
+		// straight over the destination pixel with the SrcAlpha / OneMinusSrcAlpha pair (or stored as-is
+		// when blending is off), replacing the scanline staging + BlendScanlineSrcAlpha pass. The blend
+		// math and its 0 / 255 alpha shortcuts are byte-for-byte the scalar reference of the SIMD scanline
+		// blenders (see SwRaster.cpp's quantization contract), so the result is bit-identical to the
+		// two-pass form - and a transparent texel never touches the destination at all.
+		static DEATH_ALWAYS_INLINE void FusedPaletteLutBlendTexel(const SwPaletteLut& lut, const std::uint8_t* DEATH_RESTRICT src,
+		                                                          std::int32_t texBpp, std::uint8_t* DEATH_RESTRICT dst, bool useFastBlend)
+		{
+			if (!useFastBlend) {
+				// Blending disabled: the LUT output is the final pixel
+				FusedPaletteLutTexel(lut, src, texBpp, dst);
+				return;
+			}
+			const std::uint8_t idx = (lut.indexByteOffset < texBpp ? src[lut.indexByteOffset] : std::uint8_t(255));
+			const std::uint8_t* entry = lut.packed[idx];
+			std::int32_t sA;
+			if (lut.alphaByteOffset < 0) {
+				sA = entry[3];
+			} else {
+				const std::uint8_t alphaByte = (lut.alphaByteOffset < texBpp ? src[lut.alphaByteOffset] : std::uint8_t(255));
+				if (alphaByte == 255) {
+					sA = entry[3];
+				} else if (alphaByte == 0) {
+					sA = 0;
+				} else {
+					// Exactly the fragment's (palette.a * src.a) * tint.a, quantized like packColor
+					const float palA = lut.palAlphaByte[idx] / 255.0f;
+					const float srcA = alphaByte / 255.0f;
+					sA = SwQuantizeColor((palA * srcA) * lut.tintAlpha);
+				}
+			}
+			if (sA == 0) {
+				return;
+			}
+			if (sA >= 255) {
+				dst[0] = entry[0];
+				dst[1] = entry[1];
+				dst[2] = entry[2];
+				dst[3] = std::uint8_t(sA);
+				return;
+			}
+			const std::int32_t inv = 255 - sA;
+			dst[0] = static_cast<std::uint8_t>((entry[0] * sA + dst[0] * inv) >> 8);
+			dst[1] = static_cast<std::uint8_t>((entry[1] * sA + dst[1] * inv) >> 8);
+			dst[2] = static_cast<std::uint8_t>((entry[2] * sA + dst[2] * inv) >> 8);
+			dst[3] = static_cast<std::uint8_t>((sA * 255 + dst[3] * inv) >> 8);
+		}
+
 		// =====================================================================
 		// Vertex fetch — identical transform to SwRaster::FetchVertex (procedural sprite quad or interleaved
 		// clip-space vertices), only parameterized on the viewport so it stays thread-safe during a flush.
@@ -678,9 +727,12 @@ namespace nCine::RHI::Software
 						txFix = NormalizeRepeatFix(txFix, texWFix);
 					}
 
-					// Phases 1+2 fused for PaletteRemap: gather the index byte straight from the store and
-					// write the final LUT'd pixel in one pass - a native R8 index draw (tile layers, most
-					// sprites) reads 1 byte and writes 4 per pixel instead of expand-4 + re-read-4 + LUT.
+					// All phases fused for PaletteRemap: gather the index byte straight from the store, look
+					// the final pixel up in the LUT and blend (or store) it straight into the destination
+					// row - a native R8 index draw (tile layers, most sprites) reads 1 byte and conditionally
+					// writes 4 per pixel, with no staging round trip (the former form staged 4 bytes per
+					// pixel here and re-read them in a separate scanline blend pass), and a transparent texel
+					// never touches the destination. useScanBuf guarantees the blend is the fast pair or off.
 					// AcquirePaletteLut guarantees the guards (nearest sampling, a bound non-empty texture),
 					// they are re-checked only so an impossible state falls back to the generic path.
 					if DEATH_UNLIKELY(ctx.paletteLut != nullptr && texRow != nullptr && !useLinear) {
@@ -689,29 +741,35 @@ namespace nCine::RHI::Software
 							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full scanline is in-bounds
 							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
 							const std::uint8_t* src = &texRow[srcX * texBpp];
-							for (std::int32_t i = 0; i < scanWidth; i++) {
-								FusedPaletteLutTexel(lut, src + i * texBpp, texBpp, &scanBuf[i * 4]);
+							if (useFastBlend && texBpp == 1 && lut.indexByteOffset == 0 && lut.alphaByteOffset < 0) {
+								// The dominant draw (1:1 R8 indices, constant source alpha, fast blend) runs
+								// through the CPU-dispatched scanline op - AVX2 gathers 8 LUT entries per step
+								FusedLutBlendScanline(dstRow, src, scanWidth, lut.packed);
+							} else {
+								for (std::int32_t i = 0; i < scanWidth; i++) {
+									FusedPaletteLutBlendTexel(lut, src + i * texBpp, texBpp, &dstRow[i * 4], useFastBlend);
+								}
 							}
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
-								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
+								FusedPaletteLutBlendTexel(lut, &texRow[srcX * texBpp], texBpp, &dstRow[i * 4], useFastBlend);
 								txFix += dtxFix;
 							}
 						} else if (useRepeatS) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
-								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
+								FusedPaletteLutBlendTexel(lut, &texRow[srcX * texBpp], texBpp, &dstRow[i * 4], useFastBlend);
 								txFix = AdvanceRepeatFix(txFix, dtxFix, texWFix);
 							}
 						} else {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = WrapTexelFix(txFix, texW, wrapS);
-								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
+								FusedPaletteLutBlendTexel(lut, &texRow[srcX * texBpp], texBpp, &dstRow[i * 4], useFastBlend);
 								txFix += dtxFix;
 							}
 						}
-						goto ScanlineReady;
+						continue;	// The destination row is final - phases 2 and 3 have nothing left to do
 					}
 
 					// Phase 1: gather texels (narrow native stores expand to the 4-byte working form here)
@@ -776,7 +834,6 @@ namespace nCine::RHI::Software
 						TintScanline(scanBuf, scanWidth, tR, tG, tB, tA);
 					}
 
-				ScanlineReady:
 					// Phase 3: blend or copy
 					if (useFastBlend) {
 						BlendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);

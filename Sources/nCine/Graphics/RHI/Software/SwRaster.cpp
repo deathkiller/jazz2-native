@@ -510,6 +510,129 @@ namespace nCine::RHI::Software
 	})
 
 	// =====================================================================
+	// CPU-dispatched fused palette-LUT gather + blend (SrcAlpha / OneMinusSrcAlpha)
+	//
+	// One scanline of the dominant tile/sprite draw: consecutive R8 index bytes, a constant source alpha
+	// (SwPaletteLut::alphaByteOffset < 0, so packed[idx] IS the final pixel) and the fast blend pair. Fusing
+	// the LUT gather with the blend classification skips the 4-bytes-per-pixel staging round trip the
+	// two-pass gather-then-BlendScanlineSrcAlpha form paid, and a transparent texel costs one byte read.
+	// The blend math and its `sA == 0` / `sA >= 255` shortcuts are byte-for-byte the scalar reference of
+	// blendScanlineSrcAlpha above (see the quantization contract there); the source pixel is packed[idx]
+	// instead of a staged texel, which is exactly what the staging pass would have stored.
+	// =====================================================================
+	extern void DEATH_CPU_DISPATCHED_DECLARATION(fusedLutBlendScanline)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT srcIdx, std::int32_t count, const std::uint8_t (*DEATH_RESTRICT packed)[4]);
+	DEATH_CPU_DISPATCHER_DECLARATION(fusedLutBlendScanline)
+
+	namespace
+	{
+		// Scalar fallback - also the only variant on CPUs without a vector gather (SSE2/NEON): the LUT
+		// lookup is a data-dependent load either way, and the per-pixel branches already collapse the
+		// opaque-interior / transparent-margin runs that dominate the content
+		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(fusedLutBlendScanline)>::type fusedLutBlendScanlineImplementation(Cpu::ScalarT) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT srcIdx, std::int32_t count, const std::uint8_t (*DEATH_RESTRICT packed)[4]) {
+				for (std::int32_t i = 0; i < count; ++i, dst += 4) {
+					const std::uint8_t* entry = packed[srcIdx[i]];
+					const std::int32_t sA = entry[3];
+					if (sA == 0) continue;
+					if (sA >= 255) {
+						std::memcpy(dst, entry, 4);
+						continue;
+					}
+					const std::int32_t inv = 255 - sA;
+					dst[0] = static_cast<std::uint8_t>((entry[0] * sA + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((entry[1] * sA + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((entry[2] * sA + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((sA * 255 + dst[3] * inv) >> 8);
+				}
+			};
+		}
+
+#if defined(DEATH_ENABLE_AVX2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(fusedLutBlendScanline)>::type fusedLutBlendScanlineImplementation(Cpu::Avx2T) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT srcIdx, std::int32_t count, const std::uint8_t (*DEATH_RESTRICT packed)[4]) DEATH_ENABLE_AVX2 {
+				// The 256 LUT entries are 4 packed bytes each, so vpgatherdd fetches 8 final pixels per step
+				const int* lut32 = reinterpret_cast<const int*>(packed);
+				const __m256i zero = _mm256_setzero_si256();
+				const __m256i c255 = _mm256_set1_epi16(255);
+				const __m256i c255d = _mm256_set1_epi32(255);
+				// See blendScanlineSrcAlpha's SSE2 variant: forces the widened source alpha word to 255 so the
+				// alpha lane's numerator is the scalar's `sA * 255`
+				const __m256i alphaOne = _mm256_set1_epi64x(0x00FF000000000000LL);
+
+				std::int32_t i = 0;
+				for (; i + 8 <= count; i += 8, dst += 32, srcIdx += 8) {
+					const __m128i idxBytes = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(srcIdx));
+					const __m256i idx32 = _mm256_cvtepu8_epi32(idxBytes);
+					__m256i srcPx = _mm256_i32gather_epi32(lut32, idx32, 4);
+
+					// Same whole-lane classify and uniform-block shortcuts as blendScanlineSrcAlpha's AVX2
+					// variant (see there): tile interiors are long all-opaque runs (a plain store, the
+					// destination is never loaded) and sprite margins long all-transparent ones (a no-op)
+					__m256i alpha32 = _mm256_srli_epi32(srcPx, 24);
+					__m256i opaque = _mm256_cmpeq_epi32(alpha32, c255d);
+					if (_mm256_movemask_epi8(opaque) == -1) {
+						_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), srcPx);
+						continue;
+					}
+					__m256i clear = _mm256_cmpeq_epi32(alpha32, zero);
+					if (_mm256_movemask_epi8(clear) == -1) {
+						continue;
+					}
+
+					__m256i dstPx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(dst));
+
+					__m256i sLo = _mm256_unpacklo_epi8(srcPx, zero);
+					__m256i dLo = _mm256_unpacklo_epi8(dstPx, zero);
+					__m256i aLo = _mm256_shufflelo_epi16(sLo, _MM_SHUFFLE(3, 3, 3, 3));
+					aLo = _mm256_shufflehi_epi16(aLo, _MM_SHUFFLE(3, 3, 3, 3));
+					sLo = _mm256_or_si256(sLo, alphaOne);
+					__m256i iaLo = _mm256_sub_epi16(c255, aLo);
+					__m256i rLo = _mm256_add_epi16(_mm256_mullo_epi16(sLo, aLo), _mm256_mullo_epi16(dLo, iaLo));
+					rLo = _mm256_srli_epi16(rLo, 8);
+
+					__m256i sHi = _mm256_unpackhi_epi8(srcPx, zero);
+					__m256i dHi = _mm256_unpackhi_epi8(dstPx, zero);
+					__m256i aHi = _mm256_shufflelo_epi16(sHi, _MM_SHUFFLE(3, 3, 3, 3));
+					aHi = _mm256_shufflehi_epi16(aHi, _MM_SHUFFLE(3, 3, 3, 3));
+					sHi = _mm256_or_si256(sHi, alphaOne);
+					__m256i iaHi = _mm256_sub_epi16(c255, aHi);
+					__m256i rHi = _mm256_add_epi16(_mm256_mullo_epi16(sHi, aHi), _mm256_mullo_epi16(dHi, iaHi));
+					rHi = _mm256_srli_epi16(rHi, 8);
+
+					// Branchless replay of the scalar's shortcuts for a mixed block (see the quantization
+					// contract above blendScanlineSrcAlpha)
+					__m256i blended = _mm256_packus_epi16(rLo, rHi);
+					__m256i out = _mm256_blendv_epi8(blended, srcPx, opaque);
+					out = _mm256_blendv_epi8(out, dstPx, clear);
+					_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), out);
+				}
+				// Scalar tail
+				for (; i < count; ++i, dst += 4, srcIdx++) {
+					const std::uint8_t* entry = packed[srcIdx[0]];
+					const std::int32_t sA = entry[3];
+					if (sA == 0) continue;
+					if (sA >= 255) {
+						std::memcpy(dst, entry, 4);
+						continue;
+					}
+					const std::int32_t inv = 255 - sA;
+					dst[0] = static_cast<std::uint8_t>((entry[0] * sA + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((entry[1] * sA + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((entry[2] * sA + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((sA * 255 + dst[3] * inv) >> 8);
+				}
+			};
+		}
+#endif
+
+	}
+
+	DEATH_CPU_DISPATCHER_BASE(fusedLutBlendScanlineImplementation)
+	DEATH_CPU_DISPATCHED(fusedLutBlendScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(fusedLutBlendScanline)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT srcIdx, std::int32_t count, const std::uint8_t (*DEATH_RESTRICT packed)[4]))({
+		return fusedLutBlendScanlineImplementation(Cpu::DefaultBase)(dst, srcIdx, count, packed);
+	})
+
+	// =====================================================================
 	// CPU-dispatched scanline tint (multiply RGBA by constant color)
 	// =====================================================================
 	extern void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA);
@@ -993,6 +1116,11 @@ namespace nCine::RHI::Software
 		blendScanlineSrcAlpha(dst, src, count);
 	}
 
+	void FusedLutBlendScanline(std::uint8_t* dst, const std::uint8_t* srcIdx, std::int32_t count, const std::uint8_t (*packed)[4])
+	{
+		fusedLutBlendScanline(dst, srcIdx, count, packed);
+	}
+
 	void TintScanline(std::uint8_t* buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA)
 	{
 		tintScanline(buf, count, tR, tG, tB, tA);
@@ -1306,11 +1434,6 @@ namespace nCine::RHI::Software
 			if (ctx.vertexData != nullptr) return false;
 			if (ctx.fragmentShader != nullptr) return false;
 			if (ctx.scissorEnabled) return false;
-#if defined(RHI_USE_FB16)
-			// The blit copies 4-byte rows verbatim; a 16-bit destination falls through to the axis-aligned
-			// quad rasterizer, whose row staging converts (fullscreen blits are rare on the direct tier)
-			if (g_state.is16Bit) return false;
-#endif
 
 			// Must be textured with white tint (pure blit)
 			if (!ctx.ff.hasTexture) return false;
@@ -1380,6 +1503,44 @@ namespace nCine::RHI::Software
 			// not an intentional "flip the image" instruction.
 			const bool sourceIsFbo = tex->IsRenderTarget();
 			const bool flipY = (sourceIsFbo != g_state.isFboTarget);
+
+#if defined(RHI_USE_FB16)
+			if (g_state.is16Bit) {
+				// 16-bit screen destination: the same identity / nearest-stretch source walk, packing each
+				// row to 565 on the way out (SwStoreFbSpan565 - SIMD) instead of round-tripping the whole
+				// frame through the rasterizer's row staging (unpack, overwrite, repack). This is the
+				// present-family blit that runs every frame on the FB16 build, and the sampling positions
+				// now match the RGBA8 build's blit exactly, so both framebuffer modes present the same image.
+				if (srcW == dstW && srcH == dstH) {
+					for (std::int32_t y = 0; y < srcH; y++) {
+						const std::uint8_t* srcRow = srcPixels + std::size_t(y) * srcW * 4;
+						std::uint8_t* dstRow = dstBuffer + std::size_t(flipY ? (dstH - 1 - y) : y) * dstW * 2;
+						SwStoreFbSpan565(dstRow, srcRow, srcW);
+					}
+				} else {
+					const std::uint32_t scaleX_fp = (static_cast<std::uint32_t>(srcW) << 16) / static_cast<std::uint32_t>(dstW);
+					const std::uint32_t scaleY_fp = (static_cast<std::uint32_t>(srcH) << 16) / static_cast<std::uint32_t>(dstH);
+					for (std::int32_t dy = 0; dy < dstH; dy++) {
+						const std::int32_t sy = static_cast<std::int32_t>((static_cast<std::uint32_t>(dy) * scaleY_fp) >> 16);
+						const std::int32_t actualDstY = flipY ? (dstH - 1 - dy) : dy;
+						std::uint8_t* dstRow = dstBuffer + std::size_t(actualDstY) * dstW * 2;
+						const std::uint8_t* srcRow = srcPixels + std::size_t(sy) * srcW * 4;
+						if (srcW == dstW) {
+							SwStoreFbSpan565(dstRow, srcRow, dstW);
+						} else {
+							// Fused nearest gather + pack: one 565 store per destination pixel
+							std::uint16_t* dstRow16 = reinterpret_cast<std::uint16_t*>(dstRow);
+							std::uint32_t srcX_fp = 0;
+							for (std::int32_t dx = 0; dx < dstW; dx++) {
+								dstRow16[dx] = SwPack565(&srcRow[(srcX_fp >> 16) * 4]);
+								srcX_fp += scaleX_fp;
+							}
+						}
+					}
+				}
+				return true;
+			}
+#endif
 
 			if (srcW == dstW && srcH == dstH) {
 				// Identity blit: direct memcpy (fastest path)
@@ -2634,9 +2795,20 @@ namespace nCine::RHI::Software
 		if (g_state.is16Bit) {
 			const std::uint8_t rgba[4] = { rb, gb, bb, ab };
 			const std::uint16_t pattern16 = SwPack565(rgba);
-			std::uint16_t* dst16 = reinterpret_cast<std::uint16_t*>(g_state.colorBuffer);
-			for (std::int32_t i = 0; i < totalPixels; ++i) {
-				dst16[i] = pattern16;
+			if ((pattern16 >> 8) == (pattern16 & 0xFF)) {
+				// Both pattern bytes identical (black, white, greys): a plain memset
+				std::memset(g_state.colorBuffer, pattern16 & 0xFF, static_cast<std::size_t>(totalPixels) * 2);
+			} else {
+				// Two pixels per 32-bit store (the buffer allocation is at least 4-byte aligned)
+				const std::uint32_t pattern32 = (static_cast<std::uint32_t>(pattern16) << 16) | pattern16;
+				std::uint32_t* dst32 = reinterpret_cast<std::uint32_t*>(g_state.colorBuffer);
+				const std::int32_t pairs = totalPixels >> 1;
+				for (std::int32_t i = 0; i < pairs; ++i) {
+					dst32[i] = pattern32;
+				}
+				if (totalPixels & 1) {
+					std::memcpy(g_state.colorBuffer + static_cast<std::size_t>(totalPixels - 1) * 2, &pattern16, 2);
+				}
 			}
 			return;
 		}

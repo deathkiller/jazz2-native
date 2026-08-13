@@ -14,6 +14,17 @@ namespace nCine::RHI::Software
 	/** @brief Blends a scanline of RGBA8 pixels over the destination with SrcAlpha/OneMinusSrcAlpha factors */
 	void BlendScanlineSrcAlpha(std::uint8_t* dst, const std::uint8_t* src, std::int32_t count);
 
+	/**
+	 * @brief Looks up a scanline of consecutive R8 palette-index bytes in a 256-entry packed-RGBA LUT and
+	 *        blends the results over the destination with SrcAlpha/OneMinusSrcAlpha factors
+	 *
+	 * The fused form of "gather + palette LUT into a staging row, then @ref BlendScanlineSrcAlpha" for the
+	 * dominant tile/sprite draw (1:1-mapped R8 index texture, constant source alpha - `packed[idx]` is the
+	 * final pixel). Bit-identical to that two-pass form, including the `0` / `255` alpha shortcuts; a
+	 * transparent texel never touches the destination. The AVX2 variant gathers 8 LUT entries per step.
+	 */
+	void FusedLutBlendScanline(std::uint8_t* dst, const std::uint8_t* srcIdx, std::int32_t count, const std::uint8_t (*packed)[4]);
+
 	/** @brief Multiplies a scanline of RGBA8 pixels in place by a constant color (values 0-256 per channel) */
 	void TintScanline(std::uint8_t* buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA);
 

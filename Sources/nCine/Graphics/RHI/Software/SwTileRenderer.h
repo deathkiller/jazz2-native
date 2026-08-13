@@ -222,6 +222,21 @@ namespace nCine::RHI::Software
 			bool boundsAreAccurate;
 
 			/**
+			 * @brief Whether the command overwrites every pixel of its cover rectangle regardless of what the
+			 * destination held before it
+			 *
+			 * Set at submit time for an axis-aligned procedural quad whose write is destination-independent:
+			 * blending disabled, an opaque constant fill, or a palette draw whose LUT maps every index to an
+			 * opaque pixel - all under the fast blend pair, where an opaque source is a plain copy. Everything
+			 * drawn before such a command inside its cover rectangle is overwritten, so a tile it fully covers
+			 * starts its command walk there and skips the framebuffer read-back (the reverse-painter cull in
+			 * `ProcessTile`).
+			 */
+			bool opaqueOverwrite;
+			/** @brief Inclusive screen-space pixel rectangle the command is guaranteed to overwrite (exact drawn extent, scissor applied; valid when @ref opaqueOverwrite) */
+			std::int32_t coverMinX, coverMinY, coverMaxX, coverMaxY;
+
+			/**
 			 * @brief Inline snapshot of the effect's fragment-callback parameter block
 			 *
 			 * The device fills @ref DrawContext::fragmentShaderUserData with a pointer into its own

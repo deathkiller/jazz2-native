@@ -62,6 +62,8 @@ extern "C"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
+#include <atomic>
+
 #include <Environment.h>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
@@ -446,11 +448,21 @@ static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, con
 	length += nCine::copyStringFirst(dest + length, MaxLogEntryLength - length - 1, newPart, newPartLength);
 }
 
-static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t timestamp)
+static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t timestamp, std::atomic<std::int32_t>* lastDay = nullptr)
 {
 	// Convert nanoseconds to milliseconds
 	auto dt = DateTime::FromUnixMilliseconds(timestamp / 1000000ULL);
 	auto p = dt.Partitioned();
+
+	if (lastDay != nullptr) {
+		// Prepend the full date to the first entry of each day, so the target keeps absolute time across midnight
+		// and multi-day gaps. exchange() lets exactly one thread write the date on a day change.
+		std::int32_t day = (p.Year * 12 + p.Month) * 31 + p.Day;
+		if (lastDay->exchange(day, std::memory_order_relaxed) != day) {
+			length += (std::int32_t)formatInto({ dest + length, (std::size_t)(MaxLogEntryLength - length - 1) },
+				"{}/{:.2}/{:.2} ", p.Year, p.Month + 1, p.Day);
+		}
+	}
 
 	length += (std::int32_t)formatInto({ dest + length, (std::size_t)(MaxLogEntryLength - length - 1) },
 		"{:.2}:{:.2}:{:.2}.{:.3}", p.Hour, p.Minute, p.Second, p.Millisecond);
@@ -578,10 +590,17 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 
 	if (i > 0) {
 		std::int32_t end = i;
-		i--;
-	FindFunctionName:
-		// Go backwards until we find the first space
-		for (; i >= 0; i--) {
+
+		// Everything from the "operator" keyword on belongs to the name, so the scan has to start in front of the
+		// keyword instead of stopping at the first space behind it: the brackets of "operator<<" and "operator>>" would
+		// otherwise be counted as template parameters and leave the return type in the name, and "operator new" or
+		// "operator delete" carry a space in the middle of the name
+		if (auto operatorKeyword = functionNameView.prefix(end).find(OperatorPrefix)) {
+			i = std::int32_t(operatorKeyword.begin() - functionName);
+		}
+
+		// Go backwards until we find the first space, which is what separates the name from the return type
+		for (i--; i >= 0; i--) {
 			if (functionName[i] == ')') {
 				parethesisCount++;
 			} else if (functionName[i] == '(') {
@@ -594,20 +613,13 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 				break;
 			}
 		}
-		std::int32_t j = std::max<std::int32_t>(i, 0);
-		while (j > 0 && functionName[j - 1] == ' ') {
-			j--;
-		}
-		// Hopefully only operators can contain spaces in their name
-		if (j > OperatorPrefix.size() && functionNameView.slice(j - OperatorPrefix.size(), j) == OperatorPrefix) {
-			i = j - std::int32_t(OperatorPrefix.size());
-			goto FindFunctionName;
-		}
 		i++;
-		// If the return type is a pointer, the asterisk can be right before the function name, so skip it
-		if (i > 0 && functionName[i] == '*') {
+
+		// If the return type is a pointer or a reference, the asterisk or ampersand is right before the function name
+		while (i < end && (functionName[i] == '*' || functionName[i] == '&')) {
 			i++;
 		}
+
 		AppendFunctionNamePart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 		if (isLambda) {
@@ -617,19 +629,33 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		AppendFunctionNamePart(dest, length, functionName, functionNameLength);
 	}
 #	else
-	// Try to shorten lambda function names, for example "FunctionName::<lambda_fdcd1e49ba268f6f79b01fbdc7d2a72f>::operator ()()"
-	static constexpr StringView LambdaSuffix = "()::<lambda()>"_s;
-	static constexpr StringView LambdaPrefixMsvc = "::<lambda_"_s;
-	static constexpr StringView LambdaSuffixMsvc = ">::operator ()()"_s;
+	// MSVC reports a bare qualified name with no return type and no arguments, and the trailing "()" is already part
+	// of __DEATH_CURRENT_FUNCTION, so the only thing left to shorten is a lambda. Its closure type is spelled
+	// "<lambda_1>" (a hash in older releases) and everything from there on is noise, e.g.
+	// "Class::Method::<lambda_1>::operator ()()" or "Class::Method::<lambda_5>::()::<lambda_1>::operator ()()" for a
+	// nested one, so cutting at the first occurrence always yields the enclosing function. It also always cuts,
+	// unlike a check anchored at the end of the name, which would leave the raw closure type in the log for a lambda
+	// that hosts a local class ("...::<lambda_1>::operator ()::S::F"). That's what makes "<lambda_" impossible in a
+	// written entry, which the reader relies on - the "()::<lambda()>" spelling is the same one GCC/Clang produce
+	// above and the only one anything downstream has to know.
+	static constexpr StringView LambdaPrefixMsvc = "<lambda_"_s;
+	static constexpr StringView ScopeSeparator = "::"_s;
 
 	StringView functionNameView = StringView(functionName, functionNameLength);
 	if (auto lambdaPrefix = functionNameView.find(LambdaPrefixMsvc)) {
-		if (functionNameView.suffix(lambdaPrefix.end()).hasSuffix(LambdaSuffixMsvc)) {
-			auto functionNamePrefix = functionNameView.prefix(lambdaPrefix.begin());
-			AppendFunctionNamePart(dest, length, functionNamePrefix.data(), (std::int32_t)functionNamePrefix.size());
-			AppendPart(dest, length, LambdaSuffix.data(), (std::int32_t)LambdaSuffix.size());
-			return;
+		StringView enclosingFunction = functionNameView.prefix(lambdaPrefix.begin());
+		if (enclosingFunction.hasSuffix(ScopeSeparator)) {
+			enclosingFunction = enclosingFunction.exceptSuffix(ScopeSeparator);
 		}
+
+		// A lambda in a namespace-scope initializer has no enclosing function to report it against
+		if (!enclosingFunction.empty()) {
+			AppendFunctionNamePart(dest, length, enclosingFunction.data(), (std::int32_t)enclosingFunction.size());
+			AppendPart(dest, length, "()::<lambda()>");
+		} else {
+			AppendPart(dest, length, "<lambda()>");
+		}
+		return;
 	}
 
 	AppendFunctionNamePart(dest, length, functionName, functionNameLength);
@@ -1447,7 +1473,8 @@ namespace nCine
 		// Allow attaching custom target using Application::AttachTraceTarget()
 		if (__logFile != nullptr) {
 			std::int32_t length3 = 0;
-			AppendDateTime(logEntryWithColors, length3, timestamp);
+			static std::atomic<std::int32_t> logFileLastDay{-1};
+			AppendDateTime(logEntryWithColors, length3, timestamp, &logFileLastDay);
 			logEntryWithColors[length3++] = ' ';
 			AppendLevel(logEntryWithColors, length3, level, threadId);
 			AppendFunctionName(logEntryWithColors, length3, functionName);

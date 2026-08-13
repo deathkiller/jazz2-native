@@ -197,6 +197,13 @@ namespace nCine
 #endif
 			RHI::Device::SetBlendingFactors(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor(),
 				transparentRenderCommand->GetMaterial().GetSrcAlphaBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestAlphaBlendingFactor());
+#if defined(WITH_RHI_SOFTWARE)
+			// An opaque-content hint (see Material::SetOpaqueContentHint()) keeps the command in this queue -
+			// its painter's-order position is what makes the content correct - but runs the draw with
+			// blending off, which is identical output for opaque content and lets the software rasterizer
+			// overwrite instead of blend and occlusion-cull the draws the content hides
+			RHI::Device::SetBlendingEnabled(!transparentRenderCommand->GetMaterial().GetOpaqueContentHint());
+#endif
 			const RHI::ShaderProgram* shaderProgram = transparentRenderCommand->GetMaterial().GetShaderProgram();
 			if (shaderProgram != lastCommittedShader) {
 				transparentRenderCommand->CommitCameraTransformation();

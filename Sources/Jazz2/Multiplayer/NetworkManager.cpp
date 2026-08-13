@@ -112,14 +112,18 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t NetworkManager::GetPeerCount()
 	{
-		// The size is read under the lock too - this is called from the discovery thread while
+		// The map is read under the lock too - this is called from the discovery thread while
 		// the network thread inserts/erases peers
 		std::unique_lock<Spinlock> l(_lock);
 
-		std::uint32_t count = std::uint32_t(_peerDesc.size() - 1);
-		auto it = _peerDesc.find(Peer{});
-		if (it != _peerDesc.end() && it->second->Player) {
-			count++;
+		// Count valid (remote and local splitscreen) peers plus the local host if it has a player, instead
+		// of size() - 1, which assumes the local descriptor is always present and would underflow to
+		// UINT32_MAX if it ever went missing (the count is reported to the public server list as-is)
+		std::uint32_t count = 0;
+		for (auto& [peer, peerDesc] : _peerDesc) {
+			if (peer.IsValid() || peerDesc->Player) {
+				count++;
+			}
 		}
 
 		return count;
@@ -856,7 +860,8 @@ namespace Jazz2::Multiplayer
 	{
 		NetworkManagerBase::OnPeerDisconnected(peer, reason);
 
-		if (GetState() == NetworkState::Listening) {
+		// The peer must be valid - looking up an empty peer would match the local descriptor and erase it
+		if (GetState() == NetworkState::Listening && peer) {
 			std::unique_lock<Spinlock> l(_lock);
 			auto it = _peerDesc.find(peer);
 			if (it != _peerDesc.end()) {

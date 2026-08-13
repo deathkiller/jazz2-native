@@ -365,6 +365,8 @@ namespace nCine
 		}
 		batchCommand->GetMaterial().SetBlendingEnabled(refCommand->GetMaterial().IsBlendingEnabled());
 		batchCommand->GetMaterial().SetBlendingFactors(refCommand->GetMaterial().GetSrcBlendingFactor(), refCommand->GetMaterial().GetDestBlendingFactor());
+		// The hint is part of the material sort key, so every command of this batch carries the same value
+		batchCommand->GetMaterial().SetOpaqueContentHint(refCommand->GetMaterial().GetOpaqueContentHint());
 		batchCommand->SetBatchSize(std::int32_t(nextStart - start));
 		batchCommand->SetLayer(refCommand->GetLayer());
 		batchCommand->SetVisitOrder(refCommand->GetVisitOrder());

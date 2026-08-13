@@ -121,14 +121,37 @@ namespace Jazz2::Tiles
 		// which may have been reduced to R8 (index only) or RG8 (index + alpha) to save VRAM (see CreateIndexedTexture)
 		constexpr std::int32_t Count = (DefaultTileSize + 2) * (DefaultTileSize + 2);
 		std::uint32_t channels = texture->GetChannelCount();
-		// TODO: _isTileFilled is not properly set
+
+		// A live tile edit also refreshes the "fully filled" flag, which matches BuildTilesetDiffuse's
+		// definition: no transparent texel in the 32x32 interior (the 1px ring is padding). For an indexed
+		// atlas that means no index-0 texel - index 0 samples the palette's transparent base entry - so it
+		// is what the flag's consumers combine with the palette's own alpha; an RG8 or baked atlas
+		// additionally carries per-texel alpha, which must be a full 255 everywhere.
+		bool filled = true;
+		for (std::int32_t py = 1; py <= DefaultTileSize && filled; py++) {
+			for (std::int32_t px = 1; px <= DefaultTileSize; px++) {
+				std::uint32_t c = tileDiffuse[py * (DefaultTileSize + 2) + px];
+				const std::uint32_t alpha = (c >> 24) & 0xFF;
+				const bool opaquePx = (channels == 1
+					? (alpha != 0 && (c & 0xFF) != 0)
+					: (channels == 2
+						? (alpha == 255 && (c & 0xFF) != 0)
+						: (alpha == 255)));
+				if (!opaquePx) {
+					filled = false;
+					break;
+				}
+			}
+		}
+
+		bool result;
 		if (channels == 1) {
 			std::uint8_t packed[Count];
 			for (std::int32_t i = 0; i < Count; i++) {
 				std::uint32_t c = tileDiffuse[i];
 				packed[i] = (((c >> 24) & 0xFF) == 0 ? 0 : (std::uint8_t)(c & 0xFF));
 			}
-			return texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		} else if (channels == 2) {
 			std::uint8_t packed[Count * 2];
 			for (std::int32_t i = 0; i < Count; i++) {
@@ -136,10 +159,14 @@ namespace Jazz2::Tiles
 				packed[(i * 2) + 0] = (std::uint8_t)(c & 0xFF);
 				packed[(i * 2) + 1] = (std::uint8_t)((c >> 24) & 0xFF);
 			}
-			return texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		} else {
-			return texture->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		}
+		if (result) {
+			_isTileFilled.set(tileId, filled);
+		}
+		return result;
 	}
 
 	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask)

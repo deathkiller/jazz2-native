@@ -245,6 +245,7 @@ namespace nCine::RHI::Software
 				lut.tintAlpha = ctx.ff.color[3];
 				lut.indexByteOffset = indexByteOffset;
 				lut.alphaByteOffset = alphaByteOffset;
+				lut.allOpaque = true;
 
 				FragmentShaderInput paletteInput = {};
 				paletteInput.textures = ctx.textures;
@@ -261,6 +262,9 @@ namespace nCine::RHI::Software
 					lut.packed[i][1] = SwQuantizeColor(color.g * ctx.ff.color[1]);
 					lut.packed[i][2] = SwQuantizeColor(color.b * ctx.ff.color[2]);
 					lut.packed[i][3] = SwQuantizeColor((color.a * bakedSrcAlpha) * lut.tintAlpha);
+					if (lut.packed[i][3] != 255) {
+						lut.allOpaque = false;
+					}
 					// color.a always originates from a byte (or the exact 0.0 / 1.0 of a Zero / One swizzle),
 					// so this recovers it losslessly; dividing it by 255 at apply time reproduces the exact
 					// float the fragment's own sample would produce
@@ -387,13 +391,26 @@ namespace nCine::RHI::Software
 				// Thread-local scratch buffer
 				std::uint8_t* tileBuf = g_tileScratch[workerIndex];
 
-				// Optimization: skip reading the framebuffer if the first command fully covers this tile with an
-				// opaque draw (no blending needed for a background). Only safe when boundsAreAccurate —
-				// conservative full-frame bounds would match any tile even if the geometry doesn't cover it.
-				const DeferredCommand& firstCmd = g_tile.commands[bin[0]];
-				const bool needsReadBack = (firstCmd.ctx.blendingEnabled || !firstCmd.boundsAreAccurate ||
-				    firstCmd.screenMinX > tileX || firstCmd.screenMinY > tileY ||
-				    firstCmd.screenMaxX < tileX + tileW - 1 || firstCmd.screenMaxY < tileY + tileH - 1);
+				// Reverse-painter cull: the last command that overwrites this whole tile independent of the
+				// destination (opaqueOverwrite + full cover, see SwTileRenderer.h) makes everything before it
+				// invisible here - each earlier pixel is overwritten - so the walk starts at that command and
+				// the framebuffer read-back is skipped entirely. In a side-scroller this is the common tile:
+				// solid ground/foreground covers it and the parallax layers behind cost nothing. Subsumes the
+				// former first-command rule (a non-blended background covering the tile), which as a bonus
+				// wrongly fired for an affine quad - a rotated quad does not cover its bounding box, so the
+				// tile corners outside it kept stale scratch; opaqueOverwrite is axis-aligned only.
+				std::size_t firstCmd = 0;
+				bool needsReadBack = true;
+				for (std::size_t i = bin.size(); i > 0;) {
+					const DeferredCommand& cmd = g_tile.commands[bin[--i]];
+					if (cmd.opaqueOverwrite &&
+					    cmd.coverMinX <= tileX && cmd.coverMinY <= tileY &&
+					    cmd.coverMaxX >= tileX + tileW - 1 && cmd.coverMaxY >= tileY + tileH - 1) {
+						firstCmd = i;
+						needsReadBack = false;
+						break;
+					}
+				}
 
 				if (needsReadBack) {
 					// Initialize the tile with current framebuffer contents (needed for correct blending)
@@ -402,9 +419,9 @@ namespace nCine::RHI::Software
 					                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
 				}
 
-				// Render all commands binned to this tile
-				for (std::uint16_t cmdIdx : bin) {
-					const DeferredCommand& cmd = g_tile.commands[cmdIdx];
+				// Render the visible suffix of the commands binned to this tile
+				for (std::size_t k = firstCmd; k < bin.size(); k++) {
+					const DeferredCommand& cmd = g_tile.commands[bin[k]];
 					TileInternal::RenderCommandToTile(
 						cmd.ctx, &cmd.prep, cmd.primType, cmd.firstVertex, cmd.count,
 						tileBuf, tileX, tileY, tileW, tileH,
@@ -751,6 +768,49 @@ namespace nCine::RHI::Software
 			// not met) keeps the generic fragment. Runs at submit time, while the caller's userData pointer
 			// is still alive.
 			cmd.paletteLutIndex = (ctx.paletteRemapHint ? AcquirePaletteLut(cmd.ctx) : -1);
+
+			// Classify a destination-independent full write (the reverse-painter cull's trigger, see the
+			// field in SwTileRenderer.h). Only an axis-aligned procedural quad qualifies - it writes every
+			// pixel of its drawn rectangle - and only when nothing it writes depends on the destination:
+			// blending off (whatever the source, the write replaces the pixel), or the fast blend pair with
+			// a source that is provably opaque everywhere (src-over with alpha 255 is the same replace).
+			cmd.opaqueOverwrite = false;
+			if (accurateBounds && cmd.prep.valid && cmd.prep.axisAligned) {
+				bool overwrites = !cmd.prep.useBlend;
+				if (!overwrites && cmd.prep.useFastBlend) {
+					if (cmd.prep.constantFill) {
+						overwrites = (cmd.prep.constColor[3] >= 255);
+					} else if (cmd.paletteLutIndex >= 0) {
+						// Every LUT entry opaque and the source alpha a constant 1 - each sampled texel,
+						// whatever its index, lands on an opaque entry
+						const SwPaletteLut& lut = g_tile.paletteLuts[cmd.paletteLutIndex];
+						overwrites = (lut.allOpaque && lut.alphaByteOffset == -1);
+					}
+				}
+				if (overwrites) {
+					// The axis-aligned rasterizer writes exactly [int(fxMin), int(fxMax - 0.5)] per axis
+					// (tile-clipped); the binning AABB above rounds the max edges up to int(fxMax), which may
+					// claim one pixel column/row the rasterizer never writes - fine for binning (conservative)
+					// but not for a cover test, so the cull gets its own exact rectangle
+					std::int32_t coverMinX = static_cast<std::int32_t>(cmd.prep.fxMin);
+					std::int32_t coverMaxX = static_cast<std::int32_t>(cmd.prep.fxMax - 0.5f);
+					std::int32_t coverMinY = static_cast<std::int32_t>(cmd.prep.fyMin);
+					std::int32_t coverMaxY = static_cast<std::int32_t>(cmd.prep.fyMax - 0.5f);
+					if DEATH_UNLIKELY(ctx.scissorEnabled) {
+						// cmd.ctx.scissorRect.Y was flipped to top-down above, matching tile coordinates
+						coverMinX = std::max(coverMinX, cmd.ctx.scissorRect.X);
+						coverMaxX = std::min(coverMaxX, cmd.ctx.scissorRect.X + cmd.ctx.scissorRect.W - 1);
+						coverMinY = std::max(coverMinY, cmd.ctx.scissorRect.Y);
+						coverMaxY = std::min(coverMaxY, cmd.ctx.scissorRect.Y + cmd.ctx.scissorRect.H - 1);
+					}
+					cmd.coverMinX = coverMinX;
+					cmd.coverMinY = coverMinY;
+					cmd.coverMaxX = coverMaxX;
+					cmd.coverMaxY = coverMaxY;
+					cmd.opaqueOverwrite = (coverMinX <= coverMaxX && coverMinY <= coverMaxY);
+				}
+			}
+
 			cmd.primType = type;
 			cmd.firstVertex = firstVertex;
 			cmd.count = count;
