@@ -1953,7 +1953,7 @@ namespace Jazz2::Actors
 	void Player::OnHitFloor(float timeMult)
 	{
 		if (_activeModifier == Modifier::None && (_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
-			SetCopterFlight(0.0f);
+			_copterFramesLeft = 0.0f;
 			SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 			if (!_isAttachedToPole) {
 				SetState(ActorState::ApplyGravitation, true);
@@ -2092,7 +2092,7 @@ namespace Jazz2::Actors
 							_internalForceY = 0.0f;
 							_pushFramesLeft = 0.0f;
 							_fireFramesLeft = 0.0f;
-							SetCopterFlight(0.0f);
+							_copterFramesLeft = 0.0f;
 
 							// Stick the player to wall
 							MoveInstantly(Vector2f(IsFacingLeft() ? -6.0f : 6.0f, 0.0f), MoveType::Relative | MoveType::Force, params);
@@ -2104,7 +2104,7 @@ namespace Jazz2::Actors
 								SetState(ActorState::CanJump | ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, true);
 								_pushFramesLeft = 0.0f;
 								_fireFramesLeft = 0.0f;
-								SetCopterFlight(0.0f);
+								_copterFramesLeft = 0.0f;
 								_hitFloorTime = 60.0f;
 
 								_speed.Y = 0.0f;
@@ -2148,7 +2148,7 @@ namespace Jazz2::Actors
 		if (std::abs(force.X) > 0.0f) {
 			MoveInstantly(Vector2f(_pos.X, (_pos.Y + pos.Y) * 0.5f), MoveType::Absolute);
 
-			SetCopterFlight(0.0f);
+			_copterFramesLeft = 0.0f;
 			//speedX = force.X;
 			// Match the original real-time launch speed (70/60 baseline) when not Reforged
 			float springScaleX = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale * 0.95f);
@@ -2184,7 +2184,7 @@ namespace Jazz2::Actors
 			MoveInstantly(Vector2f(lerp(_pos.X, pos.X, 0.3f), _pos.Y), MoveType::Absolute);
 
 			if (_activeModifier == Modifier::None && _copterFramesLeft > 0.0f) {
-				SetCopterFlight(0.0f);
+				_copterFramesLeft = 0.0f;
 				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 				SetState(ActorState::ApplyGravitation, true);
 			}
@@ -2556,7 +2556,7 @@ namespace Jazz2::Actors
 			}
 
 			if (cancelCopter) {
-				SetCopterFlight(0.0f);
+				_copterFramesLeft = 0.0f;
 				SetAnimation(_currentAnimation->State & ~AnimState::Copter);
 				if (!_isAttachedToPole) {
 					SetState(ActorState::ApplyGravitation, true);
@@ -2640,7 +2640,7 @@ namespace Jazz2::Actors
 				_externalForce.Y = 0.0f;
 				_isFreefall = false;
 				_isSpring = false;
-				SetCopterFlight(0.0f);
+				_copterFramesLeft = 0.0f;
 
 				if (newSuspendState == SuspendType::Hook || _wasFirePressed) {
 					_speed.X = 0.0f;
@@ -3086,7 +3086,7 @@ namespace Jazz2::Actors
 		_externalForce.Y = 0.0f;
 		_internalForceY = 0.0f;
 		_fireFramesLeft = 0.0f;
-		SetCopterFlight(0.0f);
+		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
 		_weaponCooldown = 0.0f;
 		_controllableTimeout = 0.0f;
@@ -3672,7 +3672,7 @@ namespace Jazz2::Actors
 		_controllable = false;
 		SetState(ActorState::IsInvulnerable | ActorState::ApplyGravitation, true);
 		_fireFramesLeft = 0.0f;
-		SetCopterFlight(0.0f);
+		_copterFramesLeft = 0.0f;
 		_pushFramesLeft = 0.0f;
 		_invulnerableTime = 0.0f;
 
@@ -3895,7 +3895,7 @@ namespace Jazz2::Actors
 			_externalForce.Y = 0.0f;
 			_internalForceY = 0.0f;
 			_fireFramesLeft = 0.0f;
-			SetCopterFlight(0.0f);
+			_copterFramesLeft = 0.0f;
 			_pushFramesLeft = 0.0f;
 
 			// For warping from the water
@@ -4010,7 +4010,7 @@ namespace Jazz2::Actors
 		_keepRunningTime = 0.0f;
 		_pushFramesLeft = 0.0f;
 		_fireFramesLeft = 0.0f;
-		SetCopterFlight(0.0f);
+		_copterFramesLeft = 0.0f;
 
 		SetAnimation(_currentAnimation->State & ~(AnimState::Uppercut /*| AnimState::Sidekick*/ | AnimState::Buttstomp));
 
@@ -4235,7 +4235,7 @@ namespace Jazz2::Actors
 		_internalForceY = 0.0f;
 		_fireFramesLeft = 0.0f;
 		if (!IsFlyCheatActive()) {
-			SetCopterFlight(0.0f);
+			_copterFramesLeft = 0.0f;
 		}
 		_pushFramesLeft = 0.0f;
 		SetState(ActorState::CanJump, false);
