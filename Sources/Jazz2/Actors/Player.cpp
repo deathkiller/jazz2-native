@@ -411,15 +411,12 @@ namespace Jazz2::Actors
 		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
 
 #if defined(WITH_AUDIO)
-		// Handle sequential airboard turn sounds
 		if (_airboardTurnSound != nullptr && !_airboardTurnSound->isPlaying()) {
-			// First sound finished, play the second sound now
 			auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
 			if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
 				AudioBuffer* buffer2 = &it->second.Buffers[1]->Buffer;
-				LOGD("Playing airboard_turn buffer 2 (sequential)");
 				_levelHandler->PlaySfx(this, "airboard_turn"_s, buffer2, Vector3f::Zero, true, 2.0f, 0.8f);
-				_airboardTurnSound = nullptr;  // Reset for next turn
+				_airboardTurnSound = nullptr;
 			}
 		}
 #endif
@@ -960,14 +957,10 @@ namespace Jazz2::Actors
 					_pushFramesLeft = 0.0f;
 #if defined(WITH_AUDIO)
 					if (_activeModifier == Modifier::Airboard) {
-						// Play both turn sounds in sequence
 						auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
 						if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
 							AudioBuffer* buffer1 = &it->second.Buffers[0]->Buffer;
-							LOGD("Playing airboard_turn buffer 1 (start sequence)");
 							_airboardTurnSound = _levelHandler->PlaySfx(this, "airboard_turn"_s, buffer1, Vector3f::Zero, true, 2.0f, 0.8f);
-						} else {
-							LOGD("Failed to find airboard_turn or not enough buffers");
 						}
 					}
 #endif
@@ -4164,7 +4157,6 @@ namespace Jazz2::Actors
 
 				_activeModifier = Modifier::Copter;
 
-				// If fly cheat is active, keep infinite duration; otherwise use default 10 seconds
 				SetCopterFlight(_flyCheatActive ? 1e6f : (10.0f * FrameTimer::FramesPerSecond),
 					_flyCheatActive ? FlightType::Cheat : FlightType::Normal);
 

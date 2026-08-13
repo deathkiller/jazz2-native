@@ -2540,7 +2540,6 @@ namespace Jazz2
 	void LevelHandler::CheatFly()
 	{
 		for (auto* player : _players) {
-			// Cheat only works for Jazz, Spaz, and Lori
 			PlayerType playerType = player->GetPlayerType();
 			if (playerType != PlayerType::Jazz &&
 				playerType != PlayerType::Spaz &&
@@ -2559,7 +2558,6 @@ namespace Jazz2
 				case Actors::Player::Modifier::Copter:  nextModifier = Actors::Player::Modifier::Airboard; break;
 				default:                                nextModifier = Actors::Player::Modifier::None;     break;
 			}
-			// Set cheat mode flag if switching to Copter
 			if (nextModifier == Actors::Player::Modifier::Copter) {
 				player->EnableFlyCheat();
 			}
