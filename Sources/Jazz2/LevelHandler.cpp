@@ -2556,7 +2556,7 @@ namespace Jazz2
 			}
 			// Set cheat mode flag if switching to Copter
 			if (nextModifier == Actors::Player::Modifier::Copter) {
-				player->EnableCopterCheat();
+				player->EnableFlyCheat();
 			}
 			player->SetModifier(nextModifier);
 		}

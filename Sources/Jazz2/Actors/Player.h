@@ -103,6 +103,12 @@ namespace Jazz2::Actors
 			Shielded			/**< Invulnerable due to an active shield */
 		};
 
+		/** @brief Type of copter flight state */
+		enum class FlightType {
+			Normal,				/**< Timed/regular flight */
+			Cheat				/**< Cheat-enabled flight */
+		};
+
 		/**
 			@brief Constant per-character properties
 
@@ -221,8 +227,14 @@ namespace Jazz2::Actors
 		Modifier GetModifier() const;
 		/** @brief Sets current modifier */
 		virtual bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
-		/** @brief Enables copter cheat behavior for the next cheat copter activation */
-		void EnableCopterCheat();
+		/** @brief Returns whether fly-cheat behavior is currently active */
+		bool IsFlyCheatActive() const;
+		/** @brief Sets copter flight duration and type (`timeLeft <= 0` disables flight cheat state) */
+		void SetCopterFlight(float timeLeft, FlightType type = FlightType::Normal);
+		/** @brief Enables fly cheat behavior for the next cheat flight activation */
+		void EnableFlyCheat();
+		/** @brief Disables fly cheat behavior */
+		void DisableFlyCheat();
 		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */
@@ -435,7 +447,7 @@ namespace Jazz2::Actors
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		LevelExitingState _levelExiting;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
-		bool _copterCheatActive;
+		bool _flyCheatActive;
 		std::int32_t _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
