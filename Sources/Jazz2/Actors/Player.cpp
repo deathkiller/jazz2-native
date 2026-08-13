@@ -298,6 +298,11 @@ namespace Jazz2::Actors
 		return (_inWater || _activeModifier != Modifier::None);
 	}
 
+	bool Player::IsInWater() const
+	{
+		return _inWater;
+	}
+
 	bool Player::IsContinuousJumpAllowed() const
 	{
 		return PreferencesCache::EnableContinuousJump;
@@ -2712,6 +2717,11 @@ namespace Jazz2::Actors
 			if (_pos.Y >= _levelHandler->GetWaterLevel() && _waterCooldownLeft <= 0.0f) {
 				_inWater = true;
 				_waterCooldownLeft = 20.0f;
+				_flyCheatActive = false;
+
+				if (_activeModifier == Modifier::Copter || _activeModifier == Modifier::Airboard) {
+					SetModifier(Modifier::None);
+				}
 
 				_controllable = true;
 				EndDamagingMove();
@@ -4192,6 +4202,10 @@ namespace Jazz2::Actors
 				_activeModifier = Modifier::None;
 
 #if defined(WITH_AUDIO)
+			if (_copterSound != nullptr) {
+				_copterSound->stop();
+				_copterSound = nullptr;
+			}
 			if (_airboardSound != nullptr) {
 				_airboardSound->stop();
 				_airboardSound = nullptr;

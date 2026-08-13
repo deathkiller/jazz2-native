@@ -2547,6 +2547,11 @@ namespace Jazz2
 				playerType != PlayerType::Lori) {
 				continue;
 			}
+
+			if (player->IsInWater()) {
+				player->DisableFlyCheat();
+				continue;
+			}
 			
 			Actors::Player::Modifier nextModifier;
 			switch (player->GetModifier()) {
