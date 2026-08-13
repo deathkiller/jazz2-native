@@ -4166,7 +4166,6 @@ namespace Jazz2::Actors
 			}
 
 			default: {
-				// No-wall cheat is only valid while flying: always restore tile collisions when modifier ends.
 				SetState(ActorState::CollideWithTileset | ActorState::CollideWithTilesetReduced, true);
 				_copterCheatActive = false;
 				_activeModifier = Modifier::None;
