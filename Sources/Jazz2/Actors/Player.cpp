@@ -412,12 +412,14 @@ namespace Jazz2::Actors
 
 #if defined(WITH_AUDIO)
 		if (_airboardTurnSound != nullptr && !_airboardTurnSound->isPlaying()) {
-			auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
-			if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
-				AudioBuffer* buffer2 = &it->second.Buffers[1]->Buffer;
-				_levelHandler->PlaySfx(this, "airboard_turn"_s, buffer2, Vector3f::Zero, true, 2.0f, 0.8f);
-				_airboardTurnSound = nullptr;
+			if (_activeModifier == Modifier::Airboard) {
+				auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
+				if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
+					AudioBuffer* buffer2 = &it->second.Buffers[1]->Buffer;
+					_levelHandler->PlaySfx(this, "airboard_turn"_s, buffer2, Vector3f::Zero, true, 2.0f, 0.8f);
+				}
 			}
+			_airboardTurnSound = nullptr;
 		}
 #endif
 
@@ -1203,7 +1205,7 @@ namespace Jazz2::Actors
 			if (!CanJump()) {
 				// Extend copter time
 				if (_copterFramesLeft > 0.0f) {
-					SetCopterFlight(70.0f, FlightType::Normal);
+					SetCopterFlight(70.0f, IsFlyCheatActive() ? FlightType::Cheat : FlightType::Normal);
 				}
 			} else if (_currentSpecialMove == SpecialMoveType::None && _jumpTime <= 0.0f && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down)) {
 				// Standard jump
