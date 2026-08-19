@@ -356,6 +356,22 @@ namespace Jazz2
 		return 180.0f;
 	}
 
+	bool LevelHandler::GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const
+	{
+		health = 0;
+		maxHealth = 0;
+
+		if (_activeBoss == nullptr) {
+			return false;
+		}
+
+		health = _activeBoss->GetHealth();
+		maxHealth = _activeBoss->GetMaxHealth();
+
+		// Bosses with unlimited health have no meaningful bar to show
+		return (maxHealth > 0 && maxHealth != INT32_MAX);
+	}
+
 	ArrayView<const std::shared_ptr<Actors::ActorBase>> LevelHandler::GetActors() const
 	{
 		return _actors;
@@ -418,6 +434,12 @@ namespace Jazz2
 
 	void LevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
+		// Remember it on the player as well, so checkpoints can restore the light they were activated in even where
+		// there is no viewport to read it back from (a dedicated server, or a server-side shadow of a remote player)
+		if (player != nullptr) {
+			player->SetCurrentAmbientLight(value);
+		}
+
 		for (auto& viewport : _assignedViewports) {
 			if (viewport->_targetActor == player) {
 				viewport->_ambientLightTarget = value;
@@ -856,7 +878,7 @@ namespace Jazz2
 	{
 		if (line == "/help"_s) {
 			_console->WriteLine(UI::MessageLevel::Echo, line);
-			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
+			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://de4th.dev/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
 		}
 
@@ -1289,14 +1311,9 @@ namespace Jazz2
 	{
 		_checkpointFrames = GetElapsedFrames();
 
-		// All players will be respawned at the checkpoint, so also set the same ambient light
-		float ambientLight = _defaultAmbientLight.W;
-		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetActor == player) {
-				ambientLight = viewport->_ambientLightTarget;
-				break;
-			}
-		}
+		// All players will be respawned at the checkpoint, so also set the same ambient light. It's taken from the
+		// activating player rather than from its viewport, so it's correct on a dedicated server too.
+		float ambientLight = (player != nullptr ? player->GetCurrentAmbientLight() : _defaultAmbientLight.W);
 
 		for (auto& player : _players) {
 			player->SetCheckpoint(pos, ambientLight);

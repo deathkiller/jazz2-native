@@ -196,7 +196,7 @@ namespace Jazz2::UI::Menu
 		auto footerText = _("This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and following libraries:");
 
 		std::size_t length = formatInto({ textPtr, textSize },
-			"{}\n{}\n\f[w:80]\f[c:#707070]https://deat.tk/jazz2/\f[/c]\f[/w]\n\n\n"
+			"{}\n{}\n\f[w:80]\f[c:#707070]https://de4th.dev/jazz2/\f[/c]\f[/w]\n\n\n"
 			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n\f[c:#d0705d]Dan R.\f[/c]\n\n\n"
 			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n\f[c:#707070]\f[w:80]JJ\f[h:86]2\f[/h]\f[/w]⁺\f[w:50] \f[/w]Team\f[/c]\n\f[c:#707070]arkamar\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]Bioxxdevil\f[/c]\n\f[c:#707070]Chewi\f[/c]  \f[h:86](Gentoo maintainer)\f[/h]\n\f[c:#707070]JWP\f[/c]  \f[h:86](xtradeb maintainer)\f[/h]\n\f[c:#707070]Kreeblah\f[/c]  \f[h:86](Homebrew maintainer)\f[/h]\n\f[c:#707070]Mwyann\f[/c]\n\f[c:#707070]nat\f[/c]  \f[h:86](NixOS maintainer)\f[/h]\n\f[c:#707070]roox\f[/c]  \f[h:86](OpenSUSE maintainer)\f[/h]\n\f[c:#707070]Schroedingers Cat\f[/c]\n\f[c:#707070]tunip3\f[/c]\n\f[c:#707070]x_Dub_CZ\f[/c]\n\f[c:#707070]Xandu\f[/c]\n\n\n"
 			"\f[h:125]\f[j]{}\f[/j]\f[/h]\n",
@@ -242,7 +242,7 @@ namespace Jazz2::UI::Menu
 		if (_root->ActionHit(PlayerAction::Fire)) {
 			// Approximation of scroll offsets, needs to be changed when header is changed
 			if (_scrollOffset > 40.0f && _scrollOffset < 400.0f) {
-				if (theApplication().OpenUrl("https://deat.tk/jazz2/"_s)) {
+				if (theApplication().OpenUrl("https://de4th.dev/jazz2/"_s)) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 				}
 			}
@@ -404,7 +404,7 @@ namespace Jazz2::UI::Menu
 				if (_touchLast.Y > 120.0f) {
 					// Approximation of scroll offsets, needs to be changed when header is changed
 					if (_scrollOffset > 40.0f && _scrollOffset < 400.0f) {
-						if (theApplication().OpenUrl("https://deat.tk/jazz2/"_s)) {
+						if (theApplication().OpenUrl("https://de4th.dev/jazz2/"_s)) {
 							_root->PlaySfx("MenuSelect"_s, 0.5f);
 						}
 					}

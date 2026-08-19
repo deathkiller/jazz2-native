@@ -150,7 +150,8 @@ namespace Jazz2::UI
 			if (_gemsTime >= 0.0f) {
 				_gemsTime += timeMult;
 			}
-			if (_levelHandler->_activeBoss != nullptr) {
+			std::int32_t bossHealth, bossMaxHealth;
+			if (_levelHandler->GetActiveBossHealth(bossHealth, bossMaxHealth)) {
 				_activeBossTime += timeMult;
 
 				constexpr float TransitionTime = 60.0f;
@@ -621,15 +622,31 @@ namespace Jazz2::UI
 				}
 			}
 
+			// Timed power-ups share the strip right of the lives counter, each one shifting the next to the right
+			float timerX = adjustedView.X + 68.0f;
 			if (player->_activeShield != ShieldType::None) {
 				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
 
-				DrawElement(PickupStopwatch, -1, adjustedView.X + 68.0f, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
-				DrawElement(PickupStopwatch, -1, adjustedView.X + 68.0f, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
+				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
 
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 84.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
 					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 84.0f, bottom - 8.0f, FontLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 16.0f, bottom - 8.0f, FontLayer,
+					Alignment::BottomLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+
+				timerX += 40.0f;
+			}
+
+			if (player->_sugarRushLeft > 0.0f) {
+				i32tos((std::int32_t)ceilf(player->_sugarRushLeft * FrameTimer::SecondsPerFrame), stringBuffer);
+
+				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
+
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
+					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 16.0f, bottom - 8.0f, FontLayer,
 					Alignment::BottomLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
 			}
 		} else {
@@ -658,14 +675,29 @@ namespace Jazz2::UI
 				}
 			}
 
+			// Timed power-ups share the strip right of the center of the screen, each one shifting the next to the right
+			float timerX = view.X + view.W * 0.5f - 30.0f;
 			if (player->_activeShield != ShieldType::None) {
-				DrawElement(PickupStopwatch, -1, view.X + view.W * 0.5f - 30.0f, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
-				DrawElement(PickupStopwatch, -1, view.X + view.W * 0.5f - 30.0f, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
 				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f + 1.0f,
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
 					FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W * 0.5f - 6.0f, view.Y + 6.0f,
+				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 24.0f, view.Y + 6.0f,
+					FontLayer, Alignment::TopLeft, Font::DefaultColor);
+
+				timerX += 52.0f;
+			}
+
+			if (player->_sugarRushLeft > 0.0f) {
+				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
+
+				i32tos((std::int32_t)ceilf(player->_sugarRushLeft * FrameTimer::SecondsPerFrame), stringBuffer);
+				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
+					FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 24.0f, view.Y + 6.0f,
 					FontLayer, Alignment::TopLeft, Font::DefaultColor);
 			}
 		}
@@ -765,7 +797,10 @@ namespace Jazz2::UI
 
 	void HUD::OnDrawActiveBoss(const Rectf& adjustedView)
 	{
-		if (_levelHandler->_activeBoss == nullptr || _levelHandler->_activeBoss->GetMaxHealth() == INT32_MAX) {
+		// The boss is server-authoritative in online sessions, so the health comes from the level handler (which
+		// reports either the local boss actor or the values synchronized from the server) instead of from _activeBoss
+		std::int32_t bossHealth, bossMaxHealth;
+		if (!_levelHandler->GetActiveBossHealth(bossHealth, bossMaxHealth)) {
 			return;
 		}
 
@@ -782,7 +817,7 @@ namespace Jazz2::UI
 			alpha = 1.0f;
 		}
 
-		float perc = 0.08f + 0.84f * _levelHandler->_activeBoss->GetHealth() / _levelHandler->_activeBoss->GetMaxHealth();
+		float perc = 0.08f + 0.84f * std::min(std::max((float)bossHealth / (float)bossMaxHealth, 0.0f), 1.0f);
 
 		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
 		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));

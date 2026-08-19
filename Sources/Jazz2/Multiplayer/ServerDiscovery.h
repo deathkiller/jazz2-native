@@ -49,7 +49,7 @@ namespace Jazz2::Multiplayer
 		String EndpointString;
 		/** @brief Server unique identifier */
 		Uuid UniqueServerID;
-		/** @brief Server version */
+		/** @brief Server protocol version, see @ref NCINE_PROTOCOL_VERSION */
 		String Version;
 		/** @brief Server name */
 		String Name;

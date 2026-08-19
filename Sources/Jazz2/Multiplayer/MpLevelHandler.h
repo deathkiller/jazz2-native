@@ -133,6 +133,7 @@ namespace Jazz2::Multiplayer
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
 		float GetHurtInvulnerableTime() const override;
+		bool GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const override;
 
 		float GetDefaultAmbientLight() const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;
@@ -325,6 +326,24 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn);
 		/** @brief Called when a player sets a shield */
 		void HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft);
+		/** @brief Called when sugar rush starts or ends on a player, to sync it to the owning client */
+		void HandlePlayerSetSugarRush(Actors::Player* player, float timeLeft);
+		/**
+		 * @brief Sends an ambient light intensity to the client owning @p player
+		 *
+		 * @param applyNow		Apply the value to the player's view right away
+		 * @param asCheckpoint	Remember the value as the one to restore when respawning at the checkpoint
+		 *
+		 * Does nothing for a player that isn't owned by a remote peer.
+		 */
+		void HandlePlayerSetAmbientLight(Actors::Player* player, float value, bool applyNow, bool asCheckpoint);
+		/**
+		 * @brief Pushes the complete weapon inventory of a player to the owning client
+		 *
+		 * Ammo and upgrades are otherwise only sent when they change, so a client that just (re)spawned with restored
+		 * progression has no way to verify it holds the same values as the server. Called after such a spawn.
+		 */
+		void SyncPlayerInventoryToPeer(Actors::Player* player);
 		/** @brief Called when a player emits a weapon flare */
 		void HandlePlayerEmitWeaponFlare(Actors::Player* player);
 		/** @brief Called when a player changes their current weapon */
@@ -442,6 +461,8 @@ namespace Jazz2::Multiplayer
 		SmallVector<CtfClientFlag, 0> _ctfFlagStates; // Server + Client: per-team flag info for the HUD and carried-flag attachment
 		SmallVector<PlayerScore, 0> _scoreboard;	// Server: built periodically; Client: mirrored for the scoreboard
 		float _scoreboardSyncTime;					// Server: countdown until the next scoreboard broadcast
+		std::int32_t _activeBossHealth;				// Server: last broadcasted boss health (-1 forces a rebroadcast); Client: health synced from the server
+		std::int32_t _activeBossMaxHealth;			// Server: last broadcasted boss max health; Client: max health synced from the server (0 = no active boss)
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<Vector2i, 0> _raceCheckpoints;					// Unordered, used for race position ranking
 		SmallVector<RaceCheckpoint, 0> _orderedRaceCheckpoints;		// Ordered polyline for the minimap (server-built, synced to clients)

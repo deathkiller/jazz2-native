@@ -254,6 +254,8 @@ namespace Jazz2::Actors
 		void ConsumeFood(bool isDrinkable);
 		/** @brief Activates sugar rush */
 		void ActivateSugarRush(float duration);
+		/** @brief Deactivates sugar rush immediately and restores the default renderer */
+		void DeactivateSugarRush();
 		/** @brief Adds weapon ammo */
 		virtual bool AddAmmo(WeaponType weaponType, std::int16_t count);
 		/** @brief Adds weapon upgrade */
@@ -301,6 +303,23 @@ namespace Jazz2::Actors
 		bool DisableControllable(float timeout);
 		/** @brief Sets checkpoint */
 		void SetCheckpoint(Vector2f pos, float ambientLight);
+		/** @brief Returns the ambient light intensity currently applied to this player */
+		float GetCurrentAmbientLight() const {
+			return _currentAmbientLight;
+		}
+		/** @brief Records the ambient light intensity currently applied to this player, called by the level handler */
+		void SetCurrentAmbientLight(float value) {
+			_currentAmbientLight = value;
+		}
+		/**
+		 * @brief Overrides the ambient light intensity to restore when respawning at the checkpoint
+		 *
+		 * Used in online sessions, where checkpoints are activated by the server and the owning client would
+		 * otherwise fall back to the level default after dying (see @ref SetCheckpoint).
+		 */
+		void SetCheckpointAmbientLight(float ambientLight) {
+			_checkpointLight = ambientLight;
+		}
 
 		/** @brief Returns carrying object */
 		ActorBase* GetCarryingObject() const {
@@ -464,6 +483,10 @@ namespace Jazz2::Actors
 		InventoryState _inventoryCheckpoint;
 		Vector2f _checkpointPos;
 		float _checkpointLight;
+		// Ambient light currently applied to this player. Mirrors the assigned viewport, but is tracked on the actor
+		// itself so it's also known where no viewport exists - a dedicated server, or a server-side shadow of a
+		// remote player. That's what makes a checkpoint able to remember the light it was activated in.
+		float _currentAmbientLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
 		float _shieldSpawnTime;

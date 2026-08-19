@@ -90,6 +90,8 @@ namespace Jazz2::Actors::Multiplayer
 		Vector2f _displayPos;
 		/** @brief Last "being stood on" state sent to the owning client, to only resync on change */
 		bool _beingStoodOnLastSent = false;
+		/** @brief Whether sugar rush was active when it was last sent to the owning client, to only resync on change */
+		bool _sugarRushLastSent = false;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

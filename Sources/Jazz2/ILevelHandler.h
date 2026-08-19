@@ -97,6 +97,13 @@ namespace Jazz2
 		virtual float GetWaterLevel() const = 0;
 		/** @brief Returns default invulnerable time when a player is hurt */
 		virtual float GetHurtInvulnerableTime() const = 0;
+		/**
+		 * @brief Returns `true` if a boss health bar should be shown, together with the boss' health
+		 *
+		 * Online clients never own the boss actor (boss activation is server-side only), so multiplayer reports the
+		 * health synchronized from the server instead of reading the local boss actor.
+		 */
+		virtual bool GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const = 0;
 
 		/** @brief Returns list of actors (objects) */
 		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;

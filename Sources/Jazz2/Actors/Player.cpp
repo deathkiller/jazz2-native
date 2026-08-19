@@ -79,7 +79,7 @@ namespace Jazz2::Actors
 		_furColor(PreferencesCache::PlayerFurColor), _paletteOffset(-1),
 		_lives(0), _score(0),
 		_inventory{}, _inventoryCheckpoint{},
-		_checkpointLight(1.0f),
+		_checkpointLight(1.0f), _currentAmbientLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
 		_gemsTotal{}, _gemsPitch(0),
@@ -260,6 +260,7 @@ namespace Jazz2::Actors
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_checkpointLight = _levelHandler->GetDefaultAmbientLight();
+		_currentAmbientLight = _checkpointLight;
 		_trailLastPos = _checkpointPos;
 
 		async_return true;
@@ -4369,6 +4370,20 @@ namespace Jazz2::Actors
 		_renderer.Initialize(ActorRendererType::PartialWhiteMask);
 		_weaponWheelState = WeaponWheelState::Hidden;
 		_levelHandler->HandleActivateSugarRush(this);
+	}
+
+	void Player::DeactivateSugarRush()
+	{
+		if (_sugarRushLeft <= 0.0f) {
+			return;
+		}
+
+		_sugarRushLeft = 0.0f;
+
+		// Mirrors the expiration path in OnUpdate() - only revert the renderer if sugar rush is what set it
+		if (_renderer.GetRendererType() == ActorRendererType::PartialWhiteMask) {
+			_renderer.Initialize(ActorRendererType::Default);
+		}
 	}
 
 	bool Player::AddAmmo(WeaponType weaponType, std::int16_t count)

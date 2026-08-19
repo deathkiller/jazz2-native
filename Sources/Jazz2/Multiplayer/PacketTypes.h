@@ -139,8 +139,10 @@ namespace Jazz2::Multiplayer
 		State = 1,			/**< Level state */
 		GameMode,			/**< Game mode */
 
-		LevelText = 10,		// TODO
+		LevelText = 10,		/**< Overridden level text */
 		Music,				/**< Currently playing music */
+		BossHealth,			/**< Health of the currently active boss, drives the boss health bar on clients */
+		Weather,			/**< Current weather type and intensity */
 
 		Count				/**< Count of supported property types */
 	};
@@ -170,6 +172,8 @@ namespace Jazz2::Multiplayer
 		Spectate,			/**< Spectate mode state */
 		Team,				/**< Team the player belongs to */
 		BeingStoodOn,		/**< Whether another player is standing on this one (cosmetic lift animation) */
+		SugarRush,			/**< Remaining sugar rush time */
+		AmbientLight,		/**< Ambient light intensity to apply and/or to remember for the checkpoint */
 
 		WeaponAmmo = 30,	/**< Ammo of a weapon */
 		WeaponUpgrades,		/**< Upgrades of a weapon */

@@ -46,8 +46,8 @@ using namespace Death::IO;
 #endif
 using namespace nCine;
 
-/** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
-#define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION */
+#define NCINE_PROTOCOL_VERSION_s DEATH_PASTE(NCINE_PROTOCOL_VERSION, _s)
 
 namespace Jazz2::Multiplayer
 {
@@ -164,7 +164,7 @@ namespace Jazz2::Multiplayer
 
 		LOGD("Downloading public server list…");
 
-		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
+		String url = "https://de4th.dev/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		String urlNt = String::nullTerminatedView(url);
 
 		emscripten_fetch_attr_t attr;
@@ -398,7 +398,7 @@ namespace Jazz2::Multiplayer
 	{
 		LOGD("Downloading public server list…");
 
-		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
+		String url = "https://de4th.dev/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		auto request = WebSession::GetDefault().CreateRequest(url);
 		auto result = request.Execute();
 		if (result) {
@@ -578,7 +578,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint16_t>(server->GetServerPort());
 			packet.Write(id.data(), id.size());
 
-			StringView serverVersion = NCINE_VERSION_s;
+			StringView serverVersion = NCINE_PROTOCOL_VERSION_s;
 			serverVersion = serverVersion.prefix(serverVersion.findOr('-', serverVersion.end()).begin());
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverVersion.size());
 			packet.Write(serverVersion.data(), (std::uint8_t)serverVersion.size());
@@ -707,7 +707,7 @@ namespace Jazz2::Multiplayer
 
 		length += formatInto({ input + length, sizeof(input) - length },
 			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"h\":{},\"f\":\"{}\"",
-			NCINE_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
+			NCINE_PROTOCOL_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
 			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, flags, levelDisplayName);
 
 #	if defined(WITH_WEBSOCKET)
@@ -720,7 +720,7 @@ namespace Jazz2::Multiplayer
 
 		length += formatInto({ input + length, sizeof(input) - length }, "}}");
 
-		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
+		auto request = WebSession::GetDefault().CreateRequest("https://de4th.dev/jazz2/servers"_s);
 		request.SetMethod("POST"_s);
 		request.SetData(StringView(input, length), "application/json"_s);
 		if (auto result = request.Execute()) {
@@ -774,9 +774,9 @@ namespace Jazz2::Multiplayer
 			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
 
 		length += formatInto({ input + length, sizeof(input) - length }, "\",\"e\":null,\"v\":\"{}\",\"d\":\"{}\"}}",
-			NCINE_VERSION_s, PreferencesCache::GetDeviceID());
+			NCINE_PROTOCOL_VERSION_s, PreferencesCache::GetDeviceID());
 
-		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
+		auto request = WebSession::GetDefault().CreateRequest("https://de4th.dev/jazz2/servers"_s);
 		request.SetMethod("POST"_s);
 		request.SetData(StringView(input, length), "application/json"_s);
 		if (auto result = request.Execute()) {

@@ -200,7 +200,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Subheader in First Run section
 		// \uE000 is the Discord icon of the menu font's private use area, written as an escape so that
 		// the character itself cannot be lost when the file is edited
-		String subheader = _f("You can choose your preferred play style.\nThis option can be changed at any time in \f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c].\nFor more information, visit {} and \uE000 Discord!", _("Options"), _("Gameplay"), _("Enhancements"), "\f[c:#707070]https://deat.tk/jazz2/\f[/c]"_s);
+		String subheader = _f("You can choose your preferred play style.\nThis option can be changed at any time in \f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c].\nFor more information, visit {} and \uE000 Discord!", _("Options"), _("Gameplay"), _("Enhancements"), "\f[c:#707070]https://de4th.dev/jazz2/\f[/c]"_s);
 		// The paragraph is fitted into the band between the header and the frame in both directions: on a
 		// 480 px panel its middle line is otherwise ~60 px wider than the whole screen, and a translation
 		// that needs one line more would grow into the header line above it. On a full-size panel the band

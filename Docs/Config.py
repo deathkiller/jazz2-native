@@ -1,13 +1,13 @@
 import re
 
 DOXYFILE = 'Doxyfile'
-MAIN_PROJECT_URL = 'https://deat.tk/jazz2/'
+MAIN_PROJECT_URL = 'https://de4th.dev/jazz2/'
 SHOW_UNDOCUMENTED = True
 VERSION_LABELS = True
 
 SEARCH_DOWNLOAD_BINARY = True
-SEARCH_BASE_URL = "https://deat.tk/jazz2/docs/"
-SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:deat.tk+jazz2+docs+{query}"
+SEARCH_BASE_URL = "https://de4th.dev/jazz2/docs/"
+SEARCH_EXTERNAL_URL = "https://google.com/search?q=site:de4th.dev+jazz2+docs+{query}"
 
 STYLESHEETS = [
     'https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,600,600i%7CSource+Code+Pro:400,400i,600&subset=latin-ext',

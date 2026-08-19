@@ -122,7 +122,8 @@ namespace Jazz2::Multiplayer
 			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false), _enableLedgeClimb(enableLedgeClimb),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _overtimeFinishers(0),
-			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f)
+			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f),
+			_activeBossHealth(-1), _activeBossMaxHealth(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -281,6 +282,26 @@ namespace Jazz2::Multiplayer
 		return (serverConfig.GameMode == MpGameMode::Cooperation ? 180.0f : 80.0f);
 	}
 
+	bool MpLevelHandler::GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const
+	{
+		if (_isServer) {
+			return LevelHandler::GetActiveBossHealth(health, maxHealth);
+		}
+
+		// Clients never activate or own the boss actor (AreaActivateBoss is stripped from their event map), so the
+		// boss health bar is driven purely by LevelPropertyType::BossHealth broadcasted by the server
+		health = 0;
+		maxHealth = 0;
+
+		if (_activeBossMaxHealth <= 0) {
+			return false;
+		}
+
+		health = _activeBossHealth;
+		maxHealth = _activeBossMaxHealth;
+		return true;
+	}
+
 	float MpLevelHandler::GetDefaultAmbientLight() const
 	{
 		// TODO: Remove this override
@@ -289,14 +310,20 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SetAmbientLight(Actors::Player* player, float value)
 	{
-		if (_isServer) {
-			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(player)) {
-				// TODO: Send it to remote peer
-				return;
-			}
-		}
+		// A LightAmbient tile re-applies the same value every frame the player stands on it, so only an actual change
+		// is worth a packet
+		bool changed = (player != nullptr && player->GetCurrentAmbientLight() != value);
 
+		// Records the value on the player and updates its viewport; for a server-side shadow of a remote player there
+		// is no viewport, so only the record is kept - which is what SetCheckpoint() later reads back
 		LevelHandler::SetAmbientLight(player, value);
+
+		// Push it to the owning client as well. A LightAmbient tile it walks over is applied locally too (that event
+		// isn't stripped from the client event map), so this is usually a no-op confirmation - but it's the only way
+		// a server-driven change reaches the client, e.g. restoring the checkpoint light after dying.
+		if (changed) {
+			HandlePlayerSetAmbientLight(player, value, /*applyNow:*/ true, /*asCheckpoint:*/ false);
+		}
 	}
 
 	void MpLevelHandler::OnBeginFrame()
@@ -393,6 +420,31 @@ namespace Jazz2::Multiplayer
 				BuildScoreboard();
 				if (IsTeamGameMode(serverConfig.GameMode)) {
 					SyncTeamScores();
+				}
+			}
+
+			// Bosses are activated and simulated only on the server, so clients can't show the boss health bar on
+			// their own - broadcast the health whenever it changes (which is rarely, only when the boss is hit)
+			if (!_isLocalSession) {
+				std::int32_t bossHealth, bossMaxHealth;
+				if (!LevelHandler::GetActiveBossHealth(bossHealth, bossMaxHealth)) {
+					bossHealth = 0;
+					bossMaxHealth = 0;
+				}
+
+				if (bossHealth != _activeBossHealth || bossMaxHealth != _activeBossMaxHealth) {
+					_activeBossHealth = bossHealth;
+					_activeBossMaxHealth = bossMaxHealth;
+
+					MemoryStream packet(11);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::BossHealth);
+					packet.WriteVariableInt32(bossHealth);
+					packet.WriteVariableInt32(bossMaxHealth);
+
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 				}
 			}
 		} else {
@@ -1265,13 +1317,21 @@ namespace Jazz2::Multiplayer
 
 		Vector2f pos = initiator->_pos;
 		for (auto* player : _players) {
-			if (player == initiator || (player->_pos - pos).Length() < MinDistance) {
+			if (player == initiator) {
+				// The initiator already handled the event itself in Player::OnHandleCollision
 				continue;
 			}
 
-			player->WarpToPosition(pos, WarpFlags::Default);
+			// Same as the single-player AreaActivateBoss handling: let sugar rush run out almost immediately instead of
+			// carrying it into the boss fight. The event is processed server-side only, so the other players never see
+			// it themselves; RemotePlayerOnServer::OnUpdate then pushes the end to the owning client.
+			if (player->_sugarRushLeft > 1.0f) {
+				player->_sugarRushLeft = 1.0f;
+			}
 
-			// TODO: Deactivate sugar rush
+			if ((player->_pos - pos).Length() >= MinDistance) {
+				player->WarpToPosition(pos, WarpFlags::Default);
+			}
 		}
 	}
 
@@ -1632,16 +1692,18 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::SetCheckpoint(player, pos);
 
-		float ambientLight = _defaultAmbientLight.W;
-		for (auto& viewport : _assignedViewports) {
-			if (viewport->_targetActor == player) {
-				ambientLight = viewport->_ambientLightTarget;
-				break;
-			}
-		}
+		// The light the checkpoint was activated in, taken from the activating player rather than from its viewport so
+		// it's also correct on a dedicated server (and for a remote player, which has no viewport at all)
+		float ambientLight = (player != nullptr ? player->GetCurrentAmbientLight() : _defaultAmbientLight.W);
 
 		_lastCheckpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_lastCheckpointLight = ambientLight;
+
+		// Checkpoints are activated server-side, so tell every client which light to restore when it respawns there.
+		// The base already did this for the server-side players (LevelHandler::SetCheckpoint sets it on all of them).
+		for (auto* otherPlayer : _players) {
+			HandlePlayerSetAmbientLight(otherPlayer, ambientLight, /*applyNow:*/ false, /*asCheckpoint:*/ true);
+		}
 	}
 
 	void MpLevelHandler::RollbackToCheckpoint(Actors::Player* player)
@@ -1652,7 +1714,14 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandleActivateSugarRush(Actors::Player* player)
 	{
-		// TODO: Remove this override
+		// The sugar rush jingle replaces the local music, so it must only play for a player that is actually being
+		// played on this machine. On a server every remote player is simulated too, and without this check any
+		// player's sugar rush would hijack the host's (or the dedicated server's) music. The owning client plays it
+		// itself when it applies PlayerPropertyType::SugarRush.
+		if (runtime_cast<RemotePlayerOnServer>(player) != nullptr) {
+			return;
+		}
+
 		LevelHandler::HandleActivateSugarRush(player);
 	}
 
@@ -1846,8 +1915,31 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SetWeather(WeatherType type, std::uint8_t intensity)
 	{
-		// TODO: This should probably be client local
+		bool changed = (_weatherType != type || _weatherIntensity != intensity);
+
 		LevelHandler::SetWeather(type, intensity);
+
+		if (!changed) {
+			// AreaWeather tiles are (re)activated whenever a player approaches them, so don't resend what the
+			// clients already have
+			return;
+		}
+
+		// Weather is purely cosmetic, but clients can't derive it themselves: AreaWeather tiles are activated by
+		// EventMap::ProcessEvents(), which only ever runs on the server (see ProcessEvents), and scripts are
+		// server-side too. Without this, a level that changes its weather mid-way keeps the weather it was loaded
+		// with on every client. The current value is also part of the initial peer sync (see SynchronizePeers).
+		if (_isServer && !_isLocalSession) {
+			MemoryStream packet(3);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Weather);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)type);
+			packet.WriteValue<std::uint8_t>(intensity);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		}
 	}
 
 	bool MpLevelHandler::BeginPlayMusic(StringView path, bool setDefault, bool forceReload)
@@ -2907,6 +2999,14 @@ namespace Jazz2::Multiplayer
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 		std::uint32_t playerIndex = mpPlayer->_playerIndex;
 
+		// This replaces the player actor, so its progression (weapons, ammo, upgrades, lives, score, gems) would
+		// otherwise be lost - toggling spectate mode or changing character in co-op would reset the player back to a
+		// bare Blaster. Snapshot it here and let the new actor restore it in MpPlayer::OnActivatedAsync; the spawn
+		// packet below forwards the same snapshot to the owning client. Player::PrepareLevelCarryOver() is called
+		// explicitly, because RemotePlayerOnServer overrides it to return an empty struct.
+		peerDesc->CarryOver = mpPlayer->Player::PrepareLevelCarryOver();
+		peerDesc->HasCarryOver = true;
+
 		// Remove player from active players list
 		for (std::size_t i = 0; i < _players.size(); i++) {
 			if (_players[i] == player) {
@@ -3008,15 +3108,23 @@ namespace Jazz2::Multiplayer
 			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
 			// Forward carried-over progression to the client (flag = 0 if none). The server-side player applies
 			// it in MpPlayer::OnActivatedAsync (after the base reset); clear the flag once serialized.
-			packet2.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
-			if (peerDesc->HasCarryOver) {
+			bool hadCarryOver = peerDesc->HasCarryOver;
+			packet2.WriteValue<std::uint8_t>(hadCarryOver ? 1 : 0);
+			if (hadCarryOver) {
 				WriteCarryOver(packet2, peerDesc->CarryOver);
 			}
 			peerDesc->HasCarryOver = false;
 
 			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
+
+			if (hadCarryOver && ptr->_playerType != PlayerType::Spectate) {
+				SyncPlayerInventoryToPeer(ptr);
+			}
 		} else {
-			// Local player
+			// Local player - the snapshot taken above was already applied by the new actor, so drop it (otherwise a
+			// later in-level respawn would restore this stale state)
+			peerDesc->HasCarryOver = false;
+
 			UnassignViewport(player);
 			AssignViewport(ptr);
 			CommitViewports();
@@ -3437,6 +3545,14 @@ namespace Jazz2::Multiplayer
 			peerDesc->EnableLedgeClimb = enableLedgeClimb;
 			if (peerDesc->LevelState < PeerLevelState::LevelLoaded) {
 				peerDesc->LevelState = PeerLevelState::LevelLoaded;
+
+				// The boss health is only broadcasted when it changes, which this peer just missed - invalidate the
+				// last-sent value so the next frame resends it (and the peer can show the bar for a boss already
+				// being fought). Rebroadcasting to everyone is harmless, the packet is a few bytes. The value is
+				// owned by the main thread (OnEndFrame), so don't touch it from here directly.
+				InvokeAsync([this]() {
+					_activeBossHealth = -1;
+				});
 			}
 
 			if (peerDesc->PreferredPlayerType == PlayerType::None) {
@@ -4025,23 +4141,33 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::HandleServerPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
-		MemoryStream packet(data);
-		std::uint32_t actorId = packet.ReadVariableUint32();
+		// The actor RPC handler can mutate arbitrary game state, so run it on the main thread rather than the
+		// network thread (mirrors HandleClientPacketRpc). The packet buffer is freed as soon as this returns,
+		// so copy it into an owned buffer.
+		Array<std::uint8_t> buffer{NoInit, data.size()};
+		if (data.size() > 0) {
+			std::memcpy(buffer.data(), data.data(), data.size());
+		}
 
-		std::shared_ptr<Actors::ActorBase> actor;
-		{
-			std::unique_lock lock(_lock);
-			auto it = _remoteActors.find(actorId);
-			if (it != _remoteActors.end()) {
-				actor = it->second;
+		InvokeAsync([this, buffer = Death::move(buffer)]() {
+			MemoryStream packet(buffer);
+			std::uint32_t actorId = packet.ReadVariableUint32();
+
+			std::shared_ptr<Actors::ActorBase> actor;
+			{
+				std::unique_lock lock(_lock);
+				auto it = _remoteActors.find(actorId);
+				if (it != _remoteActors.end()) {
+					actor = it->second;
+				}
 			}
-		}
-		if DEATH_LIKELY(actor != nullptr) {
-			LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, data.size() - packet.GetPosition());
-			actor->OnPacketReceived(packet);
-		} else {
-			LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - Actor not found", actorId,data.size() - packet.GetPosition());
-		}
+			if DEATH_LIKELY(actor != nullptr) {
+				LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, buffer.size() - packet.GetPosition());
+				actor->OnPacketReceived(packet);
+			} else {
+				LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - Actor not found", actorId, buffer.size() - packet.GetPosition());
+			}
+		});
 		return true;
 	}
 
@@ -4226,6 +4352,50 @@ namespace Jazz2::Multiplayer
 					bool setDefault = (flags & 0x01) != 0;
 					bool forceReload = (flags & 0x02) != 0;
 					BeginPlayMusic(path, setDefault, forceReload);
+				});
+				break;
+			}
+			case LevelPropertyType::LevelText: {
+				std::uint32_t textId = packet.ReadVariableUint32();
+				std::uint32_t textLength = packet.ReadVariableUint32();
+				if DEATH_UNLIKELY(textLength > 8192) {
+					// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+					LOGW("[MP] ServerPacketType::LevelSetProperty::LevelText - Malformed packet");
+					return true;
+				}
+				String text{NoInit, textLength};
+				packet.Read(text.data(), textLength);
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::LevelText - textId: {}, length: {}", textId, textLength);
+
+				// Call the base directly - the override only rebroadcasts on a server, but this is the receiving end
+				InvokeAsync([this, textId, text = std::move(text)]() {
+					LevelHandler::OverrideLevelText(textId, text);
+				});
+				break;
+			}
+			case LevelPropertyType::Weather: {
+				WeatherType weatherType = (WeatherType)packet.ReadValue<std::uint8_t>();
+				std::uint8_t weatherIntensity = packet.ReadValue<std::uint8_t>();
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::Weather - type: {}, intensity: {}", (std::uint32_t)weatherType, weatherIntensity);
+
+				// Call the base directly, so the client doesn't try to rebroadcast what it just received
+				InvokeAsync([this, weatherType, weatherIntensity]() {
+					LevelHandler::SetWeather(weatherType, weatherIntensity);
+				});
+				break;
+			}
+			case LevelPropertyType::BossHealth: {
+				std::int32_t health = packet.ReadVariableInt32();
+				std::int32_t maxHealth = packet.ReadVariableInt32();
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::BossHealth - health: {}, maxHealth: {}", health, maxHealth);
+
+				// Read by the HUD on the main thread through GetActiveBossHealth()
+				InvokeAsync([this, health, maxHealth]() {
+					_activeBossHealth = health;
+					_activeBossMaxHealth = maxHealth;
 				});
 				break;
 			}
@@ -5116,6 +5286,46 @@ namespace Jazz2::Multiplayer
 		}
 
 		switch (propertyType) {
+			case PlayerPropertyType::AmbientLight: {
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				float value = packet.ReadValueAsLE<float>();
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::AmbientLight - flags: 0x{:.2x}, value: {}", flags, value);
+
+				InvokeAsync([this, flags, value]() {
+					if (!_players.empty()) {
+						if ((flags & 0x02) != 0) {
+							// Checkpoints are activated server-side, so this is the only way the client learns which
+							// light to restore when it dies and respawns there
+							_players[0]->SetCheckpointAmbientLight(value);
+						}
+						if ((flags & 0x01) != 0) {
+							LevelHandler::SetAmbientLight(_players[0], value);
+						}
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::SugarRush: {
+				std::int32_t timeLeft = packet.ReadVariableInt32();
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::SugarRush - timeLeft: {}", timeLeft);
+
+				// Food is collected server-side, so this is the only way the client learns its own player entered
+				// sugar rush - applying it locally turns the player white, plays the music, spawns the star trail and
+				// makes the local prediction agree with the server. A zero time ends it, which can happen before the
+				// local timer would have run out (e.g. when the server activates a boss).
+				InvokeAsync([this, timeLeft]() {
+					if (!_players.empty()) {
+						if (timeLeft > 0) {
+							_players[0]->ActivateSugarRush((float)timeLeft);
+						} else {
+							_players[0]->DeactivateSugarRush();
+						}
+					}
+				});
+				break;
+			}
 			case PlayerPropertyType::PlayerType: {
 				PlayerType type = (PlayerType)packet.ReadValue<std::uint8_t>();
 				InvokeAsync([this, type]() {
@@ -5388,31 +5598,35 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
-		if (!_players.empty()) {
-			auto* player = static_cast<RemotablePlayer*>(_players[0]);
-			auto peerDesc = player->GetPeerDescriptor();
-			peerDesc->PositionInRound = 0;
-			peerDesc->Deaths = 0;
-			peerDesc->Kills = 0;
-			peerDesc->Laps = 0;
-			peerDesc->LapStarted = TimeStamp::now();
-			peerDesc->TreasureCollected = 0;
-			peerDesc->DeathElapsedFrames = FLT_MAX;
+		// Touches the player's inventory and per-round stats, which the main thread reads every frame (and the HUD
+		// draws), so it must not run here on the network thread
+		InvokeAsync([this]() {
+			if (!_players.empty()) {
+				auto* player = static_cast<RemotablePlayer*>(_players[0]);
+				auto peerDesc = player->GetPeerDescriptor();
+				peerDesc->PositionInRound = 0;
+				peerDesc->Deaths = 0;
+				peerDesc->Kills = 0;
+				peerDesc->Laps = 0;
+				peerDesc->LapStarted = TimeStamp::now();
+				peerDesc->TreasureCollected = 0;
+				peerDesc->DeathElapsedFrames = FLT_MAX;
 
-			player->_inventory.Coins = 0;
-			std::memset(player->_inventory.Gems, 0, sizeof(player->_inventory.Gems));
-			std::memset(player->_inventory.WeaponAmmo, 0, sizeof(player->_inventory.WeaponAmmo));
-			std::memset(player->_inventoryCheckpoint.WeaponAmmo, 0, sizeof(player->_inventoryCheckpoint.WeaponAmmo));
+				player->_inventory.Coins = 0;
+				std::memset(player->_inventory.Gems, 0, sizeof(player->_inventory.Gems));
+				std::memset(player->_inventory.WeaponAmmo, 0, sizeof(player->_inventory.WeaponAmmo));
+				std::memset(player->_inventoryCheckpoint.WeaponAmmo, 0, sizeof(player->_inventoryCheckpoint.WeaponAmmo));
 
-			player->_inventoryCheckpoint.Coins = 0;
-			std::memset(player->_inventoryCheckpoint.Gems, 0, sizeof(player->_inventoryCheckpoint.Gems));
-			std::memset(player->_inventory.WeaponUpgrades, 0, sizeof(player->_inventory.WeaponUpgrades));
-			std::memset(player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(player->_inventoryCheckpoint.WeaponUpgrades));
+				player->_inventoryCheckpoint.Coins = 0;
+				std::memset(player->_inventoryCheckpoint.Gems, 0, sizeof(player->_inventoryCheckpoint.Gems));
+				std::memset(player->_inventory.WeaponUpgrades, 0, sizeof(player->_inventory.WeaponUpgrades));
+				std::memset(player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(player->_inventoryCheckpoint.WeaponUpgrades));
 
-			player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-			player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-			player->_currentWeapon = WeaponType::Blaster;
-		}
+				player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				player->_currentWeapon = WeaponType::Blaster;
+			}
+		});
 		return true;
 	}
 
@@ -5526,18 +5740,22 @@ namespace Jazz2::Multiplayer
 
 		LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: {}, weaponType: {}, reason: {}", playerIndex, weaponType, reason);
 
-		if (!_players.empty()) {
-			auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
+		// SetCurrentWeapon() preloads metadata, plays a sound and updates the weapon wheel, so it has to run on the
+		// main thread rather than here on the network thread
+		InvokeAsync([this, weaponType, reason]() {
+			if (!_players.empty()) {
+				auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
 
-			if (reason == Actors::Player::SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {
-				HandlePlayerWeaponChanged(remotablePlayer, Actors::Player::SetCurrentWeaponReason::Rollback);
-				return true;
+				if (reason == Actors::Player::SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {
+					HandlePlayerWeaponChanged(remotablePlayer, Actors::Player::SetCurrentWeaponReason::Rollback);
+					return;
+				}
+
+				remotablePlayer->ChangingWeaponFromServer = true;
+				static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon(weaponType, reason);
+				remotablePlayer->ChangingWeaponFromServer = false;
 			}
-			
-			remotablePlayer->ChangingWeaponFromServer = true;
-			static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon(weaponType, reason);
-			remotablePlayer->ChangingWeaponFromServer = false;
-		}
+		});
 		return true;
 	}
 
@@ -5825,6 +6043,9 @@ namespace Jazz2::Multiplayer
 			// In online sessions there is only the single host player (index 0 == LocalPeer); local splitscreen
 			// registers one local descriptor per player index.
 			auto peerDesc = _networkManager->AddLocalPlayer(i);
+			// Local players carry over through levelInit (ReceiveLevelCarryOver below), so make sure a leftover
+			// descriptor snapshot can't be applied on top of it by MpPlayer::OnActivatedAsync
+			peerDesc->HasCarryOver = false;
 			std::shared_ptr<Actors::Multiplayer::LocalPlayerOnServer> player = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
@@ -5868,6 +6089,8 @@ namespace Jazz2::Multiplayer
 		// it as a LocalPlayerOnServer, mirroring SpawnPlayers(). The player's state is restored afterwards by the base
 		// from the stream (Player::InitializeFromStream activates the actor at its checkpoint).
 		auto peerDesc = _networkManager->AddLocalPlayer(index);
+		// The state is restored from the stream by the base, so a leftover descriptor snapshot must not be applied
+		peerDesc->HasCarryOver = false;
 		peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 		peerDesc->LapsElapsedFrames = _elapsedFrames;
 		peerDesc->LapStarted = TimeStamp::now();
@@ -6515,6 +6738,92 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::SyncPlayerInventoryToPeer(Actors::Player* player)
+	{
+		if (!_isServer || _isLocalSession) {
+			return;
+		}
+
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+		if (peerDesc == nullptr || !peerDesc->RemotePeer) {
+			return;
+		}
+
+		for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+			MemoryStream packet(8);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
+			packet.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)i);
+			packet.WriteValue<std::uint16_t>(mpPlayer->_inventory.WeaponAmmo[i]);
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+
+			MemoryStream packet2(7);
+			packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponUpgrades);
+			packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet2.WriteValue<std::uint8_t>((std::uint8_t)i);
+			packet2.WriteValue<std::uint8_t>(mpPlayer->_inventory.WeaponUpgrades[i]);
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+		}
+
+		// The currently selected weapon isn't sent here on purpose - it's part of the carry-over the client applies in
+		// Player::ReceiveLevelCarryOver(), and PlayerChangeWeapon is handled on the network thread, so it could
+		// otherwise overtake the ammo updates queued above
+	}
+
+	void MpLevelHandler::HandlePlayerSetAmbientLight(Actors::Player* player, float value, bool applyNow, bool asCheckpoint)
+	{
+		if (!_isServer || _isLocalSession || player == nullptr) {
+			return;
+		}
+
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+		if (peerDesc == nullptr || !peerDesc->RemotePeer) {
+			return;
+		}
+
+		std::uint8_t flags = 0;
+		if (applyNow) {
+			flags |= 0x01;
+		}
+		if (asCheckpoint) {
+			flags |= 0x02;
+		}
+		if (flags == 0) {
+			return;
+		}
+
+		// Sent as an exact float rather than a scaled integer, so the value the client applies is bit-identical to the
+		// server's - which is what lets SetAmbientLight() above suppress redundant sends with a plain comparison
+		MemoryStream packet(11);
+		packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::AmbientLight);
+		packet.WriteVariableUint32(mpPlayer->_playerIndex);
+		packet.WriteValue<std::uint8_t>(flags);
+		packet.WriteValueAsLE<float>(value);
+		_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+	}
+
+	void MpLevelHandler::HandlePlayerSetSugarRush(Actors::Player* player, float timeLeft)
+	{
+		if DEATH_LIKELY(_isServer && !_isLocalSession) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			if (peerDesc == nullptr || !peerDesc->RemotePeer) {
+				return;
+			}
+
+			// Only the owning client needs this: it drives the local player's own white-mask renderer, star trail,
+			// music and prediction. Other peers already see the white renderer, because the renderer type of every
+			// player is part of the periodic actor update (see OnEndFrame).
+			MemoryStream packet(10);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::SugarRush);
+			packet.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet.WriteVariableInt32((std::int32_t)timeLeft);
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerEmitWeaponFlare(Actors::Player* player)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -6627,6 +6936,17 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncTileMap, packet);
 				}
 
+				// Synchronize weather - the peer applied whatever the level file specifies when it loaded, which is
+				// stale if an AreaWeather tile or a script has changed it since (those only run on the server)
+				{
+					MemoryStream packet(3);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Weather);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
+					packet.WriteValue<std::uint8_t>(_weatherIntensity);
+
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+				}
+
 				// Synchronize music
 				if (_musicCurrentPath != _musicDefaultPath) {
 					MemoryStream packet(6 + _musicCurrentPath.size());
@@ -6734,10 +7054,10 @@ namespace Jazz2::Multiplayer
 				peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 
 				if DEATH_LIKELY(canSpawn) {
-					Vector2f spawnPosition = (serverConfig.GameMode == MpGameMode::Cooperation && _lastCheckpointPos != Vector2f::Zero
+					// Co-op keeps a shared checkpoint, so a player joining or arriving in a new level starts there
+					bool spawnedAtCheckpoint = (serverConfig.GameMode == MpGameMode::Cooperation && _lastCheckpointPos != Vector2f::Zero);
+					Vector2f spawnPosition = (spawnedAtCheckpoint
 						? _lastCheckpointPos : GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team));
-
-					// TODO: Send ambient light (_lastCheckpointLight)
 
 					std::uint8_t playerIndex = FindFreePlayerId();
 					LOGI("Spawning player {} [{}]", playerIndex, peer);
@@ -6811,13 +7131,29 @@ namespace Jazz2::Multiplayer
 						// start fresh; for a normal join there is none (flag = 0). The server-side player applies it in
 						// MpPlayer::OnActivatedAsync (after the base reset); clear the flag once it has been serialized
 						// so a later in-level respawn doesn't re-send/re-apply it.
-						packet.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
-						if (peerDesc->HasCarryOver) {
+						bool hadCarryOver = peerDesc->HasCarryOver;
+						packet.WriteValue<std::uint8_t>(hadCarryOver ? 1 : 0);
+						if (hadCarryOver) {
 							WriteCarryOver(packet, peerDesc->CarryOver);
 						}
 						peerDesc->HasCarryOver = false;
 
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
+
+						// Ammo and upgrades are otherwise only pushed when they change, so confirm the restored
+						// inventory explicitly - the client and the server must agree on what the player can fire
+						if (hadCarryOver) {
+							SyncPlayerInventoryToPeer(ptr);
+						}
+					}
+
+					if (spawnedAtCheckpoint) {
+						// Spawning into the shared co-op checkpoint means inheriting the light it was activated in; the
+						// fresh actor was activated with the level default (Player::OnActivatedAsync). The base is
+						// called directly and the client is told in a single packet, so the light isn't sent twice.
+						ptr->SetCheckpointAmbientLight(_lastCheckpointLight);
+						LevelHandler::SetAmbientLight(ptr, _lastCheckpointLight);
+						HandlePlayerSetAmbientLight(ptr, _lastCheckpointLight, /*applyNow:*/ true, /*asCheckpoint:*/ true);
 					}
 
 					// The player is invulnerable for a short time after spawning

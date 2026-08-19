@@ -13,6 +13,17 @@
 #if !defined(NCINE_VERSION)
 #	define NCINE_VERSION "3.7.0"
 #endif
+/**
+	@brief Application multiplayer protocol version
+
+	Decides whether a client and a server can play together, independently of @ref NCINE_VERSION. Set it to the
+	application version in which the protocol last changed incompatibly --- packet types, property types, field
+	layouts or the meaning of a field --- and leave it alone for releases that don't touch the wire, so those can
+	still play together.
+*/
+#if !defined(NCINE_PROTOCOL_VERSION)
+#	define NCINE_PROTOCOL_VERSION "3.7.1"
+#endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
 #	define NCINE_BUILD_YEAR "2026"

@@ -124,6 +124,7 @@ namespace Jazz2
 		float GetGravity() const override;
 		float GetWaterLevel() const override;
 		float GetHurtInvulnerableTime() const override;
+		bool GetActiveBossHealth(std::int32_t& health, std::int32_t& maxHealth) const override;
 
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;

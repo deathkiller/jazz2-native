@@ -23,12 +23,12 @@
 using namespace Death::IO;
 using namespace Jazz2::UI::Menu::Resources;
 
-/** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
-#define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION */
+#define NCINE_PROTOCOL_VERSION_s DEATH_PASTE(NCINE_PROTOCOL_VERSION, _s)
 
 namespace Jazz2::UI::Menu
 {
-	static constexpr std::uint64_t CurrentVersion = parseVersion(NCINE_VERSION_s);
+	static constexpr std::uint64_t CurrentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
 	constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL;
 
 	ServerSelectSection::ServerSelectSection()

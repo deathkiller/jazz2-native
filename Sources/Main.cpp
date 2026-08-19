@@ -81,6 +81,8 @@ using namespace Jazz2::Multiplayer;
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION */
+#define NCINE_PROTOCOL_VERSION_s DEATH_PASTE(NCINE_PROTOCOL_VERSION, _s)
 
 using namespace Death::IO::Compression;
 using namespace nCine;
@@ -1279,7 +1281,7 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		MemoryStream packet(64 + MaxPlayerNameLength);
 		packet.Write("J2R ", 4);
 
-		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
+		constexpr std::uint64_t currentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
 		packet.WriteVariableUint64(currentVersion);
 
 		packet.Write(PreferencesCache::UniquePlayerID, sizeof(PreferencesCache::UniquePlayerID));
@@ -1403,13 +1405,13 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				MemoryStream packet(data);
 				char gameID[4];
 				packet.Read(gameID, 4);
-				std::uint64_t gameVersion = packet.ReadVariableUint64();
+				std::uint64_t protocolVersion = packet.ReadVariableUint64();
 
 				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
-				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
+				constexpr std::uint64_t currentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
 
-				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
-					LOGI("Peer kicked ({}) [{}]: Incompatible game version", _networkManager->AddressToString(peer), peer);
+				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (protocolVersion & VersionMask) != (currentVersion & VersionMask)) {
+					LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
@@ -1418,8 +1420,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(uuid.data(), uuid.size());
 				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
-				LOGD("[MP] ClientPacketType::Auth [{}] - gameID: \"{}\", gameVersion: 0x{:x}, uuid: \"{}\"",
-					peer, StringView(gameID, 4), gameVersion, uniquePlayerId);
+				LOGD("[MP] ClientPacketType::Auth [{}] - gameID: \"{}\", protocolVersion: 0x{:x}, uuid: \"{}\"",
+					peer, StringView(gameID, 4), protocolVersion, uniquePlayerId);
 
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
 				String password{NoInit, passwordLength};
@@ -1996,7 +1998,7 @@ void GameEventHandler::CheckUpdates()
 #	if !defined(DEATH_DEBUG)
 	ZoneScopedC(0x888888);
 
-	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
+	String url = "https://de4th.dev/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	if (auto session = WebSession::GetDefault()) {
 		auto request = session.CreateRequest(url);
 		auto result = request.Execute();

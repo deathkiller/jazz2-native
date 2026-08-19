@@ -46,6 +46,16 @@ namespace Jazz2::Actors::Multiplayer
 			_beingStoodOnLastSent = _beingStoodOn;
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetBeingStoodOn(this, _beingStoodOn);
 		}
+
+		// Food is collected server-side, so the owning client would never learn that its player entered sugar rush -
+		// it wouldn't turn white, play the music, spawn the star trail or predict breaking objects. Push the state on
+		// every transition, including the end (which can come early, e.g. when a boss is activated), so the client
+		// also reliably switches its renderer back to normal.
+		bool sugarRush = (_sugarRushLeft > 0.0f);
+		if (sugarRush != _sugarRushLastSent) {
+			_sugarRushLastSent = sugarRush;
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetSugarRush(this, sugarRush ? _sugarRushLeft : 0.0f);
+		}
 	}
 
 	bool RemotePlayerOnServer::IsContinuousJumpAllowed() const

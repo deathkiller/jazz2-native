@@ -3,7 +3,7 @@ namespace Death {
 
 /** @mainpage
 
-This is an API documentation for Jazz² Resurrection. For user documentation, please visit [project homepage](https://deat.tk/jazz2/).
+This is an API documentation for Jazz² Resurrection. For user documentation, please visit [project homepage](https://de4th.dev/jazz2/).
 Additionaly, the project is hosted on https://github.com/deathkiller/jazz2-native/.
 
 Jazz² Resurrection is reimplementation of the game Jazz Jackrabbit 2 released in 1998. Supports
