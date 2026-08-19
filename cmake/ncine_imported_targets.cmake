@@ -541,16 +541,25 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	#endif()
 
 	if(VITA AND CURL_FOUND AND TARGET CURL::libcurl)
-		# VitaSDK ships libcurl as a static library built with the OpenSSL backend, but `FindCURL` describes
-		# no transitive dependencies for it, so everything `openssl.c` refers to is left undefined at link
-		# time. Put the rest of the chain on the imported target by hand - the order matters for static
-		# archives, and `libz` is linked after this anyway through `ZLIB::ZLIB`. If the OpenSSL port is
-		# missing there is nothing to link against, so drop libcurl entirely and let `WebRequest` (and with
-		# it the update check) be compiled out instead of breaking the link, see `ncine_extra_sources.cmake`.
+		# VitaSDK ships libcurl as a static library built with the OpenSSL backend, but neither its config
+		# package nor `FindCURL` describes that dependency, so everything `openssl.c` refers to is left
+		# undefined at link time. Put the rest of the chain on the imported target by hand - the order
+		# matters for static archives, and `libz` is linked after this anyway through `ZLIB::ZLIB`. If the
+		# OpenSSL port is missing there is nothing to link against, so drop libcurl entirely and let
+		# `WebRequest` (and with it the update check) be compiled out instead of breaking the link, see
+		# `ncine_extra_sources.cmake`.
+		# The config package exports `CURL::libcurl` as an alias of `CURL::libcurl_static`, and properties
+		# cannot be set through an alias, so resolve it to the target it points at first.
+		get_target_property(CURL_ALIASED_TARGET CURL::libcurl ALIASED_TARGET)
+		if(CURL_ALIASED_TARGET)
+			set(CURL_LINK_TARGET ${CURL_ALIASED_TARGET})
+		else()
+			set(CURL_LINK_TARGET CURL::libcurl)
+		endif()
 		find_library(VITA_SSL_LIBRARY NAMES ssl)
 		find_library(VITA_CRYPTO_LIBRARY NAMES crypto)
 		if(VITA_SSL_LIBRARY AND VITA_CRYPTO_LIBRARY)
-			set_property(TARGET CURL::libcurl APPEND PROPERTY
+			set_property(TARGET ${CURL_LINK_TARGET} APPEND PROPERTY
 				INTERFACE_LINK_LIBRARIES "${VITA_SSL_LIBRARY}" "${VITA_CRYPTO_LIBRARY}")
 		else()
 			message(STATUS "Cannot use CURL: OpenSSL, which libcurl is built against, was not found")
