@@ -539,7 +539,25 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	#if(NOT APPLE)
 		find_package(CURL)
 	#endif()
-	
+
+	if(VITA AND CURL_FOUND AND TARGET CURL::libcurl)
+		# VitaSDK ships libcurl as a static library built with the OpenSSL backend, but `FindCURL` describes
+		# no transitive dependencies for it, so everything `openssl.c` refers to is left undefined at link
+		# time. Put the rest of the chain on the imported target by hand - the order matters for static
+		# archives, and `libz` is linked after this anyway through `ZLIB::ZLIB`. If the OpenSSL port is
+		# missing there is nothing to link against, so drop libcurl entirely and let `WebRequest` (and with
+		# it the update check) be compiled out instead of breaking the link, see `ncine_extra_sources.cmake`.
+		find_library(VITA_SSL_LIBRARY NAMES ssl)
+		find_library(VITA_CRYPTO_LIBRARY NAMES crypto)
+		if(VITA_SSL_LIBRARY AND VITA_CRYPTO_LIBRARY)
+			set_property(TARGET CURL::libcurl APPEND PROPERTY
+				INTERFACE_LINK_LIBRARIES "${VITA_SSL_LIBRARY}" "${VITA_CRYPTO_LIBRARY}")
+		else()
+			message(STATUS "Cannot use CURL: OpenSSL, which libcurl is built against, was not found")
+			set(CURL_FOUND 0)
+		endif()
+	endif()
+
 	#if(NCINE_WITH_PNG)
 	#	find_package(PNG)
 	#endif()
