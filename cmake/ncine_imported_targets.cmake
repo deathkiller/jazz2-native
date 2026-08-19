@@ -540,28 +540,23 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(CURL)
 	#endif()
 
-	if(VITA AND CURL_FOUND AND TARGET CURL::libcurl)
-		# VitaSDK ships libcurl as a static library built with the OpenSSL backend, but neither its config
-		# package nor `FindCURL` describes that dependency, so everything `openssl.c` refers to is left
-		# undefined at link time. Put the rest of the chain on the imported target by hand - the order
-		# matters for static archives, and `libz` is linked after this anyway through `ZLIB::ZLIB`. If the
-		# OpenSSL port is missing there is nothing to link against, so drop libcurl entirely and let
-		# `WebRequest` (and with it the update check) be compiled out instead of breaking the link, see
-		# `ncine_extra_sources.cmake`.
-		# The config package exports `CURL::libcurl` as an alias of `CURL::libcurl_static`, and properties
-		# cannot be set through an alias, so resolve it to the target it points at first.
-		get_target_property(CURL_ALIASED_TARGET CURL::libcurl ALIASED_TARGET)
-		if(CURL_ALIASED_TARGET)
-			set(CURL_LINK_TARGET ${CURL_ALIASED_TARGET})
-		else()
-			set(CURL_LINK_TARGET CURL::libcurl)
-		endif()
+	if(VITA AND CURL_FOUND)
+		# VitaSDK ships libcurl as a static library built against its OpenSSL 1.0.2 port, and the two are
+		# separate packages that can end up out of step with each other. libcurl's config package does name
+		# `OpenSSL::SSL`/`OpenSSL::Crypto` in its link interface, but that doesn't reach the link line here,
+		# so everything `openssl.c` refers to is left undefined - the libraries are added to the executable
+		# directly instead, see `ncine_extra_sources.cmake`. Probe for a symbol that only OpenSSL 1.0.x
+		# exports (1.1 renamed the `sk_*` stack API to `OPENSSL_sk_*`) to confirm the installed OpenSSL is
+		# really the one libcurl was compiled against. If it isn't, or it's missing entirely, drop libcurl
+		# altogether and let `WebRequest` - and with it the update check - be compiled out, which is a lot
+		# more useful than a build that cannot be linked.
+		include(CheckLibraryExists)
 		find_library(VITA_SSL_LIBRARY NAMES ssl)
 		find_library(VITA_CRYPTO_LIBRARY NAMES crypto)
 		if(VITA_SSL_LIBRARY AND VITA_CRYPTO_LIBRARY)
-			set_property(TARGET ${CURL_LINK_TARGET} APPEND PROPERTY
-				INTERFACE_LINK_LIBRARIES "${VITA_SSL_LIBRARY}" "${VITA_CRYPTO_LIBRARY}")
-		else()
+			check_library_exists("${VITA_CRYPTO_LIBRARY}" sk_num "" VITA_OPENSSL_MATCHES_CURL)
+		endif()
+		if(NOT VITA_OPENSSL_MATCHES_CURL)
 			message(STATUS "Cannot use CURL: OpenSSL, which libcurl is built against, was not found")
 			set(CURL_FOUND 0)
 		endif()
