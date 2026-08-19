@@ -460,8 +460,8 @@ namespace nCine
 		trimSpaces(&subStart, &subEnd);
 
 		subLength = static_cast<unsigned int>(subEnd - subStart);
-		memcpy(map.name, subStart, std::min(subLength, MaxNameLength));
-		map.name[std::min(subLength, MaxNameLength)] = '\0';
+		memcpy(map.name, subStart, std::min(subLength, MaxNameLength - 1));
+		map.name[std::min(subLength, MaxNameLength - 1)] = '\0';
 
 		subStartUntrimmed = subEndUntrimmed + 1; // name plus the following ',' character
 		subEndUntrimmed = strchr(subStartUntrimmed, ',');
@@ -471,7 +471,7 @@ namespace nCine
 			trimSpaces(&subStart, &subEnd);
 
 			const char* subMid = strchr(subStart, ':');
-			if (subMid == nullptr || subEnd == nullptr) {
+			if (subMid == nullptr || subEnd == nullptr || subMid >= subEnd) {
 				LOGE("Invalid mapping string");
 				return false;
 			}
@@ -487,17 +487,17 @@ namespace nCine
 					MappedJoystick::Axis axis;
 					axis.name = static_cast<AxisName>(axisIndex);
 					const int axisMapping = parseAxisMapping(subMid + 1, subEnd, axis);
-					if (axisMapping != -1 && axisMapping < MappedJoystick::MaxNumAxes)
+					if (axisMapping >= 0 && axisMapping < MappedJoystick::MaxNumAxes)
 						map.axes[axisMapping] = axis;
 				} else {
 					const int buttonIndex = parseButtonName(subStart, subMid);
 					if (buttonIndex != -1) {
 						const int buttonMapping = parseButtonMapping(subMid + 1, subEnd);
-						if (buttonMapping != -1 && buttonMapping < MappedJoystick::MaxNumButtons)
+						if (buttonMapping >= 0 && buttonMapping < MappedJoystick::MaxNumButtons)
 							map.buttons[buttonMapping] = static_cast<ButtonName>(buttonIndex);
 						else {
 							const int hatMapping = parseHatMapping(subMid + 1, subEnd);
-							if (hatMapping != -1 && hatMapping < MappedJoystick::MaxHatButtons)
+							if (hatMapping >= 0 && hatMapping < MappedJoystick::MaxHatButtons)
 								map.hats[hatMapping] = static_cast<ButtonName>(buttonIndex);
 						}
 					}

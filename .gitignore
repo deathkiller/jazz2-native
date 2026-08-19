@@ -359,5 +359,13 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
+# CMake build output
+/build/
+
+# Original Jazz Jackrabbit 2 game data (copyrighted, not part of the repo) and generated conversion cache
+/Source/
+/Sources/
+/Cache/
+
 # Fody - auto-generated XML schema
 FodyWeavers.xsd

@@ -30,8 +30,6 @@
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
-extern int __argc;
-extern char** __argv;
 #endif
 
 using namespace nCine;

@@ -150,3 +150,10 @@ endif()
 #include(ncine_build_benchmarks)
 include(ncine_build_android)
 include(ncine_strip_binaries)
+
+if(WIN32)
+	add_custom_command(TARGET ncine POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:ncine> $<TARGET_FILE_DIR:ncine>
+		COMMAND_EXPAND_LISTS
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${NCINE_DATA_DIR} $<TARGET_FILE_DIR:ncine>/Content)
+endif()
