@@ -31,6 +31,21 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: 'Replace libcurl With The mbedTLS Build'
+      run: |
+        # The SDK's `curl` package is a prebuilt static library linked against `openssl`, which is the
+        # 1.0.x port. The catalogue also carries `openssl-1.1.1`, and since that one declares itself a
+        # provider of `openssl` it's what the image installs now - but 1.1 renamed the whole `sk_*` stack
+        # API to `OPENSSL_sk_*`, turned `SSL_library_init()` and friends into macros and dropped
+        # `SSLeay()`, so linking the shipped libcurl against it fails on every one of those symbols.
+        # `curl-mbedtls` is the same library built against mbedTLS instead, offered by the catalogue as a
+        # drop-in replacement (it declares `provides=curl`), and it needs no OpenSSL at all. The packages
+        # are plain tarballs rooted at the target prefix, so they can be unpacked over the installation.
+        for PKG in mbedtls curl-mbedtls; do
+          curl -fsSL -o "/tmp/${PKG}.tar.xz" "https://github.com/vitasdk/packages/releases/download/master/${PKG}.tar.xz"
+          tar xf "/tmp/${PKG}.tar.xz" -C "${VITASDK}/arm-vita-eabi"
+        done
+
     - name: 'Configure CMake'
       run: |
         rm -f ./Content/Translations/*.po

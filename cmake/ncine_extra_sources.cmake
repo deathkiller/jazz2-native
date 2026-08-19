@@ -699,12 +699,6 @@ endif()
 if(CURL_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_CURL")
 	target_link_libraries(${NCINE_APP} PRIVATE CURL::libcurl)
-	if(VITA)
-		# The static libcurl VitaSDK ships is built with the OpenSSL backend, but nothing its config package
-		# declares puts OpenSSL on the link line - these have to come after libcurl for the linker to pick
-		# the symbols it needs out of them, hence the separate call, see `ncine_imported_targets.cmake`
-		target_link_libraries(${NCINE_APP} PRIVATE "${VITA_SSL_LIBRARY}" "${VITA_CRYPTO_LIBRARY}")
-	endif()
 endif()
 
 if(ZLIB_FOUND)
