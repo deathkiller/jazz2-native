@@ -1413,7 +1413,7 @@ msgstr "lâché"
 
 #: Sources/Jazz2/Multiplayer/GameModes/TreasureHuntMode.cpp:32
 msgid "Find exit!"
-msgstr "Trouve une sortie !"
+msgstr "Trouve la sortie !"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:424
 msgid ""
