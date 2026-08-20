@@ -103,6 +103,12 @@ namespace Jazz2::Actors
 			Shielded			/**< Invulnerable due to an active shield */
 		};
 
+		/** @brief Type of copter flight state */
+		enum class FlightType {
+			Normal,				/**< Timed/regular flight */
+			Cheat				/**< Cheat-enabled flight */
+		};
+
 		/**
 			@brief Constant per-character properties
 
@@ -195,6 +201,8 @@ namespace Jazz2::Actors
 		bool CanBreakSolidObjects() const;
 		/** @brief Returns `true` if the player can move vertically, i.e. not affected by gravity */
 		bool CanMoveVertically() const;
+		/** @brief Returns `true` if the player is currently in water */
+		bool IsInWater() const;
 		/** @brief Returns `true` if continuous jump is allowed */
 		virtual bool IsContinuousJumpAllowed() const;
 		/** @brief Returns `true` if ledge climbing is allowed */
@@ -221,6 +229,14 @@ namespace Jazz2::Actors
 		Modifier GetModifier() const;
 		/** @brief Sets current modifier */
 		virtual bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor = nullptr);
+		/** @brief Returns whether fly-cheat behavior is currently active */
+		bool IsFlyCheatActive() const;
+		/** @brief Sets copter flight duration and type (`timeLeft <= 0` disables flight cheat state) */
+		void SetCopterFlight(float timeLeft, FlightType type = FlightType::Normal);
+		/** @brief Enables fly cheat behavior for the next cheat flight activation */
+		void EnableFlyCheat();
+		/** @brief Disables fly cheat behavior */
+		void DisableFlyCheat();
 		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */
@@ -452,6 +468,7 @@ namespace Jazz2::Actors
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		LevelExitingState _levelExiting;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
+		bool _flyCheatActive;
 		std::int32_t _inShallowWater;
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
@@ -476,6 +493,8 @@ namespace Jazz2::Actors
 		void ReleasePaletteOffset();
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardSound;
+		std::shared_ptr<AudioBufferPlayer> _airboardTurnSound;
 #endif
 
 		std::int32_t _lives, _score;
@@ -622,6 +641,7 @@ namespace Jazz2::Actors
 		void DoWarpOut(Vector2f pos, WarpFlags flags);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
+		void StopAllActiveSounds();
 
 		void OnPerishInner();
 

@@ -2441,6 +2441,7 @@ namespace Jazz2
 			{ "jjcoins"_s, {}, &LevelHandler::CheatCoins },
 			{ "jjmorph"_s, {}, &LevelHandler::CheatMorph },
 			{ "jjshield"_s, {}, &LevelHandler::CheatShield },
+			{ "jjfly"_s, {}, &LevelHandler::CheatFly },
 		};
 
 		for (const auto& cheat : CheatCommands) {
@@ -2549,6 +2550,35 @@ namespace Jazz2
 		for (auto* player : _players) {
 			ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
 			player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
+		}
+	}
+
+
+	void LevelHandler::CheatFly()
+	{
+		for (auto* player : _players) {
+			PlayerType playerType = player->GetPlayerType();
+			if (playerType != PlayerType::Jazz &&
+				playerType != PlayerType::Spaz &&
+				playerType != PlayerType::Lori) {
+				continue;
+			}
+
+			if (player->IsInWater()) {
+				player->DisableFlyCheat();
+				continue;
+			}
+			
+			Actors::Player::Modifier nextModifier;
+			switch (player->GetModifier()) {
+				case Actors::Player::Modifier::None:    nextModifier = Actors::Player::Modifier::Copter;   break;
+				case Actors::Player::Modifier::Copter:  nextModifier = Actors::Player::Modifier::Airboard; break;
+				default:                                nextModifier = Actors::Player::Modifier::None;     break;
+			}
+			if (nextModifier == Actors::Player::Modifier::Copter) {
+				player->EnableFlyCheat();
+			}
+			player->SetModifier(nextModifier);
 		}
 	}
 

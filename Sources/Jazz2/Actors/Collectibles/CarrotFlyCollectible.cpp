@@ -28,7 +28,8 @@ namespace Jazz2::Actors::Collectibles
 
 	void CarrotFlyCollectible::OnCollect(Player* player)
 	{
-		if (player->SetModifier(Player::Modifier::Copter)) {
+		// Collect the item even if the player is already in Copter; otherwise switch to Copter first and collect only on success.
+		if (player->GetModifier() == Player::Modifier::Copter || player->SetModifier(Player::Modifier::Copter)) {
 			CollectibleBase::OnCollect(player);
 		}
 	}

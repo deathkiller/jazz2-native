@@ -397,5 +397,6 @@ namespace Jazz2
 		void CheatCoins();
 		void CheatMorph();
 		void CheatShield();
+		void CheatFly();
 	};
 }

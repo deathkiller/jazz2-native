@@ -375,6 +375,15 @@
 		"Die": {
 			"Paths": [ "Spaz/idle_flavor_4.wav" ]
 		},
+		"Airboard": {
+			"Paths": [ "Common/char_airboard.wav" ]
+		},
+		"AirboardTurnStart": {
+			"Paths": [ "Common/char_airboard_turn_1.wav" ]
+		},
+		"AirboardTurnEnd": {
+			"Paths": [ "Common/char_airboard_turn_2.wav" ]
+		},
 		"Copter": {
 			"Paths": [ "Common/copter_noise.wav" ]
 		},
