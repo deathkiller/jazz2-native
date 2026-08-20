@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop">
-	<id>tk.deat.Jazz2Resurrection</id>
+	<id>dev.de4th.jazz2</id>
 	<name>Jazz² Resurrection</name>
 	<summary>A re-implementation of Jazz Jackrabbit 2</summary>
 	<metadata_license>CC0-1.0</metadata_license>
 	<project_license>GPL-3.0-or-later</project_license>
 	<developer_name>Daniel Rajf</developer_name>
-	<developer id="deat.tk">
+	<developer id="de4th.dev">
 		<name>Daniel Rajf</name>
-		<url>https://deat.tk</url>
+		<url>https://de4th.dev</url>
 	</developer>
 	<supports>
 		<control>pointing</control>
@@ -29,7 +29,7 @@
 			Also, it partially supports some features of the JJ2+ extension and MLLE.
 		</p>
 	</description>
-	
+
 	<branding>
 		<color type="primary" scheme_preference="light">#67A3D8</color>
 		<color type="primary" scheme_preference="dark">#276398</color>
@@ -41,13 +41,21 @@
 		<category>ArcadeGame</category>
 	</categories>
 
-	<launchable type="desktop-id">tk.deat.Jazz2Resurrection.desktop</launchable>
+	<launchable type="desktop-id">dev.de4th.jazz2.desktop</launchable>
 
-	<url type="homepage">https://deat.tk/jazz2/</url>
+	<url type="homepage">https://de4th.dev/jazz2/</url>
 	<url type="bugtracker">https://github.com/deathkiller/jazz2-native/issues</url>
-	<url type="faq">https://deat.tk/jazz2/help</url>
+	<url type="faq">https://de4th.dev/jazz2/help</url>
 	<url type="contact">https://discord.gg/Y7SBvkD</url>
 	<url type="vcs-browser">https://github.com/deathkiller/jazz2-native</url>
+
+	<provides>
+		<id>tk.deat.Jazz2Resurrection</id>
+		<binary>jazz2</binary>
+	</provides>
+	<replaces>
+		<id>tk.deat.Jazz2Resurrection</id>
+	</replaces>
 
 	<screenshots>
 		<screenshot type="default">
@@ -64,11 +72,8 @@
 		</screenshot>
 	</screenshots>
 
-	<provides>
-		<binary>jazz2</binary>
-	</provides>
-
 	<releases>
+		<release version="3.8.0" date="2026-08-22"/>
 		<release version="3.7.0" date="2026-08-01"/>
 		<release version="3.6.0" date="2026-05-30"/>
 		<release version="3.5.0" date="2026-01-08"/>
@@ -105,7 +110,7 @@
 		<release version="1.0.0" date="2022-10-08"/>
 	</releases>
 
-	<content_rating type="oars-1.0">
+	<content_rating type="oars-1.1">
 		<content_attribute id="violence-cartoon">moderate</content_attribute>
 		<content_attribute id="violence-fantasy">moderate</content_attribute>
 		<content_attribute id="violence-bloodshed">mild</content_attribute>

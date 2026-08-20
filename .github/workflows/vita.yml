@@ -31,7 +31,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Replace libcurl With The mbedTLS Build'
+    - name: 'Replace libcurl with the mbedTLS build'
       run: |
         # The SDK's `curl` package is a prebuilt static library linked against `openssl`, which is the
         # 1.0.x port. The catalogue also carries `openssl-1.1.1`, and since that one declares itself a

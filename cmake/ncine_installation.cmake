@@ -125,7 +125,7 @@ elseif(UNIX)
 	
 	set(PACKAGE_NAME "${CPACK_EXECUTABLE_NAME}")
 	if(NCINE_BUILD_FLATPAK)
-		set(PACKAGE_NAME "tk.deat.Jazz2Resurrection") # Flatpak uses Application ID with standard reverse-DNS schema
+		set(PACKAGE_NAME "dev.de4th.jazz2") # Flatpak uses Application ID with standard reverse-DNS schema
 	endif()
 
 	set(ICONS_INSTALL_DESTINATION "share/icons/hicolor")
