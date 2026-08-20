@@ -4,6 +4,7 @@
 
 #include "PacketTypes.h"
 #include "RaceRouteGenerator.h"
+#include "WebhookClient.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../UI/InGameConsole.h"
@@ -481,6 +482,11 @@ namespace Jazz2::Multiplayer
 							_gameTimeLeft = serverConfig.PreGameSecs * FrameTimer::FramesPerSecond;
 							ShowAlertToAllPlayers(_("\n\nThe game will begin shortly!"));
 						}
+
+						if (auto* webhook = _networkManager->GetWebhook()) {
+							webhook->OnLevelChanged(GetLevelDisplayName(), serverConfig.GameMode, IsReforged(),
+								serverConfig.PlaylistIndex, (std::int32_t)serverConfig.Playlist.size());
+						}
 					} else {
 						_levelState = LevelState::Running;
 
@@ -563,6 +569,10 @@ namespace Jazz2::Multiplayer
 						SendLevelStateToAllPlayers();
 						CalculatePositionInRound(true);
 
+						if (auto* webhook = _networkManager->GetWebhook()) {
+							webhook->OnRoundStarted(GetLevelDisplayName(), serverConfig.GameMode);
+						}
+
 						for (auto* player : _players) {
 							auto* mpPlayer = static_cast<MpPlayer*>(player);
 							auto peerDesc = mpPlayer->GetPeerDescriptor();
@@ -624,6 +634,11 @@ namespace Jazz2::Multiplayer
 						if (hasChampion) {
 							ShowAlertToAllPlayers(_f("\n\n{} won the championship!", championName));
 							LOGW("Champion is {} ({} points)", championName, championPoints);
+
+							if (auto* webhook = _networkManager->GetWebhook()) {
+								webhook->OnChampionshipEnded(championName, championPoints);
+							}
+
 							ResetPeerPoints();
 							if (serverConfig.Playlist.size() > 1) {
 								RestartPlaylist();
@@ -1028,6 +1043,10 @@ namespace Jazz2::Multiplayer
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packet);
+
+				if (auto* webhook = _networkManager->GetWebhook()) {
+					webhook->OnChatMessage(peerDesc->PlayerName, line, true);
+				}
 			}
 		} else {
 			// Chat message
@@ -3516,6 +3535,11 @@ namespace Jazz2::Multiplayer
 				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", peerDesc->PlayerName));
 			});
 
+			if (auto* webhook = _networkManager->GetWebhook()) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				webhook->OnPlayerConnected(peerDesc->PlayerName, _networkManager->GetPeerCount(), serverConfig.MaxPlayerCount);
+			}
+
 			MemoryStream packet(10 + peerDesc->PlayerName.size());
 			packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Connected);
 			packet.WriteVariableUint64(peer.GetId());
@@ -3619,6 +3643,10 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 			return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
+
+		if (auto* webhook = _networkManager->GetWebhook()) {
+			webhook->OnChatMessage(peerDesc->PlayerName, line, peerDesc->IsAdmin);
+		}
 
 		InvokeAsync([this, line = std::move(prefixedMessage)]() mutable {
 			_console->WriteLine(UI::MessageLevel::Chat, std::move(line));
@@ -9072,6 +9100,12 @@ namespace Jazz2::Multiplayer
 			LOGW("Winner is {}", peerDesc->PlayerName);
 		}
 
+		if (auto* webhook = _networkManager->GetWebhook()) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			webhook->OnRoundEnded(winner != nullptr ? StringView(winner->GetPeerDescriptor()->PlayerName) : StringView(),
+				GetLevelDisplayName(), serverConfig.GameMode);
+		}
+
 		for (auto* player : _players) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
@@ -9122,6 +9156,10 @@ namespace Jazz2::Multiplayer
 		LOGW("Team {} wins", team);
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		if (auto* webhook = _networkManager->GetWebhook()) {
+			webhook->OnRoundEndedWithTeamWinner(GetTeamName(team), GetLevelDisplayName(), serverConfig.GameMode);
+		}
 
 		// Award championship points to the members of the winning team
 		for (auto* player : _players) {

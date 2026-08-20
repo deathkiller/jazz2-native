@@ -1275,6 +1275,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Teams.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/WebhookClient.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/MpPlayerState.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/IGameMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/GameModeFactory.h
@@ -1320,6 +1321,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/RaceRouteGenerator.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/WebhookClient.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp

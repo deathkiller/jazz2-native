@@ -66,8 +66,36 @@ namespace Jazz2::Multiplayer
 	};
 
 	/**
+		@brief Server events that can be broadcast to a webhook
+
+		Selects which events are posted to the webhook configured in @ref ServerConfiguration::WebhookUrl.
+		Supports a bitwise combination of its member values.
+	*/
+	enum class WebhookEventType : std::uint32_t
+	{
+		None = 0,							/**< None */
+
+		ServerLifecycle = 0x01,				/**< Server has been started or stopped */
+		PlayerConnected = 0x02,				/**< Player joined the server */
+		PlayerDisconnected = 0x04,			/**< Player left the server */
+		PlayerKicked = 0x08,				/**< Player was kicked or banned (moderation, idle, cheating) */
+		LevelChanged = 0x10,				/**< Level has been loaded (also on playlist advance) */
+		RoundStarted = 0x20,				/**< Round countdown finished and the round is running */
+		RoundEnded = 0x40,					/**< Round ended with a winner, winning team or draw */
+		ChampionshipEnded = 0x80,			/**< A player won the championship (reached the points target) */
+		ChatMessages = 0x100,				/**< In-game chat messages */
+
+		/** @brief Default set of events used if @cpp "WebhookEvents" @ce is not specified in the configuration */
+		Default = ServerLifecycle | PlayerConnected | PlayerDisconnected | PlayerKicked | LevelChanged | RoundEnded | ChampionshipEnded,
+		/** @brief All events */
+		All = ServerLifecycle | PlayerConnected | PlayerDisconnected | PlayerKicked | LevelChanged | RoundStarted | RoundEnded | ChampionshipEnded | ChatMessages
+	};
+
+	DEATH_ENUM_FLAGS(WebhookEventType);
+
+	/**
 		@brief Server configuration
-		
+
 		This structure contains the server configuration, which is usually loaded from a file and partially also transferred to connected clients.
 
 		@section Multiplayer-ServerConfiguration-format File format description
@@ -108,6 +136,12 @@ namespace Jazz2::Multiplayer
 			-   Key specifies player ID, value can contain a user-defined comment (e.g., reason)
 		-   @cpp "BannedIPAddresses" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of banned IP addresses
 			-   Key specifies IP address, value can contain a user-defined comment (e.g., reason)
+		-   @cpp "WebhookUrl" @ce : @m_span{m-label m-danger m-flat} string @m_endspan URL of a webhook to which selected server events are automatically posted
+			-   The payload format targets **Discord** webhooks (`https://discord.com/api/webhooks/…`), so server events show up as rich notifications in the linked Discord channel
+			-   Multiple servers can post to the same channel --- every notification carries the server name, so the events can be told apart
+		-   @cpp "WebhookEvents" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of event names posted to the webhook, see @ref WebhookEventType
+			-   Supported values are @cpp "ServerLifecycle" @ce, @cpp "PlayerConnected" @ce, @cpp "PlayerDisconnected" @ce, @cpp "PlayerKicked" @ce, @cpp "LevelChanged" @ce, @cpp "RoundStarted" @ce, @cpp "RoundEnded" @ce, @cpp "ChampionshipEnded" @ce, @cpp "ChatMessages" @ce and @cpp "All" @ce
+			-   If not specified, the default set is used (everything except @cpp "RoundStarted" @ce and @cpp "ChatMessages" @ce)
 		-   @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled
 			-   Has a higher priority than settings of the player
 		-   @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
@@ -223,6 +257,10 @@ namespace Jazz2::Multiplayer
 		HashMap<String, String> BannedUniquePlayerIDs;
 		/** @brief List of banned IP addresses, value can contain user-defined reason */
 		HashMap<String, String> BannedIPAddresses;
+		/** @brief URL of a webhook (mainly Discord) to which selected server events are posted, empty to disable */
+		String WebhookUrl;
+		/** @brief Events that are posted to the webhook, see @ref WebhookUrl */
+		WebhookEventType WebhookEvents;
 
 		/** @} */
 

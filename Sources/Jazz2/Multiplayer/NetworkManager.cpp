@@ -4,6 +4,7 @@
 
 #include "Teams.h"
 #include "ServerDiscovery.h"
+#include "WebhookClient.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
@@ -81,6 +82,10 @@ namespace Jazz2::Multiplayer
 			if (!_serverConfig->IsPrivate) {
 				_discovery = std::make_unique<ServerDiscovery>(this);
 			}
+			if (!_serverConfig->WebhookUrl.empty()) {
+				_webhook = std::make_unique<WebhookClient>(this);
+				_webhook->OnServerStarted();
+			}
 		}
 
 		return result;
@@ -101,6 +106,12 @@ namespace Jazz2::Multiplayer
 	void NetworkManager::Dispose()
 	{
 		_discovery = nullptr;
+
+		if (_webhook != nullptr) {
+			_webhook->OnServerStopping();
+			// The destructor flushes still pending events and stops the delivery thread
+			_webhook = nullptr;
+		}
 
 		NetworkManagerBase::Dispose();
 	}
@@ -199,6 +210,17 @@ namespace Jazz2::Multiplayer
 		FillServerConfigurationFromFile(_serverConfig->FilePath, *_serverConfig, includedFiles, 0);
 		VerifyServerConfiguration(*_serverConfig);
 
+		// Apply webhook-related changes
+		if (_webhook != nullptr) {
+			if (_serverConfig->WebhookUrl.empty()) {
+				_webhook = nullptr;
+			} else {
+				_webhook->UpdateConfiguration();
+			}
+		} else if (!_serverConfig->WebhookUrl.empty() && GetState() == NetworkState::Listening) {
+			_webhook = std::make_unique<WebhookClient>(this);
+		}
+
 		// Check if any newly banned player should be kicked. The peers are collected under the lock, but kicked
 		// after releasing it - Kick() takes the base class lock, and holding this lock across it would invert
 		// the lock order against the send paths
@@ -233,6 +255,11 @@ namespace Jazz2::Multiplayer
 		if (_discovery != nullptr) {
 			_discovery->SetStatusProvider(std::move(statusProvider));
 		}
+	}
+
+	WebhookClient* NetworkManager::GetWebhook() const
+	{
+		return _webhook.get();
 	}
 
 	ServerConfiguration NetworkManager::CreateDefaultServerConfiguration()
@@ -276,6 +303,8 @@ namespace Jazz2::Multiplayer
 		serverConfig.MaxTeamSizeDiff = 1;
 		serverConfig.AllowTeamSelection = true;
 		serverConfig.FriendlyFire = false;
+
+		serverConfig.WebhookEvents = WebhookEventType::Default;
 
 		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
 
@@ -475,6 +504,23 @@ namespace Jazz2::Multiplayer
 						it->get(value);
 						serverConfig.BannedIPAddresses.emplace(key, value);
 					}
+				}
+
+				std::string_view webhookUrl;
+				if (doc["WebhookUrl"].get(webhookUrl) == Json::SUCCESS) {
+					serverConfig.WebhookUrl = StringView(webhookUrl).trimmed();
+				}
+
+				Json::Value& webhookEvents = doc["WebhookEvents"];
+				if (webhookEvents.isArray()) {
+					WebhookEventType events = WebhookEventType::None;
+					for (auto& entry : webhookEvents) {
+						std::string_view eventName;
+						if (entry.get(eventName) == Json::SUCCESS) {
+							events |= StringToWebhookEvent(eventName);
+						}
+					}
+					serverConfig.WebhookEvents = events;
 				}
 
 				// Game-specific settings
@@ -824,6 +870,37 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	WebhookEventType NetworkManager::StringToWebhookEvent(StringView value)
+	{
+		auto eventString = StringUtils::lowercase(value);
+		if (eventString == "serverlifecycle"_s) {
+			return WebhookEventType::ServerLifecycle;
+		} else if (eventString == "playerconnected"_s || eventString == "playerjoined"_s) {
+			return WebhookEventType::PlayerConnected;
+		} else if (eventString == "playerdisconnected"_s || eventString == "playerleft"_s) {
+			return WebhookEventType::PlayerDisconnected;
+		} else if (eventString == "playerkicked"_s) {
+			return WebhookEventType::PlayerKicked;
+		} else if (eventString == "levelchanged"_s) {
+			return WebhookEventType::LevelChanged;
+		} else if (eventString == "roundstarted"_s) {
+			return WebhookEventType::RoundStarted;
+		} else if (eventString == "roundended"_s) {
+			return WebhookEventType::RoundEnded;
+		} else if (eventString == "championshipended"_s || eventString == "championship"_s) {
+			return WebhookEventType::ChampionshipEnded;
+		} else if (eventString == "chatmessages"_s || eventString == "chat"_s) {
+			return WebhookEventType::ChatMessages;
+		} else if (eventString == "default"_s) {
+			return WebhookEventType::Default;
+		} else if (eventString == "all"_s) {
+			return WebhookEventType::All;
+		} else {
+			LOGW("Unknown webhook event \"{}\" in server configuration, ignoring", value);
+			return WebhookEventType::None;
+		}
+	}
+
 	String NetworkManager::UuidToString(StaticArrayView<Uuid::Size, Uuid::Type> uuid)
 	{
 		String uuidStr{NoInit, 39};
@@ -862,12 +939,26 @@ namespace Jazz2::Multiplayer
 
 		// The peer must be valid - looking up an empty peer would match the local descriptor and erase it
 		if (GetState() == NetworkState::Listening && peer) {
+			String playerName;
+			std::uint32_t playerCount = 0;
+
 			std::unique_lock<Spinlock> l(_lock);
 			auto it = _peerDesc.find(peer);
 			if (it != _peerDesc.end()) {
 				std::shared_ptr<PeerDescriptor> peerDesc = it->second;
 				peerDesc->RemotePeer = {};
 				_peerDesc.erase(it);
+
+				// Only authenticated peers have a name and should be reported to the webhook
+				if (_webhook != nullptr) {
+					playerName = peerDesc->PlayerName;
+					// Same counting rule as GetPeerCount(), which can't be called while the lock is held
+					for (auto& [otherPeer, otherPeerDesc] : _peerDesc) {
+						if (otherPeer.IsValid() || otherPeerDesc->Player) {
+							playerCount++;
+						}
+					}
+				}
 
 				std::int32_t reconnectWindowSecs = (_serverConfig != nullptr ? _serverConfig->ReconnectWindowSecs : 0);
 
@@ -889,6 +980,11 @@ namespace Jazz2::Multiplayer
 					peerDesc->DisconnectedSince = TimeStamp::now();
 					_disconnectedPeers[UuidToString(peerDesc->UniquePlayerID)] = Death::move(peerDesc);
 				}
+			}
+			l.unlock();
+
+			if (_webhook != nullptr && !playerName.empty()) {
+				_webhook->OnPlayerDisconnected(playerName, reason, playerCount, _serverConfig->MaxPlayerCount);
 			}
 		}
 	}

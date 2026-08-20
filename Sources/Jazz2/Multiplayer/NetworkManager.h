@@ -15,12 +15,15 @@ namespace Jazz2::Actors::Multiplayer
 
 namespace Jazz2::Multiplayer
 {
+	class WebhookClient;
+
 	/**
 		@brief Manages game-specific network connections
-		
+
 		Extends @ref NetworkManagerBase with the game session layer: holds the @ref ServerConfiguration, owns
 		the per-peer @ref PeerDescriptor map (including retained descriptors for reconnecting players), drives
-		LAN @ref ServerDiscovery, and overrides the connect/disconnect hooks to enforce server policy.
+		LAN @ref ServerDiscovery and the optional @ref WebhookClient, and overrides the connect/disconnect
+		hooks to enforce server policy.
 
 		@experimental
 	*/
@@ -100,6 +103,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Sets status provider */
 		void SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider);
 
+		/** @brief Returns the webhook client, or `nullptr` if no webhook is configured */
+		WebhookClient* GetWebhook() const;
+
 		/**
 		 * @brief Creates a default server configuration from the default template file
 		 *
@@ -134,6 +140,7 @@ namespace Jazz2::Multiplayer
 	private:
 		std::unique_ptr<ServerConfiguration> _serverConfig;
 		std::unique_ptr<ServerDiscovery> _discovery;
+		std::unique_ptr<WebhookClient> _webhook;
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
 		HashMap<String, std::shared_ptr<PeerDescriptor>> _disconnectedPeers; // Retained for reconnect, keyed by unique player ID
 		mutable Spinlock _lock;
@@ -142,6 +149,7 @@ namespace Jazz2::Multiplayer
 
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
 		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);
+		static WebhookEventType StringToWebhookEvent(StringView value);
 	};
 }
 

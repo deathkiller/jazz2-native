@@ -1512,6 +1512,9 @@
     <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\WebhookClient.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\ServerSelectSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -2697,6 +2700,9 @@
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\WebhookClient.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ServerSelectSection.cpp">

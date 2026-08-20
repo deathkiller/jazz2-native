@@ -43,6 +43,15 @@
 		"111.222.333.444": "User-defined comment 2"
 	},
 
+	/* Server events can be posted to a webhook (mainly Discord), so they show up
+	   as notifications in the linked channel - every notification carries the server
+	   name, so multiple servers can be aggregated into a single channel */
+	/*"WebhookUrl": "https://discord.com/api/webhooks/000000000000000000/XXXXXXXXXXXXXXXXXXXX",*/
+	/* If "WebhookEvents" is not specified, the default set below is used,
+	   "RoundStarted" and "ChatMessages" can also be enabled */
+	/*"WebhookEvents": [ "ServerLifecycle", "PlayerConnected", "PlayerDisconnected",
+	   "PlayerKicked", "LevelChanged", "RoundEnded", "ChampionshipEnded" ],*/
+
 	"ReforgedGameplay": true,
 	"RandomizePlaylist": false,
 	"TotalPlayerPoints": 100,
