@@ -6,7 +6,7 @@
 #include "Reason.h"
 #include "ServerInitialization.h"
 
-#if (defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	include "../../nCine/Threading/Thread.h"
 #	include "../../nCine/Threading/ThreadSync.h"
 
@@ -25,7 +25,7 @@ namespace Jazz2::Multiplayer
 {
 	class NetworkManager;
 
-#if (defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/**
 		@brief Posts selected server events to a configured webhook
@@ -111,7 +111,7 @@ namespace Jazz2::Multiplayer
 
 #else
 
-	/** @brief Stub implementation for platforms without thread support, so call sites compile everywhere */
+	/** @brief Stub implementation for builds without online multiplayer (or thread support), so call sites compile everywhere */
 	class WebhookClient
 	{
 	public:

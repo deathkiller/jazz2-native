@@ -1,6 +1,6 @@
 #include "WebhookClient.h"
 
-#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_MULTIPLAYER) && defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 
 #include "NetworkManager.h"
 #include "../UI/Font.h"
