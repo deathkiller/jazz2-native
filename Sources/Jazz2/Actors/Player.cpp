@@ -112,6 +112,13 @@ namespace Jazz2::Actors
 			_spawnedBird->FlyAway();
 			_spawnedBird = nullptr;
 		}
+		StopAllActiveSounds();
+		// Release the shared palette offset back to the pool (e.g., on disconnect/level end)
+		ReleasePaletteOffset();
+	}
+
+	void Player::StopAllActiveSounds()
+	{
 #if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
@@ -130,8 +137,6 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 #endif
-		// Release the shared palette offset back to the pool (e.g., on disconnect/level end)
-		ReleasePaletteOffset();
 	}
 
 	const Player::CharacterTraits& Player::GetCharacterTraits(PlayerType type)
@@ -413,11 +418,7 @@ namespace Jazz2::Actors
 #if defined(WITH_AUDIO)
 		if (_airboardTurnSound != nullptr && !_airboardTurnSound->isPlaying()) {
 			if (_activeModifier == Modifier::Airboard) {
-				auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
-				if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
-					AudioBuffer* buffer2 = &it->second.Buffers[1]->Buffer;
-					_levelHandler->PlaySfx(this, "airboard_turn"_s, buffer2, Vector3f::Zero, true, 2.0f, 0.8f);
-				}
+				PlayPlayerSfx("AirboardTurnEnd"_s, 2.0f, 0.8f);
 			}
 			_airboardTurnSound = nullptr;
 		}
@@ -959,11 +960,7 @@ namespace Jazz2::Actors
 					_pushFramesLeft = 0.0f;
 #if defined(WITH_AUDIO)
 					if (_activeModifier == Modifier::Airboard) {
-						auto it = _metadata->Sounds.find(String::nullTerminatedView("airboard_turn"_s));
-						if (it != _metadata->Sounds.end() && it->second.Buffers.size() >= 2) {
-							AudioBuffer* buffer1 = &it->second.Buffers[0]->Buffer;
-							_airboardTurnSound = _levelHandler->PlaySfx(this, "airboard_turn"_s, buffer1, Vector3f::Zero, true, 2.0f, 0.8f);
-						}
+						_airboardTurnSound = PlayPlayerSfx("AirboardTurnStart"_s, 2.0f, 0.8f);
 					}
 #endif
 				}
@@ -3068,21 +3065,7 @@ namespace Jazz2::Actors
 	void Player::OnPerishInner()
 	{
 		_trailLastPos = _pos;
-
-#if defined(WITH_AUDIO)
-		if (_copterSound != nullptr) {
-			_copterSound->stop();
-			_copterSound = nullptr;
-		}
-		if (_airboardSound != nullptr) {
-			_airboardSound->stop();
-			_airboardSound = nullptr;
-		}
-		if (_weaponSound != nullptr) {
-			_weaponSound->stop();
-			_weaponSound = nullptr;
-		}
-#endif
+		StopAllActiveSounds();
 
 		SetState(ActorState::CanJump, false);
 		_speed.X = 0.0f;
@@ -4138,7 +4121,7 @@ namespace Jazz2::Actors
 
 #if defined(WITH_AUDIO)
 			if (_airboardSound == nullptr) {
-				_airboardSound = PlaySfx("airboard"_s, 0.6f, 1.0f);
+				_airboardSound = PlaySfx("Airboard"_s, 0.6f, 1.0f);
 				if (_airboardSound != nullptr) {
 					_airboardSound->setLooping(true);
 				}
@@ -4196,14 +4179,14 @@ namespace Jazz2::Actors
 				_activeModifier = Modifier::None;
 
 #if defined(WITH_AUDIO)
-			if (_copterSound != nullptr) {
-				_copterSound->stop();
-				_copterSound = nullptr;
-			}
-			if (_airboardSound != nullptr) {
-				_airboardSound->stop();
-				_airboardSound = nullptr;
-			}
+				if (_copterSound != nullptr) {
+					_copterSound->stop();
+					_copterSound = nullptr;
+				}
+				if (_airboardSound != nullptr) {
+					_airboardSound->stop();
+					_airboardSound = nullptr;
+				}
 #endif
 
 				SetState(ActorState::CanJump | ActorState::ApplyGravitation, true);

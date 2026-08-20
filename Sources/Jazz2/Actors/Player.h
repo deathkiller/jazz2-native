@@ -618,6 +618,7 @@ namespace Jazz2::Actors
 		void DoWarpOut(Vector2f pos, WarpFlags flags);
 		void InitialPoleStage(bool horizontal);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
+		void StopAllActiveSounds();
 
 		void OnPerishInner();
 
