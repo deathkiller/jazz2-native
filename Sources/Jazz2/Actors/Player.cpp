@@ -4087,14 +4087,13 @@ namespace Jazz2::Actors
 		_flyCheatActive = (type == FlightType::Cheat);
 	}
 
-	void Player::EnableFlyCheat()
+	void Player::EnableFlyCheat(bool active)
 	{
-		_flyCheatActive = true;
-	}
-
-	void Player::DisableFlyCheat()
-	{
-		SetCopterFlight(0.0f);
+		if (active) {
+			_flyCheatActive = true;
+		} else {
+			SetCopterFlight(0.0f);
+		}
 	}
 
 	bool Player::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)

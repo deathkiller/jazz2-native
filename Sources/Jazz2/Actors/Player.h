@@ -233,10 +233,8 @@ namespace Jazz2::Actors
 		bool IsFlyCheatActive() const;
 		/** @brief Sets copter flight duration and type (`timeLeft <= 0` disables flight cheat state) */
 		void SetCopterFlight(float timeLeft, FlightType type = FlightType::Normal);
-		/** @brief Enables fly cheat behavior for the next cheat flight activation */
-		void EnableFlyCheat();
-		/** @brief Disables fly cheat behavior */
-		void DisableFlyCheat();
+		/** @brief Enables or disables fly cheat behavior, enabling it applies to the next cheat flight activation */
+		virtual void EnableFlyCheat(bool active);
 		/** @brief Takes damage */
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */

@@ -84,11 +84,14 @@ namespace Jazz2::Multiplayer
 		RoundEnded = 0x40,					/**< Round ended with a winner, winning team or draw */
 		ChampionshipEnded = 0x80,			/**< A player won the championship (reached the points target) */
 		ChatMessages = 0x100,				/**< In-game chat messages */
+		PlayerRoasted = 0x200,				/**< Player was roasted (killed by another player or the environment) */
+		PlayerLapFinished = 0x400,			/**< Player finished a lap (Race) */
+		FlagCaptured = 0x800,				/**< Team captured a flag (Capture The Flag) */
 
 		/** @brief Default set of events used if @cpp "WebhookEvents" @ce is not specified in the configuration */
 		Default = ServerLifecycle | PlayerConnected | PlayerDisconnected | PlayerKicked | LevelChanged | RoundEnded | ChampionshipEnded,
 		/** @brief All events */
-		All = ServerLifecycle | PlayerConnected | PlayerDisconnected | PlayerKicked | LevelChanged | RoundStarted | RoundEnded | ChampionshipEnded | ChatMessages
+		All = ServerLifecycle | PlayerConnected | PlayerDisconnected | PlayerKicked | LevelChanged | RoundStarted | RoundEnded | ChampionshipEnded | ChatMessages | PlayerRoasted | PlayerLapFinished | FlagCaptured
 	};
 
 	DEATH_ENUM_FLAGS(WebhookEventType);
@@ -127,6 +130,9 @@ namespace Jazz2::Multiplayer
 		-   @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		-   @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
 		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **300**, i.e. 5 minutes)
+		-   @cpp "AllowCheats" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether cheats can be used on the server (default is **false**)
+			-   Admins can use cheats in any game mode, other players only in Cooperation
+			-   Cheats are applied only to the player that invoked them
 		-   @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
 			-   Key specifies player ID, value contains privileges
 		-   @cpp "WhitelistedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of whitelisted player IDs
@@ -140,8 +146,8 @@ namespace Jazz2::Multiplayer
 			-   The payload format targets **Discord** webhooks (`https://discord.com/api/webhooks/…`), so server events show up as rich notifications in the linked Discord channel
 			-   Multiple servers can post to the same channel --- every notification carries the server name, so the events can be told apart
 		-   @cpp "WebhookEvents" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of event names posted to the webhook, see @ref WebhookEventType
-			-   Supported values are @cpp "ServerLifecycle" @ce, @cpp "PlayerConnected" @ce, @cpp "PlayerDisconnected" @ce, @cpp "PlayerKicked" @ce, @cpp "LevelChanged" @ce, @cpp "RoundStarted" @ce, @cpp "RoundEnded" @ce, @cpp "ChampionshipEnded" @ce, @cpp "ChatMessages" @ce and @cpp "All" @ce
-			-   If not specified, the default set is used (everything except @cpp "RoundStarted" @ce and @cpp "ChatMessages" @ce)
+			-   Supported values are @cpp "ServerLifecycle" @ce, @cpp "PlayerConnected" @ce, @cpp "PlayerDisconnected" @ce, @cpp "PlayerKicked" @ce, @cpp "LevelChanged" @ce, @cpp "RoundStarted" @ce, @cpp "RoundEnded" @ce, @cpp "ChampionshipEnded" @ce, @cpp "ChatMessages" @ce, @cpp "PlayerRoasted" @ce, @cpp "PlayerLapFinished" @ce, @cpp "FlagCaptured" @ce and @cpp "All" @ce
+			-   If not specified, the default set is used (everything except @cpp "RoundStarted" @ce, @cpp "ChatMessages" @ce, @cpp "PlayerRoasted" @ce, @cpp "PlayerLapFinished" @ce and @cpp "FlagCaptured" @ce)
 		-   @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled
 			-   Has a higher priority than settings of the player
 		-   @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
@@ -249,6 +255,8 @@ namespace Jazz2::Multiplayer
 		std::int32_t IdleKickTimeSecs;
 		/** @brief Time window in seconds during which a disconnected player can reconnect and resume their progression, 0 or less to disable */
 		std::int32_t ReconnectWindowSecs;
+		/** @brief Whether cheats can be used, admins in any game mode, other players only in Cooperation */
+		bool AllowCheats;
 		/** @brief List of unique player IDs with admin rights, value contains list of privileges, or `*` for all privileges */
 		HashMap<String, String> AdminUniquePlayerIDs;
 		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */

@@ -328,8 +328,8 @@ namespace Jazz2
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
 		/** @brief Creates a player instance while restoring a resumable state from a stream (one per serialized player) */
 		virtual std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index);
-		/** @brief Returns `true` if cheats are enabled */
-		virtual bool IsCheatingAllowed();
+		/** @brief Returns `true` if cheats are enabled for the specified player, `nullptr` refers to the local console */
+		virtual bool IsCheatingAllowed(Actors::Player* player);
 
 		/** @brief Called after the level is loaded and all players were spawned */
 		virtual void OnInitialized();
@@ -377,7 +377,18 @@ namespace Jazz2
 		virtual void ShowConsole();
 		/** @brief Hides the in-game console */
 		virtual void HideConsole();
-		
+
+		/**
+		 * @brief Applies the cheat matching the specified command to the specified players
+		 *
+		 * @param line      Command to look up
+		 * @param targets   Players the cheat is applied to, pass an empty view to only check whether @p line is a cheat
+		 * @return `true` if @p line is a known cheat command
+		 *
+		 * The command is not validated against @ref IsCheatingAllowed, the caller is responsible for it.
+		 */
+		bool ApplyCheat(StringView line, ArrayView<Actors::Player* const> targets);
+
 #if defined(WITH_IMGUI)
 		ImVec2 WorldPosToScreenSpace(const Vector2f pos, const Rendering::PlayerViewport& viewport);
 #endif
@@ -385,18 +396,18 @@ namespace Jazz2
 	private:
 		bool TryInvokeCheat(StringView line);
 
-		void CheatKill();
-		void CheatGod();
-		void CheatNext();
-		void CheatGuns();
-		void CheatRush();
-		void CheatGems();
-		void CheatBird();
-		void CheatLife();
-		void CheatPower();
-		void CheatCoins();
-		void CheatMorph();
-		void CheatShield();
-		void CheatFly();
+		void CheatKill(ArrayView<Actors::Player* const> targets);
+		void CheatGod(ArrayView<Actors::Player* const> targets);
+		void CheatNext(ArrayView<Actors::Player* const> targets);
+		void CheatGuns(ArrayView<Actors::Player* const> targets);
+		void CheatRush(ArrayView<Actors::Player* const> targets);
+		void CheatGems(ArrayView<Actors::Player* const> targets);
+		void CheatBird(ArrayView<Actors::Player* const> targets);
+		void CheatLife(ArrayView<Actors::Player* const> targets);
+		void CheatPower(ArrayView<Actors::Player* const> targets);
+		void CheatCoins(ArrayView<Actors::Player* const> targets);
+		void CheatMorph(ArrayView<Actors::Player* const> targets);
+		void CheatShield(ArrayView<Actors::Player* const> targets);
+		void CheatFly(ArrayView<Actors::Player* const> targets);
 	};
 }

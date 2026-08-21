@@ -24,8 +24,17 @@ namespace Jazz2::Actors::Multiplayer
 		RemoteActor();
 		~RemoteActor();
 
+		/**
+		 * @brief Creates the remote representation for an actor with the specified metadata
+		 *
+		 * Most actors are covered by the generic synchronization, but some render through something else than
+		 * their own sprite (e.g., locally-spawned particles), which has to be replayed on the receiving side by
+		 * a specialized subclass. This factory picks the right one from the metadata path the server sent.
+		 */
+		static std::shared_ptr<RemoteActor> Create(StringView metadataPath);
+
 		/** @brief Initializes the actor from metadata received from the server */
-		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
+		virtual void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
 		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
 		void SetPlayerColor(std::uint32_t furColor);
 		/** @brief Changes the metadata (e.g., on character change), keeping the current recolor applied */
@@ -44,6 +53,10 @@ namespace Jazz2::Actors::Multiplayer
 		StateInterpolationBuffer _stateBuffer;
 		AnimState _lastAnim;
 		bool _isAttachedLocally;
+		// Set by subclasses that replay the actor's visuals themselves (the sprite stays draw-disabled): keeps
+		// position interpolation active, which is otherwise collapsed on every push while the renderer is hidden,
+		// making the position only step at (coinciding) packet arrivals instead of moving smoothly
+		bool _alwaysInterpolate;
 		std::uint32_t _furColor;
 		// Allocated palette offset into the shared palette texture for this player's recolor (-1 = none)
 		std::int32_t _paletteOffset;

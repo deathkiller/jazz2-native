@@ -573,7 +573,7 @@ namespace Jazz2
 		return std::make_shared<Actors::Player>();
 	}
 
-	bool LevelHandler::IsCheatingAllowed()
+	bool LevelHandler::IsCheatingAllowed(Actors::Player* player)
 	{
 		return PreferencesCache::AllowCheats;
 	}
@@ -609,7 +609,7 @@ namespace Jazz2
 				}
 			}
 #if defined(DEATH_DEBUG)
-			if (IsCheatingAllowed() && PlayerActionPressed(nullptr, PlayerAction::ChangeWeapon) && PlayerActionHit(0, PlayerAction::Jump)) {
+			if (IsCheatingAllowed(nullptr) && PlayerActionPressed(nullptr, PlayerAction::ChangeWeapon) && PlayerActionHit(0, PlayerAction::Jump)) {
 				_cheatsUsed = true;
 				BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 			}
@@ -2422,10 +2422,26 @@ namespace Jazz2
 
 	bool LevelHandler::TryInvokeCheat(StringView line)
 	{
+		if (!ApplyCheat(line, {})) {
+			return false;
+		}
+
+		_console->WriteLine(UI::MessageLevel::Echo, line);
+		if (IsCheatingAllowed(nullptr) && !_players.empty()) {
+			_cheatsUsed = true;
+			ApplyCheat(line, _players);
+		} else {
+			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		}
+		return true;
+	}
+
+	bool LevelHandler::ApplyCheat(StringView line, ArrayView<Actors::Player* const> targets)
+	{
 		struct CheatCommand {
 			StringView Command;
 			StringView Alias;
-			void (LevelHandler::*Handler)();
+			void (LevelHandler::*Handler)(ArrayView<Actors::Player* const> targets);
 		};
 
 		static const CheatCommand CheatCommands[] = {
@@ -2446,12 +2462,8 @@ namespace Jazz2
 
 		for (const auto& cheat : CheatCommands) {
 			if (line == cheat.Command || (!cheat.Alias.empty() && line == cheat.Alias)) {
-				_console->WriteLine(UI::MessageLevel::Echo, line);
-				if (IsCheatingAllowed() && !_players.empty()) {
-					_cheatsUsed = true;
-					(this->*cheat.Handler)();
-				} else {
-					_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+				if (!targets.empty()) {
+					(this->*cheat.Handler)(targets);
 				}
 				return true;
 			}
@@ -2460,103 +2472,105 @@ namespace Jazz2
 		return false;
 	}
 
-	void LevelHandler::CheatKill()
+	void LevelHandler::CheatKill(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->TakeDamage(INT32_MAX, 0.0f, true);
 		}
 	}
 
-	void LevelHandler::CheatGod()
+	void LevelHandler::CheatGod(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 		}
 	}
 
-	void LevelHandler::CheatNext()
+	void LevelHandler::CheatNext(ArrayView<Actors::Player* const> targets)
 	{
-		BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
+		// The invoking player acts as the initiator, so in multiplayer the active game mode can decide what
+		// reaching the level exit means for them
+		BeginLevelChange(targets[0], ExitType::Warp | ExitType::FastTransition);
 	}
 
-	void LevelHandler::CheatGuns()
+	void LevelHandler::CheatGuns(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
 				player->AddAmmo((WeaponType)i, 99);
 			}
 		}
 	}
 
-	void LevelHandler::CheatRush()
+	void LevelHandler::CheatRush(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->ActivateSugarRush(1300.0f);
 		}
 	}
 
-	void LevelHandler::CheatGems()
+	void LevelHandler::CheatGems(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->AddGems(0, 5);
 		}
 	}
 
-	void LevelHandler::CheatBird()
+	void LevelHandler::CheatBird(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->SpawnBird(0, player->GetPos());
 		}
 	}
 
-	void LevelHandler::CheatLife()
+	void LevelHandler::CheatLife(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			player->AddLives(5);
 		}
 	}
 
-	void LevelHandler::CheatPower()
+	void LevelHandler::CheatPower(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
 				player->AddWeaponUpgrade((WeaponType)i, 0x01);
 			}
 		}
 	}
 
-	void LevelHandler::CheatCoins()
+	void LevelHandler::CheatCoins(ArrayView<Actors::Player* const> targets)
 	{
 		// Coins are synchronized automatically
-		_players[0]->AddCoins(5);
+		targets[0]->AddCoins(5);
 	}
 
-	void LevelHandler::CheatMorph()
+	void LevelHandler::CheatMorph(ArrayView<Actors::Player* const> targets)
 	{
 		PlayerType newType;
-		switch (_players[0]->GetPlayerType()) {
+		switch (targets[0]->GetPlayerType()) {
 			case PlayerType::Jazz: newType = PlayerType::Spaz; break;
 			case PlayerType::Spaz: newType = PlayerType::Lori; break;
 			default: newType = PlayerType::Jazz; break;
 		}
 
-		if (!_players[0]->MorphTo(newType)) {
-			_players[0]->MorphTo(PlayerType::Jazz);
+		if (!targets[0]->MorphTo(newType)) {
+			targets[0]->MorphTo(PlayerType::Jazz);
 		}
 	}
 
-	void LevelHandler::CheatShield()
+	void LevelHandler::CheatShield(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
 			player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
 		}
 	}
 
 
-	void LevelHandler::CheatFly()
+	void LevelHandler::CheatFly(ArrayView<Actors::Player* const> targets)
 	{
-		for (auto* player : _players) {
+		for (auto* player : targets) {
 			PlayerType playerType = player->GetPlayerType();
 			if (playerType != PlayerType::Jazz &&
 				playerType != PlayerType::Spaz &&
@@ -2565,10 +2579,10 @@ namespace Jazz2
 			}
 
 			if (player->IsInWater()) {
-				player->DisableFlyCheat();
+				player->EnableFlyCheat(false);
 				continue;
 			}
-			
+
 			Actors::Player::Modifier nextModifier;
 			switch (player->GetModifier()) {
 				case Actors::Player::Modifier::None:    nextModifier = Actors::Player::Modifier::Copter;   break;
@@ -2576,7 +2590,7 @@ namespace Jazz2
 				default:                                nextModifier = Actors::Player::Modifier::None;     break;
 			}
 			if (nextModifier == Actors::Player::Modifier::Copter) {
-				player->EnableFlyCheat();
+				player->EnableFlyCheat(true);
 			}
 			player->SetModifier(nextModifier);
 		}

@@ -64,6 +64,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
 		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
+		void EnableFlyCheat(bool active) override;
 		bool Freeze(float timeLeft) override;
 		void SetInvulnerability(float timeLeft, InvulnerableType type) override;
 

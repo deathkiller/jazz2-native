@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
 "POT-Creation-Date: 2026-07-11 01:04+0200\n"
-"PO-Revision-Date: 2026-07-11 01:06+0200\n"
+"PO-Revision-Date: 2026-08-21 00:41+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1575,7 +1575,7 @@ msgstr "Zuschauen"
 #. TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
 #: Sources/Jazz2/UI/InGameConsole.cpp:210
 msgid "Keyboard"
-msgstr ""
+msgstr "Tastatur"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:497
 msgid "Unknown command"
@@ -1632,7 +1632,7 @@ msgstr "Story spielen"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:104
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:20
 msgid "Play Multiplayer"
-msgstr ""
+msgstr "Multiplayer spielen"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
@@ -1907,12 +1907,12 @@ msgstr "Kooperation"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
-msgstr ""
+msgstr "Lokales Split-Screen-Spiel erstellen"
 
 #. TRANSLATORS: Menu item to select the number of local splitscreen players
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:222
 msgid "Number of Players"
-msgstr ""
+msgstr "Anzahl der Spieler"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:234
@@ -2133,7 +2133,7 @@ msgstr "Zu neuer Waffe wechseln"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:74
 msgid "Show Minimap"
-msgstr ""
+msgstr "Minikarte anzeigen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:78
@@ -2365,7 +2365,7 @@ msgstr "Trennen & Beenden"
 #. TRANSLATORS: Menu item in Multiplayer section (join an existing online server)
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:25
 msgid "Join Server"
-msgstr ""
+msgstr "Dem Server beitreten"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:75
 msgid "Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."
@@ -2484,15 +2484,15 @@ msgstr "Monochrom"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:139
 msgid "Laps"
-msgstr ""
+msgstr "Runden"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
 msgid "Treasure"
-msgstr ""
+msgstr "Schatz"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:169
 msgid "Scoreboard"
-msgstr ""
+msgstr "Anzeigetafel"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:174
 msgid "Player"

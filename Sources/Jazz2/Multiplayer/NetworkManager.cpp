@@ -466,6 +466,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.ReconnectWindowSecs = std::int32_t(reconnectWindowSecs);
 				}
 
+				bool allowCheats;
+				if (doc["AllowCheats"].get(allowCheats) == Json::SUCCESS) {
+					serverConfig.AllowCheats = allowCheats;
+				}
+
 				Json::Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];
 				for (auto it = adminUniquePlayerIDs.begin(); it != adminUniquePlayerIDs.end(); ++it) {
 					std::string_view key = it.name();
@@ -891,6 +896,12 @@ namespace Jazz2::Multiplayer
 			return WebhookEventType::ChampionshipEnded;
 		} else if (eventString == "chatmessages"_s || eventString == "chat"_s) {
 			return WebhookEventType::ChatMessages;
+		} else if (eventString == "playerroasted"_s || eventString == "roasted"_s) {
+			return WebhookEventType::PlayerRoasted;
+		} else if (eventString == "playerlapfinished"_s || eventString == "lapfinished"_s) {
+			return WebhookEventType::PlayerLapFinished;
+		} else if (eventString == "flagcaptured"_s) {
+			return WebhookEventType::FlagCaptured;
 		} else if (eventString == "default"_s) {
 			return WebhookEventType::Default;
 		} else if (eventString == "all"_s) {

@@ -2,6 +2,8 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#include "RemoteElectroShot.h"
+#include "RemoteThunderbolt.h"
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
@@ -32,9 +34,23 @@ namespace Jazz2::Actors::Multiplayer
 	}
 
 	RemoteActor::RemoteActor()
-		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1),
-			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
+		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _alwaysInterpolate(false), _furColor(0),
+			_paletteOffset(-1), _activeShield(ShieldType::None), _activeShieldTime(0.0f)
 	{
+	}
+
+	std::shared_ptr<RemoteActor> RemoteActor::Create(StringView metadataPath)
+	{
+		// Actors that render through something else than their own sprite need a specialized representation
+		// that replays those visuals on the receiving side; everything else is a generic remote actor
+		if (metadataPath == "Weapon/Electro"_s) {
+			return std::make_shared<RemoteElectroShot>();
+		}
+		if (metadataPath == "Weapon/Thunderbolt"_s) {
+			return std::make_shared<RemoteThunderbolt>();
+		}
+
+		return std::make_shared<RemoteActor>();
 	}
 
 	RemoteActor::~RemoteActor()
@@ -174,7 +190,9 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)
 	{
-		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), _renderer.isDrawEnabled());
+		// A permanently hidden sprite must not collapse the buffer when the actor's visuals are replayed by
+		// a subclass, otherwise its position would freeze between received packets
+		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), _alwaysInterpolate || _renderer.isDrawEnabled());
 	}
 
 	void RemoteActor::SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType)

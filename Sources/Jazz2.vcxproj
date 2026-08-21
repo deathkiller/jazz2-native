@@ -430,6 +430,8 @@
     <ClInclude Include="Jazz2\Actors\Multiplayer\PlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotablePlayer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteActor.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteElectroShot.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteThunderbolt.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\StateInterpolationBuffer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h" />
@@ -878,6 +880,8 @@
     <ClCompile Include="Jazz2\Actors\Multiplayer\PlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemotablePlayer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteActor.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteElectroShot.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteThunderbolt.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoBarrel.cpp" />
     <ClCompile Include="Jazz2\Actors\Solid\AmmoCrate.cpp" />

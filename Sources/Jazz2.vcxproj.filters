@@ -1536,6 +1536,12 @@
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteActor.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteElectroShot.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteThunderbolt.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
@@ -2721,6 +2727,12 @@
       <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteActor.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteElectroShot.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\RemoteThunderbolt.cpp">
       <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.cpp">

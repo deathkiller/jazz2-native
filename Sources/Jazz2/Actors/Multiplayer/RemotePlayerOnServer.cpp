@@ -159,6 +159,15 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	void RemotePlayerOnServer::EnableFlyCheat(bool active)
+	{
+		PlayerOnServer::EnableFlyCheat(active);
+
+		// The owning client simulates its own movement, so it needs to know about the flight cheat as well -
+		// otherwise the copter would run out after a few seconds there
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetFlyCheat(this, active);
+	}
+
 	bool RemotePlayerOnServer::Freeze(float timeLeft)
 	{
 		if (!PlayerOnServer::Freeze(timeLeft)) {

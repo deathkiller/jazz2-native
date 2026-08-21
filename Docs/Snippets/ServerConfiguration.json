@@ -33,6 +33,9 @@
 	"AdminUniquePlayerIDs": {
 		"370D:9320:3785:3216:9876:8843:323C:1401": "*"
 	},
+
+	/* Admins can use cheats in any game mode, other players only in Cooperation */
+	"AllowCheats": false,
 	
 	"BannedUniquePlayerIDs": {
 		"8C0D:8887:CDE3:F357:8D8B:8837:3123:1645": "User-defined comment 1",
@@ -47,8 +50,8 @@
 	   as notifications in the linked channel - every notification carries the server
 	   name, so multiple servers can be aggregated into a single channel */
 	/*"WebhookUrl": "https://discord.com/api/webhooks/000000000000000000/XXXXXXXXXXXXXXXXXXXX",*/
-	/* If "WebhookEvents" is not specified, the default set below is used,
-	   "RoundStarted" and "ChatMessages" can also be enabled */
+	/* If "WebhookEvents" is not specified, the default set below is used, "RoundStarted",
+	   "ChatMessages", "PlayerRoasted", "PlayerLapFinished" and "FlagCaptured" can also be enabled */
 	/*"WebhookEvents": [ "ServerLifecycle", "PlayerConnected", "PlayerDisconnected",
 	   "PlayerKicked", "LevelChanged", "RoundEnded", "ChampionshipEnded" ],*/
 

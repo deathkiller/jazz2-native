@@ -365,6 +365,81 @@ namespace Jazz2::Multiplayer
 		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorNeutral));
 	}
 
+	void WebhookClient::OnPlayerRoasted(StringView playerName, StringView attackerName)
+	{
+		if (!IsEventEnabled(WebhookEventType::PlayerRoasted)) {
+			return;
+		}
+
+		SmallVector<char, 256> description;
+		AppendRaw(description, "\xF0\x9F\x94\xA5" "\xE2\x80\x83" "**"_s /* 🔥 + em space */);
+		AppendSanitizedName(description, playerName);
+		if (!attackerName.empty()) {
+			AppendRaw(description, "** was roasted by **"_s);
+			AppendSanitizedName(description, attackerName);
+			AppendRaw(description, "**"_s);
+		} else {
+			AppendRaw(description, "** was roasted by the environment"_s);
+		}
+
+		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorNegative));
+	}
+
+	void WebhookClient::OnPlayerLapFinished(StringView playerName, float lapSecs, std::uint32_t lap, std::uint32_t totalLaps)
+	{
+		if (!IsEventEnabled(WebhookEventType::PlayerLapFinished)) {
+			return;
+		}
+
+		SmallVector<char, 256> description;
+		AppendRaw(description, "\xE2\x8F\xB1\xEF\xB8\x8F" "\xE2\x80\x83" "**"_s /* ⏱️ + em space */);
+		AppendSanitizedName(description, playerName);
+		AppendRaw(description, "** finished lap **"_s);
+
+		char buffer[48];
+		std::size_t length = formatInto(buffer, "{}/{}", lap, totalLaps);
+		AppendRaw(description, { buffer, length });
+		AppendRaw(description, "**"_s);
+
+		// Lap time with 0.1 s precision, as "m:ss.t" above one minute
+		std::int32_t totalTenths = (std::int32_t)(lapSecs * 10.0f + 0.5f);
+		if (totalTenths > 0) {
+			std::int32_t minutes = totalTenths / 600;
+			std::int32_t seconds = (totalTenths / 10) % 60;
+			std::int32_t tenths = totalTenths % 10;
+			if (minutes > 0) {
+				length = formatInto(buffer, " in {}:{:.2}.{}", minutes, seconds, tenths);
+			} else {
+				length = formatInto(buffer, " in {}.{} s", seconds, tenths);
+			}
+			AppendRaw(description, { buffer, length });
+		}
+
+		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorInfo));
+	}
+
+	void WebhookClient::OnFlagCaptured(StringView playerName, StringView teamName, StringView flagTeamName, std::uint32_t captures, std::uint32_t totalCaptures)
+	{
+		if (!IsEventEnabled(WebhookEventType::FlagCaptured)) {
+			return;
+		}
+
+		SmallVector<char, 256> description;
+		AppendRaw(description, "\xF0\x9F\x9A\xA9" "\xE2\x80\x83" "**"_s /* 🚩 + em space */);
+		AppendSanitizedName(description, playerName);
+		AppendRaw(description, "** captured the **"_s);
+		AppendSanitizedName(description, flagTeamName);
+		AppendRaw(description, "** flag for the **"_s);
+		AppendSanitizedName(description, teamName);
+		AppendRaw(description, "** team"_s);
+
+		char captureCount[24];
+		std::size_t captureCountLength = formatInto(captureCount, " ({}/{})", captures, totalCaptures);
+		AppendRaw(description, { captureCount, captureCountLength });
+
+		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorHighlight));
+	}
+
 	void WebhookClient::Enqueue(String&& embed)
 	{
 		_queueMutex.Lock();

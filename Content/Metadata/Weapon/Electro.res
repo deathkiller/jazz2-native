@@ -4,7 +4,7 @@
 	"Animations": {
 		"Mask": {
 			"Path": "Weapon/electro_mask.aura",
-			"States": [ 0 ]
+			"States": [ 0, 2 ]
 		},
 		"Particle": {
 			"Path": "Weapon/electro.aura",

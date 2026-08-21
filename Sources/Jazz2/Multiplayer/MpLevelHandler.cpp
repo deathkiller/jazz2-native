@@ -1017,8 +1017,12 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::OnConsoleCommand(StringView line)
 	{
-		if (LevelHandler::OnConsoleCommand(line)) {
-			return true;
+		// Cheats are validated and applied by the server, so a client must not handle them locally - such a
+		// command is forwarded below like any other line and the server echoes the result back
+		if (_isServer || !ApplyCheat(line, {})) {
+			if (LevelHandler::OnConsoleCommand(line)) {
+				return true;
+			}
 		}
 
 		if (_isServer) {
@@ -1547,11 +1551,17 @@ namespace Jazz2::Multiplayer
 				if ((_elapsedFrames - peerDesc->LapsElapsedFrames) > 2.0f * FrameTimer::FramesPerSecond) {
 					peerDesc->Laps++;
 					auto now = TimeStamp::now();
+					float lapSecs = (now - peerDesc->LapStarted).seconds();
 					//peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
 					peerDesc->LapStarted = now;
 
 					LOGI("Player {} finished lap ({})", mpPlayer->_playerIndex, peerDesc->Laps);
+
+					if (auto* webhook = _networkManager->GetWebhook()) {
+						auto& serverConfig = _networkManager->GetServerConfiguration();
+						webhook->OnPlayerLapFinished(peerDesc->PlayerName, lapSecs, peerDesc->Laps, serverConfig.TotalLaps);
+					}
 
 					CheckGameEnds();
 				} else {
@@ -2542,6 +2552,21 @@ namespace Jazz2::Multiplayer
 					}
 
 					std::size_t length = formatInto(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", _enableSpawning ? "Enabled"_s : "Disabled"_s);
+					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
+					return true;
+				} else if (variableName == "cheats"_s) {
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					auto boolValue = StringUtils::lowercase(value.trimmed());
+					if (boolValue == "false"_s || boolValue == "off"_s || boolValue == "0"_s) {
+						serverConfig.AllowCheats = false;
+					} else if (boolValue == "true"_s || boolValue == "on"_s || boolValue == "1"_s) {
+						serverConfig.AllowCheats = true;
+					} else {
+						return false;
+					}
+
+					std::size_t length = formatInto(infoBuffer, "Cheats set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", serverConfig.AllowCheats ? "Enabled"_s : "Disabled"_s);
 					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 					return true;
 				} else if (variableName == "kills"_s) {
@@ -3623,6 +3648,26 @@ namespace Jazz2::Multiplayer
 		if (line.hasPrefix('/')) {
 			SendMessage(peer, UI::MessageLevel::Echo, line);
 			ProcessCommand(peer, line, peerDesc->IsAdmin);
+			return true;
+		}
+
+		if (ApplyCheat(line, {})) {
+			// Cheats are applied here on the server, because most of their effects (ammo, lives, score) are
+			// server-authoritative and only synchronized down to the owning client afterwards
+			SendMessage(peer, UI::MessageLevel::Echo, line);
+			if (IsCheatingAllowed(peerDesc->Player)) {
+				// The cheat mutates game state, so it has to run on the main thread, and it affects only the
+				// player that invoked it
+				InvokeAsync([this, peerDesc, line = std::move(line)]() {
+					if (peerDesc->Player != nullptr) {
+						Actors::Player* targets[] = { peerDesc->Player };
+						_cheatsUsed = true;
+						ApplyCheat(line, targets);
+					}
+				});
+			} else {
+				SendMessage(peer, UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+			}
 			return true;
 		}
 
@@ -4813,7 +4858,7 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
-			std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
+			std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = Actors::Multiplayer::RemoteActor::Create(metadataPath);
 			remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
 
 			// If this actor was already marked as a player with a custom color, apply it before assigning
@@ -5408,6 +5453,21 @@ namespace Jazz2::Multiplayer
 					if (!_players.empty()) {
 						auto it = _remoteActors.find(decorActorId);
 						_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::FlyCheat: {
+				bool active = (packet.ReadValue<std::uint8_t>() != 0);
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::FlyCheat - active: {}", active);
+
+				// Cheats are applied on the server, but the client simulates its own movement, so it has to know
+				// about unlimited copter flight as well. Always arrives before the matching Modifier property,
+				// which is where the flight duration is actually decided.
+				InvokeAsync([this, active]() {
+					if (!_players.empty()) {
+						_players[0]->EnableFlyCheat(active);
 					}
 				});
 				break;
@@ -6150,14 +6210,43 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool MpLevelHandler::IsCheatingAllowed()
+	bool MpLevelHandler::IsCheatingAllowed(Actors::Player* player)
 	{
 		if (!_isServer) {
+			// Cheats are always applied by the server, clients only forward the command to it
 			return false;
 		}
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
-		return (PreferencesCache::AllowCheats && serverConfig.GameMode == MpGameMode::Cooperation);
+		if (!serverConfig.AllowCheats && !PreferencesCache::AllowCheats) {
+			return false;
+		}
+
+		// Admins can already change the level, kick and kill players, so they are trusted with cheats in any
+		// game mode - everybody else only in Cooperation, where cheating doesn't affect other players' standing
+		if (IsPlayerAdmin(player)) {
+			return true;
+		}
+
+		return (serverConfig.GameMode == MpGameMode::Cooperation);
+	}
+
+	bool MpLevelHandler::IsPlayerAdmin(Actors::Player* player) const
+	{
+		if (player == nullptr) {
+			// The local console always runs on the server itself
+			return true;
+		}
+
+		if (auto* mpPlayer = runtime_cast<MpPlayer>(player)) {
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			if (peerDesc != nullptr) {
+				// A player that is not connected remotely is a local (host) player
+				return (!peerDesc->RemotePeer.IsValid() || peerDesc->IsAdmin);
+			}
+		}
+
+		return false;
 	}
 
 	void MpLevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
@@ -6338,6 +6427,23 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerSetFlyCheat(Actors::Player* player, bool active)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::FlyCheat);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(active ? 1 : 0);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerFreeze(Actors::Player* player, float timeLeft)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -6509,6 +6615,10 @@ namespace Jazz2::Multiplayer
 					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
 						peerDesc->PlayerName, attackerPeerDesc->PlayerName));
 
+					if (auto* webhook = _networkManager->GetWebhook()) {
+						webhook->OnPlayerRoasted(peerDesc->PlayerName, attackerPeerDesc->PlayerName);
+					}
+
 					if (_isLocalSession) {
 						// The console line above is the whole kill feed in a local session
 						return;
@@ -6530,6 +6640,10 @@ namespace Jazz2::Multiplayer
 				} else {
 					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
 						peerDesc->PlayerName));
+
+					if (auto* webhook = _networkManager->GetWebhook()) {
+						webhook->OnPlayerRoasted(peerDesc->PlayerName, {});
+					}
 
 					if (_isLocalSession) {
 						// The console line above is the whole kill feed in a local session
@@ -8085,6 +8199,14 @@ namespace Jazz2::Multiplayer
 				}
 
 				ShowAlertToAllPlayers(_f("\n\n{} team captured the {} flag!", GetTeamName(carrierTeam), GetTeamName(flag.Team)));
+
+				if (auto* webhook = _networkManager->GetWebhook()) {
+					// The capture target reuses TotalKills
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					webhook->OnFlagCaptured(carrier->GetPeerDescriptor()->PlayerName, GetTeamName(carrierTeam), GetTeamName(flag.Team),
+						(carrierTeam < MaxTeamCount ? _ctfCaptures[carrierTeam] : 0), serverConfig.TotalKills);
+				}
+
 				stateChanged = true;
 				CheckGameEnds();
 			}

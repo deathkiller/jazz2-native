@@ -1259,6 +1259,8 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteElectroShot.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteThunderbolt.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/StateInterpolationBuffer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
@@ -1306,6 +1308,8 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteElectroShot.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteThunderbolt.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.cpp

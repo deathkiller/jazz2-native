@@ -276,7 +276,9 @@ namespace Jazz2::Multiplayer
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 		std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
-		bool IsCheatingAllowed() override;
+		bool IsCheatingAllowed(Actors::Player* player) override;
+		/** @brief Returns `true` if the specified player has admin privileges, `nullptr` refers to the local console */
+		bool IsPlayerAdmin(Actors::Player* player) const;
 
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
 		void ProcessEvents(float timeMult) override;
@@ -296,6 +298,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
 		/** @brief Called when a player changed modifier */
 		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
+		/** @brief Called when fly-cheat behavior is enabled or disabled on a player, to sync it to the owning client */
+		void HandlePlayerSetFlyCheat(Actors::Player* player, bool active);
 		/** @brief Called when a player freezes */
 		void HandlePlayerFreeze(Actors::Player* player, float timeLeft);
 		/** @brief Called when a player sets invulnerability */

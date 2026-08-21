@@ -263,6 +263,9 @@ namespace Jazz2::Tiles
 			/** @brief Time remaining until disposal */
 			float Time;
 
+			/** @brief Fraction of speed kept when bouncing off a solid tile (with @ref DebrisFlags::Bounce) */
+			float Elasticity = 0.8f;
+
 			/** @brief Texture horizontal scale */
 			float TexScaleX;
 			/** @brief Texture horizontal bias */

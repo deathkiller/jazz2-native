@@ -1996,7 +1996,7 @@ namespace Jazz2::Tiles
 					// collides with a wall from the side while in the air)
 					if (IsTilePointEmpty((std::int32_t)nx, (std::int32_t)debris.Pos.Y, true)) {
 						if (debris.Speed.Y > 0.0f) {
-							debris.Speed.Y = -(0.8f/*elasticity*/ * debris.Speed.Y);
+							debris.Speed.Y = -(debris.Elasticity * debris.Speed.Y);
 							//OnHitFloorHook();
 						} else {
 							debris.Speed.Y = 0;
@@ -2007,8 +2007,8 @@ namespace Jazz2::Tiles
 					// If the actor didn't move all the way horizontally,
 					// it hit a wall (or was already touching it)
 					if (IsTilePointEmpty((std::int32_t)debris.Pos.X, (std::int32_t)ny, true)) {
-						debris.Speed.X = -(0.8f/*elasticity*/ * debris.Speed.X);
-						debris.AngleSpeed = -(0.8f/*elasticity*/ * debris.AngleSpeed);
+						debris.Speed.X = -(debris.Elasticity * debris.Speed.X);
+						debris.AngleSpeed = -(debris.Elasticity * debris.AngleSpeed);
 						//OnHitWallHook();
 					}
 				}

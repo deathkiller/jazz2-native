@@ -75,6 +75,12 @@ namespace Jazz2::Multiplayer
 		void OnChampionshipEnded(StringView championName, std::uint32_t points);
 		/** @brief Called when a chat message has been sent */
 		void OnChatMessage(StringView playerName, StringView message, bool isAdmin);
+		/** @brief Called when a player was roasted, @p attackerName is empty if roasted by the environment */
+		void OnPlayerRoasted(StringView playerName, StringView attackerName);
+		/** @brief Called when a player finished a lap (Race) */
+		void OnPlayerLapFinished(StringView playerName, float lapSecs, std::uint32_t lap, std::uint32_t totalLaps);
+		/** @brief Called when a team captured a flag (Capture The Flag) */
+		void OnFlagCaptured(StringView playerName, StringView teamName, StringView flagTeamName, std::uint32_t captures, std::uint32_t totalCaptures);
 
 	private:
 		// Discord allows up to 10 embeds in a single webhook message
@@ -133,6 +139,9 @@ namespace Jazz2::Multiplayer
 		void OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode) {}
 		void OnChampionshipEnded(StringView championName, std::uint32_t points) {}
 		void OnChatMessage(StringView playerName, StringView message, bool isAdmin) {}
+		void OnPlayerRoasted(StringView playerName, StringView attackerName) {}
+		void OnPlayerLapFinished(StringView playerName, float lapSecs, std::uint32_t lap, std::uint32_t totalLaps) {}
+		void OnFlagCaptured(StringView playerName, StringView teamName, StringView flagTeamName, std::uint32_t captures, std::uint32_t totalCaptures) {}
 	};
 
 #endif
