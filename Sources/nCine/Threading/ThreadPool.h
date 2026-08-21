@@ -45,8 +45,6 @@ namespace nCine
 		SmallVector<Thread, 0> _threads;
 		Mutex _queueMutex;
 		CondVariable _queueCV;
-		Mutex _quitMutex;
-		std::size_t _numThreads;
 
 		ThreadStruct _threadStruct;
 		static void WorkerFunction(void* arg);

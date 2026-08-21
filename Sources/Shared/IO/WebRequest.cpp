@@ -12,6 +12,8 @@
 #include <atomic>
 #include <cstdio>
 #include <map>
+#include <mutex>
+#include <vector>
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <winhttp.h>
@@ -1027,13 +1029,6 @@ namespace Death { namespace IO {
 		return _url;
 	}
 
-	namespace
-	{
-		std::unique_ptr<WebSessionFactory> _factory;
-		WebSession _defaultSession;
-		WebSessionAsync _defaultSessionAsync;
-	}
-
 #if defined(DEATH_TARGET_WINDOWS)
 
 	class WebSessionWinHTTP;
@@ -1308,7 +1303,7 @@ namespace Death { namespace IO {
 		// This is only used for async requests
 		WebSessionAsyncCURL* const _sessionCURL;
 
-		// This pointer is only owned by this object when using async requests
+		// Always owned by this object, so requests running in parallel never share libcurl state
 		CURL* const _handle;
 		char _errorBuffer[CURL_ERROR_SIZE];
 		struct curl_slist* _headerList = nullptr;
@@ -1326,20 +1321,20 @@ namespace Death { namespace IO {
 	{
 	public:
 		explicit WebSessionBaseCURL(Mode mode);
-		~WebSessionBaseCURL() override;
 
 		static bool CurlRuntimeAtLeastVersion(std::uint32_t major, std::uint32_t minor, std::uint32_t patch);
 
 	protected:
-		static std::int32_t _activeSessions;
 		static std::uint32_t _runtimeVersion;
+
+		/** @brief Initializes libcurl and the shared caches exactly once for the whole process */
+		static void EnsureGlobalInitialized();
 	};
 
 	class WebSessionCURL : public WebSessionBaseCURL
 	{
 	public:
 		WebSessionCURL();
-		~WebSessionCURL() override;
 
 		WebSessionCURL(const WebSessionCURL&) = delete;
 		WebSessionCURL& operator=(const WebSessionCURL&) = delete;
@@ -1348,15 +1343,9 @@ namespace Death { namespace IO {
 		WebRequestImplPtr CreateRequestAsync(WebSessionAsync& session, StringView url, Function<void(WebRequestEvent&)>&& callback, std::int32_t id) override;
 
 		WebSessionHandle GetNativeHandle() const noexcept override {
-			return (WebSessionHandle)_handle;
+			// Synchronous sessions hold no native object of their own, every request owns its handle
+			return nullptr;
 		}
-
-		CURL* GetHandle() const {
-			return _handle;
-		}
-
-	private:
-		CURL* _handle;
 	};
 
 	class WebSessionAsyncCURL : public WebSessionBaseCURL
@@ -1380,21 +1369,26 @@ namespace Death { namespace IO {
 		void RequestHasTerminated(WebRequestCURL* request);
 
 	private:
-		using TransferSet = std::unordered_map<CURL*, WebRequestCURL*>;
-		using CurlSocketMap = std::unordered_map<CURL*, curl_socket_t>;
+		// The worker thread is the only thread that ever touches the multi handle - every other thread
+		// files its work into _pendingActions and pokes the worker with WakeWorker(), which uses
+		// curl_multi_wakeup(), the one multi function documented as callable from any thread
+		struct PendingAction {
+			CURL* handle;
+			WebRequestCURL* request;
+			bool add;
+		};
 
-		TransferSet _activeTransfers;
-		CurlSocketMap _activeSockets;
 		CURLM* _handle;
+		std::mutex _mutex;
+		// Both containers hold a reference to their requests (released by the worker), so a request
+		// that is still queued or transferring can never be destroyed underneath the worker
+		std::vector<PendingAction> _pendingActions;
+		std::unordered_map<CURL*, WebRequestCURL*> _activeTransfers;
+		bool _workerRunning;
+		bool _quit;
 		std::thread _workerThread;
-		std::atomic_bool _workerThreadRunning;
 
-		static int SocketCallback(CURL*, curl_socket_t, int, void*, void*);
-
-		void ProcessSocketCallback(CURL*, curl_socket_t, int);
-		void CheckForCompletedTransfers();
-		void StopActiveTransfer(CURL*);
-		void RemoveActiveSocket(CURL*);
+		void WakeWorker();
 
 		static void OnWorkerThread(WebSessionAsyncCURL* _this);
 	};
@@ -1443,41 +1437,34 @@ namespace Death { namespace IO {
 
 	WebSession& WebSession::GetDefault()
 	{
-		if (!_defaultSession.IsOpened()) {
-			_defaultSession = WebSession::New();
-		}
-		return _defaultSession;
+		static WebSession defaultSession = WebSession::New();
+		return defaultSession;
 	}
 
 	WebSessionAsync& WebSessionAsync::GetDefault()
 	{
-		if (!_defaultSessionAsync.IsOpened()) {
-			_defaultSessionAsync = WebSessionAsync::New();
-		}
-		return _defaultSessionAsync;
+		static WebSessionAsync defaultSessionAsync = WebSessionAsync::New();
+		return defaultSessionAsync;
 	}
 
 	WebSessionFactory* WebSessionBase::FindFactory()
 	{
-		if (_factory == nullptr) {
+		static std::unique_ptr<WebSessionFactory> factory = []() -> std::unique_ptr<WebSessionFactory> {
+			std::unique_ptr<WebSessionFactory> result;
 #if defined(DEATH_TARGET_WINDOWS)
-			std::unique_ptr<WebSessionFactory> factory = std::make_unique<WebSessionFactoryWinHTTP>();
-			if (!factory->Initialize()) {
-				return nullptr;
-			}
-			_factory = Death::move(factory);
+			result = std::make_unique<WebSessionFactoryWinHTTP>();
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
-			std::unique_ptr<WebSessionFactory> factory = std::make_unique<WebSessionFactoryCURL>();
-			if (!factory->Initialize()) {
-				return nullptr;
-			}
-			_factory = Death::move(factory);
+			result = std::make_unique<WebSessionFactoryCURL>();
 #else
 #	pragma message("Unsupported platform for Death::IO::WebRequest")
 #endif
-		}
+			if (result != nullptr && !result->Initialize()) {
+				result = nullptr;
+			}
+			return result;
+		}();
 
-		return _factory.get();
+		return factory.get();
 	}
 
 	WebSession WebSession::New()
@@ -2504,6 +2491,29 @@ namespace Death { namespace IO {
 				static_cast<curl_off_t>(ultotal), static_cast<curl_off_t>(ulnow));
 		}
 
+		// Bounds how long a request can be stuck, so an unreachable or stalled endpoint can't keep a background
+		// thread - and with it the whole shutdown - waiting forever. No overall timeout is used, transfers
+		// may take as long as they need as long as they keep making progress.
+		constexpr long ConnectTimeoutSecs = 30;
+		constexpr long StalledSpeedBytesPerSec = 1;
+		constexpr long StalledSpeedTimeoutSecs = 120;
+
+		// Shared caches handed to every easy handle via CURLOPT_SHARE - per-request handles alone would
+		// resolve DNS, negotiate TLS and open a fresh connection for every single request, the share
+		// object gives them a common DNS cache, TLS session cache and connection pool instead.
+		std::mutex _curlShareLock;
+		CURLSH* _curlShare = nullptr;
+
+		void CURLShareLockCallback(CURL*, curl_lock_data, curl_lock_access, void*)
+		{
+			_curlShareLock.lock();
+		}
+
+		void CURLShareUnlockCallback(CURL*, curl_lock_data, void*)
+		{
+			_curlShareLock.unlock();
+		}
+
 		void CURLSetOpt(CURL* handle, CURLoption option, long long value)
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
@@ -2683,7 +2693,7 @@ namespace Death { namespace IO {
 	}
 
 	WebRequestCURL::WebRequestCURL(WebSessionCURL& sessionImpl, StringView url)
-		: WebRequestImpl(sessionImpl), _sessionCURL(nullptr), _handle(sessionImpl.GetHandle()), _bytesSent(0)
+		: WebRequestImpl(sessionImpl), _sessionCURL(nullptr), _handle(curl_easy_init()), _bytesSent(0)
 	{
 		DoStartPrepare(url);
 	}
@@ -2709,6 +2719,17 @@ namespace Death { namespace IO {
 		CURLSetOpt(_handle, CURLOPT_READFUNCTION, CURLRead);
 		CURLSetOpt(_handle, CURLOPT_READDATA, this);
 		CURLSetOpt(_handle, CURLOPT_ACCEPT_ENCODING, "");
+		// The shared DNS cache, TLS session cache and connection pool make this per-request handle reuse
+		// what previous requests already paid for, instead of starting from a cold state every time
+		if (_curlShare != nullptr) {
+			CURLSetOpt(_handle, CURLOPT_SHARE, (const void*)_curlShare);
+		}
+		// Requests are executed on background threads, where libcurl must not use signals to time out
+		// name resolution --- it's unsafe outside the main thread and can wedge the process
+		CURLSetOpt(_handle, CURLOPT_NOSIGNAL, 1L);
+		CURLSetOpt(_handle, CURLOPT_CONNECTTIMEOUT, ConnectTimeoutSecs);
+		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_LIMIT, StalledSpeedBytesPerSec);
+		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_TIME, StalledSpeedTimeoutSecs);
 		// Enable redirection handling
 		CURLSetOpt(_handle, CURLOPT_FOLLOWLOCATION, 1L);
 		// Limit redirect to HTTP
@@ -2756,8 +2777,10 @@ namespace Death { namespace IO {
 
 		if (IsAsync()) {
 			_sessionCURL->RequestHasTerminated(this);
-			curl_easy_cleanup(_handle);
 		}
+
+		// Synchronous requests own their handle as well, so it's always released here
+		curl_easy_cleanup(_handle);
 	}
 
 	WebRequest::Result WebRequestCURL::DoFinishPrepare()
@@ -2919,53 +2942,56 @@ namespace Death { namespace IO {
 		_request.StartRequest();
 	}
 
-	std::int32_t WebSessionBaseCURL::_activeSessions = 0;
 	std::uint32_t WebSessionBaseCURL::_runtimeVersion = 0;
+
+	void WebSessionBaseCURL::EnsureGlobalInitialized()
+	{
+		// Initialized on first use and deliberately never cleaned up - curl_global_cleanup() would have
+		// to run during static destruction while sessions and transfers may still be winding down, and
+		// the operating system reclaims everything at process exit anyway
+		static const bool initialized = []() {
+			if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+				LOGE("Failed to initialize libcurl library");
+				return false;
+			}
+
+			curl_version_info_data* data = curl_version_info(CURLVERSION_NOW);
+			_runtimeVersion = data->version_num;
+
+			CURLSH* share = curl_share_init();
+			if (share != nullptr) {
+				curl_share_setopt(share, CURLSHOPT_LOCKFUNC, CURLShareLockCallback);
+				curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, CURLShareUnlockCallback);
+				curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+				curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+				// Sharing the connection cache is what restores keep-alive across requests, but it only
+				// became reliable with multiple threads in later releases, so it's gated on the runtime
+				if (CurlRuntimeAtLeastVersion(7, 66, 0)) {
+					curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+				}
+				_curlShare = share;
+			}
+			return true;
+		}();
+		(void)initialized;
+	}
 
 	WebSessionBaseCURL::WebSessionBaseCURL(Mode mode)
 		: WebSessionImpl(mode)
 	{
-		if (_activeSessions == 0) {
-			if (curl_global_init(CURL_GLOBAL_ALL)) {
-				LOGE("Failed to initialize libcurl library");
-			} else {
-				curl_version_info_data* data = curl_version_info(CURLVERSION_NOW);
-				_runtimeVersion = data->version_num;
-			}
-		}
-
-		_activeSessions++;
-	}
-
-	WebSessionBaseCURL::~WebSessionBaseCURL()
-	{
-		_activeSessions--;
-		if (_activeSessions == 0) {
-			curl_global_cleanup();
-		}
+		EnsureGlobalInitialized();
 	}
 
 	WebSessionCURL::WebSessionCURL()
-		: WebSessionBaseCURL(Mode::Sync), _handle(nullptr) {}
-
-	WebSessionCURL::~WebSessionCURL()
-	{
-		if (_handle != nullptr) {
-			curl_easy_cleanup(_handle);
-		}
-	}
+		: WebSessionBaseCURL(Mode::Sync) {}
 
 	WebRequestImplPtr WebSessionCURL::CreateRequest(WebSession& session, StringView url)
 	{
-		if (_handle == nullptr) {
-			// Allocate it the first time we need it and keep it later
-			_handle = curl_easy_init();
-		} else {
-			// But when reusing it subsequently, we must reset all the previously set options to prevent
-			// the settings from one request from applying to the subsequent ones.
-			curl_easy_reset(_handle);
-		}
-
+		// The session used to keep one handle around and reset it for every request to reuse connections, but
+		// the default session is shared process-wide, so two threads executing a request at the same time
+		// clobbered each other - libcurl refused the second transfer with "easy handle already used in multi
+		// handle", the error buffer and the response status of one request ended up belonging to the other one,
+		// and resetting the handle underneath a running transfer corrupted it. Every request owns its handle now.
 		return WebRequestImplPtr(new WebRequestCURL(*this, url));
 	}
 
@@ -2976,15 +3002,38 @@ namespace Death { namespace IO {
 	}
 
 	WebSessionAsyncCURL::WebSessionAsyncCURL()
-		: WebSessionBaseCURL(Mode::Async), _handle(nullptr), _workerThreadRunning(false) {}
+		: WebSessionBaseCURL(Mode::Async), _handle(nullptr), _workerRunning(false), _quit(false) {}
 
 	WebSessionAsyncCURL::~WebSessionAsyncCURL()
 	{
+		// Wait for the worker instead of detaching it - a detached worker kept using the multi handle
+		// that was destroyed right below, which could crash any time a process exited mid-transfer
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_quit = true;
+		}
+		WakeWorker();
+		if (_workerThread.joinable()) {
+			_workerThread.join();
+		}
+
+		// Release whatever the worker didn't get to - the handles have to leave the multi handle
+		// before the requests owning them can be released (in practice both containers are already
+		// empty here, because queued and active requests keep the session alive through their
+		// session reference)
+		for (auto& transfer : _activeTransfers) {
+			curl_multi_remove_handle(_handle, transfer.first);
+			transfer.second->Release();
+		}
+		for (PendingAction& action : _pendingActions) {
+			if (action.add) {
+				action.request->Release();
+			}
+		}
+
 		if (_handle != nullptr) {
 			curl_multi_cleanup(_handle);
 		}
-
-		_workerThread.detach();
 	}
 
 	WebRequestImplPtr WebSessionAsyncCURL::CreateRequest(WebSession& session, StringView url)
@@ -2995,13 +3044,13 @@ namespace Death { namespace IO {
 
 	WebRequestImplPtr WebSessionAsyncCURL::CreateRequestAsync(WebSessionAsync& session, StringView url, Function<void(WebRequestEvent&)>&& callback, std::int32_t id)
 	{
-		// Allocate our handle on demand
-		if (_handle == nullptr) {
-			_handle = curl_multi_init();
-			DEATH_ASSERT(_handle != nullptr, "curl_multi_init() failed", {});
-
-			curl_multi_setopt(_handle, CURLMOPT_SOCKETDATA, this);
-			curl_multi_setopt(_handle, CURLMOPT_SOCKETFUNCTION, SocketCallback);
+		{
+			// Allocate the multi handle on demand, requests can be created from any thread
+			std::lock_guard<std::mutex> lock(_mutex);
+			if (_handle == nullptr) {
+				_handle = curl_multi_init();
+				DEATH_ASSERT(_handle != nullptr, "curl_multi_init() failed", {});
+			}
 		}
 
 		return WebRequestImplPtr(new WebRequestCURL(session, *this, url, Death::move(callback), id));
@@ -3009,22 +3058,30 @@ namespace Death { namespace IO {
 
 	bool WebSessionAsyncCURL::StartRequest(WebRequestCURL& request)
 	{
-		// Add request easy handle to multi handle
-		CURL* curl = request.GetHandle();
-		int code = curl_multi_add_handle(_handle, curl);
-		if (code != CURLM_OK) {
-			return false;
+		// The queue (and later the transfer set) owns a reference for as long as the worker knows
+		// about the request, so it can't be destroyed underneath a running transfer
+		request.AddRef();
+
+		bool startWorker = false;
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_pendingActions.push_back(PendingAction{request.GetHandle(), &request, true});
+			if (!_workerRunning) {
+				_workerRunning = true;
+				startWorker = true;
+			}
 		}
 
 		request.SetState(WebRequest::State::Active);
-		_activeTransfers[curl] = &request;
 
-		// Report a timeout to curl to initiate this transfer
-		int runningHandles;
-		curl_multi_socket_action(_handle, CURL_SOCKET_TIMEOUT, 0, &runningHandles);
-
-		if (!_workerThreadRunning.exchange(true)) {
+		if (startWorker) {
+			// A previous worker exits when it runs out of work, collect it before starting a new one
+			if (_workerThread.joinable()) {
+				_workerThread.join();
+			}
 			_workerThread = std::thread(OnWorkerThread, this);
+		} else {
+			WakeWorker();
 		}
 
 		return true;
@@ -3032,16 +3089,29 @@ namespace Death { namespace IO {
 
 	void WebSessionAsyncCURL::CancelRequest(WebRequestCURL* request)
 	{
-		CURL* curl = request->GetHandle();
-		StopActiveTransfer(curl);
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			_pendingActions.push_back(PendingAction{request->GetHandle(), request, false});
+		}
+		WakeWorker();
 
 		request->SetState(WebRequest::State::Cancelled);
 	}
 
 	void WebSessionAsyncCURL::RequestHasTerminated(WebRequestCURL* request)
 	{
-		CURL* curl = request->GetHandle();
-		StopActiveTransfer(curl);
+		// Nothing to do - the pending queue and the transfer set hold a reference, so a request the
+		// worker still knows about can never reach its destructor in the first place
+	}
+
+	void WebSessionAsyncCURL::WakeWorker()
+	{
+#if CURL_AT_LEAST_VERSION(7, 68, 0)
+		// The only function that is safe to call on a multi handle from another thread
+		if (_handle != nullptr && CurlRuntimeAtLeastVersion(7, 68, 0)) {
+			curl_multi_wakeup(_handle);
+		}
+#endif
 	}
 
 	bool WebSessionBaseCURL::CurlRuntimeAtLeastVersion(std::uint32_t major, std::uint32_t minor, std::uint32_t patch)
@@ -3049,96 +3119,107 @@ namespace Death { namespace IO {
 		return (_runtimeVersion >= CURL_VERSION_BITS(major, minor, patch));
 	}
 
-	int WebSessionAsyncCURL::SocketCallback(CURL* curl, curl_socket_t sock, int what, void* userp, void* sp)
-	{
-		auto* session = static_cast<WebSessionAsyncCURL*>(userp);
-		session->ProcessSocketCallback(curl, sock, what);
-		return CURLM_OK;
-	}
-
-	void WebSessionAsyncCURL::ProcessSocketCallback(CURL* curl, curl_socket_t s, int what)
-	{
-		switch (what) {
-			case CURL_POLL_IN:
-			case CURL_POLL_OUT:
-			case CURL_POLL_INOUT: {
-				_activeSockets[curl] = s;
-				break;
-			}
-
-			case CURL_POLL_REMOVE:
-				RemoveActiveSocket(curl);
-				break;
-		}
-	}
-
-	void WebSessionAsyncCURL::CheckForCompletedTransfers()
-	{
-		std::int32_t msgQueueCount;
-		while (CURLMsg* msg = curl_multi_info_read(_handle, &msgQueueCount)) {
-			if (msg->msg == CURLMSG_DONE) {
-				CURL* curl = msg->easy_handle;
-				auto it = _activeTransfers.find(curl);
-				if (it != _activeTransfers.end()) {
-					WebRequestCURL* request = it->second;
-					curl_multi_remove_handle(_handle, curl);
-					request->HandleCompletion();
-					_activeTransfers.erase(it);
-					RemoveActiveSocket(curl);
-				}
-			}
-		}
-	}
-
-	void WebSessionAsyncCURL::StopActiveTransfer(CURL* curl)
-	{
-		auto it = _activeTransfers.find(curl);
-		if (it != _activeTransfers.end()) {
-			curl_socket_t activeSocket = CURL_SOCKET_BAD;
-			auto it2 = _activeSockets.find(curl);
-			if (it2 != _activeSockets.end()) {
-				activeSocket = it2->second;
-			}
-
-			// Remove the CURL easy handle from the CURLM multi handle
-			curl_multi_remove_handle(_handle, curl);
-
-			// If the transfer was active, close its socket
-			if (activeSocket != CURL_SOCKET_BAD) {
-				::close(activeSocket);
-			}
-
-			RemoveActiveSocket(curl);
-			_activeTransfers.erase(it);
-		}
-	}
-
-	void WebSessionAsyncCURL::RemoveActiveSocket(CURL* curl)
-	{
-		auto it = _activeSockets.find(curl);
-		if (it != _activeSockets.end()) {
-			_activeSockets.erase(it);
-		}
-	}
-
 	void WebSessionAsyncCURL::OnWorkerThread(WebSessionAsyncCURL* _this)
 	{
-		int runningHandles;
-		do {
-			if (curl_multi_perform(_this->_handle, &runningHandles) != CURLM_OK) {
-				LOGE("curl_multi_perform() failed");
-				break;
-			}
-			if (curl_multi_wait(_this->_handle, nullptr, 0, 10000, nullptr) != CURLM_OK) {
-				LOGE("curl_multi_wait() failed");
-				break;
+		std::vector<PendingAction> actions;
+
+		while (true) {
+			{
+				std::unique_lock<std::mutex> lock(_this->_mutex);
+				if (_this->_quit) {
+					return;
+				}
+				if (_this->_pendingActions.empty() && _this->_activeTransfers.empty()) {
+					// Out of work - the flag is cleared under the same lock the enqueue uses, so no
+					// request can slip in unnoticed, the next one just starts a fresh worker
+					_this->_workerRunning = false;
+					return;
+				}
+				actions.swap(_this->_pendingActions);
 			}
 
-			_this->CheckForCompletedTransfers();
-		} while(runningHandles > 0);
+			// Apply the queued actions - only this thread ever touches the multi handle
+			for (PendingAction& action : actions) {
+				if (action.add) {
+					if (curl_multi_add_handle(_this->_handle, action.handle) == CURLM_OK) {
+						std::lock_guard<std::mutex> lock(_this->_mutex);
+						_this->_activeTransfers[action.handle] = action.request;
+					} else {
+						action.request->SetState(WebRequest::State::Failed, "curl_multi_add_handle() failed"_s);
+						action.request->Release();
+					}
+				} else {
+					// Cancellation - the state was already set by CancelRequest(), and the entry is
+					// gone already if the transfer completed before the cancellation was processed
+					WebRequestCURL* request = nullptr;
+					{
+						std::lock_guard<std::mutex> lock(_this->_mutex);
+						auto it = _this->_activeTransfers.find(action.handle);
+						if (it != _this->_activeTransfers.end()) {
+							request = it->second;
+							_this->_activeTransfers.erase(it);
+						}
+					}
+					if (request != nullptr) {
+						curl_multi_remove_handle(_this->_handle, action.handle);
+						request->Release();
+					}
+				}
+			}
+			actions.clear();
 
-		_this->_workerThread.detach();
-		_this->_workerThreadRunning = false;
+			int runningHandles = 0;
+			curl_multi_perform(_this->_handle, &runningHandles);
+
+			int msgQueueCount;
+			while (CURLMsg* msg = curl_multi_info_read(_this->_handle, &msgQueueCount)) {
+				if (msg->msg != CURLMSG_DONE) {
+					continue;
+				}
+				CURL* handle = msg->easy_handle;
+				curl_multi_remove_handle(_this->_handle, handle);
+
+				WebRequestCURL* request;
+				{
+					std::lock_guard<std::mutex> lock(_this->_mutex);
+					auto it = _this->_activeTransfers.find(handle);
+					request = (it != _this->_activeTransfers.end() ? it->second : nullptr);
+					if (request != nullptr) {
+						_this->_activeTransfers.erase(it);
+					}
+				}
+				if (request != nullptr) {
+					request->HandleCompletion();
+					request->Release();
+				}
+			}
+
+			// Skip the wait entirely if more work arrived while the actions above were being applied
+			{
+				std::lock_guard<std::mutex> lock(_this->_mutex);
+				if (!_this->_pendingActions.empty() || _this->_quit) {
+					continue;
+				}
+			}
+
+			// With curl_multi_wakeup() available the sleep can be long, because WakeWorker() interrupts
+			// it - without it the wait has to stay short enough for queued actions to be noticed
+			int timeoutMs = 500;
+#if CURL_AT_LEAST_VERSION(7, 68, 0)
+			if (CurlRuntimeAtLeastVersion(7, 68, 0)) {
+				timeoutMs = 10000;
+			}
+#endif
+#if CURL_AT_LEAST_VERSION(7, 66, 0)
+			if (CurlRuntimeAtLeastVersion(7, 66, 0)) {
+				// Unlike curl_multi_wait(), curl_multi_poll() sleeps even with no sockets to monitor
+				curl_multi_poll(_this->_handle, nullptr, 0, timeoutMs, nullptr);
+			} else
+#endif
+			{
+				curl_multi_wait(_this->_handle, nullptr, 0, timeoutMs, nullptr);
+			}
+		}
 	}
 
 #endif

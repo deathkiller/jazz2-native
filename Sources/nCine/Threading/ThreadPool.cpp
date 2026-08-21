@@ -11,27 +11,35 @@ namespace nCine
 	}
 
 	ThreadPool::ThreadPool(std::size_t numThreads)
-		: _threads(numThreads), _numThreads(numThreads)
 	{
 		_threadStruct.queue = &_queue;
 		_threadStruct.queueMutex = &_queueMutex;
 		_threadStruct.queueCV = &_queueCV;
 		_threadStruct.shouldQuit = false;
 
-		_quitMutex.Lock();
+		// Only reserve the storage, the workers are appended below --- sizing the container here would
+		// prepend that many default-constructed threads and the destructor would join those instead
+		_threads.reserve(numThreads);
 
-		for (std::size_t i = 0; i < _numThreads; i++) {
+		for (std::size_t i = 0; i < numThreads; i++) {
 			_threads.emplace_back(WorkerFunction, &_threadStruct);
 		}
 	}
 
 	ThreadPool::~ThreadPool()
 	{
+		// The flag has to be set under the same lock the workers use to evaluate it, otherwise a worker
+		// that is between the check and the wait would miss the broadcast and never wake up again
+		_queueMutex.Lock();
 		_threadStruct.shouldQuit = true;
+		_queueMutex.Unlock();
+
 		_queueCV.Broadcast();
 
-		for (std::size_t i = 0; i < _numThreads; i++) {
-			_threads[i].Join();
+		// All workers must be joined before the queue, the mutex and the condition variable they still
+		// reference are destroyed with this object
+		for (auto& thread : _threads) {
+			thread.Join();
 		}
 	}
 

@@ -733,7 +733,7 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				std::int64_t result; std::string_view endpoints;
+				std::int64_t result = -1; std::string_view endpoints;
 				if (doc["r"].get(result) == Json::SUCCESS && result == 0 &&
 					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
 					_onlineSuccess = true;
@@ -789,11 +789,11 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				bool success;
-				if (doc["r"].get(success) == Json::SUCCESS && success) {
+				std::int64_t result = -1;
+				if (doc["r"].get(result) == Json::SUCCESS && result == 0) {
 					LOGD("Server delisted successfully");
 				} else {
-					LOGE("Failed to delist the server: Request rejected");
+					LOGE("Failed to delist the server: Request rejected ({})", result);
 				}
 			} else {
 				LOGE("Failed to delist the server: Response cannot be parsed: {}", StringView(errors));

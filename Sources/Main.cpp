@@ -14,6 +14,12 @@
 #	endif
 #endif
 
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	include <cerrno>
+#	include <cstring>
+#	include <unistd.h>
+#endif
+
 #include "nCine/I18n.h"
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
@@ -1128,6 +1134,54 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	StartProcessingStdin();
 }
 
+#if !defined(DEATH_TARGET_WINDOWS)
+/** @brief Reads a single line from standard input, returns `false` on end of input or an error */
+static bool ReadLineFromStdin(String& line)
+{
+	static char buffer[4096];
+
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+	// Reading the descriptor directly instead of using `fgets()` on purpose --- a thread parked in stdio keeps
+	// the lock of `stdin` held, and the stream cleanup that runs when the process exits then blocks on it, so
+	// the server would never finish shutting down unless the input happened to be closed first
+	static std::size_t bufferLength = 0;
+
+	while (true) {
+		if (char* newline = (char*)std::memchr(buffer, '\n', bufferLength)) {
+			std::size_t lineLength = (std::size_t)(newline - buffer);
+			line = String(buffer, lineLength);
+			bufferLength -= lineLength + 1;
+			std::memmove(buffer, newline + 1, bufferLength);
+			return true;
+		}
+
+		if (bufferLength >= sizeof(buffer)) {
+			// The line doesn't fit in the buffer, report what was read so far and continue with the rest
+			line = String(buffer, bufferLength);
+			bufferLength = 0;
+			return true;
+		}
+
+		ssize_t bytesRead = ::read(STDIN_FILENO, buffer + bufferLength, sizeof(buffer) - bufferLength);
+		if (bytesRead > 0) {
+			bufferLength += (std::size_t)bytesRead;
+		} else if (bytesRead < 0 && errno == EINTR) {
+			// Interrupted by a signal, e.g., by the handler that begins the shutdown
+			continue;
+		} else {
+			return false;
+		}
+	}
+#	else
+	if (::fgets(buffer, sizeof(buffer), stdin) == nullptr) {
+		return false;
+	}
+	line = buffer;
+	return true;
+#	endif
+}
+#endif
+
 void GameEventHandler::StartProcessingStdin()
 {
 	Thread thread([](void* arg) {
@@ -1137,8 +1191,6 @@ void GameEventHandler::StartProcessingStdin()
 #		if defined(DEATH_TARGET_WINDOWS)
 		wchar_t bufferW[4096];
 		HANDLE hStdIn = ::GetStdHandle(STD_INPUT_HANDLE);
-#		else
-		char buffer[4096];
 #		endif
 
 		while (true) {
@@ -1150,7 +1202,8 @@ void GameEventHandler::StartProcessingStdin()
 			}
 			String buffer = Utf8::FromUtf16(arrayView(bufferW, charsRead));
 #		else
-			if (!::fgets(buffer, sizeof(buffer), stdin)) {
+			String buffer;
+			if (!ReadLineFromStdin(buffer)) {
 				LOGW("Failed to read from stdin");
 				break;
 			}
