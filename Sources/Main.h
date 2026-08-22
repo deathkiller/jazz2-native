@@ -11,7 +11,7 @@
 #endif
 /** @brief Application version */
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "3.7.0"
+#	define NCINE_VERSION "3.8.0"
 #endif
 /**
 	@brief Application multiplayer protocol version
@@ -22,7 +22,7 @@
 	still play together.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
-#	define NCINE_PROTOCOL_VERSION "3.7.1"
+#	define NCINE_PROTOCOL_VERSION "3.8.0"
 #endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)

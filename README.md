@@ -56,7 +56,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 <sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-bin)
 [![Debian](https://img.shields.io/debian/v/jazz2-native/unstable?label=Debian&logo=debian&logoColor=ffffff)](https://tracker.debian.org/pkg/jazz2-native)
-[![Flathub](https://img.shields.io/flathub/v/tk.deat.Jazz2Resurrection?label=Flathub&logo=flathub&logoColor=ffffff)](https://flathub.org/apps/tk.deat.Jazz2Resurrection)
+[![Flathub](https://img.shields.io/flathub/v/dev.de4th.jazz2?label=Flathub&logo=flathub&logoColor=ffffff)](https://flathub.org/apps/dev.de4th.jazz2)
 [![Gentoo](https://img.shields.io/badge/Gentoo-grey?logo=gentoo&logoColor=ffffff)](https://packages.gentoo.org/packages/games-arcade/jazz2)
 [![NixOS](https://img.shields.io/badge/NixOS-grey?logo=nixos&logoColor=ffffff)](https://search.nixos.org/packages?channel=unstable&show=jazz2&from=0&size=50&sort=relevance&type=packages&query=jazz2)
 [![OpenSUSE](https://img.shields.io/obs/games/jazz2/openSUSE_Tumbleweed/x86_64?label=OpenSUSE&logo=opensuse&logoColor=ffffff)](https://build.opensuse.org/package/show/games/jazz2)
