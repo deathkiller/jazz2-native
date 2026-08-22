@@ -42,6 +42,20 @@ namespace Jazz2::Multiplayer
 	class WebhookClient
 	{
 	public:
+		/**
+			@brief Single row of a leaderboard included in a webhook notification
+
+			The name is only read while the event is being serialized, so it can point to a player name owned
+			elsewhere. @ref Value is rendered with the unit label passed alongside the whole list.
+		*/
+		struct LeaderboardEntry
+		{
+			/** @brief Player name */
+			StringView Name;
+			/** @brief Score in the unit described by the accompanying label */
+			std::uint32_t Value;
+		};
+
 		/** @brief Creates an instance for a running server and starts the delivery thread */
 		WebhookClient(NetworkManager* server);
 		/** @brief Flushes still pending events and stops the delivery thread */
@@ -63,16 +77,27 @@ namespace Jazz2::Multiplayer
 		void OnPlayerConnected(StringView playerName, std::uint32_t playerCount, std::uint32_t maxPlayerCount);
 		/** @brief Called when a player left the server, including moderation actions described by @p reason */
 		void OnPlayerDisconnected(StringView playerName, Reason reason, std::uint32_t playerCount, std::uint32_t maxPlayerCount);
-		/** @brief Called when a level has been loaded, @p playlistSize is `0` if no playlist is active */
-		void OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, std::int32_t playlistIndex, std::int32_t playlistSize);
+		/**
+		 * @brief Called when a level has been loaded, @p playlistSize is `0` if no playlist is active
+		 *
+		 * @p targetLabel and @p targetValue describe the win condition of the round (e.g. @cpp "Kills" @ce
+		 * and @cpp 10 @ce); pass a zero value to omit it, for example when the target is auto-weighted.
+		 */
+		void OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, bool elimination,
+							StringView targetLabel, std::uint32_t targetValue, std::int32_t playlistIndex, std::int32_t playlistSize);
 		/** @brief Called when the round countdown finished and the round is running */
 		void OnRoundStarted(StringView levelDisplayName, MpGameMode gameMode);
-		/** @brief Called when the round ended, @p winnerName is empty if the round ended in a draw */
-		void OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode);
-		/** @brief Called when the round ended with a winning team */
-		void OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode);
-		/** @brief Called when a player won the championship */
-		void OnChampionshipEnded(StringView championName, std::uint32_t points);
+		/**
+		 * @brief Called when the round ended, @p winnerName is empty if the round ended in a draw
+		 *
+		 * @p standings are the final rankings (best first) rendered as a leaderboard, @p scoreLabel is their
+		 * plural unit (e.g. @cpp "kills" @ce). Both can be empty in game modes without meaningful standings.
+		 */
+		void OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> standings = {}, StringView scoreLabel = {});
+		/** @brief Called when the round ended with a winning team, @p teamMembers are listed in the notification */
+		void OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> teamMembers = {}, StringView scoreLabel = {});
+		/** @brief Called when a player won the championship, @p standings are the final championship rankings */
+		void OnChampionshipEnded(StringView championName, std::uint32_t points, ArrayView<const LeaderboardEntry> standings = {});
 		/** @brief Called when a chat message has been sent */
 		void OnChatMessage(StringView playerName, StringView message, bool isAdmin);
 		/** @brief Called when a player was roasted, @p attackerName is empty if roasted by the environment */
@@ -121,6 +146,12 @@ namespace Jazz2::Multiplayer
 	class WebhookClient
 	{
 	public:
+		struct LeaderboardEntry
+		{
+			StringView Name;
+			std::uint32_t Value;
+		};
+
 		WebhookClient(NetworkManager* server) {}
 
 		WebhookClient(const WebhookClient&) = delete;
@@ -133,11 +164,12 @@ namespace Jazz2::Multiplayer
 		void OnServerStopping() {}
 		void OnPlayerConnected(StringView playerName, std::uint32_t playerCount, std::uint32_t maxPlayerCount) {}
 		void OnPlayerDisconnected(StringView playerName, Reason reason, std::uint32_t playerCount, std::uint32_t maxPlayerCount) {}
-		void OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, std::int32_t playlistIndex, std::int32_t playlistSize) {}
+		void OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, bool elimination,
+							StringView targetLabel, std::uint32_t targetValue, std::int32_t playlistIndex, std::int32_t playlistSize) {}
 		void OnRoundStarted(StringView levelDisplayName, MpGameMode gameMode) {}
-		void OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode) {}
-		void OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode) {}
-		void OnChampionshipEnded(StringView championName, std::uint32_t points) {}
+		void OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> standings = {}, StringView scoreLabel = {}) {}
+		void OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> teamMembers = {}, StringView scoreLabel = {}) {}
+		void OnChampionshipEnded(StringView championName, std::uint32_t points, ArrayView<const LeaderboardEntry> standings = {}) {}
 		void OnChatMessage(StringView playerName, StringView message, bool isAdmin) {}
 		void OnPlayerRoasted(StringView playerName, StringView attackerName) {}
 		void OnPlayerLapFinished(StringView playerName, float lapSecs, std::uint32_t lap, std::uint32_t totalLaps) {}

@@ -197,10 +197,11 @@ namespace Death { namespace IO {
 		WebSessionAsync* const _session;
 		Function<void(WebRequestEvent&)> _callback;
 		const std::int32_t _id;
-		WebRequest::State _state;
-		std::int64_t _bytesReceived;
+		// Written on whichever thread drives the transfer, read from any thread polling the request
+		std::atomic<WebRequest::State> _state;
+		std::atomic<std::int64_t> _bytesReceived;
 		String _dataText;
-		bool _cancelled;
+		std::atomic<bool> _cancelled;
 
 		virtual void DoCancel() = 0;
 
@@ -379,11 +380,11 @@ namespace Death { namespace IO {
 	{
 		DEATH_DEBUG_ASSERT(IsAsync());
 
-		if (_cancelled) {
+		// Atomic exchange, so two concurrent cancellations can't both reach DoCancel()
+		if (_cancelled.exchange(true)) {
 			return;
 		}
 
-		_cancelled = true;
 		DoCancel();
 	}
 
@@ -1124,11 +1125,12 @@ namespace Death { namespace IO {
 		WebSessionWinHTTP& _sessionImpl;
 		String _url;
 		HINTERNET _connect;
-		HINTERNET _request;
+		// Cleared by DoCancel() from an arbitrary thread while callback threads may be reading it
+		std::atomic<HINTERNET> _request;
 		ComPtr<WebResponseWinHTTP> _response;
 		ComPtr<WebAuthChallengeWinHTTP> _authChallenge;
 		SmallVector<char, 0> _dataWriteBuffer;
-		std::int64_t _dataWritten;
+		std::atomic<std::int64_t> _dataWritten;
 		WebCredentials _credentialsFromURL;
 		bool _tryCredentialsFromURL;
 		bool _tryProxyCredentials;
@@ -1177,7 +1179,7 @@ namespace Death { namespace IO {
 		bool SetProxy(const WebProxy& proxy) override;
 
 		HINTERNET GetHandle() const noexcept {
-			return _handle;
+			return _handle.load(std::memory_order_acquire);
 		}
 
 		WebSessionHandle GetNativeHandle() const noexcept override {
@@ -1193,7 +1195,9 @@ namespace Death { namespace IO {
 		}
 
 	private:
-		HINTERNET _handle;
+		// The default session is shared process-wide and requests can be created from any thread, so
+		// the lazily opened session handle is published atomically (see Open())
+		std::atomic<HINTERNET> _handle;
 		WebCredentials _proxyCredentials;
 		String _proxyURLWithoutCredentials;
 
@@ -1309,7 +1313,8 @@ namespace Death { namespace IO {
 		struct curl_slist* _headerList = nullptr;
 		ComPtr<WebResponseCURL> _response;
 		ComPtr<WebAuthChallengeCURL> _authChallenge;
-		std::int64_t _bytesSent;
+		// Written by the transfer thread in the read callback, read from any thread polling progress
+		std::atomic<std::int64_t> _bytesSent;
 
 		void DoStartPrepare(StringView url);
 		WebRequest::Result DoFinishPrepare();
@@ -1605,6 +1610,14 @@ namespace Death { namespace IO {
 		_dataBuffer = dataBuffer;
 	}
 
+	// Bounds how long a request can be stuck, shared by all backends - an unreachable or stalled
+	// endpoint must not be able to park a background thread (and with it the whole shutdown) forever.
+	// No overall timeout is imposed, transfers may take as long as they need while they keep making
+	// progress: "connect" covers name resolution, connecting and sending the request, "stalled" is
+	// an inactivity bound while receiving the response.
+	constexpr std::int32_t WebRequestConnectTimeoutSecs = 30;
+	constexpr std::int32_t WebRequestStalledTimeoutSecs = 120;
+
 #if defined(DEATH_TARGET_WINDOWS)
 
 	constexpr std::int32_t WebRequestBufferSize = 64 * 1024;
@@ -1639,6 +1652,7 @@ namespace Death { namespace IO {
 			LoadFunction(WinHttpReadData)
 			LoadFunction(WinHttpQueryAuthSchemes)
 			LoadFunction(WinHttpSetCredentials)
+			LoadFunction(WinHttpSetTimeouts)
 			LoadFunction(WinHttpOpen)
 
 			#undef LoadFunction
@@ -1680,6 +1694,8 @@ namespace Death { namespace IO {
 		static WinHttpQueryAuthSchemes_t WinHttpQueryAuthSchemes;
 		typedef BOOL(WINAPI* WinHttpSetCredentials_t)(HINTERNET, DWORD, DWORD, LPCWSTR, LPCWSTR, LPVOID);
 		static WinHttpSetCredentials_t WinHttpSetCredentials;
+		typedef BOOL(WINAPI* WinHttpSetTimeouts_t)(HINTERNET, int, int, int, int);
+		static WinHttpSetTimeouts_t WinHttpSetTimeouts;
 		typedef HINTERNET(WINAPI* WinHttpOpen_t)(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
 		static WinHttpOpen_t WinHttpOpen;
 
@@ -1703,6 +1719,7 @@ namespace Death { namespace IO {
 	WinHTTP::WinHttpReadData_t WinHTTP::WinHttpReadData;
 	WinHTTP::WinHttpQueryAuthSchemes_t WinHTTP::WinHttpQueryAuthSchemes;
 	WinHTTP::WinHttpSetCredentials_t WinHTTP::WinHttpSetCredentials;
+	WinHTTP::WinHttpSetTimeouts_t WinHTTP::WinHttpSetTimeouts;
 	WinHTTP::WinHttpOpen_t WinHTTP::WinHttpOpen;
 
 	// Define potentially missing constants
@@ -1711,6 +1728,9 @@ namespace Death { namespace IO {
 	#endif
 	#if !defined(WINHTTP_PROTOCOL_FLAG_HTTP2)
 	#	define WINHTTP_PROTOCOL_FLAG_HTTP2 0x1
+	#endif
+	#if !defined(WINHTTP_PROTOCOL_FLAG_HTTP3)
+	#	define WINHTTP_PROTOCOL_FLAG_HTTP3 0x2
 	#endif
 	#if !defined(WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL)
 	#	define WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL 133
@@ -2196,8 +2216,23 @@ namespace Death { namespace IO {
 
 	void WebRequestWinHTTP::DoCancel()
 	{
-		WinHTTP::WinHttpCloseHandle(_request);
-		_request = nullptr;
+		// Closing the handle is the documented way to abort an asynchronous request - the outstanding
+		// operation fails with ERROR_WINHTTP_OPERATION_CANCELLED and that callback records the cancelled
+		// state (the reference taken by the Active state keeps the object alive until then). The atomic
+		// exchange makes sure the handle is closed exactly once, while callbacks may still read it.
+		HINTERNET request = _request.exchange(NULL);
+		if (request != NULL) {
+			WinHTTP::WinHttpCloseHandle(request);
+		}
+
+		// In quiescent states no operation is outstanding, so no callback is coming to record the
+		// cancellation - it has to be recorded here. The state machine releases the self-reference
+		// held by the Active state, which these states no longer hold, so it's taken first to balance.
+		WebRequest::State state = GetState();
+		if (state == WebRequest::State::Idle || state == WebRequest::State::Unauthorized) {
+			AddRef();
+			SetState(WebRequest::State::Cancelled);
+		}
 	}
 
 	WebResponseWinHTTP::WebResponseWinHTTP(WebRequestWinHTTP& request)
@@ -2344,25 +2379,44 @@ namespace Death { namespace IO {
 
 		const auto& headers = GetHeaders();
 		auto userAgent = headers.find("User-Agent"_s);
-		_handle = WinHTTP::WinHttpOpen(userAgent != headers.end() ? Utf8::ToUtf16(userAgent->second) : nullptr,
+		HINTERNET handle = WinHTTP::WinHttpOpen(userAgent != headers.end() ? Utf8::ToUtf16(userAgent->second) : nullptr,
 			accessType, (!proxyName.empty() ? proxyName : WINHTTP_NO_PROXY_NAME), WINHTTP_NO_PROXY_BYPASS, flags);
-		if (_handle == NULL) {
+		if (handle == NULL) {
 			return false;
 		}
 
-		// Enable HTTP/2 (available since Windows 10 1607)
-		WinHTTPSetOption(_handle, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL,
-						 WINHTTP_PROTOCOL_FLAG_HTTP2);
+		// Enable HTTP/2 (available since Windows 10 1607) and HTTP/3 (available since Windows 11) -
+		// the option is rejected as a whole on systems that don't know all the flags, so retry with
+		// HTTP/2 alone when the combination fails
+		DWORD protocols = WINHTTP_PROTOCOL_FLAG_HTTP2 | WINHTTP_PROTOCOL_FLAG_HTTP3;
+		if (!WinHTTP::WinHttpSetOption(handle, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, &protocols, sizeof(protocols))) {
+			WinHTTPSetOption(handle, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL, WINHTTP_PROTOCOL_FLAG_HTTP2);
+		}
 
 		// Enable GZIP and DEFLATE (available since Windows 8.1)
-		WinHTTPSetOption(_handle, WINHTTP_OPTION_DECOMPRESSION,
+		WinHTTPSetOption(handle, WINHTTP_OPTION_DECOMPRESSION,
 						 WINHTTP_DECOMPRESSION_FLAG_ALL);
 
-		// Enable modern TLS on older Windows versions
-		if (Environment::IsWindows8()) {
-			WinHTTPSetOption(_handle, WINHTTP_OPTION_SECURE_PROTOCOLS,
-							 WINHTTP_FLAG_SECURE_PROTOCOL_SSL3 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1 |
-							 WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2);
+		// Enable modern TLS on old Windows versions, where TLS 1.1/1.2 exist but are disabled by default
+		// (SSL 3.0 stays off - nothing supported speaks it anymore). From Windows 8 up the defaults are
+		// left alone, so the system can also negotiate TLS 1.3, which a fixed mask would exclude.
+		if (!Environment::IsWindows8()) {
+			WinHTTPSetOption(handle, WINHTTP_OPTION_SECURE_PROTOCOLS,
+							 WINHTTP_FLAG_SECURE_PROTOCOL_TLS1 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1 |
+							 WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2);
+		}
+
+		// The receive timeout is an inactivity timeout, so long downloads that keep making progress
+		// are unaffected (see the shared constants for the rationale)
+		WinHTTP::WinHttpSetTimeouts(handle,
+			WebRequestConnectTimeoutSecs * 1000, WebRequestConnectTimeoutSecs * 1000,
+			WebRequestConnectTimeoutSecs * 1000, WebRequestStalledTimeoutSecs * 1000);
+
+		// Another thread may have opened the session in parallel, the first one wins and the loser
+		// discards its own handle - requests always read the winning handle through GetHandle()
+		HINTERNET expected = NULL;
+		if (!_handle.compare_exchange_strong(expected, handle)) {
+			WinHTTP::WinHttpCloseHandle(handle);
 		}
 
 		return true;
@@ -2491,17 +2545,13 @@ namespace Death { namespace IO {
 				static_cast<curl_off_t>(ultotal), static_cast<curl_off_t>(ulnow));
 		}
 
-		// Bounds how long a request can be stuck, so an unreachable or stalled endpoint can't keep a background
-		// thread - and with it the whole shutdown - waiting forever. No overall timeout is used, transfers
-		// may take as long as they need as long as they keep making progress.
-		constexpr long ConnectTimeoutSecs = 30;
-		constexpr long StalledSpeedBytesPerSec = 1;
-		constexpr long StalledSpeedTimeoutSecs = 120;
-
-		// Shared caches handed to every easy handle via CURLOPT_SHARE - per-request handles alone would
-		// resolve DNS, negotiate TLS and open a fresh connection for every single request, the share
-		// object gives them a common DNS cache, TLS session cache and connection pool instead.
-		std::mutex _curlShareLock;
+		// Shared DNS cache and TLS session cache for all easy handles (CURLOPT_SHARE), so per-request
+		// handles skip repeated lookups and full TLS handshakes. libcurl nests these callbacks only
+		// when the connection cache is shared (curl/curl#2218), which is deliberately not done here -
+		// if CURL_LOCK_DATA_CONNECT is ever added back, this lock must become recursive, a plain mutex
+		// self-deadlocks on the first transfer. Intentionally leaked, so a request still finishing on
+		// some thread during static destruction can't touch a destroyed mutex.
+		std::mutex& _curlShareLock = *new std::mutex();
 		CURLSH* _curlShare = nullptr;
 
 		void CURLShareLockCallback(CURL*, curl_lock_data, curl_lock_access, void*)
@@ -2725,11 +2775,12 @@ namespace Death { namespace IO {
 			CURLSetOpt(_handle, CURLOPT_SHARE, (const void*)_curlShare);
 		}
 		// Requests are executed on background threads, where libcurl must not use signals to time out
-		// name resolution --- it's unsafe outside the main thread and can wedge the process
+		// name resolution - it's unsafe outside the main thread and can wedge the process
 		CURLSetOpt(_handle, CURLOPT_NOSIGNAL, 1L);
-		CURLSetOpt(_handle, CURLOPT_CONNECTTIMEOUT, ConnectTimeoutSecs);
-		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_LIMIT, StalledSpeedBytesPerSec);
-		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_TIME, StalledSpeedTimeoutSecs);
+		CURLSetOpt(_handle, CURLOPT_CONNECTTIMEOUT, (long)WebRequestConnectTimeoutSecs);
+		// Stalled means making no progress at all (under 1 B/s) for the shared inactivity bound
+		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
+		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_TIME, (long)WebRequestStalledTimeoutSecs);
 		// Enable redirection handling
 		CURLSetOpt(_handle, CURLOPT_FOLLOWLOCATION, 1L);
 		// Limit redirect to HTTP
@@ -2960,16 +3011,20 @@ namespace Death { namespace IO {
 
 			CURLSH* share = curl_share_init();
 			if (share != nullptr) {
-				curl_share_setopt(share, CURLSHOPT_LOCKFUNC, CURLShareLockCallback);
-				curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, CURLShareUnlockCallback);
-				curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-				curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-				// Sharing the connection cache is what restores keep-alive across requests, but it only
-				// became reliable with multiple threads in later releases, so it's gated on the runtime
-				if (CurlRuntimeAtLeastVersion(7, 66, 0)) {
-					curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+				// Without working lock callbacks the shared caches would race, so the share is used
+				// only when both were installed. The connection cache (CURL_LOCK_DATA_CONNECT) is
+				// deliberately NOT shared between concurrent threads - the early crashes (curl/curl#2132,
+				// #2219) were patched back in 7.58, but the maintainers still consider the implementation
+				// incomplete for that: the documentation says unsupported, libcurl's own TODO 1.4 lists
+				// thread-safe shared connection caching as not implemented (see also curl/curl#12895)
+				if (curl_share_setopt(share, CURLSHOPT_LOCKFUNC, CURLShareLockCallback) == CURLSHE_OK &&
+					curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, CURLShareUnlockCallback) == CURLSHE_OK) {
+					curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+					curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+					_curlShare = share;
+				} else {
+					curl_share_cleanup(share);
 				}
-				_curlShare = share;
 			}
 			return true;
 		}();
@@ -3107,9 +3162,17 @@ namespace Death { namespace IO {
 	void WebSessionAsyncCURL::WakeWorker()
 	{
 #if CURL_AT_LEAST_VERSION(7, 68, 0)
-		// The only function that is safe to call on a multi handle from another thread
-		if (_handle != nullptr && CurlRuntimeAtLeastVersion(7, 68, 0)) {
-			curl_multi_wakeup(_handle);
+		if (CurlRuntimeAtLeastVersion(7, 68, 0)) {
+			CURLM* handle;
+			{
+				// The handle is created lazily under the same lock, so it must not be read unsynchronized
+				std::lock_guard<std::mutex> lock(_mutex);
+				handle = _handle;
+			}
+			if (handle != nullptr) {
+				// The only function that is safe to call on a multi handle from another thread
+				curl_multi_wakeup(handle);
+			}
 		}
 #endif
 	}

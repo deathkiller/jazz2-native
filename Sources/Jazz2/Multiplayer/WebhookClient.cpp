@@ -30,6 +30,9 @@ namespace Jazz2::Multiplayer
 		// Discord limits the webhook user name to 80 characters
 		constexpr std::size_t MaxServerIdentityLength = 80;
 		constexpr std::size_t MaxChatMessageLength = 512;
+		// Kept well below the 1024-character limit of a single embed field
+		constexpr std::size_t MaxLeaderboardRows = 5;
+		constexpr std::size_t MaxTeamMemberRows = 10;
 
 		void AppendRaw(SmallVectorImpl<char>& out, StringView text)
 		{
@@ -72,6 +75,87 @@ namespace Jazz2::Multiplayer
 					out.push_back('\\');
 				}
 				out.push_back(c);
+			}
+		}
+
+		// "12 kills" but "1 kill"
+		void AppendScoreLabel(SmallVectorImpl<char>& out, std::uint32_t value, StringView scoreLabel)
+		{
+			if (value == 1 && scoreLabel.hasSuffix('s')) {
+				AppendRaw(out, scoreLabel.exceptSuffix(std::size_t(1)));
+			} else {
+				AppendRaw(out, scoreLabel);
+			}
+		}
+
+		// One row per line as subtext (Discord renders "-# " lines in a smaller font), medals for the podium
+		void AppendRankedLeaderboard(SmallVectorImpl<char>& out, ArrayView<const WebhookClient::LeaderboardEntry> entries,
+									 StringView scoreLabel, std::size_t maxRows)
+		{
+			static const StringView Medals[] = {
+				"\xF0\x9F\xA5\x87"_s /* 🥇 */, "\xF0\x9F\xA5\x88"_s /* 🥈 */, "\xF0\x9F\xA5\x89"_s /* 🥉 */
+			};
+
+			std::size_t shown = (entries.size() < maxRows ? entries.size() : maxRows);
+			char buffer[64];
+
+			for (std::size_t i = 0; i < shown; i++) {
+				AppendRaw(out, "\n-# "_s);
+
+				if (i < arraySize(Medals)) {
+					AppendRaw(out, Medals[i]);
+					AppendRaw(out, "\xE2\x80\x82"_s /* en space */);
+				} else {
+					std::size_t length = formatInto(buffer, "`{}.`\xE2\x80\x82", (std::uint32_t)(i + 1));
+					AppendRaw(out, { buffer, length });
+				}
+
+				AppendSanitizedName(out, entries[i].Name);
+
+				if (!scoreLabel.empty()) {
+					// Em dash between the name and the score
+					std::size_t length = formatInto(buffer, " \xE2\x80\x94 {} ", entries[i].Value);
+					AppendRaw(out, { buffer, length });
+					AppendScoreLabel(out, entries[i].Value, scoreLabel);
+				}
+			}
+
+			if (entries.size() > shown) {
+				std::size_t length = formatInto(buffer, "\n-# \xE2\x80\xA6" "and {} more", (std::uint32_t)(entries.size() - shown));
+				AppendRaw(out, { buffer, length });
+			}
+		}
+
+		// The whole roster on a single subtext line, the unit is spelled out only for the first player
+		void AppendRosterLine(SmallVectorImpl<char>& out, ArrayView<const WebhookClient::LeaderboardEntry> entries,
+							  StringView scoreLabel, std::size_t maxRows)
+		{
+			std::size_t shown = (entries.size() < maxRows ? entries.size() : maxRows);
+			char buffer[48];
+
+			AppendRaw(out, "\n-# "_s);
+
+			for (std::size_t i = 0; i < shown; i++) {
+				if (i > 0) {
+					AppendRaw(out, ", "_s);
+				}
+
+				AppendSanitizedName(out, entries[i].Name);
+
+				if (!scoreLabel.empty()) {
+					std::size_t length = formatInto(buffer, " ({}", entries[i].Value);
+					AppendRaw(out, { buffer, length });
+					if (i == 0) {
+						out.push_back(' ');
+						AppendScoreLabel(out, entries[i].Value, scoreLabel);
+					}
+					out.push_back(')');
+				}
+			}
+
+			if (entries.size() > shown) {
+				std::size_t length = formatInto(buffer, ", and {} more", (std::uint32_t)(entries.size() - shown));
+				AppendRaw(out, { buffer, length });
 			}
 		}
 
@@ -229,7 +313,8 @@ namespace Jazz2::Multiplayer
 		Enqueue(CreateEmbed({ description.data(), description.size() }, color));
 	}
 
-	void WebhookClient::OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, std::int32_t playlistIndex, std::int32_t playlistSize)
+	void WebhookClient::OnLevelChanged(StringView levelDisplayName, MpGameMode gameMode, bool reforgedGameplay, bool elimination,
+									   StringView targetLabel, std::uint32_t targetValue, std::int32_t playlistIndex, std::int32_t playlistSize)
 	{
 		if (!IsEventEnabled(WebhookEventType::LevelChanged)) {
 			return;
@@ -240,15 +325,30 @@ namespace Jazz2::Multiplayer
 		AppendSanitizedName(description, levelDisplayName);
 		AppendRaw(description, "**"_s);
 
+		SmallVector<char, 64> gameModeName;
+		AppendRaw(gameModeName, NetworkManager::GameModeToString(gameMode));
+		if (elimination) {
+			AppendRaw(gameModeName, " (Elimination)"_s);
+		}
+
+		char target[16];
+		std::size_t targetLength = 0;
+		if (!targetLabel.empty() && targetValue > 0) {
+			targetLength = formatInto(target, "{}", targetValue);
+		}
+
 		char round[32];
 		std::size_t roundLength = 0;
 		if (playlistSize > 0 && playlistIndex >= 0) {
 			roundLength = formatInto(round, "{} of {}", playlistIndex + 1, playlistSize);
 		}
 
-		SmallVector<EmbedField, 3> fields;
-		fields.push_back({ "Game Mode"_s, NetworkManager::GameModeToString(gameMode) });
+		SmallVector<EmbedField, 4> fields;
+		fields.push_back({ "Game Mode"_s, { gameModeName.data(), gameModeName.size() } });
 		fields.push_back({ "Gameplay"_s, reforgedGameplay ? "Reforged"_s : "Legacy"_s });
+		if (targetLength > 0) {
+			fields.push_back({ targetLabel, { target, targetLength } });
+		}
 		if (roundLength > 0) {
 			fields.push_back({ "Playlist"_s, { round, roundLength } });
 		}
@@ -272,7 +372,7 @@ namespace Jazz2::Multiplayer
 		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorInfo));
 	}
 
-	void WebhookClient::OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode)
+	void WebhookClient::OnRoundEnded(StringView winnerName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> standings, StringView scoreLabel)
 	{
 		if (!IsEventEnabled(WebhookEventType::RoundEnded)) {
 			return;
@@ -288,6 +388,11 @@ namespace Jazz2::Multiplayer
 			AppendRaw(description, "The round ended in a draw"_s);
 		}
 
+		// The standings go into the description, so they need no field header of their own
+		if (!standings.empty()) {
+			AppendRankedLeaderboard(description, standings, scoreLabel, MaxLeaderboardRows);
+		}
+
 		SmallVector<char, 128> level;
 		AppendSanitizedName(level, levelDisplayName);
 
@@ -298,7 +403,7 @@ namespace Jazz2::Multiplayer
 		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorHighlight, fields));
 	}
 
-	void WebhookClient::OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode)
+	void WebhookClient::OnRoundEndedWithTeamWinner(StringView teamName, StringView levelDisplayName, MpGameMode gameMode, ArrayView<const LeaderboardEntry> teamMembers, StringView scoreLabel)
 	{
 		if (!IsEventEnabled(WebhookEventType::RoundEnded)) {
 			return;
@@ -309,6 +414,11 @@ namespace Jazz2::Multiplayer
 		AppendSanitizedName(description, teamName);
 		AppendRaw(description, " team** won the round!"_s);
 
+		// The whole winning team is listed on one line instead of a ranking
+		if (!teamMembers.empty()) {
+			AppendRosterLine(description, teamMembers, scoreLabel, MaxTeamMemberRows);
+		}
+
 		SmallVector<char, 128> level;
 		AppendSanitizedName(level, levelDisplayName);
 
@@ -319,7 +429,7 @@ namespace Jazz2::Multiplayer
 		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorHighlight, fields));
 	}
 
-	void WebhookClient::OnChampionshipEnded(StringView championName, std::uint32_t points)
+	void WebhookClient::OnChampionshipEnded(StringView championName, std::uint32_t points, ArrayView<const LeaderboardEntry> standings)
 	{
 		if (!IsEventEnabled(WebhookEventType::ChampionshipEnded)) {
 			return;
@@ -334,6 +444,10 @@ namespace Jazz2::Multiplayer
 		std::size_t pointsLength = formatInto(pointsBuffer, "{}", points);
 		AppendRaw(description, { pointsBuffer, pointsLength });
 		AppendRaw(description, "** points!"_s);
+
+		if (!standings.empty()) {
+			AppendRankedLeaderboard(description, standings, "points"_s, MaxLeaderboardRows);
+		}
 
 		Enqueue(CreateEmbed({ description.data(), description.size() }, ColorChampionship));
 	}

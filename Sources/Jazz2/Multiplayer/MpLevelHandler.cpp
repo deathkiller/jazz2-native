@@ -484,8 +484,34 @@ namespace Jazz2::Multiplayer
 						}
 
 						if (auto* webhook = _networkManager->GetWebhook()) {
-							webhook->OnLevelChanged(GetLevelDisplayName(), serverConfig.GameMode, IsReforged(),
-								serverConfig.PlaylistIndex, (std::int32_t)serverConfig.Playlist.size());
+							// The win condition of the round. An auto-weighted treasure target isn't resolved until the
+							// round starts, so it's left out entirely instead of being reported as zero.
+							StringView targetLabel; std::uint32_t targetValue = 0;
+							switch (serverConfig.GameMode) {
+								case MpGameMode::Battle:
+								case MpGameMode::TeamBattle:
+									// In elimination this limit counts the lives of each player instead of kills to win
+									targetLabel = (serverConfig.Elimination ? "Lives"_s : "Kills"_s);
+									targetValue = serverConfig.TotalKills;
+									break;
+								case MpGameMode::CaptureTheFlag:
+									targetLabel = "Captures"_s; targetValue = serverConfig.TotalKills;
+									break;
+								case MpGameMode::Race:
+								case MpGameMode::TeamRace:
+									targetLabel = "Laps"_s; targetValue = serverConfig.TotalLaps;
+									break;
+								case MpGameMode::TreasureHunt:
+								case MpGameMode::TeamTreasureHunt:
+									if (!_autoWeightTreasure) {
+										targetLabel = "Treasure"_s; targetValue = serverConfig.TotalTreasureCollected;
+									}
+									break;
+								default: break;
+							}
+
+							webhook->OnLevelChanged(GetLevelDisplayName(), serverConfig.GameMode, IsReforged(), serverConfig.Elimination,
+								targetLabel, targetValue, serverConfig.PlaylistIndex, (std::int32_t)serverConfig.Playlist.size());
 						}
 					} else {
 						_levelState = LevelState::Running;
@@ -636,7 +662,28 @@ namespace Jazz2::Multiplayer
 							LOGW("Champion is {} ({} points)", championName, championPoints);
 
 							if (auto* webhook = _networkManager->GetWebhook()) {
-								webhook->OnChampionshipEnded(championName, championPoints);
+								// Holding shared_ptr copies keeps the referenced player names alive once the peer
+								// lock is released, so the standings stay valid even if someone disconnects
+								SmallVector<std::shared_ptr<PeerDescriptor>, 16> ranked;
+								{
+									auto peers = _networkManager->GetPeers();
+									for (auto& [rankedPeer, peerDesc] : *peers) {
+										if (peerDesc->Player != nullptr || peerDesc->Points > 0) {
+											ranked.push_back(peerDesc);
+										}
+									}
+								}
+
+								nCine::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+									return a->Points > b->Points;
+								});
+
+								SmallVector<WebhookClient::LeaderboardEntry, 16> standings;
+								for (auto& peerDesc : ranked) {
+									standings.push_back({ peerDesc->PlayerName, peerDesc->Points });
+								}
+
+								webhook->OnChampionshipEnded(championName, championPoints, { standings.data(), standings.size() });
 							}
 
 							ResetPeerPoints();
@@ -8766,6 +8813,65 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	StringView MpLevelHandler::BuildWebhookStandings(SmallVectorImpl<WebhookClient::LeaderboardEntry>& entries, std::int32_t onlyTeam)
+	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		StringView scoreLabel;
+		switch (serverConfig.GameMode) {
+			case MpGameMode::Battle:
+			case MpGameMode::TeamBattle:
+			// Per-player captures aren't tracked in CTF, so its players are ranked by kills
+			case MpGameMode::CaptureTheFlag: scoreLabel = "kills"_s; break;
+			case MpGameMode::Race:
+			case MpGameMode::TeamRace: scoreLabel = "laps"_s; break;
+			case MpGameMode::TreasureHunt:
+			case MpGameMode::TeamTreasureHunt: scoreLabel = "treasure"_s; break;
+			// Cooperation has no ranking, and an unknown mode has no metric to rank by
+			default: return {};
+		}
+
+		MpGameMode gameMode = serverConfig.GameMode;
+		bool isRace = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
+
+		auto getScore = [gameMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+			switch (gameMode) {
+				case MpGameMode::Race:
+				case MpGameMode::TeamRace: return peerDesc.Laps;
+				case MpGameMode::TreasureHunt:
+				case MpGameMode::TeamTreasureHunt: return peerDesc.TreasureCollected;
+				default: return peerDesc.Kills;
+			}
+		};
+		// Races are decided by the accumulated lap time, everything else by fewer deaths
+		auto getTiebreaker = [isRace](const PeerDescriptor& peerDesc) -> float {
+			return (isRace ? peerDesc.LapsElapsedFrames : (float)peerDesc.Deaths);
+		};
+
+		SmallVector<std::shared_ptr<PeerDescriptor>, 32> sorted;
+		for (auto* player : _players) {
+			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+			if (peerDesc->IsSpectating != SpectateMode::None ||
+				(onlyTeam >= 0 && peerDesc->Team != (std::uint8_t)onlyTeam)) {
+				continue;
+			}
+			sorted.push_back(std::move(peerDesc));
+		}
+
+		nCine::sort(sorted.begin(), sorted.end(), [&getScore, &getTiebreaker](const auto& a, const auto& b) {
+			std::uint32_t scoreA = getScore(*a), scoreB = getScore(*b);
+			// Higher score first, then the lower tiebreaker (fewer deaths, or a faster lap time)
+			return (scoreA != scoreB ? scoreA > scoreB : getTiebreaker(*a) < getTiebreaker(*b));
+		});
+
+		for (auto& peerDesc : sorted) {
+			// The names are owned by the descriptors, which outlive the synchronous webhook call
+			entries.push_back({ peerDesc->PlayerName, getScore(*peerDesc) });
+		}
+
+		return scoreLabel;
+	}
+
 	void MpLevelHandler::CalculatePositionInRound(bool forceSend)
 	{
 		SmallVector<Pair<MpPlayer*, std::uint32_t>, 128> sortedPlayers;
@@ -9224,8 +9330,10 @@ namespace Jazz2::Multiplayer
 
 		if (auto* webhook = _networkManager->GetWebhook()) {
 			auto& serverConfig = _networkManager->GetServerConfiguration();
+			SmallVector<WebhookClient::LeaderboardEntry, 16> standings;
+			StringView scoreLabel = BuildWebhookStandings(standings);
 			webhook->OnRoundEnded(winner != nullptr ? StringView(winner->GetPeerDescriptor()->PlayerName) : StringView(),
-				GetLevelDisplayName(), serverConfig.GameMode);
+				GetLevelDisplayName(), serverConfig.GameMode, { standings.data(), standings.size() }, scoreLabel);
 		}
 
 		for (auto* player : _players) {
@@ -9280,7 +9388,11 @@ namespace Jazz2::Multiplayer
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 
 		if (auto* webhook = _networkManager->GetWebhook()) {
-			webhook->OnRoundEndedWithTeamWinner(GetTeamName(team), GetLevelDisplayName(), serverConfig.GameMode);
+			// Only the winning team is listed, ranked by each member's contribution
+			SmallVector<WebhookClient::LeaderboardEntry, 16> teamMembers;
+			StringView scoreLabel = BuildWebhookStandings(teamMembers, team);
+			webhook->OnRoundEndedWithTeamWinner(GetTeamName(team), GetLevelDisplayName(), serverConfig.GameMode,
+				{ teamMembers.data(), teamMembers.size() }, scoreLabel);
 		}
 
 		// Award championship points to the members of the winning team

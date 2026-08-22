@@ -6,6 +6,7 @@
 #include "MpGameMode.h"
 #include "Teams.h"
 #include "NetworkManager.h"
+#include "WebhookClient.h"
 #include "GameModes/GameModeFactory.h"
 #include "../Actors/Player.h"
 #include "../UI/InGameConsole.h"
@@ -543,6 +544,14 @@ namespace Jazz2::Multiplayer
 		void WarpAllPlayersToStart();
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);
+		/**
+		 * @brief Collects the round standings for a webhook notification, best player first
+		 *
+		 * Ranks all non-spectating players by the metric of the current game mode and returns its plural unit
+		 * name (e.g. @cpp "kills" @ce), or an empty view in game modes that have no meaningful ranking. If
+		 * @p onlyTeam is not @cpp -1 @ce, only members of that team are collected.
+		 */
+		StringView BuildWebhookStandings(SmallVectorImpl<WebhookClient::LeaderboardEntry>& entries, std::int32_t onlyTeam = -1);
 		void CheckGameEnds();
 		void BeginOvertime(Actors::Multiplayer::MpPlayer* winner);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
