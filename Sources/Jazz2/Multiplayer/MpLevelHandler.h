@@ -241,6 +241,24 @@ namespace Jazz2::Multiplayer
 			return _scoreboard;
 		}
 
+		/** @brief Single row of the final round standings */
+		struct RoundResult {
+			String Name;
+			std::uint32_t ActorID;		// Player index, used to highlight the local player on clients
+			std::uint32_t Position;		// 1-based final position
+			std::uint32_t Score;		// Kills, laps or treasure, depending on the game mode
+			std::uint32_t Extra;		// Deaths, 0 in race modes
+			float TimeSecs;				// Total race time of a player that finished a race, 0 otherwise
+			bool Finished;				// Race modes: whether all required laps were completed before the round ended
+			bool IsLocal;
+			std::uint8_t Team;
+		};
+
+		/** @brief Returns the final round standings shown while the round is ending (empty in Cooperation) */
+		const SmallVector<RoundResult, 0>& GetRoundResults() const {
+			return _roundResults;
+		}
+
 		/** @brief Returns owner of the specified object or the player itself */
 		static Actors::Multiplayer::MpPlayer* GetWeaponOwner(Actors::ActorBase* actor);
 
@@ -442,6 +460,12 @@ namespace Jazz2::Multiplayer
 		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 		static constexpr float EndingDuration = 10 * FrameTimer::FramesPerSecond;
+		// Competitive rounds end with a standings board on screen, which needs longer than a plain "Winner is ..." alert
+		static constexpr float EndingDurationWithResults = 15 * FrameTimer::FramesPerSecond;
+		static constexpr std::uint32_t MaxRoundResults = 10;
+		// Race positions are based on the distance travelled along the track, which changes continuously, so they
+		// are recalculated several times per second (the projection itself is cheap)
+		static constexpr float RecalcPositionInRoundInterval = FrameTimer::FramesPerSecond / 4.0f;
 		static constexpr float TeamSwitchCooldownFrames = 5.0f * FrameTimer::FramesPerSecond;
 		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
 
@@ -466,6 +490,7 @@ namespace Jazz2::Multiplayer
 		SmallVector<CtfClientFlag, 0> _ctfFlagStates; // Server + Client: per-team flag info for the HUD and carried-flag attachment
 		SmallVector<PlayerScore, 0> _scoreboard;	// Server: built periodically; Client: mirrored for the scoreboard
 		float _scoreboardSyncTime;					// Server: countdown until the next scoreboard broadcast
+		SmallVector<RoundResult, 0> _roundResults;	// Server: built when the round ends; Client: mirrored for the HUD
 		std::int32_t _activeBossHealth;				// Server: last broadcasted boss health (-1 forces a rebroadcast); Client: health synced from the server
 		std::int32_t _activeBossMaxHealth;			// Server: last broadcasted boss max health; Client: max health synced from the server (0 = no active boss)
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
@@ -491,7 +516,8 @@ namespace Jazz2::Multiplayer
 		float _recalcPositionInRoundTime;
 		float _overtimeTimeLeft;
 		bool _overtimeStarted;
-		std::uint32_t _overtimeFinishers;
+		std::uint32_t _raceFinishedCount;	// Server: number of players that completed all laps in the current round
+		float _roundStartedFrames;			// Server: _elapsedFrames when the round switched to LevelState::Running
 		std::int32_t _limitCameraLeft;
 		std::int32_t _limitCameraWidth;
 		Vector2f _lastCheckpointPos;
@@ -545,6 +571,30 @@ namespace Jazz2::Multiplayer
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);
 		/**
+		 * @brief Returns how far along the race track the given position is, in pixels
+		 *
+		 * Projects @p pos onto the ordered checkpoint polyline and returns the arc length travelled, so players can
+		 * be ranked by their progress inside the current lap and not just by completed laps. @p lastProgress is the
+		 * previously measured progress of the same player; a track that crosses or runs back on itself has several
+		 * segments close to the player, and this makes the one they can actually have reached win. The total length
+		 * of the track is returned in @p trackLength.
+		 */
+		float CalculateRaceProgress(Vector2f pos, float lastProgress, float& trackLength);
+		/** @brief Moves every player that just completed all required laps to spectate mode; returns how many did */
+		std::uint32_t UpdateRaceFinishers();
+		/** @brief Marks a player as having completed all required laps and moves them to spectate mode (server-side) */
+		void MarkRaceFinisher(Actors::Multiplayer::MpPlayer* player);
+		/** @brief Returns `true` if at least one player still has laps to complete */
+		bool IsAnyoneStillRacing();
+		/** @brief Returns the player that won a race (the first finisher, or the leader if nobody finished) */
+		Actors::Multiplayer::MpPlayer* FindRaceWinner();
+		/** @brief Returns the team that won a team race (most players across the finish line, then the most laps) */
+		std::uint8_t FindBestRaceTeam();
+		/** @brief Builds the final round standings, which in race modes also assign the final position of every player */
+		void BuildRoundResults();
+		/** @brief Sends the final round standings to all players */
+		void SyncRoundResultsToAllPlayers();
+		/**
 		 * @brief Collects the round standings for a webhook notification, best player first
 		 *
 		 * Ranks all non-spectating players by the metric of the current game mode and returns its plural unit
@@ -553,7 +603,6 @@ namespace Jazz2::Multiplayer
 		 */
 		StringView BuildWebhookStandings(SmallVectorImpl<WebhookClient::LeaderboardEntry>& entries, std::int32_t onlyTeam = -1);
 		void CheckGameEnds();
-		void BeginOvertime(Actors::Multiplayer::MpPlayer* winner);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameWithTeam(std::uint8_t team) override;
 		void EndGameOnTimeOut();
@@ -616,6 +665,7 @@ namespace Jazz2::Multiplayer
 		bool HandleServerPacketSyncRaceCheckpoints(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTeamScores(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncRoundResults(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerResetProperties(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayerRespawn(const Peer& peer, ArrayView<const std::uint8_t> data);

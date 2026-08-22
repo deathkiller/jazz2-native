@@ -36,6 +36,9 @@ namespace Jazz2::UI::Multiplayer
 		/** @brief Draws the race-track minimap in the top-right corner (also serves as @ref IGameModeHUD::DrawMinimap) */
 		void DrawMinimap(const Rectf& view, Actors::Player* player) override;
 
+		/** @brief Draws the final standings of the round in the middle of the screen while the round is ending */
+		void DrawRoundResults();
+
 		// IGameModeHUD - drawing surface used by the hosted game mode to render its part of the HUD
 		void DrawHudText(Jazz2::Multiplayer::GameModes::GameModeFontType font, StringView text, float x, float y, float shadowOffsetY,
 			Alignment alignment, const Colorf& color, float scale, float charSpacing,

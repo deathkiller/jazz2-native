@@ -94,6 +94,7 @@ namespace Jazz2::Multiplayer
 		SyncRaceCheckpoints,			/**< Sends the ordered race checkpoint polyline and start markers for the minimap */
 		SyncTeamScores,					/**< Sends the per-team aggregate scores for the HUD */
 		SyncScoreboard,					/**< Sends per-player scoreboard rows (name, kills, deaths, points, ping) */
+		SyncRoundResults,				/**< Sends the final round standings shown while the round is ending */
 
 		PlayerSetProperty = 130,		/**< Sets a property of a player */
 		PlayerResetProperties,			/**< Resets all properties of a player */
@@ -143,6 +144,7 @@ namespace Jazz2::Multiplayer
 		Music,				/**< Currently playing music */
 		BossHealth,			/**< Health of the currently active boss, drives the boss health bar on clients */
 		Weather,			/**< Current weather type and intensity */
+		Overtime,			/**< Time the remaining players have left to finish a race after the first one did */
 
 		Count				/**< Count of supported property types */
 	};

@@ -43,17 +43,25 @@ namespace Jazz2::Multiplayer
 		/** @brief Treasure collected in the current round */
 		std::uint32_t TreasureCollected;
 
+		/** @brief Order in which the player completed all required laps (`0` while still racing) */
+		std::uint32_t RaceFinishOrder;
+
 		/** @brief Timestamp when the last lap started */
 		TimeStamp LapStarted;
 		/** @brief Elapsed frames when the player lost all lives (`FLT_MAX` while alive) */
 		float DeathElapsedFrames;
 		/** @brief Elapsed frames of all completed laps */
 		float LapsElapsedFrames;
+		/** @brief Elapsed frames when the player completed the last required lap (valid if @ref RaceFinishOrder is not zero) */
+		float RaceFinishFrames;
+		/** @brief Distance travelled along the race track in the current lap, in pixels */
+		float RaceProgress;
 
 		MpPlayerState()
 			: Team(0), PreferredTeam(0xFF), TeamLocked(false), TeamSwitchCooldown(0.0f),
 				PointsInRound(0), PositionInRound(0), Deaths(0), Kills(0), Laps(0), TreasureCollected(0),
-				DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f)
+				RaceFinishOrder(0), DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), RaceFinishFrames(0.0f),
+				RaceProgress(0.0f)
 		{
 		}
 	};

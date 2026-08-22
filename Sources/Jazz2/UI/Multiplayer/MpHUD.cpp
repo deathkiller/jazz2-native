@@ -106,6 +106,8 @@ namespace Jazz2::UI::Multiplayer
 
 		std::int32_t charOffset = 0;
 
+		DrawRoundResults();
+
 		if (_countdownTimeLeft > 0.0f) {
 			float textScale = 2.0f - std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 1.0f);
 			Colorf textColor = Font::DefaultColor;
@@ -190,6 +192,29 @@ namespace Jazz2::UI::Multiplayer
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::Running && mpLevelHandler->_overtimeStarted) {
+			// Somebody already finished the race, so the players still on the track are running out of time
+			float hudScale = (view.W < ViewSize.X - 1.0f || view.H < ViewSize.Y - 1.0f ? SplitscreenHudScale : 1.0f);
+			float overtimeX, overtimeY;
+			if (player->GetPlayerType() == PlayerType::Spectate) {
+				// Spectators get no race HUD at all, only the "Spectating" label this goes right underneath
+				overtimeX = view.X + 10.0f;
+				overtimeY = view.Y + 20.0f;
+			} else {
+				// To the right of the lap timer, which GameModes::RaceMode::OnDrawHUD() draws with the medium font at
+				// scale 0.7 starting at view.X + 94 - measured (not hardcoded) so the gap holds at any font size
+				overtimeX = view.X + 94.0f + _mediumFont->MeasureString("00:00:00"_s, 0.7f * hudScale, 1.0f).X + 12.0f;
+				overtimeY = view.Y + 10.0f;
+			}
+
+			std::int32_t secsLeft = std::max<std::int32_t>(0, (std::int32_t)(mpLevelHandler->_overtimeTimeLeft * FrameTimer::SecondsPerFrame));
+			auto overtimeText = _f("Finish in {} s", secsLeft);
+			// The last few seconds are marked in the same red the multiplayer error messages use
+			Colorf overtimeColor = (secsLeft <= 10 ? Colorf(0.6f, 0.41f, 0.40f, 0.5f) : Font::DefaultColor);
+			_smallFont->DrawString(this, overtimeText, charOffsetShadow, overtimeX, overtimeY + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * hudScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, overtimeText, charOffset, overtimeX, overtimeY, FontLayer,
+				Alignment::TopLeft, overtimeColor, 0.9f * hudScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 	}
 
@@ -390,6 +415,118 @@ namespace Jazz2::UI::Multiplayer
 			}
 
 			offset += 16.0f;
+		}
+	}
+
+	void MpHUD::DrawRoundResults()
+	{
+		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+		if (mpLevelHandler->_levelState != MpLevelHandler::LevelState::Ending) {
+			return;
+		}
+
+		const auto& results = mpLevelHandler->GetRoundResults();
+		if (results.empty() || mpLevelHandler->_console->IsVisible()) {
+			return;
+		}
+
+		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
+		MpGameMode gameMode = serverConfig.GameMode;
+		bool isRace = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
+		bool teamMode = IsTeamGameMode(gameMode);
+
+		// What the right-hand column of the board shows
+		StringView scoreLabel;
+		switch (gameMode) {
+			case MpGameMode::Race:
+			case MpGameMode::TeamRace: scoreLabel = _("Time"); break;
+			case MpGameMode::TreasureHunt:
+			case MpGameMode::TeamTreasureHunt: scoreLabel = _("Treasure"); break;
+			default: scoreLabel = _("Kills"); break;
+		}
+
+		constexpr float RowHeight = 17.0f;
+		constexpr float TitleHeight = 38.0f;	// Title row, measured from the top of the content box
+		constexpr float LabelHeight = 18.0f;	// Column label row, right above the first result
+
+		// The whole screen is dimmed (the round is over, there is nothing left to look at behind it). It goes below
+		// the level text layer, so the "Winner is ..." alert at the top of the screen stays readable over it.
+		DrawSolid(Vector2f::Zero, 40, Vector2f((float)ViewSize.X, (float)ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.55f));
+
+		float boxWidth = std::min(272.0f, ViewSize.X - 40.0f);
+		float boxHeight = TitleHeight + LabelHeight + (float)results.size() * RowHeight;
+		float boxX = ViewSize.X * 0.5f - boxWidth * 0.5f;
+		float boxY = ViewSize.Y * 0.5f - boxHeight * 0.5f;
+
+		char stringBuffer[48];
+		std::int32_t charOffset = 0, charOffsetShadow = 0;
+
+		// The board sits on a dimmed screen, so the text is toned down from the default (which is as bright as the
+		// font gets): the title is the anchor, the rows a step below it, the secondary bits dimmer still
+		constexpr Colorf titleColor = Font::DefaultColor;
+		constexpr Colorf rowColor = Font::DefaultColor;
+		constexpr Colorf SecondaryColor = Colorf(0.42f, 0.42f, 0.42f, 0.5f);
+
+		auto title = _("Final standings");
+		_mediumFont->DrawString(this, title, charOffsetShadow, boxX + boxWidth * 0.5f, boxY + 2.0f, FontShadowLayer,
+			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		_mediumFont->DrawString(this, title, charOffset, boxX + boxWidth * 0.5f, boxY, FontLayer + 20,
+			Alignment::Top, titleColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+		const float rankX = boxX + 26.0f;
+		const float nameX = boxX + 36.0f;
+		const float scoreX = boxX + boxWidth - 14.0f;
+
+		_smallFont->DrawString(this, scoreLabel, charOffset, scoreX, boxY + TitleHeight, FontLayer + 20,
+			Alignment::TopRight, SecondaryColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+		float y = boxY + TitleHeight + LabelHeight;
+		for (const auto& result : results) {
+			std::size_t length = formatInto(stringBuffer, "{}.", result.Position);
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, rankX, y + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, rankX, y, FontLayer + 20,
+				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			// In team modes the name is tinted with the player's team color; otherwise the local player's name uses
+			// the usual highlight and everyone else the default color
+			Colorf nameColor;
+			if (teamMode) {
+				nameColor = GetTeamColor(result.Team);
+				nameColor.SetAlpha(result.IsLocal ? 0.9f : 0.7f);
+			} else {
+				nameColor = (result.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : rowColor);
+			}
+			_smallFont->DrawString(this, result.Name, charOffsetShadow, nameX, y + 1.0f, FontShadowLayer,
+				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, result.Name, charOffset, nameX, y, FontLayer + 20,
+				Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			if (isRace) {
+				if (result.Finished) {
+					std::int32_t minutes = (std::int32_t)(result.TimeSecs / 60);
+					std::int32_t seconds = (std::int32_t)fmod(result.TimeSecs, 60);
+					std::int32_t hundredths = (std::int32_t)(fmod(result.TimeSecs, 1) * 100);
+					length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, hundredths);
+				} else {
+					// Players that didn't complete the race are listed with the laps they managed instead of a time
+					length = formatInto(stringBuffer, "{}/{}", result.Score, mpLevelHandler->GetTotalLaps());
+				}
+			} else if (gameMode == MpGameMode::TreasureHunt || gameMode == MpGameMode::TeamTreasureHunt) {
+				length = formatInto(stringBuffer, "{}", result.Score);
+			} else {
+				// Kills and deaths
+				length = formatInto(stringBuffer, "{}/{}", result.Score, result.Extra);
+			}
+
+			// A player that didn't finish the race shows laps instead of a time, dimmed like the other secondary info
+			Colorf scoreColor = (result.Finished || !isRace ? rowColor : SecondaryColor);
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, scoreX, y + 1.0f, FontShadowLayer,
+				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, scoreX, y, FontLayer + 20,
+				Alignment::TopRight, scoreColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			y += RowHeight;
 		}
 	}
 

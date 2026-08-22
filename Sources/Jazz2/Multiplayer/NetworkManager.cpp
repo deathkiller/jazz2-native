@@ -290,7 +290,8 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalKills = 10;
 		serverConfig.TotalLaps = 3;
 		serverConfig.TotalTreasureCollected = 0;
-		serverConfig.OvertimeSecs = 0;
+		// The first player across the finish line doesn't end a race - everybody else gets this long to finish too
+		serverConfig.OvertimeSecs = 60;
 
 		serverConfig.EnableSpectate = true;
 		serverConfig.PlayerStacking = true;

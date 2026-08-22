@@ -55,7 +55,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalLaps;
 		/** @brief Total number of treasure to collect to win (Treasure Hunt); default is 0, which auto-weights the target from the level's treasure */
 		std::uint32_t TotalTreasureCollected;
-		/** @brief Duration of overtime in seconds after first player finishes (Race only) */
+		/** @brief Duration of overtime in seconds after the first player finishes, default is 60; 0 ends the round right away (Race only) */
 		std::uint32_t OvertimeSecs;
 		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
 		bool PlayerStacking;
@@ -185,7 +185,8 @@ namespace Jazz2::Multiplayer
 		-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
 		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win (Treasure Hunt)
-		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Overtime duration in seconds (Race)
+		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish after the first one does, in seconds (default is **60** seconds, Race)
+			-   Set to **0** to end the round as soon as the first player finishes
 		-   @cpp "EnableSpectate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether spectate mode is enabled (default is **true**)
 		-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other (and jump off); if disabled, they bump apart on every axis as before (default is **true**)
 		-   @cpp "EnableFreeCamera" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether free camera is enabled in spectate mode (default is **true**)
@@ -203,7 +204,7 @@ namespace Jazz2::Multiplayer
 			-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 			-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
 			-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win this round (Treasure Hunt)
-			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Overtime duration in seconds (Race)
+			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish this round after the first one does, in seconds (Race)
 		-   @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.

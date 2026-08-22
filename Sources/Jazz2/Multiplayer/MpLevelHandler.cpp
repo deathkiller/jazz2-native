@@ -122,7 +122,7 @@ namespace Jazz2::Multiplayer
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
 			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false), _enableLedgeClimb(enableLedgeClimb),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
-			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _overtimeFinishers(0),
+			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
 			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f),
 			_activeBossHealth(-1), _activeBossMaxHealth(0)
 #if defined(DEATH_DEBUG)
@@ -452,6 +452,14 @@ namespace Jazz2::Multiplayer
 			// Keep carried flags glued to their carrier using the carrier's already-interpolated position, so the
 			// flag moves in lockstep with the player instead of being interpolated independently (which looked choppy)
 			UpdateCtfClient();
+
+			// The server only announces when the overtime starts, the countdown shown in the HUD runs locally
+			if DEATH_UNLIKELY(_overtimeStarted) {
+				_overtimeTimeLeft -= timeMult;
+				if (_overtimeTimeLeft <= 0.0f) {
+					_overtimeTimeLeft = 0.0f;
+				}
+			}
 		}
 
 		_updateTimeLeft -= timeMult;
@@ -588,7 +596,9 @@ namespace Jazz2::Multiplayer
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						_levelState = LevelState::Running;
 						_gameTimeLeft = serverConfig.MaxGameTimeSecs * FrameTimer::FramesPerSecond;
-						_recalcPositionInRoundTime = FrameTimer::FramesPerSecond;
+						_recalcPositionInRoundTime = RecalcPositionInRoundInterval;
+						// Race times are measured from here, so every player gets the same starting point
+						_roundStartedFrames = _elapsedFrames;
 
 						SetControllableToAllPlayers(true);
 						static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
@@ -624,7 +634,7 @@ namespace Jazz2::Multiplayer
 						if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
 							_recalcPositionInRoundTime -= timeMult;
 							if (_recalcPositionInRoundTime <= 0.0f) {
-								_recalcPositionInRoundTime = FrameTimer::FramesPerSecond;
+								_recalcPositionInRoundTime = RecalcPositionInRoundInterval;
 								CalculatePositionInRound();
 							}
 						}
@@ -1602,6 +1612,8 @@ namespace Jazz2::Multiplayer
 					//peerDesc->LapsElapsedFrames += (now - peerDesc->LapStarted).seconds() * FrameTimer::FramesPerSecond;
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
 					peerDesc->LapStarted = now;
+					// The player is warped back to the start line, so their progress along the track starts over
+					peerDesc->RaceProgress = 0.0f;
 
 					LOGI("Player {} finished lap ({})", mpPlayer->_playerIndex, peerDesc->Laps);
 
@@ -2498,7 +2510,7 @@ namespace Jazz2::Multiplayer
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ I: {}\f[w:50] s\f[/w]",
 						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
-				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
+				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]\t│ Laps: {}/{}",
 						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
@@ -3545,6 +3557,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::SyncRaceCheckpoints: return HandleServerPacketSyncRaceCheckpoints(peer, data);
 				case ServerPacketType::SyncTeamScores: return HandleServerPacketSyncTeamScores(peer, data);
 				case ServerPacketType::SyncScoreboard: return HandleServerPacketSyncScoreboard(peer, data);
+				case ServerPacketType::SyncRoundResults: return HandleServerPacketSyncRoundResults(peer, data);
 				case ServerPacketType::PlayerSetProperty: return HandleServerPacketPlayerSetProperty(peer, data);
 				case ServerPacketType::PlayerResetProperties: return HandleServerPacketPlayerResetProperties(peer, data);
 				case ServerPacketType::PlayerRespawn: return HandleServerPacketPlayerRespawn(peer, data);
@@ -4369,6 +4382,13 @@ namespace Jazz2::Multiplayer
 					_levelState = state;
 					_gameTimeLeft = (float)gameTimeLeft * 0.01f;
 
+					if (_levelState != LevelState::Ending) {
+						// The standings and the overtime of the previous round must not carry over into this one
+						_roundResults.clear();
+						_overtimeStarted = false;
+						_overtimeTimeLeft = 0.0f;
+					}
+
 					switch (_levelState) {
 						case LevelState::WaitingForMinPlayers: {
 							// gameTimeLeft is reused for waitingForPlayerCount in this state
@@ -4516,6 +4536,18 @@ namespace Jazz2::Multiplayer
 				InvokeAsync([this, health, maxHealth]() {
 					_activeBossHealth = health;
 					_activeBossMaxHealth = maxHealth;
+				});
+				break;
+			}
+			case LevelPropertyType::Overtime: {
+				std::int32_t timeLeft = packet.ReadVariableInt32();
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::Overtime - timeLeft: {:.1f}", (float)timeLeft * 0.01f);
+
+				// The countdown itself runs locally from here (the HUD reads it on the main thread)
+				InvokeAsync([this, timeLeft]() {
+					_overtimeTimeLeft = (float)timeLeft * 0.01f;
+					_overtimeStarted = (_overtimeTimeLeft > 0.0f);
 				});
 				break;
 			}
@@ -5345,6 +5377,48 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	bool MpLevelHandler::HandleServerPacketSyncRoundResults(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > MaxRoundResults) {
+			// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::SyncRoundResults - Malformed packet");
+			return true;
+		}
+
+		SmallVector<RoundResult, 0> results;
+		results.reserve(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			RoundResult result;
+			result.ActorID = packet.ReadVariableUint32();
+			result.Position = packet.ReadVariableUint32();
+			result.Score = packet.ReadVariableUint32();
+			result.Extra = packet.ReadVariableUint32();
+			result.TimeSecs = packet.ReadVariableUint32() * 0.001f;
+			result.Finished = (packet.ReadValue<std::uint8_t>() != 0);
+			result.Team = packet.ReadValue<std::uint8_t>();
+			std::uint32_t nameLength = packet.ReadVariableUint32();
+			if DEATH_UNLIKELY(nameLength > 1024) {
+				LOGW("[MP] ServerPacketType::SyncRoundResults - Malformed packet");
+				return true;
+			}
+			result.Name = String(NoInit, nameLength);
+			packet.Read(result.Name.data(), nameLength);
+			result.IsLocal = false;
+			results.push_back(std::move(result));
+		}
+
+		// IsLocal and the swap happen on the main thread (_lastSpawnedActorId and _roundResults are owned there)
+		InvokeAsync([this, results = std::move(results)]() mutable {
+			for (auto& result : results) {
+				result.IsLocal = (result.ActorID == _lastSpawnedActorId);
+			}
+			_roundResults = std::move(results);
+		});
+		return true;
+	}
+
 	bool MpLevelHandler::HandleServerPacketPlayerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
 		MemoryStream packet(data);
@@ -5746,6 +5820,10 @@ namespace Jazz2::Multiplayer
 				peerDesc->LapStarted = TimeStamp::now();
 				peerDesc->TreasureCollected = 0;
 				peerDesc->DeathElapsedFrames = FLT_MAX;
+				peerDesc->RaceFinishOrder = 0;
+				peerDesc->RaceFinishFrames = 0.0f;
+				peerDesc->RaceProgress = 0.0f;
+				_roundResults.clear();
 
 				player->_inventory.Coins = 0;
 				std::memset(player->_inventory.Gems, 0, sizeof(player->_inventory.Gems));
@@ -7963,7 +8041,9 @@ namespace Jazz2::Multiplayer
 		for (auto* player : _players) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			if (peerDesc->Team != team || peerDesc->IsSpectating != SpectateMode::None) {
+			// Players that completed a team race are moved to spectate mode, but their laps still count for the team
+			if (peerDesc->Team != team ||
+				(peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0)) {
 				continue;
 			}
 			switch (serverConfig.GameMode) {
@@ -8517,7 +8597,8 @@ namespace Jazz2::Multiplayer
 		// same-level rounds, so stale overtime state would otherwise end the next round immediately
 		_overtimeStarted = false;
 		_overtimeTimeLeft = 0.0f;
-		_overtimeFinishers = 0;
+		_raceFinishedCount = 0;
+		_roundResults.clear();
 
 		// Per-team kill accumulator (TeamBattle score) resets each round
 		std::memset(_teamKills, 0, sizeof(_teamKills));
@@ -8529,6 +8610,9 @@ namespace Jazz2::Multiplayer
 			peerDesc->Laps = 0;
 			peerDesc->TreasureCollected = 0;
 			peerDesc->DeathElapsedFrames = FLT_MAX;
+			peerDesc->RaceFinishOrder = 0;
+			peerDesc->RaceFinishFrames = 0.0f;
+			peerDesc->RaceProgress = 0.0f;
 
 			if (peerDesc->Player) {
 				peerDesc->Player->_inventory.Coins = 0;
@@ -8851,7 +8935,9 @@ namespace Jazz2::Multiplayer
 		SmallVector<std::shared_ptr<PeerDescriptor>, 32> sorted;
 		for (auto* player : _players) {
 			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
-			if (peerDesc->IsSpectating != SpectateMode::None ||
+			// Players that completed a race are moved to spectate mode, but they are the ones the standings are
+			// mostly made of, so they are never filtered out here
+			if ((peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) ||
 				(onlyTeam >= 0 && peerDesc->Team != (std::uint8_t)onlyTeam)) {
 				continue;
 			}
@@ -8872,6 +8958,59 @@ namespace Jazz2::Multiplayer
 		return scoreLabel;
 	}
 
+	float MpLevelHandler::CalculateRaceProgress(Vector2f pos, float lastProgress, float& trackLength)
+	{
+		constexpr float TS = (float)Tiles::TileSet::DefaultTileSize;
+		// No player can travel further than this along the track between two recalculations, so a segment beyond
+		// that window belongs to another part of the track that only happens to run close by
+		constexpr float MaxProgressStep = 1600.0f;
+		// ... unless the player isn't anywhere near that window anymore (they respawned or warped somewhere else),
+		// in which case the globally nearest segment is the better guess
+		constexpr float MaxSnapDistSq = 400.0f * 400.0f;
+
+		std::int32_t n = (std::int32_t)_orderedRaceCheckpoints.size();
+		float bestDistSq = FLT_MAX, bestProgress = 0.0f;
+		float coherentDistSq = FLT_MAX, coherentProgress = 0.0f;
+		float cumulative = 0.0f;
+
+		for (std::int32_t k = 0; k + 1 < n; k++) {
+			// A group change marks a teleport: advance progress a little but don't project onto the
+			// (level-spanning) warp segment, so the gap doesn't distort the ranking
+			if (_orderedRaceCheckpoints[k].Group != _orderedRaceCheckpoints[k + 1].Group) {
+				cumulative += 1.0f;
+				continue;
+			}
+
+			Vector2f a(_orderedRaceCheckpoints[k].Tile.X * TS, _orderedRaceCheckpoints[k].Tile.Y * TS);
+			Vector2f b(_orderedRaceCheckpoints[k + 1].Tile.X * TS, _orderedRaceCheckpoints[k + 1].Tile.Y * TS);
+			float abx = b.X - a.X, aby = b.Y - a.Y;
+			float segLenSq = abx * abx + aby * aby;
+			float segLen = std::sqrt(segLenSq);
+			float t = 0.0f;
+			if (segLenSq > 0.0001f) {
+				t = ((pos.X - a.X) * abx + (pos.Y - a.Y) * aby) / segLenSq;
+				t = (t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t));
+			}
+			float dx = pos.X - (a.X + abx * t), dy = pos.Y - (a.Y + aby * t);
+			float distSq = dx * dx + dy * dy;
+			float progress = cumulative + t * segLen;
+
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				bestProgress = progress;
+			}
+			if (distSq < coherentDistSq && progress > lastProgress - MaxProgressStep && progress < lastProgress + MaxProgressStep) {
+				coherentDistSq = distSq;
+				coherentProgress = progress;
+			}
+
+			cumulative += segLen;
+		}
+
+		trackLength = cumulative;
+		return (coherentDistSq < MaxSnapDistSq ? coherentProgress : bestProgress);
+	}
+
 	void MpLevelHandler::CalculatePositionInRound(bool forceSend)
 	{
 		SmallVector<Pair<MpPlayer*, std::uint32_t>, 128> sortedPlayers;
@@ -8886,7 +9025,10 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			if (peerDesc->IsSpectating != SpectateMode::None) {
+			// A player that already finished the race is in (forced) spectate mode, but still holds a position -
+			// their finishing order, which no one still racing can beat
+			bool finishedRace = (peerDesc->RaceFinishOrder != 0);
+			if (peerDesc->IsSpectating != SpectateMode::None && !finishedRace) {
 				continue;
 			}
 
@@ -8896,50 +9038,39 @@ namespace Jazz2::Multiplayer
 					roundPoints = peerDesc->Kills;
 					break;
 				}
-				case MpGameMode::Race: {
+				case MpGameMode::Race:
+				case MpGameMode::TeamRace: {
 					// 1 hour penalty for every unfinished lap
 					//roundPoints = (std::uint32_t)(peerDesc->LapsElapsedFrames + (serverConfig.TotalLaps - peerDesc->Laps) * 3600.0f * FrameTimer::FramesPerSecond);
 
-					Vector2f pos = mpPlayer->_pos;
-					const std::uint32_t lapPenalty = (serverConfig.TotalLaps - peerDesc->Laps) * (UINT32_MAX / 100);
+					if (finishedRace) {
+						// Finishers rank by the order they crossed the finish line in, ahead of everyone still racing
+						// (which always carries a penalty for at least one unfinished lap; lower is better in races)
+						roundPoints = peerDesc->RaceFinishOrder;
+						break;
+					}
 
+					// Every unfinished lap is a fixed penalty, so the ranking is decided by laps first and by the
+					// distance still to go inside the current lap second. The lap count is capped so the penalties of
+					// a race with an absurd lap target can't overflow.
+					std::uint32_t totalLaps = std::max(serverConfig.TotalLaps, 1u);
+					std::uint32_t lapsLeft = (peerDesc->Laps < totalLaps ? totalLaps - peerDesc->Laps : 1);
+					const std::uint32_t lapPenalty = std::min(lapsLeft, 90u) * (UINT32_MAX / 100);
+
+					Vector2f pos = mpPlayer->_pos;
 					if (_raceCheckpointsOrdered && _orderedRaceCheckpoints.size() >= 2) {
 						// Rank by how far along the track the player is: project the player's position onto the ordered
 						// checkpoint polyline and measure the arc length travelled. Players closer to the finish (more
 						// distance travelled, then more laps) rank higher.
-						constexpr float TS = (float)Tiles::TileSet::DefaultTileSize;
-						std::int32_t n = (std::int32_t)_orderedRaceCheckpoints.size();
-						float bestDistSq = FLT_MAX;
-						float bestProgress = 0.0f;
-						float cumulative = 0.0f;
-						for (std::int32_t k = 0; k + 1 < n; k++) {
-							// A group change marks a teleport: advance progress a little but don't project onto the
-							// (level-spanning) warp segment, so the gap doesn't distort the ranking
-							if (_orderedRaceCheckpoints[k].Group != _orderedRaceCheckpoints[k + 1].Group) {
-								cumulative += 1.0f;
-								continue;
-							}
-							Vector2f a(_orderedRaceCheckpoints[k].Tile.X * TS, _orderedRaceCheckpoints[k].Tile.Y * TS);
-							Vector2f b(_orderedRaceCheckpoints[k + 1].Tile.X * TS, _orderedRaceCheckpoints[k + 1].Tile.Y * TS);
-							float abx = b.X - a.X, aby = b.Y - a.Y;
-							float segLenSq = abx * abx + aby * aby;
-							float segLen = std::sqrt(segLenSq);
-							float t = 0.0f;
-							if (segLenSq > 0.0001f) {
-								t = ((pos.X - a.X) * abx + (pos.Y - a.Y) * aby) / segLenSq;
-								t = (t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t));
-							}
-							float dx = pos.X - (a.X + abx * t), dy = pos.Y - (a.Y + aby * t);
-							float distSq = dx * dx + dy * dy;
-							if (distSq < bestDistSq) {
-								bestDistSq = distSq;
-								bestProgress = cumulative + t * segLen;
-							}
-							cumulative += segLen;
-						}
-						float remaining = cumulative - bestProgress;
+						float trackLength;
+						float progress = CalculateRaceProgress(pos, peerDesc->RaceProgress, trackLength);
+						peerDesc->RaceProgress = progress;
+
+						float remaining = trackLength - progress;
 						roundPoints = (std::uint32_t)(remaining < 0.0f ? 0.0f : remaining) + lapPenalty;
 					} else {
+						// No usable track (a level without waypoints where the route couldn't be derived either) -
+						// fall back to the distance to the nearest checkpoint as a rough within-lap tiebreaker
 						float nearestCheckpoint = FLT_MAX;
 						for (auto checkpointPos : _raceCheckpoints) {
 							float length = (pos - Vector2f(checkpointPos.X * Tiles::TileSet::DefaultTileSize, checkpointPos.Y * Tiles::TileSet::DefaultTileSize)).Length();
@@ -8948,7 +9079,7 @@ namespace Jazz2::Multiplayer
 							}
 						}
 
-						roundPoints = nearestCheckpoint + lapPenalty;
+						roundPoints = (nearestCheckpoint < FLT_MAX ? (std::uint32_t)nearestCheckpoint : 0) + lapPenalty;
 					}
 					break;
 				}
@@ -8958,7 +9089,8 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
-			bool isDead = (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills);
+			// Somebody who already crossed the finish line can't be eliminated out of their position
+			bool isDead = (serverConfig.Elimination && peerDesc->Deaths >= serverConfig.TotalKills && !finishedRace);
 			if (isDead) {
 				sortedDeadPlayers.push_back(pair(mpPlayer, roundPoints));
 			} else {
@@ -9106,7 +9238,9 @@ namespace Jazz2::Multiplayer
 				for (auto* player : _players) {
 					auto* mpPlayer = static_cast<MpPlayer*>(player);
 					auto peerDesc = mpPlayer->GetPeerDescriptor();
-					if (peerDesc->IsSpectating != SpectateMode::None || peerDesc->Team >= teamCount) {
+					// A player that completed a race is in spectate mode, but they are not eliminated
+					if ((peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) ||
+						peerDesc->Team >= teamCount) {
 						continue;
 					}
 					if (peerDesc->Deaths < serverConfig.TotalKills) {
@@ -9137,7 +9271,8 @@ namespace Jazz2::Multiplayer
 					auto* mpPlayer = static_cast<MpPlayer*>(player);
 					auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-					if (peerDesc->IsSpectating != SpectateMode::None) {
+					// A player that completed a race is in spectate mode, but they are not eliminated
+					if (peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) {
 						continue;
 					}
 
@@ -9200,65 +9335,65 @@ namespace Jazz2::Multiplayer
 			}
 
 			case MpGameMode::TeamRace: {
-				// A team wins when all of its non-spectating members have completed the required laps
+				std::uint32_t newFinishers = UpdateRaceFinishers();
+
+				// A team wins when all of its members that took part have completed the required laps
 				std::uint8_t teamCount = GetTeamCount();
 				for (std::uint8_t team = 0; team < teamCount; team++) {
 					bool anyMember = false, allFinished = true;
 					for (auto* player : _players) {
 						auto* mpPlayer = static_cast<MpPlayer*>(player);
 						auto peerDesc = mpPlayer->GetPeerDescriptor();
-						if (peerDesc->IsSpectating != SpectateMode::None || peerDesc->Team != team) {
+						if (peerDesc->Team != team) {
+							continue;
+						}
+						if (peerDesc->RaceFinishOrder != 0) {
+							// Finishers are in (forced) spectate mode, so they are checked before the spectator skip
+							anyMember = true;
+							continue;
+						}
+						if (peerDesc->IsSpectating != SpectateMode::None) {
 							continue;
 						}
 						anyMember = true;
-						if (peerDesc->Laps < serverConfig.TotalLaps) {
-							allFinished = false;
-							break;
-						}
+						allFinished = false;
+						break;
 					}
 					if (anyMember && allFinished) {
 						EndGameWithTeam(team);
-						break;
+						return;
 					}
+				}
+
+				if (serverConfig.OvertimeSecs == 0) {
+					// Overtime disabled - the race is over the moment somebody crosses the finish line
+					if (newFinishers > 0) {
+						EndGameWithTeam(FindBestRaceTeam());
+					}
+					break;
+				}
+
+				// The other teams keep racing until the overtime started by the first finisher runs out
+				if (_overtimeStarted && (!IsAnyoneStillRacing() || _overtimeTimeLeft <= 0.0f)) {
+					EndGameWithTeam(FindBestRaceTeam());
 				}
 				break;
 			}
 
 			case MpGameMode::Race: {
-				for (auto* player : _players) {
-					auto* mpPlayer = static_cast<MpPlayer*>(player);
-					auto peerDesc = mpPlayer->GetPeerDescriptor();
+				std::uint32_t newFinishers = UpdateRaceFinishers();
 
-					if (peerDesc->IsSpectating != SpectateMode::None) {
-						continue;
+				if (serverConfig.OvertimeSecs == 0) {
+					// Overtime disabled - the race is over the moment somebody crosses the finish line
+					if (newFinishers > 0) {
+						EndGame(FindRaceWinner());
 					}
-
-					if (peerDesc->Laps >= serverConfig.TotalLaps) {
-						if (serverConfig.OvertimeSecs > 0) {
-							BeginOvertime(mpPlayer);
-						} else {
-							EndGame(mpPlayer);
-							break;
-						}
-					}
+					break;
 				}
 
-				// Check if all players finished or overtime expired
-				if (_overtimeStarted) {
-					if (GetNonSpectatePlayerCount() == 0 || _overtimeTimeLeft <= 0.0f) {
-						// Find winner (player with best position)
-						MpPlayer* winner = nullptr;
-						std::uint32_t bestPosition = UINT32_MAX;
-						for (auto* player : _players) {
-							auto* mpPlayer = static_cast<MpPlayer*>(player);
-							auto peerDesc = mpPlayer->GetPeerDescriptor();
-							if (peerDesc->PositionInRound > 0 && peerDesc->PositionInRound < bestPosition) {
-								bestPosition = peerDesc->PositionInRound;
-								winner = mpPlayer;
-							}
-						}
-						EndGame(winner);
-					}
+				// Everyone else keeps racing until they finish too or the overtime runs out
+				if (_overtimeStarted && (!IsAnyoneStillRacing() || _overtimeTimeLeft <= 0.0f)) {
+					EndGame(FindRaceWinner());
 				}
 				break;
 			}
@@ -9280,34 +9415,320 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::BeginOvertime(MpPlayer* winner)
+	std::uint32_t MpLevelHandler::UpdateRaceFinishers()
 	{
-		if (!_overtimeStarted) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		// Collect the players that just completed their last lap before touching any of them - marking a finisher
+		// replaces their actor (spectate mode), which mutates _players
+		SmallVector<MpPlayer*, 4> finishers;
+		for (auto* player : _players) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->IsSpectating != SpectateMode::None || peerDesc->RaceFinishOrder != 0) {
+				continue;
+			}
+
+			if (peerDesc->Laps >= serverConfig.TotalLaps) {
+				finishers.push_back(mpPlayer);
+			}
+		}
+
+		// Several players can cross the finish line in the same step, so the order they are marked in is the order
+		// they completed their last lap in
+		nCine::sort(finishers.begin(), finishers.end(), [](MpPlayer* a, MpPlayer* b) {
+			return (a->GetPeerDescriptor()->LapsElapsedFrames < b->GetPeerDescriptor()->LapsElapsedFrames);
+		});
+
+		for (auto* finisher : finishers) {
+			MarkRaceFinisher(finisher);
+		}
+
+		return (std::uint32_t)finishers.size();
+	}
+
+	void MpLevelHandler::MarkRaceFinisher(MpPlayer* player)
+	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		auto peerDesc = player->GetPeerDescriptor();
+
+		_raceFinishedCount++;
+		peerDesc->RaceFinishOrder = _raceFinishedCount;
+		// The lap counter stamps the frame the last lap was completed, which is exactly the finishing time
+		peerDesc->RaceFinishFrames = peerDesc->LapsElapsedFrames;
+
+		LOGI("Player {} finished the race ({}.)", player->_playerIndex, peerDesc->RaceFinishOrder);
+
+		if (!_overtimeStarted && serverConfig.OvertimeSecs > 0) {
+			// The first finisher doesn't end the round - everyone else gets this much time to complete their own laps
 			_overtimeTimeLeft = serverConfig.OvertimeSecs * FrameTimer::FramesPerSecond;
 			_overtimeStarted = true;
-			_overtimeFinishers = 0;
 
 			LOGI("Overtime started - {} seconds", serverConfig.OvertimeSecs);
 			// TODO: Localize on client
-			ShowAlertToAllPlayers(_f("\n\nOvertime! {} seconds remaining", serverConfig.OvertimeSecs));
+			ShowAlertToAllPlayers(_f("\n\n{} finished the race!\n{} seconds remaining", peerDesc->PlayerName, serverConfig.OvertimeSecs));
+
+			// Clients count the remaining time down on their own from here, so the players still racing can see it
+			if (!_isLocalSession) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Overtime);
+				packet.WriteVariableInt32((std::int32_t)(_overtimeTimeLeft * 100.0f));
+
+				_networkManager->SendTo([this](const Peer& peer) {
+					auto targetDesc = _networkManager->GetPeerDescriptor(peer);
+					return (targetDesc && targetDesc->LevelState >= PeerLevelState::LevelLoaded);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+			}
+		} else {
+			ShowAlertToAllPlayers(_f("\n\n{} finished {}.", peerDesc->PlayerName, peerDesc->RaceFinishOrder));
 		}
 
-		_overtimeFinishers++;
-		SetPlayerSpectateMode(winner, SpectateMode::Forced);
+		// The finisher watches the rest of the race. Switching to spectate mode replaces their actor, and the finish
+		// is usually detected in the middle of the warp that completed the last lap, so it's deferred to the end of
+		// the frame. The player is looked up again there, because they might disconnect in the meantime.
+		auto playerIndex = player->_playerIndex;
+		InvokeAsync([this, playerIndex]() {
+			for (auto* candidate : _players) {
+				auto* mpPlayer = static_cast<MpPlayer*>(candidate);
+				if (mpPlayer->_playerIndex == playerIndex && mpPlayer->GetPeerDescriptor()->IsSpectating == SpectateMode::None) {
+					SetPlayerSpectateMode(mpPlayer, SpectateMode::Forced);
+					break;
+				}
+			}
+		});
+	}
+
+	bool MpLevelHandler::IsAnyoneStillRacing()
+	{
+		for (auto* player : _players) {
+			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+			// Players that just finished are only moved to spectate mode at the end of the frame, so the finishing
+			// order (and not the spectate mode alone) decides whether they are still racing
+			if (peerDesc->RaceFinishOrder == 0 && peerDesc->IsSpectating == SpectateMode::None) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	MpPlayer* MpLevelHandler::FindRaceWinner()
+	{
+		// The first player to cross the finish line wins; if the round ended before anybody finished (overtime after
+		// a disconnect, or the game time limit), the leader of the standings takes it
+		MpPlayer* winner = nullptr;
+		std::uint32_t bestOrder = UINT32_MAX, bestPosition = UINT32_MAX;
+
+		for (auto* player : _players) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RaceFinishOrder != 0) {
+				if (peerDesc->RaceFinishOrder < bestOrder) {
+					bestOrder = peerDesc->RaceFinishOrder;
+					winner = mpPlayer;
+				}
+			} else if (bestOrder == UINT32_MAX && peerDesc->IsSpectating == SpectateMode::None &&
+					peerDesc->PositionInRound > 0 && peerDesc->PositionInRound < bestPosition) {
+				bestPosition = peerDesc->PositionInRound;
+				winner = mpPlayer;
+			}
+		}
+
+		return winner;
+	}
+
+	std::uint8_t MpLevelHandler::FindBestRaceTeam()
+	{
+		std::uint8_t teamCount = GetTeamCount();
+		std::uint32_t finishedPerTeam[MaxTeamCount] = {};
+		std::uint32_t bestOrderPerTeam[MaxTeamCount];
+		for (std::uint8_t team = 0; team < MaxTeamCount; team++) {
+			bestOrderPerTeam[team] = UINT32_MAX;
+		}
+
+		for (auto* player : _players) {
+			auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+			if (peerDesc->RaceFinishOrder == 0 || peerDesc->Team >= teamCount) {
+				continue;
+			}
+
+			finishedPerTeam[peerDesc->Team]++;
+			if (peerDesc->RaceFinishOrder < bestOrderPerTeam[peerDesc->Team]) {
+				bestOrderPerTeam[peerDesc->Team] = peerDesc->RaceFinishOrder;
+			}
+		}
+
+		std::uint8_t bestTeam = 0;
+		std::uint32_t bestCount = 0;
+		for (std::uint8_t team = 0; team < teamCount; team++) {
+			// Most players across the finish line wins; if two teams tie, the one that got there first
+			if (finishedPerTeam[team] > bestCount ||
+				(finishedPerTeam[team] == bestCount && bestOrderPerTeam[team] < bestOrderPerTeam[bestTeam])) {
+				bestCount = finishedPerTeam[team];
+				bestTeam = team;
+			}
+		}
+
+		if (bestCount == 0) {
+			// Nobody finished - fall back to the aggregate lap count of each team
+			std::uint32_t bestScore = 0;
+			for (std::uint8_t team = 0; team < teamCount; team++) {
+				std::uint32_t score = GetTeamScore(team);
+				if (score > bestScore) {
+					bestScore = score;
+					bestTeam = team;
+				}
+			}
+		}
+
+		return bestTeam;
+	}
+
+	void MpLevelHandler::BuildRoundResults()
+	{
+		_roundResults.clear();
+
+		MpGameMode gameMode = _networkManager->GetServerConfiguration().GameMode;
+		if (gameMode == MpGameMode::Unknown || gameMode == MpGameMode::Cooperation) {
+			// Cooperation isn't a competition, so it has nothing to rank
+			return;
+		}
+
+		bool isRace = (gameMode == MpGameMode::Race || gameMode == MpGameMode::TeamRace);
+
+		// Refresh the standings one last time; in races this also updates the within-lap progress of everyone still
+		// racing, so the players that didn't finish are ranked by how far they actually got
+		CalculatePositionInRound();
+
+		SmallVector<MpPlayer*, 0> ranked;
+		for (auto* player : _players) {
+			ranked.push_back(static_cast<MpPlayer*>(player));
+		}
+
+		// Per-player captures aren't tracked in Capture The Flag, so its players are ranked by kills like in Battle
+		auto getScore = [gameMode](const PeerDescriptor& peerDesc) -> std::uint32_t {
+			switch (gameMode) {
+				case MpGameMode::Race:
+				case MpGameMode::TeamRace: return peerDesc.Laps;
+				case MpGameMode::TreasureHunt:
+				case MpGameMode::TeamTreasureHunt: return peerDesc.TreasureCollected;
+				default: return peerDesc.Kills;
+			}
+		};
+
+		nCine::sort(ranked.begin(), ranked.end(), [isRace, &getScore](MpPlayer* a, MpPlayer* b) {
+			auto peerDescA = a->GetPeerDescriptor(), peerDescB = b->GetPeerDescriptor();
+			if (isRace) {
+				bool finishedA = (peerDescA->RaceFinishOrder != 0), finishedB = (peerDescB->RaceFinishOrder != 0);
+				if (finishedA != finishedB) {
+					// Everyone who completed the race comes before everyone who didn't
+					return finishedA;
+				}
+				if (finishedA) {
+					return (peerDescA->RaceFinishOrder < peerDescB->RaceFinishOrder);
+				}
+				// Neither finished - more completed laps first, then further along the current lap
+				if (peerDescA->Laps != peerDescB->Laps) {
+					return (peerDescA->Laps > peerDescB->Laps);
+				}
+				return (peerDescA->RaceProgress > peerDescB->RaceProgress);
+			}
+			// Higher score first, fewer deaths as the tiebreaker
+			std::uint32_t scoreA = getScore(*peerDescA), scoreB = getScore(*peerDescB);
+			if (scoreA != scoreB) {
+				return (scoreA > scoreB);
+			}
+			return (peerDescA->Deaths < peerDescB->Deaths);
+		});
+
+		std::uint32_t position = 0;
+		for (auto* mpPlayer : ranked) {
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			// Players who spectated the round instead of playing it are not ranked at all
+			if (peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0) {
+				if (isRace) {
+					peerDesc->PositionInRound = 0;
+				}
+				continue;
+			}
+
+			position++;
+			if (isRace) {
+				// Race positions are only known now that the finishing order is complete (the finishers are in
+				// spectate mode, so the periodic standings can't rank them), and they decide the championship
+				// points awarded by the caller. Every other mode is already ranked by CalculatePositionInRound().
+				peerDesc->PositionInRound = position;
+			}
+
+			if (position <= MaxRoundResults) {
+				RoundResult result;
+				result.Name = peerDesc->PlayerName;
+				result.ActorID = mpPlayer->_playerIndex;
+				result.Position = position;
+				result.Score = getScore(*peerDesc);
+				result.Extra = (isRace ? 0 : peerDesc->Deaths);
+				result.Finished = (peerDesc->RaceFinishOrder != 0);
+				result.TimeSecs = (result.Finished
+					? std::max(0.0f, (peerDesc->RaceFinishFrames - _roundStartedFrames) * FrameTimer::SecondsPerFrame)
+					: 0.0f);
+				result.IsLocal = !peerDesc->RemotePeer;
+				result.Team = peerDesc->Team;
+				_roundResults.push_back(std::move(result));
+			}
+		}
+	}
+
+	void MpLevelHandler::SyncRoundResultsToAllPlayers()
+	{
+		if (_isLocalSession || _roundResults.empty()) {
+			// Every player of a local session already reads the standings directly
+			return;
+		}
+
+		MemoryStream packet(8 + _roundResults.size() * 48);
+		packet.WriteVariableUint32((std::uint32_t)_roundResults.size());
+		for (const auto& result : _roundResults) {
+			packet.WriteVariableUint32(result.ActorID);
+			packet.WriteVariableUint32(result.Position);
+			packet.WriteVariableUint32(result.Score);
+			packet.WriteVariableUint32(result.Extra);
+			packet.WriteVariableUint32((std::uint32_t)(result.TimeSecs * 1000.0f));
+			packet.WriteValue<std::uint8_t>(result.Finished ? 1 : 0);
+			packet.WriteValue<std::uint8_t>(result.Team);
+			packet.WriteVariableUint32((std::uint32_t)result.Name.size());
+			packet.Write(result.Name.data(), (std::uint32_t)result.Name.size());
+		}
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelLoaded);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncRoundResults, packet);
 	}
 
 	void MpLevelHandler::EndGame(MpPlayer* winner)
 	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		// Every competitive round ends with the final standings on screen, which stay up longer than a plain
+		// "Winner is ..." alert. This also assigns the final position of every player, which decides the
+		// championship points awarded below.
+		BuildRoundResults();
+
+		float endingDuration = (_roundResults.empty() ? EndingDuration : EndingDurationWithResults);
+
 		_levelState = LevelState::Ending;
-		_gameTimeLeft = EndingDuration;
+		_gameTimeLeft = endingDuration;
+		_overtimeStarted = false;
 
 		SetControllableToAllPlayers(false);
 		SendLevelStateToAllPlayers();
+		SyncRoundResultsToAllPlayers();
 
 		// Fade out
 		{
-			float fadeOutDelay = EndingDuration - 2 * FrameTimer::FramesPerSecond;
+			float fadeOutDelay = endingDuration - 2 * FrameTimer::FramesPerSecond;
 
 			_hud->BeginFadeOut(fadeOutDelay);
 
@@ -9329,7 +9750,6 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (auto* webhook = _networkManager->GetWebhook()) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
 			SmallVector<WebhookClient::LeaderboardEntry, 16> standings;
 			StringView scoreLabel = BuildWebhookStandings(standings);
 			webhook->OnRoundEnded(winner != nullptr ? StringView(winner->GetPeerDescriptor()->PlayerName) : StringView(),
@@ -9344,8 +9764,6 @@ namespace Jazz2::Multiplayer
 				peerDesc->Points += PointsPerPosition[peerDesc->PositionInRound - 1];
 
 				if (peerDesc->RemotePeer) {
-					auto& serverConfig = _networkManager->GetServerConfiguration();
-
 					MemoryStream packet(13);
 					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Points);
 					packet.WriteVariableUint32(mpPlayer->_playerIndex);
@@ -9359,15 +9777,24 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::EndGameWithTeam(std::uint8_t team)
 	{
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		// Team modes end with the same final standings board as free-for-all ones (see EndGame)
+		BuildRoundResults();
+
+		float endingDuration = (_roundResults.empty() ? EndingDuration : EndingDurationWithResults);
+
 		_levelState = LevelState::Ending;
-		_gameTimeLeft = EndingDuration;
+		_gameTimeLeft = endingDuration;
+		_overtimeStarted = false;
 
 		SetControllableToAllPlayers(false);
 		SendLevelStateToAllPlayers();
+		SyncRoundResultsToAllPlayers();
 
 		// Fade out
 		{
-			float fadeOutDelay = EndingDuration - 2 * FrameTimer::FramesPerSecond;
+			float fadeOutDelay = endingDuration - 2 * FrameTimer::FramesPerSecond;
 
 			_hud->BeginFadeOut(fadeOutDelay);
 
@@ -9385,8 +9812,6 @@ namespace Jazz2::Multiplayer
 		ShowAlertToAllPlayers(_f("\n\n{} team wins!", GetTeamName(team)));
 		LOGW("Team {} wins", team);
 
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-
 		if (auto* webhook = _networkManager->GetWebhook()) {
 			// Only the winning team is listed, ranked by each member's contribution
 			SmallVector<WebhookClient::LeaderboardEntry, 16> teamMembers;
@@ -9395,11 +9820,13 @@ namespace Jazz2::Multiplayer
 				{ teamMembers.data(), teamMembers.size() }, scoreLabel);
 		}
 
-		// Award championship points to the members of the winning team
+		// Award championship points to the members of the winning team (a team race puts its finishers into spectate
+		// mode, so they are awarded as well - they are the reason the team won)
 		for (auto* player : _players) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			if (peerDesc->Team != team || peerDesc->IsSpectating != SpectateMode::None) {
+			if (peerDesc->Team != team ||
+				(peerDesc->IsSpectating != SpectateMode::None && peerDesc->RaceFinishOrder == 0)) {
 				continue;
 			}
 
@@ -9467,20 +9894,9 @@ namespace Jazz2::Multiplayer
 			}
 
 			case MpGameMode::Race: {
-				std::uint32_t mostLaps = 0;
-				for (auto* player : _players) {
-					auto* mpPlayer = static_cast<MpPlayer*>(player);
-					auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-					if (peerDesc->IsSpectating != SpectateMode::None) {
-						continue;
-					}
-
-					if (mostLaps < peerDesc->Laps) {
-						mostLaps = peerDesc->Laps;
-						winner = mpPlayer;
-					}
-				}
+				// Somebody may well have completed the race before the time ran out, and the standings already know
+				// who is ahead of whom (by laps and by the distance covered in the current lap)
+				winner = FindRaceWinner();
 				break;
 			}
 
