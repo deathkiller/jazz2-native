@@ -9053,9 +9053,9 @@ namespace Jazz2::Multiplayer
 					// Every unfinished lap is a fixed penalty, so the ranking is decided by laps first and by the
 					// distance still to go inside the current lap second. The lap count is capped so the penalties of
 					// a race with an absurd lap target can't overflow.
-					std::uint32_t totalLaps = std::max(serverConfig.TotalLaps, 1u);
+					std::uint32_t totalLaps = std::max<std::uint32_t>(serverConfig.TotalLaps, 1);
 					std::uint32_t lapsLeft = (peerDesc->Laps < totalLaps ? totalLaps - peerDesc->Laps : 1);
-					const std::uint32_t lapPenalty = std::min(lapsLeft, 90u) * (UINT32_MAX / 100);
+					const std::uint32_t lapPenalty = std::min<std::uint32_t>(lapsLeft, 90) * (UINT32_MAX / 100);
 
 					Vector2f pos = mpPlayer->_pos;
 					if (_raceCheckpointsOrdered && _orderedRaceCheckpoints.size() >= 2) {
