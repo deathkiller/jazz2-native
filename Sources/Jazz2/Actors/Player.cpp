@@ -3032,7 +3032,8 @@ namespace Jazz2::Actors
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
 			AudioBuffer* buffer;
-			if (!it->second.Buffers.empty()) {
+			// The samples may not be loaded yet (see ContentResolver::ResolveSound)
+			if (ContentResolver::Get().ResolveSound(it->second)) {
 				std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 				buffer = &it->second.Buffers[idx]->Buffer;
 			} else {

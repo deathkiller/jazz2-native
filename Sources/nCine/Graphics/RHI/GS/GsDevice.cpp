@@ -198,6 +198,30 @@ namespace nCine::RHI::GS
 		}
 
 		/**
+			@brief The projection*view product of the last draw, rebuilt only when either input changed
+
+			The product changes a handful of times a frame (a camera move, a viewport switch) while a frame
+			runs a few hundred dispatches, so comparing 128 bytes replaces the 64 multiplies of the full
+			product almost every time. Compared by VALUE, not by pointer - the matrices are rewritten in
+			place when the camera moves.
+		*/
+		inline const float* CachedProjView(const float* projMat, const float* viewMat)
+		{
+			static float cachedPv[16];
+			static float cachedProj[16];
+			static float cachedView[16];
+			static bool cachedValid = false;
+			if (!cachedValid || std::memcmp(projMat, cachedProj, sizeof(cachedProj)) != 0 ||
+					std::memcmp(viewMat, cachedView, sizeof(cachedView)) != 0) {
+				std::memcpy(cachedProj, projMat, sizeof(cachedProj));
+				std::memcpy(cachedView, viewMat, sizeof(cachedView));
+				Mat4Mul(projMat, viewMat, cachedPv);
+				cachedValid = true;
+			}
+			return cachedPv;
+		}
+
+		/**
 			@brief The six products of projection*view*model a 2D point of the form (x, y, 0, 1) ever reads
 
 			The same reduction the PVR backend makes: a sprite pays this per instance, so the other ten
@@ -2024,10 +2048,9 @@ namespace nCine::RHI::GS
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const GsUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
-		if (block == nullptr) {
-			block = _currentProgram->FindBlock("InstancesBlock");
-		}
+		// Resolved once at introspection (see DispatchFacts) - this used to re-scan the
+		// reflection's name strings on every RenderCommand
+		const GsUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -2042,35 +2065,12 @@ namespace nCine::RHI::GS
 
 		// The reflection is the only source of truth for the instance layout: a strided block means a batched
 		// program, a declared `uTexture` means the draw samples one, and a declared `texRect` means the
-		// textured member offsets apply even when nothing is sampled (the Transition carries one)
-		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
-		std::uint32_t instanceStride = 0;
-		bool hasTexture = false;
-		bool texturedLayout = false;
-		if (reflection != nullptr) {
-			for (std::size_t i = 0; i < reflection->BlockCount; i++) {
-				if (reflection->Blocks[i].InstanceStride > 0) {
-					instanceStride = reflection->Blocks[i].InstanceStride;
-					break;
-				}
-			}
-			for (std::size_t i = 0; i < reflection->TextureCount; i++) {
-				if (std::strcmp(reflection->Textures[i].Name, "uTexture") == 0) {
-					hasTexture = true;
-					break;
-				}
-			}
-			texturedLayout = hasTexture;
-			for (std::size_t i = 0; i < reflection->BlockCount && !texturedLayout; i++) {
-				const ShaderCompiler::UniformBlock& b = reflection->Blocks[i];
-				for (std::size_t j = 0; j < b.MemberCount; j++) {
-					if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
-						texturedLayout = true;
-						break;
-					}
-				}
-			}
-		}
+		// textured member offsets apply even when nothing is sampled (the Transition carries one).
+		// All of it is a constant of the linked program, resolved once at introspection (DispatchFacts).
+		const GsShaderProgram::DispatchFacts& facts = _currentProgram->GetDispatchFacts();
+		const std::uint32_t instanceStride = facts.InstanceStride;
+		const bool hasTexture = facts.HasTexture;
+		const bool texturedLayout = facts.TexturedLayout;
 
 		GsTexture* texture = (hasTexture ? const_cast<GsTexture*>(_boundTextures[0]) : nullptr);
 		if (hasTexture && texture == nullptr) {
@@ -2093,8 +2093,7 @@ namespace nCine::RHI::GS
 			}
 		}
 
-		float pv[16];
-		Mat4Mul(projMat, viewMat, pv);
+		const float* pv = CachedProjView(projMat, viewMat);
 
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
@@ -2302,7 +2301,7 @@ namespace nCine::RHI::GS
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GsUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
+		const GsUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -2324,8 +2323,7 @@ namespace nCine::RHI::GS
 		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
-		float pvm[16];
-		Mat4Mul(projMat, viewMat, pvm);
+		const float* pvm = CachedProjView(projMat, viewMat);
 		Transform2D mvp;
 		Mat4MulTransform2D(pvm, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
 
@@ -2520,7 +2518,7 @@ namespace nCine::RHI::GS
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GsUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
+		const GsUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -2542,8 +2540,7 @@ namespace nCine::RHI::GS
 		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
-		float pvMat[16];
-		Mat4Mul(projMat, viewMat, pvMat);
+		const float* pvMat = CachedProjView(projMat, viewMat);
 		Transform2D mvp;
 		Mat4MulTransform2D(pvMat, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
 

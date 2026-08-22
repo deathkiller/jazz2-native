@@ -102,7 +102,7 @@
 		"prefix": "fixed_function-target",
 		"description": "Fixed-function block overriding the generic one for specific backends",
 		"body": [
-			"void fixed_function(${1|pvr,gx,gu,gs|}) {",
+			"void fixed_function(${1|pvr,gx,gu,gs,rdp|}) {",
 			"\tpass p;",
 			"\tp.color = ${2:COLOR};",
 			"\tsubmit_quad(p);$0",

@@ -22,9 +22,27 @@ namespace Jazz2::Tiles
 		// circular variant has no such structure, so it borrows the planar reconstruction rather than falling
 		// back to a flat tilemap - much closer to the original than no warp at all.
 		constexpr bool SupportsTexturedBackground = true;
+
+		/**
+			@brief Whether a level's tileset atlas is repacked around the tiles the level references
+
+			A tileset describes everything its author drew; the levels measured reference 42% and 59% of theirs,
+			and the rest sits in memory as texels nothing samples. Repacking costs a second read of the sheet at
+			load time and gives back 592 KB on the largest of them - the difference, on a console with 8 MB of
+			RDRAM in total, between a level that draws every sprite and one that starts refusing them.
+			Only the Nintendo 64 takes that trade for now: the analysis cannot see a tile a script places at
+			runtime (it draws blank there), and the platforms that can hold the whole sheet have no reason to
+			risk it.
+		*/
+#if defined(DEATH_TARGET_N64)
+		constexpr bool PruneAtlasToUsedTiles = true;
+#else
+		constexpr bool PruneAtlasToUsedTiles = false;
+#endif
 		constexpr bool SupportsTexturedBackgroundCircle = true;
 
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE)
 		// Slots the render command pool keeps even when nothing needs them - roughly what one viewport of a level
 		// asks for, so the common case never reallocates
 		constexpr std::int32_t MinPooledRenderCommands = 32;
@@ -62,7 +80,8 @@ namespace Jazz2::Tiles
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false),
 			_renderCommandsCount(0), _renderCommandsPeak(0), _renderCommandsPeakAge(0), _collapsingTimer(0.0f),
 			_animatedTilesOffset(0), _triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
-			_texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
+			_texturedBackgroundLayer(-1), _texturedBackgroundPass(this),
+			_tileSetPath(tileSetPath), _captionTileId(captionTileId), _tilesOverridden(false)
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
@@ -1107,7 +1126,7 @@ namespace Jazz2::Tiles
 			// atlas). Other renderer types (tinted/solid) and multi-tileset levels fall back to one command
 			// per tile.
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-			bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1);
+			bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1 && _tileSets[0].Data != nullptr);
 			TileSet* meshTileSet = (meshMode ? _tileSets[0].Data.get() : nullptr);
 			// One vertex buffer per chunk, rented on first use - a layer usually touches only some of them.
 			// Indices rather than pointers, because renting can grow (and so reallocate) _meshVertices.
@@ -1115,6 +1134,9 @@ namespace Jazz2::Tiles
 			if DEATH_LIKELY(meshMode) {
 				chunkVertices.resize(meshTileSet->GetTextureCount(), -1);
 			}
+#	if defined(TILEMAP_GROUP_MESH_BY_TILE)
+			_meshTileEntries.clear();
+#	endif
 #endif
 
 			std::int32_t tile_xo = -1;
@@ -1163,8 +1185,12 @@ namespace Jazz2::Tiles
 					// below TilesPerTexture and this would collapse to chunk 0, drawing the whole layer out of
 					// the first texture. A no-op single-texture lookup normally; only a device texture-size
 					// limit small enough to split the tileset atlas (the consoles) makes it matter.
-					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileId >= tileSet->TilesPerTexture
-						? tileId / tileSet->TilesPerTexture : 0);
+					// Through the atlas mapping first: where the atlas holds only the tiles this level uses, the
+					// chunk a tile lives in follows its packed slot, not its ID. Kept in a local of its own so
+					// ResolveTextureDiffuse() below still maps the ID itself exactly once.
+					const std::int32_t tileSlot = tileSet->MapToAtlasSlot(tileId);
+					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileSlot >= tileSet->TilesPerTexture
+						? tileSlot / tileSet->TilesPerTexture : 0);
 #endif
 					Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
 					if DEATH_UNLIKELY(tileTexture == nullptr) {
@@ -1194,6 +1220,12 @@ namespace Jazz2::Tiles
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 					if DEATH_LIKELY(meshMode) {
+#	if defined(TILEMAP_GROUP_MESH_BY_TILE)
+						// Held back so the whole layer can be emitted grouped by atlas slot below; the quad this
+						// would have appended is fully described by what goes into the entry
+						_meshTileEntries.push_back({ x2r, y2r, texScaleX, texBiasX, texScaleY, texBiasY,
+							tile.Alpha / 255.0f, (std::uint16_t)tileSlot, (std::uint16_t)tileChunk });
+#	else
 						// Accumulate this tile into its chunk's mesh; the layer tint and palette are applied once
 						// per emitted mesh in EmitMesh(). The per-tile alpha rides along in the vertex color.
 						std::int32_t& verticesIndex = chunkVertices[tileChunk];
@@ -1202,6 +1234,7 @@ namespace Jazz2::Tiles
 						}
 						AppendTileQuad(_meshVertices[verticesIndex], x2r, y2r, (float)TileSet::DefaultTileSize,
 							texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
+#	endif
 						continue;
 					}
 #endif
@@ -1249,6 +1282,62 @@ namespace Jazz2::Tiles
 					renderQueue.AddCommand(command);
 				}
 			}
+
+#if defined(TILEMAP_GROUP_MESH_BY_TILE)
+			if DEATH_LIKELY(meshMode) {
+				// The tiles of this layer are now emitted grouped by the atlas slot they sample rather than in
+				// the screen order they were visited in, which is what lets the consumer's texture residency
+				// serve every repeat of a tile id from the window already loaded (see the note above the gate).
+				// Safe because a layer's visible tiles occupy DISJOINT screen cells - the two loops above step
+				// one tile cell at a time and never revisit one, whatever the layer repeats - so nothing within
+				// a layer's mesh is drawn over anything else in it and the submission order is unobservable.
+				// Layers are never mixed: this reorders inside one DrawLayer() call only.
+				//
+				// A counting sort rather than a comparison one: the key is the packed atlas slot, so its range
+				// is known and small (the atlas holds only the tiles the level uses), and a few hundred
+				// dependent RDRAM loads per compare would have eaten the upload traffic it saves. The bucket
+				// array is offset by the lowest slot on screen, which is usually a small fraction of the atlas.
+				auto appendEntry = [&](const MeshTileEntry& entry) {
+					std::int32_t& verticesIndex = chunkVertices[entry.Chunk];
+					if (verticesIndex < 0) {
+						verticesIndex = RentMeshVertices();
+					}
+					AppendTileQuad(_meshVertices[verticesIndex], entry.X, entry.Y, (float)TileSet::DefaultTileSize,
+						entry.TexScaleX, entry.TexBiasX, entry.TexScaleY, entry.TexBiasY, entry.Alpha);
+				};
+
+				const std::uint32_t entryCount = (std::uint32_t)_meshTileEntries.size();
+				if (entryCount > 1 && entryCount <= MaxGroupedMeshTiles) {
+					std::uint32_t minSlot = UINT32_MAX, maxSlot = 0;
+					for (const auto& entry : _meshTileEntries) {
+						if (entry.Slot < minSlot) { minSlot = entry.Slot; }
+						if (entry.Slot > maxSlot) { maxSlot = entry.Slot; }
+					}
+					const std::uint32_t bucketCount = maxSlot - minSlot + 2;
+					_meshTileBuckets.resize_for_overwrite(bucketCount);
+					std::memset(_meshTileBuckets.data(), 0, bucketCount * sizeof(std::uint16_t));
+					for (const auto& entry : _meshTileEntries) {
+						_meshTileBuckets[entry.Slot - minSlot + 1]++;
+					}
+					for (std::uint32_t i = 1; i < bucketCount; i++) {
+						_meshTileBuckets[i] += _meshTileBuckets[i - 1];
+					}
+					_meshTileOrder.resize_for_overwrite(entryCount);
+					for (std::uint32_t i = 0; i < entryCount; i++) {
+						_meshTileOrder[_meshTileBuckets[_meshTileEntries[i].Slot - minSlot]++] = (std::uint16_t)i;
+					}
+					for (std::uint32_t i = 0; i < entryCount; i++) {
+						appendEntry(_meshTileEntries[_meshTileOrder[i]]);
+					}
+				} else {
+					// Nothing to group (or more tiles than the 16-bit order array indexes, which no viewport of
+					// a tile layer reaches); emitted in the order they were visited
+					for (const auto& entry : _meshTileEntries) {
+						appendEntry(entry);
+					}
+				}
+			}
+#endif
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 			if DEATH_LIKELY(meshMode) {
@@ -1663,6 +1752,8 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
+		// Remembered so PruneTilesetAtlas() knows this atlas carries patched-in tiles it must not rebuild away
+		_tilesOverridden = true;
 		return tileSet->OverrideTileDiffuse(tileId, tileDiffuse);
 	}
 
@@ -1680,6 +1771,8 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
+		// Remembered so PruneTilesetAtlas() knows this atlas carries patched-in masks it must not rebuild away
+		_tilesOverridden = true;
 		return tileSet->OverrideTileMask(tileId, tileMask);
 	}
 
@@ -2416,6 +2509,94 @@ namespace Jazz2::Tiles
 		command->GetMaterial().SetTexture(*target);
 
 		renderQueue.AddCommand(command);
+	}
+
+	void TileMap::PruneTilesetAtlas()
+	{
+		if (!PruneAtlasToUsedTiles || _tileSets.size() != 1 || _tileSets[0].Data == nullptr) {
+			// More than one part means the level brought its own extra tiles (MLLE); the ids then span several
+			// sets and the mapping below would not describe them, so those are left whole
+			return;
+		}
+		if (_tilesOverridden) {
+			// The level's per-tile overrides (MLLE) were already patched into this atlas and its masks;
+			// rebuilding from the source sheet would silently revert them - both the graphics and the
+			// collision - so such a level keeps its whole atlas
+			return;
+		}
+
+		const std::int32_t tileCount = _tileSets[0].Data->TileCount;
+		if (tileCount <= 0) {
+			return;
+		}
+
+		BitArray used(ValueInit, tileCount);
+		const auto mark = [&](std::int32_t id) {
+			if (id >= 0 && id < tileCount) {
+				used.set(id);
+			}
+		};
+
+		// Deliberately more generous than the layers alone: every frame of every animated tile is kept even if
+		// nothing points at that animation yet (a trigger or a script can start using it later), and so is the
+		// caption tile and tile 0. What cannot be covered is a script calling SetTile() with an id this level
+		// never mentions - that one maps to the blank slot and draws EMPTY while its collision mask (indexed
+		// by the original id) still applies, so it would be invisible but solid; the reserve exists to at
+		// least make that deterministic rather than sampling a neighbour.
+		mark(0);
+		mark(_captionTileId);
+		for (auto& anim : _animatedTiles) {
+			for (auto& frame : anim.Tiles) {
+				mark(frame.TileID);
+			}
+		}
+		for (auto& layer : _layers) {
+			if (layer.Layout == nullptr) {
+				continue;
+			}
+			const std::int32_t count = layer.LayoutSize.X * layer.LayoutSize.Y;
+			for (std::int32_t i = 0; i < count; i++) {
+				const LayerTile& tile = layer.Layout[i];
+				if (tile.TileID < _animatedTilesOffset) {
+					mark(tile.TileID);
+				}
+			}
+		}
+
+		std::int32_t distinct = 0;
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			distinct += (used[i] ? 1 : 0);
+		}
+		if (distinct >= tileCount) {
+			return;	// Nothing to gain
+		}
+
+		// The whole atlas goes before the packed one is built, so only one of the two is ever resident - which
+		// is the point of doing this at all. The source sheet is read again for it; that is one more pass over
+		// the cartridge at load time in exchange for the memory for the rest of the level.
+		const String path = _tileSetPath;
+		const std::uint16_t captionTileId = _captionTileId;
+		_tileSets[0].Data = nullptr;
+
+		auto pruned = ContentResolver::Get().RequestTileSet(path, captionTileId, false, nullptr, &used);
+		if (pruned == nullptr) {
+			// The old atlas is already gone (freeing it first is the point), so there is nothing to fall
+			// back to in place - retry the plain unpruned request once before giving up
+			LOGE("Cannot repack tileset \"{}\", reloading it whole", path);
+			pruned = ContentResolver::Get().RequestTileSet(path, captionTileId, false);
+			if (pruned == nullptr) {
+				// Every lookup now reports a missing tile instead of walking a null tileset; the level is
+				// unplayable either way, but it fails as empty layers rather than as a crash
+				LOGE("Cannot reload tileset \"{}\", the level has no tiles to draw", path);
+				_tileSets[0].Count = 0;
+				return;
+			}
+		} else {
+			LOGI("Tileset \"{}\" repacked to the {} of {} tiles this level references", path, distinct, tileCount);
+		}
+
+		_tileSets[0].Data = Death::move(pruned);
+		_tileSets[0].Count = _tileSets[0].Data->TileCount;
 	}
 
 	void TileMap::OnInitializeViewport()

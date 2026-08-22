@@ -547,7 +547,14 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(WebP)
 	endif()
 	if(NCINE_WITH_AUDIO)
-		if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+		if(PLATFORM_N64)
+			# libdragon ships no OpenAL. The console has no sound chip at all - the AI is a bare
+			# stereo DAC fed by DMA - so the backend software-mixes into libdragon's audio ring, the same
+			# shape as the PS3 arm below (see N64AudioDevice). Part of the SDK, nothing to look for.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(N64AUDIO_FOUND 1)
+		elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 			# devkitPro ships no OpenAL for these consoles. libogc's ASND drives the DSP mixer instead
 			# and comes with the toolchain, so there is nothing to look for - see AsndAudioDevice
 			set(ASND_FOUND 1)
@@ -615,7 +622,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
-	if(NINTENDO_SWITCH OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA)
+	if(NINTENDO_SWITCH OR PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA)
 		# These platforms support only static linking
 		set(LIBRARY_LINKAGE STATIC)
 	else()

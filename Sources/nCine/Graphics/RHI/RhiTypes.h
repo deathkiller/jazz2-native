@@ -200,6 +200,7 @@ namespace nCine
 		backend maps these logical formats to its own internal/external formats and data types. The
 		external channel order (RGB vs. BGR) is carried separately by @ref TextureFormat.
 	*/
+	// (See BytesPerPixel() below the enum - a new uncompressed entry has to be added there as well)
 	enum class PixelFormat
 	{
 		Unknown,		/**< Unknown or unsupported format */
@@ -267,6 +268,34 @@ namespace nCine
 		ASTC_12x10,		/**< ASTC, 12x10 block */
 		ASTC_12x12		/**< ASTC, 12x12 block */
 	};
+
+	/**
+		@brief Bytes one pixel of an uncompressed @ref PixelFormat occupies, or `0` (unknown or compressed)
+
+		The one authoritative table next to the enum itself, so a backend that needs the answer does not
+		grow its own switch (which then silently answers `0` for every entry added after it was copied).
+		Compressed formats have no per-pixel size - callers reason about their blocks instead.
+	*/
+	constexpr std::int32_t BytesPerPixel(PixelFormat format)
+	{
+		switch (format) {
+			case PixelFormat::R8: return 1;
+			case PixelFormat::RG8: return 2;
+			case PixelFormat::RGB8: return 3;
+			case PixelFormat::RGBA8: return 4;
+			case PixelFormat::RGB565: return 2;
+			case PixelFormat::RGB5A1: return 2;
+			case PixelFormat::RGBA4: return 2;
+			case PixelFormat::RGB16F: return 6;
+			case PixelFormat::RGBA16F: return 8;
+			case PixelFormat::RGB32F: return 12;
+			case PixelFormat::RGBA32F: return 16;
+			case PixelFormat::Depth16: return 2;
+			case PixelFormat::Depth24: return 3;
+			case PixelFormat::Depth32F: return 4;
+			default: return 0;
+		}
+	}
 
 	/**
 		@brief Type of texture the backend allocates and binds

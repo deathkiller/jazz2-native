@@ -273,10 +273,11 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	target_compile_features(${target} PUBLIC cxx_std_17)
-	if(PLATFORM_DREAMCAST OR PLATFORM_PS3)
+	if(PLATFORM_DREAMCAST OR PLATFORM_N64 OR PLATFORM_PS3)
 		# KOS newlib hides C99 stdio (snprintf, strtoll) behind !__STRICT_ANSI__, so GNU extensions are
 		# required; the powerpc64-ps3-elf newlib behind PSL1GHT does exactly the same, and libstdc++'s
-		# <cstdio> then fails to compile at all ("'::snprintf' has not been declared") under -std=c++17
+		# <cstdio> then fails to compile at all ("'::snprintf' has not been declared") under -std=c++17.
+		# libdragon's newlib is the same family, and its n64.mk builds everything as gnu17/gnu++17 anyway
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS ON)
 	else()
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
@@ -340,6 +341,9 @@ function(ncine_apply_compiler_options target)
 
 	if(NINTENDO_SWITCH)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_SWITCH")
+	elseif(PLATFORM_N64)
+		# libdragon (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64, and N64 with it)
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_N64")
 	elseif(NINTENDO_WII)
 		# devkitPPC/libogc (the devkitPro Wii.cmake toolchain file sets NINTENDO_WII)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_WII")
@@ -619,7 +623,7 @@ function(ncine_apply_compiler_options target)
 			if(NINTENDO_SWITCH)
 				# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
-			elseif(NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3)
+			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3)
 				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3: fast-math reordering
 				# is untested on Gekko/Broadway paired singles and on the Allegrex's single-precision-only FPU,
 				# and code size matters (24 MB GameCube, 16 MB Dreamcast, 24 MB usable of the PSP's 32 MB).
@@ -627,6 +631,8 @@ function(ncine_apply_compiler_options target)
 				# a GCC 7.2 that no other target in this project uses, so -Ofast's reassociation on the Cell
 				# PPE's FPU is the least-tested combination in the build - and the console is also the hardest
 				# one to attach a debugger to when a fast-math difference does surface.
+				# The N64 already compiles everything with libdragon's own fast-math triplet from the toolchain
+				# file, and with 4-8 MB of RDRAM it has the strictest code-size budget of them all.
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
 			else()
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)

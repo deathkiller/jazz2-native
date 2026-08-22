@@ -57,6 +57,8 @@ namespace nCine::RHI::GX
 		bool _maybeDirty;
 
 		UniformHashMapType _uniformCaches;
+		// Fingerprints of the _uniformCaches names, in the same order (see @ref HashUniformName)
+		std::vector<std::uint32_t> _uniformNameHashes;
 
 		void ImportUniforms(const char* includeOnly, const char* exclude);
 	};

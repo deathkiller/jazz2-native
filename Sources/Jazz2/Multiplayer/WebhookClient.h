@@ -6,7 +6,8 @@
 #include "Reason.h"
 #include "ServerInitialization.h"
 
-#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN) && \
+		(defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	include "../../nCine/Threading/Thread.h"
 #	include "../../nCine/Threading/ThreadSync.h"
 
@@ -25,7 +26,8 @@ namespace Jazz2::Multiplayer
 {
 	class NetworkManager;
 
-#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (defined(WITH_ONLINE_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN) && \
+		(defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/**
 		@brief Posts selected server events to a configured webhook

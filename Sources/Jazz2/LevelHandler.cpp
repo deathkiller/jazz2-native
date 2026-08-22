@@ -145,7 +145,11 @@ namespace Jazz2
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
 
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Only the post-processing combine samples it (see CombineRenderer); the direct tier never binds it,
+		// so an RGBA8 64x64 would sit there for the whole level without ever being read
 		_noiseTexture = resolver.GetNoiseTexture();
+#endif
 
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
@@ -200,7 +204,11 @@ namespace Jazz2
 		auto& resolver = ContentResolver::Get();
 		resolver.BeginLoading();
 
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Only the post-processing combine samples it (see CombineRenderer); the direct tier never binds it,
+		// so an RGBA8 64x64 would sit there for the whole level without ever being read
 		_noiseTexture = resolver.GetNoiseTexture();
+#endif
 
 		_rootNode = std::make_unique<SceneNode>();
 		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
@@ -965,7 +973,7 @@ namespace Jazz2
 	{
 #if defined(WITH_AUDIO)
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView(identifier));
-		if (it != _commonResources->Sounds.end() && !it->second.Buffers.empty()) {
+		if (it != _commonResources->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			auto* buffer = &it->second.Buffers[idx]->Buffer;
 			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
@@ -1372,7 +1380,7 @@ namespace Jazz2
 		}
 
 		auto it = _commonResources->Sounds.find(String::nullTerminatedView("SugarRush"_s));
-		if (it != _commonResources->Sounds.end()) {
+		if (it != _commonResources->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			_sugarRushMusic = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			_sugarRushMusic->setPosition(Vector3f(0.0f, 0.0f, 100.0f));

@@ -13,7 +13,9 @@ option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 # the toolchain can't do it.
 # LTO is also disabled on Sega Dreamcast: GCC 15.2 sh-elf crashes with an internal compiler error
 # (gen_reg_rtx) when streaming some units back in during the LTO link
-cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID;NOT PLATFORM_DREAMCAST" OFF)
+# The Nintendo 64 is excluded conservatively: libdragon's own build never exercises LTO against its
+# n64.ld linker script and --wrap'ed constructor sequencing, so it is the least-tested combination
+cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID;NOT PLATFORM_DREAMCAST;NOT PLATFORM_N64" OFF)
 if(NCINE_LINKTIME_OPTIMIZATION)
 	include(CheckIPOSupported)
 	check_ipo_supported(RESULT _ipoSupported OUTPUT _ipoOutput)
@@ -56,7 +58,19 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 
-	if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+	if(PLATFORM_N64)
+		# Nintendo 64 (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64): the
+		# only rendering backend is the fixed-function RDP one, driven through libdragon's rdpq command
+		# queue, presented through the bespoke N64 window backend. libdragon's OpenGL 1.1 is layered on
+		# that very same rdpq/RSP pipeline, so it could only cost performance - the same reasoning as
+		# pspgl and gsKit above. The RDP has no programmable shading at all, so like PVR/GX/GU/GS this
+		# backend consumes the transpiled `fixed_function` effect tables.
+		set(NCINE_PREFERRED_RHI "RDP" CACHE STRING "Rendering backend on Nintendo 64: RDP")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "RDP")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "RDP")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo 64 (expected RDP)")
+		endif()
+	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 		# Nintendo Wii/GameCube (the devkitPro toolchain files set NINTENDO_WII/NINTENDO_GAMECUBE): the only
 		# rendering backend is the fixed-function GX one (Flipper/Hollywood), presented through the bespoke
 		# Ogc window backend (no SDL/GLFW on these consoles in this engine).
@@ -160,20 +174,17 @@ endif()
 
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
-elseif(PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
-	# The PlayStation consoles are single-threaded, each for its own reason, and none of them is a
-	# configuration change away from working:
-	#  - PSP: pspdev's pthread-embedded provides create/join, but not the thread names, affinity and
-	#    priorities the engine's threading layer expects of sceKernelCreateThread.
-	#  - PS2: the engine links against PS2SDK's libpthreadglue, but a thread created through it never
-	#    appears to be scheduled (the async trace worker never drained its queue - see the
-	#    DEATH_TRACE_ASYNC exclusion below - and the content verifier never set IsVerified, parking the
-	#    game in its loading state).
-	#  - PS3: PSL1GHT ships no pthreads at all. newlib installs a <pthread.h>, but nothing implements the
-	#    symbols, so `pthread_create` does not even link; threading means lv2's own PPU threads, which
-	#    would be a new backend in Thread.cpp and PosixThreadSync.cpp.
-	# TODO: All three have cycles to spare for a background asset loader - the Allegrex's Media Engine,
-	# the EE, and the Cell's second PPE thread (plus the six SPEs PSL1GHT exposes through libspurs).
+elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
+	# These consoles are single-threaded, each for its own reason, and none is a configuration change
+	# away from working:
+	#  - PSP: pspdev's pthread-embedded lacks the thread names, affinity and priorities the engine's
+	#    threading layer expects of sceKernelCreateThread.
+	#  - PS2: a thread created through PS2SDK's libpthreadglue never appears to be scheduled.
+	#  - PS3: PSL1GHT ships no pthreads at all - newlib installs <pthread.h>, nothing implements it.
+	#  - N64: libdragon ships no pthreads either (its cooperative kthread kernel is a different API),
+	#    and a single 93 MHz core has nothing for a second thread to win anyway.
+	# TODO: The first three have cycles to spare for a background asset loader (the Allegrex's Media
+	# Engine, the EE, and the Cell's second PPE thread plus the SPEs).
 	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
 else()
 	option(NCINE_WITH_THREADS "Enable support for threads" ON)
@@ -305,15 +316,17 @@ cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward lib
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-if(PLATFORM_PSP OR PLATFORM_PS2)
-	# The game's music is entirely tracker modules, so these two consoles have sound effects and no
+if(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2)
+	# The game's music is entirely tracker modules, so these consoles have sound effects and no
 	# soundtrack. Each is blocked by something outside the project:
 	#  - PSP: the library builds and plays correctly, but the FIRST module a process loads costs a fixed
 	#    ~29 s inside it (every later one ~1.8 s), which points at the Allegrex having no
 	#    double-precision unit. There is nowhere to hide that on a handheld.
 	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
 	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
-	# Both are open-ended; the shared way out would be pre-rendering the modules offline - the AssetPacker
+	#  - N64: a decoded module's runtime state plus the streaming buffers do not fit next to the game
+	#    in 8 MB of RDRAM, so it is not even worth the code size.
+	# All are open-ended; the shared way out would be pre-rendering the modules offline - the AssetPacker
 	# already re-encodes cinematics for the Dreamcast, so it is the natural place for it.
 	# (The PS3 used to be on this list. It is not any more - see Findlibopenmpt.cmake, which puts the
 	# library into its single-threaded mode so it never reaches the std::mutex PSL1GHT lacks.)
@@ -371,7 +384,7 @@ option(DEATH_TRACE "Enable runtime event tracing" ON)
 # scheduling cannot be relied on there, and a log line that never leaves the queue is worse than a slow one -
 # it makes the platform undebuggable. Synchronous tracing writes straight to the EE's serial port instead
 # (see Application::OnTraceReceived).
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
@@ -441,7 +454,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT VITA" ON)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT VITA" ON)
 # The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
 # rasterizes per tile. The GX, PVR and GU backends all consume the whole-layer mesh directly (see
 # GxDevice::DispatchTileMesh, PvrDevice::DispatchTileMesh and GuDevice::DispatchTileMesh), so they
@@ -463,7 +476,7 @@ cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_W
 # PlayStation 2 is excluded for the same shape of reason as the Vita: PS2SDK has a socket stack (ps2ip), but
 # the bundled IXWebSocket includes <netinet/ip.h>, which PS2SDK does not ship - so the WebSocket transport
 # cannot compile there as it stands. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT VITA" OFF)
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT VITA" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).

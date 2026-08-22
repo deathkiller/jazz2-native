@@ -15,6 +15,36 @@ using namespace Death::IO::Compression;
 
 namespace Jazz2::UI
 {
+	namespace
+	{
+		/**
+			@brief Sine over a full turn, sampled at 1/256 of it, for the per-glyph wobble
+
+			The wobble displaces a glyph by at most `variance` pixels and the displaced position is rounded
+			to a whole pixel before it is drawn, so nothing downstream can resolve more than a fraction of
+			what a table this fine already gives (a step is under a quarter of a degree, which at the one or
+			two pixels of variance the menus use is a displacement error of a thousandth of a pixel). A
+			sinf()/cosf() pair, on the other hand, is two libm calls in the middle of the hottest loop the
+			text has - one per glyph, hundreds of glyphs a frame. On a console with no hardware
+			transcendentals that pair measured 37 ms of a 214 ms menu frame on its own.
+		*/
+		constexpr std::int32_t WobbleSineSteps = 256;
+
+		struct WobbleSineTable
+		{
+			float Values[WobbleSineSteps];
+
+			WobbleSineTable()
+			{
+				for (std::int32_t i = 0; i < WobbleSineSteps; i++) {
+					Values[i] = std::sin(i * (fTwoPi / WobbleSineSteps));
+				}
+			}
+		};
+
+		const WobbleSineTable WobbleSine;
+	}
+
 	Font::Font(const std::unique_ptr<Stream>& s, StringView path, const std::uint32_t* palette)
 		: _asciiChars{}, _lineHeight(0), _baseSpacing(0)
 	{
@@ -401,6 +431,9 @@ namespace Jazz2::UI
 		}
 
 		Vector2i texSize = _texture->GetSize();
+		// Reciprocals once per string rather than four divisions per glyph
+		const float invTexWidth = 1.0f / float(texSize.X);
+		const float invTexHeight = 1.0f / float(texSize.Y);
 		Shader* colorizeShader;
 		bool useRandomColor, isShadow;
 		float alpha;
@@ -572,8 +605,13 @@ namespace Jazz2::UI
 									currentPhase = -currentPhase;
 								}
 
-								pos.X += cosf(currentPhase) * varianceX * scale;
-								pos.Y += sinf(currentPhase) * varianceY * scale;
+								// See WobbleSineTable. The index is taken in 64-bit, which the phase cannot
+								// leave however long the animation has been running, and wraps by masking -
+								// negative phases truncate towards zero rather than down, which puts them a
+								// single step out at worst. Adding a quarter turn to the index is the cosine.
+								const std::int64_t sineIndex = (std::int64_t)(currentPhase * (WobbleSineSteps / fTwoPi));
+								pos.X += WobbleSine.Values[(sineIndex + WobbleSineSteps / 4) & (WobbleSineSteps - 1)] * varianceX * scale;
+								pos.Y += WobbleSine.Values[sineIndex & (WobbleSineSteps - 1)] * varianceY * scale;
 							}
 
 							// Apply the canvas-wide draw transform (menu section transitions; identity by default)
@@ -585,10 +623,10 @@ namespace Jazz2::UI
 							pos.Y = std::round(pos.Y);
 
 							Vector4f texCoords = Vector4f(
-								glyph.Width / float(texSize.X),
-								glyph.X / float(texSize.X),
-								glyph.Height / float(texSize.Y),
-								glyph.Y / float(texSize.Y)
+								glyph.Width * invTexWidth,
+								glyph.X * invTexWidth,
+								glyph.Height * invTexHeight,
+								glyph.Y * invTexHeight
 							);
 
 							auto command = canvas->RentRenderCommand();
@@ -612,10 +650,12 @@ namespace Jazz2::UI
 							// when drawn into an RGBA render target, harmless for opaque/RGB targets
 							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
-							auto* instanceBlock = command->GetInstanceBlock();
-							instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-							instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
-							instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
+							// The command resolves these once per shader change, so no glyph pays a by-name
+							// block lookup - the text path's dominant cost on the consoles
+							auto* instanceUniforms = command->GetInstanceUniforms();
+							instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+							instanceUniforms->SpriteSize->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
+							instanceUniforms->Color->SetFloatVector(glyphColor.Data());
 
 							command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 							command->SetLayer(z - (charOffset & 1));

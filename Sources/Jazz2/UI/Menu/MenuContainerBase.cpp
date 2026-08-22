@@ -302,7 +302,7 @@ namespace Jazz2::UI::Menu
 	{
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
-		if (it != _metadata->Sounds.end()) {
+		if (it != _metadata->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
 			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
 			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));

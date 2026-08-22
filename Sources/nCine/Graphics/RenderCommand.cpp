@@ -8,7 +8,7 @@
 namespace nCine
 {
 	RenderCommand::RenderCommand(Type type)
-		: _materialSortKey(0), _modelMatrixUniform(nullptr), _instanceBlock(nullptr), _cachedShaderChangeCounter(std::uint32_t(-1)),
+		: _materialSortKey(0), _modelMatrixUniform(nullptr), _instanceBlock(nullptr), _instanceUniforms{}, _cachedShaderChangeCounter(std::uint32_t(-1)),
 			_layer(0), _numInstances(0), _batchSize(0), _transformationCommitted(false), _modelMatrixUniformInBlock(false),
 			_modelMatrix(Matrix4x4f::Identity)
 #if defined(NCINE_PROFILING)
@@ -83,6 +83,12 @@ namespace nCine
 			? _instanceBlock->GetUniform(Material::ModelMatrixUniformName)
 			: _material.Uniform(Material::ModelMatrixUniformName));
 		_modelMatrixUniformInBlock = (_instanceBlock != nullptr);
+		// The per-quad members of the same block. Resolving them here costs four extra lookups per shader
+		// change and saves one per quad drawn (the text path) and per dirty sprite (BaseSprite)
+		_instanceUniforms.TexRect = (_instanceBlock != nullptr ? _instanceBlock->GetUniform(Material::TexRectUniformName) : nullptr);
+		_instanceUniforms.SpriteSize = (_instanceBlock != nullptr ? _instanceBlock->GetUniform(Material::SpriteSizeUniformName) : nullptr);
+		_instanceUniforms.Color = (_instanceBlock != nullptr ? _instanceBlock->GetUniform(Material::ColorUniformName) : nullptr);
+		_instanceUniforms.PaletteOffset = (_instanceBlock != nullptr ? _instanceBlock->GetUniform(Material::PaletteOffsetUniformName) : nullptr);
 		_cachedShaderChangeCounter = _material._shaderChangeCounter;
 	}
 
@@ -93,6 +99,15 @@ namespace nCine
 		}
 		RefreshCachedUniforms();
 		return _instanceBlock;
+	}
+
+	const RenderCommand::InstanceUniforms* RenderCommand::GetInstanceUniforms()
+	{
+		if (_material._shaderProgram == nullptr) {
+			return nullptr;
+		}
+		RefreshCachedUniforms();
+		return &_instanceUniforms;
 	}
 
 	void RenderCommand::CommitNodeTransformation()

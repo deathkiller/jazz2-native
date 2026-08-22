@@ -118,6 +118,43 @@ namespace nCine::RHI::GU
 						break;
 					}
 				}
+
+				// Everything the dispatch asks of the reflection per draw is a constant of the program,
+				// so it is all read out of the name strings exactly once, here (see DispatchFacts)
+				_dispatchFacts = {};
+				_dispatchFacts.InstanceBlock = FindBlock("InstanceBlock");
+				if (_dispatchFacts.InstanceBlock == nullptr) {
+					_dispatchFacts.InstanceBlock = FindBlock("InstancesBlock");
+				}
+				for (std::size_t i = 0; i < _reflection->TextureCount; i++) {
+					const ShaderCompiler::TextureBinding& t = _reflection->Textures[i];
+					if (std::strcmp(t.Name, "uTexture") == 0) {
+						_dispatchFacts.HasTexture = true;
+						if (t.Unit >= 0) {
+							_dispatchFacts.TextureUnit = t.Unit;
+						}
+					} else if (std::strcmp(t.Name, "uTexturePalette") == 0 && t.Unit >= 0) {
+						_dispatchFacts.PaletteUnit = t.Unit;
+					}
+				}
+				// The instance layout follows the block's own reflected declaration rather than any effect
+				// identity: a block that declares texRect uses the textured member offsets whether or not
+				// the program samples a texture (the Transition carries texRect but samples nothing)
+				_dispatchFacts.TexturedLayout = _dispatchFacts.HasTexture;
+				for (std::size_t i = 0; i < _reflection->BlockCount; i++) {
+					const ShaderCompiler::UniformBlock& b = _reflection->Blocks[i];
+					if (_dispatchFacts.InstanceStride == 0 && b.InstanceStride > 0) {
+						_dispatchFacts.InstanceStride = b.InstanceStride;
+					}
+					if (!_dispatchFacts.TexturedLayout) {
+						for (std::size_t j = 0; j < b.MemberCount; j++) {
+							if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
+								_dispatchFacts.TexturedLayout = true;
+								break;
+							}
+						}
+					}
+				}
 			}
 			// Resolve the generated fixed-function effect of this (program, variant) once here, so the
 			// draw path only reads a pointer. The key is the TRUE identity plumbed by the loaders via
@@ -252,6 +289,8 @@ namespace nCine::RHI::GU
 		_generatedEffect = nullptr;
 		_ditherVariant = false;
 		_usesPalette = false;
+		// The cached facts point into _uniformBlocks, which was just cleared
+		_dispatchFacts = {};
 	}
 
 	void GuShaderProgram::SetObjectLabel(StringView label)

@@ -59,6 +59,7 @@ namespace nCine::RHI::PVR
 	{
 		_shaderProgram = shaderProgram;
 		_uniformCaches.clear();
+		_uniformNameHashes.clear();
 		_maybeDirty = true;
 
 		if (_shaderProgram->GetStatus() == PvrShaderProgram::Status::LinkedWithIntrospection) {
@@ -93,8 +94,11 @@ namespace nCine::RHI::PVR
 
 	bool PvrShaderUniforms::HasUniform(const char* name) const
 	{
-		for (const PvrUniformCache& cache : _uniformCaches) {
-			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
+		// Fingerprints first, the name itself only on the entry that matched (see @ref HashUniformName)
+		const std::uint32_t hash = HashUniformName(name);
+		const std::size_t count = _uniformNameHashes.size();
+		for (std::size_t i = 0; i < count; i++) {
+			if (_uniformNameHashes[i] == hash && std::strcmp(_uniformCaches[i].GetUniform()->GetName(), name) == 0) {
 				return true;
 			}
 		}
@@ -103,10 +107,12 @@ namespace nCine::RHI::PVR
 
 	PvrUniformCache* PvrShaderUniforms::GetUniform(const char* name)
 	{
-		for (PvrUniformCache& cache : _uniformCaches) {
-			if (std::strcmp(cache.GetUniform()->GetName(), name) == 0) {
+		const std::uint32_t hash = HashUniformName(name);
+		const std::size_t count = _uniformNameHashes.size();
+		for (std::size_t i = 0; i < count; i++) {
+			if (_uniformNameHashes[i] == hash && std::strcmp(_uniformCaches[i].GetUniform()->GetName(), name) == 0) {
 				_maybeDirty = true;
-				return &cache;
+				return &_uniformCaches[i];
 			}
 		}
 		return nullptr;
@@ -131,6 +137,7 @@ namespace nCine::RHI::PVR
 		for (const PvrUniform& uniform : _shaderProgram->_uniforms) {
 			if (ShouldImport(uniform.GetName(), includeOnly, exclude)) {
 				_uniformCaches.push_back(PvrUniformCache(&uniform));
+				_uniformNameHashes.push_back(HashUniformName(uniform.GetName()));
 			}
 		}
 	}

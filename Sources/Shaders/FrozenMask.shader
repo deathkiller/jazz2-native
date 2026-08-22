@@ -50,7 +50,7 @@ void fragment() {
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }
 
-void fixed_function(pvr, gu, gs) {
+void fixed_function(pvr, gu, gs, rdp) {
 	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, unused, transition). The GLSL is
 	// mix(tex, vec4(0.2*grey, 0.2+0.62*grey, 0.6+0.2*grey, 0.95*outline), transition) - two passes
 	// reproduce that mix: the untouched sprite carries the (1-t) side, then an ice silhouette blended
@@ -61,9 +61,10 @@ void fixed_function(pvr, gu, gs) {
 	// on both. The tone is NOT scaled by t: the pass alpha already applies the transition weighting,
 	// and scaling both would darken quadratically.
 	//
-	// All three consoles share this block because all three are stuck with a CONSTANT ice tone: none can
-	// do per-texel arithmetic (the PVR modulates and adds, the GE has no combiner at all, and the GS's
-	// only post-texture add is achromatic), so the ramp the gx block below uses is out of reach.
+	// All four consoles share this block because all four are stuck with a CONSTANT ice tone: none can
+	// pick a tone per texel (the PVR modulates and adds, the GE has no combiner at all, the GS's
+	// only post-texture add is achromatic, and the RDP's combiner has no luminance term - no dot
+	// product to weigh the channels with), so the ramp the gx block below uses is out of reach.
 	//
 	// That constant is the MIDPOINT of the ramp (grey = 0.5), not its bright end. `grey` is luma * 2.6
 	// clamped, so it only saturates on sprites brighter than luma 0.385, and the cross blur feeding it

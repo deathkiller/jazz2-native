@@ -18,7 +18,11 @@
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 #	include "../../nCine/Threading/Thread.h"
-#	include <IO/WebRequest.h>
+#	if defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL)
+		// WebRequest exists only where it has an HTTP backend (WinHTTP or libcurl), without one the
+		// public-server-list functions below compile to no-ops
+#		include <IO/WebRequest.h>
+#	endif
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -396,6 +400,7 @@ namespace Jazz2::Multiplayer
 
 	void ServerDiscovery::DownloadPublicServerList(IServerObserver* observer)
 	{
+#	if defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL)
 		LOGD("Downloading public server list…");
 
 		String url = "https://de4th.dev/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
@@ -455,6 +460,11 @@ namespace Jazz2::Multiplayer
 		} else {
 			LOGE("Failed to download public server list: {}", result.error);
 		}
+#	else
+		// WebRequest has no HTTP backend on this platform (no WinHTTP, no libcurl), so the public
+		// server list is unreachable - the same availability condition as the update check in Main.cpp
+		static_cast<void>(observer);
+#	endif
 	}
 
 	bool ServerDiscovery::ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
@@ -638,6 +648,7 @@ namespace Jazz2::Multiplayer
 
 	void ServerDiscovery::PublishToPublicServerList(NetworkManager* server)
 	{
+#	if defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL)
 		_onlineSuccess = false;
 
 		auto& serverConfig = server->GetServerConfiguration();
@@ -747,10 +758,15 @@ namespace Jazz2::Multiplayer
 		} else {
 			LOGE("Failed to publish the server: {}", result.error);
 		}
+#	else
+		// See DownloadPublicServerList() - without an HTTP backend the server can only stay unlisted
+		static_cast<void>(server);
+#	endif
 	}
 
 	void ServerDiscovery::DelistFromPublicServerList(NetworkManager* server)
 	{
+#	if defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL)
 		if (!_onlineSuccess) {
 			return;
 		}
@@ -801,6 +817,10 @@ namespace Jazz2::Multiplayer
 		} else {
 			LOGE("Failed to delist the server: {}", result.error);
 		}
+#	else
+		// See DownloadPublicServerList() - a server that could never be published has nothing to delist
+		static_cast<void>(server);
+#	endif
 	}
 
 	void ServerDiscovery::OnClientThread(void* param)

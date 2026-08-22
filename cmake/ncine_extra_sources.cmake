@@ -92,6 +92,12 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 	# libraries it calls into are linked with the platform packaging below
 	message(STATUS "Rendering backend: GU (PlayStation Portable)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GU")
+elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
+	# Selects the Nintendo 64 fixed-function RDP backend in RhiFwd.h/Rhi.h. The RDP is driven through
+	# libdragon's rdpq command queue (the RSP assembles and feeds the display list), so the graphics
+	# stack is libdragon itself, linked with the platform packaging below
+	message(STATUS "Rendering backend: RDP (Nintendo 64)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_RDP")
 elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
 	# Selects the PS Vita's native sceGxm backend in RhiFwd.h/Rhi.h. Unlike the other console backends this
 	# is a SHADER backend - the Vita's PowerVR SGX has no fixed-function pipeline - so it keeps the whole
@@ -156,7 +162,21 @@ if(NCINE_RHI_USE_FB16)
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
-	if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+	if(PLATFORM_N64)
+		# libdragon window/input backend (no SDL/GLFW: libdragon ships neither, and the console's video
+		# output is a VI framebuffer configured through display_init rather than anything a windowing
+		# library would wrap). The rdpq libraries the rendering backend calls into come in with libdragon
+		# itself, linked with the platform packaging below.
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_N64")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.cpp
+		)
+	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 		# libogc window/input backend (no SDL/GLFW on these consoles); GX is linked by the
 		# devkitPro toolchain's standard libraries (ogc), listed with the platform packaging below
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OGC")
@@ -289,11 +309,12 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR PS3AUDIO_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioDeviceBase.h
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioMixerCommon.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
@@ -332,6 +353,13 @@ if(NOT DEDICATED_SERVER)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.cpp)
+		elseif(N64AUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "N64 --- libdragon AI DMA ring mixer")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_N64AUDIO")
+			# The AI is part of libdragon itself, which is linked with the platform packaging below
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
 			set(_NCINE_AUDIO_BACKEND "PS3 --- PSL1GHT libaudio mixer")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
@@ -905,6 +933,58 @@ else()
 		else()
 			message(STATUS "mkdcdisc not found, bootable CDI image will not be created")
 		endif()
+	elseif(PLATFORM_N64)
+		# The n64.cmake toolchain file leaves the executable suffix empty; name it like the other console
+		# targets do, so the intermediate ELF is recognizable next to the ROM that is packed from it
+		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
+
+		# The libdragon libraries the engine calls into, in one link group with libc and libstdc++: the
+		# toolchain's GCC ships an EMPTY `*lib:` spec - the driver never adds -lc on its own (n64.mk
+		# passes it explicitly for the same reason) - and the dependencies are circular anyway (libc's
+		# reentrant syscalls resolve from libdragonsys, libdragon calls back into libc).
+		target_link_libraries(${NCINE_APP} PRIVATE "-Wl,--start-group" dragon m dragonsys c stdc++ "-Wl,--end-group")
+
+		# Package a bootable .z64 ROM, reproducing libdragon's n64.mk "%.z64" rule: the symbol table for
+		# on-console backtraces, the stripped+compressed ELF, and a DragonFS image with the game content
+		# ("rom:/Content/", where the N64 branch of ContentResolver::GetContentPath() looks for it) are
+		# concatenated by n64tool behind a table of contents. ed64romconfig then marks the save type in
+		# the ROM header (the advanced homebrew header), which is how flashcarts and emulators know to
+		# provide the EEPROM the preferences are stored on.
+		#
+		# The content is staged as "dfs/Content" first, so the directory in the image is always named
+		# "Content" regardless of the source directory name (mirrors the Dreamcast arm above); a staged
+		# "Source.pak" is renamed to "Prebaked.pak" the way the PS2 arm does, because the console has no
+		# writable cache to convert into.
+		set(_n64MarkPrebakedCommand "")
+		if(EXISTS "${NCINE_CONTENT_DIR}/Source.pak")
+			set(_n64MarkPrebakedCommand COMMAND ${CMAKE_COMMAND} -E rename
+				"${CMAKE_BINARY_DIR}/dfs/Content/Source.pak" "${CMAKE_BINARY_DIR}/dfs/Content/Prebaked.pak")
+		else()
+			message(STATUS "No \"Source.pak\" in \"${NCINE_CONTENT_DIR}\", the ROM image will not be marked as prebaked")
+		endif()
+
+		# A cartridge ROM is capped at the 64 MB the flashcarts provide and a full content tree does not
+		# fit, so the packaging drops what the console cannot use or cannot afford: "Music" is undecodable
+		# dead weight here (NCINE_WITH_OPENMPT is off) and the 7 MB "ending" cinematic does not fit next to
+		# the tilesets, while the intro does and is what the game opens with.
+		# TODO: re-encode the cinematics at a lower bitrate in AssetPacker and put the ending back.
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dfs/Content"
+			COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_BINARY_DIR}/dfs/Content/Music" "${CMAKE_BINARY_DIR}/dfs/Content/Cinematics/ending.j2v"
+			${_n64MarkPrebakedCommand}
+			COMMAND "${N64_MKDFS}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.dfs" "${CMAKE_BINARY_DIR}/dfs"
+			COMMAND "${N64_SYM}" --all "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.sym"
+			COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
+			COMMAND "${CMAKE_STRIP}" -s "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
+			COMMAND "${N64_ELFCOMPRESS}" -o "${CMAKE_BINARY_DIR}" -c 1 "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
+			COMMAND "${N64_TOOL}" --toc --title "Jazz2 Resurrection" --output "${CMAKE_BINARY_DIR}/${NCINE_APP}.z64"
+				--align 256 "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
+				"${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.sym"
+				--align 16 "${CMAKE_BINARY_DIR}/${NCINE_APP}.dfs"
+			COMMAND "${N64_ED64ROMCONFIG}" --savetype eeprom16k --regionfree "${CMAKE_BINARY_DIR}/${NCINE_APP}.z64"
+			COMMAND ${CMAKE_COMMAND} "-DN64_ROM=${CMAKE_BINARY_DIR}/${NCINE_APP}.z64" -P "${CMAKE_SOURCE_DIR}/cmake/n64_check_rom_size.cmake"
+			COMMENT "Creating bootable Z64 ROM image with game content"
+			VERBATIM)
 	elseif(PLATFORM_PSP)
 		# The pspdev toolchain leaves the executable suffix empty; name it like the other console targets do,
 		# so the intermediate ELF is recognizable next to the EBOOT that is packed from it

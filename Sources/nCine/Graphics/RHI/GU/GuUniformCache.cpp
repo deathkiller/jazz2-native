@@ -180,8 +180,10 @@ namespace nCine::RHI::GU
 	{
 		_usedSize = uniformBlock->GetSize();
 		_uniformCaches.reserve(uniformBlock->_members.size());
+		_uniformNameHashes.reserve(uniformBlock->_members.size());
 		for (GuUniform& member : uniformBlock->_members) {
 			_uniformCaches.push_back({member.GetName(), GuUniformCache(&member)});
+			_uniformNameHashes.push_back(HashUniformName(member.GetName()));
 		}
 	}
 
@@ -231,9 +233,12 @@ namespace nCine::RHI::GU
 
 	GuUniformCache* GuUniformBlockCache::GetUniform(StringView name)
 	{
-		for (NamedCache& named : _uniformCaches) {
-			if (name == named.Name) {
-				return &named.Cache;
+		// Scan the fingerprints, and compare the name itself only on the entry that matched
+		const std::uint32_t hash = HashUniformName(name);
+		const std::size_t count = _uniformNameHashes.size();
+		for (std::size_t i = 0; i < count; i++) {
+			if (_uniformNameHashes[i] == hash && name == _uniformCaches[i].Name) {
+				return &_uniformCaches[i].Cache;
 			}
 		}
 		return nullptr;

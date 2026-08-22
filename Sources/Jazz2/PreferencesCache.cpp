@@ -17,19 +17,25 @@
 #include <IO/Compression/DeflateStream.h>
 #include <Utf8.h>
 
-#if defined(DEATH_TARGET_DREAMCAST)
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../nCine/Backends/Android/AndroidApplication.h"
+#	include "../nCine/Backends/Android/AndroidJniHelper.h"
+#elif defined(DEATH_TARGET_DREAMCAST)
 #	include <dc/maple.h>
 #	include <dc/maple/vmu.h>
+
+#elif defined(DEATH_TARGET_N64)
+#	include <cerrno>
+#	include <fcntl.h>
+#	include <unistd.h>
+#	include <eeprom.h>
+#	include <eepromfs.h>
+#	include <system.h>	// for attach_filesystem()
 #elif defined(DEATH_TARGET_PS2)
 #	include <cmath>
 extern "C" {
 #	include <libmc.h>
 }
-#endif
-
-#if defined(DEATH_TARGET_ANDROID)
-#	include "../nCine/Backends/Android/AndroidApplication.h"
-#	include "../nCine/Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <unistd.h>
 #endif
@@ -100,7 +106,8 @@ namespace Jazz2
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
 	bool PreferencesCache::ToggleRunAction = false;
-#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_PS3)
@@ -702,6 +709,186 @@ namespace
 }
 #endif
 
+#if defined(DEATH_TARGET_N64)
+namespace
+{
+	// The path of the config file inside the EEPROM filesystem, which is also the WHOLE filesystem: eepromfs
+	// is a fixed table of files declared up front, and the config is the only thing there is to save
+	static constexpr char EepromConfigFile[] = "/JAZZ2CFG";
+	// How large that one file is - everything the filesystem leaves free - set once the EEPROM type has been
+	// probed in Initialize(), because a flashcart may answer with either the 4-kilobit or the 16-kilobit part
+	static std::size_t EepromConfigFileSize = 0;
+
+	/**
+		@brief One open handle of the "eeprom:/" bridge below
+
+		eepromfs only reads and writes a file WHOLE (`eepfs_read`/`eepfs_write`), while the config code
+		streams through @ref Death::IO::FileStream, so a handle is a RAM copy of the file with a cursor:
+		reads serve from the copy, writes fill it, and closing a written handle is what commits it to the
+		EEPROM in one piece - the same shape KallistiOS gives a Dreamcast VMU file, just made by hand here.
+	*/
+	struct EepromOpenFile
+	{
+		std::unique_ptr<std::uint8_t[]> Buffer;
+		/** @brief Cursor, in bytes from the start of the file */
+		std::size_t Position;
+		/** @brief Extent of valid data: the fixed file size when read back, how far the writes got when writing */
+		std::size_t Size;
+		bool Writable;
+		/** @brief Set once a write did not fit - the close then must NOT commit a truncated config over a good one */
+		bool Overflowed;
+	};
+
+	void* EepromFsOpen(char* name, int flags)
+	{
+		// The prefix has already been stripped by the newlib glue, a leading slash may or may not remain
+		const char* fileName = (name[0] == '/' ? name + 1 : name);
+		if (std::strcmp(fileName, EepromConfigFile + 1) != 0) {
+			errno = ENOENT;
+			return nullptr;
+		}
+
+		auto file = std::make_unique<EepromOpenFile>();
+		file->Buffer = std::make_unique<std::uint8_t[]>(EepromConfigFileSize);
+		file->Position = 0;
+		file->Writable = ((flags & O_ACCMODE) != O_RDONLY);
+		file->Overflowed = false;
+		if ((flags & O_TRUNC) != 0) {
+			file->Size = 0;
+		} else {
+			if (eepfs_read(EepromConfigFile, file->Buffer.get(), EepromConfigFileSize) != EEPFS_ESUCCESS) {
+				errno = EIO;
+				return nullptr;
+			}
+			file->Size = EepromConfigFileSize;
+		}
+		return file.release();
+	}
+
+	int EepromFsFstat(void* file, struct stat* st)
+	{
+		auto* f = static_cast<EepromOpenFile*>(file);
+		std::memset(st, 0, sizeof(*st));
+		st->st_mode = S_IFREG;
+		st->st_nlink = 1;
+		st->st_size = off_t(f->Size);
+		return 0;
+	}
+
+	int EepromFsStat(char* name, struct stat* st)
+	{
+		const char* fileName = (name[0] == '/' ? name + 1 : name);
+		if (std::strcmp(fileName, EepromConfigFile + 1) != 0) {
+			errno = ENOENT;
+			return -1;
+		}
+		std::memset(st, 0, sizeof(*st));
+		st->st_mode = S_IFREG;
+		st->st_nlink = 1;
+		st->st_size = off_t(EepromConfigFileSize);
+		return 0;
+	}
+
+	int EepromFsLseek(void* file, int ptr, int dir)
+	{
+		auto* f = static_cast<EepromOpenFile*>(file);
+		std::int64_t target;
+		switch (dir) {
+			case SEEK_SET: target = ptr; break;
+			case SEEK_CUR: target = std::int64_t(f->Position) + ptr; break;
+			case SEEK_END: target = std::int64_t(f->Size) + ptr; break;
+			default: errno = EINVAL; return -1;
+		}
+		if (target < 0 || target > std::int64_t(EepromConfigFileSize)) {
+			errno = EINVAL;
+			return -1;
+		}
+		f->Position = std::size_t(target);
+		return int(target);
+	}
+
+	int EepromFsRead(void* file, std::uint8_t* ptr, int len)
+	{
+		auto* f = static_cast<EepromOpenFile*>(file);
+		if (len < 0) {
+			errno = EINVAL;
+			return -1;
+		}
+		std::size_t available = (f->Position < f->Size ? f->Size - f->Position : 0);
+		std::size_t n = (std::size_t(len) < available ? std::size_t(len) : available);
+		std::memcpy(ptr, &f->Buffer[f->Position], n);
+		f->Position += n;
+		return int(n);
+	}
+
+	int EepromFsWrite(void* file, std::uint8_t* ptr, int len)
+	{
+		auto* f = static_cast<EepromOpenFile*>(file);
+		if (len < 0) {
+			errno = EINVAL;
+			return -1;
+		}
+		if (!f->Writable) {
+			errno = EBADF;
+			return -1;
+		}
+		std::size_t capacity = (f->Position < EepromConfigFileSize ? EepromConfigFileSize - f->Position : 0);
+		if (std::size_t(len) > capacity) {
+			// The compressed config outgrew the EEPROM. Refusing the whole write (rather than taking what
+			// fits) is what keeps the flag honest: nothing partial ever lands in the buffer, so the close
+			// below has a clean "commit or don't" decision.
+			f->Overflowed = true;
+			errno = ENOSPC;
+			return -1;
+		}
+		std::memcpy(&f->Buffer[f->Position], ptr, std::size_t(len));
+		f->Position += std::size_t(len);
+		if (f->Position > f->Size) {
+			f->Size = f->Position;
+		}
+		return len;
+	}
+
+	int EepromFsClose(void* file)
+	{
+		std::unique_ptr<EepromOpenFile> f(static_cast<EepromOpenFile*>(file));
+		int result = 0;
+		if (f->Writable) {
+			// Committing on close is what this bridge exists for, but it also means a writer that opened
+			// with O_TRUNC and closed after writing only part of the config commits that part (with a
+			// zeroed tail) over the previous good save. Overflow - the only write failure this bridge can
+			// produce - is guarded below; PreferencesCache::Save() itself has no early-out between its
+			// writes, so any OTHER partial write means a new caller that must arrange its own guard.
+			if (f->Overflowed) {
+				LOGE("Cannot save settings, the configuration does not fit into the {}-byte EEPROM file", EepromConfigFileSize);
+				errno = ENOSPC;
+				result = -1;
+			} else if (eepfs_write(EepromConfigFile, f->Buffer.get(), EepromConfigFileSize) != EEPFS_ESUCCESS) {
+				errno = EIO;
+				result = -1;
+			}
+			// The commit is eventually consistent: eepfs_write() returns at once and the joybus flushes the
+			// blocks in the background (about 1.5 s for a full 16-kilobit part), which is fine here - the
+			// buffer just handed over is the master copy the flusher reads from
+		}
+		return result;
+	}
+
+	filesystem_t CreateEepromFilesystem()
+	{
+		filesystem_t fs = {};
+		fs.open = EepromFsOpen;
+		fs.fstat = EepromFsFstat;
+		fs.stat = EepromFsStat;
+		fs.lseek = EepromFsLseek;
+		fs.read = EepromFsRead;
+		fs.write = EepromFsWrite;
+		fs.close = EepromFsClose;
+		return fs;
+	}
+}
+#endif
+
 	void PreferencesCache::Initialize(AppConfiguration& config)
 	{
 		bool resetConfig = false;
@@ -722,9 +909,9 @@ namespace
 		bool overrideConfigPath = false;
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \
-		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
-		!defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
@@ -753,10 +940,11 @@ namespace
 		}
 #	endif
 
-		// A portable config next to the executable wins over the per-user path chosen below. The Dreamcast
-		// and the PlayStation 2 don't look for one: their whole tree is on the disc they booted from, so it
-		// could never be written back - and a miss there costs the drive a seek and a retry on every boot.
-#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		// A portable config next to the executable wins over the per-user path chosen below. The Dreamcast,
+		// the PlayStation 2 and the Nintendo 64 don't look for one: their whole tree is on the disc or ROM
+		// they booted from, so it could never be written back - and a miss there costs the drive a seek and
+		// a retry on every boot.
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2)
 		constexpr bool hasPortableConfig = false;
 #	else
 		const bool hasPortableConfig = fs::IsReadableFile(_configPath);
@@ -830,6 +1018,44 @@ namespace
 					auto& resolver = ContentResolver::Get();
 					_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 				}
+			}
+#	elif defined(DEATH_TARGET_N64)
+			// The game runs from a read-only ROM, so the only writable storage is the cartridge's own save
+			// EEPROM, which the ROM header requests as the 16-kilobit part (2048 bytes, a cheap flashcart
+			// that ignores the header answers with the 4-kilobit one, so the size is taken from the probe
+			// rather than assumed). eepromfs manages it as a fixed table of files - a single one here,
+			// spanning every block the filesystem leaves free - but only through its own whole-file calls,
+			// so the bridge above is attached as "eeprom:/" to let the config be streamed like any other
+			// file. With no EEPROM at all there is nowhere to save and the path is left on the ROM, where
+			// opening it for writing simply fails as before.
+			bool eepromFound = false;
+			if (eeprom_present() != EEPROM_NONE) {
+				// The first 8-byte block holds the filesystem's signature, the file gets all the rest
+				EepromConfigFileSize = (eeprom_total_blocks() - 1) * EEPROM_BLOCK_SIZE;
+				const eepfs_entry_t eepfsEntries[] = {
+					{ EepromConfigFile, EepromConfigFileSize, false, false }
+				};
+				if (eepfs_init(eepfsEntries, arraySize(eepfsEntries)) == EEPFS_ESUCCESS) {
+					if (!eepfs_verify_signature()) {
+						// The EEPROM was last written by another game, or never written at all - either way
+						// its contents are garbage to this filesystem, so erase everything and start over,
+						// as eepromfs asks. This blocks for a few seconds, but only on the very first boot
+						// (or after the cartridge hosted a different save), before anything is playing yet.
+						LOGI("EEPROM signature mismatch, erasing the whole EEPROM");
+						eepfs_wipe();
+						eeprom_wait_idle();
+					}
+					static filesystem_t eepromFilesystem = CreateEepromFilesystem();
+					if (attach_filesystem("eeprom:/", &eepromFilesystem) == 0) {
+						_configPath = "eeprom:/JAZZ2CFG"_s;
+						eepromFound = true;
+					}
+				}
+			}
+			if (!eepromFound) {
+				LOGW("No usable EEPROM found, settings and progress cannot be saved");
+				auto& resolver = ContentResolver::Get();
+				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
@@ -1172,8 +1398,8 @@ namespace
 #if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
 			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
-#elif defined(DEATH_TARGET_SWITCH)
-			// Use Switch button labels
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64)
+			// Use Switch button labels (on the N64 they are the closest fit, see the static initializer)
 			GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 			defined(DEATH_TARGET_PS3)
@@ -1194,9 +1420,9 @@ namespace
 		}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \
-		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
-		!defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -1255,8 +1481,8 @@ namespace
 		// `FirstRun` is true only if config file doesn't exist yet
 		FirstRun = false;
 
-#if !defined(DEATH_TARGET_DREAMCAST)
-		// A memory card's mount point always exists and has no subdirectories to create
+#if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
+		// A memory card's (or the EEPROM's) mount point always exists and has no subdirectories to create
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
 #endif
 

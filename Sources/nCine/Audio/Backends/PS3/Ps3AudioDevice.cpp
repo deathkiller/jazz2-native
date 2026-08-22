@@ -1,6 +1,7 @@
 #if defined(WITH_PS3AUDIO)
 
 #include "Ps3AudioDevice.h"
+#include "../../AudioMixerCommon.h"
 #include "../../IAudioPlayer.h"
 #include "../../../../Main.h"
 
@@ -12,17 +13,6 @@
 
 namespace nCine
 {
-	namespace
-	{
-		/** @brief Distance past which a positional source is inaudible, in the engine's own units */
-		constexpr float MaxAudibleDistance = 1000.0f;
-
-		inline float Clamp01(float value)
-		{
-			return (value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value));
-		}
-	}
-
 	Ps3AudioDevice::Ps3AudioDevice()
 		: _valid(false), _suspended(false), _portNumber(0), _portBuffer(nullptr),
 			_readIndexAddress(nullptr), _writeBlock(0)
@@ -431,22 +421,8 @@ namespace nCine
 
 	void Ps3AudioDevice::ComputePanning(const Source& source, float& leftGain, float& rightGain) const
 	{
-		const float sourceGain = Clamp01(source.Gain) * Clamp01(_gain);
-		if (source.Relative) {
-			// A relative source is head-locked (UI sounds, music), so it plays centred at full gain
-			leftGain = rightGain = sourceGain;
-			return;
-		}
-
-		const Vector3f delta = source.Position - _listenerPos;
-		const float distance = std::sqrt(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z);
-		const float attenuation = (distance >= MaxAudibleDistance ? 0.0f : 1.0f - (distance / MaxAudibleDistance));
-
-		// Constant-power panning across the X axis, which is the only one a 2D game's stereo field uses
-		const float pan = (distance > 0.0f ? Clamp01((delta.X / MaxAudibleDistance) * 0.5f + 0.5f) : 0.5f);
-		const float gain = sourceGain * attenuation;
-		leftGain = gain * std::sqrt(1.0f - pan);
-		rightGain = gain * std::sqrt(pan);
+		// The positional model is shared with the other software-mixing backends, so it sounds the same
+		AudioMixer::ComputeStereoGains(source.Relative, source.Position, _listenerPos, source.Gain, _gain, leftGain, rightGain);
 	}
 
 	bool Ps3AudioDevice::MixSource(Source& source, float* output, std::uint32_t frames)
@@ -461,10 +437,10 @@ namespace nCine
 
 		// One output frame advances the cursor by this much of an input frame, which is where both the
 		// source's pitch and the rate difference between the buffer and the port are applied
-		const double step = (double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch);
+		double step = (double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch);
 
 		for (std::uint32_t i = 0; i < frames; i++) {
-			if (source.Cursor >= double(buffer->FrameCount)) {
+			while (source.Cursor >= double(buffer->FrameCount)) {
 				if (source.QueueCount > 0) {
 					// A streaming source moves on to the next queued buffer, handing the exhausted one back
 					if (source.ProcessedCount < MaxQueuedBuffers) {
@@ -479,9 +455,11 @@ namespace nCine
 					if (buffer == nullptr) {
 						return false;
 					}
-					continue;
-				}
-				if (source.Looping) {
+					// The next buffer may carry another sample rate, so the step follows it - and the loop
+					// re-tests rather than skipping this output frame, so a buffer boundary no longer costs
+					// a one-sample gap (mirrors the N64 mixer)
+					step = (double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch);
+				} else if (source.Looping) {
 					// Wrapped rather than reset, so a step that overshoots the end does not lose the
 					// fraction of a frame it went past by - over a long loop that would drift audibly
 					source.Cursor = std::fmod(source.Cursor, double(buffer->FrameCount));

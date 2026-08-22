@@ -26,6 +26,21 @@ namespace Jazz2
 #endif
 }
 
+/*
+	Whether a tile layer's mesh is emitted grouped by the atlas slot its tiles sample instead of in screen
+	order.
+
+	Only worth it where the device keeps a single small texel window resident rather than the whole texture:
+	the RDP samples out of 4 KB of TMEM, of which a paletted tileset may use 2 KB - one 32x32 CI8 tile - so a
+	tile id that recurs at scattered screen positions is re-uploaded at every one of them. Grouping the
+	submission collapses those repeats onto the residency cache and takes the uploads down to the number of
+	DISTINCT tiles on screen. Every other backend holds the whole atlas in texture memory and would only pay
+	the grouping, so it stays off there.
+*/
+#if defined(TILEMAP_USE_SINGLE_DRAW) && defined(WITH_RHI_RDP)
+#	define TILEMAP_GROUP_MESH_BY_TILE
+#endif
+
 namespace Jazz2::Tiles
 {
 	/**
@@ -390,6 +405,9 @@ namespace Jazz2::Tiles
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		static constexpr std::int32_t MaxDebrisCount = 448;
+#elif defined(DEATH_TARGET_N64)
+		// Half the other consoles' budget, because 8 MB of RDRAM is half the heap the smallest of them has
+		static constexpr std::int32_t MaxDebrisCount = 224;
 #else
 		static constexpr std::int32_t MaxDebrisCount = 0;
 #endif
@@ -402,6 +420,9 @@ namespace Jazz2::Tiles
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		static constexpr std::int32_t MaxWeatherDebrisCount = 128;
+#elif defined(DEATH_TARGET_N64)
+		// Half again, see MaxDebrisCount
+		static constexpr std::int32_t MaxWeatherDebrisCount = 64;
 #else
 		static constexpr std::int32_t MaxWeatherDebrisCount = 0;
 #endif
@@ -415,6 +436,9 @@ namespace Jazz2::Tiles
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		static constexpr std::int32_t MaxParticleDebrisPerBurst = 256;
+#elif defined(DEATH_TARGET_N64)
+		// Half again, see MaxDebrisCount
+		static constexpr std::int32_t MaxParticleDebrisPerBurst = 128;
 #else
 		static constexpr std::int32_t MaxParticleDebrisPerBurst = 0;
 #endif
@@ -477,6 +501,14 @@ namespace Jazz2::Tiles
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes tile map state to a stream */
 		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
+
+		/**
+			@brief Repacks the tileset's atlas around the tiles this level actually references
+
+			Called once the layers, animated tiles and events have been read, which is the first moment the set
+			of referenced tiles is known. Does nothing where the platform can hold the whole atlas.
+		*/
+		void PruneTilesetAtlas();
 
 		/** @brief Called when the viewport needs to be initialized (e.g., when the resolution is changed) */
 		void OnInitializeViewport();
@@ -545,6 +577,12 @@ namespace Jazz2::Tiles
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
 		std::uint32_t _animatedTilesOffset;
+		// Kept so the atlas can be repacked once the level's tile usage is known (see PruneTilesetAtlas())
+		String _tileSetPath;
+		std::uint16_t _captionTileId;
+		// Whether any tile's graphics or mask was overridden (MLLE) - such an atlas must not be repacked,
+		// the rebuild would silently revert the overrides
+		bool _tilesOverridden;
 		BitArray _triggerState;
 		BitArray _triggerStateForRollback;
 
@@ -596,6 +634,32 @@ namespace Jazz2::Tiles
 		};
 
 		SmallVector<DebrisMeshGroup, 4> _debrisMeshGroups;
+
+#	if defined(TILEMAP_GROUP_MESH_BY_TILE)
+		/// One visible tile of the layer currently being built, held back so the layer can be emitted grouped by
+		/// the atlas slot its tiles sample instead of in screen order (see @ref DrawLayer()). Exactly the
+		/// arguments @ref AppendTileQuad() takes plus the grouping key, so nothing has to be recomputed - the
+		/// two integer divisions the UV bias costs would have run again per tile otherwise.
+		struct MeshTileEntry
+		{
+			float X, Y;
+			float TexScaleX, TexBiasX, TexScaleY, TexBiasY;
+			float Alpha;
+			std::uint16_t Slot;			//< Packed atlas slot the tile samples, the grouping key
+			std::uint16_t Chunk;		//< Atlas chunk (texture) that slot lives in
+		};
+
+		/// Ceiling on the tiles one layer's mesh is grouped over, set by the width of @ref _meshTileOrder. A
+		/// viewport of a tile layer is a few hundred cells; beyond this the layer is emitted ungrouped instead.
+		constexpr static std::uint32_t MaxGroupedMeshTiles = 65535;
+
+		/// Held-back tiles of the layer being built, reused across layers and frames (a layer's worth of cells,
+		/// so a few KB at the peak)
+		SmallVector<MeshTileEntry, 0> _meshTileEntries;
+		/// Indices into @ref _meshTileEntries in grouped order, and the counting-sort buckets that produce them
+		SmallVector<std::uint16_t, 0> _meshTileOrder;
+		SmallVector<std::uint16_t, 0> _meshTileBuckets;
+#	endif
 #endif
 
 		std::int32_t _texturedBackgroundLayer;

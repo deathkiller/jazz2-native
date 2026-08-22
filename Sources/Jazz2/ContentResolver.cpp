@@ -1,4 +1,7 @@
 ﻿#include "ContentResolver.h"
+#if defined(DEATH_TARGET_N64)
+#	include <n64sys.h>
+#endif
 #include "../Shaders/Generated/ShadersGen.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelFlags.h"
@@ -48,6 +51,64 @@ static Vector2i GetVector2iFromJson(const Json::Value& value, Vector2i defaultVa
 
 namespace Jazz2
 {
+	namespace
+	{
+		/**
+			@brief Whether a metadata's sound samples are read on demand rather than when it is parsed
+
+			The samples a level declares come to roughly a megabyte, which on a console with 8 MB of RDRAM in
+			total is more than the level has left after its tileset, layers and sprites. Reading them when
+			something first plays them - and giving them up again at every load boundary - bounds the resident
+			set to the sounds a level actually uses. The cost is a cartridge read on the first play of each
+			sound, which is why platforms with the memory to hold everything keep loading it up front.
+		*/
+#if defined(DEATH_TARGET_N64)
+		constexpr bool DeferSounds = true;
+#else
+		constexpr bool DeferSounds = false;
+#endif
+
+#if defined(DEATH_TARGET_N64)
+		/**
+			@brief Bytes of heap that must remain free for a deferred resource to be read in
+
+			Resolving an animation or a sound is a fresh allocation of tens of kilobytes made while the game
+			is running, and this platform builds without exceptions: an allocation that cannot be satisfied
+			does not throw, it aborts the process. So the ceiling is enforced before the allocation rather
+			than discovered by it - below this floor the resource is simply not loaded, which costs a sprite
+			that does not appear or an effect that stays silent. That is recoverable; a halt is not.
+		*/
+		constexpr std::int32_t MinFreeHeapToResolve = 192 * 1024;
+
+		/**
+			@brief Returns whether there is room to read another deferred resource
+
+			Also traces the low-water mark, in 64 KB steps, because a halt with no diagnosis is the worst
+			failure mode this platform has: the last line before a freeze names how close it was running.
+		*/
+		bool HasHeadroomToResolve(const char* what, StringView path)
+		{
+			heap_stats_t stats;
+			sys_get_heap_stats(&stats);
+
+			static std::int32_t lowWaterStep = INT32_MAX;
+			const std::int32_t step = stats.free / (64 * 1024);
+			if (step < lowWaterStep) {
+				lowWaterStep = step;
+				LOGW("Heap low-water mark: {} bytes free", stats.free);
+			}
+
+			if (stats.free >= MinFreeHeapToResolve) {
+				return true;
+			}
+
+			LOGE("Not enough memory to load {} \"{}\": {} bytes free, {} have to remain", what, path,
+				stats.free, MinFreeHeapToResolve);
+			return false;
+		}
+#endif
+	}
+
 	// Cache-busting version of the precompiled shader set — bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
@@ -99,19 +160,20 @@ namespace Jazz2
 		return "assets:/"_s;
 #elif defined(DEATH_TARGET_SWITCH)
 		return "romfs:/"_s;
+#elif defined(DEATH_TARGET_N64)
+		// DragonFS image appended to the ROM, mounted read-only at "rom:/", the packaging
+		// stages the tree under "Content/" inside it
+		return "rom:/Content/"_s;
+#elif defined(DEATH_TARGET_WII)
+		return "sd:/apps/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_GAMECUBE)
+		return "carda:/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		return "/cd/Content/"_s;
 #elif defined(DEATH_TARGET_PS2)
 		// The disc image built by the PS2 packaging carries "Content" at its root (see SYSTEM.CNF there);
 		// "cdrom0:" is the CDVD device PS2SDK's file I/O exposes, and ISO9660 names arrive uppercased.
 		return "cdfs:/Content/"_s;
-#elif defined(DEATH_TARGET_PSP)
-		// Next to the EBOOT in the standard homebrew layout. Relative paths would work as well (the
-		// firmware makes the EBOOT's directory the current one), but the absolute form is what shows up in
-		// the trace log when a file is missing, and it also survives a loader that does not set it.
-		return "ms0:/PSP/GAME/Jazz2/Content/"_s;
-#elif defined(DEATH_TARGET_VITA)
-		// Packed inside the VPK, so it's part of the application's own read-only directory
-		// ("ux0:/app/<titleid>/", which the firmware mounts as "app0:")
-		return "app0:/Content/"_s;
 #elif defined(DEATH_TARGET_PS3)
 		// Next to the EBOOT inside the package. "/app_home" is the alias the loader maps the running
 		// executable's OWN directory to - which is USRDIR, not the package root - so the content sits
@@ -121,12 +183,15 @@ namespace Jazz2
 		// Going through the alias rather than the title's real path also means the APPID can change without
 		// this string following it.
 		return "/app_home/Content/"_s;
-#elif defined(DEATH_TARGET_WII)
-		return "sd:/apps/Jazz2/Content/"_s;
-#elif defined(DEATH_TARGET_GAMECUBE)
-		return "carda:/Jazz2/Content/"_s;
-#elif defined(DEATH_TARGET_DREAMCAST)
-		return "/cd/Content/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		// Next to the EBOOT in the standard homebrew layout. Relative paths would work as well (the
+		// firmware makes the EBOOT's directory the current one), but the absolute form is what shows up in
+		// the trace log when a file is missing, and it also survives a loader that does not set it.
+		return "ms0:/PSP/GAME/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		// Packed inside the VPK, so it's part of the application's own read-only directory
+		// ("ux0:/app/<titleid>/", which the firmware mounts as "app0:")
+		return "app0:/Content/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Content\\"_s;
 #else
@@ -141,8 +206,9 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Cache/"_s;
-#elif defined(DEATH_TARGET_VITA)
-		return "ux0:/data/jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_N64)
+		// Read-only like the content path - the cache is prebaked into the DragonFS image
+		return "rom:/Cache/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -151,8 +217,6 @@ namespace Jazz2
 		return "/cd/Cache/"_s;
 #elif defined(DEATH_TARGET_PS2)
 		return "cdfs:/Cache/"_s;
-#elif defined(DEATH_TARGET_PSP)
-		return "ms0:/PSP/GAME/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_PS3)
 		// Unlike the read-only trees the other consoles ship, the PS3 has a writable hard disk, so the cache
 		// goes to the title's own game-data directory rather than next to the (read-only) package content.
@@ -160,6 +224,10 @@ namespace Jazz2
 		// so unlike the content path this one cannot avoid naming the ID - the build passes it in, because
 		// a copy that disagreed with the package would send the cache to a directory no title owns.
 		return "/dev_hdd0/game/" PS3_APPID "/USRDIR/Cache/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		return "ms0:/PSP/GAME/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		return "ux0:/data/jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Cache\\"_s;
 #else
@@ -174,8 +242,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Source/"_s;
-#elif defined(DEATH_TARGET_VITA)
-		return "ux0:/data/jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_N64)
+		return "rom:/Source/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -184,10 +252,12 @@ namespace Jazz2
 		return "/cd/Source/"_s;
 #elif defined(DEATH_TARGET_PS2)
 		return "cdfs:/Source/"_s;
-#elif defined(DEATH_TARGET_PSP)
-		return "ms0:/PSP/GAME/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_PS3)
 		return "/app_home/Source/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		return "ms0:/PSP/GAME/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		return "ux0:/data/jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Source\\"_s;
 #else
@@ -476,6 +546,21 @@ namespace Jazz2
 	{
 		_isLoading = true;
 
+#if defined(WITH_AUDIO)
+		// Where the samples are read on demand they are also given up here: dropping the pointers means the
+		// marking below cannot keep them, so EndLoading() frees every sample that is not played again after
+		// this load. The paths stay, so anything still wanted is read back the first time it plays. Without
+		// this the set of resident samples only ever grows - a level that has been visited once keeps every
+		// sound it declared for the rest of the session.
+		if (DeferSounds) {
+			for (auto& resource : _cachedMetadata) {
+				for (auto& [key, sound] : resource.second->Sounds) {
+					sound.Buffers.clear();
+				}
+			}
+		}
+#endif
+
 		// Reset Referenced flag
 		for (auto& resource : _cachedMetadata) {
 			resource.second->Flags &= ~MetadataFlags::Referenced;
@@ -634,8 +719,22 @@ namespace Jazz2
 
 			// A file can declare all of its animations deferred at once, and any single entry can opt in or out
 			// of it (see the deferred animations section of `Metadata`)
+			// Whether a metadata's sheets are read now or the first time each animation is actually looked up.
+			// The content decides per file, except where there is not enough memory for the choice to be the
+			// content's: a Nintendo 64 has 8 MB of RDRAM in total, and one player's metadata alone describes
+			// enough animations to hold about 2 MB of sheets and collision masks resident - which, on top of
+			// the level's own tileset and layers, is what put the level load past the end of memory. Deferring
+			// everything there costs a sheet read from the cartridge the first time an animation is used (a PI
+			// DMA out of the ROM, not a seek on a disc) and keeps only what a level actually animates resident.
+#if defined(DEATH_TARGET_N64)
+			// The document's own "Deferred" key is deliberately NOT read here: a file declaring false would
+			// load its whole sheet set eagerly at parse time, and with exceptions disabled the allocation
+			// that does not fit aborts the process instead of degrading per animation
+			constexpr bool deferredByDefault = true;
+#else
 			bool deferredByDefault = false;
 			doc["Deferred"].get(deferredByDefault);
+#endif
 
 			const auto& animations = doc["Animations"];
 			if (animations.isObject()) {
@@ -780,18 +879,15 @@ namespace Jazz2
 						for (auto assetPathItem : assetPaths) {
 							std::string_view assetPath;
 							if (assetPathItem.get(assetPath) == Json::SUCCESS && !assetPath.empty()) {
-								auto assetPathNormalized = fs::ToNativeSeparators(assetPath);
-								auto it = _cachedSounds.find(assetPathNormalized);
-								if (it != _cachedSounds.end()) {
-									it->second->Flags |= GenericSoundResourceFlags::Referenced;
-									sound.Buffers.push_back(it->second.get());
-								} else {
-									auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPathNormalized));
-									auto res = _cachedSounds.emplace(assetPathNormalized, std::make_unique<GenericSoundResource>(std::move(s), assetPathNormalized));
-									res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
-									sound.Buffers.push_back(res.first->second.get());
-								}
+								sound.Paths.push_back(fs::ToNativeSeparators(assetPath));
 							}
+						}
+						// A level describes far more sounds than it plays - one player's metadata alone lists
+						// over thirty - and every sample is resident for as long as the metadata is. Where the
+						// samples cannot all fit, only the paths are kept here and the samples are read the
+						// first time something plays them (see ResolveSound()).
+						if (!DeferSounds) {
+							ResolveSound(sound);
 						}
 					}
 #endif
@@ -803,6 +899,55 @@ namespace Jazz2
 		return _cachedMetadata.emplace(metadata->CacheKey, std::move(metadata)).first->second.get();
 	}
 
+	bool ContentResolver::ResolveSound(Resources::SoundResource& sound)
+	{
+#if defined(WITH_AUDIO)
+		if (!sound.Buffers.empty()) {
+			return true;
+		}
+		if (sound.Unavailable || sound.Paths.empty() || _isHeadless) {
+			return false;
+		}
+
+		bool anyRefused = false;
+		for (const String& assetPath : sound.Paths) {
+			auto it = _cachedSounds.find(assetPath);
+			if (it != _cachedSounds.end()) {
+				// Already resident (another metadata resolved it) - taking a pointer costs nothing, so no
+				// headroom question arises, and the Referenced mark keeps EndLoading() from evicting
+				// samples that are still played
+				it->second->Flags |= GenericSoundResourceFlags::Referenced;
+				sound.Buffers.push_back(it->second.get());
+			} else {
+#	if defined(DEATH_TARGET_N64)
+				// Only an actual read allocates, so the headroom floor guards exactly this branch
+				if (!HasHeadroomToResolve("sound", assetPath)) {
+					anyRefused = true;
+					continue;
+				}
+#	endif
+				auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPath));
+				auto res = _cachedSounds.emplace(assetPath, std::make_unique<GenericSoundResource>(std::move(s), assetPath));
+				res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
+				sound.Buffers.push_back(res.first->second.get());
+			}
+		}
+
+		if (sound.Buffers.empty()) {
+			if (!anyRefused) {
+				// Nothing readable behind any of the paths, so don't come back on every play; a refusal
+				// for lack of memory is NOT marked - it is retried once there is room again
+				sound.Unavailable = true;
+			}
+			return false;
+		}
+		return true;
+#else
+		static_cast<void>(sound);
+		return false;
+#endif
+	}
+
 	bool ContentResolver::ResolveAnimation(Metadata& metadata, GraphicResource& animation)
 	{
 		if (animation.DeferredIndex == GraphicResource::NotDeferred) {
@@ -811,6 +956,12 @@ namespace Jazz2
 		}
 
 		const DeferredGraphicResource& deferred = metadata.DeferredAnimations[animation.DeferredIndex];
+#if defined(DEATH_TARGET_N64)
+		if (!HasHeadroomToResolve("animation", deferred.Path)) {
+			// Deliberately leaves DeferredIndex alone, so it is retried once there is room again
+			return false;
+		}
+#endif
 		GenericGraphicResource* base = RequestGraphics(deferred.Path, animation.PaletteOffset, deferred.KeepIndexed);
 		if (base == nullptr) {
 			// An eagerly loaded entry would have been dropped during parsing, this is the deferred equivalent.
@@ -1278,7 +1429,8 @@ namespace Jazz2
 		return texture;
 	}
 
-	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping)
+	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping,
+		const BitArray* usedTiles)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		String fullPath;
@@ -1331,6 +1483,8 @@ namespace Jazz2
 
 		SmallVector<std::unique_ptr<Texture>, 1> textureDiffuse;
 		std::unique_ptr<Color[]> captionTile;
+		// Filled by BuildTilesetDiffuse() when only part of the tileset is packed into the atlas
+		std::unique_ptr<std::uint16_t[]> atlasSlot;
 		// Per-tile flag (1 = fully opaque diffuse); used to cull hidden debris. Set by BuildTilesetDiffuse().
 		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
 		// Whether tiles keep raw palette indices (recolored at draw time) vs baked colors; set by BuildTilesetDiffuse()
@@ -1338,7 +1492,7 @@ namespace Jazz2
 
 		// The image content follows the compressed block, so it's read from the raw stream (headless builds masks only)
 		if (!_isHeadless) {
-			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, width, height, tileCount,
+			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, usedTiles, atlasSlot, width, height, tileCount,
 				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, captionTile);
 		}
 
@@ -1350,6 +1504,7 @@ namespace Jazz2
 			tileCount, Death::move(textureDiffuse), Death::move(mask),
 			maskSize, Death::move(captionTile), tileDiffuseOpaque.get());
 		tileSet->IsIndexed = indexTiles;
+		tileSet->AtlasSlot = Death::move(atlasSlot);
 		return tileSet;
 	}
 
@@ -1393,6 +1548,7 @@ namespace Jazz2
 	}
 
 	SmallVector<std::unique_ptr<Texture>, 1> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+		const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 		const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile)
@@ -1439,8 +1595,13 @@ namespace Jazz2
 		// padded, and the sampled extent silently clamped to 1024 while the texture coordinates still ran
 		// to 1088. That is not a dropped tileset, it is a wrapped one: every tile past the clamp sampled
 		// somebody else's pixels.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2)
+		//
+		// The Nintendo 64's RDP never addresses the atlas as a whole - each primitive loads its own tile's
+		// texels into TMEM - so there is no sampler limit to stay under. The 15-tile row is kept anyway to
+		// match what the RDP backend advertises as its texture-size limit, so the chunking below behaves
+		// the same as on the other fixed-function consoles.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
 #else
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
@@ -1448,25 +1609,129 @@ namespace Jazz2
 		const std::uint32_t totalTiles = srcTilesPerRow * srcTilesPerColumn;
 		const std::uint32_t tilesPerRow = (PreferredAtlasTilesPerRow > 0 && totalTiles > PreferredAtlasTilesPerRow
 			? PreferredAtlasTilesPerRow : srcTilesPerRow);
-		const std::uint32_t tilesPerColumn = (tilesPerRow > 0 ? (totalTiles + tilesPerRow - 1) / tilesPerRow : 0);
+		// Where the caller knows which tiles the level actually references, only those go into the atlas.
+		// Slot 0 is reserved and left blank, so a tile that was pruned but turns up later - a script placing
+		// one, an id outside the set - maps there and draws as empty instead of sampling a neighbour.
+		SmallVector<std::uint16_t, 0> slotToTile;
+		if (usedTiles != nullptr) {
+			atlasSlot = std::make_unique<std::uint16_t[]>(tileCount);
+			slotToTile.push_back(0);
+			for (std::uint32_t t = 0; t < tileCount; t++) {
+				if ((*usedTiles)[t]) {
+					atlasSlot[t] = (std::uint16_t)slotToTile.size();
+					slotToTile.push_back((std::uint16_t)t);
+				}
+			}
+		}
+		const std::uint32_t atlasTiles = (usedTiles != nullptr ? (std::uint32_t)slotToTile.size() : totalTiles);
+		const std::uint32_t tilesPerColumn = (tilesPerRow > 0 ? (atlasTiles + tilesPerRow - 1) / tilesPerRow : 0);
 		const std::uint32_t paddedWidth = tilesPerRow * paddedTileSizeSrc;
 		const std::uint32_t paddedHeight = tilesPerColumn * paddedTileSizeSrc;
 		const std::uint32_t dstChannels = (indexTiles ? 1u : 4u);
 
-		std::unique_ptr<std::uint8_t[]> atlas = std::make_unique<std::uint8_t[]>(paddedWidth * paddedHeight * dstChannels);
 		tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
 
-		for (std::uint32_t ty = 0; ty < srcTilesPerColumn; ty++) {
-			for (std::uint32_t tx = 0; tx < srcTilesPerRow; tx++) {
-				const std::uint32_t srcX = tx * TileSet::DefaultTileSize;
-				const std::uint32_t srcY = ty * TileSet::DefaultTileSize;
-				const std::int32_t tileIdx = ty * srcTilesPerRow + tx;
-				// The tile keeps its index, but sits wherever that index falls in the atlas's own layout
-				const std::uint32_t dstX = (tileIdx % (std::int32_t)tilesPerRow) * paddedTileSizeSrc;
-				const std::uint32_t dstY = (tileIdx / (std::int32_t)tilesPerRow) * paddedTileSizeSrc;
+		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
+		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
+		if (captionTileId > 0) {
+			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
+			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
+			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
+				const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
+				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+
+				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+						std::uint32_t r = 0, g = 0, b = 0;
+						for (std::uint32_t row = 0; row < 3; row++) {
+							const std::uint32_t src = ((tileY + y * 3 + row) * width + (tileX + x)) * channelCount;
+							if (captionIs32bit) {
+								r += pixels[src + 0]; g += pixels[src + 1]; b += pixels[src + 2];
+							} else {
+								const std::uint32_t color = _palettes[pixels[src]];
+								r += (color >> 0) & 0xFF; g += (color >> 8) & 0xFF; b += (color >> 16) & 0xFF;
+							}
+						}
+						captionTile[y * TileSet::DefaultTileSize + x] = Color((std::uint8_t)(r / 3), (std::uint8_t)(g / 3), (std::uint8_t)(b / 3));
+					}
+				}
+			}
+		}
+
+		// Upload the atlas, splitting it into consecutive row-band textures when it exceeds the device's
+		// texture-size limit (a 4096-limit desktop always gets a single texture - identical to before; a
+		// 1024-limit console splits e.g. a 2790-tile set into 4 chunks). Bands are aligned to whole padded
+		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
+		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
+		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
+
+		// The fixed-function consoles round every texture up to a power of two, so chunking right at their
+		// 1024 limit makes each chunk ask video memory for a single megabyte-sized contiguous block. That is
+		// the first allocation to fail once the heap is fragmented: the tileset lost its store as soon as the
+		// pause menu's textures arrived and could never get it back, leaving the tilemap to flicker out.
+		// Halving the chunk height costs the same total memory - two 512-tall chunks instead of one 1024-tall
+		// one, both exactly filling their power-of-two height - but asks for it in half-sized pieces.
+		//
+		// On the PSP this coincides with the device limit rather than halving it (the GE cannot address more
+		// than 512 texels per axis anyway), so it changes nothing there today - it is stated explicitly all
+		// the same, because the pairing with PreferredAtlasTilesPerRow above is what makes a chunk exactly one
+		// GE texture, and that should not silently depend on what the backend happens to report.
+		//
+		// The PlayStation 2 does not round its storage up to a power of two (GsVram places the exact pages a
+		// buffer needs), so the argument there is only about the SIZE of the run: a 510x1020 8-bit chunk is
+		// 64 contiguous pages out of a 352-page cache, which is the first thing to fail once the window is
+		// broken up. Half-height chunks are 32 pages each for the same total.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+		constexpr std::int32_t PreferredChunkHeight = 512;
+#else
+		constexpr std::int32_t PreferredChunkHeight = 0;
+#endif
+		const std::int32_t chunkHeightLimit = (PreferredChunkHeight > 0 &&
+			(maxTextureSize <= 0 || PreferredChunkHeight < maxTextureSize) ? PreferredChunkHeight : maxTextureSize);
+		std::uint32_t tileRowsPerChunk = (chunkHeightLimit > 0 ? std::uint32_t(chunkHeightLimit) / paddedTileSize : tilesPerColumn);
+		if (tileRowsPerChunk == 0) {
+			tileRowsPerChunk = 1;
+		}
+		if ((std::int32_t)paddedWidth > maxTextureSize && maxTextureSize > 0) {
+			LOGW("Tileset atlas width {} exceeds the device texture-size limit {}", paddedWidth, maxTextureSize);
+		}
+
+		// The atlas is never materialized as one image. It used to be, and that single allocation was the
+		// largest the game ever made - 1.05 MB for a 930-tile set - which on a console heap is the first thing
+		// to fail once a level has been loaded and torn down: coming back to the main menu asked for it again
+		// with 2.7 MB free but no contiguous megabyte left. Each row band is now built in a buffer the size of
+		// one chunk and uploaded before the next is filled, so the peak is one chunk rather than the whole
+		// sheet and nothing here needs a contiguous block larger than a single texture.
+		const std::uint32_t chunkRowsMax = std::min(tileRowsPerChunk, tilesPerColumn);
+		const std::size_t chunkBytes = std::size_t(paddedWidth) * chunkRowsMax * paddedTileSize * dstChannels;
+		std::unique_ptr<std::uint8_t[]> chunk = std::make_unique<std::uint8_t[]>(chunkBytes);
+
+		SmallVector<std::unique_ptr<Texture>, 1> textures;
+		const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+		for (std::uint32_t firstTileRow = 0; firstTileRow < tilesPerColumn; firstTileRow += tileRowsPerChunk) {
+			const std::uint32_t chunkTileRows = std::min(tileRowsPerChunk, tilesPerColumn - firstTileRow);
+			const std::uint32_t chunkHeight = chunkTileRows * paddedTileSize;
+
+			// A row band can run short of tiles at the end of the sheet, and the one pixel of padding around
+			// every tile is never written by the copy below, so the band starts blank
+			std::memset(chunk.get(), 0, std::size_t(paddedWidth) * chunkHeight * dstChannels);
+
+			const std::uint32_t firstSlot = firstTileRow * tilesPerRow;
+			const std::uint32_t lastSlot = std::min((firstTileRow + chunkTileRows) * tilesPerRow, atlasTiles);
+			for (std::uint32_t slot = firstSlot; slot < lastSlot; slot++) {
+				if (usedTiles != nullptr && slot == 0) {
+					continue;	// The reserved blank slot
+				}
+				const std::uint32_t tile = (usedTiles != nullptr ? (std::uint32_t)slotToTile[slot] : slot);
+				const std::int32_t tileIdx = (std::int32_t)tile;
+				const std::uint32_t srcX = (tile % srcTilesPerRow) * TileSet::DefaultTileSize;
+				const std::uint32_t srcY = (tile / srcTilesPerRow) * TileSet::DefaultTileSize;
+				const std::uint32_t dstX = (slot % tilesPerRow) * paddedTileSizeSrc;
+				const std::uint32_t dstY = ((slot / tilesPerRow) - firstTileRow) * paddedTileSizeSrc;
 				const bool is32bit = ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
 
-				std::uint8_t* dstTile = &atlas[(dstY * paddedWidth + dstX) * dstChannels];
+				std::uint8_t* dstTile = &chunk[(dstY * paddedWidth + dstX) * dstChannels];
 				bool opaque = true;
 
 				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
@@ -1517,92 +1782,18 @@ namespace Jazz2
 
 				ExpandTileDiffuse(dstTile, paddedWidth, dstChannels);
 			}
-		}
-
-		// Upload the atlas, splitting it into consecutive row-band textures when it exceeds the device's
-		// texture-size limit (a 4096-limit desktop always gets a single texture - identical to before; a
-		// 1024-limit console splits e.g. a 2790-tile set into 4 chunks). Bands are aligned to whole padded
-		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
-		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
-		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
-
-		// The fixed-function consoles round every texture up to a power of two, so chunking right at their
-		// 1024 limit makes each chunk ask video memory for a single megabyte-sized contiguous block. That is
-		// the first allocation to fail once the heap is fragmented: the tileset lost its store as soon as the
-		// pause menu's textures arrived and could never get it back, leaving the tilemap to flicker out.
-		// Halving the chunk height costs the same total memory - two 512-tall chunks instead of one 1024-tall
-		// one, both exactly filling their power-of-two height - but asks for it in half-sized pieces.
-		//
-		// On the PSP this coincides with the device limit rather than halving it (the GE cannot address more
-		// than 512 texels per axis anyway), so it changes nothing there today - it is stated explicitly all
-		// the same, because the pairing with PreferredAtlasTilesPerRow above is what makes a chunk exactly one
-		// GE texture, and that should not silently depend on what the backend happens to report.
-		//
-		// The PlayStation 2 does not round its storage up to a power of two (GsVram places the exact pages a
-		// buffer needs), so the argument there is only about the SIZE of the run: a 510x1020 8-bit chunk is
-		// 64 contiguous pages out of a 352-page cache, which is the first thing to fail once the window is
-		// broken up. Half-height chunks are 32 pages each for the same total.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2)
-		constexpr std::int32_t PreferredChunkHeight = 512;
-#else
-		constexpr std::int32_t PreferredChunkHeight = 0;
-#endif
-		const std::int32_t chunkHeightLimit = (PreferredChunkHeight > 0 &&
-			(maxTextureSize <= 0 || PreferredChunkHeight < maxTextureSize) ? PreferredChunkHeight : maxTextureSize);
-		std::uint32_t tileRowsPerChunk = (chunkHeightLimit > 0 ? std::uint32_t(chunkHeightLimit) / paddedTileSize : tilesPerColumn);
-		if (tileRowsPerChunk == 0) {
-			tileRowsPerChunk = 1;
-		}
-		if ((std::int32_t)paddedWidth > maxTextureSize && maxTextureSize > 0) {
-			LOGW("Tileset atlas width {} exceeds the device texture-size limit {}", paddedWidth, maxTextureSize);
-		}
-
-		SmallVector<std::unique_ptr<Texture>, 1> textures;
-		const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
-		for (std::uint32_t firstTileRow = 0; firstTileRow < tilesPerColumn; firstTileRow += tileRowsPerChunk) {
-			const std::uint32_t chunkTileRows = std::min(tileRowsPerChunk, tilesPerColumn - firstTileRow);
-			const std::uint32_t chunkHeight = chunkTileRows * paddedTileSize;
-			const std::uint8_t* chunkBase = &atlas[std::size_t(firstTileRow) * paddedTileSize * paddedWidth * dstChannels];
 
 			std::unique_ptr<Texture> textureDiffuse;
 			if (indexTiles) {
 				// Index 0 is the transparent palette entry (row 0), so this uploads directly as R8 (no per-pixel alpha)
-				textureDiffuse = CreateIndexedTexture(name, chunkBase, paddedWidth, chunkHeight, 1, paletteBaseTransparent);
+				textureDiffuse = CreateIndexedTexture(name, chunk.get(), paddedWidth, chunkHeight, 1, paletteBaseTransparent);
 			} else {
 				textureDiffuse = std::make_unique<Texture>(name, Texture::Format::RGBA8, paddedWidth, chunkHeight);
-				textureDiffuse->LoadFromTexels(chunkBase, 0, 0, paddedWidth, chunkHeight);
+				textureDiffuse->LoadFromTexels(chunk.get(), 0, 0, paddedWidth, chunkHeight);
 			}
 			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
 			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 			textures.push_back(Death::move(textureDiffuse));
-		}
-
-		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
-		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
-		if (captionTileId > 0) {
-			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
-			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
-			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
-				const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
-				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-
-				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						std::uint32_t r = 0, g = 0, b = 0;
-						for (std::uint32_t row = 0; row < 3; row++) {
-							const std::uint32_t src = ((tileY + y * 3 + row) * width + (tileX + x)) * channelCount;
-							if (captionIs32bit) {
-								r += pixels[src + 0]; g += pixels[src + 1]; b += pixels[src + 2];
-							} else {
-								const std::uint32_t color = _palettes[pixels[src]];
-								r += (color >> 0) & 0xFF; g += (color >> 8) & 0xFF; b += (color >> 16) & 0xFF;
-							}
-						}
-						captionTile[y * TileSet::DefaultTileSize + x] = Color((std::uint8_t)(r / 3), (std::uint8_t)(g / 3), (std::uint8_t)(b / 3));
-					}
-				}
-			}
 		}
 
 		return textures;
@@ -1819,6 +2010,10 @@ namespace Jazz2
 		descriptor.EventMap->SetPitType(pitType);
 		descriptor.EventMap->ReadEvents(uc, descriptor.TileMap, difficulty);
 
+		// Everything that can reference a tile has now been read, so the atlas can be cut down to what
+		// this level actually uses
+		descriptor.TileMap->PruneTilesetAtlas();
+
 		DEATH_ASSERT(uc.IsValid(), "File cannot be decompressed", false);
 		return true;
 	}
@@ -1929,7 +2124,10 @@ namespace Jazz2
 			// The original model only hands a user application around twenty of those megabytes in total (the
 			// later ones with PSP_LARGE_MEMORY do give roughly fifty), and it is the smaller one that has to
 			// fit.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
+			//
+			// The Nintendo 64's textures also live in main memory, and even with the Expansion Pak there is
+			// only 8 MB of RDRAM in total - half the Dreamcast's heap - so the backdrops are skipped there too.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP)
 			constexpr bool LoadEpisodeBackgrounds = false;
 #else
 			constexpr bool LoadEpisodeBackgrounds = true;

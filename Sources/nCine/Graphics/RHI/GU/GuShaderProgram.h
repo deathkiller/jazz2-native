@@ -205,6 +205,33 @@ namespace nCine::RHI::GU
 		inline bool UsesPalette() const {
 			return _usesPalette;
 		}
+
+		/**
+			@brief Facts of the program the draw dispatch reads on every command, resolved once at introspection
+
+			All of them are constants of the linked program (they only depend on its reflection), but the
+			dispatch used to re-derive each by scanning reflection name strings per RenderCommand - dozens
+			of dependent loads per draw on a CPU where those are the cost. Only the instance block's BINDING
+			stays a per-draw read, because the material assigns bindings after linking.
+		*/
+		struct DispatchFacts
+		{
+			/** @brief The "InstanceBlock" (or the batched "InstancesBlock"), or `nullptr` */
+			const GuUniformBlock* InstanceBlock = nullptr;
+			/** @brief Reflected per-instance stride; positive exactly for batched programs */
+			std::uint32_t InstanceStride = 0;
+			/** @brief Unit `uTexture` binds (meaningful when @ref HasTexture) */
+			std::int32_t TextureUnit = 0;
+			/** @brief Unit `uTexturePalette` binds (meaningful when the program remaps) */
+			std::int32_t PaletteUnit = 1;
+			/** @brief Whether the reflection binds `uTexture` at all */
+			bool HasTexture = false;
+			/** @brief Whether the instance block declares `texRect` (the textured member layout) */
+			bool TexturedLayout = false;
+		};
+		inline const DispatchFacts& GetDispatchFacts() const {
+			return _dispatchFacts;
+		}
 		/** @brief Returns the offline reflection last set on the program (kept for the effects to read) */
 		inline const ShaderCompiler::ProgramVariant* GetReflection() const {
 			return _effectReflection;
@@ -249,6 +276,7 @@ namespace nCine::RHI::GU
 		bool _unsupportedWarned = false;
 		bool _ditherVariant;
 		bool _usesPalette;
+		DispatchFacts _dispatchFacts;
 		// The true identity set by SetProgramIdentity(): the .shader program name and the variant
 		// define - the generated-table key. Copies, because runtime loaders hand in transient strings.
 		String _programName;

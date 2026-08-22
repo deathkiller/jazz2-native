@@ -595,14 +595,28 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PrepareTexturedBackground()
 	{
+		// The seasonal preset is chosen from the wall clock, so it must first be established that there IS
+		// one. A console with no real-time clock - the Nintendo 64 has none of its own, only a few cartridges
+		// carry one - answers time() with -1, and localtime() renders that as December 1969: the one month
+		// that puts the menu into its Christmas preset, complete with the snowfall that spawns every frame.
+		// That is not a wrong picture on such a machine, it is a permanent one, so an implausible year is
+		// treated as "season unknown" and the ordinary preset is used. localtime() is allowed to fail
+		// outright as well, which is the same answer.
+		std::int32_t month = -1;
 		time_t t = time(nullptr);
+		if (t != (time_t)-1) {
 #if defined(DEATH_TARGET_WINDOWS)
-		struct tm local; localtime_s(&local, &t);
-		std::int32_t month = local.tm_mon;
+			struct tm local;
+			if (localtime_s(&local, &t) == 0 && local.tm_year + 1900 >= 2000) {
+				month = local.tm_mon;
+			}
 #else
-		struct tm* local = localtime(&t);
-		std::int32_t month = local->tm_mon;
+			struct tm* local = localtime(&t);
+			if (local != nullptr && local->tm_year + 1900 >= 2000) {
+				month = local->tm_mon;
+			}
 #endif
+		}
 		bool hasXmas = ((month == 11 || month == 0) && TryLoadBackgroundPreset(Preset::Xmas));
 		if (!hasXmas &&
 			!TryLoadBackgroundPreset(Preset::Default) &&

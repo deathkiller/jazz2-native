@@ -157,7 +157,7 @@ namespace Jazz2::UI::Multiplayer
 
 #if defined(WITH_AUDIO)
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(sfxName));
-		if (it != _metadata->Sounds.end() && !it->second.Buffers.empty()) {
+		if (it != _metadata->Sounds.end() && ContentResolver::Get().ResolveSound(it->second)) {
 			_levelHandler->PlaySfx(nullptr, sfxName, &it->second.Buffers[0]->Buffer, Vector3f::Zero, true, 1.0f, 1.0f);
 		}
 #endif

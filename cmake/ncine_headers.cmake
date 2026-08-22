@@ -153,6 +153,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiCapabilitiesBase.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiFwd.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiTypes.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiUniformNameHash.h
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputEventHandler.h
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputManager.h
 	${NCINE_SOURCE_DIR}/nCine/Input/InputEvents.h
@@ -545,5 +546,9 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Shaders/Generated/GuGeneratedEffects.h
+	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Shaders/Generated/RdpGeneratedEffects.h
 	)
 endif()

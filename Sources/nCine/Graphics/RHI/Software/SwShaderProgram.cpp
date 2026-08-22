@@ -202,6 +202,43 @@ namespace nCine::RHI::Software
 			if (_reflection != nullptr) {
 				_effectReflection = _reflection;
 				ImportReflection();
+
+				// Everything the dispatch asks of the reflection per draw is a constant of the program,
+				// so it is all read out of the name strings exactly once, here (see DispatchFacts)
+				_dispatchFacts = {};
+				_dispatchFacts.InstanceBlock = FindBlock("InstanceBlock");
+				if (_dispatchFacts.InstanceBlock == nullptr) {
+					_dispatchFacts.InstanceBlock = FindBlock("InstancesBlock");
+				}
+				for (std::size_t i = 0; i < _reflection->TextureCount; i++) {
+					const ShaderCompiler::TextureBinding& t = _reflection->Textures[i];
+					if (std::strcmp(t.Name, "uTexture") == 0) {
+						_dispatchFacts.HasTexture = true;
+						if (t.Unit >= 0) {
+							_dispatchFacts.TextureUnit = t.Unit;
+						}
+					} else if (std::strcmp(t.Name, "uTexturePalette") == 0 && t.Unit >= 0) {
+						_dispatchFacts.PaletteUnit = t.Unit;
+					}
+				}
+				// The instance layout follows the block's own reflected declaration rather than any effect
+				// identity: a block that declares texRect uses the textured member offsets whether or not
+				// the program samples a texture (the Transition carries texRect but samples nothing)
+				_dispatchFacts.TexturedLayout = _dispatchFacts.HasTexture;
+				for (std::size_t i = 0; i < _reflection->BlockCount; i++) {
+					const ShaderCompiler::UniformBlock& b = _reflection->Blocks[i];
+					if (_dispatchFacts.InstanceStride == 0 && b.InstanceStride > 0) {
+						_dispatchFacts.InstanceStride = b.InstanceStride;
+					}
+					if (!_dispatchFacts.TexturedLayout) {
+						for (std::size_t j = 0; j < b.MemberCount; j++) {
+							if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
+								_dispatchFacts.TexturedLayout = true;
+								break;
+							}
+						}
+					}
+				}
 			}
 			_status = Status::LinkedWithIntrospection;
 		}
@@ -322,6 +359,8 @@ namespace nCine::RHI::Software
 		_batchSize = DefaultBatchSize;
 		_reflection = nullptr;
 		_effectReflection = nullptr;
+		// The cached facts point into _uniformBlocks, which was just cleared
+		_dispatchFacts = {};
 	}
 
 	void SwShaderProgram::SetObjectLabel(StringView label)
@@ -359,6 +398,12 @@ namespace nCine::RHI::Software
 
 	void SwShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
+		// The two names every dispatch reads get direct slots, so the draw path never scans by name
+		if (std::strcmp(name, "uProjectionMatrix") == 0) {
+			_resolvedProjection = data;
+		} else if (std::strcmp(name, "uViewMatrix") == 0) {
+			_resolvedView = data;
+		}
 		for (ResolvedUniform& r : _resolvedUniforms) {
 			if (r.Name == name) {
 				r.Data = data;

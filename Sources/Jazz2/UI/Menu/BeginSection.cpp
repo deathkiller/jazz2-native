@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in main menu
 		_items.emplace_back(Item::About, _("About"));
 // Consoles with nowhere to quit to (no system menu to return to) omit the item entirely
-#if !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE)
+#if !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_GAMECUBE)
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		// Show quit button only in PWA/standalone environment
 		if (PreferencesCache::IsStandalone)

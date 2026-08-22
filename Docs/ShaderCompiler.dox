@@ -57,6 +57,7 @@ Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce --- transpiled `fixed_functio
 Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gx`
 PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gu`
 PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gs`
+Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function rdp`
 PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources compiled on the console | `--emit-cg`
 PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from that same Cg | `--emit-rsx` + cgcomp
 
@@ -95,7 +96,7 @@ ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] 
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs|rdp> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 @endcode

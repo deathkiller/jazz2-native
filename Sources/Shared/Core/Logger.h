@@ -37,6 +37,10 @@
 #elif defined(__OpenBSD__)
 #	include <pthread_np.h>
 #	include <unistd.h>
+#elif defined(DEATH_TARGET_N64)
+// libdragon's newlib also pthreads without implementing them
+#	include <kernel.h>
+#	include <unistd.h>
 #elif defined(DEATH_TARGET_PS3)
 // PSL1GHT installs a <pthread.h> that declares nothing, so lv2's own thread API stands in for it
 #	include <sys/thread.h>
@@ -120,6 +124,9 @@ namespace Death { namespace Trace {
 #	elif defined(DEATH_TARGET_DREAMCAST)
 			// pthread_t is an integer type in KOS
 			return static_cast<std::uintptr_t>(pthread_self());
+#	elif defined(DEATH_TARGET_N64)
+			// A thread's identity is its kthread pointer, see the includes above
+			return static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(kthread_current()));
 #	elif defined(DEATH_TARGET_PS3)
 			// PSL1GHT has no pthreads at all, so the identity comes from lv2's own thread ID
 			sys_ppu_thread_t threadId = 0;

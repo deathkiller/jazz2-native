@@ -194,8 +194,8 @@ namespace Jazz2::Rendering
 		}
 
 		// A reduced-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
@@ -211,6 +211,9 @@ namespace Jazz2::Rendering
 		// to the storage mode's page geometry. At half resolution a 640x448 viewport wants a 512x256 PSMT8
 		// surface - 16 pages of the very local memory the texture cache is short of, and 128 KB across the
 		// bus every frame. At quarter it is 256x128, which is four pages and 32 KB.
+		//
+		// The Nintendo 64's 93 MHz VR4300 is slower still than the Allegrex, and its 320x240 output keeps
+		// the absolute size just as small: the quarter-resolution map is 80x60 texels.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;
