@@ -2205,6 +2205,7 @@ namespace Jazz2
 		if (introspection == Shader::Introspection::NoUniformsInBlocks) {
 			if (appCfg.fixedBatchSize > 0) {
 				batchSize = appCfg.fixedBatchSize;
+				batchSizeComputed = true;
 			} else if (maxUniformBlockSize < 64 * 1024) {
 				// The UBO is smaller than the 64 KB the in-shader BATCH_SIZE fallbacks assume, so the batch size is
 				// computed from the std140 instance stride reflected offline by ShaderCompiler - this replaces the probe
@@ -2236,8 +2237,14 @@ namespace Jazz2
 			}
 		}
 
-		// The explicitly configured size is bounded by the same ceiling
-		if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+		// The ceiling the device published bounds whatever the steps above arrived at - including the case
+		// where they arrived at nothing. `DefaultBatchSize` here means "let the in-shader BATCH_SIZE fallback
+		// decide", and that fallback is the 64 KB-worth of instances, which is always above a ceiling a device
+		// bothered to publish. Leaving it there would compile the instance array for 64 KB while RenderBatcher
+		// fills only `maxBatchSize` instances of it, and the bound buffer range would then be smaller than the
+		// block the program declares - undefined on desktop GL, a rejected draw on WebGL.
+		if (introspection == Shader::Introspection::NoUniformsInBlocks &&
+			maxBatchSize > 0 && (batchSize <= 0 || batchSize > maxBatchSize)) {
 			batchSize = maxBatchSize;
 			batchSizeComputed = true;
 		}

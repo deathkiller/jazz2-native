@@ -321,8 +321,14 @@ namespace nCine
 					}
 				}
 
-				// The explicitly configured size is bounded by the same ceiling
-				if (maxBatchSize > 0 && batchSize > maxBatchSize) {
+				// The ceiling the device published bounds whatever the steps above arrived at - including the
+				// case where they arrived at nothing. A batch size of 0 here means "let the in-shader
+				// BATCH_SIZE fallback decide", and that fallback is the 64 KB-worth of instances, which is
+				// always above a ceiling a device bothered to publish. Leaving it at 0 would compile the
+				// instance array for 64 KB while RenderBatcher fills only `maxBatchSize` instances of it,
+				// and the bound buffer range would then be smaller than the block the program declares -
+				// undefined on desktop GL, a rejected draw on WebGL.
+				if (maxBatchSize > 0 && (batchSize <= 0 || batchSize > maxBatchSize)) {
 					batchSize = maxBatchSize;
 					hasBatchSizeDefine = true;
 				}
