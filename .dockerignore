@@ -1,0 +1,50 @@
+# Everything the dedicated server image doesn't need, kept out of the build context
+
+# Version control and CI
+.git/
+.github/
+.vs/
+.vscode/
+.claude/
+.editorconfig
+.gitignore
+
+# Prebuilt third-party libraries - the container builds against the distribution's packages instead
+Libs/
+
+# Build outputs of local (non-container) builds
+build/
+_build/
+_package/
+.fake/
+ARM64EC/
+x64/
+x86/
+Win32/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio project files and intermediates
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.*
+*.props
+*.idb
+*.pdb
+*.ilk
+*.obj
+*.log
+
+# Documentation sources and notes
+Docs/
+README.md
+
+# Converted game data and personal configuration must never be baked into an image
+Source/
+Cache/
+Config/
+Jazz2.config
+Jazz2.Server.config
+desktop.ini
+desktop.ico

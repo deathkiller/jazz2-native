@@ -124,6 +124,9 @@ elseif(PLATFORM_PS3)
 	message(STATUS "Compiling for PlayStation 3")
 elseif(NCINE_BUILD_LIBRETRO)
 	message(STATUS "Compiling as a libretro core (no window backend)")
+elseif(DEDICATED_SERVER)
+	# The dedicated server never opens a window, so no window backend is compiled for it
+	message(STATUS "Compiling as a dedicated server (no window backend)")
 else()
 	# Falling back to either GLFW or SDL2 if the other one is not available
 	if(NOT GLFW_FOUND AND NOT SDL2_FOUND AND NOT SDL3_FOUND AND NOT Qt5_FOUND)

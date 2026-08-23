@@ -326,23 +326,7 @@ static void CheckConsoleCapabilities()
 	::SetConsoleMode(hStdIn, stdInMode);
 }
 
-static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
-{
-	if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT ||
-		signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT ||
-		signal == CTRL_SHUTDOWN_EVENT) {
-		auto& app = nCine::theApplication();
-		if (!app.ShouldQuit()) {
-			LOGW("Received console close event to shut down the application");
-			app.Quit();
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
-#	include <signal.h>
 #	include <termios.h>
 #	include <sys/select.h>
 
@@ -421,20 +405,6 @@ static void CheckConsoleCapabilities()
 	::tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-static void OnHandleInterruptSignal(int sig)
-{
-	if (sig == SIGINT) {
-		auto& app = nCine::theApplication();
-		if (!app.ShouldQuit()) {
-			LOGW("Received interrupt signal to shut down the application");
-			app.Quit();
-			return;
-		}
-
-		::signal(sig, SIG_DFL);
-		::raise(sig);
-	}
-}
 #endif
 
 template<std::int32_t N>
@@ -745,6 +715,81 @@ static void AppendMessageColor(char* dest, std::int32_t& length, TraceLevel leve
 }
 #endif
 
+// Turning a shutdown request into a clean exit has nothing to do with tracing, so unlike the console
+// detection above these handlers are compiled and installed even when `DEATH_TRACE` is disabled ---
+// a dedicated server has to disconnect its peers and delist itself from the online server list on
+// the way out no matter how the build was configured
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+
+static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
+{
+	if (signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT ||
+		signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT ||
+		signal == CTRL_SHUTDOWN_EVENT) {
+		auto& app = nCine::theApplication();
+		if (!app.ShouldQuit()) {
+			LOGW("Received console close event to shut down the application");
+			app.Quit();
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+static void InstallShutdownHandlers()
+{
+	// The handler is called only for events of a console the process is attached to, so registering
+	// it is harmless even when there is none
+	::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
+}
+
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#	include <signal.h>
+
+static void OnHandleTerminationSignal(int sig)
+{
+	if (sig != SIGINT && sig != SIGTERM) {
+		return;
+	}
+
+	auto& app = nCine::theApplication();
+	if (!app.ShouldQuit()) {
+		if (sig == SIGTERM) {
+			LOGW("Received termination signal to shut down the application");
+		} else {
+			LOGW("Received interrupt signal to shut down the application");
+		}
+		app.Quit();
+		return;
+	}
+
+	// The shutdown is already in progress, so a second signal restores the default action
+	// (which terminates the process) and delivers it again --- otherwise a hung shutdown
+	// couldn't be aborted anymore
+	::signal(sig, SIG_DFL);
+	::raise(sig);
+}
+
+static void InstallShutdownHandlers()
+{
+	// Both signals that conventionally ask a process to stop are turned into a clean shutdown:
+	// SIGINT for Ctrl+C in a terminal, SIGTERM for `kill`, service managers and container
+	// runtimes --- a dedicated server usually receives the latter one
+	::signal(SIGINT, OnHandleTerminationSignal);
+	::signal(SIGTERM, OnHandleTerminationSignal);
+}
+
+#else
+
+static void InstallShutdownHandlers()
+{
+	// The remaining platforms deliver a shutdown request through their own callbacks instead
+	// (or don't have the concept at all), see the platform backends
+}
+
+#endif
+
 namespace nCine
 {
 	Application::Application()
@@ -807,6 +852,10 @@ namespace nCine
 
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
+		// Installed before anything else, so even a shutdown request that arrives during the
+		// initialization is honored
+		InstallShutdownHandlers();
+
 #if defined(DEATH_TRACE)
 		InitializeTrace();
 #endif
@@ -1637,8 +1686,6 @@ namespace nCine
 					if (hasVirtualTerminal) {
 						CheckConsoleCapabilities();
 					}
-
-					::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
 				} else {
 					__consoleType = ConsoleType::Redirect;
 				}
@@ -1732,7 +1779,6 @@ namespace nCine
 			__consoleType = ConsoleType::EscapeCodes24bit;
 		}
 
-		::signal(SIGINT, OnHandleInterruptSignal);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		DWORD NO_COLOR = ::GetEnvironmentVariable(L"NO_COLOR", nullptr, 0);
 		if (NO_COLOR) {
@@ -1746,8 +1792,6 @@ namespace nCine
 					if (hasVirtualTerminal) {
 						CheckConsoleCapabilities();
 					}
-
-					::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
 					break;
 				}
 				case FILE_TYPE_UNKNOWN:

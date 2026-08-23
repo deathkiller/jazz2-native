@@ -1,0 +1,78 @@
+# Jazz² Resurrection --- dedicated multiplayer server
+#
+#   1. Put the original Jazz Jackrabbit 2 files (Anims.j2a, *.j2l, *.j2t, …) into "./Source/".
+#      They are converted into the "jazz2-cache" volume on the first start, which takes a while,
+#      every following start reuses it.
+#   2. Copy "Docs/Snippets/ServerConfiguration.json" to "./Config/Jazz2.Server.config" and edit it ---
+#      at the very least the playlist, so that the levels exist in "./Source/".
+#   3. mkdir -p ./Config/ && sudo chown 1000:1000 ./Config/     (the server runs as uid 1000)
+#   4. docker compose pull && docker compose up -d               (published image)
+#      docker compose up -d --build                              (built from these sources instead)
+#
+# The server console reads commands from standard input, so `docker attach jazz2-server` opens it
+# (detach again with Ctrl-P Ctrl-Q --- Ctrl-C would shut the server down). Everything the server logs
+# goes to `docker compose logs`.
+#
+# ─── Several servers on one host ───────────────────────────────────────────────────────────────────
+#
+# Every instance needs its own configuration directory, its own port and its own Compose project
+# name, which keeps the container names and the cache volumes apart. Describe each one in an
+# environment file, e.g. "battle.env":
+#
+#   JAZZ2_INSTANCE=jazz2-battle
+#   JAZZ2_CONFIG=./Config-battle
+#   JAZZ2_PORT=7439
+#
+# and start it as its own project, all from this single directory:
+#
+#   docker compose -p jazz2-battle --env-file ./battle.env up -d
+#
+# Two things have to agree with "JAZZ2_PORT": "ServerPort" and "WsPort" in that instance's
+# configuration file. The port is not remapped on purpose --- the server announces the port it is
+# bound to (a remapped one would be announced wrongly), and it is also part of the unique identifier
+# the server is listed under, which is what keeps two instances sharing one configuration directory
+# apart. The read-only "./Source/" directory can be shared by all of them, the cache volume cannot.
+#
+# Finally, a public server has to announce an address its players can reach. The container only sees
+# its own address on the Docker network, so set "ServerAddressOverride" to the host's public address
+# and port, e.g. "my-server.example:7439".
+
+services:
+  jazz2-server:
+    # The prebuilt image of the latest release --- replace "latest" with a version to pin it. The
+    # build section below is used instead when "--build" is passed, so the same file serves both
+    # a published image and a local build.
+    image: ghcr.io/deathkiller/jazz2-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ${JAZZ2_INSTANCE:-jazz2-server}
+    restart: unless-stopped
+
+    # Keep standard input open, otherwise the server console has nothing to read from
+    stdin_open: true
+    tty: false
+
+    # SIGTERM shuts the server down cleanly, but give it room to disconnect the peers and delist
+    # itself from the online server list
+    stop_grace_period: 30s
+
+    ports:
+      # "ServerPort" (enet transport) and "WsPort" (WebSocket transport, drop the second line if
+      # "WsPort" is 0) --- both have to match the configuration file, see the note above
+      - "${JAZZ2_PORT:-7438}:${JAZZ2_PORT:-7438}/udp"
+      - "${JAZZ2_PORT:-7438}:${JAZZ2_PORT:-7438}/tcp"
+
+    volumes:
+      # Original game files, read-only --- the server only converts them
+      - ${JAZZ2_SOURCE:-./Source}:/app/Source:ro
+      # "Jazz2.Server.config", the preferences file, any "$include"-ed configuration and the TLS
+      # certificate of the secure WebSocket transport, if one is used ("WsCertPath" is relative to
+      # the working directory, so it has to be given as "Config/cert.pem" there)
+      - ${JAZZ2_CONFIG:-./Config}:/app/Config
+      # Converted assets and crash dumps
+      - jazz2-cache:/app/Cache
+
+volumes:
+  jazz2-cache:

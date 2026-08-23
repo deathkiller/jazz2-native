@@ -18,7 +18,8 @@ The project requires following tools and libraries to build it successfully:
     @ref consoles "consoles that drive their own graphics hardware directly") @m_endspan
 -   **GLEW** library @m_span{m-text m-dim} (required only on **Windows**) @m_endspan
 -   **GLFW** or **SDL2** library @m_span{m-text m-dim} (not required on **Android**, **UWP** and most
-    @ref consoles "consoles", because these platforms use a different backend) @m_endspan
+    @ref consoles "consoles", because these platforms use a different backend, nor by the
+    @ref building-docker "dedicated server", which opens no window at all) @m_endspan
 -   **libcurl** library @m_span{m-text m-dim} (not required on **Emscripten** and **Windows**, because these
     platforms use a different backend) @m_endspan
 -   **zlib** library
@@ -173,6 +174,60 @@ See @ref consoles "Building for consoles" for the toolchain installation, deploy
 or an emulator, how to read the game's log on each of them, and what each console does and does not
 support. The game can also be built as a **libretro core** for RetroArch, see
 @ref consoles-libretro.
+
+@subsection building-docker Running the dedicated server as a container
+
+Every release is published as a multi-architecture @m_span{m-text m-dim} (`amd64` and `arm64`)
+@m_endspan container image, so a server operator doesn't have to build anything:
+
+@code{.sh}
+docker run -d -i --name jazz2-server --restart unless-stopped \
+    -p 7438:7438/udp -p 7438:7438/tcp \
+    -v "$PWD/Source:/app/Source:ro" \
+    -v "$PWD/Config:/app/Config" \
+    -v jazz2-cache:/app/Cache \
+    ghcr.io/deathkiller/jazz2-server:latest
+@endcode
+
+@m_class{m-noindent}
+
+The original **Jazz Jackrabbit 2** files are never part of the image, they have to be provided as
+a volume, just like for a local installation --- @cpp "./Source/" @ce above. The server reads its
+configuration from the first command-line argument @m_span{m-text m-dim} (defaults to
+@cpp "/app/Config/Jazz2.Server.config" @ce in the image) @m_endspan, converts the game files into
+@cpp "/app/Cache" @ce on the first start, and takes console commands from standard input, so
+@cpp "docker attach" @ce opens the server console. The @cpp "./Config/" @ce directory has to be
+writable by uid 1000, the unprivileged user the server runs as. Both `SIGINT` and `SIGTERM` shut the
+server down cleanly, so @cpp "docker stop" @ce disconnects the peers and delists the server from the
+online server list before the process exits. See
+@relativeref{Jazz2::Multiplayer,ServerConfiguration} for all configuration properties.
+
+@m_class{m-noindent}
+
+The image is described by the `Dockerfile` in the repository root, which builds the server with
+`DEDICATED_SERVER` --- no window or audio backend is compiled, so no graphics or audio libraries are
+needed and the image contains only libcurl, OpenSSL and zlib besides the game. To build it from
+sources instead of pulling it:
+
+@code{.sh}
+docker build -t jazz2-server .
+@endcode
+
+@m_class{m-noindent}
+
+The `docker-compose.yml` next to the `Dockerfile` describes the whole setup declaratively and covers
+both cases: @cpp "docker compose up -d" @ce runs the published image, @cpp "--build" @ce builds it
+from the sources in the repository. It also parameterizes the instance name, the port and the two
+host directories, so several servers can run on a single host --- each as its own Compose project
+with its own configuration directory, as described at the top of the file. Two properties deserve
+attention in that case:
+
+-   `ServerPort` and `WsPort` have to match the published port. The port is not only announced to the
+    server list, it is also the last part of the identifier the server is listed under
+    @m_span{m-text m-dim} (the rest comes from the preferences file, so two instances that share
+    a configuration directory are told apart by their ports alone) @m_endspan.
+-   `ServerAddressOverride` has to be set for a public server. The container sees only its own
+    address on the Docker network, which is of no use to a player on the internet.
 
 - - -
 

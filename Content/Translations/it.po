@@ -1559,6 +1559,10 @@ msgid ""
 "{} finished the race!\n"
 "{} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"{} ha completato la corsa!\n"
+"{} secondi rimasti"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9484
 #, c++-format
@@ -1567,6 +1571,9 @@ msgid ""
 "\n"
 "{} finished {}."
 msgstr ""
+"\n"
+"\n"
+"{} ha completato {}."
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9748
 #, c++-format
@@ -2683,19 +2690,19 @@ msgstr[1] "In attesa di {} altri giocatori"
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:211
 #, c++-format
 msgid "Finish in {} s"
-msgstr ""
+msgstr "Termina in {} s"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:442
 msgid "Time"
-msgstr ""
+msgstr "Tempo"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:445
 msgid "Kills"
-msgstr ""
+msgstr "Uccisioni"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:470
 msgid "Final standings"
-msgstr ""
+msgstr "Classifica finale"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
 msgid "Team"
