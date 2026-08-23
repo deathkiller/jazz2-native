@@ -28,7 +28,7 @@ jobs:
   # verifies that the dedicated server still builds and starts, and publishes the bare binary as
   # an artifact. Only the architecture of the runner is built here.
   Build:
-    name: 'Dedicated Server'
+    name: 'Build'
 
     runs-on: 'ubuntu-24.04'
 
@@ -75,7 +75,7 @@ jobs:
   # Every architecture is built natively. Each job pushes its own architecture-suffixed
   # tag, which the manifest below then combines into the single tag users pull.
   Publish:
-    name: 'Publish (${{ matrix.Architecture }})'
+    name: 'Publish'
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish)
     needs: Build
 

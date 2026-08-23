@@ -3,8 +3,12 @@
 # The image contains only the game engine. The original Jazz Jackrabbit 2 files are *not* part of it
 # and have to be provided by the operator as a volume, exactly like for a local installation.
 #
-# Every release is published as "ghcr.io/deathkiller/jazz2-server" for both amd64 and arm64, so this
-# file is needed only to build the image from sources.
+# The image is published for both amd64 and arm64, so this file is needed only to build it from
+# sources:
+#
+#   docker pull ghcr.io/deathkiller/jazz2-server:latest
+#
+# where ":latest" is the latest release and ":edge" the current state of the "master" branch.
 #
 # Build (from the repository root):
 #

@@ -182,6 +182,26 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 
 *Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. It may take more time, so white screen could be shown longer than expected. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
+### Dedicated server (Docker)
+* Pull the image, which is available for `amd64` and `arm64`
+  ```bash
+  docker pull ghcr.io/deathkiller/jazz2-server:latest
+  ```
+* Copy contents of original *Jazz Jackrabbit 2* directory to `./Source/`
+* Copy [`ServerConfiguration.json`](./Docs/Snippets/ServerConfiguration.json) to `./Config/Jazz2.Server.config` and adjust it, at least the playlist
+  * The directory must be writable by uid 1000, the unprivileged user the server runs as
+* Run the container
+  ```bash
+  docker run -d -i --name jazz2-server --restart unless-stopped \
+      -p 7438:7438/udp -p 7438:7438/tcp \
+      -v "$PWD/Source:/app/Source:ro" \
+      -v "$PWD/Config:/app/Config" \
+      -v jazz2-cache:/app/Cache \
+      ghcr.io/deathkiller/jazz2-server:latest
+  ```
+
+*The image contains only the headless server, contents of original **Jazz Jackrabbit 2** directory are never part of it. Besides* `latest`*, every release is tagged also as* `X.Y` *and* `X.Y.Z` *to pin a particular version, and* `edge` *tracks the current state of the* `master` *branch. Game files are converted into the* `jazz2-cache` *volume on the first start, so the first startup takes longer.* `docker attach jazz2-server` *opens the server console,* `docker stop` *shuts the server down cleanly, disconnecting the peers and delisting the server from the online server list.* `ServerAddressOverride` *has to be set for a public server, because the container sees only its own address on the Docker network. The* `docker-compose.yml` *in this repository describes the same setup declaratively, including several servers running on one host, and* `docker build -t jazz2-server .` *builds the image from sources instead of pulling it. See [the developer documentation](https://de4th.dev/jazz2/docs/building.html#building-docker) for details.*
+
 
 ## Building the application
 

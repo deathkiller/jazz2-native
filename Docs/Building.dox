@@ -177,8 +177,25 @@ support. The game can also be built as a **libretro core** for RetroArch, see
 
 @subsection building-docker Running the dedicated server as a container
 
-Every release is published as a multi-architecture @m_span{m-text m-dim} (`amd64` and `arm64`)
+The dedicated server is published as a multi-architecture @m_span{m-text m-dim} (`amd64` and `arm64`)
 @m_endspan container image, so a server operator doesn't have to build anything:
+
+@code{.sh}
+docker pull ghcr.io/deathkiller/jazz2-server:latest
+@endcode
+
+@m_class{m-noindent}
+
+Tag | Contents
+--- | --------
+`latest` | Latest release
+`3.8` | Latest patch release of a given minor version
+`3.8.0` | A particular release
+`edge` | Current state of the `master` branch
+
+@m_class{m-noindent}
+
+Running it takes no more than pointing the server at the game files and its configuration:
 
 @code{.sh}
 docker run -d -i --name jazz2-server --restart unless-stopped \
