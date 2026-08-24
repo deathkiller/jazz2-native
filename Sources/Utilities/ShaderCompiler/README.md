@@ -508,8 +508,8 @@ unlike the software transpiler's silent declines). The **portable core**, valid 
   - `has_texel_size()` — `bool`, whether that step is derivable at all (`ctx.HasTexelStep()`; a
     zero texRect has no scale). Blocks guard their `texel_size()` uses with it.
 
-The **extended vocabulary** is valid only in a block that names its backends — a single `pvr`, `gx`
-or `gu` block, or a target list such as `pvr, gu` — because a generic block stays in the portable
+The **extended vocabulary** is valid only in a block that names its backends — a single `pvr`, `gx`,
+`gu`, `gs` or `rdp` block, or a target list such as `pvr, gu` — because a generic block stays in the portable
 quad-only core, so a shared description can never silently depend on one console's geometry synthesis
 (using it in a generic block is a hard error):
 
@@ -605,13 +605,13 @@ offset colour *is* the effect). So a generic block that writes `p.offset_color` 
 unchanged on all three consoles; the GX likewise reinterprets it as its silhouette form.
 
 Worked examples: `Transition.shader` (the iris fan, 32 segments in its `pvr` block and 64 with a
-radially eased edge in one shared `gx, gu, gs` block — the iris is pure geometry, so what it needs
-from the hardware is only a 16-vertex strip taken in one draw call, which is exactly what those three
+radially eased edge in one shared `gx, gu, gs, rdp` block — the iris is pure geometry, so what it needs
+from the hardware is only a 16-vertex strip taken in one draw call, which is exactly what those four
 agree on and the PVR's 8-vertex scratch cannot give) and `Include/TexturedBackgroundWarp.inc` (the warp
-rebuild, shared by both background shaders **and** all four backends — the band geometry is portable
+rebuild, shared by both background shaders **and** all five backends — the band geometry is portable
 vocabulary; only the horizon-tint delivery is switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the
-including block defines, which only the `gx` block sets, so the other three consoles share a
-`pvr, gu, gs` block that just includes the file — and which is also the idiom for specializing a shared
+including block defines, which only the `gx` block sets, so the other four consoles share a
+`pvr, gu, gs, rdp` block that just includes the file — and which is also the idiom for specializing a shared
 include per backend).
 
 `PartialWhiteMask.shader`, `Colorized.shader` and `FrozenMask.shader` show the other half of the

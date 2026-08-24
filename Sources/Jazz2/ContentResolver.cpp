@@ -927,7 +927,15 @@ namespace Jazz2
 				}
 #	endif
 				auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPath));
-				auto res = _cachedSounds.emplace(assetPath, std::make_unique<GenericSoundResource>(std::move(s), assetPath));
+				auto resource = std::make_unique<GenericSoundResource>(std::move(s), assetPath);
+				if (resource->Buffer.numSamples() <= 0) {
+					// The file was missing or could not be decoded (AudioBuffer already logged it).
+					// Keeping the dead resource cached would hold it for the rest of the level and
+					// pretend the sound is playable; dropping it here lets the empty-Buffers path
+					// below mark the sound Unavailable, so the read is not retried on every play.
+					continue;
+				}
+				auto res = _cachedSounds.emplace(assetPath, std::move(resource));
 				res.first->second->Flags |= GenericSoundResourceFlags::Referenced;
 				sound.Buffers.push_back(res.first->second.get());
 			}
@@ -1729,7 +1737,11 @@ namespace Jazz2
 				const std::uint32_t srcY = (tile / srcTilesPerRow) * TileSet::DefaultTileSize;
 				const std::uint32_t dstX = (slot % tilesPerRow) * paddedTileSizeSrc;
 				const std::uint32_t dstY = ((slot / tilesPerRow) - firstTileRow) * paddedTileSizeSrc;
-				const bool is32bit = ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
+				// The sheet's tile grid can be larger than its declared tile count (the last row may be
+				// padding), and the flag array holds exactly (tileCount + 7) / 8 bytes - a grid position
+				// past the count has no flag to read and is never a 32-bit tile
+				const bool is32bit = (tileIdx < (std::int32_t)tileCount) &&
+					((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
 
 				std::uint8_t* dstTile = &chunk[(dstY * paddedWidth + dstX) * dstChannels];
 				bool opaque = true;

@@ -249,7 +249,7 @@ cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED
 ```
 
 ### Other consoles
-The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option.
+The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
 
 Please refer to [the console documentation](https://de4th.dev/jazz2/docs/consoles.html) for the toolchain, build, packaging, deployment and logging steps of each console.
 

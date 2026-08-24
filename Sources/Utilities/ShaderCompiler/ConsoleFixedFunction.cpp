@@ -685,7 +685,7 @@ namespace ShaderCompiler
 			bool RequireExtended(StringView what)
 			{
 				if (_targets.empty()) {
-					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs) or a list of them (generic blocks keep the portable quad-only core)"_s);
+					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs), (rdp) or a list of them (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;

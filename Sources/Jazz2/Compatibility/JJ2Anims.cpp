@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>

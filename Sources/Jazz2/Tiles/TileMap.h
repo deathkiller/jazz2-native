@@ -384,6 +384,11 @@ namespace Jazz2::Tiles
 
 		/** @brief Returns a caption tile */
 		StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, Color> GetCaptionTile() const {
+			// The tileset can be gone after a failed repack (see PruneTilesetAtlas()); the caller
+			// already handles the empty view a caption-less tileset returns, so it covers this too
+			if (_tileSets.empty() || _tileSets[0].Data == nullptr) {
+				return {};
+			}
 			return _tileSets[0].Data->GetCaptionTile();
 		}
 

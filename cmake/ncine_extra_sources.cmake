@@ -970,7 +970,10 @@ else()
 		# TODO: re-encode the cinematics at a lower bitrate in AssetPacker and put the ending back.
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dfs/Content"
-			COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_BINARY_DIR}/dfs/Content/Music" "${CMAKE_BINARY_DIR}/dfs/Content/Cinematics/ending.j2v"
+			# Two commands rather than one "-E rm": that form needs CMake 3.17, and the project's minimum
+			# is 3.15 (remove_directory/remove both ignore paths that do not exist)
+			COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/dfs/Content/Music"
+			COMMAND ${CMAKE_COMMAND} -E remove -f "${CMAKE_BINARY_DIR}/dfs/Content/Cinematics/ending.j2v"
 			${_n64MarkPrebakedCommand}
 			COMMAND "${N64_MKDFS}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.dfs" "${CMAKE_BINARY_DIR}/dfs"
 			COMMAND "${N64_SYM}" --all "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.sym"

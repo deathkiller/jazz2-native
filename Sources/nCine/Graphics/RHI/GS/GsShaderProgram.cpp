@@ -291,6 +291,10 @@ namespace nCine::RHI::GS
 		_usesPalette = false;
 		// The cached facts point into _uniformBlocks, which was just cleared
 		_dispatchFacts = {};
+		// The direct camera-matrix slots point into the old program's committed uniform storage;
+		// left set, ResolveUniform() and these would disagree after a reload (mirrors GxShaderProgram)
+		_resolvedProjection = nullptr;
+		_resolvedView = nullptr;
 	}
 
 	void GsShaderProgram::SetObjectLabel(StringView label)

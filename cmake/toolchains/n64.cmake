@@ -18,6 +18,22 @@ endif()
 if(NOT EXISTS "${N64_INST}/mips64-elf/include/libdragon.h")
 	message(FATAL_ERROR "libdragon not found at \"${N64_INST}\" (install the toolchain and run `make install` in libdragon)")
 endif()
+if(NOT EXISTS "${N64_INST}/mips64-elf/include/GL/gl.h")
+	# The OpenGL headers are the concrete marker of the preview branch - the stable branch installs
+	# the same libdragon.h but none of the preview APIs this project builds against
+	message(FATAL_ERROR "libdragon at \"${N64_INST}\" has no preview headers (build and install libdragon from the \"preview\" branch)")
+endif()
+# libdragon's debug.c is compiled away entirely under NDEBUG, but the game declares
+# debug_init_usblog()/debug_init_emulog() directly (see MainApplication.cpp) so its own release
+# builds keep a log channel - which only links if the INSTALLED libdragon.a still exports them.
+# Catch an NDEBUG-built SDK here with a readable message instead of an undefined-reference wall.
+if(EXISTS "${N64_INST}/bin/mips64-elf-nm" AND EXISTS "${N64_INST}/mips64-elf/lib/libdragon.a")
+	execute_process(COMMAND "${N64_INST}/bin/mips64-elf-nm" --defined-only "${N64_INST}/mips64-elf/lib/libdragon.a"
+		OUTPUT_VARIABLE _n64LibdragonSymbols ERROR_QUIET)
+	if(NOT _n64LibdragonSymbols MATCHES "debug_init_usblog")
+		message(FATAL_ERROR "libdragon at \"${N64_INST}\" was built with NDEBUG and exports no debug_init_usblog() - rebuild libdragon without NDEBUG (its stock Makefile does not define it)")
+	endif()
+endif()
 
 set(ENV{N64_INST} "${N64_INST}")
 

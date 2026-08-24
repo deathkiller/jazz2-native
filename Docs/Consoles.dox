@@ -244,7 +244,10 @@ command queue directly, presented by the `N64` window backend in 320x240 RGB565
 
 libdragon publishes a prebuilt `mips64-elf` GCC, so unlike the Dreamcast nothing has to be compiled
 except the library itself --- which must come from the **preview** branch (the toolchain file
-verifies this):
+verifies this through the OpenGL headers only that branch installs, and also that the installed
+`libdragon.a` was not built with `NDEBUG` --- the log channels depend on symbols that build strips).
+The preview branch moves; when reproducibility matters, check out and record a specific revision
+rather than its tip:
 
 @code{.sh}
 # The prebuilt cross-compiler (also available as .deb; extract anywhere and point N64_INST at it)

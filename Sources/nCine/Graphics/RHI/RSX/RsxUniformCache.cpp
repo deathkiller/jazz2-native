@@ -222,7 +222,10 @@ namespace nCine::RHI::RSX
 
 	bool RsxUniformBlockCache::CopyData(std::uint32_t destIndex, const std::uint8_t* src, std::uint32_t numBytes)
 	{
-		if (destIndex + numBytes > std::uint32_t(GetSize()) || numBytes == 0 || src == nullptr || _dataPointer == nullptr) {
+		// Two comparisons rather than one sum: destIndex + numBytes can wrap around std::uint32_t,
+		// and a wrapped sum would pass the check while the memcpy runs far past the block
+		if (numBytes == 0 || src == nullptr || _dataPointer == nullptr ||
+			destIndex > std::uint32_t(GetSize()) || numBytes > std::uint32_t(GetSize()) - destIndex) {
 			return false;
 		}
 		std::memcpy(&_dataPointer[destIndex], src, numBytes);

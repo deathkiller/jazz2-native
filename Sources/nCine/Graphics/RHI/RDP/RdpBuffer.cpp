@@ -33,15 +33,21 @@ namespace nCine::RHI::RDP
 			// store every frame is nothing but wasted memory traffic
 			return;
 		}
-		_storage.assign(size, std::uint8_t(0));
+		// Supplied data replaces the store outright; only a plain allocation is zero-filled (writing
+		// every byte twice - a zero fill and then the copy - is pure memory traffic on this bus)
 		if (data != nullptr && size > 0) {
-			std::memcpy(_storage.data(), data, size);
+			const std::uint8_t* bytes = static_cast<const std::uint8_t*>(data);
+			_storage.assign(bytes, bytes + size);
+		} else {
+			_storage.assign(size, std::uint8_t(0));
 		}
 	}
 
 	void RdpBuffer::BufferSubData(std::size_t offset, std::size_t size, const void* data)
 	{
-		if (data == nullptr || size == 0 || offset + size > _storage.size()) {
+		// Two comparisons rather than one sum: offset + size can wrap around std::size_t (32-bit on
+		// this ABI), and a wrapped sum would pass the check while the memcpy runs far past the store
+		if (data == nullptr || size == 0 || offset > _storage.size() || size > _storage.size() - offset) {
 			return;
 		}
 		std::memcpy(_storage.data() + offset, data, size);
@@ -52,9 +58,11 @@ namespace nCine::RHI::RDP
 		// Everything lives in a resizable host store, so "immutable storage" is just a plain
 		// (re)allocation; the storage/mapping flags do not apply
 		static_cast<void>(flags);
-		_storage.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
-			std::memcpy(_storage.data(), data, size);
+			const std::uint8_t* bytes = static_cast<const std::uint8_t*>(data);
+			_storage.assign(bytes, bytes + size);
+		} else {
+			_storage.assign(size, std::uint8_t(0));
 		}
 	}
 
@@ -68,7 +76,8 @@ namespace nCine::RHI::RDP
 		if (offset > _storage.size()) {
 			return;
 		}
-		if (offset + size > _storage.size()) {
+		// Clamped without the offset + size sum, which can wrap around std::size_t (32-bit here)
+		if (size > _storage.size() - offset) {
 			size = _storage.size() - offset;
 		}
 		RdpDevice::BindUniformRange(index, _storage.data() + offset, std::uint32_t(size));

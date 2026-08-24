@@ -121,8 +121,14 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 
 		// The block members, resolved once per shader change rather than by name on every dirty sprite -
-		// an animated actor rewrites its texRect every animation frame, so this is a per-frame path
+		// an animated actor rewrites its texRect every animation frame, so this is a per-frame path.
+		// A material without a shader program has no members to write (all-null placeholders), but the
+		// transformation and texture binding below still have to happen.
+		static const RenderCommand::InstanceUniforms NullInstanceUniforms{};
 		const RenderCommand::InstanceUniforms* instanceUniforms = _renderCommand.GetInstanceUniforms();
+		if (instanceUniforms == nullptr) {
+			instanceUniforms = &NullInstanceUniforms;
+		}
 
 		if (_dirtyBits.test(DirtyBitPositions::TransformationUploadBit)) {
 			_renderCommand.SetTransformation(_worldMatrix);
