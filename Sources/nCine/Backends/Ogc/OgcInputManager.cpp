@@ -22,18 +22,20 @@ namespace nCine::Backends
 {
 	namespace
 	{
-		// XInput-shaped button indices (the SDL "standard gamepad" order the built-in mapping consumes)
+		// Raw button indices of the built-in "xinput" mapping string (a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,
+		// rightshoulder:b5,back:b6,start:b7,leftstick:b8,rightstick:b9,guide:b10) - NOT the
+		// SDL_GameControllerButton output order, which numbers back/guide/start as 4/5/6
 		constexpr std::int32_t ButtonA = 0;
 		constexpr std::int32_t ButtonB = 1;
 		constexpr std::int32_t ButtonX = 2;
 		constexpr std::int32_t ButtonY = 3;
-		constexpr std::int32_t ButtonBack = 4;
-		constexpr std::int32_t ButtonGuide = 5;
-		constexpr std::int32_t ButtonStart = 6;
-		constexpr std::int32_t ButtonLStick = 7;
-		constexpr std::int32_t ButtonRStick = 8;
-		constexpr std::int32_t ButtonLShoulder = 9;
-		constexpr std::int32_t ButtonRShoulder = 10;
+		constexpr std::int32_t ButtonLShoulder = 4;
+		constexpr std::int32_t ButtonRShoulder = 5;
+		constexpr std::int32_t ButtonBack = 6;
+		constexpr std::int32_t ButtonStart = 7;
+		constexpr std::int32_t ButtonLStick = 8;
+		constexpr std::int32_t ButtonRStick = 9;
+		constexpr std::int32_t ButtonGuide = 10;
 
 		// Event scratch (single-threaded poll, mirroring the UWP backend's static event objects)
 		JoyButtonEvent _joyButtonEvent;

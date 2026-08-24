@@ -110,6 +110,21 @@
 #include "GS/GsDevice.h"
 #include "GS/GsRhiCapabilities.h"
 
+#elif defined(WITH_RHI_RDP)
+
+#include "RDP/RdpDebug.h"
+#include "RDP/RdpShader.h"
+#include "RDP/RdpBuffer.h"
+#include "RDP/RdpTexture.h"
+#include "RDP/RdpVertexFormat.h"
+#include "RDP/RdpShaderTypes.h"
+#include "RDP/RdpUniformCache.h"
+#include "RDP/RdpShaderUniforms.h"
+#include "RDP/RdpShaderProgram.h"
+#include "RDP/RdpRenderTarget.h"
+#include "RDP/RdpDevice.h"
+#include "RDP/RdpRhiCapabilities.h"
+
 #elif defined(WITH_RHI_GXM)
 
 #include "GXM/GxmDebug.h"

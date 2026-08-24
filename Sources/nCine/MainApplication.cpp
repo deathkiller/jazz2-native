@@ -29,6 +29,9 @@
 #elif defined(WITH_PS3)
 #	include "Backends/Ps3/Ps3GfxDevice.h"
 #	include "Backends/Ps3/Ps3InputManager.h"
+#elif defined(WITH_N64)
+#	include "Backends/N64/N64GfxDevice.h"
+#	include "Backends/N64/N64InputManager.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -39,9 +42,8 @@
 #	include <emscripten/emscripten.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
-#elif defined(DEATH_TARGET_VITA)
-#	include <vitasdk.h>
-#	include <vitaGL.h>
+#elif defined(DEATH_TARGET_DREAMCAST)
+#	include <kos.h>
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 #	include <gccore.h>
 #	include <fat.h>
@@ -50,12 +52,8 @@
 #	if defined(DEATH_TARGET_WII)
 #		include <wiiuse/wpad.h>
 #	endif
-#elif defined(DEATH_TARGET_DREAMCAST)
-#	include <kos.h>
-#elif defined(DEATH_TARGET_PSP)
-#	include <pspkernel.h>
-#	include <pspdebug.h>
-#	include <psppower.h>
+#elif defined(DEATH_TARGET_N64)
+#	include <libdragon.h>
 #elif defined(DEATH_TARGET_PS2)
 extern "C" {
 #	include <kernel.h>
@@ -65,6 +63,13 @@ extern "C" {
 #	include <libmc.h>
 }
 #	include <cstdio>
+#elif defined(DEATH_TARGET_PSP)
+#	include <pspkernel.h>
+#	include <pspdebug.h>
+#	include <psppower.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitasdk.h>
+#	include <vitaGL.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -78,12 +83,29 @@ extern "C" {
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3) || defined(WITH_N64)
 using namespace nCine::Backends;
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 #	error "For DEATH_TARGET_WINDOWS_RT, UwpApplication should be used instead of MainApplication"
+#endif
+
+#if defined(DEATH_TARGET_N64)
+// libdragon's `debug.h` hides the whole logging API behind `#ifndef NDEBUG`: in a release build
+// `debug_init_usblog()` and `debug_init_emulog()` are macros that expand to `false` without calling
+// anything, and `debugf()` expands to nothing at all. The FUNCTIONS are still there - libdragon itself
+// is not built with our NDEBUG, so libdragon.a exports them - and they are the only thing that installs
+// the stderr sink (`hook_stdio_calls`), so a release build that goes through the macros gets no log
+// channel whatsoever and silently drops every trace message. Declaring them directly bypasses the
+// macros; the `#undef`s are needed because the macros would otherwise eat these declarations too.
+#	undef debug_init_usblog
+#	undef debug_init_emulog
+extern "C" bool debug_init_usblog(void);
+extern "C" bool debug_init_emulog(void);
+
+static bool N64DebugInitUsbLog() { return debug_init_usblog(); }
+static bool N64DebugInitEmuLog() { return debug_init_emulog(); }
 #endif
 
 #if defined(DEATH_TARGET_PS2)
@@ -222,13 +244,42 @@ namespace nCine
 		socketInitializeDefault();
 		nxlinkStdio();
 		romfsInit();
-#elif defined(DEATH_TARGET_VITA)
-		// Enable analog sampling for controllers
-		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
-		sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_START);
+#elif defined(DEATH_TARGET_N64)
+		// Route stderr to the emulator log channel (ISViewer/emux, shown in the Ares log) and to the
+		// flashcart's USB log first: this is what installs libdragon's stderr sink, so it has to happen
+		// before the first trace message is written. Both are called through N64DebugInit* rather than
+		// the libdragon macros - see the declarations above for why a release build needs that.
+		//
+		// Then the early boot console comes up on the framebuffer, so startup messages are ALSO shown
+		// directly on the screen and a crash is visible without any host tool attached. Its hook only
+		// takes the stdout slot, so it neither replaces nor disables the stderr channel installed above
+		// (and `console_close()` in N64GfxDevice only gives that one slot back).
+		const bool n64EmuLog = N64DebugInitEmuLog();
+		const bool n64UsbLog = N64DebugInitUsbLog();
+		console_init();
+		console_set_debug(true);
+		printf("Application starting...\n");
+		// Which log channels answered decides whether any trace can leave the console at all, so the
+		// answer goes on the boot console - the one sink that is known to work at this point
+		printf("Trace channels: emulator log %s, USB log %s\n", n64EmuLog ? "yes" : "no", n64UsbLog ? "yes" : "no");
 
-		// Enabling sampling for the analogs
-		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
+		// The game does not fit in the 4 MB of a base console, so the Expansion Pak is a hard
+		// requirement rather than a preference. Claiming it here turns a missing one into libdragon's
+		// own "expansion pak required" screen at startup, instead of an allocation failure somewhere
+		// deep in content loading, and it silences the advisory the allocator prints on the way past
+		// 4 MB. The size goes on the boot console next to it, because a heap smaller than expected
+		// explains most of what can go wrong afterwards.
+		assert_memory_expanded();
+		printf("Memory size: %d KB\n", get_memory_size() / 1024);
+
+		// The cartridge filesystem holds the game content, and ContentResolver opens files while the
+		// application is still being constructed - earlier than any backend's constructor runs
+		if (dfs_init(DFS_DEFAULT_LOCATION) != DFS_ESUCCESS) {
+			// Without the DFS image there is no game content, so halt with a readable message instead of
+			// crashing on the missing files later
+			printf("\n  Cannot mount the cartridge filesystem!\n\n  The ROM was built without the attached game files.\n");
+			while (true) { }
+		}
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// Bring up the shared subsystems before any device exists: the video hardware (OgcGfxDevice picks
 		// the mode and allocates framebuffers later), the SD/storage FAT layer and the controller ports
@@ -278,12 +329,6 @@ namespace nCine
 			ogcShutdownRequested = true;
 		});
 #	endif
-#elif defined(DEATH_TARGET_DREAMCAST)
-		// Early boot log on the framebuffer console: startup messages (including all trace messages)
-		// are shown directly on the screen, so crashes are visible without a serial cable attached;
-		// DcGfxDevice switches dbgio back to the serial port when the real renderer takes over
-		dbgio_dev_select("fb");
-		printf("Application starting...\n");
 #elif defined(DEATH_TARGET_PS2)
 		// The CDVD device is not registered by default, so any "cdrom0:" path fails with EPERM until its IOP
 		// side is brought up - and ContentResolver opens one while the application is still being constructed,
@@ -356,6 +401,19 @@ namespace nCine
 		// session takes the framebuffer over during Init(), after which the trace sink keeps writing to
 		// stdout alone - which the firmware discards, but PPSSPP shows in its log.
 		pspDebugScreenInit();
+		printf("Application starting...\n");
+#elif defined(DEATH_TARGET_VITA)
+		// Enable analog sampling for controllers
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_START);
+
+		// Enabling sampling for the analogs
+		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// Early boot log on the framebuffer console: startup messages (including all trace messages)
+		// are shown directly on the screen, so crashes are visible without a serial cable attached;
+		// DcGfxDevice switches dbgio back to the serial port when the real renderer takes over
+		dbgio_dev_select("fb");
 		printf("Application starting...\n");
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
@@ -740,6 +798,9 @@ namespace nCine
 			FATAL_ASSERT_MSG(_qt5Widget, "The Qt5 widget has not been assigned");
 			_gfxDevice = std::make_unique<Qt5GfxDevice>(windowMode, contextInfo, displayMode, *_qt5Widget);
 			_inputManager = std::make_unique<Qt5InputManager>(*_qt5Widget);
+#elif defined(WITH_N64)
+			_gfxDevice = std::make_unique<N64GfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<N64InputManager>();
 #elif defined(WITH_OGC)
 			_gfxDevice = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<OgcInputManager>();
@@ -786,6 +847,9 @@ namespace nCine
 			ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
 			static_cast<Qt5InputManager&>(*_inputManager).updateJoystickStates();
+#elif defined(WITH_N64)
+			// No window events on a console; polling the joypad ports is the whole event pump
+			N64InputManager::updateJoystickStates();
 #elif defined(WITH_OGC)
 			// No window events on a console; polling the controller ports is the whole event pump
 			OgcInputManager::updateJoystickStates();

@@ -91,6 +91,14 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 
 *Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. It may take more time, so white screen could be shown longer than expected. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
+### Nintendo 64
+* The game plays from a cartridge ROM, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation – such ROM image can't be distributed, so it has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-n64)
+* Copy the resulting `jazz2.z64` image onto an *EverDrive-64* or *SC64* flashcart
+  * The image also boots directly in *ares* or *simple64*
+* Run the ROM – the console must have an **Expansion Pak** installed
+
+*The game runs in 320×240 and the ROM is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image, and the settings are saved to the cartridge EEPROM. The RDP has no programmable shading, so there is no post-processing tier and no rescale filters, there is no module music (sound effects only), and threads are unavailable, so local splitscreen is not available either. The port has not been tested on real hardware yet.*
+
 ### Sega Dreamcast
 * The game plays from a disc, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation – such disc image can't be distributed, so it has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-dreamcast)
 * Burn the resulting `jazz2.cdi` image with a tool that understands the Dreamcast's multi-session layout, or serve it from an optical-drive emulator such as GDEMU/MODE
@@ -241,7 +249,7 @@ cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED
 ```
 
 ### Other consoles
-The game runs on **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option.
+The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
 
 Please refer to [the console documentation](https://de4th.dev/jazz2/docs/consoles.html) for the toolchain, build, packaging, deployment and logging steps of each console.
 

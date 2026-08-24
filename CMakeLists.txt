@@ -110,6 +110,9 @@ endif()
 
 if(WINDOWS_PHONE OR WINDOWS_STORE)
 	message(STATUS "Compiling for Windows RT")
+elseif(PLATFORM_N64)
+	# The N64 uses the N64 window/input backend (libdragon), see Sources/nCine/Backends/N64
+	message(STATUS "Compiling for Nintendo 64 (libdragon backend)")
 elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 	# The libogc consoles use the Ogc window/input backend (no SDL/GLFW), see Sources/nCine/Backends/Ogc
 	message(STATUS "Compiling for Nintendo Wii/GameCube (libogc backend)")

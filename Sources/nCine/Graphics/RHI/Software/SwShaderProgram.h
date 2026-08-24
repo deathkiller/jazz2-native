@@ -209,6 +209,41 @@ namespace nCine::RHI::Software
 		void SetResolvedUniform(const char* name, const std::uint8_t* data);
 		/** @brief Returns the last published value pointer of the named loose uniform, or `nullptr` */
 		const std::uint8_t* ResolveUniform(const char* name) const;
+		/** @brief Returns the published `uProjectionMatrix` value without the by-name scan (it runs per draw) */
+		inline const std::uint8_t* GetResolvedProjection() const {
+			return _resolvedProjection;
+		}
+		/** @brief Returns the published `uViewMatrix` value without the by-name scan (it runs per draw) */
+		inline const std::uint8_t* GetResolvedView() const {
+			return _resolvedView;
+		}
+
+		/**
+			@brief Facts of the program the draw dispatch reads on every command, resolved once at introspection
+
+			All of them are constants of the linked program (they only depend on its reflection), but the
+			dispatch used to re-derive each by scanning reflection name strings per RenderCommand - dozens
+			of dependent loads per draw. Only the instance block's BINDING stays a per-draw read, because
+			the material assigns bindings after linking.
+		*/
+		struct DispatchFacts
+		{
+			/** @brief The "InstanceBlock" (or the batched "InstancesBlock"), or `nullptr` */
+			const SwUniformBlock* InstanceBlock = nullptr;
+			/** @brief Reflected per-instance stride; positive exactly for batched programs */
+			std::uint32_t InstanceStride = 0;
+			/** @brief Unit `uTexture` binds (meaningful when @ref HasTexture) */
+			std::int32_t TextureUnit = 0;
+			/** @brief Unit `uTexturePalette` binds (meaningful when the program remaps) */
+			std::int32_t PaletteUnit = 1;
+			/** @brief Whether the reflection binds `uTexture` at all */
+			bool HasTexture = false;
+			/** @brief Whether the instance block declares `texRect` (the textured member layout) */
+			bool TexturedLayout = false;
+		};
+		inline const DispatchFacts& GetDispatchFacts() const {
+			return _dispatchFacts;
+		}
 
 	private:
 		static std::uint32_t _nextHandle;
@@ -231,6 +266,7 @@ namespace nCine::RHI::Software
 		const ShaderCompiler::ProgramVariant* _effectReflection;
 		SwEffect _effect;
 		bool _ditherVariant;
+		DispatchFacts _dispatchFacts;
 		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
 		String _label;
 
@@ -244,6 +280,9 @@ namespace nCine::RHI::Software
 			const std::uint8_t* Data;
 		};
 		std::vector<ResolvedUniform> _resolvedUniforms;
+		// The two names every dispatch reads are kept as direct pointers, bypassing the by-name scan
+		const std::uint8_t* _resolvedProjection = nullptr;
+		const std::uint8_t* _resolvedView = nullptr;
 
 		void PerformIntrospection();
 		void ImportReflection();

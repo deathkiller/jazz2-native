@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PvrShaderTypes.h"
+#include "../RhiUniformNameHash.h"
 
 #include <cstdint>
 #include <vector>
@@ -129,5 +130,8 @@ namespace nCine::RHI::PVR
 			PvrUniformCache Cache;
 		};
 		std::vector<NamedCache> _uniformCaches;
+		// Fingerprints of the _uniformCaches names, in the same order and kept in their own packed
+		// array so a lookup touches only these few bytes (see @ref HashUniformName)
+		std::vector<std::uint32_t> _uniformNameHashes;
 	};
 }

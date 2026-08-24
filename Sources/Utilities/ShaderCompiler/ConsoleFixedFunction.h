@@ -19,7 +19,8 @@
 	written against the runtime contract in `nCine/Graphics/RHI/FixedFunctionPass.h`: the function
 	fills `FixedFunctionPass` descriptors and submits them through the backend's `EffectContext`.
 	Main.cpp's `--emit-fixed-function` mode names and collects the functions into per-backend
-	aggregate headers (`PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h`),
+	aggregate headers (`PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` /
+	`GsGeneratedEffects.h` / `RdpGeneratedEffects.h`),
 	deduplicating byte-identical bodies into one shared function per backend (batched twins and
 	palette variants usually differ only in dispatch-side decoding), mirroring how
 	`--emit-sw-generated` produces `SwGeneratedShaders.h`.
@@ -61,7 +62,7 @@
 	  `submit_strip(p, count)` (textured, flat pass colour) or `submit_strip_shaded(p, count)`
 	  (per-vertex colours — gradients without a fragment shader; untextured unless the pass's TEV
 	  preset consumes the texel too). Literal indices and counts are checked against the scratch
-	  capacity of the block's targets (8 vertices on the PVR, 16 on the GX and the GU), because at
+	  capacity of the block's targets (8 vertices on the PVR, 16 everywhere else), because at
 	  runtime an out-of-range index is dropped and an oversized count clamped — silently wrong
 	  geometry. A block naming several targets is held to the SMALLEST of their capacities.
 
@@ -70,18 +71,25 @@
 	description honest, since the alternative (checking only the backend whose header is being
 	written) would accept a block that is silently wrong on the other backends it serves.
 
-	Two TEV presets need the GX's programmable combiner and have no PVR or GE equivalent at all, so
-	they are rejected outside a block targeting the GX ALONE (`void fixed_function(gx)`): `TINT_MIX`
-	(`mix(texel, colour, alpha)`, one stage — the TexturedBackground warp folds its horizon tint into
-	the band's own draw with it) and `LUMA_RAMP` (a silhouette whose tone is picked per texel from a
-	two-endpoint ramp by the texel's amplified luminance — FrozenMask's ice).
+	Two TEV presets need a programmable texture combiner. `LUMA_RAMP` (a silhouette whose tone is
+	picked per texel from a two-endpoint ramp by the texel's amplified luminance — FrozenMask's ice)
+	only the GX's multi-stage TEV can express, so it is rejected outside a block targeting the GX
+	ALONE (`void fixed_function(gx)`). `TINT_MIX` (`mix(texel, colour, alpha)`, one stage — the
+	TexturedBackground warp folds its horizon tint into the band's own draw with it) the RDP's colour
+	combiner can express too — one cycle of `(PRIM - TEX) * PRIM_ALPHA + TEX` IS that lerp — so it is
+	allowed in any block ALL of whose targets have a lerping combiner (`gx`, `rdp` or a list of them)
+	and rejected for every block that reaches a backend without one.
 
 	The GE's texture environment has no combiner output scale, so `MODULATE_X2`/`MODULATE_X4` are
 	rejected for every block the GU reaches (a `gu` block, a target list naming `gu`, AND a generic
-	one, which is transpiled for every backend): the PVR silently ignores them, so a shared block using
-	one would be honoured by only some of the backends it serves - the "silently depends on one
-	console's feature" case the capability checks exist to prevent. Express the boost as passes instead
-	(an additive pass, the way Colorized splits its multiplier on the PVR and the PSP).
+	one, which is transpiled for every backend), and the GS's texture function lacks a scale stage the
+	same way: the PVR silently ignores them, so a shared block using one would be honoured by only some
+	of the backends it serves - the "silently depends on one console's feature" case the capability
+	checks exist to prevent. The RDP sits in between: its second combiner cycle can double the first
+	one's output (`(1 - 0) * COMBINED + COMBINED`), so `MODULATE_X2` is expressible there, while
+	`MODULATE_X4` would need a third cycle the hardware does not have. On the tiers without a scale,
+	express the boost as passes instead (an additive pass, the way Colorized splits its multiplier on
+	the PVR and the PSP).
 */
 
 #include <cstdint>
@@ -101,7 +109,8 @@ namespace ShaderCompiler
 		Pvr,	/**< Dreamcast (CLX2 via KallistiOS) */
 		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
 		Gu,		/**< PlayStation Portable (Graphics Engine via sceGu) */
-		Gs		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
+		Gs,		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
+		Rdp		/**< Nintendo 64 (Reality Display Processor via libdragon) */
 	};
 
 	/**

@@ -10,6 +10,8 @@
 #	else
 #		include <mach/mach_time.h>
 #	endif
+#elif defined(DEATH_TARGET_N64)
+#	include <n64sys.h>		// libdragon's COP0 tick counter, this newlib has no clock_gettime()
 #else
 #	include <time.h>		// for clock_gettime()
 #	if defined(DEATH_TARGET_PS3)
@@ -46,6 +48,11 @@ namespace nCine
 		mach_timebase_info(&info);
 		_frequency = (info.denom * 1.0e9L) / info.numer;
 #	endif
+#elif defined(DEATH_TARGET_N64)
+		// libdragon's newlib has no clock_gettime() either; the COP0 count register ticks at half the CPU
+		// clock (TICKS_PER_SECOND) and libdragon extends it to 64 bits, so it is the monotonic clock here
+		_frequency = TICKS_PER_SECOND;
+		_hasMonotonicClock = true;
 #elif defined(DEATH_TARGET_PS3)
 		// The powerpc64-ps3-elf newlib defines _POSIX_TIMERS only for RTEMS, so there is no clock_getres()
 		// to ask; lv2's own clock reports nanoseconds and is always there, so the answer is known statically
@@ -79,6 +86,8 @@ namespace nCine
 #	else
 		return mach_absolute_time();
 #	endif
+#elif defined(DEATH_TARGET_N64)
+		return get_ticks();
 #elif defined(DEATH_TARGET_PS3)
 		std::uint64_t sec = 0, nsec = 0;
 		sysGetCurrentTime(&sec, &nsec);

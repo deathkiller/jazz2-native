@@ -34,6 +34,8 @@
 
 #if defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_N64)
+#	include <n64sys.h>	// for wait_ms()
 #elif defined(DEATH_TARGET_VITA)
 #	include <vitasdk.h>
 #endif
@@ -97,6 +99,10 @@ namespace nCine
 		sceKernelDelayThread(microseconds);
 #elif defined(DEATH_TARGET_WINDOWS)
 		::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
+#elif defined(DEATH_TARGET_N64)
+		// libdragon's newlib has no usleep(), and with its kernel not started there is no scheduler to
+		// give the time back to anyway, so the wait is its own spin-wait
+		wait_ms(milliseconds);
 #else
 		std::uint32_t microseconds = static_cast<std::uint32_t>(milliseconds) * 1000;
 		::usleep(microseconds);

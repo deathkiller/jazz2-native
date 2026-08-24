@@ -189,6 +189,17 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
+	# Nintendo 64 fixed-function RDP rendering backend (libdragon rdpq)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RDP/RdpUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "RSX")
 	# PlayStation 3 native RSX rendering backend (PSL1GHT librsx/libgcm_sys). A shader backend like GXM
 	# rather than a fixed-function one - RsxVram owns the GDDR3/XDR suballocation the way GsVram owns the

@@ -57,6 +57,30 @@ namespace nCine::RHI::Software
 			}
 		}
 
+		/**
+			@brief The projection*view product of the last draw, rebuilt only when either input changed
+
+			The product changes a handful of times a frame (a camera move, a viewport switch) while a frame
+			runs a few hundred dispatches, so comparing 128 bytes replaces the 64 multiplies of the full
+			product almost every time. Compared by VALUE, not by pointer - the matrices are rewritten in
+			place when the camera moves.
+		*/
+		inline const float* CachedProjView(const float* projMat, const float* viewMat)
+		{
+			static float cachedPv[16];
+			static float cachedProj[16];
+			static float cachedView[16];
+			static bool cachedValid = false;
+			if (!cachedValid || std::memcmp(projMat, cachedProj, sizeof(cachedProj)) != 0 ||
+					std::memcmp(viewMat, cachedView, sizeof(cachedView)) != 0) {
+				std::memcpy(cachedProj, projMat, sizeof(cachedProj));
+				std::memcpy(cachedView, viewMat, sizeof(cachedView));
+				Mat4Mul(projMat, viewMat, cachedPv);
+				cachedValid = true;
+			}
+			return cachedPv;
+		}
+
 		// Column-major 4x4 times a column vector: out = m * v
 		void Mat4Vec4(const float* m, const float* v, float* out)
 		{
@@ -852,15 +876,14 @@ namespace nCine::RHI::Software
 
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0) ? _viewport : Recti(0, 0, fb.width, fb.height);
 
-		const std::uint8_t* projBytes = _currentProgram->ResolveUniform("uProjectionMatrix");
-		const std::uint8_t* viewBytes = _currentProgram->ResolveUniform("uViewMatrix");
+		const std::uint8_t* projBytes = _currentProgram->GetResolvedProjection();
+		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const SwUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
-		if (block == nullptr) {
-			block = _currentProgram->FindBlock("InstancesBlock");
-		}
+		// Resolved once at introspection (see DispatchFacts) - this used to re-scan the
+		// reflection's name strings on every RenderCommand
+		const SwUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			LOGW("Skipped draw: Program has no instance block");
 			return;
@@ -875,27 +898,10 @@ namespace nCine::RHI::Software
 			return;
 		}
 
-		// Sampler texture units and the batched instance stride come from the offline reflection
-		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
-		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
-			if (reflection != nullptr) {
-				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
-					if (std::strcmp(reflection->Textures[i].Name, name) == 0) {
-						return (reflection->Textures[i].Unit >= 0 ? reflection->Textures[i].Unit : def);
-					}
-				}
-			}
-			return def;
-		};
-		std::uint32_t instanceStride = 0;
-		if (reflection != nullptr) {
-			for (std::size_t i = 0; i < reflection->BlockCount; i++) {
-				if (reflection->Blocks[i].InstanceStride > 0) {
-					instanceStride = reflection->Blocks[i].InstanceStride;
-					break;
-				}
-			}
-		}
+		// Sampler texture units and the batched instance stride are constants of the linked program,
+		// resolved once at introspection (see DispatchFacts)
+		const SwShaderProgram::DispatchFacts& facts = _currentProgram->GetDispatchFacts();
+		std::uint32_t instanceStride = facts.InstanceStride;
 
 		// Reads a committed loose uniform (or fills a default when it was never set)
 		auto readUniform = [](const char* name, float* dst, int count, float def) {
@@ -908,8 +914,7 @@ namespace nCine::RHI::Software
 			}
 		};
 
-		float pv[16];
-		Mat4Mul(projMat, viewMat, pv);
+		const float* pv = CachedProjView(projMat, viewMat);
 
 		// Persistent rasterizer state for every quad this draw issues
 		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, isFboTarget);
@@ -994,7 +999,7 @@ namespace nCine::RHI::Software
 			if (posAttr != nullptr && posAttr->IsEnabled() && posAttr->GetVbo() != nullptr) {
 				DispatchMeshVerticesImpl(primitive, firstVertex, numVertices, *generatedShader,
 					_currentProgram, pv, blockData, _boundUniformRanges[binding].Size, instanceStride,
-					samplerUnit("uTexture", 0), _boundTextures, blendOn, bsrc, bdst,
+					facts.TextureUnit, _boundTextures, blendOn, bsrc, bdst,
 					_scissor.Enabled, _scissor.Rect);
 				SwRaster::ClearDrawContext();
 				return;
@@ -1012,7 +1017,7 @@ namespace nCine::RHI::Software
 				return;
 			}
 
-			const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
+			const std::int32_t uTextureUnit = facts.TextureUnit;
 
 			// The shield fragments' SOFTWARE_RENDERER variant reconstructs the GL path's interpolated
 			// quad-local position from the interpolated texcoord, so those draws are fed an IDENTITY
@@ -1067,7 +1072,7 @@ namespace nCine::RHI::Software
 			case SwEffect::DefaultBatchedSprites: {
 				// The rasterizer's gathers expand every stored texel (native R8/RG8 included) to the 4-byte
 				// working form, so the primary sample is always 4 bytes
-				const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
+				const std::int32_t uTextureUnit = facts.TextureUnit;
 				const SwTexture* texture = GetBoundTexture(std::uint32_t(uTextureUnit));
 				if (texture == nullptr || texture->GetPixels() == nullptr) {
 					LOGW("Skipped draw: No texture bound to the sampler unit");

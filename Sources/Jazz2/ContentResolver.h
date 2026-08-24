@@ -11,6 +11,7 @@
 #include "../nCine/Audio/AudioBuffer.h"
 #include "../nCine/Audio/AudioStreamPlayer.h"
 #include "../nCine/Graphics/Texture.h"
+#include "../nCine/Base/BitArray.h"
 #include "../nCine/Base/HashMap.h"
 
 #include <Containers/Function.h>
@@ -292,8 +293,10 @@ namespace Jazz2
 		 * @param captionTileId     Tile used to render the level-preview caption thumbnail
 		 * @param applyPalette      Apply the tile set's palette to the live sprite palette
 		 * @param paletteRemapping  Optional 256-entry table remapping each tile's palette indices
+		 * @param usedTiles         Optional per-tile bits selecting which tiles go into the diffuse atlas
 		 */
-		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
+		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr,
+			const BitArray* usedTiles = nullptr);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);
 		/** @brief Loads specified level into a level descriptor */
@@ -323,6 +326,16 @@ namespace Jazz2
 		void CompileShaders();
 		/** @brief Returns a noise texture with random pixels */
 		std::unique_ptr<Texture> GetNoiseTexture();
+
+		/**
+			@brief Loads the samples of @p sound if they are not loaded yet
+
+			Sounds are described by the metadata but, where the platform cannot hold all of them, their samples
+			are only read when something first plays them and are given up again at the next load boundary.
+			Returns whether the sound has any sample to play; one whose samples cannot be read is marked so the
+			read is not retried on every play.
+		*/
+		bool ResolveSound(Resources::SoundResource& sound);
 
 		/** @brief Returns currently loaded set of palettes */
 		StaticArrayView<PaletteCount * ColorsPerPalette, const std::uint32_t> GetPalettes() const {
@@ -371,6 +384,7 @@ namespace Jazz2
 		// Returns one texture normally, or several consecutive row-band chunks when the atlas exceeds the
 		// device's texture-size limit (console targets); see TileSet::ResolveTextureDiffuse
 		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+			const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile);

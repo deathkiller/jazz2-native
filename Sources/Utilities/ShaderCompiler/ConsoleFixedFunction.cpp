@@ -111,16 +111,30 @@ namespace ShaderCompiler
 			if (v == "LUMA_RAMP") return "LumaRamp";
 			return nullptr;
 		}
-		// Presets no PVR texture environment can express: the CLX2 modulates a texel by the vertex
-		// colour and adds an offset colour, and that is the whole vocabulary - it cannot lerp a texel
-		// toward a colour, nor do per-texel arithmetic on its channels. The PSP's GE cannot either (its
-		// five texture functions are modulate/decal/blend/replace/add over ONE texel and the fragment
-		// colour). Both live in the GX's programmable combiner, so any block other than one targeting
-		// the GX ALONE is a hard error rather than a silently wrong console frame (design doc section 5,
-		// the `tev[]`/`swap` rows of the GX table).
+		// The preset only the GX's programmable combiner can express: LUMA_RAMP needs per-texel
+		// luminance (channel swizzles through the TEV swap tables plus a KONST-weighted dot product)
+		// feeding a two-endpoint ramp. The CLX2 modulates a texel by the vertex colour and adds an
+		// offset colour, and that is the whole vocabulary; the PSP's GE cannot either (its five texture
+		// functions are modulate/decal/blend/replace/add over ONE texel and the fragment colour); the
+		// GS's four texture functions are just as fixed; and the N64's RDP colour combiner computes
+		// (A - B) * C + D per cycle over registers and the texel - it has no dot product, so it cannot
+		// derive a luminance to pick the ramp tone with. Any block other than one targeting the GX
+		// ALONE is a hard error rather than a silently wrong console frame (design doc section 5, the
+		// `tev[]`/`swap` rows of the GX table).
 		bool IsGxOnlyTevValueName(StringView v)
 		{
-			return (v == "TINT_MIX" || v == "LUMA_RAMP");
+			return (v == "LUMA_RAMP");
+		}
+		// The preset a lerping combiner can express: TINT_MIX is mix(texel, colour, alpha) with an
+		// opaque result. The GX does it in one TEV stage (d + mix(a, b, c)), and the N64's RDP colour
+		// combiner IS that lerp - one cycle of (PRIM - TEX) * PRIM_ALPHA + TEX with the pass colour in
+		// the PRIM register. Nothing else on this tier can: the CLX2 only modulates and adds an offset
+		// colour, the GE's five texture functions have no lerp of a texel toward a constant weighted by
+		// an interpolated alpha (GU_TFX_BLEND weighs by the TEXEL), and the GS's four texture functions
+		// are just as fixed. Checked per block target through HasTintMixCombiner below.
+		bool IsTintMixTevValueName(StringView v)
+		{
+			return (v == "TINT_MIX");
 		}
 		// Presets the GE has no form of at all: its texture environment applies no output scale to the
 		// combined colour, so a x2/x4 modulate cannot be expressed by any single GE draw. The PVR
@@ -128,7 +142,8 @@ namespace ShaderCompiler
 		// also means a block shared with the gu target would be honoured by only some of the backends
 		// it serves, so any block that reaches the GU (a gu block, a target list naming gu, or a
 		// generic block) rejects them. Boosts belong in passes on this tier (the additive split
-		// Colorized uses on the PVR).
+		// Colorized uses on the PVR). The RDP splits the pair: MODULATE_X2 it can express (see
+		// HasCombinerOutputScale below), MODULATE_X4 it cannot.
 		bool IsScaledModulateTevValueName(StringView v)
 		{
 			return (v == "MODULATE_X2" || v == "MODULATE_X4");
@@ -138,7 +153,7 @@ namespace ShaderCompiler
 			return (BlendValueName(v) != nullptr || TevValueName(v) != nullptr);
 		}
 
-		// The two enums name the same four consoles - the parser's one describes what a block claims,
+		// The two enums name the same five consoles - the parser's one describes what a block claims,
 		// the emitter's which aggregate header is being written - so capability checks over a block's
 		// target list translate its entries into backends through this
 		FixedFunctionBackend BackendOfTarget(FixedFunctionTarget target)
@@ -147,15 +162,17 @@ namespace ShaderCompiler
 				case FixedFunctionTarget::Gx: return FixedFunctionBackend::Gx;
 				case FixedFunctionTarget::Gu: return FixedFunctionBackend::Gu;
 				case FixedFunctionTarget::Gs: return FixedFunctionBackend::Gs;
+				case FixedFunctionTarget::Rdp: return FixedFunctionBackend::Rdp;
 				default: return FixedFunctionBackend::Pvr;
 			}
 		}
 
 		// How many vertices the backend's strip-builder scratch holds (EffectContext::MaxStripVertices).
 		// The contract's floor is 8; the GX raises it to 16 so a radially subdivided iris wedge is one
-		// strip instead of three, and the GU and the GS match it (the GE takes a strip of any length in
-		// one draw call, and one GIF packet carries a triangle strip of any length, so there is nothing
-		// to gain from splitting the geometry into small pieces). Literal indices and counts are checked
+		// strip instead of three, and the GU, the GS and the RDP match it (the GE takes a strip of any
+		// length in one draw call, one GIF packet carries a triangle strip of any length, and the RSP's
+		// vertex cache loads well over 16 vertices in one command, so there is nothing to gain from
+		// splitting the geometry into small pieces). Literal indices and counts are checked
 		// against it at generation time, because at runtime an out-of-range index is dropped and an
 		// oversized count clamped - which would silently draw the wrong geometry. A block serving several
 		// backends may only rely on the SMALLEST of their capacities, so a "pvr, gx" block is held to the
@@ -170,17 +187,35 @@ namespace ShaderCompiler
 				case FixedFunctionBackend::Gx: return "gx";
 				case FixedFunctionBackend::Gu: return "gu";
 				case FixedFunctionBackend::Gs: return "gs";
+				case FixedFunctionBackend::Rdp: return "rdp";
 				default: return "pvr";
 			}
 		}
 
-		// Whether @p backend's texture environment has a combiner output scale, which is what
-		// MODULATE_X2/MODULATE_X4 need. Only the GX does: the PVR always modulates, the GE's five texture
-		// functions combine one texel with the fragment colour and nothing else, and the GS's four
-		// (MODULATE/DECAL/HIGHLIGHT/HIGHLIGHT2) have no scale stage either.
-		bool HasCombinerOutputScale(FixedFunctionBackend backend)
+		// Whether @p backend's texture environment has the combiner output scale the preset needs
+		// (@p x4 distinguishes MODULATE_X4 from MODULATE_X2). The GX has both scales natively. The
+		// N64's RDP has no scale stage, but its colour combiner runs up to TWO cycles of
+		// (A - B) * C + D, and the second cycle can double the first one's output -
+		// (1 - 0) * COMBINED + COMBINED - so a x2 modulate is one two-cycle setting there, while a x4
+		// would need a third cycle the hardware does not have. Nothing else on this tier scales at
+		// all: the PVR always modulates, the GE's five texture functions combine one texel with the
+		// fragment colour and nothing else, and the GS's four (MODULATE/DECAL/HIGHLIGHT/HIGHLIGHT2)
+		// have no scale stage either.
+		bool HasCombinerOutputScale(FixedFunctionBackend backend, bool x4)
 		{
-			return (backend == FixedFunctionBackend::Gx);
+			if (backend == FixedFunctionBackend::Gx) return true;
+			if (backend == FixedFunctionBackend::Rdp) return !x4;
+			return false;
+		}
+
+		// Whether @p backend's texture combiner can lerp a texel toward a constant colour by an
+		// interpolated alpha, which is what TINT_MIX (mix(texel, colour, alpha), opaque result) needs.
+		// The GX does it in one TEV stage (d + mix(a, b, c)); the RDP's one-cycle
+		// (PRIM - TEX) * PRIM_ALPHA + TEX IS that lerp, with the pass colour in the PRIM register. The
+		// CLX2, the GE and the GS cannot (see IsTintMixTevValueName above).
+		bool HasTintMixCombiner(FixedFunctionBackend backend)
+		{
+			return (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::Rdp);
 		}
 
 		// --- Statement AST ---------------------------------------------------------------------------
@@ -650,7 +685,7 @@ namespace ShaderCompiler
 			bool RequireExtended(StringView what)
 			{
 				if (_targets.empty()) {
-					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs) or a list of them (generic blocks keep the portable quad-only core)"_s);
+					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs), (rdp) or a list of them (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;
@@ -675,20 +710,22 @@ namespace ShaderCompiler
 
 			// Rejects the combiner output scales for every block that reaches a backend without one: the
 			// GE's texture environment and the GS's texture function both lack a scale stage, so nothing
-			// either can be programmed to do reproduces them. Unlike the GX-only presets this is not a
-			// per-block capability - a pvr block may keep using them, since the PVR ignores tev entirely -
-			// but a target list naming gu or gs, and a generic block (transpiled for every backend),
-			// would otherwise be honoured by only some of the backends they serve, which is exactly what
+			// either can be programmed to do reproduces them, and the RDP's two combiner cycles reach a
+			// x2 but not a x4. Unlike the GX-only presets this is not a per-block capability - a pvr
+			// block may keep using them, since the PVR ignores tev entirely - but a target list naming
+			// gu or gs (or rdp for the x4), and a generic block (transpiled for every backend), would
+			// otherwise be honoured by only some of the backends they serve, which is exactly what
 			// these checks exist to prevent.
 			bool RequireCombinerOutputScale(StringView what)
 			{
+				const bool x4 = (what == "MODULATE_X4"_s);
 				// A block with a target list is held to the intersection of its own targets; a generic one
 				// has no list, so the backend whose header is being emitted is what decides
 				FixedFunctionBackend lacking = _backend;
 				bool listed = false;
 				if (!_targets.empty()) {
 					for (FixedFunctionTarget target : _targets) {
-						if (!HasCombinerOutputScale(BackendOfTarget(target))) {
+						if (!HasCombinerOutputScale(BackendOfTarget(target), x4)) {
 							lacking = BackendOfTarget(target);
 							listed = true;
 							break;
@@ -697,7 +734,7 @@ namespace ShaderCompiler
 					if (!listed) {
 						return true;
 					}
-				} else if (HasCombinerOutputScale(_backend)) {
+				} else if (HasCombinerOutputScale(_backend, x4)) {
 					return true;
 				}
 
@@ -707,12 +744,57 @@ namespace ShaderCompiler
 						? "the Graphics Synthesizer's texture function has no combiner output scale"_s
 						: (lacking == FixedFunctionBackend::Gu
 							? "the Graphics Engine's texture environment has no combiner output scale"_s
-							: "that backend has no combiner output scale"_s));
+							: (lacking == FixedFunctionBackend::Rdp
+								? "the Reality Display Processor's second combiner cycle can double its output but not quadruple it"_s
+								: "that backend has no combiner output scale"_s)));
 				if (listed && _targets.size() > 1) {
 					// The list form: the block would have been valid without that target in it
 					why += ", which this block also names"_s;
 				}
 				why += " (write the boost as passes in a fixed_function("_s + name + ") block, e.g. an additive one)"_s;
+				Fail(std::move(why));
+				return false;
+			}
+
+			// Rejects TINT_MIX for every block that reaches a backend whose texture combiner cannot lerp
+			// a texel toward a constant colour (see HasTintMixCombiner) - the GX and the RDP can, so a
+			// block targeting either of them (or both, from one body) may use it, and the same block is
+			// a hard error as soon as its list drags in the CLX2, the GE or the GS, which would silently
+			// draw something else. A generic block is checked against the backend whose header is being
+			// emitted, so it fails while the first no-combiner console's aggregate is written.
+			bool RequireTintMixCombiner(StringView what)
+			{
+				// A block with a target list is held to the intersection of its own targets; a generic one
+				// has no list, so the backend whose header is being emitted is what decides
+				FixedFunctionBackend lacking = _backend;
+				bool listed = false;
+				if (!_targets.empty()) {
+					for (FixedFunctionTarget target : _targets) {
+						if (!HasTintMixCombiner(BackendOfTarget(target))) {
+							lacking = BackendOfTarget(target);
+							listed = true;
+							break;
+						}
+					}
+					if (!listed) {
+						return true;
+					}
+				} else if (HasTintMixCombiner(_backend)) {
+					return true;
+				}
+
+				const char* name = BackendName(lacking);
+				String why = what + " cannot be expressed for the "_s + name + " target - "_s +
+					(lacking == FixedFunctionBackend::Gs
+						? "the Graphics Synthesizer's texture functions cannot lerp a texel toward a constant colour"_s
+						: (lacking == FixedFunctionBackend::Gu
+							? "the Graphics Engine's texture functions cannot lerp a texel toward a constant colour"_s
+							: "the CLX2's texture environment can only modulate a texel and add an offset colour, not lerp one toward a colour"_s));
+				if (listed && _targets.size() > 1) {
+					// The list form: the block would have been valid without that target in it
+					why += ", which this block also names"_s;
+				}
+				why += " (keep TINT_MIX in a fixed_function block that only targets gx and/or rdp, and give the other backends their own block)"_s;
 				Fail(std::move(why));
 				return false;
 			}
@@ -1047,6 +1129,9 @@ namespace ShaderCompiler
 							return;
 						}
 						if (IsGxOnlyTevValueName(rhs->Text) && !RequireGxOnly(rhs->Text)) {
+							return;
+						}
+						if (IsTintMixTevValueName(rhs->Text) && !RequireTintMixCombiner(rhs->Text)) {
 							return;
 						}
 						if (IsScaledModulateTevValueName(rhs->Text) && !RequireCombinerOutputScale(rhs->Text)) {

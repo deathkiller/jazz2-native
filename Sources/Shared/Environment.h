@@ -16,7 +16,9 @@
 #if !defined(DEATH_TARGET_WINDOWS)
 #	include <time.h>
 #endif
-#if defined(DEATH_TARGET_PS3)
+#if defined(DEATH_TARGET_N64)
+#	include <n64sys.h>
+#elif defined(DEATH_TARGET_PS3)
 #	include <sys/systime.h>
 #endif
 
@@ -186,6 +188,10 @@ namespace Death { namespace Environment {
 		return now;
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 100ULL;
+#elif defined(DEATH_TARGET_N64)
+		// libdragon's newlib has no clock_gettime(), so its monotonic source is the COP0 count register,
+		// which get_ticks_us() already extends to 64 bits and converts
+		return get_ticks_us() * 10ULL;
 #elif defined(DEATH_TARGET_PS3)
 		// lv2's clock is the only monotonic source here. it reports seconds and nanoseconds separately,
 		// so the 100 ns unit this function returns is assembled from both
@@ -220,6 +226,9 @@ namespace Death { namespace Environment {
 		return ::GetTickCount64();
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1000000ULL;
+#elif defined(DEATH_TARGET_N64)
+		// Same source as QueryUnbiasedInterruptTime(), see there
+		return get_ticks_ms();
 #elif defined(DEATH_TARGET_PS3)
 		std::uint64_t sec = 0, nsec = 0;
 		sysGetCurrentTime(&sec, &nsec);

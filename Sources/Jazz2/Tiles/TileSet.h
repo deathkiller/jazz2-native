@@ -63,6 +63,31 @@ namespace Jazz2::Tiles
 		 * for tilesets containing 32-bit true-color tiles.
 		 */
 		bool IsIndexed = false;
+		/**
+		 * @brief Maps a tile ID to the slot it occupies in the diffuse texture, or `nullptr` when they are the same
+		 *
+		 * A tileset describes every tile its author drew, but a level references only a part of them - under half,
+		 * on the levels measured. Where memory is scarce the atlas holds only the referenced tiles, packed
+		 * together, and this table says where each ID ended up. Slot 0 is left blank and is what every pruned or
+		 * out-of-range ID maps to, so a tile that appears later (a script placing one, say) draws as empty rather
+		 * than sampling whatever happens to sit at its old position.
+		 */
+		std::unique_ptr<std::uint16_t[]> AtlasSlot;
+
+		/**
+		 * @brief Returns the atlas slot a tile ID occupies, which is the ID itself unless the atlas was packed
+		 *
+		 * Anything that treats an ID as a position in the diffuse texture - the UV maths, and the chunk index
+		 * when the atlas was split - has to go through this first. One array load; the per-tile collision data
+		 * stays indexed by the original ID.
+		 */
+		std::int32_t MapToAtlasSlot(std::int32_t tileId) const
+		{
+			if (AtlasSlot == nullptr) {
+				return tileId;
+			}
+			return (tileId >= 0 && tileId < TileCount ? (std::int32_t)AtlasSlot[tileId] : 0);
+		}
 
 		/**
 		 * @brief Resolves the diffuse texture chunk containing @p tileId, rebasing the ID into the chunk's
@@ -77,6 +102,7 @@ namespace Jazz2::Tiles
 			if (TextureDiffuse.empty()) {
 				return nullptr;
 			}
+			tileId = MapToAtlasSlot(tileId);
 			if (tileId >= TilesPerTexture && TilesPerTexture > 0) {
 				std::int32_t chunk = tileId / TilesPerTexture;
 				if (chunk >= std::int32_t(TextureDiffuse.size())) {

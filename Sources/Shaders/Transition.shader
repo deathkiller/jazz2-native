@@ -108,8 +108,8 @@ void fixed_function(pvr) {
 	}
 }
 
-void fixed_function(gx, gu, gs) {
-	// The same iris the PVR block above synthesizes, at the detail the GP, the GE and the GS can afford: 64
+void fixed_function(gx, gu, gs, rdp) {
+	// The same iris the PVR block above synthesizes, at the detail the GP, the GE, the GS and the RDP can afford: 64
 	// angular segments instead of 32 (a segment's flat chord then misses the true circle by under half a
 	// pixel at 640x480, where 32 segments were off by about one and a half), and the soft edge is
 	// split into THREE radial bands instead of one so the vertex colours trace the GLSL's `ease()`
@@ -118,7 +118,7 @@ void fixed_function(gx, gu, gs) {
 	//
 	// Each angular segment is one 10-vertex triangle strip: the vertex pairs walk outward through
 	// the five radii (inner, two soft-edge steps, outer, past the corner), which the strip turns
-	// into the four quads between them. All three strip scratches hold 16 vertices for exactly this.
+	// into the four quads between them. All four strip scratches hold 16 vertices for exactly this.
 	//
 	// The iris is pure geometry plus per-vertex colours, so nothing about it depends on a combiner -
 	// which is why the consoles that share nothing else here share this: what the block needs from

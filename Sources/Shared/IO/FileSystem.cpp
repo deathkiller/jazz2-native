@@ -22,7 +22,14 @@
 #	include <cerrno>
 #	include <cstdio>
 #	include <cstring>
-#	include <dirent.h>
+#	if !defined(DEATH_TARGET_N64)
+		// libdragon's newlib carries no <dirent.h> at all (its <sys/dirent.h> is the stub that refuses the
+		// include), the directory API it has instead is its own <dir.h>, adapted back into the POSIX surface
+		// this file is written against right below the includes
+#		include <dirent.h>
+#	else
+#		include <dir.h>
+#	endif
 #	include <fcntl.h>
 #	if !defined(DEATH_TARGET_PS3)
 #		include <ftw.h>
@@ -56,6 +63,66 @@
 #	elif defined(__linux__)
 #		include <sys/sendfile.h>
 #	endif
+#endif
+
+#if defined(DEATH_TARGET_N64)
+// The POSIX face of libdragon's own directory API: dir_findfirst()/dir_findnext() walk by PATH rather
+// than by handle, so the handle here is the remembered path plus one entry of read-ahead - the lookahead
+// is what turns "0 entries / -1 done" into readdir()'s "entry / nullptr" without losing the distinction
+// between an empty directory (opendir() succeeds, readdir() has nothing) and a missing one (opendir()
+// fails with dir_findfirst()'s errno). DT_REG/DT_DIR carry libdragon's values (1/2) since they arrive
+// straight from dir_t, DT_LNK gets a value nothing ever reports, because nothing libdragon mounts has
+// symbolic links.
+struct dirent
+{
+	char d_name[256];
+	int d_type;
+};
+#define DT_LNK 3
+
+struct DIR
+{
+	char path[1024];
+	dir_t entry;
+	int nextResult;
+	struct dirent current;
+};
+
+static DIR* opendir(const char* path)
+{
+	std::size_t pathLength = strlen(path);
+	if (pathLength >= sizeof(DIR::path)) {
+		errno = ENAMETOOLONG;
+		return nullptr;
+	}
+	DIR* d = new DIR();
+	std::memcpy(d->path, path, pathLength + 1);
+	d->nextResult = dir_findfirst(d->path, &d->entry);
+	if (d->nextResult < -1) {
+		// -1 is an existing directory with nothing in it; anything below that is a real error, and
+		// dir_findfirst() has already set errno for it
+		delete d;
+		return nullptr;
+	}
+	return d;
+}
+
+static struct dirent* readdir(DIR* d)
+{
+	if (d->nextResult != 0) {
+		return nullptr;
+	}
+	std::memcpy(d->current.d_name, d->entry.d_name, sizeof(d->current.d_name));
+	d->current.d_type = d->entry.d_type;
+	d->nextResult = dir_findnext(d->path, &d->entry);
+	return &d->current;
+}
+
+static int closedir(DIR* d)
+{
+	delete d;
+	return 0;
+}
 #endif
 
 using namespace Death::Containers;
@@ -164,14 +231,15 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 				return AndroidAssetStream::Prefix.size();
 			}
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 			defined(DEATH_TARGET_VITA)
 			// Switch mount points: romfs:, sdmc:, etc.
+			// N64 mount points: rom:, eeprom:, sd:, etc.
 			// PS2 mount points: cdfs:, cdrom0:, mc0:, mass:, host:, etc.
 			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
 			// Vita mount points: app0:, ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
-#		if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
-			// "flash0" and "cdrom0" are one character longer than anything the other platforms mount
+#		if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+			// "eeprom", "flash0" and "cdrom0" are one character longer than anything the other platforms mount
 			constexpr std::size_t MaxMountPointLength = 7;
 #		else
 			constexpr std::size_t MaxMountPointLength = 5;
@@ -329,8 +397,8 @@ namespace Death { namespace IO {
 		// memory card, and KOS answers with the bare file type whenever a filesystem has no native stat().
 		// Testing S_IRUSR there rejects everything that exists, so on those platforms the file type is all
 		// that is tested and a refused access only surfaces when it is actually attempted.
-#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		static constexpr bool HasFilePermissions = false;
 #	else
 		static constexpr bool HasFilePermissions = true;
@@ -369,9 +437,10 @@ namespace Death { namespace IO {
 		static bool TryGetFileStatus(const char* path, struct stat& sb, bool followLinks = true)
 		{
 			if constexpr (HasReliableFileStatus) {
-#	if defined(DEATH_TARGET_PS3)
+#	if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS3)
 				// PSL1GHT's newlib declares no lstat(), which costs nothing: lv2's filesystem has no
-				// symbolic links, so following them or not is the same question
+				// symbolic links, so following them or not is the same question. libdragon has stat()
+				// but no lstat() behind its newlib glue, and no symbolic links either.
 				static_cast<void>(followLinks);
 				return (::stat(path, &sb) == 0);
 #	else
@@ -462,7 +531,7 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -471,7 +540,12 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+#	if defined(DEATH_TARGET_N64)
+			// Nothing libdragon mounts can lose a directory: the ROM's DragonFS is read-only, the EEPROM
+			// filesystem is a fixed table of files, and its newlib glue has no rmdir() to walk with anyway
+			static_cast<void>(path);
+			return false;
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3)
 			// nftw() is missing in libnx, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
@@ -1285,8 +1359,8 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
-		// realpath() is missing in libnx, Vita and PS2SDK, and unreliable in KOS (lstat() fails on iso9660)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		// realpath() is missing in libnx, libdragon, Vita and PS2SDK, and unreliable in KOS (lstat() fails on iso9660)
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
@@ -1305,11 +1379,17 @@ namespace Death { namespace IO {
 
 			strncpy(left, path.data() + pathRootLength, sizeof(left));
 		} else {
+#	if defined(DEATH_TARGET_N64)
+			// libdragon's newlib has no working directory at all - every reachable path carries its mount
+			// prefix ("rom:/", "eeprom:/"), so a path without one cannot be resolved into anything
+			return {};
+#	else
 			if (::getcwd(result, sizeof(result)) == nullptr) {
 				return "."_s;
 			}
 			resultLength = std::strlen(result);
 			strncpy(left, path.data(), sizeof(left));
+#	endif
 		}
 		std::size_t leftLength = std::strlen(left);
 		if (leftLength >= sizeof(left) || resultLength >= MaxPathLength) {
@@ -1584,6 +1664,10 @@ namespace Death { namespace IO {
 			return {};
 		}
 		return Utf8::FromUtf16(pathW.data(), length);
+#elif defined(DEATH_TARGET_N64)
+		// libdragon's newlib has no getcwd() and no working directory behind it - every reachable path
+		// carries its mount prefix instead
+		return {};
 #else
 		char buffer[MaxPathLength];
 		if (::getcwd(buffer, MaxPathLength) == nullptr) {
@@ -1602,6 +1686,10 @@ namespace Death { namespace IO {
 		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
 		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		return ::SetCurrentDirectoryW(pathW.data());
+#elif defined(DEATH_TARGET_N64)
+		// No chdir() either, see GetWorkingDirectory()
+		static_cast<void>(path);
+		return false;
 #else
 		return (::chdir(String::nullTerminatedView(path).data()) == 0);
 #endif
@@ -1627,8 +1715,8 @@ namespace Death { namespace IO {
 		if (!home.empty()) {
 			return home;
 		}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
-		// `getpwuid()` is not implemented on Emscripten and Vita
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64)
+		// `getpwuid()` is not implemented on Emscripten, Vita and libdragon
 		const struct passwd* pw = ::getpwuid(getuid());
 		if (pw != nullptr) {
 			return pw->pw_dir;
@@ -2464,7 +2552,7 @@ namespace Death { namespace IO {
 #if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && \
 		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
-		!defined(__FreeBSD__)
+		!defined(DEATH_TARGET_N64) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -2559,11 +2647,12 @@ namespace Death { namespace IO {
 	End:
 #	endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && \
-		!defined(DEATH_TARGET_PS3)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && \
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		// PSL1GHT is excluded because its newlib declares fchmod() without implementing it - lv2 has only a
 		// path-based chmod - and the copy is no less correct for leaving the destination's own mode alone.
+		// libdragon has neither form of chmod, and nothing it mounts keeps permission bits to update.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;
 		}
@@ -2796,6 +2885,12 @@ namespace Death { namespace IO {
 			return false;
 		}
 #	endif
+#	if defined(DEATH_TARGET_N64)
+		// Nothing libdragon mounts keeps permission bits (see HasFilePermissions), and there is no chmod()
+		// behind its newlib glue to change them with
+		static_cast<void>(mode);
+		return false;
+#	else
 		struct stat sb;
 		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
@@ -2803,6 +2898,7 @@ namespace Death { namespace IO {
 		const std::uint32_t currentMode = sb.st_mode;
 		std::uint32_t newMode = AddPermissionsToCurrent(currentMode & ~(S_IRUSR | S_IWUSR | S_IXUSR), mode);
 		return (::chmod(nullTerminatedPath.data(), newMode) == 0);
+#	endif
 #endif
 	}
 
@@ -2830,6 +2926,11 @@ namespace Death { namespace IO {
 			return false;
 		}
 #	endif
+#	if defined(DEATH_TARGET_N64)
+		// See ChangePermissions()
+		static_cast<void>(mode);
+		return false;
+#	else
 		struct stat sb;
 		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
@@ -2837,6 +2938,7 @@ namespace Death { namespace IO {
 		const std::uint32_t currentMode = sb.st_mode;
 		const std::uint32_t newMode = AddPermissionsToCurrent(currentMode, mode);
 		return (::chmod(nullTerminatedPath.data(), newMode) == 0);
+#	endif
 #endif
 	}
 
@@ -2864,6 +2966,11 @@ namespace Death { namespace IO {
 			return false;
 		}
 #	endif
+#	if defined(DEATH_TARGET_N64)
+		// See ChangePermissions()
+		static_cast<void>(mode);
+		return false;
+#	else
 		struct stat sb;
 		if (!TryGetFileStatus(nullTerminatedPath.data(), sb)) {
 			return false;
@@ -2871,6 +2978,7 @@ namespace Death { namespace IO {
 		const std::uint32_t currentMode = sb.st_mode;
 		const std::uint32_t newMode = RemovePermissionsFromCurrent(currentMode, mode);
 		return (::chmod(nullTerminatedPath.data(), newMode) == 0);
+#	endif
 #endif
 	}
 

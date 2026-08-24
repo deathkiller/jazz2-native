@@ -128,6 +128,30 @@ namespace nCine::RHI::GU
 			}
 		}
 
+		/**
+			@brief The projection*view product of the last draw, rebuilt only when either input changed
+
+			The product changes a handful of times a frame (a camera move, a viewport switch) while a frame
+			runs a few hundred dispatches, so comparing 128 bytes replaces the 64 multiplies of the full
+			product almost every time. Compared by VALUE, not by pointer - the matrices are rewritten in
+			place when the camera moves.
+		*/
+		inline const float* CachedProjView(const float* projMat, const float* viewMat)
+		{
+			static float cachedPv[16];
+			static float cachedProj[16];
+			static float cachedView[16];
+			static bool cachedValid = false;
+			if (!cachedValid || std::memcmp(projMat, cachedProj, sizeof(cachedProj)) != 0 ||
+					std::memcmp(viewMat, cachedView, sizeof(cachedView)) != 0) {
+				std::memcpy(cachedProj, projMat, sizeof(cachedProj));
+				std::memcpy(cachedView, viewMat, sizeof(cachedView));
+				Mat4Mul(projMat, viewMat, cachedPv);
+				cachedValid = true;
+			}
+			return cachedPv;
+		}
+
 		// Both draw paths only ever transform points of the form (x, y, 0, 1), so just six of the sixteen
 		// products of projection*view*model are ever read back
 		struct Transform2D
@@ -1553,7 +1577,7 @@ namespace nCine::RHI::GU
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
+		const GuUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -1575,8 +1599,7 @@ namespace nCine::RHI::GU
 		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
-		float pv[16];
-		Mat4Mul(projMat, viewMat, pv);
+		const float* pv = CachedProjView(projMat, viewMat);
 		Transform2D mvp;
 		Mat4MulTransform2D(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
 
@@ -1768,7 +1791,7 @@ namespace nCine::RHI::GU
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
 
-		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
+		const GuUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -1790,8 +1813,7 @@ namespace nCine::RHI::GU
 		const std::uint8_t* viewBytes = _currentProgram->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
-		float pvMat[16];
-		Mat4Mul(projMat, viewMat, pvMat);
+		const float* pvMat = CachedProjView(projMat, viewMat);
 		Transform2D mvp;
 		Mat4MulTransform2D(pvMat, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
 
@@ -1933,10 +1955,9 @@ namespace nCine::RHI::GU
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
-		const GuUniformBlock* block = _currentProgram->FindBlock("InstanceBlock");
-		if (block == nullptr) {
-			block = _currentProgram->FindBlock("InstancesBlock");
-		}
+		// Resolved once at introspection (see DispatchFacts) - this used to re-scan the
+		// reflection's name strings on every RenderCommand
+		const GuUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
 			return;
 		}
@@ -1949,29 +1970,10 @@ namespace nCine::RHI::GU
 			return;
 		}
 
-		const ShaderCompiler::ProgramVariant* reflection = _currentProgram->GetReflection();
-		auto samplerUnit = [reflection](const char* name, std::int32_t def) -> std::int32_t {
-			if (reflection != nullptr) {
-				for (std::size_t i = 0; i < reflection->TextureCount; i++) {
-					if (std::strcmp(reflection->Textures[i].Name, name) == 0) {
-						return (reflection->Textures[i].Unit >= 0 ? reflection->Textures[i].Unit : def);
-					}
-				}
-			}
-			return def;
-		};
-		std::uint32_t instanceStride = 0;
-		if (reflection != nullptr) {
-			for (std::size_t i = 0; i < reflection->BlockCount; i++) {
-				if (reflection->Blocks[i].InstanceStride > 0) {
-					instanceStride = reflection->Blocks[i].InstanceStride;
-					break;
-				}
-			}
-		}
+		const GuShaderProgram::DispatchFacts& facts = _currentProgram->GetDispatchFacts();
+		std::uint32_t instanceStride = facts.InstanceStride;
 
-		float pv[16];
-		Mat4Mul(projMat, viewMat, pv);
+		const float* pv = CachedProjView(projMat, viewMat);
 
 		// Batched programs are exactly the ones whose reflection declares a BATCH_SIZE-strided
 		// InstancesBlock (non-batched programs use a flat InstanceBlock with no stride), so the reflected
@@ -1986,30 +1988,11 @@ namespace nCine::RHI::GU
 		}
 
 		// A program samples the sprite texture exactly when its reflection binds uTexture
-		bool hasTexture = false;
-		if (reflection != nullptr) {
-			for (std::size_t i = 0; i < reflection->TextureCount; i++) {
-				if (std::strcmp(reflection->Textures[i].Name, "uTexture") == 0) {
-					hasTexture = true;
-					break;
-				}
-			}
-		}
+		const bool hasTexture = facts.HasTexture;
 		// The instance layout follows the block's own reflected declaration rather than any effect identity:
 		// a block that declares texRect uses the textured member offsets whether or not the program samples
 		// a texture (the Transition carries texRect but samples nothing)
-		bool texturedLayout = hasTexture;
-		if (!texturedLayout && reflection != nullptr) {
-			for (std::size_t i = 0; i < reflection->BlockCount && !texturedLayout; i++) {
-				const ShaderCompiler::UniformBlock& b = reflection->Blocks[i];
-				for (std::size_t j = 0; j < b.MemberCount; j++) {
-					if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
-						texturedLayout = true;
-						break;
-					}
-				}
-			}
-		}
+		const bool texturedLayout = facts.TexturedLayout;
 		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette in its
 		// reflection, which is what UsesPalette() reports
 		const bool isPaletteRemap = _currentProgram->UsesPalette();
@@ -2019,7 +2002,7 @@ namespace nCine::RHI::GU
 		const bool needsUniforms = ((reqs & FixedFunctionRequirements::NeedsUniforms) == FixedFunctionRequirements::NeedsUniforms);
 		const bool needsStripBuilder = ((reqs & FixedFunctionRequirements::NeedsStripBuilder) == FixedFunctionRequirements::NeedsStripBuilder);
 		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
-		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
+		const std::int32_t textureUnit = facts.TextureUnit;
 		GuTexture* texture = const_cast<GuTexture*>(hasTexture
 			? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
@@ -2030,7 +2013,7 @@ namespace nCine::RHI::GU
 		// the recolored preview palettes of the profile menu); the registered global palette is the fallback
 		const GuTexture* paletteTex = nullptr;
 		if (isPaletteRemap || (texture != nullptr && (texture->IsIndexed() || texture->NeedsPaletteBake()))) {
-			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
+			const std::int32_t paletteUnit = facts.PaletteUnit;
 			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? _boundTextures[paletteUnit] : nullptr);
 			if (paletteTex == nullptr || paletteTex == texture) {
 				paletteTex = _paletteTexture;

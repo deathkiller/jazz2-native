@@ -132,7 +132,8 @@ namespace Jazz2::UI
 		// Frames are delta-encoded against their predecessor, so a frame cannot be skipped - it always has
 		// to be decoded, and decoding is nearly the whole cost (applying the palette and uploading the
 		// texture is a few percent on top).
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE)
 		// On a machine that decodes slower than the video's frame rate, catching up buys nothing: it hides
 		// all but the last of the decoded frames while making the stall worse. At most one frame is decoded
 		// per rendered frame, every frame is shown, and the picture may fall behind the music.
@@ -289,16 +290,43 @@ namespace Jazz2::UI
 		// video as a horizontal smear across the last ~100 px of the panel. Halving is also the trade the
 		// Dreamcast already makes above for bandwidth, and every platform whose limit this hits is one
 		// that would struggle with the full-resolution upload anyway.
+		//
+		// On the FIXED-PANEL consoles the drawable bounds the frame for a second, independent reason: the
+		// video is aspect-fit into the panel, so a frame larger than the panel is one the hardware samples
+		// back down when it draws it. Every texel past that size is one the CPU picked out of the decoded
+		// frame and uploaded for something that cannot be displayed. A 640x480 video on a 320x240 console is
+		// four times the texels the panel can show, which on a 93 MHz CPU is most of the cost of playing it;
+		// the same applies to a handheld at 480x272. Only a starting downscale is refined here, never undone,
+		// so a platform that already asked for one (the Dreamcast above) keeps it.
+		//
+		// Only where the panel is pinned, though: on a desktop the drawable is just the current window (the
+		// default one is 720x405, SMALLER than a 640x480 video), the window can grow at any moment, and the
+		// downscale decided here would outlive it - so the desktop keeps decoding at full resolution and only
+		// the texture-size limit applies there.
 		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities()
 			.GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
+
+		std::uint32_t widthLimit = 0, heightLimit = 0;	// Zero being "not limited by this"
 		if (maxTextureSize > 0) {
-			const std::uint32_t limit = (std::uint32_t)maxTextureSize;
-			while ((_width / _videoDownscale) > limit || (_height / _videoDownscale) > limit) {
+			widthLimit = heightLimit = (std::uint32_t)maxTextureSize;
+		}
+#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+		const Vector2i drawableSize = theApplication().GetResolution();
+		if (drawableSize.X > 0 && drawableSize.Y > 0) {
+			widthLimit = (widthLimit > 0 ? std::min(widthLimit, (std::uint32_t)drawableSize.X) : (std::uint32_t)drawableSize.X);
+			heightLimit = (heightLimit > 0 ? std::min(heightLimit, (std::uint32_t)drawableSize.Y) : (std::uint32_t)drawableSize.Y);
+		}
+#endif
+
+		if (widthLimit > 0 && heightLimit > 0) {
+			while ((_width / _videoDownscale) > widthLimit || (_height / _videoDownscale) > heightLimit) {
 				_videoDownscale *= 2;
 			}
 			if (_videoDownscale != downscale) {
-				LOGI("Video {}x{} exceeds the maximum texture size {}, playing it downscaled {}x",
-					_width, _height, maxTextureSize, _videoDownscale);
+				LOGI("Video {}x{} exceeds the {}x{} it can be drawn at (maximum texture size {}), playing it downscaled {}x",
+					_width, _height, widthLimit, heightLimit, maxTextureSize, _videoDownscale);
 			}
 		}
 
@@ -382,7 +410,10 @@ namespace Jazz2::UI
 		_fileWindow.Initialize(s.get(), (chunks[0].empty() ? 0 : chunks[0][0].first()));
 
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(&Cinematics::_decompressedStreams)); i++) {
-			// Skip first two bytes (zlib header 0x78 0xDA)
+			// Skip first two bytes (zlib header 0x78 0xDA). The streams were flushed per chunk and never
+			// finished, so most of them carry no end-of-stream marker - running out of chunks is their
+			// regular end (DeflateStream treats it as EOF) and the read-ahead below is expected to hit it.
+			// Short reads still fail the decode (see Cinematics::Read).
 			_compressedStreams[i].Initialize(&_fileWindow, std::move(chunks[i]), 2);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
 			_streamBuffers[i].Initialize(&_decompressedStreams[i]);
@@ -721,6 +752,14 @@ namespace Jazz2::UI
 			_paletteDirty = true;
 		}
 
+		// This frame is encoded as changes against the previous one, so the previous one has to stay
+		// readable while this one is written. The two buffers ping-pong for that, rather than the finished
+		// frame being copied over the reference at the end of every frame: at 640x480 that copy moved
+		// 300 KB a frame in each direction and measured 30 ms of a 120 ms frame on the Nintendo 64, all of
+		// it spent duplicating data that was already where it needed to be. After the swap `_lastBuffer`
+		// is the frame just shown and `_buffer` is the one before that, which is about to be overwritten.
+		_buffer.swap(_lastBuffer);
+
 		// Read pixels into the buffer. Both kinds of run are copied in one go rather than a pixel at a
 		// time - a frame is a few hundred thousand pixels, and per-pixel calls into the stream dominated
 		// the decoding cost on the slower platforms.
@@ -732,7 +771,9 @@ namespace Jazz2::UI
 			std::int32_t x = 0;
 			while ((c = ReadByte(0)) != 0x80) {
 				// A dead stream keeps returning zeros (c = 0 with a zero run length), which would spin
-				// here forever - bail out as soon as the short read is detected
+				// here forever - bail out as soon as the short read is detected. Everything not yet
+				// written this frame is then two frames old (the swap above), not one - acceptable,
+				// because a failed decode ends the playback anyway
 				if DEATH_UNLIKELY(_decodingFailed) {
 					return;
 				}
@@ -757,13 +798,19 @@ namespace Jazz2::UI
 					if (fits > 0 && n >= 0 && n + fits <= totalPixels) {
 						std::memcpy(&row[x], &_lastBuffer[n], std::size_t(fits));
 					}
+					// A back-reference the guard above rejected (corrupt frame) leaves this span holding
+					// pixels from two frames ago rather than one - a well-formed stream never gets here
 					x += u;
 				}
 			}
-		}
 
-		// Keep a copy of this frame; the next one is encoded as changes against it
-		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
+			// A row the stream did not describe to its end keeps the previous frame's pixels there. That
+			// used to happen by itself, when the buffer being written already held a copy of that frame;
+			// now that it holds the frame before it, the untouched tail is taken from the reference.
+			if (x < rowWidth) {
+				std::memcpy(&row[x], &_lastBuffer[std::size_t(y) * rowWidth + x], std::size_t(rowWidth - x));
+			}
+		}
 	}
 
 	void Cinematics::ApplyPaletteAndUpload(const std::uint8_t* indices)

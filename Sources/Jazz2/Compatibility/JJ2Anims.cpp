@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
@@ -1003,7 +1004,10 @@ namespace Jazz2::Compatibility
 				index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
 			}
 
-			*(rgba_t*)(data + px_pos) = px;
+			// Copy exactly the pixel's channels: storing the whole union regardless of the channel count
+			// would land on positions that are not 4-aligned for 1- and 2-channel images - a trap on
+			// strict-alignment targets (MIPS) - and would also write past the last pixel of the buffer
+			std::memcpy(data + px_pos, &px, channelCount);
 		}
 	}
 }

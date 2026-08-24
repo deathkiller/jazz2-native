@@ -56,7 +56,7 @@
 
 // Check platform-specific capabilities
 /** @brief Whether the current platform supports a gamepad rumble, see @relativeref{nCine,IInputManager::joystickRumble()} */
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_N64) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif
 /** @brief Whether the current platform has a native (hardware) back button */
@@ -71,7 +71,7 @@
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS2) && \
-		!defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64)
 #	define NCINE_HAS_WINDOWS
 #endif
 /**
@@ -100,18 +100,18 @@
 /**
 	@brief Whether the current platform can convert the original game data into a cache of its own
 
-	The Dreamcast and PlayStation 2 play from a disc and the GameCube has nowhere to put a cache
-	the size of a converted installation, and the web build is prepared entirely ahead of time - none
-	of the three can write one, so they consume a content tree prebaked with @ref asset-packer
-	"AssetPacker", skip the conversion altogether and never look for the original game files,
-	which are not there in the first place.
+	The Dreamcast and PlayStation 2 play from a disc, the Nintendo 64 from a read-only ROM image,
+	and the GameCube has nowhere to put a cache the size of a converted installation, and the web
+	build is prepared entirely ahead of time - none of them can write one, so they consume a content
+	tree prebaked with @ref asset-packer "AssetPacker", skip the conversion altogether and never look
+	for the original game files, which are not there in the first place.
 
 	Everywhere else the first-run conversion exists, including the PlayStation Portable and the Wii,
 	where the content sits on a writable memory stick or SD card. Those two are usually given a prebaked
 	tree as well, which is recognized at runtime rather than assumed here, see
 	@relativeref{Jazz2,ContentResolver::IsContentPrebaked()}.
 */
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_N64)
 #	define NCINE_HAS_WRITABLE_CACHE
 #endif
 

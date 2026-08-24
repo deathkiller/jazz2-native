@@ -77,6 +77,8 @@ extern "C"
 #		include "Audio/Backends/ASND/AsndAudioDevice.h"
 #	elif defined(WITH_AICA)
 #		include "Audio/Backends/AICA/AicaAudioDevice.h"
+#	elif defined(WITH_N64AUDIO)
+#		include "Audio/Backends/N64/N64AudioDevice.h"
 #	elif defined(WITH_PS3AUDIO)
 #		include "Audio/Backends/PS3/Ps3AudioDevice.h"
 #	endif
@@ -893,6 +895,8 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<AsndAudioDevice>());
 #	elif defined(WITH_AICA)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<AicaAudioDevice>());
+#	elif defined(WITH_N64AUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<N64AudioDevice>());
 #	elif defined(WITH_PS3AUDIO)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<Ps3AudioDevice>());
 #	endif
@@ -1280,6 +1284,58 @@ namespace nCine
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_N64)
+		// Write the message to fd 2, which libdragon routes to every log channel that answered during
+		// startup: the emulator log (ISViewer/emux, shown in the Ares log) and the flashcart's USB log.
+		// The early boot console also mirrors it on the screen until N64GfxDevice takes the display over.
+		//
+		// The write goes to the descriptor rather than through `stderr`, because libdragon makes that
+		// stream LINE-buffered (`setvbuf` in its debug init) - which is exactly wrong for the case these
+		// messages exist for. A hang or a hardware fault leaves whatever is still sitting in the FILE
+		// buffer unwritten, so the last messages before the failure - the interesting ones - never arrive.
+		// `write()` reaches the sinks with no buffer in between, and also cannot deadlock on the stdio
+		// lock when the trace comes from a thread that already holds it.
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		::write(STDERR_FILENO, logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+
+		// Show the message on the early boot console (a no-op once OgcGfxDevice owns the video output)
+		::fwrite(logEntryWithColors, 1, length2, stdout);
+
+		// Also send it to a USB Gecko in memory card slot B - the Dolphin emulator exposes it as a raw
+		// TCP socket on port 55020 (0xd6ec, with "SlotB = 7" in Dolphin.ini) and it also works with
+		// the real adapter
+		static const bool __geckoAlive = (usb_isgeckoalive(EXI_CHANNEL_1) != 0);
+		if (__geckoAlive) {
+			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
+		}
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// Write the message to dbgio (SCIF serial by default) - the Flycast/lxdream emulators show it
+		// in their logs and dc-tool/dcload shows it in the console
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		dbgio_write_buffer_xlat(reinterpret_cast<const std::uint8_t*>(logEntryWithColors), length2);
 #elif defined(DEATH_TARGET_PS2)
 		// A bare ELF has no connected stdout - its file descriptor is only wired up when the program was
 		// launched through ps2client - so the message goes to the EE's SIO transmit register instead.
@@ -1342,38 +1398,6 @@ namespace nCine
 			std::uint32_t written = 0;
 			sysTtyWrite(STDOUT_FILENO, logEntryWithColors, std::uint32_t(length2), &written);
 		}
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-
-		// Show the message on the early boot console (a no-op once OgcGfxDevice owns the video output)
-		::fwrite(logEntryWithColors, 1, length2, stdout);
-
-		// Also send it to a USB Gecko in memory card slot B - the Dolphin emulator exposes it as a raw
-		// TCP socket on port 55020 (0xd6ec, with "SlotB = 7" in Dolphin.ini) and it also works with
-		// the real adapter
-		static const bool __geckoAlive = (usb_isgeckoalive(EXI_CHANNEL_1) != 0);
-		if (__geckoAlive) {
-			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
-		}
-#elif defined(DEATH_TARGET_DREAMCAST)
-		// Write the message to dbgio (SCIF serial by default) - the Flycast/lxdream emulators show it
-		// in their logs and dc-tool/dcload shows it in the console
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-		dbgio_write_buffer_xlat(reinterpret_cast<const std::uint8_t*>(logEntryWithColors), length2);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
@@ -1861,6 +1885,7 @@ namespace nCine
 		Android = 12,
 		Web = 14,
 
+		Nintendo64 = 66,
 		GameCube = 67,
 		Wii = 68,
 		Switch = 70,
@@ -1961,6 +1986,8 @@ namespace nCine
 		constexpr MetadataPlatform platform = MetadataPlatform::Wii;
 #		elif defined(DEATH_TARGET_GAMECUBE)
 		constexpr MetadataPlatform platform = MetadataPlatform::GameCube;
+#		elif defined(DEATH_TARGET_N64)
+		constexpr MetadataPlatform platform = MetadataPlatform::Nintendo64;
 #		elif defined(DEATH_TARGET_DREAMCAST)
 		constexpr MetadataPlatform platform = MetadataPlatform::SegaDreamcast;
 #		elif defined(DEATH_TARGET_IOS)
@@ -2001,9 +2028,9 @@ namespace nCine
 		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
-#		elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || \
-				defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
-				defined(DEATH_TARGET_PS3)
+#		elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+				defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || \
+				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		// TODO: Hostname is not implemented on Vita, libogc, KOS, PSPSDK, PS2SDK and PSL1GHT

@@ -7,7 +7,10 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && \
+		!defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && \
+		!defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_RDP) && \
+		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX)
 #	define WITH_RHI_GL
 #endif
 
@@ -538,6 +541,103 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::GS::GsDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_RDP)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The RDP
+// backend (Nintendo 64 "Reality Display Processor" via libdragon's rdpq) is a fixed-function hardware
+// backend just like GX, PVR, GU and GS: a render target is nothing but a surface pointer handed to
+// rdpq_attach() - any RDRAM surface will do - so off-screen render targets are available (needed by the
+// textured-background passes) and `RHI_CAP_FRAMEBUFFERS` is defined; but the RDP's color combiner and
+// blender are configured per draw and there is no programmable stage at all, so `RHI_CAP_SHADERS` stays
+// undefined and the game runs the direct tier (the same tier as the software, GX, PVR, GU and GS
+// backends: scene straight to the display at the logical resolution, CPU lightmap composited by the
+// device's lighting hook).
+//
+// `RHI_CAP_PALETTED_TEXTURES` means an R8 texture of palette indices is resolved through the palette by
+// the hardware itself, under every effect. The RDP has exactly that in CI8 texels resolved through the
+// TLUT in the upper half of TMEM (loaded per draw by the device from whatever palette texture the
+// material bound), and the lookup belongs to the texture read rather than to any programmable stage, so
+// the meaning PVR, GU and GS give this flag carries over verbatim.
+//
+// `RHI_CAP_STREAMING_TEXTURES` means a texture's storage can be written by the CPU in place, so content
+// that is regenerated every frame (the cinematics) can be produced straight into it. The RDP reads
+// textures out of ordinary RDRAM, which the CPU addresses directly (only a cache writeback separates the
+// two), so this holds on the Nintendo 64 as well - the cinematics' indexed frames decode straight into
+// their CI8 store.
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_PALETTED_TEXTURES
+#define RHI_CAP_STREAMING_TEXTURES
+#define RHI_CAP_BATCHING
+
+namespace nCine::RHI::RDP
+{
+	class RdpDevice;
+	class RdpTexture;
+	class RdpBuffer;
+	class RdpShader;
+	class RdpShaderProgram;
+	class RdpShaderUniforms;
+	class RdpShaderUniformBlocks;
+	class RdpUniform;
+	class RdpUniformBlock;
+	class RdpUniformCache;
+	class RdpUniformBlockCache;
+	class RdpAttribute;
+	class RdpFramebuffer;
+	class RdpRenderbuffer;
+	class RdpRenderTarget;
+	class RdpVertexArray;
+	class RdpVertexFormat;
+	class RdpRhiCapabilities;
+	class RdpDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::RDP::RdpDevice;
+	using Texture = RHI::RDP::RdpTexture;
+	using Buffer = RHI::RDP::RdpBuffer;
+	using Shader = RHI::RDP::RdpShader;
+	using ShaderProgram = RHI::RDP::RdpShaderProgram;
+	using ShaderUniforms = RHI::RDP::RdpShaderUniforms;
+	using ShaderUniformBlocks = RHI::RDP::RdpShaderUniformBlocks;
+	using Uniform = RHI::RDP::RdpUniform;
+	using UniformBlock = RHI::RDP::RdpUniformBlock;
+	using UniformCache = RHI::RDP::RdpUniformCache;
+	using UniformBlockCache = RHI::RDP::RdpUniformBlockCache;
+	using Attribute = RHI::RDP::RdpAttribute;
+	using Framebuffer = RHI::RDP::RdpFramebuffer;
+	using Renderbuffer = RHI::RDP::RdpRenderbuffer;
+	using RenderTarget = RHI::RDP::RdpRenderTarget;
+	using VertexArray = RHI::RDP::RdpVertexArray;
+	using VertexFormat = RHI::RDP::RdpVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::RDP::RdpRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::RDP::RdpDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

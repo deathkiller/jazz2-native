@@ -146,6 +146,32 @@ namespace nCine
 		/** @brief Returns the material's "InstanceBlock" uniform block cache, resolved once per shader change */
 		RHI::UniformBlockCache* GetInstanceBlock();
 
+		/**
+			@brief The instance block members a sprite-like material rewrites for every quad it draws
+
+			Grouped so that a caller emitting one command per quad out of a pool can write them without
+			asking the block for them by name again. That lookup was the text path's largest cost on the
+			consoles: `Font::DrawString` rents a command per glyph and wrote three members through it, so a
+			menu frame ran several hundred name lookups over a block whose member names sit in separately
+			allocated strings - all of it recomputing an answer that only a shader change can invalidate.
+			`BaseSprite::updateRenderCommand()` writes the same members (plus the palette offset) for every
+			sprite whose color, size or texture changed, so it goes through this cache as well.
+		*/
+		struct InstanceUniforms
+		{
+			/** @brief The `texRect` member, or `nullptr` if the shader has none */
+			RHI::UniformCache* TexRect;
+			/** @brief The `spriteSize` member, or `nullptr` if the shader has none */
+			RHI::UniformCache* SpriteSize;
+			/** @brief The `color` member, or `nullptr` if the shader has none */
+			RHI::UniformCache* Color;
+			/** @brief The `paletteOffset` member, or `nullptr` if the shader has none (only the palette shaders declare it) */
+			RHI::UniformCache* PaletteOffset;
+		};
+
+		/** @brief Returns the instance block members resolved once per shader change, or `nullptr` if the material has no shader program */
+		const InstanceUniforms* GetInstanceUniforms();
+
 		/** @brief Commits the model matrix uniform block */
 		void CommitNodeTransformation();
 
@@ -164,10 +190,12 @@ namespace nCine
 
 		/** @brief Material sort key that minimizes state changes when rendering commands */
 		std::uint64_t _materialSortKey;
-		// Cached model matrix uniform and "InstanceBlock" uniform block cache, avoiding name-based
-		// lookups on every use. Valid as long as the cached shader change counter matches the material's one.
+		// Cached model matrix uniform, "InstanceBlock" uniform block cache and the block members a
+		// sprite-like material rewrites per quad, avoiding name-based lookups on every use. Valid as long
+		// as the cached shader change counter matches the material's one.
 		RHI::UniformCache* _modelMatrixUniform;
 		RHI::UniformBlockCache* _instanceBlock;
+		InstanceUniforms _instanceUniforms;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t _idSortKey;
 		// Value of the material's shader change counter when the cached uniforms were resolved

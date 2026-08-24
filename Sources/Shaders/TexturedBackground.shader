@@ -101,13 +101,14 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, gu, gs) {
-	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader). Both consoles
-	// take the include exactly as it is, with the tint macro left UNDEFINED, because neither can lerp a
-	// texel toward a colour: the PVR only modulates and adds, and the GE's GU_TFX_BLEND weighs by the
-	// TEXEL rather than by an interpolated alpha. So the horizon tint stays a second gradient pass over
-	// each band on both, which is the include's default delivery and the only thing the gx block below
-	// changes.
+void fixed_function(pvr, gu, gs, rdp) {
+	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader). These consoles
+	// take the include exactly as it is, with the tint macro left UNDEFINED. The PVR, the GE and the GS
+	// cannot lerp a texel toward a colour at all (the PVR only modulates and adds, and the GE's
+	// GU_TFX_BLEND weighs by the TEXEL rather than by an interpolated alpha); the RDP's combiner could,
+	// but it stays on this tier so the band geometry keeps ONE shared body instead of a second copy of
+	// the gx specialization. So the horizon tint stays a second gradient pass over each band, which is
+	// the include's default delivery and the only thing the gx block below changes.
 #include "Include/TexturedBackgroundWarp.inc"
 }
 

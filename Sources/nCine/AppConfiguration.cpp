@@ -81,6 +81,17 @@ namespace nCine
 		useBufferMapping = false;
 #endif
 
+#if defined(WITH_RHI_RDP)
+		// The RDP tier has no device memory at all: a buffer object is a host allocation, and the draw
+		// dispatch reads the vertices and indices out of it with the CPU. Mapping it is therefore the
+		// identity, and it is the unmapped path that costs something - RenderBuffersManager::FlushUnmap()
+		// copies every byte the frame streamed from its own staging buffer into the buffer object, which is
+		// one host-to-host copy of the whole tile mesh per frame for nothing. Mapping also drops the
+		// staging buffers themselves, 136 KB of the 8 MB. Keyed on the BACKEND rather than the console,
+		// because the property belongs to how RdpBuffer stores data, not to the machine it runs on.
+		useBufferMapping = true;
+#endif
+
 #if defined(DEATH_TARGET_UNIX) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 		// DPI queries do not seem to work reliably on X11 with SDL2
 		windowScaling = false;

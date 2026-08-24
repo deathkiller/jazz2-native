@@ -289,8 +289,19 @@ namespace Jazz2::Resources
 	*/
 	struct SoundResource
 	{
-		/** @brief List of underlying generic resources */
+		/** @brief List of underlying generic resources, empty until the samples are loaded */
 		SmallVector<GenericSoundResource*, 1> Buffers;
+		/**
+			@brief Paths of the samples this sound picks from
+
+			Kept for the lifetime of the metadata so @ref Buffers can be filled the first time the sound is
+			actually played and dropped again afterwards, without reparsing the metadata. A sound is a name
+			and a handful of short paths; the samples behind them are what costs memory (see
+			@relativeref{Jazz2,ContentResolver::ResolveSound()}).
+		*/
+		SmallVector<String, 1> Paths;
+		/** @brief Whether loading the samples has already been attempted and failed */
+		bool Unavailable = false;
 
 		/** @brief Creates a new instance */
 		SoundResource() noexcept;

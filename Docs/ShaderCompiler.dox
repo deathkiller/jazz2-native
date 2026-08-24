@@ -17,7 +17,8 @@ it hosts every source-to-source lowering the non-GL backends need: an HLSL trans
 Direct3D 11, a Vulkan GLSL transform with offline SPIR-V compilation, an ESSL 100 transform for the
 OpenGL|ES 2.0 profile, a GLSL-to-C++ transpiler for the software renderer, and a fixed-function
 transpiler for the console backends that have no fragment shaders at all @m_span{m-text m-dim} (PVR
-on Dreamcast, GX on Wii/GameCube, GU on PlayStation Portable, GS on PlayStation 2) @m_endspan.
+on Dreamcast, GX on Wii/GameCube, GU on PlayStation Portable, GS on PlayStation 2, RDP on
+Nintendo 64) @m_endspan.
 
 A `.shader` file therefore describes an effect on **two tiers**:
 
@@ -57,6 +58,7 @@ Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce --- transpiled `fixed_functio
 Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gx`
 PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gu`
 PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gs`
+Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function rdp`
 PlayStation Vita (GXM) | @cpp "CgGeneratedShaders.h" @ce --- Cg stage sources compiled on the console | `--emit-cg`
 PlayStation 3 (RSX) | @cpp "RsxGeneratedShaders.h" @ce --- NV40 microcode compiled offline from that same Cg | `--emit-rsx` + cgcomp
 
@@ -95,7 +97,7 @@ ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] 
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs|rdp> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 @endcode
@@ -123,7 +125,7 @@ Mode or option | Meaning
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
 `--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
 `--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header. The only path that builds stage sources with `NO_DYNAMIC_BRANCHING` defined, see @ref shader-compiler-input-preprocessor "the conditionals below"
-`--emit-fixed-function <pvr\|gx\|gu\|gs> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
+`--emit-fixed-function <pvr\|gx\|gu\|gs\|rdp> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
 `--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
 `--help`, `-h`, `/?` | Prints the usage text (to stderr) and exits successfully
@@ -364,7 +366,7 @@ include the types header alone to consume reflection without pulling in any prog
 @section shader-compiler-fixed-function Console fixed-function blocks
 
 The console backends @m_span{m-text m-dim} (PVR on the Dreamcast, GX on the Wii/GameCube, GU on the
-PlayStation Portable, GS on PlayStation 2) @m_endspan have no fragment shaders --- an effect there is a short list of
+PlayStation Portable, GS on PlayStation 2, RDP on the Nintendo 64) @m_endspan have no fragment shaders --- an effect there is a short list of
 passes over the sprite quad, each a small bundle of hardware state. A @cpp fixed_function @ce block
 states that pass list in the shader file itself, next to the GLSL it approximates. This is the whole
 console tier of @cpp "WhiteMask.shader" @ce:
@@ -394,6 +396,7 @@ Spelling | Serves
 @cpp void fixed_function(gx) @ce | the Wii/GameCube only
 @cpp void fixed_function(gu) @ce | the PlayStation Portable only
 @cpp void fixed_function(gs) @ce | the PlayStation 2 only
+@cpp void fixed_function(rdp) @ce | the Nintendo 64 only
 @cpp void fixed_function(pvr, gu, gs) @ce | all three of those, from ONE body --- the list form
 @cpp void fixed_function(gu, gx, pvr) @ce | any subset in any order. Whitespace is free: `(pvr,gu)` and `( pvr , gu )` are the same declaration
 
@@ -406,13 +409,16 @@ the case where two consoles reach an effect with *literally the same code*; when
 differ, they stay separate blocks. Capabilities are then checked against the
 @ref shader-compiler-ff-target-lists "intersection of the listed targets".
 
-Today `Colorized.shader`, `FrozenMask.shader`, `PartialWhiteMask.shader` and the two background
-shaders carry a shared @cpp void fixed_function(pvr, gu, gs) @ce block @m_span{m-text m-dim} (the
-three no-combiner tiers) @m_endspan plus a @cpp void fixed_function(gx) @ce one, and `Transition.shader`
-carries a @cpp void fixed_function(pvr) @ce block plus a shared
-@cpp void fixed_function(gx, gu, gs) @ce one @m_span{m-text m-dim} (the 16-vertex strip scratches)
-@m_endspan; everything else has a single generic block --- which is the norm, since a program with no
-block at all for a backend is skipped at runtime there.
+Today `FrozenMask.shader`, `PartialWhiteMask.shader` and the two background shaders carry a shared
+@cpp void fixed_function(pvr, gu, gs, rdp) @ce block plus a @cpp void fixed_function(gx) @ce one;
+`Colorized.shader` splits the same set three ways --- a shared @cpp void fixed_function(pvr, gu, gs) @ce
+block, its own @cpp void fixed_function(rdp) @ce one @m_span{m-text m-dim} (its combiner ceiling caps
+the additive passes at two, see the output-scale section) @m_endspan and a
+@cpp void fixed_function(gx) @ce one; and `Transition.shader` carries a
+@cpp void fixed_function(pvr) @ce block plus a shared @cpp void fixed_function(gx, gu, gs, rdp) @ce
+one @m_span{m-text m-dim} (the 16-vertex strip scratches) @m_endspan; everything else has a single
+generic block --- which is the norm, since a program with no block at all for a backend is skipped at
+runtime there.
 
 The `--emit-fixed-function` mode transpiles the applicable block of **every program variant** ---
 the block is preprocessed once per variant with the variant define baked in, exactly like the
@@ -524,7 +530,8 @@ ignores* `p.tev`, so a `pvr` block may keep using one --- but a shared block usi
 would be honoured by only some of the consoles it serves, which is precisely the "silently depends on
 one console's feature" case these checks exist to prevent. On the no-combiner tiers a boost is
 expressed as passes instead: `Colorized.shader` splits its multiplier into up to three additive passes
-in its shared `pvr, gu, gs` block.
+in its shared `pvr, gu, gs` block (and into up to two in its own `rdp` block, whose combiner ceiling
+makes the third pass unreachable).
 
 `p.offset_color` is a third capability gap, and the one place where the answer is **mechanism rather
 than policy**: the GE has no post-texture additive term either @m_span{m-text m-dim} (`GU_TFX_ADD`
@@ -550,9 +557,9 @@ Built-in | Type | Meaning | Generic block?
 `texel_size()` | `vec2` | displacement of one texel in the quad's own coordinate space, already converted per backend (raster space on the PVR, logical pixels on the GX, screen pixels on the GU) | yes
 `has_texel_size()` | `bool` | whether that step is derivable at all (a zero `texRect` has no scale) --- blocks guard their `texel_size()` uses with it | yes
 `submit_quad(p)` | statement | submits one pass over the current instance's quad | yes
-`quad_origin()` | `vec2` | **pre-clip** raster position of the sprite's (0,0) corner | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
-`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Synthesized geometry uses these instead of the post-scissor-clip corner arrays, so clipping cannot distort it | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
-`has_uniform(uName)` | `bool` | whether the program resolved that uniform. An unresolved name loads zeros, so blocks guard with this exactly like the code they replaced null-checked its pointers | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
+`quad_origin()` | `vec2` | **pre-clip** raster position of the sprite's (0,0) corner | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`, alone or in a list
+`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Synthesized geometry uses these instead of the post-scissor-clip corner arrays, so clipping cannot distort it | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`, alone or in a list
+`has_uniform(uName)` | `bool` | whether the program resolved that uniform. An unresolved name loads zeros, so blocks guard with this exactly like the code they replaced null-checked its pointers | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`, alone or in a list
 `uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | the program's resolved uniforms by name, through the backend's existing `ResolveUniform` machinery. The argument is an **identifier**, not a string literal | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
 `strip_position(i, <vec2>)` | statement | strip-builder vertex position | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
 `strip_uv(i, <vec2>)` | statement | strip-builder vertex UV, in the shader's texture space (the backend folds its padded-store scale) | no --- `pvr`/`gx`/`gu`/`gs`, alone or in a list
@@ -651,18 +658,18 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
     shader's tone for every luminance.
 -   @cpp "Transition.shader" @ce --- geometry synthesis: the iris fan built from `quad_origin()` /
     `quad_axis_x/y()` and shaded strips, 32 segments in the `pvr` block and 64 with a three-band eased
-    edge in one shared @cpp void fixed_function(gx, gu, gs) @ce block. The iris needs no combiner at
-    all --- only geometry and per-vertex colours --- so what decides the split is the strip scratch: the
-    GX, the GU and the GS all take the 10-vertex strip that walks all five radii in ONE draw, and the
-    PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx` rather than
-    at `pvr`.
+    edge in one shared @cpp void fixed_function(gx, gu, gs, rdp) @ce block. The iris needs no combiner
+    at all --- only geometry and per-vertex colours --- so what decides the split is the strip scratch:
+    the GX, the GU, the GS and the RDP all take the 10-vertex strip that walks all five radii in ONE
+    draw, and the PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx`
+    rather than at `pvr`.
 -   @cpp "Include/TexturedBackgroundWarp.inc" @ce --- the warp rebuild, shared by both background
-    shaders **and** all four backends: the band geometry uses only extended vocabulary that every
+    shaders **and** all five backends: the band geometry uses only extended vocabulary that every
     console implements the same way, so the include is literally the same code everywhere. Only the
     horizon-tint delivery differs, switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the including
-    block defines before the `#include` --- set by the `gx` block alone, which is why the other three
-    consoles need nothing but a shared @cpp void fixed_function(pvr, gu, gs) @ce block around the bare
-    `#include`, and also the general idiom for specializing a shared include per backend.
+    block defines before the `#include` --- set by the `gx` block alone, which is why the other four
+    consoles need nothing but a shared @cpp void fixed_function(pvr, gu, gs, rdp) @ce block around the
+    bare `#include`, and also the general idiom for specializing a shared include per backend.
 
 @section shader-compiler-workflow Regenerating the committed headers
 
@@ -679,8 +686,9 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
     (`--emit-sw-generated`)
 5.  @cpp "CgGeneratedShaders.h" @ce --- the PS Vita's Cg stage sources (`--emit-cg`)
 6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce,
-    @cpp "GuGeneratedEffects.h" @ce and @cpp "GsGeneratedEffects.h" @ce --- the console
-    fixed-function effects (`--emit-fixed-function pvr` / `gx` / `gu` / `gs`)
+    @cpp "GuGeneratedEffects.h" @ce, @cpp "GsGeneratedEffects.h" @ce and
+    @cpp "RdpGeneratedEffects.h" @ce --- the console fixed-function effects
+    (`--emit-fixed-function pvr` / `gx` / `gu` / `gs` / `rdp`)
 
 7.  @cpp "RsxGeneratedShaders.h" @ce --- the PlayStation 3's RSX microcode (`--emit-rsx`), **only on a
     host that has `cgcomp`**, see the note below
@@ -824,7 +832,7 @@ Where the cursor is | What is offered
 Brace depth 0 | The directives, the entry points, `#include`, types, and the names this file declares
 After `shader_type`, `render_mode` or `precision` | Only that directive's legal values --- nothing else
 After the `:` of a `uniform` | Only the seven uniform hints
-Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `gu`, `gs`
+Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `gu`, `gs`, `rdp`
 Inside a `fixed_function` body | The fixed-function statements, the `submit_*` calls, the pass fields with their enum values, the context facilities, and the small maths subset the transpiler accepts
 Inside `vertex()` or `fragment()` | GLSL built-ins and `gl_*`, the mode-appropriate canvas built-ins, and this file's uniforms, varyings, attributes, block members, structs, `#define`s, `variant` names and helper functions
 Inside an `#include "..."` | The sibling `.inc` / `.shader` files, walked directory by directory
@@ -938,7 +946,7 @@ The language vocabulary lives in exactly one place, @cpp "src/language.js" @ce, 
 completion and the hovers read. **When this page gains a directive, a `render_mode`, a pass field or a
 context facility, add it there too** --- and to
 @cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its own colour. The test suite asserts the
-closed sets against what the parser accepts @m_span{m-text m-dim} (the six render modes, the three
+closed sets against what the parser accepts @m_span{m-text m-dim} (the six render modes, the five
 fixed-function targets, the six pass fields, the four blend modes, the six tev presets, the three
 pipeline intrinsics) @m_endspan, so a set that drifts out of step fails a test rather than silently
 offering a stale list.
@@ -1039,9 +1047,10 @@ the Cg Toolkit is a build dependency. See @ref consoles-ps3-shaders for the invo
     the same reflection.
 -   **The software renderer** is the only tier built with `SOFTWARE_RENDERER` defined, and the only
     one that can decline a shader without failing generation.
--   **Dreamcast, Wii/GameCube, PlayStation Portable and PlayStation 2** include their aggregate effect
-    header from the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` / `WITH_RHI_GU` /
-    `WITH_RHI_GS`, and resolve their table entry from the program identity at link time.
+-   **Dreamcast, Wii/GameCube, PlayStation Portable, PlayStation 2 and Nintendo 64** include their
+    aggregate effect header from the backend's device file under `WITH_RHI_PVR` / `WITH_RHI_GX` /
+    `WITH_RHI_GU` / `WITH_RHI_GS` / `WITH_RHI_RDP`, and resolve their table entry from the program
+    identity at link time.
 -   **PlayStation Vita and PlayStation 3** are the two consoles with real shaders, and they resolve
     them the same way --- an identity lookup into an aggregate header --- but what they find differs.
     Under `WITH_RHI_GXM` the Vita finds Cg *source* and compiles it on the console, under

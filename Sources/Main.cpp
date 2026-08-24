@@ -105,8 +105,8 @@ namespace
 	// memory is the tightest budget of the set, and an outgoing handler's textures hold pages of it until
 	// they are released. The intro cinematic's full-screen PSMCT32 frame alone is 140 of the 422 pages the
 	// texture cache has.
-#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2)
 	constexpr bool ReleaseAssetsBeforeLoading = true;
 #else
 	constexpr bool ReleaseAssetsBeforeLoading = false;
@@ -377,7 +377,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
 		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
 		// aspect-fits the logical view into it, so no explicit override is wanted there
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);

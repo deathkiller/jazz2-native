@@ -8,10 +8,10 @@ namespace Death {
 
 @m_class{m-noindent}
 
-Beside the desktop and mobile platforms the game runs on eight consoles. Each of them is
+Beside the desktop and mobile platforms the game runs on nine consoles. Each of them is
 cross-compiled with its own SDK, most of them have a bespoke window/input backend instead of **SDL2**
-or **GLFW**, and five of them have no programmable shaders at all --- so they are driven by
-one of four rendering backends written for their fixed-function graphics hardware
+or **GLFW**, and six of them have no programmable shaders at all --- so they are driven by
+one of five rendering backends written for their fixed-function graphics hardware
 @m_span{m-text m-dim} (the Wii and the GameCube share one) @m_endspan. This page covers the
 whole path for each one: installing the toolchain, configuring the build, packaging the result,
 copying it to the device and getting a log back out of it. For everything that is not
@@ -19,6 +19,7 @@ console-specific see @ref building "Building the project".
 
 Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Rendering backend | Window backend | Build artifact
 ------- | -------------------------------------------------------------- | ----------------- | -------------- | --------------
+@ref consoles-n64 "Nintendo 64" | libdragon @m_span{m-text m-dim} (`cmake/toolchains/n64.cmake`) @m_endspan | `RDP` --- fixed-function | `N64` | `jazz2.z64` @m_span{m-text m-dim} (bootable ROM image) @m_endspan
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
@@ -30,9 +31,9 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 
 @m_class{m-noindent}
 
-The rendering backend is not a choice on the first six --- `NCINE_PREFERRED_RHI` is pinned to the
+The rendering backend is not a choice on the first seven --- `NCINE_PREFERRED_RHI` is pinned to the
 one backend the console has and any other value is a configure error. The PlayStation 3 is the
-exception among them: its pin is to `RSX`, which unlike the four fixed-function backends is a full
+exception among them: its pin is to `RSX`, which unlike the five fixed-function backends is a full
 shader backend, so it keeps the post-processing chain and differs from a desktop build mainly in
 *when* its shaders are compiled @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita
 and the Switch are ordinary shader platforms that happen to be consoles, so most of what follows
@@ -49,15 +50,16 @@ steps below.
     @m_span{m-text m-dim} (the generated shader headers) @m_endspan or prepared by hand ahead of
     time @m_span{m-text m-dim} (the game content) @m_endspan.
 -   **The game data is converted in advance** for all of them, into a content tree prepared by
-    AssetPacker. The Dreamcast and the PlayStation 2 play from a disc and the GameCube has nowhere to
-    put a converted installation, so those three have no first-run conversion compiled in at all
+    AssetPacker. The Nintendo 64 plays from a cartridge ROM, the Dreamcast and the PlayStation 2
+    play from a disc and the GameCube has nowhere to put a converted installation, so those four
+    have no first-run conversion compiled in at all
     @m_span{m-text m-dim} (`NCINE_HAS_WRITABLE_CACHE` in @cpp "Sources/Main.h" @ce) @m_endspan and
     mark their content as verified without looking at it, a build without a prepared tree reaches the
     main menu and finds no episode to play. The Wii, the PSP and the PlayStation 3 do have the
     conversion --- their content sits on a writable SD card, memory stick or hard disk --- but they
     recognize a prepared tree and skip it, and so do the Vita and the Switch, which otherwise convert
     on first run like a desktop build.
--   **Five of them have no shaders.** The `PVR`, `GX`, `GU` and `GS` backends
+-   **Six of them have no shaders.** The `RDP`, `PVR`, `GX`, `GU` and `GS` backends
     @m_span{m-text m-dim} (the Wii and the GameCube share `GX`) @m_endspan implement each effect as a
     short list of fixed-function hardware passes, transpiled from the very same `.shader` files by
     ShaderCompiler --- see @ref shader-compiler-fixed-function "console fixed-function blocks".
@@ -68,7 +70,9 @@ steps below.
 @subsection consoles-common-content Preparing the game content
 
 The content tree is prepared with @ref asset-packer "AssetPacker", built as part of an ordinary
-desktop build. All six data-prepared consoles consume the **same** tree, so it is built once:
+desktop build. Every data-prepared console consumes the **same** tree, so it is built once
+@m_span{m-text m-dim} (the Nintendo 64 is the one exception --- it additionally needs its cinematics
+re-encoded, see @ref consoles-n64-content) @m_endspan:
 
 @code{.sh}
 # Build the tool first (part of the regular desktop build)
@@ -86,6 +90,7 @@ package it creates, under the name @cpp "Content" @ce, at the place the console 
 
 Console | Content directory the game reads | Cache / save data
 ------- | -------------------------------- | -----------------
+Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (inside the ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce --- read-only, so nothing is ever written; the preferences live on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
 Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
 GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
@@ -127,19 +132,19 @@ pulling changes that touch the data formats, regenerate the tree with a freshly 
 Everything below is decided at configure time from the platform, not from a build parameter. The
 values are what a default `Release` configuration of each console produces.
 
-Feature | Dreamcast | Wii | GameCube | PSP | PS2 | PS3 | Vita | Switch
-------- | --------- | --- | -------- | --- | --- | --- | ---- | ------
-Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | Yes | Yes | Yes | **No** | **No** | **No** | Yes | Yes
-Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No
-Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
-Sound effects | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | Yes | Yes | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (built from source, single-threaded) @m_endspan | SDK-dependent | SDK-dependent
-Underwater low-pass filter | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
-Local splitscreen | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
-Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
-External `.shader` files | **No** | **No** | **No** | **No** | **No** | **No** --- no runtime compiler | Yes | Yes
-Converts the game data itself | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Feature | N64 | Dreamcast | Wii | GameCube | PSP | PS2 | PS3 | Vita | Switch
+------- | --- | --------- | --- | -------- | --- | --- | --- | ---- | ------
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | **No** | **No** | **No** | Yes | Yes
+Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No
+Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | Yes | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes | Yes | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (built from source, single-threaded) @m_endspan | SDK-dependent | SDK-dependent
+Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
+Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
+External `.shader` files | **No** | **No** | **No** | **No** | **No** | **No** | **No** --- no runtime compiler | Yes | Yes
+Converts the game data itself | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
 
 @subsection consoles-common-audio Audio backends
 
@@ -158,6 +163,7 @@ Backend | `WITH_*` | What it drives
 @ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer, the only sound API devkitPro ships for PowerPC. Comes with the toolchain, so there is nothing to install
 @ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS, using its wavetable channels for sound effects and its `snd_stream` driver for music
 @ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio. The console offers no mixer at all --- only a ring of 256-sample blocks of interleaved floats that the hardware scans out --- so this backend **is** the mixer, on the PPE
+@ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's AI ring. The console has no sound chip at all --- the AI is a bare stereo DAC fed by DMA --- so this backend is the mixer too, on the VR4300; the same arrangement as the PS3, except it mixes in integers to spare the 93 MHz core's FPU
 none | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
 
 Nothing has to be installed by hand for any of them --- each console's own SDK provides what its
@@ -205,6 +211,7 @@ anything.
 
 Console | Where the trace goes
 ------- | --------------------
+Nintendo 64 | `stderr` through libdragon's debug sinks --- the **ISViewer** register window (**ares** prints it to its terminal) and the **USB log** of an EverDrive/SC64 flashcart, both probed once at startup. The boot console mirrors startup messages on screen until the renderer takes the framebuffer over
 Dreamcast | `dbgio` --- the **framebuffer console** during startup @m_span{m-text m-dim} (visible on screen) @m_endspan, then the **SCIF serial port** once the renderer takes over. Emulators print it to their own log, `dc-tool` shows it in its console
 Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup, without the adapter nothing is written and the game runs normally
 PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console, plus the **debug screen** on the display until the GU session takes the framebuffer over
@@ -222,11 +229,147 @@ an error follows them, so a sparse log is normal and does not mean files are not
 
 - - -
 
+@section consoles-n64 Nintendo 64
+
+The oldest and by far the tightest target: a 93 MHz VR4300 with **8 MB** of RDRAM
+@m_span{m-text m-dim} (with the Expansion Pak, which this port **requires** --- the base console's
+4 MB cannot hold the game) @m_endspan shared between the CPU and the graphics hardware, and an RDP
+rasterizer whose entire texture memory is a **4 KB** TMEM that every primitive samples from. The
+port renders through the `RDP` backend @m_span{m-text m-dim}
+(@cpp "Sources/nCine/Graphics/RHI/RDP" @ce) @m_endspan on top of **libdragon**, driving the rdpq
+command queue directly, presented by the `N64` window backend in 320x240 RGB565
+@m_span{m-text m-dim} (the VI's resample filter smooths the scanout) @m_endspan.
+
+@subsection consoles-n64-toolchain Toolchain
+
+libdragon publishes a prebuilt `mips64-elf` GCC, so unlike the Dreamcast nothing has to be compiled
+except the library itself --- which must come from the **preview** branch (the toolchain file
+verifies this through the OpenGL headers only that branch installs, and also that the installed
+`libdragon.a` was not built with `NDEBUG` --- the log channels depend on symbols that build strips).
+The preview branch moves; when reproducibility matters, check out and record a specific revision
+rather than its tip:
+
+@code{.sh}
+# The prebuilt cross-compiler (also available as .deb; extract anywhere and point N64_INST at it)
+curl -LO https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.rpm
+rpm2cpio gcc-toolchain-mips64-x86_64.rpm | cpio -idm
+export N64_INST=$PWD/opt/libdragon
+export PATH="$N64_INST/bin:$PATH"
+
+# The library and its host tools, from the preview branch
+git clone -b preview https://github.com/DragonMinded/libdragon.git
+make -C libdragon -j $(nproc) libdragon && make -C libdragon install
+make -C libdragon -j $(nproc) tools && make -C libdragon tools-install
+
+# zlib is required for the compressed game content and is not packaged; eleven files compile it
+curl -L https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz | tar xz
+cd zlib-1.3.1
+for f in adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil; do
+    mips64-elf-gcc -march=vr4300 -mtune=vr4300 -mabi=o64 -O2 -c $f.c; done
+mips64-elf-gcc-ar rcs libz.a *.o
+cp libz.a "$N64_INST/mips64-elf/lib/" && cp zlib.h zconf.h "$N64_INST/mips64-elf/include/"
+@endcode
+
+@subsection consoles-n64-content Preparing the content tree
+
+Unlike the other consoles this one does not consume the shared tree unchanged --- its cinematics
+have to be re-encoded, both to halve their resolution for the 320x240 output and, more importantly,
+to convert them out of the original format into the game's own @m_span{m-text m-dim} (whose decoder
+is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. Make a copy of
+the shared console tree (`cp -al` hard-links it, so the copy costs no disk space) and re-encode the
+cinematics in the copy:
+
+@code{.sh}
+for video in intro ending; do
+    ./build/Sources/Utilities/AssetPacker/AssetPacker recompress-video \
+        "<shared console tree>/Cinematics/$video.j2v" \
+        "<n64 content tree>/Cinematics/$video.j2v" --video-downscale=2
+done
+@endcode
+
+@m_class{m-noindent}
+
+The N64 build below then takes that copy as its `NCINE_CONTENT_DIR`. Re-encoding trades size for
+decode cost --- the files come out *larger* than the originals, which is why the ending cinematic is
+left out of the image by the packaging step.
+
+@subsection consoles-n64-build Building
+
+@code{.sh}
+export N64_INST=<toolchain prefix>
+cmake -B ./build/n64/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/n64.cmake \
+    -D NCINE_CONTENT_DIR=<n64 content tree>
+make -j $(nproc) -C ./build/n64/
+@endcode
+
+@m_class{m-noindent}
+
+The toolchain file is the project's own @m_span{m-text m-dim} (like the PlayStation 3's ---
+libdragon is a Makefile-based SDK with no CMake file to point at) @m_endspan and reproduces the
+machine flags of libdragon's `n64.mk`. Link-time optimization is force-disabled conservatively
+@m_span{m-text m-dim} (libdragon's `--wrap`ed constructor sequencing and its linker script have
+never been exercised under LTO) @m_endspan and `Release` compiles with `-O2` --- the fast-math
+triplet already comes in with the toolchain flags, and code size matters more here than anywhere
+else.
+
+The build produces @cpp "build/n64/jazz2.elf" @ce and the bootable @cpp "build/n64/jazz2.z64" @ce:
+a POST_BUILD step reproduces libdragon's ROM layout --- the symbol table for on-console backtraces
+(`n64sym`), the stripped and compressed executable (`n64elfcompress`), and a **DragonFS** image
+with the content tree (`mkdfs`) are concatenated behind a table of contents (`n64tool`), and
+`ed64romconfig` marks **eeprom16k** in the header so emulators and flashcarts provide the 2 KB
+EEPROM the preferences are saved to.
+
+@subsection consoles-n64-deploy Deploying and running
+
+-   **Emulator** --- @cpp "jazz2.z64" @ce boots directly in **ares** or **simple64**; both default
+    to an Expansion Pak. ares also prints the trace (ISViewer) to its terminal.
+-   **Real hardware** --- copy the ROM onto an **EverDrive-64** or **SC64** flashcart; the save type
+    is read from the header. An Expansion Pak must be installed.
+
+@subsection consoles-n64-limits Limits and known issues
+
+-   **Everything is memory.** 8 MB of unified RDRAM is half the Dreamcast's main memory with no
+    separate video or sound RAM to hide anything in --- the framebuffers, every texture, every
+    sound and the heap all share it. The port keeps the strictest budgets of any console: episode
+    backgrounds are not loaded, debris caps are half the other consoles', the outgoing level's
+    assets are released before the incoming level loads, and the lightmap is combined at quarter
+    resolution.
+-   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
+    a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
+    like the PSP and the PlayStation 2 this console has sound effects and no soundtrack.
+-   **The ROM must fit in 64 MB** --- the ceiling of the flashcarts and of the PI bus mapping ---
+    and a full converted content tree does not, so the packaging step drops what the console
+    cannot use or cannot afford: @cpp "Music" @ce, which nothing in this binary can decode anyway
+    @m_span{m-text m-dim} (module playback is off, see above) @m_endspan, and the @cpp "ending" @ce
+    cinematic, which is 9.7 MB once re-encoded and does not fit next to the tilesets' 45 MB. The
+    intro is kept, and the game treats what is missing as missing content and plays on without it.
+    The packaging step fails the build if the image ever outgrows the cartridge, rather than
+    producing one whose tail is unreachable on hardware.
+-   **The cinematics have to be re-encoded** for this console @m_span{m-text m-dim} (see below)
+    @m_endspan. Played in the original format, the intro costs about 136 ms per frame --- some
+    57 ms of that is zlib inflate over 640x480 pixels, on a 93 MHz CPU. Re-encoded, it plays at
+    about 55 ms per frame: the game's own container is decoded with nothing but @cpp memcpy() @ce
+    and @cpp memset() @ce, which is exactly why it exists.
+-   **The preferences live on the cartridge EEPROM** through libdragon's eepromfs
+    @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce, 2 KB) @m_endspan. An emulator or flashcart
+    that ignores the header's save type leaves the game running with no way to save, which is
+    warned about at startup, not an error.
+-   **TMEM is per-primitive, not per-texture.** Every textured primitive samples through a 4 KB
+    window @m_span{m-text m-dim} (2 KB for paletted texels --- the palette occupies the upper half)
+    @m_endspan that the backend uploads before the draw, so the cost of a frame tracks how many
+    distinct texture windows it touches, not how many pixels it covers. The tile map renders one
+    32x32 tile per upload with consecutive same-tile runs coalesced.
+-   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
+    yet --- ares is the reference until then.
+
+- - -
+
 @section consoles-dreamcast Sega Dreamcast
 
-The oldest and by far the tightest target: a 200 MHz SH-4 with **16 MB** of main memory, **8 MB** of
-video memory and a PowerVR2 (CLX2) that has no programmable shading, no hardware scissor and reads
-textures in 16-bit formats only. The port renders through the `PVR` backend
+The tightest optical-disc target and the second-oldest overall: a 200 MHz SH-4 with **16 MB** of main
+memory, **8 MB** of video memory and a PowerVR2 (CLX2) that has no programmable shading, no hardware
+scissor and reads textures in 16-bit formats only. The port renders through the `PVR` backend
 @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/PVR" @ce) @m_endspan on top of **KallistiOS**,
 presented by the `Dc` window backend in 640x480 RGB565.
 
