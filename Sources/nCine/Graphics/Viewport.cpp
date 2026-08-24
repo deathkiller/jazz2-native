@@ -63,7 +63,24 @@ namespace nCine
 	{
 	}
 
-	Viewport::~Viewport() = default;
+	Viewport::~Viewport()
+	{
+		// A destroyed viewport must never stay registered - the next ScreenViewport::Update() would call
+		// into its freed memory. The handler-swap code clears the chain around viewport teardown, but the
+		// swap order legitimately destroys the outgoing handler's viewports one line before the clear
+		// (see GameEventHandler::SetStateHandler), so this unregisters silently instead of asserting.
+		for (auto it = _chain.begin(); it != _chain.end();) {
+			if (*it == this) {
+				it = _chain.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+		if (RenderResources::_currentViewport == this) {
+			RenderResources::_currentViewport = nullptr;
+		}
+	}
 
 	/** @note Adding more textures enables the use of multiple render targets (MRTs) */
 	bool Viewport::SetTexture(std::uint32_t index, Texture* texture)

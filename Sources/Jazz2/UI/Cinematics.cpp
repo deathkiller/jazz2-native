@@ -410,7 +410,10 @@ namespace Jazz2::UI
 		_fileWindow.Initialize(s.get(), (chunks[0].empty() ? 0 : chunks[0][0].first()));
 
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(&Cinematics::_decompressedStreams)); i++) {
-			// Skip first two bytes (zlib header 0x78 0xDA)
+			// Skip first two bytes (zlib header 0x78 0xDA). The streams were flushed per chunk and never
+			// finished, so most of them carry no end-of-stream marker - running out of chunks is their
+			// regular end (DeflateStream treats it as EOF) and the read-ahead below is expected to hit it.
+			// Short reads still fail the decode (see Cinematics::Read).
 			_compressedStreams[i].Initialize(&_fileWindow, std::move(chunks[i]), 2);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
 			_streamBuffers[i].Initialize(&_decompressedStreams[i]);

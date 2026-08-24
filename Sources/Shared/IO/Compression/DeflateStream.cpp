@@ -116,9 +116,9 @@ namespace Death { namespace IO { namespace Compression {
 			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
 			if DEATH_UNLIKELY(bytesRead < 0) {
 				// Whatever was already decompressed into the caller's buffer is returned rather than thrown
-				// away with the error: a stream that ends without its end marker fails on the very call that
-				// gathers its final bytes, and reporting the failure here would lose them. The state stays
-				// Failed, so the error surfaces on the next call instead.
+				// away with the error: a corrupted stream can fail on the very call that gathers its final
+				// bytes, and reporting the failure here would lose them. The state stays Failed, so the
+				// error surfaces on the next call instead.
 				if (bytesReadTotal > 0) {
 					break;
 				}
@@ -225,6 +225,7 @@ namespace Death { namespace IO { namespace Compression {
 		// waits for enough input to finish a block, and a stream that simply stops (truncated, or one of the
 		// several streams interleaved) then never gives up its last few kilobytes.
 		std::int32_t res;
+		bool inputExhausted = false;
 		while (true) {
 			res = inflate(&_strm, Z_SYNC_FLUSH);
 			if (res != Z_OK && res != Z_BUF_ERROR) {
@@ -247,6 +248,7 @@ namespace Death { namespace IO { namespace Compression {
 			// fixed-size read of a value would silently yield zeroes.
 			if (!FillInputBuffer()) {
 				// The underlying stream is exhausted, so the count below (zero) is the truth
+				inputExhausted = true;
 				break;
 			}
 		}
@@ -258,6 +260,16 @@ namespace Death { namespace IO { namespace Compression {
 		const std::int32_t produced = size - std::int32_t(_strm.avail_out);
 
 		if (res != Z_OK && res != Z_STREAM_END) {
+			// A stream written with sync flushes and never finished carries no end-of-stream marker
+			// at all - the only way it can signal its end is by running out of input, which inflate()
+			// reports as Z_BUF_ERROR once everything decompressed was handed out. That is such
+			// a stream's regular end, so it becomes a clean EOF here rather than a failure. This
+			// makes a file truncated exactly at a block boundary end quietly too, but a marker-less
+			// end is indistinguishable from that by design - and every consumer validates what it
+			// reads anyway, because a short read was never an error either.
+			if (res == Z_BUF_ERROR && inputExhausted && produced == 0) {
+				return (CeaseReading() ? 0 : Stream::Invalid);
+			}
 			CeaseReading();
 			_state = State::Failed;
 #if defined(DEATH_TRACE_VERBOSE_IO)
