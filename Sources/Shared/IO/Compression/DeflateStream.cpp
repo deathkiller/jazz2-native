@@ -214,8 +214,17 @@ namespace Death { namespace IO { namespace Compression {
 		if (_state == State::Unknown || _state >= State::Failed) {
 			return Stream::Invalid;
 		}
-		if (_state == State::Initialized && !FillInputBuffer()) {
-			return 0;
+		if (_state == State::Initialized) {
+			std::int32_t bytesRead = FillInputBuffer();
+			if (bytesRead == 0) {
+				// An empty input is an empty stream
+				return 0;
+			}
+			if (bytesRead < 0) {
+				CeaseReading();
+				_state = State::Failed;
+				return Stream::Invalid;
+			}
 		}
 
 		_strm.next_out = (std::uint8_t*)ptr;
@@ -225,7 +234,9 @@ namespace Death { namespace IO { namespace Compression {
 		// waits for enough input to finish a block, and a stream that simply stops (truncated, or one of the
 		// several streams interleaved) then never gives up its last few kilobytes.
 		std::int32_t res;
-		bool inputExhausted = false;
+		// Result of the last refill attempt: zero when the input ran out, negative when it failed,
+		// positive (the initial value included) while none of that happened
+		std::int32_t lastFill = 1;
 		while (true) {
 			res = inflate(&_strm, Z_SYNC_FLUSH);
 			if (res != Z_OK && res != Z_BUF_ERROR) {
@@ -246,18 +257,28 @@ namespace Death { namespace IO { namespace Compression {
 			// retried rather than returned as zero, because a zero-length read is indistinguishable from the
 			// end of the stream to the caller - and Stream::ReadValue() doesn't even look at the count, so a
 			// fixed-size read of a value would silently yield zeroes.
-			if (!FillInputBuffer()) {
-				// The underlying stream is exhausted, so the count below (zero) is the truth
-				inputExhausted = true;
+			lastFill = FillInputBuffer();
+			if (lastFill <= 0) {
+				// The underlying stream is exhausted (or failing), so the count below (zero) is the truth
 				break;
 			}
 		}
 
-		// Whatever this call already decompressed is kept even when it then fails: a truncated stream (one
-		// that simply stops, without an end marker) reports the error on the very call that produces its
-		// final bytes, and returning the failure straight away would discard them. The error is reported on
-		// the next call instead, because the state stays Failed.
+		// Whatever this call already decompressed is kept even when it then fails: a corrupted stream can
+		// report its error on the very call that produces its final bytes, and returning the failure
+		// straight away would discard them. The error is reported on the next call instead, because the
+		// state stays Failed.
 		const std::int32_t produced = size - std::int32_t(_strm.avail_out);
+
+		if (lastFill < 0) {
+			// The underlying stream failed mid-read - that's an I/O error, never an end of the stream
+			CeaseReading();
+			_state = State::Failed;
+#if defined(DEATH_TRACE_VERBOSE_IO)
+			LOGE("Failed to read the underlying stream of a compressed stream");
+#endif
+			return (produced > 0 ? produced : Stream::Invalid);
+		}
 
 		if (res != Z_OK && res != Z_STREAM_END) {
 			// A stream written with sync flushes and never finished carries no end-of-stream marker
@@ -267,7 +288,7 @@ namespace Death { namespace IO { namespace Compression {
 			// makes a file truncated exactly at a block boundary end quietly too, but a marker-less
 			// end is indistinguishable from that by design - and every consumer validates what it
 			// reads anyway, because a short read was never an error either.
-			if (res == Z_BUF_ERROR && inputExhausted && produced == 0) {
+			if (res == Z_BUF_ERROR && lastFill == 0 && produced == 0) {
 				return (CeaseReading() ? 0 : Stream::Invalid);
 			}
 			CeaseReading();
@@ -290,16 +311,18 @@ namespace Death { namespace IO { namespace Compression {
 		return size;
 	}
 
-	bool DeflateStream::FillInputBuffer()
+	std::int32_t DeflateStream::FillInputBuffer()
 	{
 		std::int32_t bytesRead = _inputSize;
 		if (bytesRead < 0 || bytesRead > sizeof(_buffer)) {
 			bytesRead = sizeof(_buffer);
 		}
 
+		// Returns positive count when input was buffered, zero at the end of the input, negative on
+		// an input error - the caller must not mistake a failing underlying stream for a clean end
 		bytesRead = std::int32_t(_inputStream->Read(_buffer, bytesRead));
 		if (bytesRead <= 0) {
-			return false;
+			return bytesRead;
 		}
 
 		if (_inputSize > 0) {
@@ -309,7 +332,7 @@ namespace Death { namespace IO { namespace Compression {
 		_strm.next_in = _buffer;
 		_strm.avail_in = std::uint32_t(bytesRead);
 		_state = State::Read;
-		return true;
+		return bytesRead;
 	}
 
 	bool DeflateStream::CeaseReading()

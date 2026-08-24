@@ -409,13 +409,16 @@ the case where two consoles reach an effect with *literally the same code*; when
 differ, they stay separate blocks. Capabilities are then checked against the
 @ref shader-compiler-ff-target-lists "intersection of the listed targets".
 
-Today `Colorized.shader`, `FrozenMask.shader`, `PartialWhiteMask.shader` and the two background
-shaders carry a shared @cpp void fixed_function(pvr, gu, gs) @ce block @m_span{m-text m-dim} (the
-three no-combiner tiers) @m_endspan plus a @cpp void fixed_function(gx) @ce one, and `Transition.shader`
-carries a @cpp void fixed_function(pvr) @ce block plus a shared
-@cpp void fixed_function(gx, gu, gs) @ce one @m_span{m-text m-dim} (the 16-vertex strip scratches)
-@m_endspan; everything else has a single generic block --- which is the norm, since a program with no
-block at all for a backend is skipped at runtime there.
+Today `FrozenMask.shader`, `PartialWhiteMask.shader` and the two background shaders carry a shared
+@cpp void fixed_function(pvr, gu, gs, rdp) @ce block plus a @cpp void fixed_function(gx) @ce one;
+`Colorized.shader` splits the same set three ways --- a shared @cpp void fixed_function(pvr, gu, gs) @ce
+block, its own @cpp void fixed_function(rdp) @ce one @m_span{m-text m-dim} (its combiner ceiling caps
+the additive passes at two, see the output-scale section) @m_endspan and a
+@cpp void fixed_function(gx) @ce one; and `Transition.shader` carries a
+@cpp void fixed_function(pvr) @ce block plus a shared @cpp void fixed_function(gx, gu, gs, rdp) @ce
+one @m_span{m-text m-dim} (the 16-vertex strip scratches) @m_endspan; everything else has a single
+generic block --- which is the norm, since a program with no block at all for a backend is skipped at
+runtime there.
 
 The `--emit-fixed-function` mode transpiles the applicable block of **every program variant** ---
 the block is preprocessed once per variant with the variant define baked in, exactly like the
@@ -655,18 +658,18 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
     shader's tone for every luminance.
 -   @cpp "Transition.shader" @ce --- geometry synthesis: the iris fan built from `quad_origin()` /
     `quad_axis_x/y()` and shaded strips, 32 segments in the `pvr` block and 64 with a three-band eased
-    edge in one shared @cpp void fixed_function(gx, gu, gs) @ce block. The iris needs no combiner at
-    all --- only geometry and per-vertex colours --- so what decides the split is the strip scratch: the
-    GX, the GU and the GS all take the 10-vertex strip that walks all five radii in ONE draw, and the
-    PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx` rather than
-    at `pvr`.
+    edge in one shared @cpp void fixed_function(gx, gu, gs, rdp) @ce block. The iris needs no combiner
+    at all --- only geometry and per-vertex colours --- so what decides the split is the strip scratch:
+    the GX, the GU, the GS and the RDP all take the 10-vertex strip that walks all five radii in ONE
+    draw, and the PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx`
+    rather than at `pvr`.
 -   @cpp "Include/TexturedBackgroundWarp.inc" @ce --- the warp rebuild, shared by both background
     shaders **and** all five backends: the band geometry uses only extended vocabulary that every
     console implements the same way, so the include is literally the same code everywhere. Only the
     horizon-tint delivery differs, switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the including
-    block defines before the `#include` --- set by the `gx` block alone, which is why the other three
-    consoles need nothing but a shared @cpp void fixed_function(pvr, gu, gs) @ce block around the bare
-    `#include`, and also the general idiom for specializing a shared include per backend.
+    block defines before the `#include` --- set by the `gx` block alone, which is why the other four
+    consoles need nothing but a shared @cpp void fixed_function(pvr, gu, gs, rdp) @ce block around the
+    bare `#include`, and also the general idiom for specializing a shared include per backend.
 
 @section shader-compiler-workflow Regenerating the committed headers
 

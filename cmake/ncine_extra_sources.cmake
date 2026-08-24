@@ -969,6 +969,10 @@ else()
 		# the tilesets, while the intro does and is what the game opens with.
 		# TODO: re-encode the cinematics at a lower bitrate in AssetPacker and put the ending back.
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			# The staging directory is rebuilt from scratch: copy_directory keeps destination files that are
+			# no longer in the source, so a stale file from a previous build (e.g., a "Source.pak" already
+			# renamed to "Prebaked.pak" below) would otherwise be packed into every later ROM
+			COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/dfs/Content"
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dfs/Content"
 			# Two commands rather than one "-E rm": that form needs CMake 3.17, and the project's minimum
 			# is 3.15 (remove_directory/remove both ignore paths that do not exist)
