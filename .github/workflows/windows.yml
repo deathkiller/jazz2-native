@@ -30,11 +30,15 @@ jobs:
           Backend: SDL2
           RHI: OpenGL
           
+        # `OfflineTools` builds AssetPacker and ShaderCompiler as well. They are not part of the package and
+        # depend on neither the backend, the RHI nor the architecture extensions, so this one baseline x64
+        # entry compiles them for the whole matrix
         - BuildType: Release
           Platform: x64
           ArchExts: SSE2
           Backend: GLFW
           RHI: OpenGL
+          OfflineTools: 'ON'
 
         - BuildType: Release
           Platform: x64
@@ -104,7 +108,7 @@ jobs:
         
         rm -force ".\Content\Translations\*.po"
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v142
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D NCINE_BUILD_ASSET_PACKER=${{ matrix.OfflineTools || 'OFF' }} -D NCINE_BUILD_SHADER_COMPILER=${{ matrix.OfflineTools || 'OFF' }}
 
     - name: 'Build'
       run: |
@@ -143,7 +147,7 @@ jobs:
           'ARM64' { $arch = 'ARM64EC' }
         }
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D DEDICATED_SERVER=ON
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v142 -D DEDICATED_SERVER=ON -D NCINE_BUILD_ASSET_PACKER=OFF -D NCINE_BUILD_SHADER_COMPILER=OFF
 
     - name: 'Build (Dedicated Server)'
       if: matrix.RHI == 'OpenGL'

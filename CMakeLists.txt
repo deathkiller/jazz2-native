@@ -92,8 +92,11 @@ if(NCINE_BUILD_ANDROID)
 	return()
 endif()
 
-# The offline shader preprocessing tool runs on the build machine, so it's skipped when cross-compiling
-if(NOT CMAKE_CROSSCOMPILING)
+# ShaderCompiler: preprocesses the ".shader" files into the generated headers that are committed to the
+# repository (see Sources/Utilities/ShaderCompiler/Main.cpp), so the game's own build never runs it. The
+# option behind it is forced off when cross-compiling - the tool runs on the build machine - and defaults
+# to off where nothing would use it, see `NCINE_BUILD_SHADER_COMPILER` in "ncine_options.cmake".
+if(NCINE_BUILD_SHADER_COMPILER)
 	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler")
 	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()
@@ -164,9 +167,8 @@ target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 
 # AssetPacker: converts original game data ahead of time (see Sources/Utilities/AssetPacker/Main.cpp). Host-only - it is
 # a build tool, so it is skipped for every cross-compiled target, and it links only the base layer and the
-# converters rather than the engine.
-option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ON)
-if(NCINE_BUILD_ASSET_PACKER AND NOT CMAKE_CROSSCOMPILING)
+# converters rather than the engine. See `NCINE_BUILD_ASSET_PACKER` in "ncine_options.cmake" for where it's built.
+if(NCINE_BUILD_ASSET_PACKER)
 	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/AssetPacker")
 	set_target_properties(AssetPacker PROPERTIES FOLDER "Utilities")
 endif()

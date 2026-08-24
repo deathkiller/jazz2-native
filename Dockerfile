@@ -57,14 +57,14 @@ RUN find ./Content/ -name '*.po' -delete
 # creates a graphics device - but the OpenGL one would still link against libGL, so the software
 # rasterizer is selected to keep the runtime image free of any GL runtime. NCINE_WITH_AUDIO=OFF and
 # NCINE_WITH_GLEW=OFF only stop CMake from looking for (or downloading and building) libraries that
-# a headless build cannot use anyway.
+# a headless build cannot use anyway. The two offline tools (AssetPacker, ShaderCompiler) are already
+# off by default in a DEDICATED_SERVER build, so nothing here has to ask for that.
 RUN cmake -B ./_build/ -S . \
 		-D CMAKE_BUILD_TYPE=Release \
 		-D DEDICATED_SERVER=ON \
 		-D NCINE_PREFERRED_RHI=Software \
 		-D NCINE_WITH_AUDIO=OFF \
 		-D NCINE_WITH_GLEW=OFF \
-		-D NCINE_BUILD_ASSET_PACKER=OFF \
 		-D NCINE_VERSION_FROM_GIT=OFF \
 		-D NCINE_STRIP_BINARIES=ON \
 	&& cmake --build ./_build/ --parallel "$(nproc)"

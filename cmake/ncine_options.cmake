@@ -486,3 +486,18 @@ if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)
+
+# The two offline tools (see `Sources/Utilities`) are executables for the build machine, which is why both
+# are forced off for every cross-compiled target. Beyond that they are never installed, never packaged and
+# never invoked by the game's own build - the headers ShaderCompiler produces are committed to the
+# repository - so a build whose only product is a package, a container image or a headless server compiles
+# them just to throw them away. Those configurations default to off and can still ask for the tools
+# explicitly; on a normal desktop build they stay on, because that is where they get used.
+if(DEDICATED_SERVER OR NCINE_BUILD_FLATPAK OR NCINE_BUILD_LIBRETRO)
+	set(_ncineBuildOfflineTools OFF)
+else()
+	set(_ncineBuildOfflineTools ON)
+endif()
+cmake_dependent_option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
+cmake_dependent_option(NCINE_BUILD_SHADER_COMPILER "Build the offline ShaderCompiler tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
+unset(_ncineBuildOfflineTools)

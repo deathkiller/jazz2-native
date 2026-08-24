@@ -80,7 +80,9 @@ cross-compiling, because both of them run on the build machine:
 @ref asset-packer "AssetPacker" converts the original game data into the layout a given platform
 loads, and @ref shader-compiler "ShaderCompiler" preprocesses the `.shader` files into the generated
 headers that are committed to the repository @m_span{m-text m-dim} (so the game's own build never
-runs it) @m_endspan.
+runs it) @m_endspan. Neither of them is installed or packaged, so builds that only produce a
+distributable artifact --- `DEDICATED_SERVER`, `NCINE_BUILD_FLATPAK` and `NCINE_BUILD_LIBRETRO` ---
+leave both of them out unless they are requested explicitly.
 
 @subsection building-android Building on Android
 
@@ -265,6 +267,11 @@ The following parameters can be used to customize the build:
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
 -   `NCINE_BUILD_ASSET_PACKER` (default @cpp ON @ce) --- Build the offline @ref asset-packer "AssetPacker" tool
     -   It runs on the build machine, so it's skipped for every cross-compiled target
+    -   Defaults to @cpp OFF @ce if `DEDICATED_SERVER`, `NCINE_BUILD_FLATPAK` or `NCINE_BUILD_LIBRETRO` is enabled --- the tool is not part of any of those artifacts
+-   `NCINE_BUILD_SHADER_COMPILER` (default @cpp ON @ce) --- Build the offline @ref shader-compiler "ShaderCompiler" tool
+    -   It runs on the build machine, so it's skipped for every cross-compiled target
+    -   Defaults to @cpp OFF @ce in the same configurations as `NCINE_BUILD_ASSET_PACKER`
+    -   The generated shader headers are committed to the repository, so turning it off never affects the game
 -   `NCINE_BUILD_LIBRETRO` (default @cpp OFF @ce) --- Build as a **libretro** core instead of an executable, see @ref consoles-libretro
     -   Only `Software` and `OpenGL` are valid values of `NCINE_PREFERRED_RHI` in this configuration
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita** and **Nintendo Switch**) --- Preferred core backend
