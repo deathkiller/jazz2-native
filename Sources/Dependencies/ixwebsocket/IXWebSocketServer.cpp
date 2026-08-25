@@ -7,6 +7,7 @@
 
 #include "IXWebSocketServer.h"
 
+#include "IXLogger.h"
 #include "IXNetSystem.h"
 #include "IXSetThreadName.h"
 #include "IXSocketConnect.h"
@@ -118,9 +119,10 @@ namespace ix
 
 			if (!webSocket->isOnMessageCallbackRegistered())
 			{
-				logError("WebSocketServer Application developer error: Server callback improperly "
-						 "registered.");
-				logError("Missing call to setOnMessageCallback inside setOnConnectionCallback.");
+				logError(IX_CURRENT_FUNCTION,
+						 "Application developer error: Server callback improperly registered.");
+				logError(IX_CURRENT_FUNCTION,
+						 "Missing call to setOnMessageCallback inside setOnConnectionCallback.");
 				connectionState->setTerminated();
 				return;
 			}
@@ -134,9 +136,10 @@ namespace ix
 		}
 		else
 		{
-			logError(
-				"WebSocketServer Application developer error: No server callback is registerered.");
-			logError("Missing call to setOnConnectionCallback or setOnClientMessageCallback.");
+			logError(IX_CURRENT_FUNCTION,
+					 "Application developer error: No server callback is registerered.");
+			logError(IX_CURRENT_FUNCTION,
+					 "Missing call to setOnConnectionCallback or setOnClientMessageCallback.");
 			connectionState->setTerminated();
 			return;
 		}
@@ -174,9 +177,8 @@ namespace ix
 		else
 		{
 			std::stringstream ss;
-			ss << "WebSocketServer::handleConnection() HTTP status: " << status.http_status
-			   << " error: " << status.errorStr;
-			logError(ss.str());
+			ss << "HTTP status: " << status.http_status << " error: " << status.errorStr;
+			logError(IX_CURRENT_FUNCTION, ss.str());
 		}
 
 		webSocket->setOnMessageCallback(nullptr);
@@ -186,7 +188,7 @@ namespace ix
 			std::lock_guard<std::mutex> lock(_clientsMutex);
 			if (_clients.erase(webSocket) != 1)
 			{
-				logError("Cannot delete client");
+				logError(IX_CURRENT_FUNCTION, "Cannot delete client");
 			}
 		}
 	}

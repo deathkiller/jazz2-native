@@ -20,6 +20,7 @@ set(_IXWEBSOCKET_SOURCES
 	${_IXWEBSOCKET_ROOT}/IXHttp.cpp
 	${_IXWEBSOCKET_ROOT}/IXHttpClient.cpp
 	${_IXWEBSOCKET_ROOT}/IXHttpServer.cpp
+	${_IXWEBSOCKET_ROOT}/IXLogger.cpp
 	${_IXWEBSOCKET_ROOT}/IXNetSystem.cpp
 	${_IXWEBSOCKET_ROOT}/IXSelectInterrupt.cpp
 	${_IXWEBSOCKET_ROOT}/IXSelectInterruptFactory.cpp
@@ -60,6 +61,7 @@ set(_IXWEBSOCKET_HEADERS
 	${_IXWEBSOCKET_ROOT}/IXHttp.h
 	${_IXWEBSOCKET_ROOT}/IXHttpClient.h
 	${_IXWEBSOCKET_ROOT}/IXHttpServer.h
+	${_IXWEBSOCKET_ROOT}/IXLogger.h
 	${_IXWEBSOCKET_ROOT}/IXNetSystem.h
 	${_IXWEBSOCKET_ROOT}/IXProgressCallback.h
 	${_IXWEBSOCKET_ROOT}/IXSelectInterrupt.h

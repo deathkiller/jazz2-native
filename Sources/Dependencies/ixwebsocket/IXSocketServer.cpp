@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  IXSocketServer.cpp
  *  Author: Benjamin Sergeant
  *  Copyright (c) 2018 Machine Zone, Inc. All rights reserved.
@@ -7,6 +7,7 @@
 
 #include "IXSocketServer.h"
 
+#include "IXLogger.h"
 #include "IXNetSystem.h"
 #include "IXSelectInterrupt.h"
 #include "IXSelectInterruptFactory.h"
@@ -15,12 +16,36 @@
 #include "IXSocketConnect.h"
 #include "IXSocketFactory.h"
 #include <assert.h>
+#include <chrono>
 #include <sstream>
 #include <stdio.h>
 #include <string.h>
 
 namespace ix
 {
+	namespace
+	{
+		// How long the accept loop waits before trying again after an error that left the pending
+		// connection in the queue, and how often such an error may be written to the log
+		const int kAcceptRetryDelayInMs = 100;
+		const int kErrorLogIntervalInSecs = 5;
+
+		// How long a connection has to send its first byte when the transport is auto-detected
+		const int kTlsAutoDetectTimeoutInMs = 5000;
+
+		// Whether the error means that the process (or the kernel) is out of a resource that accepting
+		// a connection needs. These are not per-connection failures - the connection stays queued, so
+		// the next accept() fails the same way until a descriptor (or memory) is released elsewhere
+		bool isResourceExhausted(int err)
+		{
+#ifdef _WIN32
+			return (err == WSAEMFILE || err == WSAENOBUFS);
+#else
+			return (err == EMFILE || err == ENFILE || err == ENOBUFS || err == ENOMEM);
+#endif
+		}
+	}
+
 	const int SocketServer::kDefaultPort(8080);
 	const std::string SocketServer::kDefaultHost("127.0.0.1");
 	const int SocketServer::kDefaultTcpBacklog(5);
@@ -47,16 +72,14 @@ namespace ix
 		stop();
 	}
 
-	void SocketServer::logError(const std::string& str)
+	void SocketServer::logError(const char* functionName, const std::string& str)
 	{
-		std::lock_guard<std::mutex> lock(_logMutex);
-		fprintf(stderr, "%s\n", str.c_str());
+		log(LogLevel::Error, functionName, str);
 	}
 
-	void SocketServer::logInfo(const std::string& str)
+	void SocketServer::logInfo(const char* functionName, const std::string& str)
 	{
-		std::lock_guard<std::mutex> lock(_logMutex);
-		fprintf(stdout, "%s\n", str.c_str());
+		log(LogLevel::Info, functionName, str);
 	}
 
 	std::pair<bool, std::string> SocketServer::listen()
@@ -211,7 +234,7 @@ namespace ix
 			// Wake up select
 			if (!_acceptSelectInterrupt->notify(SelectInterrupt::kCloseRequest))
 			{
-				logError("SocketServer::stop: Cannot wake up from select");
+				logError(IX_CURRENT_FUNCTION, "Cannot wake up from select");
 			}
 
 			_thread.join();
@@ -280,6 +303,38 @@ namespace ix
 		// 13
 		setThreadName("Srv:ac:" + std::to_string(_port));
 
+		// Neither the poll nor the accept below consumes the pending connection when it fails, so the
+		// loop can run into the same error as fast as it can iterate. Writing every one of them to the
+		// log would flood it (and spend a core doing so) for as long as the condition lasts, so the
+		// message is emitted at most once every few seconds, with a count of the repeats in between.
+		auto lastErrorTimePoint =
+			std::chrono::steady_clock::now() - std::chrono::seconds(kErrorLogIntervalInSecs);
+		uint64_t suppressedErrors = 0;
+
+		auto logErrorThrottled = [this, &lastErrorTimePoint, &suppressedErrors](const std::string& str)
+		{
+			auto now = std::chrono::steady_clock::now();
+			if (now - lastErrorTimePoint < std::chrono::seconds(kErrorLogIntervalInSecs))
+			{
+				suppressedErrors++;
+				return;
+			}
+
+			lastErrorTimePoint = now;
+
+			if (suppressedErrors == 0)
+			{
+				logError(IX_CURRENT_FUNCTION, str);
+			}
+			else
+			{
+				std::stringstream ss;
+				ss << str << " (" << suppressedErrors << " more of these were suppressed)";
+				suppressedErrors = 0;
+				logError(IX_CURRENT_FUNCTION, ss.str());
+			}
+		};
+
 		for (;;)
 		{
 			if (_stop) return;
@@ -298,8 +353,12 @@ namespace ix
 			if (pollResult == PollResultType::Error)
 			{
 				std::stringstream ss;
-				ss << "SocketServer::run() error in select: " << strerror(Socket::getErrno());
-				logError(ss.str());
+				ss << "error in select: " << strerror(Socket::getErrno());
+				logErrorThrottled(ss.str());
+
+				// A listening socket that stays in an error state (a closed or invalid descriptor,
+				// for example) reports itself as ready over and over, so the loop has to be paced
+				std::this_thread::sleep_for(std::chrono::milliseconds(kAcceptRetryDelayInMs));
 				continue;
 			}
 
@@ -324,9 +383,16 @@ namespace ix
 					// FIXME: that error should be propagated
 					int err = Socket::getErrno();
 					std::stringstream ss;
-					ss << "SocketServer::run() error accepting connection: " << err << ", "
-					   << strerror(err);
-					logError(ss.str());
+					ss << "error accepting connection: " << err << ", " << strerror(err);
+					logErrorThrottled(ss.str());
+
+					if (isResourceExhausted(err))
+					{
+						// The connection is still waiting in the queue and every retry fails the same
+						// way, so the loop has to wait for the resource to be released elsewhere
+						// instead of spinning on it
+						std::this_thread::sleep_for(std::chrono::milliseconds(kAcceptRetryDelayInMs));
+					}
 				}
 				continue;
 			}
@@ -334,9 +400,9 @@ namespace ix
 			if (getConnectedClientsCount() >= _maxConnections)
 			{
 				std::stringstream ss;
-				ss << "SocketServer::run() reached max connections = " << _maxConnections << ". "
+				ss << "reached max connections = " << _maxConnections << ". "
 				   << "Not accepting connection";
-				logError(ss.str());
+				logErrorThrottled(ss.str());
 
 				Socket::closeSocket(clientFd);
 
@@ -355,9 +421,8 @@ namespace ix
 				{
 					int err = Socket::getErrno();
 					std::stringstream ss;
-					ss << "SocketServer::run() error calling inet_ntop (ipv4): " << err << ", "
-					   << strerror(err);
-					logError(ss.str());
+					ss << "error calling inet_ntop (ipv4): " << err << ", " << strerror(err);
+					logError(IX_CURRENT_FUNCTION, ss.str());
 
 					Socket::closeSocket(clientFd);
 
@@ -376,9 +441,8 @@ namespace ix
 				{
 					int err = Socket::getErrno();
 					std::stringstream ss;
-					ss << "SocketServer::run() error calling inet_ntop (ipv6): " << err << ", "
-					   << strerror(err);
-					logError(ss.str());
+					ss << "error calling inet_ntop (ipv6): " << err << ", " << strerror(err);
+					logError(IX_CURRENT_FUNCTION, ss.str());
 
 					Socket::closeSocket(clientFd);
 
@@ -398,7 +462,11 @@ namespace ix
 			connectionState->setRemoteIp(remoteIp);
 			connectionState->setRemotePort(remotePort);
 
-			if (_stop) return;
+			if (_stop)
+			{
+				Socket::closeSocket(clientFd);
+				return;
+			}
 
 			// create socket
 			std::string errorMsg;
@@ -408,16 +476,16 @@ namespace ix
 			{
 				// Peek at the first byte to decide: TLS ClientHello starts with 0x16,
 				// plain HTTP/WS requests start with an ASCII letter.
-				struct timeval timeout;
-				timeout.tv_sec = 5;
-				timeout.tv_usec = 0;
-				fd_set readfds;
-				FD_ZERO(&readfds);
-				FD_SET(clientFd, &readfds);
-				int selectRet = select(clientFd + 1, &readfds, nullptr, nullptr, &timeout);
-				if (selectRet <= 0)
+				//
+				// Polling instead of selecting on purpose: a server that has been running for a while
+				// hands out descriptors above FD_SETSIZE, and FD_SET() writes out of bounds for those.
+				// Note that the wait happens on the accept thread, so a client that connects without
+				// sending anything holds up the connections queued behind it until it times out.
+				bool readyToRead = true;
+				if (Socket::poll(readyToRead, kTlsAutoDetectTimeoutInMs, clientFd, nullptr) !=
+					PollResultType::ReadyForRead)
 				{
-					logError("SocketServer::run() TLS auto-detect: timeout waiting for first byte");
+					logError(IX_CURRENT_FUNCTION, "TLS auto-detect: timeout waiting for first byte");
 					Socket::closeSocket(clientFd);
 					continue;
 				}
@@ -426,7 +494,7 @@ namespace ix
 				int n = recv(clientFd, (char*) &firstByte, 1, MSG_PEEK);
 				if (n <= 0)
 				{
-					logError("SocketServer::run() TLS auto-detect: failed to peek first byte");
+					logError(IX_CURRENT_FUNCTION, "TLS auto-detect: failed to peek first byte");
 					Socket::closeSocket(clientFd);
 					continue;
 				}
@@ -434,12 +502,13 @@ namespace ix
 				tls = (firstByte == 0x16); // 0x16 = TLS record type for ClientHello
 			}
 
+			// The descriptor belongs to the socket from here on - it's closed by its destructor, and
+			// already closed when none could be created, so it must not be closed here as well
 			auto socket = createSocket(tls, clientFd, errorMsg, _socketTLSOptions);
 
 			if (socket == nullptr)
 			{
-				logError("SocketServer::run() cannot create socket: " + errorMsg);
-				Socket::closeSocket(clientFd);
+				logError(IX_CURRENT_FUNCTION, "cannot create socket: " + errorMsg);
 				continue;
 			}
 
@@ -448,8 +517,7 @@ namespace ix
 
 			if (!socket->accept(errorMsg))
 			{
-				logError("SocketServer::run() tls accept failed: " + errorMsg);
-				Socket::closeSocket(clientFd);
+				logError(IX_CURRENT_FUNCTION, "tls accept failed: " + errorMsg);
 				continue;
 			}
 

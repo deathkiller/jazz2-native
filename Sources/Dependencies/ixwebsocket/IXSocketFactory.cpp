@@ -54,10 +54,19 @@ namespace ix
 #endif
 #else
 			errorMsg = "TLS support is not enabled on this platform.";
+
+			// The descriptor is taken over even when no socket can be created, so that callers have one
+			// rule to follow - on failure it is closed already, and closing it again could take down an
+			// unrelated connection that has been given the same number in the meantime
+			if (fd != -1)
+			{
+				Socket::closeSocket(fd);
+			}
 			return nullptr;
 #endif
 		}
 
+		// The socket owns the descriptor from here on, its destructor closes it
 		if (!socket->init(errorMsg))
 		{
 			socket.reset();

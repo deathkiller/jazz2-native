@@ -112,10 +112,18 @@ namespace ix
 		/** @brief Get the address family. */
 		int getAddressFamily();
 	protected:
-		/** @brief Log an error message. */
-		void logError(const std::string& str);
-		/** @brief Log an informational message. */
-		void logInfo(const std::string& str);
+		/**
+		 * @brief Report an error message, see @ref setLogCallback()
+		 * @param functionName Reporting function, pass @cpp IX_CURRENT_FUNCTION @ce.
+		 * @param str The message, which doesn't have to name the function again.
+		 */
+		void logError(const char* functionName, const std::string& str);
+		/**
+		 * @brief Report an informational message, see @ref setLogCallback()
+		 * @param functionName Reporting function, pass @cpp IX_CURRENT_FUNCTION @ce.
+		 * @param str The message, which doesn't have to name the function again.
+		 */
+		void logInfo(const char* functionName, const std::string& str);
 
 		/** @brief Stop accepting new connections. */
 		void stopAcceptingConnections();
@@ -137,9 +145,6 @@ namespace ix
 
 		/** @brief Flag to stop the server. */
 		std::atomic<bool> _stop;
-
-		/** @brief Mutex for logging. */
-		std::mutex _logMutex;
 
 		/** @brief Thread for accepting incoming connections. */
 		std::thread _thread;

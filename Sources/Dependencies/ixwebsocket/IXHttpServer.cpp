@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  IXHttpServer.cpp
  *  Author: Benjamin Sergeant
  *  Copyright (c) 2019 Machine Zone, Inc. All rights reserved.
@@ -7,6 +7,7 @@
 #include "IXHttpServer.h"
 
 #include "IXGzipCodec.h"
+#include "IXLogger.h"
 #include "IXNetSystem.h"
 #include "IXSocketConnect.h"
 #include "IXUserAgent.h"
@@ -106,7 +107,7 @@ namespace ix
 				auto response = _onConnectionCallback(request, connectionState);
 				if (!Http::sendResponse(response, socket))
 				{
-					logError("Cannot send response");
+					logError(IX_CURRENT_FUNCTION, "Cannot send response");
 				}
 			}
 		}
@@ -155,7 +156,7 @@ namespace ix
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
 				   << " " << request->method << " " << request->headers["User-Agent"] << " "
 				   << request->uri << " " << content.size();
-				logInfo(ss.str());
+				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
 				// FIXME: check extensions to set the content type
 				// headers["Content-Type"] = "application/octet-stream";
@@ -183,7 +184,7 @@ namespace ix
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
 				   << " " << request->method << " " << request->headers["User-Agent"] << " "
 				   << request->uri;
-				logInfo(ss.str());
+				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
 				if (request->method == "POST")
 				{
@@ -215,20 +216,20 @@ namespace ix
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
 				   << " " << request->method << " " << request->headers["User-Agent"] << " "
 				   << request->uri;
-				logInfo(ss.str());
+				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
-				logInfo("== Headers == ");
+				logInfo(IX_CURRENT_FUNCTION, "== Headers == ");
 				for (auto&& it : request->headers)
 				{
 					std::ostringstream oss;
 					oss << it.first << ": " << it.second;
-					logInfo(oss.str());
+					logInfo(IX_CURRENT_FUNCTION, oss.str());
 				}
-				logInfo("");
+				logInfo(IX_CURRENT_FUNCTION, "");
 
-				logInfo("== Body == ");
-				logInfo(request->body);
-				logInfo("");
+				logInfo(IX_CURRENT_FUNCTION, "== Body == ");
+				logInfo(IX_CURRENT_FUNCTION, request->body);
+				logInfo(IX_CURRENT_FUNCTION, "");
 
 				return std::make_shared<HttpResponse>(
 					200, "OK", HttpErrorCode::Ok, headers, std::string("OK"));

@@ -59,6 +59,7 @@ EM_JS(EMSCRIPTEN_WEBSOCKET_T, safe_websocket_new, (const EmscriptenWebSocketCrea
 	}
 });
 #	else
+#		include <ixwebsocket/IXLogger.h>
 #		include <ixwebsocket/IXNetSystem.h>
 #	endif
 #endif
@@ -1128,6 +1129,30 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManagerBase::InitializeBackend()
 	{
+#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN) && defined(DEATH_TRACE)
+		// The WebSocket library writes to standard output on its own, which on a dedicated server means
+		// its messages miss the timestamps, the log file and everything else attached to the game's log.
+		// Attached only once - the sink outlives every server, and messages can arrive from any thread.
+		// Without tracing there is nothing to attach it to, so the library keeps its own output.
+		static const bool logCallbackAttached = []() {
+			ix::setLogCallback([](ix::LogLevel level, const char* functionName, const std::string& message) {
+				TraceLevel traceLevel;
+				switch (level) {
+					case ix::LogLevel::Error: traceLevel = TraceLevel::Error; break;
+					case ix::LogLevel::Warning: traceLevel = TraceLevel::Warning; break;
+					case ix::LogLevel::Info: traceLevel = TraceLevel::Info; break;
+					default: traceLevel = TraceLevel::Debug; break;
+				}
+
+				// The macros behind LOGE() and friends would report this callback as the source, so the
+				// entry point they build on is used directly with the library's own function name.
+				__DEATH_TRACE(traceLevel, functionName, message.c_str());
+			});
+			return true;
+		}();
+		static_cast<void>(logCallbackAttached);
+#endif
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 		if (++_initializeCount == 1) {
 			std::int32_t error = enet_initialize();

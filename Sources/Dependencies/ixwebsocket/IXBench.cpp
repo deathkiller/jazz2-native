@@ -6,7 +6,9 @@
 
 #include "IXBench.h"
 
-#include <iostream>
+#include "IXLogger.h"
+
+#include <sstream>
 
 namespace ix
 {
@@ -36,7 +38,10 @@ namespace ix
 		auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - _start);
 
 		_duration = microseconds.count();
-		std::cerr << _description << " completed in " << _duration << " us" << std::endl;
+
+		std::stringstream ss;
+		ss << _description << " completed in " << _duration << " us";
+		log(LogLevel::Debug, IX_CURRENT_FUNCTION, ss.str());
 
 		setReported();
 	}

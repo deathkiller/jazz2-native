@@ -33,8 +33,12 @@ namespace Death { namespace IO {
 	class IRefCounted
 	{
 	public:
+		// The first reference belongs to the smart pointer the instance is handed to --- `ComPtr` takes
+		// a reference of its own when it's constructed from a raw pointer, so starting at one would leave
+		// every request and response owning itself forever, and the transfer handle underneath it (with
+		// the socket of its keep-alive connection) would never be released
 		IRefCounted()
-			: _count(1) {
+			: _count(0) {
 		}
 
 		void AddRef() {
@@ -205,7 +209,7 @@ namespace Death { namespace IO {
 
 		virtual void DoCancel() = 0;
 
-		void ProcessStateEvent(WebRequest::State state, StringView failMsg);
+		void ProcessStateEvent(WebRequest::State prevState, WebRequest::State state, StringView failMsg);
 	};
 
 	class WebResponseImpl : public IRefCounted
@@ -332,7 +336,7 @@ namespace Death { namespace IO {
 	{
 		inline WebSessionImplPtr FromOwned(WebSessionImpl& impl)
 		{
-			impl.AddRef();
+			// The returned pointer takes the reference on its own, the session must not be referenced twice
 			return WebSessionImplPtr{&impl};
 		}
 	}
@@ -385,7 +389,26 @@ namespace Death { namespace IO {
 			return;
 		}
 
-		DoCancel();
+		switch (GetState()) {
+			case WebRequest::State::Idle:
+				// The request was never started, so there is no transfer to abort - it reaches its
+				// final state right away, which is also what notifies the callback
+				SetState(WebRequest::State::Cancelled);
+				break;
+
+			case WebRequest::State::Active:
+			case WebRequest::State::Unauthorized:
+				// Only a transfer the backend already knows about has to be aborted down there, and
+				// the final state is recorded when it actually stops
+				DoCancel();
+				break;
+
+			case WebRequest::State::Completed:
+			case WebRequest::State::Failed:
+			case WebRequest::State::Cancelled:
+				// The request has already finished, there is nothing left to cancel
+				break;
+		}
 	}
 
 	String WebRequestImpl::GetHTTPMethod() const
@@ -457,14 +480,21 @@ namespace Death { namespace IO {
 
 	void WebRequestImpl::SetState(WebRequest::State state, StringView failMessage)
 	{
-		DEATH_DEBUG_ASSERT(state != _state);
-
 		if (state == WebRequest::State::Active) {
+			// An in-flight transfer keeps itself alive, so that dropping the last public handle can't
+			// destroy the request underneath the thread that is running it. The reference is taken
+			// before the state is published, otherwise a thread that sees Active could reach a final
+			// state and give the reference back before it was ever taken.
 			AddRef();
 		}
 
-		_state = state;
-		ProcessStateEvent(state, failMessage);
+		// Only the Active state holds that reference, so the state it replaces says whether there is one
+		// to give back. Reading and replacing it in one step keeps two threads that reach a final state
+		// at the same time from both trying to.
+		WebRequest::State prevState = _state.exchange(state);
+		DEATH_DEBUG_ASSERT(prevState != state);
+
+		ProcessStateEvent(prevState, state, failMessage);
 	}
 
 	void WebRequestImpl::ReportDataReceived(std::size_t sizeReceived)
@@ -552,9 +582,10 @@ namespace Death { namespace IO {
 		}
 	}
 
-	void WebRequestImpl::ProcessStateEvent(WebRequest::State state, StringView failMsg)
+	void WebRequestImpl::ProcessStateEvent(WebRequest::State prevState, WebRequest::State state, StringView failMsg)
 	{
-		AddRef();
+		// Keeps the instance alive for the duration of the callback, so that the `Release()` below can
+		// drop the self-reference that `SetState(State::Active)` took without pulling the ground away
 		const WebRequestImplPtr request(this);
 
 		const WebResponseImplPtr& response = GetResponse();
@@ -599,7 +630,9 @@ namespace Death { namespace IO {
 			FileSystem::RemoveFile(dataFile);
 		}
 
-		if (shouldRelease) {
+		// The self-reference is given back when the transfer leaves the active state --- a request that
+		// failed while it was still being prepared never took one
+		if (shouldRelease && prevState == WebRequest::State::Active) {
 			Release();
 		}
 	}
@@ -675,7 +708,6 @@ namespace Death { namespace IO {
 	void WebRequestAsync::Cancel()
 	{
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", );
-		DEATH_ASSERT(_impl->GetState() == State::Idle, "Not yet started requests cannot be cancelled", );
 
 		_impl->Cancel();
 	}
@@ -763,7 +795,17 @@ namespace Death { namespace IO {
 
 	WebResponseImpl::~WebResponseImpl()
 	{
-		auto path = _file->GetPath();
+		// Only file storage has a temporary file to discard, memory-backed responses never open one
+		if (_file == nullptr) {
+			return;
+		}
+
+		String path = _file->GetPath();
+
+		// Both handles have to be closed before the file can be removed
+		_stream = nullptr;
+		_file = nullptr;
+
 		if (FileSystem::FileExists(path)) {
 			FileSystem::RemoveFile(path);
 		}
@@ -787,7 +829,7 @@ namespace Death { namespace IO {
 				hash *= 0xFF51AFD7ED558CCDULL;
 			}
 
-			if (_file == nullptr || _file->IsValid()) {
+			if (_file == nullptr || !_file->IsValid()) {
 				return WebRequest::Result::Error("Failed to create temporary file");
 			}
 		}
@@ -879,10 +921,8 @@ namespace Death { namespace IO {
 					break;
 				}
 
-				_request.AddRef();
+				// Both pointers take a reference of their own, keeping the pair alive for the callback
 				const WebRequestImplPtr request(&_request);
-
-				AddRef();
 				const WebResponseImplPtr response(this);
 
 				if (_request._callback) {
@@ -2225,12 +2265,10 @@ namespace Death { namespace IO {
 			WinHTTP::WinHttpCloseHandle(request);
 		}
 
-		// In quiescent states no operation is outstanding, so no callback is coming to record the
-		// cancellation - it has to be recorded here. The state machine releases the self-reference
-		// held by the Active state, which these states no longer hold, so it's taken first to balance.
-		WebRequest::State state = GetState();
-		if (state == WebRequest::State::Idle || state == WebRequest::State::Unauthorized) {
-			AddRef();
+		// Waiting for credentials means no operation is outstanding, so no callback is coming to record
+		// the cancellation - it has to be recorded here. That state holds no self-reference anymore, and
+		// the state machine only releases one that was actually taken, so nothing has to be balanced.
+		if (GetState() == WebRequest::State::Unauthorized) {
 			SetState(WebRequest::State::Cancelled);
 		}
 	}

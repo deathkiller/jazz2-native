@@ -321,7 +321,12 @@ namespace Death { namespace IO {
 
 		/** @brief Executes the request to the server asynchronously */
 		void Run();
-		/** @brief Cancels the active request */
+		/**
+		 * @brief Cancels the request
+		 *
+		 * A request that hasn't been started yet reaches @ref State::Cancelled right away, and one that
+		 * already finished is left alone.
+		 */
 		void Cancel();
 		/** @brief Returns the current authentication challenge while the state of the request is @ref State::Unauthorized */
 		WebAuthChallenge GetAuthChallenge() const;
