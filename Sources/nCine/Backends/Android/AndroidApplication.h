@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 #include "../../Application.h"
-#include "../../Threading/ThreadSync.h"
+
+#include <mutex>
 
 #include <Containers/SmallVector.h>
 
@@ -113,7 +114,8 @@ namespace nCine
 		struct android_app* _state;
 		CreateAppEventHandlerDelegate _createAppEventHandler;
 
-		Mutex _deferredInputLock;
+		// `nCine::Mutex` is not available when the engine is built without thread support
+		std::mutex _deferredInputLock;
 		SmallVector<DeferredInputEvent, 0> _deferredInput;
 
 		/** @brief Dispatches all input events received from the Java UI thread since the last call */

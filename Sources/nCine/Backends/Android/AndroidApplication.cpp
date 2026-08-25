@@ -307,9 +307,8 @@ namespace nCine
 	
 	void AndroidApplication::HandleTextInput(char32_t codePoint)
 	{
-		_deferredInputLock.Lock();
+		std::lock_guard<std::mutex> lock(_deferredInputLock);
 		_deferredInput.push_back(DeferredInputEvent{0, codePoint, false});
-		_deferredInputLock.Unlock();
 	}
 
 	void AndroidApplication::HandleKeyEvent(bool pressed, std::int32_t keyCode)
@@ -318,21 +317,20 @@ namespace nCine
 			return;
 		}
 
-		_deferredInputLock.Lock();
+		std::lock_guard<std::mutex> lock(_deferredInputLock);
 		_deferredInput.push_back(DeferredInputEvent{keyCode, 0, pressed});
-		_deferredInputLock.Unlock();
 	}
 
 	void AndroidApplication::ProcessDeferredInput()
 	{
 		SmallVector<DeferredInputEvent, 0> events;
-
-		_deferredInputLock.Lock();
-		if (!_deferredInput.empty()) {
-			events = std::move(_deferredInput);
-			_deferredInput.clear();
+		{
+			std::lock_guard<std::mutex> lock(_deferredInputLock);
+			if (!_deferredInput.empty()) {
+				events = std::move(_deferredInput);
+				_deferredInput.clear();
+			}
 		}
-		_deferredInputLock.Unlock();
 
 		for (const auto& event : events) {
 			if (event.KeyCode != 0) {
