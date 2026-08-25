@@ -747,6 +747,12 @@ namespace nCine::Backends
 	int AndroidJniClass_Display::getSupportedModes(AndroidJniClass_DisplayMode* destination, int maxSize) const
 	{
 		jobjectArray arrModes = static_cast<jobjectArray>(AndroidJniHelper::jniEnv->CallObjectMethod(_javaObject, _midGetSupportedModes));
+		if (AndroidJniHelper::CheckAndClearExceptions() || arrModes == nullptr) {
+			// A display that is being removed reports no modes, and passing null to GetArrayLength() below
+			// would abort the whole process with a JNI error instead
+			return 0;
+		}
+
 		int length = (int)AndroidJniHelper::jniEnv->GetArrayLength(arrModes);
 
 		for (int i = 0; i < length && i < maxSize; i++) {

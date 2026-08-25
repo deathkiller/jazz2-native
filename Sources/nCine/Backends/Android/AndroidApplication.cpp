@@ -30,9 +30,8 @@ extern "C"
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
 	{
-		JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
-		nc::Backends::AndroidJniHelper::jniEnv = env;
-
+		// Everything below goes through this thread's own `env`. Publishing it to `AndroidJniHelper` would
+		// hand the Java UI thread's `JNIEnv` to the main thread, which is using its own at the same time.
 		const char* actionStr = env->GetStringUTFChars(action, nullptr);
 		const char* uriStr = env->GetStringUTFChars(uri, nullptr);
 
@@ -45,8 +44,6 @@ extern "C"
 
 		env->ReleaseStringUTFChars(action, actionStr);
 		env->ReleaseStringUTFChars(uri, uriStr);
-
-		nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 	}
 
 	/** @brief Called by `jnicall_functions.cpp` */
@@ -151,6 +148,11 @@ namespace nCine
 			}
 
 			app.ProcessDeferredInput();
+
+			if (app.IsInitialized()) {
+				// Requested by the display listener on the Java UI thread
+				EglGfxDevice::ProcessPendingMonitorsUpdate();
+			}
 
 			if (app.IsInitialized() && !app.ShouldSuspend()) {
 				AndroidInputManager::updateJoystickConnections();

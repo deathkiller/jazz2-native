@@ -19,14 +19,12 @@ extern "C"
 	/** @brief Called by `jnicall_functions.cpp` */
 	void nativeUpdateMonitors(JNIEnv* env, jclass clazz)
 	{
+		// This runs on the Java UI thread. Refreshing the monitors here would have to publish this thread's
+		// `JNIEnv` to `AndroidJniHelper`, which the main thread is using at the same time, and would write
+		// the monitor list while the main thread reads it - so only the request is recorded here.
 		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
 		if (androidApp.IsInitialized()) {
-			JNIEnv* oldEnv = nc::Backends::AndroidJniHelper::jniEnv;
-			nc::Backends::AndroidJniHelper::jniEnv = env;
-
-			nc::Backends::EglGfxDevice::updateMonitorsFromJni();
-
-			nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
+			nc::Backends::EglGfxDevice::RequestMonitorsUpdate();
 		}
 	}
 }
@@ -35,6 +33,9 @@ extern "C"
 namespace nCine::Backends
 {
 	char EglGfxDevice::_monitorNames[MaxMonitors][MaxMonitorNameLength];
+#if defined(DEATH_TARGET_ANDROID)
+	std::atomic_bool EglGfxDevice::_monitorsUpdateRequested{false};
+#endif
 
 	EglGfxDevice::EglGfxDevice(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(WindowMode(0, 0, 0, 0, true, false, false), contextInfo, displayMode), _state(state)
@@ -178,8 +179,17 @@ namespace nCine::Backends
 	}
 
 #if defined(DEATH_TARGET_ANDROID)
-	void EglGfxDevice::updateMonitorsFromJni()
+	void EglGfxDevice::RequestMonitorsUpdate()
 	{
+		_monitorsUpdateRequested.store(true, std::memory_order_relaxed);
+	}
+
+	void EglGfxDevice::ProcessPendingMonitorsUpdate()
+	{
+		if (!_monitorsUpdateRequested.exchange(false, std::memory_order_relaxed)) {
+			return;
+		}
+
 		EglGfxDevice& gfxDevice = static_cast<EglGfxDevice&>(theApplication().GetGfxDevice());
 		gfxDevice.updateMonitors();
 	}

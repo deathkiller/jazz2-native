@@ -7,6 +7,8 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <atomic>
+
 struct android_app;
 
 namespace nCine::Backends
@@ -51,8 +53,16 @@ namespace nCine::Backends
 		static bool isModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode);
 
 #if defined(DEATH_TARGET_ANDROID)
-		/** @brief Refreshes the monitor list from JNI, called only by the JNI native function */
-		static void updateMonitorsFromJni();
+		/**
+		 * @brief Requests a refresh of the monitor list, called only by the JNI native function
+		 *
+		 * The display listener runs on the Java UI thread, which must not touch JNI state owned by the
+		 * main thread, so the refresh itself is deferred to @ref ProcessPendingMonitorsUpdate().
+		 */
+		static void RequestMonitorsUpdate();
+
+		/** @brief Refreshes the monitor list if @ref RequestMonitorsUpdate() asked for it, called on the main thread */
+		static void ProcessPendingMonitorsUpdate();
 #endif
 
 	protected:
@@ -72,6 +82,10 @@ namespace nCine::Backends
 
 		static const unsigned int MaxMonitorNameLength = 128;
 		static char _monitorNames[MaxMonitors][MaxMonitorNameLength];
+#if defined(DEATH_TARGET_ANDROID)
+		/** @brief Set by the Java UI thread, consumed by the main thread */
+		static std::atomic_bool _monitorsUpdateRequested;
+#endif
 
 		/** @brief Initializes the OpenGL graphics context */
 		void initDevice();
