@@ -97,7 +97,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * The image also boots directly in *ares* or *simple64*
 * Run the ROM – the console must have an **Expansion Pak** installed
 
-*The game runs in 320×240 and the ROM is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image, and the settings are saved to the cartridge EEPROM. The RDP has no programmable shading, so there is no post-processing tier and no rescale filters, there is no module music (sound effects only), and threads are unavailable, so local splitscreen is not available either. The port has not been tested on real hardware yet.*
+*The game runs in 320×240 and the ROM is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image, and the settings are saved to the cartridge EEPROM. The RDP has no programmable shading, so there is no post-processing tier and no rescale filters, there is no module music (sound effects only), and threads are unavailable, so local splitscreen is not available either. **This port is experimental**: the Nintendo 64 is by far the smallest machine the game runs on, it has not been performance-tuned for it, so the frame rate is well below the other consoles' and varies with what is on screen. The port has not been tested on real hardware yet.*
 
 ### Sega Dreamcast
 * The game plays from a disc, which has to carry the game content converted from an original *Jazz Jackrabbit 2* installation – such disc image can't be distributed, so it has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-dreamcast)
@@ -114,14 +114,14 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-wii) to skip the conversion
 * Run *Jazz² Resurrection* from the **Homebrew Channel**
 
-*The game reads its content from `sd:/apps/Jazz2/Content/`, so the storage device has to stay present – otherwise the game stops at *Cannot access the SD card*. The Hollywood GPU is fixed-function, so there is no post-processing tier and no rescale filters. The port has not been tested on real hardware yet.*
+*The game reads its content from `sd:/apps/Jazz2/Content/`, so the storage device has to stay present – otherwise the game stops at _Cannot access the SD card_. The Hollywood GPU is fixed-function, so there is no post-processing tier and no rescale filters. Module music plays through _libxmp_, which costs a fraction of the memory _libopenmpt_ needs on a console of this size – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
 
 ### Nintendo GameCube
 * The console can't convert the game data itself, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-gamecube)
 * Copy the resulting `sd` directory contents to an SD card in an **SD Gecko** (memory-card slot A) or an **SD2SP2** adapter
 * Start `Jazz2/Jazz2.dol` from **Swiss**
 
-*The game reads its content from `carda:/Jazz2/Content/`, which is slot A by definition. The console has 24 MB of memory and no second pool, which makes it the tightest of the two PowerPC targets, and only GameCube controllers are read. Everything noted for the Wii applies here as well, including that the port has not been tested on real hardware yet.*
+*The game reads its content from `carda:/Jazz2/Content/`, which is slot A by definition. The console has 24 MB of memory and no second pool, which makes it the tightest of the two PowerPC targets – and the reason module music plays through _libxmp_ here as well – and only GameCube controllers are read. Everything noted for the Wii applies here as well, including that the port has not been tested on real hardware yet.*
 
 ### PlayStation Portable
 * Download the game
@@ -131,7 +131,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-psp) to skip the conversion
 * Run the newly installed application
 
-*The game runs in the native 480×272 and reads its content from `ms0:/PSP/GAME/Jazz2/Content/`. Threads are unavailable on this console, so local splitscreen is not available either. The port has not been tested on real hardware yet.*
+*The game runs in the native 480×272 and reads its content from `ms0:/PSP/GAME/Jazz2/Content/`. Threads are unavailable on this console, so local splitscreen is not available either. Module music plays through _libxmp_ rather than _libopenmpt_, which is too heavy for this CPU – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
 
 ### PlayStation 2
 * As on the Dreamcast, the game plays from a disc that has to carry the converted game content, so the `jazz2.iso` image can't be distributed either and has to be built first – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-ps2)
@@ -157,6 +157,13 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 * Run the newly installed application
 
 *The `Content` directory is included directly in the VPK file, no action is needed. Cache is recreated in `ux0:/data/jazz2/Cache/` during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up. The port has not been tested on real hardware yet. See [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-vita) for details.*
+
+### Amiga
+* The game plays from a ready-to-run directory that has to carry the game content converted from an original *Jazz Jackrabbit 2* installation, so it can't be distributed and has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/amiga.html)
+* Copy the resulting `dist` directory contents – the `Jazz2` executable next to `Content/` – onto the Amiga's hard disk, or mount it as a directory hard drive in an emulator
+* Run `Jazz2`
+
+*Three systems are supported from three separate builds. **AmigaOS 3.x** needs a 68040/68060 with an FPU and an RTG graphics card (Picasso96 or CyberGraphX) – PiStorm/Emu68 and Apollo Vampire machines are the practical targets – and picks a performance preset by measuring the machine at startup; it has no usable graphics hardware, so it renders on the CPU. **AmigaOS 4.1** and **MorphOS** are PowerPC builds that reach the display through SDL2, which on MorphOS means [sdl2.library](https://www.morphos-storage.net/) has to be installed first. Both render in hardware through the fixed-function OpenGL each system provides – MiniGL over Warp3D on AmigaOS 4, TinyGL on MorphOS – so a 3D driver for the graphics card has to be installed; a build made with `-D NCINE_PREFERRED_RHI=Software` renders on the CPU instead. There are no graphics shaders on any of these systems, so the post-processing tier and the rescale filters are unavailable. Only the classic Amiga and MorphOS builds have been run so far, both under emulation and both on the CPU renderer; none of the three has been tested on real hardware.*
 
 ### Web (Emscripten)
 * Go to https://de4th.dev/jazz2/wasm/
@@ -252,6 +259,11 @@ cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED
 The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
 
 Please refer to [the console documentation](https://de4th.dev/jazz2/docs/consoles.html) for the toolchain, build, packaging, deployment and logging steps of each console.
+
+### Amiga systems
+The game also runs on **AmigaOS 3.x** (68k), **AmigaOS 4.1** and **MorphOS** (PowerPC). Each is cross-compiled with its own *CMake* toolchain file in `cmake/toolchains/` and stages a ready-to-run directory into `build/<target>/dist/`; the two PowerPC SDKs come as container images, so only the m68k toolchain has to be installed. The classic Amiga has a window and input backend of its own (Intuition + RTG) and an AHI audio backend; the PowerPC systems use SDL2 and render through the fixed-function OpenGL each of them provides.
+
+Please refer to [the Amiga documentation](https://de4th.dev/jazz2/docs/amiga.html) for the toolchains, the hardware each build targets, the system quirks each of them works around, and how they can be run under emulation.
 
 ### Web (Emscripten)
 * Install [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) (preferably to `../emsdk/`)

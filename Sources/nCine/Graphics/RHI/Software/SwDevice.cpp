@@ -509,8 +509,8 @@ namespace nCine::RHI::Software
 		}
 
 		// Clamp the viewport rectangle to the actual screen buffer (the compositor submits the unclamped rect)
-		const std::int32_t vpX = std::max(0, light.VpX);
-		const std::int32_t vpY = std::max(0, light.VpY);
+		const std::int32_t vpX = std::max<std::int32_t>(0, light.VpX);
+		const std::int32_t vpY = std::max<std::int32_t>(0, light.VpY);
 		const std::int32_t vpW = std::min(light.VpW, fb.width - vpX);
 		const std::int32_t vpH = std::min(light.VpH, fb.height - vpY);
 		if (vpW <= 0 || vpH <= 0) {
@@ -551,10 +551,10 @@ namespace nCine::RHI::Software
 			const float waterLevelNorm = light.WaterLevelPx * invVpH;
 			if (waterLevelNorm < 0.4f) {
 				const std::int32_t a = (std::int32_t)((0.4f - waterLevelNorm) * 255.0f + 0.5f);
-				aboveWaterBlend[0] = (std::uint8_t)std::clamp((std::int32_t)(ambR * 255.0f + 0.5f), 0, 255);
-				aboveWaterBlend[1] = (std::uint8_t)std::clamp((std::int32_t)(ambG * 255.0f + 0.5f), 0, 255);
-				aboveWaterBlend[2] = (std::uint8_t)std::clamp((std::int32_t)(ambB * 255.0f + 0.5f), 0, 255);
-				aboveWaterBlend[3] = (std::uint8_t)std::clamp(a, 0, 254);
+				aboveWaterBlend[0] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(ambR * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[1] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(ambG * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[2] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(ambB * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[3] = (std::uint8_t)std::clamp<std::int32_t>(a, 0, 254);
 			}
 		}
 		constexpr float WaterColorR = 0.4f, WaterColorG = 0.6f, WaterColorB = 0.8f;
@@ -602,10 +602,10 @@ namespace nCine::RHI::Software
 				const float tintScale = 0.4f * (1.0f - glow) / a;
 				const float glowTerm = glow / a;
 				std::uint8_t tintBlend[4];
-				tintBlend[0] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorR * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[1] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorG * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[2] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorB * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
-				tintBlend[3] = (std::uint8_t)std::clamp((std::int32_t)(a * 255.0f + 0.5f), 1, 254);
+				tintBlend[0] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorR * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[1] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorG * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[2] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)((WaterColorB * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[3] = (std::uint8_t)std::clamp<std::int32_t>((std::int32_t)(a * 255.0f + 0.5f), 1, 254);
 				BlendScanlineConstSrcAlpha(px, vpW, tintBlend);
 			}
 
@@ -1018,6 +1018,7 @@ namespace nCine::RHI::Software
 			}
 
 			const std::int32_t uTextureUnit = facts.TextureUnit;
+
 
 			// The shield fragments' SOFTWARE_RENDERER variant reconstructs the GL path's interpolated
 			// quad-local position from the interpolated texcoord, so those draws are fed an IDENTITY

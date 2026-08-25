@@ -70,6 +70,13 @@
 
 namespace nCine::Backends
 {
+#if defined(DEATH_TARGET_MORPHOS) && defined(WITH_RHI_LEGACYGL)
+	/** @brief Points MorphOS' TinyGL globals at the context SDL created (MorphOSTinyGl.cpp) */
+	bool MorphOsAttachTinyGl(void* glContext);
+	/** @brief Releases what @ref MorphOsAttachTinyGl() acquired */
+	void MorphOsDetachTinyGl();
+#endif
+
 	SDL_Window* SdlGfxDevice::_windowHandle = nullptr;
 	SDL_GLContext SdlGfxDevice::_glContextHandle;
 
@@ -141,6 +148,14 @@ namespace nCine::Backends
 		// Vita renders through vitaGL (brought up with vglInit() in initDevice), not an SDL-managed GL context.
 		// No explicit teardown is issued here.
 #elif !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN)
+#	if defined(WITH_RHI_LEGACYGL)
+		// Leave the context idle before it is destroyed - anything still batched refers to memory that is
+		// about to go away with the backend's frame arena
+		RHI::Device::ShutdownGl();
+#		if defined(DEATH_TARGET_MORPHOS)
+		Backends::MorphOsDetachTinyGl();
+#		endif
+#	endif
 #	if defined(WITH_SDL3)
 		SDL_GL_DestroyContext(_glContextHandle);
 #	else
@@ -285,6 +300,11 @@ namespace nCine::Backends
 		// created nor manages this GL context). GL_FALSE = do not pump the SceCommonDialog overlay here.
 		vglSwapBuffers(GL_FALSE);
 #else
+#	if defined(WITH_RHI_LEGACYGL)
+		// The fixed-function backend batches draws and only submits them when it must, so the frame's tail
+		// is still unsubmitted at this point; the swap below is what makes it visible
+		RHI::Device::PresentFrame();
+#	endif
 		SDL_GL_SwapWindow(_windowHandle);
 #endif
 	}
@@ -313,12 +333,13 @@ namespace nCine::Backends
 #	if defined(WITH_SDL3)
 		// SDL3: SDL_CreateRGBSurfaceWithFormatFrom -> SDL_CreateSurfaceFrom (reordered args, no bit-depth
 		// parameter), SDL_FreeSurface -> SDL_DestroySurface, and SDL_PIXELFORMAT_BGR888 -> SDL_PIXELFORMAT_XBGR8888
-		const SDL_PixelFormat pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_ABGR8888 : SDL_PIXELFORMAT_XBGR8888;
+		// RGBA32/RGB24 rather than the packed names, so the channel order holds on a big-endian machine too
+		const SDL_PixelFormat pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_RGBA32 : SDL_PIXELFORMAT_RGB24;
 		SDL_Surface* surface = SDL_CreateSurfaceFrom(image->width(), image->height(), pixelFormat, pixels, pitch);
 		SDL_SetWindowIcon(_windowHandle, surface);
 		SDL_DestroySurface(surface);
 #	else
-		const Uint32 pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_ABGR8888 : SDL_PIXELFORMAT_BGR888;
+		const Uint32 pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_RGBA32 : SDL_PIXELFORMAT_RGB24;
 		SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(pixels, image->width(), image->height(), bytesPerPixel * 8, pitch, pixelFormat);
 		SDL_SetWindowIcon(_windowHandle, surface);
 		SDL_FreeSurface(surface);
@@ -582,9 +603,14 @@ namespace nCine::Backends
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
+#if defined(WITH_RHI_LEGACYGL)
+		// The fixed-function backend draws with what a forward-compatible context is defined to have
+		// removed (the fixed-function pipeline itself), so that flag is never set for it
+#else
 		if (!_contextInfo.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 		}
+#endif
 		if (_contextInfo.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
@@ -706,6 +732,20 @@ namespace nCine::Backends
 
 		_contextInfo.debugContext = (_contextInfo.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
+
+#if defined(WITH_RHI_LEGACYGL)
+#	if defined(DEATH_TARGET_MORPHOS)
+		// TinyGL is reached through two globals that live in the program rather than in sdl2.library, so
+		// the context SDL just created has to be handed to them before any `gl*` call is made
+		FATAL_ASSERT_MSG(Backends::MorphOsAttachTinyGl(_glContextHandle),
+			"Cannot open tinygl.library - the legacy OpenGL backend needs a 3D driver TinyGL supports");
+#	endif
+		// Unlike the shader backend, the fixed-function one keeps state of its own that has to be
+		// programmed once per context, and it renders the screen pass in the drawable's pixels - so it is
+		// told how large that is here rather than only when the window is resized later
+		RHI::Device::ResizeSwapchain(_drawableWidth, _drawableHeight);
+		RHI::Device::InitializeGl();
+#endif
 	}
 
 #if defined(WITH_RHI_SOFTWARE)
@@ -755,9 +795,11 @@ namespace nCine::Backends
 		_softwareTexture = SDL_CreateTexture(_softwareRenderer, SDL_PIXELFORMAT_RGB565,
 			SDL_TEXTUREACCESS_STREAMING, width, height);
 #	else
-		// The backend framebuffer is laid out as R,G,B,A bytes per texel; on a little-endian host that byte
-		// order is SDL's ABGR8888 packed format
-		_softwareTexture = SDL_CreateTexture(_softwareRenderer, SDL_PIXELFORMAT_ABGR8888,
+		// The backend framebuffer is laid out as R,G,B,A bytes per texel. RGBA32 is SDL's name for exactly
+		// that byte order whatever the machine's endianness - the packed names (ABGR8888 here) describe a
+		// 32-bit value instead, so on a big-endian machine like the PowerPC Amigas one of them would put
+		// the channels in the wrong places
+		_softwareTexture = SDL_CreateTexture(_softwareRenderer, SDL_PIXELFORMAT_RGBA32,
 			SDL_TEXTUREACCESS_STREAMING, width, height);
 #	endif
 		FATAL_ASSERT_MSG(_softwareTexture, "SDL_CreateTexture failed: {}", SDL_GetError());

@@ -225,7 +225,7 @@ namespace nCine::RHI::GX
 			ctx.SubmitQuad(p);
 		}
 
-		// Colorized - from Colorized.shader:fixed_function(gx)
+		// Colorized - from Colorized.shader:fixed_function(gx, legacygl)
 		// Shared by: Colorized, BatchedColorized
 		void Colorized_Effect(EffectContext& ctx)
 		{
@@ -293,7 +293,7 @@ namespace nCine::RHI::GX
 			ctx.SubmitQuad(sprite);
 		}
 
-		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(gx)
+		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(gx, legacygl)
 		// Shared by: PartialWhiteMask, PartialWhiteMask (USE_PALETTE), BatchedPartialWhiteMask, BatchedPartialWhiteMask (USE_PALETTE)
 		void PartialWhiteMask_Effect(EffectContext& ctx)
 		{
@@ -305,8 +305,8 @@ namespace nCine::RHI::GX
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackground - from TexturedBackground.shader:fixed_function(gx)
-		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(gx)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(gx)]
+		// TexturedBackground - from TexturedBackground.shader:fixed_function(gx, legacygl)
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(gx, legacygl)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(gx, legacygl)]
 		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -403,7 +403,7 @@ namespace nCine::RHI::GX
 			}
 		}
 
-		// Transition - from Transition.shader:fixed_function(gx, gu, gs, rdp)
+		// Transition - from Transition.shader:fixed_function(gx, gu, gs, rdp, legacygl)
 		void Transition_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

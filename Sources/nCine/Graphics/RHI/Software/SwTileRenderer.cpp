@@ -711,8 +711,8 @@ namespace nCine::RHI::Software
 				if DEATH_UNLIKELY(!cmd.prep.valid) {
 					return true; // Degenerate quad - accepted but discarded (it draws nothing on any path)
 				}
-				screenMinX = std::max(0, static_cast<std::int32_t>(cmd.prep.fxMin));
-				screenMinY = std::max(0, static_cast<std::int32_t>(cmd.prep.fyMin));
+				screenMinX = std::max<std::int32_t>(0, static_cast<std::int32_t>(cmd.prep.fxMin));
+				screenMinY = std::max<std::int32_t>(0, static_cast<std::int32_t>(cmd.prep.fyMin));
 				screenMaxX = std::min(g_tile.fbWidth - 1, static_cast<std::int32_t>(cmd.prep.fxMax));
 				screenMaxY = std::min(g_tile.fbHeight - 1, static_cast<std::int32_t>(cmd.prep.fyMax));
 				accurateBounds = true;
@@ -733,8 +733,8 @@ namespace nCine::RHI::Software
 					fyMin = std::min(fyMin, sy);
 					fyMax = std::max(fyMax, sy);
 				}
-				screenMinX = std::max(0, static_cast<std::int32_t>(fxMin) - 1);
-				screenMinY = std::max(0, static_cast<std::int32_t>(fyMin) - 1);
+				screenMinX = std::max<std::int32_t>(0, static_cast<std::int32_t>(fxMin) - 1);
+				screenMinY = std::max<std::int32_t>(0, static_cast<std::int32_t>(fyMin) - 1);
 				screenMaxX = std::min(g_tile.fbWidth - 1, static_cast<std::int32_t>(fxMax) + 1);
 				screenMaxY = std::min(g_tile.fbHeight - 1, static_cast<std::int32_t>(fyMax) + 1);
 				accurateBounds = false;
@@ -753,9 +753,9 @@ namespace nCine::RHI::Software
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
 				std::int32_t scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
 				std::int32_t scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
-				screenMinX = std::max(screenMinX, ctx.scissorRect.X);
+				screenMinX = std::max<std::int32_t>(screenMinX, ctx.scissorRect.X);
 				screenMinY = std::max(screenMinY, scY0);
-				screenMaxX = std::min(screenMaxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
+				screenMaxX = std::min<std::int32_t>(screenMaxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
 				screenMaxY = std::min(screenMaxY, scY1);
 			}
 
@@ -798,10 +798,10 @@ namespace nCine::RHI::Software
 					std::int32_t coverMaxY = static_cast<std::int32_t>(cmd.prep.fyMax - 0.5f);
 					if DEATH_UNLIKELY(ctx.scissorEnabled) {
 						// cmd.ctx.scissorRect.Y was flipped to top-down above, matching tile coordinates
-						coverMinX = std::max(coverMinX, cmd.ctx.scissorRect.X);
-						coverMaxX = std::min(coverMaxX, cmd.ctx.scissorRect.X + cmd.ctx.scissorRect.W - 1);
-						coverMinY = std::max(coverMinY, cmd.ctx.scissorRect.Y);
-						coverMaxY = std::min(coverMaxY, cmd.ctx.scissorRect.Y + cmd.ctx.scissorRect.H - 1);
+						coverMinX = std::max<std::int32_t>(coverMinX, cmd.ctx.scissorRect.X);
+						coverMaxX = std::min<std::int32_t>(coverMaxX, cmd.ctx.scissorRect.X + cmd.ctx.scissorRect.W - 1);
+						coverMinY = std::max<std::int32_t>(coverMinY, cmd.ctx.scissorRect.Y);
+						coverMaxY = std::min<std::int32_t>(coverMaxY, cmd.ctx.scissorRect.Y + cmd.ctx.scissorRect.H - 1);
 					}
 					cmd.coverMinX = coverMinX;
 					cmd.coverMinY = coverMinY;
@@ -826,9 +826,9 @@ namespace nCine::RHI::Software
 			g_tile.commandCount++;
 
 			// Bin into overlapping tiles (clamp to the valid tile range)
-			const std::int32_t tileMinCol = std::max(0, screenMinX >> TileSizeShift);
+			const std::int32_t tileMinCol = std::max<std::int32_t>(0, screenMinX >> TileSizeShift);
 			const std::int32_t tileMaxCol = std::min(g_tile.tilesX - 1, screenMaxX >> TileSizeShift);
-			const std::int32_t tileMinRow = std::max(0, screenMinY >> TileSizeShift);
+			const std::int32_t tileMinRow = std::max<std::int32_t>(0, screenMinY >> TileSizeShift);
 			const std::int32_t tileMaxRow = std::min(g_tile.tilesY - 1, screenMaxY >> TileSizeShift);
 
 			for (std::int32_t row = tileMinRow; row <= tileMaxRow; row++) {
@@ -852,6 +852,7 @@ namespace nCine::RHI::Software
 				DiscardPending();
 				return;
 			}
+
 
 			// Fix up the per-command pointers now that submissions are done for this window and neither the
 			// command arena nor the LUT pool grows any further, so everything stays stable for every worker:

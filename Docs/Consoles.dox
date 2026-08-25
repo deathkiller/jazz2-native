@@ -138,7 +138,7 @@ Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes |
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No
 Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes | Yes | Yes | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | **Off on purpose** @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (built from source, single-threaded) @m_endspan | SDK-dependent | SDK-dependent
+Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
@@ -337,7 +337,11 @@ EEPROM the preferences are saved to.
     resolution.
 -   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
     a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
-    like the PSP and the PlayStation 2 this console has sound effects and no soundtrack.
+    like the PlayStation 2 this console has sound effects and no soundtrack. The lighter **libxmp**
+    the PSP uses does not rescue it either: one of this game's modules costs it between 0.5 MB and
+    4 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan, which is most of the
+    console's 8 MB, and the ROM packaging drops the whole `Music` directory to stay inside the 64 MB
+    cartridge ceiling anyway.
 -   **The ROM must fit in 64 MB** --- the ceiling of the flashcarts and of the PI bus mapping ---
     and a full converted content tree does not, so the packaging step drops what the console
     cannot use or cannot afford: @cpp "Music" @ce, which nothing in this binary can decode anyway
@@ -360,6 +364,12 @@ EEPROM the preferences are saved to.
     @m_endspan that the backend uploads before the draw, so the cost of a frame tracks how many
     distinct texture windows it touches, not how many pixels it covers. The tile map renders one
     32x32 tile per upload with consecutive same-tile runs coalesced.
+-   **It runs, but not smoothly.** This is the one target whose CPU is far below what the game was
+    written for --- an order of magnitude under the next-slowest console here --- and the port has
+    not been performance-tuned for it: the frame rate is well below the others' and swings with what
+    is on screen, so treat this port as **experimental** rather than as a finished one. The numbers
+    above for the cinematics @m_span{m-text m-dim} (55 ms per frame for a decoder that is little more
+    than @cpp memcpy() @ce) @m_endspan are the honest scale of the machine.
 -   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
     yet --- ares is the reference until then.
 
@@ -589,6 +599,15 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
 
 @subsection consoles-wii-limits Limits and known issues
 
+-   **Module music plays through libxmp, not libopenmpt.** Both play the whole soundtrack, but they
+    do not cost the same: measured over this game's tracks, one loaded module costs libopenmpt
+    4.6-12.5 MB against libxmp's 0.5-4 MB, and neither devkitPro SDK packages libopenmpt, so that
+    path also compiles the entire library into the binary @m_span{m-text m-dim} (the GameCube `.dol`
+    is 5.6 MB with it and 4.3 MB without) @m_endspan. On a console with 24 MB and no second pool
+    @m_span{m-text m-dim} (see @ref consoles-gamecube-limits; the Wii shares this port and its
+    content) @m_endspan that decides it, so `NCINE_WITH_XMP` is on by default here. What it costs is
+    the four `.mo3` tracks, which libxmp cannot read, and slightly less exact playback;
+    `-D NCINE_WITH_XMP=OFF` goes back to libopenmpt.
 -   **Sound goes through libogc's ASND**, not OpenAL --- devkitPro ships no OpenAL for PowerPC. The
     DSP mixes up to **16 voices** at 48 kHz and resamples each one, so the voice count rather than
     CPU time is the limit, that is also the source count the engine advertises, well below the 64 it
@@ -759,12 +778,16 @@ anything else can fail, so the console always has a way out even if initializati
 
 @subsection consoles-psp-limits Limits and known issues
 
--   **Module music is disabled.** The game's soundtrack is tracker modules, and while **libopenmpt**
-    does cross-compile, play correctly and cost only ~0.2 FPS in steady state, the **first** module
-    a process loads costs a fixed ~29 seconds inside the library on this CPU
-    @m_span{m-text m-dim} (every later load takes ~1.8 s) @m_endspan --- most likely because the
+-   **Module music plays through libxmp, not libopenmpt.** The game's soundtrack is tracker modules,
+    and while **libopenmpt** does cross-compile, play correctly and cost only ~0.2 FPS in steady
+    state, the **first** module a process loads costs a fixed ~29 seconds inside the library on this
+    CPU @m_span{m-text m-dim} (every later load takes ~1.8 s) @m_endspan --- most likely because the
     Allegrex has no double-precision unit. There is nowhere to hide a half-minute freeze on a
-    handheld, so `NCINE_WITH_OPENMPT` is forced off, sound effects work normally.
+    handheld, so `NCINE_WITH_OPENMPT` is forced off here and `NCINE_WITH_XMP` is on by default
+    instead: **libxmp**'s mixer is integer throughout @m_span{m-text m-dim} (its only double-precision
+    arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
+    sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
+    read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
 -   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
     is compiled out and asset loading is synchronous. pspdev does ship a pthreads implementation,
     but the engine's threading layer also wants thread names, priorities and affinity, which do not
@@ -852,7 +875,10 @@ exists.
     corrupt each other.
 -   **There is no audio backend yet.** `audsrv` is the intended path, until it exists the game runs
     silent and `NCINE_WITH_OPENMPT` is forced off @m_span{m-text m-dim} (libopenmpt's
-    `to_chars(char*, char*, const double&)` is ambiguous against PS2SDK's newlib) @m_endspan.
+    `to_chars(char*, char*, const double&)` is ambiguous against PS2SDK's newlib) @m_endspan. The
+    lighter **libxmp** does build for the EE toolchain, so once there is a device to play through,
+    module music is one default away @m_span{m-text m-dim} (`NCINE_WITH_XMP`, see
+    "ncine_options.cmake") @m_endspan.
 -   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
     is compiled out and asset loading is synchronous.
 -   Two pipeline stages are still unimplemented: the weapon wheel's line strip
@@ -930,15 +956,7 @@ the host, which is the one dependency ps3toolchain does not check for.
 
 @subsection consoles-ps3-build Building
 
-@code{.sh}
-./BuildPs3.sh
-@endcode
-
-@m_class{m-noindent}
-
-The script exports the environment described above, validates that the compiler and PSL1GHT are where
-it expects, and configures with the project's own toolchain file. Doing it by hand is the same three
-lines:
+With the environment described above exported, it is three lines:
 
 @code{.sh}
 cmake -S . -B build/ps3 -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/ps3dev.cmake \
@@ -1177,6 +1195,12 @@ console's own firmware. Extract it with
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.
+-   **Module music is libopenmpt**, built from source by the configure step. VitaSDK packages both
+    that and **libxmp**, and this is the one console where the choice is a genuine trade rather than a
+    constraint: `NCINE_WITH_XMP=ON` picks up the SDK's prebuilt libxmp @m_span{m-text m-dim} (nothing
+    is downloaded, and the binary loses several megabytes of decoder) @m_endspan at the cost of the
+    four `.mo3` tracks and some playback accuracy. libopenmpt stays the default because a 444 MHz
+    quad-core Cortex-A9 with NEON and 512 MB has no trouble with it.
 
 - - -
 

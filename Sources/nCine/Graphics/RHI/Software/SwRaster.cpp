@@ -3,6 +3,9 @@
 #include "SwRaster.h"
 #include "SwTileRenderer.h"
 #include "SwScanlineOps.h"
+#if defined(WITH_AMMX)
+#	include "SwAmmxOps.h"
+#endif
 
 #include <Cpu.h>
 #if defined(DEATH_TARGET_X86)
@@ -1109,15 +1112,49 @@ namespace nCine::RHI::Software
 		return combineLightingScanlineImplementation(Cpu::DefaultBase)(px, width, lmRow, lmW, scale, ambR, ambG, ambB);
 	})
 
+#if defined(WITH_AMMX)
+	// The Apollo 68080's AMMX vector unit sits outside the Death CPU dispatcher (which knows x86/ARM/WASM
+	// feature sets), so the two kernels it implements are gated right here instead: one branch on a bool
+	// the Amiga platform layer sets after detecting the 68080 at startup. The kernels are bit-identical
+	// to the scalar reference by construction - see AmigaAmmxOps.s - and SwBackendHarness is the
+	// on-hardware check for that claim.
+	namespace
+	{
+		bool g_ammxEnabled = false;
+	}
+
+	void SetAmmxEnabled(bool enabled)
+	{
+		g_ammxEnabled = enabled;
+	}
+
+	bool IsAmmxEnabled()
+	{
+		return g_ammxEnabled;
+	}
+#endif
+
 	// Externally-visible entry points (see SwScanlineOps.h) so the tile rasterizer TU runs the exact same
 	// CPU-dispatched implementations instead of keeping its own (previously scalar-on-x86) copies
 	void BlendScanlineSrcAlpha(std::uint8_t* dst, const std::uint8_t* src, std::int32_t count)
 	{
+#if defined(WITH_AMMX)
+		if (g_ammxEnabled) {
+			SwAmmxBlendScanlineSrcAlpha(dst, src, count);
+			return;
+		}
+#endif
 		blendScanlineSrcAlpha(dst, src, count);
 	}
 
 	void FusedLutBlendScanline(std::uint8_t* dst, const std::uint8_t* srcIdx, std::int32_t count, const std::uint8_t (*packed)[4])
 	{
+#if defined(WITH_AMMX)
+		if (g_ammxEnabled) {
+			SwAmmxFusedLutBlendScanline(dst, srcIdx, count, packed);
+			return;
+		}
+#endif
 		fusedLutBlendScanline(dst, srcIdx, count, packed);
 	}
 
@@ -1639,8 +1676,8 @@ namespace nCine::RHI::Software
 			// Snap to pixel grid when within epsilon of an integer.
 			// Eliminates 1-scanline flicker caused by float precision drift in MVP calculation.
 			constexpr float SnapEps = 1.0f / 128.0f;
-			float rxSnap = std::round(out.x);
-			float rySnap = std::round(out.y);
+			float rxSnap = ::roundf(out.x);
+			float rySnap = ::roundf(out.y);
 			if (std::fabs(out.x - rxSnap) < SnapEps) out.x = rxSnap;
 			if (std::fabs(out.y - rySnap) < SnapEps) out.y = rySnap;
 
@@ -1674,9 +1711,9 @@ namespace nCine::RHI::Software
 			const float vBot   = (v0.y <= v1.y) ? v1.v : v0.v;
 
 			// Pixel bbox clamped to buffer
-			std::int32_t xMin = std::max(0, static_cast<std::int32_t>(fxMin));
+			std::int32_t xMin = std::max(std::int32_t(0), static_cast<std::int32_t>(fxMin));
 			std::int32_t xMax = std::min(g_state.bufferWidth  - 1, static_cast<std::int32_t>(fxMax - 0.5f));
-			std::int32_t yMin = std::max(0, static_cast<std::int32_t>(fyMin));
+			std::int32_t yMin = std::max(std::int32_t(0), static_cast<std::int32_t>(fyMin));
 			std::int32_t yMax = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(fyMax - 0.5f));
 
 			// Scissor pre-clip (Y always flipped — scissor is in bottom-up window coordinates)
@@ -1945,9 +1982,9 @@ namespace nCine::RHI::Software
 		void RasterizeTriangle(const DrawContext& ctx, Vertex2D v0, Vertex2D v1, Vertex2D v2)
 		{
 			// Bounding box in screen space
-			std::int32_t minX = std::max(0, static_cast<std::int32_t>(std::min({v0.x, v1.x, v2.x})));
+			std::int32_t minX = std::max(std::int32_t(0), static_cast<std::int32_t>(std::min({v0.x, v1.x, v2.x})));
 			std::int32_t maxX = std::min(g_state.bufferWidth  - 1, static_cast<std::int32_t>(std::max({v0.x, v1.x, v2.x})));
-			std::int32_t minY = std::max(0, static_cast<std::int32_t>(std::min({v0.y, v1.y, v2.y})));
+			std::int32_t minY = std::max(std::int32_t(0), static_cast<std::int32_t>(std::min({v0.y, v1.y, v2.y})));
 			std::int32_t maxY = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(std::max({v0.y, v1.y, v2.y})));
 
 			// Pre-clip to scissor (Y always flipped — scissor is in bottom-up window coordinates)
@@ -2054,8 +2091,8 @@ namespace nCine::RHI::Software
 					} else if (texPixels != nullptr) {
 						u = WrapUV(u, wrapS);
 						vv = WrapUV(vv, wrapT);
-						const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
-						const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
+						const std::int32_t srcX = std::max<std::int32_t>(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
+						const std::int32_t srcY = std::max<std::int32_t>(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
 						std::uint8_t raw[4];
 						SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
 						sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
@@ -2168,9 +2205,9 @@ namespace nCine::RHI::Software
 			float fyMin = quad[0].y;
 			float fyMax = quad[3].y;
 
-			std::int32_t yMin = std::max(0, static_cast<std::int32_t>(fyMin));
+			std::int32_t yMin = std::max(std::int32_t(0), static_cast<std::int32_t>(fyMin));
 			std::int32_t yMax = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(fyMax));
-			std::int32_t xMinClamp = std::max(0, static_cast<std::int32_t>(fxMin));
+			std::int32_t xMinClamp = std::max<std::int32_t>(0, static_cast<std::int32_t>(fxMin));
 			std::int32_t xMaxClamp = std::min(g_state.bufferWidth - 1, static_cast<std::int32_t>(fxMax));
 
 			// Scissor clamp (Y always flipped — scissor is in bottom-up window coordinates)
@@ -2420,8 +2457,8 @@ namespace nCine::RHI::Software
 						} else if (texPixels != nullptr) {
 							float wu = WrapUV(u, wrapS);
 							float wv = WrapUV(vv, wrapT);
-							std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(wu * (texW - 1) + 0.5f)));
-							std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(wv * (texH - 1) + 0.5f)));
+							std::int32_t srcX = std::max<std::int32_t>(0, std::min(texW - 1, static_cast<std::int32_t>(wu * (texW - 1) + 0.5f)));
+							std::int32_t srcY = std::max<std::int32_t>(0, std::min(texH - 1, static_cast<std::int32_t>(wv * (texH - 1) + 0.5f)));
 							std::uint8_t raw[4];
 							SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
@@ -2544,7 +2581,7 @@ namespace nCine::RHI::Software
 
 			const float dx = v1.x - v0.x;
 			const float dy = v1.y - v0.y;
-			const std::int32_t steps = std::max(1, static_cast<std::int32_t>(std::ceil(std::max(std::fabs(dx), std::fabs(dy)))));
+			const std::int32_t steps = std::max<std::int32_t>(1, static_cast<std::int32_t>(std::ceil(std::max(std::fabs(dx), std::fabs(dy)))));
 			const float invSteps = 1.0f / static_cast<float>(steps);
 
 			for (std::int32_t i = 0; i < steps; i++) {
@@ -2568,8 +2605,8 @@ namespace nCine::RHI::Software
 				} else if (texPixels != nullptr) {
 					u = WrapUV(u, wrapS);
 					vv = WrapUV(vv, wrapT);
-					const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
-					const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
+					const std::int32_t srcX = std::max<std::int32_t>(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
+					const std::int32_t srcY = std::max<std::int32_t>(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
 					std::uint8_t raw[4];
 					SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
 					sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];

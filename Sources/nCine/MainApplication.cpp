@@ -32,6 +32,10 @@
 #elif defined(WITH_N64)
 #	include "Backends/N64/N64GfxDevice.h"
 #	include "Backends/N64/N64InputManager.h"
+#elif defined(WITH_AMIGA)
+#	include "Backends/Amiga/AmigaGfxDevice.h"
+#	include "Backends/Amiga/AmigaInputManager.h"
+#	include "Backends/Amiga/AmigaPlatform.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -83,7 +87,7 @@ extern "C" {
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3) || defined(WITH_N64)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3) || defined(WITH_N64) || defined(WITH_AMIGA)
 using namespace nCine::Backends;
 #endif
 
@@ -440,8 +444,23 @@ namespace nCine
 		timeBeginPeriod(1);
 #endif
 
+#if defined(DEATH_TARGET_AMIGAOS)
+		// OS libraries, the EClock timer and the performance probe come up before anything can need
+		// them (the probe's preset decides the screen mode AmigaGfxDevice opens during Init())
+		if (!AmigaPlatform::Initialize()) {
+			AmigaPlatform::Shutdown();
+			return EXIT_FAILURE;
+		}
+#endif
+
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.Init(createAppEventHandler, argc, argv);
+
+#if defined(DEATH_TARGET_AMIGAOS)
+		// The machine description, the probe's measurements and the preset they chose were all gathered
+		// above, before Init() attached the trace sink - so they are written to the log here
+		AmigaPlatform::FlushStartupLog();
+#endif
 
 #if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// The boot console is invisible from the moment OgcGfxDevice installed its own framebuffers
@@ -477,6 +496,11 @@ namespace nCine
 #endif
 
 		app.ShutdownCommon();
+
+#if defined(DEATH_TARGET_AMIGAOS)
+		// The gfx device (screen/window) and input manager are gone after ShutdownCommon()
+		AmigaPlatform::Shutdown();
+#endif
 
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
@@ -811,6 +835,9 @@ namespace nCine
 #elif defined(WITH_N64)
 			_gfxDevice = std::make_unique<N64GfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<N64InputManager>();
+#elif defined(WITH_AMIGA)
+			_gfxDevice = std::make_unique<AmigaGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<AmigaInputManager>();
 #elif defined(WITH_OGC)
 			_gfxDevice = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<OgcInputManager>();
@@ -860,6 +887,9 @@ namespace nCine
 #elif defined(WITH_N64)
 			// No window events on a console; polling the joypad ports is the whole event pump
 			N64InputManager::updateJoystickStates();
+#elif defined(WITH_AMIGA)
+			// The whole event pump: the game window's IDCMP queue (keyboard, mouse) plus the joyports
+			AmigaInputManager::updateJoystickStates();
 #elif defined(WITH_OGC)
 			// No window events on a console; polling the controller ports is the whole event pump
 			OgcInputManager::updateJoystickStates();

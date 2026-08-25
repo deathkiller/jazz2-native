@@ -6,7 +6,7 @@
 # rules set up: the powerpc64-ps3-elf cross compiler, the PSL1GHT include/library paths, and the machine
 # flags the SDK builds its own libraries with.
 #
-# Set PS3DEV in the environment (BuildPs3.sh does); PSL1GHT defaults to "$PS3DEV/psl1ght", which is where
+# Set PS3DEV in the environment; PSL1GHT defaults to "$PS3DEV/psl1ght", which is where
 # ps3toolchain's step 8 installs it.
 
 if(DEFINED ENV{PS3DEV})
@@ -27,8 +27,8 @@ endif()
 
 # The ppu-gcc driver reads $PSL1GHT itself and refuses to run without it ("fatal error: environment
 # variable 'PSL1GHT' not defined"), so it has to be in the environment of every compile - not merely a
-# CMake variable. Setting it here covers the configure step and CMake's own compiler probes; BuildPs3.sh
-# exports it for the build itself, because the build commands inherit the environment of `cmake --build`.
+# CMake variable. Setting it here covers the configure step and CMake's own compiler probes; it has to be
+# exported for the build itself as well, since the build commands inherit the environment of `cmake --build`.
 set(ENV{PS3DEV} "${PS3DEV}")
 set(ENV{PSL1GHT} "${PSL1GHT}")
 
@@ -80,7 +80,7 @@ set(PLATFORM_PS3 TRUE)
 set(PS3 TRUE)
 
 # Host tools the packaging steps in ncine_extra_sources.cmake invoke. cgcomp additionally needs NVIDIA's
-# Cg Toolkit shared library at run time; BuildPs3.sh puts it on LD_LIBRARY_PATH.
+# Cg Toolkit shared library at run time, so its directory has to be on LD_LIBRARY_PATH (see Docs/Consoles.dox).
 set(PS3_CGCOMP "${PS3DEV}/bin/cgcomp" CACHE FILEPATH "Path to cgcomp (Cg -> RSX microcode)")
 set(PS3_FSELF "${PS3DEV}/bin/fself" CACHE FILEPATH "Path to fself (ELF -> fake SELF)")
 set(PS3_SELF "${PS3DEV}/bin/make_self" CACHE FILEPATH "Path to make_self (ELF -> signed SELF)")

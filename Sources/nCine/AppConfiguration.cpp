@@ -50,18 +50,30 @@ namespace nCine
 		withGlDebugContext(false),
 
 		// Compile-time variables
+#if defined(WITH_RHI_LEGACYGL)
+		// The fixed-function GL backend needs the fixed-function pipeline, which only a compatibility
+		// context has - a core profile has neither glBegin/glInterleavedArrays nor the texture
+		// environment the effect tables are expressed in. 1.3 is what it actually uses (the texture
+		// combiners); asking for exactly that also keeps a driver from handing out a context that
+		// deprecates what the backend calls.
+		_glCoreProfile(false),
+		_glForwardCompatible(false),
+		_glMajorVersion(1),
+		_glMinorVersion(3),
+#else
 		_glCoreProfile(true),
 		_glForwardCompatible(true),
-#if defined(RHI_GL_PROFILE_ES2)
+#	if defined(RHI_GL_PROFILE_ES2)
 		// Real OpenGL|ES 2.0 profile (PS Vita target): ESSL 100, no UBOs, no gl_VertexID
 		_glMajorVersion(2),
 		_glMinorVersion(0),
-#elif defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	elif defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		_glMajorVersion(3),
 		_glMinorVersion(0),
-#else
+#	else
 		_glMajorVersion(3),
 		_glMinorVersion(3),
+#	endif
 #endif
 		_argv(nullptr)
 	{

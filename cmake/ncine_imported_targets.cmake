@@ -536,9 +536,17 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	# SDL3 ships a proper CMake config package (defines the SDL3::SDL3 imported target directly)
 	find_package(SDL3 CONFIG QUIET)
 	
-	#if(NOT APPLE)
+	if(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
+		# The Amiga PowerPC SDKs do ship libcurl, but its link-library autoinit opens bsdsocket.library
+		# and usergroup.library before main() runs, and puts a requester on screen when they are not
+		# there - which is every machine without a TCP/IP stack started. The update check and the online
+		# server list are the only things that use it, and both belong to the online multiplayer that is
+		# already off on these two targets.
+		unset(CURL_LIBRARY CACHE)
+		unset(CURL_INCLUDE_DIR CACHE)
+	else()
 		find_package(CURL)
-	#endif()
+	endif()
 
 	#if(NCINE_WITH_PNG)
 	#	find_package(PNG)
@@ -574,6 +582,30 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			unset(OPENAL_INCLUDE_DIR CACHE)
 			unset(OPENAL_LIBRARY CACHE)
 			set(PS3AUDIO_FOUND 1)
+		elseif(PLATFORM_AMIGA)
+			# No OpenAL on classic AmigaOS. The backend software-mixes like the N64/PS3 ones and hands the
+			# blocks to ahi.device (retargetable audio: Paula 14-bit on stock machines, Pamela on a Vampire,
+			# HDMI on a PiStorm, sound cards elsewhere), opened at run time - nothing to look for.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(AHIAUDIO_FOUND 1)
+		elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
+			# Neither PowerPC Amiga SDK carries OpenAL, but MorphOS has a port of openal-soft (with an AHI
+			# backend) that can be cross-compiled into the prefix the rest of the dependencies live in
+			# (MORPHOS_DEPS, see Docs/Amiga.dox). Where it is present the engine's own OpenAL backend is used, which is the best-tested
+			# audio path in the project; where it is not, the fallback is the SDL one (a software mixer into
+			# SDL's audio queue, see SdlAudioDevice), so neither target depends on it being there.
+			find_package(OpenAL)
+			if(NOT OPENAL_FOUND)
+				unset(OPENAL_INCLUDE_DIR CACHE)
+				unset(OPENAL_LIBRARY CACHE)
+				# The fallback is only a fallback where SDL2 itself is present, without it the build has no
+				# audio backend at all, which the summary reports as such (and a missing SDL2 stops the
+				# configure a moment later anyway, being the window backend of these two systems)
+				if(SDL2_FOUND)
+					set(SDLAUDIO_FOUND 1)
+				endif()
+			endif()
 		else()
 			find_package(OpenAL)
 
@@ -588,6 +620,14 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 		if(NCINE_WITH_OPENMPT)
 			find_package(libopenmpt)
+		endif()
+		if(NCINE_WITH_XMP AND (OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR
+				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND))
+			# Always built from source (there is nothing to find on the platforms that select it), so this
+			# only has to run where the option is on - see cmake/Findlibxmp.cmake. The audio-backend test
+			# is the same one the sources are guarded by: with no device to play through, downloading and
+			# compiling a module decoder would be work for nothing
+			find_package(libxmp)
 		endif()
 	endif()
 	if(NCINE_WITH_LUA)
@@ -651,6 +691,12 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 
 	if(SDL2_FOUND AND NOT TARGET SDL2::SDL2)
 		split_extra_libraries(SDL2 "${SDL2_LIBRARY}")
+		if(PLATFORM_MORPHOS)
+			# The SDK's static SDL2 calls into TinyGL whether or not a GL context is ever asked for, and
+			# a static library has to be followed by what it needs - which is what an interface dependency
+			# of the imported target guarantees
+			list(APPEND SDL2_EXTRA_LIBRARIES "GL")
+		endif()
 		add_library(SDL2::SDL2 ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(SDL2::SDL2 PROPERTIES
 			IMPORTED_LOCATION "${SDL2_LIBRARY_FILE}" # On macOS it's a list

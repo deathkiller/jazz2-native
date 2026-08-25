@@ -14,6 +14,14 @@
 #	include <pthread.h>
 #endif
 
+#if defined(DEATH_TARGET_MORPHOS)
+// MorphOS's <pthread.h> turns exec's Wait(), WaitIO() and WaitPort() into macros that add a
+// cancellation point - and a macro named Wait rewrites every Wait() member declared below
+#	undef Wait
+#	undef WaitIO
+#	undef WaitPort
+#endif
+
 namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 

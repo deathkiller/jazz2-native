@@ -1,0 +1,200 @@
+name: 'Amiga'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The two PowerPC systems, which have maintained cross-toolchains in container images - so this job
+  # only has to configure and build. Both render through the fixed-function `LegacyGL` backend on the
+  # OpenGL 1.x their system provides (MiniGL over Warp3D on AmigaOS 4, TinyGL on MorphOS), which is the
+  # default there; neither has been run on hardware, so what this proves is that they build and link.
+  PowerPC:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - Target: 'AmigaOS 4.1'
+          # adtools (ppc-amigaos-gcc 11.5) together with the AmigaOS 4.1 SDK, which is where the
+          # prebuilt SDL2, zlib, Vorbis and MiniGL this build links against come from
+          Image: 'docker.io/walkero/amigagccondocker:os4-gcc11'
+          Toolchain: 'os4.cmake'
+          Artifact: 'Jazz2_AmigaOS4'
+          BuildType: Release
+        - Target: 'MorphOS'
+          # The MorphOS SDK (ppc-morphos-gcc 11.3) at /gg. It ships SDL2 and TinyGL but no zlib, which
+          # the step below cross-compiles, and no OpenAL - so the SDL audio backend is selected
+          Image: 'docker.io/walkero/amigagccondocker:mos-gcc-amd64'
+          Toolchain: 'morphos.cmake'
+          Artifact: 'Jazz2_MorphOS'
+          BuildType: Release
+
+    name: '${{ matrix.Target }}'
+    runs-on: 'ubuntu-latest'
+    container:
+      image: ${{ matrix.Image }}
+      # The images define an unprivileged user; the runner's workspace is owned by root
+      options: --user root
+
+    env:
+      # Where the cross-compiled dependencies below are installed, outside the SDK itself
+      MORPHOS_DEPS: '/tmp/morphos-deps'
+      ZLIB_VERSION: '1.3.1'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Build zlib'
+      if: matrix.Target == 'MorphOS'
+      run: |
+        # The MorphOS SDK ships no zlib and the game cannot run without it (PakFile). -noixemul
+        # matches how everything else on this target is built, including the SDK's own SDL2.
+        curl -fsSL https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz | tar xz -C /tmp
+        cd /tmp/zlib-${ZLIB_VERSION}
+        CC=ppc-morphos-gcc CFLAGS='-O2 -noixemul' ./configure --prefix=${MORPHOS_DEPS} --static
+        make -j $(nproc) libz.a
+        make install
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        # Without a prebaked console content tree (see Docs/Amiga.dox) the staged directory carries
+        # only the repository's base assets and the game boots to the "content missing" message -
+        # which still exercises the whole build and the staging step
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/${{ matrix.Toolchain }} -D NCINE_CONTENT_DIR=./Content
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The "dist" directory is the ready-to-run layout the build stages: the stripped "Jazz2"
+        # executable next to its "Content/", which is copied to the machine as it is
+        mkdir ./_package/
+        cp -r ./_build/dist/. ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ matrix.Artifact }}
+        path: ./_package/
+
+  # AmigaOS 3.x (m68k). Unlike the two above there is no usable prebuilt toolchain: this codebase needs
+  # full C++17, so it needs bebbo's amiga-gcc from a GCC 13 branch, and every published m68k-amigaos
+  # image is still on the GCC 6.5 default branch. So the cross-compiler is built here and kept in the
+  # actions cache, which is what makes this job manual-only (workflow_dispatch): a cold cache is an
+  # hour of toolchain build before a line of the game is compiled, and that should not sit in front of
+  # every push. Run it by hand after touching the classic Amiga backend or its toolchain file.
+  #
+  # This one has NOT been proven on a runner yet - it mirrors the toolchain build that works locally
+  # and upstream's own Dockerfile recipe. If `make all` stops in a C target library over an `extern
+  # bool` declaration in gcc/config/m68k/m68k.h, that is the known trap: the meta-Makefile's `libgcc`
+  # target runs gcc's `all-target`, which includes libobjc, and libobjc is C.
+  Classic:
+    if: github.event_name == 'workflow_dispatch'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    name: 'AmigaOS 3.x'
+    runs-on: 'ubuntu-latest'
+
+    env:
+      # A home-directory prefix keeps every step - and the cache restore - free of sudo
+      AMIGA_INST: /home/runner/amiga
+      # The GCC 13 branch of the gcc module: the 6.5 default branch is not C++17-capable
+      AMIGA_GCC_BRANCH: amiga13.4
+      ZLIB_VERSION: '1.3.1'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Cache amiga-gcc'
+      id: cache-amiga-gcc
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/amiga
+        key: amiga-gcc-${{ env.AMIGA_GCC_BRANCH }}-zlib-${{ env.ZLIB_VERSION }}
+
+    - name: 'Build amiga-gcc'
+      if: steps.cache-amiga-gcc.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get -y update
+        sudo apt-get -y install make wget git gcc g++ libgmp-dev libmpfr-dev libmpc-dev flex bison \
+          gettext texinfo ncurses-dev autoconf automake rsync lhasa
+
+        git clone --depth 1 https://github.com/bebbo/amiga-gcc /tmp/amiga-gcc
+        cd /tmp/amiga-gcc
+        # The gcc module is moved onto the GCC 13 branch BEFORE anything is fetched or built
+        make branch branch=${AMIGA_GCC_BRANCH} mod=gcc PREFIX=${AMIGA_INST}
+        make update -j $(nproc) PREFIX=${AMIGA_INST}
+
+        # `all-sdk` is what installs the third-party developer kits the classic Amiga backend needs -
+        # cgx.sdk (CyberGraphX, which Picasso96 implements too) and ahi.sdk - into the NDK include
+        # tree. Without them the window and audio backends have no headers to compile against.
+        #
+        # CXXFLAGS travels as an ENVIRONMENT variable, never as a make command-line variable: as the
+        # latter it rides MAKEFLAGS down into libnix's own Makefile and clobbers the include paths it
+        # sets for itself. The pin exists because a host GCC that defaults to C++20 or newer fails to
+        # build the bundled libcody and libstdc++ sources.
+        CXXFLAGS="-Os -std=gnu++17" make all all-sdk -j $(nproc) PREFIX=${AMIGA_INST}
+
+        # zlib is the one third-party library the game cannot run without, and the toolchain packages
+        # none - the same arrangement the Nintendo 64 workflow uses
+        export PATH="${AMIGA_INST}/bin:${PATH}"
+        curl -fsSL https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz | tar xz -C /tmp
+        cd /tmp/zlib-${ZLIB_VERSION}
+        CC=m68k-amigaos-gcc CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' ./configure --prefix=${AMIGA_INST}/m68k-amigaos --static
+        make -j $(nproc) libz.a
+        make install
+
+    - name: 'Configure CMake'
+      shell: bash
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        export PATH="${AMIGA_INST}/bin:${PATH}"
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/amiga.cmake -D NCINE_CONTENT_DIR=./Content
+
+    - name: 'Build'
+      shell: bash
+      run: |
+        export PATH="${AMIGA_INST}/bin:${PATH}"
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The staged directory can be copied onto an Amiga hard disk or mounted as an emulator
+        # directory-hard-drive as it is
+        mkdir ./_package/
+        cp -r ./_build/dist/. ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_Amiga
+        path: ./_package/

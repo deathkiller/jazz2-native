@@ -255,7 +255,7 @@ namespace nCine::RHI::GS
 			ctx.SubmitQuad(p);
 		}
 
-		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, gu, gs, rdp)
+		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, gu, gs, rdp, legacygl)
 		// Shared by: FrozenMask, FrozenMask (USE_PALETTE), BatchedFrozenMask, BatchedFrozenMask (USE_PALETTE)
 		void FrozenMask_Effect(EffectContext& ctx)
 		{
@@ -417,7 +417,7 @@ namespace nCine::RHI::GS
 			}
 		}
 
-		// Transition - from Transition.shader:fixed_function(gx, gu, gs, rdp)
+		// Transition - from Transition.shader:fixed_function(gx, gu, gs, rdp, legacygl)
 		void Transition_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

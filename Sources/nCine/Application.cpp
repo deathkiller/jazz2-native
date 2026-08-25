@@ -81,6 +81,10 @@ extern "C"
 #		include "Audio/Backends/N64/N64AudioDevice.h"
 #	elif defined(WITH_PS3AUDIO)
 #		include "Audio/Backends/PS3/Ps3AudioDevice.h"
+#	elif defined(WITH_AHIAUDIO)
+#		include "Audio/Backends/Amiga/AmigaAudioDevice.h"
+#	elif defined(WITH_SDLAUDIO)
+#		include "Audio/Backends/SDL/SdlAudioDevice.h"
 #	endif
 #endif
 
@@ -899,6 +903,10 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<N64AudioDevice>());
 #	elif defined(WITH_PS3AUDIO)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<Ps3AudioDevice>());
+#	elif defined(WITH_AHIAUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<AmigaAudioDevice>());
+#	elif defined(WITH_SDLAUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<SdlAudioDevice>());
 #	endif
 		}
 #endif
@@ -1324,6 +1332,21 @@ namespace nCine
 		if (__geckoAlive) {
 			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
 		}
+#elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_MORPHOS)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+
+		// Through the descriptor rather than stdio: neither Amiga system has a crash-time atexit flush,
+		// and the boot-test workflow reads the shell-redirected file after a guru - a buffered line
+		// would be exactly the one that named the crash. On MorphOS the shell redirects this to DEBUG:,
+		// which the emulator writes to its serial log.
+		::write(STDOUT_FILENO, logEntryWithColors, length2);
 #elif defined(DEATH_TARGET_DREAMCAST)
 		// Write the message to dbgio (SCIF serial by default) - the Flycast/lxdream emulators show it
 		// in their logs and dc-tool/dcload shows it in the console
@@ -1896,7 +1919,9 @@ namespace nCine
 		Switch = 70,
 		PlayStationPortable = 101,
 		PlayStationVita = 102,
-		SegaDreamcast = 117
+		SegaDreamcast = 117,
+
+		Amiga = 176
 	};
 
 	// How the application version is stored in the TraceDigger metadata header, the values are part
@@ -1938,11 +1963,11 @@ namespace nCine
 	{
 		// Write TraceDigger metadata header, the payload is encoded with URL-safe Base64 (without padding):
 		//
-		//   u8       Control --- bits 0-4: format version (1), bits 5-6: `MetadataVersionForm`,
-		//                        bit 7: reserved
+		//   u8       Control - bits 0-4: format version (1), bits 5-6: `MetadataVersionForm`,
+		//                      bit 7: reserved
 		//   varint   Flags
-		//   u8       Platform --- `MetadataPlatform`
-		//   varint   Timestamp --- Unix time in milliseconds
+		//   u8       Platform - `MetadataPlatform`
+		//   varint   Timestamp - Unix time in milliseconds
 		//   varint   Process ID
 		//   varint   Main thread ID as zig-zag delta from the process ID
 		//   ...      Application version according to `MetadataVersionForm`
@@ -1951,11 +1976,11 @@ namespace nCine
 		//            is `MetadataVersionForm::Raw`); trailing empty strings are omitted, so any string
 		//            that is not there anymore is empty
 		//
-		// Each string begins with a variable-length integer --- the number of characters shifted left by 2 bits
-		// with `MetadataStringEncoding` in the lower 2 bits --- followed by the characters packed according
+		// Each string begins with a variable-length integer - the number of characters shifted left by 2 bits
+		// with `MetadataStringEncoding` in the lower 2 bits - followed by the characters packed according
 		// to the encoding, the leftover bits of the last byte are always zero
 		//
-		// Everything that can be derived on the reader side is left out --- the main thread ID usually differs
+		// Everything that can be derived on the reader side is left out - the main thread ID usually differs
 		// from the process ID only slightly and the version is mostly digits, so both of them compress well
 		// into the layout above
 
@@ -1995,6 +2020,8 @@ namespace nCine
 		constexpr MetadataPlatform platform = MetadataPlatform::Nintendo64;
 #		elif defined(DEATH_TARGET_DREAMCAST)
 		constexpr MetadataPlatform platform = MetadataPlatform::SegaDreamcast;
+#		elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
+		constexpr MetadataPlatform platform = MetadataPlatform::Amiga;
 #		elif defined(DEATH_TARGET_IOS)
 		constexpr MetadataPlatform platform = MetadataPlatform::iOS;
 #		elif defined(DEATH_TARGET_APPLE)
@@ -2047,12 +2074,17 @@ namespace nCine
 #			if defined(DEATH_TARGET_SWITCH)
 			flags |= 0x20;	// RemoteDevice
 #			endif
-		std::uint32_t processId = (std::uint32_t)::getpid();
+		std::uint32_t processId = (std::uint32_t)getpid();
 		char hostName[128] {}; std::int32_t hostNameLength = 0;
+#			if !defined(DEATH_TARGET_MORPHOS)
+		// Not on MorphOS: gethostname() there lives in bsdsocket.library, and a reference to it makes
+		// the loader open that library before the program starts - so a machine with no TCP/IP stack
+		// running would refuse to start the game
 		if (::gethostname(hostName, arraySize(hostName)) == 0) {
 			hostName[arraySize(hostName) - 1] = '\0';
 			hostNameLength = std::strlen(hostName);
 		}
+#			endif
 #		endif
 
 		// Try to store the application version numerically, the string form is used only as a fallback

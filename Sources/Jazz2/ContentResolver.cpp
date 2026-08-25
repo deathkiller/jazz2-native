@@ -1608,8 +1608,15 @@ namespace Jazz2
 		// texels into TMEM - so there is no sampler limit to stay under. The 15-tile row is kept anyway to
 		// match what the RDP backend advertises as its texture-size limit, so the chunking below behaves
 		// the same as on the other fixed-function consoles.
+		//
+		// The legacy OpenGL backend joins them for both reasons at once, which is why this is keyed on the
+		// BACKEND there rather than on a platform: what it runs on is a GL that may well sample only
+		// power-of-two textures (TinyGL on MorphOS), and the source sheet's own row width is exactly what
+		// broke on the PlayStation 2 above - secretf/04_haunted1's 32-tile row is 1088 px padded, which no
+		// limit that is a power of two can hold.
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+		defined(WITH_RHI_LEGACYGL)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
 #else
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
@@ -1690,7 +1697,8 @@ namespace Jazz2
 		// 64 contiguous pages out of a 352-page cache, which is the first thing to fail once the window is
 		// broken up. Half-height chunks are 32 pages each for the same total.
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
+		defined(WITH_RHI_LEGACYGL)
 		constexpr std::int32_t PreferredChunkHeight = 512;
 #else
 		constexpr std::int32_t PreferredChunkHeight = 0;

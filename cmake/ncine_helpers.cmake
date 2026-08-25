@@ -273,11 +273,12 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	target_compile_features(${target} PUBLIC cxx_std_17)
-	if(PLATFORM_DREAMCAST OR PLATFORM_N64 OR PLATFORM_PS3)
+	if(PLATFORM_DREAMCAST OR PLATFORM_N64 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
 		# KOS newlib hides C99 stdio (snprintf, strtoll) behind !__STRICT_ANSI__, so GNU extensions are
 		# required; the powerpc64-ps3-elf newlib behind PSL1GHT does exactly the same, and libstdc++'s
 		# <cstdio> then fails to compile at all ("'::snprintf' has not been declared") under -std=c++17.
-		# libdragon's newlib is the same family, and its n64.mk builds everything as gnu17/gnu++17 anyway
+		# libdragon's newlib is the same family, and its n64.mk builds everything as gnu17/gnu++17 anyway.
+		# amiga-gcc's libnix/newlib headers are the same newlib family again.
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS ON)
 	else()
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
@@ -344,6 +345,40 @@ function(ncine_apply_compiler_options target)
 	elseif(PLATFORM_N64)
 		# libdragon (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64, and N64 with it)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_N64")
+	elseif(PLATFORM_AMIGA)
+		# amiga-gcc/AmigaOS 3.x (the project's own cmake/toolchains/amiga.cmake toolchain file sets PLATFORM_AMIGA)
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_AMIGAOS")
+	elseif(PLATFORM_MORPHOS)
+		# MorphOS (the project's own cmake/toolchains/morphos.cmake toolchain file sets PLATFORM_MORPHOS).
+		# Like AmigaOS 4 it is PowerPC with SDL2 and threads, but a different system again - its own
+		# kernel, its own C library, and TinyGL where the other has Warp3D Nova
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_MORPHOS")
+		# The SDK's GCC 10.4.0 runtime directory, put in front of the compiler's own: it is where this
+		# port takes its C++ runtime from, and dropping it changes what the link resolves. Two things
+		# come out of it - libatomic, for the 64-bit atomics a 32-bit PowerPC cannot do inline, and the
+		# libstdc++ that MorphOSLibcCompat.cpp is written against (its `__throw_bad_array_new_length`
+		# fills the one symbol GCC 11 emits calls to and that older libstdc++ does not carry; linking
+		# the SDK's 11.3.0 runtime instead makes the two definitions collide). Moving the port onto the
+		# matching runtime means removing that stub as well, so it is a deliberate change rather than a
+		# path cleanup - hence the check, which turns a future SDK without this directory into a clear
+		# error instead of a silent switch. (TinyGL, which SDL2 needs, is attached to the SDL2 imported
+		# target instead, so it lands after it on the link line.)
+		set(_morphosRuntimeDir "${MORPHOS_SDK}/lib/gcc-lib/ppc-morphos/10.4.0")
+		if(NOT EXISTS "${_morphosRuntimeDir}/libatomic.a")
+			message(FATAL_ERROR "The MorphOS SDK at \"${MORPHOS_SDK}\" has no GCC 10.4.0 runtime directory (see the note above this check in cmake/ncine_helpers.cmake)")
+		endif()
+		target_link_libraries(${target} PRIVATE "-L${_morphosRuntimeDir}" atomic)
+	elseif(PLATFORM_AMIGAOS4)
+		# adtools/AmigaOS 4.1 (the project's own cmake/toolchains/os4.cmake toolchain file sets PLATFORM_AMIGAOS4).
+		# A separate target from DEATH_TARGET_AMIGAOS above and not a superset of it: the two share a system
+		# API in name only - this one is PowerPC with a newlib that has threads and most of POSIX, and it
+		# reaches the display through SDL2 rather than through a backend of its own.
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_AMIGAOS4")
+		# The threading layer calls the pthread API directly, which on this target lives in the SDK's
+		# libpthread - the compiler's own -athread flavours provide only the gthreads hooks std::thread needs.
+		# libatomic supplies the 64-bit atomics: this is a 32-bit PowerPC, so an atomic 64-bit load is a
+		# library call rather than an instruction, and the web-request layer counts bytes in one.
+		target_link_libraries(${target} PRIVATE pthread atomic)
 	elseif(NINTENDO_WII)
 		# devkitPPC/libogc (the devkitPro Wii.cmake toolchain file sets NINTENDO_WII)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_WII")
@@ -623,7 +658,7 @@ function(ncine_apply_compiler_options target)
 			if(NINTENDO_SWITCH)
 				# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
-			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3)
+			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3 OR PLATFORM_AMIGA)
 				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3: fast-math reordering
 				# is untested on Gekko/Broadway paired singles and on the Allegrex's single-precision-only FPU,
 				# and code size matters (24 MB GameCube, 16 MB Dreamcast, 24 MB usable of the PSP's 32 MB).
@@ -633,6 +668,10 @@ function(ncine_apply_compiler_options target)
 				# one to attach a debugger to when a fast-math difference does surface.
 				# The N64 already compiles everything with libdragon's own fast-math triplet from the toolchain
 				# file, and with 4-8 MB of RDRAM it has the strictest code-size budget of them all.
+				# The classic Amiga joins them for both halves of the reason at once: a stock RTG machine has
+				# a few megabytes to load the whole executable into, and its floating point comes from either
+				# a 68060 FPU or the Apollo core's - two implementations that differ in what they trap, which
+				# is the last place to let -Ofast reassociate arithmetic on.
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
 			else()
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)

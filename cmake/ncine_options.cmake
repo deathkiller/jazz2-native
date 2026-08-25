@@ -15,7 +15,10 @@ option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 # (gen_reg_rtx) when streaming some units back in during the LTO link
 # The Nintendo 64 is excluded conservatively: libdragon's own build never exercises LTO against its
 # n64.ld linker script and --wrap'ed constructor sequencing, so it is the least-tested combination
-cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID;NOT PLATFORM_DREAMCAST;NOT PLATFORM_N64" OFF)
+# The two PowerPC Amiga targets join the list for a toolchain reason rather than a code-size one:
+# neither GCC can produce a usable LTO archive here, so CMake's own IPO probe fails - on MorphOS with
+# "-fno-fat-lto-objects are supported only with linker plugin", on AmigaOS 4 when it archives the probe
+cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID;NOT PLATFORM_DREAMCAST;NOT PLATFORM_N64;NOT PLATFORM_AMIGA;NOT PLATFORM_MORPHOS;NOT PLATFORM_AMIGAOS4" OFF)
 if(NCINE_LINKTIME_OPTIMIZATION)
 	include(CheckIPOSupported)
 	check_ipo_supported(RESULT _ipoSupported OUTPUT _ipoOutput)
@@ -50,7 +53,7 @@ if(NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
-	if(NINTENDO_SWITCH OR VITA)
+	if(NINTENDO_SWITCH OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
 		set(_NCINE_DEFAULT_BACKEND "SDL2")
 	else()
 		set(_NCINE_DEFAULT_BACKEND "GLFW")
@@ -58,7 +61,68 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 
-	if(PLATFORM_N64)
+	if((PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS) AND NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
+		# SDL2 is the only one of them that exists on the PowerPC Amigas - there is no GLFW, no SDL3 and
+		# no Qt5 - so an overridden value cannot be honoured and is rejected instead of falling back
+		message(FATAL_ERROR "Invalid NCINE_PREFERRED_BACKEND \"${NCINE_PREFERRED_BACKEND}\" for AmigaOS 4.1/MorphOS (expected SDL2)")
+	endif()
+
+	if(PLATFORM_MORPHOS)
+		# MorphOS (the project's own cmake/toolchains/morphos.cmake toolchain file sets PLATFORM_MORPHOS):
+		# two backends are possible, and neither is the engine's shader path - MorphOS's 3D interface is
+		# TinyGL, a fixed-function OpenGL 1.x with no shader support of any kind.
+		#
+		# "LegacyGL" drives that interface through the fixed-function GL backend, which is the same idea as
+		# the PVR/GX/GU/GS/RDP console backends (it consumes the same transpiled `fixed_function` effect
+		# tables) with OpenGL 1.3 texture combiners in place of each console's TEV. It needs a 3D card
+		# tinygl.library supports - a Radeon on a PowerBook/Efika/Sam or a PCI Radeon/Voodoo/Permedia in a
+		# Pegasos - and SDL2 creates the context for it.
+		#
+		# "Software" is the CPU rasterizer, and remains available for a machine whose graphics card TinyGL
+		# does not support - and for emulation, where there is no 3D at all (QEMU's ATI card does not
+		# implement the CCE DMA path tinygl.library drives), which is also why the GL path has not been
+		# verified on this system yet. See Docs/Amiga.dox.
+		#
+		# A LegacyGL build does not start without tinygl.library: it is opened before main() by the SDK's
+		# own initializer, which is what puts the call vectors in place (see MorphOSTinyGl.cpp).
+		set(NCINE_PREFERRED_RHI "LegacyGL" CACHE STRING "Rendering backend on MorphOS: LegacyGL or Software")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "LegacyGL;Software")
+		if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|LegacyGL)$")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on MorphOS (expected LegacyGL or Software)")
+		endif()
+	elseif(PLATFORM_AMIGAOS4)
+		# AmigaOS 4.1 (the project's own cmake/toolchains/os4.cmake toolchain file sets PLATFORM_AMIGAOS4):
+		# the same two backends as MorphOS, for the same reason - the hardware is a real Radeon and the
+		# way to it that this SDK ships is MiniGL, a fixed-function OpenGL 1.x over Warp3D. So "LegacyGL"
+		# drives it with the same backend TinyGL gets, and it is the default here as well; MiniGL
+		# advertises GL_EXT_texture_env_combine, which is what that backend expresses its effects with.
+		#
+		# What MiniGL has no trace of is framebuffer objects, so a render target is drawn into the back
+		# buffer and copied into its texture instead (see LegacyGlRenderTarget) - that path is compiled
+		# in rather than probed here, because the entry points do not even exist to call.
+		#
+		# The other road to this hardware is Warp3D Nova's ogles2.library, which the engine's ES2 profile
+		# would match (the same one the PS Vita's vitaGL build uses) - but this SDK ships no GLES2 headers
+		# or link library for it, so that stays a separate project. "Software" remains available as the
+		# fallback for a machine with no 3D driver.
+		set(NCINE_PREFERRED_RHI "LegacyGL" CACHE STRING "Rendering backend on AmigaOS 4: LegacyGL or Software")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "LegacyGL;Software")
+		if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|LegacyGL)$")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on AmigaOS 4 (expected LegacyGL or Software)")
+		endif()
+	elseif(PLATFORM_AMIGA)
+		# Classic Amiga (the project's own cmake/toolchains/amiga.cmake toolchain file sets PLATFORM_AMIGA):
+		# the only rendering backend is the CPU software rasterizer, presented through the bespoke Amiga
+		# window backend into an RTG (Picasso96/CyberGraphX) chunky framebuffer. No Amiga this port can run
+		# on has texturing or blending hardware - RTG cards accelerate at most blits and fills - so unlike
+		# the fixed-function consoles there is no hardware pipeline to drive: the Software RHI, which the
+		# desktop and Vita builds already ship, IS the renderer here (see Docs/AmigaPortDesign.md).
+		set(NCINE_PREFERRED_RHI "Software" CACHE STRING "Rendering backend on Amiga: Software")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "Software")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "Software")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Amiga (expected Software)")
+		endif()
+	elseif(PLATFORM_N64)
 		# Nintendo 64 (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64): the
 		# only rendering backend is the fixed-function RDP one, driven through libdragon's rdpq command
 		# queue, presented through the bespoke N64 window backend. libdragon's OpenGL 1.1 is layered on
@@ -155,13 +219,18 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		# VkSwapchainKHR), so any of them forces the SDL2 window backend. Direct3D 11 requires Windows + MSVC;
 		# Vulkan is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic vulkan-1.dll loader (no
 		# Vulkan SDK). The rest of the build keys on this variable directly (NCINE_PREFERRED_RHI STREQUAL "...").
-		set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend: OpenGL, Software, D3D11, or Vulkan")
-		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software;D3D11;Vulkan")
+		# "LegacyGL" is the fixed-function OpenGL 1.x backend. Its target is MorphOS' TinyGL (see the arm
+		# above); it is offered on the desktop because that is where it can be developed and looked at -
+		# a desktop GL runs the same 1.3 combiner pipeline, so what renders wrongly here renders wrongly
+		# there. It is not a sensible choice for an actual desktop build, where the OpenGL backend is
+		# better in every respect.
+		set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend: OpenGL, LegacyGL, Software, D3D11, or Vulkan")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;LegacyGL;Software;D3D11;Vulkan")
 
 		if(NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT (WIN32 AND MSVC))
 			message(FATAL_ERROR "NCINE_PREFERRED_RHI=D3D11 requires Windows with the MSVC toolchain")
-		elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(OpenGL|Software|D3D11|Vulkan)$")
-			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, Software, D3D11, or Vulkan)")
+		elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(OpenGL|LegacyGL|Software|D3D11|Vulkan)$")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, LegacyGL, Software, D3D11, or Vulkan)")
 		endif()
 
 		# The non-OpenGL backends present through the SDL window, so force an SDL window backend.
@@ -174,7 +243,7 @@ endif()
 
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
-elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
+elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFORM_MORPHOS)
 	# These consoles are single-threaded, each for its own reason, and none is a configuration change
 	# away from working:
 	#  - PSP: pspdev's pthread-embedded lacks the thread names, affinity and priorities the engine's
@@ -183,6 +252,13 @@ elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3)
 	#  - PS3: PSL1GHT ships no pthreads at all - newlib installs <pthread.h>, nothing implements it.
 	#  - N64: libdragon ships no pthreads either (its cooperative kthread kernel is a different API),
 	#    and a single 93 MHz core has nothing for a second thread to win anyway.
+	#  - Amiga: bebbo's GCC has no gthreads/std::thread (AmigaOS Exec tasks are a different API), and
+	#    every machine in this port's range is a single core anyway.
+	#  - MorphOS: it HAS working pthreads, but its <pthread.h> includes <exec/semaphores.h>, which puts
+	#    exec's `struct Task` in the global namespace - and that is also the name of the engine's
+	#    coroutine type, so every one of the 264 unqualified `Task<...>` declarations in the game becomes
+	#    ambiguous as soon as anything includes the header. Nothing else in the SDK does (SDL2's headers
+	#    are clean), so the way out is to not use pthreads rather than to rename a type across the game.
 	# TODO: The first three have cycles to spare for a background asset loader (the Allegrex's Media
 	# Engine, the EE, and the Cell's second PPE thread plus the SPEs).
 	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
@@ -309,6 +385,13 @@ endif()
 # either way, GX copies out to a YUV XFB - so there is nothing to switch there, and a D3D11/Vulkan swap
 # chain in 5/6/5 is not something drivers reliably offer.
 cmake_dependent_option(NCINE_RHI_USE_FB16 "Use 16-bit (RGB565) color surfaces instead of RGBA8" OFF "NCINE_PREFERRED_RHI STREQUAL Software OR NCINE_PREFERRED_RHI STREQUAL OpenGL" OFF)
+if(PLATFORM_AMIGA)
+	# The Amiga present path copies the screen buffer into an RTG bitmap whose native 16-bit format is
+	# big-endian R5G6B5 - exactly what the native-endian FB16 buffer holds on the big-endian 68k - so
+	# 16-bit is both the halved-bandwidth choice and the conversion-free one. Forced rather than
+	# defaulted: the backend's present path only implements the FB16 layout.
+	set(NCINE_RHI_USE_FB16 ON)
+endif()
 
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
@@ -316,17 +399,65 @@ cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward lib
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-if(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2)
-	# The game's music is entirely tracker modules, so these consoles have sound effects and no
-	# soundtrack. Each is blocked by something outside the project:
+# The game's music is entirely tracker modules, and there are two libraries here that can play them.
+# They are alternatives, never both: whichever is enabled provides the module path (see the audio
+# section of "ncine_extra_sources.cmake").
+#
+#  - libopenmpt is the reference decoder - every format the game ships, including the four ".mo3"
+#    tracks, and the most accurate playback. It is also the heavy one: floating-point mixing written
+#    for desktop CPUs.
+#  - libxmp is an order of magnitude lighter. Its mixer is integer throughout (the only double-
+#    precision arithmetic in it is the resonant-filter coefficient setup, run per filter change rather
+#    than per sample), it is plain C89 that builds with every toolchain here, and its Galaxy Music
+#    System loaders read the original ".j2b" modules directly. What it costs is coverage: it has no
+#    MO3 support, so 4 of the 56 shipped tracks are silent wherever it is used, and its playback is
+#    less exact on the edge cases libopenmpt is famous for getting right. Converting those four files
+#    offline in the AssetPacker would remove that last difference.
+#
+# So NCINE_WITH_XMP is available everywhere - it is how a platform that cannot afford libopenmpt gets
+# music at all, and it is a legitimate choice on any other target that would rather spend the CPU
+# elsewhere. It defaults on exactly where libopenmpt cannot be used and the machine can still hold a
+# module: a loaded module costs libxmp between 0.5 MB and 4 MB of RAM (measured over this game's
+# tracks; the largest is "grabbag.it"), plus about 0.2 MB of player state.
+# The Wii and the GameCube are on that list for memory rather than for CPU. Measured over this game's
+# tracks, one loaded module costs libopenmpt 4.6-12.5 MB against libxmp's 0.5-4 MB - two to three
+# times more - and the GameCube has 24 MB with no second pool to hide it in (the Wii shares the port
+# and the content, so it follows the same choice). Neither SDK packages libopenmpt either, so that
+# path also compiles the whole of it into a console binary.
+#
+# (Not the PlayStation 2, even though libxmp builds for its toolchain and the machine has the memory:
+# that port has no audio backend at all yet, so there is nothing for a decoder to play through. When
+# one appears, this is the line to add it to. Not the PS Vita either - VitaSDK packages libxmp, and
+# turning this on there does pick the SDK's copy up, but that console runs libopenmpt comfortably and
+# the fuller coverage is worth more than the CPU it saves.)
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR NINTENDO_WII OR NINTENDO_GAMECUBE)
+	set(_ncineXmpDefault ON)
+else()
+	set(_ncineXmpDefault OFF)
+endif()
+cmake_dependent_option(NCINE_WITH_XMP "Enable module (libxmp) audio file support instead of libopenmpt" ${_ncineXmpDefault} "NCINE_WITH_AUDIO" OFF)
+
+if(NCINE_WITH_XMP)
+	# The two decoders serve the same purpose, so enabling libxmp turns libopenmpt off rather than
+	# building both into the binary
+	set(NCINE_WITH_OPENMPT OFF)
+elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_AMIGA)
+	# Turning libxmp off on one of these does NOT bring libopenmpt back - it cannot be used on any of
+	# them, each for a reason outside this project. They are left with sound effects and no soundtrack:
 	#  - PSP: the library builds and plays correctly, but the FIRST module a process loads costs a fixed
 	#    ~29 s inside it (every later one ~1.8 s), which points at the Allegrex having no
 	#    double-precision unit. There is nowhere to hide that on a handheld.
 	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
 	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
+	#    libxmp does build there, but the console has no audio backend yet, so neither is of any use.
 	#  - N64: a decoded module's runtime state plus the streaming buffers do not fit next to the game
-	#    in 8 MB of RDRAM, so it is not even worth the code size.
-	# All are open-ended; the shared way out would be pre-rendering the modules offline - the AssetPacker
+	#    in 8 MB of RDRAM, so it is not even worth the code size. That is also why libxmp is not the
+	#    default there despite being far lighter - its own per-module cost (up to 4 MB, see above) is
+	#    most of the console's memory, and the ROM packaging drops the whole "Music" directory to stay
+	#    inside the 64 MB cartridge ceiling anyway.
+	#  - Amiga: libopenmpt's mixer is written for machines two orders of magnitude faster than a 68060;
+	#    there is no port and no prospect of one being real-time on the classic tier.
+	# The shared way out for all of them would be pre-rendering the modules offline - the AssetPacker
 	# already re-encodes cinematics for the Dreamcast, so it is the natural place for it.
 	# (The PS3 used to be on this list. It is not any more - see Findlibopenmpt.cmake, which puts the
 	# library into its single-threaded mode so it never reaches the std::mutex PSL1GHT lacks.)
@@ -334,6 +465,7 @@ if(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2)
 else()
 	cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
 endif()
+
 option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
@@ -454,11 +586,11 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT VITA" ON)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT NCINE_PREFERRED_RHI STREQUAL LegacyGL;NOT VITA" ON)
 # The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
-# rasterizes per tile. The GX, PVR and GU backends all consume the whole-layer mesh directly (see
-# GxDevice::DispatchTileMesh, PvrDevice::DispatchTileMesh and GuDevice::DispatchTileMesh), so they
-# keep it on - on the GU it is also what lets a whole layer go out as one GE draw call
+# rasterizes per tile. The GX, PVR, GU and LegacyGL backends all consume the whole-layer mesh directly
+# (see GxDevice::DispatchTileMesh and its counterparts), so they keep it on - on the GU it is also what
+# lets a whole layer go out as one GE draw call
 cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
 # Even the local (splitscreen) half of multiplayer is built on NetworkManagerBase, which owns an
@@ -476,11 +608,20 @@ cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_W
 # PlayStation 2 is excluded for the same shape of reason as the Vita: PS2SDK has a socket stack (ps2ip), but
 # the bundled IXWebSocket includes <netinet/ip.h>, which PS2SDK does not ship - so the WebSocket transport
 # cannot compile there as it stands. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT VITA" OFF)
+# AmigaOS 4 and MorphOS are excluded for the same reason as each other: both bsdsocket stacks are
+# IPv4-only - neither SDK has a <netinet/in6.h> or a `struct in6_addr` anywhere - while the bundled ENet
+# is built around IPv6 addresses with IPv4-mapped ones inside them. This is not a header away like the
+# two exclusions above, so it carries no TODO. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
-cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA" OFF)
+# AmigaOS 4 is excluded for one header rather than the stack: its bsdsocket headers cover everything
+# else IXWebSocket wants, but there is no <poll.h> anywhere in the SDK - the OS offers select() and
+# the library's own WaitSelect - and IXWebSocket includes it unconditionally. MorphOS does ship <poll.h>
+# and is named here only to keep the exclusion explicit: this option follows WITH_ONLINE_MULTIPLAYER,
+# which is already off there for the ENet reason above.
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
 	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners

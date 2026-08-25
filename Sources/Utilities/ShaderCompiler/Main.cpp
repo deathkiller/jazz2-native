@@ -244,7 +244,7 @@ namespace
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
 			"  --emit-rsx <output.h> [--cgcomp <path>] <input.shader ...>  Compile every stage to RSX microcode (PlayStation 3)\n"
-			"  --emit-fixed-function <pvr|gx|gu|gs|rdp> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
+			"  --emit-fixed-function <pvr|gx|gu|gs|rdp|legacygl> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
 	int ReportError(const char* inputPath, const Diagnostic& diag)
@@ -1431,7 +1431,7 @@ namespace
 		return String{path.exceptPrefix(begin)};
 	}
 
-	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" / "RdpGeneratedEffects.h" contents from the transpiled effects */
+	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" / "RdpGeneratedEffects.h" / "LegacyGlGeneratedEffects.h" contents from the transpiled effects */
 	String BuildFixedFunctionHeader(FixedFunctionBackend backend, const SmallVectorImpl<GeneratedEffectEntry>& entries,
 		const SmallVectorImpl<GeneratedEffectFunction>& functions)
 	{
@@ -1456,6 +1456,9 @@ namespace
 				break;
 			case FixedFunctionBackend::Rdp:
 				backendArg = "rdp"; guard = "WITH_RHI_RDP"; ns = "nCine::RHI::RDP";
+				break;
+			case FixedFunctionBackend::LegacyGl:
+				backendArg = "legacygl"; guard = "WITH_RHI_LEGACYGL"; ns = "nCine::RHI::LegacyGL";
 				break;
 			default:
 				backendArg = "pvr"; guard = "WITH_RHI_PVR"; ns = "nCine::RHI::PVR";
@@ -1570,8 +1573,11 @@ namespace
 		} else if (StringView(backendName) == "rdp") {
 			backend = FixedFunctionBackend::Rdp;
 			overrideTarget = FixedFunctionTarget::Rdp;
+		} else if (StringView(backendName) == "legacygl") {
+			backend = FixedFunctionBackend::LegacyGl;
+			overrideTarget = FixedFunctionTarget::LegacyGl;
 		} else {
-			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, gu, gs or rdp)\n", backendName);
+			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, gu, gs, rdp or legacygl)\n", backendName);
 			return 2;
 		}
 
@@ -2540,7 +2546,7 @@ namespace
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
 			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "gu", "GuGeneratedEffects.h" },
-			{ "gs", "GsGeneratedEffects.h" }, { "rdp", "RdpGeneratedEffects.h" }
+			{ "gs", "GsGeneratedEffects.h" }, { "rdp", "RdpGeneratedEffects.h" }, { "legacygl", "LegacyGlGeneratedEffects.h" }
 		};
 		for (const auto& target : fixedFunctionTargets) {
 			String path = fs::CombinePath(outputDirectory, target.FileName);

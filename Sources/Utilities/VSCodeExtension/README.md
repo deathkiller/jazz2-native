@@ -36,7 +36,7 @@ GLSL it knows the language's own vocabulary and colours it distinctly:
 
 - the top-level directives `program`, `shader_type`, `variant`, `render_mode`, `precision`,
   `batched`, `attribute`, `varying`, and the `uniform … : hint` hint list
-- the entry points `void vertex()`, `void fragment()` and `void fixed_function([pvr, gx, gu, gs, rdp])`
+- the entry points `void vertex()`, `void fragment()` and `void fixed_function([pvr, gx, gu, gs, rdp, legacygl])`
 - the fixed-function DSL inside a `fixed_function` block: `pass`, `pipeline`, `submit_quad`,
   `submit_strip`, `submit_strip_shaded`, the pass fields (`color`, `offset_color`, `screen_offset`,
   `blend`, `tev`, `luma_gain`), their `MATERIAL`/`ADD`/… and `MODULATE`/`LUMA_RAMP`/… values, and the
@@ -60,7 +60,7 @@ Offered per cursor context rather than as one flat list:
 | brace depth 0 | the directives, the entry points, `#include`, types, and the names this file declares |
 | after `shader_type` / `render_mode` / `precision` | only that directive's legal values |
 | after the `:` of a uniform | only the seven uniform hints |
-| inside `void fixed_function(…)`'s parentheses | `pvr`, `gx`, `gu`, `gs`, `rdp` |
+| inside `void fixed_function(…)`'s parentheses | `pvr`, `gx`, `gu`, `gs`, `rdp`, `legacygl` |
 | inside a `fixed_function` body | the fixed-function DSL, the pass fields and the small maths subset the transpiler accepts |
 | inside `vertex()` / `fragment()` | GLSL built-ins, `gl_*`, the mode-appropriate canvas built-ins, and this file's uniforms, varyings, attributes, block members, structs, `#define`s and helper functions |
 | inside an `#include "…"` | the sibling `.inc` / `.shader` files, directory by directory |

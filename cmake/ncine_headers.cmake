@@ -551,4 +551,21 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Shaders/Generated/RdpGeneratedEffects.h
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlApi.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlBuffer.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlDebug.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlRhiCapabilities.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShader.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShaderProgram.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShaderTypes.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShaderUniforms.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlTexture.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlUniformCache.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlVertexFormat.h
+		${NCINE_SOURCE_DIR}/Shaders/Generated/LegacyGlGeneratedEffects.h
+	)
 endif()

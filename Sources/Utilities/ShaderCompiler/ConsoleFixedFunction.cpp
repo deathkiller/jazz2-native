@@ -126,18 +126,20 @@ namespace ShaderCompiler
 			return (v == "LUMA_RAMP");
 		}
 		// The preset a lerping combiner can express: TINT_MIX is mix(texel, colour, alpha) with an
-		// opaque result. The GX does it in one TEV stage (d + mix(a, b, c)), and the N64's RDP colour
+		// opaque result. The GX does it in one TEV stage (d + mix(a, b, c)); the N64's RDP colour
 		// combiner IS that lerp - one cycle of (PRIM - TEX) * PRIM_ALPHA + TEX with the pass colour in
-		// the PRIM register. Nothing else on this tier can: the CLX2 only modulates and adds an offset
-		// colour, the GE's five texture functions have no lerp of a texel toward a constant weighted by
-		// an interpolated alpha (GU_TFX_BLEND weighs by the TEXEL), and the GS's four texture functions
-		// are just as fixed. Checked per block target through HasTintMixCombiner below.
+		// the PRIM register; and OpenGL 1.3's GL_INTERPOLATE is the same operation again. Nothing else
+		// on this tier can: the CLX2 only modulates and adds an offset colour, the GE's five texture
+		// functions have no lerp of a texel toward a constant weighted by an interpolated alpha
+		// (GU_TFX_BLEND weighs by the TEXEL), and the GS's four texture functions are just as fixed.
+		// Checked per block target through HasTintMixCombiner below.
 		bool IsTintMixTevValueName(StringView v)
 		{
 			return (v == "TINT_MIX");
 		}
 		// Presets the GE has no form of at all: its texture environment applies no output scale to the
-		// combined colour, so a x2/x4 modulate cannot be expressed by any single GE draw. The PVR
+		// combined colour, so a x2/x4 modulate cannot be expressed by any single GE draw. A legacy GL
+		// has both (GL_RGB_SCALE takes 1, 2 or 4), like the GX. The PVR
 		// silently IGNORES them (it always modulates), which is why they are not "gx-only" - but that
 		// also means a block shared with the gu target would be honoured by only some of the backends
 		// it serves, so any block that reaches the GU (a gu block, a target list naming gu, or a
@@ -163,16 +165,17 @@ namespace ShaderCompiler
 				case FixedFunctionTarget::Gu: return FixedFunctionBackend::Gu;
 				case FixedFunctionTarget::Gs: return FixedFunctionBackend::Gs;
 				case FixedFunctionTarget::Rdp: return FixedFunctionBackend::Rdp;
+				case FixedFunctionTarget::LegacyGl: return FixedFunctionBackend::LegacyGl;
 				default: return FixedFunctionBackend::Pvr;
 			}
 		}
 
 		// How many vertices the backend's strip-builder scratch holds (EffectContext::MaxStripVertices).
 		// The contract's floor is 8; the GX raises it to 16 so a radially subdivided iris wedge is one
-		// strip instead of three, and the GU, the GS and the RDP match it (the GE takes a strip of any
-		// length in one draw call, one GIF packet carries a triangle strip of any length, and the RSP's
-		// vertex cache loads well over 16 vertices in one command, so there is nothing to gain from
-		// splitting the geometry into small pieces). Literal indices and counts are checked
+		// strip instead of three, and every other backend matches it (the GE takes a strip of any
+		// length in one draw call, one GIF packet carries a triangle strip of any length, the RSP's
+		// vertex cache loads well over 16 vertices in one command, and a GL draws an array of any
+		// length, so there is nothing to gain from splitting the geometry into small pieces). Literal indices and counts are checked
 		// against it at generation time, because at runtime an out-of-range index is dropped and an
 		// oversized count clamped - which would silently draw the wrong geometry. A block serving several
 		// backends may only rely on the SMALLEST of their capacities, so a "pvr, gx" block is held to the
@@ -188,6 +191,7 @@ namespace ShaderCompiler
 				case FixedFunctionBackend::Gu: return "gu";
 				case FixedFunctionBackend::Gs: return "gs";
 				case FixedFunctionBackend::Rdp: return "rdp";
+				case FixedFunctionBackend::LegacyGl: return "legacygl";
 				default: return "pvr";
 			}
 		}
@@ -203,7 +207,8 @@ namespace ShaderCompiler
 		// have no scale stage either.
 		bool HasCombinerOutputScale(FixedFunctionBackend backend, bool x4)
 		{
-			if (backend == FixedFunctionBackend::Gx) return true;
+			// OpenGL 1.3's GL_COMBINE has GL_RGB_SCALE, which takes 1, 2 or 4 - both scales, exactly
+			if (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::LegacyGl) return true;
 			if (backend == FixedFunctionBackend::Rdp) return !x4;
 			return false;
 		}
@@ -215,7 +220,10 @@ namespace ShaderCompiler
 		// CLX2, the GE and the GS cannot (see IsTintMixTevValueName above).
 		bool HasTintMixCombiner(FixedFunctionBackend backend)
 		{
-			return (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::Rdp);
+			// GL_INTERPOLATE is that lerp: Arg0 * Arg2 + Arg1 * (1 - Arg2), with the texel in Arg0, the
+			// pass colour in the texture environment colour and the interpolated alpha in Arg2
+			return (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::Rdp ||
+				backend == FixedFunctionBackend::LegacyGl);
 		}
 
 		// --- Statement AST ---------------------------------------------------------------------------
@@ -757,10 +765,10 @@ namespace ShaderCompiler
 			}
 
 			// Rejects TINT_MIX for every block that reaches a backend whose texture combiner cannot lerp
-			// a texel toward a constant colour (see HasTintMixCombiner) - the GX and the RDP can, so a
-			// block targeting either of them (or both, from one body) may use it, and the same block is
-			// a hard error as soon as its list drags in the CLX2, the GE or the GS, which would silently
-			// draw something else. A generic block is checked against the backend whose header is being
+			// a texel toward a constant colour (see HasTintMixCombiner) - the GX, the RDP and a legacy GL
+			// can, so a block targeting any of them (or several, from one body) may use it, and the same
+			// block is a hard error as soon as its list drags in the CLX2, the GE or the GS, which would
+			// silently draw something else. A generic block is checked against the backend whose header is being
 			// emitted, so it fails while the first no-combiner console's aggregate is written.
 			bool RequireTintMixCombiner(StringView what)
 			{
@@ -794,7 +802,7 @@ namespace ShaderCompiler
 					// The list form: the block would have been valid without that target in it
 					why += ", which this block also names"_s;
 				}
-				why += " (keep TINT_MIX in a fixed_function block that only targets gx and/or rdp, and give the other backends their own block)"_s;
+				why += " (keep TINT_MIX in a fixed_function block that only targets gx, rdp and/or legacygl, and give the other backends their own block)"_s;
 				Fail(std::move(why));
 				return false;
 			}

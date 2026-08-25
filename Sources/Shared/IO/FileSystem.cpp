@@ -31,7 +31,8 @@
 #		include <dir.h>
 #	endif
 #	include <fcntl.h>
-#	if !defined(DEATH_TARGET_PS3)
+#	if !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
+		!defined(DEATH_TARGET_MORPHOS)
 #		include <ftw.h>
 #	endif
 #	include <libgen.h>
@@ -258,6 +259,25 @@ namespace Death { namespace IO {
 					break;
 				}
 			}
+#	elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
+			// AmigaDOS roots a path at a volume, device or assign name followed by a colon ("Work:Games",
+			// "Ram Disk:", "LIBS:"), and the colon IS the whole root - there is no separator after it, so
+			// "Work:Games" is already absolute. The name is not restricted to the alphanumerics the console
+			// mount points above are (a space is ordinary in one), so the scan runs to the first colon and
+			// stops at the first '/', which cannot appear in a name. A bare ':' names the current volume's
+			// root, which the same rule already covers.
+			for (std::size_t i = 0; i < path.size(); i++) {
+				char c = path.data()[i];
+				if (c == ':') {
+					return i + 1;
+				}
+				if (c == '/' || c == '\\') {
+					break;
+				}
+			}
+			// A leading slash is not a root here: AmigaDOS spells the parent directory that way, so
+			// "/Data" is relative to the current directory rather than to anything above it
+			return 0;
 #	endif
 			return (path[0] == '/' || path[0] == '\\' ? 1 : 0);
 #endif
@@ -531,7 +551,8 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64)
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64) && \
+		!defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -547,7 +568,8 @@ namespace Death { namespace IO {
 			return false;
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3)
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS) || \
+		defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 			// nftw() is missing in libnx, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
 			// all), and on PSPSDK and PS2SDK it is only declared
 			// (there is no implementation behind it), so the walk is done by hand everywhere on the consoles.
@@ -1495,8 +1517,9 @@ namespace Death { namespace IO {
 			return path;
 		}
 #	endif
-#	if defined(DEATH_TARGET_PS3)
+#	if defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 		// This newlib defines no PATH_MAX, the class's own bound is larger than lv2's real path limit
+		// (libnix defines none either, and AmigaOS paths are far shorter than the class's bound)
 		char buffer[MaxPathLength];
 #	else
 		// realpath() output parameter must be a pointer to a buffer with >= PATH_MAX bytes
@@ -1715,8 +1738,11 @@ namespace Death { namespace IO {
 		if (!home.empty()) {
 			return home;
 		}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64)
-		// `getpwuid()` is not implemented on Emscripten, Vita and libdragon
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64) && \
+		!defined(DEATH_TARGET_MORPHOS)
+		// `getpwuid()` is not implemented on Emscripten, Vita and libdragon, and on MorphOS it lives in
+		// usergroup.library - a reference to it makes the loader open that library (and bsdsocket.library
+		// behind it) before the program starts
 		const struct passwd* pw = ::getpwuid(getuid());
 		if (pw != nullptr) {
 			return pw->pw_dir;
@@ -2520,9 +2546,10 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#	if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3)
+#	if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS) || \
+		defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 		// O_CLOEXEC is not supported on Vita, and the PS3's newlib does not declare it - lv2 has no exec
-		// for a descriptor to survive into anyway
+		// for a descriptor to survive into anyway (neither Amiga runtime declares it - AmigaOS has no exec at all)
 		const std::int32_t commonFlags = 0;
 #	else
 		const std::int32_t commonFlags = O_CLOEXEC;
@@ -2552,7 +2579,8 @@ namespace Death { namespace IO {
 #if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && \
 		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
-		!defined(DEATH_TARGET_N64) && !defined(__FreeBSD__)
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
+		!defined(DEATH_TARGET_MORPHOS) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;

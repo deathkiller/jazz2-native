@@ -396,8 +396,8 @@ namespace Death { namespace IO {
 		return result;
 #elif defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 		return (::fdatasync(_fileDescriptor) == 0 && result);
-#elif defined(DEATH_TARGET_DREAMCAST)
-		// fsync() is not implemented in KOS
+#elif defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_MORPHOS)
+		// fsync() is not implemented in KOS, and MorphOS's C library only declares it
 		return result;
 #else
 		return (::fsync(_fileDescriptor) == 0 && result);
@@ -616,9 +616,11 @@ namespace Death { namespace IO {
 #	endif
 				return;
 		}
-#	if !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3)
+#	if !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_AMIGAOS) && \
+		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		// The PS3's newlib declares no O_CLOEXEC, and the flag would have nothing to do there anyway:
-		// lv2 has no exec, so a descriptor cannot outlive this process into another one
+		// lv2 has no exec, so a descriptor cannot outlive this process into another one (neither Amiga
+		// runtime declares it either, and AmigaOS has no exec at all)
 		if ((mode & FileAccess::InheritHandle) != FileAccess::InheritHandle) {
 			openFlags |= O_CLOEXEC;
 		}
@@ -646,7 +648,8 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && \
-		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file

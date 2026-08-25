@@ -7,6 +7,8 @@
 #	endif
 #	if defined(WITH_OPENMPT)
 #		include "AudioLoaderMpt.h"
+#	elif defined(WITH_XMP)
+#		include "AudioLoaderXmp.h"
 #	endif
 #endif
 
@@ -56,6 +58,13 @@ namespace nCine
 #	if defined(WITH_OPENMPT)
 		if (extension == "it"_s || extension == "j2b"_s || extension == "mo3"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
 			return std::make_unique<AudioLoaderMpt>(std::move(fileHandle));
+		}
+#	elif defined(WITH_XMP)
+		// The lightweight module player for platforms where libopenmpt is not real-time-viable
+		// (no ".mo3": that is an Un4seen container libxmp does not parse, and the game's own
+		// soundtrack never uses it)
+		if (extension == "it"_s || extension == "j2b"_s || extension == "mod"_s || extension == "s3m"_s || extension == "xm"_s) {
+			return std::make_unique<AudioLoaderXmp>(std::move(fileHandle));
 		}
 #	endif
 
