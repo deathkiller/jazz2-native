@@ -7,6 +7,8 @@
 #include "AndroidJniHelper.h"
 #include "../../tracy.h"
 
+#include <android/input.h>
+
 #include <IO/AndroidAssetStream.h>
 
 using namespace Death::IO;
@@ -46,6 +48,45 @@ extern "C"
 
 		nc::Backends::AndroidJniHelper::jniEnv = oldEnv;
 	}
+
+	/** @brief Called by `jnicall_functions.cpp` */
+	void nativeTextInput(JNIEnv* env, jclass clazz, jstring text)
+	{
+		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+		if (text == nullptr || !androidApp.IsInitialized()) {
+			return;
+		}
+
+		// UTF-16 is used instead of `GetStringUTFChars()`, which returns modified UTF-8 with surrogate
+		// pairs encoded separately
+		const jsize length = env->GetStringLength(text);
+		const jchar* chars = env->GetStringChars(text, nullptr);
+		if (chars == nullptr) {
+			return;
+		}
+
+		for (jsize i = 0; i < length; i++) {
+			char32_t codePoint = chars[i];
+			if (codePoint >= 0xD800 && codePoint <= 0xDBFF && i + 1 < length &&
+				chars[i + 1] >= 0xDC00 && chars[i + 1] <= 0xDFFF) {
+				codePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (chars[i + 1] - 0xDC00);
+				i++;
+			}
+			androidApp.HandleTextInput(codePoint);
+		}
+
+		env->ReleaseStringChars(text, chars);
+	}
+
+	/** @brief Called by `jnicall_functions.cpp` */
+	void nativeKeyEvent(JNIEnv* env, jclass clazz, jint action, jint keyCode)
+	{
+		// `AKEY_EVENT_ACTION_DOWN` and `AKEY_EVENT_ACTION_UP` match `KeyEvent.ACTION_DOWN`/`ACTION_UP`
+		nc::AndroidApplication& androidApp = static_cast<nc::AndroidApplication&>(nc::theApplication());
+		if (androidApp.IsInitialized() && (action == AKEY_EVENT_ACTION_DOWN || action == AKEY_EVENT_ACTION_UP)) {
+			androidApp.HandleKeyEvent(action == AKEY_EVENT_ACTION_DOWN, keyCode);
+		}
+	}
 }
 
 namespace nCine
@@ -57,8 +98,8 @@ namespace nCine
 	}
 
 	AndroidApplication::AndroidApplication()
-		: Application(), _isInitialized(false), _isBackInvoked(false), _isScreenRound(false), _state(nullptr),
-			_createAppEventHandler(nullptr)
+		: Application(), _isInitialized(false), _isBackInvoked(false), _isScreenRound(false),
+			_canShowScreenKeyboard(false), _state(nullptr), _createAppEventHandler(nullptr)
 	{
 	}
 
@@ -108,6 +149,8 @@ namespace nCine
 				app._isBackInvoked = false;
 				app._appEventHandler->OnBackInvoked();
 			}
+
+			app.ProcessDeferredInput();
 
 			if (app.IsInitialized() && !app.ShouldSuspend()) {
 				AndroidInputManager::updateJoystickConnections();
@@ -187,6 +230,9 @@ namespace nCine
 			}
 			case APP_CMD_CONFIG_CHANGED: {
 				LOGI("APP_CMD_CONFIG_CHANGED event received");
+				// Attaching a physical keyboard can disable the input methods providing a software one
+				AndroidApplication& app = theAndroidApplication();
+				app._canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::isSoftInputAvailable();
 				break;
 			}
 			case APP_CMD_LOW_MEMORY: {
@@ -259,24 +305,66 @@ namespace nCine
 		LOGI("Received new content bounds: {{X: {}, Y: {}, W: {}, H: {}}}", bounds.X, bounds.Y, bounds.W, bounds.H);
 	}
 	
+	void AndroidApplication::HandleTextInput(char32_t codePoint)
+	{
+		_deferredInputLock.Lock();
+		_deferredInput.push_back(DeferredInputEvent{0, codePoint, false});
+		_deferredInputLock.Unlock();
+	}
+
+	void AndroidApplication::HandleKeyEvent(bool pressed, std::int32_t keyCode)
+	{
+		if (keyCode == 0) {
+			return;
+		}
+
+		_deferredInputLock.Lock();
+		_deferredInput.push_back(DeferredInputEvent{keyCode, 0, pressed});
+		_deferredInputLock.Unlock();
+	}
+
+	void AndroidApplication::ProcessDeferredInput()
+	{
+		SmallVector<DeferredInputEvent, 0> events;
+
+		_deferredInputLock.Lock();
+		if (!_deferredInput.empty()) {
+			events = std::move(_deferredInput);
+			_deferredInput.clear();
+		}
+		_deferredInputLock.Unlock();
+
+		for (const auto& event : events) {
+			if (event.KeyCode != 0) {
+				AndroidInputManager::injectKeyEvent(event.Pressed, event.KeyCode);
+			} else {
+				AndroidInputManager::injectTextInput(event.CodePoint);
+			}
+		}
+	}
+
 	bool AndroidApplication::CanShowScreenKeyboard()
 	{
-		return _isInitialized;
+		return _isInitialized && _canShowScreenKeyboard;
+	}
+
+	bool AndroidApplication::IsScreenKeyboardVisible()
+	{
+		return _isInitialized && AndroidJniWrap_InputMethodManager::isSoftInputVisible();
 	}
 
 	bool AndroidApplication::ToggleScreenKeyboard()
 	{
-		if (_isInitialized) {
-			AndroidJniWrap_InputMethodManager::toggleSoftInput();
-			return true;
-		} else {
+		if (!CanShowScreenKeyboard()) {
 			return false;
 		}
+
+		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
 	}
 
 	bool AndroidApplication::ShowScreenKeyboard()
 	{
-		return _isInitialized && AndroidJniWrap_InputMethodManager::showSoftInput();
+		return CanShowScreenKeyboard() && AndroidJniWrap_InputMethodManager::showSoftInput();
 	}
 
 	bool AndroidApplication::HideScreenKeyboard()
@@ -313,7 +401,8 @@ namespace nCine
 		AndroidAssetStream::InitializeAssetManager(_state);
 
 		_isScreenRound = AndroidJniWrap_Activity::isScreenRound();
-		
+		_canShowScreenKeyboard = AndroidJniWrap_InputMethodManager::isSoftInputAvailable();
+
 		PreInitCommon(_createAppEventHandler());
 
 #if defined(DEATH_DEBUG)
@@ -343,6 +432,9 @@ namespace nCine
 
 		if (_isScreenRound) {
 			LOGI("Using round screen layout");
+		}
+		if (!_canShowScreenKeyboard) {
+			LOGI("No input method providing a software keyboard is enabled");
 		}
 	}
 

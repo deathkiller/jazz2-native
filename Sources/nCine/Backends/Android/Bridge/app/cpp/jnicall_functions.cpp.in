@@ -17,9 +17,23 @@ extern "C"
 	}
 	
 	extern void nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri);
-	
+
 	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeHandleIntent(JNIEnv* env, jclass clazz, jstring action, jstring uri)
 	{
 		nativeHandleIntent(env, clazz, action, uri);
+	}
+
+	extern void nativeTextInput(JNIEnv* env, jclass clazz, jstring text);
+
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeTextInput(JNIEnv* env, jclass clazz, jstring text)
+	{
+		nativeTextInput(env, clazz, text);
+	}
+
+	extern void nativeKeyEvent(JNIEnv* env, jclass clazz, jint action, jint keyCode);
+
+	JNIEXPORT void JNICALL Java_@JNICALL_PACKAGE@_MainActivityBase_nativeKeyEvent(JNIEnv* env, jclass clazz, jint action, jint keyCode)
+	{
+		nativeKeyEvent(env, clazz, action, keyCode);
 	}
 }

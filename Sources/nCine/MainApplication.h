@@ -34,6 +34,7 @@ namespace nCine
 		bool OpenUrl(StringView url) override;
 		
 		bool CanShowScreenKeyboard() override;
+		bool IsScreenKeyboardVisible() override;
 		bool ToggleScreenKeyboard() override;
 		bool ShowScreenKeyboard() override;
 		bool HideScreenKeyboard() override;

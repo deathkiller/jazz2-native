@@ -440,6 +440,12 @@ namespace nCine::Backends
 			return false;
 		}
 
+		// Native activities receive key events before the input method does, so the Back key has to be left
+		// alone while the screen keyboard is shown, otherwise there would be no way to dismiss it
+		if (keyCode == AKEYCODE_BACK && theApplication().IsScreenKeyboardVisible()) {
+			return false;
+		}
+
 		int metaState = AKeyEvent_getMetaState(event);
 
 		_keyboardEvent.scancode = AKeyEvent_getScanCode(event);
@@ -473,36 +479,52 @@ namespace nCine::Backends
 				_inputEventHandler->OnKeyReleased(_keyboardEvent);
 				break;
 			case AKEY_EVENT_ACTION_MULTIPLE:
-				// AKEY_EVENT_ACTION_MULTIPLE should be deprecated, but it seems it's still used even on Android 13
+				// AKEY_EVENT_ACTION_MULTIPLE should be deprecated, but it seems it's still used even on Android 13.
+				// It can also carry a string of characters, but software keyboards commit their text through
+				// an input connection instead, which arrives in `injectTextInput()`.
 				if (_keyboardEvent.sym != Keys::Unknown) {
 					_inputEventHandler->OnKeyPressed(_keyboardEvent);
 				}
-				// TODO: This section doesn't work anyway with software keyboards (https://stackoverflow.com/q/21124051)
-				/*else if ((metaState & AMETA_CTRL_ON) == 0) {
-					// Unicode input from software keyboard
-					long long int downTime = AKeyEvent_getDownTime(event);
-					long long int eventTime = AKeyEvent_getEventTime(event);
-					int repeatCount = AKeyEvent_getRepeatCount(event);
-					int deviceID = AInputEvent_getDeviceId(event);
-					int flags = AKeyEvent_getFlags(event);
-					int source = AInputEvent_getSource(event);
-
-					AndroidJniClass_KeyEvent keyEvent(downTime, eventTime, action, keyCode, repeatCount, metaState, deviceID, _keyboardEvent.scancode, flags, source);
-					_textInputEvent.length = keyEvent.getCharacters(_textInputEvent.text, sizeof(_textInputEvent.text));
-					if (_textInputEvent.length > 0) {
-						_inputEventHandler->OnTextInput(_textInputEvent);
-					} else if (keyEvent.isPrintingKey() || keyCode == AKEYCODE_SPACE) {
-						const int unicodeKey = keyEvent.getUnicodeChar(metaState);
-						_textInputEvent.length = Utf8::FromCodePoint(unicodeKey, _textInputEvent.text);
-						if (_textInputEvent.length > 0) {
-							_inputEventHandler->OnTextInput(_textInputEvent);
-						}
-					}
-				}*/
 				break;
 		}
 
 		return true;
+	}
+
+	void AndroidInputManager::injectTextInput(char32_t codePoint)
+	{
+		if (_inputEventHandler == nullptr) {
+			return;
+		}
+
+		_textInputEvent.length = static_cast<std::int32_t>(Utf8::FromCodePoint(codePoint, _textInputEvent.text));
+		if (_textInputEvent.length > 0) {
+			_inputEventHandler->OnTextInput(_textInputEvent);
+		}
+	}
+
+	void AndroidInputManager::injectKeyEvent(bool pressed, std::int32_t keyCode)
+	{
+		if (_inputEventHandler == nullptr) {
+			return;
+		}
+
+		_keyboardEvent.scancode = 0;
+		_keyboardEvent.sym = AndroidKeys::keySymValueToEnum(keyCode);
+		_keyboardEvent.mod = 0;
+
+		if (_keyboardEvent.sym == Keys::Unknown) {
+			return;
+		}
+
+		const unsigned int keySym = static_cast<unsigned int>(_keyboardEvent.sym);
+		if (pressed) {
+			_keyboardState._keys[keySym] = 1;
+			_inputEventHandler->OnKeyPressed(_keyboardEvent);
+		} else {
+			_keyboardState._keys[keySym] = 0;
+			_inputEventHandler->OnKeyReleased(_keyboardEvent);
+		}
 	}
 
 	bool AndroidInputManager::processTouchEvent(const AInputEvent* event)

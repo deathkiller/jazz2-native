@@ -1659,7 +1659,12 @@ namespace nCine
 	{
 		return false;
 	}
-	
+
+	bool Application::IsScreenKeyboardVisible()
+	{
+		return false;
+	}
+
 	bool Application::ToggleScreenKeyboard()
 	{
 		return false;

@@ -83,12 +83,13 @@ namespace nCine::Backends
 	jfieldID AndroidJniWrap_Activity::_fidRectRight = nullptr;
 	jfieldID AndroidJniWrap_Activity::_fidRectBottom = nullptr;
 	jmethodID AndroidJniWrap_Activity::_midGetWindowVisibleDisplayFrame = nullptr;
+	jmethodID AndroidJniWrap_Activity::_midGetVisibleBounds = nullptr;
 
-	jobject AndroidJniWrap_InputMethodManager::_inputMethodManagerObject = nullptr;
-	jmethodID AndroidJniWrap_InputMethodManager::_midToggleSoftInput = nullptr;
+	jobject AndroidJniWrap_InputMethodManager::_activityObject = nullptr;
+	jmethodID AndroidJniWrap_InputMethodManager::_midIsSoftInputAvailable = nullptr;
+	jmethodID AndroidJniWrap_InputMethodManager::_midIsSoftInputVisible = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::_midShowSoftInput = nullptr;
 	jmethodID AndroidJniWrap_InputMethodManager::_midHideSoftInput = nullptr;
-	jmethodID AndroidJniWrap_InputMethodManager::_midGetWindowToken = nullptr;
 
 	jobject AndroidJniWrap_DisplayManager::_displayManagerObject = nullptr;
 	jmethodID AndroidJniWrap_DisplayManager::_midGetDisplay = nullptr;
@@ -158,7 +159,6 @@ namespace nCine::Backends
 	{
 		if (_javaVM) {
 			AndroidJniWrap_DisplayManager::shutdown();
-			AndroidJniWrap_InputMethodManager::shutdown();
 
 			_javaVM->DetachCurrentThread();
 			LOGI("Thread detached");
@@ -793,6 +793,8 @@ namespace nCine::Backends
 		jclass viewClass = AndroidJniClass::findClass("android/view/View");
 		_midGetWindowVisibleDisplayFrame = AndroidJniClass::getMethodID(viewClass, "getWindowVisibleDisplayFrame", "(Landroid/graphics/Rect;)V");
 
+		_midGetVisibleBounds = AndroidJniClass::getMethodID(nativeActivityClass, "getVisibleBounds", "()[I");
+
 		// Cache the device vibrator for reuse
 		{
 			jstring svcName = AndroidJniHelper::jniEnv->NewStringUTF("vibrator");
@@ -962,6 +964,22 @@ namespace nCine::Backends
 
 	Recti AndroidJniWrap_Activity::getVisibleBounds()
 	{
+		// Prefer the activity of the Java bridge, because it also accounts for the screen keyboard, which
+		// the visible display frame doesn't report for a window drawn edge-to-edge
+		if (_midGetVisibleBounds != nullptr) {
+			jintArray boundsArray = static_cast<jintArray>(AndroidJniHelper::jniEnv->CallObjectMethod(_activityObject, _midGetVisibleBounds));
+			if (!AndroidJniHelper::CheckAndClearExceptions() && boundsArray != nullptr) {
+				Recti result;
+				if (AndroidJniHelper::jniEnv->GetArrayLength(boundsArray) >= 4) {
+					jint bounds[4];
+					AndroidJniHelper::jniEnv->GetIntArrayRegion(boundsArray, 0, 4, bounds);
+					result = Recti(bounds[0], bounds[1], bounds[2], bounds[3]);
+				}
+				AndroidJniHelper::jniEnv->DeleteLocalRef(boundsArray);
+				return result;
+			}
+		}
+
 		if (_midRectInit == nullptr || _midGetWindowVisibleDisplayFrame == nullptr ||
 			_fidRectLeft == nullptr || _fidRectTop == nullptr || _fidRectRight == nullptr || _fidRectBottom == nullptr) {
 			return {};
@@ -1036,39 +1054,39 @@ namespace nCine::Backends
 
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
 	{
-		// Retrieve `NativeActivity`
-		jobject activityObject = state->activity->clazz;
-		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject);
+		// The activity of the Java bridge owns the text editor the keyboard attaches to, so everything is
+		// delegated to it - it also takes care of running the requests on the UI thread
+		_activityObject = state->activity->clazz;
+		jclass activityClass = AndroidJniHelper::jniEnv->GetObjectClass(_activityObject);
 
-		// Retrieve `Context.INPUT_METHOD_SERVICE`
-		jclass contextClass = AndroidJniClass::findClass("android/content/Context");
-		jfieldID fidInputMethodService = AndroidJniClass::getStaticFieldID(contextClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
-		jobject inputMethodServiceObject = AndroidJniHelper::jniEnv->GetStaticObjectField(contextClass, fidInputMethodService);
+		_midIsSoftInputAvailable = AndroidJniClass::getMethodID(activityClass, "isSoftInputAvailable", "()Z");
+		_midIsSoftInputVisible = AndroidJniClass::getMethodID(activityClass, "isSoftInputVisible", "()Z");
+		_midShowSoftInput = AndroidJniClass::getMethodID(activityClass, "showSoftInput", "()Z");
+		_midHideSoftInput = AndroidJniClass::getMethodID(activityClass, "hideSoftInput", "()Z");
 
-		// Run `getSystemService(Context.INPUT_METHOD_SERVICE)`
-		jclass inputMethodManagerClass = AndroidJniClass::findClass("android/view/inputmethod/InputMethodManager");
-		jmethodID midGetSystemService = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-		jobject inputMethodManagerObject = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject, midGetSystemService, inputMethodServiceObject);
-		_inputMethodManagerObject = AndroidJniHelper::jniEnv->NewGlobalRef(inputMethodManagerObject);
-
-		_midToggleSoftInput = AndroidJniClass::getMethodID(inputMethodManagerClass, "toggleSoftInput", "(II)V");
-		_midShowSoftInput = AndroidJniClass::getMethodID(inputMethodManagerClass, "showSoftInput", "(Landroid/view/View;I)Z");
-		_midHideSoftInput = AndroidJniClass::getMethodID(inputMethodManagerClass, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
-
-		jclass viewClass = AndroidJniClass::findClass("android/view/View");
-		_midGetWindowToken = AndroidJniClass::getMethodID(viewClass, "getWindowToken", "()Landroid/os/IBinder;");
+		AndroidJniHelper::jniEnv->DeleteLocalRef(activityClass);
 	}
 
-	void AndroidJniWrap_InputMethodManager::shutdown()
+	bool AndroidJniWrap_InputMethodManager::isSoftInputAvailable()
 	{
-		if (_inputMethodManagerObject) {
-			AndroidJniHelper::jniEnv->DeleteGlobalRef(_inputMethodManagerObject);
+		if (_midIsSoftInputAvailable == nullptr) {
+			return false;
 		}
+
+		const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midIsSoftInputAvailable);
+		AndroidJniHelper::CheckAndClearExceptions();
+		return (result == JNI_TRUE);
 	}
 
-	void AndroidJniWrap_InputMethodManager::toggleSoftInput()
+	bool AndroidJniWrap_InputMethodManager::isSoftInputVisible()
 	{
-		AndroidJniHelper::jniEnv->CallVoidMethod(_inputMethodManagerObject, _midToggleSoftInput, SHOW_IMPLICIT, HIDE_IMPLICIT_ONLY);
+		if (_midIsSoftInputVisible == nullptr) {
+			return false;
+		}
+
+		const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midIsSoftInputVisible);
+		AndroidJniHelper::CheckAndClearExceptions();
+		return (result == JNI_TRUE);
 	}
 
 	bool AndroidJniWrap_InputMethodManager::showSoftInput()
@@ -1077,32 +1095,20 @@ namespace nCine::Backends
 			return false;
 		}
 
-		bool result = false;
-		jobject decorViewObject = AndroidJniWrap_Activity::getDecorView();
-		if (decorViewObject != nullptr) {
-			result = AndroidJniHelper::jniEnv->CallBooleanMethod(_inputMethodManagerObject, _midShowSoftInput, decorViewObject, 0);
-			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
-		}
-		return result;
+		const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midShowSoftInput);
+		AndroidJniHelper::CheckAndClearExceptions();
+		return (result == JNI_TRUE);
 	}
 
 	bool AndroidJniWrap_InputMethodManager::hideSoftInput()
 	{
-		if (_midGetWindowToken == nullptr || _midHideSoftInput == nullptr) {
+		if (_midHideSoftInput == nullptr) {
 			return false;
 		}
 
-		bool result = false;
-		jobject decorViewObject = AndroidJniWrap_Activity::getDecorView();
-		if (decorViewObject != nullptr) {
-			jobject windowToken = AndroidJniHelper::jniEnv->CallObjectMethod(decorViewObject, _midGetWindowToken);
-			if (windowToken != nullptr) {
-				result = AndroidJniHelper::jniEnv->CallBooleanMethod(_inputMethodManagerObject, _midHideSoftInput, windowToken, 0);
-				AndroidJniHelper::jniEnv->DeleteLocalRef(windowToken);
-			}
-			AndroidJniHelper::jniEnv->DeleteLocalRef(decorViewObject);
-		}
-		return result;
+		const jboolean result = AndroidJniHelper::jniEnv->CallBooleanMethod(_activityObject, _midHideSoftInput);
+		AndroidJniHelper::CheckAndClearExceptions();
+		return (result == JNI_TRUE);
 	}
 
 	// ------------------- AndroidJniWrap_DisplayManager -------------------

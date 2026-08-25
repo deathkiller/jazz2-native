@@ -211,8 +211,10 @@ namespace nCine
 		/** @brief Opens the specified URL in a default web browser */
 		virtual bool OpenUrl(StringView url);
 		
-		/** @brief Returns `true` if screen (software) keyboard is supported and @ref ShowScreenKeyboard() should succeed */ 
+		/** @brief Returns `true` if screen (software) keyboard is supported and @ref ShowScreenKeyboard() should succeed */
 		virtual bool CanShowScreenKeyboard();
+		/** @brief Returns `true` if the screen (software) keyboard is currently shown, always `false` if it cannot be queried */
+		virtual bool IsScreenKeyboardVisible();
 		/** @brief Toggles the screen (software) keyboard */
 		virtual bool ToggleScreenKeyboard();
 		/** @brief Shows the screen (software) keyboard */

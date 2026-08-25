@@ -326,28 +326,37 @@ namespace nCine::Backends
 		static jfieldID _fidRectRight;
 		static jfieldID _fidRectBottom;
 		static jmethodID _midGetWindowVisibleDisplayFrame;
+		static jmethodID _midGetVisibleBounds;
 	};
 
-	/** @brief Wraps JNI access to `android.view.inputmethod.InputMethodManager` */
+	/**
+		@brief Wraps JNI access to the screen (software) keyboard
+
+		`android.app.NativeActivity` contains no view that accepts text, so the activity of the Java bridge
+		owns an invisible one and drives `android.view.inputmethod.InputMethodManager` on the UI thread.
+		Software keyboards open only for a focused text editor, which is why talking to the input method
+		manager directly used to fail on many devices and never showed anything on Android TV.
+	*/
 	class AndroidJniWrap_InputMethodManager
 	{
 	public:
 		static void init(struct android_app* state);
-		static void shutdown();
 
-		static void toggleSoftInput();
+		/** @brief Returns `true` if any input method that can provide a software keyboard is enabled */
+		static bool isSoftInputAvailable();
+		/** @brief Returns `true` if the software keyboard is currently shown */
+		static bool isSoftInputVisible();
+		/** @brief Requests the software keyboard to be shown */
 		static bool showSoftInput();
+		/** @brief Requests the software keyboard to be hidden */
 		static bool hideSoftInput();
 
 	private:
-		static jobject _inputMethodManagerObject;
-		static jmethodID _midToggleSoftInput;
+		static jobject _activityObject;
+		static jmethodID _midIsSoftInputAvailable;
+		static jmethodID _midIsSoftInputVisible;
 		static jmethodID _midShowSoftInput;
 		static jmethodID _midHideSoftInput;
-		static jmethodID _midGetWindowToken;
-
-		static const int SHOW_IMPLICIT = 1;
-		static const int HIDE_IMPLICIT_ONLY = 1;
 	};
 
 	/** @brief Wraps JNI access to `android.hardware.display.DisplayManager` */

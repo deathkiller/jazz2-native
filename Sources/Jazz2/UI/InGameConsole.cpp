@@ -73,6 +73,10 @@ namespace Jazz2::UI
 		_carretAnim += timeMult;
 
 #if defined(DEATH_TARGET_ANDROID)
+		// The on-screen keyboard can also be dismissed by the user, so follow the reported state instead
+		// of assuming it stays shown until the game hides it
+		_keyboardVisible = theApplication().IsScreenKeyboardVisible();
+
 		if (_isVisible && _keyboardVisible) {
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {

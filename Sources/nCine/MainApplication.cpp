@@ -615,6 +615,16 @@ namespace nCine
 #endif
 	}
 
+	bool MainApplication::IsScreenKeyboardVisible()
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
+		return (hwnd != NULL && ::IsWindowVisible(hwnd));
+#else
+		return false;
+#endif
+	}
+
 	bool MainApplication::ToggleScreenKeyboard()
 	{
 #if defined(DEATH_TARGET_WINDOWS)

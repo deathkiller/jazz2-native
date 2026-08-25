@@ -1,21 +1,54 @@
 package @NCINE_REVERSE_DNS@;
 
 import android.app.NativeActivity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
-import android.provider.Settings;
+import android.text.InputType;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.FrameLayout;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
+import java.util.List;
 import @NCINE_REVERSE_DNS@.Keep;
 
 public abstract class MainActivityBase extends NativeActivity implements DisplayManager.DisplayListener {
 
+	// Software keyboards often ignore the first request, because the target view is not attached, focused or
+	// served by the input method manager yet, so the request needs to be repeated for a while
+	private static final int SoftInputRetryCount = 8;
+	private static final int SoftInputRetryDelayMs = 100;
+	// The keyboard needs some time to animate in, don't trust insets reporting it as hidden until then
+	private static final int SoftInputGracePeriodMs = 1500;
+
 	private OnBackInvokedCallback backCallback;
+
+	private final Handler uiHandler = new Handler(Looper.getMainLooper());
+	private volatile TextInputView textInputView;
+	private volatile InputMethodManager inputMethodManager;
+	private boolean isTelevision;
+	private volatile boolean softInputRequested;
+	private volatile boolean softInputVisible;
+	private volatile int softInputHeight;
+	private volatile long softInputRequestTime;
+	private int softInputRetriesLeft;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -24,7 +57,7 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		// Register a display listener to update the monitors array
 		DisplayManager dm = getSystemService(DisplayManager.class);
 		dm.registerDisplayListener(this, null);
-		
+
 		if (android.os.Build.VERSION.SDK_INT >= 33) {
 			backCallback = () -> {
 				nativeBackInvoked();
@@ -35,19 +68,31 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 				backCallback
 			);
 		}
-		
+
+		initializeTextInput();
+
 		handleIntent(getIntent());
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		
+
+		uiHandler.removeCallbacksAndMessages(null);
+
 		if (android.os.Build.VERSION.SDK_INT >= 33) {
 			getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
 		}
 	}
-	
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+
+		// The keyboard is always dismissed together with the activity, don't leave a stale state behind
+		hideSoftInput();
+	}
+
 	@Override
 	protected void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
@@ -80,13 +125,13 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 			return null;
 		}
 	}
-	
+
 	@Keep
 	public boolean isScreenRound() {
 		if (android.os.Build.VERSION.SDK_INT < 23) {
 			return false;
 		}
-		
+
 		try {
 			return getResources().getConfiguration().isScreenRound();
 		} catch (Exception ignored) {
@@ -99,7 +144,7 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		if (android.os.Build.VERSION.SDK_INT < 30) {
 			return false;
 		}
-		
+
 		try {
 			return Environment.isExternalStorageManager();
 		} catch (Exception ignored) {
@@ -112,7 +157,7 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		if (android.os.Build.VERSION.SDK_INT < 30) {
 			return;
 		}
-	
+
 		try {
 			Uri uri = Uri.parse("package:" + BuildConfig.APPLICATION_ID);
 			Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri);
@@ -126,7 +171,7 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 			}
 		}
 	}
-	
+
 	@Keep
 	public void setActivityEnabled(String activityName, boolean enable) {
 		// Supported only in MainActivity to avoid duplicating activities
@@ -143,7 +188,94 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 			return false;
 		}
 	}
-	
+
+	/** Returns `true` if any input method that can provide a software keyboard is enabled */
+	@Keep
+	public boolean isSoftInputAvailable() {
+		if (inputMethodManager == null || textInputView == null) {
+			return false;
+		}
+
+		try {
+			List<InputMethodInfo> enabledMethods = inputMethodManager.getEnabledInputMethodList();
+			return (enabledMethods != null && !enabledMethods.isEmpty());
+		} catch (Exception ignored) {
+			// Assume the keyboard is available if the list cannot be queried
+			return true;
+		}
+	}
+
+	/** Returns `true` if the software keyboard is currently shown */
+	@Keep
+	public boolean isSoftInputVisible() {
+		return softInputVisible;
+	}
+
+	@Keep
+	public boolean showSoftInput() {
+		if (inputMethodManager == null || textInputView == null) {
+			return false;
+		}
+
+		softInputRequested = true;
+		softInputRequestTime = SystemClock.uptimeMillis();
+
+		runOnUiThread(() -> {
+			softInputRetriesLeft = SoftInputRetryCount;
+			requestShowSoftInput();
+		});
+		return true;
+	}
+
+	@Keep
+	public boolean hideSoftInput() {
+		if (inputMethodManager == null || textInputView == null) {
+			return false;
+		}
+
+		softInputRequested = false;
+
+		runOnUiThread(() -> {
+			softInputRetriesLeft = 0;
+
+			if (textInputView.getWindowToken() != null) {
+				inputMethodManager.hideSoftInputFromWindow(textInputView.getWindowToken(), 0);
+			}
+
+			// Drop the focus as well, so the system cannot bring the keyboard up again on its own
+			textInputView.setFocusable(false);
+			textInputView.setFocusableInTouchMode(false);
+			textInputView.clearFocus();
+			textInputView.setVisibility(View.INVISIBLE);
+
+			softInputVisible = false;
+			softInputHeight = 0;
+		});
+		return true;
+	}
+
+	/** Returns bounds of the window that are not covered by the system bars and the software keyboard */
+	@Keep
+	public int[] getVisibleBounds() {
+		View decorView = getWindow().getDecorView();
+		int decorHeight = decorView.getHeight();
+		if (decorHeight <= 0) {
+			return null;
+		}
+
+		Rect frame = new Rect();
+		decorView.getWindowVisibleDisplayFrame(frame);
+
+		// The visible display frame doesn't shrink when the window is drawn edge-to-edge, which is always
+		// the case here, so the reported keyboard height needs to be subtracted from it explicitly
+		int keyboardHeight = softInputHeight;
+		if (keyboardHeight > 0 && frame.bottom > decorHeight - keyboardHeight) {
+			frame.bottom = decorHeight - keyboardHeight;
+		}
+
+		return new int[] { frame.left, frame.top, frame.right - frame.left, frame.bottom - frame.top };
+	}
+
 	private void handleIntent(Intent intent) {
 		if (intent != null) {
 			Uri uri = intent.getData();
@@ -153,14 +285,215 @@ public abstract class MainActivityBase extends NativeActivity implements Display
 		}
 	}
 
+	private void initializeTextInput() {
+		inputMethodManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+		if (inputMethodManager == null) {
+			return;
+		}
+
+		PackageManager pm = getPackageManager();
+		isTelevision = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+			pm.hasSystemFeature("android.hardware.type.television");
+
+		// `NativeActivity` contains no view that accepts text and software keyboards refuse to open for a view
+		// that is not a text editor, so add a tiny invisible one that is. Without it `showSoftInput()` silently
+		// fails on many devices and never shows anything at all on Android TV.
+		// It stays laid out even while hidden, otherwise the view could not be focused right away
+		textInputView = new TextInputView(this);
+		textInputView.setVisibility(View.INVISIBLE);
+		addContentView(textInputView, new FrameLayout.LayoutParams(1, 1));
+
+		View decorView = getWindow().getDecorView();
+		if (android.os.Build.VERSION.SDK_INT >= 30) {
+			decorView.setOnApplyWindowInsetsListener((v, insets) -> {
+				updateSoftInputState(insets.getInsets(WindowInsets.Type.ime()).bottom);
+				return v.onApplyWindowInsets(insets);
+			});
+		} else {
+			// Older versions don't report the keyboard as an inset, so guess its height from the visible frame
+			decorView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+				View v = getWindow().getDecorView();
+				int decorHeight = v.getHeight();
+				if (decorHeight <= 0) {
+					return;
+				}
+
+				Rect frame = new Rect();
+				v.getWindowVisibleDisplayFrame(frame);
+
+				// Anything smaller than a fifth of the screen is a system bar rather than a keyboard
+				int coveredHeight = decorHeight - frame.bottom;
+				updateSoftInputState(coveredHeight > decorHeight / 5 ? coveredHeight : 0);
+			});
+		}
+	}
+
+	private void requestShowSoftInput() {
+		if (!softInputRequested || textInputView == null) {
+			return;
+		}
+
+		textInputView.setVisibility(View.VISIBLE);
+		textInputView.setFocusable(true);
+		textInputView.setFocusableInTouchMode(true);
+		textInputView.requestFocus();
+
+		if (textInputView.isFocused()) {
+			inputMethodManager.showSoftInput(textInputView, 0);
+		}
+
+		// `showSoftInput()` can report success and still show nothing, so keep asking until the keyboard is
+		// actually reported as visible
+		if (softInputRetriesLeft > 0 && !softInputVisible) {
+			softInputRetriesLeft--;
+			uiHandler.postDelayed(this::requestShowSoftInput, SoftInputRetryDelayMs);
+		}
+	}
+
+	private void updateSoftInputState(int height) {
+		boolean visible = (height > 0);
+		if (!visible && softInputRequested &&
+				SystemClock.uptimeMillis() - softInputRequestTime < SoftInputGracePeriodMs) {
+			// The keyboard was just requested and may still be animating in
+			return;
+		}
+
+		softInputHeight = height;
+		softInputVisible = visible;
+
+		if (!visible && softInputRequested) {
+			// The keyboard was dismissed by the user, don't leave the text editor focused behind it
+			softInputRequested = false;
+			softInputRetriesLeft = 0;
+
+			if (textInputView != null) {
+				textInputView.setFocusable(false);
+				textInputView.setFocusableInTouchMode(false);
+				textInputView.clearFocus();
+				textInputView.setVisibility(View.INVISIBLE);
+			}
+		}
+	}
+
+	/** Invisible text editor that gives the software keyboard something to attach to */
+	private class TextInputView extends View {
+
+		public TextInputView(Context context) {
+			super(context);
+
+			setFocusable(false);
+			setFocusableInTouchMode(false);
+			setBackgroundColor(Color.TRANSPARENT);
+		}
+
+		@Override
+		public boolean onCheckIsTextEditor() {
+			return true;
+		}
+
+		@Override
+		public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+			// Suggestions would turn every word into composing text that the game cannot render properly
+			outAttrs.inputType = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_NORMAL |
+				InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+			outAttrs.imeOptions = EditorInfo.IME_ACTION_DONE;
+			if (!isTelevision) {
+				// Keyboards switch to a full-screen editor in landscape by default, but the game draws the
+				// entered text on its own. Android TV keyboards are full-screen by design, so leave them be.
+				outAttrs.imeOptions |= EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN;
+			}
+			outAttrs.initialSelStart = 0;
+			outAttrs.initialSelEnd = 0;
+			return new TextInputConnection(this);
+		}
+	}
+
+	/** Forwards text entered on the software keyboard to the game */
+	private class TextInputConnection extends BaseInputConnection {
+
+		private int composingLength;
+
+		public TextInputConnection(View targetView) {
+			super(targetView, true);
+		}
+
+		@Override
+		public boolean commitText(CharSequence text, int newCursorPosition) {
+			replaceComposingText(text);
+			return super.commitText(text, newCursorPosition);
+		}
+
+		@Override
+		public boolean setComposingText(CharSequence text, int newCursorPosition) {
+			replaceComposingText(text);
+			composingLength = codePointCount(text);
+			return super.setComposingText(text, newCursorPosition);
+		}
+
+		@Override
+		public boolean finishComposingText() {
+			composingLength = 0;
+			return super.finishComposingText();
+		}
+
+		@Override
+		public boolean deleteSurroundingText(int beforeLength, int afterLength) {
+			// The default implementation only updates the local buffer, the game has to be notified separately
+			CharSequence before = getTextBeforeCursor(beforeLength, 0);
+			sendBackspaces(before != null ? codePointCount(before) : beforeLength);
+			return super.deleteSurroundingText(beforeLength, afterLength);
+		}
+
+		@Override
+		public boolean performEditorAction(int actionCode) {
+			// Every editor action commits the entered text, which is what Enter does in the game as well
+			nativeKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER);
+			nativeKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER);
+
+			// The game starts over with an empty line, so the mirrored buffer has to be reset as well
+			composingLength = 0;
+			if (getEditable() != null) {
+				getEditable().clear();
+			}
+			return true;
+		}
+
+		/** Replaces the previously reported composing text, which the game has no notion of, by deleting it first */
+		private void replaceComposingText(CharSequence text) {
+			sendBackspaces(composingLength);
+			composingLength = 0;
+
+			if (text != null && text.length() > 0) {
+				nativeTextInput(text.toString());
+			}
+		}
+
+		private void sendBackspaces(int count) {
+			for (int i = 0; i < count; i++) {
+				nativeKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL);
+				nativeKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL);
+			}
+		}
+
+		private int codePointCount(CharSequence text) {
+			return (text != null ? Character.codePointCount(text, 0, text.length()) : 0);
+		}
+	}
+
 	// Calls `AndroidApplication::HandleBackInvoked()`
 	protected native void nativeBackInvoked();
-	
+
 	// Calls `EglGfxDevice::updateMonitorsFromJni()`
 	protected native void nativeUpdateMonitors();
-	
+
 	// Calls `AndroidApplication::HandleIntent()`
 	protected native void nativeHandleIntent(String action, String uri);
+
+	// Calls `AndroidApplication::HandleTextInput()`
+	protected native void nativeTextInput(String text);
+
+	// Calls `AndroidApplication::HandleKeyEvent()`
+	protected native void nativeKeyEvent(int action, int keyCode);
 
 	static {
 		@JAVA_SYSTEM_LOADLIBRARY_OPENAL@
