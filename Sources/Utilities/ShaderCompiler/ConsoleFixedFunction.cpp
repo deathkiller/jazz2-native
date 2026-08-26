@@ -1010,6 +1010,9 @@ namespace ShaderCompiler
 					Fail("submit_quad() takes a declared pass variable ('"_s + name + "' is not one)"_s);
 					return {};
 				}
+				// The quad is always textured, so the dispatch must refuse to run this effect with
+				// nothing bound to the program's sampler (see FixedFunctionRequirements::SamplesTexture)
+				Require(FixedFunctionRequirements::SamplesTexture);
 				return "ctx.SubmitQuad("_s + name + ")"_s;
 			}
 
@@ -1040,6 +1043,11 @@ namespace ShaderCompiler
 				// A literal count above the scratch capacity would be clamped at runtime, drawing a
 				// truncated strip; below 3 it would be dropped entirely
 				if (!CheckStripLiteral(e->Args[1].get(), "vertex count"_s, 3)) return {};
+				// The flat form is textured; the shaded one only samples when a pass sets TINT_MIX, which
+				// is recorded where that assignment is emitted (see FixedFunctionRequirements::SamplesTexture)
+				if (e->Text == "submit_strip"_s) {
+					Require(FixedFunctionRequirements::SamplesTexture);
+				}
 				const char* method = (e->Text == "submit_strip"_s ? "SubmitStrip" : "SubmitStripShaded");
 				return "ctx."_s + method + "("_s + name + ", "_s + count + ")"_s;
 			}
@@ -1138,6 +1146,11 @@ namespace ShaderCompiler
 						}
 						if (IsGxOnlyTevValueName(rhs->Text) && !RequireGxOnly(rhs->Text)) {
 							return;
+						}
+						if (IsTintMixTevValueName(rhs->Text)) {
+							// The one preset that makes a SHADED strip consume the texel as well, so an
+							// effect that can set it depends on a bound texture like a quad does
+							Require(FixedFunctionRequirements::SamplesTexture);
 						}
 						if (IsTintMixTevValueName(rhs->Text) && !RequireTintMixCombiner(rhs->Text)) {
 							return;
@@ -1542,7 +1555,7 @@ namespace ShaderCompiler
 				// values their GLSL does), through the program's existing ResolveUniform machinery. The
 				// argument is an identifier rather than a string literal - the expression tokenizer has
 				// no string literals, and an identifier is validated as a well-formed uniform name.
-				if (name == "has_uniform"_s || name == "uniform_vec2"_s || name == "uniform_vec4"_s) {
+				if (name == "has_uniform"_s || name == "uniform_float"_s || name == "uniform_vec2"_s || name == "uniform_vec4"_s) {
 					if (!RequireExtended(name)) return {};
 					Require(FixedFunctionRequirements::NeedsUniforms);
 					if (e->Args.size() != 1 || e->Args[0]->Kind != ExprKind::Ident) {
@@ -1553,6 +1566,10 @@ namespace ShaderCompiler
 					if (name == "has_uniform"_s) {
 						t = Ty::Bool;
 						return "ctx.HasUniform(\""_s + uniform + "\")"_s;
+					}
+					if (name == "uniform_float"_s) {
+						t = Ty::Float;
+						return "UniformFloat(ctx, \""_s + uniform + "\")"_s;
 					}
 					t = (name == "uniform_vec2"_s ? Ty::Vec2 : Ty::Vec4);
 					return String{name == "uniform_vec2"_s ? "UniformVec2" : "UniformVec4"} +
@@ -1654,7 +1671,7 @@ namespace ShaderCompiler
 					return name + "("_s + args + ")"_s;
 				}
 
-				Fail("unknown function '"_s + name + "' (supported: min, max, clamp, mix, ceil, floor, abs, sqrt, sin, cos, texel_size, has_texel_size, quad_origin, quad_axis_x, quad_axis_y, has_uniform, uniform_vec2, uniform_vec4, submit_quad, submit_strip[_shaded], strip_position/uv/color, vec/float/int constructors)"_s);
+				Fail("unknown function '"_s + name + "' (supported: min, max, clamp, mix, ceil, floor, abs, sqrt, sin, cos, texel_size, has_texel_size, quad_origin, quad_axis_x, quad_axis_y, has_uniform, uniform_float, uniform_vec2, uniform_vec4, submit_quad, submit_strip[_shaded], strip_position/uv/color, vec/float/int constructors)"_s);
 				return {};
 			}
 
@@ -1748,18 +1765,25 @@ namespace ShaderCompiler
 			tokens.push_back(std::move(end));
 		}
 
-		// "pipeline <name>;" — an intrinsic binding instead of a transpiled function. Recognized on
-		// the raw token stream (before the statement grammar) because it is not an expression: it
-		// must be the SOLE statement of the block, so a block either describes passes or names a
-		// backend pipeline stage, never both.
+		// "pipeline <name>;" — binds the program to a backend pipeline stage that consumes an engine
+		// data structure. Recognized on the raw token stream (before the statement grammar) because it
+		// is not an expression, and required to be the FIRST statement so a reader meets the binding
+		// before the passes.
+		//
+		// A block MAY carry passes after it. The stage keeps whatever it cannot delegate - a per-vertex
+		// or per-texel loop over an engine buffer is backend mechanism, and dispatching a transpiled
+		// call per tile is not affordable on this tier - while the passes carry the per-draw POLICY that
+		// used to be duplicated in every backend (the water overlay of the lighting compositor: two
+		// screen quads whose colours and thresholds belong next to the GLSL they approximate). The
+		// backend runs the stage first and the function after it, so the passes composite over whatever
+		// the stage produced.
 		for (std::size_t i = 0; i < tokens.size(); i++) {
 			if (tokens[i].Type == GlslTokenType::Identifier && tokens[i].Text == "pipeline"_s) {
 				const std::int32_t lineNo = static_cast<std::int32_t>(tokens[i].Index);
-				if (i != 0 || tokens.size() != 4 ||
+				if (i != 0 || tokens.size() < 4 ||
 					tokens[1].Type != GlslTokenType::Identifier ||
-					!(tokens[2].Type == GlslTokenType::Operator && tokens[2].Text == ";"_s) ||
-					tokens[3].Type != GlslTokenType::End) {
-					result.Error = "\"pipeline <name>;\" must be the only statement of the fixed_function block"_s;
+					!(tokens[2].Type == GlslTokenType::Operator && tokens[2].Text == ";"_s)) {
+					result.Error = "\"pipeline <name>;\" must be the first statement of the fixed_function block"_s;
 					result.Line = lineNo;
 					return result;
 				}
@@ -1776,9 +1800,15 @@ namespace ShaderCompiler
 					result.Line = lineNo;
 					return result;
 				}
-				result.Ok = true;
 				result.Intrinsic = intrinsic;
-				return result;
+				// Nothing but the binding: no function at all, the long-standing form
+				if (tokens.size() == 4 && tokens[3].Type == GlslTokenType::End) {
+					result.Ok = true;
+					return result;
+				}
+				// Passes follow: drop the three binding tokens and transpile the remainder normally
+				tokens.erase(tokens.begin(), tokens.begin() + 3);
+				break;
 			}
 		}
 
@@ -1984,6 +2014,7 @@ namespace ShaderCompiler
 			// Extended-vocabulary bridges (backend-specific blocks only): resolved-uniform loads and
 			// the strip-builder vertex setters, spelled over the EffectContext's scalar methods so the
 			// contract in FixedFunctionPass.h stays free of these vector types
+			inline float UniformFloat(EffectContext& ctx, const char* name) { float v = 0.0f; ctx.LoadUniform(name, &v, 1); return v; }
 			inline vec2 UniformVec2(EffectContext& ctx, const char* name) { float v[2] = { 0.0f, 0.0f }; ctx.LoadUniform(name, v, 2); return vec2(v[0], v[1]); }
 			inline vec4 UniformVec4(EffectContext& ctx, const char* name) { float v[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; ctx.LoadUniform(name, v, 4); return vec4(v[0], v[1], v[2], v[3]); }
 			inline void StripPosition(EffectContext& ctx, int i, const vec2& p) { ctx.SetStripVertexPosition(i, p.x, p.y); }

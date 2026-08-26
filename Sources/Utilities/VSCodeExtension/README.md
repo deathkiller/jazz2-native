@@ -71,7 +71,39 @@ identifier), `VERTEX` only inside `vertex()`, and `TEXTURE`/`PALETTE_OFFSET` onl
 ### Hovers and navigation
 
 Hovering a directive, built-in, hint, pass field or context facility shows what the compiler does
-with it. Hovering something this file declares shows the declaration line. <kbd>Ctrl</kbd>-clicking
+with it. The `fixed_function` vocabulary whose *backend support* is not guessable carries it in the
+tooltip: a `p.tev` preset (`SILHOUETTE`, `MODULATE_X2`, `TINT_MIX`, `LUMA_RAMP`, …) says which
+consoles can express it and which reject it, the `tev` field itself shows the whole support matrix,
+and each `fixed_function` target says what its texture combiner can do. That is the constraint the
+transpiler actually enforces — a block is validated against the *intersection* of its targets, so a
+preset one of them lacks is a hard error for the block, and the PVR ignoring `p.tev` outright is the
+one case that silently draws something else instead.
+
+The GLSL built-in functions carry their signature plus the same kind of note, because a `.shader` is
+written once and *lowered* to every backend: `round()` is declined outright by the ES2 lowering,
+`exp`/`log` and the comparison built-ins are outside the software transpiler's set (which makes it
+decline the shader **silently** — the effect just gets no software path), `texelFetch`/`textureSize`
+and friends are a hard error for D3D11 and the PS3, and `mix`/`fract`/`mod`/`dFdx` are all spelled
+differently once they reach HLSL. Only `texture()` is portable across the whole set.
+
+The types carry their **std140 size and alignment**, since that is what decides a uniform block's
+offsets and therefore what the engine writes into the buffer: `vec3` is 12 bytes aligned to 16,
+`mat3` is 48 bytes and not 36, `bool` is 4 bytes. `uint`/`uvec*` say that the ES2 lowering declines
+them by name. Completion offers exactly the types the compiler's own table knows — a type the grammar
+merely colours (`double`, `mat3x3`, `sampler2DArray`) says so when hovered, and an HLSL spelling
+(`float3`, `lerp`, `saturate`, `tex2D`, …) names the GLSL one to use instead.
+
+Hovers are **context-aware**, because a `.shader` holds two languages that overlap by name and not by
+meaning: `mix`, `min`, `max`, `abs`, `clamp`, `float`, `int` and `COLOR` all exist in both the GLSL
+stages and the `fixed_function` DSL. Inside a block, `mix` is the C++ maths subset evaluated once per
+draw while the pass is built and `COLOR` is the instance colour; in `fragment()`, `mix` is the GLSL
+built-in that becomes `lerp` on D3D11 and `COLOR` is the fragment output. A word from the *other*
+vocabulary is reported as such — `smoothstep` in a block says the DSL has no such built-in, and
+`LUMA_RAMP` in `fragment()` says it is fixed-function only. The pass fields are the deliberate
+exception: `color`, `blend` and `tev` only resolve inside a block, since they are perfectly ordinary
+local names in a GLSL body.
+
+Hovering something this file declares shows the declaration line. <kbd>Ctrl</kbd>-clicking
 an `#include` path opens the file; go-to-definition also works on any name declared in the document.
 The outline (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>) lists the programs, variants, uniform
 blocks, uniforms, varyings, attributes, helper functions and entry points.

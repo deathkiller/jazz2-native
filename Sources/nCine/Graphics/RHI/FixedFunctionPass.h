@@ -130,7 +130,19 @@ namespace nCine::RHI
 		NeedsTexelStep = 0x01,		/**< Calls `texel_size()` / `has_texel_size()` (the texel-step conversion) */
 		NeedsUniforms = 0x02,		/**< Calls `has_uniform()` / `uniform_vec2/vec4()` (resolved-uniform plumbing) */
 		NeedsStripBuilder = 0x04,	/**< Calls `strip_*()` / `submit_strip[_shaded]()` (the strip-builder scratch and its state) */
-		NeedsQuadAxes = 0x08		/**< Calls `quad_origin()` / `quad_axis_x/y()` (pre-clip quad geometry) */
+		NeedsQuadAxes = 0x08,		/**< Calls `quad_origin()` / `quad_axis_x/y()` (pre-clip quad geometry) */
+		/**
+			Submits at least one primitive that SAMPLES the bound texture: `submit_quad()`,
+			`submit_strip()`, or `submit_strip_shaded()` in a block that can set `TevPreset::TintMix`
+			(the one shaded form that consumes the texel too).
+
+			Unlike its siblings this one does not gate setup but a REQUIREMENT: a dispatch refuses to
+			draw a program whose reflection binds a sampler with nothing bound to it, because a textured
+			primitive would then rasterize garbage. An effect that only submits shaded, untextured
+			strips has no such dependency, and the water overlay of the lighting compositor is exactly
+			that - its program declares `uTexture` for a fragment stage the console tiers never run.
+		*/
+		SamplesTexture = 0x10
 	};
 
 	DEATH_ENUM_FLAGS(FixedFunctionRequirements);

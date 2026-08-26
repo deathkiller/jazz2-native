@@ -30,8 +30,12 @@
 	grammar is a hard ERROR with the offending line, so mistakes surface on the dev machine instead
 	of silently dropping a console effect. The portable core (valid in every block):
 
-	- `pipeline <name>;` as the SOLE statement binds the program to a backend pipeline stage
-	  (`nCine::RHI::FixedFunctionIntrinsic`) instead of describing passes — no function is emitted
+	- `pipeline <name>;` as the FIRST statement binds the program to a backend pipeline stage
+	  (`nCine::RHI::FixedFunctionIntrinsic`). Alone in the block it describes no passes at all and no
+	  function is emitted; followed by passes, the entry carries BOTH — the stage keeps the part it
+	  cannot delegate (a per-vertex or per-texel loop over an engine buffer, where a transpiled call
+	  per tile would not be affordable on this tier) and the passes carry the per-draw policy, run by
+	  the backend AFTER the stage so they composite over what it produced
 	- `pass p;` declares a `nCine::RHI::FixedFunctionPass` local (no initializer)
 	- assignments to pass fields: `p.color = <vec4>;`, `p.offset_color = <vec3>;` (marks
 	  HasOffsetColor), `p.screen_offset = <vec2>;`, `p.blend = MATERIAL|ADD|OPAQUE|ALPHA;`,
@@ -54,9 +58,11 @@
 	- `quad_origin()`, `quad_axis_x()`, `quad_axis_y()` (vec2) — the PRE-CLIP raster position of
 	  the sprite's (0,0) corner and the raster displacements of its local axes; geometry synthesis
 	  uses these instead of the post-scissor-clip corner arrays so clipping cannot distort it
-	- `has_uniform(uName)` (bool), `uniform_vec2(uName)`, `uniform_vec4(uName)` — the program's
-	  resolved uniforms by name (`ctx.HasUniform`/`ctx.LoadUniform` over the backend's existing
-	  ResolveUniform machinery); the argument is an identifier, not a string literal
+	- `has_uniform(uName)` (bool), `uniform_float(uName)`, `uniform_vec2(uName)`, `uniform_vec4(uName)`
+	  — the program's resolved uniforms by name (`ctx.HasUniform`/`ctx.LoadUniform` over the backend's
+	  existing ResolveUniform machinery); the argument is an identifier, not a string literal. This is
+	  the ONLY way a block reads engine state, and deliberately so: the language stays game-neutral
+	  because the shader names its own uniforms rather than the DSL growing a facility per concept
 	- the strip builder: `strip_position(i, <vec2>)`, `strip_uv(i, <vec2>)` (texture-space UVs;
 	  the backend folds its padded-store scale), `strip_color(i, <vec4>)`, then
 	  `submit_strip(p, count)` (textured, flat pass colour) or `submit_strip_shaded(p, count)`
@@ -127,7 +133,8 @@ namespace ShaderCompiler
 		NeedsTexelStep = 0x01,		/**< `texel_size()` / `has_texel_size()` */
 		NeedsUniforms = 0x02,		/**< `has_uniform()` / `uniform_vec2/vec4()` */
 		NeedsStripBuilder = 0x04,	/**< `strip_*()` / `submit_strip[_shaded]()` */
-		NeedsQuadAxes = 0x08		/**< `quad_origin()` / `quad_axis_x/y()` */
+		NeedsQuadAxes = 0x08,		/**< `quad_origin()` / `quad_axis_x/y()` */
+		SamplesTexture = 0x10		/**< `submit_quad()` / `submit_strip()`, or `TINT_MIX` with a shaded strip */
 	};
 
 	/** @brief Outcome of transpiling one fixed_function block variant to C++ */
@@ -151,11 +158,11 @@ namespace ShaderCompiler
 		/**
 			@brief `FixedFunctionIntrinsic` member name declared by a `pipeline <name>;` block, or empty
 
-			A block whose sole statement is `pipeline <name>;` transpiles to no function at all: the
-			program binds itself to a backend pipeline stage that consumes engine data structures
-			(tile-layer meshes, line strips, the lighting hook). The table entry then carries the enum
-			value instead of a function pointer, so even these stages are named in the shader file
-			rather than matched by label in a backend.
+			The program binds itself to a backend pipeline stage that consumes engine data structures
+			(tile-layer meshes, line strips, the lighting hook), so even these stages are named in the
+			shader file rather than matched by label in a backend. Alone in the block, @ref Body stays
+			empty and the table entry carries the enum value instead of a function pointer; with passes
+			after it, the entry carries both and the backend runs the function after the stage.
 		*/
 		String Intrinsic;
 		/**

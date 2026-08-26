@@ -242,13 +242,17 @@ namespace Jazz2
 		Shader* _blurShader;
 		Shader* _downsampleShader;
 		Shader* _combineShader;
-		Shader* _combineWithWaterShader;
 #else
-		// Software renderer: the bloom/lighting chain is gated out, but the viewport compositor still needs the
-		// Combine program so the device recognizes the draw (object label "Combine" -> SwEffect::Combine) and runs
+		// Software renderer and the console fixed-function tiers: the bloom/lighting chain is gated out, but the
+		// viewport compositor still needs the Combine programs so the device recognizes the draw (object label
+		// "Combine" -> SwEffect::Combine, or the generated fixed-function entry's LightingCombine stage) and runs
 		// the CPU dynamic-lighting combine in its place. Default-initialized here so no constructor arm is needed.
 		Shader* _combineShader = nullptr;
 #endif
+		// Acquired on EVERY tier: the water variant's own program is what carries the water description. On the
+		// shader path that is its fragment stage, on the console tiers the fixed_function block that draws the
+		// tint band over whatever the lighting stage produced (see CombineWithWater.shader)
+		Shader* _combineWithWaterShader = nullptr;
 
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 		// When the scene is supersampled (splitscreen zoom-out), the HUD and the in-game menu are rendered through this

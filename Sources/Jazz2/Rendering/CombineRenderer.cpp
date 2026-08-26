@@ -22,15 +22,24 @@ namespace Jazz2::Rendering
 		_bounds = Rectf(static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), static_cast<float>(height));
 
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
-		// Software renderer: the scene is rasterized straight to the screen buffer and the bloom/blur chain is
-		// gated out, so the command carries no textures or uniforms. It only binds the Combine program (so the
-		// device recognizes the draw and runs the CPU dynamic-lighting combine in its place) and a 4-vertex quad
-		// so the draw actually reaches the device in the Draw phase.
+		// Software renderer and the console fixed-function tiers: the scene is rasterized straight to the screen
+		// buffer and the bloom/blur chain is gated out, so the commands carry no post-processing textures. They
+		// bind the compositor program (so the device recognizes the draw and runs the CPU dynamic-lighting
+		// combine in its place) and a 4-vertex quad so the draw actually reaches the device in the Draw phase.
 		if (_renderCommand.GetMaterial().SetShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
 			_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 		}
+		// The water variant is a separate program on this tier too, because on the console backends its
+		// fixed_function block is what draws the water - the plain Combine has no water description at all. The
+		// software backend maps both labels onto SwEffect::Combine and keeps doing its own per-row water, so
+		// binding this one there changes nothing.
+		if (_renderCommandWithWater.GetMaterial().SetShader(_owner->_levelHandler->_combineWithWaterShader)) {
+			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
+			_renderCommandWithWater.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+		}
 		_renderCommand.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
+		_renderCommandWithWater.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
 #else
 		if (_renderCommand.GetMaterial().SetShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
@@ -91,18 +100,50 @@ namespace Jazz2::Rendering
 	bool CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
-		// Software renderer: the scene was rasterized straight to the screen buffer; bloom stays dropped (too
-		// heavy for the CPU), and the underwater shader variant is replaced by a lightweight per-row CPU water
-		// effect applied by the device together with the lighting. Neither can be composited here - OnDraw runs
-		// in nCine's Visit (queue-building) phase, before the scene is rasterized into the screen buffer, so an
-		// in-place combine here would be overwritten when the queue is actually drawn. Instead we build the
-		// lightmap now (pure CPU work) and hand it plus the water parameters to the device; the Combine command
+		// Software renderer and the console fixed-function tiers: the scene was rasterized straight to the
+		// screen buffer and bloom stays dropped (too heavy without shaders). The lighting cannot be composited
+		// here - OnDraw runs in nCine's Visit (queue-building) phase, before the scene is rasterized into the
+		// screen buffer, so an in-place combine here would be overwritten when the queue is actually drawn.
+		// Instead we build the lightmap now (pure CPU work) and hand it to the device; the compositor command
 		// queued below is dispatched in the Draw phase - after the scene and before the HUD - where the device
-		// applies the combine in place.
+		// applies the combine in place. The underwater effect is the device's own: a per-row CPU pass on the
+		// software backend, the water program's fixed_function block on the console tiers.
 		if (!PrepareSoftwareLighting()) {
 			return false;	// Fully lit with no lights and no water: nothing to composite
 		}
-		renderQueue.AddCommand(&_renderCommand);
+
+		// The variant is selected by the SAME test the shader path uses, so which program is bound says whether
+		// this viewport has water - on the console tiers that is not cosmetic bookkeeping but the mechanism: the
+		// water is a fixed_function block of the water program, and the plain Combine has none. The software
+		// backend keeps its own richer per-row water from the queued light either way.
+		const float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
+		const bool viewHasWater = (viewWaterLevel < _bounds.H);
+		const bool waterProgramReady = (_owner->_levelHandler->_combineWithWaterShader != nullptr);
+		auto& command = (viewHasWater && waterProgramReady ? _renderCommandWithWater : _renderCommand);
+
+		// The block reads the viewport rectangle off its own quad (quad_origin/quad_axis_*), so the instance
+		// block has to describe it here exactly as the shader path does - it is the only source those have
+		auto* instanceBlock = command.GetMaterial().UniformBlock(Material::InstanceBlockName);
+		if (instanceBlock != nullptr) {
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		}
+		if (viewHasWater) {
+			// Read back by NAME on the console tiers (uniform_float(uWaterLevel) / uniform_vec4(uAmbientColor)),
+			// so the water description consumes the shader's own uniforms instead of the fixed-function
+			// language growing a facility per game concept. Same values the shader path's fragment stage reads.
+			auto* waterLevelUniform = command.GetMaterial().Uniform("uWaterLevel");
+			if (waterLevelUniform != nullptr) {
+				waterLevelUniform->SetFloatValue(viewWaterLevel / _bounds.H);
+			}
+			auto* ambientUniform = command.GetMaterial().Uniform("uAmbientColor");
+			if (ambientUniform != nullptr) {
+				ambientUniform->SetFloatVector(_owner->_ambientLight.Data());
+			}
+		}
+
+		renderQueue.AddCommand(&command);
 		return true;
 #else
 		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;

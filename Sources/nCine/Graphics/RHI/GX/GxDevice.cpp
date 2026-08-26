@@ -4,6 +4,7 @@
 #include "GxRenderTarget.h"
 #include "GxTexture.h"
 #include "../FixedFunctionPass.h"
+#include "../LightingCombine.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1456,9 +1457,10 @@ namespace nCine::RHI::GX
 		const PendingSoftwareLight light = _pendingSoftwareLights.front();
 		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
+		// Only the lightmap composite: the water overlay is a fixed_function block of the
+		// CombineWithWater shaders, run by Dispatch after this hook (see CombineWithWater.shader)
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
-		const bool hasWater = light.WaterActive;
-		if (!hasLighting && !hasWater) {
+		if (!hasLighting) {
 			return;
 		}
 
@@ -1499,14 +1501,11 @@ namespace nCine::RHI::GX
 					const float* src = light.Lightmap + std::size_t(y) * w * 2;
 					std::uint8_t* dst = linear + std::size_t(y) * w * 4;
 					for (std::int32_t x = 0; x < w; x++) {
-						float r = src[x * 2];
-						float g = src[x * 2 + 1];
-						r = (r < 0.0f ? 0.0f : (r > 1.0f ? 1.0f : r));
-						g = (g < 0.0f ? 0.0f : (g > 1.0f ? 1.0f : g));
-						const float lit = r * (1.0f + g);
-						dst[x * 4 + 0] = QuantizeChannel(lit + light.AmbR * (1.0f - r));
-						dst[x * 4 + 1] = QuantizeChannel(lit + light.AmbG * (1.0f - r));
-						dst[x * 4 + 2] = QuantizeChannel(lit + light.AmbB * (1.0f - r));
+						const float r = ClampLightmapChannel(src[x * 2]);
+						const float g = ClampLightmapChannel(src[x * 2 + 1]);
+						dst[x * 4 + 0] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbR));
+						dst[x * 4 + 1] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbG));
+						dst[x * 4 + 2] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbB));
 						dst[x * 4 + 3] = 255;
 					}
 				}
@@ -1551,33 +1550,6 @@ namespace nCine::RHI::GX
 					GX_Position3f32(vpX + vpW, vpY, 0.0f);			GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(1.0f, 1.0f);
 					GX_Position3f32(vpX + vpW, vpY + vpH, 0.0f);	GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(1.0f, 0.0f);
 					GX_Position3f32(vpX, vpY + vpH, 0.0f);			GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(0.0f, 0.0f);
-				GX_End();
-			}
-		}
-
-		if (hasWater) {
-			// Water v1: the constant underwater tint band (out = main * 0.6 + waterColor * 0.4) and the
-			// above-deep-water darkening; the per-row wave displacement and surface glow of the software
-			// combine are dropped (TODO(GX): reproduce them with per-row quads if it matters visually)
-			SetVertexModeTextured(false);
-			GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
-			const float waterTop = vpY + light.WaterLevelPx;
-			if (waterTop < vpY + vpH) {
-				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-					GX_Position3f32(vpX, waterTop, 0.0f);			GX_Color4u8(102, 153, 204, 102);
-					GX_Position3f32(vpX + vpW, waterTop, 0.0f);		GX_Color4u8(102, 153, 204, 102);
-					GX_Position3f32(vpX + vpW, vpY + vpH, 0.0f);	GX_Color4u8(102, 153, 204, 102);
-					GX_Position3f32(vpX, vpY + vpH, 0.0f);			GX_Color4u8(102, 153, 204, 102);
-				GX_End();
-			}
-			const float waterLevelNorm = (vpH > 0.0f ? light.WaterLevelPx / vpH : 1.0f);
-			if (waterLevelNorm < 0.4f && waterTop > vpY) {
-				const std::uint8_t a = QuantizeChannel(0.4f - waterLevelNorm);
-				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-					GX_Position3f32(vpX, vpY, 0.0f);				GX_Color4u8(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG), QuantizeChannel(light.AmbB), a);
-					GX_Position3f32(vpX + vpW, vpY, 0.0f);			GX_Color4u8(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG), QuantizeChannel(light.AmbB), a);
-					GX_Position3f32(vpX + vpW, waterTop, 0.0f);		GX_Color4u8(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG), QuantizeChannel(light.AmbB), a);
-					GX_Position3f32(vpX, waterTop, 0.0f);			GX_Color4u8(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG), QuantizeChannel(light.AmbB), a);
 				GX_End();
 			}
 		}
@@ -1913,7 +1885,13 @@ namespace nCine::RHI::GX
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
 		if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 			ApplyPendingSoftwareLighting();
-			return;
+			// A block that binds a stage may ALSO carry passes - the water overlay of the CombineWithWater
+			// variants, whose colours and thresholds belong next to the GLSL they approximate rather than
+			// duplicated in every backend. They composite over what the stage produced, so fall through to
+			// the quad-family path below instead of returning.
+			if (generated->Fn == nullptr) {
+				return;
+			}
 		}
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
@@ -1997,7 +1975,12 @@ namespace nCine::RHI::GX
 		const bool isPaletteRemap = _currentProgram->UsesPalette();
 		const std::int32_t textureUnit = facts.TextureUnit;
 		const GxTexture* texture = (hasTexture ? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
-		if (hasTexture && texture == nullptr) {
+		// A program whose reflection binds a sampler with nothing bound to it can only be drawn by an
+		// effect that never samples: a textured primitive would rasterize garbage, an untextured shaded
+		// strip is unaffected. That is exactly what SamplesTexture records (the lighting compositor's
+		// water overlay declares uTexture for a fragment stage this tier never runs).
+		if (hasTexture && texture == nullptr &&
+			(generated->Requirements & FixedFunctionRequirements::SamplesTexture) == FixedFunctionRequirements::SamplesTexture) {
 			return;
 		}
 

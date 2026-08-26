@@ -520,6 +520,32 @@ $swText3 = [System.IO.File]::ReadAllText($swOut3)
 Assert ($swMsg.Contains("declined: MultiOutput") -and $swMsg.Contains("fragment output 'NORMAL' is unsupported")) 'MultiOutput: SW transpile did not decline with the MRT diagnostic'
 Assert (-not $swText3.Contains('MultiOutput_Fragment')) 'MultiOutput: a fragment function for the declined shader leaked into the SW header'
 
+# --- fixed_function: a pipeline binding WITH passes, uniform_float, and the SamplesTexture analysis --
+
+$ffOut = Join-Path $tempDir 'PvrPipelinePasses.h'
+& $tool --emit-fixed-function pvr $ffOut (Join-Path $testsDir 'fixedfunction\PipelinePasses.shader') | Out-Null
+Assert ($LASTEXITCODE -eq 0) 'PipelinePasses: --emit-fixed-function pvr failed'
+$ff = [System.IO.File]::ReadAllText($ffOut)
+# The whole point: ONE entry carrying both the stage and a function, which used to be mutually exclusive
+Assert ($ff -match '\{ "PipelinePasses", "",[^\n]*FixedFunctionIntrinsic::LightingCombine, &PipelinePasses_Effect \}') `
+    'PipelinePasses: the table row does not carry both the LightingCombine stage and the effect function'
+Assert ($ff.Contains('UniformFloat(ctx, "uLevel")')) 'PipelinePasses: uniform_float() did not lower to the UniformFloat bridge'
+Assert ($ff.Contains('ctx.SubmitStripShaded(p, 4)')) 'PipelinePasses: the shaded strip was not emitted'
+# An effect that only submits shaded strips never samples, so the dispatch must not require a texture
+# for it - the program declares uTexture purely for the fragment stage the console tiers never run
+$ffRow = ([regex]'\{ "PipelinePasses", "",[^\n]*').Match($ff).Value
+Assert (-not $ffRow.Contains('SamplesTexture')) 'PipelinePasses: a shaded-strip-only effect must not claim SamplesTexture'
+Assert ($ffRow.Contains('NeedsStripBuilder') -and $ffRow.Contains('NeedsQuadAxes') -and $ffRow.Contains('NeedsUniforms')) `
+    'PipelinePasses: the strip-builder / quad-axes / uniform requirements were not recorded'
+
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$ffErr = (& $tool --emit-fixed-function pvr (Join-Path $tempDir 'PvrNotFirst.h') (Join-Path $testsDir 'fixedfunction\PipelineNotFirst.shader') 2>&1 | Out-String -Width 4096)
+$ffErrExit = $LASTEXITCODE
+$ErrorActionPreference = $previousPreference
+Assert ($ffErrExit -ne 0) 'PipelineNotFirst: a pipeline binding after a pass should be rejected'
+Assert ($ffErr.Contains('must be the first statement')) "PipelineNotFirst: unexpected diagnostic: $ffErr"
+
 Write-Host ''
 if ($failures -eq 0) {
     Write-Host "All tests passed ($passed assertions)."

@@ -267,6 +267,135 @@ const uTintColumn = SRC.split('\n')[8].indexOf('uTint') + 1;
 	check('hover on fragColor warns', h5 !== null && h5.contents.value.indexOf('parse error') >= 0);
 	const h6 = I.hoverProvider.provideHover(doc, new Position(9, 0));
 	check('hover on nothing returns null', h6 === null);
+	// The blend/tev enum values are the ones whose backend support a reader cannot guess
+	const tevDoc = makeDocument('void fixed_function(gx) {\n\tp.tev = LUMA_RAMP;\n\tp.blend = ADD;\n}\n', '/x/y.shader');
+	const h7 = I.hoverProvider.provideHover(tevDoc, new Position(1, 12));
+	check('hover on LUMA_RAMP names its one backend',
+		h7 !== null && h7.contents.value.indexOf('fixed_function(gx)') >= 0, h7 && h7.contents.value);
+	const h8 = I.hoverProvider.provideHover(tevDoc, new Position(2, 12));
+	check('hover on a blend mode', h8 !== null && h8.contents.value.indexOf('Additive') >= 0, h8 && h8.contents.value);
+	const h9 = I.hoverProvider.provideHover(tevDoc, new Position(1, 4));
+	check('hover on the tev field carries the support matrix',
+		h9 !== null && h9.contents.value.indexOf('| `LUMA_RAMP` |') >= 0, h9 && h9.contents.value);
+	const h10 = I.hoverProvider.provideHover(doc, new Position(10, 21));
+	check('hover on a fixed_function target explains its combiner',
+		h10 !== null && h10.contents.value.indexOf('ignored entirely') >= 0, h10 && h10.contents.value);
+	// GLSL built-ins: the signature plus the per-backend lowering, which is the part worth a tooltip
+	const h11 = I.hoverProvider.provideHover(doc, new Position(8, 18));
+	check('hover on texture() shows its signature',
+		h11 !== null && h11.contents.value.indexOf('vec4 texture(sampler2D s, vec2 uv') >= 0, h11 && h11.contents.value);
+	const builtinDoc = makeDocument('\tCOLOR.r = round(min(x, y));\n\tCOLOR.g = texelFetch(s, i, 0).r;\n', '/x/y.shader');
+	const h12 = I.hoverProvider.provideHover(builtinDoc, new Position(0, 13));
+	check('hover on round() warns about ES2',
+		h12 !== null && h12.contents.value.indexOf('ES2: a hard error') >= 0, h12 && h12.contents.value);
+	const h13 = I.hoverProvider.provideHover(builtinDoc, new Position(0, 18));
+	check('hover on min() stays short', h13 !== null && h13.contents.value.indexOf('Component-wise minimum') >= 0, h13 && h13.contents.value);
+	const h14 = I.hoverProvider.provideHover(builtinDoc, new Position(1, 16));
+	check('hover on texelFetch names every backend that rejects it',
+		h14 !== null && h14.contents.value.indexOf('Software renderer') >= 0 &&
+		h14.contents.value.indexOf('unknown function') >= 0, h14 && h14.contents.value);
+
+	// ----- hover is context-aware: the two vocabularies overlap by name, not by meaning
+	const bothDoc = makeDocument([
+		'program P;',                          // 0
+		'void fragment() {',                   // 1
+		'\tfloat a = mix(0.0, 1.0, 0.5);',     // 2
+		'\tCOLOR = vec4(a);',                  // 3
+		'\tvec4 color = COLOR;',               // 4
+		'\tfloat t = LUMA_RAMP;',              // 5
+		'}',                                   // 6
+		'void fixed_function(gx) {',           // 7
+		'\tpass p;',                           // 8
+		'\tfloat a = mix(0.0, 1.0, 0.5);',     // 9
+		'\tp.color = COLOR;',                  // 10
+		'\tfloat b = smoothstep(0.0, 1.0, a);',// 11
+		'\tp.tev = LUMA_RAMP;',                // 12
+		'\tsubmit_quad(p);',                   // 13
+		'}',                                   // 14
+		''
+	].join('\n'), '/x/both.shader');
+
+	const gMix = I.hoverProvider.provideHover(bothDoc, new Position(2, 12));
+	check('mix in fragment() is the GLSL built-in',
+		gMix !== null && gMix.contents.value.indexOf('lowers to `lerp`') >= 0, gMix && gMix.contents.value);
+	const fMix = I.hoverProvider.provideHover(bothDoc, new Position(9, 12));
+	check('mix in fixed_function is the C++ subset entry',
+		fMix !== null && fMix.contents.value.indexOf('once per draw') >= 0 &&
+		fMix.contents.value.indexOf('lerp') < 0, fMix && fMix.contents.value);
+
+	const gColor = I.hoverProvider.provideHover(bothDoc, new Position(3, 3));
+	check('COLOR in fragment() is the fragment output',
+		gColor !== null && gColor.contents.value.indexOf('fragment output') >= 0, gColor && gColor.contents.value);
+	const fColor = I.hoverProvider.provideHover(bothDoc, new Position(10, 12));
+	check('COLOR in fixed_function is the instance colour',
+		fColor !== null && fColor.contents.value.indexOf('never shades a pixel') >= 0, fColor && fColor.contents.value);
+
+	// A GLSL built-in the DSL does not accept must say so rather than explain itself
+	const fStep = I.hoverProvider.provideHover(bothDoc, new Position(11, 14));
+	check('smoothstep in fixed_function warns it is unavailable',
+		fStep !== null && fStep.contents.value.indexOf('Not available in a `fixed_function` block') >= 0, fStep && fStep.contents.value);
+	// ...and the other way round
+	const gPreset = I.hoverProvider.provideHover(bothDoc, new Position(5, 14));
+	check('LUMA_RAMP in fragment() warns it is fixed-function only',
+		gPreset !== null && gPreset.contents.value.indexOf('Only available inside a `fixed_function` block') >= 0, gPreset && gPreset.contents.value);
+	const fPreset = I.hoverProvider.provideHover(bothDoc, new Position(12, 13));
+	check('LUMA_RAMP in fixed_function carries no warning',
+		fPreset !== null && fPreset.contents.value.indexOf('Only available inside') < 0 &&
+		fPreset.contents.value.indexOf('fixed_function(gx)') >= 0, fPreset && fPreset.contents.value);
+
+	// `color`/`blend`/`tev` are ordinary local names in GLSL, so they must NOT resolve as pass fields there
+	const gLocal = I.hoverProvider.provideHover(bothDoc, new Position(4, 8));
+	check('a local named "color" in fragment() is not called a pass field',
+		gLocal === null || gLocal.contents.value.indexOf('pass colour') < 0, gLocal && gLocal.contents.value);
+	const fField = I.hoverProvider.provideHover(bothDoc, new Position(10, 5));
+	check('p.color in fixed_function still resolves as the pass field',
+		fField !== null && fField.contents.value.indexOf('pass colour') >= 0, fField && fField.contents.value);
+
+	// ----- types: the std140 numbers in a GLSL body, the local role inside a block
+	const typeDoc2 = makeDocument([
+		'program P;',                          // 0
+		'void fragment() {',                   // 1
+		'\tvec3 g = vec3(1.0);',               // 2
+		'\tmat3 m = m3;',                      // 3
+		'\tuint n = 0u;',                      // 4
+		'\tsampler2DArray bad;',               // 5
+		'\tCOLOR = vec4(g, 1.0);',             // 6
+		'}',                                   // 7
+		'void fixed_function(gx) {',           // 8
+		'\tvec3 c = vec3(1.0);',               // 9
+		'}',                                   // 10
+		''
+	].join('\n'), '/x/t.shader');
+
+	const tVec3 = I.hoverProvider.provideHover(typeDoc2, new Position(2, 2));
+	check('vec3 in fragment() explains the std140 alignment',
+		tVec3 !== null && tVec3.contents.value.indexOf('aligned to 16') >= 0, tVec3 && tVec3.contents.value);
+	const tMat3 = I.hoverProvider.provideHover(typeDoc2, new Position(3, 2));
+	check('mat3 in fragment() gives its real size',
+		tMat3 !== null && tMat3.contents.value.indexOf('48 bytes') >= 0, tMat3 && tMat3.contents.value);
+	const tUint = I.hoverProvider.provideHover(typeDoc2, new Position(4, 2));
+	check('uint warns about the ES2 lowering',
+		tUint !== null && tUint.contents.value.indexOf('ESSL 100') >= 0, tUint && tUint.contents.value);
+	const tBad = I.hoverProvider.provideHover(typeDoc2, new Position(5, 5));
+	check('sampler2DArray is reported as not a type this language has',
+		tBad !== null && tBad.contents.value.indexOf('Not a type this language has') >= 0, tBad && tBad.contents.value);
+	const tFfVec3 = I.hoverProvider.provideHover(typeDoc2, new Position(9, 2));
+	check('vec3 inside a block is the local/constructor entry',
+		tFfVec3 !== null && tFfVec3.contents.value.indexOf('once per draw') >= 0 &&
+		tFfVec3.contents.value.indexOf('std140') < 0, tFfVec3 && tFfVec3.contents.value);
+
+	// An HLSL spelling pasted in gets told what to rename, rather than nothing
+	const hlslDoc = makeDocument('void fragment() {\n\tfloat3 g = lerp(a, b, t);\n}\n', '/x/h.shader');
+	const aType = I.hoverProvider.provideHover(hlslDoc, new Position(1, 3));
+	check('float3 points at vec3',
+		aType !== null && aType.contents.value.indexOf('Use `vec3` instead') >= 0, aType && aType.contents.value);
+	const aFunc = I.hoverProvider.provideHover(hlslDoc, new Position(1, 13));
+	check('lerp points at mix',
+		aFunc !== null && aFunc.contents.value.indexOf('Use `mix` instead') >= 0, aFunc && aFunc.contents.value);
+	// ...but a name this file actually declares wins over the guess
+	const shadow = I.hoverProvider.provideHover(makeDocument('uniform vec4 lerp;\n', '/x/s.shader'), new Position(0, 14));
+	check('a declared name beats the HLSL-spelling hint',
+		shadow !== null && shadow.contents.value.indexOf('Declared in this file') >= 0, shadow && shadow.contents.value);
 
 	// ----- outline
 	const symbols = I.symbolProvider.provideDocumentSymbols(doc);

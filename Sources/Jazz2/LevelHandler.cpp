@@ -835,7 +835,10 @@ namespace Jazz2
 			_console->setParent(hudParent);
 		}
 
-#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		// Acquired on every tier: the console fixed-function backends need this program bound for the water
+		// description in its fixed_function block to run at all, exactly as the shader path needs it for the
+		// fragment stage. Both quality variants carry the same console block, so the preference still picks
+		// the program - there is simply nothing left for it to reduce there.
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
 			? PrecompiledShader::CombineWithWaterLow
 			: PrecompiledShader::CombineWithWater);
@@ -846,7 +849,6 @@ namespace Jazz2
 				LOGW("PrecompiledShader::CombineWithWater failed");
 			}
 		}
-#endif
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];

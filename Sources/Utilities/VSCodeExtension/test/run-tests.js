@@ -406,12 +406,18 @@ function messagesOf(findings) {
 		['CANVAS_CONTRACT', language.CANVAS_CONTRACT],
 		['GLSL_TYPES', language.GLSL_TYPES],
 		['GLSL_FUNCTIONS', language.GLSL_FUNCTIONS],
+		['UNSUPPORTED_TYPES', language.UNSUPPORTED_TYPES],
 		['GLSL_KEYWORDS', language.GLSL_KEYWORDS],
 		['FIXED_FUNCTION.submits', language.FIXED_FUNCTION.submits],
 		['FIXED_FUNCTION.context', language.FIXED_FUNCTION.context],
 		['FIXED_FUNCTION.passFields', language.FIXED_FUNCTION.passFields],
 		['FIXED_FUNCTION.pipelines', language.FIXED_FUNCTION.pipelines],
-		['FIXED_FUNCTION.stripHelpers', language.FIXED_FUNCTION.stripHelpers]
+		['FIXED_FUNCTION.stripHelpers', language.FIXED_FUNCTION.stripHelpers],
+		['FIXED_FUNCTION.blendModes', language.FIXED_FUNCTION.blendModes],
+		['FIXED_FUNCTION.tevPresets', language.FIXED_FUNCTION.tevPresets],
+		['FIXED_FUNCTION.builtins', language.FIXED_FUNCTION.builtins],
+		['FIXED_FUNCTION.types', language.FIXED_FUNCTION.types],
+		['FIXED_FUNCTION.functions', language.FIXED_FUNCTION.functions]
 	];
 	for (var i = 0; i < tables.length; i++) {
 		check(tables[i][0] + ' is a non-empty array',
@@ -426,11 +432,108 @@ function messagesOf(findings) {
 	equal('fixed function target set', names(language.FIXED_FUNCTION_TARGETS).sort().join(','), 'gs,gu,gx,legacygl,pvr,rdp');
 	equal('pass field set', names(language.FIXED_FUNCTION.passFields).sort().join(','),
 		'blend,color,luma_gain,offset_color,screen_offset,tev');
-	equal('blend mode set', language.FIXED_FUNCTION.blendModes.slice().sort().join(','), 'ADD,ALPHA,MATERIAL,OPAQUE');
-	equal('tev preset set', language.FIXED_FUNCTION.tevPresets.slice().sort().join(','),
+	equal('blend mode set', names(language.FIXED_FUNCTION.blendModes).sort().join(','), 'ADD,ALPHA,MATERIAL,OPAQUE');
+	equal('tev preset set', names(language.FIXED_FUNCTION.tevPresets).sort().join(','),
 		'LUMA_RAMP,MODULATE,MODULATE_X2,MODULATE_X4,SILHOUETTE,TINT_MIX');
+
+	// Every preset the transpiler gates on a backend capability must SAY which backends have it, or the
+	// tooltip is worse than nothing - it would read as portable. `MODULATE` is the one that is.
+	var ungated = null;
+	var gatedPresets = ['SILHOUETTE', 'MODULATE_X2', 'MODULATE_X4', 'TINT_MIX', 'LUMA_RAMP'];
+	for (var t = 0; t < language.FIXED_FUNCTION.tevPresets.length; t++) {
+		var preset = language.FIXED_FUNCTION.tevPresets[t];
+		if (gatedPresets.indexOf(preset.name) >= 0 && preset.doc.indexOf('`gx`') < 0) {
+			ungated = preset.name;
+		}
+	}
+	check('gated tev presets name their backends', ungated === null, 'no backend list: ' + ungated);
+
+	// A built-in's hover is only worth having if it carries the signature, so require one on every entry
+	var noSignature = null;
+	for (var g = 0; g < language.GLSL_FUNCTIONS.length; g++) {
+		var builtin = language.GLSL_FUNCTIONS[g];
+		if (typeof builtin.detail !== 'string' || builtin.detail.indexOf(builtin.name + '(') < 0) {
+			noSignature = builtin.name;
+		}
+	}
+	check('GLSL built-ins carry their signature', noSignature === null, 'no signature: ' + noSignature);
+
+	// The built-ins each lowering cannot express must SAY so - a silent decline (the software renderer
+	// just drops the shader) is the whole reason these notes exist. Mirrors GlslToCpp.cpp/Hlsl.cpp.
+	var swDeclined = ['all', 'any', 'determinant', 'equal', 'exp', 'faceforward', 'greaterThan',
+		'greaterThanEqual', 'inverse', 'lessThan', 'lessThanEqual', 'log', 'matrixCompMult', 'not',
+		'notEqual', 'outerProduct', 'refract', 'transpose', 'trunc'];
+	var swBanned = ['texelFetch', 'textureGrad', 'textureLod', 'textureProj', 'textureSize'];
+	var quiet = null;
+	var overWarned = null;
+	// Portable across all three lowerings - these must NOT grow a scary note, or the warnings stop meaning anything
+	var portable = ['abs', 'clamp', 'cos', 'floor', 'max', 'min', 'mix', 'normalize', 'sin', 'smoothstep', 'sqrt', 'step'];
+	for (var s = 0; s < language.GLSL_FUNCTIONS.length; s++) {
+		var entry = language.GLSL_FUNCTIONS[s];
+		var rejected = (swDeclined.indexOf(entry.name) >= 0 || swBanned.indexOf(entry.name) >= 0);
+		if (rejected && entry.doc.indexOf('Software renderer:') < 0) {
+			quiet = entry.name;
+		}
+		if (portable.indexOf(entry.name) >= 0 &&
+			(entry.doc.indexOf('Software renderer:') >= 0 || entry.doc.indexOf('declines') >= 0)) {
+			overWarned = entry.name;
+		}
+	}
+	check('built-ins the software transpiler rejects say so', quiet === null, 'no software note: ' + quiet);
+	check('portable built-ins carry no software warning', overWarned === null, 'spurious warning: ' + overWarned);
 	equal('pipeline intrinsic set', names(language.FIXED_FUNCTION.pipelines).sort().join(','),
 		'lighting_combine,line_strip_mesh,tile_map_mesh');
+	// The maths subset is exactly what ConsoleFixedFunction.cpp accepts, and the hover relies on the
+	// overlap with GLSL being spelled out in both tables
+	equal('fixed-function maths subset', names(language.FIXED_FUNCTION.functions).sort().join(','),
+		'abs,ceil,clamp,cos,float,floor,int,max,min,mix,sin,sqrt');
+	var overlap = [];
+	var glslNames = names(language.GLSL_FUNCTIONS);
+	var ffNames = names(language.FIXED_FUNCTION.functions);
+	for (var o = 0; o < ffNames.length; o++) {
+		if (glslNames.indexOf(ffNames[o]) >= 0) {
+			overlap.push(ffNames[o]);
+		}
+	}
+	// If this ever drops to zero the context-aware hover has nothing to disambiguate and can be simplified
+	check('the two vocabularies really do overlap', overlap.length >= 8, 'overlap: ' + overlap.join(','));
+
+	// GLSL_TYPES must be EXACTLY the compiler's type table (GlslReflect.cpp BuiltinTypes, plus `void`):
+	// offering a type no emitter knows is worse than not offering it, and hover explains those instead
+	equal('type set matches the compiler', names(language.GLSL_TYPES).sort().join(','),
+		'bool,bvec2,bvec3,bvec4,float,int,ivec2,ivec3,ivec4,mat2,mat3,mat4,' +
+		'sampler2D,sampler3D,samplerCube,uint,uvec2,uvec3,uvec4,vec2,vec3,vec4,void');
+	var offeredAndUnsupported = null;
+	for (var u = 0; u < language.UNSUPPORTED_TYPES.length; u++) {
+		if (names(language.GLSL_TYPES).indexOf(language.UNSUPPORTED_TYPES[u]) >= 0) {
+			offeredAndUnsupported = language.UNSUPPORTED_TYPES[u];
+		}
+	}
+	check('no type is both offered and unsupported', offeredAndUnsupported === null, 'both: ' + offeredAndUnsupported);
+
+	// The std140 trap is the reason these hovers exist at all, so pin the three numbers that surprise
+	function docOf(table, name) {
+		for (var i = 0; i < table.length; i++) {
+			if (table[i].name === name) { return table[i].doc; }
+		}
+		return '';
+	}
+	check('vec3 hover states its 16-byte alignment', docOf(language.GLSL_TYPES, 'vec3').indexOf('aligned to 16') >= 0);
+	check('mat3 hover states its 48-byte size', docOf(language.GLSL_TYPES, 'mat3').indexOf('48 bytes') >= 0);
+	check('bool hover states its 4-byte size', docOf(language.GLSL_TYPES, 'bool').indexOf('4 bytes') >= 0);
+	// uint/uvec are the types the ES2 lowering refuses by name
+	var uintish = ['uint', 'uvec2', 'uvec3', 'uvec4'];
+	var unwarned = null;
+	for (var q = 0; q < uintish.length; q++) {
+		if (docOf(language.GLSL_TYPES, uintish[q]).indexOf('ESSL100') < 0) {
+			unwarned = uintish[q];
+		}
+	}
+	check('unsigned types warn about ES2', unwarned === null, 'no ES2 note: ' + unwarned);
+
+	// A fixed_function block takes vec2/3/4 locals too (ConsoleFixedFunction.h), so they must be offered
+	equal('fixed-function local types', names(language.FIXED_FUNCTION.types).sort().join(','),
+		'bool,float,int,pass,vec2,vec3,vec4');
 
 	// Anything with a snippet placeholder must be inserted as a snippet, so check the markers are sane
 	var withPlaceholders = language.DIRECTIVES.concat(language.ENTRY_POINTS);

@@ -4,6 +4,7 @@
 #include "RdpRenderTarget.h"
 #include "RdpTexture.h"
 #include "../FixedFunctionPass.h"
+#include "../LightingCombine.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1800,9 +1801,10 @@ namespace nCine::RHI::RDP
 		const PendingSoftwareLight light = _pendingSoftwareLights.front();
 		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
+		// Only the lightmap composite: the water overlay is a fixed_function block of the
+		// CombineWithWater shaders, run by Dispatch after this hook (see CombineWithWater.shader)
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
-		const bool hasWater = light.WaterActive;
-		if (!hasLighting && !hasWater) {
+		if (!hasLighting) {
 			return;
 		}
 
@@ -1825,7 +1827,7 @@ namespace nCine::RHI::RDP
 			// f = r*(1+g) + amb*(1-r) is the multiply-only approximation shared with the GX/PVR/GU
 			// backends, collapsed to the AMBIENT LUMINANCE - a per-channel ambient tint cannot ride a
 			// single alpha (TODO: an additive second pass could restore the hue if it ever shows).
-			const float ambLuma = 0.299f * light.AmbR + 0.587f * light.AmbG + 0.114f * light.AmbB;
+			const float ambLuma = AmbientLuminance(light.AmbR, light.AmbG, light.AmbB);
 			const std::int32_t stride = ((light.LmW * 2) + 7) & ~7;
 			const std::size_t size = std::size_t(stride) * std::size_t(light.LmH);
 			LightmapSurface& lm = lightmapSurfaces[nextLightmapSurface];
@@ -1863,9 +1865,9 @@ namespace nCine::RHI::RDP
 						}
 						prevR = rawR;
 						prevG = rawG;
-						const float r = Saturate(rawR);
-						const float g = Saturate(rawG);
-						const float f = Saturate(r * (1.0f + g) + ambLuma * (1.0f - r));
+						const float r = ClampLightmapChannel(rawR);
+						const float g = ClampLightmapChannel(rawG);
+						const float f = Saturate(LightingCombineFactor(r, g, ambLuma));
 						// IA16: intensity byte unused (RGB comes out of the combiner as 0), alpha = 1-f
 						prevTexel = std::uint16_t(255 - std::uint8_t(f * 255.0f + 0.5f));
 						dst[x] = prevTexel;
@@ -1885,32 +1887,6 @@ namespace nCine::RHI::RDP
 				SubmitTexturedRect(state, vpX, vpY, vpX + vpW, vpY + vpH,
 					0.0f, 0.0f, float(light.LmW), float(light.LmH));
 				InvalidateTmemWindow();		// The window key points at a stack surface
-			}
-		}
-
-		if (hasWater) {
-			// Water v1: constant underwater tint band + above-deep-water darkening (shared with GX/PVR/GU)
-			DrawState state;
-			state.Combiner = CombFlat;
-			state.BlendEnabled = true;
-			state.Blender = BlendAlphaOver;
-
-			const float waterTop = vpY + light.WaterLevelPx * scaleY;
-			const float uv[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			if (waterTop < vpY + vpH) {
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { waterTop, vpY + vpH, waterTop, vpY + vpH };
-				state.PrimColor = PackRgba(102, 153, 204, 102);
-				SubmitQuadPrimitive(state, px, py, uv, uv);
-			}
-			const float waterLevelNorm = (light.VpH > 0 ? light.WaterLevelPx / float(light.VpH) : 1.0f);
-			if (waterLevelNorm < 0.4f && waterTop > vpY) {
-				const std::uint8_t a = QuantizeChannel(0.4f - waterLevelNorm);
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { vpY, waterTop, vpY, waterTop };
-				state.PrimColor = PackRgba(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG),
-					QuantizeChannel(light.AmbB), a);
-				SubmitQuadPrimitive(state, px, py, uv, uv);
 			}
 		}
 	}
@@ -2313,7 +2289,13 @@ namespace nCine::RHI::RDP
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
 		if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 			ApplyPendingSoftwareLighting();
-			return;
+			// A block that binds a stage may ALSO carry passes - the water overlay of the CombineWithWater
+			// variants, whose colours and thresholds belong next to the GLSL they approximate rather than
+			// duplicated in every backend. They composite over what the stage produced, so fall through to
+			// the quad-family path below instead of returning.
+			if (generated->Fn == nullptr) {
+				return;
+			}
 		}
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
@@ -2381,10 +2363,15 @@ namespace nCine::RHI::RDP
 		const bool needsUniforms = ((reqs & FixedFunctionRequirements::NeedsUniforms) == FixedFunctionRequirements::NeedsUniforms);
 		const bool needsStripBuilder = ((reqs & FixedFunctionRequirements::NeedsStripBuilder) == FixedFunctionRequirements::NeedsStripBuilder);
 		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
+		const bool samplesTexture = ((reqs & FixedFunctionRequirements::SamplesTexture) == FixedFunctionRequirements::SamplesTexture);
 		const std::int32_t textureUnit = facts.TextureUnit;
 		RdpTexture* texture = const_cast<RdpTexture*>(hasTexture
 			? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
-		if (hasTexture && texture == nullptr) {
+		// A program whose reflection binds a sampler with nothing bound to it can only be drawn by an
+		// effect that never samples: a textured primitive would rasterize garbage, an untextured shaded
+		// strip is unaffected. That is exactly what SamplesTexture records (the lighting compositor's
+		// water overlay declares uTexture for a fragment stage this tier never runs).
+		if (hasTexture && texture == nullptr && samplesTexture) {
 			return;
 		}
 

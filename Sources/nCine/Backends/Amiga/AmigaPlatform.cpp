@@ -3,15 +3,15 @@
 #include "AmigaPlatform.h"
 #include "../../../Main.h"
 
+#include <Environment.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #include <exec/execbase.h>
 #include <exec/memory.h>
-#include <devices/timer.h>
 #include <proto/exec.h>
-#include <proto/timer.h>
 
 #if defined(WITH_AMMX)
 #	include "../../Graphics/RHI/Software/SwAmmxOps.h"
@@ -29,37 +29,19 @@ struct Library* KeymapBase = nullptr;
 struct IntuitionBase* IntuitionBase = nullptr;
 struct GfxBase* GfxBase = nullptr;
 
-// ReadEClock's inline calls through TimerBase
-struct Device* TimerBase = nullptr;
-
 extern "C" {
 // libnix reads this at startup and swaps to an allocated stack of this size before main() runs.
 // AmigaOS default stacks are 4-8 KB and this engine's deepest paths (level loading, the software
 // rasterizer's dispatch) need far more; a megabyte is cheap on the 32 MB+ machines this port targets.
 unsigned long __stack = 1024 * 1024;
-
-// The monotonic source Death::Environment's inline time queries call (see Environment.h): the
-// EClock in microseconds. Zero before AmigaPlatform::Initialize() has the timer open - the trace
-// system may stamp a line or two that early, and a zero timestamp beats a crash.
-unsigned long long __amiga_query_monotonic_us() noexcept
-{
-	if (TimerBase == nullptr) {
-		return 0;
-	}
-	struct EClockVal eclock;
-	const ULONG frequency = ReadEClock(&eclock);
-	const unsigned long long ticks = ((unsigned long long)(eclock.ev_hi) << 32) | eclock.ev_lo;
-	return (frequency != 0 ? (ticks * 1000000ull) / frequency : 0);
-}
 }
 
 namespace nCine::Backends
 {
 	namespace
 	{
-		struct MsgPort* _timerPort = nullptr;
-		struct timerequest* _timerRequest = nullptr;
-		bool _timerOpen = false;
+		// The E-clock rate as Death::Environment reported it at startup, kept here so the callers that
+		// need it every frame (the frame clock, the audio device) do not go back to the device for it
 		std::uint32_t _timerFrequency = 709379;
 
 		AmigaPlatform::PerformanceClass _performanceClass = AmigaPlatform::PerformanceClass::Low;
@@ -154,21 +136,17 @@ namespace nCine::Backends
 		// Optional: RAWKEY -> character mapping for text input fields
 		KeymapBase = OpenLibrary(reinterpret_cast<CONST_STRPTR>("keymap.library"), 37);
 
-		// EClock is the only fine-grained monotonic clock the OS offers (the CIA E-clock, ~709 kHz), and
-		// reading it needs an opened timer.device request for TimerBase. UNIT_MICROHZ is the unit every
-		// Kickstart accepts here; the unit only matters for time REQUESTS, which this backend never sends.
-		_timerPort = CreateMsgPort();
-		_timerRequest = reinterpret_cast<struct timerequest*>(CreateIORequest(_timerPort, sizeof(struct timerequest)));
-		if (_timerRequest == nullptr ||
-			OpenDevice(reinterpret_cast<CONST_STRPTR>(TIMERNAME), UNIT_MICROHZ, &_timerRequest->tr_node, 0) != 0) {
+		// The EClock is the only fine-grained monotonic clock the OS offers (the CIA E-clock, ~709 kHz).
+		// Death::Environment owns it - it opens timer.device on the first reading, because the shared time
+		// queries have to answer before any of this runs - so all that is left here is to remember the rate
+		// it reports, and to fail the same way as before if the device cannot be opened at all.
+		std::uint32_t timerFrequency = 0;
+		Death::Environment::Implementation::QueryAmigaEClock(&timerFrequency);
+		if (timerFrequency == 0) {
 			std::fprintf(stderr, "nCine: cannot open timer.device\n");
 			return false;
 		}
-		_timerOpen = true;
-		TimerBase = _timerRequest->tr_node.io_Device;
-
-		struct EClockVal eclock;
-		_timerFrequency = ReadEClock(&eclock);
+		_timerFrequency = timerFrequency;
 
 		const struct ExecBase* sysBase = reinterpret_cast<struct ExecBase*>(SysBase);
 
@@ -250,19 +228,8 @@ namespace nCine::Backends
 
 	void AmigaPlatform::Shutdown()
 	{
-		if (_timerOpen) {
-			CloseDevice(&_timerRequest->tr_node);
-			_timerOpen = false;
-			TimerBase = nullptr;
-		}
-		if (_timerRequest != nullptr) {
-			DeleteIORequest(&_timerRequest->tr_node);
-			_timerRequest = nullptr;
-		}
-		if (_timerPort != nullptr) {
-			DeleteMsgPort(_timerPort);
-			_timerPort = nullptr;
-		}
+		// The timer is not closed here - see Environment::Implementation::QueryAmigaEClock(), which owns it
+		// and keeps it open for the lifetime of the process on purpose
 		if (KeymapBase != nullptr) {
 			CloseLibrary(KeymapBase);
 			KeymapBase = nullptr;
@@ -292,11 +259,9 @@ namespace nCine::Backends
 
 	std::uint64_t AmigaPlatform::TimerTicks()
 	{
-		// ReadEClock's two halves are read atomically by the OS, and the 64-bit value wraps after ~800000
-		// years at 709 kHz, so this is the monotonic clock without further bookkeeping
-		struct EClockVal eclock;
-		ReadEClock(&eclock);
-		return (std::uint64_t(eclock.ev_hi) << 32) | eclock.ev_lo;
+		// Unconverted ticks, which is what the frame clock and the audio device want - no 64-bit division
+		// per reading, which on a 68k is a libgcc call
+		return Death::Environment::Implementation::QueryAmigaEClock();
 	}
 
 	AmigaPlatform::PerformanceClass AmigaPlatform::GetPerformanceClass()
