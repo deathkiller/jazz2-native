@@ -447,7 +447,7 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PlayMenuMusic()
 	{
-#if defined(WITH_AUDIO) && defined(WITH_OPENMPT)
+#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP))
 		auto& resolver = ContentResolver::Get();
 
 		if (PreferencesCache::EnableReforgedMainMenu) {

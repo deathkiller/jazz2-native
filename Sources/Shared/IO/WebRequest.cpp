@@ -1338,7 +1338,7 @@ namespace Death { namespace IO {
 
 		bool StartRequest();
 
-		void HandleCompletion();
+		void HandleCompletion(CURLcode result);
 
 		String GetError() const;
 
@@ -1352,6 +1352,8 @@ namespace Death { namespace IO {
 		// Always owned by this object, so requests running in parallel never share libcurl state
 		CURL* const _handle;
 		char _errorBuffer[CURL_ERROR_SIZE];
+		// How the transfer ended, which is not always what the error buffer describes - see GetError()
+		CURLcode _result = CURLE_OK;
 		struct curl_slist* _headerList = nullptr;
 		ComPtr<WebResponseCURL> _response;
 		ComPtr<WebAuthChallengeCURL> _authChallenge;
@@ -2819,6 +2821,13 @@ namespace Death { namespace IO {
 		// Requests are executed on background threads, where libcurl must not use signals to time out
 		// name resolution - it's unsafe outside the main thread and can wedge the process
 		CURLSetOpt(_handle, CURLOPT_NOSIGNAL, 1L);
+#	if defined(DEATH_TARGET_PSP)
+		// The console's stack is IPv4-only - sceNetInet has no IPv6 in it at all - so an address of any other
+		// family can only take the transfer somewhere it cannot go. libcurl notices the family it cannot use
+		// late and indirectly, in conninfo_remote(), where it surfaces as an inet_ntop() failure rather than
+		// as anything resembling "this address is unusable"
+		CURLSetOpt(_handle, CURLOPT_IPRESOLVE, (long)CURL_IPRESOLVE_V4);
+#	endif
 		CURLSetOpt(_handle, CURLOPT_CONNECTTIMEOUT, (long)WebRequestConnectTimeoutSecs);
 		// Stalled means making no progress at all (under 1 B/s) for the shared inactivity bound
 		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
@@ -2930,8 +2939,8 @@ namespace Death { namespace IO {
 			return result;
 		}
 
-		const CURLcode err = curl_easy_perform(_handle);
-		if (err != CURLE_OK) {
+		_result = curl_easy_perform(_handle);
+		if (_result != CURLE_OK) {
 			// This ensures that DoHandleCompletion() returns failure and uses libcurl error message
 			_response.reset();
 		}
@@ -2983,8 +2992,10 @@ namespace Death { namespace IO {
 		return GetResultFromHTTPStatus(WebResponseImplPtr(_response));
 	}
 
-	void WebRequestCURL::HandleCompletion()
+	void WebRequestCURL::HandleCompletion(CURLcode result)
 	{
+		_result = result;
+
 		HandleResult(DoHandleCompletion());
 
 		if (GetState() == WebRequest::State::Unauthorized) {
@@ -2995,7 +3006,16 @@ namespace Death { namespace IO {
 
 	String WebRequestCURL::GetError() const
 	{
-		return _errorBuffer;
+		// The error buffer holds the last message libcurl saw fit to write, which is not necessarily the one
+		// that ended the transfer: several of its diagnostics are non-fatal (conninfo_remote(), for one,
+		// reports a failing getpeername() and carries on), and several failure codes never write a message
+		// at all. So the code goes in as well - it is the only part that always describes the actual outcome.
+		String description = curl_easy_strerror(_result);
+		if (_errorBuffer[0] == '\0') {
+			return description;
+		}
+
+		return String(_errorBuffer) + " ("_s + description + ")"_s;
 	}
 
 	std::size_t WebRequestCURL::CURLOnRead(char* buffer, std::size_t size)
@@ -3294,7 +3314,7 @@ namespace Death { namespace IO {
 					}
 				}
 				if (request != nullptr) {
-					request->HandleCompletion();
+					request->HandleCompletion(msg->data.result);
 					request->Release();
 				}
 			}

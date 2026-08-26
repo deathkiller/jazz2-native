@@ -108,6 +108,9 @@ namespace Jazz2::Scripting
 #if defined(WITH_OPENMPT)
 			{ "WITH_OPENMPT"_s, true },
 #endif
+#if defined(WITH_XMP)
+			{ "WITH_XMP"_s, true },
+#endif
 #if defined(WITH_IMGUI)
 			{ "WITH_IMGUI"_s, true },
 #endif

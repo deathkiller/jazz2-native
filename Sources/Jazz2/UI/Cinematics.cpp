@@ -228,7 +228,7 @@ namespace Jazz2::UI
 			return;
 		}
 
-#if defined(WITH_AUDIO) && defined(WITH_OPENMPT)
+#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP))
 		_music = resolver.GetMusic(String(path + ".j2b"_s));
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
