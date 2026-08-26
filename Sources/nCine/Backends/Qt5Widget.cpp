@@ -14,6 +14,12 @@ namespace nCine::Backends
 		: QOpenGLWidget(parent), _application(static_cast<MainApplication&>(theApplication())),
 			_createAppEventHandler(createAppEventHandler), _isInitialized(false), _shouldUpdate(true)
 	{
+#if defined(DEATH_TRACE)
+		// This widget drives Init() itself rather than going through MainApplication::Run(), so the sink is
+		// attached here - before the assertion below, which would otherwise fire into nothing
+		_application.InitializeTrace();
+#endif
+
 		DEATH_ASSERT(_createAppEventHandler != nullptr);
 
 		setFocusPolicy(Qt::StrongFocus);

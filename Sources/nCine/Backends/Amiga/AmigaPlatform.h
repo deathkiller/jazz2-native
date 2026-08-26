@@ -44,14 +44,6 @@ namespace nCine::Backends
 
 		/** @brief Opens the OS libraries, runs the performance probe; `false` is fatal for the caller */
 		static bool Initialize();
-		/**
-			@brief Writes what @ref Initialize() found to the log
-
-			Called once the application has attached its trace sink. @ref Initialize() itself runs before
-			that - it has to, the performance preset it measures decides the screen mode the graphics
-			device opens - so it only *records* its findings and this writes them.
-		*/
-		static void FlushStartupLog();
 		static void Shutdown();
 
 		/** @brief EClock rate in ticks per second (~709379 PAL / ~715909 NTSC), as read by @ref Initialize() */

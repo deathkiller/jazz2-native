@@ -171,6 +171,48 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #else
 #	include <IO/FileStream.h>
 static std::unique_ptr<Death::IO::Stream> __logFile;
+
+// Entries formatted before the log file existed, so they still reach it once it opens. Unlike the sink, the
+// file cannot be attached any sooner: its path is the config directory's, which PreferencesCache resolves from
+// OnPreInitialize() - so the file would otherwise begin where its own path became known rather than where the
+// session did, missing the platform bring-up that explains a startup gone wrong. Bounded, keeping the oldest
+// entries; released once the file takes them over or PreInitCommon() sees that none is coming.
+static constexpr std::uint32_t MaxLogHistoryLength = 16 * 1024;
+static Death::Containers::Array<char> __logHistory;
+static std::uint32_t __logHistoryLength = 0;
+static bool __logHistoryClosed = false;
+
+static void AppendLogHistory(const char* entry, std::uint32_t length)
+{
+	// A length one past the capacity is what says entries were lost, so the overflow needs no flag of its own.
+	// Only the branch below can set it, and it fills the buffer to exactly the capacity on the way - which is
+	// what keeps the held byte count equal to the length clamped to the capacity, with no gap of its own.
+	if (__logHistoryLength > MaxLogHistoryLength) {
+		return;
+	}
+	if (__logHistory.empty()) {
+		__logHistory = Death::Containers::Array<char>(Death::Containers::NoInit, MaxLogHistoryLength);
+	}
+
+	const std::uint32_t remaining = MaxLogHistoryLength - __logHistoryLength;
+	if (length > remaining) {
+		// As much of the entry that no longer fits as there is room for, so the buffer ends exactly at its
+		// capacity; the note written after it in AttachTraceTarget() explains the cut
+		std::memcpy(__logHistory.data() + __logHistoryLength, entry, remaining);
+		__logHistoryLength = MaxLogHistoryLength + 1;
+		return;
+	}
+
+	std::memcpy(__logHistory.data() + __logHistoryLength, entry, length);
+	__logHistoryLength += length;
+}
+
+static void DiscardLogHistory()
+{
+	__logHistoryClosed = true;
+	__logHistoryLength = 0;
+	__logHistory = {};
+}
 #endif
 
 enum class ConsoleType {
@@ -183,6 +225,9 @@ enum class ConsoleType {
 };
 
 static ConsoleType __consoleType = ConsoleType::None;
+// Whether the trace sink is already attached, so Application::InitializeTrace() can be called as early as
+// an entry point is able to and still be called again by PreInitCommon() without attaching twice
+static bool __traceInitialized = false;
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 static bool __consoleDarkMode = true;
 static bool __consoleSixelSupported = false;
@@ -869,6 +914,13 @@ namespace nCine
 		_appEventHandler = std::move(appEventHandler);
 		_appEventHandler->OnPreInitialize(_appCfg);
 		LOGB("IAppEventHandler::OnPreInitialize() invoked");
+
+#if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		// OnPreInitialize() is where a log file gets attached if this session is going to have one at all -
+		// PreferencesCache resolves the config directory and calls AttachTraceTarget() from there - so the
+		// startup history has either been written into it by now or is never going to be needed
+		DiscardLogHistory();
+#endif
 	}
 
 	void Application::InitCommon()
@@ -1566,8 +1618,9 @@ namespace nCine
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Allow attaching custom target using Application::AttachTraceTarget()
-		if (__logFile != nullptr) {
+		// Allow attaching custom target using Application::AttachTraceTarget(). Until one is attached the
+		// entry is kept in the startup history instead, so it still reaches the file the moment it opens.
+		if (__logFile != nullptr || !__logHistoryClosed) {
 			std::int32_t length3 = 0;
 			static std::atomic<std::int32_t> logFileLastDay{-1};
 			AppendDateTime(logEntryWithColors, length3, timestamp, &logFileLastDay);
@@ -1577,16 +1630,20 @@ namespace nCine
 			AppendPart(logEntryWithColors, length3, content.data(), (std::int32_t)content.size());
 			logEntryWithColors[length3++] = '\n';
 
+			if (__logFile != nullptr) {
 #	if !defined(DEATH_TRACE_ASYNC)
-			// File needs to be locked, because messages can arrive from different threads
-			__logFile->Write(logEntryWithColors, length3);
+				// File needs to be locked, because messages can arrive from different threads
+				__logFile->Write(logEntryWithColors, length3);
 #	else
-			__logFile->Write(logEntryWithColors, length3);
+				__logFile->Write(logEntryWithColors, length3);
 #	endif
 #	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-			// Flush every entry, so the log is complete even if the game hangs or crashes
-			__logFile->Flush();
+				// Flush every entry, so the log is complete even if the game hangs or crashes
+				__logFile->Flush();
 #	endif
+			} else {
+				AppendLogHistory(logEntryWithColors, std::uint32_t(length3));
+			}
 		}
 #endif
 
@@ -1756,11 +1813,29 @@ namespace nCine
 		__logFile = fs::Open(targetPath, FileAccess::Write);
 		if (__logFile->IsValid()) {
 			AppendLogFileHeader(*__logFile);
+
+			// Everything traced before the path was known goes in right after the header, so the file starts
+			// where the session started rather than where its own location was resolved. These entries are
+			// therefore older than the header's timestamp, which reads them as one session all the same.
+			const std::uint32_t historyLength = (__logHistoryLength > MaxLogHistoryLength ? MaxLogHistoryLength : __logHistoryLength);
+			if (historyLength > 0) {
+				__logFile->Write(__logHistory.data(), historyLength);
+			}
+			if (__logHistoryLength > MaxLogHistoryLength) {
+				// The kept entries are the oldest ones, so whatever was dropped sits between here and the
+				// next line - saying so is better than leaving a silent gap in the middle of the startup.
+				// The leading newline terminates the entry the buffer was cut in the middle of.
+				static const char historyOverflowNote[] = "\n(some entries between here and the next line exceeded the startup buffer and were not recorded)\n";
+				__logFile->Write(historyOverflowNote, sizeof(historyOverflowNote) - 1);
+			}
+			DiscardLogHistory();
+
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
 			__eh.Destination = __logFile.get();
 #	endif
 		} else {
+			// Another target may still be attached later, so the history is deliberately kept
 			__logFile = nullptr;
 #	if defined(WITH_BACKWARD)
 			__eh.Destination = nullptr;
@@ -1779,6 +1854,17 @@ namespace nCine
 #if defined(DEATH_TRACE)
 	void Application::InitializeTrace()
 	{
+		// Idempotent on purpose: an entry point that can do it earlier than PreInitCommon() should, so that
+		// everything it does afterwards - platform bring-up included - can report what it finds through the
+		// ordinary LOG* macros instead of writing to a stream of its own. MainApplication, AndroidApplication,
+		// UwpApplication and Qt5Widget all do; the libretro core cannot (there is no application object
+		// before its own Init(), which calls PreInitCommon() as its first statement), so this call stands
+		// for it, and for anything else that never gets there any earlier.
+		if (__traceInitialized) {
+			return;
+		}
+		__traceInitialized = true;
+
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
 			return (typeof navigator !== 'undefined' && navigator !== null &&
@@ -1888,6 +1974,7 @@ namespace nCine
 #	endif
 
 		Trace::RemoveSink(this);
+		__traceInitialized = false;
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__consoleType >= ConsoleType::WinApi) {

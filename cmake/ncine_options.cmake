@@ -52,14 +52,59 @@ if(NCINE_BUILD_LIBRETRO)
 	endif()
 endif()
 
+# ── Window/input backend family ───────────────────────────────────────────────────────────────────────
+# There are two kinds of platform in this project. Most of them get their window, their graphics context
+# and their input devices from a windowing library - GLFW, SDL2, SDL3 or Qt5 - which NCINE_PREFERRED_BACKEND
+# below chooses between. The consoles and the classic Amiga have a backend of their own instead, because
+# their SDKs either ship no such library at all, or ship one that is layered on the very interface the
+# backend drives directly; the per-platform arms in ncine_extra_sources.cmake spell out each one's reason.
+#
+# NCINE_NATIVE_WINDOW_BACKEND names that backend and is empty on every platform that uses a library, which
+# makes it the single answer the rest of the build keys on: a windowing library, a desktop OpenGL or an
+# OpenAL is then looked for only where something could actually use one (see ncine_imported_targets.cmake),
+# instead of every platform probing for all of them. NCINE_PLATFORM_SUMMARY is the label the configure
+# prints for such a platform, so the list of them lives here and nowhere else.
+if(WINDOWS_PHONE OR WINDOWS_STORE)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Uwp")
+	set(NCINE_PLATFORM_SUMMARY "Windows RT")
+elseif(PLATFORM_N64)
+	set(NCINE_NATIVE_WINDOW_BACKEND "N64")
+	set(NCINE_PLATFORM_SUMMARY "Nintendo 64 (libdragon backend)")
+elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Ogc")
+	set(NCINE_PLATFORM_SUMMARY "Nintendo Wii/GameCube (libogc backend)")
+elseif(PLATFORM_DREAMCAST)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Dc")
+	set(NCINE_PLATFORM_SUMMARY "Sega Dreamcast (KallistiOS backend)")
+elseif(PLATFORM_PSP)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Psp")
+	set(NCINE_PLATFORM_SUMMARY "PlayStation Portable (PSPSDK backend)")
+elseif(PLATFORM_PS2)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Ps2")
+	set(NCINE_PLATFORM_SUMMARY "PlayStation 2 (PS2SDK backend)")
+elseif(PLATFORM_PS3)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Ps3")
+	set(NCINE_PLATFORM_SUMMARY "PlayStation 3 (PSL1GHT backend)")
+elseif(PLATFORM_AMIGA)
+	# Only the classic 68k Amiga: the PowerPC ones (AmigaOS 4.1, MorphOS) have a maintained SDL2 and use it
+	set(NCINE_NATIVE_WINDOW_BACKEND "Amiga")
+	set(NCINE_PLATFORM_SUMMARY "Amiga (AmigaOS 3.x, Intuition/CyberGraphX backend)")
+else()
+	set(NCINE_NATIVE_WINDOW_BACKEND "")
+endif()
+
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
-	if(NINTENDO_SWITCH OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
-		set(_NCINE_DEFAULT_BACKEND "SDL2")
-	else()
-		set(_NCINE_DEFAULT_BACKEND "GLFW")
+	# Only platforms that take their window from a library get to choose which one; the rest have exactly
+	# one backend, named above, and no fallback to offer
+	if(NOT NCINE_NATIVE_WINDOW_BACKEND)
+		if(NINTENDO_SWITCH OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
+			set(_NCINE_DEFAULT_BACKEND "SDL2")
+		else()
+			set(_NCINE_DEFAULT_BACKEND "GLFW")
+		endif()
+		set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
+		set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 	endif()
-	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
-	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 
 	if((PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS) AND NOT NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
 		# SDL2 is the only one of them that exists on the PowerPC Amigas - there is no GLFW, no SDL3 and

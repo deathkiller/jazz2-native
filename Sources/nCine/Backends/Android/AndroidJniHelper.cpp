@@ -123,7 +123,8 @@ namespace nCine::Backends
 	{
 		_javaVM = state->activity->vm;
 
-		// This is called before PreInitCommon(), so trace targets are usually not attached yet, only logcat
+		// The sink is attached by AndroidApplication::Run() before this, so these reach logcat; the log FILE
+		// is a different matter - it is opened later still (see Application::AttachTraceTarget)
 		if (_javaVM == nullptr) {
 			LOGE("JavaVM pointer is null");
 		} else {

@@ -292,6 +292,17 @@ namespace nCine
 		virtual void SetFocus(bool hasFocus);
 
 #if defined(DEATH_TRACE)
+		/**
+			@brief Attaches the trace sink
+
+			Idempotent, so an entry point should call it as early as it has an application object - everything
+			it does afterwards can then report through the ordinary `LOG*` macros. @ref PreInitCommon() calls
+			it as well, for the entry points that cannot get there any sooner.
+		*/
+		void InitializeTrace();
+		/** @brief Detaches the trace sink and closes the log file */
+		void ShutdownTrace();
+
 		// ITraceSink interface
 		void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView functionName, StringView content) override;
 		void OnTraceFlushed() override;
@@ -315,9 +326,6 @@ namespace nCine
 		friend class Viewport;
 
 #if defined(DEATH_TRACE)
-		void InitializeTrace();
-		void ShutdownTrace();
-
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		void AppendLogFileHeader(IO::Stream& s);
 #	endif

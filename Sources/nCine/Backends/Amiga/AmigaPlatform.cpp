@@ -46,15 +46,6 @@ namespace nCine::Backends
 
 		AmigaPlatform::PerformanceClass _performanceClass = AmigaPlatform::PerformanceClass::Low;
 
-		// What Initialize() and the probe found, kept until there is a log to write it to. None of this
-		// can be reported where it is measured: Initialize() runs before Application attaches its trace
-		// sink (see FlushStartupLog()), so a LOG* call there reaches nobody.
-		std::uint32_t _probeNsPerPixel = 0;
-		std::uint32_t _probeNsPerFlop = 0;
-		bool _probeSkipped = false;
-		bool _presetForced = false;
-		bool _ammxEnabled = false;
-
 		const char* PerformanceClassName(AmigaPlatform::PerformanceClass performanceClass)
 		{
 			switch (performanceClass) {
@@ -105,10 +96,10 @@ namespace nCine::Backends
 		if (IntuitionBase == nullptr || GfxBase == nullptr) {
 			// Kickstart below 3.0 - nothing below that can drive an RTG board anyway.
 			//
-			// stderr rather than LOGF, here and in the other two fatal checks below: this function runs
-			// before Application has attached its trace sink, so a trace entry would be enqueued and
-			// dispatched to nobody, and LOG* compiles to nothing at all in a build without DEATH_TRACE.
-			// The Shell that started the program is the only place left that can say why it exited.
+			// stderr rather than LOGF, here and in the other three fatal checks below - not because of when
+			// this runs (the trace sink is attached before any of the platform bring-up, see
+			// MainApplication::Run), but because LOG* compiles to nothing at all in a build without
+			// DEATH_TRACE, and each of these is the only explanation the Shell will ever get for the exit.
 			std::fprintf(stderr, "nCine: AmigaOS 3.0 (Kickstart 39) or newer is required\n");
 			return false;
 		}
@@ -128,10 +119,13 @@ namespace nCine::Backends
 			std::fprintf(stderr, "nCine: cybergraphics.library is required (install Picasso96 or CyberGraphX with an RTG driver)\n");
 			return false;
 		}
+		LOGI("cybergraphics.library v{}.{}", CyberGfxBase->lib_Version, CyberGfxBase->lib_Revision);
 
 		// Optional: CD32-pad/joystick support. Part of the OS since 3.1, but its absence only costs joysticks.
 		LowLevelBase = OpenLibrary(reinterpret_cast<CONST_STRPTR>("lowlevel.library"), 40);
-		// Its absence is reported by FlushStartupLog() once there is a log
+		if (LowLevelBase == nullptr) {
+			LOGW("lowlevel.library not found, joysticks and CD32 pads will not be available");
+		}
 
 		// Optional: RAWKEY -> character mapping for text input fields
 		KeymapBase = OpenLibrary(reinterpret_cast<CONST_STRPTR>("keymap.library"), 37);
@@ -150,6 +144,11 @@ namespace nCine::Backends
 
 		const struct ExecBase* sysBase = reinterpret_cast<struct ExecBase*>(SysBase);
 
+		const std::uint32_t chipBytes = AvailMem(MEMF_CHIP | MEMF_TOTAL);
+		const std::uint32_t fastBytes = AvailMem(MEMF_FAST | MEMF_TOTAL);
+		LOGI("Machine: {} (AttnFlags 0x{:x}), {} KB chip + {} KB fast RAM, EClock {} Hz",
+			DescribeCpu(sysBase->AttnFlags), sysBase->AttnFlags, chipBytes / 1024, fastBytes / 1024, _timerFrequency);
+
 		if ((sysBase->AttnFlags & (AFF_68881 | AFF_68882 | AFF_FPU40)) == 0) {
 			// The binary is compiled -m68881 and the game's update loop is floating point throughout, so
 			// this cannot limp along in software emulation - it would trap on the first FPU instruction
@@ -162,8 +161,13 @@ namespace nCine::Backends
 		// vetoed with an environment variable in case a specific setup misbehaves (the kernels are
 		// designed bit-identical to the scalar path - SwBackendHarness verifies that on hardware).
 		if ((sysBase->AttnFlags & (1 << 10)) != 0) {
-			_ammxEnabled = (std::getenv("NCINE_NO_AMMX") == nullptr);
-			RHI::Software::SetAmmxEnabled(_ammxEnabled);
+			const bool ammxEnabled = (std::getenv("NCINE_NO_AMMX") == nullptr);
+			RHI::Software::SetAmmxEnabled(ammxEnabled);
+			if (ammxEnabled) {
+				LOGI("Apollo 68080 detected, AMMX scanline kernels enabled (set NCINE_NO_AMMX to disable)");
+			} else {
+				LOGI("Apollo 68080 detected, AMMX kernels disabled by NCINE_NO_AMMX");
+			}
 		}
 #endif
 
@@ -172,7 +176,9 @@ namespace nCine::Backends
 		// An explicit preset wins over the measurement. This exists for bring-up on a machine the probe
 		// reads wrongly (an accelerator whose RAM is faster than its CPU, a PiStorm whose emulated 68040
 		// times unlike any real one) and for A/B-ing the presets on one machine without rebuilding.
+		bool presetForced = false;
 		if (const char* preset = std::getenv("NCINE_PRESET")) {
+			presetForced = true;
 			if (EqualsIgnoreCase(preset, "low")) {
 				SetPerformanceClass(PerformanceClass::Low);
 			} else if (EqualsIgnoreCase(preset, "medium")) {
@@ -182,48 +188,14 @@ namespace nCine::Backends
 			} else if (EqualsIgnoreCase(preset, "ultra")) {
 				SetPerformanceClass(PerformanceClass::Ultra);
 			} else {
-				std::fprintf(stderr, "nCine: ignoring NCINE_PRESET=\"%s\" (expected low, medium, high or ultra)\n", preset);
+				presetForced = false;
+				LOGW("Ignoring NCINE_PRESET=\"{}\" (expected low, medium, high or ultra)", preset);
 			}
 		}
-		return true;
-	}
 
-	void AmigaPlatform::FlushStartupLog()
-	{
-		// Everything Initialize() found, written where a log finally exists. It has to be split this way:
-		// the performance preset decides the screen mode AmigaGfxDevice opens, so it must be measured
-		// before Application::Init() - which is also what attaches the trace sink, so nothing written
-		// before that point reaches a sink, a file or the Shell's redirect.
-		if (CyberGfxBase != nullptr) {
-			LOGI("cybergraphics.library v{}.{}", CyberGfxBase->lib_Version, CyberGfxBase->lib_Revision);
-		}
-		if (LowLevelBase == nullptr) {
-			LOGW("lowlevel.library not found, joysticks and CD32 pads will not be available");
-		}
-
-		const struct ExecBase* sysBase = reinterpret_cast<struct ExecBase*>(SysBase);
-		const std::uint32_t chipBytes = AvailMem(MEMF_CHIP | MEMF_TOTAL);
-		const std::uint32_t fastBytes = AvailMem(MEMF_FAST | MEMF_TOTAL);
-		LOGI("Machine: {} (AttnFlags 0x{:x}), {} KB chip + {} KB fast RAM, EClock {} Hz",
-			DescribeCpu(sysBase->AttnFlags), sysBase->AttnFlags, chipBytes / 1024, fastBytes / 1024, _timerFrequency);
-
-#if defined(WITH_AMMX)
-		if ((sysBase->AttnFlags & (1 << 10)) != 0) {
-			if (_ammxEnabled) {
-				LOGI("Apollo 68080 detected, AMMX scanline kernels enabled (set NCINE_NO_AMMX to disable)");
-			} else {
-				LOGI("Apollo 68080 detected, AMMX kernels disabled by NCINE_NO_AMMX");
-			}
-		}
-#endif
-
-		if (_probeSkipped) {
-			LOGW("Performance probe skipped (out of memory), assuming the Low class");
-		} else if (_probeNsPerPixel > 0) {
-			LOGI("Performance probe: {} ns/composited pixel, {} ns/FPU multiply-add", _probeNsPerPixel, _probeNsPerFlop);
-		}
 		LOGI("Performance preset: {}{}", PerformanceClassName(_performanceClass),
-			(_presetForced ? " (forced by NCINE_PRESET)" : ""));
+			(presetForced ? " (forced by NCINE_PRESET)" : ""));
+		return true;
 	}
 
 	void AmigaPlatform::Shutdown()
@@ -271,10 +243,7 @@ namespace nCine::Backends
 
 	void AmigaPlatform::SetPerformanceClass(PerformanceClass performanceClass)
 	{
-		if (_performanceClass != performanceClass) {
-			_performanceClass = performanceClass;
-			_presetForced = true;
-		}
+		_performanceClass = performanceClass;
 	}
 
 	void AmigaPlatform::RunPerformanceProbe()
@@ -294,7 +263,7 @@ namespace nCine::Backends
 		if (source == nullptr || dest == nullptr) {
 			std::free(source);
 			std::free(dest);
-			_probeSkipped = true;
+			LOGW("Performance probe skipped (out of memory), assuming the Low class");
 			_performanceClass = PerformanceClass::Low;
 			return;
 		}
@@ -365,8 +334,7 @@ namespace nCine::Backends
 		}
 
 		_performanceClass = measured;
-		_probeNsPerPixel = nsPerPixel;
-		_probeNsPerFlop = nsPerFlop;
+		LOGI("Performance probe: {} ns/composited pixel, {} ns/FPU multiply-add", nsPerPixel, nsPerFlop);
 
 		std::free(source);
 		std::free(dest);

@@ -1148,6 +1148,21 @@ else()
 			m
 		)
 
+		if(CURL_FOUND)
+			# The console has no socket stack at boot, so MainApplication brings one up for `WebRequest`
+			# (see PspNetworkInitialize) - that is the only thing in the engine calling into these stubs,
+			# because libcurl on top of them only needs the BSD sockets the newlib port already wraps.
+			# They are in the toolchain's default set as well, but listing them here keeps the dependency
+			# visible like the ones above.
+			target_link_libraries(${NCINE_APP} PRIVATE
+				pspnet
+				pspnet_inet
+				pspnet_apctl
+				pspnet_resolver
+				psputility
+			)
+		endif()
+
 		if(OPENAL_FOUND)
 			# pspdev's OpenAL is an OpenAL Soft whose only output backend ("src/Alc/psp.c") drives
 			# sceAudioOutputBlocking() from a thread of its own, so the audio stubs it imports have to be

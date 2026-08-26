@@ -66,6 +66,13 @@ namespace nCine
 	{
 		_instance = this;
 
+#if defined(DEATH_TRACE)
+		// As early as this entry point can: the sink IS the application object, and this is the first place
+		// where one exists (Run() above still runs without it). Everything the activation path does from
+		// here on can therefore use LOG*; the PreInitCommon() call in OnActivated() is then a no-op.
+		InitializeTrace();
+#endif
+
 		applicationView.Activated({ this, &UwpApplication::OnActivated });
 
 		winrtWAC::CoreApplication::Suspending({ this, &UwpApplication::OnSuspending });

@@ -108,17 +108,16 @@ else()
 	add_executable(${NCINE_APP})
 endif()
 
-if(WINDOWS_PHONE OR WINDOWS_STORE)
-	message(STATUS "Compiling for Windows RT")
-elseif(PLATFORM_N64)
-	# The N64 uses the N64 window/input backend (libdragon), see Sources/nCine/Backends/N64
-	message(STATUS "Compiling for Nintendo 64 (libdragon backend)")
-elseif(PLATFORM_AMIGA)
-	# Classic Amiga uses the Amiga window/input backend (Intuition/CyberGraphX), see Sources/nCine/Backends/Amiga
-	message(STATUS "Compiling for Amiga (AmigaOS 3.x, Intuition/CyberGraphX backend)")
+if(NCINE_NATIVE_WINDOW_BACKEND)
+	# A platform with a window/input backend of its own, so none of the windowing libraries below is
+	# involved (or was even looked for). Which platforms those are, and what each one is called, is decided
+	# in one place - see NCINE_NATIVE_WINDOW_BACKEND in cmake/ncine_options.cmake - and the backend itself
+	# lives in Sources/nCine/Backends/${NCINE_NATIVE_WINDOW_BACKEND}
+	message(STATUS "Compiling for ${NCINE_PLATFORM_SUMMARY}")
 elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
-	# Unlike the classic Amiga above, the PowerPC Amigas have a maintained SDL2 and use it for window and
-	# input, so they need no backend of their own - see Docs/Amiga.dox. It is also the only backend they
+	# Unlike the classic 68k Amiga, which has a backend of its own and is matched by the arm above, the
+	# PowerPC Amigas have a maintained SDL2 and use it for window and input, so they need no backend of
+	# their own - see Docs/Amiga.dox. It is also the only backend they
 	# have, and this arm never reaches the fallback chain in the `else()` branch below, so a missing SDL2
 	# is reported here rather than as a missing header or an unresolved symbol later in the build
 	if(NOT SDL2_FOUND)
@@ -129,21 +128,6 @@ elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
 	else()
 		message(STATUS "Compiling for MorphOS (SDL2 backend)")
 	endif()
-elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
-	# The libogc consoles use the Ogc window/input backend (no SDL/GLFW), see Sources/nCine/Backends/Ogc
-	message(STATUS "Compiling for Nintendo Wii/GameCube (libogc backend)")
-elseif(PLATFORM_DREAMCAST)
-	# The Dreamcast uses the Dc window/input backend (KallistiOS), see Sources/nCine/Backends/Dc
-	message(STATUS "Compiling for Sega Dreamcast (KallistiOS backend)")
-elseif(PLATFORM_PS2)
-	# The PS2 uses the Ps2 window/input backend (PS2SDK), see Sources/nCine/Backends/Ps2
-	message(STATUS "Compiling for PlayStation 2")
-elseif(PLATFORM_PSP)
-	# The PSP uses the Psp window/input backend (PSPSDK), see Sources/nCine/Backends/Psp
-	message(STATUS "Compiling for PlayStation Portable")
-elseif(PLATFORM_PS3)
-	# The PS3 uses the Ps3 window/input backend (PSL1GHT), see Sources/nCine/Backends/Ps3
-	message(STATUS "Compiling for PlayStation 3")
 elseif(NCINE_BUILD_LIBRETRO)
 	message(STATUS "Compiling as a libretro core (no window backend)")
 elseif(DEDICATED_SERVER)

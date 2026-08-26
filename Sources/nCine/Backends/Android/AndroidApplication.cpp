@@ -109,6 +109,13 @@ namespace nCine
 		DEATH_ASSERT(state != nullptr);
 		DEATH_ASSERT(createAppEventHandler != nullptr);
 		AndroidApplication& app = theAndroidApplication();
+
+#if defined(DEATH_TRACE)
+		// The sink goes up before the JVM is attached and the asset manager is opened (see PreInit() below),
+		// so both can just use LOG*. It is idempotent, so the PreInitCommon() call inside stays harmless.
+		app.InitializeTrace();
+#endif
+
 		app._state = state;
 		app._createAppEventHandler = createAppEventHandler;
 

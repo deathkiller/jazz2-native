@@ -520,7 +520,14 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_WITH_GLEW)
 		find_package(GLEW)
 	endif()
-	if(NOT NINTENDO_SWITCH AND NOT VITA)
+	# A desktop OpenGL client library is linked by exactly two of the rendering backends: the Core profile
+	# of the OpenGL one, and the fixed-function LegacyGL one - and not even by that on the PowerPC Amigas,
+	# where MiniGL/TinyGL are linked by name instead (see ncine_extra_sources.cmake). The ES profiles take
+	# EGL/libGLESv2 below, and the console backends, D3D11, Vulkan and the software rasterizer have nothing
+	# to do with OpenGL at all. Emscripten keeps the probe because its own toolchain is what answers it.
+	if(EMSCRIPTEN OR
+		(NCINE_PREFERRED_RHI STREQUAL "LegacyGL" AND NOT PLATFORM_AMIGAOS4 AND NOT PLATFORM_MORPHOS) OR
+		(NCINE_PREFERRED_RHI STREQUAL "OpenGL" AND NCINE_RHI_GL_PROFILE STREQUAL "Core"))
 		set(OPENGL_USE_OPENGL ON)
 		find_package(OpenGL)
 	endif()
@@ -530,12 +537,17 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_RHI_GL_PROFILE MATCHES "^ES" OR NINTENDO_SWITCH)
 		find_package(OpenGLES2)
 	endif()
-	# Look for both GLFW and SDL2 to make the fallback logic work
-	find_package(GLFW)
-	find_package(SDL2)
-	# SDL3 ships a proper CMake config package (defines the SDL3::SDL3 imported target directly)
-	find_package(SDL3 CONFIG QUIET)
-	
+	# A windowing library is only of use where the window backend is one (see NCINE_NATIVE_WINDOW_BACKEND
+	# in ncine_options.cmake) - the consoles bring their own, and the dedicated server and the libretro core
+	# never open a window at all
+	if(NOT NCINE_NATIVE_WINDOW_BACKEND AND NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
+		# Look for both GLFW and SDL2 to make the fallback logic work
+		find_package(GLFW)
+		find_package(SDL2)
+		# SDL3 ships a proper CMake config package (defines the SDL3::SDL3 imported target directly)
+		find_package(SDL3 CONFIG QUIET)
+	endif()
+
 	if(PLATFORM_MORPHOS OR PLATFORM_AMIGAOS4)
 		# The Amiga PowerPC SDKs do ship libcurl, but its link-library autoinit opens bsdsocket.library
 		# and usergroup.library before main() runs, and puts a requester on screen when they are not
@@ -582,6 +594,13 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			unset(OPENAL_INCLUDE_DIR CACHE)
 			unset(OPENAL_LIBRARY CACHE)
 			set(PS3AUDIO_FOUND 1)
+		elseif(PLATFORM_PS2)
+			# PS2SDK carries no OpenAL, and this is also the one console with no audio backend in the engine
+			# yet: the SPU2 is reached through audsrv, which is unwritten (see Docs/Consoles.dox). So there is
+			# nothing to look for and nothing to fall back to - the build has no audio, which is what the
+			# summary reports, and no OpenAL path left in the cache by an earlier configure can suggest otherwise.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
 		elseif(PLATFORM_AMIGA)
 			# No OpenAL on classic AmigaOS. The backend software-mixes like the N64/PS3 ones and hands the
 			# blocks to ahi.device (retargetable audio: Paula 14-bit on stock machines, Pamela on a Vampire,
