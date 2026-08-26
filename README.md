@@ -105,7 +105,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * The image also boots directly in *Flycast*, *lxdream* or *redream*
 * Run the disc
 
-*The game runs in 640×480 and the disc is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image. The PowerVR has no programmable shading, so there is no post-processing tier and no rescale filters. The port has not been tested on real hardware yet.*
+*The game runs in 640×480 and the disc is read-only, so nothing is ever converted or written on the console – the content has to be complete in the image. The PowerVR has no programmable shading, so there is no post-processing tier and no rescale filters. Module music plays through _libxmp_, which leaves the larger levels enough of the console's small heap to load in – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
 
 ### Nintendo Wii
 * Download the game
@@ -159,8 +159,10 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 *The `Content` directory is included directly in the VPK file, no action is needed. Cache is recreated in `ux0:/data/jazz2/Cache/` during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up. The port has not been tested on real hardware yet. See [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-vita) for details.*
 
 ### Amiga
-* The game plays from a ready-to-run directory that has to carry the game content converted from an original *Jazz Jackrabbit 2* installation, so it can't be distributed and has to be built first, as described in [the developer documentation](https://de4th.dev/jazz2/docs/amiga.html)
-* Copy the resulting `dist` directory contents – the `Jazz2` executable next to `Content/` – onto the Amiga's hard disk, or mount it as a directory hard drive in an emulator
+* Download the game for the particular system – **AmigaOS 3.x**, **AmigaOS 4.1** or **MorphOS**
+* Copy contents of the archive – the `Jazz2` executable next to `Content/` – onto the Amiga's hard disk, or mount the directory as a hard drive in an emulator
+* Copy contents of original *Jazz Jackrabbit 2* directory to `Source/` next to the executable
+  * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/amiga.html#amiga-content) to skip the conversion, which takes far longer on these machines than on a desktop
 * Run `Jazz2`
 
 *Three systems are supported from three separate builds. **AmigaOS 3.x** needs a 68040/68060 with an FPU and an RTG graphics card (Picasso96 or CyberGraphX) – PiStorm/Emu68 and Apollo Vampire machines are the practical targets – and picks a performance preset by measuring the machine at startup; it has no usable graphics hardware, so it renders on the CPU. **AmigaOS 4.1** and **MorphOS** are PowerPC builds that reach the display through SDL2, which on MorphOS means [sdl2.library](https://www.morphos-storage.net/) has to be installed first. Both render in hardware through the fixed-function OpenGL each system provides – MiniGL over Warp3D on AmigaOS 4, TinyGL on MorphOS – so a 3D driver for the graphics card has to be installed; a build made with `-D NCINE_PREFERRED_RHI=Software` renders on the CPU instead. There are no graphics shaders on any of these systems, so the post-processing tier and the rescale filters are unavailable. Only the classic Amiga and MorphOS builds have been run so far, both under emulation and both on the CPU renderer; none of the three has been tested on real hardware.*

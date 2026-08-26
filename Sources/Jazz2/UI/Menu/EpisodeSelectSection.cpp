@@ -14,6 +14,7 @@
 
 #include <cstring>
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 #include <Utf8.h>
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -327,7 +328,12 @@ namespace Jazz2::UI::Menu
 				std::int32_t prevEpisodeIndex = -1;
 				if (!item.Description.PreviousEpisode.empty()) {
 					for (std::int32_t j = 0; j < (std::int32_t)_episodes.size(); j++) {
-						if (item.Description.PreviousEpisode == _episodes[j].Description.Name) {
+						// The two sides of this comparison do not come from the same place: the name of an episode is
+						// its file name, while the episode it names as its predecessor is a string stored inside the
+						// file - and a file system is free to report a name in a case of its own (a bare ISO 9660 disc,
+						// which is how the game ships on the PlayStation 2, reports every name upper-cased). Episode
+						// names are identifiers, so they are compared as such, without case.
+						if (StringUtils::equalsIgnoreCase(item.Description.PreviousEpisode, _episodes[j].Description.Name)) {
 							prevEpisodeIndex = j;
 							break;
 						}
@@ -356,10 +362,10 @@ namespace Jazz2::UI::Menu
 			float size = (isSelected ? 0.5f + Easing::OutElastic(_animation) * 0.6f : 0.7f);
 			float textWidth = item.Description.DisplayName.size() + 3;
 			if (isSelected) {
-				if (item.Description.Name == "prince"_s || item.Description.Name == "share"_s) {
+				if (StringUtils::equalsIgnoreCase(item.Description.Name, "prince"_s) || StringUtils::equalsIgnoreCase(item.Description.Name, "share"_s)) {
 					// "Formerly a Prince" & "Shareware Demo" title image is too narrow, so try to adjust it a bit
 					textWidth *= 0.8f;
-				} else if (item.Description.Name == "flash"_s) {
+				} else if (StringUtils::equalsIgnoreCase(item.Description.Name, "flash"_s)) {
 					// "Flashback" title image is too wide, so try to adjust it a bit
 					textWidth *= 1.5f;
 				}

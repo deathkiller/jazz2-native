@@ -17,6 +17,7 @@
 #include <cmath>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
 #include <IO/Compression/DeflateStream.h>
 #include <Utf8.h>
 
@@ -317,11 +318,14 @@ namespace Jazz2::UI::Menu
 
 	std::int32_t HighscoresSection::TryGetSeriesIndex(StringView episodeName, bool playerDied)
 	{
-		if (episodeName == "monk"_s || (playerDied && (episodeName == "prince"_s || episodeName == "rescue"_s || episodeName == "flash"_s))) {
+		// The name is an identifier that reaches here from a file name, which a file system may report in a
+		// case of its own (see EpisodeSelectSection), so the series is matched without case
+		if (StringUtils::equalsIgnoreCase(episodeName, "monk"_s) || (playerDied && (StringUtils::equalsIgnoreCase(episodeName, "prince"_s) ||
+				StringUtils::equalsIgnoreCase(episodeName, "rescue"_s) || StringUtils::equalsIgnoreCase(episodeName, "flash"_s)))) {
 			return (std::int32_t)SeriesName::BaseGame;
-		} else if (episodeName == "share"_s) {
+		} else if (StringUtils::equalsIgnoreCase(episodeName, "share"_s)) {
 			return (std::int32_t)SeriesName::SharewareDemo;
-		} else if (episodeName == "secretf"_s) {
+		} else if (StringUtils::equalsIgnoreCase(episodeName, "secretf"_s)) {
 			return (std::int32_t)SeriesName::TheSecretFiles;
 		} else {
 			return -1;

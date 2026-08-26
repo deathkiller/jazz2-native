@@ -419,18 +419,23 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 # elsewhere. It defaults on exactly where libopenmpt cannot be used and the machine can still hold a
 # module: a loaded module costs libxmp between 0.5 MB and 4 MB of RAM (measured over this game's
 # tracks; the largest is "grabbag.it"), plus about 0.2 MB of player state.
-# The Wii and the GameCube are on that list for memory rather than for CPU. Measured over this game's
-# tracks, one loaded module costs libopenmpt 4.6-12.5 MB against libxmp's 0.5-4 MB - two to three
-# times more - and the GameCube has 24 MB with no second pool to hide it in (the Wii shares the port
-# and the content, so it follows the same choice). Neither SDK packages libopenmpt either, so that
-# path also compiles the whole of it into a console binary.
+# The Wii, the GameCube and the Dreamcast are on that list for memory rather than for CPU. Measured
+# over this game's tracks, one loaded module costs libopenmpt 4.6-12.5 MB against libxmp's 0.5-4 MB -
+# two to three times more - and the GameCube has 24 MB with no second pool to hide it in (the Wii
+# shares the port and the content, so it follows the same choice). Neither SDK packages libopenmpt
+# either, so that path also compiles the whole of it into a console binary.
+# The Dreamcast is the same trade one size tighter: the heap it has to fit a module into is the window
+# between the loaded ELF and the top of its 16 MB, about 13.8 MB (see Docs/Consoles.dox), and with a
+# module holding up to 12.5 MB of that the larger levels ran the allocator out. libopenmpt does work
+# there - it plays the whole soundtrack, and it has to be compiled from source like on the devkitPro
+# consoles - but not at a size the game can afford next to a big level, which is what decides it.
 #
 # (Not the PlayStation 2, even though libxmp builds for its toolchain and the machine has the memory:
 # that port has no audio backend at all yet, so there is nothing for a decoder to play through. When
 # one appears, this is the line to add it to. Not the PS Vita either - VitaSDK packages libxmp, and
 # turning this on there does pick the SDK's copy up, but that console runs libopenmpt comfortably and
 # the fuller coverage is worth more than the CPU it saves.)
-if(PLATFORM_AMIGA OR PLATFORM_PSP OR NINTENDO_WII OR NINTENDO_GAMECUBE)
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE)
 	set(_ncineXmpDefault ON)
 else()
 	set(_ncineXmpDefault OFF)

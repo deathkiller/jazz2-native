@@ -104,8 +104,11 @@
 #	define _i8 ""
 #endif
 
+// The two module decoders are alternatives, never both - whichever one was built plays the music
 #if defined(WITH_OPENMPT)
 #	define _i9 "\nlibopenmpt \f[c:#707070]· \f[h:80]https://lib.openmpt.org/libopenmpt/\f[/h]\f[/c]"
+#elif defined(WITH_XMP)
+#	define _i9 "\nlibxmp \f[c:#707070]· \f[h:80]https://libxmp.sourceforge.net/\f[/h]\f[/c]"
 #else
 #	define _i9 ""
 #endif

@@ -10,6 +10,7 @@
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
+#include <Containers/StringUtils.h>
 #include <Cpu.h>
 #include <Environment.h>
 #include <IO/FileSystem.h>
@@ -1862,6 +1863,15 @@ namespace
 	{
 		auto it = _episodeEnd.find(String::nullTerminatedView(episodeName));
 		if (it == _episodeEnd.end()) {
+			// An episode is keyed by its name, which is an identifier rather than a path - and the same episode
+			// can be spelled in two cases, because one caller has it from a file name and another from inside a
+			// ".j2e" file (see EpisodeSelectSection). The exact lookup above is the fast path; entries are one
+			// per episode, so the fallback that ignores case can simply walk them.
+			for (auto& pair : _episodeEnd) {
+				if (StringUtils::equalsIgnoreCase(pair.first, episodeName)) {
+					return &pair.second;
+				}
+			}
 			if (createIfNotFound) {
 				return &_episodeEnd.emplace(String(episodeName), EpisodeContinuationState()).first->second;
 			} else {
@@ -1876,6 +1886,12 @@ namespace
 	{
 		auto it = _episodeContinue.find(String::nullTerminatedView(episodeName));
 		if (it == _episodeContinue.end()) {
+			// Keyed without case as well, see GetEpisodeEnd() above
+			for (auto& pair : _episodeContinue) {
+				if (StringUtils::equalsIgnoreCase(pair.first, episodeName)) {
+					return &pair.second;
+				}
+			}
 			if (createIfNotFound) {
 				return &_episodeContinue.emplace(String(episodeName), EpisodeContinuationStateWithLevel()).first->second;
 			} else {
@@ -1888,11 +1904,19 @@ namespace
 
 	void PreferencesCache::RemoveEpisodeContinue(StringView episodeName)
 	{
-		if (episodeName.empty() || episodeName == "unknown"_s) {
+		if (episodeName.empty() || StringUtils::equalsIgnoreCase(episodeName, "unknown"_s)) {
 			return;
 		}
 
-		_episodeContinue.erase(String::nullTerminatedView(episodeName));
+		if (_episodeContinue.erase(String::nullTerminatedView(episodeName)) == 0) {
+			// The entry may have been stored under a different case, see GetEpisodeEnd() above
+			for (auto it = _episodeContinue.begin(); it != _episodeContinue.end(); ++it) {
+				if (StringUtils::equalsIgnoreCase(it->first, episodeName)) {
+					_episodeContinue.erase(it);
+					break;
+				}
+			}
+		}
 	}
 
 	void PreferencesCache::TryLoadPreferredLanguage()

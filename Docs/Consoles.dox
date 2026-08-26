@@ -138,7 +138,7 @@ Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes |
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No
 Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
-Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
+Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
@@ -338,10 +338,10 @@ EEPROM the preferences are saved to.
 -   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
     a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
     like the PlayStation 2 this console has sound effects and no soundtrack. The lighter **libxmp**
-    the PSP uses does not rescue it either: one of this game's modules costs it between 0.5 MB and
-    4 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan, which is most of the
-    console's 8 MB, and the ROM packaging drops the whole `Music` directory to stay inside the 64 MB
-    cartridge ceiling anyway.
+    the PSP and the Dreamcast use does not rescue it either: one of this game's modules costs it
+    between 0.5 MB and 4 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan,
+    which is most of the console's 8 MB, and the ROM packaging drops the whole `Music` directory to
+    stay inside the 64 MB cartridge ceiling anyway.
 -   **The ROM must fit in 64 MB** --- the ceiling of the flashcarts and of the PI bus mapping ---
     and a full converted content tree does not, so the packaging step drops what the console
     cannot use or cannot afford: @cpp "Music" @ce, which nothing in this binary can decode anyway
@@ -495,6 +495,15 @@ crash also loses everything written since the last flush.
     heap is the binding constraint: the AICA has its own **2 MB of sound RAM** and every fully
     loaded sound effect lives there, not on the 13.8 MB heap. What main memory does hold is the
     module decoder and the three 16 KB buffers a stream is refilled through.
+-   **Module music plays through libxmp, not libopenmpt** @m_span{m-text m-dim} (`NCINE_WITH_XMP`,
+    on by default here) @m_endspan --- and that decoder is the one audio allocation big enough to
+    matter on the heap above. Measured over this game's tracks, one loaded module costs libopenmpt
+    4.6-12.5 MB against libxmp's 0.5-4 MB; the larger levels have to fit in the same 13.8 MB, and
+    with libopenmpt they ran it out. libopenmpt does play the whole soundtrack here and can be put
+    back with `-D NCINE_WITH_XMP=OFF` @m_span{m-text m-dim} (it is compiled from source either way ---
+    KallistiOS packages neither library) @m_endspan, at the price of the levels that then no longer
+    load. What libxmp costs instead is the four `.mo3` tracks, which it cannot read, and slightly
+    less exact playback.
 -   The two kinds of player use two different parts of the sound processor, see
     @ref nCine::AicaAudioDevice. A sound effect is one AICA wavetable channel
     @m_span{m-text m-dim} (two for a stereo sample, since a channel is mono --- the sample is
