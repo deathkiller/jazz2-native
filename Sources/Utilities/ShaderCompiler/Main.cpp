@@ -1405,6 +1405,7 @@ namespace
 			{ FixedFunctionRequirements::NeedsUniforms, "NeedsUniforms" },
 			{ FixedFunctionRequirements::NeedsStripBuilder, "NeedsStripBuilder" },
 			{ FixedFunctionRequirements::NeedsQuadAxes, "NeedsQuadAxes" },
+			{ FixedFunctionRequirements::SamplesTexture, "SamplesTexture" },
 		};
 		String out;
 		for (const auto& bit : bits) {
@@ -1479,9 +1480,10 @@ namespace
 		out += "\t\tOne generated fixed-function effect: the (program, variant) it implements, whether any of\n";
 		out += "\t\tits passes can write an offset colour (the PVR compiles specular into the base polygon\n";
 		out += "\t\theader, so this is needed before any pass runs), which optional EffectContext facilities\n";
-		out += "\t\tthe function can ever call (so Dispatch skips the setup for the rest), and either its\n";
-		out += "\t\tfunction or the backend pipeline stage a \"pipeline <name>;\" block bound it to (never\n";
-		out += "\t\tboth). Byte-identical bodies are emitted once and shared by all their rows.\n\n";
+		out += "\t\tthe function can ever call (so Dispatch skips the setup for the rest), and the backend\n";
+		out += "\t\tpipeline stage a \"pipeline <name>;\" block bound it to. An entry may carry BOTH a stage\n";
+		out += "\t\tand a function - the stage runs first, the function composites over what it produced -\n";
+		out += "\t\tor either alone. Byte-identical bodies are emitted once and shared by all their rows.\n\n";
 		out += "\t\tDefined at namespace scope (unlike the functions and the table below) so the backend's\n";
 		out += "\t\tShaderProgram can forward-declare it and store a resolved entry pointer; only this\n";
 		out += "\t\ttranslation unit ever sees the definition.\n";
@@ -1655,7 +1657,9 @@ namespace
 					e.Intrinsic = std::move(r.Intrinsic);
 					e.UsesOffsetColor = r.UsesOffsetColor;
 					e.Requirements = r.Requirements;
-					if (e.Intrinsic.empty()) {
+					// Keyed on the BODY, not on the intrinsic: a block may bind a pipeline stage AND carry
+					// passes, in which case the entry gets both the enum value and a function pointer
+					if (!r.Body.empty()) {
 						// Deduplicate on the exact body text: bodies are name-free, so batched twins and
 						// palette variants whose difference lives in the dispatch loop (not in the pass
 						// code) collapse into the first occurrence's function. UsesOffsetColor and

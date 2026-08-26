@@ -5,6 +5,7 @@
 #include "GsTexture.h"
 #include "GsBuffer.h"
 #include "../FixedFunctionPass.h"
+#include "../LightingCombine.h"
 
 #include "../../../../Main.h"
 
@@ -1516,6 +1517,15 @@ namespace nCine::RHI::GS
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
 		bool waterActive, float waterLevelPx, float waterTime, float waterCamY)
 	{
+		// The water parameters stay in the cross-backend interface but have no consumer here: the water is a
+		// fixed_function block of the CombineWithWater programs now, and it reads the waterline and the ambient
+		// colour off the draw's own uniforms (see CombineWithWater.shader). Only the software backend, whose
+		// richer per-row water is its own, still reads them.
+		static_cast<void>(waterActive);
+		static_cast<void>(waterLevelPx);
+		static_cast<void>(waterTime);
+		static_cast<void>(waterCamY);
+
 		PendingSoftwareLight entry;
 		entry.Lightmap = lightmap;
 		entry.LmW = lmW;
@@ -1528,10 +1538,6 @@ namespace nCine::RHI::GS
 		entry.AmbR = ambR;
 		entry.AmbG = ambG;
 		entry.AmbB = ambB;
-		entry.WaterActive = waterActive;
-		entry.WaterLevelPx = waterLevelPx;
-		entry.WaterTime = waterTime;
-		entry.WaterCamY = waterCamY;
 		_pendingSoftwareLights.push_back(entry);
 	}
 
@@ -1548,9 +1554,10 @@ namespace nCine::RHI::GS
 		const PendingSoftwareLight light = _pendingSoftwareLights.front();
 		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
+		// Only the lightmap composite: the water overlay is a fixed_function block of the
+		// CombineWithWater shaders, run by Dispatch after this hook (see CombineWithWater.shader)
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
-		const bool hasWater = light.WaterActive;
-		if ((!hasLighting && !hasWater) || !_gsInitialized) {
+		if (!hasLighting || !_gsInitialized) {
 			return;
 		}
 
@@ -1621,7 +1628,7 @@ namespace nCine::RHI::GS
 			}
 
 			// Luminance weights of the ambient colour, so the one channel carried is the perceptual factor
-			const float ambGray = 0.299f * light.AmbR + 0.587f * light.AmbG + 0.114f * light.AmbB;
+			const float ambGray = AmbientLuminance(light.AmbR, light.AmbG, light.AmbB);
 
 			std::uint8_t* const surface = _lightmapStaging.Reserve(std::size_t(pitch) * std::size_t(storeHeight));
 			if (surface == nullptr) {
@@ -1643,10 +1650,10 @@ namespace nCine::RHI::GS
 					}
 					prevR = rawR;
 					prevG = rawG;
-					const float r = (rawR < 0.0f ? 0.0f : (rawR > 1.0f ? 1.0f : rawR));
-					const float g = (rawG < 0.0f ? 0.0f : (rawG > 1.0f ? 1.0f : rawG));
+					const float r = ClampLightmapChannel(rawR);
+					const float g = ClampLightmapChannel(rawG);
 					// The stored value is the ATTENUATION (1 - factor), because the equation subtracts it
-					prevTexel = QuantizePassChannel(1.0f - (r * (1.0f + g) + ambGray * (1.0f - r)));
+					prevTexel = QuantizePassChannel(1.0f - LightingCombineFactor(r, g, ambGray));
 					dst[x] = prevTexel;
 				}
 				// The padding columns are reached by the bilinear tap at the last texel
@@ -1697,30 +1704,6 @@ namespace nCine::RHI::GS
 			const float pu[4] = { uMax, uMax, 0.0f, 0.0f };
 			const float pv[4] = { vMax, 0.0f, vMax, 0.0f };
 			SubmitQuadPrimitive(state, px, py, pu, pv, PackPassColor(OpaqueWhite), 0.0f, 0.0f, true);
-		}
-
-		if (hasWater) {
-			// Water v1: constant underwater tint band + above-deep-water darkening (shared with the PVR and
-			// the GE), both flat source-over quads
-			BlendEquation equation = SourceOverEquation();
-			ApplyBlendEquation(equation);
-
-			DrawState untextured;
-			const float waterTop = vpY + light.WaterLevelPx * scaleY;
-			const float uv[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			if (waterTop < vpY + vpH) {
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { waterTop, vpY + vpH, waterTop, vpY + vpH };
-				const float tint[4] = { 0.4f, 0.6f, 0.8f, 0.4f };
-				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackVertexColor(tint), 0.0f, 0.0f, true);
-				}
-			const float waterLevelNorm = (light.VpH > 0 ? light.WaterLevelPx / float(light.VpH) : 1.0f);
-			if (waterLevelNorm < 0.4f && waterTop > vpY) {
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { vpY, waterTop, vpY, waterTop };
-				const float above[4] = { light.AmbR, light.AmbG, light.AmbB, 0.4f - waterLevelNorm };
-				SubmitQuadPrimitive(untextured, px, py, uv, uv, PackVertexColor(above), 0.0f, 0.0f, true);
-				}
 		}
 	}
 
@@ -2032,7 +2015,13 @@ namespace nCine::RHI::GS
 			} else if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
 				DispatchLineStrip(firstVertex, numVertices);
 			}
-			return;
+			// A block that binds a stage may ALSO carry passes - the water overlay of the CombineWithWater
+			// variants, whose colours and thresholds belong next to the GLSL they approximate rather than
+			// duplicated in every backend. They composite over what the stage produced, so fall through to
+			// the quad-effect path below instead of returning.
+			if (generated->Fn == nullptr) {
+				return;
+			}
 		}
 
 		if (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles) {
@@ -2071,9 +2060,18 @@ namespace nCine::RHI::GS
 		const std::uint32_t instanceStride = facts.InstanceStride;
 		const bool hasTexture = facts.HasTexture;
 		const bool texturedLayout = facts.TexturedLayout;
+		// Statically computed per effect by the transpiler: whether any primitive it submits samples the
+		// bound texture at all. This backend gates no setup on the requirement bits, so it reads the one
+		// bit it does need straight off the entry.
+		const bool samplesTexture = ((generated->Requirements & FixedFunctionRequirements::SamplesTexture) ==
+			FixedFunctionRequirements::SamplesTexture);
 
 		GsTexture* texture = (hasTexture ? const_cast<GsTexture*>(_boundTextures[0]) : nullptr);
-		if (hasTexture && texture == nullptr) {
+		// A program whose reflection binds a sampler with nothing bound to it can only be drawn by an
+		// effect that never samples: a textured primitive would rasterize garbage, an untextured shaded
+		// strip is unaffected. That is exactly what SamplesTexture records (the lighting compositor's
+		// water overlay declares uTexture for a fragment stage this tier never runs).
+		if (hasTexture && texture == nullptr && samplesTexture) {
 			return;
 		}
 		// A program with no `uTexture` draws flat-colour geometry (the menu dimmer, panels, separators). It

@@ -130,7 +130,19 @@ namespace nCine::RHI
 		NeedsTexelStep = 0x01,		/**< Calls `texel_size()` / `has_texel_size()` (the texel-step conversion) */
 		NeedsUniforms = 0x02,		/**< Calls `has_uniform()` / `uniform_vec2/vec4()` (resolved-uniform plumbing) */
 		NeedsStripBuilder = 0x04,	/**< Calls `strip_*()` / `submit_strip[_shaded]()` (the strip-builder scratch and its state) */
-		NeedsQuadAxes = 0x08		/**< Calls `quad_origin()` / `quad_axis_x/y()` (pre-clip quad geometry) */
+		NeedsQuadAxes = 0x08,		/**< Calls `quad_origin()` / `quad_axis_x/y()` (pre-clip quad geometry) */
+		/**
+			Submits at least one primitive that SAMPLES the bound texture: `submit_quad()`,
+			`submit_strip()`, or `submit_strip_shaded()` in a block that can set `TevPreset::TintMix`
+			(the one shaded form that consumes the texel too).
+
+			Unlike its siblings this one does not gate setup but a REQUIREMENT: a dispatch refuses to
+			draw a program whose reflection binds a sampler with nothing bound to it, because a textured
+			primitive would then rasterize garbage. An effect that only submits shaded, untextured
+			strips has no such dependency, and the water overlay of the lighting compositor is exactly
+			that - its program declares `uTexture` for a fragment stage the console tiers never run.
+		*/
+		SamplesTexture = 0x10
 	};
 
 	DEATH_ENUM_FLAGS(FixedFunctionRequirements);
@@ -214,9 +226,13 @@ namespace nCine::RHI
 		must know it when compiling the base polygon header - specular is enabled per program, not
 		per pass - the FixedFunctionRequirements bitmask above (which optional context facilities
 		the function can ever call, so Dispatch skips the setup for the rest), and the
-		FixedFunctionIntrinsic a `pipeline <name>;` block declared instead of a function (see
-		above). An entry has either a function or an intrinsic, never both; a program absent from
-		the table is skipped with a one-time warning. Byte-identical function bodies are emitted
+		FixedFunctionIntrinsic a `pipeline <name>;` block declared (see above). An entry may carry
+		BOTH a stage and a function - a stage keeps what it cannot delegate (a per-vertex or
+		per-texel loop over an engine buffer) while the passes after it carry the per-draw policy,
+		so the backend runs the stage first and the function composites over what it produced - or
+		either alone; a program absent from the table is skipped with a one-time warning. The
+		lighting compositor is the both-at-once case: the CPU-lightmap stage plus the water overlay
+		of the CombineWithWater variants. Byte-identical function bodies are emitted
 		once and shared by all their (program, variant) rows - batched twins and palette variants
 		usually differ only in dispatch-side decoding, not in pass code.
 	*/

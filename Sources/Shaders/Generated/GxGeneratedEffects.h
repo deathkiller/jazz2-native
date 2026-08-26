@@ -17,9 +17,10 @@ namespace nCine::RHI::GX
 		One generated fixed-function effect: the (program, variant) it implements, whether any of
 		its passes can write an offset colour (the PVR compiles specular into the base polygon
 		header, so this is needed before any pass runs), which optional EffectContext facilities
-		the function can ever call (so Dispatch skips the setup for the rest), and either its
-		function or the backend pipeline stage a "pipeline <name>;" block bound it to (never
-		both). Byte-identical bodies are emitted once and shared by all their rows.
+		the function can ever call (so Dispatch skips the setup for the rest), and the backend
+		pipeline stage a "pipeline <name>;" block bound it to. An entry may carry BOTH a stage
+		and a function - the stage runs first, the function composites over what it produced -
+		or either alone. Byte-identical bodies are emitted once and shared by all their rows.
 
 		Defined at namespace scope (unlike the functions and the table below) so the backend's
 		ShaderProgram can forward-declare it and store a resolved entry pointer; only this
@@ -190,6 +191,7 @@ namespace nCine::RHI::GX
 			// Extended-vocabulary bridges (backend-specific blocks only): resolved-uniform loads and
 			// the strip-builder vertex setters, spelled over the EffectContext's scalar methods so the
 			// contract in FixedFunctionPass.h stays free of these vector types
+			inline float UniformFloat(EffectContext& ctx, const char* name) { float v = 0.0f; ctx.LoadUniform(name, &v, 1); return v; }
 			inline vec2 UniformVec2(EffectContext& ctx, const char* name) { float v[2] = { 0.0f, 0.0f }; ctx.LoadUniform(name, v, 2); return vec2(v[0], v[1]); }
 			inline vec4 UniformVec4(EffectContext& ctx, const char* name) { float v[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; ctx.LoadUniform(name, v, 4); return vec4(v[0], v[1], v[2], v[3]); }
 			inline void StripPosition(EffectContext& ctx, int i, const vec2& p) { ctx.SetStripVertexPosition(i, p.x, p.y); }
@@ -235,6 +237,46 @@ namespace nCine::RHI::GX
 			p.Tev = FixedFunctionPass::TevPreset::ModulateX4;
 			Store(p.Color, vec4(1.5f * (1.0f + (COLOR.xyz() - 0.5f) * 4.0f) * 0.25f, 1.0f + (COLOR.w - 0.5f) * 4.0f));
 			ctx.SubmitQuad(p);
+		}
+
+		// CombineWithWater - from CombineWithWater.shader:fixed_function(pvr, gx, gu, gs, rdp, legacygl)
+		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(pvr, gx, gu, gs, rdp, legacygl)]
+		void CombineWithWater_Effect(EffectContext& ctx)
+		{
+			using namespace ff;
+			if (ctx.HasUniform("uWaterLevel")) {
+				vec2 origin = vec2(ctx.QuadOriginX(), ctx.QuadOriginY());
+				vec2 axisX = vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy());
+				vec2 axisY = vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy());
+				float level = UniformFloat(ctx, "uWaterLevel");
+				vec2 waterline = origin + level * axisY;
+				FixedFunctionPass p;
+				p.Blend = FixedFunctionPass::BlendMode::Alpha;
+				if (level < 1.0f) {
+					StripPosition(ctx, 0, waterline);
+					StripPosition(ctx, 1, waterline + axisX);
+					StripPosition(ctx, 2, origin + axisY);
+					StripPosition(ctx, 3, origin + axisY + axisX);
+					StripColor(ctx, 0, vec4(0.4f, 0.6f, 0.8f, 0.4f));
+					StripColor(ctx, 1, vec4(0.4f, 0.6f, 0.8f, 0.4f));
+					StripColor(ctx, 2, vec4(0.4f, 0.6f, 0.8f, 0.4f));
+					StripColor(ctx, 3, vec4(0.4f, 0.6f, 0.8f, 0.4f));
+					ctx.SubmitStripShaded(p, 4);
+				}
+				vec4 ambient = UniformVec4(ctx, "uAmbientColor");
+				if (level < 0.4f && level > 0.0f) {
+					vec4 above = vec4(ambient.x, ambient.y, ambient.z, 0.4f - level);
+					StripPosition(ctx, 0, origin);
+					StripPosition(ctx, 1, origin + axisX);
+					StripPosition(ctx, 2, waterline);
+					StripPosition(ctx, 3, waterline + axisX);
+					StripColor(ctx, 0, above);
+					StripColor(ctx, 1, above);
+					StripColor(ctx, 2, above);
+					StripColor(ctx, 3, above);
+					ctx.SubmitStripShaded(p, 4);
+				}
+			}
 		}
 
 		// DefaultBatchedSpritesNoTexture - from DefaultBatchedSpritesNoTexture.shader:fixed_function()
@@ -469,45 +511,45 @@ namespace nCine::RHI::GX
 		}
 
 		constexpr FixedFunctionGeneratedEffect FixedFunctionGeneratedEffects[] = {
-			{ "BatchedShieldFire", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
-			{ "BatchedShieldLightning", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
-			{ "Colorized", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &Colorized_Effect },
-			{ "BatchedColorized", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &Colorized_Effect },
+			{ "BatchedShieldFire", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
+			{ "BatchedShieldLightning", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
+			{ "Colorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
+			{ "BatchedColorized", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Colorized_Effect },
 			{ "Combine", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
-			{ "CombineWithWater", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
-			{ "CombineWithWaterLow", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LightingCombine, nullptr },
-			{ "DefaultBatchedSpritesNoTexture", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "CombineWithWater", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
+			{ "CombineWithWaterLow", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::LightingCombine, &CombineWithWater_Effect },
+			{ "DefaultBatchedSpritesNoTexture", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
 			{ "DefaultMeshSprite", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::LineStripMesh, nullptr },
-			{ "DefaultSprite", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
-			{ "DefaultBatchedSprites", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
-			{ "DefaultSpriteNoTexture", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
-			{ "FrozenMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
-			{ "FrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
-			{ "BatchedFrozenMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
-			{ "BatchedFrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
-			{ "Outline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
-			{ "BatchedOutline", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
-			{ "OutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
-			{ "BatchedOutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep, FixedFunctionIntrinsic::None, &Outline_Effect },
-			{ "PaletteRemap", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
-			{ "BatchedPaletteRemap", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
-			{ "PartialWhiteMask", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
-			{ "PartialWhiteMask", "USE_PALETTE", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
-			{ "BatchedPartialWhiteMask", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
-			{ "BatchedPartialWhiteMask", "USE_PALETTE", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
-			{ "ShieldFire", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
-			{ "ShieldLightning", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
-			{ "TexturedBackground", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
-			{ "TexturedBackground", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
-			{ "TexturedBackgroundCircle", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
-			{ "TexturedBackgroundCircle", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "DefaultSprite", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "DefaultBatchedSprites", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "DefaultSpriteNoTexture", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "FrozenMask", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
+			{ "FrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
+			{ "BatchedFrozenMask", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
+			{ "BatchedFrozenMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &FrozenMask_Effect },
+			{ "Outline", "", true, FixedFunctionRequirements::NeedsTexelStep | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "BatchedOutline", "", true, FixedFunctionRequirements::NeedsTexelStep | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "OutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "BatchedOutlinePalette", "", true, FixedFunctionRequirements::NeedsTexelStep | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &Outline_Effect },
+			{ "PaletteRemap", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "BatchedPaletteRemap", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &DefaultBatchedSpritesNoTexture_Effect },
+			{ "PartialWhiteMask", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
+			{ "PartialWhiteMask", "USE_PALETTE", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
+			{ "BatchedPartialWhiteMask", "", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
+			{ "BatchedPartialWhiteMask", "USE_PALETTE", false, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &PartialWhiteMask_Effect },
+			{ "ShieldFire", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldFire_Effect },
+			{ "ShieldLightning", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &BatchedShieldLightning_Effect },
+			{ "TexturedBackground", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackground", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCircle", "", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
+			{ "TexturedBackgroundCircle", "DITHER", false, FixedFunctionRequirements::NeedsUniforms | FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes | FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &TexturedBackground_Effect },
 			{ "TileMapMesh", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
 			{ "TileMapMeshPalette", "", false, FixedFunctionRequirements::None, FixedFunctionIntrinsic::TileMapMesh, nullptr },
 			{ "Transition", "", false, FixedFunctionRequirements::NeedsStripBuilder | FixedFunctionRequirements::NeedsQuadAxes, FixedFunctionIntrinsic::None, &Transition_Effect },
-			{ "WhiteMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
-			{ "WhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
-			{ "BatchedWhiteMask", "", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
-			{ "BatchedWhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::None, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
+			{ "WhiteMask", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
+			{ "WhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
+			{ "BatchedWhiteMask", "", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
+			{ "BatchedWhiteMask", "USE_PALETTE", true, FixedFunctionRequirements::SamplesTexture, FixedFunctionIntrinsic::None, &WhiteMask_Effect },
 		};
 		constexpr std::size_t FixedFunctionGeneratedEffectCount = sizeof(FixedFunctionGeneratedEffects) / sizeof(FixedFunctionGeneratedEffects[0]);
 	}

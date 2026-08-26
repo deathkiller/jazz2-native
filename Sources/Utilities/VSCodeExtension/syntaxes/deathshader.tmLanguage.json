@@ -478,7 +478,7 @@
 				},
 				{
 					"comment": "Optional EffectContext facilities - the generated table records which ones an effect calls",
-					"match": "\\b(texel_size|has_texel_size|quad_origin|quad_axis_x|quad_axis_y|has_uniform|uniform_vec2|uniform_vec4)\\b",
+					"match": "\\b(texel_size|has_texel_size|quad_origin|quad_axis_x|quad_axis_y|has_uniform|uniform_float|uniform_vec2|uniform_vec4)\\b",
 					"name": "support.function.context.deathshader"
 				},
 				{

@@ -186,7 +186,13 @@ namespace nCine::RHI::PVR
 		/** @brief Invalidates the palette banks (and RG8 bakes) of the given palette rows after an upload */
 		static void NotifyPaletteTextureChanged(PvrTexture* texture, std::int32_t firstRow, std::int32_t rowCount);
 
-		/** @brief Queues the CPU lightmap/water combine for the next `Combine` draw (the direct-tier lighting contract) */
+		/**
+			@brief Queues the CPU lightmap combine for the next `Combine` draw (the direct-tier lighting contract)
+
+			The water half of the compositor is NOT queued here: it is a fixed_function block of the
+			CombineWithWater programs (see CombineWithWater.shader), so the `water*` parameters of the shared
+			signature are ignored by this backend - only the software one still reads them.
+		*/
 		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
 			bool waterActive = false, float waterLevelPx = 0.0f, float waterTime = 0.0f, float waterCamY = 0.0f);
@@ -218,8 +224,6 @@ namespace nCine::RHI::PVR
 			std::int32_t LmW = 0, LmH = 0, Scale = 1;
 			std::int32_t VpX = 0, VpY = 0, VpW = 0, VpH = 0;
 			float AmbR = 0.0f, AmbG = 0.0f, AmbB = 0.0f;
-			bool WaterActive = false;
-			float WaterLevelPx = 0.0f, WaterTime = 0.0f, WaterCamY = 0.0f;
 		};
 
 		struct PaletteBank

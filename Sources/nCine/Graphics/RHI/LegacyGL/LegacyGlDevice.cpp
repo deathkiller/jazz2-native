@@ -6,6 +6,7 @@
 #include "LegacyGlRenderTarget.h"
 #include "LegacyGlTexture.h"
 #include "../FixedFunctionPass.h"
+#include "../LightingCombine.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1512,6 +1513,15 @@ namespace nCine::RHI::LegacyGL
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
 		bool waterActive, float waterLevelPx, float waterTime, float waterCamY)
 	{
+		// The water parameters stay in the cross-backend interface but have no consumer here: the water is a
+		// fixed_function block of the CombineWithWater programs now, and it reads the waterline and the ambient
+		// colour off the draw's own uniforms (see CombineWithWater.shader). Only the software backend, whose
+		// richer per-row water is its own, still reads them.
+		static_cast<void>(waterActive);
+		static_cast<void>(waterLevelPx);
+		static_cast<void>(waterTime);
+		static_cast<void>(waterCamY);
+
 		PendingSoftwareLight light;
 		light.Lightmap = lightmap;
 		light.LmW = lmW;
@@ -1524,10 +1534,6 @@ namespace nCine::RHI::LegacyGL
 		light.AmbR = ambR;
 		light.AmbG = ambG;
 		light.AmbB = ambB;
-		light.WaterActive = waterActive;
-		light.WaterLevelPx = waterLevelPx;
-		light.WaterTime = waterTime;
-		light.WaterCamY = waterCamY;
 		_pendingSoftwareLights.push_back(light);
 	}
 
@@ -1551,9 +1557,10 @@ namespace nCine::RHI::LegacyGL
 		const PendingSoftwareLight light = _pendingSoftwareLights.front();
 		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
 
+		// Only the lightmap composite: the water overlay is a fixed_function block of the
+		// CombineWithWater shaders, run by Dispatch after this hook (see CombineWithWater.shader)
 		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
-		const bool hasWater = light.WaterActive;
-		if (!hasLighting && !hasWater) {
+		if (!hasLighting) {
 			return;
 		}
 
@@ -1599,12 +1606,11 @@ namespace nCine::RHI::LegacyGL
 						}
 						prevR = rawR;
 						prevG = rawG;
-						const float r = (rawR < 0.0f ? 0.0f : (rawR > 1.0f ? 1.0f : rawR));
-						const float g = (rawG < 0.0f ? 0.0f : (rawG > 1.0f ? 1.0f : rawG));
-						const float lit = r * (1.0f + g);
-						const float inv = 1.0f - r;
-						prevTexel = PackRgbaBytes(QuantizeChannel(lit + light.AmbR * inv),
-							QuantizeChannel(lit + light.AmbG * inv), QuantizeChannel(lit + light.AmbB * inv), 255);
+						const float r = ClampLightmapChannel(rawR);
+						const float g = ClampLightmapChannel(rawG);
+						prevTexel = PackRgbaBytes(QuantizeChannel(LightingCombineFactor(r, g, light.AmbR)),
+							QuantizeChannel(LightingCombineFactor(r, g, light.AmbG)),
+							QuantizeChannel(LightingCombineFactor(r, g, light.AmbB)), 255);
 						dst[x] = prevTexel;
 					}
 					// The padding columns are reached by the bilinear tap at the last texel
@@ -1637,30 +1643,6 @@ namespace nCine::RHI::LegacyGL
 				const float pu[4] = { float(copyW), float(copyW), 0.0f, 0.0f };
 				const float pv[4] = { float(copyH), 0.0f, float(copyH), 0.0f };
 				SubmitQuadPrimitive(state, px, py, pu, pv, PackAbgr(255, 255, 255, 255));
-			}
-		}
-
-		if (hasWater) {
-			// Water v1: constant underwater tint band + above-deep-water darkening (shared with GX/PVR)
-			DrawState state;
-			state.BlendEnabled = true;
-			state.BlendSrc = GL_SRC_ALPHA;
-			state.BlendDst = GL_ONE_MINUS_SRC_ALPHA;
-
-			const float waterTop = vpY + light.WaterLevelPx * scaleY;
-			const float uv[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			if (waterTop < vpY + vpH) {
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { waterTop, vpY + vpH, waterTop, vpY + vpH };
-				SubmitQuadPrimitive(state, px, py, uv, uv, PackAbgr(102, 153, 204, 102));
-			}
-			const float waterLevelNorm = (light.VpH > 0 ? light.WaterLevelPx / float(light.VpH) : 1.0f);
-			if (waterLevelNorm < 0.4f && waterTop > vpY) {
-				const std::uint8_t a = QuantizeChannel(0.4f - waterLevelNorm);
-				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
-				const float py[4] = { vpY, waterTop, vpY, waterTop };
-				SubmitQuadPrimitive(state, px, py, uv, uv,
-					PackAbgr(QuantizeChannel(light.AmbR), QuantizeChannel(light.AmbG), QuantizeChannel(light.AmbB), a));
 			}
 		}
 	}
@@ -2015,7 +1997,13 @@ namespace nCine::RHI::LegacyGL
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
 		if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 			ApplyPendingSoftwareLighting();
-			return;
+			// A block that binds a stage may ALSO carry passes - the water overlay of the CombineWithWater
+			// variants, whose colours and thresholds belong next to the GLSL they approximate rather than
+			// duplicated in every backend. They composite over what the stage produced, so fall through to
+			// the quad-family path below instead of returning.
+			if (generated->Fn == nullptr) {
+				return;
+			}
 		}
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
@@ -2096,10 +2084,15 @@ namespace nCine::RHI::LegacyGL
 		const bool needsUniforms = ((reqs & FixedFunctionRequirements::NeedsUniforms) == FixedFunctionRequirements::NeedsUniforms);
 		const bool needsStripBuilder = ((reqs & FixedFunctionRequirements::NeedsStripBuilder) == FixedFunctionRequirements::NeedsStripBuilder);
 		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
+		const bool samplesTexture = ((reqs & FixedFunctionRequirements::SamplesTexture) == FixedFunctionRequirements::SamplesTexture);
 		const std::int32_t textureUnit = facts.TextureUnit;
 		LegacyGlTexture* texture = const_cast<LegacyGlTexture*>(hasTexture
 			? _boundTextures[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
-		if (hasTexture && texture == nullptr) {
+		// A program whose reflection binds a sampler with nothing bound to it can only be drawn by an
+		// effect that never samples: a textured primitive would rasterize garbage, an untextured shaded
+		// strip is unaffected. That is exactly what SamplesTexture records (the lighting compositor's
+		// water overlay declares uTexture for a fragment stage this tier never runs).
+		if (hasTexture && texture == nullptr && samplesTexture) {
 			return;
 		}
 

@@ -4,6 +4,10 @@
 #	include <emscripten.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_AMIGAOS)
+#	include <devices/timer.h>
+#	include <proto/exec.h>
+#	include <proto/timer.h>
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include <winrt/Windows.System.Profile.h>
 namespace winrtWSP = winrt::Windows::System::Profile;
@@ -17,6 +21,12 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #	include <cstdlib>
 #	include <cstring>
 #	include <unistd.h>
+#endif
+
+#if defined(DEATH_TARGET_AMIGAOS)
+// Where ReadEClock() takes its library base from: the NDK's inline stub loads it from a global with
+// exactly this name, and <proto/timer.h> declares it without extern "C", so the linkage has to match.
+struct Device* TimerBase = nullptr;
 #endif
 
 namespace Death { namespace Environment {
@@ -252,6 +262,58 @@ namespace Death { namespace Environment {
 	{
 		HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 		return (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
+	}
+#endif
+
+#if defined(DEATH_TARGET_AMIGAOS)
+	namespace Implementation
+	{
+		std::uint64_t QueryAmigaEClock(std::uint32_t* frequency) noexcept
+		{
+			if DEATH_UNLIKELY(TimerBase == nullptr) {
+				// Opened on the first reading instead of by an initialization step, so the clock answers
+				// from the first line of startup code (the trace system stamps lines that early). The
+				// static request needs no MsgPort - nothing is ever queued, a unit is named only because
+				// OpenDevice() insists on one - and it is never closed either: timer.device lives in
+				// Kickstart ROM and can never be expunged anyway.
+				static struct timerequest request;
+				static bool attempted = false;
+				if (!attempted) {
+					attempted = true;
+					if (OpenDevice(reinterpret_cast<CONST_STRPTR>(TIMERNAME), UNIT_MICROHZ, &request.tr_node, 0) == 0) {
+						TimerBase = request.tr_node.io_Device;
+					}
+				}
+				if (TimerBase == nullptr) {
+					if (frequency != nullptr) {
+						*frequency = 0;
+					}
+					return 0;
+				}
+			}
+
+			struct EClockVal eclock;
+			const std::uint32_t currentFrequency = std::uint32_t(ReadEClock(&eclock));
+			if (frequency != nullptr) {
+				*frequency = currentFrequency;
+			}
+			// The two halves are read atomically by the OS, and 64 bits at ~709 kHz wrap after some 800000
+			// years, so this is the monotonic counter without any further bookkeeping
+			return (std::uint64_t(eclock.ev_hi) << 32) | eclock.ev_lo;
+		}
+
+		std::uint64_t QueryAmigaEClockAsUs() noexcept
+		{
+			std::uint32_t frequency = 0;
+			const std::uint64_t ticks = QueryAmigaEClock(&frequency);
+			if DEATH_UNLIKELY(frequency == 0) {
+				return 0;
+			}
+			// Whole seconds and the remainder are scaled separately instead of the raw count: the E-clock
+			// counts from power-on, and `ticks * 1000000` would overflow 64 bits after roughly ten months
+			// of uptime, while `(ticks % frequency) * 1000000` cannot overflow at all
+			return (ticks / frequency) * 1000000ULL + ((ticks % frequency) * 1000000ULL) / frequency;
+		}
 	}
 #endif
 

@@ -20,11 +20,6 @@
 #	include <n64sys.h>
 #elif defined(DEATH_TARGET_PS3)
 #	include <sys/systime.h>
-#elif defined(DEATH_TARGET_AMIGAOS)
-// libnix has no monotonic clock_gettime(); the EClock through timer.device is the machine's
-// monotonic source, wrapped by the Amiga backend (AmigaPlatform.cpp) behind this plain function
-// so this shared header does not pull AmigaOS headers into everything
-extern "C" unsigned long long __amiga_query_monotonic_us() noexcept;
 #endif
 
 namespace Death {
@@ -180,6 +175,17 @@ namespace Death { namespace Environment {
 	bool IsWine() noexcept;
 #endif
 
+#if defined(DEATH_TARGET_AMIGAOS)
+	namespace Implementation
+	{
+		// The E-clock read through timer.device, the only fine-grained monotonic source AmigaOS 3.x has
+		// (libnix has no monotonic clock_gettime()). Opened on the first call, 0 if it cannot be opened.
+		// Raw ticks are for the Amiga backend's frame clock only - everything else uses the queries below.
+		std::uint64_t QueryAmigaEClock(std::uint32_t* frequency = nullptr) noexcept;
+		std::uint64_t QueryAmigaEClockAsUs() noexcept;
+	}
+#endif
+
 	/**
 	 * @brief Returns the current unbiased interrupt-time count, in units of 100 nanoseconds
 	 * 
@@ -198,8 +204,9 @@ namespace Death { namespace Environment {
 		// which get_ticks_us() already extends to 64 bits and converts
 		return get_ticks_us() * 10ULL;
 #elif defined(DEATH_TARGET_AMIGAOS)
-		// libnix has no monotonic clock_gettime() either; the EClock stands in (see the declaration above)
-		return __amiga_query_monotonic_us() * 10ULL;
+		// libnix has no monotonic clock_gettime() either; the E-clock stands in (see the declarations above).
+		// Its tick is 1.4 us, so nothing is lost by scaling microseconds up to the 100 ns unit
+		return Implementation::QueryAmigaEClockAsUs() * 10ULL;
 #elif defined(DEATH_TARGET_PS3)
 		// lv2's clock is the only monotonic source here. it reports seconds and nanoseconds separately,
 		// so the 100 ns unit this function returns is assembled from both
@@ -239,7 +246,7 @@ namespace Death { namespace Environment {
 		return get_ticks_ms();
 #elif defined(DEATH_TARGET_AMIGAOS)
 		// Same source as QueryUnbiasedInterruptTime(), see there
-		return __amiga_query_monotonic_us() / 1000ULL;
+		return Implementation::QueryAmigaEClockAsUs() / 1000ULL;
 #elif defined(DEATH_TARGET_PS3)
 		std::uint64_t sec = 0, nsec = 0;
 		sysGetCurrentTime(&sec, &nsec);

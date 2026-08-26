@@ -209,9 +209,8 @@ function fixedFunctionItems() {
 		.concat(itemsFromTable(ff.functions, vscode.CompletionItemKind.Function, '3', 'allowed in fixed_function'))
 		.concat(itemsFromTable(ff.types, vscode.CompletionItemKind.TypeParameter, '3', 'fixed-function type'))
 		.concat(itemsFromTable(ff.blendModes, vscode.CompletionItemKind.EnumMember, '2', 'p.blend value'))
-		.concat(itemsFromTable(ff.tevPresets, vscode.CompletionItemKind.EnumMember, '2', 'p.tev value'));
-	out.push(item('COLOR', vscode.CompletionItemKind.Constant, 'built-in',
-		'The instance colour available to a fixed-function block.', null, '0'));
+		.concat(itemsFromTable(ff.tevPresets, vscode.CompletionItemKind.EnumMember, '2', 'p.tev value'))
+		.concat(itemsFromTable(ff.builtins, vscode.CompletionItemKind.Constant, '0', 'built-in'));
 	return out;
 }
 
@@ -302,39 +301,115 @@ var completionProvider = {
 
 // ------------------------------------------------------------------ hover
 
-/** name -> {detail, doc} over every documented table, built once. */
-var HOVER_INDEX = (function () {
+/**
+ * Builds a `name -> {detail, doc}` map over `[table, detailPrefix]` pairs. String entries are skipped
+ * (they carry no documentation) and the FIRST table to define a name wins, so the pairs are ordered
+ * most-specific first.
+ */
+function buildHoverIndex(tables) {
 	var index = new Map();
-	function add(entry, detail) {
-		if (typeof entry === 'string' || index.has(entry.name)) {
-			return;
+	for (var i = 0; i < tables.length; i++) {
+		var table = tables[i][0];
+		var detail = tables[i][1];
+		for (var j = 0; j < table.length; j++) {
+			var entry = table[j];
+			if (typeof entry === 'string' || index.has(entry.name)) {
+				continue;
+			}
+			index.set(entry.name, { detail: entry.detail || detail, doc: entry.doc });
 		}
-		index.set(entry.name, { detail: entry.detail || detail, doc: entry.doc });
 	}
-	function addAll(table, detail) {
-		for (var i = 0; i < table.length; i++) {
-			add(table[i], detail);
-		}
-	}
-	addAll(language.DIRECTIVES, 'directive');
-	addAll(language.ENTRY_POINTS, 'entry point');
-	addAll(language.BUILTINS, 'built-in');
-	addAll(language.STAGE_MACROS, 'stage macro');
-	addAll(language.SHADER_TYPES, 'shader_type value');
-	addAll(language.RENDER_MODES, 'render_mode value');
-	addAll(language.PRECISION_QUALIFIERS, 'precision value');
-	addAll(language.UNIFORM_HINTS, 'uniform hint');
-	addAll(language.FIXED_FUNCTION_TARGETS, 'fixed_function target');
-	addAll(language.GL_BUILTIN_VARIABLES, 'GLSL built-in variable');
-	addAll(language.CANVAS_CONTRACT, 'sprite contract');
-	addAll(language.FIXED_FUNCTION.statements, 'fixed-function statement');
-	addAll(language.FIXED_FUNCTION.submits, 'fixed-function');
-	addAll(language.FIXED_FUNCTION.stripHelpers, 'strip builder');
-	addAll(language.FIXED_FUNCTION.context, 'pass context');
-	addAll(language.FIXED_FUNCTION.passFields, 'pass field');
-	addAll(language.FIXED_FUNCTION.pipelines, 'pipeline intrinsic');
 	return index;
-})();
+}
+
+/*
+	A `.shader` holds TWO languages, and they overlap by name: `mix`, `min`, `max`, `abs`, `clamp`,
+	`float`, `int` and `COLOR` all exist in both the GLSL stages and the `fixed_function` DSL, meaning
+	different things (a fixed_function body is transpiled to C++ that the console's CPU runs once per
+	draw to build a pass - it never shades a pixel, so "lowers to lerp on D3D11" is nonsense there).
+	One flat index therefore had to pick a winner and be wrong half the time; these two let the hover
+	answer for the vocabulary the cursor is actually in.
+*/
+var GLSL_HOVER_INDEX = buildHoverIndex([
+	[language.DIRECTIVES, 'directive'],
+	[language.ENTRY_POINTS, 'entry point'],
+	[language.BUILTINS, 'built-in'],
+	[language.STAGE_MACROS, 'stage macro'],
+	[language.SHADER_TYPES, 'shader_type value'],
+	[language.RENDER_MODES, 'render_mode value'],
+	[language.PRECISION_QUALIFIERS, 'precision value'],
+	[language.UNIFORM_HINTS, 'uniform hint'],
+	[language.FIXED_FUNCTION_TARGETS, 'fixed_function target'],
+	[language.GL_BUILTIN_VARIABLES, 'GLSL built-in variable'],
+	[language.GLSL_FUNCTIONS, 'GLSL built-in'],
+	[language.GLSL_TYPES, 'type'],
+	[language.CANVAS_CONTRACT, 'sprite contract']
+]);
+
+var FIXED_FUNCTION_HOVER_INDEX = buildHoverIndex([
+	[language.FIXED_FUNCTION.builtins, 'built-in'],
+	[language.FIXED_FUNCTION.statements, 'fixed-function statement'],
+	[language.FIXED_FUNCTION.submits, 'fixed-function'],
+	[language.FIXED_FUNCTION.stripHelpers, 'strip builder'],
+	[language.FIXED_FUNCTION.context, 'pass context'],
+	[language.FIXED_FUNCTION.passFields, 'pass field'],
+	[language.FIXED_FUNCTION.pipelines, 'pipeline intrinsic'],
+	[language.FIXED_FUNCTION.blendModes, 'p.blend value'],
+	[language.FIXED_FUNCTION.tevPresets, 'p.tev value'],
+	[language.FIXED_FUNCTION.functions, 'allowed in fixed_function'],
+	[language.FIXED_FUNCTION.types, 'fixed-function type']
+]);
+
+/**
+ * The GLSL vocabulary a `fixed_function` body genuinely cannot use, so hovering one of these inside a
+ * block says so instead of explaining a built-in that will not compile there. Deliberately narrower
+ * than the whole GLSL index: a directive or a stage macro in a block is a different mistake (or a
+ * legitimate `#if`), not a "wrong vocabulary" one.
+ */
+var GLSL_ONLY_HOVER_INDEX = buildHoverIndex([
+	[language.GLSL_FUNCTIONS, 'GLSL built-in'],
+	[language.BUILTINS, 'built-in'],
+	[language.GL_BUILTIN_VARIABLES, 'GLSL built-in variable'],
+	[language.CANVAS_CONTRACT, 'sprite contract']
+]);
+
+/**
+ * The fixed-function words distinctive enough to name from a GLSL context. The pass FIELDS are
+ * deliberately absent: `color`, `blend` and `tev` are perfectly ordinary local names in a fragment
+ * body, and claiming they belong to a `fixed_function` block there would be wrong far more often than
+ * right. They only resolve inside a block, where `p.color` is what they actually are.
+ */
+var FIXED_FUNCTION_ONLY_HOVER_INDEX = buildHoverIndex([
+	[language.FIXED_FUNCTION.statements, 'fixed-function statement'],
+	[language.FIXED_FUNCTION.submits, 'fixed-function'],
+	[language.FIXED_FUNCTION.stripHelpers, 'strip builder'],
+	[language.FIXED_FUNCTION.context, 'pass context'],
+	[language.FIXED_FUNCTION.pipelines, 'pipeline intrinsic'],
+	[language.FIXED_FUNCTION.blendModes, 'p.blend value'],
+	[language.FIXED_FUNCTION.tevPresets, 'p.tev value']
+]);
+
+var NOT_IN_FIXED_FUNCTION = '**Not available in a `fixed_function` block.** That body is not GLSL — it is transpiled to ' +
+	'C++ that the console\'s CPU runs once per draw, and its whole vocabulary is `pass` / `pipeline`, the pass fields, ' +
+	'the `submit_*` calls, the context facilities and a small maths subset (`abs`, `ceil`, `clamp`, `cos`, `float`, ' +
+	'`floor`, `int`, `max`, `min`, `mix`, `sin`, `sqrt`).';
+var ONLY_IN_FIXED_FUNCTION = '**Only available inside a `fixed_function` block** — it belongs to the console ' +
+	'fixed-function DSL, never to the GLSL stages.';
+
+/** Renders one index entry (plus an optional context warning) as the hover body. */
+function hoverBody(word, entry, warning) {
+	var body = '**' + word + '**';
+	if (entry.detail !== undefined && entry.detail !== null) {
+		body += '  —  `' + entry.detail + '`';
+	}
+	if (warning !== undefined) {
+		body += '\n\n' + warning;
+	}
+	if (entry.doc !== undefined && entry.doc !== null) {
+		body += '\n\n' + entry.doc;
+	}
+	return body;
+}
 
 var hoverProvider = {
 	provideHover: function (document, position) {
@@ -343,34 +418,66 @@ var hoverProvider = {
 			return null;
 		}
 		var word = document.getText(wordRange);
+		var text = document.getText();
+		var scan = analysis.scanDocument(text);
+		// Resolved at the word's START, so hovering the first character of a word that opens a body
+		// still classifies as the body it is in rather than the position after it
+		var context = analysis.contextAt(text, document.offsetAt(wordRange.start), scan);
+		var inFixedFunction = (context.kind === 'fixedFunctionBody');
 
-		var known = HOVER_INDEX.get(word);
+		// The vocabulary the cursor is in answers first; the other one only gets to answer to say the
+		// word does not belong here (and, for a block, then falls through to a plain explanation)
+		var near = (inFixedFunction ? FIXED_FUNCTION_HOVER_INDEX : GLSL_HOVER_INDEX);
+		var restricted = (inFixedFunction ? GLSL_ONLY_HOVER_INDEX : FIXED_FUNCTION_ONLY_HOVER_INDEX);
+		var warning = (inFixedFunction ? NOT_IN_FIXED_FUNCTION : ONLY_IN_FIXED_FUNCTION);
+
+		var known = near.get(word);
 		if (known !== undefined) {
-			var body = '**' + word + '**';
-			if (known.detail !== undefined && known.detail !== null) {
-				body += '  —  `' + known.detail + '`';
+			return new vscode.Hover(markdown(hoverBody(word, known)), wordRange);
+		}
+		var blocked = restricted.get(word);
+		if (blocked !== undefined) {
+			return new vscode.Hover(markdown(hoverBody(word, blocked, warning)), wordRange);
+		}
+		if (inFixedFunction) {
+			var elsewhere = GLSL_HOVER_INDEX.get(word);
+			if (elsewhere !== undefined) {
+				return new vscode.Hover(markdown(hoverBody(word, elsewhere)), wordRange);
 			}
-			if (known.doc !== undefined && known.doc !== null) {
-				body += '\n\n' + known.doc;
-			}
-			return new vscode.Hover(markdown(body), wordRange);
 		}
 
 		if (language.UNSUPPORTED_BUILTINS.indexOf(word) >= 0) {
 			return new vscode.Hover(markdown('**' + word + '**\n\nA canvas built-in the compiler reports as **unsupported**. ' +
 				'Only `COLOR`, `UV`, `TEXTURE`, `PALETTE_OFFSET` and `VERTEX` are implemented.'), wordRange);
 		}
+		// The grammar highlights a wider set of type-looking words than the compiler has entries for, so
+		// say so here rather than let the colour imply it compiles
+		if (language.UNSUPPORTED_TYPES.indexOf(word) >= 0) {
+			return new vscode.Hover(markdown('**' + word + '**\n\n**Not a type this language has.** The compiler\'s type table ' +
+				'(reflection, and every emitter) knows `float`, `int`, `uint`, `bool`, `vec2/3/4`, `ivec2/3/4`, `uvec2/3/4`, ' +
+				'`bvec2/3/4`, `mat2`, `mat3`, `mat4`, `sampler2D`, `sampler3D`, `samplerCube` and your own `struct`s — ' +
+				'nothing else. The editor colours it like a type because the grammar is deliberately permissive; the ' +
+				'declaration still fails as an unknown type.'), wordRange);
+		}
 		if (word === 'fragColor') {
 			return new vscode.Hover(markdown('**fragColor**\n\nReferencing `fragColor` anywhere in a `.shader` file is a **parse error** — ' +
 				'`COLOR` is the fragment output variable itself.'), wordRange);
 		}
 
-		// Something declared by this document: show the declaration
-		var scan = analysis.scanDocument(document.getText());
+		// Something declared by this document: show the declaration. Checked BEFORE the HLSL spellings
+		// below, so a real declaration in the file always wins over a guess about where the word came from
 		var declaration = findDeclaration(scan, word);
 		if (declaration !== null) {
 			var lineText = document.lineAt(declaration.line).text.replace(/^[\s]+|[\s]+$/g, '');
 			return new vscode.Hover(markdown('```glsl\n' + lineText + '\n```\n\nDeclared in this file.'), wordRange);
+		}
+
+		// Pasted from an HLSL / Cg / Unity shader: name the spelling this language does use
+		if (Object.prototype.hasOwnProperty.call(language.HLSL_SPELLINGS, word)) {
+			return new vscode.Hover(markdown('**' + word + '**\n\nAn **HLSL / Cg spelling**, which this language does not accept — ' +
+				'a `.shader` is written in GLSL and deliberately has no aliases. Use `' + language.HLSL_SPELLINGS[word] + '` instead.\n\n' +
+				'The HLSL lowering happens inside the compiler on the way to D3D11 and the PS3 (`mix` → `lerp`, `fract` → `frac`, ' +
+				'`dFdx` → `ddx`, …), so the source keeps one spelling for every backend.'), wordRange);
 		}
 		return null;
 	}
