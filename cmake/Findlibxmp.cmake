@@ -17,7 +17,7 @@ if(NOT TARGET Libxmp)
 endif()
 
 if(NOT TARGET Libxmp AND LIBXMP_INCLUDE_DIR AND LIBXMP_LIBRARY)
-	message(STATUS "Using libxmp from \"${LIBXMP_LIBRARY}\"")
+	message(STATUS "Found libxmp: ${LIBXMP_LIBRARY}")
 
 	add_library(Libxmp UNKNOWN IMPORTED)
 	set_target_properties(Libxmp PROPERTIES

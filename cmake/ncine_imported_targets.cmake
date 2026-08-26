@@ -1,4 +1,12 @@
-if(NCINE_DOWNLOAD_DEPENDENCIES AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH)
+# These archives are host-architecture binaries, so cross-compiling rules them out whatever the target is -
+# fetching them anyway would point NCINE_LIBS at the wrong architecture and the find modules below would
+# start matching it. UWP is the exception: CMake calls it cross-compiling (CMAKE_SYSTEM_NAME=WindowsStore),
+# but the same MSVC builds it on the same machine, and it is where MSVC_LIBDIR/MSVC_BINDIR come from.
+#
+# Not a condition on NCINE_DOWNLOAD_DEPENDENCIES itself, because that option also governs what the find
+# modules fetch as SOURCE and compile with the current toolchain (lz4, Zstd, AngelScript, libopenmpt) - the
+# PS3 gets its module music that way, and FindLz4/FindZstd otherwise fall through to a REQUIRED pkg-config.
+if(NCINE_DOWNLOAD_DEPENDENCIES AND (NOT CMAKE_CROSSCOMPILING OR WINDOWS_STORE OR WINDOWS_PHONE))
 	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
 		if(NCINE_BUILD_ANDROID)
 			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.3.1-android.tar.gz")

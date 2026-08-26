@@ -421,41 +421,41 @@ if(NOT DEDICATED_SERVER)
 				${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALDebug.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALAudioDevice.cpp)
 		elseif(ASND_FOUND)
-			set(_NCINE_AUDIO_BACKEND "ASND - libogc DSP mixer")
+			set(_NCINE_AUDIO_BACKEND "ASND (libogc DSP mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ASND")
 			target_link_libraries(${NCINE_APP} PRIVATE asnd)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.cpp)
 		elseif(AICA_FOUND)
-			set(_NCINE_AUDIO_BACKEND "AICA - KallistiOS sound driver")
+			set(_NCINE_AUDIO_BACKEND "AICA (KallistiOS sound driver)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AICA")
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.cpp)
 		elseif(N64AUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "N64 - libdragon AI DMA ring mixer")
+			set(_NCINE_AUDIO_BACKEND "N64 (libdragon AI DMA ring mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_N64AUDIO")
 			# The AI is part of libdragon itself, which is linked with the platform packaging below
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.cpp)
 		elseif(AHIAUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "AHI - ahi.device software mixer")
+			set(_NCINE_AUDIO_BACKEND "AHI (ahi.device software mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AHIAUDIO")
 			# ahi.device is opened at run time through exec, nothing to link
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Amiga/AmigaAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Amiga/AmigaAudioDevice.cpp)
 		elseif(SDLAUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "SDL - software mixer into SDL's audio queue")
+			set(_NCINE_AUDIO_BACKEND "SDL (software mixer into SDL's audio queue)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDLAUDIO")
 			# SDL itself is already linked as the window backend
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "PS3 - PSL1GHT libaudio mixer")
+			set(_NCINE_AUDIO_BACKEND "PS3 (PSL1GHT libaudio mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
 			# libaudio is the lv2 audio port itself; libsysmodule loads the SYSMODULE_AUDIO PRX it needs
 			target_link_libraries(${NCINE_APP} PRIVATE audio sysmodule)
@@ -1154,12 +1154,20 @@ else()
 			# because libcurl on top of them only needs the BSD sockets the newlib port already wraps.
 			# They are in the toolchain's default set as well, but listing them here keeps the dependency
 			# visible like the ones above.
+			#
+			# `atomic` is libatomic, for the same shape of reason as on the PlayStation 2 (see that arm): the
+			# Allegrex is a 32-bit MIPS with no 64-bit atomic instruction, so the `std::atomic<std::int64_t>`
+			# byte counters `WebRequest` keeps per request (WebRequestImpl::_bytesReceived and
+			# WebRequestCURL::_bytesSent) are lowered to __atomic_load_8 / __atomic_store_8 /
+			# __atomic_fetch_add_8 calls instead of inline instructions. It is scoped to this arm because
+			# `WebRequest` is what brings those counters in - nothing else on this console needs 64-bit atomics.
 			target_link_libraries(${NCINE_APP} PRIVATE
 				pspnet
 				pspnet_inet
 				pspnet_apctl
 				pspnet_resolver
 				psputility
+				atomic
 			)
 		endif()
 
