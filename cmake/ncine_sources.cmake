@@ -189,6 +189,17 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
+	# Fixed-function OpenGL 1.x rendering backend (MorphOS' TinyGL, and any desktop GL for testing it)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/LegacyGL/LegacyGlUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "RDP")
 	# Nintendo 64 fixed-function RDP rendering backend (libdragon rdpq)
 	list(APPEND SOURCES

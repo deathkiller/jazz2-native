@@ -127,7 +127,8 @@ const FIXED_FUNCTION_TARGETS = [
 	{ name: 'gx', doc: 'The Wii / GameCube GX only.' },
 	{ name: 'gu', doc: 'The PlayStation Portable\'s Graphics Engine (sceGu) only.' },
 	{ name: 'gs', doc: 'The PlayStation 2\'s Graphics Synthesizer only.' },
-	{ name: 'rdp', doc: 'The Nintendo 64\'s Reality Display Processor only.' }
+	{ name: 'rdp', doc: 'The Nintendo 64\'s Reality Display Processor only.' },
+	{ name: 'legacygl', doc: 'The fixed-function OpenGL 1.x backend (MorphOS\' TinyGL, and any desktop GL in a compatibility context) only.' }
 ];
 
 /** Canvas-mode built-ins (and `COLOR`, which is the fragment output in both modes) */

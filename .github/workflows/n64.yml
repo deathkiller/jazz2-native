@@ -1,0 +1,113 @@
+name: 'Nintendo 64'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+
+    env:
+      # The prebuilt toolchain is relocatable ("extract anywhere and point N64_INST at it"), and a
+      # home-directory prefix keeps every step - and the cache restore - free of sudo
+      N64_INST: /home/runner/libdragon
+      # Pinned to the revision of libdragon's PREVIEW branch the game is developed and tested against -
+      # the branch moves, and an unpinned clone can break this workflow (or silently change the runtime)
+      # with no change in this repository. The project's toolchain file additionally verifies that the
+      # install carries the preview headers and was not built with NDEBUG.
+      LIBDRAGON_COMMIT: 55aac1355773169d87e45424b772faf0dfb9432a
+      ZLIB_VERSION: 1.3.1
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Cache libdragon'
+      id: cache-libdragon
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/libdragon
+        key: libdragon-${{ env.LIBDRAGON_COMMIT }}-zlib-${{ env.ZLIB_VERSION }}
+
+    - name: 'Build libdragon'
+      if: steps.cache-libdragon.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        # The prebuilt mips64-elf cross-compiler published by libdragon's own toolchain CI; only the
+        # library and its host tools have to be built from source (from the pinned preview revision)
+        curl -fsSL -o /tmp/gcc-toolchain-mips64-x86_64.deb \
+          https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+        dpkg -x /tmp/gcc-toolchain-mips64-x86_64.deb /tmp/toolchain
+        mv /tmp/toolchain/opt/libdragon "${N64_INST}"
+        export PATH="${N64_INST}/bin:${PATH}"
+
+        git init /tmp/libdragon
+        cd /tmp/libdragon
+        git remote add origin https://github.com/DragonMinded/libdragon.git
+        git fetch --depth 1 origin ${LIBDRAGON_COMMIT}
+        git checkout FETCH_HEAD
+        make -j $(nproc) libdragon
+        make install
+        make -j $(nproc) tools
+        make tools-install
+
+        # zlib is required for the compressed game content and is not packaged with the toolchain;
+        # eleven files compile it (see Docs/Consoles.dox, "Nintendo 64" / "Toolchain")
+        curl -fsSL https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz | tar xz -C /tmp
+        cd /tmp/zlib-${ZLIB_VERSION}
+        for f in adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil; do
+          mips64-elf-gcc -march=vr4300 -mtune=vr4300 -mabi=o64 -O2 -c $f.c
+        done
+        mips64-elf-gcc-ar rcs libz.a *.o
+        cp libz.a "${N64_INST}/mips64-elf/lib/"
+        cp zlib.h zconf.h "${N64_INST}/mips64-elf/include/"
+
+    - name: 'Configure CMake'
+      shell: bash
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        export PATH="${N64_INST}/bin:${PATH}"
+        # Without a prebaked console content tree (see Docs/Consoles.dox) the ROM carries only the
+        # repository's base assets and boots to the "content missing" message - which still exercises
+        # the whole build, the DragonFS packaging and the 64 MiB ROM size check
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/n64.cmake -D NCINE_CONTENT_DIR=./Content
+
+    - name: 'Build'
+      shell: bash
+      run: |
+        export PATH="${N64_INST}/bin:${PATH}"
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The .z64 ROM is bootable directly in emulators and on flashcarts (the header already carries
+        # the eeprom16k save type, see the packaging step in cmake/ncine_extra_sources.cmake)
+        mkdir ./_package/
+        cp -f ./_build/jazz2.z64 ./_package/Jazz2.z64
+        cp -f ./_build/jazz2.elf ./_package/Jazz2.elf
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_Nintendo64
+        path: ./_package/

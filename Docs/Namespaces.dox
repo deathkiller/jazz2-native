@@ -35,6 +35,9 @@ matches the current implementation.
   see @ref consoles-switch
 - **Nintendo Wii** and **Nintendo GameCube** using devkitPro toolchain and a fixed-function GX
   rendering backend, see @ref consoles-wii and @ref consoles-gamecube
+- **Nintendo 64** using [libdragon](https://github.com/DragonMinded/libdragon) and a fixed-function
+  RDP rendering backend, see @ref consoles-n64 @m_span{m-text m-dim} (experimental --- it is by far
+  the smallest machine here and does not hold a steady frame rate) @m_endspan
 - **Sega Dreamcast** using [KallistiOS](https://github.com/KallistiOS/KallistiOS) and a
   fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
 - **PlayStation Portable** using [pspdev](https://github.com/pspdev/pspdev) and a fixed-function
@@ -46,16 +49,26 @@ matches the current implementation.
 - **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and a native **sceGxm** rendering
   backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
 - **libretro** core for RetroArch, see @ref consoles-libretro
+- **AmigaOS 3.x** on 68040/68060, PiStorm and Vampire machines, using
+  [bebbo's amiga-gcc](https://github.com/bebbo/amiga-gcc) with a bespoke Intuition/RTG window
+  backend and the CPU software rasterizer, see @ref amiga-classic
+- **AmigaOS 4.1** and **MorphOS** on PowerPC, using their own SDKs through SDL2 and the
+  fixed-function `LegacyGL` rendering backend on the OpenGL 1.x each of them provides
+  @m_span{m-text m-dim} (MiniGL over Warp3D, resp. TinyGL) @m_endspan, see @ref amiga-os4 and
+  @ref amiga-morphos
 
 The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced
 instruction sets. Additionally, the application requires a rendering backend --- **OpenGL**
 3.3, **OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer
 are all fully supported and interchangeable, so any of them can be used depending on the target
-platform. The consoles above are the exception: five of them have no programmable shaders at all
-and are driven by one of four rendering backends written for their fixed-function graphics hardware
-@m_span{m-text m-dim} (the Wii and the GameCube share one) @m_endspan, while the PlayStation Vita
-and the PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm**
---- directly. See also @ref consoles-common-features "the list of features each console supports",
+platform. The platforms above are where that stops being a free choice: six of the consoles have no
+programmable shaders at all and are driven by one of five rendering backends written for their
+fixed-function graphics hardware @m_span{m-text m-dim} (the Wii and the GameCube share one)
+@m_endspan, a sixth such backend drives the fixed-function OpenGL 1.x of the two PowerPC Amigas, while
+the PlayStation Vita and the
+PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm** ---
+directly. The classic Amiga has no usable graphics hardware at all, so there the software rasterizer
+is the renderer rather than a fallback. See also @ref consoles-common-features "the list of features each console supports",
 which is where the platform differences are the largest.
 	
 @section mainpage-license License
@@ -215,6 +228,35 @@ See also @ref third-party for the licenses of the libraries used.
 	constraint, which is why the backend has a suballocator of its own in @ref nCine::RHI::GS::GsVram.
 */
 /** @namespace nCine::RHI::GS::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/RDP
+	@brief Namespace @ref nCine::RHI::RDP
+*/
+/** @namespace nCine::RHI::RDP
+	@brief Nintendo 64 fixed-function Reality Display Processor backend, selected by `WITH_RHI_RDP`
+
+	Drives libdragon's rdpq command queue, with @ref nCine::RHI::FixedFunctionPass translated into
+	colour-combiner and blender settings. Unlike the other fixed-function backends it never addresses a
+	texture as a whole: the RDP samples through a 4 KB TMEM window that every primitive loads first,
+	which is what the backend's draw path is built around.
+*/
+/** @namespace nCine::RHI::RDP::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/LegacyGL
+	@brief Namespace @ref nCine::RHI::LegacyGL
+*/
+/** @namespace nCine::RHI::LegacyGL
+	@brief Fixed-function OpenGL 1.x backend, selected by `WITH_RHI_LEGACYGL`
+
+	The one member of this family that is not a console: its target is an OpenGL with no programmable
+	stage at all --- MorphOS' TinyGL @m_span{m-text m-dim} (see @ref amiga-morphos-gl) @m_endspan, and
+	a desktop GL in a compatibility context, which is where that path is developed. It consumes
+	@ref nCine::RHI::FixedFunctionPass like the console backends, with each TEV preset expressed as an
+	OpenGL 1.3 `GL_COMBINE` program.
+*/
+/** @namespace nCine::RHI::LegacyGL::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
 /** @dir nCine/Graphics/RHI/GXM

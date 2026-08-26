@@ -154,13 +154,14 @@ See @ref building-config-params-uwp for more details.
 
 @subsection building-consoles Building for consoles
 
-Eight consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
+Nine consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
 The build is configured the same way as above, but every one of them also needs its toolchain
 installed, its own packaging step and, on most of them, a game content tree prepared in advance
 with @ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
 
 Console | Toolchain | Details
 ------- | --------- | -------
+Nintendo 64 | libdragon | @ref consoles-n64
 Sega Dreamcast | KallistiOS | @ref consoles-dreamcast
 Nintendo Wii | devkitPPC + libogc | @ref consoles-wii
 Nintendo GameCube | devkitPPC + libogc | @ref consoles-gamecube
@@ -176,6 +177,23 @@ See @ref consoles "Building for consoles" for the toolchain installation, deploy
 or an emulator, how to read the game's log on each of them, and what each console does and does not
 support. The game can also be built as a **libretro core** for RetroArch, see
 @ref consoles-libretro.
+
+@subsection building-amiga Building for Amiga systems
+
+The game also runs natively on three Amiga systems, all of them rendering with the same CPU software
+rasterizer the desktop build can use, because none of them has graphics hardware it could use instead:
+
+System | Toolchain | CMake toolchain file
+------ | --------- | --------------------
+AmigaOS 3.x @m_span{m-text m-dim} (m68k, from an accelerated 68060 with RTG upwards - PiStorm/Emu68 and Apollo Vampire being the ones worth playing on) @m_endspan | bebbo's amiga-gcc | `cmake/toolchains/amiga.cmake`
+AmigaOS 4.1 @m_span{m-text m-dim} (PowerPC) @m_endspan | adtools @m_span{m-text m-dim} (container) @m_endspan | `cmake/toolchains/os4.cmake`
+MorphOS @m_span{m-text m-dim} (PowerPC) @m_endspan | MorphOS SDK @m_span{m-text m-dim} (container) @m_endspan | `cmake/toolchains/morphos.cmake`
+
+@m_class{m-noindent}
+
+The classic toolchain needs a specific branch and a few one-time additions to its prefix, the two
+PowerPC ones come as container images, and the m68k port picks a performance preset by measuring the
+machine at startup. All of it is documented on @ref amiga "Building for Amiga systems".
 
 @subsection building-docker Running the dedicated server as a container
 
@@ -291,12 +309,20 @@ The following parameters can be used to customize the build:
           see @ref consoles-psp
         - `GS` --- Fixed-function Graphics Synthesizer backend writing GIF packets directly (**PlayStation 2** only),
           see @ref consoles-ps2
+        - `RDP` --- Fixed-function Reality Display Processor backend driving libdragon's rdpq queue
+          (**Nintendo 64** only), see @ref consoles-n64
+        - `LegacyGL` --- Fixed-function OpenGL 1.x backend, whose targets are **MorphOS**' TinyGL and
+          **AmigaOS 4.1**'s MiniGL, see @ref amiga-morphos-gl and @ref amiga-os4-gl
+          @m_span{m-text m-dim} (selectable on the desktop too, where it is how that path is developed
+          and looked at) @m_endspan
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
         available on **PS Vita**
-    -   Pinned to the console's only rendering backend on **Sega Dreamcast** (`PVR`), **Nintendo Wii**
-        and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`), **PlayStation 2** (`GS`)
-        and **PlayStation 3** (`RSX`), see @ref consoles
+    -   Only `LegacyGL` (the default) and `Software` are available on **MorphOS** and **AmigaOS 4.1**;
+        **AmigaOS 3.x** is pinned to `Software`, see @ref amiga
+    -   Pinned to the console's only rendering backend on **Nintendo 64** (`RDP`), **Sega Dreamcast**
+        (`PVR`), **Nintendo Wii** and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`),
+        **PlayStation 2** (`GS`) and **PlayStation 3** (`RSX`), see @ref consoles
     -   `RSX` is the only one of those pins that is a **shader** backend --- the RSX is a programmable
         part, so the PlayStation 3 keeps the post-processing chain the fixed-function consoles lose
 -   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
@@ -330,11 +356,20 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable** and **PlayStation 2**) --- Enable module music audio file support, requires **libopenmpt** library
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Wii** and the **GameCube**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has
-    -   See @ref consoles-psp-limits and @ref consoles-ps2-limits for why it's disabled on those two ---
-        the reasons are unrelated to each other. The **PlayStation 3** builds it from source in the
-        library's single-threaded mode @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan
+    -   See @ref consoles-n64-limits, @ref consoles-psp-limits and @ref consoles-ps2-limits for why it's
+        disabled on those --- the reasons are unrelated to each other. The **PlayStation 3** builds it
+        from source in the library's single-threaded mode @m_span{m-text m-dim} (see @ref consoles-ps3)
+        @m_endspan
+-   `NCINE_WITH_XMP` (default @cpp ON @ce on **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable** and the **classic Amiga**, @cpp OFF @ce elsewhere) --- Play module music with **libxmp** *instead of* libopenmpt. Available on every platform: it is how a machine that cannot afford libopenmpt gets music at all, and a legitimate choice anywhere else that would rather spend the CPU elsewhere
+    -   The two are alternatives --- turning this on turns `NCINE_WITH_OPENMPT` off
+    -   The library is downloaded and built from source by the configure step
+        @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`, pinned by hash) @m_endspan, so nothing has to
+        be installed
+    -   It is far lighter --- an integer mixer rather than a floating-point one --- but it does not read
+        **MO3**, so four of the game's tracks are silent under it, and its playback is less exact than
+        libopenmpt's on the edge cases
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce is enabled
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support

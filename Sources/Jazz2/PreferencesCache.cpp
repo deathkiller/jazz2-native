@@ -1058,8 +1058,9 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
-			// Save config file next to `Source` directory (on the storage device the content is read from)
+				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS)
+			// Save config file next to `Source` directory (on the storage device the content is read from;
+			// on the Amiga that is the game's own directory, the conventional home of a program's settings)
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 #	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
@@ -1752,6 +1753,12 @@ namespace
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Switch {}.{}.{}{}||9|{}",
 			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, arch);
+#elif defined(DEATH_TARGET_WII)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Wii||14|{}", arch);
+#elif defined(DEATH_TARGET_GAMECUBE)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo GameCube||15|{}", arch);
 #elif defined(DEATH_TARGET_PS2)
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 2||11|{}", arch);
@@ -1761,6 +1768,19 @@ namespace
 #elif defined(DEATH_TARGET_VITA)
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Vita||10|{}", arch);
+#elif defined(DEATH_TARGET_PSP)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Portable||16|{}", arch);
+#elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
+#	if defined(DEATH_TARGET_AMIGAOS)
+		StringView systemName = "AmigaOS 3.x"_s;
+#	elif defined(DEATH_TARGET_AMIGAOS4)
+		StringView systemName = "AmigaOS 4.1"_s;
+#	else
+		StringView systemName = "MorphOS"_s;
+#	endif
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|{}||13|{}", systemName, arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;

@@ -67,7 +67,7 @@ void fixed_function(rdp) {
 		submit_quad(p);
 	}
 }
-void fixed_function(gx) {
+void fixed_function(gx, legacygl) {
 	// GX: the dye exceeds 1.0 for any tint brighter than neutral, which a vertex colour cannot carry,
 	// so both the gray gain and the dye are folded in at a quarter strength and the TEV stage scales
 	// the result back up (x4 output scale)

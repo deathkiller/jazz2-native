@@ -255,7 +255,7 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(p);
 		}
 
-		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, gu, gs, rdp)
+		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, gu, gs, rdp, legacygl)
 		// Shared by: FrozenMask, FrozenMask (USE_PALETTE), BatchedFrozenMask, BatchedFrozenMask (USE_PALETTE)
 		void FrozenMask_Effect(EffectContext& ctx)
 		{

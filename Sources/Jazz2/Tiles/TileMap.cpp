@@ -42,7 +42,7 @@ namespace Jazz2::Tiles
 		constexpr bool SupportsTexturedBackgroundCircle = true;
 
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_AMIGAOS)
 		// Slots the render command pool keeps even when nothing needs them - roughly what one viewport of a level
 		// asks for, so the common case never reallocates
 		constexpr std::int32_t MinPooledRenderCommands = 32;

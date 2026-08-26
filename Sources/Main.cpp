@@ -377,9 +377,10 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS)
 		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
-		// aspect-fits the logical view into it, so no explicit override is wanted there
+		// aspect-fits the logical view into it, so no explicit override is wanted there (the Amiga backend
+		// also picks its own screen mode, from the performance preset)
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 
@@ -445,7 +446,7 @@ void GameEventHandler::OnInitialize()
 	}
 	RunDedicatedServer(configPath);
 #else
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_AMIGAOS) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);

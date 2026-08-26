@@ -113,6 +113,22 @@ if(WINDOWS_PHONE OR WINDOWS_STORE)
 elseif(PLATFORM_N64)
 	# The N64 uses the N64 window/input backend (libdragon), see Sources/nCine/Backends/N64
 	message(STATUS "Compiling for Nintendo 64 (libdragon backend)")
+elseif(PLATFORM_AMIGA)
+	# Classic Amiga uses the Amiga window/input backend (Intuition/CyberGraphX), see Sources/nCine/Backends/Amiga
+	message(STATUS "Compiling for Amiga (AmigaOS 3.x, Intuition/CyberGraphX backend)")
+elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
+	# Unlike the classic Amiga above, the PowerPC Amigas have a maintained SDL2 and use it for window and
+	# input, so they need no backend of their own - see Docs/Amiga.dox. It is also the only backend they
+	# have, and this arm never reaches the fallback chain in the `else()` branch below, so a missing SDL2
+	# is reported here rather than as a missing header or an unresolved symbol later in the build
+	if(NOT SDL2_FOUND)
+		message(FATAL_ERROR "SDL2 has not been found, which is the only window and input backend of the PowerPC Amigas (both SDKs carry it - see Docs/Amiga.dox)")
+	endif()
+	if(PLATFORM_AMIGAOS4)
+		message(STATUS "Compiling for AmigaOS 4.1 (SDL2 backend)")
+	else()
+		message(STATUS "Compiling for MorphOS (SDL2 backend)")
+	endif()
 elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 	# The libogc consoles use the Ogc window/input backend (no SDL/GLFW), see Sources/nCine/Backends/Ogc
 	message(STATUS "Compiling for Nintendo Wii/GameCube (libogc backend)")
@@ -181,3 +197,4 @@ if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_A
 	include(ncine_installation)
 endif()
 include(ncine_strip_binaries)
+

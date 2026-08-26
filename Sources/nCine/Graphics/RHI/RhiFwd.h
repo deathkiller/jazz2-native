@@ -10,7 +10,7 @@
 #if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && \
 		!defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && \
 		!defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_RDP) && \
-		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX)
+		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX) && !defined(WITH_RHI_LEGACYGL)
 #	define WITH_RHI_GL
 #endif
 
@@ -445,6 +445,98 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::GU::GuDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_LEGACYGL)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The legacy
+// GL backend drives the FIXED-FUNCTION half of OpenGL - immediate-mode arrays, the texture environment and
+// the 1.3 texture combiners - which is what MorphOS' TinyGL implements and what remains of a desktop GL in a
+// compatibility context. It belongs with PVR/GX/GU/GS/RDP rather than with the OpenGL backend: it consumes
+// the same transpiled `fixed_function` effect tables, and the combiners take the place of each console's
+// TEV. So `RHI_CAP_SHADERS` stays undefined and the game runs the direct tier (scene straight to the
+// drawable at the logical resolution, CPU lightmap composited by the device's lighting hook).
+//
+// `RHI_CAP_FRAMEBUFFERS` is defined because a render target is always reachable here - through a framebuffer
+// object where one works, and otherwise by rendering into the back buffer and copying the region into the
+// texture (see @ref RHI::LegacyGL::LegacyGlRenderTarget), which is a GL 1.1 operation.
+//
+// `RHI_CAP_PALETTED_TEXTURES` is NOT defined: the paletted-texture extension the consoles' CLUT hardware
+// corresponds to (GL_EXT_paletted_texture) was removed from every driver a long time ago and TinyGL never
+// had it, so an indexed image is baked through its palette row into RGBA8 before it is uploaded.
+//
+// `RHI_CAP_STREAMING_TEXTURES` is NOT defined either. A GL texture is a driver-owned object rather than
+// memory the CPU can write, so content that is regenerated every frame is uploaded like any other.
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_BATCHING
+
+namespace nCine::RHI::LegacyGL
+{
+	class LegacyGlDevice;
+	class LegacyGlTexture;
+	class LegacyGlBuffer;
+	class LegacyGlShader;
+	class LegacyGlShaderProgram;
+	class LegacyGlShaderUniforms;
+	class LegacyGlShaderUniformBlocks;
+	class LegacyGlUniform;
+	class LegacyGlUniformBlock;
+	class LegacyGlUniformCache;
+	class LegacyGlUniformBlockCache;
+	class LegacyGlAttribute;
+	class LegacyGlFramebuffer;
+	class LegacyGlRenderbuffer;
+	class LegacyGlRenderTarget;
+	class LegacyGlVertexArray;
+	class LegacyGlVertexFormat;
+	class LegacyGlRhiCapabilities;
+	class LegacyGlDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::LegacyGL::LegacyGlDevice;
+	using Texture = RHI::LegacyGL::LegacyGlTexture;
+	using Buffer = RHI::LegacyGL::LegacyGlBuffer;
+	using Shader = RHI::LegacyGL::LegacyGlShader;
+	using ShaderProgram = RHI::LegacyGL::LegacyGlShaderProgram;
+	using ShaderUniforms = RHI::LegacyGL::LegacyGlShaderUniforms;
+	using ShaderUniformBlocks = RHI::LegacyGL::LegacyGlShaderUniformBlocks;
+	using Uniform = RHI::LegacyGL::LegacyGlUniform;
+	using UniformBlock = RHI::LegacyGL::LegacyGlUniformBlock;
+	using UniformCache = RHI::LegacyGL::LegacyGlUniformCache;
+	using UniformBlockCache = RHI::LegacyGL::LegacyGlUniformBlockCache;
+	using Attribute = RHI::LegacyGL::LegacyGlAttribute;
+	using Framebuffer = RHI::LegacyGL::LegacyGlFramebuffer;
+	using Renderbuffer = RHI::LegacyGL::LegacyGlRenderbuffer;
+	using RenderTarget = RHI::LegacyGL::LegacyGlRenderTarget;
+	using VertexArray = RHI::LegacyGL::LegacyGlVertexArray;
+	using VertexFormat = RHI::LegacyGL::LegacyGlVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::LegacyGL::LegacyGlRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::LegacyGL::LegacyGlDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

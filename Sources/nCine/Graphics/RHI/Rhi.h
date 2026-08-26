@@ -94,6 +94,21 @@
 #include "GU/GuDevice.h"
 #include "GU/GuRhiCapabilities.h"
 
+#elif defined(WITH_RHI_LEGACYGL)
+
+#include "LegacyGL/LegacyGlDebug.h"
+#include "LegacyGL/LegacyGlShader.h"
+#include "LegacyGL/LegacyGlBuffer.h"
+#include "LegacyGL/LegacyGlTexture.h"
+#include "LegacyGL/LegacyGlVertexFormat.h"
+#include "LegacyGL/LegacyGlShaderTypes.h"
+#include "LegacyGL/LegacyGlUniformCache.h"
+#include "LegacyGL/LegacyGlShaderUniforms.h"
+#include "LegacyGL/LegacyGlShaderProgram.h"
+#include "LegacyGL/LegacyGlRenderTarget.h"
+#include "LegacyGL/LegacyGlDevice.h"
+#include "LegacyGL/LegacyGlRhiCapabilities.h"
+
 #elif defined(WITH_RHI_GS)
 
 #include "GS/GsDebug.h"

@@ -625,10 +625,10 @@ namespace nCine::RHI::Software
 
 			// Also apply scissor (scissorRect.Y is already stored top-down by SubmitCommand)
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
-				xMin = std::max(xMin, ctx.scissorRect.X);
-				xMax = std::min(xMax, ctx.scissorRect.X + ctx.scissorRect.W - 1);
-				yMin = std::max(yMin, ctx.scissorRect.Y);
-				yMax = std::min(yMax, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
+				xMin = std::max<std::int32_t>(xMin, ctx.scissorRect.X);
+				xMax = std::min<std::int32_t>(xMax, ctx.scissorRect.X + ctx.scissorRect.W - 1);
+				yMin = std::max<std::int32_t>(yMin, ctx.scissorRect.Y);
+				yMax = std::min<std::int32_t>(yMax, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
 			}
 			if DEATH_UNLIKELY(xMin > xMax || yMin > yMax) return;
 
@@ -739,7 +739,7 @@ namespace nCine::RHI::Software
 						const SwPaletteLut& lut = *ctx.paletteLut;
 						if (uvSafeX && dtxFix == 65536) {
 							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full scanline is in-bounds
-							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+							const std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, txFix >> 16));
 							const std::uint8_t* src = &texRow[srcX * texBpp];
 							if (useFastBlend && texBpp == 1 && lut.indexByteOffset == 0 && lut.alphaByteOffset < 0) {
 								// The dominant draw (1:1 R8 indices, constant source alpha, fast blend) runs
@@ -752,7 +752,7 @@ namespace nCine::RHI::Software
 							}
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
-								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+								const std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, txFix >> 16));
 								FusedPaletteLutBlendTexel(lut, &texRow[srcX * texBpp], texBpp, &dstRow[i * 4], useFastBlend);
 								txFix += dtxFix;
 							}
@@ -783,11 +783,11 @@ namespace nCine::RHI::Software
 						if (uvSafeX && dtxFix == 65536) {
 							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full scanline is
 							// in-bounds; direct memcpy (4-byte stores) or a SIMD expand run
-							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+							const std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, txFix >> 16));
 							SwExpandTexelRun(scanBuf, &texRow[srcX * texBpp], scanWidth, texBpp);
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
-								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+								const std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, txFix >> 16));
 								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
 								txFix += dtxFix;
 							}
@@ -988,10 +988,10 @@ namespace nCine::RHI::Software
 			yMax = std::min(yMax, static_cast<std::int32_t>(prep.fyMax));
 
 			if (ctx.scissorEnabled) {
-				xMin = std::max(xMin, ctx.scissorRect.X);
-				xMax = std::min(xMax, ctx.scissorRect.X + ctx.scissorRect.W - 1);
-				yMin = std::max(yMin, ctx.scissorRect.Y);
-				yMax = std::min(yMax, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
+				xMin = std::max<std::int32_t>(xMin, ctx.scissorRect.X);
+				xMax = std::min<std::int32_t>(xMax, ctx.scissorRect.X + ctx.scissorRect.W - 1);
+				yMin = std::max<std::int32_t>(yMin, ctx.scissorRect.Y);
+				yMax = std::min<std::int32_t>(yMax, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
 			}
 			if (xMin > xMax || yMin > yMax) return;
 
@@ -1058,8 +1058,8 @@ namespace nCine::RHI::Software
 									SampleBilinearFix(texPixels, texW, texH, texBpp, uFix, vFix, wrapS, wrapT, raw);
 									sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 								} else {
-									std::int32_t srcX = std::max(0, std::min(texW - 1, WrapTexelFix(uFix, texW, wrapS)));
-									std::int32_t srcY = std::max(0, std::min(texH - 1, WrapTexelFix(vFix, texH, wrapT)));
+									std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, WrapTexelFix(uFix, texW, wrapS)));
+									std::int32_t srcY = std::max<std::int32_t>(0, std::min<std::int32_t>(texH - 1, WrapTexelFix(vFix, texH, wrapT)));
 									std::uint8_t raw[4];
 									SwExpandTexel(raw, texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * texBpp, texBpp);
 									sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
@@ -1231,10 +1231,10 @@ namespace nCine::RHI::Software
 				std::int32_t maxY = std::min(tileY + tileH - 1, static_cast<std::int32_t>(std::max({va.y, vb.y, vc.y})));
 
 				if DEATH_UNLIKELY(ctx.scissorEnabled) {
-					minX = std::max(minX, ctx.scissorRect.X);
-					maxX = std::min(maxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
-					minY = std::max(minY, ctx.scissorRect.Y);
-					maxY = std::min(maxY, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
+					minX = std::max<std::int32_t>(minX, ctx.scissorRect.X);
+					maxX = std::min<std::int32_t>(maxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
+					minY = std::max<std::int32_t>(minY, ctx.scissorRect.Y);
+					maxY = std::min<std::int32_t>(maxY, ctx.scissorRect.Y + ctx.scissorRect.H - 1);
 				}
 				if DEATH_UNLIKELY(minX > maxX || minY > maxY) {
 					return;
@@ -1291,8 +1291,8 @@ namespace nCine::RHI::Software
 						} else if (texPixels != nullptr) {
 							u = WrapUV(u, wrapS);
 							vv = WrapUV(vv, wrapT);
-							const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
-							const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
+							const std::int32_t srcX = std::max<std::int32_t>(0, std::min<std::int32_t>(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
+							const std::int32_t srcY = std::max<std::int32_t>(0, std::min<std::int32_t>(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
 							std::uint8_t raw[4];
 							SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];

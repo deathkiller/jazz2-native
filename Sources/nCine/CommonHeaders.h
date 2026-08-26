@@ -83,6 +83,11 @@
 #			include "AL/alc.h"
 #			include "AL/al.h"
 #			include "AL/alext.h"
+#			if __has_include("AL/efx.h")
+				// Current OpenAL Soft pulls efx.h in from alext.h, older ones ship it as a separate
+				// header, and the EFX filters the underwater effect uses are declared only there
+#				include "AL/efx.h"
+#			endif
 #			if __has_include("AL/inprogext.h")
 #				include "AL/inprogext.h"
 #			endif
@@ -91,6 +96,10 @@
 #			include <al.h>
 #			include <alext.h>
 #			if defined(__has_include)
+#				if __has_include(<efx.h>)
+					// See the note above: separate in older OpenAL Soft, included by alext.h in current ones
+#					include <efx.h>
+#				endif
 #				if __has_include(<inprogext.h>)
 #					include <inprogext.h>
 #				endif

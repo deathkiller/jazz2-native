@@ -158,7 +158,9 @@ namespace nCine
 #endif
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 
 	void ThreadAffinityMask::Zero()
 	{
@@ -289,8 +291,8 @@ namespace nCine
 		return (exitCode == STILL_ACTIVE);
 #else
 		pthread_t handle = _sharedBlock->_handle;
-#	if defined(DEATH_TARGET_DREAMCAST)
-		// pthread_kill() is not available in KOS
+#	if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4)
+		// pthread_kill() is available neither in KOS nor in AmigaOS 4's newlib
 		return (handle != 0);
 #	else
 		return (handle != 0 && pthread_kill(handle, 0) == 0);
@@ -419,7 +421,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(_sharedBlock->_handle, name);
-#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
+#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 			pthread_setname_np(_sharedBlock->_handle, name);
@@ -438,7 +440,7 @@ namespace nCine
 		tracy::SetThreadName(name);
 #elif defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 #	if !defined(DEATH_TARGET_APPLE)
@@ -603,7 +605,8 @@ namespace nCine
 				return true;
 			}
 		}
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 		// Stack information is not available on these platforms
 		return false;
 #else
@@ -676,7 +679,7 @@ namespace nCine
 #endif
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;

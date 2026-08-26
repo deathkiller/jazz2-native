@@ -168,7 +168,7 @@ namespace Death { namespace Containers {
 		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3)
 			return _timezone;
-#	elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+#	elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_AMIGAOS)
 			// PS2SDK's and PSPSDK's newlib exposes neither `timezone` nor `_timezone`, and the console has
 			// no timezone database at all - the firmware keeps the offset in its own settings, reachable through
 			// sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_TIMEZONE), which returns minutes east of UTC.

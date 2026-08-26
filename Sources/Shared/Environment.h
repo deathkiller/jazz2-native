@@ -20,6 +20,11 @@
 #	include <n64sys.h>
 #elif defined(DEATH_TARGET_PS3)
 #	include <sys/systime.h>
+#elif defined(DEATH_TARGET_AMIGAOS)
+// libnix has no monotonic clock_gettime(); the EClock through timer.device is the machine's
+// monotonic source, wrapped by the Amiga backend (AmigaPlatform.cpp) behind this plain function
+// so this shared header does not pull AmigaOS headers into everything
+extern "C" unsigned long long __amiga_query_monotonic_us() noexcept;
 #endif
 
 namespace Death {
@@ -192,6 +197,9 @@ namespace Death { namespace Environment {
 		// libdragon's newlib has no clock_gettime(), so its monotonic source is the COP0 count register,
 		// which get_ticks_us() already extends to 64 bits and converts
 		return get_ticks_us() * 10ULL;
+#elif defined(DEATH_TARGET_AMIGAOS)
+		// libnix has no monotonic clock_gettime() either; the EClock stands in (see the declaration above)
+		return __amiga_query_monotonic_us() * 10ULL;
 #elif defined(DEATH_TARGET_PS3)
 		// lv2's clock is the only monotonic source here. it reports seconds and nanoseconds separately,
 		// so the 100 ns unit this function returns is assembled from both
@@ -229,12 +237,16 @@ namespace Death { namespace Environment {
 #elif defined(DEATH_TARGET_N64)
 		// Same source as QueryUnbiasedInterruptTime(), see there
 		return get_ticks_ms();
+#elif defined(DEATH_TARGET_AMIGAOS)
+		// Same source as QueryUnbiasedInterruptTime(), see there
+		return __amiga_query_monotonic_us() / 1000ULL;
 #elif defined(DEATH_TARGET_PS3)
 		std::uint64_t sec = 0, nsec = 0;
 		sysGetCurrentTime(&sec, &nsec);
 		return sec * 1000ULL + nsec / 1000000ULL;
 #elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST)
+		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4) || \
+		defined(DEATH_TARGET_MORPHOS)
 		// These platforms have no coarse clock (it is a Linux-specific one), so the precise monotonic clock stands in
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);

@@ -45,6 +45,11 @@
 // PSL1GHT installs a <pthread.h> that declares nothing, so lv2's own thread API stands in for it
 #	include <sys/thread.h>
 #	include <unistd.h>
+#elif defined(DEATH_TARGET_MORPHOS)
+// This port does not use MorphOS's pthreads at all, so exec's own task API is included for FindTask()
+// rather than left to arrive through <pthread.h>
+#	include <proto/exec.h>
+#	include <unistd.h>
 #elif !defined(DEATH_TARGET_WINDOWS)
 #	include <pthread.h>
 #	include <unistd.h>
@@ -64,10 +69,15 @@
 #	include <limits>
 
 	// BoundedSPSCQueue includes
-#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_AMIGAOS4)
 #		include <malloc.h>
 #	else
 #		include <sys/mman.h>
+		// The BSD spelling, which MorphOS (and Apple) use
+#		if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#			define MAP_ANONYMOUS MAP_ANON
+#		endif
 #	endif
 
 #	if defined(DEATH_TARGET_X86)
@@ -132,6 +142,14 @@ namespace Death { namespace Trace {
 			sys_ppu_thread_t threadId = 0;
 			sysThreadGetId(&threadId);
 			return static_cast<std::uint32_t>(threadId);
+#	elif defined(DEATH_TARGET_AMIGAOS4)
+			// pthread_t is an integer type here rather than a pointer, and reinterpret_cast does not
+			// convert between integer types
+			return static_cast<std::uint32_t>(pthread_self());
+#	elif defined(DEATH_TARGET_MORPHOS)
+			// This port does not use MorphOS's pthreads, so the identity is the task
+			// pointer the OS itself uses for one - which is also what getpid() reports here.
+			return static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(FindTask(nullptr)));
 #	else
 			return reinterpret_cast<std::uintptr_t>(pthread_self());
 #	endif
@@ -540,7 +558,7 @@ namespace Death { namespace Trace {
 				void* p = _aligned_malloc(size, alignment);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS4)
 				void* p = ::memalign(alignment, size);
 				DEATH_DEBUG_ASSERT(p != nullptr);
 				return p;
@@ -586,7 +604,7 @@ namespace Death { namespace Trace {
 			static void freeAligned(void* ptr) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS4)
 				::free(ptr);
 #	else
 				// Retrieve the size and offset information from the metadata
@@ -599,7 +617,9 @@ namespace Death { namespace Trace {
 				// Calculate the original memory block address
 				void* mem = static_cast<std::uint8_t*>(ptr) - offset;
 
-				::munmap(mem, totalSize);
+				// Passed as char* rather than void*: MorphOS declares munmap() with a caddr_t, and the
+				// implicit conversion the other way round makes this correct everywhere else
+				::munmap(static_cast<char*>(mem), totalSize);
 #	endif
 			}
 		};

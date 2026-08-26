@@ -12,6 +12,8 @@
 #	endif
 #elif defined(DEATH_TARGET_N64)
 #	include <n64sys.h>		// libdragon's COP0 tick counter, this newlib has no clock_gettime()
+#elif defined(DEATH_TARGET_AMIGAOS)
+#	include "../Backends/Amiga/AmigaPlatform.h"	// timer.device's EClock (~709 kHz), libnix has no monotonic clock_gettime()
 #else
 #	include <time.h>		// for clock_gettime()
 #	if defined(DEATH_TARGET_PS3)
@@ -53,6 +55,11 @@ namespace nCine
 		// clock (TICKS_PER_SECOND) and libdragon extends it to 64 bits, so it is the monotonic clock here
 		_frequency = TICKS_PER_SECOND;
 		_hasMonotonicClock = true;
+#elif defined(DEATH_TARGET_AMIGAOS)
+		// The CIA E-clock through timer.device's ReadEClock(), the machine's only fine-grained monotonic
+		// counter (~709379 Hz PAL / ~715909 NTSC - AmigaPlatform read the true rate at startup)
+		_frequency = Backends::AmigaPlatform::TimerFrequency();
+		_hasMonotonicClock = true;
 #elif defined(DEATH_TARGET_PS3)
 		// The powerpc64-ps3-elf newlib defines _POSIX_TIMERS only for RTEMS, so there is no clock_getres()
 		// to ask; lv2's own clock reports nanoseconds and is always there, so the answer is known statically
@@ -88,6 +95,8 @@ namespace nCine
 #	endif
 #elif defined(DEATH_TARGET_N64)
 		return get_ticks();
+#elif defined(DEATH_TARGET_AMIGAOS)
+		return Backends::AmigaPlatform::TimerTicks();
 #elif defined(DEATH_TARGET_PS3)
 		std::uint64_t sec = 0, nsec = 0;
 		sysGetCurrentTime(&sec, &nsec);

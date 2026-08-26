@@ -60,6 +60,29 @@ else(VORBIS_FOUND)
 	set(VORBIS_LIBRARIES)
 endif(VORBIS_FOUND)
 
+# The project links the modern target names, which the system's own VorbisConfig.cmake defines where
+# there is one (most Linux distributions, vcpkg). Where there is not - any cross-compiled target that
+# reaches this module in module mode - they have to be created here, or the names end up on the link
+# line verbatim as "-lVorbis::Vorbisfile".
+if(VORBIS_FOUND AND NOT TARGET Vorbis::Vorbisfile)
+	add_library(Ogg::Ogg UNKNOWN IMPORTED)
+	set_target_properties(Ogg::Ogg PROPERTIES
+		IMPORTED_LOCATION "${OGG_LIBRARY}"
+		INTERFACE_INCLUDE_DIRECTORIES "${VORBIS_INCLUDE_DIR}")
+
+	add_library(Vorbis::Vorbis UNKNOWN IMPORTED)
+	set_target_properties(Vorbis::Vorbis PROPERTIES
+		IMPORTED_LOCATION "${VORBIS_LIBRARY}"
+		INTERFACE_INCLUDE_DIRECTORIES "${VORBIS_INCLUDE_DIR}"
+		INTERFACE_LINK_LIBRARIES Ogg::Ogg)
+
+	add_library(Vorbis::Vorbisfile UNKNOWN IMPORTED)
+	set_target_properties(Vorbis::Vorbisfile PROPERTIES
+		IMPORTED_LOCATION "${VORBISFILE_LIBRARY}"
+		INTERFACE_INCLUDE_DIRECTORIES "${VORBIS_INCLUDE_DIR}"
+		INTERFACE_LINK_LIBRARIES Vorbis::Vorbis)
+endif()
+
 mark_as_advanced(VORBIS_INCLUDE_DIR)
 mark_as_advanced(OGG_LIBRARY VORBIS_LIBRARY VORBISFILE_LIBRARY)
 

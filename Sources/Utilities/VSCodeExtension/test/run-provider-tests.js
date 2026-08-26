@@ -241,7 +241,7 @@ const uTintColumn = SRC.split('\n')[8].indexOf('uTint') + 1;
 
 	const targetDoc = makeDocument('void fixed_function(p\n', '/x/y.shader');
 	const targetItems = await I.completionProvider.provideCompletionItems(targetDoc, new Position(0, 21));
-	check('fixed_function targets offered', labels(targetItems).sort().join(',') === 'gs,gu,gx,pvr,rdp', labels(targetItems).join(','));
+	check('fixed_function targets offered', labels(targetItems).sort().join(',') === 'gs,gu,gx,legacygl,pvr,rdp', labels(targetItems).join(','));
 
 	// custom mode must not offer the canvas built-ins
 	const customDoc = makeDocument('program P;\nvoid vertex() {\n\tgl_Position = vec4(0.0);\n}\nvoid fragment() {\n\tCOLOR = vec4(1.0);\n}\n', '/x/c.shader');

@@ -115,6 +115,35 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "RSX")
 	# PSL1GHT's librsx/libgcm_sys come in with the platform packaging further down.
 	message(STATUS "Rendering backend: RSX (PlayStation 3, native libgcm)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_RSX")
+elseif(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
+	# Selects the fixed-function OpenGL 1.x backend in RhiFwd.h/Rhi.h. Its client library is a plain
+	# desktop GL where one exists, MiniGL on AmigaOS 4 and TinyGL on MorphOS - on both of those it has
+	# to follow SDL2 on the link line, which is what the two arms below arrange.
+	message(STATUS "Rendering backend: Legacy OpenGL (fixed-function 1.x)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_LEGACYGL")
+	if(PLATFORM_AMIGAOS4)
+		# MiniGL, the SDK's fixed-function OpenGL over Warp3D. Its stub library has to follow SDL2 on the
+		# link line (SDL2's OS4 video driver calls into it to create the context), which is what listing
+		# it here rather than as an interface dependency of the imported target does - the SDL2 target is
+		# already on the line by the time this is appended.
+		target_link_libraries(${NCINE_APP} PRIVATE GL)
+	elseif(PLATFORM_MORPHOS)
+		# Asks for the SDK's TinyGL initializer by name. It is what opens tinygl.library into the
+		# `TinyGLBase` the call macros read, but nothing references it: SDL2's static glue declares that
+		# same global as a common symbol, which satisfies every reference without pulling the initializer's
+		# object out of libGL.a - and the program would then call through a null library base. An
+		# undefined symbol on the link line is what makes the linker take that object (see
+		# Sources/nCine/Backends/MorphOS/MorphOSTinyGl.cpp).
+		target_link_options(${NCINE_APP} PRIVATE "-u" "_CSTP_init_TinyGLBase")
+	else()
+		if(TARGET OpenGL::OpenGL)
+			target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
+		elseif(TARGET OpenGL::GL)
+			target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
+		else()
+			message(FATAL_ERROR "NCINE_PREFERRED_RHI=LegacyGL needs a desktop OpenGL library, which was not found")
+		endif()
+	endif()
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")
@@ -162,7 +191,58 @@ if(NCINE_RHI_USE_FB16)
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
-	if(PLATFORM_N64)
+	if(PLATFORM_MORPHOS)
+		# MorphOS reaches the display and the input devices through SDL2, so it has no backend of its own -
+		# this is only the handful of library functions its C runtime declares but does not implement
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/MorphOS/MorphOSLibcCompat.cpp)
+		if(NCINE_PREFERRED_RHI STREQUAL "LegacyGL")
+			# ... plus the two TinyGL globals an application has to fill in itself (see the file)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/MorphOS/MorphOSTinyGl.cpp)
+		endif()
+	endif()
+
+	if(PLATFORM_AMIGA)
+		# Intuition/CyberGraphX window/input backend (no SDL/GLFW: the 68k SDL2 ports are nascent, and the
+		# whole job here is opening one RTG screen and copying the Software RHI's framebuffer into it - see
+		# AmigaGfxDevice). The OS libraries (intuition, graphics, cybergraphics, lowlevel, ahi.device) are
+		# opened at run time, so nothing is linked beyond what -mcrt already brings in.
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AMIGA")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaPlatform.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaPlatform.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaLibcCompat.c
+		)
+
+		# AMMX scanline kernels for the Apollo 68080 (Vampire), runtime-gated so the binary stays
+		# 68060-safe. binutils' assembler does not know AMMX, so the module is assembled by vasm,
+		# which ships with the amiga-gcc toolchain ("make vasm").
+		find_program(VASM_EXECUTABLE vasmm68k_mot HINTS "$ENV{AMIGA_INST}/bin")
+		if(VASM_EXECUTABLE)
+			# A subdirectory of its own, so the object cannot collide with anything else assembled into the
+			# build root, and vasm itself is a dependency - a toolchain swap re-assembles the module
+			set(_ammxObject "${CMAKE_CURRENT_BINARY_DIR}/Amiga/AmigaAmmxOps.o")
+			add_custom_command(OUTPUT "${_ammxObject}"
+				COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/Amiga"
+				COMMAND "${VASM_EXECUTABLE}" -quiet -m68080 -Fhunk
+					-o "${_ammxObject}" "${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaAmmxOps.s"
+				DEPENDS "${NCINE_SOURCE_DIR}/nCine/Backends/Amiga/AmigaAmmxOps.s" "${VASM_EXECUTABLE}"
+				COMMENT "Assembling AMMX scanline kernels (vasm)"
+				VERBATIM)
+			set_source_files_properties("${_ammxObject}" PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+			target_sources(${NCINE_APP} PRIVATE "${_ammxObject}")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AMMX")
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwAmmxOps.h)
+			message(STATUS "AMMX scanline kernels enabled (vasm: ${VASM_EXECUTABLE})")
+		else()
+			message(STATUS "vasm not found, AMMX scanline kernels will not be built")
+		endif()
+	elseif(PLATFORM_N64)
 		# libdragon window/input backend (no SDL/GLFW: libdragon ships neither, and the console's video
 		# output is a VI framebuffer configured through display_init rather than anything a windowing
 		# library would wrap). The rdpq libraries the rendering backend calls into come in with libdragon
@@ -309,7 +389,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
@@ -341,27 +421,41 @@ if(NOT DEDICATED_SERVER)
 				${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALDebug.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALAudioDevice.cpp)
 		elseif(ASND_FOUND)
-			set(_NCINE_AUDIO_BACKEND "ASND --- libogc DSP mixer")
+			set(_NCINE_AUDIO_BACKEND "ASND - libogc DSP mixer")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ASND")
 			target_link_libraries(${NCINE_APP} PRIVATE asnd)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.cpp)
 		elseif(AICA_FOUND)
-			set(_NCINE_AUDIO_BACKEND "AICA --- KallistiOS sound driver")
+			set(_NCINE_AUDIO_BACKEND "AICA - KallistiOS sound driver")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AICA")
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.cpp)
 		elseif(N64AUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "N64 --- libdragon AI DMA ring mixer")
+			set(_NCINE_AUDIO_BACKEND "N64 - libdragon AI DMA ring mixer")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_N64AUDIO")
 			# The AI is part of libdragon itself, which is linked with the platform packaging below
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/N64/N64AudioDevice.cpp)
+		elseif(AHIAUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "AHI - ahi.device software mixer")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AHIAUDIO")
+			# ahi.device is opened at run time through exec, nothing to link
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Amiga/AmigaAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Amiga/AmigaAudioDevice.cpp)
+		elseif(SDLAUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "SDL - software mixer into SDL's audio queue")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDLAUDIO")
+			# SDL itself is already linked as the window backend
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
-			set(_NCINE_AUDIO_BACKEND "PS3 --- PSL1GHT libaudio mixer")
+			set(_NCINE_AUDIO_BACKEND "PS3 - PSL1GHT libaudio mixer")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
 			# libaudio is the lv2 audio port itself; libsysmodule loads the SYSMODULE_AUDIO PRX it needs
 			target_link_libraries(${NCINE_APP} PRIVATE audio sysmodule)
@@ -406,6 +500,21 @@ if(NOT DEDICATED_SERVER)
 			list(APPEND SOURCES
 				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderMpt.cpp
 				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
+		elseif(NCINE_WITH_XMP)
+			# libxmp, the lightweight tracker player for platforms where libopenmpt is not real-time-viable
+			# (today: the classic Amiga). Downloaded and built by cmake/Findlibxmp.cmake - the full library
+			# rather than libxmp-lite, because the lite build drops the Galaxy Music System loaders that
+			# read the game's original ".j2b" modules.
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_XMP")
+			target_link_libraries(${NCINE_APP} PRIVATE Libxmp)
+
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderXmp.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderXmp.h)
+
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderXmp.cpp
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderXmp.cpp)
 		endif()
 	elseif(NOT NCINE_BUILD_ANDROID)
 		message(STATUS "Cannot find any audio backend library")
@@ -933,6 +1042,32 @@ else()
 		else()
 			message(STATUS "mkdcdisc not found, bootable CDI image will not be created")
 		endif()
+	elseif(PLATFORM_AMIGA)
+		# libnix ships the math functions in a separate libm; the driver does not add it on its own.
+		# pthread satisfies the thread-id the trace header stamps on every line (the game itself is
+		# single-threaded here); atomic covers the exchange/fetch forms the 68060 has no inline
+		# sequence for, the same reason the PS2 links it.
+		target_link_libraries(${NCINE_APP} PRIVATE m pthread atomic)
+
+		# Stage a ready-to-run game directory ("dist/") with the executable next to "Content/", the
+		# layout ContentResolver's relative paths expect. The directory can be copied straight onto an
+		# Amiga hard disk or mounted as an emulator directory-hard-drive.
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/dist"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/dist/Jazz2"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dist/Content"
+			COMMENT "Staging Amiga game directory with game content"
+			VERBATIM)
+	elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
+		# Same staged layout as the classic Amiga above - the executable next to "Content/" - copied to
+		# a PowerPC Amiga machine as it is. The binary is stripped on the way: these toolchains leave the
+		# DWARF in even in Release, which is two thirds of its size and of no use on the target.
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/dist"
+			COMMAND "${CMAKE_STRIP}" -o "${CMAKE_BINARY_DIR}/dist/Jazz2" "$<TARGET_FILE:${NCINE_APP}>"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dist/Content"
+			COMMENT "Staging game directory with game content"
+			VERBATIM)
 	elseif(PLATFORM_N64)
 		# The n64.cmake toolchain file leaves the executable suffix empty; name it like the other console
 		# targets do, so the intermediate ELF is recognizable next to the ROM that is packed from it

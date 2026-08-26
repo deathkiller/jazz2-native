@@ -110,7 +110,8 @@ namespace ShaderCompiler
 		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
 		Gu,		/**< PlayStation Portable (Graphics Engine via sceGu) */
 		Gs,		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
-		Rdp		/**< Nintendo 64 (Reality Display Processor via libdragon) */
+		Rdp,	/**< Nintendo 64 (Reality Display Processor via libdragon) */
+		LegacyGl	/**< Legacy OpenGL (MorphOS's TinyGL, and a desktop GL for testing that path) */
 	};
 
 	/**
