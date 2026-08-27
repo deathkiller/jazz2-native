@@ -860,13 +860,112 @@ namespace Jazz2::Tiles
 			ry = (TileSet::DefaultTileSize - 1 - ry);
 		}
 
-		// Walk the tolerance window bottom-up, testing column rx's bit in each packed row
+		// Walk the tolerance window bottom-up, testing column rx's bit in each packed row. The window is
+		// clipped to the tile on purpose - it decides where exactly the player ends up hanging.
 		const std::int32_t top = std::max<std::int32_t>(ry - Tolerance, 0);
 		const std::int32_t bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1);
 
 		for (std::int32_t row = bottom; row >= top; row--) {
 			if (TileSet::IsTileMaskBitSet(mask, rx, row)) {
 				return tile.HasSuspendType;
+			}
+		}
+
+		return SuspendType::None;
+	}
+
+	SuspendType TileMap::GetTileSuspendState(float x, float y, float toleranceX, float toleranceUp, float toleranceDown, Vector2f& snapOffset)
+	{
+		snapOffset = Vector2f(0.0f, 0.0f);
+
+		if (_sprLayerIndex == -1) {
+			return SuspendType::None;
+		}
+
+		TileMapLayer& layer = _layers[_sprLayerIndex];
+
+		std::int32_t originX = (std::int32_t)x;
+		std::int32_t originY = (std::int32_t)y;
+		std::int32_t left = std::max<std::int32_t>(originX - (std::int32_t)toleranceX, 0);
+		std::int32_t right = std::min<std::int32_t>(originX + (std::int32_t)toleranceX, layer.LayoutSize.X * TileSet::DefaultTileSize - 1);
+		std::int32_t top = std::max<std::int32_t>(originY - (std::int32_t)toleranceUp, 0);
+		std::int32_t bottom = std::min<std::int32_t>(originY + (std::int32_t)toleranceDown, layer.LayoutSize.Y * TileSet::DefaultTileSize - 1);
+		if (left > right || top > bottom) {
+			return SuspendType::None;
+		}
+
+		std::int32_t txLeft = left / TileSet::DefaultTileSize;
+		std::int32_t txRight = right / TileSet::DefaultTileSize;
+		std::int32_t tyTop = top / TileSet::DefaultTileSize;
+
+		// Walk the tolerance box bottom-up, so the player always attaches to the lowest point in reach
+		for (std::int32_t ty = bottom / TileSet::DefaultTileSize; ty >= tyTop; ty--) {
+			std::int32_t tileOriginY = ty * TileSet::DefaultTileSize;
+			std::int32_t rowTop = std::max<std::int32_t>(top - tileOriginY, 0);
+			std::int32_t rowBottom = std::min(bottom - tileOriginY, TileSet::DefaultTileSize - 1);
+
+			// Attachment points of all tiles in the row range are collected first, because the closest
+			// one can be in any of them
+			SuspendType foundType[TileSet::DefaultTileSize];
+			std::int32_t foundX[TileSet::DefaultTileSize];
+			for (std::int32_t row = rowTop; row <= rowBottom; row++) {
+				foundType[row] = SuspendType::None;
+				foundX[row] = 0;
+			}
+
+			for (std::int32_t tx = txLeft; tx <= txRight; tx++) {
+				LayerTile& tile = layer.Layout[tx + ty * layer.LayoutSize.X];
+				if (tile.HasSuspendType == SuspendType::None) {
+					continue;
+				}
+
+				std::int32_t tileId = ResolveTileID(tile);
+				TileSet* tileSet = ResolveTileSet(tileId);
+				if (tileSet == nullptr) {
+					continue;
+				}
+
+				bool flipX = ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX);
+				bool flipY = ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY);
+
+				std::int32_t tileOriginX = tx * TileSet::DefaultTileSize;
+				std::int32_t columnLeft = std::max<std::int32_t>(left - tileOriginX, 0);
+				std::int32_t columnRight = std::min(right - tileOriginX, TileSet::DefaultTileSize - 1);
+				if (flipX) {
+					std::int32_t columnLeftFlipped = (TileSet::DefaultTileSize - 1 - columnRight);
+					columnRight = (TileSet::DefaultTileSize - 1 - columnLeft);
+					columnLeft = columnLeftFlipped;
+				}
+
+				// Packed mask: one 32-bit row word tests the whole column range at once
+				const std::uint8_t* mask = tileSet->GetTileMask(tileId);
+				const std::uint32_t rangeMask = (~0u >> (31 - columnRight)) & (~0u << columnLeft);
+
+				for (std::int32_t row = rowTop; row <= rowBottom; row++) {
+					std::uint32_t maskRow = TileSet::GetTileMaskRow(mask, flipY ? (TileSet::DefaultTileSize - 1 - row) : row) & rangeMask;
+					if (maskRow == 0) {
+						continue;
+					}
+
+					for (std::int32_t column = columnLeft; column <= columnRight; column++) {
+						if ((maskRow & (1u << column)) == 0) {
+							continue;
+						}
+
+						std::int32_t candidateX = tileOriginX + (flipX ? (TileSet::DefaultTileSize - 1 - column) : column);
+						if (foundType[row] == SuspendType::None || std::abs(candidateX - originX) < std::abs(foundX[row] - originX)) {
+							foundType[row] = tile.HasSuspendType;
+							foundX[row] = candidateX;
+						}
+					}
+				}
+			}
+
+			for (std::int32_t row = rowBottom; row >= rowTop; row--) {
+				if (foundType[row] != SuspendType::None) {
+					snapOffset = Vector2f((float)foundX[row] - x, (float)(tileOriginY + row) - y);
+					return foundType[row];
+				}
 			}
 		}
 

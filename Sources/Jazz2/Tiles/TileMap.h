@@ -360,6 +360,17 @@ namespace Jazz2::Tiles
 		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
 		/** @brief Returns suspend state of a given position */
 		SuspendType GetTileSuspendState(float x, float y);
+		/**
+			@brief Returns suspend state of the closest attachment point around a given position
+
+			Searches the whole tolerance box around `[x, y]` instead of a single point, so that vines and
+			hooks spanning only one tile are not too hard to grab. The lowest reachable row wins, and inside
+			that row the column closest to `[x, y]` - `snapOffset` receives the offset that needs to be
+			applied to the given position to align it with the returned attachment point.
+
+			Either vertical tolerance can be negative to move that edge of the box past `y` to the other side.
+		*/
+		SuspendType GetTileSuspendState(float x, float y, float toleranceX, float toleranceUp, float toleranceDown, Vector2f& snapOffset);
 		/** @brief Advances descructible animation of a given tile */
 		bool AdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount);
 

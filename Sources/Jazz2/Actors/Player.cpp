@@ -1103,7 +1103,10 @@ namespace Jazz2::Actors
 
 					MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
 					_suspendType = SuspendType::None;
-					_suspendTime = 4.0f;
+					// The grab box reaches above the player, so dropping down has to be ignored long enough
+					// for gravity to carry them clear of the vine they just let go of - the 4 px above are
+					// nowhere near enough on their own
+					_suspendTime = 12.0f;
 
 					SetState(ActorState::ApplyGravitation, true);
 				}
@@ -2582,40 +2585,43 @@ namespace Jazz2::Actors
 		AnimState currentState = _currentAnimation->State;
 
 		SuspendType newSuspendState = tiles->GetTileSuspendState(_pos.X, _pos.Y - 1.0f);
+		Vector2f snapOffset = Vector2f::Zero;
 
-		if (newSuspendState == _suspendType) {
+		if (_suspendType != SuspendType::None) {
+			// Already attached - the plain point check decides when the player slides off the end of a vine
+			// and where exactly they hang, so it has to stay exactly as it is
+			if (newSuspendState == _suspendType) {
+				return;
+			}
+		} else {
+			// The settle loop below parks the player 4 px under the lowest pixel of the vine, so that is where
+			// the two of them actually touch. The grab box is anchored to that contact line rather than to the
+			// grab point, otherwise a falling player attaches while the vine is still below their hands.
+			constexpr float ContactOffset = 4.0f;
+			// A falling player catches the vine this much past the contact line, which reads better than
+			// snapping the very moment the vine is level with the hands. It applies to falling only - moving
+			// the line while rising would just yank the player upwards.
+			constexpr float ContactDelay = 4.0f;
+			// Vines and hooks spanning only a single tile would be nearly impossible to grab without this
+			constexpr float ToleranceX = 14.0f;
+			// How much higher than the grab line the vine may be and still be caught
+			constexpr float ToleranceUp = 2.0f;
+			// The player reaches higher while rising, so a vine that is just out of jump range can still be
+			// grabbed, but nobody gets pulled up while standing below one
+			constexpr float ToleranceUpRising = 8.0f;
+
+			// The box covers the whole distance travelled this frame as well, so that falling (or jumping)
+			// fast cannot tunnel through a vine in between two frames - the grab is then resolved where the
+			// vine was actually crossed instead of where the player ended up
+			float sweep = std::abs(_speed.Y) * timeMult;
+			float grabLine = ContactOffset + (_speed.Y > 0.0f ? ContactDelay : 0.0f);
+			float reachUp = (!CanJump() && _speed.Y < 0.0f ? ToleranceUpRising : ToleranceUp);
+
+			float toleranceUp = grabLine + reachUp + (_speed.Y > 0.0f ? sweep : 0.0f);
+			float toleranceDown = -grabLine + (_speed.Y < 0.0f ? sweep : 0.0f);
+
+			newSuspendState = tiles->GetTileSuspendState(_pos.X, _pos.Y - 1.0f, ToleranceX, toleranceUp, toleranceDown, snapOffset);
 			if (newSuspendState == SuspendType::None) {
-				constexpr float ToleranceX = 8.0f;
-				constexpr float ToleranceY = 4.0f;
-
-				newSuspendState = tiles->GetTileSuspendState(_pos.X - ToleranceX, _pos.Y - 1.0f);
-				if (newSuspendState != SuspendType::Hook) {
-					newSuspendState = tiles->GetTileSuspendState(_pos.X + ToleranceX, _pos.Y - 1.0f);
-					if (newSuspendState != SuspendType::Hook) {
-						// Also try with Y tolerance
-						newSuspendState = tiles->GetTileSuspendState(_pos.X, _pos.Y - 1.0f + ToleranceY);
-						if (newSuspendState != SuspendType::Hook) {
-							newSuspendState = tiles->GetTileSuspendState(_pos.X - ToleranceX, _pos.Y - 1.0f + ToleranceY);
-							if (newSuspendState != SuspendType::Hook) {
-								newSuspendState = tiles->GetTileSuspendState(_pos.X + ToleranceX, _pos.Y - 1.0f + ToleranceY);
-								if (newSuspendState != SuspendType::Hook) {
-									return;
-								} else {
-									MoveInstantly(Vector2f(ToleranceX, ToleranceY), MoveType::Relative | MoveType::Force);
-								}
-							} else {
-								MoveInstantly(Vector2f(-ToleranceX, ToleranceY), MoveType::Relative | MoveType::Force);
-							}
-						} else {
-							MoveInstantly(Vector2f(0.0f, ToleranceY), MoveType::Relative | MoveType::Force);
-						}
-					} else {
-						MoveInstantly(Vector2f(ToleranceX, 0.0f), MoveType::Relative | MoveType::Force);
-					}
-				} else {
-					MoveInstantly(Vector2f(-ToleranceX, 0.0f), MoveType::Relative | MoveType::Force);
-				}
-			} else {
 				return;
 			}
 		}
@@ -2627,6 +2633,11 @@ namespace Jazz2::Actors
 			}
 
 			if (_currentSpecialMove == SpecialMoveType::None) {
+				// Align with the found attachment point, but never through a solid wall or a ceiling
+				if (snapOffset != Vector2f::Zero && !MoveInstantly(snapOffset, MoveType::Relative)) {
+					return;
+				}
+
 				_suspendType = newSuspendState;
 				SetState(ActorState::ApplyGravitation, false);
 

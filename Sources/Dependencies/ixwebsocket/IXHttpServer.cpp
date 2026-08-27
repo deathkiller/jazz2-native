@@ -154,8 +154,9 @@ namespace ix
 				// Log request
 				std::stringstream ss;
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
-				   << " " << request->method << " " << request->headers["User-Agent"] << " "
-				   << request->uri << " " << content.size();
+				   << " " << Http::escape(request->method) << " "
+				   << Http::escape(request->headers["User-Agent"]) << " "
+				   << Http::escape(request->uri) << " " << content.size();
 				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
 				// FIXME: check extensions to set the content type
@@ -182,8 +183,9 @@ namespace ix
 				// Log request
 				std::stringstream ss;
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
-				   << " " << request->method << " " << request->headers["User-Agent"] << " "
-				   << request->uri;
+				   << " " << Http::escape(request->method) << " "
+				   << Http::escape(request->headers["User-Agent"]) << " "
+				   << Http::escape(request->uri);
 				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
 				if (request->method == "POST")
@@ -214,15 +216,16 @@ namespace ix
 				// Log request
 				std::stringstream ss;
 				ss << connectionState->getRemoteIp() << ":" << connectionState->getRemotePort()
-				   << " " << request->method << " " << request->headers["User-Agent"] << " "
-				   << request->uri;
+				   << " " << Http::escape(request->method) << " "
+				   << Http::escape(request->headers["User-Agent"]) << " "
+				   << Http::escape(request->uri);
 				logInfo(IX_CURRENT_FUNCTION, ss.str());
 
 				logInfo(IX_CURRENT_FUNCTION, "== Headers == ");
 				for (auto&& it : request->headers)
 				{
 					std::ostringstream oss;
-					oss << it.first << ": " << it.second;
+					oss << Http::escape(it.first) << ": " << Http::escape(it.second, 1024);
 					logInfo(IX_CURRENT_FUNCTION, oss.str());
 				}
 				logInfo(IX_CURRENT_FUNCTION, "");

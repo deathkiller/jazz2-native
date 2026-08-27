@@ -9,6 +9,7 @@
 #include "IXProgressCallback.h"
 #include "IXWebSocketHttpHeaders.h"
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <tuple>
 #include <unordered_map>
@@ -181,5 +182,17 @@ namespace ix
 		 * @return Trimmed string.
 		 */
 		static std::string trim(const std::string& str);
+
+		/**
+		 * @brief Escape a remotely supplied string so it can be logged or sent back safely
+		 * @param str The string to escape.
+		 * @param maxLength Maximum number of input bytes to keep, the rest is replaced by `...`.
+		 * @return String containing only printable ASCII, using C escape sequences.
+		 *
+		 * Backslashes, quotes and whitespace become the usual C escapes, everything else outside
+		 * of printable ASCII becomes @cpp \xNN @ce, so a hostile peer cannot inject line breaks
+		 * or terminal control sequences into a message that quotes what it sent.
+		 */
+		static std::string escape(const std::string& str, std::size_t maxLength = 128);
 	};
 }

@@ -3039,7 +3039,7 @@ namespace Death { namespace IO {
 			return "Server returned no response"_s;
 		}
 
-		// The code comes first because it is the only part that always describes the actual outcome; the
+		// The code comes first because it is the only part that always describes the actual outcome, the
 		// buffer holds the last message libcurl saw fit to write, which is not necessarily the one that
 		// ended the transfer - several of its diagnostics are non-fatal (conninfo_remote() reports a failing
 		// getpeername() and carries on) and several failure codes write nothing at all.

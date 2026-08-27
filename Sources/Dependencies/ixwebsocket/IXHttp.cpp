@@ -9,6 +9,7 @@
 #include "IXCancellationRequest.h"
 #include "IXGzipCodec.h"
 #include "IXSocket.h"
+#include <algorithm>
 #include <sstream>
 #include <vector>
 
@@ -23,6 +24,51 @@ namespace ix
 			{
 				out += c;
 			}
+		}
+
+		return out;
+	}
+
+	std::string Http::escape(const std::string& str, std::size_t maxLength)
+	{
+		static const char hexDigits[] = "0123456789abcdef";
+
+		std::size_t length = std::min<std::size_t>(str.size(), maxLength);
+
+		std::string out;
+		out.reserve(length);
+
+		for (std::size_t i = 0; i < length; i++)
+		{
+			unsigned char c = static_cast<unsigned char>(str[i]);
+			switch (c)
+			{
+				case '\\': out += "\\\\"; break;
+				case '\'': out += "\\'"; break;
+				case '\"': out += "\\\""; break;
+				case '\t': out += "\\t"; break;
+				case '\r': out += "\\r"; break;
+				case '\n': out += "\\n"; break;
+				default:
+					// Escape control characters and everything non-ASCII, so that no byte sequence
+					// can be mistaken for a line break, a terminal escape or a broken UTF-8 string
+					if (c < 0x20 || c >= 0x7F)
+					{
+						out += "\\x";
+						out += hexDigits[c >> 4];
+						out += hexDigits[c & 0x0F];
+					}
+					else
+					{
+						out += static_cast<char>(c);
+					}
+					break;
+			}
+		}
+
+		if (length < str.size())
+		{
+			out += "...";
 		}
 
 		return out;

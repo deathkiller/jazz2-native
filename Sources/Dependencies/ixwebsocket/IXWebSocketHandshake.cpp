@@ -66,11 +66,23 @@ namespace ix
 
 	WebSocketInitResult WebSocketHandshake::sendErrorResponse(int code, const std::string& reason)
 	{
+		// The reason shows up in the status line, so no control character may survive in it,
+		// otherwise a peer could split the response apart. Call sites are expected to run any
+		// remotely supplied part through Http::escape() already, this is only the last resort.
+		std::string sanitizedReason = reason;
+		for (char& c : sanitizedReason)
+		{
+			if (static_cast<unsigned char>(c) < 0x20 || c == 0x7F)
+			{
+				c = '?';
+			}
+		}
+
 		std::stringstream ss;
 		ss << "HTTP/1.1 ";
 		ss << code;
 		ss << " ";
-		ss << reason;
+		ss << sanitizedReason;
 		ss << "\r\n";
 		ss << "Server: " << (_serverName.empty() ? userAgent() : _serverName) << "\r\n";
 
@@ -84,7 +96,7 @@ namespace ix
 			return WebSocketInitResult(false, 500, "Timed out while sending error response");
 		}
 
-		return WebSocketInitResult(false, code, reason);
+		return WebSocketInitResult(false, code, sanitizedReason);
 	}
 
 	WebSocketInitResult WebSocketHandshake::clientHandshake(
@@ -180,9 +192,9 @@ namespace ix
 		if (httpVersion != "HTTP/1.1")
 		{
 			std::stringstream ss;
-			ss << "Expecting HTTP/1.1, got " << httpVersion << ". "
+			ss << "Expecting HTTP/1.1, got '" << Http::escape(httpVersion) << "'. "
 			   << "Rejecting connection to " << url << ", status: " << status
-			   << ", HTTP Status line: " << line;
+			   << ", HTTP Status line: '" << Http::escape(line) << "'";
 			return WebSocketInitResult(false, status, ss.str());
 		}
 
@@ -201,7 +213,8 @@ namespace ix
 		{
 			std::stringstream ss;
 			ss << "Expecting status 101 (Switching Protocol), got " << status
-			   << " status connecting to " << url << ", HTTP Status line: " << line;
+			   << " status connecting to " << url << ", HTTP Status line: '" << Http::escape(line)
+			   << "'";
 
 			return WebSocketInitResult(false, status, ss.str(), headers, path);
 		}
@@ -222,7 +235,7 @@ namespace ix
 		if (!insensitiveStringCompare(headers["connection"], "Upgrade"))
 		{
 			std::stringstream ss;
-			ss << "Invalid connection value: " << headers["connection"];
+			ss << "Invalid connection value: '" << Http::escape(headers["connection"]) << "'";
 			return WebSocketInitResult(false, status, ss.str());
 		}
 
@@ -298,13 +311,15 @@ namespace ix
 
 		if (method != "GET")
 		{
-			return sendErrorResponse(400, "Invalid HTTP method, need GET, got " + method);
+			return sendErrorResponse(
+				400, "Invalid HTTP method, need GET, got '" + Http::escape(method) + "'");
 		}
 
 		if (httpVersion != "HTTP/1.1")
 		{
-			return sendErrorResponse(400,
-									 "Invalid HTTP version, need HTTP/1.1, got: " + httpVersion);
+			return sendErrorResponse(
+				400,
+				"Invalid HTTP version, need HTTP/1.1, got '" + Http::escape(httpVersion) + "'");
 		}
 
 		WebSocketHttpHeaders headers;
@@ -340,8 +355,8 @@ namespace ix
 		{
 			return sendErrorResponse(400,
 									 "Invalid Upgrade header, "
-									 "need WebSocket, got " +
-										 headers["upgrade"]);
+									 "need WebSocket, got '" +
+										 Http::escape(headers["upgrade"]) + "'");
 		}
 
 		if (headers.find("sec-websocket-version") == headers.end())
@@ -359,8 +374,8 @@ namespace ix
 			{
 				return sendErrorResponse(400,
 										 "Invalid Sec-WebSocket-Version, "
-										 "need 13, got " +
-											 ss.str());
+										 "need 13, got '" +
+											 Http::escape(headers["sec-websocket-version"]) + "'");
 			}
 		}
 
