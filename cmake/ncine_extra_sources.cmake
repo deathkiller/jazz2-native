@@ -191,6 +191,13 @@ if(NCINE_RHI_USE_FB16)
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
+	if(VITA AND WITH_ONLINE_MULTIPLAYER)
+		# The Vita reaches the display and the input devices through SDL2 and vitaGL, so it has no backend
+		# of its own - this is one library function VitaSDK does implement, but not to the contract its
+		# callers rely on (see the file; it is what makes HTTPS verify and ENet parse an address)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Vita/VitaLibcCompat.cpp)
+	endif()
+
 	if(PLATFORM_MORPHOS)
 		# MorphOS reaches the display and the input devices through SDL2, so it has no backend of its own -
 		# this is only the handful of library functions its C runtime declares but does not implement
@@ -290,10 +297,12 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.cpp
 		)
 	elseif(PLATFORM_PS2)
 		# PS2SDK window/input backend. PS2SDK does package an SDL2, and the configure would otherwise pick it,
@@ -1132,10 +1141,10 @@ else()
 		# so the intermediate ELF is recognizable next to the EBOOT that is packed from it
 		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
 
-		# The PSPSDK libraries the engine calls into. The pspdev toolchain file already adds the default set
-		# from build.mak (pspdebug/pspdisplay/pspge/pspctrl and the net stubs), but linking them explicitly
-		# keeps the dependency visible here the way the other consoles list theirs - and pspgu/pspgum/psppower
-		# are NOT in that default set.
+		# The PSPSDK libraries the engine calls into. None of them are on psp-gcc's own link line, whose
+		# `*lib` spec ends with "-lm --start-group -lpthreadglue -lpthread -lcglue -lc --end-group
+		# -lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser";
+		# anything that is in that spec must not be repeated here, see the note below.
 		target_link_libraries(${NCINE_APP} PRIVATE
 			pspgum
 			pspgu
@@ -1143,30 +1152,30 @@ else()
 			pspdisplay
 			pspctrl
 			psppower
-			psprtc
 			pspdebug
-			m
 		)
 
 		if(CURL_FOUND)
 			# The console has no socket stack at boot, so MainApplication brings one up for `WebRequest`
-			# (see PspNetworkInitialize) - that is the only thing in the engine calling into these stubs,
-			# because libcurl on top of them only needs the BSD sockets the newlib port already wraps.
-			# They are in the toolchain's default set as well, but listing them here keeps the dependency
-			# visible like the ones above.
+			# (see PspNetworkInitialize); libcurl on top of it only needs the BSD sockets newlib wraps.
 			#
-			# `atomic` is libatomic, for the same shape of reason as on the PlayStation 2 (see that arm): the
-			# Allegrex is a 32-bit MIPS with no 64-bit atomic instruction, so the `std::atomic<std::int64_t>`
-			# byte counters `WebRequest` keeps per request (WebRequestImpl::_bytesReceived and
-			# WebRequestCURL::_bytesSent) are lowered to __atomic_load_8 / __atomic_store_8 /
-			# __atomic_fetch_add_8 calls instead of inline instructions. It is scoped to this arm because
-			# `WebRequest` is what brings those counters in - nothing else on this console needs 64-bit atomics.
+			# `pspnet_inet`, `pspnet_resolver` and `psputility` are deliberately not listed, even though
+			# MainApplication calls into all three: the spec above appends them at the very end anyway,
+			# and an archive scanned at two points of the link line has its stubs extracted in two chunks
+			# - the engine's calls here, and the rest where libcglue's socket()/gethostbyname() pull them
+			# in from the spec's copy. psp-fixup-imports needs each module's stubs contiguous to write the
+			# stub and NID counts into its import table ("could not fixup imports, stubs out of order" is
+			# it giving up), and wrong counts make one module's table overlap the next one's stubs, so the
+			# loader patches syscalls into each other's slots. `pspnet` and `pspnet_apctl` are not in the
+			# spec and nothing but the engine imports them, so their single scan here is contiguous.
+			#
+			# `atomic` is libatomic, for the same reason as on the PlayStation 2 (see that arm): the
+			# Allegrex has no 64-bit atomic instruction, so the `std::atomic<std::int64_t>` byte counters
+			# `WebRequest` keeps per request are lowered to __atomic_*_8 calls. It is scoped to this arm
+			# because nothing else on this console needs 64-bit atomics.
 			target_link_libraries(${NCINE_APP} PRIVATE
 				pspnet
-				pspnet_inet
 				pspnet_apctl
-				pspnet_resolver
-				psputility
 				atomic
 			)
 		endif()
@@ -1591,8 +1600,9 @@ if(WITH_MULTIPLAYER)
 			message(STATUS "Building the game with online multiplayer support")
 		endif()
 		
-		if(NINTENDO_SWITCH)
-			# Switch doesn't support IPv6 protocol, fallback to IPv4
+		if(NINTENDO_SWITCH OR PLATFORM_PSP OR VITA)
+			# None of these three stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no
+			# address family for it at all - so ENet is built on its IPv4 arm
 			target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
 		elseif(WIN32)
 			# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)

@@ -215,8 +215,6 @@ namespace Death { namespace IO {
 
 	class WebResponseImpl : public IRefCounted
 	{
-		friend class WebRequestImpl;
-
 	public:
 		~WebResponseImpl() override;
 
@@ -248,6 +246,8 @@ namespace Death { namespace IO {
 
 		void ReportDataReceived(std::size_t sizeReceived);
 
+		void Finalize();
+
 	protected:
 		WebRequestImpl& _request;
 
@@ -260,8 +260,6 @@ namespace Death { namespace IO {
 		SmallVector<char, 0> _readBuffer;
 		mutable std::unique_ptr<FileStream> _file;
 		mutable std::unique_ptr<Stream> _stream;
-
-		void Finalize();
 	};
 
 	class WebSessionFactory
@@ -1342,8 +1340,9 @@ namespace Death { namespace IO {
 
 		String GetError() const;
 
-		// Method called from libcurl callback
+		// Methods called from libcurl callbacks
 		std::size_t CURLOnRead(char* buffer, std::size_t size);
+		int CURLOnSeek(curl_off_t offset, int origin);
 
 	private:
 		// This is only used for async requests
@@ -2159,6 +2158,11 @@ namespace Death { namespace IO {
 			_response->ReportDataReceived(bytesRead);
 		}
 
+		// Nothing else runs before this function returns, so the file backing the response has to be closed
+		// right here - otherwise the caller is handed the path of a file whose tail is still sitting
+		// in a buffer
+		_response->Finalize();
+
 		return GetResultFromHTTPStatus(_response);
 	}
 
@@ -2786,6 +2790,13 @@ namespace Death { namespace IO {
 		return static_cast<WebRequestCURL*>(userdata)->CURLOnRead(buffer, size * nitems);
 	}
 
+	static int CURLSeek(void* userdata, curl_off_t offset, int origin)
+	{
+		DEATH_DEBUG_ASSERT(userdata != nullptr);
+
+		return static_cast<WebRequestCURL*>(userdata)->CURLOnSeek(offset, origin);
+	}
+
 	WebRequestCURL::WebRequestCURL(WebSessionCURL& sessionImpl, StringView url)
 		: WebRequestImpl(sessionImpl), _sessionCURL(nullptr), _handle(curl_easy_init()), _bytesSent(0)
 	{
@@ -2812,6 +2823,11 @@ namespace Death { namespace IO {
 		CURLSetOpt(_handle, CURLOPT_HEADERFUNCTION, CURLHeader);
 		CURLSetOpt(_handle, CURLOPT_READFUNCTION, CURLRead);
 		CURLSetOpt(_handle, CURLOPT_READDATA, this);
+		// Without a way to rewind the attached data libcurl has to abandon any request it needs to submit
+		// a second time, which is what a 301/302/307/308 redirect and a 401/407 answered with credentials
+		// both come down to
+		CURLSetOpt(_handle, CURLOPT_SEEKFUNCTION, CURLSeek);
+		CURLSetOpt(_handle, CURLOPT_SEEKDATA, this);
 		CURLSetOpt(_handle, CURLOPT_ACCEPT_ENCODING, "");
 		// The shared DNS cache, TLS session cache and connection pool make this per-request handle reuse
 		// what previous requests already paid for, instead of starting from a cold state every time
@@ -2821,13 +2837,6 @@ namespace Death { namespace IO {
 		// Requests are executed on background threads, where libcurl must not use signals to time out
 		// name resolution - it's unsafe outside the main thread and can wedge the process
 		CURLSetOpt(_handle, CURLOPT_NOSIGNAL, 1L);
-#	if defined(DEATH_TARGET_PSP)
-		// The console's stack is IPv4-only - sceNetInet has no IPv6 in it at all - so an address of any other
-		// family can only take the transfer somewhere it cannot go. libcurl notices the family it cannot use
-		// late and indirectly, in conninfo_remote(), where it surfaces as an inet_ntop() failure rather than
-		// as anything resembling "this address is unusable"
-		CURLSetOpt(_handle, CURLOPT_IPRESOLVE, (long)CURL_IPRESOLVE_V4);
-#	endif
 		CURLSetOpt(_handle, CURLOPT_CONNECTTIMEOUT, (long)WebRequestConnectTimeoutSecs);
 		// Stalled means making no progress at all (under 1 B/s) for the shared inactivity bound
 		CURLSetOpt(_handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
@@ -2939,10 +2948,17 @@ namespace Death { namespace IO {
 			return result;
 		}
 
+		_errorBuffer[0] = '\0';
 		_result = curl_easy_perform(_handle);
 		if (_result != CURLE_OK) {
-			// This ensures that DoHandleCompletion() returns failure and uses libcurl error message
+			// Whatever arrived before the transfer broke down is not worth handing to the caller, who has
+			// no way of telling how much of it is missing
 			_response.reset();
+		} else if (_response != nullptr) {
+			// Nothing else runs before this function returns, so the file backing the response has to be
+			// closed right here - otherwise the caller is handed the path of a file whose tail is still
+			// sitting in a buffer
+			_response->Finalize();
 		}
 
 		return DoHandleCompletion();
@@ -2968,7 +2984,14 @@ namespace Death { namespace IO {
 
 	bool WebRequestCURL::StartRequest()
 	{
+		// The same handle is submitted again once credentials for a 401/407 arrive, and libcurl starts that
+		// over as a brand new transfer that reads the upload from wherever the stream happens to be left
 		_bytesSent = 0;
+		_errorBuffer[0] = '\0';
+
+		if (_dataStream != nullptr) {
+			_dataStream->Seek(0, SeekOrigin::Begin);
+		}
 
 		if (!_sessionCURL->StartRequest(*this)) {
 			SetState(WebRequest::State::Failed);
@@ -2985,10 +3008,14 @@ namespace Death { namespace IO {
 
 	WebRequest::Result WebRequestCURL::DoHandleCompletion()
 	{
-		// This is a special case, we want to use libcurl error message if there is no response at all
-		if (_response == nullptr || _response->GetStatus() == 0) {
+		// A failed transfer can still carry a response that looks perfectly complete, because the failure
+		// can happen long after the headers arrived - the body is then truncated while the status line goes
+		// on saying 200, so the libcurl outcome gets to decide before the HTTP status does. The same message
+		// covers the case of no response at all, where it's the only thing there is to report.
+		if (_result != CURLE_OK || _response == nullptr || _response->GetStatus() == 0) {
 			return Result::Error(GetError());
 		}
+
 		return GetResultFromHTTPStatus(WebResponseImplPtr(_response));
 	}
 
@@ -3006,16 +3033,22 @@ namespace Death { namespace IO {
 
 	String WebRequestCURL::GetError() const
 	{
-		// The error buffer holds the last message libcurl saw fit to write, which is not necessarily the one
-		// that ended the transfer: several of its diagnostics are non-fatal (conninfo_remote(), for one,
-		// reports a failing getpeername() and carries on), and several failure codes never write a message
-		// at all. So the code goes in as well - it is the only part that always describes the actual outcome.
+		// Nothing failed as far as libcurl is concerned, and the buffer is documented as meaningless unless
+		// the transfer did, so all that is left to describe is what the caller was denied
+		if (_result == CURLE_OK) {
+			return "Server returned no response"_s;
+		}
+
+		// The code comes first because it is the only part that always describes the actual outcome; the
+		// buffer holds the last message libcurl saw fit to write, which is not necessarily the one that
+		// ended the transfer - several of its diagnostics are non-fatal (conninfo_remote() reports a failing
+		// getpeername() and carries on) and several failure codes write nothing at all.
 		String description = curl_easy_strerror(_result);
 		if (_errorBuffer[0] == '\0') {
 			return description;
 		}
 
-		return String(_errorBuffer) + " ("_s + description + ")"_s;
+		return description + " / "_s + StringView(_errorBuffer);
 	}
 
 	std::size_t WebRequestCURL::CURLOnRead(char* buffer, std::size_t size)
@@ -3031,6 +3064,34 @@ namespace Death { namespace IO {
 
 		_bytesSent += bytesRead;
 		return bytesRead;
+	}
+
+	int WebRequestCURL::CURLOnSeek(curl_off_t offset, int origin)
+	{
+		if (_dataStream == nullptr) {
+			return CURL_SEEKFUNC_CANTSEEK;
+		}
+
+		SeekOrigin seekOrigin;
+		switch (origin) {
+			case SEEK_SET: seekOrigin = SeekOrigin::Begin; break;
+			case SEEK_CUR: seekOrigin = SeekOrigin::Current; break;
+			case SEEK_END: seekOrigin = SeekOrigin::End; break;
+			default:
+				LOGD("Cannot seek attached data, unknown origin {}", origin);
+				return CURL_SEEKFUNC_CANTSEEK;
+		}
+
+		std::int64_t newPos = _dataStream->Seek(std::int64_t(offset), seekOrigin);
+		if (newPos < 0) {
+			return CURL_SEEKFUNC_CANTSEEK;
+		}
+
+		// Everything from here on is sent for the second time, so the counter has to go back with the stream
+		// instead of climbing past the total size
+		_bytesSent = newPos;
+
+		return CURL_SEEKFUNC_OK;
 	}
 
 	std::int64_t WebRequestCURL::GetBytesSent() const

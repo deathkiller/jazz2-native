@@ -41,6 +41,10 @@ struct ipv6_mreq {
 #	include <Utf8.h>
 #endif
 
+#if defined(DEATH_TARGET_PSP) && defined(WITH_ONLINE_MULTIPLAYER)
+#	include "../../nCine/Backends/Psp/PspNetwork.h"
+#endif
+
 #include <jsoncpp/json.h>
 
 using namespace std::string_view_literals;
@@ -826,6 +830,13 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnClientThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+
+#if defined(DEATH_TARGET_PSP)
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one
+		Backends::PspNetwork::EnsureConnected();
+#endif
+
 		IServerObserver* observer = _this->_observer;
 
 		NetworkManagerBase::InitializeBackend();
@@ -864,6 +875,13 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnServerThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+
+#if defined(DEATH_TARGET_PSP)
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one
+		Backends::PspNetwork::EnsureConnected();
+#endif
+
 		NetworkManager* server = _this->_server;
 		std::int32_t delayCount = 30;	// Delay for 15 seconds before starting to send discovery responses
 

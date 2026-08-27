@@ -23,6 +23,7 @@
 #elif defined(WITH_PSP)
 #	include "Backends/Psp/PspGfxDevice.h"
 #	include "Backends/Psp/PspInputManager.h"
+#	include "Backends/Psp/PspNetwork.h"
 #elif defined(WITH_PS2)
 #	include "Backends/Ps2/Ps2GfxDevice.h"
 #	include "Backends/Ps2/Ps2InputManager.h"
@@ -71,14 +72,6 @@ extern "C" {
 #	include <pspkernel.h>
 #	include <pspdebug.h>
 #	include <psppower.h>
-#	if defined(WITH_CURL)
-// The console has no socket stack at boot, `WebRequest` needs one brought up first (see PspNetworkInitialize)
-#		include <psputility.h>
-#		include <pspnet.h>
-#		include <pspnet_inet.h>
-#		include <pspnet_apctl.h>
-#		include <pspnet_resolver.h>
-#	endif
 #elif defined(DEATH_TARGET_VITA)
 #	include <vitasdk.h>
 #	include <vitaGL.h>
@@ -221,98 +214,6 @@ namespace nCine
 		return 0;
 	}
 
-#	if defined(WITH_CURL)
-	// Set once the stack itself is up, so it is not torn down again when it never came up
-	static bool __pspNetworkInitialized = false;
-
-	// There is no socket stack at boot on this console: the two network PRXes have to be loaded, the stack
-	// brought up and an access point joined before a single BSD call - and therefore libcurl, which is what
-	// WebRequest is built on everywhere except Windows - can work. WITH_CURL is what decides whether
-	// anything in the build can reach the network at all, the update check being the only caller left here
-	// (online multiplayer is off on this console, see WITH_ONLINE_MULTIPLAYER).
-	//
-	// None of it is fatal to the application - all that is lost is the route the update check would have
-	// taken - hence the warnings rather than errors. The error codes are formatted unsigned, because they
-	// all have the high bit set (0x8011....) and would print as the negative `int` the SDK returns them as.
-	static void PspNetworkInitialize()
-	{
-		// The stack lives in these two firmware modules and neither one is loaded into a user-mode
-		// application by default. COMMON has to go first, INET is what implements the BSD sockets.
-		sceUtilityLoadNetModule(PSP_NET_MODULE_COMMON);
-		sceUtilityLoadNetModule(PSP_NET_MODULE_INET);
-
-		// The pool is what every socket buffer is carved out of, so it also caps how much can be in flight;
-		// 128 KB is what the firmware's own network applications ask for. The two priority/stack pairs
-		// belong to the callout and interrupt threads the stack creates for itself.
-		int result = sceNetInit(128 * 1024, 42, 4 * 1024, 42, 4 * 1024);
-		if (result < 0) {
-			LOGW("Failed to initialize the network stack, sceNetInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			return;
-		}
-		result = sceNetInetInit();
-		if (result < 0) {
-			LOGW("Failed to initialize the network stack, sceNetInetInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			return;
-		}
-		// libcurl resolves host names through gethostbyname(), which the newlib port routes into this
-		// resolver - without it every transfer fails with "Could not resolve host"
-		result = sceNetResolverInit();
-		if (result < 0) {
-			LOGW("Failed to initialize the network stack, sceNetResolverInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			return;
-		}
-		result = sceNetApctlInit(0x8000, 48);
-		if (result < 0) {
-			LOGW("Failed to initialize the network stack, sceNetApctlInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			return;
-		}
-
-		__pspNetworkInitialized = true;
-
-		// Index 1 is the first of the network configurations saved in the system settings (PPSSPP always
-		// provides one). Association and DHCP are asynchronous, so the state has to be polled until an
-		// address arrives - and the budget is deliberately small, because every second of it is a stall in
-		// front of the intro.
-		result = sceNetApctlConnect(1);
-		if (result < 0) {
-			LOGW("No network connection is available, sceNetApctlConnect() failed with error 0x{:.8x}", std::uint32_t(result));
-			return;
-		}
-
-		for (int i = 0; i < 50; i++) {
-			// Plain `int` and not `std::int32_t`, because sceNetApctlGetState() takes `int*` and newlib
-			// typedefs the fixed-width type to `long` on this target
-			int state;
-			if (sceNetApctlGetState(&state) < 0) {
-				break;
-			}
-			if (state == PSP_NET_APCTL_STATE_GOT_IP) {
-				LOGI("Network connection is established");
-				return;
-			}
-			sceKernelDelayThread(100 * 1000);
-		}
-
-		LOGW("Timed out waiting for a network connection (sceNetApctlGetState)");
-		sceNetApctlDisconnect();
-	}
-
-	static void PspNetworkShutdown()
-	{
-		if (!__pspNetworkInitialized) {
-			return;
-		}
-
-		__pspNetworkInitialized = false;
-		sceNetApctlDisconnect();
-		sceNetApctlTerm();
-		sceNetResolverTerm();
-		sceNetInetTerm();
-		sceNetTerm();
-		sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
-		sceUtilityUnloadNetModule(PSP_NET_MODULE_COMMON);
-	}
-#	endif
 #endif
 
 	Application& theApplication()
@@ -502,10 +403,11 @@ namespace nCine
 		printf("Application starting...\n");
 
 #	if defined(WITH_CURL)
-		// Brings up the socket stack that `WebRequest` needs, which nothing on this console has at boot. It
-		// has to happen before Init() below, because the only thing that uses it - the update check - is
-		// started from the event handler's OnInit(), which that call reaches.
-		PspNetworkInitialize();
+		// Brings up the socket stack that nothing on this console has at boot. It has to happen before
+		// Init() below, because the first thing that uses the network - the update check - is started from
+		// the event handler's OnInit(), which that call reaches. Only the stack is brought up here, no
+		// access point is joined (see PspNetwork::EnsureConnected), so it costs nothing.
+		PspNetwork::Initialize();
 #	endif
 #elif defined(DEATH_TARGET_VITA)
 		// Enable analog sampling for controllers
@@ -596,7 +498,7 @@ namespace nCine
 		sceKernelExitProcess(0);
 #elif defined(DEATH_TARGET_PSP)
 #	if defined(WITH_CURL)
-		PspNetworkShutdown();
+		PspNetwork::Shutdown();
 #	endif
 		// Returning from main() would land back in the crt0 stub, which halts; the firmware expects a
 		// finished application to hand control back to whatever launched it instead

@@ -288,11 +288,9 @@ endif()
 
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
-elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFORM_MORPHOS)
+elseif(PLATFORM_N64 OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFORM_MORPHOS)
 	# These consoles are single-threaded, each for its own reason, and none is a configuration change
 	# away from working:
-	#  - PSP: pspdev's pthread-embedded lacks the thread names, affinity and priorities the engine's
-	#    threading layer expects of sceKernelCreateThread.
 	#  - PS2: a thread created through PS2SDK's libpthreadglue never appears to be scheduled.
 	#  - PS3: PSL1GHT ships no pthreads at all - newlib installs <pthread.h>, nothing implements it.
 	#  - N64: libdragon ships no pthreads either (its cooperative kthread kernel is a different API),
@@ -304,8 +302,8 @@ elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_
 	#    coroutine type, so every one of the 264 unqualified `Task<...>` declarations in the game becomes
 	#    ambiguous as soon as anything includes the header. Nothing else in the SDK does (SDL2's headers
 	#    are clean), so the way out is to not use pthreads rather than to rename a type across the game.
-	# TODO: The first three have cycles to spare for a background asset loader (the Allegrex's Media
-	# Engine, the EE, and the Cell's second PPE thread plus the SPEs).
+	# TODO: The first two have cycles to spare for a background asset loader (the EE, and the Cell's
+	# second PPE thread plus the SPEs).
 	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
 else()
 	option(NCINE_WITH_THREADS "Enable support for threads" ON)
@@ -566,6 +564,9 @@ option(DEATH_TRACE "Enable runtime event tracing" ON)
 # scheduling cannot be relied on there, and a log line that never leaves the queue is worse than a slow one -
 # it makes the platform undebuggable. Synchronous tracing writes straight to the EE's serial port instead
 # (see Application::OnTraceReceived).
+# The PSP is excluded for the second half of that reason alone - it does have working threads - because the
+# trace stream is the only debugging channel the console has, and a queued line is a line that is not there
+# after a crash.
 cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
@@ -645,33 +646,42 @@ cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each ti
 
 # Even the local (splitscreen) half of multiplayer is built on NetworkManagerBase, which owns an
 # `nCine::Thread` unconditionally on every non-Emscripten platform, so the whole feature needs threads.
-# This only ever excludes a target that has none at all (the PSP today) - every other platform defaults
-# NCINE_WITH_THREADS to ON, and Emscripten reaches NetworkManagerBase through its own thread-free arm.
+# Emscripten reaches NetworkManagerBase through its own thread-free arm instead.
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
 # sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
-# PS Vita is excluded for a different reason than the other consoles: it has threads and it has sockets, but
-# the bundled ENet has no Vita arm - its POSIX branch includes <sys/ioctl.h>, which VitaSDK does not ship at
-# all - so the transport cannot compile there as it stands. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
-# TODO: Give ENet a Vita arm (sceNet has the equivalent of the ioctl the non-blocking setup needs) and drop
-# the exclusion again.
-# PlayStation 2 is excluded for the same shape of reason as the Vita: PS2SDK has a socket stack (ps2ip), but
-# the bundled IXWebSocket includes <netinet/ip.h>, which PS2SDK does not ship - so the WebSocket transport
-# cannot compile there as it stands. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
+# PlayStation 2 is excluded because PS2SDK has a socket stack (ps2ip), but the bundled IXWebSocket includes
+# <netinet/ip.h>, which PS2SDK does not ship - so the WebSocket transport cannot compile there as it stands.
+# Local splitscreen (WITH_MULTIPLAYER) is unaffected.
 # AmigaOS 4 and MorphOS are excluded for the same reason as each other: both bsdsocket stacks are
 # IPv4-only - neither SDK has a <netinet/in6.h> or a `struct in6_addr` anywhere - while the bundled ENet
-# is built around IPv6 addresses with IPv4-mapped ones inside them. This is not a header away like the
-# two exclusions above, so it carries no TODO. Local splitscreen (WITH_MULTIPLAYER) is unaffected.
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+# is built around IPv6 addresses with IPv4-mapped ones inside them. Local splitscreen (WITH_MULTIPLAYER)
+# is unaffected.
+# TODO: ENET_IPV6=0 is what the PSP arm below uses to get past exactly that, so these two are no longer
+# blocked on the address family - what is left for them is threads (see NCINE_WITH_THREADS above).
+# Neither Sony handheld is excluded, although both stacks are IPv4-only: ENET_IPV6=0 covers the address
+# family for them (see ncine_extra_sources.cmake), and what each one needs on top of that lives with the
+# code it belongs to. The PSP has three pieces of the sockets API missing from pspdev's newlib, filled in
+# inside the vendored enet.h - poll() over select(), getaddrinfo()/getnameinfo() over
+# gethostbyname()/gethostbyaddr(). The Vita needs none of that; what it needs is nCine/Backends/Vita/
+# VitaLibcCompat.cpp, because VitaSDK's inet_pton() answers -1 where POSIX says 0 and both libcurl and
+# ENet read that as "yes, an address" (see the file). The <sys/ioctl.h> that used to be given as the Vita's
+# blocker turned out to be an unused include - ENet only ever calls ioctl() in its _WIN32 arm.
+# Both verified against a real ENet peer, under PPSSPP and Vita3K respectively.
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
-# PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
+# PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used, and
+# on the Vita that is now the transport that carries online play rather than a fallback).
 # AmigaOS 4 is excluded for one header rather than the stack: its bsdsocket headers cover everything
 # else IXWebSocket wants, but there is no <poll.h> anywhere in the SDK - the OS offers select() and
 # the library's own WaitSelect - and IXWebSocket includes it unconditionally. MorphOS does ship <poll.h>
 # and is named here only to keep the exclusion explicit: this option follows WITH_ONLINE_MULTIPLAYER,
 # which is already off there for the ENet reason above.
-cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+# The PSP is excluded for both of the reasons above at once: pspdev has neither <netinet/ip.h> nor a
+# <poll.h> header (the shim that gets ENet past that is a private engine header, not something the
+# library's own `#include <poll.h>` can find). The ENet transport carries online play there.
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
 	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners

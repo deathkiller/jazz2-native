@@ -152,12 +152,263 @@
 	#include <netinet/tcp.h>
 
 	#if defined(ENET_IMPLEMENTATION)
+	#if !defined(DEATH_TARGET_PSP)
 	#include <poll.h>
+	#endif
 	#include <string.h>
+	#if defined(DEATH_TARGET_VITA)
+	// VitaSDK declares getnameinfo() with C's `restrict`, which is not a keyword in C++ and makes the
+	// declaration unparseable there. GCC's spelling of it works in both languages, so the keyword is
+	// mapped onto that across this one include and put back afterwards.
+	#define restrict __restrict
 	#include <netdb.h>
+	#undef restrict
+	#else
+	#include <netdb.h>
+	#endif
 	#include <unistd.h>
+	#if !defined(DEATH_TARGET_VITA)
+	// Nothing below reaches for it: ioctl() appears only in the _WIN32 arm, as ioctlsocket(FIONBIO),
+	// while every POSIX target switches non-blocking sockets with fcntl() or setsockopt() instead.
+	// VitaSDK ships no <sys/ioctl.h> at all, which is the only reason the include is guarded.
 	#include <sys/ioctl.h>
+	#endif
 	#include <fcntl.h>
+
+	#if !defined(SOMAXCONN)
+	// Also absent from VitaSDK's <sys/socket.h>; this is the value every BSD-derived stack uses, and it
+	// is only ever reached through enet_socket_listen(), which a UDP host never calls
+	#define SOMAXCONN 128
+	#endif
+	#endif
+
+	#if defined(ENET_IMPLEMENTATION) && defined(DEATH_TARGET_PSP)
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <sys/select.h>
+
+	// pspdev's newlib covers most of the BSD sockets API through libcglue (socket, bind, connect, select,
+	// send/recv, setsockopt, gethostbyname, and inet_pton/inet_ntop as macros onto sceNetInet*), but stops
+	// short of the three pieces below. The firmware is not missing anything here - it is only the POSIX
+	// spelling that is absent - so they are filled in over what libcglue does export rather than by
+	// rewriting the transport around sceNetInet. They are static: this is the only translation unit that
+	// needs them, and nothing on this console declares these names.
+
+	#define POLLIN		0x0001
+	#define POLLPRI		0x0002
+	#define POLLOUT		0x0004
+	#define POLLERR		0x0008
+	#define POLLHUP		0x0010
+	#define POLLNVAL	0x0020
+
+	struct pollfd {
+		int fd;
+		short events;
+		short revents;
+	};
+
+	// The firmware has sceNetInetPoll(), but its own struct and event bits, and nothing in the SDK says
+	// which values it expects - so this goes over select(), which libcglue does export and libcurl already
+	// relies on. ENet only ever polls a single socket (enet_socket_wait), which select() answers exactly.
+	static int poll(struct pollfd* fds, unsigned int nfds, int timeout) {
+		fd_set readSet, writeSet, exceptSet;
+		struct timeval timeVal;
+		int maxFd = -1, result, readyCount = 0;
+		unsigned int i;
+
+		if (fds == NULL || nfds == 0) {
+			return -1;
+		}
+
+		FD_ZERO(&readSet); FD_ZERO(&writeSet); FD_ZERO(&exceptSet);
+
+		for (i = 0; i < nfds; i++) {
+			fds[i].revents = 0;
+			if (fds[i].fd < 0) {
+				continue;
+			}
+			if (fds[i].events & (POLLIN | POLLPRI)) {
+				FD_SET(fds[i].fd, &readSet);
+			}
+			if (fds[i].events & POLLOUT) {
+				FD_SET(fds[i].fd, &writeSet);
+			}
+			// select() reports every error condition through the exception set, which is where POLLERR has
+			// to come from - poll() delivers that without being asked, so it is always armed
+			FD_SET(fds[i].fd, &exceptSet);
+			if (fds[i].fd > maxFd) {
+				maxFd = fds[i].fd;
+			}
+		}
+
+		if (maxFd < 0) {
+			return -1;
+		}
+
+		if (timeout >= 0) {
+			timeVal.tv_sec = timeout / 1000;
+			timeVal.tv_usec = (timeout % 1000) * 1000;
+		}
+
+		result = select(maxFd + 1, &readSet, &writeSet, &exceptSet, (timeout >= 0 ? &timeVal : NULL));
+		if (result <= 0) {
+			return result;
+		}
+
+		// The return value is the number of descriptors with something to report, not the number of bits
+		// that were set - a socket that is both readable and writable counts once
+		for (i = 0; i < nfds; i++) {
+			if (fds[i].fd < 0) {
+				continue;
+			}
+			if (FD_ISSET(fds[i].fd, &readSet)) {
+				fds[i].revents |= (short)(fds[i].events & (POLLIN | POLLPRI));
+			}
+			if (FD_ISSET(fds[i].fd, &writeSet)) {
+				fds[i].revents |= POLLOUT;
+			}
+			if (FD_ISSET(fds[i].fd, &exceptSet)) {
+				fds[i].revents |= POLLERR;
+			}
+			if (fds[i].revents != 0) {
+				readyCount++;
+			}
+		}
+
+		return readyCount;
+	}
+
+	#define AI_PASSIVE		0x0001
+	#define AI_NUMERICHOST	0x0004
+
+	#define NI_NUMERICHOST	0x0001
+	#define NI_NAMEREQD		0x0004
+
+	#define EAI_NONAME		-2
+	#define EAI_FAIL		-4
+	#define EAI_FAMILY		-6
+	#define EAI_MEMORY		-10
+
+	struct addrinfo {
+		int ai_family;
+		int ai_socktype;
+		int ai_protocol;
+		int ai_flags;
+		socklen_t ai_addrlen;
+		char* ai_canonname;			// Never filled in, there is no resolver behind it
+		struct sockaddr* ai_addr;
+		struct addrinfo* ai_next;	// Always NULL, one address is all this can answer with
+	};
+
+	static int getaddrinfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res) {
+		// The result and its address are one allocation, so freeaddrinfo() below is a single free()
+		struct Combined {
+			struct addrinfo ai;
+			struct sockaddr_in sin;
+		};
+
+		struct Combined* combined;
+		struct in_addr parsed;
+		in_addr_t host;
+		unsigned short port = 0;	// enet_uint16 is not typedef'd this early in the header
+
+		if (res == NULL) {
+			return EAI_FAIL;
+		}
+
+		*res = NULL;
+
+		if (hints != NULL && hints->ai_family != AF_UNSPEC && hints->ai_family != AF_INET) {
+			// The console's stack is IPv4-only, so anything else has nowhere to go
+			return EAI_FAMILY;
+		}
+
+		if (node == NULL) {
+			host = htonl((hints != NULL && (hints->ai_flags & AI_PASSIVE)) ? INADDR_ANY : INADDR_LOOPBACK);
+		} else if (inet_aton(node, &parsed) == 1) {
+			host = parsed.s_addr;
+		} else if (hints != NULL && (hints->ai_flags & AI_NUMERICHOST)) {
+			return EAI_NONAME;
+		} else {
+			// gethostbyname() is the only resolver libcglue exports (it routes into sceNetResolver), and it
+			// answers with IPv4 addresses alone - which is all this can return anyway
+			struct hostent* entry = gethostbyname(node);
+			if (entry == NULL || entry->h_addrtype != AF_INET || entry->h_addr_list == NULL ||
+				entry->h_addr_list[0] == NULL) {
+				return EAI_NONAME;
+			}
+			memcpy(&host, entry->h_addr_list[0], sizeof(host));
+		}
+
+		if (service != NULL) {
+			// Only numeric services are supported - there is no /etc/services on this console, and the one
+			// caller (enet_address_set_host) passes NULL anyway
+			port = (unsigned short)strtoul(service, NULL, 10);
+		}
+
+		combined = (struct Combined*)calloc(1, sizeof(struct Combined));
+		if (combined == NULL) {
+			return EAI_MEMORY;
+		}
+
+		combined->sin.sin_len = sizeof(struct sockaddr_in);
+		combined->sin.sin_family = AF_INET;
+		combined->sin.sin_port = htons(port);
+		combined->sin.sin_addr.s_addr = host;
+
+		combined->ai.ai_family = AF_INET;
+		combined->ai.ai_socktype = (hints != NULL ? hints->ai_socktype : 0);
+		combined->ai.ai_protocol = (hints != NULL ? hints->ai_protocol : 0);
+		combined->ai.ai_flags = (hints != NULL ? hints->ai_flags : 0);
+		combined->ai.ai_addrlen = sizeof(struct sockaddr_in);
+		combined->ai.ai_addr = (struct sockaddr*)&combined->sin;
+		combined->ai.ai_next = NULL;
+
+		*res = &combined->ai;
+		return 0;
+	}
+
+	static void freeaddrinfo(struct addrinfo* res) {
+		// Every result is a single allocation holding both the node and its address, and the list is never
+		// longer than one entry, so there is nothing to walk
+		free(res);
+	}
+
+	static int getnameinfo(const struct sockaddr* addr, socklen_t addrlen, char* host, socklen_t hostlen,
+		char* serv, socklen_t servlen, int flags) {
+		const struct sockaddr_in* sin = (const struct sockaddr_in*)addr;
+
+		if (addr == NULL || addr->sa_family != AF_INET || addrlen < (socklen_t)sizeof(struct sockaddr_in)) {
+			return EAI_FAMILY;
+		}
+
+		if (serv != NULL && servlen > 0) {
+			snprintf(serv, servlen, "%u", (unsigned int)ntohs(sin->sin_port));
+		}
+
+		if (host == NULL || hostlen == 0) {
+			return 0;
+		}
+
+		if ((flags & NI_NUMERICHOST) == 0) {
+			// The firmware's resolver has no reverse lookup behind gethostbyaddr(), so this is expected to
+			// come back empty - NI_NAMEREQD callers want EAI_NONAME for that, which is what
+			// enet_address_get_host falls back on, and the rest take the numeric form below
+			struct hostent* entry = gethostbyaddr(&sin->sin_addr, sizeof(sin->sin_addr), AF_INET);
+			if (entry != NULL && entry->h_name != NULL) {
+				snprintf(host, hostlen, "%s", entry->h_name);
+				return 0;
+			}
+			if (flags & NI_NAMEREQD) {
+				return EAI_NONAME;
+			}
+		}
+
+		if (inet_ntop(AF_INET, &sin->sin_addr, host, hostlen) == NULL) {
+			return EAI_FAIL;
+		}
+		return 0;
+	}
 	#endif
 
 	#ifdef __APPLE__
@@ -5697,7 +5948,12 @@ extern "C" {
 
 		switch (option) {
 			case ENET_SOCKOPT_NONBLOCK:
+#if defined(DEATH_TARGET_PSP)
+				// newlib's fcntl() does not reach the firmware's sockets, they are switched with this instead
+				result = setsockopt(socket, SOL_SOCKET, SO_NONBLOCK, (char*)&value, sizeof(int));
+#else
 				result = fcntl(socket, F_SETFL, (value ? O_NONBLOCK : 0) | (fcntl(socket, F_GETFL) & ~O_NONBLOCK));
+#endif
 				break;
 
 			case ENET_SOCKOPT_BROADCAST:
@@ -5736,9 +5992,11 @@ extern "C" {
 				result = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char *)&value, sizeof(int));
 				break;
 #if ENET_IPV6
+#if defined(IPV6_V6ONLY)
 			case ENET_SOCKOPT_IPV6_V6ONLY:
 				result = setsockopt(socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&value, sizeof(int));
 				break;
+#endif
 #endif
 		}
 		return (result == -1 ? -1 : 0);
@@ -5960,6 +6218,42 @@ extern "C" {
 			address->host           = sin.sin6_addr;
 			address->port           = ENET_NET_TO_HOST_16(sin.sin6_port);
 			address->sin6_scope_id  = sin.sin6_scope_id;
+		}
+
+		return recvLength;
+#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+		// Both Sony handhelds export recvmsg() in firmware, and neither emulator implements it - PPSSPP
+		// logs "UNIMPL sceNetInetRecvmsg", Vita3K "Unimplemented sceNetRecvmsg import called" - while both
+		// do implement sendmsg, so only the receive side needs another route. Nothing is given up by
+		// taking recvfrom(): every caller of this function passes exactly one buffer (see
+		// enet_protocol_receive_incoming_commands), which is precisely what recvfrom() takes, and a
+		// datagram longer than it is truncated either way. It is what the hardware does too, so this is
+		// not an emulator-only path that goes untested on a console.
+		struct sockaddr_in sin;
+		socklen_t sinLength = sizeof(struct sockaddr_in);
+		int recvLength;
+
+		if (bufferCount != 1) {
+			return -1;
+		}
+
+		recvLength = recvfrom(socket, buffers[0].data, buffers[0].dataLength, MSG_NOSIGNAL,
+			(address != NULL ? (struct sockaddr*)&sin : NULL), (address != NULL ? &sinLength : NULL));
+
+		if (recvLength == -1) {
+			switch (errno) {
+				case EWOULDBLOCK:
+					return 0;
+				case EINTR:
+				case EMSGSIZE:
+					return -2;
+			}
+			return -1;
+		}
+
+		if (address != NULL) {
+			address->host = sin.sin_addr.s_addr;
+			address->port = ENET_NET_TO_HOST_16(sin.sin_port);
 		}
 
 		return recvLength;

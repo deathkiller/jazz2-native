@@ -21,6 +21,9 @@
 #endif
 
 #include "nCine/I18n.h"
+#if defined(DEATH_TARGET_PSP)
+#	include "nCine/Backends/Psp/PspNetwork.h"
+#endif
 #include "nCine/IAppEventHandler.h"
 #include "nCine/tracy.h"
 #include "nCine/Base/Random.h"
@@ -2051,6 +2054,12 @@ void GameEventHandler::CheckUpdates()
 {
 #	if !defined(DEATH_DEBUG)
 	ZoneScopedC(0x888888);
+
+#	if defined(DEATH_TARGET_PSP)
+	// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread that
+	// is not the main one - which this is, the whole check runs on the parallel initialization thread
+	Backends::PspNetwork::EnsureConnected();
+#	endif
 
 	String url = "https://de4th.dev/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	if (auto session = WebSession::GetDefault()) {

@@ -28,6 +28,11 @@
 #		include <net/if.h>
 #	elif defined(DEATH_TARGET_WINDOWS)
 #		include <iphlpapi.h>
+#	elif defined(DEATH_TARGET_PSP)
+#		include <pspnet_apctl.h>
+#		include "../../nCine/Backends/Psp/PspNetwork.h"
+#	elif defined(DEATH_TARGET_VITA)
+#		include <psp2/net/netctl.h>
 #	elif !defined(DEATH_TARGET_EMSCRIPTEN)
 #		include <ifaddrs.h>
 #	endif
@@ -542,6 +547,37 @@ namespace Jazz2::Multiplayer
 							// Unsupported address family
 						}
 					}
+				}
+			} else {
+				LOGW("Failed to get server endpoints");
+			}
+#	elif defined(DEATH_TARGET_VITA)
+			// Same as on the PSP below - there is no interface list to walk, and the one address the stack
+			// has is reported already formatted, here by sceNetCtlInetGetInfo()
+			SceNetCtlInfo info;
+			struct in_addr vitaAddr;
+			if (sceNetCtlInetGetInfo(SCE_NETCTL_INFO_GET_IP_ADDRESS, &info) == 0 &&
+				inet_aton(info.ip_address, &vitaAddr) == 1) {
+				String addressString = AddressToString(vitaAddr, _host->address.port);
+				LOGI("Found 1 interface:");
+				LOGI(" -\t{}", addressString);
+				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+					arrayAppend(result, std::move(addressString));
+				}
+			} else {
+				LOGW("Failed to get server endpoints");
+			}
+#	elif defined(DEATH_TARGET_PSP)
+			// There is no interface list to walk on this console: the stack has exactly one address, the one
+			// the access point handed out, and sceNetApctlGetInfo() reports it already formatted
+			union SceNetApctlInfo info;
+			struct in_addr addr;
+			if (sceNetApctlGetInfo(PSP_NET_APCTL_INFO_IP, &info) == 0 && inet_aton(info.ip, &addr) == 1) {
+				String addressString = AddressToString(addr, _host->address.port);
+				LOGI("Found 1 interface:");
+				LOGI(" -\t{}", addressString);
+				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+					arrayAppend(result, std::move(addressString));
 				}
 			} else {
 				LOGW("Failed to get server endpoints");
@@ -1553,6 +1589,12 @@ namespace Jazz2::Multiplayer
 	{
 		Thread::SetCurrentName("Multiplayer client");
 
+#if defined(DEATH_TARGET_PSP)
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one
+		Backends::PspNetwork::EnsureConnected();
+#endif
+
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);
 		INetworkHandler* handler = _this->_handler;
 
@@ -1687,6 +1729,12 @@ namespace Jazz2::Multiplayer
 	void NetworkManagerBase::OnServerThread(void* param)
 	{
 		Thread::SetCurrentName("Multiplayer server");
+
+#if defined(DEATH_TARGET_PSP)
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one
+		Backends::PspNetwork::EnsureConnected();
+#endif
 
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);
 		INetworkHandler* handler = _this->_handler;

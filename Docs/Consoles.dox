@@ -134,14 +134,14 @@ values are what a default `Release` configuration of each console produces.
 
 Feature | N64 | Dreamcast | Wii | GameCube | PSP | PS2 | PS3 | Vita | Switch
 ------- | --- | --------- | --- | -------- | --- | --- | --- | ---- | ------
-Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | **No** | **No** | **No** | Yes | Yes
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes | **No** | **No** | Yes | Yes
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No
 Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
 Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
-Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | **No** --- needs threads | **No** --- needs threads | **No** --- needs threads | Yes | Yes
-Online multiplayer | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
+Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
+Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
 Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
 External `.shader` files | **No** | **No** | **No** | **No** | **No** | **No** | **No** --- no runtime compiler | Yes | Yes
 Converts the game data itself | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
@@ -777,8 +777,27 @@ which asks the firmware for the extra memory of the 2000/3000 models, a PSP-1000
 Handing PPSSPP a path outside its memory-stick directory can silently run a **stale** copy of the
 game. Copy the staged tree into the emulator's memory stick every time --- for the flatpak that is
 @cpp "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/GAME/Jazz2/" @ce, which the build directory is
-not writable from. The emulator's `--log=FILE` option does not work either, capture its stdout
-instead, where the game's trace appears prefixed with `I[PRINTF]: stdout:`.
+not writable from.
+
+@m_class{m-noindent}
+
+The game's own trace reaches the emulator's log at the *info* level, prefixed with
+@cpp "I[PRINTF]: stdout:" @ce, so `--loglevel=4 --log=FILE` is the way to read it. The `Jazz2.log`
+written next to the EBOOT is only flushed on a clean exit and stays empty when the emulator is
+killed. For the flatpak, the log path has to be somewhere the sandbox can write --- pass
+`--filesystem=<dir>` for it, or the option looks like it does nothing.
+
+@m_class{m-block m-info}
+
+@par Networking in PPSSPP
+The update check and online multiplayer both need **Enable networking/WLAN** turned on in the
+emulator's settings; without it `sceNetApctlConnect()` fails with
+@cpp "SCE_NET_APCTL_ERROR_WLAN_SWITCH_OFF" @ce and nothing else is attempted. The emulator also steps
+its access-point state machine on a timer and takes a little over **6 seconds** to reach `GOT_IP`,
+which is why the wait in `PspNetwork::EnsureConnected()` is not budgeted more tightly. One gap is
+worth knowing about: PPSSPP does not implement `sceNetInetRecvmsg()` @m_span{m-text m-dim} (`sendmsg`
+it does) @m_endspan, which is why the ENet transport receives through `recvfrom()` here --- exact,
+because ENet only ever receives into a single buffer.
 
 @m_class{m-noindent}
 
@@ -797,10 +816,44 @@ anything else can fail, so the console always has a way out even if initializati
     arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
     sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
     read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
--   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
-    is compiled out and asset loading is synchronous. pspdev does ship a pthreads implementation,
-    but the engine's threading layer also wants thread names, priorities and affinity, which do not
-    map onto `sceKernelCreateThread` as they stand.
+-   **Threads are on**, over pspdev's **pthread-embedded**. Two of the things the engine's threading
+    layer asks for are genuinely absent --- `pthread_setname_np` and CPU affinity --- and are compiled
+    out here the way they already are on the libogc consoles; priorities, `pthread_kill` and the rest
+    are all present. Two details are the console's own: `pthread_t` is a pointer, so a thread id needs
+    a `reinterpret_cast` rather than a `static_cast`, and stack information comes from
+    `sceKernelReferThreadStatus()` and not the Vita's `sceKernelGetThreadInfo()`.
+-   **Thread stacks are 64 KB here, not the 256 KB the Vita uses.** pthread-embedded defaults to
+    32 KB, which is thin for a thread that decodes audio or runs a TLS handshake, but the ceiling is
+    low: the executable takes the whole user partition as its heap
+    @m_span{m-text m-dim} (`PSP_HEAP_SIZE_KB(-1)`) @m_endspan while `sceKernelCreateThread` allocates
+    stacks out of what the firmware kept back, and that pool holds one 256 KB stack but not two. The
+    second creation then fails with `NO_MEMORY` --- silently losing whichever thread starts later,
+    in practice the audio decode thread --- so raising this is not free.
+-   **Online multiplayer works, over ENet only.** `WITH_WEBSOCKET` is forced off: pspdev has neither
+    @cpp "netinet/ip.h" @ce nor a @cpp "poll.h" @ce header, both of which IXWebSocket includes
+    unconditionally. `ENET_IPV6=0` selects ENet's IPv4 arm, as on the Switch, because `sceNetInet`
+    has no IPv6 in it at all. pspdev's newlib covers most of the BSD sockets API through **libcglue**
+    but leaves out `poll()`, `getaddrinfo()` and `getnameinfo()`, which the vendored
+    @cpp "Sources/Dependencies/enet/enet.h" @ce fills in for this target over `select()` and
+    `gethostbyname()`/`gethostbyaddr()`. Two calls also work differently: non-blocking sockets are
+    switched with `setsockopt(SO_NONBLOCK)` rather than `fcntl()`, which does not reach the firmware's
+    sockets, and receiving goes through `recvfrom()` rather than `recvmsg()`
+    @m_span{m-text m-dim} (see @ref consoles-psp-deploy for why) @m_endspan.
+-   **Nothing has joined an access point at boot.** `PspNetwork::Initialize()`
+    @m_span{m-text m-dim} (@cpp "Sources/nCine/Backends/Psp/PspNetwork.cpp" @ce) @m_endspan loads the
+    two network PRXes and brings the stack up during startup, which is cheap, but joining an access
+    point and waiting out a DHCP lease is seconds of work and is left to `PspNetwork::EnsureConnected()`
+    --- called by every consumer of the network on its own thread, so the wait overlaps with the rest
+    of the application coming up instead of stalling in front of it.
+-   **The PSPSDK stub libraries must not be linked twice.** psp-gcc's own `*lib` spec appends
+    `-lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser` after
+    everything CMake emits, and an archive scanned at two points of the link line has its stubs
+    extracted in two non-contiguous chunks. `psp-fixup-imports` then cannot write the stub and NID
+    counts into the module's import table --- it says so, as
+    @cpp "could not fixup imports, stubs out of order" @ce --- and the resulting counts make one
+    module's table overlap the next one's stub slots, so the loader patches syscalls over each other
+    and calls such as `sceNetInetSocket()` end up somewhere else entirely. Anything that spec already
+    provides is therefore deliberately absent from `target_link_libraries` for this target.
 -   The underwater and pause low-pass filters are absent, because pspdev's OpenAL has no `efx.h`.
 -   Textures are limited to **512 pixels per axis**, so larger atlases are split into pages with
     per-primitive page selection, palettized textures use the hardware CLUT, of which only one is
@@ -1053,9 +1106,9 @@ provokes the same thing.
 
 @subsection consoles-ps3-limits Limits and known issues
 
--   **Threads are off.** Unlike the PSP and the PS2, which at least ship a pthreads shim, PSL1GHT has
-    none: the newlib installs a `<pthread.h>` that declares symbols nothing implements, so
-    `pthread_create` does not even link. Threading here means lv2's own PPU threads
+-   **Threads are off.** Unlike the PSP, whose pthread-embedded the engine does use, and the PS2,
+    whose shim at least links, PSL1GHT ships none at all: the newlib installs a `<pthread.h>` that
+    declares symbols nothing implements, so `pthread_create` does not even link. Threading here means lv2's own PPU threads
     @m_span{m-text m-dim} (`sysThreadCreate`, `sys/mutex.h`, `sys/cond.h`) @m_endspan, which would be
     a new backend in @cpp "Thread.cpp" @ce rather than a configuration change. Multiplayer
     @m_span{m-text m-dim} (including local splitscreen) @m_endspan is therefore compiled out and
@@ -1169,6 +1222,19 @@ copy an original installation to @cpp "ux0:/data/jazz2/Source/" @ce and let it b
 Both of those live on @cpp "ux0:" @ce because @cpp "app0:" @ce cannot be written to, reinstalling the
 VPK replaces the content but leaves the cache, the converted source data and the settings alone.
 
+@m_class{m-block m-info}
+
+@par Networking under Vita3K
+The emulator does not implement @cpp "sceNetRecvmsg()" @ce - it says so, as
+@cpp "Unimplemented sceNetRecvmsg import called" @ce - while @cpp "sceNetSendmsg()" @ce it does. ENet
+receives through @cpp "recvfrom()" @ce here for exactly that reason @m_span{m-text m-dim} (see
+@ref consoles-vita-limits; PPSSPP has the same gap) @m_endspan, so online play works under it. Two
+further things it only stubs are harmless: @cpp "sceNetCtlInit()" @ce, and
+@cpp "sceNetResolverDestroy()" @ce, which leaks a resolver handle per lookup under the emulator alone.
+Beyond that, a build whose @cpp "eboot.bin" @ce it has already loaded once is re-run from a cached
+image, so replacing the file is not enough to test a new binary --- quit the emulator fully, or give
+each build its own title id with `-D VITA_TITLEID=`.
+
 @subsection consoles-vita-shaders The console needs a firmware module
 
 Shaders are compiled **on the console**, whichever backend is selected, because the VitaSDK ships no
@@ -1198,9 +1264,30 @@ console's own firmware. Extract it with
     sceGxm onto desktop OpenGL, where such a texture repeats without any restriction, so the join is
     expected to be absent on a console. No workaround is applied for it: emulating one in the shared
     shader would cost every other backend and could not blend across the join anyway.
--   Online multiplayer is unavailable: ENet has no Vita arm @m_span{m-text m-dim} (it needs
-    @cpp "sys/ioctl.h" @ce, which the SDK does not provide) @m_endspan, so `WITH_ONLINE_MULTIPLAYER`
-    is forced off. Local (split-screen) multiplayer is unaffected.
+-   **Online multiplayer works, over ENet only.** `WITH_WEBSOCKET` is forced off, because IXWebSocket
+    includes @cpp "netinet/ip.h" @ce and VitaSDK does not ship it. `ENET_IPV6=0` selects ENet's IPv4 arm,
+    as on the PSP and the Switch: there is no IPv6 anywhere in @cpp "psp2/net/net.h" @ce, so the
+    @cpp "in6_addr" @ce the SDK's own headers declare has nothing behind it. What the @cpp "sys/ioctl.h" @ce
+    ENet includes was once given as the blocker here turned out to be an unused include --- the only
+    @cpp "ioctl()" @ce in the library is @cpp "ioctlsocket(FIONBIO)" @ce in its `_WIN32` arm, and every
+    POSIX target uses @cpp "fcntl()" @ce instead --- so it is simply not included on this target.
+-   **VitaSDK's @cpp "inet_pton()" @ce does not follow POSIX**, and it takes HTTPS down with it. Its
+    `AF_INET` arm forwards to @cpp "sceNetInetPton()" @ce and collapses any negative result to -1, so a
+    host name comes back as -1 where POSIX requires 0 @m_span{m-text m-dim} (-1 is reserved for an
+    unsupported address family) @m_endspan. Both callers here test the result for truth rather than for a
+    positive value, which is what the libraries themselves do: libcurl's OpenSSL back end concludes that
+    the host it is verifying is a literal address and matches the certificate's `iPAddress` entries
+    against four bytes of nothing, failing every request with @cpp "no alternative certificate subject
+    name matches target ipv4 address" @ce; and ENet's @cpp "enet_address_set_host_ip()" @ce, written as
+    @cpp "if (!inet_pton(...)) return -1;" @ce, accepts an address it never parsed. Replacing the function
+    fixes both --- see @cpp "Sources/nCine/Backends/Vita/VitaLibcCompat.cpp" @ce. Until it was, the update
+    check and the public server list had been failing here for the same reason.
+-   The rest of the sockets API needs nothing: VitaSDK provides @cpp "poll()" @ce,
+    @cpp "getaddrinfo()" @ce, @cpp "setsockopt()" @ce and @cpp "recvmsg()" @ce natively, its
+    @cpp "SceNetMsghdr" @ce and @cpp "sockaddr_in" @ce are byte-identical to newlib's, and the network
+    stack needs no explicit bring-up --- newlib calls @cpp "_vita_net_init()" @ce lazily from
+    @cpp "socket()" @ce and the resolver entry points, which is why there is no counterpart here to the
+    PSP's `PspNetwork::Initialize()`.
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.
