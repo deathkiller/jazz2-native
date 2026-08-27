@@ -2055,6 +2055,13 @@ void GameEventHandler::CheckUpdates()
 	String url = "https://de4th.dev/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	if (auto session = WebSession::GetDefault()) {
 		auto request = session.CreateRequest(url);
+#		if defined(DEATH_TARGET_PSP)
+		// pspdev's libcurl is built with the host's CA bundle path, which does not exist on the console, so
+		// the handshake ends as CURLE_SSL_CACERT_BADFILE. Accepted for this request only instead of shipping
+		// a bundle in Content: the response is just a version string, nothing in it is stored or executed.
+		// Hostname verification needs no CA and stays on, so only the chain of trust is dropped.
+		request.DisablePeerVerify();
+#		endif
 		auto result = request.Execute();
 		if (result) {
 			auto s = request.GetResponse().AsString();
