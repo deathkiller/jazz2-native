@@ -54,16 +54,23 @@ jobs:
         # Unlike x86_64, `Libs/Linux/` contains no prebuilt aarch64 libraries, so every dependency has to come
         # from the system. The `-dev` packages are required, because the runtime ones provide neither the headers
         # nor the unversioned `.so` symlinks that `find_package()` needs (without them no backend would be found).
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev
+        # `libdw-dev` (elfutils) is what makes the crash reports readable: without it Backward falls back to
+        # `backtrace_symbols()`, which resolves addresses through the dynamic symbol table only - and since
+        # everything is compiled with `-fvisibility=hidden`, that yields bare addresses and no function names.
+        # It's also the only stack details backend that follows ".gnu_debuglink" into the split symbol file.
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev libdw-dev zlib1g-dev
 
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
-        
+
         rm -f ./Content/Translations/*.po
-        
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
+
+        # `DEATH_DEBUG_SYMBOLS` replaces `NCINE_STRIP_BINARIES` here: instead of discarding the debug info it
+        # splits it off into "jazz2.pdb" and links the stripped executable back to it, the same way as on
+        # Windows. The shipped executable stays just as small, but crash reports have function names again.
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D DEATH_DEBUG_SYMBOLS=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |
@@ -73,6 +80,9 @@ jobs:
       run: |
         mkdir ./_package/
         cp -f ./_build/jazz2 ./_package/jazz2
+        # The split debug symbols, referenced by name from the executable's ".gnu_debuglink" section, so this
+        # has to stay next to it and keep its file name
+        cp -f ./_build/jazz2.pdb ./_package/jazz2.pdb
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
         
@@ -132,7 +142,8 @@ jobs:
         # Unlike x86_64, `Libs/Linux/` contains no prebuilt aarch64 libraries, so every dependency has to come
         # from the system. The `-dev` packages are required, because the runtime ones provide neither the headers
         # nor the unversioned `.so` symlinks that `find_package()` needs (without them no backend would be found).
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev fuse
+        # See the comment on `libdw-dev` in the `Build` job above
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev libdw-dev zlib1g-dev fuse
 
     - name: 'Configure CMake'
       run: |
@@ -141,7 +152,8 @@ jobs:
 
         rm -f ./Content/Translations/*.po
 
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
+        # See the comment on `DEATH_DEBUG_SYMBOLS` in the `Build` job above
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D DEATH_DEBUG_SYMBOLS=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
 
     - name: 'Build'
       run: |
@@ -159,7 +171,17 @@ jobs:
         rm -f -r ./_appdir/usr/share/jazz2/
         rm -f -r ./_appdir/usr/share/doc/
 
-        LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=aarch64 ./linuxdeploy-aarch64.AppImage --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage --plugin checkrt
+        # elfutils' libdw is loaded with `dlopen()` rather than linked, so there is no DT_NEEDED entry for
+        # linuxdeploy to pick up and it has to be named explicitly. It is worth bundling: linuxdeploy patches
+        # the executable's RUNPATH to "$ORIGIN/../lib", which `dlopen()` honours for a bare SONAME, so the
+        # crash reports stay symbolized even on a host that has no elfutils installed.
+        libdwArgs=""
+        libdwPath="$(ls /usr/lib/*/libdw.so.1 2>/dev/null | head -n 1)"
+        if [ -n "$libdwPath" ]; then libdwArgs="--library=$libdwPath"; fi
+
+        # `NO_STRIP` is required, linuxdeploy strips the deployed executable by default, which would remove the
+        # ".gnu_debuglink" section pointing at the bundled "jazz2.pdb" and make the crash reports unreadable
+        NO_STRIP=1 LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=aarch64 ./linuxdeploy-aarch64.AppImage $libdwArgs --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage --plugin checkrt
 
         rhiSuffix=""
         if [ "${{ matrix.RHI }}" != "OpenGL" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi

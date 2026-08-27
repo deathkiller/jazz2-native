@@ -67,10 +67,13 @@ if(${STACK_DETAILS_AUTO_DETECT})
 	if(NOT CMAKE_VERSION VERSION_LESS 3.17)
 		set(_name_mismatched_arg NAME_MISMATCHED)
 	endif()
-	# Find libdw
+	# Find libdw. Only the headers are required: Backward resolves the entry points of "libdw.so.1" with
+	# `dlopen()`/`dlsym()` at runtime (see `Implementation::LibdwApi` in "Backward.h") instead of linking the
+	# library, so a system without elfutils installed still runs the executable, just with crash reports
+	# degraded to module names and offsets. That also means neither the library itself nor any of its own
+	# dependencies (libelf, zlib, liblzma, ...) have to be resolvable here.
 	find_path(LIBDW_INCLUDE_DIR NAMES "elfutils/libdw.h" "elfutils/libdwfl.h")
-	find_library(LIBDW_LIBRARY dw)
-	# In case it's statically linked, look for all the possible dependencies
+	# In case libbfd or libdwarf ends up being used instead, they are linked normally and do need these
 	find_library(LIBELF_LIBRARY elf)
 	find_library(LIBPTHREAD_LIBRARY pthread)
 	find_library(LIBZ_LIBRARY z)
@@ -78,15 +81,9 @@ if(${STACK_DETAILS_AUTO_DETECT})
 	find_library(LIBLZMA_LIBRARY lzma)
 	find_library(LIBZSTD_LIBRARY zstd)
 	set(LIBDW_INCLUDE_DIRS ${LIBDW_INCLUDE_DIR})
-	set(LIBDW_LIBRARIES ${LIBDW_LIBRARY}
-		$<$<BOOL:${LIBELF_LIBRARY}>:${LIBELF_LIBRARY}>
-		$<$<BOOL:${LIBPTHREAD_LIBRARY}>:${LIBPTHREAD_LIBRARY}>
-		$<$<BOOL:${LIBZ_LIBRARY}>:${LIBZ_LIBRARY}>
-		$<$<BOOL:${LIBBZ2_LIBRARY}>:${LIBBZ2_LIBRARY}>
-		$<$<BOOL:${LIBLZMA_LIBRARY}>:${LIBLZMA_LIBRARY}>
-		$<$<BOOL:${LIBZSTD_LIBRARY}>:${LIBZSTD_LIBRARY}>)
-	find_package_handle_standard_args(libdw ${_name_mismatched_arg} REQUIRED_VARS LIBDW_LIBRARY LIBDW_INCLUDE_DIR)
-	mark_as_advanced(LIBDW_INCLUDE_DIR LIBDW_LIBRARY)
+	set(LIBDW_LIBRARIES ${CMAKE_DL_LIBS})
+	find_package_handle_standard_args(libdw ${_name_mismatched_arg} REQUIRED_VARS LIBDW_INCLUDE_DIR)
+	mark_as_advanced(LIBDW_INCLUDE_DIR)
 
 	# Find libbfd
 	find_path(LIBBFD_INCLUDE_DIR NAMES "bfd.h")
@@ -119,7 +116,7 @@ if(${STACK_DETAILS_AUTO_DETECT})
 		set(STACK_DETAILS_BFD OFF)
 		set(STACK_DETAILS_DWARF OFF)
 		set(STACK_DETAILS_BACKTRACE_SYMBOL OFF)
-		message(STATUS "Backward will use libdw to read stack traces")
+		message(STATUS "Backward will use libdw to read stack traces (loaded at runtime, not linked)")
 	elseif(LIBBFD_FOUND)
 		LIST(APPEND _BACKWARD_INCLUDE_DIRS ${LIBBFD_INCLUDE_DIRS})
 		LIST(APPEND _BACKWARD_LIBRARIES ${LIBBFD_LIBRARIES})
@@ -159,7 +156,8 @@ if(${STACK_DETAILS_AUTO_DETECT})
 	endif()
 else()
 	if(STACK_DETAILS_DW)
-		LIST(APPEND _BACKWARD_LIBRARIES dw)
+		# Not "dw" -- it is loaded at runtime rather than linked, see the auto-detection above
+		LIST(APPEND _BACKWARD_LIBRARIES ${CMAKE_DL_LIBS})
 	endif()
 
 	if(STACK_DETAILS_BFD)

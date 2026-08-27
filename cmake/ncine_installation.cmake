@@ -111,6 +111,14 @@ elseif(UNIX)
 				else()
 					set(CPACK_DEBIAN_PACKAGE_DEPENDS "libopenal1, libopenal1, libopenmpt0")
 				endif()
+
+				# Backward needs elfutils' libdw to turn a crash report into function names, but it loads it at
+				# runtime instead of linking it (see `Implementation::LibdwApi` in "Backward.h"), so it is a
+				# recommendation rather than a dependency - without it the game still runs, only the crash
+				# reports degrade to module names and offsets
+				if(BACKWARD_HAS_DW)
+					set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "libdw1 | libdw1t64")
+				endif()
 			endif()
 		endif()
 		if(NCINE_ASSEMBLE_RPM)
@@ -121,8 +129,15 @@ elseif(UNIX)
 			endif()
 		endif()
 	endif()
-	set(CPACK_STRIP_FILES TRUE)
-	
+	# CPack strips everything it installs, which would undo the symbol split by removing the ".gnu_debuglink"
+	# section from the executable and orphaning the separate symbol file. There is nothing left to strip in
+	# that case anyway, the split step already did it (see "ncine_compiler_options.cmake").
+	if(NCINE_DEBUG_SYMBOLS_FILE)
+		set(CPACK_STRIP_FILES FALSE)
+	else()
+		set(CPACK_STRIP_FILES TRUE)
+	endif()
+
 	set(PACKAGE_NAME "${CPACK_EXECUTABLE_NAME}")
 	if(NCINE_BUILD_FLATPAK)
 		set(PACKAGE_NAME "dev.de4th.jazz2") # Flatpak uses Application ID with standard reverse-DNS schema
@@ -194,11 +209,19 @@ include(CPack)
 
 if(UNIX AND NOT APPLE)
 	install(TARGETS ${NCINE_APP} RUNTIME DESTINATION "bin")
+	# The ".gnu_debuglink" section records a bare file name, so the symbol file is only ever found when it sits
+	# in the same directory as the executable
+	if(NCINE_DEBUG_SYMBOLS_FILE)
+		install(FILES "${NCINE_DEBUG_SYMBOLS_FILE}" DESTINATION "bin")
+	endif()
 	if(NOT NCINE_BUILD_FLATPAK)
 		install(FILES "${NCINE_ROOT}/README.md" DESTINATION ${README_INSTALL_DESTINATION})
 	endif()
 else()
 	install(TARGETS ${NCINE_APP} RUNTIME DESTINATION ".")
+	if(NCINE_DEBUG_SYMBOLS_FILE)
+		install(FILES "${NCINE_DEBUG_SYMBOLS_FILE}" DESTINATION ".")
+	endif()
 endif()
 #if((MSVC OR APPLE) AND EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
 #	install(FILES LICENSE DESTINATION . RENAME LICENSE.txt)

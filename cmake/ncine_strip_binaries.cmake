@@ -1,4 +1,13 @@
-if(NCINE_STRIP_BINARIES AND CMAKE_BUILD_TYPE MATCHES "Release" AND NOT EMSCRIPTEN AND EXISTS ${CMAKE_STRIP})
+# `NCINE_DEBUG_SYMBOLS_FILE` means the debug symbols were split into a separate file instead of being thrown
+# away (see "ncine_compiler_options.cmake"), which is mutually exclusive with stripping here: the executable
+# is already stripped in place by the split step and carries a ".gnu_debuglink" section pointing at that file,
+# which `strip --strip-all` would silently remove again, and stripping the static libraries would drop their
+# debug info before the executable even links them, leaving every dependency frame unnamed in a crash report.
+if(NCINE_STRIP_BINARIES AND NCINE_DEBUG_SYMBOLS_FILE)
+	message(STATUS "Not stripping any binaries, the debug symbols are split into a separate file instead")
+endif()
+
+if(NCINE_STRIP_BINARIES AND NOT NCINE_DEBUG_SYMBOLS_FILE AND CMAKE_BUILD_TYPE MATCHES "Release" AND NOT EMSCRIPTEN AND EXISTS ${CMAKE_STRIP})
 	message(STATUS "Strip command: " ${CMAKE_STRIP})
 
 	get_directory_property(NCINE_BUILD_TARGETS ${CMAKE_BUILD_DIR} BUILDSYSTEM_TARGETS)

@@ -1773,23 +1773,183 @@ namespace Death { namespace Backward {
 
 #if defined(BACKWARD_HAS_DW)
 
+	namespace Implementation
+	{
+		/**
+			@brief Entry points of elfutils' `libdw`, resolved at runtime
+
+			The library is loaded with @cpp dlopen() @ce instead of being linked directly, so that the executable
+			doesn't depend on elfutils being installed. Where the library is missing, the crash reports fall back
+			to module names and offsets (see @cpp TraceResolver::ResolveWithoutDebugInfo() @ce) rather than the
+			process failing to start --- which matters especially for the split debug symbols setup, where `libdw`
+			is the only backend that can follow the `.gnu_debuglink` section into the separate symbol file, but is
+			of no use to a system that has no intention of ever reading a crash report.
+
+			The declarations from the `libdw` headers are still used at build time, both for the types and for the
+			signatures of the members below, so the header package is required to compile --- only the linking and
+			with it the hard runtime dependency are avoided.
+		*/
+		struct LibdwApi
+		{
+			decltype(&::dwfl_begin) dwfl_begin = nullptr;
+			decltype(&::dwfl_end) dwfl_end = nullptr;
+			decltype(&::dwfl_report_begin) dwfl_report_begin = nullptr;
+			decltype(&::dwfl_report_end) dwfl_report_end = nullptr;
+			decltype(&::dwfl_linux_proc_report) dwfl_linux_proc_report = nullptr;
+			decltype(&::dwfl_linux_proc_find_elf) dwfl_linux_proc_find_elf = nullptr;
+			decltype(&::dwfl_standard_find_debuginfo) dwfl_standard_find_debuginfo = nullptr;
+			decltype(&::dwfl_addrmodule) dwfl_addrmodule = nullptr;
+			decltype(&::dwfl_module_info) dwfl_module_info = nullptr;
+			decltype(&::dwfl_module_addrname) dwfl_module_addrname = nullptr;
+			decltype(&::dwfl_module_addrdie) dwfl_module_addrdie = nullptr;
+			decltype(&::dwfl_module_nextcu) dwfl_module_nextcu = nullptr;
+			decltype(&::dwarf_getsrc_die) dwarf_getsrc_die = nullptr;
+			decltype(&::dwarf_linesrc) dwarf_linesrc = nullptr;
+			decltype(&::dwarf_lineno) dwarf_lineno = nullptr;
+			decltype(&::dwarf_linecol) dwarf_linecol = nullptr;
+			decltype(&::dwarf_tag) dwarf_tag = nullptr;
+			decltype(&::dwarf_diename) dwarf_diename = nullptr;
+			decltype(&::dwarf_diecu) dwarf_diecu = nullptr;
+			decltype(&::dwarf_attr) dwarf_attr = nullptr;
+			decltype(&::dwarf_hasattr) dwarf_hasattr = nullptr;
+			decltype(&::dwarf_formudata) dwarf_formudata = nullptr;
+			decltype(&::dwarf_formflag) dwarf_formflag = nullptr;
+			decltype(&::dwarf_lowpc) dwarf_lowpc = nullptr;
+			decltype(&::dwarf_highpc) dwarf_highpc = nullptr;
+			decltype(&::dwarf_ranges) dwarf_ranges = nullptr;
+			decltype(&::dwarf_child) dwarf_child = nullptr;
+			decltype(&::dwarf_siblingof) dwarf_siblingof = nullptr;
+			decltype(&::dwarf_getsrcfiles) dwarf_getsrcfiles = nullptr;
+			decltype(&::dwarf_filesrc) dwarf_filesrc = nullptr;
+
+			/** @brief Returns `true` if the library is loaded and every entry point was resolved */
+			bool IsLoaded() const {
+				return (_handle != nullptr);
+			}
+
+			/** @brief Loads the library, does nothing if it is already loaded or a previous attempt failed */
+			bool Load() {
+				if (_handle != nullptr) {
+					return true;
+				}
+				if (_failed) {
+					return false;
+				}
+
+				// "libdw.so.1" is the SONAME shipped by the runtime package, the unversioned name exists only
+				// when the development package is installed --- try it as well, it costs nothing
+				_handle = ::dlopen("libdw.so.1", RTLD_LAZY | RTLD_LOCAL);
+				if (_handle == nullptr) {
+					_handle = ::dlopen("libdw.so", RTLD_LAZY | RTLD_LOCAL);
+					if (_handle == nullptr) {
+						_failed = true;
+						return false;
+					}
+				}
+
+				bool complete = true;
+
+				#define __DEATH_LIBDW_RESOLVE(name)										\
+					name = reinterpret_cast<decltype(name)>(::dlsym(_handle, #name));	\
+					if (name == nullptr) {												\
+						complete = false;												\
+					}
+
+				__DEATH_LIBDW_RESOLVE(dwfl_begin)
+				__DEATH_LIBDW_RESOLVE(dwfl_end)
+				__DEATH_LIBDW_RESOLVE(dwfl_report_begin)
+				__DEATH_LIBDW_RESOLVE(dwfl_report_end)
+				__DEATH_LIBDW_RESOLVE(dwfl_linux_proc_report)
+				__DEATH_LIBDW_RESOLVE(dwfl_linux_proc_find_elf)
+				__DEATH_LIBDW_RESOLVE(dwfl_standard_find_debuginfo)
+				__DEATH_LIBDW_RESOLVE(dwfl_addrmodule)
+				__DEATH_LIBDW_RESOLVE(dwfl_module_info)
+				__DEATH_LIBDW_RESOLVE(dwfl_module_addrname)
+				__DEATH_LIBDW_RESOLVE(dwfl_module_addrdie)
+				__DEATH_LIBDW_RESOLVE(dwfl_module_nextcu)
+				__DEATH_LIBDW_RESOLVE(dwarf_getsrc_die)
+				__DEATH_LIBDW_RESOLVE(dwarf_linesrc)
+				__DEATH_LIBDW_RESOLVE(dwarf_lineno)
+				__DEATH_LIBDW_RESOLVE(dwarf_linecol)
+				__DEATH_LIBDW_RESOLVE(dwarf_tag)
+				__DEATH_LIBDW_RESOLVE(dwarf_diename)
+				__DEATH_LIBDW_RESOLVE(dwarf_diecu)
+				__DEATH_LIBDW_RESOLVE(dwarf_attr)
+				__DEATH_LIBDW_RESOLVE(dwarf_hasattr)
+				__DEATH_LIBDW_RESOLVE(dwarf_formudata)
+				__DEATH_LIBDW_RESOLVE(dwarf_formflag)
+				__DEATH_LIBDW_RESOLVE(dwarf_lowpc)
+				__DEATH_LIBDW_RESOLVE(dwarf_highpc)
+				__DEATH_LIBDW_RESOLVE(dwarf_ranges)
+				__DEATH_LIBDW_RESOLVE(dwarf_child)
+				__DEATH_LIBDW_RESOLVE(dwarf_siblingof)
+				__DEATH_LIBDW_RESOLVE(dwarf_getsrcfiles)
+				__DEATH_LIBDW_RESOLVE(dwarf_filesrc)
+
+				#undef __DEATH_LIBDW_RESOLVE
+
+				// A partially resolved library is treated as no library at all, an ABI this different from what
+				// the header described cannot be used safely. The members that did resolve are left dangling by
+				// the `dlclose()`, but nothing can reach them anymore once `IsLoaded()` returns `false`
+				if (!complete) {
+					::dlclose(_handle);
+					_handle = nullptr;
+					_failed = true;
+					return false;
+				}
+
+				return true;
+			}
+
+		private:
+			void* _handle = nullptr;
+			bool _failed = false;
+		};
+
+		/** @brief Returns the process-wide `libdw` entry points */
+		inline LibdwApi& GetLibdwApi() {
+			static LibdwApi api;
+			return api;
+		}
+
+		struct DwflDeleter {
+			void operator()(Dwfl*& ptr) const {
+				// Checking `IsLoaded()` and not the entry point itself, the latter can be left dangling by a
+				// partial load
+				LibdwApi& dw = GetLibdwApi();
+				if (dw.IsLoaded()) {
+					dw.dwfl_end(ptr);
+				}
+			}
+		};
+	}
+
 	class TraceResolver : public TraceResolverLinuxBase {
 	public:
-		TraceResolver() : _dwfl_handle_initialized(false) {}
+		TraceResolver() : _dwfl_handle_initialized(false) {
+			// Idempotent, `ExceptionHandling` already does this on startup - this covers the case of a resolver
+			// created directly, without the exception handling ever being installed
+			Implementation::GetLibdwApi().Load();
+		}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			using namespace Implementation;
+
+			LibdwApi& dw = GetLibdwApi();
+			if (!dw.IsLoaded()) {
+				return ResolveWithoutDebugInfo(trace);
+			}
 
 			Dwarf_Addr trace_addr = reinterpret_cast<Dwarf_Addr>(trace.Address);
 
 			if (!_dwfl_handle_initialized) {
 				// initialize dwfl...
 				_dwfl_cb.reset(new Dwfl_Callbacks);
-				_dwfl_cb->find_elf = &dwfl_linux_proc_find_elf;
-				_dwfl_cb->find_debuginfo = &dwfl_standard_find_debuginfo;
+				_dwfl_cb->find_elf = dw.dwfl_linux_proc_find_elf;
+				_dwfl_cb->find_debuginfo = dw.dwfl_standard_find_debuginfo;
 				_dwfl_cb->debuginfo_path = nullptr;
 
-				_dwfl_handle.reset(dwfl_begin(_dwfl_cb.get()));
+				_dwfl_handle.reset(dw.dwfl_begin(_dwfl_cb.get()));
 				_dwfl_handle_initialized = true;
 
 				if (!_dwfl_handle) {
@@ -1797,9 +1957,9 @@ namespace Death { namespace Backward {
 				}
 
 				// ...from the current process.
-				dwfl_report_begin(_dwfl_handle.get());
-				int r = dwfl_linux_proc_report(_dwfl_handle.get(), getpid());
-				dwfl_report_end(_dwfl_handle.get(), nullptr, nullptr);
+				dw.dwfl_report_begin(_dwfl_handle.get());
+				int r = dw.dwfl_linux_proc_report(_dwfl_handle.get(), getpid());
+				dw.dwfl_report_end(_dwfl_handle.get(), nullptr, nullptr);
 				if (r < 0) {
 					return trace;
 				}
@@ -1811,18 +1971,18 @@ namespace Death { namespace Backward {
 
 			// find the module (binary object) that contains the trace's address. This is not using any debug information,
 			// but the addresses ranges of all the currently loaded binary object.
-			Dwfl_Module* mod = dwfl_addrmodule(_dwfl_handle.get(), trace_addr);
+			Dwfl_Module* mod = dw.dwfl_addrmodule(_dwfl_handle.get(), trace_addr);
 			if (mod != nullptr) {
 				// now that we found it, lets get the name of it, this will be the full path to the running binary
 				// or one of the loaded library.
-				const char* module_name = dwfl_module_info(mod, 0, 0, 0, 0, 0, 0, 0);
+				const char* module_name = dw.dwfl_module_info(mod, 0, 0, 0, 0, 0, 0, 0);
 				if (module_name != nullptr) {
 					trace.ObjectFilename = module_name;
 				}
 				// We also look after the name of the symbol, equal or before this address. This is found by walking
 				// the symtab. We should get the symbol corresponding to the function (mangled) containing the address.
 				// If the code corresponding to the address was inlined, this is the name of the out-most inliner function.
-				const char* sym_name = dwfl_module_addrname(mod, trace_addr);
+				const char* sym_name = dw.dwfl_module_addrname(mod, trace_addr);
 				if (sym_name != nullptr) {
 					trace.ObjectFunction = Demangle(sym_name);
 				}
@@ -1834,7 +1994,7 @@ namespace Death { namespace Backward {
 			// This function will look in .debug_aranges for the address and map it to the location of the compilation
 			// unit DIE in .debug_info and return it.
 			Dwarf_Addr mod_bias = 0;
-			Dwarf_Die* cudie = dwfl_module_addrdie(mod, trace_addr, &mod_bias);
+			Dwarf_Die* cudie = dw.dwfl_module_addrdie(mod, trace_addr, &mod_bias);
 			trace.ObjectBaseAddress = (void*)mod_bias;
 
 #	if 1
@@ -1847,7 +2007,7 @@ namespace Death { namespace Backward {
 				// a lowpc/highpc/range, which we will use to infer the compilation unit.
 
 				// Note that this is probably badly inefficient.
-				while ((cudie = dwfl_module_nextcu(mod, cudie, &mod_bias))) {
+				while ((cudie = dw.dwfl_module_nextcu(mod, cudie, &mod_bias))) {
 					Dwarf_Die die_mem;
 					Dwarf_Die* fundie = find_fundie_by_pc(cudie, trace_addr - mod_bias, &die_mem);
 					if (fundie != nullptr) {
@@ -1890,16 +2050,16 @@ namespace Death { namespace Backward {
 
 			// Now that we have a compilation unit DIE, this function will be able to load the corresponding section
 			// in .debug_line (if not already loaded) and hopefully find the source location mapped to our address.
-			Dwarf_Line* srcloc = dwarf_getsrc_die(cudie, trace_addr - mod_bias);
+			Dwarf_Line* srcloc = dw.dwarf_getsrc_die(cudie, trace_addr - mod_bias);
 
 			if (srcloc) {
-				const char* srcfile = dwarf_linesrc(srcloc, 0, 0);
+				const char* srcfile = dw.dwarf_linesrc(srcloc, 0, 0);
 				if (srcfile != nullptr) {
 					trace.Source.Filename = srcfile;
 				}
 				std::int32_t line = 0, col = 0;
-				dwarf_lineno(srcloc, &line);
-				dwarf_linecol(srcloc, &col);
+				dw.dwarf_lineno(srcloc, &line);
+				dw.dwarf_linecol(srcloc, &col);
 				trace.Source.Line = line;
 				trace.Source.Column = col;
 			}
@@ -1914,17 +2074,41 @@ namespace Death { namespace Backward {
 		}
 
 	private:
-		typedef Implementation::Handle<Dwfl*, Implementation::Deleter<void, Dwfl*, &dwfl_end>> dwfl_handle_t;
+		typedef Implementation::Handle<Dwfl*, Implementation::DwflDeleter> dwfl_handle_t;
 		Implementation::Handle<Dwfl_Callbacks*, Implementation::DefaultDelete<Dwfl_Callbacks*>> _dwfl_cb;
 		dwfl_handle_t _dwfl_handle;
 		bool _dwfl_handle_initialized;
 
+		// Used when "libdw" is not installed on the system. The dynamic symbol table is all that remains
+		// reachable then, and it is empty for a binary compiled with "-fvisibility=hidden", but the module
+		// an address belongs to and its offset inside that module are still recoverable - which is enough to
+		// symbolize the report afterwards with `addr2line` and the matching ".pdb" file
+		ResolvedTrace ResolveWithoutDebugInfo(ResolvedTrace trace) {
+			Dl_info symbol_info;
+			if (!dladdr(trace.Address, &symbol_info)) {
+				return trace;
+			}
+
+			trace.ObjectBaseAddress = symbol_info.dli_fbase;
+			if (symbol_info.dli_fname != nullptr) {
+				trace.ObjectFilename = resolve_exec_path(symbol_info);
+			}
+			if (symbol_info.dli_sname != nullptr) {
+				trace.ObjectFunction = Demangle(symbol_info.dli_sname);
+				trace.Source.Function = trace.ObjectFunction;
+			}
+
+			return trace;
+		}
+
 		struct inliners_search_cb {
 			void operator()(Dwarf_Die* die) {
-				switch (dwarf_tag(die)) {
+				Implementation::LibdwApi& dw = Implementation::GetLibdwApi();
+
+				switch (dw.dwarf_tag(die)) {
 					case DW_TAG_subprogram: {
 						const char* name;
-						if ((name = dwarf_diename(die))) {
+						if ((name = dw.dwarf_diename(die))) {
 							trace.Source.Function = name;
 							trace.Source.Function += "()";
 						}
@@ -1935,7 +2119,7 @@ namespace Death { namespace Backward {
 						Dwarf_Attribute attr_mem;
 
 						const char* name;
-						if ((name = dwarf_diename(die))) {
+						if ((name = dw.dwarf_diename(die))) {
 							sloc.Function = name;
 							sloc.Function += "()";
 						}
@@ -1944,8 +2128,8 @@ namespace Death { namespace Backward {
 						}
 
 						Dwarf_Word line = 0, col = 0;
-						dwarf_formudata(dwarf_attr(die, DW_AT_call_line, &attr_mem), &line);
-						dwarf_formudata(dwarf_attr(die, DW_AT_call_column, &attr_mem), &col);
+						dw.dwarf_formudata(dw.dwarf_attr(die, DW_AT_call_line, &attr_mem), &line);
+						dw.dwarf_formudata(dw.dwarf_attr(die, DW_AT_call_column, &attr_mem), &col);
 						sloc.Line = static_cast<std::int32_t>(line);
 						sloc.Column = static_cast<std::int32_t>(col);
 
@@ -1959,18 +2143,20 @@ namespace Death { namespace Backward {
 		};
 
 		static bool die_has_pc(Dwarf_Die* die, Dwarf_Addr pc) {
+			Implementation::LibdwApi& dw = Implementation::GetLibdwApi();
+
 			Dwarf_Addr low, high;
 
 			// Continuous range
-			if (dwarf_hasattr(die, DW_AT_low_pc) && dwarf_hasattr(die, DW_AT_high_pc)) {
-				if (dwarf_lowpc(die, &low) != 0) {
+			if (dw.dwarf_hasattr(die, DW_AT_low_pc) && dw.dwarf_hasattr(die, DW_AT_high_pc)) {
+				if (dw.dwarf_lowpc(die, &low) != 0) {
 					return false;
 				}
-				if (dwarf_highpc(die, &high) != 0) {
+				if (dw.dwarf_highpc(die, &high) != 0) {
 					Dwarf_Attribute attr_mem;
-					Dwarf_Attribute* attr = dwarf_attr(die, DW_AT_high_pc, &attr_mem);
+					Dwarf_Attribute* attr = dw.dwarf_attr(die, DW_AT_high_pc, &attr_mem);
 					Dwarf_Word value;
-					if (dwarf_formudata(attr, &value) != 0) {
+					if (dw.dwarf_formudata(attr, &value) != 0) {
 						return false;
 					}
 					high = low + value;
@@ -1981,7 +2167,7 @@ namespace Death { namespace Backward {
 			// Non-continuous range.
 			Dwarf_Addr base;
 			ptrdiff_t offset = 0;
-			while ((offset = dwarf_ranges(die, offset, &base, &low, &high)) > 0) {
+			while ((offset = dw.dwarf_ranges(die, offset, &base, &low, &high)) > 0) {
 				if (pc >= low && pc < high) {
 					return true;
 				}
@@ -1990,13 +2176,15 @@ namespace Death { namespace Backward {
 		}
 
 		static Dwarf_Die* find_fundie_by_pc(Dwarf_Die* parent_die, Dwarf_Addr pc, Dwarf_Die* result) {
-			if (dwarf_child(parent_die, result) != 0) {
+			Implementation::LibdwApi& dw = Implementation::GetLibdwApi();
+
+			if (dw.dwarf_child(parent_die, result) != 0) {
 				return 0;
 			}
 
 			Dwarf_Die* die = result;
 			do {
-				switch (dwarf_tag(die)) {
+				switch (dw.dwarf_tag(die)) {
 					case DW_TAG_subprogram:
 					case DW_TAG_inlined_subroutine:
 						if (die_has_pc(die, pc)) {
@@ -2005,7 +2193,7 @@ namespace Death { namespace Backward {
 				};
 				bool declaration = false;
 				Dwarf_Attribute attr_mem;
-				dwarf_formflag(dwarf_attr(die, DW_AT_declaration, &attr_mem), &declaration);
+				dw.dwarf_formflag(dw.dwarf_attr(die, DW_AT_declaration, &attr_mem), &declaration);
 				if (!declaration) {
 					// Let's be curious and look deeper in the tree, function are not necessarily at the first level,
 					// but might be nested inside a namespace, structure etc.
@@ -2016,14 +2204,16 @@ namespace Death { namespace Backward {
 						return result;
 					}
 				}
-			} while (dwarf_siblingof(die, result) == 0);
+			} while (dw.dwarf_siblingof(die, result) == 0);
 			return 0;
 		}
 
 		template <typename CB>
 		static bool deep_first_search_by_pc(Dwarf_Die* parent_die, Dwarf_Addr pc, CB cb) {
+			Implementation::LibdwApi& dw = Implementation::GetLibdwApi();
+
 			Dwarf_Die die_mem;
-			if (dwarf_child(parent_die, &die_mem) != 0) {
+			if (dw.dwarf_child(parent_die, &die_mem) != 0) {
 				return false;
 			}
 
@@ -2032,7 +2222,7 @@ namespace Death { namespace Backward {
 			do {
 				bool declaration = false;
 				Dwarf_Attribute attr_mem;
-				dwarf_formflag(dwarf_attr(die, DW_AT_declaration, &attr_mem), &declaration);
+				dw.dwarf_formflag(dw.dwarf_attr(die, DW_AT_declaration, &attr_mem), &declaration);
 				if (!declaration) {
 					// Let's be curious and look deeper in the tree, function are not necessarily at the first level,
 					// but might be nested inside a namespace, structure, a function, an inlined function etc.
@@ -2044,34 +2234,36 @@ namespace Death { namespace Backward {
 				if (branch_has_pc) {
 					cb(die);
 				}
-			} while (dwarf_siblingof(die, &die_mem) == 0);
+			} while (dw.dwarf_siblingof(die, &die_mem) == 0);
 			return branch_has_pc;
 		}
 
 		static const char* die_call_file(Dwarf_Die* die) {
+			Implementation::LibdwApi& dw = Implementation::GetLibdwApi();
+
 			Dwarf_Attribute attr_mem;
 			Dwarf_Word file_idx = 0;
 
-			dwarf_formudata(dwarf_attr(die, DW_AT_call_file, &attr_mem), &file_idx);
+			dw.dwarf_formudata(dw.dwarf_attr(die, DW_AT_call_file, &attr_mem), &file_idx);
 
 			if (file_idx == 0) {
 				return nullptr;
 			}
 
 			Dwarf_Die die_mem;
-			Dwarf_Die* cudie = dwarf_diecu(die, &die_mem, nullptr, nullptr);
+			Dwarf_Die* cudie = dw.dwarf_diecu(die, &die_mem, nullptr, nullptr);
 			if (!cudie) {
 				return nullptr;
 			}
 
 			Dwarf_Files* files = nullptr;
 			std::size_t nfiles;
-			dwarf_getsrcfiles(cudie, &files, &nfiles);
+			dw.dwarf_getsrcfiles(cudie, &files, &nfiles);
 			if (!files) {
 				return nullptr;
 			}
 
-			return dwarf_filesrc(files, file_idx, nullptr, nullptr);
+			return dw.dwarf_filesrc(files, file_idx, nullptr, nullptr);
 		}
 	};
 #endif // BACKWARD_HAS_DW
@@ -4323,6 +4515,13 @@ namespace Death { namespace Backward {
 				return;
 			}
 			current = this;
+
+#	if defined(BACKWARD_HAS_DW)
+			// Load "libdw" upfront: the whole crash report, the `TraceResolver` included, is assembled from
+			// inside the signal handler, and `dlopen()` is a considerably worse thing to be doing there than
+			// during startup
+			Implementation::GetLibdwApi().Load();
+#	endif
 
 			bool success = true;
 

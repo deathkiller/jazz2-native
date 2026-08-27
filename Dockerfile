@@ -36,12 +36,14 @@ FROM debian:${DEBIAN_RELEASE}-slim AS build
 
 # The dedicated server needs no graphics or audio libraries at all - libcurl is the mandatory HTTP
 # backend of `WebRequest` (the online server list), OpenSSL is the TLS backend of the WebSocket
-# transport and zlib is used for packet and asset compression
+# transport and zlib is used for packet and asset compression. Only the *headers* of elfutils' libdw
+# are needed, Backward loads the library itself at runtime, so this doesn't reach the runtime image
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		build-essential \
 		cmake \
 		libcurl4-openssl-dev \
+		libdw-dev \
 		libssl-dev \
 		zlib1g-dev \
 	&& rm -rf /var/lib/apt/lists/*
@@ -59,6 +61,10 @@ RUN find ./Content/ -name '*.po' -delete
 # NCINE_WITH_GLEW=OFF only stop CMake from looking for (or downloading and building) libraries that
 # a headless build cannot use anyway. The two offline tools (AssetPacker, ShaderCompiler) are already
 # off by default in a DEDICATED_SERVER build, so nothing here has to ask for that.
+#
+# DEATH_DEBUG_SYMBOLS takes the place of NCINE_STRIP_BINARIES: instead of discarding the debug info it
+# moves it into a separate "jazz2.pdb" file and links the stripped executable back to it. The binary
+# copied into the runtime image stays the same size either way, but a server crash becomes readable.
 RUN cmake -B ./_build/ -S . \
 		-D CMAKE_BUILD_TYPE=Release \
 		-D DEDICATED_SERVER=ON \
@@ -66,7 +72,7 @@ RUN cmake -B ./_build/ -S . \
 		-D NCINE_WITH_AUDIO=OFF \
 		-D NCINE_WITH_GLEW=OFF \
 		-D NCINE_VERSION_FROM_GIT=OFF \
-		-D NCINE_STRIP_BINARIES=ON \
+		-D DEATH_DEBUG_SYMBOLS=ON \
 	&& cmake --build ./_build/ --parallel "$(nproc)"
 
 # ─── Runtime stage ────────────────────────────────────────────────────────────────────────────────
@@ -78,6 +84,12 @@ RUN apt-get update \
 		libcurl4 \
 		libssl3 \
 		zlib1g \
+	# elfutils' libdw is what turns a crash report into function names, using the "jazz2.pdb" file copied
+	# in below. It is loaded with `dlopen()` and not linked, so it is entirely optional - dropping this
+	# line only degrades the crash reports to module names and offsets, the server runs either way. The
+	# package was renamed by the 64-bit `time_t` transition, so both names are tried
+	&& (apt-get install -y --no-install-recommends libdw1 \
+		|| apt-get install -y --no-install-recommends libdw1t64) \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& groupadd --gid 1000 jazz2 \
 	&& useradd --uid 1000 --gid 1000 --no-create-home --shell /usr/sbin/nologin jazz2
@@ -85,6 +97,9 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=build /src/_build/jazz2 ./jazz2
+# The split debug symbols. The executable's ".gnu_debuglink" section names the file without a path, so it
+# is only ever found while it sits in the same directory as the executable
+COPY --from=build /src/_build/jazz2.pdb ./jazz2.pdb
 COPY --from=build /src/Content/ ./Content/
 COPY --from=build /src/LICENSE ./LICENSE
 

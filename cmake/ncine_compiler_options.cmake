@@ -217,6 +217,12 @@ else() # GCC and LLVM
 			COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink="${_targetName}.pdb" "${_targetPath}/${_targetName}"
 			COMMENT "Splitting symbols and generating debug info"
 		)
+
+		# Everything downstream of this has to know that the symbols live in a separate file now: it must be
+		# packaged next to the executable, and nothing may strip the executable again afterwards, because
+		# `strip --strip-all` also drops the ".gnu_debuglink" section that ties the two together (it is not
+		# an allocated section). See "ncine_strip_binaries.cmake" and "ncine_installation.cmake".
+		set(NCINE_DEBUG_SYMBOLS_FILE "${_targetPath}/${_targetName}.pdb")
 	endif()
 
 	if(NCINE_WITH_TRACY)

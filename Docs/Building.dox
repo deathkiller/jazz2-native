@@ -427,6 +427,16 @@ The following parameters can be used to customize the build:
 -   `DEATH_DEBUG_SYMBOLS` --- Create debug symbols for executable
     -   A separate `.pdb` file will be created on Windows and Linux, on other platforms the symbols will probably be embedded in the executable
     -   Enabled by default on Windows platforms
+    -   Mutually exclusive with `NCINE_STRIP_BINARIES`, which is ignored when this option is enabled --- stripping
+        the executable again would remove the `.gnu_debuglink` section that ties it to the separate file
+    -   On Linux, the `.pdb` file has to be deployed next to the executable, because the `.gnu_debuglink` section
+        of the executable references it by file name without a path
+    -   On Linux, the headers of `libdw` (elfutils) have to be found at configuration time, otherwise the crash
+        reports will contain raw addresses instead of function names --- it's the only stack details backend of
+        Backward that follows `.gnu_debuglink` (see `FindBackward.cmake`)
+        -   The library itself is loaded at runtime with @cpp dlopen() @ce and not linked, so it doesn't need to be
+            installed on the target system --- where it's missing, the crash reports degrade to module names and
+            offsets, which can still be resolved afterwards with `addr2line` and the matching `.pdb` file
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h file
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
     -   Always @cpp OFF @ce on the @ref consoles "consoles" and in the libretro core
