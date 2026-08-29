@@ -54,6 +54,7 @@ namespace Jazz2::Rendering
 		}
 
 		if (_renderCommandWithWater.GetMaterial().SetShader(_owner->_levelHandler->_combineWithWaterShader)) {
+			_renderCommandWithWater.SetTelemetryLabel("CombineWithWater");
 			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
 			_renderCommandWithWater.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.GetMaterial().Uniform(Material::TextureUniformName);
@@ -80,6 +81,10 @@ namespace Jazz2::Rendering
 
 		_renderCommand.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
 		_renderCommandWithWater.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
+		// RenderQueue groups opaque commands by material. Keep the base composite ahead of the
+		// clipped water overlay regardless of the material sort keys.
+		_renderCommand.SetLayer(1);
+		_renderCommandWithWater.SetLayer(0);
 #endif
 	}
 
@@ -107,34 +112,63 @@ namespace Jazz2::Rendering
 #else
 		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
 		bool viewHasWater = (viewWaterLevel < _bounds.H);
-		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
+		// Above a low waterline the full shader produces the same result as Combine except within a few pixels
+		// of the wave edge. Compose the cheap base once, then restrict the expensive shader to the wet rows.
+		// A fully submerged viewport still uses the original one-pass path, where clipping cannot save pixels.
+		constexpr float WaterScissorThreshold = 0.4f;
+		constexpr std::int32_t WaterEdgePadding = 4;
+		// Vita uses the two-sample low-water shader. A full-screen base Combine plus a clipped overlay costs more
+		// than its single-pass path, while fully submerged views cannot be clipped at all.
+#if defined(DEATH_TARGET_VITA)
+		const bool scissorWater = false;
+#else
+		const bool scissorWater = viewHasWater && viewWaterLevel >= _bounds.H * WaterScissorThreshold;
+#endif
 
-		command.GetMaterial().SetTexture(0, *_owner->_viewTexture);
-		command.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
-		if (PreferencesCache::BlurEffects) {
-			command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
-			command.GetMaterial().SetTexture(3, *_owner->_blurPass4.GetTarget());
-		} else {
-			command.GetMaterial().SetTexture(2, nullptr);
-			command.GetMaterial().SetTexture(3, nullptr);
+		auto prepareCommand = [&](RenderCommand& command) {
+			command.GetMaterial().SetTexture(0, *_owner->_viewTexture);
+			command.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
+			if (PreferencesCache::BlurEffects) {
+				command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
+#if defined(DEATH_TARGET_VITA)
+				// The Vita only builds the half-resolution blur; use it for both bloom samples.
+				command.GetMaterial().SetTexture(3, *_owner->_blurPass2.GetTarget());
+#else
+				command.GetMaterial().SetTexture(3, *_owner->_blurPass4.GetTarget());
+#endif
+			} else {
+				command.GetMaterial().SetTexture(2, nullptr);
+				command.GetMaterial().SetTexture(3, nullptr);
+			}
+			auto* instanceBlock = command.GetMaterial().UniformBlock(Material::InstanceBlockName);
+			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+			command.GetMaterial().Uniform("uAmbientColor")->SetFloatVector(_owner->_ambientLight.Data());
+			command.GetMaterial().Uniform("uTime")->SetFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);
+		};
+
+		if (scissorWater) {
+			prepareCommand(_renderCommand);
+			renderQueue.AddCommand(&_renderCommand);
 		}
+
+		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
+		prepareCommand(command);
 		if (viewHasWater && !PreferencesCache::LowWaterQuality) {
 			command.GetMaterial().SetTexture(4, *_owner->_levelHandler->_noiseTexture);
 		}
-
-		auto* instanceBlock = command.GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
-
-		command.GetMaterial().Uniform("uAmbientColor")->SetFloatVector(_owner->_ambientLight.Data());
-		command.GetMaterial().Uniform("uTime")->SetFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);
-
 		if (viewHasWater) {
 			command.GetMaterial().Uniform("uWaterLevel")->SetFloatValue(viewWaterLevel / _bounds.H);
 			command.GetMaterial().Uniform("uCameraPos")->SetFloatVector(_owner->_cameraPos.Data());
 		}
-
+		if (scissorWater) {
+			const std::int32_t waterTop = std::clamp(std::int32_t(viewWaterLevel) - WaterEdgePadding, 0, std::int32_t(_bounds.H));
+			command.SetScissor(std::int32_t(_bounds.X), std::int32_t(_bounds.Y), std::int32_t(_bounds.W), std::int32_t(_bounds.H) - waterTop);
+		} else {
+			// The command is retained between frames; an old wet rectangle must not clip a later full-water pass.
+			command.SetScissor(0, 0, 0, 0);
+		}
 		renderQueue.AddCommand(&command);
 
 		return true;

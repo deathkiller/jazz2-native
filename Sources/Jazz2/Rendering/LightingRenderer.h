@@ -38,6 +38,7 @@ namespace Jazz2::Rendering
 		// submitted as a single draw - lights need no sorting and no texture, so unlike a tile layer they never
 		// have to be grouped, only split when the shared array buffer cannot hold them all at once.
 		SmallVector<float, 0> _vertices;
+		SmallVector<std::uint16_t, 0> _indices;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 
 		void AppendLightQuad(const LightEmitter& light);

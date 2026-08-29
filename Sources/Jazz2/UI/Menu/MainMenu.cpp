@@ -244,13 +244,15 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Background;
 
+#if defined(DEATH_TARGET_VITA)
+		// Bake the indexed tile layout once, then composite the RGBA target. Drawing the repeated tilemap
+		// directly interleaves palette-remap layers with the menu canvases on GXM.
+		_owner->RenderTexturedBackground(renderQueue);
+#else
 		if (PreferencesCache::EnableReforgedMainMenu || !_owner->RenderLegacyBackground(renderQueue)) {
-			if (SupportsTexturedBackground) {
-				_owner->RenderTexturedBackground(renderQueue);
-			} else {
-				_owner->RenderTexturedBackgroundAsTilemap(renderQueue);
-			}
+			_owner->RenderTexturedBackground(renderQueue);
 		}
+#endif
 
 		Vector2i center = ViewSize / 2;
 		std::int32_t charOffset = 0;
@@ -264,10 +266,13 @@ namespace Jazz2::UI::Menu
 		float logoTranslateY = (1.0f - _owner->_logoTransition) * 120.0f;
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
+		// Vita has physical back/menu controls; this mobile-only hint obscures the logo after an incidental touch.
+#if !defined(DEATH_TARGET_VITA)
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			float arrowScale = (ViewSize.Y >= 300 ? 1.0f : 0.7f);
 			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - (ViewSize.Y >= 300 ? 30.0f : 12.0f), ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
+#endif
 
 		// Title
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
@@ -759,23 +764,29 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+#if !defined(DEATH_TARGET_VITA)
 		Vector4f horizonColor;
 		switch (_preset) {
 			case Preset::Default: horizonColor = Vector4f(0.098f, 0.35f, 1.0f, 0.0f); break;
 			default: horizonColor = Vector4f(0.0f, 0.0f, 0.06f, 1.0f); break;
 		}
+#endif
 
 		Vector2i viewSize = _canvasBackground->ViewSize;
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
 		auto instanceBlock = command->GetInstanceBlock();
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, _texturedBackgroundPos.X / 256.0f, 1.0f, _texturedBackgroundPos.Y / 256.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
+		// The Vita path composites the prepared target as a regular sprite instead of running the procedural
+		// background shader over it.
+#if !defined(DEATH_TARGET_VITA)
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->GetMaterial().Uniform("uShift")->SetFloatVector(_texturedBackgroundPos.Data());
 		command->GetMaterial().Uniform("uHorizonColor")->SetFloatVector(horizonColor.Data());
+#endif
 
 		command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->GetMaterial().SetTexture(*target);
@@ -921,7 +932,13 @@ namespace Jazz2::UI::Menu
 			_camera = std::make_unique<Camera>();
 			_camera->SetOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
 			_camera->SetView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr,
+#if defined(DEATH_TARGET_VITA)
+				Texture::Format::RGBA8,
+#else
+				Texture::Format::RGB8,
+#endif
+				width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());
@@ -946,7 +963,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Prepare output render command
+#if defined(DEATH_TARGET_VITA)
+		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+#else
 		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
+#endif
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
 			_outputRenderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);

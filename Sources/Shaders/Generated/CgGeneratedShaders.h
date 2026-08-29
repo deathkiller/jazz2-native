@@ -869,8 +869,6 @@ uniform float uWaterLevel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
-uniform sampler2D uTextureBlurHalf : TEXUNIT2;
-uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
 static float2 vViewSizeInv;
@@ -883,19 +881,6 @@ struct PsInput
 	float2 vViewSizeInv : TEXCOORD1;
 };
 
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float2 noiseTexCoords(float2 position)
-{
-	float2 seed = position + frac(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
@@ -904,27 +889,24 @@ float4 main(PsInput _input) : COLOR
 	float2 uvLocal = vTexCoords;
 	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
+	float waveHeight = sin((uvWorld.x - uTime) * 60.0) * 0.007;
+	float waterSurface = uWaterLevel + waveHeight;
+	float isTexelBelow = 1.0 - step(uvLocal.y, waterSurface);
 	float isTexelAbove = 1.0 - isTexelBelow;
 	float2 uv = clamp(uvLocal + float2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
 	float4 main = tex2D(uTexture, uv);
-	float topDist = abs(uvLocal.y - uWaterLevel);
+	float topDist = abs(uvLocal.y - waterSurface);
 	float topGradient = max(1.0 - topDist, 0.0);
 	float isNearTop = 0.2 * topGradient * topGradient;
 	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
 	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
-	float4 blur1 = tex2D(uTextureBlurHalf, uv);
-	float4 blur2 = tex2D(uTextureBlurQuarter, uv);
-	float4 light = tex2D(uTextureLighting, noiseTexCoords(uv));
-	float4 blur = (blur1 + blur2) * ((float4)0.5);
-	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
-	blur = float4(gray, gray, gray, blur.w);
+	float4 light = tex2D(uTextureLighting, uv);
 	float darknessStrength = 1.0 - light.x;
 	if (uWaterLevel < 0.4) {
 		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	COLOR = lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -5043,19 +5025,13 @@ float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
+	float horizonDepth = distance_;
 	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
 	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
 	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(distance_ * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5161,21 +5137,13 @@ float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
+	float horizonDepth = distance_;
 	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
 	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
 	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
 	float4 texColor = tex2D(uTexture, texturePos);
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(distance_ * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5286,14 +5254,8 @@ float4 main(PsInput _input) : COLOR
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(distance_ * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5404,16 +5366,8 @@ float4 main(PsInput _input) : COLOR
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
 	float4 texColor = tex2D(uTexture, texturePos);
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(distance_ * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;

@@ -31,6 +31,8 @@ namespace nCine::RHI::GXM
 
 		RetainedSurface _retainedSurfaces[MaxRetainedSurfaces];
 		std::uint32_t _retainedSurfaceCount = 0;
+		std::uint32_t _surfaceNewAcquisitions = 0;
+		std::uint32_t _surfaceReusedAcquisitions = 0;
 
 		inline std::uint32_t AlignUp(std::uint32_t value, std::uint32_t alignment)
 		{
@@ -102,6 +104,7 @@ namespace nCine::RHI::GXM
 		for (RetainedSurface& surface : _retainedSurfaces) {
 			if (!surface.InUse && surface.Stride == stride && surface.Height == height) {
 				surface.InUse = true;
+				_surfaceReusedAcquisitions++;
 				return surface.Memory;
 			}
 		}
@@ -114,6 +117,7 @@ namespace nCine::RHI::GXM
 				surface.Height = height;
 				surface.Memory = block;
 				surface.InUse = true;
+				_surfaceNewAcquisitions++;
 			} else {
 				// Out of slots to keep addresses stable in, so this one goes back to the allocator when it is
 				// released - it may then be handed to a target of another size, with the consequences above
@@ -141,6 +145,17 @@ namespace nCine::RHI::GXM
 		}
 
 		Free(block);
+	}
+
+	void GxmMemory::ReleaseRetainedSurfaces()
+	{
+		for (RetainedSurface& surface : _retainedSurfaces) {
+			Free(surface.Memory);
+			surface = {};
+		}
+		_retainedSurfaceCount = 0;
+		_surfaceNewAcquisitions = 0;
+		_surfaceReusedAcquisitions = 0;
 	}
 
 	GxmMemory::Block GxmMemory::AllocVertexUsse(const char* name, std::uint32_t size)
@@ -239,5 +254,21 @@ namespace nCine::RHI::GXM
 	std::uint32_t GxmMemory::GetAllocatedBytes()
 	{
 		return _allocatedBytes;
+	}
+
+	GxmMemory::SurfaceTelemetry GxmMemory::GetAndResetSurfaceTelemetry()
+	{
+		SurfaceTelemetry telemetry;
+		telemetry.RetainedSurfaces = _retainedSurfaceCount;
+		for (const RetainedSurface& surface : _retainedSurfaces) {
+			if (surface.InUse) {
+				telemetry.InUseSurfaces++;
+			}
+		}
+		telemetry.NewAcquisitions = _surfaceNewAcquisitions;
+		telemetry.ReusedAcquisitions = _surfaceReusedAcquisitions;
+		_surfaceNewAcquisitions = 0;
+		_surfaceReusedAcquisitions = 0;
+		return telemetry;
 	}
 }

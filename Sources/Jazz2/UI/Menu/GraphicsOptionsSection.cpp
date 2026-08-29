@@ -109,7 +109,7 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(RHI_CAP_POSTPROCESSING)
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
 		// Blur effects are not supported by the direct rendering tier
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
@@ -133,7 +133,11 @@ namespace Jazz2::UI::Menu
 			},
 			[this](std::int32_t direction) {
 				// Ascending presets so Right increases and Left decreases; clamped at the ends (no wraparound)
+#if defined(DEATH_TARGET_VITA)
+				static const std::int32_t presets[] = { 12, 25, 50 };
+#else
 				static const std::int32_t presets[] = { 12, 25, 50, 75, 100 };
+#endif
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
 				std::int32_t index = count - 1;
 				for (std::int32_t i = 0; i < count; i++) {
@@ -152,6 +156,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#if !defined(DEATH_TARGET_VITA)
 		// Selects between the two Combine shader variants (see LevelHandler), neither of which the direct
 		// tier uses - its water is the per-row tint and wave applied by the device's software compositor
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -162,6 +167,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 #endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Show Player Trails"),

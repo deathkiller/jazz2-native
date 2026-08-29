@@ -1170,13 +1170,22 @@ else()
 				"which the firmware requires - set it explicitly to a conforming id")
 		endif()
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
+		set(VITA_GXP_CACHE_DIR "" CACHE PATH "Directory containing exported GxpCache/v1 entries to package into the VPK")
+		set(VITA_GXP_CACHE_VPK_FILES "")
+		if(VITA_GXP_CACHE_DIR)
+			if(NOT IS_DIRECTORY "${VITA_GXP_CACHE_DIR}")
+				message(FATAL_ERROR "VITA_GXP_CACHE_DIR does not exist: ${VITA_GXP_CACHE_DIR}")
+			endif()
+			list(APPEND VITA_GXP_CACHE_VPK_FILES FILE "${VITA_GXP_CACHE_DIR}" "GxpCache/v1")
+		endif()
 		# The game content travels inside the VPK, next to the executable, so it ends up in the
 		# application's own read-only directory ("ux0:/app/<titleid>/", mounted as "app0:") and needs
 		# no separate copy on the device.
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
 			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
 			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png"
-			FILE "${NCINE_CONTENT_DIR}" "Content")
+			FILE "${NCINE_CONTENT_DIR}" "Content"
+			${VITA_GXP_CACHE_VPK_FILES})
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		

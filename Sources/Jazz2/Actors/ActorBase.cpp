@@ -1494,6 +1494,9 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		const bool preservesFade = (type == ActorRendererType::WhiteMask || type == ActorRendererType::PartialWhiteMask ||
+			_rendererType == ActorRendererType::WhiteMask || _rendererType == ActorRendererType::PartialWhiteMask);
+		const float alpha = (preservesFade ? color().A : 1.0f);
 		_rendererType = type;
 
 		auto& resolver = ContentResolver::Get();
@@ -1529,7 +1532,9 @@ namespace Jazz2::Actors
 					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
-				setColor(Colorf::White);
+				// Mask shaders intentionally replace the sprite RGB with a flash colour, but must not cancel an
+				// actor fade already in progress.
+				setColor(Colorf(1.0f, 1.0f, 1.0f, alpha));
 			}
 		}
 

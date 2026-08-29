@@ -105,8 +105,15 @@ namespace Jazz2::Rendering
 			_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
 			_blurPass1.Initialize(_downsamplePass.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
 			_blurPass2.Initialize(_blurPass1.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(0.0f, 1.0f));
+#if defined(DEATH_TARGET_VITA)
+			// The Vita keeps the half-resolution blur for bloom but reuses it for the quarter sample in Combine.
+			// Removing the second two-pass blur avoids two render-target scenes every frame.
+			_blurPass3.Dispose();
+			_blurPass4.Dispose();
+#else
 			_blurPass3.Initialize(_blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
 			_blurPass4.Initialize(_blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
+#endif
 		} else {
 			_downsamplePass.Dispose();
 			_blurPass1.Dispose();
@@ -132,8 +139,10 @@ namespace Jazz2::Rendering
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
 		if (PreferencesCache::BlurEffects) {
+#if !defined(DEATH_TARGET_VITA)
 			_blurPass4.Register();
 			_blurPass3.Register();
+#endif
 			_blurPass2.Register();
 			_blurPass1.Register();
 			_downsamplePass.Register();

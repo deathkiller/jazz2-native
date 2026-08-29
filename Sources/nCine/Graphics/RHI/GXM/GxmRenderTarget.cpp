@@ -189,6 +189,8 @@ namespace nCine::RHI::GXM
 			if (result < 0) {
 				LOGE("sceGxmCreateRenderTarget({}x{}) failed with 0x{:.8x}", targetWidth, targetHeight, std::uint32_t(result));
 				_gxmRenderTarget = nullptr;
+				sceGxmSyncObjectDestroy(_syncObject);
+				_syncObject = nullptr;
 				return false;
 			}
 
@@ -204,6 +206,8 @@ namespace nCine::RHI::GXM
 				LOGE("sceGxmColorSurfaceInit({}x{}) failed with 0x{:.8x}", targetWidth, targetHeight, std::uint32_t(result));
 				sceGxmDestroyRenderTarget(_gxmRenderTarget);
 				_gxmRenderTarget = nullptr;
+				sceGxmSyncObjectDestroy(_syncObject);
+				_syncObject = nullptr;
 				return false;
 			}
 

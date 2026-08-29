@@ -96,6 +96,8 @@ namespace nCine::RHI::GXM
 		Block AcquireSurface(const char* name, std::uint32_t stride, std::uint32_t height);
 		/** @brief Retires a block from @ref AcquireSurface(), keeping its address reserved for the same geometry */
 		void ReleaseSurface(Block& block);
+		/** @brief Releases every retained render-target surface before the GXM device is terminated */
+		void ReleaseRetainedSurfaces();
 
 		/** @brief Allocates memory in the vertex USSE window (for the shader patcher's compiled vertex programs) */
 		Block AllocVertexUsse(const char* name, std::uint32_t size);
@@ -107,5 +109,15 @@ namespace nCine::RHI::GXM
 
 		/** @brief Returns the total number of bytes currently reserved through this allocator (for the memory report) */
 		std::uint32_t GetAllocatedBytes();
+
+		struct SurfaceTelemetry
+		{
+			std::uint32_t RetainedSurfaces = 0;
+			std::uint32_t InUseSurfaces = 0;
+			std::uint32_t NewAcquisitions = 0;
+			std::uint32_t ReusedAcquisitions = 0;
+		};
+		/** @brief Returns current render-target pool state and clears interval acquisition counters */
+		SurfaceTelemetry GetAndResetSurfaceTelemetry();
 	}
 }

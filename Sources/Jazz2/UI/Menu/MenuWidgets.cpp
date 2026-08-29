@@ -475,7 +475,8 @@ namespace Jazz2::UI::Menu
 			float h = child->GetHeight();
 			child->Selected = (i == _selectedIndex);
 			Rectf childRect(bounds.X, cy - h * 0.5f, bounds.W, h);
-			if (cy > topLine - ItemSpacing && cy < bottomLine + ItemSpacing) {
+			const bool drawChild = (cy > topLine - ItemSpacing && cy < bottomLine + ItemSpacing);
+			if (drawChild) {
 				child->Draw(root, canvas, childRect, charOffset);
 			} else {
 				// Keep the bounds up to date for touch hit-testing even when culled

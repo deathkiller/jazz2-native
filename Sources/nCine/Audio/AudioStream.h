@@ -84,7 +84,12 @@ namespace nCine
 
 	private:
 		/** @brief Number of buffers used for streaming */
+#if defined(DEATH_TARGET_VITA)
+		// Keep music queued through occasional long GXM render stalls.
+		static const std::int32_t NumBuffers = 8;
+#else
 		static const std::int32_t NumBuffers = 3;
+#endif
 		/** @brief Backend buffer queue used for streaming */
 		SmallVector<std::uint32_t, NumBuffers> _buffersIds;
 		/** @brief Index of the next available buffer, which is also the number of buffers currently queued */

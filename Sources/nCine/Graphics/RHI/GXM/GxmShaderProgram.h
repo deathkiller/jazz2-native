@@ -427,7 +427,7 @@ namespace nCine::RHI::GXM
 			@param sizeInBytes   Receives the size of the returned binary
 			@returns A GXP binary to release with `std::free()`, or `nullptr` if the compile failed
 		*/
-		static SceGxmProgram* CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes);
+		static SceGxmProgram* CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes, bool& loadedFromCache);
 
 	private:
 		static std::uint32_t _nextHandle;

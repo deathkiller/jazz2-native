@@ -21,6 +21,9 @@
 #include "../nCine/Graphics/Texture.h"
 #include "../nCine/Graphics/Viewport.h"
 #include "../nCine/Input/JoyMapping.h"
+#if defined(DEATH_TARGET_VITA)
+#	include <IO/FileStream.h>
+#endif
 
 #include "Actors/Player.h"
 #include "Actors/SolidObjectBase.h"
@@ -31,6 +34,7 @@
 
 #include <Containers/StaticArray.h>
 #include <Containers/StringConcatenable.h>
+#include <IO/FileSystem.h>
 #include <Utf8.h>
 
 using namespace nCine;
@@ -38,6 +42,20 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2
 {
+	static void WriteVitaGxmCheckpoint(StringView checkpoint)
+	{
+#if defined(DEATH_TARGET_VITA)
+		FileStream file("ux0:/data/Jazz2/VitaGxmCheckpoint.log"_s,
+			Death::IO::FileSystem::FileExists("ux0:/data/Jazz2/VitaGxmCheckpoint.log"_s) ? FileAccess::ReadWrite : FileAccess::Write);
+		if (file.IsValid()) {
+			file.Seek(0, Death::IO::SeekOrigin::End);
+			file.Write(checkpoint.data(), checkpoint.size());
+			file.Write("\n", 1);
+			file.Flush();
+		}
+#endif
+	}
+
 	namespace Resources
 	{
 		static constexpr AnimState Snow = (AnimState)0;
@@ -717,6 +735,10 @@ namespace Jazz2
 	{
 		ZoneScopedC(0x4876AF);
 
+#if defined(DEATH_TARGET_VITA)
+		WriteVitaGxmCheckpoint("LevelHandler::OnInitializeViewport entered"_s);
+#endif
+
 		auto& resolver = ContentResolver::Get();
 		if (resolver.IsHeadless()) {
 			// Use only the main viewport in headless mode
@@ -747,7 +769,13 @@ namespace Jazz2
 		// thus the HUD layout) stays unchanged.
 		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
 		std::int32_t supersample = (useHalfRes ? 2 : 1);
+#if defined(DEATH_TARGET_VITA)
+		WriteVitaGxmCheckpoint("LevelHandler: initializing upscale pass"_s);
+#endif
 		_upscalePass.Initialize(w, h, width, height, supersample);
+#if defined(DEATH_TARGET_VITA)
+		WriteVitaGxmCheckpoint("LevelHandler: upscale pass initialized"_s);
+#endif
 
 		// When the scene is supersampled, the HUD and in-game menu are rendered through a separate overlay pass at the
 		// native resolution and then composited (nearest, so clean integer scaling) into the supersampled scene buffer,
@@ -775,13 +803,25 @@ namespace Jazz2
 			LOGI("Acquiring required shaders");
 
 			// Every light of a viewport goes out as one mesh, so there is no per-light program to acquire
+			WriteVitaGxmCheckpoint("LevelHandler: getting LightingMesh"_s);
 			_lightingMeshShader = resolver.GetShader(PrecompiledShader::LightingMesh);
+			WriteVitaGxmCheckpoint("LevelHandler: LightingMesh acquired"_s);
+			LOGI("Level viewport checkpoint: LightingMesh acquired");
 			if (_lightingMeshShader == nullptr) { LOGW("PrecompiledShader::LightingMesh failed"); }
+			WriteVitaGxmCheckpoint("LevelHandler: getting Blur"_s);
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
+			WriteVitaGxmCheckpoint("LevelHandler: Blur acquired"_s);
+			LOGI("Level viewport checkpoint: Blur acquired");
 			if (_blurShader == nullptr) { LOGW("PrecompiledShader::Blur failed"); }
+			WriteVitaGxmCheckpoint("LevelHandler: getting Downsample"_s);
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
+			WriteVitaGxmCheckpoint("LevelHandler: Downsample acquired"_s);
+			LOGI("Level viewport checkpoint: Downsample acquired");
 			if (_downsampleShader == nullptr) { LOGW("PrecompiledShader::Downsample failed"); }
+			WriteVitaGxmCheckpoint("LevelHandler: getting Combine"_s);
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+			WriteVitaGxmCheckpoint("LevelHandler: Combine acquired"_s);
+			LOGI("Level viewport checkpoint: Combine acquired");
 			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
 		}
 #endif
@@ -806,37 +846,59 @@ namespace Jazz2
 		}
 
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		WriteVitaGxmCheckpoint("LevelHandler: getting water shader"_s);
+		// Vita's renderer has a dedicated two-sample water compositor. The full shader is fragment-bound there.
+#if defined(DEATH_TARGET_VITA)
+		_combineWithWaterShader = resolver.GetShader(PrecompiledShader::CombineWithWaterLow);
+#else
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
 			? PrecompiledShader::CombineWithWaterLow
 			: PrecompiledShader::CombineWithWater);
+#endif
+		WriteVitaGxmCheckpoint("LevelHandler: water shader acquired"_s);
+		LOGI("Level viewport checkpoint: water shader acquired (low quality {})", PreferencesCache::LowWaterQuality);
 		if (_combineWithWaterShader == nullptr) {
+#if defined(DEATH_TARGET_VITA)
+				LOGW("PrecompiledShader::CombineWithWaterLow failed");
+#else
 			if (PreferencesCache::LowWaterQuality) {
 				LOGW("PrecompiledShader::CombineWithWaterLow failed");
 			} else {
 				LOGW("PrecompiledShader::CombineWithWater failed");
 			}
+#endif
 		}
 #endif
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
 			Recti bounds = GetPlayerViewportBounds(w, h, (std::int32_t)i);
+			WriteVitaGxmCheckpoint("LevelHandler: initializing player viewport"_s);
+			LOGI("Level viewport checkpoint: initializing player viewport {} ({}x{})", i, bounds.W, bounds.H);
 			if (viewport.Initialize(_rootNode.get(), _upscalePass.GetNode(), bounds, useHalfRes)) {
 				InitializeCamera(viewport);
 			}
+			WriteVitaGxmCheckpoint("LevelHandler: player viewport initialized"_s);
+			LOGI("Level viewport checkpoint: player viewport {} initialized", i);
 		}
 
 		// Viewports must be registered in reverse order (registered later = drawn earlier). The scene pass composites
 		// everything to the screen, so it is registered first; the overlay pass must render its UI texture before the
 		// scene pass reads it (to composite it into the scene buffer), so it is registered after.
+		WriteVitaGxmCheckpoint("LevelHandler: registering upscale pass"_s);
 		_upscalePass.Register();
+		WriteVitaGxmCheckpoint("LevelHandler: upscale pass registered"_s);
+		LOGI("Level viewport checkpoint: upscale pass registered");
 		if (_hudOverlayActive) {
 			_hudUpscalePass.Register();
 		}
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
+			WriteVitaGxmCheckpoint("LevelHandler: registering player viewport"_s);
 			viewport.Register();
+			WriteVitaGxmCheckpoint("LevelHandler: player viewport registered"_s);
+			LOGI("Level viewport checkpoint: player viewport {} registered", i);
 
 			if (_pauseMenu != nullptr) {
 				viewport.UpdateCamera(0.0f);	// Force update camera if game is paused
@@ -844,12 +906,17 @@ namespace Jazz2
 		}
 
 		if (_tileMap != nullptr) {
+			WriteVitaGxmCheckpoint("LevelHandler: initializing tile map viewport"_s);
 			_tileMap->OnInitializeViewport();
+			WriteVitaGxmCheckpoint("LevelHandler: tile map viewport initialized"_s);
 		}
 
 		if (_pauseMenu != nullptr) {
+			WriteVitaGxmCheckpoint("LevelHandler: initializing pause menu viewport"_s);
 			_pauseMenu->OnInitializeViewport(_viewSize.X, _viewSize.Y);
+			WriteVitaGxmCheckpoint("LevelHandler: pause menu viewport initialized"_s);
 		}
+		WriteVitaGxmCheckpoint("LevelHandler::OnInitializeViewport completed"_s);
 	}
 
 	bool LevelHandler::OnConsoleCommand(StringView line)
@@ -898,7 +965,9 @@ namespace Jazz2
 			if (_console->IsVisible()) {
 				_console->OnTouchEvent(event, _viewSize);
 			}
+#if !defined(DEATH_TARGET_VITA)
 			_hud->OnTouchEvent(event, _overrideActions, _overrideMovement);
+#endif
 		}
 	}
 

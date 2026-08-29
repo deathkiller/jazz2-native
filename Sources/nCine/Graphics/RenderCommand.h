@@ -93,6 +93,10 @@ namespace nCine
 		inline void SetIdSortKey(std::uint32_t idSortKey) {
 			_idSortKey = idSortKey;
 		}
+		/** @brief Sets an optional backend telemetry label for this draw */
+		inline void SetTelemetryLabel(const char* label) {
+			_telemetryLabel = label;
+		}
 
 		/** @brief Binds the command state and issues the draw call */
 		void Issue();
@@ -170,6 +174,7 @@ namespace nCine
 		RHI::UniformBlockCache* _instanceBlock;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t _idSortKey;
+		const char* _telemetryLabel;
 		// Value of the material's shader change counter when the cached uniforms were resolved
 		std::uint32_t _cachedShaderChangeCounter;
 		/** @brief Drawing layer for this command */

@@ -1781,6 +1781,10 @@ namespace
 			}
 			for (const ProgramReflection& program : programs) {
 				const String& progName = program.Document->ProgramName;
+				// The Vita runs these full-screen procedural backgrounds in its fragment stage. The
+				// software branch retains the moving warp while omitting stars, dither and expensive
+				// curve evaluation; apply it only to these two Cg programs.
+				const bool useBackgroundQualityPath = (progName == "TexturedBackground"_s || progName == "TexturedBackgroundCircle"_s);
 				for (const VariantReflection& v : program.Variants) {
 					String prefix = (v.Name.empty() ? progName : String(progName + "_" + v.Name));
 					CgShaderEntry e;
@@ -1789,7 +1793,8 @@ namespace
 					bool ok = true;
 					for (std::int32_t stage = 0; stage < 2 && ok; stage++) {
 						const bool vertexStage = (stage == 0);
-						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define,
+							useBackgroundQualityPath);
 						String cg;
 						Diagnostic diag;
 						if (HlslEmitter::Transform(modern, vertexStage, v.Reflection, cg, diag,

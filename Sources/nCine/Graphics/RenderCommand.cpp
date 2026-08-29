@@ -5,11 +5,15 @@
 #include "DrawableNode.h"
 #include "../tracy.h"
 
+#if defined(WITH_RHI_GXM)
+#	include "RHI/GXM/GxmDevice.h"
+#endif
+
 namespace nCine
 {
 	RenderCommand::RenderCommand(Type type)
 		: _materialSortKey(0), _modelMatrixUniform(nullptr), _instanceBlock(nullptr), _cachedShaderChangeCounter(std::uint32_t(-1)),
-			_layer(0), _numInstances(0), _batchSize(0), _transformationCommitted(false), _modelMatrixUniformInBlock(false),
+			_layer(0), _telemetryLabel(nullptr), _numInstances(0), _batchSize(0), _transformationCommitted(false), _modelMatrixUniformInBlock(false),
 			_modelMatrix(Matrix4x4f::Identity)
 #if defined(NCINE_PROFILING)
 			, _type(type)
@@ -39,6 +43,12 @@ namespace nCine
 
 		_material.Bind();
 		_material.CommitUniforms();
+
+#if defined(WITH_RHI_GXM)
+		if (_telemetryLabel != nullptr) {
+			RHI::GXM::GxmDevice::SetTelemetryDrawLabel(_telemetryLabel);
+		}
+#endif
 
 		RHI::Device::ScissorState scissorState = RHI::Device::GetScissorState();
 		if (_scissorRect.W > 0 && _scissorRect.H > 0) {

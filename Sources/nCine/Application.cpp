@@ -51,6 +51,7 @@ extern "C"
 #include "IAppEventHandler.h"
 #include "Graphics/RenderResources.h"
 #include "Graphics/RenderQueue.h"
+#include "Graphics/RenderStatistics.h"
 #include "Graphics/ScreenViewport.h"
 #include "Graphics/RHI/Rhi.h"
 #include "Base/FrameTimer.h"
@@ -67,6 +68,11 @@ extern "C"
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
+#if defined(DEATH_TARGET_VITA) && defined(WITH_RHI_GXM)
+#	include <IO/FileStream.h>
+#	include "Graphics/RHI/GXM/GxmDevice.h"
+#	include "Graphics/RHI/GXM/GxmMemory.h"
+#endif
 
 #if defined(WITH_AUDIO)
 #	if defined(WITH_OPENAL)
@@ -923,6 +929,57 @@ namespace nCine
 	void Application::Step()
 	{
 		_frameTimer->AddFrame();
+
+#if defined(DEATH_TARGET_VITA) && defined(WITH_RHI_GXM)
+		// Keep Vita telemetry independent from NCINE_PROFILING, which changes RenderCommand's ABI.
+		// Log only sustained slowdowns to avoid loading and shader compilation hitches.
+		static float slowFrameDuration = 0.0f;
+		static float logCooldown = 0.0f;
+		static std::unique_ptr<FileStream> performanceLog = []() {
+				auto file = std::make_unique<FileStream>("ux0:/data/Jazz2/VitaGxmPerformance.log"_s,
+					FileSystem::FileExists("ux0:/data/Jazz2/VitaGxmPerformance.log"_s) ? FileAccess::ReadWrite : FileAccess::Write);
+				if (file->IsValid()) {
+					file->Seek(0, SeekOrigin::End);
+					file->Write("\n", 1);
+					constexpr char Header[] = "Vita GXM safe telemetry: entries follow 0.5 seconds below 55 FPS\n";
+				file->Write(Header, sizeof(Header) - 1);
+				file->Flush();
+			}
+			return file;
+		}();
+		const float frameDuration = _frameTimer->GetLastFrameDuration();
+		if (frameDuration > (1.0f / 55.0f)) {
+			slowFrameDuration += std::min(frameDuration, 0.1f);
+		} else {
+			slowFrameDuration = 0.0f;
+		}
+		logCooldown -= frameDuration;
+		if (slowFrameDuration >= 0.5f && logCooldown <= 0.0f && performanceLog->IsValid()) {
+			const auto deviceTelemetry = RHI::GXM::GxmDevice::GetAndResetTelemetry();
+			const auto surfaceTelemetry = RHI::GXM::GxmMemory::GetAndResetSurfaceTelemetry();
+			char entry[352];
+			std::size_t length = formatInto(entry,
+				"GxmPerf: {:.1f} ms, {:.1f} FPS; gpu {} KB; scenes {}/{}/{} present {}; wait {:.1f} ms finish {:.1f} ms; surfaces {}/{} new {} reuse {}\n",
+				frameDuration * 1000.0f, _frameTimer->GetAverageFps(), RHI::GXM::GxmMemory::GetAllocatedBytes() / 1024,
+				deviceTelemetry.SceneBegins, deviceTelemetry.SceneFinishes, deviceTelemetry.NotificationWaits,
+				deviceTelemetry.Presents, deviceTelemetry.NotificationWaitMicroseconds / 1000.0f,
+				deviceTelemetry.FinishMicroseconds / 1000.0f, surfaceTelemetry.InUseSurfaces, surfaceTelemetry.RetainedSurfaces,
+				surfaceTelemetry.NewAcquisitions, surfaceTelemetry.ReusedAcquisitions);
+			performanceLog->Write(entry, length);
+			for (const auto& draw : deviceTelemetry.ShaderDraws) {
+				if (draw.ProgramName == nullptr) {
+					break;
+				}
+				char drawEntry[128];
+				length = formatInto(drawEntry, "GxmDraw: {} calls {} indices {}; scene ends {} wait {:.1f} ms present {:.1f} ms\n",
+					draw.ProgramName, draw.Calls, draw.Indices, draw.SceneEnds, draw.WaitMicroseconds / 1000.0f,
+					draw.PresentFinishMicroseconds / 1000.0f);
+				performanceLog->Write(drawEntry, length);
+			}
+			performanceLog->Flush();
+			logCooldown = 2.0f;
+		}
+#endif
 
 #if defined(WITH_IMGUI)
 		if (_appCfg.withGraphics) {

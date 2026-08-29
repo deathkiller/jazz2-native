@@ -173,10 +173,13 @@ namespace Jazz2::UI::Menu
 
 		DrawViewportSeparators();
 
+		// See MainMenu: do not cover the Vita title area with a touch-only back hint.
+#if !defined(DEATH_TARGET_VITA)
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			float arrowScale = (ViewSize.Y >= 300 ? 1.0f : 0.7f);
 			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - (ViewSize.Y >= 300 ? 30.0f : 12.0f), ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
+#endif
 
 		// Title
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);

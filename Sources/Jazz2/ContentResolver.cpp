@@ -142,7 +142,7 @@ namespace Jazz2
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_VITA)
-		return "ux0:/data/jazz2/Cache/"_s;
+		return "ux0:/data/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -175,7 +175,7 @@ namespace Jazz2
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_VITA)
-		return "ux0:/data/jazz2/Source/"_s;
+		return "ux0:/data/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
@@ -2045,7 +2045,9 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", ShadersGen::Blur);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", ShadersGen::Downsample);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Combine] = CompileShader("Combine", ShadersGen::Combine);
+#if !defined(DEATH_TARGET_VITA)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", ShadersGen::CombineWithWater);
+		#endif
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", ShadersGen::CombineWithWaterLow);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", ShadersGen::TexturedBackground);

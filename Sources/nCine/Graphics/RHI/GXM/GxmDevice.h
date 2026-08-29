@@ -113,6 +113,8 @@ namespace nCine::RHI::GXM
 		static void SetScissorState(const ScissorState& state);
 		static void SetScissor(const Recti& rect);
 		static void SetScissorTestEnabled(bool enabled);
+		/** @brief Overrides the program name recorded for the next draw in safe performance telemetry */
+		static void SetTelemetryDrawLabel(const char* label);
 
 		static Recti GetViewport();
 		static void SetViewport(const Recti& rect);
@@ -170,13 +172,34 @@ namespace nCine::RHI::GXM
 		*/
 		static void FinishScene();
 
+		struct Telemetry
+		{
+			struct ShaderDraw
+			{
+				const char* ProgramName = nullptr;
+				std::uint32_t Calls = 0;
+				std::uint64_t Indices = 0;
+				std::uint32_t SceneEnds = 0;
+				std::uint64_t WaitMicroseconds = 0;
+				std::uint64_t PresentFinishMicroseconds = 0;
+			};
+
+			static constexpr std::uint32_t MaxShaderDraws = 24;
+			std::uint32_t SceneBegins = 0;
+			std::uint32_t SceneFinishes = 0;
+			std::uint32_t NotificationWaits = 0;
+			std::uint32_t Presents = 0;
+			std::uint64_t NotificationWaitMicroseconds = 0;
+			std::uint64_t FinishMicroseconds = 0;
+			ShaderDraw ShaderDraws[MaxShaderDraws];
+		};
+		/** @brief Returns and clears the lightweight counters collected since the previous call */
+		static Telemetry GetAndResetTelemetry();
+
 		/** @brief Returns the shader patcher every program creates its vertex/fragment programs through */
 		static SceGxmShaderPatcher* GetShaderPatcher();
 		/** @brief Returns the rendering context, or `nullptr` before @ref CreateSwapchain() */
 		static SceGxmContext* GetContext();
-
-		/** @brief Monotonic count of presented frames (used to detect resources still referenced by the current frame) */
-		static std::uint32_t GetSceneCounter();
 
 		/**
 			@brief Returns the static vertex stream feeding `aQuadCorner` for the 4-vertex sprite strip
@@ -348,6 +371,11 @@ namespace nCine::RHI::GXM
 		// EnsureScene())
 		static void* _sceneSurfaceData;
 		static std::uint32_t _sceneCounter;
+		static Telemetry _telemetry;
+		// The shader that most recently wrote the open scene, used to attribute its completion wait.
+		static const char* _sceneLastProgram;
+		static const char* _lastFinishedSceneProgram;
+		static const char* _telemetryNextDrawLabel;
 		// State that has to be re-applied after a scene begins (sceGxmBeginScene resets the pipeline state)
 		static bool _sceneStateApplied;
 
@@ -363,6 +391,8 @@ namespace nCine::RHI::GXM
 		// equivalent of glClear (see the class documentation)
 		static SceGxmShaderPatcherId _clearVertexId;
 		static SceGxmShaderPatcherId _clearFragmentId;
+		static SceGxmProgram* _clearVertexStage;
+		static SceGxmProgram* _clearFragmentStage;
 		static SceGxmVertexProgram* _clearVertexProgram;
 		static SceGxmFragmentProgram* _clearFragmentProgram;
 		// Next slot of the clear quad ring, so concurrent clears in one frame keep their own colours
@@ -372,6 +402,8 @@ namespace nCine::RHI::GXM
 		// Present: the screen surface sampled with a flipped V into the display buffer
 		static SceGxmShaderPatcherId _presentVertexId;
 		static SceGxmShaderPatcherId _presentFragmentId;
+		static SceGxmProgram* _presentVertexStage;
+		static SceGxmProgram* _presentFragmentStage;
 		static SceGxmVertexProgram* _presentVertexProgram;
 		static SceGxmFragmentProgram* _presentFragmentProgram;
 		static GxmMemory::Block _presentVertices;
@@ -442,8 +474,5 @@ namespace nCine::RHI::GXM
 		/** @brief Shared body of the draw calls: binds the program, its resources and state, then issues the draw */
 		static void DrawCommon(PrimitiveType primitive, std::int32_t firstVertex, std::uint32_t count,
 			bool indexed, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
-		/** @brief Draws the full-screen quad of a built-in shader pair into the current scene */
-		static void DrawFullscreenQuad(SceGxmVertexProgram* vertexProgram, SceGxmFragmentProgram* fragmentProgram,
-			const void* vertices, const Colorf* color, const SceGxmTexture* texture);
 	};
 }

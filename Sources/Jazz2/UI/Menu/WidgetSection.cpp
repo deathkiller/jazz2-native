@@ -6,7 +6,12 @@ namespace Jazz2::UI::Menu
 {
 	// Standard divider line insets (matching the scrollable list sections)
 	static constexpr std::int32_t WidgetTopLine = 31;
+	// Vita has no bottom touch prompt, so its scrollable menu can use that space.
+#if defined(DEATH_TARGET_VITA)
+	static constexpr std::int32_t WidgetBottomLine = 12;
+#else
 	static constexpr std::int32_t WidgetBottomLine = 42;
+#endif
 
 	WidgetSection::WidgetSection()
 	{

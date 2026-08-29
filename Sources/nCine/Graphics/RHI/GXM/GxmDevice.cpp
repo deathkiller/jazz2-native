@@ -14,6 +14,7 @@
 #include <Containers/String.h>
 
 #include <psp2/display.h>
+#include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
 #include <vitashark.h>
 
@@ -252,12 +253,18 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	bool GxmDevice::_sceneOpen = false;
 	void* GxmDevice::_sceneSurfaceData = nullptr;
 	std::uint32_t GxmDevice::_sceneCounter = 0;
+	GxmDevice::Telemetry GxmDevice::_telemetry;
+	const char* GxmDevice::_sceneLastProgram = nullptr;
+	const char* GxmDevice::_lastFinishedSceneProgram = nullptr;
+	const char* GxmDevice::_telemetryNextDrawLabel = nullptr;
 	bool GxmDevice::_sceneStateApplied = false;
 	std::int32_t GxmDevice::_sceneWidth = GxmDevice::DisplayWidth;
 	std::int32_t GxmDevice::_sceneHeight = GxmDevice::DisplayHeight;
 
 	SceGxmShaderPatcherId GxmDevice::_clearVertexId = nullptr;
 	SceGxmShaderPatcherId GxmDevice::_clearFragmentId = nullptr;
+	SceGxmProgram* GxmDevice::_clearVertexStage = nullptr;
+	SceGxmProgram* GxmDevice::_clearFragmentStage = nullptr;
 	SceGxmVertexProgram* GxmDevice::_clearVertexProgram = nullptr;
 	SceGxmFragmentProgram* GxmDevice::_clearFragmentProgram = nullptr;
 	std::uint32_t GxmDevice::_clearQuadIndex = 0;
@@ -265,6 +272,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 	SceGxmShaderPatcherId GxmDevice::_presentVertexId = nullptr;
 	SceGxmShaderPatcherId GxmDevice::_presentFragmentId = nullptr;
+	SceGxmProgram* GxmDevice::_presentVertexStage = nullptr;
+	SceGxmProgram* GxmDevice::_presentFragmentStage = nullptr;
 	SceGxmVertexProgram* GxmDevice::_presentVertexProgram = nullptr;
 	SceGxmFragmentProgram* GxmDevice::_presentFragmentProgram = nullptr;
 	GxmMemory::Block GxmDevice::_presentVertices;
@@ -493,9 +502,16 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		return _context;
 	}
 
-	std::uint32_t GxmDevice::GetSceneCounter()
+	void GxmDevice::SetTelemetryDrawLabel(const char* label)
 	{
-		return _sceneCounter;
+		_telemetryNextDrawLabel = label;
+	}
+
+	GxmDevice::Telemetry GxmDevice::GetAndResetTelemetry()
+	{
+		Telemetry telemetry = _telemetry;
+		_telemetry = {};
+		return telemetry;
 	}
 
 	const void* GxmDevice::GetQuadCornerStream()
@@ -554,9 +570,11 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	void GxmDevice::GetCurrentTarget(SceGxmRenderTarget*& renderTarget, SceGxmColorSurface*& colorSurface,
 		SceGxmDepthStencilSurface*& depthSurface, SceGxmSyncObject*& syncObject, std::int32_t& width, std::int32_t& height)
 	{
-		depthSurface = &_depthSurface;
 		if (_currentRenderTarget != nullptr &&
 			_currentRenderTarget->GetSceneTarget(renderTarget, colorSurface, syncObject, width, height)) {
+			// Jazz2's off-screen viewports have no depth/stencil attachment. Reusing the display-sized
+			// depth surface here corrupts memory when a level background target is larger than 960x544.
+			depthSurface = nullptr;
 			return;
 		}
 
@@ -565,6 +583,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// GxmRenderTarget::GetSceneTarget())
 		renderTarget = _displayRenderTarget;
 		colorSurface = &_screenSurface;
+		depthSurface = &_depthSurface;
 		syncObject = _screenSyncObject;
 		width = DisplayWidth;
 		height = DisplayHeight;
@@ -611,7 +630,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 
 		_sceneOpen = true;
+		_telemetry.SceneBegins++;
 		_sceneSurfaceData = surfaceData;
+		_sceneLastProgram = nullptr;
 		_sceneWidth = width;
 		_sceneHeight = height;
 		ApplyViewportAndScissor();
@@ -636,9 +657,25 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// really samples this surface, which needs a scene's bindings to be known before it begins.
 		_sceneNotification.value++;
 		sceGxmEndScene(_context, nullptr, &_sceneNotification);
+		_telemetry.SceneFinishes++;
+		const std::uint64_t waitStart = sceKernelGetProcessTimeWide();
 		sceGxmNotificationWait(&_sceneNotification);
+		_telemetry.NotificationWaits++;
+		const std::uint64_t waitMicroseconds = sceKernelGetProcessTimeWide() - waitStart;
+		_telemetry.NotificationWaitMicroseconds += waitMicroseconds;
+		if (_sceneLastProgram != nullptr) {
+			_lastFinishedSceneProgram = _sceneLastProgram;
+			for (Telemetry::ShaderDraw& draw : _telemetry.ShaderDraws) {
+				if (draw.ProgramName != nullptr && std::strcmp(draw.ProgramName, _sceneLastProgram) == 0) {
+					draw.SceneEnds++;
+					draw.WaitMicroseconds += waitMicroseconds;
+					break;
+				}
+			}
+		}
 		_sceneOpen = false;
 		_sceneSurfaceData = nullptr;
+		_sceneLastProgram = nullptr;
 		_sceneStateApplied = false;
 	}
 
@@ -674,16 +711,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				// cannot express - a 1x1 region outside the surface is the closest equivalent
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_OUTSIDE, 0, 0, 0, 0);
 			} else {
-				// Measured on the console: the rows of a region clip run opposite to the way this backend stores
-				// its surfaces, so the rectangle is mirrored vertically. The viewport above can express either
-				// direction because its Y scale is signed - which is what puts clip -Y on row 0 and gives every
-				// surface OpenGL's bottom-up layout - while an unsigned clip rectangle cannot, so anything handed
-				// to sceGxm as plain surface rows has to be turned over to match the rectangle `glScissor()`
-				// takes on the reference backend
-				const std::int32_t yMinClip = targetHeight - 1 - yMax;
-				const std::int32_t yMaxClip = targetHeight - 1 - yMin;
+				// Region clips use the same top-down coordinates as the engine's scissor rectangles. The viewport
+				// transform handles the surface's bottom-up storage; mirroring here clips the lower menu rows early.
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_OUTSIDE,
-					std::uint32_t(xMin), std::uint32_t(yMinClip), std::uint32_t(xMax), std::uint32_t(yMaxClip));
+					std::uint32_t(xMin), std::uint32_t(yMin), std::uint32_t(xMax), std::uint32_t(yMax));
 			}
 		} else {
 			sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_NONE, 0, 0, 0, 0);
@@ -1024,6 +1055,25 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			}
 		}
 		sceGxmDraw(_context, primitiveType, gxmIndexFormat, indexData, indexCount);
+
+		const char* programName = (_telemetryNextDrawLabel != nullptr ? _telemetryNextDrawLabel : program->GetProgramName());
+		_telemetryNextDrawLabel = nullptr;
+		if (programName != nullptr) {
+			_sceneLastProgram = programName;
+			for (Telemetry::ShaderDraw& draw : _telemetry.ShaderDraws) {
+				if (draw.ProgramName == nullptr) {
+					draw.ProgramName = programName;
+					draw.Calls = 1;
+					draw.Indices = indexCount;
+					break;
+				}
+				if (std::strcmp(draw.ProgramName, programName) == 0) {
+					draw.Calls++;
+					draw.Indices += indexCount;
+					break;
+				}
+			}
+		}
 	}
 
 	void GxmDevice::UploadUniforms(void* uniformBuffer, GxmShaderProgram* program,
@@ -1122,7 +1172,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// Waiting for everything is stronger than the caller asked for, but correct - and this is only reached
 		// when the pipeline's ring buffers have wrapped, which the enlarged vertex ring makes rare
 		FinishScene();
+		const std::uint64_t finishStart = sceKernelGetProcessTimeWide();
 		sceGxmFinish(_context);
+		_telemetry.FinishMicroseconds += sceKernelGetProcessTimeWide() - finishStart;
 		return true;
 	}
 
@@ -1139,16 +1191,11 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			const char* Name;
 		};
 
-		static SceGxmProgram* clearVertexStage = nullptr;
-		static SceGxmProgram* clearFragmentStage = nullptr;
-		static SceGxmProgram* presentVertexStage = nullptr;
-		static SceGxmProgram* presentFragmentStage = nullptr;
-
 		const BuiltinStage stages[] = {
-			{ ClearVertexSource, SHARK_VERTEX_SHADER, &clearVertexStage, &_clearVertexId, "clear vertex" },
-			{ ClearFragmentSource, SHARK_FRAGMENT_SHADER, &clearFragmentStage, &_clearFragmentId, "clear fragment" },
-			{ PresentVertexSource, SHARK_VERTEX_SHADER, &presentVertexStage, &_presentVertexId, "present vertex" },
-			{ PresentFragmentSource, SHARK_FRAGMENT_SHADER, &presentFragmentStage, &_presentFragmentId, "present fragment" }
+			{ ClearVertexSource, SHARK_VERTEX_SHADER, &_clearVertexStage, &_clearVertexId, "clear vertex" },
+			{ ClearFragmentSource, SHARK_FRAGMENT_SHADER, &_clearFragmentStage, &_clearFragmentId, "clear fragment" },
+			{ PresentVertexSource, SHARK_VERTEX_SHADER, &_presentVertexStage, &_presentVertexId, "present vertex" },
+			{ PresentFragmentSource, SHARK_FRAGMENT_SHADER, &_presentFragmentStage, &_presentFragmentId, "present fragment" }
 		};
 
 		for (const BuiltinStage& stage : stages) {
@@ -1158,12 +1205,13 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			*stage.Output = nullptr;
 
 			std::uint32_t size = 0;
-			*stage.Output = GxmShaderProgram::CompileCgStage(stage.Source, stage.Type == SHARK_VERTEX_SHADER, size);
+			bool loadedFromCache = false;
+			*stage.Output = GxmShaderProgram::CompileCgStage(stage.Source, stage.Type == SHARK_VERTEX_SHADER, size, loadedFromCache);
 			if (*stage.Output == nullptr) {
 				LOGE("Failed to compile the built-in {} shader", stage.Name);
 				return false;
 			}
-			LOGD("Compiled the built-in {} shader ({} bytes of GXP)", stage.Name, size);
+			LOGD("{} the built-in {} shader ({} bytes of GXP)", loadedFromCache ? "Loaded" : "Compiled", stage.Name, size);
 			if (sceGxmShaderPatcherRegisterProgram(_shaderPatcher, *stage.Output, stage.Id) < 0) {
 				LOGE("Failed to register the built-in {} shader with the shader patcher", stage.Name);
 				return false;
@@ -1192,13 +1240,13 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		clearAttribute.offset = 0;
 		clearAttribute.format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
 		clearAttribute.componentCount = 2;
-		resolveAttribute(clearVertexStage, "aPosition", 0, clearAttribute.regIndex);
+		resolveAttribute(_clearVertexStage, "aPosition", 0, clearAttribute.regIndex);
 		SceGxmVertexAttribute clearColorAttribute = {};
 		clearColorAttribute.streamIndex = 0;
 		clearColorAttribute.offset = offsetof(ClearVertex, R);
 		clearColorAttribute.format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
 		clearColorAttribute.componentCount = 4;
-		resolveAttribute(clearVertexStage, "aColor", 1, clearColorAttribute.regIndex);
+		resolveAttribute(_clearVertexStage, "aColor", 1, clearColorAttribute.regIndex);
 		const SceGxmVertexAttribute clearAttributes[2] = { clearAttribute, clearColorAttribute };
 		SceGxmVertexStream clearStream = {};
 		clearStream.stride = sizeof(ClearVertex);
@@ -1206,7 +1254,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		if (sceGxmShaderPatcherCreateVertexProgram(_shaderPatcher, _clearVertexId, clearAttributes, 2,
 				&clearStream, 1, &_clearVertexProgram) < 0 ||
 			sceGxmShaderPatcherCreateFragmentProgram(_shaderPatcher, _clearFragmentId,
-				SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, nullptr, clearVertexStage,
+				SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, nullptr, _clearVertexStage,
 				&_clearFragmentProgram) < 0) {
 			LOGE("Failed to create the built-in clear programs");
 			return false;
@@ -1222,15 +1270,15 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		presentAttributes[1].offset = sizeof(float) * 2;
 		presentAttributes[1].format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
 		presentAttributes[1].componentCount = 2;
-		resolveAttribute(presentVertexStage, "aPosition", 0, presentAttributes[0].regIndex);
-		resolveAttribute(presentVertexStage, "aTexCoords", 1, presentAttributes[1].regIndex);
+		resolveAttribute(_presentVertexStage, "aPosition", 0, presentAttributes[0].regIndex);
+		resolveAttribute(_presentVertexStage, "aTexCoords", 1, presentAttributes[1].regIndex);
 		SceGxmVertexStream presentStream = {};
 		presentStream.stride = sizeof(float) * 4;
 		presentStream.indexSource = SCE_GXM_INDEX_SOURCE_INDEX_16BIT;
 		if (sceGxmShaderPatcherCreateVertexProgram(_shaderPatcher, _presentVertexId, presentAttributes, 2,
 				&presentStream, 1, &_presentVertexProgram) < 0 ||
 			sceGxmShaderPatcherCreateFragmentProgram(_shaderPatcher, _presentFragmentId,
-				SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, nullptr, presentVertexStage,
+				SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4, SCE_GXM_MULTISAMPLE_NONE, nullptr, _presentVertexStage,
 				&_presentFragmentProgram) < 0) {
 			LOGE("Failed to create the built-in present programs");
 			return false;
@@ -1257,6 +1305,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return true;
 		}
 		_vsync = vsync;
+		LOGI("Initializing native GXM RHI (requested {}x{}, vsync {})", width, height, vsync);
 
 		SceGxmInitializeParams initializeParams = {};
 		initializeParams.flags = 0;
@@ -1455,13 +1504,20 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// sceGxm consumes compiled GXP binaries and the SDK ships no offline compiler for them, so the whole
 		// shader set is compiled on the console by the firmware's own Cg compiler. A build that bundles the
 		// module in its own VPK is served first, the standard shared location second
-		if (shark_init(ShaderCompilerModulePath) < 0 && shark_init(ShaderCompilerModulePathAlt) < 0) {
+		const char* shaderCompilerPath = ShaderCompilerModulePath;
+		std::int32_t shaderCompilerResult = shark_init(shaderCompilerPath);
+		if (shaderCompilerResult < 0) {
+			shaderCompilerPath = ShaderCompilerModulePathAlt;
+			shaderCompilerResult = shark_init(shaderCompilerPath);
+		}
+		if (shaderCompilerResult < 0) {
 			LOGE("Cannot initialize the runtime Cg compiler: \"libshacccg.suprx\" was not found. This backend "
 				"compiles its shaders on the console, so that firmware module has to be extracted and placed "
 				"in \"ur0:/data/\" (see the PS Vita section of the console documentation)");
 			DestroySwapchain();
 			return false;
 		}
+		LOGI("Runtime Cg compiler loaded from \"{}\"", shaderCompilerPath);
 
 		// A scene's completion notification has to be written into the driver's own notification region
 		// (see FinishScene())
@@ -1524,6 +1580,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		if (_context != nullptr) {
 			sceGxmFinish(_context);
 		}
+		// A swapchain can be torn down before the next present, leaving grown index buffers held in this
+		// table. The finish above guarantees that no submitted draw still references them.
+		ReleaseRetiredBlocks();
 		sceGxmDisplayQueueFinish();
 
 		shark_end();
@@ -1540,6 +1599,14 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		_clearFragmentProgram = nullptr;
 		_presentVertexProgram = nullptr;
 		_presentFragmentProgram = nullptr;
+		std::free(_clearVertexStage);
+		std::free(_clearFragmentStage);
+		std::free(_presentVertexStage);
+		std::free(_presentFragmentStage);
+		_clearVertexStage = nullptr;
+		_clearFragmentStage = nullptr;
+		_presentVertexStage = nullptr;
+		_presentFragmentStage = nullptr;
 		_clearQuadIndex = 0;
 
 		for (std::uint32_t i = 0; i < DisplayBufferCount; i++) {
@@ -1579,6 +1646,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		GxmMemory::Free(_vertexRingBuffer);
 		GxmMemory::Free(_vdmRingBuffer);
 		GxmMemory::Free(_contextHostMem);
+		GxmMemory::ReleaseRetainedSurfaces();
 		_sequentialIndexCount = 0;
 		_lineStripVertexCount = 0;
 
@@ -1594,6 +1662,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 	void GxmDevice::PresentFrame()
 	{
+		_telemetry.Presents++;
 		if (!_initialized || _context == nullptr) {
 			return;
 		}
@@ -1645,7 +1714,18 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// The cost is real - CPU and GPU no longer overlap. Removing it means giving every per-frame buffer as
 		// many copies as there are frames in flight and cycling them with the display queue, which is a
 		// pipeline-wide change rather than a backend one.
+		const std::uint64_t finishStart = sceKernelGetProcessTimeWide();
 		sceGxmFinish(_context);
+		const std::uint64_t finishMicroseconds = sceKernelGetProcessTimeWide() - finishStart;
+		_telemetry.FinishMicroseconds += finishMicroseconds;
+		if (_lastFinishedSceneProgram != nullptr) {
+			for (Telemetry::ShaderDraw& draw : _telemetry.ShaderDraws) {
+				if (draw.ProgramName != nullptr && std::strcmp(draw.ProgramName, _lastFinishedSceneProgram) == 0) {
+					draw.PresentFinishMicroseconds += finishMicroseconds;
+					break;
+				}
+			}
+		}
 
 		// Everything recorded this frame has been consumed, so anything a growing buffer displaced can go
 		ReleaseRetiredBlocks();

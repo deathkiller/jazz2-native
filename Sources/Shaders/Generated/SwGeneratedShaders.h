@@ -292,27 +292,6 @@ void CombineWithWaterLow_ComputeVaryings(void* inputs, const std::uint8_t* insta
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
-static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	float h = dot(p, vec2(12.9898f, 78.233f));
-	float h2 = dot(p, vec2(37.271f, 377.632f));
-	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
-}
-
-static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
-{
-	using namespace nCine::RHI::Software::sw;
-	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec2 seed = position + fract(unis->uTime * 0.01f);
-	return clamp(position + CombineWithWaterLow_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
-}
-
 void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -324,27 +303,24 @@ void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInpu
 	vec2 uvLocal = vec2(in.u, in.v);
 	vec2 uvWorldCenter = unis->uCameraPos.xy() * unis->vViewSizeInv.xy();
 	vec2 uvWorld = uvLocal + uvWorldCenter;
-	float isTexelBelow = 1.0f - step(uvLocal.y, unis->uWaterLevel);
+	float waveHeight = sin((uvWorld.x - unis->uTime) * 60.0f) * 0.007f;
+	float waterSurface = unis->uWaterLevel + waveHeight;
+	float isTexelBelow = 1.0f - step(uvLocal.y, waterSurface);
 	float isTexelAbove = 1.0f - isTexelBelow;
 	vec2 uv = clamp(uvLocal + vec2(0.008f * sin(unis->uTime * 16.0f + uvWorld.y * 20.0f) * isTexelBelow, 0.0f), vec2(0.0f), vec2(1.0f));
 	vec4 main = swTexture(in, 0, uv);
-	float topDist = abs(uvLocal.y - unis->uWaterLevel);
+	float topDist = abs(uvLocal.y - waterSurface);
 	float topGradient = max(1.0f - topDist, 0.0f);
 	float isNearTop = 0.2f * topGradient * topGradient;
 	float isVeryNearTop = 1.0f - step(unis->vViewSizeInv.y, topDist);
 	main.rgb() = mix(main.rgb(), waterColor, vec3(isTexelBelow * 0.4f)) + vec3((isNearTop + 0.2f * isVeryNearTop) * isTexelBelow);
-	vec4 blur1 = swTexture(in, 2, uv);
-	vec4 blur2 = swTexture(in, 3, uv);
-	vec4 light = swTexture(in, 1, CombineWithWaterLow_noiseTexCoords(in, uv));
-	vec4 blur = (blur1 + blur2) * vec4(0.5f);
-	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
-	blur = vec4(gray, gray, gray, blur.a);
+	vec4 light = swTexture(in, 1, uv);
 	float darknessStrength = 1.0f - light.r;
 	if (unis->uWaterLevel < 0.4f) {
 		float aboveWaterDarkness = isTexelAbove * (0.4f - unis->uWaterLevel);
 		darknessStrength = min(1.0f, darknessStrength + aboveWaterDarkness);
 	}
-	COLOR = mix(mix(main * (1.0f + light.g) + max(light.g - 0.7f, 0.0f) * vec4(1.0f), blur, vec4(clamp((1.0f - light.r) / sqrt(max(unis->uAmbientColor.w, 0.35f)), 0.0f, 1.0f))), unis->uAmbientColor, vec4(darknessStrength));
+	COLOR = mix(main * (1.0f + light.g) + max(light.g - 0.7f, 0.0f) * vec4(1.0f), unis->uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
 }

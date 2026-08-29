@@ -66,14 +66,27 @@ namespace Jazz2::Rendering
 			return true;
 		}
 
-		// Cap vertices per command to whatever the shared array buffer can hold, queried at runtime from the buffer
-		// manager instead of a fixed size. Rounded down to a multiple of 6 (one light = two triangles = 6 vertices)
-		// so a split falls between lights.
+		// Cap each indexed light mesh to both shared buffers. Four vertices plus six indices describe a light's two
+		// triangles, avoiding the two duplicated vertices the old non-indexed stream submitted for every light.
 		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		std::uint32_t maxVerticesPerChunk = maxVertexDataSize / (FloatsPerVertex * sizeof(float));
-		maxVerticesPerChunk -= (maxVerticesPerChunk % 6);
+		const std::uint32_t maxIndexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
+		std::uint32_t maxVerticesPerChunk = std::min(maxVertexDataSize / (FloatsPerVertex * sizeof(float)),
+			(maxIndexDataSize / sizeof(std::uint16_t)) * 2 / 3);
+		maxVerticesPerChunk = std::min(maxVerticesPerChunk, std::uint32_t(UINT16_MAX - 3));
+		maxVerticesPerChunk -= (maxVerticesPerChunk % 4);
+		FATAL_ASSERT(maxVerticesPerChunk >= 4);
 
 		const std::uint32_t totalVertices = (std::uint32_t)(_vertices.size() / FloatsPerVertex);
+		const std::uint32_t maxIndicesPerChunk = maxVerticesPerChunk / 4 * 6;
+		_indices.resize_for_overwrite(maxIndicesPerChunk);
+		for (std::uint32_t firstVertex = 0, firstIndex = 0; firstIndex < maxIndicesPerChunk; firstVertex += 4) {
+			_indices[firstIndex++] = std::uint16_t(firstVertex);
+			_indices[firstIndex++] = std::uint16_t(firstVertex + 1);
+			_indices[firstIndex++] = std::uint16_t(firstVertex + 2);
+			_indices[firstIndex++] = std::uint16_t(firstVertex);
+			_indices[firstIndex++] = std::uint16_t(firstVertex + 2);
+			_indices[firstIndex++] = std::uint16_t(firstVertex + 3);
+		}
 		std::int32_t commandIndex = 0;
 		for (std::uint32_t firstVertex = 0; firstVertex < totalVertices; firstVertex += maxVerticesPerChunk) {
 			const std::uint32_t count = std::min(maxVerticesPerChunk, totalVertices - firstVertex);
@@ -89,6 +102,8 @@ namespace Jazz2::Rendering
 			geometry.SetElementsPerVertex(FloatsPerVertex);
 			geometry.SetVertexCount(count);
 			geometry.SetHostVertexPointer(_vertices.data() + firstVertex * FloatsPerVertex);
+			geometry.SetIndexCount(count / 4 * 6);
+			geometry.SetHostIndexPointer(_indices.data());
 			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count);
 
 			renderQueue.AddCommand(command);
@@ -110,18 +125,16 @@ namespace Jazz2::Rendering
 		const float radiusNear = light.RadiusNear / light.RadiusFar;
 
 		std::size_t base = _vertices.size();
-		// Every float is written below, so the zero-initialization resize() would do first is wasted work
-		_vertices.resize_for_overwrite(base + 6 * FloatsPerVertex);
+		// Every float is written below, so the zero-initialization resize() would do first is wasted work.
+		_vertices.resize_for_overwrite(base + 4 * FloatsPerVertex);
 		float* v = _vertices.data() + base;
 		auto put = [&](float px, float py, float cx, float cy) {
 			*v++ = px; *v++ = py; *v++ = radiusNear; *v++ = 0.0f;
 			*v++ = light.Intensity; *v++ = light.Brightness; *v++ = cx; *v++ = cy;
 		};
-		// Same two-triangle vertex order the tile and particle meshes use
+		// The index buffer forms the same two triangles the old duplicated-vertex stream used.
 		put(x0, y0, -1.0f, -1.0f);
 		put(x1, y0,  1.0f, -1.0f);
-		put(x1, y1,  1.0f,  1.0f);
-		put(x0, y0, -1.0f, -1.0f);
 		put(x1, y1,  1.0f,  1.0f);
 		put(x0, y1, -1.0f,  1.0f);
 	}

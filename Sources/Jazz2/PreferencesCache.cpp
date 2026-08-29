@@ -15,6 +15,9 @@
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
+#if defined(DEATH_TARGET_VITA)
+#	include <IO/FileStream.h>
+#endif
 #include <Utf8.h>
 
 #if defined(DEATH_TARGET_DREAMCAST)
@@ -1192,6 +1195,32 @@ namespace
 			}
 #endif
 		}
+
+#if defined(DEATH_TARGET_VITA)
+		// Jazz2.config is shared with older VitaGL builds and can restore a renderer-specific post-process
+		// path. Keep the proven Phase 0 GXM configuration without resetting controls or episode progress.
+		ActiveRescaleMode = RescaleMode::None;
+		BlurEffects = true;
+		LowWaterQuality = false;
+		LightingResolutionPercent = 50;
+		UnalignedViewport = false;
+
+		// This log records the effective values after Jazz2.config and the Vita profile are both applied.
+		// It survives a GPU hang, unlike the buffered application trace.
+		FileStream configLog("ux0:/data/Jazz2/VitaGxmConfig.log"_s,
+			FileSystem::FileExists("ux0:/data/Jazz2/VitaGxmConfig.log"_s) ? FileAccess::ReadWrite : FileAccess::Write);
+		if (configLog.IsValid()) {
+			configLog.Seek(0, SeekOrigin::End);
+			configLog.Write("\n", 1);
+			char entry[256];
+			std::size_t length = formatInto(entry,
+				"Vita GXM effective graphics config\nrescale={} blur={} low-water={} lighting={} unaligned-viewport={} background-dithering={} zoom-out={} metrics={} max-fps={}\n",
+				std::int32_t(ActiveRescaleMode), BlurEffects, LowWaterQuality, LightingResolutionPercent,
+				UnalignedViewport, BackgroundDithering, PreferZoomOut, ShowPerformanceMetrics, MaxFps);
+			configLog.Write(entry, length);
+			configLog.Flush();
+		}
+#endif
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && \

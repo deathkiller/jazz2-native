@@ -8,17 +8,101 @@
 #include "../../../../Shaders/Generated/CgGeneratedShaders.h"
 #include "../../Material.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #include <Containers/StringConcatenable.h>
+#include <Cryptography/xxHash.h>
+#include <IO/FileSystem.h>
+#include <IO/FileStream.h>
 
+#include <psp2/kernel/processmgr.h>
 #include <vitashark.h>
 
 namespace nCine::RHI::GXM
 {
 	namespace
 	{
+		constexpr char GxpCacheDirectory[] = "ux0:/data/Jazz2/GxpCache/v1";
+		constexpr char PackagedGxpCacheDirectory[] = "app0:/GxpCache/v1";
+		constexpr std::uint32_t GxpCacheMagic = 0x47585043; // "GXPC"
+		constexpr std::uint32_t MaxCachedGxpSize = 1024 * 1024;
+
+		struct GxpCacheHeader
+		{
+			std::uint32_t Magic;
+			std::uint16_t Version;
+			std::uint8_t Stage;
+			std::uint8_t Reserved;
+			std::uint64_t SourceHash;
+			std::uint32_t Size;
+		};
+
+		bool MakeGxpCachePath(const char* directory, const char* source, bool vertexStage, char (&path)[128], std::uint64_t& sourceHash)
+		{
+			sourceHash = Death::Cryptography::xxHash3(source, std::strlen(source));
+			return std::snprintf(path, sizeof(path), "%s/%016llx.%s.gxp", directory,
+				static_cast<unsigned long long>(sourceHash), vertexStage ? "vs" : "fs") > 0;
+		}
+
+		SceGxmProgram* LoadCachedGxp(const char* source, bool vertexStage, std::uint32_t& sizeInBytes)
+		{
+			char path[128];
+			std::uint64_t sourceHash;
+			bool writableCache = false;
+			if (!MakeGxpCachePath(PackagedGxpCacheDirectory, source, vertexStage, path, sourceHash) ||
+				!Death::IO::FileSystem::FileExists(Death::Containers::StringView{path})) {
+				if (!MakeGxpCachePath(GxpCacheDirectory, source, vertexStage, path, sourceHash) ||
+					!Death::IO::FileSystem::FileExists(Death::Containers::StringView{path})) {
+					return nullptr;
+				}
+				writableCache = true;
+			}
+
+			Death::IO::FileStream file(Death::Containers::StringView{path}, Death::IO::FileAccess::Read);
+			GxpCacheHeader header{};
+			if (!file.IsValid() || file.Read(&header, sizeof(header)) != sizeof(header) ||
+				header.Magic != GxpCacheMagic || header.Version != 1 || header.Stage != (vertexStage ? 1 : 0) ||
+				header.SourceHash != sourceHash || header.Size == 0 || header.Size > MaxCachedGxpSize ||
+				file.GetSize() != std::int64_t(sizeof(header)) + header.Size) {
+				if (writableCache) {
+					Death::IO::FileSystem::RemoveFile(Death::Containers::StringView{path});
+				}
+				return nullptr;
+			}
+
+			SceGxmProgram* program = static_cast<SceGxmProgram*>(std::malloc(header.Size));
+			if (program == nullptr) {
+				return nullptr;
+			}
+			if (file.Read(program, header.Size) != header.Size) {
+				std::free(program);
+				if (writableCache) {
+					Death::IO::FileSystem::RemoveFile(Death::Containers::StringView{path});
+				}
+				return nullptr;
+			}
+			sizeInBytes = header.Size;
+			return program;
+		}
+
+		void SaveCachedGxp(const char* source, bool vertexStage, const SceGxmProgram* program, std::uint32_t sizeInBytes)
+		{
+			char path[128];
+			std::uint64_t sourceHash;
+			if (program == nullptr || sizeInBytes == 0 || sizeInBytes > MaxCachedGxpSize || !MakeGxpCachePath(GxpCacheDirectory, source, vertexStage, path, sourceHash) ||
+				!Death::IO::FileSystem::CreateDirectories(Death::Containers::StringView{GxpCacheDirectory})) {
+				return;
+			}
+
+			Death::IO::FileStream file(Death::Containers::StringView{path}, Death::IO::FileAccess::Write);
+			const GxpCacheHeader header{GxpCacheMagic, 1, std::uint8_t(vertexStage ? 1 : 0), 0, sourceHash, sizeInBytes};
+			if (file.IsValid() && file.Write(&header, sizeof(header)) == sizeof(header) && file.Write(program, sizeInBytes) == sizeInBytes) {
+				file.Flush();
+			}
+		}
+
 		/** @brief Maps an engine blending factor onto its sceGxm counterpart */
 		SceGxmBlendFactor TranslateBlendFactor(nCine::BlendingFactor factor)
 		{
@@ -229,19 +313,47 @@ namespace nCine::RHI::GXM
 		}
 
 		std::uint32_t vertexSize = 0;
-		_vertexStage = CompileCgStage(vertexText, true, vertexSize);
+		bool vertexCached = false;
+		const std::uint64_t vertexStart = sceKernelGetProcessTimeWide();
+		_vertexStage = CompileCgStage(vertexText, true, vertexSize, vertexCached);
+		const std::uint64_t vertexMicroseconds = sceKernelGetProcessTimeWide() - vertexStart;
 		if (_vertexStage == nullptr) {
 			LOGE("Failed to compile the vertex stage of shader \"{}\"", _programName != nullptr ? _programName : "<unnamed>");
 			return false;
 		}
 
 		std::uint32_t fragmentSize = 0;
-		_fragmentStage = CompileCgStage(fragmentText, false, fragmentSize);
+		bool fragmentCached = false;
+		const std::uint64_t fragmentStart = sceKernelGetProcessTimeWide();
+		_fragmentStage = CompileCgStage(fragmentText, false, fragmentSize, fragmentCached);
+		const std::uint64_t fragmentMicroseconds = sceKernelGetProcessTimeWide() - fragmentStart;
 		if (_fragmentStage == nullptr) {
 			LOGE("Failed to compile the fragment stage of shader \"{}\"", _programName != nullptr ? _programName : "<unnamed>");
 			std::free(_vertexStage);
 			_vertexStage = nullptr;
 			return false;
+		}
+
+		// Application::Step() telemetry starts after the startup shader set is linked. Keep this flushed record
+		// separate so offline-GXP work can be justified by real console compile time.
+		static Death::IO::FileStream compileLog(Death::Containers::StringView{"ux0:/data/Jazz2/VitaGxmShaderCompile.log"},
+			Death::IO::FileSystem::FileExists(Death::Containers::StringView{"ux0:/data/Jazz2/VitaGxmShaderCompile.log"}) ? Death::IO::FileAccess::ReadWrite : Death::IO::FileAccess::Write);
+		static const bool compileLogAtEnd = []() {
+			if (compileLog.IsValid()) {
+				compileLog.Seek(0, Death::IO::SeekOrigin::End);
+			}
+			return true;
+		}();
+		static_cast<void>(compileLogAtEnd);
+		if (compileLog.IsValid()) {
+			char entry[256];
+			const std::size_t length = Death::formatInto(entry, "GxmShaderCompile: {}/{} vs {} {:.3f} ms ({} B) fs {} {:.3f} ms ({} B) total {:.3f} ms\n",
+				_programName != nullptr ? _programName : "<unnamed>", _variantName != nullptr ? _variantName : "default",
+				vertexCached ? "cache" : "compile", double(vertexMicroseconds) / 1000.0, vertexSize,
+				fragmentCached ? "cache" : "compile", double(fragmentMicroseconds) / 1000.0, fragmentSize,
+				double(vertexMicroseconds + fragmentMicroseconds) / 1000.0);
+			compileLog.Write(entry, length);
+			compileLog.Flush();
 		}
 
 		std::int32_t result = sceGxmShaderPatcherRegisterProgram(patcher, _vertexStage, &_vertexStageId);
@@ -397,6 +509,7 @@ namespace nCine::RHI::GXM
 		}
 
 		if (!CompileStages()) {
+			ReleaseGpu();
 			_status = Status::CompilationFailed;
 			return false;
 		}
@@ -639,8 +752,8 @@ namespace nCine::RHI::GXM
 			_vertexSamplerSlots.clear();
 			_fragmentSamplerSlots.clear();
 			_vertexFormat.Reset();
-			ReleaseGpu();
 		}
+		ReleaseGpu();
 		_status = Status::NotLinked;
 	}
 
@@ -675,8 +788,14 @@ namespace nCine::RHI::GXM
 		shark_install_log_cb(SharkLogCallback);
 	}
 
-	SceGxmProgram* GxmShaderProgram::CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes)
+	SceGxmProgram* GxmShaderProgram::CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes, bool& loadedFromCache)
 	{
+		loadedFromCache = false;
+		if (SceGxmProgram* cached = LoadCachedGxp(source, vertexStage, sizeInBytes); cached != nullptr) {
+			loadedFromCache = true;
+			return cached;
+		}
+
 		// The length goes IN (vitaShaRK reads it as the source length), the compiled size comes back OUT
 		sizeInBytes = std::uint32_t(std::strlen(source));
 		const SceGxmProgram* compiled = shark_compile_shader(source, &sizeInBytes,
@@ -687,6 +806,7 @@ namespace nCine::RHI::GXM
 			owned = static_cast<SceGxmProgram*>(std::malloc(sizeInBytes));
 			if (owned != nullptr) {
 				std::memcpy(owned, compiled, sizeInBytes);
+				SaveCachedGxp(source, vertexStage, owned, sizeInBytes);
 			} else {
 				LOGE("Out of memory copying a {} byte GXP binary", sizeInBytes);
 			}

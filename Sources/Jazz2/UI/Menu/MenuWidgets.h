@@ -145,7 +145,13 @@ namespace Jazz2::UI::Menu
 		/** @brief Extra horizontal spacing of the `<` `>` arrows, for rows with wider values */
 		float ArrowSpacing = 0.0f;
 		/** @brief Height of the item row */
+		// The Vita menu viewport is shorter than desktop's. Keep both text lines readable
+		// while fitting one additional complete setting row inside its clipped area.
+#if defined(DEATH_TARGET_VITA)
+		float Height = 46.0f;
+#else
 		float Height = 52.0f;
+#endif
 
 		ChoiceItem(StringView label, Function<StringView()> value, Function<void(std::int32_t)> onChange, bool readOnly = false)
 			: Label(label), ReadOnly(readOnly), Value(Death::move(value)), OnChange(Death::move(onChange))
