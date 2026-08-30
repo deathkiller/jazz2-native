@@ -680,7 +680,12 @@ namespace Jazz2::Multiplayer
 			if (port == 0) {
 				port = server->_host->address.port;
 			}
-			length += formatInto({ input + length, sizeof(input) - length }, "{}:{}", addressEscaped, port);
+			// Bare IPv6 address must be enclosed in brackets, otherwise the appended port can't be told apart from it
+			if (address.contains(':')) {
+				length += formatInto({ input + length, sizeof(input) - length }, "[{}]:{}", addressEscaped, port);
+			} else {
+				length += formatInto({ input + length, sizeof(input) - length }, "{}:{}", addressEscaped, port);
+			}
 		} else {
 			bool isFirst = true;
 			auto endpoints = server->GetServerEndpoints();

@@ -118,6 +118,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Maximum connected peer count */
 		static constexpr std::uint32_t MaxPeerCount = 128;
 
+		/** @brief Default port used when an endpoint doesn't specify one */
+		static constexpr std::uint16_t DefaultPort = 7438;
+
 		/** @} */
 
 		/** @brief Creates a new instance */

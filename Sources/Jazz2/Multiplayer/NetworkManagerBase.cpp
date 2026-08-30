@@ -1075,40 +1075,55 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManagerBase::TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port)
 	{
-		if (auto portSep = input.findLast(':')) {
-			auto portString = input.suffix(portSep.begin() + 1);
-			if (portString.contains(']')) {
-				// Probably only IPv6 address (or some garbage)
-				address = input;
-				port = 0;
-				return true;
-			} else {
-				// Address (or hostname) and port
-				address = input.prefix(portSep.begin()).trimmed();
-				if (address.hasPrefix('[') && address.hasSuffix(']')) {
-					address = address.slice(1, address.size() - 1);
-				}
-				if (address.empty()) {
-					return false;
-				}
+		StringView trimmed = input.trimmed();
 
-				auto portString = input.suffix(portSep.begin() + 1);
-				port = std::uint16_t(stou32(portString.data(), portString.size()));
-				return true;
+		// Unwraps the brackets of an IPv6 address, if there are any, and reports whether the result is non-empty
+		auto assignAddress = [&address](StringView value) {
+			value = value.trimmed();
+			if (value.hasPrefix('[') && value.hasSuffix(']')) {
+				value = value.slice(1, value.size() - 1);
 			}
-		} else {
+			address = value;
+			return !address.empty();
+		};
+
+		auto portSep = trimmed.findLast(':');
+		if (!portSep) {
 			// Address (or hostname) only
-			address = input.trimmed();
-			if (address.hasPrefix('[') && address.hasSuffix(']')) {
-				address = address.slice(1, address.size() - 1);
-			}
-			if (address.empty()) {
-				return false;
-			}
-
 			port = 0;
-			return true;
+			return assignAddress(trimmed);
 		}
+
+		StringView portString = trimmed.suffix(portSep.begin() + 1);
+		if (portString.contains(']')) {
+			// The last colon is inside the brackets, so it's a bracketed IPv6 address without port (or some garbage)
+			port = 0;
+			return assignAddress(trimmed);
+		}
+
+		if (!trimmed.contains(']')) {
+			// No brackets at all, so if there is more than one colon, it must be an unbracketed IPv6 address,
+			// because a hostname or an IPv4 address can never contain one
+			std::size_t colonCount = 0;
+			for (char c : trimmed) {
+				if (c == ':') {
+					colonCount++;
+				}
+			}
+			if (colonCount > 1) {
+				port = 0;
+				return assignAddress(trimmed);
+			}
+		}
+
+		// Address (or hostname) and port
+		if (!assignAddress(trimmed.prefix(portSep.begin()))) {
+			return false;
+		}
+
+		portString = portString.trimmed();
+		port = std::uint16_t(stou32(portString.data(), portString.size()));
+		return true;
 	}
 
 	const char* NetworkManagerBase::ReasonToString(Reason reason)

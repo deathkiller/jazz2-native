@@ -126,7 +126,6 @@ public:
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
-	static constexpr std::uint16_t MultiplayerDefaultPort = 7438;
 	static constexpr std::uint32_t MultiplayerProtocolVersion = 1;
 #endif
 
@@ -494,7 +493,7 @@ void GameEventHandler::OnInitialize()
 			if (!endpoint.empty()) {
 				WaitForVerify();
 				SetStateHandler(std::make_shared<LoadingHandler>(this, true));
-				ConnectToServer(endpoint, MultiplayerDefaultPort, (i + 2 < config.argc() ? config.argv(i + 2) : ""_s));
+				ConnectToServer(endpoint, NetworkManagerBase::DefaultPort, (i + 2 < config.argc() ? config.argv(i + 2) : ""_s));
 				return;
 			}
 		}

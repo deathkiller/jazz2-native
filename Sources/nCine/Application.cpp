@@ -170,48 +170,69 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #	include <emscripten/emscripten.h>
 #else
 #	include <IO/FileStream.h>
-static std::unique_ptr<Death::IO::Stream> __logFile;
+// The sink writes the entries and AttachTraceTarget() opens the file, and with DEATH_TRACE_ASYNC those are two
+// different threads - so the two sides are kept apart: the owner below belongs to whoever attaches or detaches
+// the target, and the pointer next to it is the only thing the sink ever follows. It is published once the
+// header and the startup history are already in the file, which is what keeps them at the very beginning of it.
+static std::unique_ptr<Death::IO::Stream> __logFileOwner;
+static std::atomic<Death::IO::Stream*> __logFile{nullptr};
 
 // Entries formatted before the log file existed, so they still reach it once it opens. Unlike the sink, the
 // file cannot be attached any sooner: its path is the config directory's, which PreferencesCache resolves from
 // OnPreInitialize() - so the file would otherwise begin where its own path became known rather than where the
 // session did, missing the platform bring-up that explains a startup gone wrong. Bounded, keeping the oldest
 // entries; released once the file takes them over or PreInitCommon() sees that none is coming.
+//
+// The buffer itself belongs to the sink - it is the only one appending to it, so it is also the one that frees
+// it, once it notices that the history was closed. Closing it happens on the thread that attaches the target,
+// which cannot know whether an append is in progress at that moment.
+enum class LogHistoryState : std::uint8_t {
+	// Entries with nowhere else to go are appended to the buffer
+	Open,
+	// A target took the entries over, or none is coming - the buffer is not written to anymore
+	Closed,
+	// The buffer itself is gone
+	Released
+};
+
 static constexpr std::uint32_t MaxLogHistoryLength = 16 * 1024;
 static Death::Containers::Array<char> __logHistory;
-static std::uint32_t __logHistoryLength = 0;
-static bool __logHistoryClosed = false;
+static std::atomic<std::uint32_t> __logHistoryLength{0};
+static std::atomic<LogHistoryState> __logHistoryState{LogHistoryState::Open};
 
 static void AppendLogHistory(const char* entry, std::uint32_t length)
 {
 	// A length one past the capacity is what says entries were lost, so the overflow needs no flag of its own.
 	// Only the branch below can set it, and it fills the buffer to exactly the capacity on the way - which is
 	// what keeps the held byte count equal to the length clamped to the capacity, with no gap of its own.
-	if (__logHistoryLength > MaxLogHistoryLength) {
+	const std::uint32_t historyLength = __logHistoryLength.load(std::memory_order_relaxed);
+	if (historyLength > MaxLogHistoryLength) {
 		return;
 	}
 	if (__logHistory.empty()) {
 		__logHistory = Death::Containers::Array<char>(Death::Containers::NoInit, MaxLogHistoryLength);
 	}
 
-	const std::uint32_t remaining = MaxLogHistoryLength - __logHistoryLength;
+	const std::uint32_t remaining = MaxLogHistoryLength - historyLength;
 	if (length > remaining) {
 		// As much of the entry that no longer fits as there is room for, so the buffer ends exactly at its
 		// capacity; the note written after it in AttachTraceTarget() explains the cut
-		std::memcpy(__logHistory.data() + __logHistoryLength, entry, remaining);
-		__logHistoryLength = MaxLogHistoryLength + 1;
+		std::memcpy(__logHistory.data() + historyLength, entry, remaining);
+		__logHistoryLength.store(MaxLogHistoryLength + 1, std::memory_order_release);
 		return;
 	}
 
-	std::memcpy(__logHistory.data() + __logHistoryLength, entry, length);
-	__logHistoryLength += length;
+	std::memcpy(__logHistory.data() + historyLength, entry, length);
+	// Releasing store, so that the bytes written above are there for whoever picks the new length up
+	__logHistoryLength.store(historyLength + length, std::memory_order_release);
 }
 
+// Both callers are on the thread that attaches trace targets, so the state can only move forwards from here
 static void DiscardLogHistory()
 {
-	__logHistoryClosed = true;
-	__logHistoryLength = 0;
-	__logHistory = {};
+	LogHistoryState expected = LogHistoryState::Open;
+	__logHistoryState.compare_exchange_strong(expected, LogHistoryState::Closed,
+		std::memory_order_release, std::memory_order_relaxed);
 }
 #endif
 
@@ -1618,9 +1639,25 @@ namespace nCine
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// The startup history is closed by another thread, but freeing the buffer is left to this one, which is
+		// the only one that appends to it - whichever entry gets here first claims it
+		LogHistoryState historyState = __logHistoryState.load(std::memory_order_acquire);
+		if DEATH_UNLIKELY(historyState == LogHistoryState::Closed) {
+			if (__logHistoryState.compare_exchange_strong(historyState, LogHistoryState::Released,
+					std::memory_order_acq_rel, std::memory_order_acquire)) {
+				__logHistory = {};
+				__logHistoryLength.store(0, std::memory_order_relaxed);
+				historyState = LogHistoryState::Released;
+			}
+		}
+
 		// Allow attaching custom target using Application::AttachTraceTarget(). Until one is attached the
 		// entry is kept in the startup history instead, so it still reaches the file the moment it opens.
-		if (__logFile != nullptr || !__logHistoryClosed) {
+		// AttachTraceTarget() publishes the file only once its header is in, so this can never write in
+		// front of the header - and the pointer is used instead of reloading it, so that the destination
+		// cannot change halfway through the entry either.
+		Stream* logFile = __logFile.load(std::memory_order_acquire);
+		if (logFile != nullptr || historyState == LogHistoryState::Open) {
 			std::int32_t length3 = 0;
 			static std::atomic<std::int32_t> logFileLastDay{-1};
 			AppendDateTime(logEntryWithColors, length3, timestamp, &logFileLastDay);
@@ -1630,16 +1667,11 @@ namespace nCine
 			AppendPart(logEntryWithColors, length3, content.data(), (std::int32_t)content.size());
 			logEntryWithColors[length3++] = '\n';
 
-			if (__logFile != nullptr) {
-#	if !defined(DEATH_TRACE_ASYNC)
-				// File needs to be locked, because messages can arrive from different threads
-				__logFile->Write(logEntryWithColors, length3);
-#	else
-				__logFile->Write(logEntryWithColors, length3);
-#	endif
+			if (logFile != nullptr) {
+				logFile->Write(logEntryWithColors, length3);
 #	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 				// Flush every entry, so the log is complete even if the game hangs or crashes
-				__logFile->Flush();
+				logFile->Flush();
 #	endif
 			} else {
 				AppendLogHistory(logEntryWithColors, std::uint32_t(length3));
@@ -1674,8 +1706,8 @@ namespace nCine
 	void Application::OnTraceFlushed()
 	{
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (__logFile != nullptr) {
-			__logFile->Flush();
+		if (Stream* logFile = __logFile.load(std::memory_order_acquire)) {
+			logFile->Flush();
 		}
 #	endif
 	}
@@ -1810,33 +1842,59 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		__logFile = fs::Open(targetPath, FileAccess::Write);
-		if (__logFile->IsValid()) {
-			AppendLogFileHeader(*__logFile);
+		auto logFile = fs::Open(targetPath, FileAccess::Write);
+		if (logFile->IsValid()) {
+			// Written into a file the sink cannot reach yet - it is handed over only at the end of this
+			// function, so an entry dispatched in the meantime cannot land in front of the header
+			AppendLogFileHeader(*logFile);
 
 			// Everything traced before the path was known goes in right after the header, so the file starts
 			// where the session started rather than where its own location was resolved. These entries are
 			// therefore older than the header's timestamp, which reads them as one session all the same.
-			const std::uint32_t historyLength = (__logHistoryLength > MaxLogHistoryLength ? MaxLogHistoryLength : __logHistoryLength);
-			if (historyLength > 0) {
-				__logFile->Write(__logHistory.data(), historyLength);
+			if (__logHistoryState.load(std::memory_order_acquire) == LogHistoryState::Open) {
+				std::uint32_t historyWritten = 0, historyLength = 0;
+				for (;;) {
+					historyLength = __logHistoryLength.load(std::memory_order_acquire);
+					const std::uint32_t available = (historyLength > MaxLogHistoryLength ? MaxLogHistoryLength : historyLength);
+					if (available <= historyWritten) {
+						break;
+					}
+					// Entries are only appended, never rewritten, so the part that was already counted stays
+					// put - and repeating the check picks up whatever the sink added in the meantime. The
+					// buffer is bounded, so this cannot keep up with a producer indefinitely.
+					logFile->Write(__logHistory.data() + historyWritten, available - historyWritten);
+					historyWritten = available;
+				}
+				if (historyLength > MaxLogHistoryLength) {
+					// The kept entries are the oldest ones, so whatever was dropped sits between here and the
+					// next line - saying so is better than leaving a silent gap in the middle of the startup.
+					// The leading newline terminates the entry the buffer was cut in the middle of.
+					static const char historyOverflowNote[] = "\n(some entries between here and the next line exceeded the startup buffer and were not recorded)\n";
+					logFile->Write(historyOverflowNote, sizeof(historyOverflowNote) - 1);
+				}
 			}
-			if (__logHistoryLength > MaxLogHistoryLength) {
-				// The kept entries are the oldest ones, so whatever was dropped sits between here and the
-				// next line - saying so is better than leaving a silent gap in the middle of the startup.
-				// The leading newline terminates the entry the buffer was cut in the middle of.
-				static const char historyOverflowNote[] = "\n(some entries between here and the next line exceeded the startup buffer and were not recorded)\n";
-				__logFile->Write(historyOverflowNote, sizeof(historyOverflowNote) - 1);
+
+			if (__logFileOwner != nullptr) {
+				// A second target is taking over from the first one - wait until the sink is through with
+				// everything it still has for the old file, which is about to be closed underneath it
+				__logFile.store(nullptr, std::memory_order_release);
+				Trace::Flush();
 			}
+
+			// The sink appends to the history up to this store and writes to the file from it on, with the
+			// history closed only afterwards - in that order, so that no entry falls in between the two
+			__logFileOwner = std::move(logFile);
+			__logFile.store(__logFileOwner.get(), std::memory_order_release);
 			DiscardLogHistory();
 
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
-			__eh.Destination = __logFile.get();
+			__eh.Destination = __logFileOwner.get();
 #	endif
 		} else {
 			// Another target may still be attached later, so the history is deliberately kept
-			__logFile = nullptr;
+			__logFile.store(nullptr, std::memory_order_release);
+			__logFileOwner = nullptr;
 #	if defined(WITH_BACKWARD)
 			__eh.Destination = nullptr;
 #	endif
@@ -1964,17 +2022,26 @@ namespace nCine
 	void Application::ShutdownTrace()
 	{
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (__logFile != nullptr) {
+		if (__logFileOwner != nullptr) {
 			Trace::Flush();
 #		if defined(WITH_BACKWARD)
 			__eh.Destination = nullptr;
 #		endif
-			__logFile = nullptr;
+			__logFile.store(nullptr, std::memory_order_release);
 		}
 #	endif
 
 		Trace::RemoveSink(this);
 		__traceInitialized = false;
+
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Detaching the sink joins the tracing worker thread, so from here on nothing can be inside a write
+		// to the file or an append to the startup history and both of them can finally be released
+		__logFileOwner = nullptr;
+		__logHistoryState.store(LogHistoryState::Released, std::memory_order_relaxed);
+		__logHistoryLength.store(0, std::memory_order_relaxed);
+		__logHistory = {};
+#	endif
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__consoleType >= ConsoleType::WinApi) {

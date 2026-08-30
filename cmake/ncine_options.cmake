@@ -571,6 +571,12 @@ cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of even
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
+# Relaxed floating-point model in release (`/fp:fast`, `-ffast-math` and the `-Ofast` that implies it).
+# It's off by default because it's not a free speed-up: the compiler is allowed to reassociate arithmetic,
+# assume no NaNs/infinities (which folds `isnan()`/`isinf()` to a constant false) and flush denormals, all
+# of which have already caused platform-specific differences in this project. Turn it on per build when
+# the target has been measured to benefit from it and its results verified.
+option(DEATH_USE_FAST_MATH "Enable relaxed floating-point optimizations when in release" OFF)
 option(DEATH_USE_RUNTIME_CAST "Enable runtime_cast<T>() optimization" ON)
 cmake_dependent_option(DEATH_WITH_VC_LTL "Build with VC-LTL on Windows" ON "WIN32" OFF)
 

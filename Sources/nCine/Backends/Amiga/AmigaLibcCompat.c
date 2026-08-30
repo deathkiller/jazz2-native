@@ -99,8 +99,8 @@ double round(double x)
 /*
 	fmin/fmax (and the float forms): also broken in libnix - fminf(0.5f, 2.5f) came back as 0x00000004
 	rather than 0.5f. Plain comparisons are the whole content of these functions anyway; NaN operands
-	are detected by bit pattern because the game is built with -ffast-math, under which isnan() folds
-	to a constant false and would defeat the check.
+	are detected by bit pattern rather than with isnan(), which folds to a constant false under
+	-ffast-math (DEATH_USE_FAST_MATH) and would defeat the check.
 */
 static int __amiga_isnanf(float x)
 {

@@ -711,17 +711,21 @@ namespace Death { namespace Trace {
 	{
 		// Get the lowest timestamp
 		std::uint64_t minTs = std::numeric_limits<std::uint64_t>::max();
-		ThreadContext* threadContext = nullptr;
+		ThreadContext* threadContext = (_activeThreadContextsCache.size() == 1
+											? _activeThreadContextsCache.front()
+											: nullptr);
 
-		for (ThreadContext* tc : _activeThreadContextsCache) {
-			TransitEvent const* te = tc->_transitEventBuffer.front();
-			if (te != nullptr && minTs > te->Timestamp) {
-				minTs = te->Timestamp;
-				threadContext = tc;
+		if (threadContext == nullptr) {
+			for (ThreadContext* tc : _activeThreadContextsCache) {
+				TransitEvent const* te = tc->_transitEventBuffer.front();
+				if (te != nullptr && minTs > te->Timestamp) {
+					minTs = te->Timestamp;
+					threadContext = tc;
+				}
 			}
 		}
 
-		if (threadContext == nullptr) {
+		if (threadContext == nullptr || threadContext->_transitEventBuffer.front() == nullptr) {
 			// All transit event buffers are empty
 			return false;
 		}
@@ -1030,7 +1034,10 @@ namespace Death { namespace Trace {
 
 		std::size_t totalSize = /*Level*/ sizeof(std::uint8_t) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ std::size_t(contentLength);
-		std::uint8_t* writeBuffer = _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
+		
+		auto& queue = _threadContext->GetSpscQueue<DefaultQueueType>();
+		auto const reservation = queue.prepareWriteReserveCached(totalSize);
+		auto* writeBuffer = reservation.writeBuffer;
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
 					  DefaultQueueType == QueueType::UnboundedDropping) {
@@ -1084,7 +1091,7 @@ namespace Death { namespace Trace {
 		DEATH_DEBUG_ASSERT(totalSize == (static_cast<std::size_t>(writeBuffer - writeBegin)));
 #	endif
 
-		_threadContext->GetSpscQueue<DefaultQueueType>().finishAndCommitWrite(totalSize);
+		queue.finishAndCommitWriteReservation(reservation.writerPos + totalSize);
 
 		return true;
 	}

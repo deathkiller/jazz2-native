@@ -442,6 +442,12 @@ The following parameters can be used to customize the build:
     -   Always @cpp OFF @ce on the @ref consoles "consoles" and in the libretro core
 -   `DEATH_TRACE_LOG_PATH` --- Override path to trace log file if specified
     -   Also forces writing traces to file on some platforms (except on Android/Switch where it's already forced)
+-   `DEATH_USE_FAST_MATH` (default @cpp OFF @ce) --- Enable relaxed floating-point optimizations when in release
+    -   Compiles with `/fp:fast` on MSVC and `-ffast-math` (as part of `-Ofast` instead of `-O3`) on GCC and Clang
+    -   Not a free speed-up --- the compiler may reassociate arithmetic, assume no NaNs or infinities (which folds
+        @cpp isnan() @ce and @cpp isinf() @ce to a constant false) and flush denormals to zero, so enable it only
+        for a target where the gain has been measured and the results verified
+    -   Ignored on the @ref consoles "consoles" and the Amiga targets, which always compile at `-O2`
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization
 -   `NCINE_ADDRESS_SANITIZER` (default @cpp OFF @ce) --- Enable `AddressSanitizer` memory error detector
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)

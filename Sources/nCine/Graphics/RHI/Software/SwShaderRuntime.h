@@ -420,10 +420,10 @@ namespace nCine::RHI::Software::sw
 		// reads. Without this the expanded texel's opaque byte-3 would drop that alpha).
 		//
 		// NOTE: the `/ 255.0f` byte normalization is kept verbatim (no reciprocal multiply, no lookup
-		// table): the Debug (/fp:precise) build compiles it as a true division while the Release
-		// (/fp:fast) build already rewrites it into `* (1/255)` on its own, and the two differ in the
-		// last bit for 126 of the 256 byte values - so any manual substitution would break bit-parity
-		// with the current output in one of the two float models.
+		// table): under the default /fp:precise model it compiles as a true division, while a build
+		// with DEATH_USE_FAST_MATH (/fp:fast) already rewrites it into `* (1/255)` on its own, and the two
+		// differ in the last bit for 126 of the 256 byte values - so any manual substitution would
+		// break bit-parity with the current output in one of the two float models.
 		const nCine::SwizzleChannel* swizzle = tex->GetSwizzle();
 		if (swizzle[0] == nCine::SwizzleChannel::Red && swizzle[1] == nCine::SwizzleChannel::Green &&
 		    swizzle[2] == nCine::SwizzleChannel::Blue && swizzle[3] == nCine::SwizzleChannel::Alpha) {

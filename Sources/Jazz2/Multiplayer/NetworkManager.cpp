@@ -804,7 +804,7 @@ namespace Jazz2::Multiplayer
 			serverConfig.WelcomeMessage = "Welcome to the {ServerName}!"_s;
 		}
 		if (serverConfig.ServerPort == 0) {
-			serverConfig.ServerPort = 7438;
+			serverConfig.ServerPort = DefaultPort;
 		}
 		if (serverConfig.MaxPlayerCount == 0) {
 			serverConfig.MaxPlayerCount = MaxPeerCount;

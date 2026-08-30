@@ -78,23 +78,14 @@
 #		if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
 #			define MAP_ANONYMOUS MAP_ANON
 #		endif
-#	endif
-
-#	if defined(DEATH_TARGET_X86)
-#		if defined(DEATH_TARGET_MSVC)
-#			include <intrin.h>
-#		else
-#			if __has_include(<x86gprintrin.h>)
-#				if defined(__GNUC__) && __GNUC__ > 10
-#					include <emmintrin.h>
-#					include <x86gprintrin.h>
-#				elif defined(__clang_major__)
-					// clang needs immintrin for _mm_clflushopt
-#					include <immintrin.h>
-#				endif
-#			else
-#				include <immintrin.h>
-#				include <x86intrin.h>
+#		if defined(__linux__)
+			// MAP_HUGE_2MB can be missing from older libc headers, construct it from
+			// the kernel ABI values (page size log2, shifted by MAP_HUGE_SHIFT)
+#			if !defined(MAP_HUGE_SHIFT)
+#				define MAP_HUGE_SHIFT 26
+#			endif
+#			if !defined(MAP_HUGE_2MB)
+#				define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
 #			endif
 #		endif
 #	endif
@@ -379,31 +370,31 @@ namespace Death { namespace Trace {
 		class BoundedSPSCQueueImpl
 		{
 		public:
-			explicit BoundedSPSCQueueImpl(T capacity, bool hugesPagesEnabled = false, T readerStorePercent = 5)
+			using integer_type = T;
+
+			static_assert(integer_type{0} < static_cast<integer_type>(~integer_type{0}),
+						  "BoundedSPSCQueueImpl integer_type must be unsigned");
+
+			struct WriteReservation
+			{
+				std::uint8_t* writeBuffer{nullptr};
+				std::size_t writerPos{0};
+				BoundedSPSCQueueImpl* boundedQueue{nullptr};
+			};
+
+			explicit BoundedSPSCQueueImpl(integer_type capacity, bool hugesPagesEnabled = false, integer_type readerStorePercent = 5)
 				: _capacity(NextPowerOfTwo(capacity)), _capacityMask(_capacity - 1),
-					_bytesPerBatch(static_cast<T>(_capacity * static_cast<double>(readerStorePercent) / 100.0)),
-					_storage(static_cast<std::uint8_t*>(allocAligned(2ULL * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
+					_bytesPerBatch(static_cast<integer_type>(_capacity * static_cast<double>(readerStorePercent) / 100.0)),
+					_storage(static_cast<std::uint8_t*>(allocAligned(2U * static_cast<std::size_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
 					_hugePagesEnabled(hugesPagesEnabled)
 			{
-				std::memset(_storage, 0, 2ULL * static_cast<std::uint64_t>(_capacity));
+				std::memset(_storage, 0, static_cast<std::size_t>(_capacity));
 
 				_atomicWriterPos.store(0);
 				_atomicReaderPos.store(0);
 
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-				// Remove log memory from cache
-				for (std::uint64_t i = 0; i < (2ULL * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
-					_mm_clflush(_storage + i);
-				}
-
-				DEATH_DEBUG_ASSERT(_capacity >= 1024);
-
-				std::uint64_t cacheLines = (_capacity >= 2048 ? 32 : 16);
-
-				for (std::uint64_t i = 0; i < cacheLines; ++i) {
-					_mm_prefetch(reinterpret_cast<char const*>(_storage + (CacheLineSize * i)), _MM_HINT_T0);
-				}
-#	endif
+				// reader_pos starts at 0, so cached value is 0 + capacity
+				_readerPosCachePlusCapacity = _capacity;
 			}
 
 			~BoundedSPSCQueueImpl() noexcept {
@@ -414,21 +405,35 @@ namespace Death { namespace Trace {
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
 			/** @brief Reserves space for @p n bytes and returns a pointer to write to, or `nullptr` if the queue is full */
-			std::uint8_t* prepareWrite(T n) noexcept {
-				if ((_capacity - static_cast<T>(_writerPos - _cachedReaderPos)) < n) {
-					// Not enough space, we need to load reader and re-check
-					_cachedReaderPos = _atomicReaderPos.load(std::memory_order_acquire);
+			DEATH_NODISCARD std::uint8_t* prepareWrite(integer_type n) noexcept {
+				if (static_cast<integer_type>(_readerPosCachePlusCapacity - _writerPos) < n) {
+					// not enough space, we need to load reader and re-check
+					_readerPosCachePlusCapacity = _atomicReaderPos.load(std::memory_order_acquire) + _capacity;
 
-					if ((_capacity - static_cast<T>(_writerPos - _cachedReaderPos)) < n) {
+					if (static_cast<integer_type>(_readerPosCachePlusCapacity - _writerPos) < n) {
 						return nullptr;
 					}
 				}
 
-				return &_storage[_writerPos & _capacityMask];
+				return _storage + (_writerPos & _capacityMask);
+			}
+
+			DEATH_NODISCARD WriteReservation prepareWriteReserveCached(integer_type n) noexcept {
+				integer_type const writerPos = _writerPos;
+
+				if (DEATH_UNLIKELY(static_cast<integer_type>(_readerPosCachePlusCapacity - writerPos) < n)) {
+					return WriteReservation{nullptr, writerPos, this};
+				}
+
+				// _storage is never null after construction; hint lets the compiler
+				// eliminate a redundant null-check on the computed write pointer.
+				DEATH_ASSUME(_storage != nullptr);
+
+				return WriteReservation{_storage + (writerPos & _capacityMask), writerPos, this};
 			}
 
 			/** @brief Advances the writer position by @p nbytes after a successful @ref prepareWrite() */
-			void finishWrite(T nbytes) noexcept {
+			void finishWrite(integer_type nbytes) noexcept {
 				_writerPos += nbytes;
 			}
 
@@ -436,50 +441,44 @@ namespace Death { namespace Trace {
 			void commitWrite() noexcept {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
-
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-				// Flush writen cache lines
-				flushCacheLines(_lastFlushedWriterPos, _writerPos);
-
-				// Prefetch a future cache line
-				_mm_prefetch(reinterpret_cast<char const*>(_storage + (_writerPos & _capacityMask) + (CacheLineSize * 10)), _MM_HINT_T0);
-#	endif
 			}
 
 			/** @brief Convenience helper that calls @ref finishWrite() followed by @ref commitWrite() */
-			void finishAndCommitWrite(T nbytes) noexcept {
-				finishWrite(nbytes);
-				commitWrite();
+			void finishAndCommitWrite(integer_type n) noexcept {
+				finishAndCommitWriteReservation(_writerPos + n);
+			}
+
+			void finishAndCommitWriteReservation(integer_type newWriterPos) noexcept {
+				_writerPos = newWriterPos;
+
+				// Set the atomic flag so the reader can see write
+				_atomicWriterPos.store(newWriterPos, std::memory_order_release);
 			}
 
 			/** @brief Returns a pointer to the next bytes to read, or `nullptr` if the queue is empty */
-			const std::uint8_t* prepareRead() noexcept {
+			DEATH_NODISCARD const std::uint8_t* prepareRead() noexcept {
 				if (empty()) {
 					return nullptr;
 				}
 
-				return &_storage[_readerPos & _capacityMask];
+				return _storage + (_readerPos & _capacityMask);
 			}
 
-			/** @brief Advances the reader position by @p nbytes after a successful @ref prepareRead() */
-			void finishRead(T nbytes) noexcept {
-				_readerPos += nbytes;
+			/** @brief Advances the reader position by @p n after a successful @ref prepareRead() */
+			void finishRead(integer_type n) noexcept {
+				_readerPos += n;
 			}
 
 			/** @brief Publishes finished reads so the writer can reuse the freed space */
 			void commitRead() noexcept {
-				if ((static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) ||
+				if ((static_cast<integer_type>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) ||
 					(_writerPosCache == _readerPos)) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
-
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-					flushCacheLines(_lastFlushedReaderPos, _readerPos);
-#	endif
 				}
 			}
 
 			/** @brief Checks if the queue is empty, should be called only by the reader */
-			bool empty() const noexcept {
+			DEATH_NODISCARD bool empty() const noexcept {
 				if (_writerPosCache == _readerPos) {
 					// if we think the queue is empty we also load the atomic variable to check further
 					_writerPosCache = _atomicWriterPos.load(std::memory_order_acquire);
@@ -493,61 +492,31 @@ namespace Death { namespace Trace {
 			}
 
 			/** @brief Returns the capacity of the queue in bytes */
-			T capacity() const noexcept {
-				return static_cast<T>(_capacity);
+			DEATH_NODISCARD integer_type capacity() const noexcept {
+				return static_cast<integer_type>(_capacity);
 			}
 
 			/** @brief Returns `true` if the underlying storage uses huge pages */
-			bool hugePagesEnabled() const noexcept {
+			DEATH_NODISCARD bool hugePagesEnabled() const noexcept {
 				return _hugePagesEnabled;
 			}
 
 		private:
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-			static constexpr T CacheLineMask{CacheLineSize - 1};
-#	endif
-
-			const T _capacity;
-			const T _capacityMask;
-			const T _bytesPerBatch;
+			const integer_type _capacity;
+			const integer_type _capacityMask;
+			const integer_type _bytesPerBatch;
 			std::uint8_t* _storage{nullptr};
 			const bool _hugePagesEnabled;
 
-			alignas(CacheLineAligned) std::atomic<T> _atomicWriterPos{0};
-			alignas(CacheLineAligned) T _writerPos{0};
-			T _cachedReaderPos{0};
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-			T _lastFlushedWriterPos{0};
-#	endif
+			alignas(CacheLineAligned) std::atomic<integer_type> _atomicWriterPos{0};
+			alignas(CacheLineAligned) integer_type _writerPos{0};
+			integer_type _readerPosCachePlusCapacity{0};
 
-			alignas(CacheLineAligned) std::atomic<T> _atomicReaderPos{0};
-			alignas(CacheLineAligned) T _readerPos{0};
-			mutable T _writerPosCache{0};
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-			T _lastFlushedReaderPos{0};
-#	endif
+			alignas(CacheLineAligned) std::atomic<integer_type> _atomicReaderPos{0};
+			alignas(CacheLineAligned) integer_type _readerPos{0};
+			mutable integer_type _writerPosCache{0};
 
-#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
-			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on Clang-CL
-			void flushCacheLines(T& last, T offset) noexcept {
-				T lastDiff = last - (last & CacheLineMask);
-				T curDiff = offset - (offset & CacheLineMask);
-
-				if (curDiff > lastDiff) {
-					std::uint8_t* ptr = _storage + (lastDiff & _capacityMask);
-
-					do {
-						_mm_clflushopt(ptr);
-						ptr += CacheLineSize;
-						lastDiff += CacheLineSize;
-					} while (curDiff > lastDiff);
-
-					last = lastDiff;
-				}
-			}
-#	endif
-
-			static std::uint8_t* alignPointer(void* pointer, std::size_t alignment) noexcept {
+			DEATH_NODISCARD static std::uint8_t* alignPointer(void* pointer, std::size_t alignment) noexcept {
 				DEATH_DEBUG_ASSERT(IsPowerOfTwo(alignment), "alignment must be a power of two", reinterpret_cast<std::uint8_t*>(pointer));
 				return reinterpret_cast<std::uint8_t*>((reinterpret_cast<std::uintptr_t>(pointer) + (alignment - 1ul)) &
 													~(alignment - 1ul));
@@ -572,7 +541,11 @@ namespace Death { namespace Trace {
 
 #		if defined(__linux__)
 				if (hugesPagesEnabled) {
-					flags |= MAP_HUGETLB;
+					// Request 2 MiB pages explicitly so the page size is known. The rounding cannot
+					// overflow: _validate_capacity() caps the capacity well below SIZE_MAX / 2
+					constexpr std::size_t HugePageSize = 2u * 1024u * 1024u;
+					totalSize = ((totalSize + HugePageSize - 1u) / HugePageSize) * HugePageSize;
+					flags |= MAP_HUGETLB | MAP_HUGE_2MB;
 				}
 #		endif
 
@@ -580,7 +553,8 @@ namespace Death { namespace Trace {
 
 #		if defined(__linux__)
 				if (mem == MAP_FAILED && hugesPagesEnabled) {
-					flags &= ~MAP_HUGETLB;
+					flags &= ~(MAP_HUGETLB | MAP_HUGE_2MB);
+					totalSize = size + MetadataSize + alignment;
 					mem = ::mmap(nullptr, totalSize, PROT_READ | PROT_WRITE, flags, -1, 0);
 				}
 #		endif
@@ -662,6 +636,13 @@ namespace Death { namespace Trace {
 				bool allocation{false};
 			};
 
+			struct WriteReservation
+			{
+				std::uint8_t* writeBuffer{nullptr};
+				std::size_t writerPos{0};
+				BoundedSPSCQueue* boundedQueue{nullptr};
+			};
+
 			explicit UnboundedSPSCQueue(std::size_t initialBoundedQueueCapacity, bool hugesPagesEnabled = false)
 				: _producer(new Node(initialBoundedQueueCapacity, hugesPagesEnabled)), _consumer(_producer) {}
 
@@ -681,7 +662,7 @@ namespace Death { namespace Trace {
 			UnboundedSPSCQueue& operator=(UnboundedSPSCQueue const&) = delete;
 
 			/** @brief Reserves space for @p nbytes, allocating a larger buffer if the current one is full, and returns a pointer to write to */
-			std::uint8_t* prepareWrite(std::size_t nbytes) noexcept {
+			DEATH_NODISCARD std::uint8_t* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
 				std::uint8_t* writePos = _producer->boundedQueue.prepareWrite(nbytes);
 
@@ -690,6 +671,12 @@ namespace Death { namespace Trace {
 				}
 
 				return handleFullQueue(nbytes);
+			}
+
+			DEATH_NODISCARD WriteReservation prepareWriteReserveCached(std::size_t nbytes) noexcept {
+				BoundedSPSCQueue* const boundedQueue = &_producer->boundedQueue;
+				auto const reservation = boundedQueue->prepareWriteReserveCached(nbytes);
+				return WriteReservation{reservation.writeBuffer, reservation.writerPos, boundedQueue};
 			}
 
 			/** @brief Advances the writer position by @p nbytes after a successful @ref prepareWrite() */
@@ -708,8 +695,12 @@ namespace Death { namespace Trace {
 				commitWrite();
 			}
 
+			void finishAndCommitWriteReservation(std::size_t newWriterPos) noexcept {
+				_producer->boundedQueue.finishAndCommitWriteReservation(newWriterPos);
+			}
+
 			/** @brief Returns the capacity of the current producer buffer in bytes */
-			std::size_t producerCapacity() const noexcept {
+			DEATH_NODISCARD std::size_t producerCapacity() const noexcept {
 				return _producer->boundedQueue.capacity();
 			}
 
@@ -732,7 +723,7 @@ namespace Death { namespace Trace {
 			}
 
 			/** @brief Returns a @ref ReadResult describing the next bytes to read, transparently switching to the next buffer when needed */
-			ReadResult prepareRead() noexcept {
+			DEATH_NODISCARD ReadResult prepareRead() noexcept {
 				ReadResult readResult{_consumer->boundedQueue.prepareRead()};
 
 				if (readResult.readPos != nullptr) {
@@ -766,7 +757,7 @@ namespace Death { namespace Trace {
 			}
 
 			/** @brief Returns `true` if the queue is empty and no further buffers are pending */
-			bool empty() const noexcept {
+			DEATH_NODISCARD bool empty() const noexcept {
 				return _consumer->boundedQueue.empty() && (_consumer->next.load(std::memory_order_relaxed) == nullptr);
 			}
 

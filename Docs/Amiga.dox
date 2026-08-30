@@ -183,7 +183,7 @@ executable with its `Content/` tree next to it. `Jazz2.config` is written into t
 which is the conventional home of a program's settings on AmigaOS.
 
 Two notes specific to this target. **Link-time optimization is off** @m_span{m-text m-dim}
-(`NCINE_LINKTIME_OPTIMIZATION`) @m_endspan and Release compiles at `-O2` rather than `-Ofast`, for
+(`NCINE_LINKTIME_OPTIMIZATION`) @m_endspan and Release compiles at `-O2` rather than `-O3`, for
 the same reason as the consoles: this is the least-tested compiler in the project and code size
 matters. And **threads are off** — there is no `std::thread` on m68k-amigaos — so everything,
 including audio decoding, runs on the main thread.

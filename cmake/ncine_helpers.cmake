@@ -514,7 +514,10 @@ function(ncine_apply_compiler_options target)
 		endif()
 
 		# Extra optimizations in Release
-		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/fp:fast /O2 /Oi /Qpar /Gy>)
+		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/O2 /Oi /Qpar /Gy>)
+		if(DEATH_USE_FAST_MATH)
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+		endif()
 
 		if(DEATH_DEBUG_SYMBOLS)
 			# Include PDB debug information in Release and enable hot reloading in Debug
@@ -575,7 +578,9 @@ function(ncine_apply_compiler_options target)
 		else()
 			target_compile_options(${target} PRIVATE "-fno-exceptions")
 		endif()
-		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+		if(DEATH_USE_FAST_MATH)
+			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+		endif()
 
 		if(MINGW OR MSYS)
 			target_link_options(${target} PRIVATE "-municode")
@@ -656,25 +661,24 @@ function(ncine_apply_compiler_options target)
 
 			# Extra optimizations in Release
 			if(NINTENDO_SWITCH)
-				# -Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
+				# -O3/-Ofast is crashing on Nintendo Switch for some reason, use -O2 instead
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
 			elseif(PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP OR PLATFORM_PS3 OR PLATFORM_AMIGA)
-				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3: fast-math reordering
-				# is untested on Gekko/Broadway paired singles and on the Allegrex's single-precision-only FPU,
-				# and code size matters (24 MB GameCube, 16 MB Dreamcast, 24 MB usable of the PSP's 32 MB).
-				# The PS3 has memory to spare, but joins them for the other half of the reason: its compiler is
-				# a GCC 7.2 that no other target in this project uses, so -Ofast's reassociation on the Cell
-				# PPE's FPU is the least-tested combination in the build - and the console is also the hardest
-				# one to attach a debugger to when a fast-math difference does surface.
+				# Conservative optimization on the PowerPC consoles, Dreamcast, PSP and PS3, where -O3's extra
+				# inlining and loop transformations aren't worth the code they add (24 MB GameCube, 16 MB
+				# Dreamcast, 24 MB usable of the PSP's 32 MB) - and where `DEATH_USE_FAST_MATH`, if it's turned on
+				# at all, is the least advisable: fast-math reordering is untested on Gekko/Broadway paired
+				# singles and on the Allegrex's single-precision-only FPU, the PS3 compiles with a GCC 7.2 that
+				# no other target in this project uses (and is the hardest one to attach a debugger to when a
+				# fast-math difference does surface), and the classic Amiga's floating point comes from either
+				# a 68060 FPU or the Apollo core's - two implementations that differ in what they trap.
 				# The N64 already compiles everything with libdragon's own fast-math triplet from the toolchain
 				# file, and with 4-8 MB of RDRAM it has the strictest code-size budget of them all.
-				# The classic Amiga joins them for both halves of the reason at once: a stock RTG machine has
-				# a few megabytes to load the whole executable into, and its floating point comes from either
-				# a 68060 FPU or the Apollo core's - two implementations that differ in what they trap, which
-				# is the last place to let -Ofast reassociate arithmetic on.
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O2>)
-			else()
+			elseif(DEATH_USE_FAST_MATH)
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
+			else()
+				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O3>)
 			endif()
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
 
@@ -700,7 +704,11 @@ function(ncine_apply_compiler_options target)
 
 			if(NOT EMSCRIPTEN)
 				# Extra optimizations in Release
-				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
+				if(DEATH_USE_FAST_MATH)
+					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
+				else()
+					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-O3>)
+				endif()
 			endif()
 
 			if(NCINE_AUTOVECTORIZATION_REPORT)

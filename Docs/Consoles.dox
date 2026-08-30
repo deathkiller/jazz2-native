@@ -448,8 +448,9 @@ It leaves `NCINE_CONTENT_DIR` at its default, which is the repository's own
 @cpp "Content" @ce --- enough to reach the main menu, but pass the parameter on the first
 configuration of the build directory to get a playable disc.
 Link-time optimization is force-disabled for this platform because it makes the
-`sh-elf` GCC 15.2 abort, and `Release` compiles with `-O2` rather than `-Ofast` --- fast-math
-reordering is untested on the SH-4 and code size matters here.
+`sh-elf` GCC 15.2 abort, and `Release` compiles with `-O2` rather than the default `-O3` --- code size
+matters here, and `DEATH_USE_FAST_MATH` is never applied on this platform because fast-math reordering is
+untested on the SH-4.
 
 The build produces @cpp "build/dreamcast/jazz2.elf" @ce and, if `mkdcdisc` was found, the bootable
 @cpp "build/dreamcast/jazz2.cdi" @ce with the content tree included as @cpp "/cd/Content" @ce.

@@ -709,9 +709,8 @@ namespace Jazz2::UI::Menu
 			// Manual IP entry or fallback: wrap in ws:// if not already a WebSocket URL
 			if (!firstEndpoint.hasPrefix("ws://"_s) && !firstEndpoint.hasPrefix("wss://"_s)) {
 				// Bare IPv6 (more than one colon, no brackets yet) needs to be enclosed in [...]
-				StringView host; std::uint16_t port;
-				Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, port);
-				bool isIpv6 = host.contains(':');
+				StringView host; std::uint16_t port = 0;
+				bool isIpv6 = (Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, port) && host.contains(':'));
 				if (isIpv6) {
 					char portBuf[12] {};
 					std::size_t portLen = (port != 0 ? formatInto(portBuf, ":{}", (std::int32_t)port) : 0);
@@ -725,7 +724,8 @@ namespace Jazz2::UI::Menu
 		}
 		_root->ConnectToServer(wsUrl, 0);
 #else
-		_root->ConnectToServer(_selectedServer.EndpointString, 0);
+		// Endpoints of manually entered addresses often don't contain any port, so the default one is used instead
+		_root->ConnectToServer(_selectedServer.EndpointString, Jazz2::Multiplayer::NetworkManagerBase::DefaultPort);
 #endif
 	}
 

@@ -2444,7 +2444,10 @@ namespace Jazz2::Multiplayer
 					if (port == 0) {
 						port = serverConfig.ServerPort;
 					}
-					std::size_t length = formatInto(infoBuffer, "{}:{} (Override)", address, port);
+					// Bare IPv6 address must be enclosed in brackets, otherwise the appended port can't be told apart from it
+					std::size_t length = (address.contains(':')
+						? formatInto(infoBuffer, "[{}]:{} (Override)", address, port)
+						: formatInto(infoBuffer, "{}:{} (Override)", address, port));
 					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 				}
 				return true;
