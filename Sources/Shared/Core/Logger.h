@@ -68,6 +68,18 @@
 #	include <thread>
 #	include <limits>
 
+	// For __rdtsc() and _ReadStatusReg() in rdtsc()
+#	if defined(DEATH_TARGET_MSVC)
+#		include <intrin.h>
+#	elif defined(DEATH_TARGET_X86)
+		// Recent GCC has the general-purpose intrinsics in a separate and much smaller header
+#		if defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ > 10
+#			include <x86gprintrin.h>
+#		else
+#			include <x86intrin.h>
+#		endif
+#	endif
+
 	// BoundedSPSCQueue includes
 #	if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_AMIGAOS4)
@@ -421,7 +433,7 @@ namespace Death { namespace Trace {
 			DEATH_NODISCARD WriteReservation prepareWriteReserveCached(integer_type n) noexcept {
 				integer_type const writerPos = _writerPos;
 
-				if (DEATH_UNLIKELY(static_cast<integer_type>(_readerPosCachePlusCapacity - writerPos) < n)) {
+				if DEATH_UNLIKELY(static_cast<integer_type>(_readerPosCachePlusCapacity - writerPos) < n) {
 					return WriteReservation{nullptr, writerPos, this};
 				}
 
