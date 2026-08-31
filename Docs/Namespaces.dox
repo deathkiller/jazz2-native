@@ -50,8 +50,8 @@ matches the current implementation.
   backend, or OpenGL|ES 2.0 through vitaGL, see @ref consoles-vita
 - **libretro** core for RetroArch, see @ref consoles-libretro
 - **AmigaOS 3.x** on 68040/68060, PiStorm and Vampire machines, using
-  [bebbo's amiga-gcc](https://github.com/bebbo/amiga-gcc) with a bespoke Intuition/RTG window
-  backend and the CPU software rasterizer, see @ref amiga-classic
+  [AmigaPorts' m68k-amigaos-gcc](https://github.com/AmigaPorts/m68k-amigaos-gcc) with a bespoke
+  Intuition/RTG window backend and the CPU software rasterizer, see @ref amiga-classic
 - **AmigaOS 4.1** and **MorphOS** on PowerPC, using their own SDKs through SDL2 and the
   fixed-function `LegacyGL` rendering backend on the OpenGL 1.x each of them provides
   @m_span{m-text m-dim} (MiniGL over Warp3D, resp. TinyGL) @m_endspan, see @ref amiga-os4 and

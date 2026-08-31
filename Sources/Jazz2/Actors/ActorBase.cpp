@@ -960,6 +960,12 @@ namespace Jazz2::Actors
 
 			stride = res->Base->GetMaskStride();
 
+			// A resource loaded without a mask has nothing to sample. Degrading to the inner hitboxes is
+			// exactly what an actor with SkipPerPixelCollisions already gets, so the pairing keeps working.
+			if (p == nullptr) {
+				return AABBInner.Overlaps(other->AABBInner);
+			}
+
 			// Per-pixel collision check
 			for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
 				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
@@ -994,6 +1000,9 @@ namespace Jazz2::Actors
 			// Per-pixel collision check
 			auto p1 = res1->Base->Mask.get();
 			auto p2 = res2->Base->Mask.get();
+			if (p1 == nullptr || p2 == nullptr) {
+				return AABBInner.Overlaps(other->AABBInner);
+			}
 
 			for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
 				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
@@ -1061,6 +1070,9 @@ namespace Jazz2::Actors
 
 		// Per-pixel collision check
 		auto p = res->Base->Mask.get();
+		if (p == nullptr) {
+			return aabb.Overlaps(AABBInner);
+		}
 
 		for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
 			for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
@@ -1165,6 +1177,9 @@ namespace Jazz2::Actors
 
 		auto p1 = res1->Base->Mask.get();
 		auto p2 = res2->Base->Mask.get();
+		if (p1 == nullptr || p2 == nullptr) {
+			return AABBInner.Overlaps(other->AABBInner);
+		}
 
 		for (std::int32_t y1 = 0; y1 < height1; y1 += PerPixelCollisionStep) {
 			Vector3f posIn2 = yPosIn2;
@@ -1239,6 +1254,9 @@ namespace Jazz2::Actors
 		std::int32_t stride = res->Base->GetMaskStride();
 
 		auto p = res->Base->Mask.get();
+		if (p == nullptr) {
+			return aabb.Overlaps(AABBInner);
+		}
 
 		for (std::int32_t y1 = 0; y1 < height; y1 += PerPixelCollisionStep) {
 			Vector3f posInAABB = yPosInAABB;

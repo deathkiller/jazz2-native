@@ -278,7 +278,7 @@ function(ncine_apply_compiler_options target)
 		# required; the powerpc64-ps3-elf newlib behind PSL1GHT does exactly the same, and libstdc++'s
 		# <cstdio> then fails to compile at all ("'::snprintf' has not been declared") under -std=c++17.
 		# libdragon's newlib is the same family, and its n64.mk builds everything as gnu17/gnu++17 anyway.
-		# amiga-gcc's libnix/newlib headers are the same newlib family again.
+		# m68k-amigaos-gcc's libnix/newlib headers are the same newlib family again.
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS ON)
 	else()
 		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
@@ -346,7 +346,7 @@ function(ncine_apply_compiler_options target)
 		# libdragon (the project's own cmake/toolchains/n64.cmake toolchain file sets PLATFORM_N64, and N64 with it)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_N64")
 	elseif(PLATFORM_AMIGA)
-		# amiga-gcc/AmigaOS 3.x (the project's own cmake/toolchains/amiga.cmake toolchain file sets PLATFORM_AMIGA)
+		# AmigaOS 3.x, m68k (the project's own cmake/toolchains/amiga.cmake toolchain file sets PLATFORM_AMIGA)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_AMIGAOS")
 	elseif(PLATFORM_MORPHOS)
 		# MorphOS (the project's own cmake/toolchains/morphos.cmake toolchain file sets PLATFORM_MORPHOS).

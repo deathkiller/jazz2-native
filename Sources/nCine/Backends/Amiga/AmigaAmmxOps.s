@@ -24,7 +24,7 @@
 ; them, so the read is harmless; nothing is ever over-WRITTEN (stores go through STOREC with
 ; an exact byte count).
 ;
-; Register conventions: bebbo-gcc passes arguments on the stack and expects d2-d7/a2-a6
+; Register conventions: m68k-amigaos-gcc passes arguments on the stack and expects d2-d7/a2-a6
 ; preserved; the E registers have no C convention (the compiler never touches them) and no
 ; state is held in them across calls. NOTE: E registers survive a task switch only under an
 ; AMMX-aware exec, which every Apollo/Vampire setup ships.

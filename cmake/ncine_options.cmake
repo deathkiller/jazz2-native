@@ -295,7 +295,7 @@ elseif(PLATFORM_N64 OR PLATFORM_PS2 OR PLATFORM_PS3 OR PLATFORM_AMIGA OR PLATFOR
 	#  - PS3: PSL1GHT ships no pthreads at all - newlib installs <pthread.h>, nothing implements it.
 	#  - N64: libdragon ships no pthreads either (its cooperative kthread kernel is a different API),
 	#    and a single 93 MHz core has nothing for a second thread to win anyway.
-	#  - Amiga: bebbo's GCC has no gthreads/std::thread (AmigaOS Exec tasks are a different API), and
+	#  - Amiga: m68k-amigaos-gcc has no gthreads/std::thread (AmigaOS Exec tasks are a different API), and
 	#    every machine in this port's range is a single core anyway.
 	#  - MorphOS: it HAS working pthreads, but its <pthread.h> includes <exec/semaphores.h>, which puts
 	#    exec's `struct Task` in the global namespace - and that is also the name of the engine's

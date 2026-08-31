@@ -185,7 +185,7 @@ rasterizer the desktop build can use, because none of them has graphics hardware
 
 System | Toolchain | CMake toolchain file
 ------ | --------- | --------------------
-AmigaOS 3.x @m_span{m-text m-dim} (m68k, from an accelerated 68060 with RTG upwards - PiStorm/Emu68 and Apollo Vampire being the ones worth playing on) @m_endspan | bebbo's amiga-gcc | `cmake/toolchains/amiga.cmake`
+AmigaOS 3.x @m_span{m-text m-dim} (m68k, from an accelerated 68060 with RTG upwards - PiStorm/Emu68 and Apollo Vampire being the ones worth playing on) @m_endspan | AmigaPorts' m68k-amigaos-gcc @m_span{m-text m-dim} (prebuilt release) @m_endspan | `cmake/toolchains/amiga.cmake`
 AmigaOS 4.1 @m_span{m-text m-dim} (PowerPC) @m_endspan | adtools @m_span{m-text m-dim} (container) @m_endspan | `cmake/toolchains/os4.cmake`
 MorphOS @m_span{m-text m-dim} (PowerPC) @m_endspan | MorphOS SDK @m_span{m-text m-dim} (container) @m_endspan | `cmake/toolchains/morphos.cmake`
 

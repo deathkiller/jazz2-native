@@ -22,7 +22,7 @@ stays selectable for a machine whose card has no 3D driver. Everything below tha
 
 System | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Renderer | Window/input | Audio | Details
 ------ | -------------------------------------------------------------- | -------- | ------------ | ----- | -------
-AmigaOS 3.x @m_span{m-text m-dim} (m68k) @m_endspan | bebbo's amiga-gcc @m_span{m-text m-dim} (`amiga.cmake`) @m_endspan | `Software` | own backend @m_span{m-text m-dim} (Intuition + RTG) @m_endspan | `AHI` | @ref amiga-classic
+AmigaOS 3.x @m_span{m-text m-dim} (m68k) @m_endspan | AmigaPorts' m68k-amigaos-gcc @m_span{m-text m-dim} (`amiga.cmake`) @m_endspan | `Software` | own backend @m_span{m-text m-dim} (Intuition + RTG) @m_endspan | `AHI` | @ref amiga-classic
 AmigaOS 4.1 @m_span{m-text m-dim} (PowerPC) @m_endspan | adtools @m_span{m-text m-dim} (`os4.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (MiniGL) @m_endspan | SDL2 | `SDL` | @ref amiga-os4
 MorphOS @m_span{m-text m-dim} (PowerPC) @m_endspan | MorphOS SDK @m_span{m-text m-dim} (`morphos.cmake`) @m_endspan | `LegacyGL` @m_span{m-text m-dim} (TinyGL) @m_endspan | SDL2 | `SDL` | @ref amiga-morphos
 
@@ -41,7 +41,7 @@ is chosen at startup by measuring the machine — see @ref amiga-presets.
 
 Property | Value
 -------- | -----
-Toolchain | bebbo's **amiga-gcc**, `gcc` module on branch `amiga13.4` @m_span{m-text m-dim} (`cmake/toolchains/amiga.cmake`) @m_endspan
+Toolchain | AmigaPorts' **m68k-amigaos-gcc** @m_span{m-text m-dim} (GCC 16.2, prebuilt release; `cmake/toolchains/amiga.cmake`) @m_endspan
 C runtime | libnix @m_span{m-text m-dim} (`-mcrt=nix20`) @m_endspan
 Rendering backend | `Software` @m_span{m-text m-dim} (pinned -- any other value is a configure error) @m_endspan, forced to 16-bit surfaces
 Window/input backend | `Amiga` @m_span{m-text m-dim} (`Sources/nCine/Backends/Amiga/`) @m_endspan — Intuition screen, IDCMP input, lowlevel.library gamepads
@@ -70,65 +70,62 @@ a stock machine has. @m_endspan
 
 @subsection amiga-toolchain Toolchain
 
-The cross-compiler is bebbo's amiga-gcc **with its `gcc` module on branch `amiga13.4`** — the default
-branch is GCC 6.5, which cannot compile this codebase @m_span{m-text m-dim} (it is C++17 throughout)
-@m_endspan. The canonical repository moved away from GitHub -- use
-[franke.ms/git/bebbo/amiga-gcc](https://franke.ms/git/bebbo/amiga-gcc) or its Codeberg mirror.
+The cross-compiler is [AmigaPorts/m68k-amigaos-gcc](https://github.com/AmigaPorts/m68k-amigaos-gcc),
+which is **published as a prebuilt release** for Linux x86_64 and macOS arm64 -- so no cross-compiler
+has to be built. The releases are GCC 16.2; GCC 13 is the floor, this codebase being C++17 throughout,
+and `BuildAmiga.sh` refuses anything older.
 
 @code{.sh}
-git clone https://franke.ms/git/bebbo/amiga-gcc.git && cd amiga-gcc
-# Pin the gcc module to the C++17-capable branch before the first build
-sed -i 's|\(projects/gcc.*\)master|\1amiga13.4|' .repos
-export CFLAGS="-Os" CXXFLAGS="-Os -std=gnu++17"
-make update
-make all -j$(nproc) PREFIX=/opt/amiga
+# The archive's own directory IS the prefix - the toolchain is relocatable, so unpack it anywhere
+curl -fsSLO https://github.com/AmigaPorts/m68k-amigaos-gcc/releases/download/v16.2-rc6/m68k-amigaos-gcc-16.2-rc6-Linux-x86_64.tar.xz
+tar xJf m68k-amigaos-gcc-16.2-rc6-Linux-x86_64.tar.xz -C /opt
+export AMIGA_INST=/opt/m68k-amigaos-gcc-16.2
+@endcode
+
+@m_class{m-noindent}
+
+The release already carries everything this port compiles against except one library. **NDK 3.2**, the
+**CyberGraphX and AHI headers** @m_span{m-text m-dim} (which the NDK itself does not include) @m_endspan
+and **vasm** @m_span{m-text m-dim} (`vasmm68k_mot`, needed only for `NCINE_WITH_AMMX` -- the AMMX
+kernels are hand-written assembly that no GCC can emit) @m_endspan are all in the archive. What is
+left is **zlib**, the one third-party library the game cannot run without:
+
+@code{.sh}
+export PATH="$AMIGA_INST/bin:$PATH"
+curl -LO https://zlib.net/zlib-1.3.1.tar.gz && tar xf zlib-1.3.1.tar.gz && cd zlib-1.3.1
+CC=m68k-amigaos-gcc AR=m68k-amigaos-ar RANLIB=m68k-amigaos-ranlib \
+    CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' ./configure --prefix=$AMIGA_INST/m68k-amigaos --static
+make -j$(nproc) libz.a && make install
 @endcode
 
 @m_class{m-block m-warning}
 
-@par Building the toolchain on a recent host compiler
-`CFLAGS`/`CXXFLAGS` must be passed as **environment variables**, never as `make` command-line
-variables: as command-line variables they ride `MAKEFLAGS` into libnix's own makefile and overwrite
-its include path, which fails on `amistdio.h`. The `-std=gnu++17` pin is needed because GCC 14+ hosts
-default to C++20, under which the bundled libcody and libstdc++ locale sources do not compile.
-
-@m_class{m-noindent}
-
-Four things have to be present in the prefix before the game will configure. All of them are
-one-time steps:
-
-<ul>
-<li>**NDK 3.2 headers** — installed by `make all` as part of the toolchain.</li>
-<li>**CyberGraphX and AHI headers**, which the NDK does not carry. Take them from the CGX developer
-kit and the AHI developer archive, and generate the `proto`/`inline` headers for `cybergraphics`
-with `fd2sfd` + `sfdc` into `$PREFIX/m68k-amigaos/ndk-include`.</li>
-<li>**zlib**, the one third-party library the game cannot run without:
-@code{.sh}
-curl -LO https://zlib.net/zlib-1.3.1.tar.gz && tar xf zlib-1.3.1.tar.gz && cd zlib-1.3.1
-CC=$PREFIX/bin/m68k-amigaos-gcc CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' \
-    ./configure --prefix=$PREFIX/m68k-amigaos --static
-make -j$(nproc) libz.a && make install
-@endcode
-</li>
-<li>**vasm** (`vasmm68k_mot`) in `$PREFIX/bin`, but only for a build with `NCINE_WITH_AMMX` — the
-AMMX kernels are hand-written assembly and no version of GCC can emit AMMX. Any Apollo-aware vasm
-works -- the kernels are assembled with `-m68080 -Fhunk`.</li>
-</ul>
+@par AR and RANLIB have to be named explicitly
+Left at their defaults, zlib's configure uses the **host** `ar`/`ranlib`, and the host `ranlib`
+writes an ELF-shaped symbol index into the Amiga-format archive. `m68k-amigaos-ld` cannot read that
+index, so `libz.a` contributes no symbols at all and the game's link fails on `crc32`, `inflate*`
+and `deflate*` -- with the archive sitting right there on the command line. Running
+`m68k-amigaos-ranlib libz.a` afterwards repairs an archive already built the wrong way.
 
 @subsubsection amiga-toolchain-flags What the toolchain file sets, and why
 
-`cmake/toolchains/amiga.cmake` is small, but two of its flags are load-bearing and must not be
+`cmake/toolchains/amiga.cmake` is small, but three of its flags are load-bearing and must not be
 "cleaned up":
 
 <ul>
 <li>`-mcpu=68060` **without** an explicit `-m68881`. The 68060 implies its FPU, and adding `-m68881`
 silently knocks GCC's multilib selection off `libm060` back onto the plain-68000 libraries.</li>
-<li>`-fno-optimize-sibling-calls` — this is **correctness, not tuning**. bebbo's binutils resolves a
-sibling call @m_span{m-text m-dim} (`bra.l`, and `ld`'s own `60FF`/`61FF` → `4EB9` conversion)
-@m_endspan to a *weak* symbol against the wrong address, so any tail call into an inline or template
-function jumps into garbage. Ordinary `jsr` calls to the same symbols are fine, which is why the
-mitigation is this narrow. `-fno-weak` is **not** an alternative: it also removes weak *data*, and
-template statics such as `Vector2f::Zero` then fail to link.</li>
+<li>`-fno-optimize-sibling-calls` — this is **correctness, not tuning**. The m68k-amigaos binutils
+resolves a sibling call @m_span{m-text m-dim} (`bra.l`, and `ld`'s own `60FF`/`61FF` → `4EB9`
+conversion) @m_endspan to a *weak* symbol against the wrong address, so any tail call into an inline
+or template function jumps into garbage. Ordinary `jsr` calls to the same symbols are fine, which is
+why the mitigation is this narrow. `-fno-weak` is **not** an alternative: it also removes weak
+*data*, and template statics such as `Vector2f::Zero` then fail to link.</li>
+<li>`-std=gnu++17`, pinned rather than left to CMake. `target_compile_features(cxx_std_17)` is a
+*minimum*, so on a compiler that already defaults higher -- GCC 16 defaults to `gnu++20` -- CMake
+adds no `-std` flag at all and this target alone would build as C++20. Beyond the inconsistency, the
+toolchain's `<math.h>` pulls `using std::lerp;` into the global namespace under C++20, which is
+ambiguous against the engine's own `nCine::lerp` at every call site.</li>
 </ul>
 
 @m_class{m-noindent}
@@ -172,11 +169,11 @@ cmake --build ./build/amiga/ --parallel $(nproc)
 
 @m_class{m-noindent}
 
-`AMIGA_INST` is the toolchain prefix, and the toolchain file checks it: it wants
-`$AMIGA_INST/bin/m68k-amigaos-gcc` to exist, to be GCC 13 or newer, and to have the NDK headers and
-zlib installed beside it @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The same
-`workflow_dispatch` job in `.github/workflows/amiga.yml` builds the toolchain and the game from
-nothing, if a recipe that runs unattended is what is wanted.
+`AMIGA_INST` is the toolchain prefix, and it is checked before anything is configured: the toolchain
+file wants `$AMIGA_INST/bin/m68k-amigaos-gcc` and the NDK headers to be there, and `BuildAmiga.sh`
+additionally wants that compiler to be GCC 13 or newer and zlib to be installed beside it @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The
+`AmigaOS 3.x` job in `.github/workflows/amiga.yml` is the same recipe end to end -- download the
+release, cross-compile zlib, configure, build -- if an unattended one is what is wanted.
 
 The build stages `build/amiga/dist/`, which is the directory to copy to the Amiga: the `Jazz2`
 executable with its `Content/` tree next to it. `Jazz2.config` is written into that same directory,

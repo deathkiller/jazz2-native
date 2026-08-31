@@ -228,7 +228,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 
 		# AMMX scanline kernels for the Apollo 68080 (Vampire), runtime-gated so the binary stays
 		# 68060-safe. binutils' assembler does not know AMMX, so the module is assembled by vasm,
-		# which ships with the amiga-gcc toolchain ("make vasm").
+		# which the m68k-amigaos-gcc release ships in its own bin directory.
 		find_program(VASM_EXECUTABLE vasmm68k_mot HINTS "$ENV{AMIGA_INST}/bin")
 		if(VASM_EXECUTABLE)
 			# A subdirectory of its own, so the object cannot collide with anything else assembled into the

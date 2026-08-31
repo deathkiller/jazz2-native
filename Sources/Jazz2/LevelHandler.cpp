@@ -1873,11 +1873,7 @@ namespace Jazz2
 				continue;
 			}
 			
-			if (actor->GetState(Actors::ActorState::IsDirty)) {
-				if (actor->_collisionProxyID == Collisions::NullNode) {
-					continue;
-				}
-
+			if (actor->GetState(Actors::ActorState::IsDirty) && actor->_collisionProxyID != Collisions::NullNode) {
 				actor->UpdateAABB();
 				_collisions.MoveProxy(actor->_collisionProxyID, actor->AABB, actor->_speed * timeMult);
 				actor->SetState(Actors::ActorState::IsDirty, false);

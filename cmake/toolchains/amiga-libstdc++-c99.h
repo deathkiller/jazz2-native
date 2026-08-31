@@ -1,5 +1,5 @@
 /** @file
-	@brief Restores the C99 maths functions `std::` is missing on the amiga-gcc toolchain
+	@brief Restores the C99 maths functions `std::` is missing on the m68k-amigaos-gcc toolchain
 
 	Force-included into every C++ translation unit by `cmake/toolchains/amiga.cmake`, third-party
 	sources included - the same arrangement as `ps3-libstdc++-c99.h`, and for the same reason: the

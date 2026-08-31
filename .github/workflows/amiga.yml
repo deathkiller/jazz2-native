@@ -94,34 +94,28 @@ jobs:
         name: ${{ matrix.Artifact }}
         path: ./_package/
 
-  # AmigaOS 3.x (m68k). Unlike the two above there is no usable prebuilt toolchain: this codebase needs
-  # full C++17, so it needs bebbo's amiga-gcc from a GCC 13 branch, and every published m68k-amigaos
-  # image is still on the GCC 6.5 default branch. So the cross-compiler is built here and kept in the
-  # actions cache, which is what makes this job manual-only (workflow_dispatch): a cold cache is an
-  # hour of toolchain build before a line of the game is compiled, and that should not sit in front of
-  # every push. Run it by hand after touching the classic Amiga backend or its toolchain file.
+  # AmigaOS 3.x (m68k). Like the two above this is a configure-and-build job: AmigaPorts publishes
+  # m68k-amigaos-gcc (GCC 16.2) as a prebuilt Linux x86_64 archive, so the cross-compiler is a 61 MB
+  # download that unpacks in seconds and nothing here needs caching.
   #
-  # This one has NOT been proven on a runner yet - it mirrors the toolchain build that works locally
-  # and upstream's own Dockerfile recipe. If `make all` stops in a C target library over an `extern
-  # bool` declaration in gcc/config/m68k/m68k.h, that is the known trap: the meta-Makefile's `libgcc`
-  # target runs gcc's `all-target`, which includes libobjc, and libobjc is C.
+  # That archive also carries the third-party developer kits this port compiles against - CyberGraphX
+  # (which Picasso96 implements too) for the window backend and AHI for audio - and the vasm the AMMX
+  # kernels are assembled with. zlib is the one thing left to cross-compile.
   Classic:
-    if: github.event_name == 'workflow_dispatch'
-
     strategy:
       fail-fast: false
       matrix:
         include:
         - BuildType: Release
 
-    name: 'AmigaOS 3.x'
+    name: 'AmigaOS 3.x (m68k)'
     runs-on: 'ubuntu-latest'
 
     env:
-      # A home-directory prefix keeps every step - and the cache restore - free of sudo
+      # Where the release archive is unpacked. A home-directory prefix keeps every step free of sudo,
+      # and the toolchain is relocatable, so its own build-time prefix does not matter.
       AMIGA_INST: /home/runner/amiga
-      # The GCC 13 branch of the gcc module: the 6.5 default branch is not C++17-capable
-      AMIGA_GCC_BRANCH: amiga13.4
+      AMIGA_GCC_VERSION: '16.2-rc6'
       ZLIB_VERSION: '1.3.1'
 
     steps:
@@ -130,43 +124,31 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Cache amiga-gcc'
-      id: cache-amiga-gcc
-      uses: actions/cache@v4
-      with:
-        path: /home/runner/amiga
-        key: amiga-gcc-${{ env.AMIGA_GCC_BRANCH }}-zlib-${{ env.ZLIB_VERSION }}
-
-    - name: 'Build amiga-gcc'
-      if: steps.cache-amiga-gcc.outputs.cache-hit != 'true'
+    - name: 'Install m68k-amigaos-gcc'
       shell: bash
       run: |
+        # cc1/cc1plus link against these dynamically. The runner image already carries them as
+        # dependencies of its own GCC, but naming them keeps the job independent of that.
         sudo apt-get -y update
-        sudo apt-get -y install make wget git gcc g++ libgmp-dev libmpfr-dev libmpc-dev flex bison \
-          gettext texinfo ncurses-dev autoconf automake rsync lhasa
+        sudo apt-get -y install libgmp10 libmpc3 libmpfr6 libzstd1
 
-        git clone --depth 1 https://github.com/bebbo/amiga-gcc /tmp/amiga-gcc
-        cd /tmp/amiga-gcc
-        # The gcc module is moved onto the GCC 13 branch BEFORE anything is fetched or built
-        make branch branch=${AMIGA_GCC_BRANCH} mod=gcc PREFIX=${AMIGA_INST}
-        make update -j $(nproc) PREFIX=${AMIGA_INST}
+        # --strip-components=1 unpacks the archive's single "m68k-amigaos-gcc-<version>" directory
+        # AS the prefix, so AMIGA_INST does not have to spell the version out twice
+        mkdir -p "${AMIGA_INST}"
+        curl -fsSL "https://github.com/AmigaPorts/m68k-amigaos-gcc/releases/download/v${AMIGA_GCC_VERSION}/m68k-amigaos-gcc-${AMIGA_GCC_VERSION}-Linux-x86_64.tar.xz" \
+          | tar xJ --strip-components=1 -C "${AMIGA_INST}"
+        "${AMIGA_INST}/bin/m68k-amigaos-gcc" --version
 
-        # `all-sdk` is what installs the third-party developer kits the classic Amiga backend needs -
-        # cgx.sdk (CyberGraphX, which Picasso96 implements too) and ahi.sdk - into the NDK include
-        # tree. Without them the window and audio backends have no headers to compile against.
-        #
-        # CXXFLAGS travels as an ENVIRONMENT variable, never as a make command-line variable: as the
-        # latter it rides MAKEFLAGS down into libnix's own Makefile and clobbers the include paths it
-        # sets for itself. The pin exists because a host GCC that defaults to C++20 or newer fails to
-        # build the bundled libcody and libstdc++ sources.
-        CXXFLAGS="-Os -std=gnu++17" make all all-sdk -j $(nproc) PREFIX=${AMIGA_INST}
-
-        # zlib is the one third-party library the game cannot run without, and the toolchain packages
-        # none - the same arrangement the Nintendo 64 workflow uses
+        # zlib is the one third-party library the game cannot run without and the toolchain packages
+        # none - the same arrangement the Nintendo 64 workflow uses. AR and RANLIB have to be named
+        # explicitly: left at the host's, ranlib writes an ELF-shaped index into the Amiga-format
+        # archive that m68k-amigaos-ld cannot read, the archive then contributes no symbols at all,
+        # and the game's link fails on crc32/inflate/deflate.
         export PATH="${AMIGA_INST}/bin:${PATH}"
         curl -fsSL https://github.com/madler/zlib/releases/download/v${ZLIB_VERSION}/zlib-${ZLIB_VERSION}.tar.gz | tar xz -C /tmp
         cd /tmp/zlib-${ZLIB_VERSION}
-        CC=m68k-amigaos-gcc CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' ./configure --prefix=${AMIGA_INST}/m68k-amigaos --static
+        CC=m68k-amigaos-gcc AR=m68k-amigaos-ar RANLIB=m68k-amigaos-ranlib \
+          CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' ./configure --prefix=${AMIGA_INST}/m68k-amigaos --static
         make -j $(nproc) libz.a
         make install
 
@@ -177,6 +159,9 @@ jobs:
 
         git config --global --add safe.directory '*'
         export PATH="${AMIGA_INST}/bin:${PATH}"
+        # Without a prebaked console content tree (see Docs/Amiga.dox) the staged directory carries
+        # only the repository's base assets and the game boots to the "content missing" message -
+        # which still exercises the whole build and the staging step
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=./cmake/toolchains/amiga.cmake -D NCINE_CONTENT_DIR=./Content
 
     - name: 'Build'

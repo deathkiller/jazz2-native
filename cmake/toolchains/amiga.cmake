@@ -1,14 +1,20 @@
 # CMake toolchain file for classic Amiga (AmigaOS 3.x, m68k)
 #
-# Uses Bebbo's amiga-gcc (https://franke.ms/git/bebbo/amiga-gcc, branch amiga13.4 - GCC 13 with full
-# C++17; the default gcc-6.5 branch cannot compile this codebase). The C runtime is libnix
-# (-mcrt=nix20, Kickstart 2.0+), which is the leanest of the toolchain's runtimes and enough for a
-# game that ships its own content tree. Like PSL1GHT and libdragon this SDK has no CMake toolchain
-# file of its own, so this one lives with the project.
+# Uses AmigaPorts' m68k-amigaos-gcc (https://github.com/AmigaPorts/m68k-amigaos-gcc), which is
+# published as a prebuilt release for Linux x86_64 and macOS arm64, so nothing here has to build a
+# cross-compiler. GCC 16.2 there; GCC 13 is the floor this codebase needs, being C++17 throughout.
+# The release also carries the third-party developer kits this port compiles against - CyberGraphX
+# and AHI headers - plus the vasm the AMMX kernels are assembled with.
 #
-# Set AMIGA_INST in the environment to the amiga-gcc install prefix (the directory holding
-# bin/m68k-amigaos-gcc). zlib must be cross-compiled into "$AMIGA_INST/m68k-amigaos" once, exactly
-# like the N64 toolchain's zlib (see Docs/Amiga.dox for the one-time commands).
+# The C runtime is libnix (-mcrt=nix20, Kickstart 2.0+), which is the leanest of the toolchain's
+# runtimes and enough for a game that ships its own content tree. Like PSL1GHT and libdragon this
+# SDK has no CMake toolchain file of its own, so this one lives with the project.
+#
+# Set AMIGA_INST in the environment to the toolchain prefix (the directory holding
+# bin/m68k-amigaos-gcc - for a release archive that is the unpacked "m68k-amigaos-gcc-<version>"
+# directory itself, which is relocatable). zlib must be cross-compiled into
+# "$AMIGA_INST/m68k-amigaos" once, exactly like the N64 toolchain's zlib (see Docs/Amiga.dox for
+# the one-time commands).
 #
 # The binary targets a 68040/68060 with FPU ("-mcpu=68060", which implies the FPU): GCC's 68060 code generation
 # avoids the instructions the 060 traps on, the 68080 (Vampire) and Emu68 (PiStorm) execute the
@@ -22,10 +28,10 @@ else()
 endif()
 
 if(NOT EXISTS "${AMIGA_INST}/bin/m68k-amigaos-gcc")
-	message(FATAL_ERROR "amiga-gcc not found at \"${AMIGA_INST}\" (build https://franke.ms/git/bebbo/amiga-gcc with the gcc module on branch amiga13.4)")
+	message(FATAL_ERROR "m68k-amigaos-gcc not found at \"${AMIGA_INST}\" (unpack a release from https://github.com/AmigaPorts/m68k-amigaos-gcc/releases)")
 endif()
 if(NOT EXISTS "${AMIGA_INST}/m68k-amigaos/ndk-include/exec/exec.h" AND NOT EXISTS "${AMIGA_INST}/m68k-amigaos/ndk/include/exec/exec.h")
-	message(FATAL_ERROR "amiga-gcc at \"${AMIGA_INST}\" has no NDK headers (run its \"make ndk\" target)")
+	message(FATAL_ERROR "m68k-amigaos-gcc at \"${AMIGA_INST}\" has no NDK headers - the release archive was not unpacked whole")
 endif()
 
 set(ENV{AMIGA_INST} "${AMIGA_INST}")
@@ -51,18 +57,22 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # convention on the console tier and libnix has no unwinder anyway (RTTI stays on - the game has a
 # dynamic_cast or two, like every other console build). Large data/code model is the compiler's
 # default (no -fbaserel: the binary's data far exceeds a 64 KB near section).
-# -fno-optimize-sibling-calls is CORRECTNESS, not tuning: bebbo-ld resolves a sibcall (bra.l/60FF)
-# to a WEAK symbol against the wrong address (verified with a minimal two-line reproducer - strong
-# targets and ordinary jsr calls to the same weak symbols resolve fine), and a C++ codebase is full
-# of tail calls into inline/template functions. Costs only the tail-call optimization.
+# -fno-optimize-sibling-calls is CORRECTNESS, not tuning: the m68k-amigaos ld resolves a sibcall
+# (bra.l/60FF) to a WEAK symbol against the wrong address (verified with a minimal two-line
+# reproducer - strong targets and ordinary jsr calls to the same weak symbols resolve fine), and a
+# C++ codebase is full of tail calls into inline/template functions. Costs only the tail-call
+# optimization.
 set(_amigaMachDep "-mcpu=68060 -mcrt=nix20 -fomit-frame-pointer -fno-exceptions -fno-optimize-sibling-calls")
 
 set(CMAKE_C_FLAGS_INIT "${_amigaMachDep}")
 # The force-included header restores the C99 maths set libstdc++ was configured without - the same
 # arrangement (and file layout) as the PS3 toolchain, see amiga-libstdc++-c99.h
-# The force-included header restores the C99 maths set libstdc++ was configured without - the
-# same arrangement (and file layout) as the PS3 toolchain, see amiga-libstdc++-c99.h
-set(CMAKE_CXX_FLAGS_INIT "${_amigaMachDep} -include ${CMAKE_CURRENT_LIST_DIR}/amiga-libstdc++-c99.h")
+# -std=gnu++17 is pinned here rather than left to CMake: GCC 16 defaults to gnu++20, and
+# `target_compile_features(cxx_std_17)` is a MINIMUM, so CMake adds no flag at all and the whole
+# codebase silently compiles as C++20. That is not merely inconsistent with every other target -
+# the toolchain's <math.h> pulls `using std::lerp;` into the global namespace under C++20, which
+# collides with the engine's own nCine::lerp on every call.
+set(CMAKE_CXX_FLAGS_INIT "${_amigaMachDep} -std=gnu++17 -include ${CMAKE_CURRENT_LIST_DIR}/amiga-libstdc++-c99.h")
 # -mcrt selects the matching startup/libs at link time as well
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-mcrt=nix20")
 
