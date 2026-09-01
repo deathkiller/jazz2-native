@@ -72,8 +72,7 @@ a stock machine has. @m_endspan
 
 The cross-compiler is [AmigaPorts/m68k-amigaos-gcc](https://github.com/AmigaPorts/m68k-amigaos-gcc),
 which is **published as a prebuilt release** for Linux x86_64 and macOS arm64 -- so no cross-compiler
-has to be built. The releases are GCC 16.2; GCC 13 is the floor, this codebase being C++17 throughout,
-and `BuildAmiga.sh` refuses anything older.
+has to be built. The releases are GCC 16.2; GCC 13 is the floor, this codebase being C++17 throughout.
 
 @code{.sh}
 # The archive's own directory IS the prefix - the toolchain is relocatable, so unpack it anywhere
@@ -113,8 +112,18 @@ and `deflate*` -- with the archive sitting right there on the command line. Runn
 "cleaned up":
 
 <ul>
-<li>`-mcpu=68060` **without** an explicit `-m68881`. The 68060 implies its FPU, and adding `-m68881`
-silently knocks GCC's multilib selection off `libm060` back onto the plain-68000 libraries.</li>
+<li>`-mcpu=68060` **with** an explicit `-m68881`. The CPU flag alone does *not* imply the FPU ---
+`m68k-amigaos-gcc -mcpu=68060 -Q --help=target` reports `-msoft-float [enabled]` --- so without
+`-m68881` every floating-point operation in the update loop compiles into a libgcc call. Measured
+under an emulated 68040: **1550 ns** per multiply-add soft, **300 ns** with the FPU, the integer
+side of the same benchmark unchanged. It is also an ABI trap, because the libnix `libm` the link
+resolves to @m_span{m-text m-dim} (`libm020/libm881/libm.a`) @m_endspan is the hard-float one either
+way: it returns floating point in `fp0`, and soft-float code reads the return value from `d0`. That
+mismatch is what made `fminf()`, `fmaxf()`, `rint()` and `nearbyint()` return garbage
+@m_span{m-text m-dim} (`round()` and `trunc()` appeared to work only because their result bits are
+left in `d0` as well) @m_endspan. `-print-multi-directory` reports `.` for this flag combination,
+which looks alarming, but the link resolves the `libm020/libm881` variant of every library --- which
+is what actually matters.</li>
 <li>`-fno-optimize-sibling-calls` — this is **correctness, not tuning**. The m68k-amigaos binutils
 resolves a sibling call @m_span{m-text m-dim} (`bra.l`, and `ld`'s own `60FF`/`61FF` → `4EB9`
 conversion) @m_endspan to a *weak* symbol against the wrong address, so any tail call into an inline
@@ -170,8 +179,8 @@ cmake --build ./build/amiga/ --parallel $(nproc)
 @m_class{m-noindent}
 
 `AMIGA_INST` is the toolchain prefix, and it is checked before anything is configured: the toolchain
-file wants `$AMIGA_INST/bin/m68k-amigaos-gcc` and the NDK headers to be there, and `BuildAmiga.sh`
-additionally wants that compiler to be GCC 13 or newer and zlib to be installed beside it @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The
+file wants `$AMIGA_INST/bin/m68k-amigaos-gcc` and the NDK headers to be there, with zlib installed
+beside them @m_span{m-text m-dim} (see @ref amiga-toolchain) @m_endspan. The
 `AmigaOS 3.x` job in `.github/workflows/amiga.yml` is the same recipe end to end -- download the
 release, cross-compile zlib, configure, build -- if an unattended one is what is wanted.
 
@@ -264,9 +273,16 @@ Variable | Effect
 @subsection amiga-limits Limits and known issues
 
 <ul>
-<li>**An FPU is required.** The binary is compiled for 68040/68060 with FPU and the game's update
-loop is floating point throughout, so it exits with a message rather than trapping on a machine
-without one.</li>
+<li>**An FPU is required, and on a 68040/68060 so is its support library.** The binary is compiled
+for hardware floating point @m_span{m-text m-dim} (`-mcpu=68060 -m68881`) @m_endspan and the game's
+update loop is floating point throughout, so it exits with a message rather than trapping on a
+machine without an FPU at all. Neither the 68040 nor the 68060 implements the whole 68881 set in
+silicon, though --- `FMOVECR` and the extended-precision forms GCC emits are left to Motorola's FPSP
+--- so `Libs:68040.library` @m_span{m-text m-dim} (resp. `68060.library`) @m_endspan has to be
+installed for `SetPatch` to load. Every accelerator ships it and Workbench 3.5/3.9 include it, but a
+bare Workbench 3.1 does **not**, and the symptom there is an immediate `Recoverable Alert
+0006 8881` rather than anything the game gets to report. The Apollo 68080 and Emu68 implement the
+instructions natively and need nothing.</li>
 <li>**RTG only.** There is no chunky-to-planar path, so an AGA-only machine cannot run this build.</li>
 <li>**No threads.** `WITH_THREADS` is off, so audio streaming decodes synchronously on the main
 thread and the multiplayer client/server are not built.</li>
@@ -283,14 +299,23 @@ that has run dry — which one long level-loading frame is enough to cause. The 
 measures linking at startup with two throwaway requests of its own and restarts a queue that has not
 retired anything for a second. Both mechanisms are inert on a device that behaves as documented -- the
 log line `Audio device initialized: …` states which mode is in use.</li>
-<li>**libnix's `round`, `roundf`, `truncf`, `fminf`, `fmaxf` and `rint` return garbage** —
-`roundf(0.0f)` is a NaN. Correct implementations in
-`Sources/nCine/Backends/Amiga/AmigaLibcCompat.c` override the archive members, together with the
-handful of functions libnix does not ship at all @m_span{m-text m-dim} (`exp2`, `strnlen`,
-`wcstoul`, …) @m_endspan. If you see the menu render blank, suspect that this file did not get
-linked in.</li>
-<li>**Emulator timings mean nothing here.** FS-UAE interpreting a 68040 runs gameplay at well under
-one frame per second, which says nothing about a PiStorm. Performance work belongs on hardware.</li>
+<li>**libnix does not ship every C99 function.** `exp2`, `exp2f`, `log2f`, `strnlen` and `wcstoul`
+are missing entirely and are defined in `Sources/nCine/Backends/Amiga/AmigaLibcCompat.c`, along with
+the POSIX entry points AmigaOS has no equivalent for @m_span{m-text m-dim} (`flock`, `fchmod`,
+`getpwuid`, `realpath`, `gethostname`) @m_endspan and `__xpg_strerror_r`, which libstdc++ references
+by name. What is *not* in that file any more is a replacement for `round`, `trunc`, `fmin`, `fmax`,
+`rint` or `nearbyint`: those returned garbage under the old soft-float flags and are correct as
+libnix ships them once the build is hard-float @m_span{m-text m-dim} (see @ref
+amiga-toolchain-flags) @m_endspan.</li>
+<li>**Emulator timings are worth exactly one thing: A/B comparisons.** FS-UAE interpreting a 68040
+runs gameplay at well under one frame per second, and its *absolute* numbers say nothing about a
+PiStorm --- but they are stable and they scale with the code, which is enough to compare two builds
+of the same thing. The startup probe is the instrument: it prints `… ns/composited pixel, …
+ns/FPU multiply-add` into the log on every boot, and the soft-float regression above was found by
+reading the second of those two numbers. Note that the integer figure it reports under emulation
+@m_span{m-text m-dim} (around 330 ns/pixel here) @m_endspan happens to land in the same band as a
+real 68060/50, while the emulated FPU does not --- so the two halves of that line are not comparable
+with each other. Anything that is not a comparison between two builds belongs on hardware.</li>
 </ul>
 
 @section amiga-os4 AmigaOS 4.1 (PowerPC)

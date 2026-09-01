@@ -6,6 +6,7 @@
 #include "../Input/IInputEventHandler.h"
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
+#include "../../Main.h"
 
 #if defined(WITH_SDL3)
 #	if defined(__HAS_LOCAL_SDL3)
@@ -352,6 +353,10 @@ namespace nCine::Backends
 				_joyHatEvent.hatId = event.jhat.hat;
 				_joyHatEvent.hatState = event.jhat.value;
 				break;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+			// Where the macro is not defined the platform has a touch device the game doesn't use (the PS Vita's
+			// screen and rear pad sit under the hands that hold it), so a finger event is neither translated here
+			// nor dispatched below - see `NCINE_HAS_TOUCH_CONTROLS` in "Main.h"
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
@@ -393,6 +398,7 @@ namespace nCine::Backends
 				SDL_free(fingers);
 #endif
 				break;
+#endif
 		}
 
 		// Calling the event handler method
@@ -434,11 +440,13 @@ namespace nCine::Backends
 				_joyMapping.OnJoyHatMoved(_joyHatEvent);
 				_inputEventHandler->OnJoyHatMoved(_joyHatEvent);
 				break;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
 				_inputEventHandler->OnTouchEvent(_touchEvent);
 				break;
+#endif
 			default:
 				break;
 		}

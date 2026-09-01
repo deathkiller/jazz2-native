@@ -16,7 +16,7 @@
 # "$AMIGA_INST/m68k-amigaos" once, exactly like the N64 toolchain's zlib (see Docs/Amiga.dox for
 # the one-time commands).
 #
-# The binary targets a 68040/68060 with FPU ("-mcpu=68060", which implies the FPU): GCC's 68060 code generation
+# The binary targets a 68040/68060 with FPU ("-mcpu=68060 -m68881"): GCC's 68060 code generation
 # avoids the instructions the 060 traps on, the 68080 (Vampire) and Emu68 (PiStorm) execute the
 # same code natively, and a plain 68040 runs it through the 68040 support libraries. Machines
 # without an FPU are below this port's floor (see Docs/AmigaPortDesign.md).
@@ -51,8 +51,16 @@ set(CMAKE_OBJCOPY "${AMIGA_INST}/bin/m68k-amigaos-objcopy" CACHE FILEPATH "Objco
 # There is no Amiga host to run a link test on, so CMake's compiler probe has to stop at the object file
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-# -mcpu=68060: see the header comment; the 060 implies its FPU, and an EXPLICIT -m68881 must not be
-# added - it knocks GCC's multilib selection off "libm060" back to the plain-68000 libraries.
+# -mcpu=68060 -m68881: the CPU flag alone selects GCC's SOFT-float code generation (-msoft-float is
+# what "-Q --help=target" reports for it), which turns every float operation in the update loop into
+# a libgcc call - measured at 1550 ns per multiply-add against 300 ns with the FPU, on a target whose
+# every supported machine has one. It is also an ABI trap: the libnix libm the link actually resolves
+# to is "libm020/libm881/libm.a", which RETURNS floats in fp0, while soft-float code reads them from
+# d0 - so fminf(), fmaxf(), rint() and nearbyint() all came back as garbage (the ones that appeared to
+# work, round() and trunc(), only did so because their result bits happen to be left in d0 as well).
+# -m68881 fixes both at once: hardware FPU code, and libm/libgcc from the matching hard-float
+# multilib. "-print-multi-directory" reports "." for this combination, but the link resolves the
+# libm020/libm881 variants of every library, which is what matters.
 # -fomit-frame-pointer matters on a register-starved 68k. -fno-exceptions is the project's
 # convention on the console tier and libnix has no unwinder anyway (RTTI stays on - the game has a
 # dynamic_cast or two, like every other console build). Large data/code model is the compiler's
@@ -62,7 +70,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # reproducer - strong targets and ordinary jsr calls to the same weak symbols resolve fine), and a
 # C++ codebase is full of tail calls into inline/template functions. Costs only the tail-call
 # optimization.
-set(_amigaMachDep "-mcpu=68060 -mcrt=nix20 -fomit-frame-pointer -fno-exceptions -fno-optimize-sibling-calls")
+set(_amigaMachDep "-mcpu=68060 -m68881 -mcrt=nix20 -fomit-frame-pointer -fno-exceptions -fno-optimize-sibling-calls")
 
 set(CMAKE_C_FLAGS_INIT "${_amigaMachDep}")
 # The force-included header restores the C99 maths set libstdc++ was configured without - the same

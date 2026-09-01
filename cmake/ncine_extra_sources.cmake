@@ -1429,7 +1429,7 @@ else()
 		# no separate copy on the device.
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
 			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
-			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png"
+			FILE "${NCINE_SOURCE_DIR}/Icons/Vita.png" "sce_sys/icon0.png"
 			FILE "${NCINE_CONTENT_DIR}" "Content")
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")

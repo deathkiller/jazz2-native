@@ -1519,7 +1519,6 @@ namespace Death { namespace IO {
 #	endif
 #	if defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 		// This newlib defines no PATH_MAX, the class's own bound is larger than lv2's real path limit
-		// (libnix defines none either, and AmigaOS paths are far shorter than the class's bound)
 		char buffer[MaxPathLength];
 #	else
 		// realpath() output parameter must be a pointer to a buffer with >= PATH_MAX bytes

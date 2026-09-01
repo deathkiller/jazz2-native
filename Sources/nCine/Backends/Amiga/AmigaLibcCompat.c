@@ -6,6 +6,11 @@
 	  cmake/toolchains/amiga-libstdc++-c99.h cannot cover it - these are the real out-of-line
 	  definitions, derived the standard way (exp2(x) == exp(x * ln 2)).
 
+	  Nothing else from libm is replaced here. round, trunc, fmin, fmax, rint and nearbyint used to
+	  be, because they returned garbage - that was never a library bug but the soft-float build the
+	  toolchain file used to produce: libm returns floating point in fp0 and soft-float code reads it
+	  from d0. With -m68881 (see cmake/toolchains/amiga.cmake) every one of them is correct.
+
 	- __xpg_strerror_r: the m68k-amigaos libstdc++ was configured against a glibc-shaped
 	  strerror_r and its system_error translation unit references the XPG entry point by name.
 	  Nothing here is threaded (the whole port runs single-threaded), so routing it through plain
@@ -39,145 +44,6 @@ float exp2f(float x)
 float log2f(float x)
 {
 	return (float)log2(x);
-}
-
-/*
-	round/roundf: libnix SHIPS these symbols, but they are broken - they return garbage rather than a
-	rounded value (measured on m68k-amigaos: roundf(0.0f) -> 0xFFFFFFFF i.e. NaN, roundf(2.5f) ->
-	0x00200000, roundf(112.26f) -> 0x00010000, and the double form is equally wrong, while floorf,
-	ceilf, truncf, fabsf, sqrtf, sinf and fmodf from the same library are all correct). Defining them
-	here overrides the archive members, because the linker only pulls a libnix object in for a symbol
-	that is still undefined.
-
-	This mattered far more than it looks: the UI rounds every glyph and sprite position to whole
-	pixels through std::round, so a broken round turned every menu item's coordinates into NaN and the
-	whole menu drew off-screen.
-
-	Half-way cases round away from zero, as C99 specifies. Adding 0.5 and flooring is NOT used because
-	it rounds 0.49999997f up; taking the truncated part and comparing the exact remainder does not.
-*/
-/*
-	trunc/truncf: broken the same way, though less spectacularly - for 0 < |x| < 1 libnix returns tiny
-	denormals (measured: truncf(0.5f) -> 0x0000007E, truncf(-0.9f) -> 0x0000007E) instead of a clean
-	zero. floorf and ceilf ARE correct, so they are what these are built from; roundf below then
-	inherits a trustworthy truncation.
-*/
-float truncf(float x)
-{
-	return (x >= 0.0f ? floorf(x) : ceilf(x));
-}
-
-double trunc(double x)
-{
-	return (x >= 0.0 ? floor(x) : ceil(x));
-}
-
-float roundf(float x)
-{
-	float t = truncf(x);
-	float d = x - t;
-	if (d >= 0.5f) {
-		t += 1.0f;
-	} else if (d <= -0.5f) {
-		t -= 1.0f;
-	}
-	return t;
-}
-
-double round(double x)
-{
-	double t = trunc(x);
-	double d = x - t;
-	if (d >= 0.5) {
-		t += 1.0;
-	} else if (d <= -0.5) {
-		t -= 1.0;
-	}
-	return t;
-}
-
-/*
-	fmin/fmax (and the float forms): also broken in libnix - fminf(0.5f, 2.5f) came back as 0x00000004
-	rather than 0.5f. Plain comparisons are the whole content of these functions anyway; NaN operands
-	are detected by bit pattern rather than with isnan(), which folds to a constant false under
-	-ffast-math (DEATH_USE_FAST_MATH) and would defeat the check.
-*/
-static int __amiga_isnanf(float x)
-{
-	unsigned long bits;
-	memcpy(&bits, &x, sizeof(bits));
-	return ((bits & 0x7F800000UL) == 0x7F800000UL) && ((bits & 0x007FFFFFUL) != 0UL);
-}
-
-float fminf(float x, float y)
-{
-	if (__amiga_isnanf(x)) return y;
-	if (__amiga_isnanf(y)) return x;
-	return (x < y ? x : y);
-}
-
-float fmaxf(float x, float y)
-{
-	if (__amiga_isnanf(x)) return y;
-	if (__amiga_isnanf(y)) return x;
-	return (x > y ? x : y);
-}
-
-double fmin(double x, double y)
-{
-	if (x != x) return y;
-	if (y != y) return x;
-	return (x < y ? x : y);
-}
-
-double fmax(double x, double y)
-{
-	if (x != x) return y;
-	if (y != y) return x;
-	return (x > y ? x : y);
-}
-
-/*
-	rint/rintf: libnix's rint returned its argument unchanged (rint(2.5) -> 2.5). It is written here
-	from floor() rather than delegating to nearbyint(), even though nearbyint measured correct: that
-	one is implemented in terms of rint inside libnix, so calling it from here recurses until the
-	stack dies. Round-half-to-even, which is what both functions mean in the default rounding mode.
-*/
-static double __amiga_rint(double x)
-{
-	double t = floor(x);
-	double d = x - t;
-	if (d > 0.5) {
-		return t + 1.0;
-	}
-	if (d < 0.5) {
-		return t;
-	}
-	/* Exactly halfway: pick the even neighbour. Evenness is tested with floor() rather than fmod(),
-	   because libnix's double fmod is not trustworthy either (fmod(2.0, 2.0) did not compare equal
-	   to zero here, which sent 2.5 to 3.0 instead of 2.0). */
-	const double half = t * 0.5;
-	return (floor(half) == half ? t : t + 1.0);
-}
-
-double rint(double x)
-{
-	return __amiga_rint(x);
-}
-
-float rintf(float x)
-{
-	return (float)__amiga_rint((double)x);
-}
-
-double nearbyint(double x)
-{
-	return __amiga_rint(x);
-}
-
-float nearbyintf(float x)
-{
-	return (float)__amiga_rint((double)x);
 }
 
 /* strnlen: absent from libnix entirely - neither declared nor implemented - while the engine uses it

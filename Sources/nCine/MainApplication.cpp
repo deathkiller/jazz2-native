@@ -410,9 +410,11 @@ namespace nCine
 		PspNetwork::Initialize();
 #	endif
 #elif defined(DEATH_TARGET_VITA)
-		// Enable analog sampling for controllers
+#	if defined(NCINE_HAS_TOUCH_CONTROLS)
+		// Start sampling the front touchscreen and the rear touchpad
 		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
 		sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_START);
+#	endif
 
 		// Enabling sampling for the analogs
 		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);

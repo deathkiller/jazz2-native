@@ -256,6 +256,26 @@ namespace nCine::RHI::GXM
 		static constexpr std::int32_t DisplayStride = 960;
 
 		/**
+			@brief Width the frame is rendered at, before the present blit stretches it to the panel
+
+			The whole frame - the scene, the upscale pass and the UI on top of it - is rendered into the
+			intermediate screen surface, and @ref PresentFrame() has to resample that surface into the display
+			buffer anyway (the OpenGL-to-native flip). Making the surface smaller than the panel therefore costs
+			nothing extra and takes ~55% of the fragments off every full-screen pass, which is what the SGX543
+			runs out of first. The gfx device reports this as the drawable resolution, so the logical view the
+			game lays out (@relativeref{Jazz2,LevelHandler::OnInitializeViewport()}) follows it and the scene is
+			rendered at this size too, rather than at 715x405 stretched into 960x544.
+
+			The panel is 1.765:1 and this is 1.739:1, so the stretch is 1.5% wider than tall - not something the
+			eye finds on a handheld, and it keeps the width a whole number of 32-pixel tiles.
+		*/
+		static constexpr std::int32_t ScreenWidth = 640;
+		/** @brief Height the frame is rendered at, see @ref ScreenWidth */
+		static constexpr std::int32_t ScreenHeight = 368;
+		/** @brief Stride of the intermediate screen surface in pixels (a colour surface needs 8-pixel alignment) */
+		static constexpr std::int32_t ScreenStride = 640;
+
+		/**
 			@brief Returns the largest supported 2D texture dimension
 
 			4096 is the SGX543's limit; it only feeds the tileset chunking in `ContentResolver` and the
@@ -330,7 +350,9 @@ namespace nCine::RHI::GXM
 		static std::uint32_t _frontBufferIndex;
 
 		// The intermediate surface every draw that is not aimed at a render target lands in, kept bottom-up
-		// like OpenGL and flipped into the display buffer at present time (see the class documentation)
+		// like OpenGL and flipped into the display buffer at present time (see the class documentation). It is
+		// smaller than the panel (see ScreenWidth), so it needs a render target describing its own tiling
+		static SceGxmRenderTarget* _screenRenderTarget;
 		static GxmMemory::Block _screenBuffer;
 		static SceGxmColorSurface _screenSurface;
 		static SceGxmTexture _screenTexture;

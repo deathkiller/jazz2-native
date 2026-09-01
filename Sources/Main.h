@@ -79,9 +79,14 @@
 
 	Listed rather than excluded, so a platform that has no touchscreen doesn't acquire one by not being
 	mentioned - which is how the consoles ended up offering to configure touch controls.
+
+	Where it is not defined, no touch event ever reaches the game (the input backends drop them at the
+	source), so the on-screen controls can never appear and the section that configures them is gone from
+	the options. The PS Vita does have a front touchscreen and a rear touchpad, but both sit exactly where
+	the console is held, so they only ever fire by accident - it is played with the sticks and buttons.
 */
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_EMSCRIPTEN) || \
-		defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_SWITCH) || \
 		defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_TOUCH_CONTROLS
 #endif

@@ -173,7 +173,20 @@ namespace nCine::Backends
 	void SdlGfxDevice::queryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height)
 	{
 		// The one place that knows how the active backend measures a window's pixel size
-#if defined(WITH_RHI_SOFTWARE)
+#if defined(WITH_RHI_GXM)
+		// The sceGxm backend renders the frame into an intermediate surface of its own and stretches that onto
+		// the panel at present time, so the drawable size is the surface's - smaller than the panel, and nothing
+		// SDL knows about (see GxmDevice::ScreenWidth)
+		static_cast<void>(windowHandle);
+		width = RHI::Device::ScreenWidth;
+		height = RHI::Device::ScreenHeight;
+#elif defined(DEATH_TARGET_VITA)
+		// vitaGL owns the framebuffer and renders to the fixed panel; SDL's idea of the window size can be
+		// skewed by HighDPI scaling, and a frame sized after it lands in a corner of the screen
+		static_cast<void>(windowHandle);
+		width = 960;
+		height = 544;
+#elif defined(WITH_RHI_SOFTWARE)
 		SDL_Renderer* renderer = SDL_GetRenderer(windowHandle);
 		if (renderer != nullptr) {
 #	if defined(WITH_SDL3)
@@ -652,12 +665,11 @@ namespace nCine::Backends
 		_windowHandle = SDL_CreateWindow("", windowPosX, windowPosY, _width, _height, flags);
 		FATAL_ASSERT_MSG(_windowHandle, "SDL_CreateWindow failed: {}", SDL_GetError());
 #endif
-#if defined(DEATH_TARGET_VITA)
-		// vitaGL renders to the Vita's fixed 960x544 panel and owns the framebuffer, so SDL's drawable size (which
-		// can be skewed by the window size or HighDPI scaling) is not authoritative here - pin it to the panel so
-		// the device viewport matches vitaGL's backbuffer exactly. Otherwise the scene renders into a screen corner.
-		_drawableWidth = 960;
-		_drawableHeight = 544;
+#if defined(WITH_RHI_GXM) || defined(DEATH_TARGET_VITA)
+		// On the Vita the frame's pixel size comes from the rendering backend rather than from the window, and
+		// queryDrawableSize() is where that is decided - going through it here as well is what keeps the size
+		// the game initializes with and the one the first window event resizes it to from disagreeing
+		queryDrawableSize(_windowHandle, _width, _height, _drawableWidth, _drawableHeight);
 #elif defined(WITH_SDL3)
 		SDL_GetWindowSizeInPixels(_windowHandle, &_drawableWidth, &_drawableHeight);
 #else

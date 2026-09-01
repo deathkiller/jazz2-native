@@ -38,10 +38,11 @@ namespace Jazz2::UI::Menu
 
 		auto list = std::make_unique<ScrollView>();
 
-#if defined(RHI_CAP_POSTPROCESSING)
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(DISABLE_RESCALE_SHADERS)
 		// The direct rendering tier has no rescale/antialiasing shader passes (the scene is rendered at the
 		// logical resolution directly into the screen framebuffer, see UpscaleRenderPass), so the option is
-		// hidden there
+		// hidden there. `DISABLE_RESCALE_SHADERS` takes the same passes out of a build that does have the
+		// tier - the PS Vita's, where the section would list modes that then resolve to no program at all.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ListItem>(_("Rescale Mode"), [root]() { root->SwitchToSection<RescaleModeSection>(); });
 #endif

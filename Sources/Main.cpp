@@ -726,7 +726,13 @@ void GameEventHandler::OnTextInput(const TextInputEvent& event)
 
 void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 {
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	_currentHandler->OnTouchEvent(event);
+#else
+	// The platform's touch device is not played on (see `NCINE_HAS_TOUCH_CONTROLS` in "Main.h"); the input
+	// backends already drop these, this only keeps a backend that doesn't from reaching the state handlers
+	static_cast<void>(event);
+#endif
 }
 
 void GameEventHandler::InvokeAsync(Function<void()>&& callback)

@@ -212,7 +212,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	GxmDevice::DepthTestState GxmDevice::_depthTest;
 	GxmDevice::CullFaceState GxmDevice::_cullFace;
 	GxmDevice::ScissorState GxmDevice::_scissor;
-	Recti GxmDevice::_viewport(0, 0, GxmDevice::DisplayWidth, GxmDevice::DisplayHeight);
+	Recti GxmDevice::_viewport(0, 0, GxmDevice::ScreenWidth, GxmDevice::ScreenHeight);
 	Colorf GxmDevice::_clearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	GxmShaderProgram* GxmDevice::_currentProgram = nullptr;
@@ -223,6 +223,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	SceGxmContext* GxmDevice::_context = nullptr;
 	SceGxmShaderPatcher* GxmDevice::_shaderPatcher = nullptr;
 	SceGxmRenderTarget* GxmDevice::_displayRenderTarget = nullptr;
+	SceGxmRenderTarget* GxmDevice::_screenRenderTarget = nullptr;
 
 	GxmMemory::Block GxmDevice::_contextHostMem;
 	GxmMemory::Block GxmDevice::_vdmRingBuffer;
@@ -253,8 +254,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	void* GxmDevice::_sceneSurfaceData = nullptr;
 	std::uint32_t GxmDevice::_sceneCounter = 0;
 	bool GxmDevice::_sceneStateApplied = false;
-	std::int32_t GxmDevice::_sceneWidth = GxmDevice::DisplayWidth;
-	std::int32_t GxmDevice::_sceneHeight = GxmDevice::DisplayHeight;
+	std::int32_t GxmDevice::_sceneWidth = GxmDevice::ScreenWidth;
+	std::int32_t GxmDevice::_sceneHeight = GxmDevice::ScreenHeight;
 
 	SceGxmShaderPatcherId GxmDevice::_clearVertexId = nullptr;
 	SceGxmShaderPatcherId GxmDevice::_clearFragmentId = nullptr;
@@ -563,11 +564,11 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// The screen surface is written by the frame and sampled by the present blit, so it is a
 		// render-to-texture hand-off like any other and carries its own sync object (see
 		// GxmRenderTarget::GetSceneTarget())
-		renderTarget = _displayRenderTarget;
+		renderTarget = _screenRenderTarget;
 		colorSurface = &_screenSurface;
 		syncObject = _screenSyncObject;
-		width = DisplayWidth;
-		height = DisplayHeight;
+		width = ScreenWidth;
+		height = ScreenHeight;
 	}
 
 	bool GxmDevice::EnsureScene()
@@ -674,16 +675,14 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				// cannot express - a 1x1 region outside the surface is the closest equivalent
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_OUTSIDE, 0, 0, 0, 0);
 			} else {
-				// Measured on the console: the rows of a region clip run opposite to the way this backend stores
-				// its surfaces, so the rectangle is mirrored vertically. The viewport above can express either
-				// direction because its Y scale is signed - which is what puts clip -Y on row 0 and gives every
-				// surface OpenGL's bottom-up layout - while an unsigned clip rectangle cannot, so anything handed
-				// to sceGxm as plain surface rows has to be turned over to match the rectangle `glScissor()`
-				// takes on the reference backend
-				const std::int32_t yMinClip = targetHeight - 1 - yMax;
-				const std::int32_t yMaxClip = targetHeight - 1 - yMin;
+				// A region clip is in the same surface rows the viewport above resolves to, and that viewport maps
+				// OpenGL's window space onto them one to one (positive Y scale, so clip -Y lands on row 0 and the
+				// viewport's own Y is already a row index). The rectangle the engine hands down is a `glScissor()`
+				// one measured against the same target, so its rows go straight through - mirroring it here would
+				// clip the frame against the reflection of the intended rectangle, which is what the main menu's
+				// clipped section showed
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_OUTSIDE,
-					std::uint32_t(xMin), std::uint32_t(yMinClip), std::uint32_t(xMax), std::uint32_t(yMaxClip));
+					std::uint32_t(xMin), std::uint32_t(yMin), std::uint32_t(xMax), std::uint32_t(yMax));
 			}
 		} else {
 			sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_NONE, 0, 0, 0, 0);
@@ -1323,6 +1322,17 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return false;
 		}
 
+		// The frame is rendered smaller than the panel (see ScreenWidth), so the intermediate screen surface
+		// tiles differently and needs a render target of its own
+		renderTargetParams.width = ScreenWidth;
+		renderTargetParams.height = ScreenHeight;
+		result = sceGxmCreateRenderTarget(&renderTargetParams, &_screenRenderTarget);
+		if (result < 0) {
+			LOGE("sceGxmCreateRenderTarget({}x{}) failed with 0x{:.8x}", ScreenWidth, ScreenHeight, std::uint32_t(result));
+			DestroySwapchain();
+			return false;
+		}
+
 		// The display buffers the controller scans out of, with the sync object that keeps the GPU from
 		// overwriting one still on screen
 		const std::uint32_t displayBufferSize = std::uint32_t(DisplayStride) * std::uint32_t(DisplayHeight) * 4u;
@@ -1352,17 +1362,19 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 
 		// The intermediate surface every screen-targeted draw lands in, kept bottom-up like OpenGL and
-		// flipped into a display buffer at present time
-		_screenBuffer = GxmMemory::AllocCdram("Jazz2:ScreenSurface", displayBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		// flipped into a display buffer at present time - and stretched to the panel on the way, because it is
+		// rendered at ScreenWidth x ScreenHeight rather than at the panel's size
+		const std::uint32_t screenBufferSize = std::uint32_t(ScreenStride) * std::uint32_t(ScreenHeight) * 4u;
+		_screenBuffer = GxmMemory::AllocCdram("Jazz2:ScreenSurface", screenBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
 		if (!_screenBuffer.IsValid()) {
 			LOGE("Failed to allocate the intermediate screen surface");
 			DestroySwapchain();
 			return false;
 		}
-		std::memset(_screenBuffer.Base, 0, displayBufferSize);
+		std::memset(_screenBuffer.Base, 0, screenBufferSize);
 		result = sceGxmColorSurfaceInit(&_screenSurface, SCE_GXM_COLOR_FORMAT_U8U8U8U8_ABGR,
 			SCE_GXM_COLOR_SURFACE_LINEAR, SCE_GXM_COLOR_SURFACE_SCALE_NONE, SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT,
-			DisplayWidth, DisplayHeight, DisplayStride, _screenBuffer.Base);
+			ScreenWidth, ScreenHeight, ScreenStride, _screenBuffer.Base);
 		if (result < 0) {
 			LOGE("sceGxmColorSurfaceInit(screen) failed with 0x{:.8x}", std::uint32_t(result));
 			DestroySwapchain();
@@ -1376,14 +1388,19 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return false;
 		}
 		result = sceGxmTextureInitLinear(&_screenTexture, _screenBuffer.Base, SCE_GXM_TEXTURE_FORMAT_U8U8U8U8_ABGR,
-			DisplayWidth, DisplayHeight, 0);
+			ScreenWidth, ScreenHeight, 0);
 		if (result < 0) {
 			LOGE("sceGxmTextureInitLinear(screen) failed with 0x{:.8x}", std::uint32_t(result));
 			DestroySwapchain();
 			return false;
 		}
-		sceGxmTextureSetMinFilter(&_screenTexture, SCE_GXM_TEXTURE_FILTER_POINT);
-		sceGxmTextureSetMagFilter(&_screenTexture, SCE_GXM_TEXTURE_FILTER_POINT);
+		// The present blit is a 1:1 copy only if the frame is rendered at the panel's size; when it is smaller
+		// the stretch is fractional (1.5x here), and point sampling would double some rows and columns and not
+		// others, which is far more visible than the softness bilinear costs
+		constexpr SceGxmTextureFilter screenFilter = (ScreenWidth == DisplayWidth && ScreenHeight == DisplayHeight
+			? SCE_GXM_TEXTURE_FILTER_POINT : SCE_GXM_TEXTURE_FILTER_LINEAR);
+		sceGxmTextureSetMinFilter(&_screenTexture, screenFilter);
+		sceGxmTextureSetMagFilter(&_screenTexture, screenFilter);
 		sceGxmTextureSetUAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
 		sceGxmTextureSetVAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
 
@@ -1509,8 +1526,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		_backBufferIndex = 0;
 		_frontBufferIndex = DisplayBufferCount - 1;
-		LOGI("sceGxm initialized ({}x{}, {} display buffers, {} KB of GPU memory reserved)",
-			DisplayWidth, DisplayHeight, DisplayBufferCount, GxmMemory::GetAllocatedBytes() / 1024);
+		LOGI("sceGxm initialized ({}x{} rendered, {}x{} displayed, {} display buffers, {} KB of GPU memory reserved)",
+			ScreenWidth, ScreenHeight, DisplayWidth, DisplayHeight, DisplayBufferCount, GxmMemory::GetAllocatedBytes() / 1024);
 		return true;
 	}
 
@@ -1554,6 +1571,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			_screenSyncObject = nullptr;
 		}
 
+		if (_screenRenderTarget != nullptr) {
+			sceGxmDestroyRenderTarget(_screenRenderTarget);
+			_screenRenderTarget = nullptr;
+		}
 		if (_displayRenderTarget != nullptr) {
 			sceGxmDestroyRenderTarget(_displayRenderTarget);
 			_displayRenderTarget = nullptr;
