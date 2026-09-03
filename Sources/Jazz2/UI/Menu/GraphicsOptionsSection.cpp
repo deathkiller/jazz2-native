@@ -1,7 +1,6 @@
 #include "GraphicsOptionsSection.h"
 #include "RescaleModeSection.h"
 #include "../Font.h"
-#include "../../LevelHandler.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
@@ -96,11 +95,15 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(RHI_CAP_POSTPROCESSING)
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
 		// The dithering is a second texture sample inside the warped background shader, which the direct
 		// tier never runs: the fixed-function backends draw those layers as a flat repeating tilemap (see
 		// TileMap's SupportsTexturedBackground), and the shader itself compiles the dither sample out for
-		// the software renderer. The option would have no effect anywhere on this tier.
+		// the software renderer. The option would have no effect anywhere on this tier. On PS Vita it does
+		// have an effect and the effect is unaffordable: the second sample is a DEPENDENT one (its
+		// coordinate comes out of a sin()-based hash), which is the access pattern the SGX543 is worst at,
+		// and it measured at a sixth of the frame rate over a full-screen background. The shader compiles
+		// it out there (see LOW_POWER_GPU in TexturedBackground.shader) and the option goes with it.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Background Dithering"),
 			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },
@@ -110,8 +113,10 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(RHI_CAP_POSTPROCESSING)
-		// Blur effects are not supported by the direct rendering tier
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
+		// Blur effects are not supported by the direct rendering tier, and are forced off on PS Vita (see
+		// PreferencesCache): the chain is five more off-screen passes over the whole view, and every one of
+		// them is a scene of its own that the backend has to wait out before the next can sample it
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
 			[]() -> StringView { return (PreferencesCache::BlurEffects ? _("Enabled") : _("Disabled")); },
@@ -127,9 +132,16 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Lighting Resolution"),
 			[this]() -> StringView {
+				// The pixel size is the one the buffer will actually have, so it is derived from the CURRENT
+				// view size rather than from LevelHandler::DefaultWidth/Height. Those are only the upper bound
+				// of the logical view: a display smaller than 720x405 (the PS Vita's 480x272, say) gets a view
+				// of its own size instead, and quoting the cap there claims a lighting buffer larger than the
+				// whole screen. The menu's view size is computed by the same rule from the same constants as
+				// the level's, so it is the same number the level will use
+				Vector2i viewSize = _root->GetViewSize();
 				_lightingResolutionValue = format("{}% ({}x{})", PreferencesCache::LightingResolutionPercent,
-					LevelHandler::DefaultWidth * PreferencesCache::LightingResolutionPercent / 100,
-					LevelHandler::DefaultHeight * PreferencesCache::LightingResolutionPercent / 100);
+					viewSize.X * PreferencesCache::LightingResolutionPercent / 100,
+					viewSize.Y * PreferencesCache::LightingResolutionPercent / 100);
 				return _lightingResolutionValue;
 			},
 			[this](std::int32_t direction) {

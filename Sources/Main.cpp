@@ -34,6 +34,7 @@
 
 #include "Jazz2/IRootController.h"
 #include "Jazz2/ContentResolver.h"
+#include "Jazz2/PlatformWebRequest.h"
 #include "Jazz2/LevelHandler.h"
 #include "Jazz2/PreferencesCache.h"
 #include "Jazz2/UI/Cinematics.h"
@@ -2069,6 +2070,7 @@ void GameEventHandler::CheckUpdates()
 	String url = "https://de4th.dev/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
 	if (auto session = WebSession::GetDefault()) {
 		auto request = session.CreateRequest(url);
+		ApplyPlatformWebRequestOptions(request);
 #		if defined(DEATH_TARGET_PSP)
 		// pspdev's libcurl is built with the host's CA bundle path, which does not exist on the console, so
 		// the handshake ends as CURLE_SSL_CACERT_BADFILE. Accepted for this request only instead of shipping

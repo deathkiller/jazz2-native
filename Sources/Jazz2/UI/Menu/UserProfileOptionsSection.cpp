@@ -268,7 +268,14 @@ namespace Jazz2::UI::Menu
 #endif
 			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				theApplication().ToggleScreenKeyboard();
+				// Not Application::ToggleScreenKeyboard(): its show side takes no field to seed from and no
+				// callback to hand the result to, so a reopen came up empty and then appended what was typed
+				// to the name already there
+				if (theApplication().IsScreenKeyboardVisible()) {
+					theApplication().HideScreenKeyboard();
+				} else {
+					_nameInput->ShowScreenKeyboard();
+				}
 				RecalcLayoutForScreenKeyboard();
 			} else if (_root->ActionHit(PlayerAction::Run)) {
 				_nameInput->Cancel(_root);
@@ -416,7 +423,7 @@ namespace Jazz2::UI::Menu
 				if (event.type == TouchEventType::Down) {
 					if (keyboardCorner && theApplication().CanShowScreenKeyboard()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						theApplication().ShowScreenKeyboard();
+						_nameInput->ShowScreenKeyboard();
 						RecalcLayoutForScreenKeyboard();
 					}
 				} else if (event.type == TouchEventType::Up && !keyboardCorner) {

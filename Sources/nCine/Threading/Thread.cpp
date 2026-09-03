@@ -355,6 +355,11 @@ namespace nCine
 		// second sceKernelCreateThread() fails with NO_MEMORY, which on this console means silently losing
 		// the audio decode thread. 64 KB doubles what pthread-embedded gives and leaves the pool room to
 		// spare for every thread the engine starts.
+		//
+		// It cannot be raised to 128 KB either, whatever an emulator allows: on hardware that comes back as
+		// EAGAIN from pthread_create() for the second and third thread, which loses the audio decoder and
+		// the asset conversion worker and leaves the game sitting on the loading screen forever. What has to
+		// fit in 64 KB instead is the conversion call chain, so keep an eye on -fstack-usage there.
 		pthread_attr_t attr;
 		pthread_attr_init(&attr);
 #		if defined(DEATH_TARGET_PSP)

@@ -46,6 +46,29 @@ namespace nCine::RHI
 		return r * (1.0f + g) + amb * (1.0f - r);
 	}
 
+	/**
+		@brief The multiply-only lighting factors for all three ambient channels at once
+
+		Per channel this is exactly @ref LightingCombineFactor(), but the two terms that do NOT depend on
+		the ambient colour - the covered term `r * (1 + g)` and the uncovered weight `1 - r` - are
+		computed once for the three of them instead of three times.
+
+		That is worth a function rather than being left to the compiler, because the compiler does not do
+		it. A backend's conversion loop runs this once per lightmap texel, and calling the single-channel
+		form three times leaves the common subexpression to be spotted across three separate inline
+		expansions - which GCC does not manage for the PSP's Allegrex. Measured on that target, the three
+		separate calls compile to 24 `mul.s` and 24 `add.s`; this compiles to 7 and 7.
+	*/
+	DEATH_ALWAYS_INLINE void LightingCombineFactors(float r, float g, float ambR, float ambG, float ambB,
+		float& outR, float& outG, float& outB)
+	{
+		const float covered = r * (1.0f + g);
+		const float uncovered = 1.0f - r;
+		outR = covered + ambR * uncovered;
+		outG = covered + ambG * uncovered;
+		outB = covered + ambB * uncovered;
+	}
+
 	/** @brief Rec.601 luminance of an ambient colour, for a lightmap store with no colour channels */
 	DEATH_ALWAYS_INLINE float AmbientLuminance(float r, float g, float b)
 	{

@@ -218,6 +218,14 @@ namespace Jazz2::UI::Menu
 		float GetCaretAnim() const {
 			return _buffer.GetCaretAnim();
 		}
+		/**
+			@brief Opens the platform's screen keyboard on the text currently being edited
+
+			Every path that brings the keyboard up for this field goes through here, including a reopen while
+			the field is already active - see the implementation for what calling
+			@relativeref{nCine::Application,ShowScreenKeyboard()} directly costs.
+		*/
+		void ShowScreenKeyboard();
 		/** @brief Cancels editing without committing */
 		void Cancel(IMenuContainer* root);
 		/** @brief Commits the current text if non-empty */

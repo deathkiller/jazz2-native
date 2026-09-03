@@ -1145,19 +1145,34 @@ namespace nCine::RHI::GS
 		Dispatch(primitive, firstVertex, numVertices);
 	}
 
+	const std::uint16_t* GsDevice::ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices)
+	{
+		// Only the mesh dispatches read the vertex stream, and only through the 16-bit indices the pipeline
+		// produces (Geometry hands out no other width). Anything else falls back to the non-indexed walk,
+		// which is also what a draw with no index buffer bound gets.
+		if (indexFormat != IndexFormat::UInt16 || numIndices == 0 || _currentProgram == nullptr) {
+			return nullptr;
+		}
+		const GsBuffer* ibo = _currentProgram->GetBoundIbo();
+		if (ibo == nullptr || indexOffset + numIndices * sizeof(std::uint16_t) > ibo->GetSize()) {
+			return nullptr;
+		}
+		return reinterpret_cast<const std::uint16_t*>(ibo->HostData() + indexOffset);
+	}
+
 	void GsDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		// The index count doubles as the vertex count, unchanged: the procedural quad family never reads the
+		// stream and derives its instance count from it, so only the mesh dispatches take the range as well.
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 
 	void GsDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 
 	FenceHandle GsDevice::InsertFence()
@@ -1981,7 +1996,8 @@ namespace nCine::RHI::GS
 
 	// ------------------------------------------------------------------ dispatch
 
-	void GsDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GsDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		static_cast<void>(firstVertex);
 		if (_currentProgram == nullptr || numVertices <= 0 || !_gsInitialized) {
@@ -2011,7 +2027,7 @@ namespace nCine::RHI::GS
 			if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 				ApplyPendingSoftwareLighting();
 			} else if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
-				DispatchTileMesh(primitive, firstVertex, numVertices);
+				DispatchTileMesh(primitive, firstVertex, numVertices, indices, indexCount);
 			} else if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
 				DispatchLineStrip(firstVertex, numVertices);
 			}
@@ -2277,7 +2293,8 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	void GsDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GsDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a hard
@@ -2291,13 +2308,37 @@ namespace nCine::RHI::GS
 		if (vbo == nullptr) {
 			return;
 		}
+		// The mesh arrives either as a plain triangle list, or - on the pipeline's indexed path - as the four
+		// distinct corners of each quad addressed through the index pattern every quad mesh shares (see
+		// RenderResources::GetQuadIndices()). `numVertices` counts element slots either way, three to a
+		// triangle; all that differs is how a slot resolves to a vertex, which is what vertexAt() below does.
+		// The slots the six-vertex form duplicates become repeated indices, so the two that the quad test
+		// further down compares land on the very same vertex in both forms and the test needs no special case.
+		//
+		// Six indices describe four corners, so the element count is no bound on how far into the stream they
+		// reach - and using it as one would reject any mesh whose chunk lands in the last third of the buffer.
+		// One integer pass gives the real extent, and checks that the indices address vertices this buffer
+		// holds at all.
+		std::size_t vertexExtent = std::size_t(numVertices);
+		if (indices != nullptr) {
+			std::uint32_t maxIndex = 0;
+			for (std::int32_t i = 0; i < indexCount; i++) {
+				if (indices[i] > maxIndex) {
+					maxIndex = indices[i];
+				}
+			}
+			vertexExtent = std::size_t(maxIndex) + 1;
+		}
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
-		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
-		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+		// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
+		const auto vertexAt = [vertices, indices](std::int32_t element) {
+			return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
+		};
 
 		const GsUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
@@ -2425,16 +2466,17 @@ namespace nCine::RHI::GS
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		color_t packed{};
 		while (triangle < triangleCount) {
-			// Tiles reach here as the six vertices of two triangles, of which the fourth and fifth repeat the
-			// first and third. Recognizing that pattern lets a tile go out as one quad.
-			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			// Tiles reach here as two triangles whose fourth and fifth slots repeat the first and third.
+			// Recognizing that pattern lets a tile go out as one quad.
+			const std::int32_t element = triangle * 3;
+			const float* group = vertexAt(element);
 			const float* v0 = group;
-			const float* v1 = group + FloatsPerVertex;
-			const float* v2 = group + 2 * FloatsPerVertex;
-			const float* v3 = group + 5 * FloatsPerVertex;
+			const float* v1 = vertexAt(element + 1);
+			const float* v2 = vertexAt(element + 2);
+			const float* v3 = vertexAt(element + 5);
 			const bool isQuad = (triangle + 2 <= triangleCount &&
-				group[3 * FloatsPerVertex + 0] == v0[0] && group[3 * FloatsPerVertex + 1] == v0[1] &&
-				group[4 * FloatsPerVertex + 0] == v2[0] && group[4 * FloatsPerVertex + 1] == v2[1]);
+				vertexAt(element + 3)[0] == v0[0] && vertexAt(element + 3)[1] == v0[1] &&
+				vertexAt(element + 4)[0] == v2[0] && vertexAt(element + 4)[1] == v2[1]);
 			// Whether that quad is a rectangle is a separate question, and the answer is not always yes:
 			// the destructible debris is appended to this same stream with its spin folded into its four
 			// corners (see TileMap::AppendDebrisQuad). Rebuilding one of those from two OPPOSITE corners
@@ -2458,7 +2500,7 @@ namespace nCine::RHI::GS
 			}
 
 			// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
-			// 1 = (1,1), 2 = (0,0), 3 = (0,1) - which the mesh's vertex order maps onto as v1, v2, v0, v3.
+			// 1 = (1,1), 2 = (0,0), 3 = (0,1) - which the mesh's slot order maps onto as v1, v2, v0, v3.
 			if (isRect) {
 				// Two opposite corners describe the whole of it, so only those are transformed. The
 				// duplicated ones keep the axis-aligned test inside SubmitQuadPrimitive agreeing with the
@@ -2486,7 +2528,7 @@ namespace nCine::RHI::GS
 				// A lone triangle, from a mesh whose vertices do not pair up into quads at all
 				float sx[3], sy[3], tu[3], tv[3];
 				for (std::int32_t i = 0; i < 3; i++) {
-					project(group + std::size_t(i) * FloatsPerVertex, sx[i], sy[i], tu[i], tv[i]);
+					project(vertexAt(element + i), sx[i], sy[i], tu[i], tv[i]);
 				}
 				SubmitTrianglePrimitive(state, sx, sy, tu, tv, packed, 0.0f, 0.0f);
 				triangle++;

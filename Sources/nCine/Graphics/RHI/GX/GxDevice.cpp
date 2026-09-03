@@ -1231,18 +1231,33 @@ namespace nCine::RHI::GX
 		static_cast<void>(numInstances);
 		Dispatch(primitive, firstVertex, numVertices);
 	}
+	const std::uint16_t* GxDevice::ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices)
+	{
+		// Only the mesh dispatches read the vertex stream, and only through the 16-bit indices the pipeline
+		// produces (Geometry hands out no other width). Anything else falls back to the non-indexed walk,
+		// which is also what a draw with no index buffer bound gets.
+		if (indexFormat != IndexFormat::UInt16 || numIndices == 0 || _currentProgram == nullptr) {
+			return nullptr;
+		}
+		const GxBuffer* ibo = _currentProgram->GetBoundIbo();
+		if (ibo == nullptr || indexOffset + numIndices * sizeof(std::uint16_t) > ibo->GetSize()) {
+			return nullptr;
+		}
+		return reinterpret_cast<const std::uint16_t*>(ibo->HostData() + indexOffset);
+	}
+
 	void GxDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		// The index count doubles as the vertex count, unchanged: the procedural quad family never reads the
+		// stream and derives its instance count from it, so only the mesh dispatches take the range as well.
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 	void GxDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 
 	FenceHandle GxDevice::InsertFence()
@@ -1562,7 +1577,8 @@ namespace nCine::RHI::GX
 
 	// ------------------------------------------------------------------ draw dispatch
 
-	void GxDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GxDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
@@ -1576,13 +1592,37 @@ namespace nCine::RHI::GX
 		if (vbo == nullptr) {
 			return;
 		}
+		// The mesh arrives either as a plain triangle list, or - on the pipeline's indexed path - as the four
+		// distinct corners of each quad addressed through the index pattern every quad mesh shares (see
+		// RenderResources::GetQuadIndices()). `numVertices` counts element slots either way, three to a
+		// triangle; all that differs is how a slot resolves to a vertex, which is what vertexAt() below does.
+		// The slots the six-vertex form duplicates become repeated indices, so the two that the quad test
+		// further down compares land on the very same vertex in both forms and the test needs no special case.
+		//
+		// Six indices describe four corners, so the element count is no bound on how far into the stream they
+		// reach - and using it as one would reject any mesh whose chunk lands in the last third of the buffer.
+		// One integer pass gives the real extent, and checks that the indices address vertices this buffer
+		// holds at all.
+		std::size_t vertexExtent = std::size_t(numVertices);
+		if (indices != nullptr) {
+			std::uint32_t maxIndex = 0;
+			for (std::int32_t i = 0; i < indexCount; i++) {
+				if (indices[i] > maxIndex) {
+					maxIndex = indices[i];
+				}
+			}
+			vertexExtent = std::size_t(maxIndex) + 1;
+		}
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
-		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
-		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+		// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
+		const auto vertexAt = [vertices, indices](std::int32_t element) {
+			return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
+		};
 
 		const GxUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
@@ -1687,20 +1727,21 @@ namespace nCine::RHI::GX
 
 		const std::int32_t triangleCount = numVertices / 3;
 
-		// Tiles reach here as the six vertices of two triangles, of which the fourth repeats the first
-		// and the fifth repeats the third. Recognizing that pattern lets a tile go out as one four-vertex
-		// GX quad instead of two triangles, and consecutive tiles share a single GX_Begin run, so the
-		// begin/end register writes are paid once per run instead of once per tile. GX has a hardware
-		// scissor (applied by ApplyRenderState above), so unlike the PVR path everything is submitted
-		// as-is and the GP clips it - no geometric clipping or bounding-box rejection is needed.
-		auto isTileQuad = [vertices, triangleCount](std::int32_t triangle) {
+		// Tiles reach here as two triangles whose fourth slot repeats the first and whose fifth repeats the
+		// third. Recognizing that pattern lets a tile go out as one four-vertex GX quad instead of two
+		// triangles, and consecutive tiles share a single GX_Begin run, so the begin/end register writes are
+		// paid once per run instead of once per tile. GX has a hardware scissor (applied by ApplyRenderState
+		// above), so unlike the PVR path everything is submitted as-is and the GP clips it - no geometric
+		// clipping or bounding-box rejection is needed.
+		auto isTileQuad = [vertexAt, triangleCount](std::int32_t triangle) {
 			if (triangle + 2 > triangleCount) {
 				return false;
 			}
-			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
-			return (group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
-				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
-				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+			const std::int32_t element = triangle * 3;
+			const float* group = vertexAt(element);
+			return (vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
 		};
 
 		// GX_Begin carries the vertex count in a 16-bit register, so runs are chopped below that limit
@@ -1719,17 +1760,18 @@ namespace nCine::RHI::GX
 
 				GX_Begin(GX_QUADS, GX_VTXFMT0, std::uint16_t(quadRun * 4));
 				for (std::int32_t q = 0; q < quadRun; q++) {
-					const float* group = vertices + std::size_t(runStart + q * 2) * 3 * FloatsPerVertex;
+					const std::int32_t element = (runStart + q * 2) * 3;
+					const float* group = vertexAt(element);
 					// Every vertex of a tile carries the same colour, so it only has to be folded with the
 					// layer tint and quantized once
 					const std::uint8_t r = QuantizeChannel(group[4] * layerColor[0]);
 					const std::uint8_t g = QuantizeChannel(group[5] * layerColor[1]);
 					const std::uint8_t b = QuantizeChannel(group[6] * layerColor[2]);
 					const std::uint8_t a = QuantizeChannel(group[7] * layerColor[3]);
-					// Perimeter order of the tile's six strip-ordered vertices (see AppendTileQuad)
+					// Perimeter order of the tile's six strip-ordered slots (see AppendTileQuad)
 					static const std::int32_t QuadOrder[4] = { 0, 1, 2, 5 };
 					for (std::int32_t i = 0; i < 4; i++) {
-						const float* v = group + std::size_t(QuadOrder[i]) * FloatsPerVertex;
+						const float* v = vertexAt(element + QuadOrder[i]);
 						GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
 							raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
 						GX_Color4u8(r, g, b, a);
@@ -1747,7 +1789,7 @@ namespace nCine::RHI::GX
 
 				GX_Begin(GX_TRIANGLES, GX_VTXFMT0, std::uint16_t(triRun * 3));
 				for (std::int32_t i = 0; i < triRun * 3; i++) {
-					const float* v = vertices + std::size_t(runStart) * 3 * FloatsPerVertex + std::size_t(i) * FloatsPerVertex;
+					const float* v = vertexAt(runStart * 3 + i);
 					GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
 						raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
 					GX_Color4u8(QuantizeChannel(v[4] * layerColor[0]), QuantizeChannel(v[5] * layerColor[1]),
@@ -1868,7 +1910,8 @@ namespace nCine::RHI::GX
 		GX_End();
 	}
 
-	void GxDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GxDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		if (_currentProgram == nullptr || numVertices <= 0 || !_gxInitialized) {
 			return;
@@ -1901,7 +1944,7 @@ namespace nCine::RHI::GX
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
 		if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
-			DispatchTileMesh(primitive, firstVertex, numVertices);
+			DispatchTileMesh(primitive, firstVertex, numVertices, indices, indexCount);
 			return;
 		}
 

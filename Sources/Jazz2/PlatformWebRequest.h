@@ -1,0 +1,58 @@
+#pragma once
+
+#include "../Main.h"
+
+#include <IO/WebRequest.h>
+
+#if defined(WITH_CURL) && defined(DEATH_TARGET_VITA)
+#	include "ContentResolver.h"
+
+#	include <Containers/String.h>
+#	include <IO/FileSystem.h>
+
+#	include <curl/curl.h>
+#endif
+
+namespace Jazz2
+{
+	/**
+		@brief Applies whatever the platform needs on a freshly created web request before it is executed
+
+		Nothing anywhere else, and nothing at all on a platform whose TLS stack can find its own trust store.
+		The PS Vita cannot: VitaSDK's libcurl verifies against the firmware's own store under `vs0:`, a mount
+		point an application's sandbox does not contain - opening it fails with `ENOENT`, not a permission
+		error - and the TLS stack linked into the executable is not the system one that iTLS-Enso and friends
+		patch, so nothing installed on the console supplies it either. Without this every HTTPS request fails
+		to verify, which takes the server list, the update check and script web requests with it.
+
+		The bundle therefore travels with the content (the CMake packaging fetches it at configure time) and
+		is named here rather than inside @relativeref{Death::IO,WebRequest}: where a game keeps its files is
+		not something that layer can know, and the handle it already exposes is enough to say so from outside.
+	*/
+	inline void ApplyPlatformWebRequestOptions(Death::IO::WebRequest& request)
+	{
+#if defined(WITH_CURL) && defined(DEATH_TARGET_VITA)
+		using namespace Death::Containers::Literals;
+
+		// Resolved once - the path cannot change while the game is running, and a missing bundle leaves the
+		// TLS stack's own default alone instead of pointing it at something that is not there either
+		static const Death::Containers::String caBundlePath = []() -> Death::Containers::String {
+			Death::Containers::String path = Death::IO::FileSystem::CombinePath(
+				ContentResolver::Get().GetContentPath(), "cacert.pem"_s);
+			if (!Death::IO::FileSystem::FileExists(path)) {
+				LOGW("Certificate bundle \"{}\" is missing, HTTPS requests will fail to verify", path);
+				return {};
+			}
+			return path;
+		}();
+
+		if (!caBundlePath.empty()) {
+			if (CURL* handle = (CURL*)request.GetNativeHandle()) {
+				curl_easy_setopt(handle, CURLOPT_CAINFO, caBundlePath.data());
+			}
+		}
+#else
+		static_cast<void>(request);
+#endif
+	}
+}

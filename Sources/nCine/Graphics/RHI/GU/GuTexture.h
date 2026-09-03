@@ -188,14 +188,19 @@ namespace nCine::RHI::GU
 		/**
 			@brief Makes the GE store hold this RG8 texture baked through one palette row
 
-			Index resolved through @p paletteRow (256 RGBA8 entries), alpha from the texel's own alpha byte,
-			written as `GU_PSM_4444` - the analogue of @ref PVR::PvrTexture::EnsureBakedArgb4444(). A small
-			number of bakes is cached, so the common "one extra palette row" case (a sprite and its
-			recolored twin) does not rebuild anything; @ref AcquirePage() then hands out the pages of the
-			matching bake. Returns `false` when the bake could not be produced.
+			The row is taken as the 256 RGBA8 entries of @p palette starting at @p paletteOffset; the index
+			is resolved through it and the alpha comes from the texel's own alpha byte, written as
+			`GU_PSM_4444` - the analogue of @ref PVR::PvrTexture::EnsureBakedArgb4444(). A small number of
+			bakes is cached, so the common "one extra palette row" case (a sprite and its recolored twin)
+			does not rebuild anything; @ref AcquirePage() then hands out the pages of the matching bake.
+			Returns `false` when the bake could not be produced.
+
+			The offset is taken rather than a ready row pointer so that the 256 entries this reads can be
+			checked to lie inside @p palette here, once, instead of at each of the callers --- none of which
+			used to check at all, while the CLUT path next to them always has.
 		*/
-		bool EnsureBakedStore(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex,
-			std::uint32_t paletteGeneration, const void* palette);
+		bool EnsureBakedStore(const GuTexture* palette, std::int32_t paletteOffset,
+			std::uint32_t paletteGeneration);
 
 		/**
 			@brief Returns a writable pointer to the GE store, for content that is rebuilt every frame

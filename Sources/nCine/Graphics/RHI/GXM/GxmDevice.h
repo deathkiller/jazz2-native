@@ -248,6 +248,18 @@ namespace nCine::RHI::GXM
 			static_cast<void>(handle);
 		}
 
+		/**
+			@brief Brings up the runtime Cg compiler if it is not up already
+
+			`libshacccg.suprx` is expensive to load and is only needed by a stage the compiled shader cache
+			does not already have (see @relativeref{nCine::RHI::GXM,GxmShaderCache}), so the session does not
+			load it and the first cache miss does. A run whose cache is complete never loads it at all, which
+			also means such a run works on a console that does not have the module installed.
+
+			@returns `false` (once, with a diagnostic) if the module cannot be loaded
+		*/
+		static bool EnsureShaderCompiler();
+
 		/** @brief The panel's fixed width in pixels */
 		static constexpr std::int32_t DisplayWidth = 960;
 		/** @brief The panel's fixed height in pixels */
@@ -261,19 +273,24 @@ namespace nCine::RHI::GXM
 			The whole frame - the scene, the upscale pass and the UI on top of it - is rendered into the
 			intermediate screen surface, and @ref PresentFrame() has to resample that surface into the display
 			buffer anyway (the OpenGL-to-native flip). Making the surface smaller than the panel therefore costs
-			nothing extra and takes ~55% of the fragments off every full-screen pass, which is what the SGX543
-			runs out of first. The gfx device reports this as the drawable resolution, so the logical view the
-			game lays out (@relativeref{Jazz2,LevelHandler::OnInitializeViewport()}) follows it and the scene is
-			rendered at this size too, rather than at 715x405 stretched into 960x544.
+			nothing extra and takes fragments off every full-screen pass, which is what the SGX543 runs out of
+			first. The gfx device reports this as the drawable resolution, so the logical view the game lays out
+			(@relativeref{Jazz2,LevelHandler::OnInitializeViewport()}) follows it and the scene is rendered at
+			this size too, rather than at 720x405 stretched into 960x544.
 
-			The panel is 1.765:1 and this is 1.739:1, so the stretch is 1.5% wider than tall - not something the
-			eye finds on a handheld, and it keeps the width a whole number of 32-pixel tiles.
+			This is exactly half the panel in both axes, which is worth as much as the 45% fewer fragments: the
+			present blit becomes a clean 2x point doubling instead of a fractional resample, so the pixel art
+			stops shimmering as the camera moves, and the aspect ratio matches the panel's 1.765:1 exactly
+			rather than approximating it. 480 also satisfies the 8-pixel stride alignment a colour surface
+			needs. Note that 272 logical rows put the UI below the 300-row threshold at which
+			@relativeref{Jazz2::UI::Menu,MenuContainerBase::UpdateContentBounds()} switches to the compact
+			header/footer layout, which is the intended look at this size (the PSP renders at 480x272 too).
 		*/
-		static constexpr std::int32_t ScreenWidth = 640;
+		static constexpr std::int32_t ScreenWidth = 480;
 		/** @brief Height the frame is rendered at, see @ref ScreenWidth */
-		static constexpr std::int32_t ScreenHeight = 368;
+		static constexpr std::int32_t ScreenHeight = 272;
 		/** @brief Stride of the intermediate screen surface in pixels (a colour surface needs 8-pixel alignment) */
-		static constexpr std::int32_t ScreenStride = 640;
+		static constexpr std::int32_t ScreenStride = 480;
 
 		/**
 			@brief Returns the largest supported 2D texture dimension
@@ -356,10 +373,26 @@ namespace nCine::RHI::GXM
 		static GxmMemory::Block _screenBuffer;
 		static SceGxmColorSurface _screenSurface;
 		static SceGxmTexture _screenTexture;
+		// The runtime Cg compiler is loaded on demand (see EnsureShaderCompiler()); the second flag keeps a
+		// failure from being retried, and reported, once per shader
+		// What the stencil plane currently holds for the scissor test, all of it per scene (the plane starts
+		// at the surface's background value again at every BeginScene, see EnsureScene())
+		static Recti _stencilBandRect;
+		static std::uint8_t _stencilBandRef;
+		static std::uint8_t _stencilBandCounter;
+		static bool _stencilTestEnabled;
+		static bool _shaderCompilerReady;
+		static bool _shaderCompilerFailed;
+		// 1x1 transparent black, bound into every sampler slot the current material leaves unbound. sceGxm has
+		// no way to clear a texture slot, so without it a shader sampling a unit its material does not set
+		// would read whatever the previous draw left there (see the sampler loops in ApplyPipelineState())
+		static GxmMemory::Block _dummyTextureBuffer;
+		static SceGxmTexture _dummyTexture;
 		// Serializes the frame's writes to the screen surface against the present blit that samples them
 		static SceGxmSyncObject* _screenSyncObject;
 
 		static GxmMemory::Block _depthBuffer;
+		static GxmMemory::Block _stencilBuffer;
 		static SceGxmDepthStencilSurface _depthSurface;
 
 		static bool _initialized;
@@ -380,6 +413,11 @@ namespace nCine::RHI::GXM
 		static std::int32_t _sceneHeight;
 
 		// -- Built-in shaders --
+
+		// The compiled GXP binaries of the four stages below. They are our own copies of the runtime compiler's
+		// output, which the patcher only borrows (see GxmShaderProgram::CompileCgStage()), so they have to
+		// outlive every program built from them and be released with the swapchain that compiled them.
+		static SceGxmProgram* _builtinStages[4];
 
 		// Clear: a full-screen quad in clip space filled with a uniform colour, the tile-based renderer's
 		// equivalent of glClear (see the class documentation)
@@ -415,6 +453,29 @@ namespace nCine::RHI::GXM
 		static bool EnsureScene();
 		/** @brief Programs the viewport and region clip of the current target from the tracked engine state */
 		static void ApplyViewportAndScissor();
+		/**
+			@brief Makes the scissor rectangle exact by putting it in the stencil buffer
+
+			`sceGxmSetRegionClip()` is a tile-level cull, so on its own it rounds the rectangle out to the
+			32x32 grid and lets up to 31 rows and columns of what should have been clipped survive along each
+			edge. This stamps the rectangle into the stencil plane with @ref StampStencilBand() and leaves the
+			stencil test comparing against it, which is exact - the region clip stays on as the cheap coarse
+			pass that keeps whole tiles out of the tiler in the first place.
+
+			Each band gets a reference of its own, so a new one never has to clear the last: the rows an older
+			band wrote keep an older value and simply stop matching. Re-applying the same rectangle (the state
+			is re-applied whenever anything dirties it, not only when the rectangle changes) skips the stamp.
+		*/
+		static void SetScissorStencil(std::int32_t xMin, std::int32_t yMin, std::int32_t xMax, std::int32_t yMax);
+		/** @brief Draws one band into the stencil plane with colour writes off, see @ref SetScissorStencil() */
+		static void StampStencilBand(std::int32_t xMin, std::int32_t yMin, std::int32_t xMax, std::int32_t yMax,
+			std::uint8_t reference);
+		/** @brief Sets the stencil test to pass only where the mask holds @p reference */
+		static void ApplyStencilTest(std::uint8_t reference);
+		/** @brief Lets every fragment through the stencil test again (no scissor rectangle is active) */
+		static void SetStencilTestDisabled();
+		/** @brief Cheap identifier of the SceShaccCg build on this console, see the compiled shader cache */
+		static std::uint32_t GetShaderCompilerFingerprint();
 		/**
 			@brief Programs the depth function and depth write mask for **both** facings
 

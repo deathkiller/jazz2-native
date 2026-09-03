@@ -229,9 +229,10 @@ namespace ShaderCompiler
 
 		/**
 			Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared
-			prelude + stage body). The conditionals naming SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING are
-			resolved here according to @p softwareRenderer and @p noDynamicBranching, like the stage macros
-			are at assembly time - the built sources never contain either macro itself. Both the
+			prelude + stage body). The conditionals naming SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or
+			LOW_POWER_GPU are resolved here according to @p softwareRenderer, @p noDynamicBranching
+			and @p lowPowerGpu, like the stage macros are at assembly time - the built sources never
+			contain any of the macros themselves. Both the
 			"#ifdef"/"#ifndef" forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif"
 			expressions built from them are recognized, so one directive can replace a nest of them
 			("#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING"). An expression that also names a macro this
@@ -243,16 +244,24 @@ namespace ShaderCompiler
 			because the ES profiles reject an undefined macro inside an "#if" expression - see
 			LowerEmittedCondition.
 
-			Both default to false, so an emission that passes neither comes out byte-for-byte unchanged.
+			All three default to false, so an emission that passes none comes out byte-for-byte unchanged.
 			Only the offline GLSL-to-C++ software-fragment transpiler sets @p softwareRenderer, so a shader
 			can carry a cheaper software-renderer variant of a too-expensive fragment path. Only the
 			PlayStation 3 emission sets @p noDynamicBranching: a fragment stage that compiles to NV40
 			IF/LOOP/BRK control flow does not survive that toolchain - the branch body overwrites registers
 			the surrounding code is still holding, which silently corrupted the textured background's
 			horizon tint - so a shader gates any dynamically branching block on it.
+
+			Only the PS Vita (Cg / sceGxm) emission sets @p lowPowerGpu. Unlike the two above it says
+			nothing about what the target CAN compile - the SGX543 runs every one of these shaders as
+			written - only about how much per-pixel work it can sustain: it is a handheld part shading a
+			full screen from a shared memory bus, and an operation that is invisible on a desktop GPU (a
+			nine-tap voronoi of sin()-based hashes, say) is most of its frame. A shader gates a cheaper
+			approximation of such a path on it, so a low-power part gets a substitute rather than the
+			feature being dropped for everyone.
 		*/
 		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define,
-			bool softwareRenderer = false, bool noDynamicBranching = false);
+			bool softwareRenderer = false, bool noDynamicBranching = false, bool lowPowerGpu = false);
 
 		/** Returns the directory part of @p path, or "." if it has none */
 		static String DirectoryOf(StringView path);

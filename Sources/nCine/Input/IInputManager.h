@@ -50,9 +50,25 @@ namespace nCine
 
 		bool operator==(const JoystickGuid& guid) const;
 
-		/** @brief Raw GUID bytes */
-		std::uint8_t data[16];
+		/**
+		 * @brief Raw GUID bytes
+		 *
+		 * Over-aligned deliberately: `fromType()`, `isValid()` and @relativeref{nCine,JoyMapping::CreateJoystickGuid()}
+		 * all read and write these bytes four or two at a time through a `std::uint32_t*` / `std::uint16_t*`,
+		 * which a plain byte array does not guarantee is legal --- its own alignment is 1, so wherever the
+		 * compiler happened to place a GUID could leave those accesses unaligned. That costs nothing on x86
+		 * or ARM, but MIPS and SH-4 raise an address error rather than taking a slow path, which kills the
+		 * process outright (see the event-parameter read in `Player::OnUpdate` that did exactly that on the
+		 * PSP). One `alignas` makes every one of those accesses well defined instead of lucky.
+		 */
+		alignas(std::uint32_t) std::uint8_t data[16];
 	};
+
+	// Guards the alignment the casts above depend on: `data` is the only member, so over-aligning it
+	// over-aligns the whole class, and a later member reordering that broke this would otherwise only show
+	// up as a hardware fault on a console
+	static_assert(alignof(JoystickGuid) >= alignof(std::uint32_t),
+		"JoystickGuid is read four bytes at a time and must be aligned for it");
 
 	/**
 		@brief Interface for querying input state and dispatching input events

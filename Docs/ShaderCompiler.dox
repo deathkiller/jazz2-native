@@ -476,7 +476,7 @@ block is an error --- a block either describes passes or names a stage.
 
 `pipeline` name | `FixedFunctionIntrinsic` | Stage | Declared by
 --------------- | ------------------------ | ----- | -----------
-`tile_map_mesh` | `TileMapMesh` | a whole tile layer as one triangle-list mesh (the 8-float `TileMap::AppendTileQuad` contract, with quad-pattern recognition and, on the PVR, scissor clipping) | `TileMapMesh.shader`, `TileMapMeshPalette.shader`
+`tile_map_mesh` | `TileMapMesh` | a whole tile layer as one indexed triangle-list mesh (the 8-float `TileMap::AppendTileQuad` contract, four corners per quad addressed through @cpp RenderResources::GetQuadIndices() @ce and resolved on the CPU, with quad-pattern recognition and, on the PVR, scissor clipping) | `TileMapMesh.shader`, `TileMapMeshPalette.shader`
 `lighting_combine` | `LightingCombine` | the viewport compositor --- the direct-tier CPU-lightmap lighting hook | `Combine.shader`, `CombineWithWater.shader`, `CombineWithWaterLow.shader`
 `line_strip_mesh` | `LineStripMesh` | vertex-fed textured line strip of the weapon wheel (the PVR expands segments into thin quads; the GX and the GU draw native lines) | `DefaultMeshSprite.shader`
 

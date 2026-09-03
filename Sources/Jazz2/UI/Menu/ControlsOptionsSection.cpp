@@ -81,6 +81,10 @@ namespace Jazz2::UI::Menu
 			});
 
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
+		// Offered on the PS Vita as well, even though the handheld has no vibration motor of its own: SDL
+		// implements rumble for the platform (`VITA_JoystickRumble`, next to a `SetLED` that only a
+		// DualShock has), which reaches a controller paired to a PS TV - and, through the ds3vita/ds4vita
+		// plugins, one paired to a handheld too. Where nothing can rumble the setting simply does nothing.
 		list->Add<ChoiceItem>(_("Gamepad Rumble"),
 			[]() -> StringView {
 				return (PreferencesCache::GamepadRumble == 2

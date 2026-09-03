@@ -19,6 +19,16 @@ namespace Jazz2::UI::Menu
 	{
 	}
 
+	RefreshCacheSection::~RefreshCacheSection()
+	{
+#if defined(WITH_THREADS)
+		// OnUpdate() leaves this section the moment the worker reports it is done, which is the last thing the
+		// worker does - so it can still be inside the lambda, holding this pointer, while the section is being
+		// destroyed here
+		_thread.Join();
+#endif
+	}
+
 	void RefreshCacheSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
@@ -33,7 +43,7 @@ namespace Jazz2::UI::Menu
 			std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 			LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 
-			_this->_done = true;
+			_this->_done.store(true, std::memory_order_release);
 		}, this);
 #else
 		if (auto mainMenu = runtime_cast<MainMenu>(_root)) {
@@ -43,7 +53,7 @@ namespace Jazz2::UI::Menu
 		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 		LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 
-		_done = true;
+		_done.store(true, std::memory_order_release);
 #endif
 	}
 
@@ -52,7 +62,7 @@ namespace Jazz2::UI::Menu
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
-		if (_done) {
+		if (_done.load(std::memory_order_acquire)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
 		}

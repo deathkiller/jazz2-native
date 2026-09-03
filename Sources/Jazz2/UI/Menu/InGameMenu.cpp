@@ -196,8 +196,14 @@ namespace Jazz2::UI::Menu
 		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
+		// Kept clear of a compact view's section frame exactly as in MainMenu - see the longer note there:
+		// below the 272-row threshold the frame reaches the bottom of the screen and these show through
+		// underneath it, so they are drawn only while the root section is the one on top
+		bool showCorners = (ViewSize.Y >= 300 || _owner->_sections.size() <= 1);
 #if defined(DEATH_TARGET_ANDROID)
-		if (!static_cast<AndroidApplication&>(theApplication()).IsScreenRound())
+		if (showCorners && !static_cast<AndroidApplication&>(theApplication()).IsScreenRound())
+#else
+		if (showCorners)
 #endif
 		{
 			// Version

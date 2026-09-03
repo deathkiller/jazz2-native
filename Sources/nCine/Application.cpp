@@ -1451,31 +1451,6 @@ namespace nCine
 				*sioTx = std::uint8_t(logEntryWithColors[i]);
 			}
 		}
-#elif defined(DEATH_TARGET_PSP)
-		// Write the message to stdout, which PSPSDK routes to the host through sceIoWrite on fd 1: the
-		// PPSSPP emulator prints it into its log and psplink shows it in its console. On real hardware
-		// launched from the firmware there is nobody listening, but pspDebugScreenPrintf below still puts
-		// it on the screen for as long as the GU session has not taken the framebuffer over - which covers
-		// exactly the startup window where a failure would otherwise be invisible.
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		if (length2 >= MaxLogEntryLength - 2) {
-			length2 = MaxLogEntryLength - 2;
-		}
-		logEntryWithColors[length2++] = '\n';
-		logEntryWithColors[length2] = '\0';
-		::fwrite(logEntryWithColors, 1, length2, stdout);
-		::fflush(stdout);
-		pspDebugScreenPrintf("%s", logEntryWithColors);
-#elif defined(DEATH_TARGET_VITA)
-		std::int32_t length2 = 0;
-		AppendLevel(logEntryWithColors, length2, level, threadId);
-		AppendFunctionName(logEntryWithColors, length2, functionName);
-		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
-		logEntryWithColors[length2] = '\0';
-		sceClibPrintf("%s", logEntryWithColors);
 #elif defined(DEATH_TARGET_PS3)
 		// PSL1GHT's newlib routes fd 1 and 2 straight to the lv2 `sysTtyWrite` syscall rather than to a
 		// file, so an ordinary write reaches the console TTY on hardware and RPCS3's log in the emulator -
@@ -1494,6 +1469,37 @@ namespace nCine
 			std::uint32_t written = 0;
 			sysTtyWrite(STDOUT_FILENO, logEntryWithColors, std::uint32_t(length2), &written);
 		}
+#elif defined(DEATH_TARGET_PSP)
+		// Write the message to stdout, which PSPSDK routes to the host through sceIoWrite on fd 1: the
+		// PPSSPP emulator prints it into its log and psplink shows it in its console. On real hardware
+		// launched from the firmware there is nobody listening, but pspDebugScreenPrintf below still puts
+		// it on the screen for as long as the GU session has not taken the framebuffer over - which covers
+		// exactly the startup window where a failure would otherwise be invisible.
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		::fwrite(logEntryWithColors, 1, length2, stdout);
+		::fflush(stdout);
+		// Only while the GU session has not taken the framebuffer over. The comment above describes what
+		// this was meant to do all along, but the call used to be unconditional, so every trace line after
+		// startup - a level load, a warning, anything - was still being drawn straight into the framebuffer
+		// the game was presenting, printing debug text over the running game.
+		if (!RHI::Device::HasDisplayOwnership()) {
+			pspDebugScreenPrintf("%s", logEntryWithColors);
+		}
+#elif defined(DEATH_TARGET_VITA)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		logEntryWithColors[length2] = '\0';
+		sceClibPrintf("%s", logEntryWithColors);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
@@ -1669,9 +1675,36 @@ namespace nCine
 
 			if (logFile != nullptr) {
 				logFile->Write(logEntryWithColors, length3);
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-				// Flush every entry, so the log is complete even if the game hangs or crashes
-				logFile->Flush();
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_PSP)
+				// This file is the only debugging channel these consoles have, and a hard kill (the PS button,
+				// vitacompanion's "destroy") runs no shutdown code, so an unflushed buffer is exactly the log
+				// that would have said why. Flushing every entry guaranteed that at 8-13 ms per line on a
+				// memory card, measured on a Vita, which the continuously logging asset conversion could not
+				// afford. So a warning or worse still flushes at once and the rest at most once per
+				// FlushInterval, which costs a hard kill some Debug chatter but never the diagnosis.
+				// Held as 32 bits of milliseconds rather than the raw 64-bit nanosecond timestamp, because a
+				// 64-bit atomic is not lock-free on every console in this list: PowerPC has no 8-byte atomic
+				// instruction, so on the Wii and GameCube std::atomic<std::uint64_t> lowers to
+				// __atomic_load_8 / __atomic_compare_exchange_8 libcalls that devkitPPC does not ship, and
+				// the link fails on them while every other target builds. A 32-bit atomic is lock-free
+				// everywhere here (lwarx/stwcx on PowerPC), and truncating to 32 bits is harmless because
+				// only the difference is ever read - that stays correct across the wrap, which at
+				// millisecond resolution comes round every 49 days.
+				constexpr std::uint32_t FlushIntervalMs = 250;
+				static std::atomic<std::uint32_t> lastFlushMs{0};
+				const std::uint32_t nowMs = (std::uint32_t)(timestamp / 1000000);
+				if (level >= TraceLevel::Warning) {
+					lastFlushMs.store(nowMs, std::memory_order_relaxed);
+					logFile->Flush();
+				} else {
+					std::uint32_t lastFlush = lastFlushMs.load(std::memory_order_relaxed);
+					// An unsigned wrap here (a timestamp going backwards) only ever flushes early, never late
+					if (nowMs - lastFlush >= FlushIntervalMs &&
+						lastFlushMs.compare_exchange_strong(lastFlush, nowMs, std::memory_order_relaxed)) {
+						logFile->Flush();
+					}
+				}
 #	endif
 			} else {
 				AppendLogHistory(logEntryWithColors, std::uint32_t(length3));
@@ -1782,7 +1815,7 @@ namespace nCine
 		return false;
 	}
 	
-	bool Application::ShowScreenKeyboard()
+	bool Application::ShowScreenKeyboard(Containers::StringView initialText, Containers::Function<void(Containers::StringView)>&& onCompleted)
 	{
 		return false;
 	}

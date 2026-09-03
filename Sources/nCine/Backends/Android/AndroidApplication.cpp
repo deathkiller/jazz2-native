@@ -369,7 +369,7 @@ namespace nCine
 		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
 	}
 
-	bool AndroidApplication::ShowScreenKeyboard()
+	bool AndroidApplication::ShowScreenKeyboard(Containers::StringView initialText, Containers::Function<void(Containers::StringView)>&& onCompleted)
 	{
 		return CanShowScreenKeyboard() && AndroidJniWrap_InputMethodManager::showSoftInput();
 	}

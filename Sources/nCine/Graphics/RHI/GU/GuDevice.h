@@ -50,6 +50,17 @@ namespace nCine::RHI::GU
 	class GuDevice
 	{
 	public:
+		/**
+			@brief Whether the GU session has taken the framebuffer over
+
+			Until it has, the console has no renderer and the debug screen is the only thing on the display,
+			which is what makes it worth printing traces to (see @relativeref{nCine,Application::OnTraceReceived()}).
+			Afterwards the same call would draw the text straight into the frame the game is presenting.
+		*/
+		static bool HasDisplayOwnership() {
+			return _guInitialized;
+		}
+
 		/** @brief Monotonic count of finished frames, used to detect "still referenced by the current frame" resources */
 		static std::uint32_t GetSceneCounter() {
 			return _sceneCounter;
@@ -287,9 +298,14 @@ namespace nCine::RHI::GU
 		/** @brief Maps the logical space onto the current target (scale of the 480x272 panel, or 1:1 for a target) */
 		static void GetTargetScale(float& scaleX, float& scaleY);
 
-		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		/** @brief Resolves the index range of a `DrawElements()` into a host pointer, or `nullptr` if it cannot be read */
+		static const std::uint16_t* ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices);
+
+		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices = nullptr, std::int32_t indexCount = 0);
 		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)
-		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices, std::int32_t indexCount);
 		// Draws a vertex-fed textured line strip (the weapon wheel) through the GE's native line primitive
 		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();

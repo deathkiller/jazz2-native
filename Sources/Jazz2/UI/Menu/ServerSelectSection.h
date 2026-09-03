@@ -23,6 +23,9 @@ namespace Jazz2::UI::Menu
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;
 
+		/** @brief Opens the platform's on-screen keyboard for the "connect to IP" field, if it has one */
+		void ShowScreenKeyboardForIpInput();
+
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;

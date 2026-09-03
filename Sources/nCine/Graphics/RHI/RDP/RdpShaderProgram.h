@@ -161,6 +161,10 @@ namespace nCine::RHI::RDP
 		inline std::uint32_t GetBoundVboOffset() const {
 			return _boundVboOffset;
 		}
+		/** @brief Returns the index buffer last bound by @ref DefineVertexFormat(), or `nullptr` */
+		inline const RdpBuffer* GetBoundIbo() const {
+			return _boundIbo;
+		}
 
 		void Reset();
 		void SetObjectLabel(StringView label);
@@ -281,6 +285,7 @@ namespace nCine::RHI::RDP
 		RdpVertexFormat _vertexFormat;
 		const RdpBuffer* _boundVbo;
 		std::uint32_t _boundVboOffset;
+		const RdpBuffer* _boundIbo;
 
 		struct ResolvedUniform
 		{

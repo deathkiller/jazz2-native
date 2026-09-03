@@ -12,6 +12,7 @@
 
 #include "../../Shaders/Generated/ShadersGen.h"
 
+#include <algorithm>
 #include <cstddef>	// for offsetof()
 #include <cstring>
 
@@ -47,6 +48,8 @@ namespace nCine
 	std::unique_ptr<RHI::Buffer> RenderResources::_quadCornerVbo;
 #endif
 
+	std::unique_ptr<std::uint16_t[]> RenderResources::_quadIndices;
+
 	std::unique_ptr<RHI::ShaderProgram> RenderResources::_defaultShaderPrograms[DefaultShaderProgramsCount];
 	HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> RenderResources::_batchedShaders(32);
 
@@ -56,6 +59,49 @@ namespace nCine
 	Camera* RenderResources::_currentCamera = nullptr;
 	std::unique_ptr<Camera> RenderResources::_defaultCamera;
 	Viewport* RenderResources::_currentViewport = nullptr;
+
+	std::uint32_t RenderResources::GetMaxQuadsForIndices()
+	{
+		// A 16-bit index addresses 65536 corners, and sceGxm silently drops a draw whose indices reach past
+		// 63999 (see GxmDevice::DrawCommon()), so the guard sits below both. Neither bound is reached with the
+		// shipped buffer sizes - the element buffer runs out long before - but a larger one must not pass it.
+		constexpr std::uint32_t MaxIndexableQuads = 63999 / VerticesPerQuad;
+
+		const std::uint32_t maxIndexDataSize = _buffersManager->Specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
+		return std::min<std::uint32_t>(maxIndexDataSize / (IndicesPerQuad * std::uint32_t(sizeof(std::uint16_t))), MaxIndexableQuads);
+	}
+
+	std::uint32_t RenderResources::GetMaxQuadsPerDraw(std::uint32_t floatsPerVertex)
+	{
+		DEATH_ASSERT(floatsPerVertex > 0);
+
+		const std::uint32_t maxVertexDataSize = _buffersManager->Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
+		const std::uint32_t vertexBytesPerQuad = VerticesPerQuad * floatsPerVertex * std::uint32_t(sizeof(float));
+		// Buffers too small for even a single quad would leave a caller's chunk loop making no progress at all.
+		// Reporting one quad instead lets the buffers manager name the buffer that could not hold it.
+		return std::max<std::uint32_t>(std::min<std::uint32_t>(maxVertexDataSize / vertexBytesPerQuad, GetMaxQuadsForIndices()), 1);
+	}
+
+	const std::uint16_t* RenderResources::GetQuadIndices()
+	{
+		if (_quadIndices == nullptr) {
+			// Sized for the longest draw any mesh can submit, so it is written once and never moves afterwards
+			const std::uint32_t quadCount = std::max<std::uint32_t>(GetMaxQuadsForIndices(), 1);
+			_quadIndices = std::make_unique<std::uint16_t[]>(std::size_t(quadCount) * IndicesPerQuad);
+
+			std::uint16_t* dst = _quadIndices.get();
+			for (std::uint32_t quad = 0, firstVertex = 0; quad < quadCount; quad++, firstVertex += VerticesPerQuad) {
+				*dst++ = std::uint16_t(firstVertex);
+				*dst++ = std::uint16_t(firstVertex + 1);
+				*dst++ = std::uint16_t(firstVertex + 2);
+				*dst++ = std::uint16_t(firstVertex);
+				*dst++ = std::uint16_t(firstVertex + 2);
+				*dst++ = std::uint16_t(firstVertex + 3);
+			}
+		}
+
+		return _quadIndices.get();
+	}
 
 	RHI::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
@@ -411,6 +457,8 @@ namespace nCine
 		}
 
 		DEATH_ASSERT(_cameraUniformDataMap.empty());
+
+		_quadIndices.reset(nullptr);
 
 		_defaultCamera.reset(nullptr);
 		_renderBatcher.reset(nullptr);

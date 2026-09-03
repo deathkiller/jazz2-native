@@ -473,12 +473,17 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 # there - it plays the whole soundtrack, and it has to be compiled from source like on the devkitPro
 # consoles - but not at a size the game can afford next to a big level, which is what decides it.
 #
+# The PS Vita is on the list for CPU rather than for memory, which makes it the odd one out: it has the
+# RAM for libopenmpt and plays the whole soundtrack with it. What it does not have is the headroom - a
+# 444 MHz Cortex-A9 also running the game logic, and a float mixer written for desktop CPUs is a
+# measurable slice of that. libxmp's integer mixer buys the frame time back, and VitaSDK packages it so
+# this picks the SDK's copy up rather than compiling it. The price is the 4 ".mo3" tracks of the 56
+# shipped, which libxmp cannot read and which are silent until the AssetPacker converts them offline.
+#
 # (Not the PlayStation 2, even though libxmp builds for its toolchain and the machine has the memory:
 # that port has no audio backend at all yet, so there is nothing for a decoder to play through. When
-# one appears, this is the line to add it to. Not the PS Vita either - VitaSDK packages libxmp, and
-# turning this on there does pick the SDK's copy up, but that console runs libopenmpt comfortably and
-# the fuller coverage is worth more than the CPU it saves.)
-if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE)
+# one appears, this is the line to add it to.)
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR VITA)
 	set(_ncineXmpDefault ON)
 else()
 	set(_ncineXmpDefault OFF)
@@ -568,6 +573,12 @@ option(DEATH_TRACE "Enable runtime event tracing" ON)
 # trace stream is the only debugging channel the console has, and a queued line is a line that is not there
 # after a crash.
 cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
+# Every file open, read, seek and close raises a trace line of its own. That is what makes a missing or
+# truncated asset findable, so it stays on wherever tracing is on - but on a console where tracing is
+# synchronous (see DEATH_TRACE_ASYNC above) the formatting and the emit both land on the thread doing the
+# I/O, and level streaming turns into thousands of them per load. Turn it off to keep the trace stream
+# (crashes, warnings, the shader cache) without paying for the I/O firehose.
+cmake_dependent_option(DEATH_TRACE_VERBOSE_IO "Trace every file I/O operation" ON "DEATH_TRACE" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()

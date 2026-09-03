@@ -2,6 +2,7 @@
 #include "GxmShaderUniforms.h"
 #include "GxmBufferObject.h"
 #include "GxmDevice.h"
+#include "GxmShaderCache.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -130,6 +131,13 @@ namespace nCine::RHI::GXM
 
 	void GxmShaderProgram::ReleaseGpu()
 	{
+		// Holding nothing is the common case for a program that never linked - Shader::LoadFromMemory() resets
+		// before it attaches - and the GPU flush below is far too expensive to spend on it
+		if (_vertexPrograms.empty() && _fragmentPrograms.empty() && _vertexStageId == nullptr &&
+			_fragmentStageId == nullptr && _vertexStage == nullptr && _fragmentStage == nullptr) {
+			return;
+		}
+
 		SceGxmShaderPatcher* patcher = GxmDevice::GetShaderPatcher();
 		if (patcher != nullptr) {
 			// A patched program may still be referenced by a scene the GPU has not finished, and releasing it
@@ -244,6 +252,8 @@ namespace nCine::RHI::GXM
 			return false;
 		}
 
+		// Whatever these two leave behind - the GXP binaries, and a vertex stage the patcher already took - is
+		// released by the ReleaseGpu() the caller runs on failure
 		std::int32_t result = sceGxmShaderPatcherRegisterProgram(patcher, _vertexStage, &_vertexStageId);
 		if (result < 0) {
 			LOGE("sceGxmShaderPatcherRegisterProgram(vertex) failed with 0x{:.8x}", std::uint32_t(result));
@@ -397,6 +407,8 @@ namespace nCine::RHI::GXM
 		}
 
 		if (!CompileStages()) {
+			// A stage that compiled or registered before the failing one is still held here
+			ReleaseGpu();
 			_status = Status::CompilationFailed;
 			return false;
 		}
@@ -639,8 +651,11 @@ namespace nCine::RHI::GXM
 			_vertexSamplerSlots.clear();
 			_fragmentSamplerSlots.clear();
 			_vertexFormat.Reset();
-			ReleaseGpu();
 		}
+		// Outside the branch above: only a linked program has introspection caches to clear, but a program that
+		// failed part way through CompileStages() is exactly the one that may still hold a GXP binary or a stage
+		// the patcher took. Everything released in here is null-checked, so this is a no-op for the rest.
+		ReleaseGpu();
 		_status = Status::NotLinked;
 	}
 
@@ -677,6 +692,19 @@ namespace nCine::RHI::GXM
 
 	SceGxmProgram* GxmShaderProgram::CompileCgStage(const char* source, bool vertexStage, std::uint32_t& sizeInBytes)
 	{
+		// A GXP this source has already been compiled into on this console is byte-for-byte what SceShaccCg
+		// would hand back, so a hit skips the compiler entirely - which is what the startup time is made of
+		if (SceGxmProgram* cached = GxmShaderCache::Lookup(source, vertexStage, sizeInBytes)) {
+			return cached;
+		}
+
+		// A miss is the first thing that actually needs the compiler, and bringing up "libshacccg.suprx" is
+		// itself expensive, so it is loaded here rather than with the rest of the session
+		if (!GxmDevice::EnsureShaderCompiler()) {
+			sizeInBytes = 0;
+			return nullptr;
+		}
+
 		// The length goes IN (vitaShaRK reads it as the source length), the compiled size comes back OUT
 		sizeInBytes = std::uint32_t(std::strlen(source));
 		const SceGxmProgram* compiled = shark_compile_shader(source, &sizeInBytes,
@@ -687,6 +715,7 @@ namespace nCine::RHI::GXM
 			owned = static_cast<SceGxmProgram*>(std::malloc(sizeInBytes));
 			if (owned != nullptr) {
 				std::memcpy(owned, compiled, sizeInBytes);
+				GxmShaderCache::Store(source, vertexStage, owned, sizeInBytes);
 			} else {
 				LOGE("Out of memory copying a {} byte GXP binary", sizeInBytes);
 			}

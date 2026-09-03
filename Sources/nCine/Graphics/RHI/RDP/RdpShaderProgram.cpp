@@ -19,7 +19,7 @@ namespace nCine::RHI::RDP
 		: _handle(_nextHandle++), _status(Status::NotLinked), _introspection(Introspection::Disabled), _queryPhase(queryPhase),
 			_batchSize(DefaultBatchSize), _shouldLogOnErrors(true), _uniformsSize(0), _uniformBlocksSize(0),
 			_reflection(nullptr), _effectReflection(nullptr), _generatedEffect(nullptr), _usesPalette(false),
-			_boundVbo(nullptr), _boundVboOffset(0)
+			_boundVbo(nullptr), _boundVboOffset(0), _boundIbo(nullptr)
 	{
 	}
 
@@ -256,10 +256,11 @@ namespace nCine::RHI::RDP
 
 	void RdpShaderProgram::DefineVertexFormat(const RdpBuffer* vbo, const RdpBuffer* ibo, std::uint32_t vboOffset)
 	{
-		// The index buffer is deliberately not kept: nothing on this backend ever draws indexed (the
-		// vertex format still records it for the attribute plumbing shared with the other backends)
 		_boundVbo = vbo;
 		_boundVboOffset = vboOffset;
+		// Kept for the tile-mesh dispatch, which resolves the quad corners of an indexed mesh out of it
+		// itself rather than having the RSP pull them (see RdpDevice::DispatchTileMesh())
+		_boundIbo = ibo;
 		if (vbo != nullptr) {
 			for (const RdpAttribute& a : _attributes) {
 				if (a.GetLocation() >= 0) {

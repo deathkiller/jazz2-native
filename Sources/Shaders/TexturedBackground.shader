@@ -53,9 +53,7 @@ float addStarField(vec2 samplePosition, float threshold) {
 void fragment() {
 	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
 	float distance = 1.3 - abs(2.0 * UV.y - 1.0);
-#if !SOFTWARE_RENDERER
-	float horizonDepth = pow(distance, 1.4);
-#else
+#if SOFTWARE_RENDERER
 	// Software-renderer variant: this full-screen per-pixel fragment is dominated by transcendentals
 	// on the CPU - two pow() curves, an optional dithering second texture sample and a per-pixel
 	// voronoi "star field" (dozens of sin() per pixel when uHorizonColor.w > 0). One such draw costs
@@ -63,6 +61,17 @@ void fragment() {
 	// approximates the pow() curves with plain polynomials and drops the dither sample and the star
 	// field entirely; the visible loss is the faint stars and a slightly different horizon falloff.
 	float horizonDepth = distance;	// Approximates pow(distance, 1.4)
+#elif LOW_POWER_GPU
+	// pow() is two transcendentals on the SGX543's USSE and this shader ran two of them per pixel over a
+	// full-screen background. sqrt() is one cheap instruction and gives pow(distance, 1.5) EXACTLY as
+	// distance * sqrt(distance), which is the second curve below for free; blending that against the
+	// linear term lands on pow(distance, 1.4) to within 0.007 over the whole range this takes ([0.3, 1.3]),
+	// which is far closer than the plain `distance` the software branch settles for - that one is a
+	// different shape, and it is what made the horizon read as too sharp.
+	float distancePow15 = distance * sqrt(distance);
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance;
+#else
+	float horizonDepth = pow(distance, 1.4);
 #endif
 
 	float yShift = (UV.y > 0.5 ? 1.0 : 0.0);
@@ -75,19 +84,21 @@ void fragment() {
 
 	vec4 texColor = texture(TEXTURE, texturePos);
 
-#if DITHER && !SOFTWARE_RENDERER
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
 	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
 #endif
 
-#if !SOFTWARE_RENDERER
-	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
-#else
+#if SOFTWARE_RENDERER
 	float horizonOpacity = clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.5)
+#elif LOW_POWER_GPU
+	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);	// distance * sqrt(distance) IS pow(distance, 1.5)
+#else
+	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
 #endif
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
-#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING
+#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING && !LOW_POWER_GPU
 	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (UV * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));

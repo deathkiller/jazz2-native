@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include <Containers/Function.h>
 #include <Containers/StringView.h>
 #include <Core/ITraceSink.h>
 #include <IO/Stream.h>
@@ -217,8 +218,22 @@ namespace nCine
 		virtual bool IsScreenKeyboardVisible();
 		/** @brief Toggles the screen (software) keyboard */
 		virtual bool ToggleScreenKeyboard();
-		/** @brief Shows the screen (software) keyboard */
-		virtual bool ShowScreenKeyboard();
+		/**
+			@brief Shows the screen (software) keyboard
+
+			Two kinds of platform answer this, and a caller that wants to work on both has to serve both. Where
+			the keyboard is an overlay that feeds keystrokes (Windows, Android) it types into whatever has
+			focus and the text arrives as @relativeref{nCine,IInputEventHandler::OnTextInput()} events, exactly
+			as a real keyboard would; @p initialText and @p onCompleted are unused there. Where it is a modal
+			editor that collects a whole string (the PS Vita's IME) there are no keystrokes to deliver:
+			@p initialText seeds the editor with what the field already holds, and @p onCompleted is invoked
+			once with the finished string, which REPLACES that field rather than appending to it. It is not
+			invoked at all if the user cancels.
+
+			So pass both, keep handling `OnTextInput`, and the field ends up right either way.
+		*/
+		virtual bool ShowScreenKeyboard(Containers::StringView initialText = {},
+			Containers::Function<void(Containers::StringView)>&& onCompleted = {});
 		/** @brief Hides the screen (software) keyboard */
 		virtual bool HideScreenKeyboard();
 

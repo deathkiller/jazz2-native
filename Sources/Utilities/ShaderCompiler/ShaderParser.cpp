@@ -3228,7 +3228,8 @@ R"GLSL(void main()
 			@brief One macro a conditional resolver owns, together with the value it has in the pass being run
 
 			Two passes own two disjoint sets: ResolveStageConditionals owns VERTEX_STAGE/FRAGMENT_STAGE (at
-			assembly time) and ResolveBackendConditionals owns SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING (when a
+			assembly time) and ResolveBackendConditionals owns
+			SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING/LOW_POWER_GPU (when a
 			stage source is built, per emission). A pass folds only its own macros and leaves everything else
 			alone, so the two compose: an expression naming macros of both is folded once by each.
 		*/
@@ -3501,30 +3502,90 @@ R"GLSL(void main()
 		}
 
 		/**
-			Flags, per line index, every "#if"/"#ifdef"/"#ifndef" opener whose conditional chain contains an
-			"#elif". Such a conditional cannot be resolved away even when its own expression is determined -
-			dropping its directive lines would strand the "#elif" branches - so its opener is rewritten to
-			"#if 1"/"#if 0" instead and the chain is left for the GLSL compiler to finish.
+			Determines one branch condition of a conditional chain from the macros a pass owns: reports
+			whether its value follows from them alone and, if it does, what that value is. Handles both
+			the presence spellings ("#ifdef"/"#ifndef", determined exactly when the macro named is an
+			owned one) and the expression spellings ("#if"/"#elif", determined when FoldCondition settles
+			them without help from any macro this pass does not own).
 		*/
-		void MarkElifChains(const SmallVectorImpl<SourceLine>& stripped, SmallVectorImpl<std::uint8_t>& hasElif)
+		bool DetermineCondition(StringView name, StringView rest, ArrayView<const CompileTimeMacro> macros, bool& value)
 		{
-			SmallVector<std::size_t, 0> open;
+			if (name == "ifdef" || name == "ifndef") {
+				const CompileTimeMacro* macro = FindCompileTimeMacro(macros, FirstIdentifier(rest));
+				if (macro == nullptr) {
+					return false;
+				}
+				value = ((name == "ifdef") == macro->Value);
+				return true;
+			}
+
+			String rewritten;
+			switch (FoldCondition(rest, macros, rewritten)) {
+				case FoldedCondition::True: value = true; return true;
+				case FoldedCondition::False: value = false; return true;
+				default: return false;
+			}
+		}
+
+		/**
+			Flags, per line index, every "#if"/"#ifdef"/"#ifndef" opener whose WHOLE conditional chain this
+			pass can resolve, i.e. whose outcome follows from the macros it owns and nothing else.
+
+			The chain is walked branch by branch the way the preprocessor would take them: a determined-false
+			branch is skipped, the first determined-true branch settles the chain (every branch after it is
+			dead whatever it names, so an undetermined one there is harmless), an "#else" settles it as well,
+			and a chain whose branches are all determined-false simply selects nothing. Only an UNDETERMINED
+			condition reached BEFORE any of that leaves the chain unresolvable: the outcome would then depend
+			on a macro this pass does not own, so the directive lines have to survive for the GLSL compiler
+			to finish the job - the opener rewritten to "#if 1"/"#if 0" and the chain left standing.
+
+			This is what lets a shader spell a multi-way choice as one "#if"/"#elif"/"#else" chain instead of
+			nesting two-way conditionals: a chain built from owned macros resolves away completely, leaving
+			only the branch the backend selected and no "#if 0 / #elif 1" scaffolding behind.
+		*/
+		void MarkResolvableChains(const SmallVectorImpl<SourceLine>& stripped,
+			ArrayView<const CompileTimeMacro> macros, SmallVectorImpl<std::uint8_t>& resolvable)
+		{
+			struct OpenChain
+			{
+				std::size_t Opener;
+				bool Settled;			// A branch was already taken (or an "#else" reached), so the rest is dead
+				bool Unresolvable;		// An undetermined condition was reached before that
+			};
+
+			SmallVector<OpenChain, 0> open;
 			for (std::size_t index = 0; index < stripped.size(); index++) {
-				hasElif.push_back(0);
+				resolvable.push_back(0);
 				StringView name, rest;
 				std::size_t hashPos;
 				if (!SplitDirective(stripped[index].Text, name, rest, hashPos)) {
 					continue;
 				}
 				if (name == "if" || name == "ifdef" || name == "ifndef") {
-					open.push_back(index);
+					bool value = false;
+					const bool determined = DetermineCondition(name, rest, macros, value);
+					open.push_back({ index, determined && value, !determined });
 				} else if (name == "elif") {
 					if (!open.empty()) {
-						hasElif[open.back()] = 1;
+						OpenChain& chain = open.back();
+						if (!chain.Settled && !chain.Unresolvable) {
+							bool value = false;
+							if (!DetermineCondition(name, rest, macros, value)) {
+								chain.Unresolvable = true;
+							} else if (value) {
+								chain.Settled = true;
+							}
+						}
+					}
+				} else if (name == "else") {
+					if (!open.empty()) {
+						open.back().Settled = true;
 					}
 				} else if (name == "endif") {
 					if (!open.empty()) {
+						const OpenChain chain = open.back();
 						open.pop_back();
+						resolvable[chain.Opener] = (chain.Unresolvable ? 0 : 1);
 					}
 				}
 			}
@@ -3554,6 +3615,7 @@ R"GLSL(void main()
 			{
 				bool Stage;			// true = resolved stage conditional (its directive lines are removed)
 				bool Keep;			// Stage conditionals only — the current branch is the active one
+				bool SeenTaken;		// Stage conditionals only — an earlier branch of the chain was the active one
 				bool SeenElse;
 				std::int32_t Line;
 			};
@@ -3562,8 +3624,8 @@ R"GLSL(void main()
 			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
 
-			SmallVector<std::uint8_t, 0> hasElif;
-			MarkElifChains(stripped, hasElif);
+			SmallVector<std::uint8_t, 0> resolvable;
+			MarkResolvableChains(stripped, macros, resolvable);
 
 			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
@@ -3590,15 +3652,15 @@ R"GLSL(void main()
 						const CompileTimeMacro* macro = FindCompileTimeMacro(macros, FirstIdentifier(rest));
 						if (macro != nullptr) {
 							const bool value = ((name == "ifdef") == macro->Value);
-							if (hasElif[index] == 0) {
-								stack.push_back({ true, value, false, lineNumber });
+							if (resolvable[index] != 0) {
+								stack.push_back({ true, value, value, false, lineNumber });
 								removed = true;
 								continue;
 							}
 							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, "if"_s, value ? "1"_s : "0"_s);
 							replaced = true;
 						}
-						stack.push_back({ false, true, false, lineNumber });
+						stack.push_back({ false, true, false, false, lineNumber });
 					} else if (name == "if" || name == "elif") {
 						if (name == "elif" && stack.empty()) {
 							return Fail(diag, "#elif without matching #if", lineNumber);
@@ -3606,13 +3668,29 @@ R"GLSL(void main()
 						String rewritten;
 						const FoldedCondition folded = FoldCondition(rest, macros, rewritten);
 						const bool determined = (folded == FoldedCondition::True || folded == FoldedCondition::False);
+						if (name == "elif" && stack.back().Stage) {
+							// A branch of a chain that resolves away completely: this directive goes with the
+							// rest of the chain's and only the branch the macros select keeps its body. Once
+							// the chain is settled every later branch is dead whatever it names, which is why
+							// an undetermined condition can be treated as false here (MarkResolvableChains
+							// only lets a chain reach this state when that is sound)
+							Cond& top = stack.back();
+							if (top.SeenElse) {
+								return Fail(diag, "#elif after #else", lineNumber);
+							}
+							top.Keep = (!top.SeenTaken && folded == FoldedCondition::True);
+							top.SeenTaken = (top.SeenTaken || top.Keep);
+							removed = true;
+							continue;
+						}
 						if (name == "if") {
-							if (determined && hasElif[index] == 0) {
-								stack.push_back({ true, folded == FoldedCondition::True, false, lineNumber });
+							if (determined && resolvable[index] != 0) {
+								const bool value = (folded == FoldedCondition::True);
+								stack.push_back({ true, value, value, false, lineNumber });
 								removed = true;
 								continue;
 							}
-							stack.push_back({ false, true, false, lineNumber });
+							stack.push_back({ false, true, false, false, lineNumber });
 						}
 						if (folded != FoldedCondition::Untouched) {
 							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, name,
@@ -3628,7 +3706,8 @@ R"GLSL(void main()
 							if (top.SeenElse) {
 								return Fail(diag, "duplicate #else", lineNumber);
 							}
-							top.Keep = !top.Keep;
+							top.Keep = !top.SeenTaken;
+							top.SeenTaken = true;
 							top.SeenElse = true;
 							removed = true;
 							continue;
@@ -3676,10 +3755,11 @@ R"GLSL(void main()
 
 		/**
 			Partial preprocessing of an assembled stage stream (BuildStageSource): resolves ONLY the
-			conditionals that name SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING - the "#ifdef"/"#ifndef"
-			forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif" expressions
-			built from them - keeping or dropping the enclosed lines according to @p softwareRenderer
-			and @p noDynamicBranching, the backend the source is being built for. Every other
+			conditionals that name SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or LOW_POWER_GPU - the
+			"#ifdef"/"#ifndef" forms (with an optional "#else" and the matching "#endif") and "#if"/"#elif"
+			expressions built from them - keeping or dropping the enclosed lines according to
+			@p softwareRenderer, @p noDynamicBranching and @p lowPowerGpu, the backend the source is
+			being built for. Every other
 			preprocessor conditional passes through textually untouched (nesting works in both
 			directions, exactly like ResolveStageConditionals), so the built sources never contain
 			either macro and shaders without such blocks come out byte-for-byte unchanged. An
@@ -3692,17 +3772,19 @@ R"GLSL(void main()
 			(a leaked block is then caught by the generated-header staleness checks).
 		*/
 		void ResolveBackendConditionals(SmallVectorImpl<SourceLine>& lines, bool softwareRenderer,
-			bool noDynamicBranching)
+			bool noDynamicBranching, bool lowPowerGpu)
 		{
 			const CompileTimeMacro macros[] = {
 				{ "SOFTWARE_RENDERER"_s, softwareRenderer },
-				{ "NO_DYNAMIC_BRANCHING"_s, noDynamicBranching }
+				{ "NO_DYNAMIC_BRANCHING"_s, noDynamicBranching },
+				{ "LOW_POWER_GPU"_s, lowPowerGpu }
 			};
 
 			struct Cond
 			{
 				bool Resolved;		// true = a resolved backend conditional (its directive lines are removed)
 				bool Keep;			// Resolved conditionals only - the current branch is the active one
+				bool SeenTaken;		// Resolved conditionals only - an earlier branch of the chain was the active one
 				bool SeenElse;
 			};
 
@@ -3710,8 +3792,8 @@ R"GLSL(void main()
 			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
 			ShaderParser::StripComments(stripped);
 
-			SmallVector<std::uint8_t, 0> hasElif;
-			MarkElifChains(stripped, hasElif);
+			SmallVector<std::uint8_t, 0> resolvable;
+			MarkResolvableChains(stripped, macros, resolvable);
 
 			SmallVector<SourceLine, 0> output;
 			output.reserve(lines.size());
@@ -3737,31 +3819,42 @@ R"GLSL(void main()
 						const CompileTimeMacro* macro = FindCompileTimeMacro(macros, FirstIdentifier(rest));
 						if (macro != nullptr) {
 							const bool value = ((name == "ifdef") == macro->Value);
-							if (hasElif[index] == 0) {
-								stack.push_back({ true, value, false });
+							if (resolvable[index] != 0) {
+								stack.push_back({ true, value, value, false });
 								removed = true;
 								continue;
 							}
 							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, "if"_s, value ? "1"_s : "0"_s);
 							replaced = true;
 						}
-						stack.push_back({ false, true, false });
+						stack.push_back({ false, true, false, false });
 					} else if (name == "if" || name == "elif") {
-						// MarkElifChains keeps a conditional with an "#elif" out of the resolved state, so the
-						// second half of this can only trip on malformed nesting
-						if (name == "elif" && (stack.empty() || stack.back().Resolved)) {
+						if (name == "elif" && stack.empty()) {
 							return;		// Malformed - leave untouched
 						}
 						String rewritten;
 						const FoldedCondition folded = FoldCondition(rest, macros, rewritten);
 						const bool determined = (folded == FoldedCondition::True || folded == FoldedCondition::False);
+						if (name == "elif" && stack.back().Resolved) {
+							// A branch of a chain that resolves away completely - see the same spot in
+							// ResolveStageConditionals for why an undetermined condition is false here
+							Cond& top = stack.back();
+							if (top.SeenElse) {
+								return;	// Malformed - leave untouched
+							}
+							top.Keep = (!top.SeenTaken && folded == FoldedCondition::True);
+							top.SeenTaken = (top.SeenTaken || top.Keep);
+							removed = true;
+							continue;
+						}
 						if (name == "if") {
-							if (determined && hasElif[index] == 0) {
-								stack.push_back({ true, folded == FoldedCondition::True, false });
+							if (determined && resolvable[index] != 0) {
+								const bool value = (folded == FoldedCondition::True);
+								stack.push_back({ true, value, value, false });
 								removed = true;
 								continue;
 							}
-							stack.push_back({ false, true, false });
+							stack.push_back({ false, true, false, false });
 						}
 						if (folded != FoldedCondition::Untouched) {
 							replacement = FoldedDirectiveLine(lines[index].Text, hashPos, name,
@@ -3777,7 +3870,8 @@ R"GLSL(void main()
 							if (top.SeenElse) {
 								return;	// Malformed - leave untouched
 							}
-							top.Keep = !top.Keep;
+							top.Keep = !top.SeenTaken;
+							top.SeenTaken = true;
 							top.SeenElse = true;
 							removed = true;
 							continue;
@@ -4801,16 +4895,18 @@ R"GLSL(void main()
 	}
 
 	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define,
-		bool softwareRenderer, bool noDynamicBranching)
+		bool softwareRenderer, bool noDynamicBranching, bool lowPowerGpu)
 	{
 		const SmallVectorImpl<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 
-		// Resolve the conditionals naming SOFTWARE_RENDERER or NO_DYNAMIC_BRANCHING according to the backend
-		// the source is built for (see the header comment). Gated on a quick reference scan so every document
-		// without such a block keeps the verbatim fast path (and provably identical output).
+		// Resolve the conditionals naming SOFTWARE_RENDERER, NO_DYNAMIC_BRANCHING or LOW_POWER_GPU
+		// according to the backend the source is built for (see the header comment). Gated on a quick
+		// reference scan so every document without such a block keeps the verbatim fast path (and provably
+		// identical output).
 		auto referencesMacro = [](const SmallVectorImpl<SourceLine>& lines) {
 			for (const SourceLine& line : lines) {
-				if (line.Text.contains("SOFTWARE_RENDERER"_s) || line.Text.contains("NO_DYNAMIC_BRANCHING"_s)) {
+				if (line.Text.contains("SOFTWARE_RENDERER"_s) || line.Text.contains("NO_DYNAMIC_BRANCHING"_s) ||
+					line.Text.contains("LOW_POWER_GPU"_s)) {
 					return true;
 				}
 			}
@@ -4843,7 +4939,15 @@ R"GLSL(void main()
 			resolved.insert(resolved.end(), document.Prelude.begin(), document.Prelude.end());
 			resolved.insert(resolved.end(), stage.begin(), stage.end());
 			if (useResolved) {
-				ResolveBackendConditionals(resolved, softwareRenderer, noDynamicBranching);
+				ResolveBackendConditionals(resolved, softwareRenderer, noDynamicBranching, lowPowerGpu);
+				// Again, now that the backend macros are gone. The pass at assembly time (see
+				// ParseDocument) could not see through them: a helper called only from inside
+				// "#if !SOFTWARE_RENDERER" still had a textual reference there and counted as used, so
+				// resolving the conditional away removed the call and left the definition behind - which
+				// is how the software renderer ended up carrying a transpiled voronoi nothing calls. The
+				// reference scan is textual and this stream still holds the variant conditionals, so it
+				// stays conservative about those; it only collects what THIS backend just dropped.
+				EliminateUnusedFunctions(resolved);
 			}
 			if (lowerConditionals) {
 				LowerEmittedConditionals(resolved, valueMacros);

@@ -2633,8 +2633,13 @@ namespace Death { namespace IO {
 #		else
 		constexpr std::size_t BufferSize = 128 * 1024;
 #		endif
-#		if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
-		// On devices with smaller stack size, use heap buffer instead to avoid performance loss due to multiple small reads/writes with small buffer
+#		if defined(DEATH_TARGET_SWITCH)|| defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_GAMECUBE) || \
+			defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
+			defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
+			defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
+		// On devices with smaller stack size, use heap buffer instead - the alternative is not a performance
+		// question there but a crash: BufferSize is larger than the whole stack these platforms give a thread
+		// (the PSP's are 64 KB), so the array below would run off the end of it before a single byte was copied.
 		auto heapBuffer = std::make_unique<char[]>(BufferSize);
 		char* buffer = heapBuffer.get();
 #		else

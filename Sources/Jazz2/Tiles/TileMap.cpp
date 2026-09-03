@@ -7,7 +7,6 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/RenderResources.h"
-#include "../../nCine/Graphics/RenderBuffersManager.h"
 
 #include <Containers/GrowableArray.h>
 
@@ -41,6 +40,21 @@ namespace Jazz2::Tiles
 #endif
 		constexpr bool SupportsTexturedBackgroundCircle = true;
 
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Interleaved per-vertex format of the tile-layer and debris meshes, shared with the lighting mesh:
+		// position.xy, texcoords.uv, color.rgba
+		constexpr std::uint32_t FloatsPerVertex = 8;
+
+		// A quad is its four distinct corners plus six indices out of the pattern every quad mesh shares (see
+		// RenderResources::GetQuadIndices()) - a third less vertex data to write and copy each frame than the
+		// six-vertex form the same triangles need without indices, and a third fewer vertices for a
+		// programmable backend to shade. The fixed-function tiers read the vertex stream themselves rather
+		// than pulling it through the index buffer, so they resolve the indices in their own dispatch (see
+		// `DispatchTileMesh()` in the GU, GX, PVR, GS, RDP and LegacyGL backends).
+		constexpr std::uint32_t VerticesPerQuad = RenderResources::VerticesPerQuad;
+		constexpr std::uint32_t FloatsPerQuad = VerticesPerQuad * FloatsPerVertex;
+#endif
+
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_AMIGAOS)
 		// Slots the render command pool keeps even when nothing needs them - roughly what one viewport of a level
@@ -52,10 +66,10 @@ namespace Jazz2::Tiles
 		// Capacity _debrisList keeps around, so the usual handful of particles never reallocates
 		constexpr std::int32_t MinDebrisCapacity = 64;
 		// Buffers the mesh vertex pool keeps around (one per drawn tile layer plus one per debris group, which a
-		// level of eight layers with a burst running fits into), and the floats each of them keeps - 48 per quad,
-		// so this holds a modest layer or burst without reallocating
+		// level of eight layers with a burst running fits into), and the floats each of them keeps - 32 per
+		// quad, so this holds a modest layer or burst without reallocating
 		constexpr std::int32_t MinPooledMeshBuffers = 12;
-		constexpr std::int32_t MinMeshBufferCapacity = 48 * 128;
+		constexpr std::int32_t MinMeshBufferCapacity = 32 * 128;
 #	if !defined(TILEMAP_USE_SINGLE_DRAW)
 		// Absolute ceiling on the render command pool for the fallback path that rents one command per visible
 		// particle (~840 bytes each on the Dreamcast). TileMap::MaxDebrisCount already bounds it for a single
@@ -1195,8 +1209,8 @@ namespace Jazz2::Tiles
 			x1 -= remX - (float)TileSet::DefaultTileSize;
 			y1 -= remY - (float)TileSet::DefaultTileSize;
 			
-			// Save the tile Y at the left border so that we can roll back to it at the start of every row iteration
-			std::int32_t tileYs = tileY;
+			// Save the tile X at the left border so that we can roll back to it at the start of every row
+			std::int32_t tileXs = tileX;
 
 			// Calculate the last coordinates we want to draw to
 			float x3 = x1 + (TileSet::DefaultTileSize * 2) + cullingRect.W;
@@ -1238,27 +1252,41 @@ namespace Jazz2::Tiles
 #	endif
 #endif
 
-			std::int32_t tile_xo = -1;
-			for (float x2 = x1; x2 <= x3; x2 += TileSet::DefaultTileSize) {
-				tileX = (tileX + 1) % tileCount.X;
-				tile_xo++;
-				if (!layer.Description.RepeatX) {
-					// If the current tile isn't in the first iteration of the layer horizontally, don't draw this column
-					if (tileAbsX + tile_xo + 1 < 0 || tileAbsX + tile_xo + 1 >= tileCount.X) {
+			// Remembers the reciprocals of the last tile texture's dimensions across the walk below; a layer's
+			// tiles overwhelmingly share one texture, so this turns four divisions per tile into two per layer
+			Texture* lastTileTexture = nullptr;
+			float lastTexInvW = 0.0f, lastTexInvH = 0.0f;
+
+			// Y is the OUTER loop, so the walk runs along the layout's rows. `Layout` is indexed
+			// `tileX + tileY * LayoutSize.X`, so with X outside (as it used to be) the inner step jumped a
+			// whole row - 12 bytes per LayerTile times a level width of a couple of hundred, about 3 KB - and
+			// every one of the ~200 tiles a layer visits landed on its own cache line. Along a row instead,
+			// eighteen consecutive tiles share four lines. The same tiles are visited either way; only the
+			// order the quads are appended in changes, and tiles of one layer never overlap.
+			std::int32_t tile_yo = -1;
+			for (float y2 = y1; y2 <= y3; y2 += TileSet::DefaultTileSize) {
+				// A compare-and-wrap rather than a modulo: tileY is always already below tileCount.Y, so the
+				// two agree, and an integer division is about 36 cycles on the consoles' in-order cores
+				if (++tileY >= tileCount.Y) { tileY = 0; }
+				tile_yo++;
+				if (!layer.Description.RepeatY) {
+					// If the current tile isn't in the first iteration of the layer vertically, skip this row
+					if (tileAbsY + tile_yo + 1 < 0 || tileAbsY + tile_yo + 1 >= tileCount.Y) {
 						continue;
 					}
 				}
-				tileY = tileYs;
-				std::int32_t tile_yo = -1;
-				for (float y2 = y1; y2 <= y3; y2 += TileSet::DefaultTileSize) {
-					tileY = (tileY + 1) % tileCount.Y;
-					tile_yo++;
+				tileX = tileXs;
+				std::int32_t tile_xo = -1;
+				for (float x2 = x1; x2 <= x3; x2 += TileSet::DefaultTileSize) {
+					// As above, and this one is per TILE rather than per row
+					if (++tileX >= tileCount.X) { tileX = 0; }
+					tile_xo++;
 
 					LayerTile tile = layer.Layout[tileX + tileY * layer.LayoutSize.X];
 
-					if (!layer.Description.RepeatY) {
-						// If the current tile isn't in the first iteration of the layer vertically, don't draw it
-						if (tileAbsY + tile_yo + 1 < 0 || tileAbsY + tile_yo + 1 >= tileCount.Y) {
+					if (!layer.Description.RepeatX) {
+						// If the current tile isn't in the first iteration of the layer horizontally, don't draw it
+						if (tileAbsX + tile_xo + 1 < 0 || tileAbsX + tile_xo + 1 >= tileCount.X) {
 							continue;
 						}
 					}
@@ -1296,11 +1324,24 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					Vector2i texSize = tileTexture->GetSize();
-					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-					float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
-					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-					float texBiasY = ((tileId / tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+					// The two reciprocals depend only on the texture, and a layer's tiles overwhelmingly share
+					// one, so they are remembered across iterations instead of dividing four times per tile.
+					// The tile's row and column come from ONE integer division as well - the remainder is
+					// recovered with a multiply. That is six divisions per tile removed, and on the consoles'
+					// in-order cores a division is both slow (about 29 cycles for `div.s`, 36 for integer) and
+					// unpipelined, which made this loop's arithmetic mostly waiting.
+					if DEATH_UNLIKELY(tileTexture != lastTileTexture) {
+						lastTileTexture = tileTexture;
+						const Vector2i texSize = tileTexture->GetSize();
+						lastTexInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
+						lastTexInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
+					}
+					const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
+					const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
+					float texScaleX = TileSet::DefaultTileSize * lastTexInvW;
+					float texBiasX = (tileCol * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * lastTexInvW;
+					float texScaleY = TileSet::DefaultTileSize * lastTexInvH;
+					float texBiasY = (tileRow * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * lastTexInvH;
 
 					// ToDo: Flip normal map somehow
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -1314,7 +1355,13 @@ namespace Jazz2::Tiles
 
 					float x2r = x2, y2r = y2;
 					if (!PreferencesCache::UnalignedViewport) {
-						x2r = std::floor(x2r); y2r = std::floor(y2r);
+						// MIPS and SH-4 have no floor instruction, so `std::floor` here is a real `jal floorf`
+						// into libm - twice per tile. A truncating cast with the negative correction is the
+						// same value for any coordinate that fits in an int32, which a tile position on
+						// screen always does.
+						const float tx = float(std::int32_t(x2r)), ty = float(std::int32_t(y2r));
+						x2r = (tx > x2r ? tx - 1.0f : tx);
+						y2r = (ty > y2r ? ty - 1.0f : ty);
 					}
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
@@ -1543,16 +1590,15 @@ namespace Jazz2::Tiles
 		// layer tint is applied via the command's instance color in EmitMesh)
 		std::size_t base = vertices.size();
 		// Every float is written below, so the zero-initialization resize() would do first is wasted work
-		vertices.resize_for_overwrite(base + 6 * 8);
+		vertices.resize_for_overwrite(base + FloatsPerQuad);
 		float* v = vertices.data() + base;
 		auto put = [&](float px, float py, float pu, float pv) {
 			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
 			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = alpha;
 		};
+		// The four corners in the order of the shared quad index pattern
 		put(x,  y,  u0, v0);
 		put(xr, y,  u1, v0);
-		put(xr, yr, u1, v1);
-		put(x,  y,  u0, v0);
 		put(xr, yr, u1, v1);
 		put(x,  yr, u0, v1);
 	}
@@ -1591,10 +1637,10 @@ namespace Jazz2::Tiles
 		const float u0 = debris.TexBiasX, v0 = debris.TexBiasY;
 		const float u1 = debris.TexScaleX + debris.TexBiasX, v1 = debris.TexScaleY + debris.TexBiasY;
 
-		// Same 8-float layout and same vertex order as AppendTileQuad(), so a particle is still recognized as a
-		// quad by the backends that fold the two triangles back into one four-vertex strip
+		// Same 8-float layout and same corner order as AppendTileQuad(), so a particle is still recognized as
+		// a quad by the backends that fold the two triangles back into one four-vertex strip
 		std::size_t base = vertices.size();
-		vertices.resize_for_overwrite(base + 6 * 8);
+		vertices.resize_for_overwrite(base + FloatsPerQuad);
 		float* v = vertices.data() + base;
 		auto put = [&](float px, float py, float pu, float pv) {
 			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
@@ -1603,26 +1649,22 @@ namespace Jazz2::Tiles
 		put(x0,           y0,           u0, v0);
 		put(x0 + ex,      y0 + ey,      u1, v0);
 		put(x0 + ex + fx, y0 + ey + fy, u1, v1);
-		put(x0,           y0,           u0, v0);
-		put(x0 + ex + fx, y0 + ey + fy, u1, v1);
 		put(x0 + fx,      y0 + fy,      u0, v1);
 	}
 
 	void TileMap::EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
 		std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending)
 	{
-		constexpr std::uint32_t FloatsPerVertex = 8;
-		// Cap vertices per command to whatever the shared array buffer can actually hold, queried at runtime from the
-		// buffer manager (same source RenderBatcher uses) instead of a fixed size - so it adapts to the configured VBO
-		// size rather than assuming 64 KB. Rounded down to a multiple of 6 (one quad = two triangles = 6 vertices) so
-		// chunk boundaries fall on quad boundaries.
-		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		std::uint32_t maxVerticesPerChunk = maxVertexDataSize / (FloatsPerVertex * sizeof(float));
-		maxVerticesPerChunk -= (maxVerticesPerChunk % 6);
+		// Cap quads per command to what one draw can actually reach through the shared streaming buffers, queried
+		// at runtime from the buffer manager (same source RenderBatcher uses) instead of a fixed size - so it
+		// adapts to the configured buffer sizes rather than assuming 64 KB. Counting in quads is what puts the
+		// chunk boundaries on quad boundaries, whichever form a quad takes.
+		const std::uint32_t maxQuadsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
+		const std::uint16_t* quadIndices = RenderResources::GetQuadIndices();
 
-		std::uint32_t totalVertices = (std::uint32_t)(vertices.size() / FloatsPerVertex);
-		for (std::uint32_t firstVertex = 0; firstVertex < totalVertices; firstVertex += maxVerticesPerChunk) {
-			std::uint32_t count = std::min(maxVerticesPerChunk, totalVertices - firstVertex);
+		std::uint32_t totalQuads = (std::uint32_t)(vertices.size() / FloatsPerQuad);
+		for (std::uint32_t firstQuad = 0; firstQuad < totalQuads; firstQuad += maxQuadsPerChunk) {
+			std::uint32_t count = std::min(maxQuadsPerChunk, totalQuads - firstQuad);
 
 			if (_meshCommandCount >= (std::int32_t)_meshCommands.size()) {
 				auto& newCommand = _meshCommands.emplace_back(std::make_unique<RenderCommand>());
@@ -1656,9 +1698,12 @@ namespace Jazz2::Tiles
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(FloatsPerVertex);
-			geometry.SetVertexCount(count);
-			geometry.SetHostVertexPointer(vertices.data() + firstVertex * FloatsPerVertex);
-			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count);
+			geometry.SetHostVertexPointer(vertices.data() + firstQuad * FloatsPerQuad);
+			// Indices count from the chunk's own first vertex, which the base vertex of the draw supplies, so
+			// every chunk reads the shared array from its start
+			geometry.SetIndexCount(count * RenderResources::IndicesPerQuad);
+			geometry.SetHostIndexPointer(quadIndices);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * VerticesPerQuad);
 
 			// Vertex positions are already in world space, so the model matrix is identity
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));

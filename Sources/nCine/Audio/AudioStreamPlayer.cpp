@@ -35,7 +35,7 @@ namespace nCine
 			case PlayerState::Initial:
 			case PlayerState::Stopped: {
 				const unsigned int source = device.registerPlayer(this);
-				if (source == IAudioDevice::UnavailableSource) {
+				if DEATH_UNLIKELY(source == IAudioDevice::UnavailableSource) {
 					if (device.isValid()) {
 						LOGW("No more available audio sources for playing");
 					}
@@ -65,7 +65,12 @@ namespace nCine
 				// its buffer queue with an iterator that is not valid until something is queued and
 				// asserts its way into a kernel panic instead. `enqueue()` starts the source itself once
 				// it has queued the first buffer, which is the same path it uses to recover an underrun.
-				if (!_audioStream.enqueue(_sourceId, GetFlags(PlayerFlags::Looping))) {
+				// Nothing is primed for a stream that is turned all the way down - that first chunk is a
+				// decode like any other. The source is left registered but never started, which is safe
+				// precisely because nothing is queued on it: the state the comment above warns about is
+				// a source that has been told to play with an empty queue, and playSource() only ever
+				// happens from inside enqueue(), after a buffer is on the queue.
+				if (!isSilent() && !_audioStream.enqueue(_sourceId, GetFlags(PlayerFlags::Looping))) {
 					// Nothing could be decoded at all, there is no stream to play
 					_state = PlayerState::Stopped;
 					device.setSourceBuffer(_sourceId, 0);
@@ -124,6 +129,14 @@ namespace nCine
 	void AudioStreamPlayer::updateState()
 	{
 		if (_state == PlayerState::Playing) {
+			// Decoding is by far the most expensive thing a streamed player does and none of it is worth doing
+			// for a stream turned all the way down. The player stays registered and stays in the Playing state,
+			// so this resumes by itself the moment the gain comes back: what is already queued plays out,
+			// the source runs dry, and the underrun path inside enqueue() starts it again.
+			if DEATH_UNLIKELY(isSilent()) {
+				return;
+			}
+
 			bool shouldStillPlay = _audioStream.enqueue(_sourceId, GetFlags(PlayerFlags::Looping));
 			if (!shouldStillPlay) {
 				IAudioDevice& device = theServiceLocator().GetAudioDevice();

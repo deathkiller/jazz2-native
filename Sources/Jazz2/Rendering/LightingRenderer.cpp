@@ -1,7 +1,6 @@
 ﻿#include "LightingRenderer.h"
 #include "PlayerViewport.h"
 
-#include "../../nCine/Graphics/RenderBuffersManager.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/RenderResources.h"
 
@@ -13,6 +12,9 @@ namespace Jazz2::Rendering
 		// Interleaved per-vertex format shared with the tile-layer meshes (position.xy, texcoords.xy, color.rgba),
 		// so the mesh shaders declare the same attributes - see ContentResolver::CompileShaders()
 		constexpr std::uint32_t FloatsPerVertex = 8;
+		// A light goes out as its four distinct corners plus the shared two-triangle index pattern, instead of
+		// the six vertices the same triangles need without indices
+		constexpr std::uint32_t FloatsPerQuad = RenderResources::VerticesPerQuad * FloatsPerVertex;
 	}
 #endif
 
@@ -66,17 +68,18 @@ namespace Jazz2::Rendering
 			return true;
 		}
 
-		// Cap vertices per command to whatever the shared array buffer can hold, queried at runtime from the buffer
-		// manager instead of a fixed size. Rounded down to a multiple of 6 (one light = two triangles = 6 vertices)
-		// so a split falls between lights.
-		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		std::uint32_t maxVerticesPerChunk = maxVertexDataSize / (FloatsPerVertex * sizeof(float));
-		maxVerticesPerChunk -= (maxVerticesPerChunk % 6);
+		// Cap lights per command to what one indexed draw can reach through the shared streaming buffers, which
+		// the buffers manager knows at runtime rather than this being a fixed size. Splitting on whole lights
+		// keeps every chunk describable by the same shared index pattern.
+		const std::uint32_t maxLightsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
+		// Indices count from the chunk's own first vertex, which the base vertex of the draw supplies, so every
+		// chunk reads the shared array from its start
+		const std::uint16_t* indices = RenderResources::GetQuadIndices();
 
-		const std::uint32_t totalVertices = (std::uint32_t)(_vertices.size() / FloatsPerVertex);
+		const std::uint32_t totalLights = (std::uint32_t)(_vertices.size() / FloatsPerQuad);
 		std::int32_t commandIndex = 0;
-		for (std::uint32_t firstVertex = 0; firstVertex < totalVertices; firstVertex += maxVerticesPerChunk) {
-			const std::uint32_t count = std::min(maxVerticesPerChunk, totalVertices - firstVertex);
+		for (std::uint32_t firstLight = 0; firstLight < totalLights; firstLight += maxLightsPerChunk) {
+			const std::uint32_t count = std::min(maxLightsPerChunk, totalLights - firstLight);
 
 			RenderCommand* command = RentRenderCommand(commandIndex++);
 
@@ -87,9 +90,10 @@ namespace Jazz2::Rendering
 
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(FloatsPerVertex);
-			geometry.SetVertexCount(count);
-			geometry.SetHostVertexPointer(_vertices.data() + firstVertex * FloatsPerVertex);
-			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count);
+			geometry.SetHostVertexPointer(_vertices.data() + firstLight * FloatsPerQuad);
+			geometry.SetIndexCount(count * RenderResources::IndicesPerQuad);
+			geometry.SetHostIndexPointer(indices);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * RenderResources::VerticesPerQuad);
 
 			renderQueue.AddCommand(command);
 		}
@@ -111,17 +115,16 @@ namespace Jazz2::Rendering
 
 		std::size_t base = _vertices.size();
 		// Every float is written below, so the zero-initialization resize() would do first is wasted work
-		_vertices.resize_for_overwrite(base + 6 * FloatsPerVertex);
+		_vertices.resize_for_overwrite(base + FloatsPerQuad);
 		float* v = _vertices.data() + base;
 		auto put = [&](float px, float py, float cx, float cy) {
 			*v++ = px; *v++ = py; *v++ = radiusNear; *v++ = 0.0f;
 			*v++ = light.Intensity; *v++ = light.Brightness; *v++ = cx; *v++ = cy;
 		};
-		// Same two-triangle vertex order the tile and particle meshes use
+		// Corner order of the shared quad index pattern (see RenderResources::GetQuadIndices()), which is also
+		// the order the tile and particle meshes use
 		put(x0, y0, -1.0f, -1.0f);
 		put(x1, y0,  1.0f, -1.0f);
-		put(x1, y1,  1.0f,  1.0f);
-		put(x0, y0, -1.0f, -1.0f);
 		put(x1, y1,  1.0f,  1.0f);
 		put(x0, y1, -1.0f,  1.0f);
 	}

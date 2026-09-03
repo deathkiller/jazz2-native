@@ -5,6 +5,7 @@
 #include "NetworkManager.h"
 #include "PacketTypes.h"
 #include "../PreferencesCache.h"
+#include "../PlatformWebRequest.h"
 #include "../../nCine/Application.h"
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/FrameTimer.h"
@@ -409,6 +410,7 @@ namespace Jazz2::Multiplayer
 
 		String url = "https://de4th.dev/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		auto request = WebSession::GetDefault().CreateRequest(url);
+		ApplyPlatformWebRequestOptions(request);
 		auto result = request.Execute();
 		if (result) {
 			auto s = request.GetResponse().GetStream();
@@ -741,6 +743,7 @@ namespace Jazz2::Multiplayer
 		length += formatInto({ input + length, sizeof(input) - length }, "}}");
 
 		auto request = WebSession::GetDefault().CreateRequest("https://de4th.dev/jazz2/servers"_s);
+		ApplyPlatformWebRequestOptions(request);
 		request.SetMethod("POST"_s);
 		request.SetData(StringView(input, length), "application/json"_s);
 		if (auto result = request.Execute()) {
@@ -802,6 +805,7 @@ namespace Jazz2::Multiplayer
 			NCINE_PROTOCOL_VERSION_s, PreferencesCache::GetDeviceID());
 
 		auto request = WebSession::GetDefault().CreateRequest("https://de4th.dev/jazz2/servers"_s);
+		ApplyPlatformWebRequestOptions(request);
 		request.SetMethod("POST"_s);
 		request.SetData(StringView(input, length), "application/json"_s);
 		if (auto result = request.Execute()) {

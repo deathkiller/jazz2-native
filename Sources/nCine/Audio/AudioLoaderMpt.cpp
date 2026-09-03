@@ -19,8 +19,8 @@ namespace nCine
 
 #if defined(DEATH_TARGET_PSP)
 		// Rendering a module is the most expensive thing the Allegrex is asked to do outside the renderer, and
-		// on this platform it happens synchronously on the main thread (there is no decoding thread), so every
-		// buffer the stream refills is time the frame does not get. Half the output rate is half that cost,
+		// it costs more than the idle time the decoding thread has to hide it in, so the main thread ends up
+		// waiting on the part it cannot overlap. Half the output rate is half that cost,
 		// for music that comes out of a pair of centimetre-wide speakers - and the samples inside the original
 		// modules were recorded at around this rate to begin with. The device resamples the stream back up to
 		// its own 44100 Hz, which costs a fraction of what the module mixer does.

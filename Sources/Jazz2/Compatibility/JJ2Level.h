@@ -121,6 +121,14 @@ namespace Jazz2::Compatibility
 		std::int32_t GetMaxSupportedTiles() const {
 			return (_version == JJ2Version::BaseGame ? 1024 : 4096);
 		}
+		/**
+			@brief Frames one animated tile can have
+
+			What the format stores per tile, and the size of @ref AnimatedTileSection::Frames. The count that
+			accompanies them is a single byte, so a file can name up to 255 - see LoadAnimatedTiles().
+		*/
+		static constexpr std::int32_t MaxAnimationFrames = 64;
+
 		/** @brief Returns maximum number of supported animations */
 		std::int32_t GetMaxSupportedAnims() const {
 			return (_version == JJ2Version::BaseGame ? 128 : 256);
@@ -189,7 +197,7 @@ namespace Jazz2::Compatibility
 			bool IsPingPong;
 			std::uint8_t Speed;
 			std::uint8_t FrameCount;
-			std::uint16_t Frames[64];
+			std::uint16_t Frames[MaxAnimationFrames];
 		};
 
 		struct OverridenTileDiffuse {

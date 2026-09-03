@@ -473,13 +473,24 @@ namespace nCine
 	{
 		// Through locals of OpenAL's own type, for the same reason as in createBuffer()
 		constexpr std::int32_t MaxUnqueuedBuffers = 8;
-		ALuint unqueuedIds[MaxUnqueuedBuffers];
+		ALuint unqueuedIds[MaxUnqueuedBuffers] = {};
 		if DEATH_UNLIKELY(count > MaxUnqueuedBuffers) {
 			count = MaxUnqueuedBuffers;
 		}
 
+		// `count` entries of the caller's array are written, so the caller has to be able to hold that many -
+		// this cannot check it, and the local clamp above is not that check (it bounds the local buffer, not
+		// the caller's). Zero-initialized because `alSourceUnqueueBuffers()` either unqueues exactly `count`
+		// buffers or fails and unqueues none, leaving the locals untouched: without this the caller would
+		// then copy uninitialized stack into its own buffer-name table and later ask the library to fill a
+		// name that was never valid.
+		alGetError();
 		alSourceUnqueueBuffers(sourceId, count, unqueuedIds);
-		AL_LOG_ERRORS();
+		if DEATH_UNLIKELY(alGetError() != AL_NO_ERROR) {
+			for (std::int32_t i = 0; i < MaxUnqueuedBuffers; i++) {
+				unqueuedIds[i] = 0;
+			}
+		}
 
 		for (std::int32_t i = 0; i < count; i++) {
 			bufferIds[i] = unqueuedIds[i];

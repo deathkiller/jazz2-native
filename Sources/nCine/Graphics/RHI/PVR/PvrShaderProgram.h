@@ -161,6 +161,10 @@ namespace nCine::RHI::PVR
 		inline std::uint32_t GetBoundVboOffset() const {
 			return _boundVboOffset;
 		}
+		/** @brief Returns the index buffer last bound by @ref DefineVertexFormat(), or `nullptr` */
+		inline const PvrBuffer* GetBoundIbo() const {
+			return _boundIbo;
+		}
 
 		void Reset();
 		void SetObjectLabel(StringView label);

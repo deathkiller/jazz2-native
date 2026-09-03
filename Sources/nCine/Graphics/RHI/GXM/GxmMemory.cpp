@@ -143,6 +143,18 @@ namespace nCine::RHI::GXM
 		Free(block);
 	}
 
+	void GxmMemory::ReleaseRetainedSurfaces()
+	{
+		// Deliberately unconditional about InUse: the whole point of the table is that a released surface stays
+		// allocated, so at teardown time nothing but this hands its CDRAM back. The caller has to have finished
+		// the GPU first (see GxmDevice::DestroySwapchain()).
+		for (RetainedSurface& surface : _retainedSurfaces) {
+			Free(surface.Memory);
+			surface = RetainedSurface();
+		}
+		_retainedSurfaceCount = 0;
+	}
+
 	GxmMemory::Block GxmMemory::AllocVertexUsse(const char* name, std::uint32_t size)
 	{
 		Block block;

@@ -51,6 +51,20 @@ namespace Jazz2::UI::Menu
 	{
 	}
 
+	void ServerSelectSection::ShowScreenKeyboardForIpInput()
+	{
+		// A console has no keyboard of its own, so the field can only be filled through the platform's. Where
+		// that is a modal editor the callback hands back the whole string and the buffer takes it verbatim;
+		// where it feeds keystrokes there is no callback and they arrive through OnTextInput() as usual.
+		if (!theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		theApplication().ShowScreenKeyboard(_ipInput.GetText(), [this](StringView text) {
+			_ipInput.Activate(text);
+		});
+	}
+
 	Recti ServerSelectSection::GetClipRectangle(const Recti& contentBounds)
 	{
 		return Recti(contentBounds.X, contentBounds.Y + TopLine - 1, contentBounds.W, contentBounds.H - TopLine - BottomLine + 2);
@@ -113,7 +127,7 @@ namespace Jazz2::UI::Menu
 						theApplication().HideScreenKeyboard();
 						_keyboardVisible = false;
 					} else {
-						theApplication().ShowScreenKeyboard();
+						ShowScreenKeyboardForIpInput();
 						_keyboardVisible = true;
 					}
 					RecalcLayoutForScreenKeyboard();
@@ -145,6 +159,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForIpInput = true;
 				_ipInput.Activate({});
+				ShowScreenKeyboardForIpInput();
 				return;
 			} else if (_root->ActionHit(PlayerAction::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -595,7 +610,7 @@ namespace Jazz2::UI::Menu
 							theApplication().HideScreenKeyboard();
 							_keyboardVisible = false;
 						} else {
-							theApplication().ShowScreenKeyboard();
+							ShowScreenKeyboardForIpInput();
 							_keyboardVisible = true;
 						}
 						RecalcLayoutForScreenKeyboard();
@@ -608,6 +623,7 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForIpInput = true;
 					_ipInput.Activate({});
+					ShowScreenKeyboardForIpInput();
 					return;
 				}
 

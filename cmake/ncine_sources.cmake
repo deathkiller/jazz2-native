@@ -232,6 +232,7 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmDevice.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmMemory.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderCache.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderProgram.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderUniforms.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmTexture.cpp

@@ -324,7 +324,9 @@ namespace
 				for (std::int32_t stage = 0; stage < 2; stage++) {
 					bool vertexStage = (stage == 0);
 					dump += String(vertexStage ? "--- vertex (" : "--- fragment (") + tag + ") ---\n";
-					String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+					// The Cg dialect is the PS Vita's, so the dump has to be built the way RunEmitCg builds it
+					String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define,
+						/*softwareRenderer*/ false, /*noDynamicBranching*/ false, /*lowPowerGpu*/ cg);
 					String transformed;
 					Diagnostic diag;
 					if (HlslEmitter::Transform(modern, vertexStage, v.Reflection, transformed, diag, dialect)) {
@@ -1806,7 +1808,11 @@ namespace
 					bool ok = true;
 					for (std::int32_t stage = 0; stage < 2 && ok; stage++) {
 						const bool vertexStage = (stage == 0);
-						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+						// Only this transpile path builds sources for the PS Vita, so a shader can substitute
+						// a cheaper approximation of a fragment path the SGX543 cannot afford at full screen
+						// (e.g. TexturedBackground's star field) without changing any other backend's output
+						String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define,
+							/*softwareRenderer*/ false, /*noDynamicBranching*/ false, /*lowPowerGpu*/ true);
 						String cg;
 						Diagnostic diag;
 						if (HlslEmitter::Transform(modern, vertexStage, v.Reflection, cg, diag,

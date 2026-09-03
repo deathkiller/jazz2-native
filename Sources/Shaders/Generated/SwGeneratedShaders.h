@@ -1908,58 +1908,6 @@ struct TexturedBackground_Uniforms
 	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RHI::Software::sw::vec2 TexturedBackground_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	float h = dot(p, vec2(12.9898f, 78.233f));
-	float h2 = dot(p, vec2(37.271f, 377.632f));
-	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
-}
-
-static nCine::RHI::Software::sw::vec3 TexturedBackground_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-	vec2 mg;
-	vec2 mr;
-	float md = 8.0f;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = TexturedBackground_hash2D(in, n + g);
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-static float TexturedBackground_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec3 starValue = TexturedBackground_voronoi(in, samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0f - starValue.x / threshold;
-		return min(power * power * power, 0.5f);
-	}
-	return 0.0f;
-}
-
 void TexturedBackground_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -1988,58 +1936,6 @@ struct TexturedBackground_DITHER_Uniforms
 	nCine::RHI::Software::sw::vec4 uHorizonColor;
 	nCine::RHI::Software::sw::vec2 uShift;
 };
-
-static nCine::RHI::Software::sw::vec2 TexturedBackground_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	float h = dot(p, vec2(12.9898f, 78.233f));
-	float h2 = dot(p, vec2(37.271f, 377.632f));
-	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
-}
-
-static nCine::RHI::Software::sw::vec3 TexturedBackground_DITHER_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-	vec2 mg;
-	vec2 mr;
-	float md = 8.0f;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = TexturedBackground_DITHER_hash2D(in, n + g);
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-static float TexturedBackground_DITHER_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec3 starValue = TexturedBackground_DITHER_voronoi(in, samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0f - starValue.x / threshold;
-		return min(power * power * power, 0.5f);
-	}
-	return 0.0f;
-}
 
 void TexturedBackground_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
@@ -2070,58 +1966,6 @@ struct TexturedBackgroundCircle_Uniforms
 	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RHI::Software::sw::vec2 TexturedBackgroundCircle_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	float h = dot(p, vec2(12.9898f, 78.233f));
-	float h2 = dot(p, vec2(37.271f, 377.632f));
-	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
-}
-
-static nCine::RHI::Software::sw::vec3 TexturedBackgroundCircle_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-	vec2 mg;
-	vec2 mr;
-	float md = 8.0f;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = TexturedBackgroundCircle_hash2D(in, n + g);
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-static float TexturedBackgroundCircle_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec3 starValue = TexturedBackgroundCircle_voronoi(in, samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0f - starValue.x / threshold;
-		return min(power * power * power, 0.5f);
-	}
-	return 0.0f;
-}
-
 void TexturedBackgroundCircle_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
 	using namespace nCine::RHI::Software::sw;
@@ -2150,58 +1994,6 @@ struct TexturedBackgroundCircle_DITHER_Uniforms
 	nCine::RHI::Software::sw::vec4 uHorizonColor;
 	nCine::RHI::Software::sw::vec2 uShift;
 };
-
-static nCine::RHI::Software::sw::vec2 TexturedBackgroundCircle_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	float h = dot(p, vec2(12.9898f, 78.233f));
-	float h2 = dot(p, vec2(37.271f, 377.632f));
-	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
-}
-
-static nCine::RHI::Software::sw::vec3 TexturedBackgroundCircle_DITHER_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec2 n = floor(p);
-	vec2 f = fract(p);
-	vec2 mg;
-	vec2 mr;
-	float md = 8.0f;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			vec2 g = vec2(float(i), float(j));
-			vec2 o = TexturedBackgroundCircle_DITHER_hash2D(in, n + g);
-			vec2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return vec3(md, mr);
-}
-
-static float TexturedBackgroundCircle_DITHER_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
-{
-	using namespace nCine::RHI::Software::sw;
-	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
-	(void)unis;
-	(void)in;
-	vec3 starValue = TexturedBackgroundCircle_DITHER_voronoi(in, samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0f - starValue.x / threshold;
-		return min(power * power * power, 0.5f);
-	}
-	return 0.0f;
-}
 
 void TexturedBackgroundCircle_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {

@@ -90,24 +90,36 @@ namespace nCine
 		/** @brief Index of the next available buffer, which is also the number of buffers currently queued */
 		std::int32_t _nextAvailableBufferIndex;
 
+		/**
+		 * @brief Returns the buffers the backend has finished playing to the free list
+		 *
+		 * Bounded by what this object can actually account for, which the two call sites used to take on
+		 * trust from the backend --- see the comment on the definition for what that cost.
+		 *
+		 * @return Number of buffers returned
+		 */
+		std::int32_t unqueueProcessedBuffers(IAudioDevice& device, std::uint32_t source);
+
 		/** @brief Size in bytes of each streaming buffer */
-#if defined(DEATH_TARGET_PSP)
-		// The PSP has no decoding thread, so a buffer is filled synchronously in the middle of a frame and
-		// the whole cost of it lands on that one frame. Decoding a quarter as much at a time is the same
-		// total work spread over four times as many frames, which is what keeps a refill inside the frame
-		// budget instead of visibly dropping one - measured with module music, where quartering this (along
-		// with halving the decoder's output rate) took the dropped frames of a two-and-a-half minute session
-		// from 85 down to 13. Three of these still queue over a hundred milliseconds ahead, far more than a
-		// frame hitch can eat into.
-		static const std::int32_t BufferSize = 4 * 1024;
-#else
+		// One size for every platform, because what makes a chunk the right size is not how fast the machine
+		// is but how it is consumed: only ONE chunk is ever decoded ahead, so a chunk has to hold more audio
+		// than a frame plays or the queue cannot build a lead and the main thread ends up blocked waiting on
+		// the decoding thread for every buffer. The PSP used to take a quarter of this on the theory that a
+		// smaller synchronous decode spreads the cost - measured, it did the opposite: at 4 KB a chunk held
+		// 46 ms and took ~43 ms of wall time to produce, so production and consumption ran level with no
+		// margin, the queue sat permanently at one buffer, and the frame paid 3-6 ms of pure waiting. The
+		// larger chunk also costs less per byte: the same decode measured 3.0 ms of CPU uncontended at load
+		// against 11.1 ms in a running frame, nearly all of it the renderer evicting the mixer's samples from
+		// a 16 KB D-cache, and a chunk four times the size pays that cold start a quarter as often.
 		static const std::int32_t BufferSize = 16 * 1024;
-#endif
 		/** @brief Reusable decode request holding the intermediate buffer, executed ahead of time on the decoding thread when available */
 		std::shared_ptr<StreamDecodeRequest> _decodeRequest;
 
 		/** @brief Backend id of the currently playing buffer, or 0 if none */
 		std::uint32_t _currentBufferId;
+
+		/** @brief Whether the last chunk could be handed to a decoding thread, so this one need not decode it */
+		bool _asyncDecodeAvailable;
 
 		/** @brief Number of bytes per sample */
 		std::int32_t _bytesPerSample;

@@ -40,7 +40,7 @@ namespace Jazz2::Actors::Lighting
 		light.Pos = _pos;
 		light.Intensity = _intensity;
 		light.Brightness = _brightness;
-		light.RadiusNear = _radiusNear1 + sinf(_phase) * _radiusNear2;
+		light.RadiusNear = _radiusNear1 + sinApprox(_phase) * _radiusNear2;
 		light.RadiusFar = light.RadiusNear + _radiusFar;
 	}
 }

@@ -172,17 +172,30 @@ namespace nCine::RHI::GU
 			out.Ty = pv[1] * model[12] + pv[5] * model[13] + pv[9] * model[14] + pv[13] * model[15];
 		}
 
+		// The clamp is applied to the CONVERTED INTEGER rather than to the float, and the conversion goes
+		// through a SIGNED int. Both details are about the Allegrex rather than taste: MIPS has no
+		// float-to-unsigned instruction, so `std::uint8_t(f)` expands into a comparison against 2^31 with a
+		// second truncation behind a branch, and the compiler then re-evaluates the argument on both arms.
+		// This runs once per vertex colour, which makes it one of the hottest lines in the backend -
+		// packing four channels measured 207 instructions with 23 branches in that form against 39 with
+		// none in this one, and the whole translation unit lost 88 `trunc.w.s` and 305 branches.
+		//
+		// The two forms agree on every input: `v * 255 + 0.5` is monotone, so clamping before or after the
+		// scale picks the same endpoint, a negative v truncates to 0 or below and the integer clamp catches
+		// it, and anything at or above 1 lands at or past 255.
 		inline std::uint8_t QuantizeChannel(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint8_t(v * 255.0f + 0.5f);
+			const std::int32_t q = std::int32_t(v * 255.0f + 0.5f);
+			return std::uint8_t(q < 0 ? 0 : (q > 255 ? 255 : q));
 		}
 
-		// Straight to the 4 bits a 4444 channel actually keeps, skipping the round trip through 8 bits
+		// Straight to the 4 bits a 4444 channel actually keeps, skipping the round trip through 8 bits.
+		// Clamped as an integer for the same reason as QuantizeChannel() above; this one runs once per
+		// lightmap texel.
 		inline std::uint32_t Quantize4Bit(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint32_t(v * 15.0f + 0.5f);
+			const std::int32_t q = std::int32_t(v * 15.0f + 0.5f);
+			return std::uint32_t(q < 0 ? 0 : (q > 15 ? 15 : q));
 		}
 
 		// The GE takes clear/vertex/environment colors as ABGR, the opposite channel order from the ARGB the
@@ -248,7 +261,6 @@ namespace nCine::RHI::GU
 		std::int32_t BlendOp = GU_ADD;
 		std::int32_t BlendSrc = GU_SRC_ALPHA, BlendDst = GU_ONE_MINUS_SRC_ALPHA;
 		std::uint32_t BlendSrcFix = 0, BlendDstFix = 0;
-		std::int32_t Prim = GU_SPRITES;
 		bool TextureSwizzled = false;
 		bool BlendEnabled = true;
 	};
@@ -263,10 +275,16 @@ namespace nCine::RHI::GU
 				a.WrapU == b.WrapU && a.WrapV == b.WrapV && a.Tfx == b.Tfx && a.Tcc == b.Tcc &&
 				a.EnvColor == b.EnvColor && a.BlendOp == b.BlendOp && a.BlendSrc == b.BlendSrc &&
 				a.BlendDst == b.BlendDst && a.BlendSrcFix == b.BlendSrcFix && a.BlendDstFix == b.BlendDstFix &&
-				a.Prim == b.Prim && a.TextureSwizzled == b.TextureSwizzled && a.BlendEnabled == b.BlendEnabled;
+				a.TextureSwizzled == b.TextureSwizzled && a.BlendEnabled == b.BlendEnabled;
 		}
 
 		DrawState batchState;
+		// The primitive is NOT part of DrawState. It is picked at submission time (a quad goes out as a GE
+		// rectangle or a triangle pair depending on its own geometry), so keeping it in the material state
+		// meant every submitter had to take a private copy of that state just to stamp one field into it -
+		// a 76-byte copy per sprite AND per tile, on the hottest path of the backend. It still takes part
+		// in the batch key: a draw call is one primitive type.
+		std::int32_t batchPrim = GU_SPRITES;
 		std::size_t batchFirstByte = 0;
 		std::int32_t batchVertexCount = 0;
 
@@ -338,7 +356,7 @@ namespace nCine::RHI::GU
 			// The GE reads main memory without seeing the data cache; this is the writeback that makes the
 			// vertices visible to it (the PSP equivalent of the GX's DCFlushRange)
 			sceKernelDcacheWritebackRange(base, bytes);
-			sceGuDrawArray(batchState.Prim, VertexType2D, batchVertexCount, nullptr, base);
+			sceGuDrawArray(batchPrim, VertexType2D, batchVertexCount, nullptr, base);
 			frameDrawCalls++;
 			frameVertices += std::uint32_t(batchVertexCount);
 			batchVertexCount = 0;
@@ -358,10 +376,10 @@ namespace nCine::RHI::GU
 			return frameArena + aligned;
 		}
 
-		/** @brief Reserves @p count vertices of the open (or a new) batch drawn under @p state */
-		Vertex2D* AllocVertices(const DrawState& state, std::int32_t count)
+		/** @brief Reserves @p count vertices of the open (or a new) batch of @p prim drawn under @p state */
+		Vertex2D* AllocVertices(const DrawState& state, std::int32_t prim, std::int32_t count)
 		{
-			if (batchVertexCount > 0 && !SameDrawState(batchState, state)) {
+			if (batchVertexCount > 0 && (batchPrim != prim || !SameDrawState(batchState, state))) {
 				FlushBatch();
 			}
 			const std::size_t bytes = std::size_t(count) * sizeof(Vertex2D);
@@ -369,6 +387,7 @@ namespace nCine::RHI::GU
 				frameArenaUsed = (frameArenaUsed + 15) & ~std::size_t(15);
 				batchFirstByte = frameArenaUsed;
 				batchState = state;
+				batchPrim = prim;
 			}
 			if (frameArenaUsed + bytes > FrameArenaBytes) {
 				FlushBatch();
@@ -391,13 +410,12 @@ namespace nCine::RHI::GU
 			the y = 1 edge (see the corner synthesis in Dispatch), so an axis-aligned quad is exactly the case
 			where those pairs agree on the other axis.
 		*/
-		void SubmitQuadPrimitive(DrawState state, const float* px, const float* py, const float* pu, const float* pv,
+		void SubmitQuadPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
 			std::uint32_t abgr, float dx = 0.0f, float dy = 0.0f)
 		{
 			const bool axisAligned = (px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]);
 			if (axisAligned && PreferSpritePrimitive) {
-				state.Prim = GU_SPRITES;
-				Vertex2D* const v = AllocVertices(state, 2);
+				Vertex2D* const v = AllocVertices(state, GU_SPRITES, 2);
 				if (v == nullptr) {
 					return;
 				}
@@ -417,8 +435,7 @@ namespace nCine::RHI::GU
 				v[0] = { u0, v0, abgr, x0, y0, 0.0f };
 				v[1] = { u1, v1, abgr, x1, y1, 0.0f };
 			} else {
-				state.Prim = GU_TRIANGLES;
-				Vertex2D* const v = AllocVertices(state, 6);
+				Vertex2D* const v = AllocVertices(state, GU_TRIANGLES, 6);
 				if (v == nullptr) {
 					return;
 				}
@@ -432,14 +449,13 @@ namespace nCine::RHI::GU
 		}
 
 		/** @brief Submits a triangle strip of its own draw call (arbitrary synthesized geometry) */
-		void SubmitStripPrimitive(DrawState state, const float* px, const float* py, const float* pu, const float* pv,
+		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
 			std::int32_t count, const std::uint32_t* abgr, std::uint32_t flatAbgr, float dx, float dy)
 		{
 			// A strip cannot share a draw call with anything else - the GE would connect it to whatever
 			// vertices follow - so it is bracketed by flushes
-			state.Prim = GU_TRIANGLE_STRIP;
 			FlushBatch();
-			Vertex2D* const v = AllocVertices(state, count);
+			Vertex2D* const v = AllocVertices(state, GU_TRIANGLE_STRIP, count);
 			if (v == nullptr) {
 				return;
 			}
@@ -980,7 +996,7 @@ namespace nCine::RHI::GU
 			const std::uint32_t abgr = PackAbgr(QuantizeChannel(_clearColor.R), QuantizeChannel(_clearColor.G),
 				QuantizeChannel(_clearColor.B), QuantizeChannel(_clearColor.A));
 			sceGuClearColor(abgr);
-			sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT | GU_FAST_CLEAR_BIT);
+			sceGuClear(GU_COLOR_BUFFER_BIT | GU_FAST_CLEAR_BIT);
 		} else {
 			FlushBatch();
 		}
@@ -1135,11 +1151,14 @@ namespace nCine::RHI::GU
 		if ((flags & ClearFlags::Color) == ClearFlags::Color) {
 			guFlags |= GU_COLOR_BUFFER_BIT;
 		}
-		// The depth buffer lives at a fixed video-memory offset sized for the display, so clearing it while
-		// a render target of another size is bound would write outside it; depth is disabled anyway
-		if ((flags & ClearFlags::Depth) == ClearFlags::Depth && _currentRenderTarget == nullptr) {
-			guFlags |= GU_DEPTH_BUFFER_BIT;
-		}
+		// Depth is NOT cleared, however much the caller asks for it. The game draws 2D in painter's order,
+		// so InitializeGu() leaves GU_DEPTH_TEST disabled and the depth mask closed - nothing in a frame
+		// ever reads or writes the depth buffer, so clearing it is a whole framebuffer's worth of writes
+		// (272 KB at this resolution) that no later draw can observe. The surface stays reserved at its
+		// fixed video-memory offset, so restoring a depth pass only means restoring this bit.
+		//
+		// The stencil bit below stays: on this hardware it shares the colour buffer's alpha rather than a
+		// surface of its own, so it costs nothing beyond the colour clear that is happening anyway.
 		if ((flags & ClearFlags::Stencil) == ClearFlags::Stencil && _currentRenderTarget == nullptr) {
 			guFlags |= GU_STENCIL_BUFFER_BIT;
 		}
@@ -1164,18 +1183,33 @@ namespace nCine::RHI::GU
 		static_cast<void>(numInstances);
 		Dispatch(primitive, firstVertex, numVertices);
 	}
+	const std::uint16_t* GuDevice::ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices)
+	{
+		// Only the mesh dispatches read the vertex stream, and only through the 16-bit indices the pipeline
+		// produces (Geometry hands out no other width). Anything else falls back to the non-indexed walk,
+		// which is also what a draw with no index buffer bound gets.
+		if (indexFormat != IndexFormat::UInt16 || numIndices == 0 || _currentProgram == nullptr) {
+			return nullptr;
+		}
+		const GuBuffer* ibo = _currentProgram->GetBoundIbo();
+		if (ibo == nullptr || indexOffset + numIndices * sizeof(std::uint16_t) > ibo->GetSize()) {
+			return nullptr;
+		}
+		return reinterpret_cast<const std::uint16_t*>(ibo->HostData() + indexOffset);
+	}
+
 	void GuDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		// The index count doubles as the vertex count, unchanged: the procedural quad family never reads the
+		// stream and derives its instance count from it, so only the mesh dispatches take the range as well.
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 	void GuDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 
 	FenceHandle GuDevice::InsertFence()
@@ -1488,10 +1522,13 @@ namespace nCine::RHI::GU
 						prevG = rawG;
 						const float r = ClampLightmapChannel(rawR);
 						const float g = ClampLightmapChannel(rawG);
-						const std::uint32_t fr = Quantize4Bit(LightingCombineFactor(r, g, light.AmbR));
-						const std::uint32_t fg = Quantize4Bit(LightingCombineFactor(r, g, light.AmbG));
-						const std::uint32_t fb = Quantize4Bit(LightingCombineFactor(r, g, light.AmbB));
-						prevTexel = std::uint16_t(0xF000 | (fb << 8) | (fg << 4) | fr);
+						// All three channels at once: the covered term and the uncovered weight are shared
+						// between them, and the compiler does not find that through three separate inline
+						// expansions of the single-channel form (see LightingCombineFactors())
+						float factorR, factorG, factorB;
+						LightingCombineFactors(r, g, light.AmbR, light.AmbG, light.AmbB, factorR, factorG, factorB);
+						prevTexel = std::uint16_t(0xF000 | (Quantize4Bit(factorB) << 8)
+							| (Quantize4Bit(factorG) << 4) | Quantize4Bit(factorR));
 						dst[x] = prevTexel;
 					}
 					// The padding columns are reached by the bilinear tap at the last texel
@@ -1535,7 +1572,8 @@ namespace nCine::RHI::GU
 
 	// ------------------------------------------------------------------ draw dispatch
 
-	void GuDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GuDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
@@ -1549,13 +1587,37 @@ namespace nCine::RHI::GU
 		if (vbo == nullptr) {
 			return;
 		}
+		// The mesh arrives either as a plain triangle list, or - on the pipeline's indexed path - as the four
+		// distinct corners of each quad addressed through the index pattern every quad mesh shares (see
+		// RenderResources::GetQuadIndices()). `numVertices` counts element slots either way, three to a
+		// triangle; all that differs is how a slot resolves to a vertex, which is what vertexAt() below does.
+		// The slots the six-vertex form duplicates become repeated indices, so the two that the quad test
+		// further down compares land on the very same vertex in both forms and the test needs no special case.
+		//
+		// Six indices describe four corners, so the element count is no bound on how far into the stream they
+		// reach - and using it as one would reject any mesh whose chunk lands in the last third of the buffer.
+		// One integer pass gives the real extent, and checks that the indices address vertices this buffer
+		// holds at all.
+		std::size_t vertexExtent = std::size_t(numVertices);
+		if (indices != nullptr) {
+			std::uint32_t maxIndex = 0;
+			for (std::int32_t i = 0; i < indexCount; i++) {
+				if (indices[i] > maxIndex) {
+					maxIndex = indices[i];
+				}
+			}
+			vertexExtent = std::size_t(maxIndex) + 1;
+		}
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
-		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
-		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+		// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
+		const auto vertexAt = [vertices, indices](std::int32_t element) {
+			return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
+		};
 
 		const GuUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
@@ -1612,12 +1674,8 @@ namespace nCine::RHI::GU
 
 		DrawState state;
 		if (texture->NeedsPaletteBake()) {
-			if (paletteTex == nullptr || paletteTex->GetPixels() == nullptr) {
-				return;
-			}
-			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels())
-				+ paletteOffset;
-			if (!texture->EnsureBakedStore(entries, std::uint32_t(paletteOffset), paletteVersion, paletteTex)) {
+			// The bake takes the palette and the offset and bounds the row itself
+			if (!texture->EnsureBakedStore(paletteTex, paletteOffset, paletteVersion)) {
 				return;
 			}
 		} else if (texture->IsIndexed()) {
@@ -1700,14 +1758,15 @@ namespace nCine::RHI::GU
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		std::uint32_t lastAbgr = 0;
 		while (triangle < triangleCount) {
-			// Tiles reach here as the six vertices of two triangles, of which the third and fourth repeat the
-			// first and third. Recognizing that pattern lets a tile go out as one quad - and, since tile
-			// quads are axis-aligned, as a two-vertex GE rectangle rather than six triangle vertices.
-			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			// Tiles reach here as two triangles whose third and fourth slots repeat the first and third.
+			// Recognizing that pattern lets a tile go out as one quad - and, since tile quads are
+			// axis-aligned, as a two-vertex GE rectangle rather than six triangle vertices.
+			const std::int32_t element = triangle * 3;
+			const float* group = vertexAt(element);
 			const bool isQuad = (triangle + 2 <= triangleCount &&
-				group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
-				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
-				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+				vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
 
 			float px[4], py[4], pu[4], pvv[4];
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
@@ -1718,24 +1777,30 @@ namespace nCine::RHI::GU
 			}
 
 			if (isQuad) {
-				// Corner order of the sprite strip (v0, v1, v2, v3): vertices 1, 2, 0 and 5 of the tile's six
+				// Corner order of the sprite strip (v0, v1, v2, v3): slots 1, 2, 0 and 5 of the tile's six
 				static const std::int32_t QuadOrder[4] = { 1, 2, 0, 5 };
 				for (std::int32_t i = 0; i < 4; i++) {
-					project(group + std::size_t(QuadOrder[i]) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+					project(vertexAt(element + QuadOrder[i]), px[i], py[i], pu[i], pvv[i]);
 				}
-				DrawState quadState = state;
-				if (!pagedTexture || selectPage(quadState, pu, pvv, 4)) {
-					SubmitQuadPrimitive(quadState, px, py, pu, pvv, lastAbgr);
+				// A single-page atlas (the common case) shares one state with the whole layer, so the tile
+				// submits under it directly; only a paged atlas has to rebase onto its own page and needs a
+				// copy to do it in
+				if DEATH_LIKELY(!pagedTexture) {
+					SubmitQuadPrimitive(state, px, py, pu, pvv, lastAbgr);
+				} else {
+					DrawState quadState = state;
+					if (selectPage(quadState, pu, pvv, 4)) {
+						SubmitQuadPrimitive(quadState, px, py, pu, pvv, lastAbgr);
+					}
 				}
 				triangle += 2;
 			} else {
 				for (std::int32_t i = 0; i < 3; i++) {
-					project(group + std::size_t(i) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+					project(vertexAt(element + i), px[i], py[i], pu[i], pvv[i]);
 				}
 				DrawState triState = state;
-				triState.Prim = GU_TRIANGLES;
 				if (!pagedTexture || selectPage(triState, pu, pvv, 3)) {
-					Vertex2D* v = AllocVertices(triState, 3);
+					Vertex2D* v = AllocVertices(triState, GU_TRIANGLES, 3);
 					if (v == nullptr) {
 						return;
 					}
@@ -1810,9 +1875,7 @@ namespace nCine::RHI::GU
 			if (paletteTex == nullptr || paletteTex == texture) {
 				paletteTex = _paletteTexture;
 			}
-			if (paletteTex == nullptr || paletteTex->GetPixels() == nullptr ||
-				!texture->EnsureBakedStore(reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels()), 0,
-					paletteVersion, paletteTex)) {
+			if (!texture->EnsureBakedStore(paletteTex, 0, paletteVersion)) {
 				return;
 			}
 		} else if (texture->IsIndexed()) {
@@ -1838,7 +1901,6 @@ namespace nCine::RHI::GU
 		state.BlendDst = MapBlendGu(_blending.DstRgb, dstFix);
 		state.BlendSrcFix = srcFix;
 		state.BlendDstFix = dstFix;
-		state.Prim = GU_LINE_STRIP;
 
 		EnsureList();
 		ApplyDrawTarget();
@@ -1862,7 +1924,7 @@ namespace nCine::RHI::GU
 
 		// A line strip is one primitive, so it gets its own draw call
 		FlushBatch();
-		Vertex2D* v = AllocVertices(state, numVertices);
+		Vertex2D* v = AllocVertices(state, GU_LINE_STRIP, numVertices);
 		if (v == nullptr) {
 			return;
 		}
@@ -1878,7 +1940,8 @@ namespace nCine::RHI::GU
 		FlushBatch();
 	}
 
-	void GuDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void GuDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		if (_currentProgram == nullptr || numVertices <= 0 || !_guInitialized) {
 			return;
@@ -1912,7 +1975,7 @@ namespace nCine::RHI::GU
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
 		if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
-			DispatchTileMesh(primitive, firstVertex, numVertices);
+			DispatchTileMesh(primitive, firstVertex, numVertices, indices, indexCount);
 			return;
 		}
 
@@ -2086,13 +2149,8 @@ namespace nCine::RHI::GU
 				}
 				if (texture->NeedsPaletteBake()) {
 					// Index + per-pixel alpha has no paletted form: a CPU bake through the palette row is
-					// what the other consoles do too
-					if (paletteTex == nullptr || paletteTex->GetPixels() == nullptr) {
-						continue;
-					}
-					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels())
-						+ paletteOffset;
-					if (!texture->EnsureBakedStore(entries, std::uint32_t(paletteOffset), paletteVersion, paletteTex)) {
+					// what the other consoles do too. The bake bounds the row against the palette itself.
+					if (!texture->EnsureBakedStore(paletteTex, paletteOffset, paletteVersion)) {
 						continue;
 					}
 				} else if (texture->IsIndexed()) {

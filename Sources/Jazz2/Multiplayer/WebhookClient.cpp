@@ -11,6 +11,7 @@
 #include <Base/Format.h>
 #include <Containers/DateTime.h>
 #include <IO/WebRequest.h>
+#include "../PlatformWebRequest.h"
 
 using namespace Death;
 using namespace Death::Containers::Literals;
@@ -644,6 +645,7 @@ namespace Jazz2::Multiplayer
 
 		for (std::int32_t attempt = 0; attempt < maxAttempts; attempt++) {
 			auto request = WebSession::GetDefault().CreateRequest(url);
+			ApplyPlatformWebRequestOptions(request);
 			request.SetMethod("POST"_s);
 			request.SetData(payloadView, "application/json"_s);
 

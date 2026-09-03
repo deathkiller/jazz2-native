@@ -359,12 +359,34 @@ namespace nCine::RHI::GU
 		return true;
 	}
 
-	bool GuTexture::EnsureBakedStore(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex,
-		std::uint32_t paletteGeneration, const void* palette)
+	bool GuTexture::EnsureBakedStore(const GuTexture* palette, std::int32_t paletteOffset,
+		std::uint32_t paletteGeneration)
 	{
-		if (_uploadFormat != PixelFormat::RG8 || paletteRow == nullptr || _pixels.empty() || _pages.empty()) {
+		if (_uploadFormat != PixelFormat::RG8 || palette == nullptr || _pixels.empty() || _pages.empty()) {
 			return false;
 		}
+		const std::uint8_t* const paletteBase = palette->GetPixels();
+		if (paletteBase == nullptr) {
+			return false;
+		}
+
+		// The bake reads 256 consecutive RGBA8 entries from the offset, so the offset has to leave that many
+		// inside the palette texture. Every caller used to hand in a ready row pointer computed by adding an
+		// unchecked offset to the palette's base, while the CLUT path beside them (AcquireClutForRow) has
+		// always applied exactly this bound - so an out-of-range palette offset read up to a kilobyte past
+		// the end of the palette store, and the resulting garbage went into the texture the GE then sampled.
+		const std::int32_t maxOffset = palette->GetWidth() * palette->GetHeight() - 256;
+		if (paletteOffset < 0 || paletteOffset > maxOffset) {
+			static bool warnedOffset = false;
+			if (!warnedOffset) {
+				warnedOffset = true;
+				LOGW("Palette offset {} is outside the {}x{} palette texture (at most {}), skipping the bake",
+					paletteOffset, palette->GetWidth(), palette->GetHeight(), maxOffset);
+			}
+			return false;
+		}
+		const std::uint32_t* const paletteRow = reinterpret_cast<const std::uint32_t*>(paletteBase) + paletteOffset;
+		const std::uint32_t paletteRowIndex = std::uint32_t(paletteOffset);
 
 		// A bake that is already the active store needs nothing at all, which is the case for every draw of
 		// the frame once the sprite's palette row has been seen once

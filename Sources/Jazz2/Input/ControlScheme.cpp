@@ -15,6 +15,21 @@ namespace Jazz2::Input
 			mapping.Targets.clear();
 		}
 
+		// Fire and Run take a shoulder control in addition to their face button. On a controller with analog
+		// triggers that is the trigger, which leaves the bumpers free; the two PlayStation handhelds have a
+		// shoulder row of L and R alone, so there it has to be the bumpers. Neither reports a trigger the
+		// binding could reach: the PSP's built-in pad declares no trigger axis at all, and the Vita's
+		// declares "lefttrigger:a4" / "righttrigger:a5" for axes nothing on the console drives (see
+		// JoyMappingDb.h). Binding them is what left both actions on their face button only. Named here so
+		// the first player below and the loop over the others stay one description of the same layout.
+#if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+		constexpr ButtonName FireShoulder = ButtonName::RightBumper;
+		constexpr ButtonName RunShoulder = ButtonName::LeftBumper;
+#else
+		constexpr AxisName FireShoulder = AxisName::RightTrigger;
+		constexpr AxisName RunShoulder = AxisName::LeftTrigger;
+#endif
+
 		// Set default mappings for 1st player
 		auto first = GetMappings(0);
 		first[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::Left));
@@ -35,12 +50,12 @@ namespace Jazz2::Input
 
 		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(Keys::Space));
 		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(0, ButtonName::X));
-		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(0, AxisName::RightTrigger));
+		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(0, FireShoulder));
 		first[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::V));
 		first[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(0, ButtonName::A));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::C));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, ButtonName::B));
-		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, AxisName::LeftTrigger));
+		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, RunShoulder));
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::X));
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(0, ButtonName::Y));
 		first[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(Keys::Escape));
@@ -115,10 +130,10 @@ namespace Jazz2::Input
 				current[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(i, AxisName::LeftY));
 				
 				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, ButtonName::X));
-				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, AxisName::RightTrigger));
+				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, FireShoulder));
 				current[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(i, ButtonName::A));
 				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, ButtonName::B));
-				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, AxisName::LeftTrigger));
+				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, RunShoulder));
 				current[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(i, ButtonName::Y));
 				current[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(i, ButtonName::Start));
 			}

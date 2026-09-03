@@ -93,14 +93,27 @@ namespace nCine
 		useBufferMapping = false;
 #endif
 
-#if defined(WITH_RHI_RDP)
-		// The RDP tier has no device memory at all: a buffer object is a host allocation, and the draw
+#if defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || defined(WITH_RHI_GX) || \
+		defined(WITH_RHI_GS) || defined(WITH_RHI_SOFTWARE)
+		// These tiers have no device memory at all: a buffer object is a host allocation, and the draw
 		// dispatch reads the vertices and indices out of it with the CPU. Mapping it is therefore the
 		// identity, and it is the unmapped path that costs something - RenderBuffersManager::FlushUnmap()
 		// copies every byte the frame streamed from its own staging buffer into the buffer object, which is
 		// one host-to-host copy of the whole tile mesh per frame for nothing. Mapping also drops the
 		// staging buffers themselves, 136 KB of the 8 MB. Keyed on the BACKEND rather than the console,
-		// because the property belongs to how RdpBuffer stores data, not to the machine it runs on.
+		// because the property belongs to how the buffer object stores data, not to the machine it runs on.
+		//
+		// Every other fixed-function buffer class is the same story and was missed when the RDP got this.
+		// GuBuffer, SwBuffer, PvrBuffer, GxBuffer and GsBuffer are character for character alike in the
+		// three methods that matter: `MapBufferRange()` returns `_storage.data() + offset`,
+		// `FlushMappedBufferRange()` and `Unmap()` are empty, and `BufferSubData()` is a plain memcpy into
+		// that same storage. So mapping is the identity on all of them, while the unmapped path pays one
+		// BufferSubData() of everything the frame streamed - vertices AND uniform blocks.
+		//
+		// Measured on the PSP: this took the commit phase from 3.5 ms to 2.0 ms of a ~17 ms frame, and the
+		// staging buffers it drops also stopped competing for memory bandwidth with the audio mixer thread
+		// (updatePlayers() fell from about 2.1 ms to well under 1). Only the GU number is measured; the
+		// other four are enabled on the strength of their buffer classes being identical.
 		useBufferMapping = true;
 #endif
 

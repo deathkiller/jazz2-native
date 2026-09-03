@@ -67,8 +67,18 @@ namespace Jazz2
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = true;
+#if defined(DEATH_TARGET_VITA)
+	// Both are forced off on this console rather than merely defaulted off, because both are measurably
+	// unaffordable there and neither has a menu item left to turn it back on (see GraphicsOptionsSection).
+	// Dithering is a dependent second texture sample over the whole background - the shader compiles it out
+	// on this target anyway - and the blur chain is five more full-view off-screen passes, each of them a
+	// scene the backend has to wait out before the next one can sample it. Load() puts them back to these.
+	bool PreferencesCache::BackgroundDithering = false;
+	bool PreferencesCache::BlurEffects = false;
+#else
 	bool PreferencesCache::BackgroundDithering = true;
 	bool PreferencesCache::BlurEffects = true;
+#endif
 #if defined(DEATH_TARGET_VITA)
 	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
 	// it costs the SGX a quarter of that work for a difference the light falloff largely hides
@@ -1261,6 +1271,15 @@ namespace
 						BlurEffects = ((boolOptions & BoolOptions::BlurEffects) == BoolOptions::BlurEffects);
 						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
+
+#if defined(DEATH_TARGET_VITA)
+					// Outside every version arm above, because both are read there under different ones and
+					// what matters is that no config can end up with them on: neither is offered on this
+					// console (see GraphicsOptionsSection), so there would be no menu item left to turn a
+					// value the file switched on back off again
+					BackgroundDithering = false;
+					BlurEffects = false;
+#endif
 
 					// Touch button per-slot configuration (v14+)
 					EnableTouchJoystick = ((boolOptions & BoolOptions::EnableTouchJoystick) == BoolOptions::EnableTouchJoystick);

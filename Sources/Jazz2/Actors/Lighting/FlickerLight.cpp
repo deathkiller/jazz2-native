@@ -63,7 +63,7 @@ namespace Jazz2::Actors::Lighting
 		light.RadiusFar = lerp(_radiusNear, _radiusFar, _phase);
 
 		for (auto& part : _parts) {
-			float phase = sinf(part.Phase * fPi);
+			float phase = sinApprox(part.Phase * fPi);
 
 			auto& light2 = lights.emplace_back();
 			light2.Pos = part.Pos;

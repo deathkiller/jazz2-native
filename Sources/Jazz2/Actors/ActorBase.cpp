@@ -30,6 +30,16 @@ using namespace nCine;
 
 namespace Jazz2::Actors
 {
+	namespace
+	{
+		/** @brief Whether a render type leaves the alpha channel of the sprite color to the actor's own fade */
+		constexpr bool KeepsActorFadeInAlpha(ActorRendererType type)
+		{
+			// Outline and FrozenMask spend the alpha on their own transition instead (see ActorRenderer::Initialize())
+			return (type != ActorRendererType::Outline && type != ActorRendererType::FrozenMask);
+		}
+	}
+
 	ActorBase::ActorBase()
 		: _state(ActorState::None), _levelHandler(nullptr), _internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f),
 			_unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1), _spawnFrames(0.0f), _metadata(nullptr),
@@ -1513,6 +1523,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		const ActorRendererType previousType = _rendererType;
 		_rendererType = type;
 
 		auto& resolver = ContentResolver::Get();
@@ -1548,7 +1559,12 @@ namespace Jazz2::Actors
 					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
-				setColor(Colorf::White);
+				// Outline and FrozenMask took the whole color above - RGB for the texel size, alpha for their own
+				// transition - so alpha coming out of one of them means nothing here. Every other type leaves it as
+				// the actor's own fade, and the mask shaders replace the sprite's RGB with a flash colour without
+				// touching its alpha, so a fade already in progress has to survive a switch between any two of them.
+				const bool alphaIsActorFade = (KeepsActorFadeInAlpha(previousType) && KeepsActorFadeInAlpha(type));
+				setColor(Colorf(1.0f, 1.0f, 1.0f, alphaIsActorFade ? color().A : 1.0f));
 			}
 		}
 

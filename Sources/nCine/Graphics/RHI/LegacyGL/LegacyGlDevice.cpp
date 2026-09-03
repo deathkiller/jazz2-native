@@ -1281,18 +1281,33 @@ namespace nCine::RHI::LegacyGL
 		static_cast<void>(numInstances);
 		Dispatch(primitive, firstVertex, numVertices);
 	}
+	const std::uint16_t* LegacyGlDevice::ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices)
+	{
+		// Only the mesh dispatches read the vertex stream, and only through the 16-bit indices the pipeline
+		// produces (Geometry hands out no other width). Anything else falls back to the non-indexed walk,
+		// which is also what a draw with no index buffer bound gets.
+		if (indexFormat != IndexFormat::UInt16 || numIndices == 0 || _currentProgram == nullptr) {
+			return nullptr;
+		}
+		const LegacyGlBuffer* ibo = _currentProgram->GetBoundIbo();
+		if (ibo == nullptr || indexOffset + numIndices * sizeof(std::uint16_t) > ibo->GetSize()) {
+			return nullptr;
+		}
+		return reinterpret_cast<const std::uint16_t*>(ibo->HostData() + indexOffset);
+	}
+
 	void LegacyGlDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		// The index count doubles as the vertex count, unchanged: the procedural quad family never reads the
+		// stream and derives its instance count from it, so only the mesh dispatches take the range as well.
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 	void LegacyGlDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		static_cast<void>(indexFormat);
-		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
-		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices),
+			ResolveHostIndices(indexFormat, indexOffset, numIndices), std::int32_t(numIndices));
 	}
 
 	FenceHandle LegacyGlDevice::InsertFence()
@@ -1649,7 +1664,8 @@ namespace nCine::RHI::LegacyGL
 
 	// ------------------------------------------------------------------ draw dispatch
 
-	void LegacyGlDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void LegacyGlDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
@@ -1663,13 +1679,37 @@ namespace nCine::RHI::LegacyGL
 		if (vbo == nullptr) {
 			return;
 		}
+		// The mesh arrives either as a plain triangle list, or - on the pipeline's indexed path - as the four
+		// distinct corners of each quad addressed through the index pattern every quad mesh shares (see
+		// RenderResources::GetQuadIndices()). `numVertices` counts element slots either way, three to a
+		// triangle; all that differs is how a slot resolves to a vertex, which is what vertexAt() below does.
+		// The slots the six-vertex form duplicates become repeated indices, so the two that the quad test
+		// further down compares land on the very same vertex in both forms and the test needs no special case.
+		//
+		// Six indices describe four corners, so the element count is no bound on how far into the stream they
+		// reach - and using it as one would reject any mesh whose chunk lands in the last third of the buffer.
+		// One integer pass gives the real extent, and checks that the indices address vertices this buffer
+		// holds at all.
+		std::size_t vertexExtent = std::size_t(numVertices);
+		if (indices != nullptr) {
+			std::uint32_t maxIndex = 0;
+			for (std::int32_t i = 0; i < indexCount; i++) {
+				if (indices[i] > maxIndex) {
+					maxIndex = indices[i];
+				}
+			}
+			vertexExtent = std::size_t(maxIndex) + 1;
+		}
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
 			std::size_t(firstVertex) * FloatsPerVertex;
-		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
-		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+		// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
+		const auto vertexAt = [vertices, indices](std::int32_t element) {
+			return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
+		};
 
 		const LegacyGlUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
@@ -1808,14 +1848,14 @@ namespace nCine::RHI::LegacyGL
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		std::uint32_t lastAbgr = 0;
 		while (triangle < triangleCount) {
-			// Tiles reach here as the six vertices of two triangles, of which the third and fourth repeat the
-			// first and third. Recognizing that pattern lets a tile go out as one quad - and, since tile
+			// Tiles reach here as two triangles whose third and fourth slots repeat the first and third. Recognizing that pattern lets a tile go out as one quad - and, since tile
 			// quads are axis-aligned, they would be a two-vertex rectangle on hardware that has one.
-			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			const std::int32_t element = triangle * 3;
+			const float* group = vertexAt(element);
 			const bool isQuad = (triangle + 2 <= triangleCount &&
-				group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
-				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
-				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+				vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
 
 			float px[4], py[4], pu[4], pvv[4];
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
@@ -1829,7 +1869,7 @@ namespace nCine::RHI::LegacyGL
 				// Corner order of the sprite strip (v0, v1, v2, v3): vertices 1, 2, 0 and 5 of the tile's six
 				static const std::int32_t QuadOrder[4] = { 1, 2, 0, 5 };
 				for (std::int32_t i = 0; i < 4; i++) {
-					project(group + std::size_t(QuadOrder[i]) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+					project(vertexAt(element + QuadOrder[i]), px[i], py[i], pu[i], pvv[i]);
 				}
 				DrawState quadState = state;
 				if (!pagedTexture || selectPage(quadState, pu, pvv, 4)) {
@@ -1838,7 +1878,7 @@ namespace nCine::RHI::LegacyGL
 				triangle += 2;
 			} else {
 				for (std::int32_t i = 0; i < 3; i++) {
-					project(group + std::size_t(i) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+					project(vertexAt(element + i), px[i], py[i], pu[i], pvv[i]);
 				}
 				DrawState triState = state;
 				triState.Prim = GL_TRIANGLES;
@@ -1974,7 +2014,8 @@ namespace nCine::RHI::LegacyGL
 		FlushBatch();
 	}
 
-	void LegacyGlDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	void LegacyGlDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+		const std::uint16_t* indices, std::int32_t indexCount)
 	{
 		if (_currentProgram == nullptr || numVertices <= 0 || !_glInitialized) {
 			return;
@@ -2008,7 +2049,7 @@ namespace nCine::RHI::LegacyGL
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
 		if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
-			DispatchTileMesh(primitive, firstVertex, numVertices);
+			DispatchTileMesh(primitive, firstVertex, numVertices, indices, indexCount);
 			return;
 		}
 

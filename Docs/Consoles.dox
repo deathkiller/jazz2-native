@@ -196,6 +196,35 @@ polarity, which sounds far worse than clipping.
 
 @m_class{m-block m-info}
 
+@par Keeping a stream off the frame's critical path
+@ref nCine::AudioStream decodes **one chunk ahead**, on the decoding thread @ref nCine::AudioDeviceBase
+creates on the first streamed sound, and `enqueue()` **never waits for it**. Neither half of that is
+obvious, and both were measured on the PSP, where decoding the module music of a level costs about a
+quarter of the whole CPU. Filling every free buffer per call looks harmless but is not: only one chunk
+is ever decoded ahead, so after consuming it the loop would find the request idle and decode the rest
+*on the calling thread* --- 8 ms of every frame, while the decoding thread sat unused. Waiting for a
+chunk that is still being decoded is worse again, because a decoding thread only gets the CPU the main
+thread is not using: a frame that had fallen to 130 ms spent 55 ms of it stopped in that wait, and the
+wait made the next frame later still. So a chunk that is not ready yet simply is not queued. The music
+goes quiet for a frame --- it had already run dry, and waiting could not have undone that --- and the
+decoding thread gets the whole of the vblank wait to catch up, which is what actually ends the underrun.
+A platform with no decoding thread at all is the one exception and still decodes in place, because
+there is nothing else that ever would.
+
+@m_class{m-block m-info}
+
+@par A player nobody can hear does no work
+Every volume the user can set is folded into a player's gain by the caller, so @ref nCine::IAudioPlayer::isSilent()
+--- a gain of zero --- is how both *"the music slider is down"* and *"the master slider is down"* reach
+the engine, and both are acted on rather than mixed as silence. A silent @ref nCine::AudioStreamPlayer
+decodes nothing at all, which on the PSP hands back that quarter of the CPU; it stays registered and
+stays in the playing state, so it resumes by itself when the gain comes back, continuing from where it
+left off. A silent @ref nCine::AudioBufferPlayer never takes a source, so it costs neither a voice nor
+its share of the mix for the length of the sample. This matters most exactly where it is least
+convenient to notice --- the consoles that mix in software, where every live source is CPU.
+
+@m_class{m-block m-info}
+
 @par Sample byte order
 The buffer formats of @ref nCine::IAudioDevice are **native-endian**, which is what the module
 decoder produces. The WAVE and Vorbis readers therefore byte-swap 16-bit samples on a big-endian
@@ -226,6 +255,48 @@ Switch | `svcOutputDebugString` --- picked up by a debug logger on the host, wri
 platforms with writable storage @m_span{m-text m-dim} (not the Dreamcast, whose only medium is a
 read-only disc) @m_endspan. Verbose I/O lines use the deferred trace level and are only flushed when
 an error follows them, so a sparse log is normal and does not mean files are not being opened.
+
+@subsection consoles-common-indexedquads Tile layers are indexed meshes
+
+A tile layer goes out as one mesh rather than one draw per tile
+@m_span{m-text m-dim} (`TILEMAP_USE_SINGLE_DRAW`, on everywhere except the software renderer) @m_endspan,
+and so do the destructible debris and, on the backends that have shaders, the lighting quads. That mesh
+is **indexed**: a quad contributes its four distinct corners, and the two triangles that draw it come
+from six indices out of one pattern the whole engine shares
+@m_span{m-text m-dim} (@cpp RenderResources::GetQuadIndices() @ce --- `0, 1, 2, 0, 2, 3` per quad,
+counted from the draw's first vertex, written once into an array long enough for the longest draw the
+streaming buffers allow, so it never moves and a render queue may hold the pointer until its draw
+phase) @m_endspan. The alternative, and what this used to be, is six vertices per quad with two of the
+corners written out twice.
+
+At 8 floats a vertex that is 128 bytes of corners plus 12 of indices per quad instead of 192 bytes of
+vertices --- a third less mesh data to write and, on top of that, a third less to copy into the
+streaming buffer every frame. The fixed-function backends gain twice over, because there the copy is a plain
+@cpp memcpy @ce into host storage that the draw dispatch then *reads back*, so the round trip per quad
+falls from 384 bytes to 268. A single draw also reaches further: with the 64 KB vertex / 8 KB index
+buffers a constrained platform configures, one command now covers 512 quads where the six-vertex form
+managed 341.
+
+How the indices are consumed differs by tier, and it is the one place where a fixed-function backend
+does more work rather than less:
+
+-   The backends with shaders @m_span{m-text m-dim} (`GL`, `GXM`, `RSX`, `D3D11`, `Vulkan`) @m_endspan
+    let the hardware pull vertices through the index buffer, which is also where the third fewer
+    *shaded* vertices come from. Base-vertex addressing makes every chunk index from zero; the
+    OpenGL|ES profiles below 3.2 have no @cpp glDrawElementsBaseVertex() @ce and fold the base into the
+    vertex format's offset instead @m_span{m-text m-dim} (@cpp RenderCommand::Issue() @ce) @m_endspan.
+-   The fixed-function backends @m_span{m-text m-dim} (`GU`, `GX`, `PVR`, `GS`, `RDP`, `LegacyGL`) @m_endspan
+    transform on the CPU and read the vertex stream themselves, so their tile-mesh dispatch resolves the
+    indices: @cpp ResolveHostIndices() @ce turns the draw's index range into a host pointer and a
+    `vertexAt()` resolver maps a triangle's element slot to the vertex it names. Their quad recognition
+    @m_span{m-text m-dim} (which is what lets a tile go out as one GE rectangle, one `GX_QUADS` quad
+    or one GS sprite instead of two triangles) @m_endspan is unchanged by it: the slots the six-vertex
+    form duplicated are repeated indices here, so both forms compare the very same vertex.
+
+Only @cpp RenderResources::GetMaxQuadsPerDraw() @ce decides how long a chunk may be, from the two
+streaming buffer sizes and what a 16-bit index can address
+@m_span{m-text m-dim} (sceGxm rejects a draw whose indices pass 63999, which is the lower of the two
+ceilings) @m_endspan --- a mesh larger than that is split on whole-quad boundaries.
 
 - - -
 
@@ -817,6 +888,23 @@ anything else can fail, so the console always has a way out even if initializati
     arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
     sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
     read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
+-   **Modules are mixed at 22050 Hz here, not the device's 44100.** A module mixer's cost scales with
+    its output rate, and this one is the most expensive thing the Allegrex is asked to do outside the
+    renderer: measured in `prince/02_castle1n`, mixing at the device rate cost around 420 ms of every
+    second --- more CPU than the whole renderer. Half the rate is half of that, for music that comes out
+    of a pair of centimetre-wide speakers, and the samples inside the original modules were recorded at
+    around this rate to begin with; the device resamples back up to its own 44100 Hz for a fraction of
+    what the mixer costs. @ref nCine::AudioLoaderMpt and @ref nCine::AudioLoaderXmp both cap it, which
+    matters because **only the libxmp one is reachable on this console** --- the cap had been written
+    for libopenmpt alone and was dead code here until it was noticed.
+-   **This platform's libm is startlingly slow --- a `sinf()` costs about 13.5 us, some 4500 cycles.**
+    That is enough for a handful of light sources flickering to cost several milliseconds a frame on
+    their own, so anything that only drives appearance --- a flicker phase, a pulse, an orbit --- goes
+    through @ref nCine::sinApprox() / @ref nCine::cosApprox() instead, at 331 ns and within 0.0014 of
+    full scale. The same applies to `std::floor()`, which is a real `jal floorf` on a CPU with no floor
+    instruction. Note that this is a fact about *this* libm and not about approximations in general:
+    on x86-64 the same polynomial is 1.37x **slower** than glibc's `sinf()`, so
+    @ref nCine::sinApprox() substitutes it only on the consoles and calls the library everywhere else.
 -   **Threads are on**, over pspdev's **pthread-embedded**. Two of the things the engine's threading
     layer asks for are genuinely absent --- `pthread_setname_np` and CPU affinity --- and are compiled
     out here the way they already are on the libogc consoles; priorities, `pthread_kill` and the rest
@@ -1251,6 +1339,57 @@ console's own firmware. Extract it with
 -   `OpenGL` hands GLSL to @cpp glCompileShader() @ce, and vitaGL compiles it through the very same
     SceShaccCg. That is also what lets external @cpp ".shader" @ce files and the rescale filters work
     on this platform, unlike the fixed-function consoles above.
+
+@subsection consoles-vita-shadercache The compiled shaders are cached, and shipped
+
+Compiling on the console is not cheap: the ~50 Cg stages this game links cost **3.27 s** of a 6.8 s cold
+start, measured on hardware. @cpp nCine::RHI::GXM::GxmShaderCache @ce removes that by keeping the GXP
+binaries SceShaccCg produces.
+
+-   Every entry is keyed by a 64-bit hash of the exact Cg source string it was compiled from, so editing
+    a @cpp ".shader" @ce and regenerating invalidates only the stages that actually changed --- a stale
+    entry cannot be *found*, only orphaned. The file header adds the two invalidations a per-entry hash
+    cannot express: a format revision, and a fingerprint of the @cpp "libshacccg.suprx" @ce the entries
+    came from, so one compiler's output is never handed to a different driver. Either mismatch rejects
+    the whole pack and the console simply recompiles.
+-   **Two packs are loaded.** A read-only one shipped inside the VPK at
+    @cpp "app0:/Content/Shaders/ShadersGxm.bin" @ce first, then the writable one under
+    @cpp "ux0:/data/jazz2/Cache/Shaders/" @ce over it. Writes only ever go to the writable one.
+-   That is what makes "precompiled offline" work without an offline compiler: run once on a console,
+    pull the written pack back, commit it. The committed copy lives at
+    `Sources/Shaders/Prebaked/Vita/ShadersGxm.bin` and is packaged for this platform only --- a GXP is
+    Vita machine code. Its `README.md` covers the refresh procedure and, importantly, **why the pack must
+    be committed exactly as the console wrote it**: some keys belong to sources that never appear in
+    @cpp "CgGeneratedShaders.h" @ce at all, either because the batched shaders are patched at runtime
+    @m_span{m-text m-dim} (see below) @m_endspan or because the clear and present shaders are string
+    literals in @cpp "GxmDevice.cpp" @ce. Pruning against the generated header deletes precisely those.
+
+With the shipped pack a cold start loads 51 binaries and compiles nothing; startup from the clock line to
+@cpp sceGxmInitialize() @ce completing is then well under half a second.
+
+@subsection consoles-vita-batching Sprite batching
+
+The backend publishes @cpp IRhiCapabilities::IntValues::MaxBatchSize @ce as **32**, which bounds both the
+`BATCH_SIZE` baked into the batched Cg programs and @cpp nCine::RenderBatcher @ce itself. The value is
+measured rather than assumed: it was 10 (mirroring the fixed batch the engine forces on the newer PowerVR
+Rogue parts, see @cpp nCine::Application::InitCommon() @ce), and instrumenting the batcher on the credits
+screen --- the most text-heavy view in the game --- showed runs of ~18 same-state commands being split by
+the ceiling alone. Raising it does not change how many instances are uploaded per frame, only how few
+draws carry them, and a draw call costs this part far more than the extra instance-block bytes do.
+
+A batch smaller than the ceiling is legitimate here, and that matters more than the ceiling does: a
+batched draw submits @cpp 6 * @ce its own size in vertices and its instance block is allocated from the
+sizes actually accumulated, so a short batch draws and costs only what it holds. Only the *ceiling* has
+to match what the shader was compiled for, because a batch may not index past its instance array. The
+batcher's floor is therefore independent of it @m_span{m-text m-dim} (@cpp minBatchSize @ce is 2 whenever
+a device publishes a ceiling) @m_endspan; forcing the floor up to the ceiling instead left every run
+shorter than it, and every remainder past a multiple of it, drawn one command at a time.
+
+Together the two took the credits screen from 31.5 fps to 41--43 fps on hardware, most of it now
+vsync-locked. What remains is @cpp Jazz2::UI::Font::DrawString() @ce switching between the plain sprite
+shader and `Colorized` on every @cpp "\f[c:...]" @ce run, which splits a batch every few glyphs; the two
+shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates and then dyes, so it emits
+@cpp 4.5 * @ce the texel at white) @m_endspan, so unifying them would change how all coloured text looks.
 
 @subsection consoles-vita-limits Limits and known issues
 

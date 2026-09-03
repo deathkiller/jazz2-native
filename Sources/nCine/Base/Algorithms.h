@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../CommonConstants.h"
+
 #include "Iterator.h"
 #if !defined(NCINE_PREFER_STD_SORT)
 #	include "pdqsort/pdqsort.h"
@@ -260,6 +262,66 @@ namespace nCine
 		Implementation::destructHelpers<isTriviallyDestructible<T>::value>::destructArray(ptr, numElements);
 	}
 #endif
+
+	/**
+	 * @brief Returns @f$ \sin(x) @f$ as cheaply as the platform can, within 0.0014 of full scale
+	 *
+	 * For values that only drive something's appearance - a flicker phase, a pulse, an orbit - where
+	 * the library function's exactness buys nothing. On a platform whose libm is fast this simply calls
+	 * it, because an approximation is not automatically cheaper: measured on x86-64 against wrapped
+	 * phases, the polynomial below is 1.37x SLOWER than glibc's `sinf()` (3.5 ns against 4.9 ns, same
+	 * with clang). It is only worth substituting where libm is genuinely bad, which on the consoles it
+	 * is - a `sinf()` on the PSP measures **13.5 us**, about 4,500 cycles, against 331 ns here.
+	 *
+	 * Only the PSP and x86-64 have actually been measured; the other consoles are included because they
+	 * share the same newlib libm and have no hardware sine. Move a platform out of the list if it ever
+	 * measures otherwise.
+	 *
+	 * @param x Angle in radians, @f$ |x| \lesssim 4096 @f$ - see the note on the fold below
+	 */
+	inline float sinApprox(float x)
+	{
+#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
+		// The fold below subtracts a whole number of turns found with a truncating cast, and both halves
+		// of that fail on a large angle: past about 4096 radians a float no longer resolves the fraction
+		// of a turn that is left (the error reaches 0.016 by 1e6), and past ~1.3e10 the cast overflows and
+		// the result is nonsense rather than merely imprecise. Nothing here should pass an angle that big,
+		// but a phase accumulator that is never wrapped eventually would, so hand those to libm - it is
+		// one compare on a path that is already the slow one.
+		if (x < -4096.0f || x > 4096.0f) {
+			return std::sin(x);
+		}
+
+		// Fold into [-Pi, Pi]. No division, no fmod(), and no std::floor() either - MIPS has no floor
+		// instruction, so that would be a real `jal floorf`, and it cost a quarter of this function's
+		// runtime until it became a truncating cast with a correction for negatives.
+		const float turns = x * (0.5f / fPi) + 0.5f;
+		std::int32_t whole = (std::int32_t)turns;
+		if (turns < (float)whole) {
+			whole--;
+		}
+		x -= 2.0f * fPi * (float)whole;
+
+		// One parabola through the half-period, then a correction of the same shape. Worst error measured
+		// at 0.0013 across the whole guarded range, and smooth, so an animation driven by it does not
+		// visibly step.
+		constexpr float B = 4.0f / fPi;
+		constexpr float C = -4.0f / (fPi * fPi);
+		const float y = B * x + C * x * (x < 0.0f ? -x : x);
+		constexpr float P = 0.225f;
+		return P * (y * (y < 0.0f ? -y : y) - y) + y;
+#else
+		return std::sin(x);
+#endif
+	}
+
+	/** @brief Returns @f$ \cos(x) @f$ as cheaply as the platform can, see @ref sinApprox() */
+	inline float cosApprox(float x)
+	{
+		return sinApprox(x + fPiOver2);
+	}
 
 	/** @brief Linearly interpolates between two values by the given ratio */
 	inline float lerp(float a, float b, float ratio)

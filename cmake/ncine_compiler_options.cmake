@@ -177,6 +177,16 @@ else() # GCC and LLVM
 		target_compile_options(${NCINE_APP} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
 	endif()
 	
+	# Dead-code stripping. Both halves are needed: the compile options only put each function and datum in
+	# a section of its own, and nothing is discarded without "--gc-sections" at link time. Vita only - the
+	# PSP links fine and then fails in psp-fixup-imports with "no nid section found", because the SDK
+	# resolves firmware imports from a section the collector sees unreferenced and discards. Another
+	# console needs the same end-to-end check; a clean link is not evidence.
+	if(VITA)
+		target_compile_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-ffunction-sections -fdata-sections>)
+		target_link_options(${NCINE_APP} PRIVATE $<$<CONFIG:Release>:-Wl,--gc-sections>)
+	endif()
+	
 	# _mm_clflushopt also requires "-mclflushopt" option on GCC/clang
 	#if(CMAKE_OSX_ARCHITECTURES)
 	#	set(CPU_ARCH "${CMAKE_OSX_ARCHITECTURES}")

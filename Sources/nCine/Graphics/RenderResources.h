@@ -100,6 +100,36 @@ namespace nCine
 		}
 #endif
 
+		/** @brief Number of distinct corners a quad contributes to an indexed mesh */
+		static constexpr std::uint32_t VerticesPerQuad = 4;
+		/** @brief Number of indices that draw one quad as two triangles */
+		static constexpr std::uint32_t IndicesPerQuad = 6;
+
+		/**
+			@brief Returns how many quads one indexed draw can describe, for a mesh of @p floatsPerVertex floats per vertex
+
+			A quad occupies four interleaved vertices in the shared array buffer and six 16-bit indices in the
+			shared element one, so the smaller of those two limits - and of what a 16-bit index can address at
+			all - is how far a single draw reaches. A quad mesh larger than that has to be split into several
+			commands on whole-quad boundaries.
+		*/
+		static std::uint32_t GetMaxQuadsPerDraw(std::uint32_t floatsPerVertex);
+
+		/**
+			@brief Returns the host-side index array that draws quads as two triangles each
+
+			The pattern is the same for every quad mesh - `0, 1, 2, 0, 2, 3` per quad, counted from the first
+			vertex of the command - so one array backs all of them instead of every renderer building its own.
+			A quad mesh writes only its four distinct corners and points its geometry here, which is a third
+			less vertex data to copy and a third fewer vertex shader invocations than the six-vertex stream the
+			same triangles need without indices.
+
+			The array is allocated once, long enough for the longest draw @ref GetMaxQuadsPerDraw() can report,
+			so the returned pointer stays valid as long as the rendering resources do - a render queue may hold
+			it until its draw phase without another mesh moving it in between.
+		*/
+		static const std::uint16_t* GetQuadIndices();
+
 		static RHI::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
 		static RHI::ShaderProgram* GetBatchedShader(const RHI::ShaderProgram* shader);
@@ -134,6 +164,9 @@ namespace nCine
 		static std::unique_ptr<RHI::Buffer> _quadCornerVbo;
 #endif
 
+		// Two-triangles-per-quad index pattern shared by every quad mesh (see GetQuadIndices())
+		static std::unique_ptr<std::uint16_t[]> _quadIndices;
+
 		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
 		static std::unique_ptr<RHI::ShaderProgram> _defaultShaderPrograms[DefaultShaderProgramsCount];
 		static HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> _batchedShaders;
@@ -145,6 +178,8 @@ namespace nCine
 		static Camera* _currentCamera;
 		static std::unique_ptr<Camera> _defaultCamera;
 		static Viewport* _currentViewport;
+
+		static std::uint32_t GetMaxQuadsForIndices();
 
 		static void SetCurrentCamera(Camera* camera);
 		static void UpdateCameraUniforms();

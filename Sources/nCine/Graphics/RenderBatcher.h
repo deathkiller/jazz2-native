@@ -28,6 +28,16 @@ namespace nCine
 		 * Commands that cannot be batched, or runs shorter than the minimum batch size, are passed through to
 		 * the destination queue unchanged.
 		 *
+		 * The two bounds come from different places and mean different things. The **maximum** is what the
+		 * batched shader was compiled for --- a batch may not index past its instance array --- so a backend
+		 * that publishes @relativeref{RHI::IRhiCapabilities,IntValues::MaxBatchSize} (or a build that sets
+		 * @relativeref{AppConfiguration,fixedBatchSize}) supplies it, and the run loop clamps to the shader's
+		 * own @cpp GetBatchSize() @ce as well. The **minimum** is only a worthwhile-ness threshold: a batch
+		 * submits @cpp 6 * @ce its own size in vertices and its instance block is allocated from the sizes
+		 * actually accumulated, so a batch below the maximum draws and costs only what it holds. Tying the
+		 * two together would leave every run shorter than the maximum, and every remainder past a multiple
+		 * of it, drawn one command at a time.
+		 *
 		 * @param srcQueue   Sorted source command queue
 		 * @param destQueue  Destination queue that receives batched and pass-through commands
 		 */

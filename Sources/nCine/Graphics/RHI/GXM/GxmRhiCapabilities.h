@@ -28,10 +28,16 @@ namespace nCine::RHI::GXM
 			// draw's *default uniform buffer*, which is uploaded per draw and indexed dynamically by the
 			// shader; sized from the 64 KB block budget above that array is 585 instances, i.e. 64 KB of
 			// per-draw uniform data for a PowerVR SGX543, which is not a shape this hardware is meant to be
-			// fed. The engine already forces a fixed batch on the PowerVR Rogue parts for the same reason
-			// (see Application::InitCommon()), one generation *newer* than the Vita's, so the same 10 is used.
+			// fed - so this stays far below the budget.
+			//
+			// It is 32 because that is what measuring said, not by analogy: the value was 10 (mirroring the
+			// fixed batch the engine forces on the newer PowerVR Rogue parts, see Application::InitCommon()),
+			// and instrumenting RenderBatcher on the credits screen showed runs of ~18 same-state commands
+			// being cut into 10 + 8 purely by the ceiling, with only ~3% of commands left unbatched for any
+			// other reason. Raising it does not change how many instances are uploaded per frame, only how
+			// few draws carry them, and a draw call costs this part far more than the extra block bytes do.
 			SetDeviceCapabilities("GXM", GxmDevice::GetMaxTextureDimension(), std::int32_t(GxmTexture::MaxTextureUnits),
-				64 * 1024, GxmDevice::GetUniformBufferOffsetAlignment(), std::int32_t(GxmRenderTarget::MaxColorAttachments), 10);
+				64 * 1024, GxmDevice::GetUniformBufferOffsetAlignment(), std::int32_t(GxmRenderTarget::MaxColorAttachments), 32);
 
 			LogCapabilities();
 		}

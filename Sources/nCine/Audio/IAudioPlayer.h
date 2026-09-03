@@ -74,6 +74,18 @@ namespace nCine
 			return _state;
 		}
 		/** @brief Returns `true` if the player is currently playing */
+		/**
+		 * @brief Returns whether the player is configured so that nothing could be heard from it
+		 *
+		 * Every volume the user can set is folded into the player's gain by the caller, so a gain of zero
+		 * is how both "the music slider is down" and "the master slider is down" reach the engine. It is
+		 * worth acting on rather than mixing silence.
+		 */
+		inline bool isSilent() const {
+			// Written so that a NaN gain counts as silent rather than as audible
+			return !(_gain > 0.0f);
+		}
+
 		inline bool isPlaying() const {
 			return _state == PlayerState::Playing;
 		}

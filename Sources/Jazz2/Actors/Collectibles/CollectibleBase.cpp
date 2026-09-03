@@ -80,8 +80,8 @@ namespace Jazz2::Actors::Collectibles
 	{
 		for (auto& current : _illuminateLights) {
 			auto& light = lights.emplace_back();
-			light.Pos = Vector2f(_pos.X + cosf(current.Phase + cosf(current.Phase * 0.33f) * 0.33f) * current.Distance,
-				_pos.Y + sinf(current.Phase + sinf(current.Phase) * 0.33f) * current.Distance);
+			light.Pos = Vector2f(_pos.X + cosApprox(current.Phase + cosApprox(current.Phase * 0.33f) * 0.33f) * current.Distance,
+				_pos.Y + sinApprox(current.Phase + sinApprox(current.Phase) * 0.33f) * current.Distance);
 			light.Intensity = current.Intensity * 0.7f;
 			light.Brightness = current.Intensity;
 			light.RadiusNear = 0.0f;

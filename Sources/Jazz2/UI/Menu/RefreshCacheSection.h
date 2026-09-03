@@ -8,6 +8,8 @@
 
 #include "../../../nCine/Threading/Thread.h"
 
+#include <atomic>
+
 namespace Jazz2::UI::Menu
 {
 	/**
@@ -21,6 +23,7 @@ namespace Jazz2::UI::Menu
 	public:
 		/** @brief Creates a new instance */
 		RefreshCacheSection();
+		~RefreshCacheSection() override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -29,7 +32,8 @@ namespace Jazz2::UI::Menu
 
 	private:
 		float _animation;
-		bool _done;
+		// Set by the worker thread below and polled by OnUpdate() on the main one
+		std::atomic_bool _done;
 #if defined(WITH_THREADS)
 		Thread _thread;
 #endif

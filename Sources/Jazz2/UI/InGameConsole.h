@@ -96,6 +96,7 @@ namespace Jazz2::UI
 		void ScrollUp(std::int32_t amount);
 		void ScrollDown(std::int32_t amount);
 		void ToggleScreenKeyboard();
+		void ShowScreenKeyboardForInputLine();
 		void RecalcLayoutForScreenKeyboard();
 	};
 }

@@ -81,6 +81,10 @@ namespace Jazz2::UI::Menu
 			Count
 		};
 
+		/** @brief Offset of the frame's top line from the content bounds, as in the other framed list sections */
+		static constexpr std::int32_t TopLine = 31;
+		/** @brief Offset of the frame's bottom line from the bottom of the content bounds */
+		static constexpr std::int32_t BottomLine = 42;
 		static constexpr std::int32_t MaxItems = 10;
 		static constexpr std::int32_t MaxPlayerNameLength = 24;
 		static constexpr StringView FileName = "Highscores.list"_s;
@@ -112,5 +116,6 @@ namespace Jazz2::UI::Menu
 		void SerializeToFile();
 		void AddItemAndFocus(HighscoreItem&& item);
 		void RecalcLayoutForScreenKeyboard();
+		void ShowScreenKeyboardForPlayerName();
 	};
 }

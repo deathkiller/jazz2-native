@@ -4999,63 +4999,18 @@ struct PsInput
 	float2 vTexCoords : TEXCOORD0;
 };
 
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
+	float distancePow15 = distance_ * sqrt(distance_);
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
 	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
 	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
 	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5117,65 +5072,18 @@ struct PsInput
 	float2 vTexCoords : TEXCOORD0;
 };
 
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	float distance_ = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance_, 1.4);
+	float distancePow15 = distance_ * sqrt(distance_);
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance_;
 	float yShift = vTexCoords.y > 0.5 ? 1.0 : 0.0;
 	float correction = uViewSize.x * 9.0 / (uViewSize.y * 16.0);
 	float2 texturePos = float2(uShift.x / 256.0 + (vTexCoords.x - 0.5) * (0.5 + 1.5 * horizonDepth) * correction, uShift.y / 256.0 + (vTexCoords.y - yShift) * 1.4 * distance_);
 	float4 texColor = tex2D(uTexture, texturePos);
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
-	float horizonOpacity = clamp(pow(distance_, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(distancePow15 - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5237,46 +5145,6 @@ struct PsInput
 	float2 vTexCoords : TEXCOORD0;
 };
 
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
@@ -5286,14 +5154,8 @@ float4 main(PsInput _input) : COLOR
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
 	float4 texColor = tex2D(uTexture, texturePos);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(0.8 * (distance_ * sqrt(distance_)) + 0.2 * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;
@@ -5355,46 +5217,6 @@ struct PsInput
 	float2 vTexCoords : TEXCOORD0;
 };
 
-float2 hash2D(float2 p)
-{
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
-}
-
-float3 voronoi(float2 p)
-{
-	float2 n = floor(p);
-	float2 f = frac(p);
-	float2 mg;
-	float2 mr;
-	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
-			float2 g = float2(float(i), float(j));
-			float2 o = hash2D(n + g);
-			float2 r = g + o - f;
-			float d = dot(r, r);
-			if (d < md) {
-				md = d;
-				mr = r;
-				mg = g;
-			}
-		}
-	}
-	return float3(md, mr);
-}
-
-float addStarField(float2 samplePosition, float threshold)
-{
-	float3 starValue = voronoi(samplePosition);
-	if (starValue.x < threshold) {
-		float power = 1.0 - starValue.x / threshold;
-		return min(power * power * power, 0.5);
-	}
-	return 0.0;
-}
-
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
@@ -5404,16 +5226,8 @@ float4 main(PsInput _input) : COLOR
 	float xShift = targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan2(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675;
 	float2 texturePos = float2(xShift * 1.0 + uShift.x * 0.01, 1.0 / distance_ * 1.4 + uShift.y * 0.002);
 	float4 texColor = tex2D(uTexture, texturePos);
-	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
-	texColor = lerp(texColor, tex2D(uTexture, texturePos), 0.333);
-	float horizonOpacity = 1.0 - clamp(pow(distance_, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(0.8 * (distance_ * sqrt(distance_)) + 0.2 * distance_ - 0.3, 0.0, 1.0);
 	float4 horizonColorWithStars = float4(uHorizonColor.xyz, 1.0);
-	if (uHorizonColor.w > 0.0) {
-		float2 samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00012;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-		samplePosition = vTexCoords * uViewSize / uViewSize.xx + uCameraPos.xy * 0.00018 + 0.5;
-		horizonColorWithStars += ((float4)addStarField(samplePosition * 7.0, 0.00008));
-	}
 	COLOR = lerp(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.w = 1.0;
 	return COLOR;

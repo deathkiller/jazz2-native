@@ -83,6 +83,10 @@ extern "C" {
 #	include <Utf8.h>
 #endif
 
+#include "Input/IInputEventHandler.h"
+
+#include <Utf8.h>
+
 #include "tracy.h"
 
 using namespace Death;
@@ -410,6 +414,20 @@ namespace nCine
 		PspNetwork::Initialize();
 #	endif
 #elif defined(DEATH_TARGET_VITA)
+		// Homebrew is launched at a reduced power profile rather than the one a retail title gets, so the
+		// clocks are raised to the maximum the firmware allows before anything is timed against them. These
+		// are the four independent domains: the Cortex-A9 cluster, the bus feeding it, the SGX543 itself and
+		// the crossbar between the GPU and memory - raising only the first would leave the renderer where it
+		// was. The four values below are the documented ceilings; the firmware clamps anything above them, so
+		// a failure here is not fatal and only means the console stays at its default profile.
+		if (scePowerSetArmClockFrequency(444) < 0 || scePowerSetBusClockFrequency(222) < 0 ||
+			scePowerSetGpuClockFrequency(222) < 0 || scePowerSetGpuXbarClockFrequency(166) < 0) {
+			LOGW("Cannot raise the console clocks, performance will be reduced");
+		}
+		LOGI("Clocks: {} MHz ARM, {} MHz bus, {} MHz GPU, {} MHz GPU crossbar",
+			scePowerGetArmClockFrequency(), scePowerGetBusClockFrequency(),
+			scePowerGetGpuClockFrequency(), scePowerGetGpuXbarClockFrequency());
+
 #	if defined(NCINE_HAS_TOUCH_CONTROLS)
 		// Start sampling the front touchscreen and the rear touchpad
 		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
@@ -474,6 +492,11 @@ namespace nCine
 #else
 		while (!app._shouldQuit) {
 			app.ProcessStep();
+#	if defined(DEATH_TARGET_VITA)
+			// The IME is modal to the firmware but not to the game, which keeps running and presenting behind
+			// it - so its result has to be collected from the frame loop rather than from whoever opened it
+			app.UpdateScreenKeyboard();
+#	endif
 #	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 			if (ogcShutdownRequested) {
 				app.Quit();
@@ -624,9 +647,61 @@ namespace nCine
 		return false;
 	}
 	
+#if defined(DEATH_TARGET_VITA)
+	void MainApplication::UpdateScreenKeyboard()
+	{
+		if (sceImeDialogGetStatus() != SCE_COMMON_DIALOG_STATUS_FINISHED) {
+			return;
+		}
+
+		SceImeDialogResult result;
+		std::memset(&result, 0, sizeof(result));
+		sceImeDialogGetResult(&result);
+
+		if (result.button == SCE_IME_DIALOG_BUTTON_ENTER) {
+			// UTF-16 in, UTF-8 out, recombining surrogate pairs on the way - without that every non-BMP
+			// character would come out as two invalid ones
+			String text;
+			char encoded[4];
+			for (std::size_t i = 0; i < ImeMaxTextLength && _imeInputBuffer[i] != 0; i++) {
+				char32_t codePoint = _imeInputBuffer[i];
+				if (codePoint >= 0xD800 && codePoint <= 0xDBFF && _imeInputBuffer[i + 1] != 0) {
+					codePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (_imeInputBuffer[i + 1] - 0xDC00);
+					i++;
+				}
+				std::size_t encodedLength = Death::Utf8::FromCodePoint(codePoint, encoded);
+				if (encodedLength > 0) {
+					text += StringView(encoded, encodedLength);
+				}
+			}
+
+			if (_imeOnCompleted) {
+				// The caller can take the whole string, which is what the dialog actually collected - the
+				// field is replaced rather than appended to
+				_imeOnCompleted(text);
+			} else if (IInputEventHandler* handler = IInputManager::handler()) {
+				// Nobody asked for the string, so it is delivered as the text input events a keystroke-feeding
+				// keyboard would have produced. That appends, which is the best this fallback can do.
+				TextInputEvent textInputEvent;
+				for (std::size_t i = 0; i < text.size(); ) {
+					auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
+					i = nextI;
+					textInputEvent.length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.text);
+					if (textInputEvent.length > 0) {
+						handler->OnTextInput(textInputEvent);
+					}
+				}
+			}
+		}
+
+		_imeOnCompleted = {};
+		sceImeDialogTerm();
+	}
+#endif
+
 	bool MainApplication::CanShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_VITA)
 		return true;
 #else
 		return false;
@@ -635,7 +710,9 @@ namespace nCine
 
 	bool MainApplication::IsScreenKeyboardVisible()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_VITA)
+		return (sceImeDialogGetStatus() == SCE_COMMON_DIALOG_STATUS_RUNNING);
+#elif defined(DEATH_TARGET_WINDOWS)
 		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
 		return (hwnd != NULL && ::IsWindowVisible(hwnd));
 #else
@@ -645,7 +722,9 @@ namespace nCine
 
 	bool MainApplication::ToggleScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_VITA)
+		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
+#elif defined(DEATH_TARGET_WINDOWS)
 		if (HideScreenKeyboard()) {
 			return true;
 		}
@@ -656,9 +735,68 @@ namespace nCine
 #endif
 	}
 
-	bool MainApplication::ShowScreenKeyboard()
+	bool MainApplication::ShowScreenKeyboard(Containers::StringView initialText, Containers::Function<void(Containers::StringView)>&& onCompleted)
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_VITA)
+		// The console has no keyboard overlay that feeds keystrokes the way the desktop ones do - what it has
+		// is the IME, a modal dialog that collects a whole string and hands it back when the user confirms.
+		// So this opens the dialog and VitaImeDialog::Update() below turns the result into the text input
+		// events the caller was expecting, one code point at a time.
+		if (sceImeDialogGetStatus() != SCE_COMMON_DIALOG_STATUS_NONE) {
+			return false;
+		}
+
+		std::memset(_imeInputBuffer, 0, sizeof(_imeInputBuffer));
+		std::memset(_imeTitle, 0, sizeof(_imeTitle));
+		_imeOnCompleted = std::move(onCompleted);
+
+		// Seed the editor with what the field already holds, so the user edits it instead of retyping it.
+		// UTF-8 in, UTF-16 out, a code point at a time; anything past the buffer is dropped rather than
+		// truncating mid-character.
+		{
+			std::size_t out = 0;
+			for (std::size_t i = 0; i < initialText.size() && out < ImeMaxTextLength; ) {
+				auto [codePoint, nextI] = Death::Utf8::NextChar(initialText, i);
+				i = nextI;
+				if (codePoint == U'\0') {
+					break;
+				}
+				if (codePoint <= 0xFFFF) {
+					_imeInputBuffer[out++] = (SceWChar16)codePoint;
+				} else if (out + 1 < ImeMaxTextLength) {
+					codePoint -= 0x10000;
+					_imeInputBuffer[out++] = (SceWChar16)(0xD800 + (codePoint >> 10));
+					_imeInputBuffer[out++] = (SceWChar16)(0xDC00 + (codePoint & 0x3FF));
+				} else {
+					break;
+				}
+			}
+			_imeInputBuffer[out] = 0;
+		}
+		// The title is what the dialog shows above the field; UTF-16, and the API wants it writable
+		static constexpr char TitleText[] = "Enter text";
+		for (std::size_t i = 0; i < sizeof(TitleText) - 1; i++) {
+			_imeTitle[i] = (SceWChar16)TitleText[i];
+		}
+
+		SceImeDialogParam param;
+		sceImeDialogParamInit(&param);
+		param.supportedLanguages = 0;					// 0 with languagesForced false = whatever the user has
+		param.languagesForced = SCE_FALSE;
+		param.type = SCE_IME_TYPE_DEFAULT;
+		param.dialogMode = SCE_IME_DIALOG_DIALOG_MODE_DEFAULT;
+		param.textBoxMode = SCE_IME_DIALOG_TEXTBOX_MODE_DEFAULT;
+		param.title = _imeTitle;
+		param.maxTextLength = ImeMaxTextLength;
+		param.initialText = _imeInputBuffer;
+		param.inputTextBuffer = _imeInputBuffer;
+
+		if (sceImeDialogInit(&param) < 0) {
+			LOGW("sceImeDialogInit() failed, the on-screen keyboard is unavailable");
+			return false;
+		}
+		return true;
+#elif defined(DEATH_TARGET_WINDOWS)
 		if (::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL) != NULL) {
 			// IID_ITipInvocation is supported only on Windows 10 and later
 			ITipInvocation* tip;
@@ -700,7 +838,14 @@ namespace nCine
 
 	bool MainApplication::HideScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS)
+#if defined(DEATH_TARGET_VITA)
+		if (sceImeDialogGetStatus() != SCE_COMMON_DIALOG_STATUS_RUNNING) {
+			return false;
+		}
+		// Aborting still leaves the dialog to be torn down, which the poll below does once it reports
+		// finished - terminating it here would race the firmware's own animation out
+		return (sceImeDialogAbort() >= 0);
+#elif defined(DEATH_TARGET_WINDOWS)
 		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
 		if (hwnd != NULL && ::IsWindowVisible(hwnd)) {
 			// IID_ITipInvocation is supported only on Windows 10 and later

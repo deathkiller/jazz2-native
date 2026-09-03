@@ -183,6 +183,7 @@ namespace Jazz2::Rendering
 	}
 
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+
 	bool CombineRenderer::PrepareSoftwareLighting()
 	{
 		// Water covers (part of) this viewport when the waterline is above its bottom edge - the same test the
@@ -235,26 +236,33 @@ namespace Jazz2::Rendering
 		}
 
 		// A reduced-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
-#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
+#if defined(DEATH_TARGET_PSP)
+		// The PSP takes this one step further than the consoles below, for the same two reasons that put it
+		// among them and then one measurement. A sixth of a 480x272 viewport is 80x46 texels - 3680 of them
+		// against the 8160 a quarter gives - so both passes over the map cost 45% of what they did.
+		//
+		// Measured on hardware, that pair (the splat here in the Visit phase and the conversion in the
+		// device) was 3.1 ms of a 13 ms CPU frame at a quarter, and the frame has to fit inside one 16.7 ms
+		// vblank interval or the console shows it twice - so this was what stood between a level and a
+		// locked 60 fps. Nothing in the map has sharp detail to lose: every light is a smooth cubic falloff
+		// and the map is stretched over the viewport with bilinear filtering at any scale.
+		constexpr std::int32_t Scale = 6;
+#elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
 		// work; the map is stretched over the viewport with bilinear filtering either way, and the lights
 		// themselves are smooth cubic falloffs with nothing sharp to lose.
 		//
-		// The 333 MHz Allegrex is the slowest of the four at this, and its screen is the smallest, so the
-		// absolute size of the map matters least there: a full 480x272 viewport comes to 120x68 texels, which
-		// is small enough that the whole thing stays in cache for both passes.
-		//
-		// The PS2 belongs here for a third reason on top of those two: its device pass does not just convert
+		// The PS2 belongs here for a second reason on top of that: its device pass does not just convert
 		// the map, it DMAs the result into video memory every frame, and the surface it needs is rounded up
 		// to the storage mode's page geometry. At half resolution a 640x448 viewport wants a 512x256 PSMT8
 		// surface - 16 pages of the very local memory the texture cache is short of, and 128 KB across the
 		// bus every frame. At quarter it is 256x128, which is four pages and 32 KB.
 		//
-		// The Nintendo 64's 93 MHz VR4300 is slower still than the Allegrex, and its 320x240 output keeps
-		// the absolute size just as small: the quarter-resolution map is 80x60 texels.
+		// The Nintendo 64's 93 MHz VR4300 is slower even than the Allegrex, but its 320x240 output keeps
+		// the absolute size small on its own: the quarter-resolution map is 80x60 texels.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;
@@ -295,10 +303,23 @@ namespace Jazz2::Rendering
 			// than fading it out.
 			const float intensity = std::max(0.0f, light.Intensity);
 			const float brightness = std::max(0.0f, light.Brightness);
+			// A light that has ramped to nothing still covered its whole radius, adding 0.0f to every texel
+			// under it - and the clamp above is exactly what produces those: the fading player motion trail
+			// ramps its Intensity down through zero and keeps emitting. Dropping them here costs one compare
+			// per light and saves the entire splat of each one.
+			if (intensity <= 0.0f && brightness <= 0.0f) {
+				continue;
+			}
 
-			const float cx = (light.Pos.X - camX + halfW) / Scale;
-			const float cy = (camY - light.Pos.Y + halfH) / Scale;
-			const float rLm = radiusFar / Scale;
+			// Multiplying by the reciprocal of a compile-time constant, because dividing by one is not the
+			// same thing on this hardware: 1/6 is not exactly representable, so without -ffast-math (off by
+			// default here) GCC has to keep a real division, and the Allegrex has a single unpipelined
+			// `div.s` of about 29 cycles. These three ran per light, and the band loop below runs the setup
+			// once per band a light crosses.
+			constexpr float InvScale = 1.0f / Scale;
+			const float cx = (light.Pos.X - camX + halfW) * InvScale;
+			const float cy = (camY - light.Pos.Y + halfH) * InvScale;
+			const float rLm = radiusFar * InvScale;
 			if (rLm < 0.5f) {
 				continue;
 			}
@@ -308,21 +329,51 @@ namespace Jazz2::Rendering
 			const std::int32_t y0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
 			const std::int32_t y1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
 
+			// Both divisions the falloff needs are loop-invariant, so they become reciprocals once per
+			// light instead of being issued per texel. The Allegrex has a single unpipelined `div.s` of
+			// about 29 cycles, and this is the hottest inner loop of the frame on that console - the two
+			// divisions alone were most of its cost (137 instructions per row against 73 after this).
+			// `1/rLm` is also what advances dx, so the per-texel integer-to-float conversion goes with them.
+			const float invRLm = 1.0f / rLm;
+			const bool hasFalloff = (denom > 0.0f);
+			const float invDenom = (hasFalloff ? 1.0f / denom : 0.0f);
+			// Squared, so the inner loop can recognize the light's flat core without taking a square root:
+			// t reaches 1 exactly where dist <= radiusNearNorm, so every texel inside that circle has a
+			// strength of exactly 1. It also subsumes the no-falloff case - radiusNear >= radiusFar makes
+			// this >= 1, so the whole disc takes the core path and the inner loop needs no branch on it.
+			const float radiusNearNormSq = radiusNearNorm * radiusNearNorm;
 			for (std::int32_t y = y0; y <= y1; y++) {
-				const float dy = (y - cy) / rLm;
+				const float dy = (y - cy) * invRLm;
+				const float dySq = dy * dy;
+				float dx = (x0 - cx) * invRLm;
 				float* texelRow = &_swLightmap[((std::size_t)y * lmW + x0) * 2];
-				for (std::int32_t x = x0; x <= x1; x++, texelRow += 2) {
-					const float dx = (x - cx) / rLm;
+				for (std::int32_t x = x0; x <= x1; x++, texelRow += 2, dx += invRLm) {
 					// About a fifth of the bounding box lies outside the circle - reject on the squared
 					// distance so those texels never pay for the square root
-					const float dist2 = dx * dx + dy * dy;
+					const float dist2 = dx * dx + dySq;
 					if (dist2 > 1.0f) {
 						continue;
 					}
-					const float dist = std::sqrt(dist2);
-					// Cubic falloff, identical to lightBlend() in LightingFs.inc
-					float t = (denom > 0.0f ? 1.0f - ((dist - radiusNearNorm) / denom) : 1.0f);
-					t = std::clamp(t, 0.0f, 1.0f);
+					if (dist2 <= radiusNearNormSq) {
+						// The flat core, where the falloff has not started - no distance needed at all
+						texelRow[0] += intensity;
+						texelRow[1] += brightness;
+						continue;
+					}
+					// Cubic falloff, identical to lightBlend() in LightingFs.inc. Algebraically
+					// `1 - (dist - near) / (1 - near)` is `(1 - dist) / (1 - near)`, which is why the core
+					// test above can be exact without a distance at all - and reaching here means dist is
+					// strictly between radiusNearNorm and 1, so t is inside (0, 1) by construction and the
+					// clamp the shader needs is not needed.
+					//
+					// The square root stays. It is genuinely expensive - measured at about 58 cycles on this
+					// FPU, and NOT pipelined (100k independent square roots cost the same 160 ns each as
+					// 100k dependent ones), so no amount of unrolling hides it. But reading `1 - sqrt` out
+					// of a 512-entry table instead measured only 232 ns per texel against 260 - a tenth of
+					// the loop, under a millisecond a frame - and it visibly flattened the light cores,
+					// because sqrt's slope is unbounded at zero and no table indexed by the SQUARED distance
+					// can resolve the middle of a light. Not a trade worth making at this price.
+					const float t = std::min((1.0f - std::sqrt(dist2)) * invDenom, 1.0f);
 					const float strength = t * t * t;
 					texelRow[0] += strength * intensity;
 					texelRow[1] += strength * brightness;

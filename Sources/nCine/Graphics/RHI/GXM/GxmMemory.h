@@ -96,6 +96,8 @@ namespace nCine::RHI::GXM
 		Block AcquireSurface(const char* name, std::uint32_t stride, std::uint32_t height);
 		/** @brief Retires a block from @ref AcquireSurface(), keeping its address reserved for the same geometry */
 		void ReleaseSurface(Block& block);
+		/** @brief Hands back every address reserved by @ref AcquireSurface(), for use once the GPU is idle */
+		void ReleaseRetainedSurfaces();
 
 		/** @brief Allocates memory in the vertex USSE window (for the shader patcher's compiled vertex programs) */
 		Block AllocVertexUsse(const char* name, std::uint32_t size);

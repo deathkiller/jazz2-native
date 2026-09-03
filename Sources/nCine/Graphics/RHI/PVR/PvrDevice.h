@@ -266,9 +266,14 @@ namespace nCine::RHI::PVR
 		static std::int32_t _lightmapW;
 		static std::int32_t _lightmapH;
 
-		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		/** @brief Resolves the index range of a `DrawElements()` into a host pointer, or `nullptr` if it cannot be read */
+		static const std::uint16_t* ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices);
+
+		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices = nullptr, std::int32_t indexCount = 0);
 		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)
-		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices, std::int32_t indexCount);
 		// Draws a vertex-fed textured line strip (the weapon wheel); the TA has no line primitive,
 		// so every segment goes out as a thin screen-space quad
 		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);

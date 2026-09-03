@@ -189,6 +189,8 @@ namespace nCine::RHI::GXM
 			if (result < 0) {
 				LOGE("sceGxmCreateRenderTarget({}x{}) failed with 0x{:.8x}", targetWidth, targetHeight, std::uint32_t(result));
 				_gxmRenderTarget = nullptr;
+				// The sync object above is already ours, and this target is not going to be retried with it
+				ReleaseSceneTarget();
 				return false;
 			}
 
@@ -202,8 +204,7 @@ namespace nCine::RHI::GXM
 				std::uint32_t(targetWidth), std::uint32_t(targetHeight), texture->GetSurfaceStride() / 4u, surfaceData);
 			if (result < 0) {
 				LOGE("sceGxmColorSurfaceInit({}x{}) failed with 0x{:.8x}", targetWidth, targetHeight, std::uint32_t(result));
-				sceGxmDestroyRenderTarget(_gxmRenderTarget);
-				_gxmRenderTarget = nullptr;
+				ReleaseSceneTarget();
 				return false;
 			}
 

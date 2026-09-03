@@ -68,7 +68,16 @@ namespace nCine
 		switch (_state) {
 			case PlayerState::Initial:
 			case PlayerState::Stopped: {
-				if (_audioBuffer == nullptr) {
+				if DEATH_UNLIKELY(_audioBuffer == nullptr) {
+					break;
+				}
+				// A sound at zero gain is one the master or effects slider has turned off, and playing it
+				// would still cost a source and its share of the mix for the whole length of the sample.
+				// Staying Stopped is what the callers already handle: callers usually prune anything stopped
+				// out of its list of playing sounds, and the actors that keep a looping sound around test
+				// the pointer they were handed rather than asking whether it plays, so none of them
+				// re-trigger. Nothing is audible either way, this way nothing is spent.
+				if DEATH_UNLIKELY(isSilent()) {
 					break;
 				}
 

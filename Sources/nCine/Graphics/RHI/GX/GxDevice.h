@@ -287,8 +287,13 @@ namespace nCine::RHI::GX
 		static std::uint8_t* _lightmapLinear;
 		static std::size_t _lightmapLinearSize;
 
-		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
-		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		/** @brief Resolves the index range of a `DrawElements()` into a host pointer, or `nullptr` if it cannot be read */
+		static const std::uint16_t* ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices);
+
+		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices = nullptr, std::int32_t indexCount = 0);
+		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const std::uint16_t* indices, std::int32_t indexCount);
 		// Draws a vertex-fed textured line strip (the weapon wheel) through the GP's native line primitive
 		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();

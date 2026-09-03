@@ -1,5 +1,6 @@
 #include "MenuWidgets.h"
 #include "../Font.h"
+#include "../../../nCine/Application.h"
 
 #include <algorithm>
 #include <cmath>
@@ -428,13 +429,20 @@ namespace Jazz2::UI::Menu
 		_bandTop = bounds.Y;
 		_availableHeight = bounds.H;
 
-		float content = ItemSpacing * 2.0f / 3.0f;
+		// Items are positioned by their CENTRE (see the loop below), so the run starts half of the FIRST
+		// item's height below the top edge and ends half of the last one's above the bottom - the leading
+		// term has to be that item's own height, not a constant. It used to be ItemSpacing, which cancels
+		// exactly for a list of default-height rows and leaves a growing gap for anything else: the
+		// highscore table's 25 px rows opened 15 px above the first entry against the 8 px intended here.
+		float firstHeight = 0.0f, content = 0.0f;
 		for (const auto& child : _children) {
 			if (child->Visible) {
+				if (firstHeight <= 0.0f) {
+					firstHeight = child->GetHeight();
+				}
 				content += child->GetHeight();
 			}
 		}
-		content -= ItemSpacing * 0.5f;
 		// Reserve extra space before the first and after the last item (for rows with oversized content)
 		content += ContentPadding * 2.0f;
 		_contentHeight = content;
@@ -457,7 +465,7 @@ namespace Jazz2::UI::Menu
 						before += _children[i]->GetHeight();
 					}
 				}
-				float desired = (_availableHeight * 0.5f) - (ItemSpacing * 0.5f) - ContentPadding - before;
+				float desired = (_availableHeight * 0.5f) - (firstHeight * 0.5f) - ContentPadding - before;
 				_scrollY = std::clamp(desired, _availableHeight - _contentHeight, 0.0f);
 			}
 		}
@@ -465,7 +473,7 @@ namespace Jazz2::UI::Menu
 		float centerX = bounds.X + bounds.W * 0.5f;
 		float topLine = bounds.Y;
 		float bottomLine = bounds.Y + bounds.H;
-		float cy = topLine + ItemSpacing * 0.5f + ContentPadding + _scrollY;
+		float cy = topLine + ContentPadding + (firstHeight * 0.5f) + _scrollY;
 
 		for (std::int32_t i = 0; i < (std::int32_t)_children.size(); i++) {
 			auto& child = _children[i];
@@ -573,8 +581,10 @@ namespace Jazz2::UI::Menu
 		// padding past the item is kept so the viewport scrolls slightly more than strictly needed, leaving the
 		// selection a bit inside the edge (revealing part of the adjacent item) instead of flush against it. The
 		// scroll offset is clamped in Draw, so this never over-scrolls past the first/last item.
-		constexpr float EdgePadding = ItemSpacing * 0.5f;
 		auto& selected = _children[_selectedIndex];
+		// Half of the row being scrolled to, for the same reason the layout above uses its own height: a
+		// constant here reveals most of a neighbouring row in a list of short ones and none in a list of tall
+		const float EdgePadding = selected->Bounds.H * 0.5f;
 		float itemTop = selected->Bounds.Y;
 		float itemBottom = selected->Bounds.Y + selected->Bounds.H;
 		float topLine = _bandTop;
@@ -726,6 +736,31 @@ namespace Jazz2::UI::Menu
 		if (OnEditStateChanged) {
 			OnEditStateChanged(true);
 		}
+
+		ShowScreenKeyboard();
+	}
+
+	void TextInput::ShowScreenKeyboard()
+	{
+		// A console has no keyboard of its own, so entering a field has to bring up the platform's. Where that
+		// is a modal editor (the PS Vita's IME) it opens on the text already in the field and hands the edited
+		// string back, which REPLACES the buffer instead of being appended to it; where the keyboard feeds
+		// keystrokes instead, neither argument is used and they arrive through OnTextInput() as before.
+		//
+		// The seed is the buffer rather than Value(), so reopening the keyboard on a field that is already
+		// being edited offers the text as edited so far instead of the value it started from.
+		//
+		// Reopening MUST come through here and not through the argument-less
+		// Application::ShowScreenKeyboard(): with no callback to hand the finished string to, that overload
+		// delivers it as the text input events a keystroke-feeding keyboard would have produced, which append.
+		// A second open done that way therefore loses the seed text AND duplicates whatever was in the field.
+		if (!theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		theApplication().ShowScreenKeyboard(_buffer.GetText(), [this](StringView text) {
+			_buffer.Activate(text);
+		});
 	}
 
 	bool TextInput::OnNavigate(const WidgetInput& input, IMenuContainer* root)

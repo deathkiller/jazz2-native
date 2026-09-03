@@ -35,8 +35,8 @@ namespace Jazz2::Rendering
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 		// Only the shader render path renders lights into a buffer; backends without cheap shaders skip lighting
 		// entirely (see RhiFwd.h). Every visible light of the viewport is accumulated into one vertex stream and
-		// submitted as a single draw - lights need no sorting and no texture, so unlike a tile layer they never
-		// have to be grouped, only split when the shared array buffer cannot hold them all at once.
+		// submitted as a single indexed draw - lights need no sorting and no texture, so unlike a tile layer they
+		// never have to be grouped, only split when the shared buffers cannot hold them all at once.
 		SmallVector<float, 0> _vertices;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 

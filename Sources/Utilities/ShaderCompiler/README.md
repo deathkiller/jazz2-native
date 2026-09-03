@@ -203,9 +203,32 @@ write](#which-conditional-to-write).
 
 That fold is what keeps the guarantee that no compile-time macro ever reaches an emitted source,
 where it would be silently read as *undefined* instead of as *resolved*. `defined(X)` works, and
-because each family is folded by its own pass, an expression may name macros of both. A conditional
-whose chain contains an `#elif` is never resolved away — dropping its directive lines would strand
-the `#elif` branches — so its `#if` is rewritten to `#if 1` / `#if 0` instead.
+because each family is folded by its own pass, an expression may name macros of both.
+
+An `#if` / `#elif` / `#else` **chain** is resolved as a whole, so a multi-way choice between backends
+is one flat chain rather than a nest of two-way conditionals:
+
+```glsl
+#if SOFTWARE_RENDERER
+	float horizonDepth = distance;                    // Cheap polynomial for the CPU
+#elif LOW_POWER_GPU
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance;   // One sqrt() on the SGX543
+#else
+	float horizonDepth = pow(distance, 1.4);
+#endif
+```
+
+The chain is walked branch by branch the way the preprocessor would take them: a determined-false
+branch is skipped, the first determined-true branch **settles** it (every branch after that is dead
+whatever it names, so an undetermined condition there is harmless), an `#else` settles it too, and a
+chain whose branches are all false selects nothing. Whenever the chain settles, all of its directive
+lines disappear along with every losing branch — exactly as for a two-way conditional, and with no
+`#if 0` / `#elif 1` scaffolding left in the emitted source.
+
+Only an **undetermined** condition reached *before* the chain settles leaves it standing: the outcome
+then genuinely depends on a macro the resolver does not own, so the chain survives for the GLSL
+compiler with its opener rewritten to `#if 1` / `#if 0` and the remaining conditions folded and
+lowered as usual. `tests/BackendConditionals.shader` covers both outcomes.
 
 #### Which conditional to write
 

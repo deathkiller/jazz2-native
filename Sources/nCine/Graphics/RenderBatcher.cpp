@@ -28,16 +28,27 @@ namespace nCine
 		std::uint32_t fixedBatchSize = theApplication().GetAppConfiguration().fixedBatchSize;
 		if (fixedBatchSize == 0) {
 			// A backend that publishes a hard ceiling (IntValues::MaxBatchSize) is one whose shaders were
-			// compiled for exactly that count, so it wants every batch to be that size rather than a range:
-			// clamping only the maximum would let short runs form extra small batches, and each of those
-			// still costs a whole instance block out of a uniform pool that is tiny on such backends.
+			// compiled for exactly that count, so the ceiling below comes from the device rather than from
+			// the rendering settings.
 			const std::int32_t deviceMaxBatchSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxBatchSize);
 			if (deviceMaxBatchSize > 0) {
 				fixedBatchSize = std::uint32_t(deviceMaxBatchSize);
 			}
 		}
 		if (fixedBatchSize > 0) {
-			minBatchSize = fixedBatchSize;
+			// The CEILING must be the count the batched shader was compiled for - a batch may not index past
+			// its instance array - and the loop below clamps to GetBatchSize() for exactly that reason. The
+			// FLOOR does not have to match it: a batch draws `6 * its own size` vertices (see the
+			// SetDrawParameters() calls in CollectCommands) and its instance block is allocated from the
+			// sizes actually accumulated, so a short batch draws and costs only what it holds and never
+			// reads the tail of the array.
+			//
+			// Raising the floor to the ceiling instead left every run shorter than it, and every remainder
+			// past a multiple of it, entirely unbatched - the passthrough at the bottom of the loop. Measured
+			// on a PS Vita back when its ceiling was 10, the credits screen drew 840 of its ~1266 items in 84
+			// batches and the remaining ~426 one draw at a time; at roughly 53 us of frame time per draw call
+			// that was most of a 31 ms frame, and fixing it alone took the worst point from 31.5 to 39 fps.
+			minBatchSize = 2;
 			maxBatchSize = fixedBatchSize;
 		} else {
 			auto& renderingSettings = theApplication().GetRenderingSettings();

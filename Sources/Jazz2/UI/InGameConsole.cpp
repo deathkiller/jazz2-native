@@ -417,7 +417,7 @@ namespace Jazz2::UI
 		// On touch-only devices the on-screen keyboard is the only way to type, so show it right away. On desktop
 		// the keyboard stays hidden until the user taps the hint, so it never pops up over a physical keyboard.
 		if (!_keyboardVisible && theApplication().CanShowScreenKeyboard()) {
-			theApplication().ShowScreenKeyboard();
+			ShowScreenKeyboardForInputLine();
 			_keyboardVisible = true;
 			RecalcLayoutForScreenKeyboard();
 		}
@@ -446,11 +446,32 @@ namespace Jazz2::UI
 			theApplication().HideScreenKeyboard();
 			_keyboardVisible = false;
 		} else {
-			theApplication().ShowScreenKeyboard();
+			ShowScreenKeyboardForInputLine();
 			_keyboardVisible = true;
 		}
 
 		RecalcLayoutForScreenKeyboard();
+	}
+
+	void InGameConsole::ShowScreenKeyboardForInputLine()
+	{
+		// A modal editor (the PS Vita's IME) opens on the line typed so far and hands the edited string back,
+		// which REPLACES it; where the keyboard feeds keystrokes neither argument is used and the characters
+		// arrive through OnTextInput() as before.
+		//
+		// Reopening through the argument-less Application::ShowScreenKeyboard() would instead deliver the
+		// result as input events and append it to the line already there, so this is the only way in.
+		if (!theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		theApplication().ShowScreenKeyboard(_currentLine, [this](StringView text) {
+			std::size_t length = std::min(text.size(), std::size_t(MaxLineLength - 1));
+			std::memcpy(_currentLine, text.data(), length);
+			_currentLine[length] = '\0';
+			_textCursor = length;
+			_carretAnim = 0.0f;
+		});
 	}
 
 	void InGameConsole::RecalcLayoutForScreenKeyboard()

@@ -72,23 +72,27 @@ void fragment() {
 
 	vec4 texColor = texture(TEXTURE, texturePos);
 
-#if DITHER && !SOFTWARE_RENDERER
+#if DITHER && !SOFTWARE_RENDERER && !LOW_POWER_GPU
 	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
 #endif
 
-#if !SOFTWARE_RENDERER
-	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
-#else
+#if SOFTWARE_RENDERER
 	// Software-renderer variant: the tunnel keeps its atan()-based warp geometry and the horizon
 	// tint, but the per-pixel pow() curve, the dithering second texture sample and the voronoi
 	// "star field" (dozens of sin() per pixel when uHorizonColor.w > 0) are far too slow on the
 	// CPU, so the pow() is approximated polynomially and dither/stars are dropped entirely.
 	float horizonOpacity = 1.0 - clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.4)
+#elif LOW_POWER_GPU
+	// See TexturedBackground.shader: sqrt() is one USSE instruction where pow() is two transcendentals,
+	// and 0.8 * d^1.5 + 0.2 * d tracks pow(d, 1.4) closely enough that the horizon keeps its shape
+	float horizonOpacity = 1.0 - clamp(0.8 * (distance * sqrt(distance)) + 0.2 * distance - 0.3, 0.0, 1.0);
+#else
+	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
 #endif
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
-#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING
+#if !SOFTWARE_RENDERER && !NO_DYNAMIC_BRANCHING && !LOW_POWER_GPU
 	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (UV * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));

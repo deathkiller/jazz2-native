@@ -53,6 +53,19 @@ namespace nCine
 			return;
 		}
 		_playerStarted = true;
+
+#if defined(DEATH_TARGET_PSP)
+		// The mixer is the expensive part of playing a module, and both of these are per-sample costs inside
+		// its inner loop that libxmp turns on by default: linear interpolation is a multiply-add for every
+		// sample of every voice, and the DSP lowpass is an IIR filter over the whole output. On the Allegrex
+		// the two together are the difference between the decoding thread finishing a chunk inside a frame
+		// and not: it needs about 9.6 ms per 46 ms chunk against the ~11 ms of vblank idle a frame leaves it,
+		// so falling just short means the queue never builds past one buffer and the main thread has to stop
+		// and wait for the decode it could otherwise have overlapped. Nearest-neighbour resampling and no
+		// lowpass are what module players ran on the hardware these modules were written for.
+		xmp_set_player(context, XMP_PLAYER_INTERP, XMP_INTERP_NEAREST);
+		xmp_set_player(context, XMP_PLAYER_DSP, 0);
+#endif
 		_context = context;
 	}
 

@@ -253,8 +253,14 @@ namespace Jazz2::Events
 		std::int32_t y1 = std::max<std::int32_t>(0, ty1);
 		std::int32_t y2 = std::min<std::int32_t>(_layoutSize.Y - 1, ty2);
 
-		for (std::int32_t x = x1; x <= x2; x++) {
-			for (std::int32_t y = y1; y <= y2; y++) {
+		// Row-major, matching the layout: the index is `x + y * width`, so y has to be the OUTER loop or the
+		// inner step jumps a whole row. It used to be the other way round, which made this walk column-major
+		// over a row-major array - every one of the 53x53 = 2809 tiles of an activation zone landed on its
+		// own cache line, 6 KB apart at a typical level width, and that was the whole cost of the frame's
+		// OnBeginFrame on the consoles (about 1 ms of a 16 ms budget on the PSP). Swapping the two reads the
+		// same tiles in the same zone; only the order events activate in changes, and no event depends on it.
+		for (std::int32_t y = y1; y <= y2; y++) {
+			for (std::int32_t x = x1; x <= x2; x++) {
 				auto& tile = _eventLayout[x + y * _layoutSize.X];
 				if (!tile.IsEventActive && tile.Event != EventType::Empty) {
 					tile.IsEventActive = true;

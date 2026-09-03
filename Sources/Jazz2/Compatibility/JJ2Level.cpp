@@ -171,9 +171,18 @@ namespace Jazz2::Compatibility
 			tile.ReverseDelay = block.ReadUInt16();
 			tile.IsPingPong = block.ReadBool();
 			tile.Speed = block.ReadByte(); // 0-70
+			// The frame list that follows is always MaxAnimationFrames entries long, but the count in front
+			// of it is a byte and nothing in the format stops it naming more. Convert() walks the frames up
+			// to this count, so a file saying 255 would have it read past the end of Frames - into the next
+			// tile of the array, and for the LAST tile past the end of the allocation entirely.
 			tile.FrameCount = block.ReadByte();
+			if (tile.FrameCount > MaxAnimationFrames) {
+				LOGW("Animated tile {} of level \"{}\" declares {} frames, more than the {} the format stores",
+					i, LevelName, tile.FrameCount, MaxAnimationFrames);
+				tile.FrameCount = MaxAnimationFrames;
+			}
 
-			for (std::int32_t j = 0; j < 64; j++) {
+			for (std::int32_t j = 0; j < MaxAnimationFrames; j++) {
 				tile.Frames[j] = block.ReadUInt16();
 			}
 		}
@@ -336,8 +345,11 @@ namespace Jazz2::Compatibility
 					}
 				}
 			} else {
-				// Array will be initialized with zeros
-				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.Width * layer.Height);
+				// Array will be initialized with zeros. Sized by InternalWidth like the branch above, because
+				// that is the stride Convert() indexes every layer with - sizing this one by Width instead
+				// left it short by (InternalWidth - Width) * Height entries for any layer whose rows are
+				// padded, which is every layer whose width is not a multiple of four.
+				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.InternalWidth * layer.Height);
 			}
 		}
 	}
@@ -610,7 +622,7 @@ namespace Jazz2::Compatibility
 				JJ2Event eventType;
 				if (tileEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
 					// Generators are converted differently
-					std::uint8_t eventParams[8];
+					std::uint8_t eventParams[16];
 					EventConverter::ConvertParamInt(tileEvent.TileParams, {
 						{ JJ2ParamUInt, 8 },	// Event
 						{ JJ2ParamUInt, 8 },	// Delay
@@ -640,7 +652,7 @@ namespace Jazz2::Compatibility
 			JJ2Event eventType;
 			if (offGridEvent.EventType == JJ2Event::MODIFIER_GENERATOR) {
 				// Generators are converted differently
-				std::uint8_t eventParams[8];
+				std::uint8_t eventParams[16];
 				EventConverter::ConvertParamInt(offGridEvent.TileParams, {
 					{ JJ2ParamUInt, 8 },	// Event
 					{ JJ2ParamUInt, 8 },	// Delay

@@ -1136,90 +1136,6 @@ else()
 			COMMAND ${CMAKE_COMMAND} "-DN64_ROM=${CMAKE_BINARY_DIR}/${NCINE_APP}.z64" -P "${CMAKE_SOURCE_DIR}/cmake/n64_check_rom_size.cmake"
 			COMMENT "Creating bootable Z64 ROM image with game content"
 			VERBATIM)
-	elseif(PLATFORM_PSP)
-		# The pspdev toolchain leaves the executable suffix empty; name it like the other console targets do,
-		# so the intermediate ELF is recognizable next to the EBOOT that is packed from it
-		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
-
-		# The PSPSDK libraries the engine calls into. None of them are on psp-gcc's own link line, whose
-		# `*lib` spec ends with "-lm --start-group -lpthreadglue -lpthread -lcglue -lc --end-group
-		# -lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser";
-		# anything that is in that spec must not be repeated here, see the note below.
-		target_link_libraries(${NCINE_APP} PRIVATE
-			pspgum
-			pspgu
-			pspge
-			pspdisplay
-			pspctrl
-			psppower
-			pspdebug
-		)
-
-		if(CURL_FOUND)
-			# The console has no socket stack at boot, so MainApplication brings one up for `WebRequest`
-			# (see PspNetworkInitialize); libcurl on top of it only needs the BSD sockets newlib wraps.
-			#
-			# `pspnet_inet`, `pspnet_resolver` and `psputility` are deliberately not listed, even though
-			# MainApplication calls into all three: the spec above appends them at the very end anyway,
-			# and an archive scanned at two points of the link line has its stubs extracted in two chunks
-			# - the engine's calls here, and the rest where libcglue's socket()/gethostbyname() pull them
-			# in from the spec's copy. psp-fixup-imports needs each module's stubs contiguous to write the
-			# stub and NID counts into its import table ("could not fixup imports, stubs out of order" is
-			# it giving up), and wrong counts make one module's table overlap the next one's stubs, so the
-			# loader patches syscalls into each other's slots. `pspnet` and `pspnet_apctl` are not in the
-			# spec and nothing but the engine imports them, so their single scan here is contiguous.
-			#
-			# `atomic` is libatomic, for the same reason as on the PlayStation 2 (see that arm): the
-			# Allegrex has no 64-bit atomic instruction, so the `std::atomic<std::int64_t>` byte counters
-			# `WebRequest` keeps per request are lowered to __atomic_*_8 calls. It is scoped to this arm
-			# because nothing else on this console needs 64-bit atomics.
-			target_link_libraries(${NCINE_APP} PRIVATE
-				pspnet
-				pspnet_apctl
-				atomic
-			)
-		endif()
-
-		if(OPENAL_FOUND)
-			# pspdev's OpenAL is an OpenAL Soft whose only output backend ("src/Alc/psp.c") drives
-			# sceAudioOutputBlocking() from a thread of its own, so the audio stubs it imports have to be
-			# linked here - the toolchain's default set does not include them. psphprm comes with it because
-			# the same backend also implements capture and probes for the headset microphone.
-			target_link_libraries(${NCINE_APP} PRIVATE
-				pspaudio
-				psphprm
-			)
-		endif()
-
-		# Package an EBOOT.PBP into the standard homebrew layout ("ms0:/PSP/GAME/Jazz2/"), staged under
-		# "ms0/" in the build directory together with the game content, so its contents can be copied
-		# straight onto a memory stick (or handed to PPSSPP, which mounts a directory as the memory stick).
-		# create_pbp_file() runs psp-strip / psp-fixup-imports / mksfoex / pack-pbp on the built ELF - see
-		# "$PSPDEV/psp/share/CreatePBP.cmake", included by the toolchain file.
-		set(PSP_EBOOT_DIR "${CMAKE_BINARY_DIR}/ms0/PSP/GAME/Jazz2")
-		file(MAKE_DIRECTORY "${PSP_EBOOT_DIR}")
-		create_pbp_file(
-			TARGET ${NCINE_APP}
-			#TITLE "${NCINE_APP_NAME}"
-			TITLE "${NCINE_APP}"
-			#VERSION "${NCINE_VERSION}"
-			VERSION "01.00"
-			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
-			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
-			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"
-			BACKGROUND_PATH NULL
-			PREVIEW_PATH NULL
-			OUTPUT_DIR "${PSP_EBOOT_DIR}"
-			# MEMSIZE=1 asks the firmware for the extra memory of the 2000/3000 models (and is what PPSSPP
-			# emulates by default); without it a user-mode application is capped at the 24 MB of a PSP-1000
-			MEMSIZE 1
-		)
-		# The content is staged as "Content" next to the EBOOT, which is where the PSP branch of
-		# ContentResolver::GetContentPath() looks for it
-		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PSP_EBOOT_DIR}/Content"
-			COMMENT "Staging memory stick layout with game content"
-			VERBATIM)
 	elseif(PLATFORM_PS2)
 		# The ps2dev toolchain leaves the executable suffix empty; name it like the other console targets do
 		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
@@ -1359,6 +1275,92 @@ else()
 			COMMAND "${PS3_PKG}" --contentid "${PS3_CONTENTID}" "${PS3_PKG_DIR}/" "${CMAKE_BINARY_DIR}/${NCINE_APP}.pkg"
 			COMMENT "Packaging EBOOT.BIN, SELF and NPDRM package with game content"
 			VERBATIM)
+	elseif(PLATFORM_PSP)
+		# The pspdev toolchain leaves the executable suffix empty; name it like the other console targets do,
+		# so the intermediate ELF is recognizable next to the EBOOT that is packed from it
+		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
+
+		# The PSPSDK libraries the engine calls into. None of them are on psp-gcc's own link line, whose
+		# `*lib` spec ends with "-lm --start-group -lpthreadglue -lpthread -lcglue -lc --end-group
+		# -lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser";
+		# anything that is in that spec must not be repeated here, see the note below.
+		target_link_libraries(${NCINE_APP} PRIVATE
+			pspgum
+			pspgu
+			pspge
+			pspdisplay
+			pspctrl
+			psppower
+			pspdebug
+		)
+
+		if(CURL_FOUND)
+			# The console has no socket stack at boot, so MainApplication brings one up for `WebRequest`
+			# (see PspNetworkInitialize); libcurl on top of it only needs the BSD sockets newlib wraps.
+			#
+			# `pspnet_inet`, `pspnet_resolver` and `psputility` are deliberately not listed, even though
+			# MainApplication calls into all three: the spec above appends them at the very end anyway,
+			# and an archive scanned at two points of the link line has its stubs extracted in two chunks
+			# - the engine's calls here, and the rest where libcglue's socket()/gethostbyname() pull them
+			# in from the spec's copy. psp-fixup-imports needs each module's stubs contiguous to write the
+			# stub and NID counts into its import table ("could not fixup imports, stubs out of order" is
+			# it giving up), and wrong counts make one module's table overlap the next one's stubs, so the
+			# loader patches syscalls into each other's slots. `pspnet` and `pspnet_apctl` are not in the
+			# spec and nothing but the engine imports them, so their single scan here is contiguous.
+			#
+			# `atomic` is libatomic, for the same reason as on the PlayStation 2 (see that arm): the
+			# Allegrex has no 64-bit atomic instruction, so the `std::atomic<std::int64_t>` byte counters
+			# `WebRequest` keeps per request are lowered to __atomic_*_8 calls. It is scoped to this arm
+			# because nothing else on this console needs 64-bit atomics.
+			target_link_libraries(${NCINE_APP} PRIVATE
+				pspnet
+				pspnet_apctl
+				atomic
+			)
+		endif()
+
+		if(OPENAL_FOUND)
+			# pspdev's OpenAL is an OpenAL Soft whose only output backend ("src/Alc/psp.c") drives
+			# sceAudioOutputBlocking() from a thread of its own, so the audio stubs it imports have to be
+			# linked here - the toolchain's default set does not include them. psphprm comes with it because
+			# the same backend also implements capture and probes for the headset microphone.
+			target_link_libraries(${NCINE_APP} PRIVATE
+				pspaudio
+				psphprm
+			)
+		endif()
+
+		# Package an EBOOT.PBP into the standard homebrew layout ("ms0:/PSP/GAME/Jazz2/"), staged under
+		# "ms0/" in the build directory together with the game content, so its contents can be copied
+		# straight onto a memory stick (or handed to PPSSPP, which mounts a directory as the memory stick).
+		# create_pbp_file() runs psp-strip / psp-fixup-imports / mksfoex / pack-pbp on the built ELF - see
+		# "$PSPDEV/psp/share/CreatePBP.cmake", included by the toolchain file.
+		set(PSP_EBOOT_DIR "${CMAKE_BINARY_DIR}/ms0/PSP/GAME/Jazz2")
+		file(MAKE_DIRECTORY "${PSP_EBOOT_DIR}")
+		# The title is what the firmware's game list and Adrenaline show under the icon. PARAM.SFO carries it
+		# as UTF-8, so the superscript in the project's name survives - the PS Vita packaging a few hundred
+		# lines below hands `vita_create_vpk()` the very same string.
+		create_pbp_file(
+			TARGET ${NCINE_APP}
+			TITLE "${NCINE_APP_NAME}"
+			#VERSION "${NCINE_VERSION}"
+			VERSION "01.00"
+			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
+			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
+			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"
+			BACKGROUND_PATH NULL
+			PREVIEW_PATH NULL
+			OUTPUT_DIR "${PSP_EBOOT_DIR}"
+			# MEMSIZE=1 asks the firmware for the extra memory of the 2000/3000 models (and is what PPSSPP
+			# emulates by default); without it a user-mode application is capped at the 24 MB of a PSP-1000
+			MEMSIZE 1
+		)
+		# The content is staged as "Content" next to the EBOOT, which is where the PSP branch of
+		# ContentResolver::GetContentPath() looks for it
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PSP_EBOOT_DIR}/Content"
+			COMMENT "Staging memory stick layout with game content"
+			VERBATIM)
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 
@@ -1419,6 +1421,12 @@ else()
 		if(NOT VITA_TITLEID)
 			string(SUBSTRING "${NCINE_APP}000000000" 0 9 VITA_TITLEID)
 		endif()
+		# Upper case, always. Sony's own ids are (four letters, five digits) and every id the firmware writes
+		# or matches is upper case; a lower-case one installs and boots, but the shell does not treat it as the
+		# same id everywhere it looks - which is how this port ended up with a bubble whose LiveArea page was
+		# never picked up and which the uninstaller refused with C2-17770-2. Derived ids come from
+		# `NCINE_APP`, which is lower case, so this is the one place it can be corrected for everyone.
+		string(TOUPPER "${VITA_TITLEID}" VITA_TITLEID)
 		if(NOT VITA_TITLEID MATCHES "^[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]$")
 			message(FATAL_ERROR "VITA_TITLEID \"${VITA_TITLEID}\" is not 9 alphanumeric characters, "
 				"which the firmware requires - set it explicitly to a conforming id")
@@ -1427,9 +1435,96 @@ else()
 		# The game content travels inside the VPK, next to the executable, so it ends up in the
 		# application's own read-only directory ("ux0:/app/<titleid>/", mounted as "app0:") and needs
 		# no separate copy on the device.
+		# The LiveArea page - what the firmware shows when the game's bubble is selected, before the game
+		# starts. It is optional: without "template.xml" the firmware falls back to the default homebrew gate,
+		# so a tree that has not been given the artwork still produces a working VPK.
+		#
+		# The template's "style" names a layout the firmware owns - they are the ".rco" files in
+		# "vs0:/vsh/shell/livearea" (a1 through a5, ad0 through ad4, psmobile, pspemu, ps1emu, ...) - and it,
+		# not anything in the template, decides where the gate and any frames sit. "psmobile" is what homebrew
+		# uses. Two things about that file are worth knowing because getting either wrong fails silently, with
+		# the firmware showing the default gate as though no template had been shipped at all: the shell's
+		# parser wants the root element straight after the XML declaration (an XML comment in between, legal
+		# as it is, is enough), and "content-rev" has to go up when the page's content changes, or an already
+		# installed copy keeps what the shell cached. Both images are packaged under the names the template
+		# gives them, at sizes the firmware will not rescale: 840x500 and 280x158.
+		set(_vitaLiveAreaDir "${NCINE_SOURCE_DIR}/Icons/Vita")
+		set(VITA_LIVEAREA_FILES "")
+		if(EXISTS "${_vitaLiveAreaDir}/Template.xml")
+			set(_vitaLiveAreaComplete TRUE)
+			foreach(_liveAreaImage Background.png Startup.png)
+				if(NOT EXISTS "${_vitaLiveAreaDir}/${_liveAreaImage}")
+					message(WARNING "LiveArea artwork \"${_liveAreaImage}\" is missing from \"${_vitaLiveAreaDir}\", "
+						"so the default homebrew gate is packaged instead (Background.png is 840x500, "
+						"Startup.png is 280x158)")
+					set(_vitaLiveAreaComplete FALSE)
+				endif()
+			endforeach()
+			if(_vitaLiveAreaComplete)
+				list(APPEND VITA_LIVEAREA_FILES
+					FILE "${_vitaLiveAreaDir}/Template.xml" "sce_sys/livearea/contents/template.xml"
+					FILE "${_vitaLiveAreaDir}/Background.png" "sce_sys/livearea/contents/bg0.png"
+					FILE "${_vitaLiveAreaDir}/Startup.png" "sce_sys/livearea/contents/startup.png")
+				message(STATUS "Packaging a custom PS Vita LiveArea page")
+			endif()
+		endif()
+
+		# The CA bundle every HTTPS request is verified against. VitaSDK's libcurl defaults CURLOPT_CAINFO to
+		# the firmware's own store under "vs0:", which an application cannot open at all - the mount point is
+		# not in its sandbox, so the call fails with ENOENT rather than a permission error (see WebRequest.cpp)
+		# - and the TLS stack linked into the executable is not the system one that iTLS-Enso and friends
+		# patch, so nothing installed on the console can supply it either. It is fetched at configure time
+		# rather than committed: a trust store goes stale, and a copy in the repository would be a second
+		# thing to remember to update. The download is cached in the build directory, so it happens once.
+		set(VITA_CACERT_FILES "")
+		set(_vitaCaCert "${CMAKE_BINARY_DIR}/cacert.pem")
+		if(NOT EXISTS "${_vitaCaCert}")
+			message(STATUS "Downloading the CA certificate bundle for HTTPS support...")
+			file(DOWNLOAD "https://curl.se/ca/cacert.pem" "${_vitaCaCert}"
+				INACTIVITY_TIMEOUT 30 TIMEOUT 120 TLS_VERIFY ON STATUS _vitaCaCertStatus SHOW_PROGRESS)
+			list(GET _vitaCaCertStatus 0 _vitaCaCertResult)
+			if(NOT _vitaCaCertResult EQUAL 0)
+				list(GET _vitaCaCertStatus 1 _vitaCaCertError)
+				# Not fatal: the build is still perfectly good, it just cannot verify a certificate until a
+				# bundle is there, so this reports what is missing instead of stopping the build
+				message(WARNING "Cannot download the CA certificate bundle (${_vitaCaCertError}), so HTTPS "
+					"requests will fail to verify - put a PEM bundle at \"${_vitaCaCert}\" and configure again")
+				file(REMOVE "${_vitaCaCert}")
+			endif()
+		endif()
+		if(EXISTS "${_vitaCaCert}")
+			list(APPEND VITA_CACERT_FILES FILE "${_vitaCaCert}" "Content/cacert.pem")
+		endif()
+
+		# Compiled GXP shader binaries, so a fresh install does not have to run the on-console Cg compiler
+		# for every stage before the first frame (that cost 3.3 s of the 6.8 s startup). The pack is
+		# produced BY the console - there is no offline sceGxm shader compiler - so it is pulled back from
+		# "ux0:/data/jazz2/Cache/Shaders/" after a run and committed here; see the directory's README.md.
+		#
+		# It is packaged only for this platform, hence a directory of its own rather than a file under
+		# "Content": a GXP is Vita machine code and would be dead weight in every other build. The path it
+		# lands on is the one GxmShaderCache::PrebakedPath reads, and nothing has to match beyond that -
+		# entries are keyed by a hash of the Cg source they were compiled from, so a pack that predates a
+		# shader change is not wrong, only incomplete (the changed stages miss and are recompiled), and one
+		# built by a different "libshacccg.suprx" is rejected wholesale by its fingerprint. A missing pack
+		# is simply the old behaviour, which is why this is not an error.
+		set(VITA_SHADERCACHE_FILES "")
+		set(_vitaShaderCache "${NCINE_SOURCE_DIR}/Shaders/Prebaked/Vita/ShadersGxm.bin")
+		if(EXISTS "${_vitaShaderCache}")
+			list(APPEND VITA_SHADERCACHE_FILES FILE "${_vitaShaderCache}" "Content/Shaders/ShadersGxm.bin")
+			message(STATUS "Packaging the prebaked GXP shader cache")
+		else()
+			message(WARNING "The prebaked GXP shader cache is missing from \"${_vitaShaderCache}\", so a "
+				"fresh install will compile every shader on the console at its first start (about 3 s). See "
+				"that directory's README.md for how to regenerate it.")
+		endif()
+
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
 			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
-			FILE "${NCINE_SOURCE_DIR}/Icons/Vita.png" "sce_sys/icon0.png"
+			FILE "${NCINE_SOURCE_DIR}/Icons/Vita/Icon.png" "sce_sys/icon0.png"
+			${VITA_LIVEAREA_FILES}
+			${VITA_CACERT_FILES}
+			${VITA_SHADERCACHE_FILES}
 			FILE "${NCINE_CONTENT_DIR}" "Content")
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")

@@ -2792,8 +2792,14 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::ModifierLimitCameraView: { // Left, Width
-				std::uint16_t left = *(std::uint16_t*)&p[0];
-				std::uint16_t width = *(std::uint16_t*)&p[2];
+				// Through EventParamsReader, which memcpy()s. The parameters are a byte array starting at an
+				// ODD offset inside EventTile (4-byte flags, 2-byte event type, 1-byte active flag, then
+				// these), so a `*(std::uint16_t*)` of them is an unaligned halfword load - and on MIPS and
+				// SH-4 that is not a slow path but an address error that takes the process down with no
+				// chance to log anything. See the AreaEndOfLevel case below, where it was reproducible.
+				EventParamsReader eventParams(p);
+				std::uint16_t left = eventParams.GetUint16(0);
+				std::uint16_t width = eventParams.GetUint16(2);
 				_levelHandler->LimitCameraView(this, _pos,
 					(left == 0 ? (std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize,
 					width * Tiles::TileSet::DefaultTileSize);
@@ -2850,7 +2856,13 @@ namespace Jazz2::Actors
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
 				if (_levelExiting == LevelExitingState::None) {
 					// TODO: Implement Fast parameter
-					uint16_t coinsRequired = *(std::uint16_t*)&p[4];
+					// memcpy'd through EventParamsReader rather than cast, because EventTile puts these
+					// parameters at an odd offset - see ModifierLimitCameraView above. This exact line killed
+					// the PSP build every time the player reached a level exit: the unaligned `lhu` raised an
+					// address error inside Player::OnUpdate, before even the exit sound was played, so the
+					// log always just stopped. PPSSPP never reproduced it - its JIT lowers the load to an x86
+					// access, which permits unaligned - only real hardware faults.
+					std::uint16_t coinsRequired = EventParamsReader(p).GetUint16(4);
 					if (coinsRequired <= _inventory.Coins) {
 						_inventory.Coins -= coinsRequired;
 

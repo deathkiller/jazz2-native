@@ -112,7 +112,11 @@ namespace Jazz2::UI::Menu
 			std::int32_t row = GetSelectedRow();
 			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				theApplication().ToggleScreenKeyboard();
+				if (theApplication().IsScreenKeyboardVisible()) {
+					theApplication().HideScreenKeyboard();
+				} else {
+					ShowScreenKeyboardForPlayerName();
+				}
 				RecalcLayoutForScreenKeyboard();
 			} else if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
@@ -165,8 +169,8 @@ namespace Jazz2::UI::Menu
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + 31.0f;
-		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
@@ -383,8 +387,16 @@ namespace Jazz2::UI::Menu
 		root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.18f, itemY, IMenuContainer::MainLayer - 100, Alignment::Left,
 			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 
+		// Every column here is placed as a fraction of the view's half-width while the text in it is drawn at
+		// a fixed scale, so a narrow view moves the columns together without shrinking what sits in them. The
+		// gem counts are the widest of them and the elapsed time is the least important, so on a view too
+		// narrow to hold both the time is what gives way - measured against the string actually being drawn
+		// rather than a resolution threshold, because a long gem count crowds a wide view just the same.
+		float gemsRight = centerX * 1.18f + root->MeasureString({ stringBuffer, length }, 0.8f).X;
+		bool elapsedFits = (gemsRight + 12.0f < centerX * 1.58f - 12.0f);
+
 		std::int64_t elapsedSeconds = (entry.ElapsedMilliseconds / 1000);
-		if (elapsedSeconds > 0) {
+		if (elapsedSeconds > 0 && elapsedFits) {
 			root->DrawElement(PickupStopwatch, -1, centerX * 1.58f - 6.0f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf::White, 0.55f, 0.55f);
 
 			std::int32_t elapsedHours = (std::int32_t)(elapsedSeconds / 3600);
@@ -414,7 +426,7 @@ namespace Jazz2::UI::Menu
 					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 					if (x < 0.2f && y < 80.0f && theApplication().CanShowScreenKeyboard()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						theApplication().ShowScreenKeyboard();
+						ShowScreenKeyboardForPlayerName();
 						RecalcLayoutForScreenKeyboard();
 						return;
 					}
@@ -434,7 +446,7 @@ namespace Jazz2::UI::Menu
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				if (y >= 80.0f) {
 					Recti contentBounds = _root->GetContentBounds();
-					float topLine = contentBounds.Y + 31.0f;
+					float topLine = contentBounds.Y + TopLine;
 					if (std::abs(x - 0.5f) > (y > topLine ? 0.35f : 0.1f)) {
 						SwitchSeries(x < 0.5f ? -1 : 1);
 						return;
@@ -468,6 +480,31 @@ namespace Jazz2::UI::Menu
 			_selectedSeries = 0;
 		}
 		RebuildList();
+	}
+
+	void HighscoresSection::ShowScreenKeyboardForPlayerName()
+	{
+		// Hand the name over so a modal editor opens on it rather than empty, and take the result back the
+		// same way - on a platform whose keyboard feeds keystrokes instead, neither is used and the
+		// characters arrive through OnTextInput() as before.
+		//
+		// The argument-less Application::ShowScreenKeyboard() must not be used for this: with no callback to
+		// receive the finished string it delivers the text as input events, which APPEND to the name already
+		// entered instead of replacing it. Every path that opens the keyboard here goes through this one.
+		std::int32_t row = GetSelectedRow();
+		if (row < 0 || !theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		theApplication().ShowScreenKeyboard(_series[_selectedSeries].Items[row].PlayerName,
+			[this, row](StringView text) {
+				auto& entry = _series[_selectedSeries].Items[row];
+				entry.PlayerName = text;
+				if (entry.PlayerName.size() > MaxPlayerNameLength) {
+					entry.PlayerName = entry.PlayerName.prefix(MaxPlayerNameLength);
+				}
+				_textCursor = entry.PlayerName.size();
+			});
 	}
 
 	void HighscoresSection::FinishNameEntry()

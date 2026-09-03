@@ -287,8 +287,17 @@ namespace Jazz2::UI::Menu
 		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
+		// The version and the copyright sit in the bottom corners of the background, behind whatever section
+		// is on top. That is fine while the view is tall enough to keep the section's own frame clear of
+		// them, but on a compact one (the handhelds' 272 rows - the same threshold the header and footer
+		// shrink at, see MenuContainerBase::UpdateContentBounds()) the frame reaches all the way down and
+		// they show through underneath it. They belong to the title screen rather than to any section, so
+		// there they are drawn only while the root section is the one on top.
+		bool showCorners = (ViewSize.Y >= 300 || _owner->_sections.size() <= 1);
 #if defined(DEATH_TARGET_ANDROID)
-		if (!static_cast<AndroidApplication&>(theApplication()).IsScreenRound())
+		if (showCorners && !static_cast<AndroidApplication&>(theApplication()).IsScreenRound())
+#else
+		if (showCorners)
 #endif
 		{
 			// Version
