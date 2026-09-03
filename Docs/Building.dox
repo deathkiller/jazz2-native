@@ -357,7 +357,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library, only offered for `NCINE_RHI_GL_PROFILE=Core`
 -   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, Emscripten and UWP) --- Enable better exception handling
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
--   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
+-   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop; the consoles use their own backends, see @ref consoles-common-audio
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
 -   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Wii** and the **GameCube**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has

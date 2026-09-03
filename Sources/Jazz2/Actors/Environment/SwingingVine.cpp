@@ -6,6 +6,8 @@
 
 #include "../../../nCine/Graphics/RenderQueue.h"
 
+#include <array>
+
 namespace Jazz2::Actors::Environment
 {
 	SwingingVine::SwingingVine()
@@ -62,13 +64,25 @@ namespace Jazz2::Actors::Environment
 	{
 		ActorBase::OnUpdate(timeMult);
 
+		// The distance of each chunk along the vine depends only on its index, so the `powf()` is paid once
+		// per process instead of sixteen times a frame per vine - and the angles go through the cheap
+		// approximations, which are exact libm calls everywhere but on the consoles, where a libm `sinf()`
+		// costs thousands of cycles and this loop alone was five of them per chunk (80 per vine per frame)
+		static const auto chunkDistances = [] {
+			std::array<float, ChunkCount> distances;
+			for (std::int32_t i = 0; i < ChunkCount; i++) {
+				distances[i] = ChunkSize * powf((float)i, 0.95f);
+			}
+			return distances;
+		}();
+
 		float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
 		for (std::int32_t i = 0; i < ChunkCount; i++) {
-			_angle = sinf(currentPhase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
+			_angle = sinApprox(currentPhase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
 
-			float distance = ChunkSize * powf(i, 0.95f);
-			_chunkPos[i].X = _pos.X + cosf(_angle) * distance;
-			_chunkPos[i].Y = _pos.Y + sinf(_angle) * distance;
+			float distance = chunkDistances[i];
+			_chunkPos[i].X = _pos.X + cosApprox(_angle) * distance;
+			_chunkPos[i].Y = _pos.Y + sinApprox(_angle) * distance;
 		}
 
 		auto& lastChunk = _chunkPos[ChunkCount - 1];
@@ -77,7 +91,7 @@ namespace Jazz2::Actors::Environment
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
 			if (player->GetCarryingObject() == this) {
-				float chunkAngle = sinf(currentPhase - ChunkCount * 0.08f) * 0.6f;
+				float chunkAngle = sinApprox(currentPhase - ChunkCount * 0.08f) * 0.6f;
 				Vector2f prevPos = player->GetPos();
 				Vector2 newPos = lastChunk + Vector2(chunkAngle * -22.0f, 20.0f + std::abs(chunkAngle) * -10.0f);
 				player->MoveInstantly(newPos, MoveType::Absolute);
@@ -123,7 +137,7 @@ namespace Jazz2::Actors::Environment
 				resolver.ConfigureSpriteShader(*command, indexed);
 
 				float chunkTexSize = ChunkSize / texSize.Y;
-				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
+				float chunkAngle = sinApprox(currentPhase - i * 0.08f) * 1.2f;
 
 				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);

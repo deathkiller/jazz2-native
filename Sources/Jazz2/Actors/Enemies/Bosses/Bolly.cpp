@@ -160,11 +160,11 @@ namespace Jazz2::Actors::Bosses
 		float distance = 30.0f;
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
-				float angle = sinf(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
+				float angle = sinApprox(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 
 				Vector2f piecePos = _pos;
-				piecePos.X += cosf(angle) * distance;
-				piecePos.Y += sinf(angle) * distance;
+				piecePos.X += cosApprox(angle) * distance;
+				piecePos.Y += sinApprox(angle) * distance;
 				_chain[i]->MoveInstantly(piecePos, MoveType::Absolute | MoveType::Force);
 
 				distance += _chain[i]->Size;

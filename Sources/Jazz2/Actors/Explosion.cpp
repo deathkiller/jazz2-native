@@ -113,7 +113,7 @@ namespace Jazz2::Actors
 			}
 			case Type::RF: {
 				float phase1 = _time * 0.16f;
-				float phase2 = (phase1 < fRadAngle270 ? sinf(phase1) : -1.0f);
+				float phase2 = (phase1 < fRadAngle270 ? sinApprox(phase1) : -1.0f);
 				_lightIntensity = 0.2f + phase2;
 				_lightBrightness = 0.2f + phase2;
 				_lightRadiusFar = 50.0f * _scale * (1.0f + phase2);
@@ -121,7 +121,7 @@ namespace Jazz2::Actors
 			}
 			case Type::RFUpgraded: {
 				float phase1 = _time * 0.18f;
-				float phase2 = (phase1 < fRadAngle270 ? sinf(phase1) : -1.0f);
+				float phase2 = (phase1 < fRadAngle270 ? sinApprox(phase1) : -1.0f);
 				_lightIntensity = 0.1f + phase2 * 0.1f;
 				_lightBrightness = 0.2f + phase2 * 0.4f;
 				_lightRadiusNear = (2.0f * _scale) + (phase1 * 1.4f);

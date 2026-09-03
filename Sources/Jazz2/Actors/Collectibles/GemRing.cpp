@@ -62,7 +62,7 @@ namespace Jazz2::Actors::Collectibles
 			for (int i = 0; i < _pieces.size(); i++) {
 				float angle = _phase * (1.0f + _collectedPhase * 0.001f) + (i * fTwoPi / _pieces.size());
 				float distance = 8 * 4 + _collectedPhase * 3.6f;
-				_pieces[i].Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+				_pieces[i].Pos = Vector2f(_pos.X + cosApprox(angle) * distance, _pos.Y + sinApprox(angle) * distance);
 				_pieces[i].Angle = angle + fPiOver2;
 				_pieces[i].Scale += 0.02f * timeMult;
 			}
@@ -72,8 +72,8 @@ namespace Jazz2::Actors::Collectibles
 		} else {
 			for (int i = 0; i < _pieces.size(); i++) {
 				float angle = _phase + (i * fTwoPi / _pieces.size());
-				float distance = 8 * (4 + sinf(_phase * 1.1f));
-				_pieces[i].Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+				float distance = 8 * (4 + sinApprox(_phase * 1.1f));
+				_pieces[i].Pos = Vector2f(_pos.X + cosApprox(angle) * distance, _pos.Y + sinApprox(angle) * distance);
 				_pieces[i].Angle = angle + fPiOver2;
 			}
 

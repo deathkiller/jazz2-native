@@ -609,6 +609,16 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			# summary reports, and no OpenAL path left in the cache by an earlier configure can suggest otherwise.
 			unset(OPENAL_INCLUDE_DIR CACHE)
 			unset(OPENAL_LIBRARY CACHE)
+		elseif(PLATFORM_PSP)
+			# pspdev does ship an OpenAL - an OpenAL Soft 1.6 from 2008 - and the engine ran on it, but its
+			# mixer thread alone measured 12-24% of the console's single core in game, as much as the whole
+			# module decoder, for effects and filters the game never uses. The backend software-mixes into an
+			# sceAudio channel instead, the same mixer as the SDL/N64 backends (see PspAudioDevice); sceAudio
+			# is part of the SDK, so there is nothing to look for, and a stale OpenAL path in the cache of a
+			# previously configured build directory must not select the old backend.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(PSPAUDIO_FOUND 1)
 		elseif(PLATFORM_AMIGA)
 			# No OpenAL on classic AmigaOS. The backend software-mixes like the N64/PS3 ones and hands the
 			# blocks to ahi.device (retargetable audio: Paula 14-bit on stock machines, Pamela on a Vampire,
@@ -649,7 +659,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			find_package(libopenmpt)
 		endif()
 		if(NCINE_WITH_XMP AND (OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR
-				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND))
+				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND))
 			# Always built from source (there is nothing to find on the platforms that select it), so this
 			# only has to run where the option is on - see cmake/Findlibxmp.cmake. The audio-backend test
 			# is the same one the sources are guarded by: with no device to play through, downloading and

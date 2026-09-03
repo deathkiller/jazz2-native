@@ -1573,8 +1573,8 @@ namespace Jazz2::Actors
 
 						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
-							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
+							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinApprox(frames * 0.006f),
+							-sinApprox(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
@@ -1604,8 +1604,8 @@ namespace Jazz2::Actors
 
 						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
+							frames * 0.006f, sinApprox(frames * 0.006f) + _pos.Y * PosMultiplier,
+							sinApprox(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
@@ -1676,7 +1676,7 @@ namespace Jazz2::Actors
 					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
-					float shieldSize = 70.0f * shieldScale + sinf(frames * 0.06f) * 4.0f;
+					float shieldSize = 70.0f * shieldScale + sinApprox(frames * 0.06f) * 4.0f;
 
 					float shieldPosX = _pos.X - shieldSize * 0.5f;
 					float shieldPosY = _pos.Y - shieldSize * 0.5f;
@@ -1706,8 +1706,8 @@ namespace Jazz2::Actors
 
 						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							-sinf(frames * 0.015f), frames * 0.006f);
+							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinApprox(frames * 0.006f) + _pos.Y * PosMultiplier,
+							-sinApprox(frames * 0.015f), frames * 0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
@@ -1737,8 +1737,8 @@ namespace Jazz2::Actors
 
 						auto* instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							sinf(frames * 0.015f), frames * -0.006f);
+							frames * 0.006f + _pos.X * PosMultiplier, sinApprox(frames * 0.006f) + _pos.Y * PosMultiplier,
+							sinApprox(frames * 0.015f), frames * -0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 

@@ -90,6 +90,8 @@ extern "C"
 #		include "Audio/Backends/Amiga/AmigaAudioDevice.h"
 #	elif defined(WITH_SDLAUDIO)
 #		include "Audio/Backends/SDL/SdlAudioDevice.h"
+#	elif defined(WITH_PSPAUDIO)
+#		include "Audio/Backends/Psp/PspAudioDevice.h"
 #	endif
 #endif
 
@@ -1008,6 +1010,8 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<AmigaAudioDevice>());
 #	elif defined(WITH_SDLAUDIO)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<SdlAudioDevice>());
+#	elif defined(WITH_PSPAUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<PspAudioDevice>());
 #	endif
 		}
 #endif

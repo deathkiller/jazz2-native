@@ -1071,9 +1071,9 @@ namespace Jazz2::UI
 		std::int32_t lastCarrotIdx = 0;
 		float lastCarrotOffset = 0.0f;
 		float scale = 0.5f;
-		float angleBase1 = sinf(AnimTime * 10.0f) * fDegToRad;
-		float angleBase2 = sinf(AnimTime * 12.0f + 3.0f) * fDegToRad;
-		float angleBase3 = sinf(AnimTime * 11.0f + 7.0f) * fDegToRad;
+		float angleBase1 = sinApprox(AnimTime * 10.0f) * fDegToRad;
+		float angleBase2 = sinApprox(AnimTime * 12.0f + 3.0f) * fDegToRad;
+		float angleBase3 = sinApprox(AnimTime * 11.0f + 7.0f) * fDegToRad;
 
 		// Limit frame rate of carrot movement
 		angleBase1 = std::round(angleBase1 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);

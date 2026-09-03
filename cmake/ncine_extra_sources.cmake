@@ -398,7 +398,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
@@ -463,6 +463,13 @@ if(NOT DEDICATED_SERVER)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/SDL/SdlAudioDevice.cpp)
+		elseif(PSPAUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "sceAudio (software mixer into a PSP hardware channel)")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PSPAUDIO")
+			# The audio stubs are linked with the platform packaging below
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Psp/PspAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Psp/PspAudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
 			set(_NCINE_AUDIO_BACKEND "PS3 (PSL1GHT libaudio mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
@@ -1319,7 +1326,11 @@ else()
 			)
 		endif()
 
-		if(OPENAL_FOUND)
+		if(PSPAUDIO_FOUND)
+			# The engine's own backend drives sceAudioOutputPannedBlocking() from a thread of its own (see
+			# PspAudioDevice); the audio stubs are not in the toolchain's default set
+			target_link_libraries(${NCINE_APP} PRIVATE pspaudio)
+		elseif(OPENAL_FOUND)
 			# pspdev's OpenAL is an OpenAL Soft whose only output backend ("src/Alc/psp.c") drives
 			# sceAudioOutputBlocking() from a thread of its own, so the audio stubs it imports have to be
 			# linked here - the toolchain's default set does not include them. psphprm comes with it because

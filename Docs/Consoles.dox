@@ -136,10 +136,10 @@ Feature | N64 | Dreamcast | Wii | GameCube | PSP | PS2 | PS3 | Vita | Switch
 ------- | --- | --------- | --- | -------- | --- | --- | --- | ---- | ------
 Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes | **No** | **No** | Yes | Yes
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No
-Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `PSP` @m_span{m-text m-dim} (software mixer into an `sceAudio` channel) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes | **No** | Yes | SDK-dependent | SDK-dependent
 Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
-Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no `efx.h` in pspdev | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
+Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no filter stage in the mixer | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
 Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
@@ -159,10 +159,11 @@ under @cpp "nCine/Graphics/RHI/" @ce:
 
 Backend | `WITH_*` | What it drives
 ------- | -------- | --------------
-@ref nCine::ALAudioDevice "AL" | `WITH_OPENAL` | The system OpenAL on desktop, and the SDK's own on the PSP, Switch and Vita
+@ref nCine::ALAudioDevice "AL" | `WITH_OPENAL` | The system OpenAL on desktop, and the SDK's own on the Switch and Vita
 @ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer, the only sound API devkitPro ships for PowerPC. Comes with the toolchain, so there is nothing to install
 @ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS, using its wavetable channels for sound effects and its `snd_stream` driver for music
 @ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio. The console offers no mixer at all --- only a ring of 256-sample blocks of interleaved floats that the hardware scans out --- so this backend **is** the mixer, on the PPE
+@ref nCine::PspAudioDevice "PSP" | `WITH_PSPAUDIO` | One `sceAudio` hardware channel. pspdev does ship an OpenAL, but the console cannot afford it (see below), so this is the N64/SDL mixer again --- on a thread of its own here, which is the one thing that sets it apart from the others
 @ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's AI ring. The console has no sound chip at all --- the AI is a bare stereo DAC fed by DMA --- so this backend is the mixer too, on the VR4300; the same arrangement as the PS3, except it mixes in integers to spare the 93 MHz core's FPU
 none | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
 
@@ -185,7 +186,7 @@ code on our side and considerably better behaved.
 
 @par Why the PlayStation 3 mixes in software
 The other consoles all have something to hand a sound to: the Dreamcast has 64 wavetable channels, the
-Wii and GameCube have libogc's DSP mixer, the PSP has an OpenAL. lv2 gives a title one output ring and
+Wii and GameCube have libogc's DSP mixer. lv2 gives a title one output ring and
 nothing else --- no voices, no per-source volume or pitch register --- so resampling, panning, looping
 and the streaming queues are all @ref nCine::Ps3AudioDevice on the PPE. Two consequences are worth
 knowing when reading it: the ring is topped up from `updatePlayers()` once per frame rather than from
@@ -193,6 +194,43 @@ a callback @m_span{m-text m-dim} (PSL1GHT ships no threads, so there is no mixer
 @m_endspan, which is why it is deliberately long enough to survive a late frame, and the mix is **clamped**
 before it is written, because the hardware folds an out-of-range sample into the opposite
 polarity, which sounds far worse than clipping.
+
+@m_class{m-block m-info}
+
+@par Why the PlayStation Portable does not use pspdev's OpenAL
+It did, at first. pspdev's OpenAL is an OpenAL Soft **1.6** from 2008, and the port ran on it for a
+long time --- until the CPU time of every thread was measured on the hardware with `runClocks`. In a
+level, with music and effects playing, its mixer thread alone took **12--24%** of the console's single
+core, as much as the whole module decoder, for filters and effects the game never asks for
+@m_span{m-text m-dim} (it resamples and low-passes every source in floating point, under one global
+lock that every `alSource*` call from the game then waits on) @m_endspan. The game's sounds are 8- and
+16-bit samples at 11--22 kHz mixed into stereo, which the integer mixer the N64 and SDL backends share
+does for a few percent, so @ref nCine::PspAudioDevice is that mixer over one `sceAudio` channel. With
+it the same level went from 30--45 fps to a steady 57--60 with sound on.
+
+Two details of it are deliberate. It mixes **on its output thread**, double-buffered right before each
+block is handed to `sceAudioOutputPannedBlocking()`, rather than on the main thread once per frame the
+way the other software backends do: on this console a frame that runs long --- a busy scene, a level
+load --- is common, and a main-thread mixer with 93 ms of lead went audibly silent in exactly those
+scenes. The price is a lock around every source and buffer operation, and it is a **kernel semaphore**,
+not a spin lock: the mixer thread has the higher priority, so spinning on a lock the main thread holds
+would never let it be released. Music can still gap in such a scene, because its next chunk is decoded
+and queued from the main thread; only the decoder's priority could change that, at the cost of the
+frame rate in the same scenes.
+
+@m_class{m-block m-info}
+
+@par Positional audio in the software mixers
+All of them share @ref nCine::AudioMixer::ComputeStereoGains(), and it has to agree with the two frames
+the players use. A positional source arrives in the OpenAL convention that
+`IAudioPlayer::getAdjustedPosition()` produces --- **world** space in physical units, pixels times
+@ref nCine::IAudioDevice::LengthToPhysical with Y and Z negated --- while the listener arrives through
+`updateListener()` in raw pixels, so the helper scales the listener into the same frame before taking
+the difference, and applies OpenAL's `AL_LINEAR_DISTANCE_CLAMPED` model with the same reference and
+maximum distances the OpenAL backend programs. Getting the frames wrong is not subtle: with the
+listener left in pixels every positional sound went silent as soon as the camera was a few hundred
+pixels from the level's origin, which presented as *some* sounds not playing --- those near a level's
+start still did.
 
 @m_class{m-block m-info}
 
@@ -1030,7 +1068,30 @@ anything else can fail, so the console always has a way out even if initializati
     module's table overlap the next one's stub slots, so the loader patches syscalls over each other
     and calls such as `sceNetInetSocket()` end up somewhere else entirely. Anything that spec already
     provides is therefore deliberately absent from `target_link_libraries` for this target.
--   The underwater and pause low-pass filters are absent, because pspdev's OpenAL has no `efx.h`.
+-   **The underwater and pause low-pass filters are absent** --- the mixer has no filter stage, like the
+    other software-mixing consoles.
+-   **The dynamic lighting is splatted on the VFPU.** Every fixed-function console builds the lightmap on
+    the CPU @m_span{m-text m-dim} (`CombineRenderer::PrepareSoftwareLighting()`) @m_endspan, and on this one
+    it was the largest item of a busy frame: a scalar loop bound by FPU latency on a single-issue core,
+    with an unpipelined `sqrt.s` of about 58 cycles per lit texel. The Allegrex's vector unit does four
+    texels per instruction, so the PSP arm is inline VFPU assembly --- a branch-free
+    @cpp clamp((1 - dist) * invDenom, 0, 1)^3 @ce per lane, which is exactly 1 in a light's flat core and
+    exactly 0 outside it, validated against the scalar algorithm to 1.4e-6 over thousands of frames. Only
+    the main thread has the VFPU @m_span{m-text m-dim} (`PSP_MAIN_THREAD_ATTR`) @m_endspan, which is where
+    this runs. The other consoles take the row-segmented scalar path of
+    @cpp "Rendering/SoftwareLightSplat.h" @ce, which cuts each row analytically into outside, flat core and
+    falloff segments and uses each platform's cheapest square root --- `fsrra` on the Dreamcast, `frsqrte`
+    with two Newton steps on the Wii and GameCube, whose CPU has no square-root instruction at all.
+-   **The Media Engine is not a second core for this port.** The console does have one --- a second
+    Allegrex normally reserved to the firmware's codecs --- and pspdev ships a library that runs user code
+    on it @m_span{m-text m-dim} (`libme-core`, which embeds and loads a kernel bridge, so it needs a custom
+    firmware) @m_endspan. It was probed as a home for the module decoder, which is the last large audio
+    cost. Under **Adrenaline** the bridge loads and runs but the ME's firmware image is absent
+    @m_span{m-text m-dim} (the witness word at `0x88300018` reads zero) @m_endspan, so the library reports
+    the core unavailable, and PPSSPP fakes the kernel module load and then hangs inside the library's
+    `kinit()` --- anything touching the ME has to test for the emulator first, through
+    @cpp sceIoDevctl("kemulator:", 0x03, ...) @ce, which succeeds only there. The firmware's own
+    `sceAudiocodec` path does reach the ME on every platform, but it decodes MP3/ATRAC, not modules.
 -   Textures are limited to **512 pixels per axis**, so larger atlases are split into pages with
     per-primitive page selection, palettized textures use the hardware CLUT, of which only one is
     resident at a time, so the palette is part of the batch key.

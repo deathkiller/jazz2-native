@@ -209,9 +209,9 @@ namespace Jazz2::Actors::Solid
 			return 0.0f;
 		}
 		if (widthCovered < leftX) {
-			return (leftX > 0.0f ? leftHeight * sinf(fPiOver2 * widthCovered / leftX) : leftHeight);
+			return (leftX > 0.0f ? leftHeight * sinApprox(fPiOver2 * widthCovered / leftX) : leftHeight);
 		} else if (rightX < widthCovered) {
-			return (_bridgeWidth > rightX ? rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - rightX)) : rightHeight);
+			return (_bridgeWidth > rightX ? rightHeight * sinApprox(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - rightX)) : rightHeight);
 		} else {
 			return (rightX > leftX ? lerp(leftHeight, rightHeight, (widthCovered - leftX) / (rightX - leftX)) : leftHeight);
 		}
@@ -275,6 +275,6 @@ namespace Jazz2::Actors::Solid
 		}
 
 		float fase = fPi * std::clamp(x / _bridgeWidth, 0.0f, 1.0f);
-		return _heightFactor * sinf(fase);
+		return _heightFactor * sinApprox(fase);
 	}
 }

@@ -284,14 +284,14 @@ namespace Jazz2::Actors::Solid
 		float effectivePhase = _phase;
 
 		if (_isSwing) {
-			effectivePhase = fPiOver2 + sinf(effectivePhase) * fPiOver2;
+			effectivePhase = fPiOver2 + sinApprox(effectivePhase) * fPiOver2;
 		} else if (_pieces.size() > 4 && distance > 0 && distance < _pieces.size()) {
-			float shift = sinf(fPi * (float)(distance + 1) / _pieces.size()) * _speed * 4.0f;
+			float shift = sinApprox(fPi * (float)(distance + 1) / _pieces.size()) * _speed * 4.0f;
 			effectivePhase -= shift;
 		}
 
-		float multiX = cosf(effectivePhase);
-		float multiY = sinf(effectivePhase);
+		float multiX = cosApprox(effectivePhase);
+		float multiY = sinApprox(effectivePhase);
 
 		return Vector2f(
 			std::round(_originPos.X + multiX * distance * 12.0f),

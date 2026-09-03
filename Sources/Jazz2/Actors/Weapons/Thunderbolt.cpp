@@ -226,7 +226,7 @@ namespace Jazz2::Actors::Weapons
 		constexpr float FlashDuration = 0.5f;
 
 		if (lightProgress < fPi) {
-			float lightIntensity = sinf(lightProgress) * 0.2f;
+			float lightIntensity = sinApprox(lightProgress) * 0.2f;
 			for (std::int32_t i = -1; i <= LightCount; i++) {
 				float dist = (float)i / LightCount;
 				auto& light = lights.emplace_back();
