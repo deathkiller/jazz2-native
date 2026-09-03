@@ -209,6 +209,42 @@ namespace nCine
 	// a thread of its own - this is the standard PSPSDK arrangement (sceKernelSleepThreadCB is what makes
 	// the firmware deliver them). Without it the HOME button does nothing and the console can only be
 	// switched off, which is why every PSP title sets this up before anything else.
+	/**
+		@brief Stops the FPU trapping on IEEE exceptions, the way every other platform behaves
+
+		The Allegrex takes a floating-point exception when the FCSR enable bits are set, and an unhandled
+		one on this console ends the process instantly - every thread with it, nothing written to the log,
+		and a firmware error code ten seconds later. That is not a theoretical concern: drawing a static
+		sprite computed its frame as `animTime * FrameCount / AnimDuration`, `AnimDuration` is legitimately
+		zero for something that does not animate, and the division alone killed the game. The *value* was
+		harmless (the `% FrameCount` that followed made it zero either way, which is exactly how the same
+		code has always been fine everywhere else) - it was the operation that was fatal.
+
+		C and C++ default to exceptions being non-trapping: `1.0f / 0.0f` is infinity and execution
+		continues. Nothing in the engine installs a handler or reads `fetestexcept()`, so nothing wants the
+		traps, and leaving them armed makes every division in the codebase a place the console can die for
+		reasons that are invisible on any other target. So they are cleared here, and the flags and cause
+		bits with them.
+
+		FCSR (coprocessor 1 control register 31) bits 7-11 are the enables for Inexact, Underflow, Overflow,
+		Divide-by-zero and Invalid; bits 12-17 are the cause bits and 2-6 the sticky flags. The register is
+		per-thread context, so this runs on every thread the engine starts as well as here.
+	*/
+	void PspDisableFpuTraps(bool trace)
+	{
+		std::uint32_t fcsr = 0;
+		__asm__ __volatile__("cfc1 %0, $31" : "=r"(fcsr));
+		const std::uint32_t before = fcsr;
+		fcsr &= ~std::uint32_t(0x0003FF7C);	// enables (7-11), cause (12-17) and flags (2-6)
+		__asm__ __volatile__("ctc1 %0, $31" :: "r"(fcsr));
+		if (trace) {
+			std::uint32_t after = 0;
+			__asm__ __volatile__("cfc1 %0, $31" : "=r"(after));
+			LOGI("FPU traps disabled: FCSR 0x{:.8x} -> 0x{:.8x} (enables were 0x{:.2x})",
+				before, after, (before >> 7) & 0x1F);
+		}
+	}
+
 	static int PspCallbackThread(SceSize args, void* argp)
 	{
 		static_cast<void>(args); static_cast<void>(argp);
@@ -385,6 +421,9 @@ namespace nCine
 		// the choice of which slot to save on, belong to PreferencesCache and are done there.
 		mcInit(MC_TYPE_MC);
 #elif defined(DEATH_TARGET_PSP)
+		// Before anything else does any floating-point arithmetic at all
+		PspDisableFpuTraps(true);
+
 		// The HOME button has to be answered by the application itself, so its callback goes up first -
 		// before anything can go wrong during initialization and leave the console with no way out
 		{

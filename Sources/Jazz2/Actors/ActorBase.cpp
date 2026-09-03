@@ -1638,8 +1638,15 @@ namespace Jazz2::Actors
 				case AnimationLoopMode::Loop:
 					AnimTime += timeMult * FrameTimer::SecondsPerFrame;
 					if (AnimTime > AnimDuration) {
-						std::int32_t n = (std::int32_t)(AnimTime / AnimDuration);
-						AnimTime -= AnimDuration * n;
+						if DEATH_LIKELY(AnimDuration > 0.0f) {
+							std::int32_t n = (std::int32_t)(AnimTime / AnimDuration);
+							AnimTime -= AnimDuration * n;
+						} else {
+							// A looping animation of no duration still reaches this - IsAnimationRunning()
+							// only asks whether it is paused - and dividing by that zero is not survivable
+							// on every target (see GraphicResource::GetFrameForTime())
+							AnimTime = 0.0f;
+						}
 						_owner->OnAnimationFinished();
 					}
 					break;

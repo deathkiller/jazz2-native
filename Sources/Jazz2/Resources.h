@@ -211,6 +211,24 @@ namespace Jazz2::Resources
 		 */
 		std::uint16_t DeferredIndex;
 
+		/**
+		 * @brief Returns the frame to draw at @p animTime, or the first one if there is nothing to animate
+		 *
+		 * A static image has no duration, and the obvious `animTime * FrameCount / AnimDuration` divides by
+		 * zero for one. On a desktop that quietly yields infinity and the following `% FrameCount` hides it;
+		 * on the PSP the Allegrex raises the divide-by-zero and the process is gone instantly, taking every
+		 * thread with it - which is what the weapon wheel's dim backing sprite (a single 16x16 frame with
+		 * `AnimDuration == 0`) did on hardware, with nothing in the log and no emulator able to reproduce it.
+		 * A duration of zero is a legitimate value for content that does not animate, so the division is the
+		 * thing that has to give way.
+		 */
+		inline std::int32_t GetFrameForTime(float animTime) const {
+			if (FrameCount <= 1 || !(AnimDuration > 0.0f)) {
+				return FrameOffset;
+			}
+			return FrameOffset + ((std::int32_t)(animTime * FrameCount / AnimDuration) % FrameCount);
+		}
+
 		/** @brief Creates a new instance */
 		GraphicResource() noexcept;
 

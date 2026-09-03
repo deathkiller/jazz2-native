@@ -451,6 +451,9 @@ namespace Jazz2
 #endif
 		Function<String(StringView)> _pathHandler;
 
+		/** @brief Drops the cached fonts whose atlas baked the palette, leaving the palette-indexed ones alone */
+		void DropBakedFonts();
+
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
 #endif

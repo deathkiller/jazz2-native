@@ -206,6 +206,13 @@ namespace nCine::RHI::GU
 		static GuShaderProgram* CurrentProgram();
 		/** @brief Records the texture bound to a texture unit */
 		static void BindTexture(std::uint32_t unit, const GuTexture* texture);
+		/**
+		 * @brief Makes it safe to free or replace a GE store the GE may still be about to read
+		 *
+		 * Closes the open batch and, if a display list is open, kicks it and waits for the GE to finish -
+		 * the commands in it may reference the store. Call before any `std::free()` of one.
+		 */
+		static void SyncBeforeStoreRelease();
 		/** @brief Clears a texture from every unit it is bound to (called from ~GuTexture) */
 		static void UnbindTexture(const GuTexture* texture);
 		/** @brief Returns the texture bound to a texture unit */

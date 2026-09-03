@@ -58,11 +58,16 @@ extern "C"
 #include "Input/IInputManager.h"
 #include "Input/JoyMapping.h"
 #include "Threading/Thread.h"
+#if defined(WITH_THREADS)
+#	include "Threading/ThreadSync.h"
+#endif
 #include "ServiceLocator.h"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
 #include <atomic>
+#include <cstdlib>
+#include <new>
 
 #include <Environment.h>
 #include <Containers/DateTime.h>
@@ -944,10 +949,33 @@ namespace nCine
 #endif
 	}
 
+	namespace
+	{
+		/**
+			@brief Reports an allocation failure before the process dies
+
+			Every console target is built with `-fno-exceptions`, where the libstdc++ `operator new` ends a
+			failed allocation in `std::__throw_bad_alloc()` - which without exceptions is a bare `abort()`.
+			The process vanishes with nothing written anywhere, which on a console (no console output, no
+			debugger, a log file that is the only channel there is) looks exactly like a GPU hang or a
+			freeze, and costs a diagnosis session to tell apart. A handler cannot rescue the allocation,
+			but it can say what happened first, and `std::set_new_handler` is the only hook the standard
+			gives for it.
+		*/
+		void ReportFailedAllocation()
+		{
+			// The handler is called in a loop until the allocation succeeds, so it must not return
+			LOGF("Out of memory: an allocation failed and the process cannot continue");
+			std::abort();
+		}
+	}
+
 	void Application::InitCommon()
 	{
 		TracyGpuContext;
 		ZoneScopedC(0x81A861);
+
+		std::set_new_handler(ReportFailedAllocation);
 		// This timestamp is needed to initialize random number generator
 		_profileStartTime = TimeStamp::now();
 
@@ -1329,8 +1357,52 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
+#	if !defined(DEATH_TRACE_ASYNC) && defined(WITH_THREADS)
+	namespace
+	{
+		/**
+			@brief Serializes the trace sink when entries are emitted on the calling thread
+
+			With `DEATH_TRACE_ASYNC` a single background thread owns the sink and nothing here can race.
+			Without it - which is every console, the option is switched off for all of them - each thread
+			formats AND emits its own entry, and two threads doing that at once interleave inside one line
+			and, worse, race on the log file's own buffer and offset. That was visible as a spliced line
+			followed by a log that simply stopped while the game kept running, which is about the most
+			misleading thing a diagnostic channel can do: several crashes were localized to "wherever the
+			log ends" when the log had only stopped being written.
+
+			The lock covers the whole emit, so an entry reaches every destination whole and in one piece.
+			Nothing here blocks for long: the file write is buffered, and the flush the console targets do
+			for the important levels is the cost that was already being paid.
+		*/
+		Mutex& TraceSinkLock()
+		{
+			static Mutex lock;
+			return lock;
+		}
+
+		class TraceSinkGuard
+		{
+		public:
+			TraceSinkGuard() {
+				TraceSinkLock().Lock();
+			}
+			~TraceSinkGuard() {
+				TraceSinkLock().Unlock();
+			}
+
+			TraceSinkGuard(const TraceSinkGuard&) = delete;
+			TraceSinkGuard& operator=(const TraceSinkGuard&) = delete;
+		};
+	}
+#	endif
+
 	void Application::OnTraceReceived(TraceLevel level, std::uint64_t timestamp, StringView threadId, StringView functionName, StringView content)
 	{
+#	if !defined(DEATH_TRACE_ASYNC) && defined(WITH_THREADS)
+		TraceSinkGuard sinkGuard;
+#	endif
+
 		char logEntryWithColors[MaxLogEntryLength + 24];
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -1681,8 +1753,13 @@ namespace nCine
 				// vitacompanion's "destroy") runs no shutdown code, so an unflushed buffer is exactly the log
 				// that would have said why. Flushing every entry guaranteed that at 8-13 ms per line on a
 				// memory card, measured on a Vita, which the continuously logging asset conversion could not
-				// afford. So a warning or worse still flushes at once and the rest at most once per
+				// afford. So Info or worse still flushes at once and the rest at most once per
 				// FlushInterval, which costs a hard kill some Debug chatter but never the diagnosis.
+				// Info is on the immediate side of that line because Info is what the one-off milestones
+				// use - a level finishing loading, a texture being split into pages - and those are
+				// exactly what localizes a crash. Leaving them buffered cost a diagnosis: three runs all
+				// ended on the same Warning, which read as "died here" when it only meant "last thing
+				// flushed", and the Info line that would have said otherwise was still in the buffer.
 				// Held as 32 bits of milliseconds rather than the raw 64-bit nanosecond timestamp, because a
 				// 64-bit atomic is not lock-free on every console in this list: PowerPC has no 8-byte atomic
 				// instruction, so on the Wii and GameCube std::atomic<std::uint64_t> lowers to
@@ -1694,7 +1771,7 @@ namespace nCine
 				constexpr std::uint32_t FlushIntervalMs = 250;
 				static std::atomic<std::uint32_t> lastFlushMs{0};
 				const std::uint32_t nowMs = (std::uint32_t)(timestamp / 1000000);
-				if (level >= TraceLevel::Warning) {
+				if (level >= TraceLevel::Info) {
 					lastFlushMs.store(nowMs, std::memory_order_relaxed);
 					logFile->Flush();
 				} else {

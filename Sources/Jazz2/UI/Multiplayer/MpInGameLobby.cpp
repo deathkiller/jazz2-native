@@ -380,7 +380,7 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		if (frame < 0) {
-			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+			frame = res->GetFrameForTime(AnimTime);
 		}
 
 		GenericGraphicResource* base = res->Base;

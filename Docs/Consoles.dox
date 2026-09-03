@@ -878,6 +878,93 @@ anything else can fail, so the console always has a way out even if initializati
 
 @subsection consoles-psp-limits Limits and known issues
 
+-   **The FPU is configured not to trap on IEEE exceptions, and that is load-bearing.** `PspDisableFpuTraps()`
+    @m_span{m-text m-dim} (`MainApplication.cpp`) @m_endspan clears the FCSR enable bits
+    @m_span{m-text m-dim} (bits 7-11, plus the cause and sticky-flag fields) @m_endspan at startup and again on
+    every thread the engine starts, because FCSR is per-thread context. C and C++ default to non-trapping
+    exceptions - `1.0f / 0.0f` is infinity and execution continues - and nothing in the engine installs an
+    FP handler or reads `fetestexcept()`, so nothing wants the traps. Leaving them armed made every
+    division in the codebase somewhere this console could die, invisibly, for reasons no other target
+    shows: see the entry below for the one that was found the hard way. Divisions whose divisor comes from
+    level data are still guarded individually @m_span{m-text m-dim} (@ref Jazz2::Actors::Solid::Bridge,
+    whose width and height factor are both event parameters that may be zero) @m_endspan, because an
+    infinity propagating into geometry is a bug everywhere, not just here.
+-   **A floating-point division by zero was fatal here, and is silently harmless everywhere else.** The
+    Allegrex raises it and the process is gone in the same instant, taking every thread with it; the
+    firmware then shows a frozen screen for about ten seconds and reports `C1-2858-3` on a Vita running
+    Adrenaline. Nothing is written to the log, because the thread that would write it is already gone.
+    What did this was one line of the HUD, which resolved an animation's current frame as
+    @cpp animTime * FrameCount / AnimDuration @ce --- correct for an animation, a division by zero for a
+    *static* image, which legitimately has no duration. The weapon wheel's dim backing sprite
+    @m_span{m-text m-dim} (`UI/dim.aura`, a single 16x16 frame) @m_endspan is one, so opening the wheel
+    killed the game every time. On a desktop the division yields infinity, the `% FrameCount` that
+    follows hides it, and the frame comes out as 0 anyway --- which is exactly why no emulator and no
+    other platform ever showed it. @ref Jazz2::GraphicResource::GetFrameForTime() is now the only place
+    that arithmetic lives, and it returns the first frame when there is nothing to animate; every caller
+    @m_span{m-text m-dim} (the HUD, the loading handler, the menu background, the multiplayer lobby)
+    @m_endspan goes through it, and `ActorBase::ActorRenderer::UpdateAnimation()` guards the same
+    division for a looping animation of no duration.
+
+    The general lesson for this port: an expression that is merely *sloppy* on a desktop can be
+    *terminal* here, and it will not leave a diagnosis behind. It was found by making the weapon wheel
+    enable its parts in stages and logging each one, which is worth remembering as a technique --- no
+    amount of logging can localize a fault that stops the machine, because the log dies with it.
+
+-   **A GE store must not be freed while a display list still references it** @m_span{m-text m-dim} (a latent hazard found while chasing the above, not its cause) @m_endspan**.** Commands are written
+    into a list that is only kicked at `sceGuFinish()` in `GuDevice::PresentFrame()`, so between a draw
+    being recorded and the GE reading it there is a whole frame's worth of window --- and a level load
+    creates, replaces and drops textures right in the middle of it, while the loading screen is being
+    presented. `GuTexture` used to `std::free()` a store from three of those points
+    @m_span{m-text m-dim} (the reallocation in `RefreshGeStore()`, `FreeGeStores()` when `Allocate()`
+    re-initializes a texture, and the destructor) @m_endspan, handing the memory back to the allocator
+    before the GE had ever fetched from it. When the list finally ran, the texture base was whatever had
+    been allocated there since: garbage at best, an address the GE cannot fetch at worst, and then it
+    never signals, `sceGuSync()` never returns, and the firmware kills the process about ten seconds
+    later --- `C1-2858-3` on a Vita running Adrenaline. It presents as a freeze rather than a crash and
+    writes nothing to the log, because the thread that would have written it is the one that is stuck.
+    `GuDevice::SyncBeforeStoreRelease()` now closes the batch, kicks the open list and waits for the GE
+    before any of those frees; the next draw opens a fresh list through `EnsureList()`. This was fixed on
+    its own merits --- it is a genuine use-after-free by the GE --- but it was not what the weapon wheel
+    was dying of. Note that
+    building the store eagerly at load time --- which is what `ReleaseHostCopy()` does to make the host
+    texels redundant --- is what made this frequent: it turns one lazy build on first draw into a
+    hundred and eighty mid-frame allocations and frees per level load.
+-   **Main memory is the other thing this console runs out of.** The executable takes the whole user
+    partition as its heap @m_span{m-text m-dim} (`PSP_HEAP_SIZE_KB(-1)`) @m_endspan, so the heap is
+    whatever is left after the binary and its `.bss`, and a level with every sprite resident leaves a
+    few hundred kilobytes of it. That is thin enough for a *single* streaming buffer to be fatal: ~90
+    line-strip meshes in one frame push the shared vertex buffer past the 64 KB it holds,
+    @ref nCine::RenderBuffersManager allocates a second one, and there may be no 64 KB left to give it.
+    Nothing said so --- with `-fno-exceptions`, a failed `operator new` ends in
+    `std::__throw_bad_alloc()`, which is a bare `abort()`, and the process vanished with an empty log.
+    @ref nCine::Application::InitCommon() now installs a `std::set_new_handler` that writes a fatal line
+    first, which is the only reason such a failure is diagnosable at all --- on any of these consoles,
+    since they all build without exceptions. Two sizings were reduced to buy headroom back: the GE
+    display list @m_span{m-text m-dim} (below) @m_endspan and the four half-pixel shadow segments of the
+    weapon wheel, which this backend does not need
+    @m_span{m-text m-dim} (see @ref Jazz2::UI::HUD::DrawWeaponWheel()) @m_endspan.
+-   **Palette-indexed fonts are not dropped when the palette changes.** @ref Jazz2::ContentResolver
+    drops cached fonts on a palette change so a baked atlas can rebake, but with
+    `RHI_CAP_PALETTED_TEXTURES` a font atlas holds indices and resolves its colors from the live palette
+    texture at draw time, so there is nothing to rebake. Reloading one cost a second 128x529 texture
+    @m_span{m-text m-dim} (a 67 KB host copy plus a 69 KB GE store plus the decode buffer) @m_endspan
+    during level load, with a whole level already resident. @ref Jazz2::UI::Font::IsPaletteIndexed()
+    is what that decision now consults.
+-   **The GE display list is 32 KB, and its sizing is measured rather than assumed.** The busiest frame
+    observed --- the weapon wheel open over a level, 87 draw calls --- fills 3.7 KB of it, so the
+    128 KB this used to reserve was 96 KB of a main memory the game has none of to spare. Nothing in
+    `sceGu` bounds-checks the list, and an overflow would be a silent write past the array, so
+    `GuDevice::PresentFrame()` reads the size `sceGuFinish()` returns and warns once if a frame ever
+    passes three quarters of it.
+-   **A line strip is expanded into coverage quads, not drawn as GE lines.** The GE does have a native
+    single-pixel line primitive and the weapon wheel --- the one thing in the game that draws a line at
+    all --- went out as one `GU_LINE_STRIP` for exactly that reason. It now goes out as a triangle pair
+    per segment, half a pixel to each side of the line and widened by the slope's Manhattan factor, the
+    same expansion the PowerVR uses @m_span{m-text m-dim} (see @ref consoles-dreamcast-limits)
+    @m_endspan: it puts the wheel on the path every other draw already takes, batches into the frame's
+    other triangles instead of taking a draw call of its own, and is why the half-pixel shadow copies
+    above can be skipped here.
+
 -   **Module music plays through libxmp, not libopenmpt.** The game's soundtrack is tracker modules,
     and while **libopenmpt** does cross-compile, play correctly and cost only ~0.2 FPS in steady
     state, the **first** module a process loads costs a fixed ~29 seconds inside the library on this
@@ -1397,6 +1484,17 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     from the **ESSL 100** lowering that ShaderCompiler bakes into the same generated headers, see
     @ref shader-compiler-platforms. The `GXM` backend has the same missing vertex-ID input and reuses
     the very same rewrite, so both read the quad corner from a vertex attribute instead.
+-   **sceGxm's polygon mode is not implied by the primitive type**, and it decides whether a primitive
+    rasterizes at all: under the default @cpp SCE_GXM_POLYGON_MODE_TRIANGLE_FILL @ce a
+    @cpp SCE_GXM_PRIMITIVE_LINES @ce draw has no interior to fill and produces nothing, silently. That is
+    how the weapon wheel's segment arcs @m_span{m-text m-dim} (a textured line strip through `MeshSprite`,
+    which this backend already draws as the independent segments it means --- see
+    @cpp GxmDevice::EnsureLineStripIndices() @ce) @m_endspan came out missing while every triangle in the
+    frame was correct. @cpp GxmDevice::DrawCommon() @ce now selects the mode from the primitive
+    @m_span{m-text m-dim} (`LINE` for lines, `POINT` for points, `TRIANGLE_FILL` otherwise) @m_endspan.
+    It is sticky context state rather than part of a draw, so the three paths that bypass that function
+    --- the stencil band, @cpp Clear() @ce and the present blit --- assert `TRIANGLE_FILL` for themselves
+    the same way they already re-assert the depth and fragment-program state.
 -   Under **Vita3K** the `GXM` backend draws a one-pixel seam where a repeating texture wraps --- most
     visibly along the scrolling textured background. The wrap is set up correctly for the hardware
     @m_span{m-text m-dim} (a power-of-two, tiled colour-surface texture whose control words read back

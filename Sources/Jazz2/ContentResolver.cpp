@@ -1434,6 +1434,10 @@ namespace Jazz2
 			texture->LoadFromTexels(packed.get(), 0, 0, width, height);
 			texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
+		// A sprite atlas is uploaded once here and then only sampled, so a backend that keeps the decoded
+		// texels alongside what the hardware samples can give them up - which on the PSP is the difference
+		// between the animation set fitting in the heap and not (see Texture::ReleaseHostCopy())
+		texture->ReleaseHostCopy();
 		return texture;
 	}
 
@@ -1532,9 +1536,7 @@ namespace Jazz2
 			// The sprite palette changed. Indexed sprites/tiles recolor from the live palette texture, so they don't
 			// need reloading; only the baked fonts are dropped so they rebake with the new palette.
 			if (_isLoading) {
-				for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
-					_fonts[i] = nullptr;
-				}
+				DropBakedFonts();
 			}
 
 			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t));
@@ -1912,9 +1914,7 @@ namespace Jazz2
 				if (_isLoading) {
 					// Indexed sprites/tiles recolor from the live palette texture and need no reload; only the baked
 					// fonts are dropped to rebake with the new palette
-					for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
-						_fonts[i] = nullptr;
-					}
+					DropBakedFonts();
 				}
 
 				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t));
@@ -2047,9 +2047,7 @@ namespace Jazz2
 			if (_isLoading) {
 				// Indexed sprites/tiles recolor from the live palette texture and need no reload; only the baked
 				// fonts are dropped to rebake with the new palette
-				for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
-					_fonts[i] = nullptr;
-				}
+				DropBakedFonts();
 			}
 
 			std::memcpy(_palettes, SpritePalette, ColorsPerPalette * sizeof(std::uint32_t));
@@ -2196,6 +2194,22 @@ namespace Jazz2
 #else
 		return nullptr;
 #endif
+	}
+
+	void ContentResolver::DropBakedFonts()
+	{
+		// Only an atlas that baked the palette goes stale when the palette changes. A backend that samples
+		// a paletted texture keeps the indices and resolves colors from the live palette texture, so its
+		// fonts draw correctly under the new palette without being touched - and reloading one is not free
+		// on the console that needs this most: `font_small` is 128x529, which on the PSP is a 67 KB host
+		// copy plus a 69 KB GE store plus the decode buffer, asked for during level load with a whole
+		// level already resident. That reload is what used to end the process there, with no message,
+		// because the allocation that failed was neither `operator new` nor one of SmallVector's.
+		for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
+			if (_fonts[i] != nullptr && !_fonts[i]->IsPaletteIndexed()) {
+				_fonts[i] = nullptr;
+			}
+		}
 	}
 
 	UI::Font* ContentResolver::GetFont(FontType fontType)

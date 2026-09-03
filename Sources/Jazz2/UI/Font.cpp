@@ -46,7 +46,7 @@ namespace Jazz2::UI
 	}
 
 	Font::Font(const std::unique_ptr<Stream>& s, StringView path, const std::uint32_t* palette)
-		: _asciiChars{}, _lineHeight(0), _baseSpacing(0)
+		: _asciiChars{}, _lineHeight(0), _baseSpacing(0), _paletteIndexed(false)
 	{
 		if (!s->IsValid()) {
 			// A font that can't be opened at all used to fail silently here, which then looked like a
@@ -148,6 +148,8 @@ namespace Jazz2::UI
 			: std::size_t(w) * h * ContentResolver::PixelSize);
 		auto pixels = std::make_unique<std::uint8_t[]>(bufferSize);
 		Compatibility::JJ2Anims::ReadImageContent(uc, pixels.get(), w, h, 1);
+
+		_paletteIndexed = keepIndexed;
 
 		if (keepIndexed) {
 			_texture = std::make_unique<Texture>(path.data(), Texture::Format::R8, w, h);

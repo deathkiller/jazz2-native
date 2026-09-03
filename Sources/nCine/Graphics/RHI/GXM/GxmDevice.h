@@ -449,6 +449,9 @@ namespace nCine::RHI::GXM
 		static GxmMemory::Block _quadCornerStream;
 		static GxmMemory::Block _batchedCornerStream;
 
+		/** @brief Sets how the rasterizer fills a primitive, for both faces (see the call in `DrawCommon()`) */
+		static void SetPolygonModeBothFaces(SceGxmPolygonMode mode);
+
 		/** @brief Opens a scene on the current target if none is open, and (re)applies the pipeline state it reset */
 		static bool EnsureScene();
 		/** @brief Programs the viewport and region clip of the current target from the tracked engine state */

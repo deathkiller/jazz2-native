@@ -1,6 +1,9 @@
 #include "SmallVector.h"
 
+#include <cstdlib>
+
 #if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+#	include <new>
 #	include <stdexcept>
 #endif
 
@@ -93,8 +96,25 @@ namespace Death { namespace Containers {
 		return std::min(std::max(newCapacity, minSize), maxSize);
 	}
 
+	// std::malloc()/std::realloc() coming back empty is not something this interface can hand back to the
+	// caller: every growth path returns void, so a null would flow into the memcpy() below and into every
+	// write the caller then makes - through address zero. On a console with a small heap that shows up as a
+	// crash at an address that moves between runs, with nothing in the log to say memory ran out, which is
+	// precisely the failure this replaces.
+	static void reportOutOfMemory(std::size_t bytes) {
+#if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+		throw std::bad_alloc();
+#else
+		LOGF("Out of memory allocating {} bytes for Containers::SmallVector", bytes);
+		std::abort();
+#endif
+	}
+
 	static void* replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize = 0) {
 		void* newEltsReplace = std::malloc(newCapacity * typeSize);
+		if (newEltsReplace == nullptr) {
+			reportOutOfMemory(newCapacity * typeSize);
+		}
 		if (vSize != 0) {
 			std::memcpy(newEltsReplace, newElts, vSize * typeSize);
 		}
@@ -109,6 +129,9 @@ namespace Death { namespace Containers {
 		// Even if capacity is not 0 now, if the vector was originally created with
 		// capacity 0, it's possible for the malloc to return FirstEl.
 		void* newElts = std::malloc(newCapacity * typeSize);
+		if (newElts == nullptr) {
+			reportOutOfMemory(newCapacity * typeSize);
+		}
 		if (newElts == firstEl) {
 			newElts = replaceAllocation(newElts, typeSize, newCapacity);
 		}
@@ -118,7 +141,14 @@ namespace Death { namespace Containers {
 	// Note: Moving this function into the header may cause performance regression.
 	template<class Size_T>
 	void* SmallVectorBase<Size_T>::mallocForShrink(void* firstEl, std::size_t newCapacity, std::size_t typeSize) {
-		return std::realloc(firstEl, newCapacity * typeSize);
+		const std::size_t bytes = newCapacity * typeSize;
+		void* newElts = std::realloc(firstEl, bytes);
+		// A zero-byte request is allowed to come back null, and does on the platforms here - that is the
+		// block being released rather than a failure
+		if (newElts == nullptr && bytes != 0) {
+			reportOutOfMemory(bytes);
+		}
+		return newElts;
 	}
 
 	// Note: Moving this function into the header may cause performance regression.
@@ -128,6 +158,9 @@ namespace Death { namespace Containers {
 		void* newElts;
 		if (BeginX == firstEl) {
 			newElts = std::malloc(newCapacity * typeSize);
+			if (newElts == nullptr) {
+				reportOutOfMemory(newCapacity * typeSize);
+			}
 			if (newElts == firstEl) {
 				newElts = replaceAllocation(newElts, typeSize, newCapacity);
 			}
@@ -136,6 +169,9 @@ namespace Death { namespace Containers {
 		} else {
 			// If this wasn't grown from the inline copy, grow the allocated space.
 			newElts = std::realloc(this->BeginX, newCapacity * typeSize);
+			if (newElts == nullptr) {
+				reportOutOfMemory(newCapacity * typeSize);
+			}
 			if (newElts == firstEl) {
 				newElts = replaceAllocation(newElts, typeSize, newCapacity, size());
 			}

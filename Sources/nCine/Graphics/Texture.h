@@ -189,6 +189,17 @@ namespace nCine
 		 */
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 
+		/**
+			@brief Declares that the texture will not be uploaded to or read back again
+
+			Some backends have to keep the decoded texels in main memory after the upload, because what the
+			hardware samples is a padded and swizzled copy built from them - so a texture costs twice its
+			size until one of the two can go. Calling this once a texture is complete lets such a backend
+			give the texels up; elsewhere it does nothing. Content that is still being assembled, streamed
+			or read back must not call it - a later @ref LoadFromTexels() would be dropped (with a warning).
+		*/
+		void ReleaseHostCopy();
+
 		/** @brief Sets the backend object label for the texture, for debugging */
 		void SetTextureLabel(const char* label);
 

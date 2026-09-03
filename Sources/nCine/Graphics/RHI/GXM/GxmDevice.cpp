@@ -570,6 +570,12 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		sceGxmSetBackFragmentProgramEnable(_context, mode);
 	}
 
+	void GxmDevice::SetPolygonModeBothFaces(SceGxmPolygonMode mode)
+	{
+		sceGxmSetFrontPolygonMode(_context, mode);
+		sceGxmSetBackPolygonMode(_context, mode);
+	}
+
 	// -- Scene management --
 
 	void GxmDevice::GetCurrentTarget(SceGxmRenderTarget*& renderTarget, SceGxmColorSurface*& colorSurface,
@@ -767,6 +773,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		sceGxmSetVertexProgram(_context, _clearVertexProgram);
 		sceGxmSetFragmentProgram(_context, _clearFragmentProgram);
 		sceGxmSetCullMode(_context, SCE_GXM_CULL_NONE);
+		SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_TRIANGLE_FILL);
 		SetDepthStateBothFaces(SCE_GXM_DEPTH_FUNC_ALWAYS, SCE_GXM_DEPTH_WRITE_DISABLED);
 		// Colour writes off, so this rasterizes into the stencil alone - the same trick the depth-only clear
 		// uses. The ISP still runs, so REPLACE lands the reference on every pixel the quad covers.
@@ -941,6 +948,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		sceGxmSetVertexProgram(_context, _clearVertexProgram);
 		sceGxmSetFragmentProgram(_context, _clearFragmentProgram);
 		sceGxmSetCullMode(_context, SCE_GXM_CULL_NONE);
+		SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_TRIANGLE_FILL);
 		SetDepthStateBothFaces(SCE_GXM_DEPTH_FUNC_ALWAYS,
 			clearDepth ? SCE_GXM_DEPTH_WRITE_ENABLED : SCE_GXM_DEPTH_WRITE_DISABLED);
 		// A colour-less clear (depth only) still has to rasterize the quad, with the colour write masked off -
@@ -1039,6 +1047,28 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			sceGxmSetCullMode(_context, _cullFace.Mode == CullFaceMode::Front ? SCE_GXM_CULL_CCW : SCE_GXM_CULL_CW);
 		} else {
 			sceGxmSetCullMode(_context, SCE_GXM_CULL_NONE);
+		}
+
+		// The polygon mode decides how the rasterizer fills a primitive, and it is NOT implied by the
+		// primitive type: under the default TRIANGLE_FILL a LINES or POINTS draw has no interior to fill and
+		// produces nothing at all - which is how the weapon wheel's segment lines went missing here while
+		// every triangle drew correctly. It is sticky context state rather than a property of the draw, so
+		// each of the three paths that bypass this function (the stencil band, Clear() and the present blit)
+		// asserts TRIANGLE_FILL for itself, exactly as they already re-assert the depth and fragment state.
+		switch (primitive) {
+			case PrimitiveType::Lines:
+			case PrimitiveType::LineStrip:
+			case PrimitiveType::LineLoop:
+				SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_LINE);
+				break;
+			// Plain POINT rather than one of the `*_01UV`/`*_10UV` modes: those synthesize a point's texture
+			// coordinates the way `gl_PointCoord` does, where plain OpenGL points interpolate the vertex's own
+			case PrimitiveType::Points:
+				SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_POINT);
+				break;
+			default:
+				SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_TRIANGLE_FILL);
+				break;
 		}
 
 		// Uniforms: sceGxm addresses a default uniform buffer in 32-bit components, so a slot's bytes land at
@@ -1870,6 +1900,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				sceGxmSetVertexProgram(_context, _presentVertexProgram);
 				sceGxmSetFragmentProgram(_context, _presentFragmentProgram);
 				sceGxmSetCullMode(_context, SCE_GXM_CULL_NONE);
+				SetPolygonModeBothFaces(SCE_GXM_POLYGON_MODE_TRIANGLE_FILL);
 				SetDepthStateBothFaces(SCE_GXM_DEPTH_FUNC_ALWAYS, SCE_GXM_DEPTH_WRITE_DISABLED);
 				SetFragmentProgramEnabledBothFaces(SCE_GXM_FRAGMENT_PROGRAM_ENABLED);
 				sceGxmSetFragmentTexture(_context, 0, &_screenTexture);

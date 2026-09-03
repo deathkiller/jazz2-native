@@ -46,8 +46,13 @@ namespace Jazz2::Actors::Solid
 		EventParamsReader params(details);
 		_bridgeWidth = params.GetUint16(0) * 16;
 		_bridgeType = (BridgeType)params.GetUint8(2);
-		// Limit _heightFactor here, because with higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate
-		_heightFactor = std::round(std::min((float)_bridgeWidth / params.GetUint8(3), 38.0f));
+		// Limit _heightFactor here, because with higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate.
+		// The divisor is level data and nothing stops it being zero, which is not survivable everywhere: the PSP's
+		// Allegrex traps the IEEE divide-by-zero and the process is gone with no diagnosis (see PspDisableFpuTraps()).
+		const std::uint8_t heightDivisor = params.GetUint8(3);
+		_heightFactor = (heightDivisor != 0
+			? std::round(std::min((float)_bridgeWidth / heightDivisor, 38.0f))
+			: 0.0f);
 
 		_pos.Y -= 6.0f;
 
@@ -263,6 +268,12 @@ namespace Jazz2::Actors::Solid
 
 	float Bridge::GetSectionHeight(float x) const
 	{
+		// A bridge of no width has no sag to compute, and the division would be by zero - fatal on a target
+		// whose FPU traps it rather than yielding infinity
+		if (_bridgeWidth <= 0) {
+			return 0.0f;
+		}
+
 		float fase = fPi * std::clamp(x / _bridgeWidth, 0.0f, 1.0f);
 		return _heightFactor * sinf(fase);
 	}

@@ -81,7 +81,7 @@ namespace nCine::RHI::GU
 			_minFilter(nCine::SamplerFilter::Nearest), _magFilter(nCine::SamplerFilter::Nearest),
 			_wrap(SamplerWrapping::ClampToEdge), _textureUnit(0), _isRenderTarget(false), _isPaletteTexture(false),
 			_geStore(nullptr), _geStoreSize(0), _guFormat(-1), _geBytesPerTexel(0), _pagesX(0), _pagesY(0),
-			_geStoreValid(false), _bakedStores{}, _activeBakedStore(-1), _nextBakedStore(0), _uploadCount(0),
+			_geStoreValid(false), _bakedStores{}, _activeBakedStore(-1), _nextBakedStore(0), _uploadCount(0), _hostCopyReleased(false),
 			_streamingSwapPending(false), _renderTargetSurface(nullptr), _renderTargetStride(0),
 			_renderTargetSurfaceInVram(false)
 	{
@@ -193,6 +193,34 @@ namespace nCine::RHI::GU
 		}
 	}
 
+	void GuTexture::ReleaseHostPixels()
+	{
+		// Emptying the vector is not enough: SmallVector keeps its allocation, and for a texture that
+		// allocation is the entire point of releasing it
+		_pixels.clear();
+		_pixels.shrink(0);
+	}
+
+	void GuTexture::ReleaseHostCopy()
+	{
+		// The GE store is derived from these texels, so they only become redundant once it exists - and only
+		// for content nothing writes again. A palette bake rebuilds RGBA from the indices on every palette
+		// change, streaming content is rewritten every frame, and the shared palette texture is read back by
+		// the device itself, so none of those may give up the host copy.
+		if (_pixels.empty() || _isRenderTarget || _isPaletteTexture ||
+			_uploadFormat == PixelFormat::RG8 || _uploadCount > 1) {
+			return;
+		}
+		// Building the store here rather than at the first draw is what makes the texels redundant, and it
+		// moves the work to load time where a hitch does not show
+		if (!RefreshGeStore()) {
+			return;
+		}
+
+		ReleaseHostPixels();
+		_hostCopyReleased = true;
+	}
+
 	void GuTexture::InvalidateGeStore()
 	{
 		_geStoreValid = false;
@@ -204,6 +232,11 @@ namespace nCine::RHI::GU
 
 	void GuTexture::FreeGeStores()
 	{
+		if (_geStore != nullptr || _bakedStores[0].Data != nullptr || _bakedStores[1].Data != nullptr) {
+			// Reached from the destructor and from Allocate() when a texture is re-initialized, both of
+			// which can happen mid-frame; the GE has to be finished with these before they are freed
+			GuDevice::SyncBeforeStoreRelease();
+		}
 		if (_geStore != nullptr) {
 			std::free(_geStore);
 			_geStore = nullptr;
@@ -224,6 +257,9 @@ namespace nCine::RHI::GU
 	void GuTexture::FreeRenderTargetSurface()
 	{
 		if (_renderTargetSurface != nullptr) {
+			// Same hazard as a GE store: Allocate() reaches this when a render target is re-created, which
+			// can happen while a list still references the surface
+			GuDevice::SyncBeforeStoreRelease();
 			if (_renderTargetSurfaceInVram) {
 				GuDevice::FreeVram(_renderTargetSurface);
 			} else {
@@ -329,10 +365,17 @@ namespace nCine::RHI::GU
 		}
 		if (_geStore == nullptr || _geStoreSize != size) {
 			if (_geStore != nullptr) {
+				// Replacing a store the GE may not have read yet - a first allocation needs no such care,
+				// but this one is handing live memory back to the allocator
+				GuDevice::SyncBeforeStoreRelease();
 				std::free(_geStore);
 			}
-			// The GE fetches texels through physical addresses and expects the base to be quad-word aligned
-			_geStore = static_cast<std::uint8_t*>(memalign(16, size));
+			// The GE fetches texels through physical addresses and expects the base to be quad-word aligned.
+			// 64 rather than 16 because this store is handed to sceKernelDcacheWritebackRange() below and
+			// 64 bytes is the Allegrex's data cache line: a base part way into a line makes the writeback
+			// straddle a line the store does not own, which is a real operation on hardware however much
+			// an emulator treats it as a no-op.
+			_geStore = static_cast<std::uint8_t*>(memalign(64, size));
 			_geStoreSize = (_geStore != nullptr ? size : 0);
 			if (_geStore == nullptr) {
 				LOGE("Out of memory allocating a {} B GE store for a {}x{} texture", size, _width, _height);
@@ -566,7 +609,7 @@ namespace nCine::RHI::GU
 		}
 		// A render target has no host content worth keeping - the rasterizer owns every texel - and its
 		// linear store would be another quarter of a megabyte of main memory for nothing
-		_pixels = {};
+		ReleaseHostPixels();
 
 		_renderTargetStride = page.PaddedWidth;
 		// The two GE registers this surface reaches do NOT take the same form of address. The draw-buffer
@@ -615,6 +658,10 @@ namespace nCine::RHI::GU
 			return;		// Level 0 only
 		}
 		Allocate(format, width, height);
+		if (data != nullptr && _pixels.empty() && _hostCopyReleased) {
+			LOGW("A {}x{} texture is being uploaded after its host copy was released, so the upload is lost",
+				width, height);
+		}
 		if (data != nullptr && !_pixels.empty()) {
 			std::memcpy(_pixels.data(), data, _pixels.size());
 			_contentVersion = ++_nextContentVersion;
@@ -631,6 +678,10 @@ namespace nCine::RHI::GU
 	{
 		static_cast<void>(bgr);
 		if (level != 0 || data == nullptr || _pixels.empty()) {
+			if (data != nullptr && _hostCopyReleased) {
+				LOGW("A {}x{} region of a texture is being uploaded after its host copy was released, so the "
+					"upload is lost", width, height);
+			}
 			return;
 		}
 		const std::int32_t srcBpp = BytesPerPixel(format);

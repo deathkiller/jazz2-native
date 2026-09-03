@@ -248,6 +248,18 @@ namespace nCine
 		_wrapMode = wrapMode;
 	}
 
+	void Texture::ReleaseHostCopy()
+	{
+#if defined(WITH_RHI_GU)
+		// Only the GU backend has a release to do today: the GE samples a padded, swizzled store that the
+		// backend builds from the decoded texels, so once that store exists the texels are a second copy of
+		// the whole texture. The other backends either hand their texels to a driver or sample them in place.
+		if (_rhiTexture != nullptr) {
+			_rhiTexture->ReleaseHostCopy();
+		}
+#endif
+	}
+
 	void Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
 		_rhiTexture->SetSwizzle(r, g, b, a);

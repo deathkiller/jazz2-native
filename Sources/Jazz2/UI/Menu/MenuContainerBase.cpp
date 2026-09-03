@@ -202,7 +202,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (frame < 0) {
-			frame = res->FrameOffset + ((std::int32_t)(_canvasBackground->AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+			frame = res->GetFrameForTime(_canvasBackground->AnimTime);
 		}
 
 		Canvas* currentCanvas = GetActiveCanvas();

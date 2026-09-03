@@ -79,7 +79,7 @@ namespace Jazz2::UI
 
 		auto* loadingRes = _owner->_metadata->FindAnimation(AnimState::Idle);
 		if (loadingRes != nullptr) {
-			std::int32_t frame = loadingRes->FrameOffset + ((std::int32_t)(AnimTime * loadingRes->FrameCount / loadingRes->AnimDuration) % loadingRes->FrameCount);
+			std::int32_t frame = loadingRes->GetFrameForTime(AnimTime);
 
 			GenericGraphicResource* base = loadingRes->Base;
 			Vector2f size = Vector2f(base->FrameDimensions.X, base->FrameDimensions.Y);

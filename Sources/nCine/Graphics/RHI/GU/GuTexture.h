@@ -199,6 +199,15 @@ namespace nCine::RHI::GU
 			checked to lie inside @p palette here, once, instead of at each of the callers --- none of which
 			used to check at all, while the CLUT path next to them always has.
 		*/
+		/**
+			@brief Releases the decoded texels once the GE store built from them is the only copy needed
+
+			Both live in main memory, so a texture nothing writes again costs twice what it has to. Refused
+			for content that still needs the texels - a palette bake, streaming content, a render target or
+			the shared palette texture. Does nothing on a texture that has already given them up.
+		*/
+		void ReleaseHostCopy();
+
 		bool EnsureBakedStore(const GuTexture* palette, std::int32_t paletteOffset,
 			std::uint32_t paletteGeneration);
 
@@ -340,6 +349,8 @@ namespace nCine::RHI::GU
 		// Number of full uploads the texture has received. Content that is replaced again (video frames)
 		// stops being swizzled, because interleaving it every frame costs more than the sampling saves.
 		std::uint32_t _uploadCount;
+		// So an upload arriving after ReleaseHostCopy() is reported instead of being dropped in silence
+		bool _hostCopyReleased;
 		// Whether MapStreamingTexels() handed the GE store out and its channel order still has to be
 		// flipped into the GE's before a draw can read it
 		bool _streamingSwapPending;
@@ -360,6 +371,7 @@ namespace nCine::RHI::GU
 		/** @brief Converts and pads one page out of the host store baked through a palette row */
 		void BuildBakedPage(const Page& page, std::uint8_t* dst, const std::uint16_t* rgb444, bool swizzle);
 		/** @brief Drops the GE store (and every bake), so the next draw rebuilds it */
+		void ReleaseHostPixels();
 		void InvalidateGeStore();
 		void FreeGeStores();
 		void FreeRenderTargetSurface();

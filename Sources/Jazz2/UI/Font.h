@@ -72,6 +72,19 @@ namespace Jazz2::UI
 		/** @brief Strips formatting from the specified text */
 		static String StripFormatting(StringView text);
 
+		/**
+		 * @brief Whether the atlas holds palette indices instead of baked colors
+		 *
+		 * A backend that samples a paletted texture keeps the atlas as the indices it was authored with and
+		 * resolves the colors from the live palette texture at draw time; everywhere else the palette is
+		 * baked into the atlas when the font is loaded. Only a baked atlas goes stale when the palette
+		 * changes, which is what @ref ContentResolver decides from - reloading an indexed font would cost
+		 * a whole atlas and change nothing about how it draws.
+		 */
+		inline bool IsPaletteIndexed() const {
+			return _paletteIndexed;
+		}
+
 	private:
 		static constexpr Colorf RandomColors[] = {
 			Colorf(0.4f, 0.55f, 0.85f, 0.5f),
@@ -91,6 +104,7 @@ namespace Jazz2::UI
 		std::int32_t _lineHeight;
 		std::int32_t _baseSpacing;
 		std::unique_ptr<Texture> _texture;
+		bool _paletteIndexed;
 
 		/** @brief Returns the glyph of the specified character, or the placeholder if the font doesn't have it */
 		const FontFormat::Glyph& GetGlyph(char32_t c) const;

@@ -32,7 +32,17 @@ namespace nCine::RHI::GU
 		// has to be 16-byte aligned; sceGuStart() maps it through the uncached mirror, so the commands
 		// themselves never need a cache writeback (the vertex arena below is a different matter). Sized for a
 		// frame's worth of state changes and draw calls - the vertices do NOT live here.
-		alignas(16) std::uint32_t displayList[128 * 1024 / sizeof(std::uint32_t)];
+		//
+		// 32 KB is a little over eight times the busiest frame measured (3.7 KB for 87 draw calls, the
+		// weapon wheel open over a level), where the 128 KB this used to reserve was a guess that cost
+		// 96 KB of a main memory the game runs out of: the heap takes whatever is left after .bss, and a
+		// level with the wheel open had so little of it that a 64 KB streaming vertex buffer could not be
+		// allocated. sceGuFinish() returns the list's real size, so the sizing is checked rather than
+		// assumed - nothing in sceGu bounds-checks the list, and an overflow would be a silent write past
+		// the array.
+		constexpr std::size_t DisplayListBytes = 32 * 1024;
+		alignas(16) std::uint32_t displayList[DisplayListBytes / sizeof(std::uint32_t)];
+		bool warnedDisplayListNearlyFull = false;
 
 		// Both framebuffers and the depth buffer live in the 2 MB of video memory, allocated by hand: there
 		// is no allocator behind sceGeEdramGetAddr(), the GE just reads whatever offset it is given. At
@@ -1001,7 +1011,13 @@ namespace nCine::RHI::GU
 			FlushBatch();
 		}
 
-		sceGuFinish();
+		// Reports the sizing above going wrong before it can turn into a write past the list
+		const std::int32_t listBytes = sceGuFinish();
+		if (!warnedDisplayListNearlyFull && listBytes > std::int32_t(DisplayListBytes * 3 / 4)) {
+			warnedDisplayListNearlyFull = true;
+			LOGW("A frame filled {} B of the {} B display list with {} draw calls; it needs to be larger",
+				listBytes, DisplayListBytes, frameDrawCalls);
+		}
 		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below
 		sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 		_listOpen = false;
@@ -1247,6 +1263,36 @@ namespace nCine::RHI::GU
 		}
 	}
 
+	void GuDevice::SyncBeforeStoreRelease()
+	{
+		if (!_guInitialized) {
+			return;
+		}
+
+		// The open batch must not keep pointing at a store that is about to go away
+		FlushBatch();
+
+		// Closing the batch is not enough, and this is where the PSP's frozen-then-killed hang came from.
+		// The assumption used to be that GE stores only change between frames, where PresentFrame() has
+		// already synced - but they do not: a level load creates, replaces and drops textures from the
+		// middle of a frame that is drawing the loading screen. The commands referencing a store sit in a
+		// display list that has been written but NOT yet kicked (sceGuFinish() in PresentFrame() does
+		// that), so freeing the store hands that memory back to the allocator before the GE has ever read
+		// it. When the list finally runs, the texture base is whatever was allocated there since - garbage
+		// at best, an address the GE cannot fetch at worst, and then the GE never signals, sceGuSync()
+		// never returns and the firmware kills the process about ten seconds later (C1-2858-3 on a Vita
+		// running Adrenaline). Kicking and waiting for the list here makes the release safe; the next draw
+		// opens a fresh one through EnsureList().
+		if (_listOpen) {
+			sceGuFinish();
+			sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
+			_listOpen = false;
+			// Nothing about the list's state survives into the one EnsureList() opens next
+			appliedStateValid = false;
+			appliedTargetValid = false;
+		}
+	}
+
 	void GuDevice::UnbindTexture(const GuTexture* texture)
 	{
 		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
@@ -1257,10 +1303,9 @@ namespace nCine::RHI::GU
 		if (_paletteTexture == texture) {
 			_paletteTexture = nullptr;
 		}
-		// A destroyed texture's store must not stay referenced by an open batch. Anything already submitted
-		// is safe: resources are only ever destroyed between frames (level loads, menu transitions), and
-		// PresentFrame() has synced the previous frame's list by then.
-		FlushBatch();
+		// A destroyed texture's store must not stay referenced by an open batch, and the GE must be done
+		// with it before the destructor frees it
+		SyncBeforeStoreRelease();
 		if (appliedStateValid && appliedState.TextureData != nullptr) {
 			appliedStateValid = false;
 		}
@@ -1922,22 +1967,67 @@ namespace nCine::RHI::GU
 			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
 		};
 
-		// A line strip is one primitive, so it gets its own draw call
-		FlushBatch();
-		Vertex2D* v = AllocVertices(state, GU_LINE_STRIP, numVertices);
+		// Every segment goes out as a quad half a pixel to each side of the line, which is what the 1-wide
+		// GL lines this stands in for rasterize to - the same expansion the PowerVR does. The GE does have
+		// a native single-pixel line, and the strip went out as one GU_LINE_STRIP draw for exactly that
+		// reason, but the wheel is the only line primitive in the game and so the only thing that ever
+		// exercised it: a triangle pair is the path every other draw already takes, and it costs one batch
+		// rather than a draw call of its own.
+		const float pixelScale = std::max(scaleX, scaleY);
+		const std::int32_t segments = numVertices - 1;
+		Vertex2D* const v = AllocVertices(state, GU_TRIANGLES, segments * 6);
 		if (v == nullptr) {
 			return;
 		}
-		for (std::int32_t i = 0; i < numVertices; i++) {
-			const float* src = vertices + std::size_t(i) * FloatsPerVertex;
-			v[i].U = src[2] * uvScaleU - uvBiasU;
-			v[i].V = src[3] * uvScaleV - uvBiasV;
-			v[i].Color = abgr;
-			v[i].X = raster.Xx * src[0] + raster.Yx * src[1] + raster.Tx;
-			v[i].Y = raster.Xy * src[0] + raster.Yy * src[1] + raster.Ty;
-			v[i].Z = 0.0f;
+
+		const auto project = [vertices, &raster, uvScaleU, uvScaleV, uvBiasU, uvBiasV]
+			(std::int32_t i, float& x, float& y, float& u, float& w) {
+			const float* DEATH_RESTRICT src = vertices + std::size_t(i) * FloatsPerVertex;
+			x = raster.Xx * src[0] + raster.Yx * src[1] + raster.Tx;
+			y = raster.Xy * src[0] + raster.Yy * src[1] + raster.Ty;
+			u = src[2] * uvScaleU - uvBiasU;
+			w = src[3] * uvScaleV - uvBiasV;
+		};
+
+		float prevX, prevY, prevU, prevV;
+		project(0, prevX, prevY, prevU, prevV);
+		for (std::int32_t i = 1; i < numVertices; i++) {
+			float curX, curY, curU, curV;
+			project(i, curX, curY, curU, curV);
+
+			Vertex2D* const q = v + std::size_t(i - 1) * 6;
+			const float dx = curX - prevX, dy = curY - prevY;
+			const float len2 = dx * dx + dy * dy;
+			if (len2 > 0.000001f) {
+				const float len = std::sqrt(len2);
+				// A quad exactly one pixel wide covers too few pixel centres on a diagonal and the line
+				// comes out dashed and dimmer. Widening by the slope's Manhattan factor (1 for axis
+				// aligned, sqrt(2) at 45 degrees) restores the unbroken one-pixel chain GL's line
+				// rasterization guarantees whatever the slope.
+				const float invLen = (0.5f * pixelScale * (std::fabs(dx) + std::fabs(dy)) / len) / len;
+				const float nx = -dy * invLen;
+				const float ny = dx * invLen;
+
+				const float px[4] = { prevX + nx, prevX - nx, curX + nx, curX - nx };
+				const float py[4] = { prevY + ny, prevY - ny, curY + ny, curY - ny };
+				const float pu[4] = { prevU, prevU, curU, curU };
+				const float pv[4] = { prevV, prevV, curV, curV };
+				// The two triangles of the 0..3 quad; culling is off, so the winding is free
+				static const std::int32_t Order[6] = { 0, 1, 2, 2, 1, 3 };
+				for (std::int32_t k = 0; k < 6; k++) {
+					const std::int32_t o = Order[k];
+					q[k] = { pu[o], pv[o], abgr, px[o], py[o], 0.0f };
+				}
+			} else {
+				// The batch reserves six vertices per segment up front, so a segment of no length has to
+				// fill its own slot - six coincident vertices rasterize nothing
+				for (std::int32_t k = 0; k < 6; k++) {
+					q[k] = { prevU, prevV, abgr, prevX, prevY, 0.0f };
+				}
+			}
+
+			prevX = curX; prevY = curY; prevU = curU; prevV = curV;
 		}
-		FlushBatch();
 	}
 
 	void GuDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,

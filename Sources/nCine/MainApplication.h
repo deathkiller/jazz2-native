@@ -8,6 +8,11 @@
 
 namespace nCine
 {
+#if defined(DEATH_TARGET_PSP)
+	/** @brief Stops the Allegrex FPU trapping on IEEE exceptions; must run on every thread */
+	void PspDisableFpuTraps(bool trace);
+#endif
+
 	/** @brief Native argument type, `wchar_t*` on Windows, otherwise `char*` */
 #if defined(DEATH_TARGET_WINDOWS)
 	typedef wchar_t* NativeArgument;

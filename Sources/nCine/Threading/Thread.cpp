@@ -1,5 +1,8 @@
 #include "Thread.h"
 #include "../../Main.h"
+#if defined(DEATH_TARGET_PSP)
+#	include "../MainApplication.h"
+#endif
 
 #include <atomic>
 #include <cstring>
@@ -770,6 +773,12 @@ namespace nCine
 	void* Thread::Process(void* arg)
 #endif
 	{
+#if defined(DEATH_TARGET_PSP)
+		// FCSR is per-thread context, so a new thread starts with the firmware's enables again - and an
+		// IEEE exception it traps on ends the whole process (see PspDisableFpuTraps())
+		PspDisableFpuTraps(false);
+#endif
+
 		Thread t(static_cast<SharedBlock*>(arg));
 		auto threadFunc = t._sharedBlock->_threadFunc;
 		auto threadArg = t._sharedBlock->_threadArg;
