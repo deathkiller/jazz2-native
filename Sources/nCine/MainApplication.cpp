@@ -164,9 +164,17 @@ static DWORD GetTabTipPathFromRegistry(wchar_t* dstPath, DWORD dstSize)
 // scope in the executable itself, and the module name has to stay plain ASCII (it goes into a 27-byte
 // field), which is why it is NCINE_APP rather than NCINE_APP_NAME.
 //
-// A negative heap size means "everything that is free, less the threshold the firmware keeps for itself"
-// (PSPSDK's _sbrk reads the value as kilobytes and treats any negative one that way), which is what a
-// game that loads its assets into main memory wants - a fixed budget would only leave memory unusable.
+// Any negative heap size means "everything that is free, less the threshold below" - the magnitude is not
+// read at all, because PSPSDK's _sbrk only tests the sign - which is what a game that loads its assets into
+// main memory wants, since a fixed budget would only leave memory unusable. The whole block is allocated
+// once, on the first sbrk (so before main), and never grows.
+//
+// The threshold is what stays free for everything the firmware allocates outside that heap, and PSPSDK's
+// own default of 512 KB is not enough here: it has to hold the network PRXes - two for the common module,
+// three more for infrastructure mode, five more for ad hoc mode - plus sceNetInit()'s 128 KB pool and the
+// stacks its threads and sceNetApctlInit() ask for. Loading the ad hoc module against the default failed
+// with a kernel allocation error, so it is raised; PspNetwork logs how much is actually free before every
+// module load, which is the number to dial this back against if the memory is ever needed elsewhere.
 //
 // PSP_MAIN_THREAD_ATTR asks for the VFPU, whose vector unit is the Allegrex's only fast float path. The
 // shared math code compiles to ordinary FPU instructions today, but a thread that was not created with
@@ -174,6 +182,7 @@ static DWORD GetTabTipPathFromRegistry(wchar_t* dstPath, DWORD dstSize)
 PSP_MODULE_INFO(NCINE_APP, PSP_MODULE_USER, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 PSP_HEAP_SIZE_KB(-1);
+PSP_HEAP_THRESHOLD_SIZE_KB(2048);
 #endif
 
 namespace nCine

@@ -177,22 +177,22 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #	include <emscripten/emscripten.h>
 #else
 #	include <IO/FileStream.h>
-// The sink writes the entries and AttachTraceTarget() opens the file, and with DEATH_TRACE_ASYNC those are two
-// different threads - so the two sides are kept apart: the owner below belongs to whoever attaches or detaches
-// the target, and the pointer next to it is the only thing the sink ever follows. It is published once the
-// header and the startup history are already in the file, which is what keeps them at the very beginning of it.
+// The owner belongs to whoever attaches or detaches the target, the pointer is the only thing the sink follows -
+// with DEATH_TRACE_ASYNC those are two different threads. Published once the header and the startup history are
+// already in the file, which keeps them at the very beginning of it.
 static std::unique_ptr<Death::IO::Stream> __logFileOwner;
 static std::atomic<Death::IO::Stream*> __logFile{nullptr};
 
-// Entries formatted before the log file existed, so they still reach it once it opens. Unlike the sink, the
-// file cannot be attached any sooner: its path is the config directory's, which PreferencesCache resolves from
-// OnPreInitialize() - so the file would otherwise begin where its own path became known rather than where the
-// session did, missing the platform bring-up that explains a startup gone wrong. Bounded, keeping the oldest
-// entries; released once the file takes them over or PreInitCommon() sees that none is coming.
+// When the session started, for the log file header.
+static std::int64_t __startupTimestampMs = 0;
+
+// Entries formatted before the log file existed, so they still reach it once it opens - otherwise the file would
+// begin where its own path became known rather than where the session did, missing the platform bring-up that
+// explains a startup gone wrong. Bounded, keeping the oldest entries.
 //
-// The buffer itself belongs to the sink - it is the only one appending to it, so it is also the one that frees
-// it, once it notices that the history was closed. Closing it happens on the thread that attaches the target,
-// which cannot know whether an append is in progress at that moment.
+// The buffer belongs to the sink - the only one appending to it, so also the one that frees it, once it notices
+// that the history was closed. Closing happens on the thread that attaches the target, which cannot know whether
+// an append is in progress at that moment.
 enum class LogHistoryState : std::uint8_t {
 	// Entries with nowhere else to go are appended to the buffer
 	Open,
@@ -2037,6 +2037,12 @@ namespace nCine
 		}
 		__traceInitialized = true;
 
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (__startupTimestampMs == 0) {
+			__startupTimestampMs = DateTime::UtcNow().ToUnixMilliseconds();
+		}
+#	endif
+
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
 			return (typeof navigator !== 'undefined' && navigator !== null &&
@@ -2252,9 +2258,14 @@ namespace nCine
 		// from the process ID only slightly and the version is mostly digits, so both of them compress well
 		// into the layout above
 
-		std::int64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
-		if (timestampMs < 0) {
-			timestampMs = 0;
+		// When the session started, not when the file was opened - the fallback is for a caller that somehow
+		// gets here without InitializeTrace() having run
+		std::int64_t timestampMs = __startupTimestampMs;
+		if (timestampMs <= 0) {
+			timestampMs = DateTime::UtcNow().ToUnixMilliseconds();
+			if (timestampMs < 0) {
+				timestampMs = 0;
+			}
 		}
 
 		std::uint32_t flags = 0;

@@ -59,12 +59,21 @@ namespace nCine::Backends
 	// Brings the infrastructure half of the stack up: the INET module, the BSD sockets it implements, the
 	// resolver and the access point control. The COMMON module and sceNetInit() underneath are shared with
 	// ad hoc mode and stay up either way, so they are not part of this.
+	// Every module load here comes out of what the heap left free (see PSP_HEAP_THRESHOLD_SIZE_KB), and running
+	// out of it is the one failure these calls really have, so the amount is logged in front of them
+	static void LogFreeMemory()
+	{
+		LOGI("{} KB of memory free ({} KB in the largest block)",
+			std::uint32_t(sceKernelTotalFreeMemSize() / 1024), std::uint32_t(sceKernelMaxFreeMemSize() / 1024));
+	}
+
 	static bool BeginInfrastructure()
 	{
 		if (_inetActive) {
 			return true;
 		}
 
+		LogFreeMemory();
 		std::int32_t result = sceUtilityLoadNetModule(PSP_NET_MODULE_INET);
 		if (result < 0) {
 			LOGW("Cannot load the infrastructure module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
@@ -120,6 +129,7 @@ namespace nCine::Backends
 		// The stack lives in these firmware modules and none of them is loaded into a user-mode application
 		// by default. COMMON has to go first, and the module of whichever half of the stack is in use goes
 		// on top of it.
+		LogFreeMemory();
 		std::int32_t result = sceUtilityLoadNetModule(PSP_NET_MODULE_COMMON);
 		if (result < 0) {
 			LOGW("Cannot load the common network module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
@@ -301,18 +311,19 @@ namespace nCine::Backends
 			return false;
 		}
 
-		// The WLAN is either associated with an access point or an ad hoc peer, never both, and neither are
-		// the two modules: this one is five PRXes (adhoc, adhocctl, matching, download, discover) against
-		// the infrastructure one's single one, and the loader has only what the heap left free to put them
-		// in, so the whole infrastructure half goes away rather than just its association. AdhocEnd() brings
-		// it back. The free memory is logged because it is what this load fails on.
+		// The WLAN is either associated with an access point or an ad hoc peer, never both, and neither are the
+		// two modules: this one is five PRXes (adhoc, adhocctl, matching, download, discover) against the
+		// infrastructure one's three, and the loader has only what the heap left free to put them in, so the
+		// whole infrastructure half goes away rather than just its association. AdhocEnd() brings it back.
 		EndInfrastructure();
-		LOGI("Loading the ad hoc module, {} KB of memory free ({} KB in the largest block)",
-			std::uint32_t(sceKernelTotalFreeMemSize() / 1024), std::uint32_t(sceKernelMaxFreeMemSize() / 1024));
 
+		LogFreeMemory();
 		std::int32_t result = sceUtilityLoadNetModule(PSP_NET_MODULE_ADHOC);
 		if (result < 0) {
 			LOGW("Cannot load the ad hoc module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
+			// The module is a set of PRXes and the loader stops at the first one it cannot place, so the ones
+			// before it stay resident and hold the memory infrastructure mode is about to want back
+			sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
 			BeginInfrastructure();
 			return false;
 		}
