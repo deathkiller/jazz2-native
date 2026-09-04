@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-08-22 20:20+0200\n"
+"POT-Creation-Date: 2026-09-04 19:48+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: rtdsx\n"
@@ -63,8 +63,8 @@ msgid ""
 "Always has!"
 msgstr ""
 "\n"
-"Nick loves shiny,\n"
-"Always has!"
+"Nick elsker blanke ting.\n"
+"Det har han alltid gjort!"
 
 #: .fake/Translations/flash/02_diam3.j2l.h:1
 msgctxt "flash/02_diam3"
@@ -1371,19 +1371,19 @@ msgstr ""
 "Besøk\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:165 Sources/Jazz2/LevelHandler.cpp:216
+#: Sources/Jazz2/LevelHandler.cpp:169 Sources/Jazz2/LevelHandler.cpp:224
 #, c++-format
 msgid "Level \"{}\" initialized"
 msgstr "Nivå \"{}\" initialisert"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:881
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:188
+#: Sources/Jazz2/LevelHandler.cpp:891
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:191
 msgid "For more information, visit the official website:"
 msgstr "For mer informasjon, besøk den offisielle nettsiden:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2434
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3729
+#: Sources/Jazz2/LevelHandler.cpp:2443
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3732
 msgid "Cheats are not allowed in current context"
 msgstr "Juks er ikke tillat i nåværende kontekst"
 
@@ -1420,74 +1420,77 @@ msgid ""
 "\n"
 "{} won the championship!"
 msgstr ""
+"\n"
+"\n"
+"{} vant mesterskapet!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2678
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2681
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr "Verdi utenfor rekkevidde (2-{})"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2754
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2757
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr "Bruk: /team <blue|red|green|yellow|auto>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2761
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4215
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2764
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4218
 #, c++-format
 msgid "You joined the {} team"
 msgstr "Du ble med i {} teamet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2763
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4217
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2766
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4220
 msgid "Cannot change team right now"
 msgstr "Kan ikke bytte lag akkurat nå"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2774
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2786
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2777
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2789
 msgid "Teams are only used in team game modes"
 msgstr "Lag brukes kun i lagspillmoduser"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2777
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2780
 msgid "Teams rebalanced"
 msgstr "Lagene er ombalansert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2801
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2804
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr "Bruk: /setteam <spiller#> <blue|red|green|yellow>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2816
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2819
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr "Spiller {} flyttet til {}-laget"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2818
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2821
 msgid "Player not found"
 msgstr "Spilleren ble ikke funnet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3343
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4327
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3346
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4330
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] frakoblet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3620
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4325
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3623
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4328
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] koblet på"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4348
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6740
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4351
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6743
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] Var stekt av \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4351
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6766
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4354
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6769
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] var stekt av miljø"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7967
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7979
 msgid ""
 "\n"
 "\n"
@@ -1497,7 +1500,7 @@ msgstr ""
 "\n"
 "Lagene har blitt ombalansert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8272
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8284
 #, c++-format
 msgid ""
 "\n"
@@ -1508,7 +1511,7 @@ msgstr ""
 "\n"
 "{} tok {}-flagget!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8280
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8292
 #, c++-format
 msgid ""
 "\n"
@@ -1519,7 +1522,7 @@ msgstr ""
 "\n"
 "Flagget {} ble returnert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8328
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8340
 #, c++-format
 msgid ""
 "\n"
@@ -1530,7 +1533,7 @@ msgstr ""
 "\n"
 "{}-laget erobret {}-flagget!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8439
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8451
 #, c++-format
 msgid ""
 "\n"
@@ -1541,28 +1544,31 @@ msgstr ""
 "\n"
 "Flagget {} ble mistet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9470
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9482
 #, c++-format
-#| msgid ""
-#| "\n"
-#| "\n"
-#| "Overtime! {} seconds remaining"
 msgid ""
 "\n"
 "\n"
 "{} finished the race!\n"
 "{} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"{} fullførte løpet!\n"
+"{} sekunder igjen"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9484
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9496
 #, c++-format
 msgid ""
 "\n"
 "\n"
 "{} finished {}."
 msgstr ""
+"\n"
+"\n"
+"{} fullførte {}."
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9748
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9760
 #, c++-format
 msgid ""
 "\n"
@@ -1573,7 +1579,7 @@ msgstr ""
 "\n"
 "Vinneren er {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9812
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9824
 #, c++-format
 msgid ""
 "\n"
@@ -1584,7 +1590,7 @@ msgstr ""
 "\n"
 "{} lag vinner!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9868
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9880
 msgid ""
 "\n"
 "\n"
@@ -1599,16 +1605,16 @@ msgid "Spectating"
 msgstr "Ser på"
 
 #. TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
-#: Sources/Jazz2/UI/InGameConsole.cpp:210
+#: Sources/Jazz2/UI/InGameConsole.cpp:216
 msgid "Keyboard"
-msgstr ""
+msgstr "Tastatur"
 
-#: Sources/Jazz2/UI/InGameConsole.cpp:497
+#: Sources/Jazz2/UI/InGameConsole.cpp:524
 msgid "Unknown command"
 msgstr "Ukjent kommando"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:186
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:189
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1621,22 +1627,22 @@ msgstr ""
 "funksjoner i JJ2+ utvidelsen."
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:190
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:193
 msgid "Developers"
 msgstr "Utviklere"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:192
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:195
 msgid "Contributors"
 msgstr "Bidragsytere"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:194
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:197
 msgid "Translators"
 msgstr "Oversettere"
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:196
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:199
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1647,8 +1653,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:99
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:177
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:179
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:178
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:180
 msgid "Play Story"
 msgstr "Spill historie"
 
@@ -1739,7 +1745,7 @@ msgstr "Tillat tilgang til ekstern lagring"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:36
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:38
 msgid "Controls"
 msgstr "Kontroller"
 
@@ -1768,8 +1774,8 @@ msgid "Toggle Run"
 msgstr "Slå av/på Løp"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
@@ -1781,22 +1787,22 @@ msgstr "Slå av/på Løp"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:75
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:101
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:67
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:87
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:168
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:183
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:191
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:205
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:173
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:256
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:271
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:279
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:293
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:104
 msgid "Enabled"
 msgstr "Skrudd på"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:92
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:96
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
@@ -1807,15 +1813,15 @@ msgstr "Skrudd på"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:75
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:101
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:67
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:87
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:105
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:116
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:168
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:183
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:191
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:198
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:205
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:173
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:256
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:271
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:279
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:286
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:293
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:104
 msgid "Disabled"
 msgstr "Skrudd av"
@@ -1824,35 +1830,35 @@ msgstr "Skrudd av"
 msgid "Gamepad Button Labels"
 msgstr "Gamepad-knappetiketter"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:84
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
 msgid "Gamepad Rumble"
 msgstr "Gamepad-vibrering"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:92
 msgid "Strong"
 msgstr "Sterk"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:91
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
 msgid "Weak"
 msgstr "Svak"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
 msgid "Extended PlayStation™ Support"
 msgstr "Extended PlayStation™-støtte"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:111
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:115
 msgid "Native Back Button"
 msgstr "Innebygd tilbake-knapp"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:120
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "Input Diagnostics"
 msgstr "Inndatadiagnostikk"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 msgid "Reset To Default"
 msgstr "Tilbakestill til standard"
 
@@ -1874,63 +1880,63 @@ msgstr "Vanskelig"
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:168
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:176
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:237
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:54
 msgid "Battle"
 msgstr "Kamp"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:169
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:238
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:56
 msgid "Team Battle"
 msgstr "Lagkamp"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:170
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:239
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:58
 msgid "Race"
 msgstr "Race"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:171
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:240
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:60
 msgid "Team Race"
 msgstr "Lagkonkurranse"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:172
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:241
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:62
 msgid "Treasure Hunt"
 msgstr "Skattejakt"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:173
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:221
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:242
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:64
 msgid "Team Treasure Hunt"
 msgstr "Lagskattejakt"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:222
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:243
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:66
 msgid "Capture The Flag"
 msgstr "Fang flagget"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:175
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:244
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:68
 msgid "Cooperation"
 msgstr "Samarbeid"
 
 #. TRANSLATORS: Menu item in Multiplayer section (local splitscreen multiplayer)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:217
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
 msgstr "Lag et lokalt spill med delt skjerm"
@@ -1942,7 +1948,7 @@ msgstr "Antall spillere"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:234
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:36
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:39
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:22
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:139
 msgid "Character"
@@ -1956,7 +1962,7 @@ msgstr "Vanskelighetsgrad"
 
 #. TRANSLATORS: Menu item to select game mode
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:38
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:41
 msgid "Game Mode"
 msgstr "Spillmodus"
 
@@ -1967,12 +1973,30 @@ msgstr "Spillmodus"
 msgid "Start"
 msgstr "Start"
 
+#. TRANSLATORS: Menu item to select Wi-Fi or ad hoc connection (PSP only)
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:44
+#| msgid "Cooperation"
+msgid "Connection"
+msgstr ""
+
 #. TRANSLATORS: Menu item to create server with selected settings
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:40
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:47
 msgid "Create Server"
 msgstr "Opprett server"
 
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:369
+#. TRANSLATORS: Transport mode in Create Server section on PSP, local wireless connection between consoles
+#. TRANSLATORS: Transport mode in Connect To Server section on PSP, local wireless connection between consoles
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:425
+msgid "Ad hoc"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:425
+msgid "Wi-Fi"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:409
 msgid ""
 "\f[c:#704a4a]Cannot create the server!\f[/c]\n"
 "\n"
@@ -1986,7 +2010,7 @@ msgstr ""
 "Spillelisten er ikke riktig konfigurert.\n"
 "Kontroller serverkonfigurasjonen og prøv på nytt."
 
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:408
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:448
 msgid ""
 "\f[c:#704a4a]Cannot create the server!\f[/c]\n"
 "\n"
@@ -2001,7 +2025,7 @@ msgstr ""
 "kjører på den porten, og prøv igjen."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:155
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:551
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:557
 msgid "Play Custom Levels"
 msgstr "Spill tilpassede nivåer"
 
@@ -2014,35 +2038,35 @@ msgid "Create server from playlist"
 msgstr "Opprett server fra spilleliste"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a private online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:175
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:176
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:30
 msgid "Create Private Server"
 msgstr "Opprett privat server"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a publicly listed online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:176
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:177
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:28
 msgid "Create Public Server"
 msgstr "Opprett offentlig server"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:190
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
 msgid "No episode found!"
 msgstr "Ingen episoder funnet!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:321
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:322
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:323
 msgid "Restart episode"
 msgstr "Start episode på nytt"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:342
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:348
 #, c++-format
 msgid "You must complete \"{}\" first!"
 msgstr "Du må fullføre \"{}\" først!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:346
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:352
 msgid "Episode is locked!"
 msgstr "Episoden er låst!"
 
@@ -2062,7 +2086,7 @@ msgstr "Fornyet"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:108
 msgid "I want to play the game with something new."
-msgstr "I want to play the game with something new."
+msgstr "Jeg vil spille spillet med noe nytt."
 
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:193
@@ -2072,7 +2096,7 @@ msgstr "Velkommen til \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementering!"
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:38
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:28
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
 msgid "Gameplay"
 msgstr "Spillopplevelse"
 
@@ -2203,111 +2227,130 @@ msgstr "Bla gjennom \"Source\"-mappen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:126
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:73
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:83
 msgid "Refresh Cache"
 msgstr "Oppdater cache"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:37
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:32
 msgid "Graphics"
 msgstr "Grafikk"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
 msgid "Rescale Mode"
 msgstr "Omskaleringsmodus"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:51
-msgid "Resolution"
-msgstr "Oppløsning"
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:52
+#| msgid "Resolution"
+msgid "Screen Resolution"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:68
+#| msgid "Lighting Resolution"
+msgid "Rendering Resolution"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:117
 msgid "Fullscreen"
 msgstr "Fullskjerm"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:86
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:137
 msgid "Antialiasing"
 msgstr "Antialiasing"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:104
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:159
 msgid "Background Dithering"
 msgstr "Bakgrunnsdithering"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:115
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:172
 msgid "Blur Effects"
 msgstr "Uskarphetseffekter"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:184
 msgid "Lighting Resolution"
 msgstr "Oppløsning for belysning"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
-msgid "Water Quality"
-msgstr "Vannkvalitet"
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:224
+#| msgid "Water Quality"
+msgid "Particle Quality"
+msgstr ""
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:159
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:227
+msgid "Off"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:228
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:247
 msgid "Low"
 msgstr "Lav"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:159
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:229
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:247
 msgid "High"
 msgstr "Høy"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:167
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:246
+msgid "Water Quality"
+msgstr "Vannkvalitet"
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:255
 msgid "Show Player Trails"
 msgstr "Vis spillerspor"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:262
 msgid "Preferred Splitscreen"
 msgstr "Foretrukket delt skjerm"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:175
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:263
 msgid "Vertical"
 msgstr "Vertikal"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:175
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:263
 msgid "Horizontal"
 msgstr "Horisontal"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:182
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:270
 msgid "Prefer Zoom Out"
 msgstr "Foretrekk å zoome ut"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:190
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:278
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Behold bildeforholdet i filmsekvenser"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:197
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:285
 msgid "Unaligned Viewport"
 msgstr "Ujustert visningsvindu"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:198
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:286
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Aktivert \f[c:#d0705d](Eksperimentell)\f[/c]"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:204
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:292
 msgid "Performance Metrics"
 msgstr "Ytelsesmålinger"
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:176
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:181
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
 msgstr "Highscores for \f[c:#d0705d]Basisspill\f[/c]"
 
-#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:186
+#: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:191
 #, c++-format
 msgid "Highscores for \f[c:#d0705d]{}\f[/c]"
 msgstr "Høye poengsummer for \f[c:#d0705d]{}\f[/c]"
@@ -2345,13 +2388,13 @@ msgid "Select Game Mode"
 msgstr "Velg spillmodus"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:33
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:27
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:35
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:41
 msgid "Sounds"
 msgstr "Lyder"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:38
+#: Sources/Jazz2/UI/Menu/OptionsSection.cpp:40
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:97
 msgid "User Profile"
 msgstr "Brukerprofil"
@@ -2391,11 +2434,11 @@ msgstr "Koble fra og avslutt"
 msgid "Join Server"
 msgstr "Bli med i serveren"
 
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:75
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:85
 msgid "Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."
 msgstr "Behandler filer i \f[c:#9e7056]\"Source\"\f[/c]-mappen…"
 
-#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:78
+#: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:88
 msgid "Newly added levels and episodes will be available soon."
 msgstr "Nye nivåer og episoder vil snart være tilgjengelige."
 
@@ -2446,8 +2489,8 @@ msgstr "Løp"
 #. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:283
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:376
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:387
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:408
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:434
 msgid "Change Weapon"
 msgstr "Bytt våpen"
 
@@ -2511,7 +2554,7 @@ msgid "Laps"
 msgstr "Runder"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:444
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:449
 msgid "Treasure"
 msgstr "Skatt"
 
@@ -2531,31 +2574,31 @@ msgstr "Png"
 msgid "Ping"
 msgstr "Ping"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:216
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:248
 msgid "Connect To Server"
 msgstr "Koble til server"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:228
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:260
 msgid "No servers found, but still searchin'!"
 msgstr "Ingen servere funnet, men søker fortsatt!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:378
 msgid "IP Address:"
 msgstr "IP Adresse:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:385
 msgid "<ip> or <ip>:<port>"
 msgstr "<ip> eller <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:416
 msgid "to show keyboard"
 msgstr "for å vise tastaturet"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:445
 msgid "to connect to IP address"
 msgstr "å koble til IP-adresse"
 
@@ -2565,19 +2608,24 @@ msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
 msgstr "Trykk \f[c:#d0705d]Skyt\f[/c] for å fortsette"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:33
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:47
 msgid "Master Volume"
 msgstr "Hovedvolum"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:41
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:55
 msgid "SFX Volume"
 msgstr "Effektvolum"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:49
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:63
 msgid "Music Volume"
 msgstr "Musikkvolum"
+
+#. TRANSLATORS: Menu item in Options > Sounds section
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:78
+msgid "Sample Rate"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:111
 msgid "Save"
@@ -2658,34 +2706,34 @@ msgstr "Online og alle lokale spillere"
 msgid "Unique Player ID"
 msgstr "Unik Spiller ID"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:184
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:189
 #, c++-format
 msgid "Game starts in {}"
 msgstr "Spillet starter om {}"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:190
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:195
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
 msgstr[0] "Venter for {} mer spiller"
 msgstr[1] "Venter for {} mer spillere"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:211
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:216
 #, c++-format
 msgid "Finish in {} s"
-msgstr ""
+msgstr "I mål om {} s"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:442
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:447
 msgid "Time"
-msgstr ""
+msgstr "Tid"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:445
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:450
 msgid "Kills"
-msgstr ""
+msgstr "Drepte"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:470
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:475
 msgid "Final standings"
-msgstr ""
+msgstr "Sluttstilling"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
 msgid "Team"
@@ -2699,7 +2747,7 @@ msgstr "Auto"
 msgid "Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"
 msgstr "Bruk \f[c:#d0705d]Opp/Ned\f[/c] for å bytte mellom karakter og lag"
 
-#: Sources/Main.cpp:825 Sources/Main.cpp:896
+#: Sources/Main.cpp:837 Sources/Main.cpp:908
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2713,7 +2761,7 @@ msgstr ""
 "Sørg for at alle nødvendige filer\n"
 "er tilgjengelige og prøv på nytt."
 
-#: Sources/Main.cpp:988
+#: Sources/Main.cpp:1000
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2727,11 +2775,11 @@ msgstr ""
 "Sørg for at alle nødvendige filer\n"
 "er tilgjengelige og prøv igjen."
 
-#: Sources/Main.cpp:1255
+#: Sources/Main.cpp:1267
 msgid "Unnamed server"
 msgstr "Navnløs server"
 
-#: Sources/Main.cpp:1421
+#: Sources/Main.cpp:1433
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2743,7 +2791,7 @@ msgstr ""
 "\n"
 "Ugyldig parameter angitt."
 
-#: Sources/Main.cpp:1422
+#: Sources/Main.cpp:1434
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2755,7 +2803,7 @@ msgstr ""
 "\n"
 "Din klientversjon er ikke kompatibel med serveren."
 
-#: Sources/Main.cpp:1423
+#: Sources/Main.cpp:1435
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2767,7 +2815,7 @@ msgstr ""
 "\n"
 "Klienten ble avvist på grunn av feil kommunikasjonsprotokoll."
 
-#: Sources/Main.cpp:1424
+#: Sources/Main.cpp:1436
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2781,7 +2829,7 @@ msgstr ""
 "Tilkoblingen ble avvist av nettleseren.\n"
 "En av årsakene kan være tilkobling til en usikret WebSocket."
 
-#: Sources/Main.cpp:1425
+#: Sources/Main.cpp:1437
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2795,7 +2843,7 @@ msgstr ""
 "Autentisering mislyktes.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1426
+#: Sources/Main.cpp:1438
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2807,7 +2855,7 @@ msgstr ""
 "\n"
 "Ugyldig passord angitt."
 
-#: Sources/Main.cpp:1427
+#: Sources/Main.cpp:1439
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2821,7 +2869,7 @@ msgstr ""
 "Ugyldig spillernavn angitt.\n"
 "Kontroller profilen din og prøv igjen."
 
-#: Sources/Main.cpp:1428
+#: Sources/Main.cpp:1440
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2835,7 +2883,7 @@ msgstr ""
 "Denne klienten er ikke på serverens hviteliste.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1429
+#: Sources/Main.cpp:1441
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2849,7 +2897,7 @@ msgstr ""
 "Serveren krever tredjeparts autentiseringsleverandør.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1430
+#: Sources/Main.cpp:1442
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2863,7 +2911,7 @@ msgstr ""
 "Serveren er full.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1431
+#: Sources/Main.cpp:1443
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2871,13 +2919,13 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
-"\f[c:#704a4a]Kan ikke koble til serveren![\f/c]\n"
+"\f[c:#704a4a]Kan ikke koble til serveren!\f[/c]\n"
 "\n"
 "\n"
 "Serveren er ikke i en tilstand der den kan behandle forespørselen din.\n"
 "Vennligst prøv igjen om noen sekunder."
 
-#: Sources/Main.cpp:1432
+#: Sources/Main.cpp:1444
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2891,7 +2939,7 @@ msgstr ""
 "Serveren stenger ned.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1433
+#: Sources/Main.cpp:1445
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2905,7 +2953,7 @@ msgstr ""
 "Serveren stenger for vedlikehold.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1434
+#: Sources/Main.cpp:1446
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2919,7 +2967,7 @@ msgstr ""
 "Serveren stenger for omkonfigurering.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1435
+#: Sources/Main.cpp:1447
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2933,7 +2981,7 @@ msgstr ""
 "Serveren stenger for oppdatering.\n"
 "Vennligst sjekk klientversjonen din og prøv igjen om et minutt."
 
-#: Sources/Main.cpp:1436
+#: Sources/Main.cpp:1448
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2947,7 +2995,7 @@ msgstr ""
 "Vennligst prøv igjen, og hvis problemet vedvarer, sjekk "
 "nettverkstilkoblingen din."
 
-#: Sources/Main.cpp:1437
+#: Sources/Main.cpp:1449
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2959,7 +3007,7 @@ msgstr ""
 "\n"
 "Serveren svarer ikke på tilkoblingsforespørselen."
 
-#: Sources/Main.cpp:1438
+#: Sources/Main.cpp:1450
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2973,7 +3021,7 @@ msgstr ""
 "Du har blitt \f[c:#907050]kastet\f[/c] ut av serveren.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1439
+#: Sources/Main.cpp:1451
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2987,7 +3035,7 @@ msgstr ""
 "Du har blitt \f[c:#725040]utelukket/bannet\f[/c] fra serveren.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1440
+#: Sources/Main.cpp:1452
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2999,7 +3047,7 @@ msgstr ""
 "\n"
 "Juks oppdaget."
 
-#: Sources/Main.cpp:1441
+#: Sources/Main.cpp:1453
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3013,7 +3061,7 @@ msgstr ""
 "Klienten din inneholder ikke nødvendige ressurser.\n"
 "Last ned de nødvendige filene og prøv igjen."
 
-#: Sources/Main.cpp:1442
+#: Sources/Main.cpp:1454
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3025,7 +3073,7 @@ msgstr ""
 "\n"
 "Serveren har koblet deg fra på grunn av inaktivitet."
 
-#: Sources/Main.cpp:1728
+#: Sources/Main.cpp:1751
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
