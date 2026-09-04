@@ -7320,6 +7320,12 @@ namespace Jazz2::Multiplayer
 				if (_levelState == LevelState::Running && !serverConfig.AllowJoinDuringRound) {
 					canSpawn = false;
 				}
+				// A reconnecting player who left while spectating resumes as a spectator (the descriptor keeps
+				// the mode, see the reclaim in GameEventHandler), through the same spectator spawn below
+				const bool resumeAsSpectator = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+				if (resumeAsSpectator) {
+					canSpawn = false;
+				}
 
 				peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 
@@ -7502,8 +7508,11 @@ namespace Jazz2::Multiplayer
 						? serverConfig.InitialPlayerHealth
 						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
-					// Set spectate mode
-					peerDesc->IsSpectating = SpectateMode::Forced;
+					// Set spectate mode - forced by the round, unless the player asked for it before (a reconnecting
+					// spectator), whose request is kept so they can leave it the same way
+					if (!resumeAsSpectator) {
+						peerDesc->IsSpectating = SpectateMode::Forced;
+					}
 					if (serverConfig.EnableFreeCamera) {
 						peerDesc->IsSpectating |= SpectateMode::FreeCamera;
 					}

@@ -266,7 +266,7 @@ namespace Jazz2::UI::Menu
 				float halfWidth = viewSize.X * 0.5f;
 				// Has to follow the compact layout of OnDraw() one to one, otherwise the hit areas would
 				// no longer line up with where the columns and rows are actually drawn
-				float layoutScale = (viewSize.Y < 300 ? 0.7f : 1.0f);
+				float layoutScale = MenuLayout::Blend(0.7f, 1.0f, viewSize);
 
 				if (y < 80.0f * layoutScale) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);

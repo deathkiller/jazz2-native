@@ -140,8 +140,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
-		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
+		float titleOffset = MenuLayout::GetTitleOffset(ViewSize);
+		float titleY = _owner->_contentBounds.Y - titleOffset;
+		float logoBaseScale = MenuLayout::Blend(0.85f, 1.0f, ViewSize);
 		float logoScale = logoBaseScale;
 		float logoTextScale = logoBaseScale;
 		float logoTranslateX = logoBaseScale;
@@ -174,19 +175,21 @@ namespace Jazz2::UI::Menu
 		DrawViewportSeparators();
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			float arrowScale = (ViewSize.Y >= 300 ? 1.0f : 0.7f);
-			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - (ViewSize.Y >= 300 ? 30.0f : 12.0f), ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
+			float arrowScale = MenuLayout::Blend(0.7f, 1.0f, ViewSize);
+			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - titleOffset, ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
 
 		// Title
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		// The shadow follows the same horizontal placement as the text itself (it did not, and drifted off
+		// the text as soon as the logo was scaled down for a compact view)
+		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
+		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
 			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY, FontLayer + 200,
@@ -209,7 +212,7 @@ namespace Jazz2::UI::Menu
 			// Version
 			Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
 			bottomRight.X = ViewSize.X - 24.0f;
-			bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
+			bottomRight.Y -= MenuLayout::Blend(4.0f, 10.0f, ViewSize);
 			_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 				Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
@@ -336,9 +339,11 @@ namespace Jazz2::UI::Menu
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
-			_transition.Skip();
-			_sections.clear();
-			SwitchToSection<PauseSection>();
+			RecreateSections();
+		} else if ((type & ChangedPreferencesType::Layout) == ChangedPreferencesType::Layout) {
+			// A new view size keeps the stack and lets every section lay itself out again - at the next
+			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection)
+			_sectionsRelayoutPending = true;
 		}
 
 		if ((type & ChangedPreferencesType::ControlScheme) == ChangedPreferencesType::ControlScheme) {
@@ -351,6 +356,13 @@ namespace Jazz2::UI::Menu
 				_root->_hud->RefreshTouchButtons();
 			}
 		}
+	}
+
+	void InGameMenu::RecreateSections()
+	{
+		_transition.Skip();
+		_sections.clear();
+		SwitchToSection<PauseSection>();
 	}
 
 	bool InGameMenu::IsLocalSession() const

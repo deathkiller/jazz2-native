@@ -10,9 +10,41 @@
 #	include "../../Multiplayer/ServerInitialization.h"
 #endif
 
+#include <algorithm>
+
 namespace Jazz2::UI::Menu
 {
 	class MenuSection;
+
+	/**
+		@brief Metrics of the menu layout that follow the size of the view
+
+		The menu has a compact layout for the handhelds' 272-row views and a full one for 405 rows and more.
+		Rather than switching between the two at a threshold (which left every size in between - a PS Vita
+		at 60% rendering resolution is 326 rows - with the full layout's margins squeezed into far less room),
+		the header, footer, title and logo metrics are blended between the two by how far the view is from
+		one to the other. Sections whose structure differs between the layouts still switch at 300 rows.
+	*/
+	namespace MenuLayout
+	{
+		/** @brief Height at and below which the compact layout applies entirely */
+		constexpr std::int32_t CompactHeight = 272;
+		/** @brief Height at and above which the full layout applies entirely */
+		constexpr std::int32_t FullHeight = 400;
+
+		/** @brief Returns how far the view is from the compact layout towards the full one (0 to 1) */
+		inline float GetTransition(Vector2i viewSize) {
+			return std::clamp((viewSize.Y - CompactHeight) / float(FullHeight - CompactHeight), 0.0f, 1.0f);
+		}
+		/** @brief Blends a metric between its compact and full layout values for the given view */
+		inline float Blend(float compact, float full, Vector2i viewSize) {
+			return compact + (full - compact) * GetTransition(viewSize);
+		}
+		/** @brief Returns the distance of a section title (and the logo baseline) above the content bounds */
+		inline float GetTitleOffset(Vector2i viewSize) {
+			return Blend(12.0f, 30.0f, viewSize);
+		}
+	}
 
 	/**
 		@brief Changed preferences
@@ -30,7 +62,8 @@ namespace Jazz2::UI::Menu
 		Language = 0x08,				/**< Language */
 		ControlScheme = 0x10,			/**< Control Scheme */
 		TouchButtons = 0x20,			/**< Touch Buttons layout */
-		MainMenu = 0x40					/**< Main Menu */
+		MainMenu = 0x40,				/**< Main Menu */
+		Layout = 0x80					/**< View layout (the rendering resolution), all sections are recreated as for a language change */
 	};
 
 	DEATH_ENUM_FLAGS(ChangedPreferencesType);

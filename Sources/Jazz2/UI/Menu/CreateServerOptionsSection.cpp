@@ -20,9 +20,12 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	CreateServerOptionsSection::CreateServerOptionsSection(StringView levelName, StringView previousEpisodeName, bool privateServer)
-		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex(2),
+		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _selectedIndex((int32_t)Item::Start),
 			_availableCharacters(3), _selectedPlayerType(0), _selectedDifficulty(1), _lastPlayerType(0), _lastDifficulty(0),
 			_imageTransition(1.0f), _animation(0.0f), _transitionTime(0.0f), _privateServer(privateServer), _shouldStart(false)
+#if defined(DEATH_TARGET_PSP)
+			, _adhocMode(false)
+#endif
 	{
 		if (levelName.hasPrefix("unknown/"_s)) {
 			// Custom level
@@ -36,6 +39,10 @@ namespace Jazz2::UI::Menu
 		_items[(int32_t)Item::Character].Name = _("Character");
 		// TRANSLATORS: Menu item to select game mode
 		_items[(int32_t)Item::GameMode].Name = _("Game Mode");
+#if defined(DEATH_TARGET_PSP)
+		// TRANSLATORS: Menu item to select Wi-Fi or ad hoc connection (PSP only)
+		_items[(int32_t)Item::Connection].Name = _("Connection");
+#endif
 		// TRANSLATORS: Menu item to create server with selected settings
 		_items[(int32_t)Item::Start].Name = _("Create Server");
 	}
@@ -79,7 +86,14 @@ namespace Jazz2::UI::Menu
 						_selectedPlayerType = _availableCharacters - 1;
 					}
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-				} /*else if (_selectedIndex == 1) {
+				}
+#if defined(DEATH_TARGET_PSP)
+				else if (_selectedIndex == (int32_t)Item::Connection) {
+					_adhocMode = !_adhocMode;
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+				}
+#endif
+				/*else if (_selectedIndex == 1) {
 					if (_selectedDifficulty > 0) {
 						StartImageTransition();
 						_selectedDifficulty--;
@@ -96,7 +110,14 @@ namespace Jazz2::UI::Menu
 						_selectedPlayerType = 0;
 					}
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-				} /*else if (_selectedIndex == 1) {
+				}
+#if defined(DEATH_TARGET_PSP)
+				else if (_selectedIndex == (int32_t)Item::Connection) {
+					_adhocMode = !_adhocMode;
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+				}
+#endif
+				/*else if (_selectedIndex == 1) {
 					if (_selectedDifficulty < 3 - 1) {
 						StartImageTransition();
 						_selectedDifficulty++;
@@ -228,7 +249,23 @@ namespace Jazz2::UI::Menu
 
 				_items[i].TouchY = center.Y + 28.0f;
 				center.Y += 6.0f;
-			} else {
+			}
+#if defined(DEATH_TARGET_PSP)
+			else if (i == (int32_t)Item::Connection) {
+				// TRANSLATORS: Transport mode in Create Server section on PSP, local wireless connection between consoles
+				StringView connectionString = (_adhocMode ? _("Ad hoc") : _("Wi-Fi"));
+				_root->DrawStringShadow(connectionString, charOffset, center.X, center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
+				_root->DrawStringShadow("<"_s, charOffset, center.X - (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
+				_root->DrawStringShadow(">"_s, charOffset, center.X + (100.0f + 40.0f), center.Y + 28.0f, IMenuContainer::FontLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f);
+
+				_items[i].TouchY = center.Y + 28.0f;
+				center.Y += 6.0f;
+			}
+#endif
+			else {
 				_items[i].TouchY = center.Y;
 			}
 
@@ -349,6 +386,9 @@ namespace Jazz2::UI::Menu
 		serverInit.Configuration = NetworkManager::CreateDefaultServerConfiguration();
 		serverInit.Configuration.GameMode = _gameMode;
 		serverInit.Configuration.IsPrivate = _privateServer;
+#if defined(DEATH_TARGET_PSP)
+		serverInit.Configuration.AdhocMode = _adhocMode;
+#endif
 
 		serverInit.InitialLevel.IsLocalSession = false;
 		serverInit.InitialLevel.LevelName = _levelName;

@@ -14,5 +14,12 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		void OnShow(IMenuContainer* root) override;
+		void OnLayoutChanged(IMenuContainer* root) override;
+
+	private:
+		// The rows, whose height follows the view size (see GetItemHeight())
+		SmallVector<ListItem*, 5> _items;
+
+		static float GetItemHeight(IMenuContainer* root);
 	};
 }

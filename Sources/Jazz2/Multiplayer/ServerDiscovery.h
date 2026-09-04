@@ -134,6 +134,14 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Sets status provider */
 		void SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider);
+		/**
+		 * @brief Stops discovering and waits for the discovery thread to end
+		 *
+		 * The destructor does the same; this is for a caller that has to release the thread earlier - the
+		 * server list calls it right before connecting, because on the PSP the thread-stack pool cannot hold
+		 * the discovery thread and the multiplayer client thread at the same time (see @ref nCine::Thread).
+		 */
+		void Stop();
 
 	private:
 		ServerDiscovery(const ServerDiscovery&) = delete;
@@ -141,6 +149,8 @@ namespace Jazz2::Multiplayer
 
 		NetworkManager* _server;
 		IServerObserver* _observer;
+		// Whether Stop() has run (it may be called before the destructor runs it again)
+		bool _stopped = false;
 		std::weak_ptr<IServerStatusProvider> _statusProvider;
 		TimeStamp _lastOnlineRequestTime;
 		bool _onlineSuccess;

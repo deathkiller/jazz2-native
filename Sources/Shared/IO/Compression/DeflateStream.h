@@ -75,7 +75,7 @@ namespace Death { namespace IO { namespace Compression {
 			Failed
 		};
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
 		static constexpr std::int32_t BufferSize = 8192;
 #else
 		static constexpr std::int32_t BufferSize = 16384;
@@ -126,7 +126,7 @@ namespace Death { namespace IO { namespace Compression {
 			Failed
 		};
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
 		static constexpr std::int32_t BufferSize = 8192;
 #else
 		static constexpr std::int32_t BufferSize = 16384;

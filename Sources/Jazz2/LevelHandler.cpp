@@ -509,7 +509,11 @@ namespace Jazz2
 				_music->setLooping(true);
 				_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 				_music->setSourceRelative(true);
-				_music->play();
+				// Not started here: the rest of the level (the actors, their metadata on first sight) is
+				// still to load, and the stream is fed from the main thread once per frame, so a stream
+				// started now ran dry against that loading and came back with an audible gap after a second
+				// of playing. OnBeginFrame() starts it once the first frames are through.
+				_musicStartDelay = 2;
 			}
 		}
 #endif
@@ -596,6 +600,14 @@ namespace Jazz2
 		ZoneScopedC(0x4876AF);
 
 		float timeMult = theApplication().GetTimeMult();
+
+#if defined(WITH_AUDIO)
+		// The level music is started only after the first frames have loaded what they load (see the level
+		// loading above); it keeps playing under the pause menu, so a pause in the meantime changes nothing
+		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
+			_music->play();
+		}
+#endif
 
 		if (_pauseMenu == nullptr) {
 			UpdatePressedActions();
@@ -754,22 +766,10 @@ namespace Jazz2
 			return;
 		}
 
-		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
-		float currentRatio = (float)width / height;
-
-		std::int32_t w, h;
-		if (currentRatio > defaultRatio) {
-			w = std::min(DefaultWidth, width);
-			h = (std::int32_t)roundf(w / currentRatio);
-		} else if (currentRatio < defaultRatio) {
-			h = std::min(DefaultHeight, height);
-			w = (std::int32_t)roundf(h * currentRatio);
-		} else {
-			w = std::min(DefaultWidth, width);
-			h = std::min(DefaultHeight, height);
-		}
-
-		_viewSize = Vector2i(w, h);
+		// The logical view, bounded by DefaultWidth/Height scaled by the rendering resolution preference
+		_viewSize = Rendering::UpscaleRenderPass::CalculateViewSize(width, height, DefaultWidth, DefaultHeight);
+		std::int32_t w = _viewSize.X;
+		std::int32_t h = _viewSize.Y;
 
 		// When zooming out in splitscreen, each player's camera shows a full-size view but their on-screen region is
 		// only a fraction of the framebuffer, so the per-player image would be minified to roughly half resolution.
@@ -1745,7 +1745,9 @@ namespace Jazz2
 
 	void LevelHandler::ProcessWeather(float timeMult)
 	{
-		if (_weatherType == WeatherType::None) {
+		// Weather is by far the busiest particle producer (it respawns every frame), so the particle quality
+		// preference reaches it too: none of it when particles are off, half the density at the low quality
+		if (_weatherType == WeatherType::None || PreferencesCache::Particles == ParticleQuality::Off) {
 			return;
 		}
 
@@ -1769,7 +1771,8 @@ namespace Jazz2
 			}
 		}
 
-		std::int32_t weatherIntensity = std::max<std::int32_t>((std::int32_t)(_weatherIntensity * timeMult), 1);
+		float effectiveIntensity = (PreferencesCache::Particles == ParticleQuality::Low ? _weatherIntensity * 0.5f : (float)_weatherIntensity);
+		std::int32_t weatherIntensity = std::max<std::int32_t>((std::int32_t)(effectiveIntensity * timeMult), 1);
 
 		bool isRain = ((_weatherType & ~WeatherType::OutdoorsOnly) == WeatherType::Rain);
 		auto* res = _commonResources->FindAnimation(isRain ? Rain : Snow);

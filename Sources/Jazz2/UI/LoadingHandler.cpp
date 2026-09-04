@@ -46,20 +46,9 @@ namespace Jazz2::UI
 
 	void LoadingHandler::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
-		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
-		float currentRatio = (float)width / height;
-
-		std::int32_t w, h;
-		if (currentRatio > defaultRatio) {
-			w = std::min(DefaultWidth, width);
-			h = (std::int32_t)roundf(w / currentRatio);
-		} else if (currentRatio < defaultRatio) {
-			h = std::min(DefaultHeight, height);
-			w = (std::int32_t)roundf(h * currentRatio);
-		} else {
-			w = std::min(DefaultWidth, width);
-			h = std::min(DefaultHeight, height);
-		}
+		Vector2i viewSize = Rendering::UpscaleRenderPass::CalculateViewSize(width, height, DefaultWidth, DefaultHeight);
+		std::int32_t w = viewSize.X;
+		std::int32_t h = viewSize.Y;
 
 		_upscalePass.Initialize(w, h, width, height);
 

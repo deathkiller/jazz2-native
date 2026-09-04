@@ -170,6 +170,8 @@ namespace Jazz2::UI::Menu
 		float _logoTransition;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
+		// Frames left before the opened music starts playing (see PlayMenuMusic()), or 0
+		std::int32_t _musicStartDelay = 0;
 #endif
 		SmallVector<Tiles::TileMap::DestructibleDebris, 0> _debrisList;
 
@@ -186,6 +188,7 @@ namespace Jazz2::UI::Menu
 		bool RenderLegacyBackground(RenderQueue& renderQueue);
 
 	protected:
+		void RecreateSections() override;
 		Rendering::UpscaleRenderPassWithClipping& GetUpscalePass() override {
 			return _upscalePass;
 		}

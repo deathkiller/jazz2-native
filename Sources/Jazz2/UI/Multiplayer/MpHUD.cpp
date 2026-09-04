@@ -11,6 +11,11 @@
 #include "../../../nCine/I18n.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 #include "../../../nCine/Graphics/Texture.h"
+#include "../../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_SHADERS (a header macro, not a build define)
+
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 using namespace Jazz2::Multiplayer;
 using namespace Jazz2::Actors::Multiplayer;
@@ -600,6 +605,23 @@ namespace Jazz2::UI::Multiplayer
 
 		const Colorf trackColor(0.95f, 0.96f, 1.0f, 0.9f);
 		const Colorf shadowColor(0.0f, 0.0f, 0.0f, 0.45f);
+#if !defined(RHI_CAP_SHADERS)
+		// The direct tier draws the track from textures rasterized once (see RefreshMinimapTrackTextures()): two
+		// sprites a frame, the line and its thicker, offset shadow - the same thicknesses as the mesh strip uses,
+		// so the shadow shows as the dark rim around the line here too. The textures are in box coordinates, so a
+		// box that merely moves (the touch pause button pushing it aside) keeps them.
+		{
+			const std::int32_t texWidth = (std::int32_t)std::ceil(boxW);
+			const std::int32_t texHeight = (std::int32_t)std::ceil(boxH);
+			RefreshMinimapTrackTextures(texWidth, texHeight, origin - Vector2f(boxX, boxY), mn, scale, 1.8f, 2.6f);
+			if (_minimapTrackTexture != nullptr && _minimapTrackShadowTexture != nullptr) {
+				Vector2f boxPos(boxX, boxY);
+				Vector2f texSize((float)texWidth, (float)texHeight);
+				DrawTexture(*_minimapTrackShadowTexture, boxPos + Vector2f(0.8f, 1.0f), ShadowLayer, texSize, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), shadowColor);
+				DrawTexture(*_minimapTrackTexture, boxPos, MainLayer, texSize, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), trackColor);
+			}
+		}
+#else
 		SmallVector<Vector2f, 0> screenPts;
 		for (std::int32_t r = 0; r + 1 < (std::int32_t)_minimapRunOffsets.size(); r++) {
 			std::int32_t a = _minimapRunOffsets[r], b = _minimapRunOffsets[r + 1];
@@ -613,6 +635,7 @@ namespace Jazz2::UI::Multiplayer
 			DrawMinimapTrackLine(&screenPts[0], (std::int32_t)screenPts.size(), Vector2f(0.8f, 1.0f), 2.6f, ShadowLayer, shadowColor);
 			DrawMinimapTrackLine(&screenPts[0], (std::int32_t)screenPts.size(), Vector2f(0.0f, 0.0f), 1.8f, MainLayer, trackColor);
 		}
+#endif
 
 		// Start/finish markers (warp "Set Lap" tiles)
 		for (const auto& m : mpLevelHandler->_raceStartMarkers) {
@@ -839,6 +862,98 @@ namespace Jazz2::UI::Multiplayer
 		command->GetMaterial().SetTexture(0, *_minimapLineTexture);
 
 		DrawRenderCommand(command);
+	}
+
+	void MpHUD::RefreshMinimapTrackTextures(std::int32_t boxWidth, std::int32_t boxHeight, Vector2f localOrigin, Vector2f worldMin, float scale, float lineHalfThickness, float shadowHalfThickness)
+	{
+		if (boxWidth <= 0 || boxHeight <= 0 || _minimapRunOffsets.size() < 2) {
+			return;
+		}
+
+		// Everything the raster depends on, folded into one key: the track (its own cache key), the box size
+		// and the projection into it. A change of any of them is rare - a level load, a view size change.
+		std::uint32_t key = _minimapCacheKey;
+		auto fold = [&key](std::uint32_t value) { key = key * 2654435761u + value; };
+		fold((std::uint32_t)boxWidth); fold((std::uint32_t)boxHeight);
+		std::uint32_t bits;
+		std::memcpy(&bits, &scale, sizeof(bits)); fold(bits);
+		std::memcpy(&bits, &localOrigin.X, sizeof(bits)); fold(bits);
+		std::memcpy(&bits, &localOrigin.Y, sizeof(bits)); fold(bits);
+		if (_minimapTrackTexture != nullptr && key == _minimapTrackTextureKey) {
+			return;
+		}
+		_minimapTrackTextureKey = key;
+
+		constexpr float TS = (float)Tiles::TileSet::DefaultTileSize;
+		const std::int32_t pixelCount = boxWidth * boxHeight;
+		// Two coverage masks side by side: the line's and the shadow's (see the feather texture of the mesh
+		// path, whose edges fade over the outer third of the half-thickness - about a pixel here)
+		constexpr float Feather = 1.0f;
+		const float halfThicknesses[2] = { lineHalfThickness, shadowHalfThickness };
+		SmallVector<std::uint8_t, 0> coverage((std::size_t)pixelCount * 2);
+		std::memset(coverage.data(), 0, (std::size_t)pixelCount * 2);
+
+		// An antialiased thick polyline: every pixel within the half-thickness of a segment is covered, with
+		// the feather's worth of distance fading out. Segments are short (the centerline is subdivided), so
+		// each one touches a few dozen pixels and the whole track takes well under a frame, once.
+		const float reach = shadowHalfThickness + Feather;
+		for (std::int32_t r = 0; r + 1 < (std::int32_t)_minimapRunOffsets.size(); r++) {
+			std::int32_t a = _minimapRunOffsets[r], b = _minimapRunOffsets[r + 1];
+			for (std::int32_t k = a; k + 1 < b; k++) {
+				Vector2f p0 = localOrigin + (_minimapPoints[k] * TS - worldMin) * scale;
+				Vector2f p1 = localOrigin + (_minimapPoints[k + 1] * TS - worldMin) * scale;
+				Vector2f d = p1 - p0;
+				const float lengthSq = d.X * d.X + d.Y * d.Y;
+
+				const std::int32_t x0 = std::max<std::int32_t>(0, (std::int32_t)std::floor(std::min(p0.X, p1.X) - reach));
+				const std::int32_t x1 = std::min<std::int32_t>(boxWidth - 1, (std::int32_t)std::ceil(std::max(p0.X, p1.X) + reach));
+				const std::int32_t y0 = std::max<std::int32_t>(0, (std::int32_t)std::floor(std::min(p0.Y, p1.Y) - reach));
+				const std::int32_t y1 = std::min<std::int32_t>(boxHeight - 1, (std::int32_t)std::ceil(std::max(p0.Y, p1.Y) + reach));
+				for (std::int32_t y = y0; y <= y1; y++) {
+					for (std::int32_t x = x0; x <= x1; x++) {
+						Vector2f c((float)x + 0.5f, (float)y + 0.5f);
+						// Distance from the pixel centre to the segment
+						float t = (lengthSq > 0.0001f ? ((c.X - p0.X) * d.X + (c.Y - p0.Y) * d.Y) / lengthSq : 0.0f);
+						t = std::clamp(t, 0.0f, 1.0f);
+						Vector2f q = p0 + d * t;
+						float dist = (c - q).Length();
+						for (std::int32_t m = 0; m < 2; m++) {
+							float alpha = std::clamp((halfThicknesses[m] - dist) / Feather + 1.0f, 0.0f, 1.0f);
+							if (alpha > 0.0f) {
+								std::uint8_t& pixel = coverage[m * pixelCount + y * boxWidth + x];
+								pixel = std::max(pixel, (std::uint8_t)(alpha * 255.0f));
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// White with the coverage as alpha, so the sprite's colour is the line's (or the shadow's) colour
+		SmallVector<std::uint8_t, 0> texels((std::size_t)pixelCount * 4);
+		const bool resize = (_minimapTrackTextureSize.X != boxWidth || _minimapTrackTextureSize.Y != boxHeight);
+		std::unique_ptr<Texture>* textures[2] = { &_minimapTrackTexture, &_minimapTrackShadowTexture };
+		const char* names[2] = { "RaceMinimapTrack", "RaceMinimapTrackShadow" };
+		for (std::int32_t m = 0; m < 2; m++) {
+			for (std::int32_t i = 0; i < pixelCount; i++) {
+				texels[i * 4 + 0] = 255;
+				texels[i * 4 + 1] = 255;
+				texels[i * 4 + 2] = 255;
+				texels[i * 4 + 3] = coverage[m * pixelCount + i];
+			}
+
+			std::unique_ptr<Texture>& texture = *textures[m];
+			if (texture == nullptr) {
+				texture = std::make_unique<Texture>(names[m], Texture::Format::RGBA8, boxWidth, boxHeight);
+			} else if (resize) {
+				texture->Init(names[m], Texture::Format::RGBA8, 1, boxWidth, boxHeight);
+			}
+			texture->LoadFromTexels(texels.data(), 0, 0, boxWidth, boxHeight);
+			texture->SetMinFiltering(SamplerFilter::Linear);
+			texture->SetMagFiltering(SamplerFilter::Linear);
+			texture->SetWrap(SamplerWrapping::ClampToEdge);
+		}
+		_minimapTrackTextureSize = Vector2i(boxWidth, boxHeight);
 	}
 }
 

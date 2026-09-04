@@ -531,7 +531,7 @@ namespace nCine
 #else
 		while (!app._shouldQuit) {
 			app.ProcessStep();
-#	if defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 			// The IME is modal to the firmware but not to the game, which keeps running and presenting behind
 			// it - so its result has to be collected from the frame loop rather than from whoever opened it
 			app.UpdateScreenKeyboard();
@@ -686,7 +686,65 @@ namespace nCine
 		return false;
 	}
 	
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+	void MainApplication::UpdateScreenKeyboard()
+	{
+		if (!_oskActive) {
+			return;
+		}
+
+		// The state machine the SDK prescribes: VISIBLE is refreshed by the GU backend at present time (the
+		// dialog draws into the frame being finished, see GuDevice::PresentFrame()), QUIT asks for the
+		// shutdown, and FINISHED is when the result is valid to read. Anything else - none, or an error code,
+		// which is what the call returns once the dialog is gone - ends the collection too, so a keyboard
+		// that went away without reporting FINISHED cannot keep the game waiting for it.
+		switch (sceUtilityOskGetStatus()) {
+			case PSP_UTILITY_DIALOG_INIT:
+			case PSP_UTILITY_DIALOG_VISIBLE:
+				break;
+			case PSP_UTILITY_DIALOG_QUIT:
+				sceUtilityOskShutdownStart();
+				break;
+			default: {
+				_oskActive = false;
+
+				if (_oskData.result != PSP_UTILITY_OSK_RESULT_CANCELLED) {
+					// UCS-2 in (no surrogate pairs on this firmware), UTF-8 out
+					String text;
+					char encoded[4];
+					for (std::size_t i = 0; i < ImeMaxTextLength && _oskOutputBuffer[i] != 0; i++) {
+						std::size_t encodedLength = Death::Utf8::FromCodePoint((char32_t)_oskOutputBuffer[i], encoded);
+						if (encodedLength > 0) {
+							text += StringView(encoded, encodedLength);
+						}
+					}
+
+					if (_imeOnCompleted) {
+						// The caller can take the whole string, which is what the dialog actually collected - the
+						// field is replaced rather than appended to
+						_imeOnCompleted(text);
+					} else if (IInputEventHandler* handler = IInputManager::handler()) {
+						// Nobody asked for the string, so it is delivered as the text input events a
+						// keystroke-feeding keyboard would have produced. That appends, which is the best this
+						// fallback can do.
+						TextInputEvent textInputEvent;
+						for (std::size_t i = 0; i < text.size(); ) {
+							auto [codePoint, nextI] = Death::Utf8::NextChar(text, i);
+							i = nextI;
+							textInputEvent.length = (std::int32_t)Death::Utf8::FromCodePoint(codePoint, textInputEvent.text);
+							if (textInputEvent.length > 0) {
+								handler->OnTextInput(textInputEvent);
+							}
+						}
+					}
+				}
+
+				_imeOnCompleted = {};
+				break;
+			}
+		}
+	}
+#elif defined(DEATH_TARGET_VITA)
 	void MainApplication::UpdateScreenKeyboard()
 	{
 		if (sceImeDialogGetStatus() != SCE_COMMON_DIALOG_STATUS_FINISHED) {
@@ -740,7 +798,7 @@ namespace nCine
 
 	bool MainApplication::CanShowScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		return true;
 #else
 		return false;
@@ -749,7 +807,10 @@ namespace nCine
 
 	bool MainApplication::IsScreenKeyboardVisible()
 	{
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+		const std::int32_t status = sceUtilityOskGetStatus();
+		return (status == PSP_UTILITY_DIALOG_INIT || status == PSP_UTILITY_DIALOG_VISIBLE);
+#elif defined(DEATH_TARGET_VITA)
 		return (sceImeDialogGetStatus() == SCE_COMMON_DIALOG_STATUS_RUNNING);
 #elif defined(DEATH_TARGET_WINDOWS)
 		HWND hwnd = ::FindWindowEx(NULL, NULL, L"IPTip_Main_Window", NULL);
@@ -761,7 +822,7 @@ namespace nCine
 
 	bool MainApplication::ToggleScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		return (IsScreenKeyboardVisible() ? HideScreenKeyboard() : ShowScreenKeyboard());
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (HideScreenKeyboard()) {
@@ -776,7 +837,74 @@ namespace nCine
 
 	bool MainApplication::ShowScreenKeyboard(Containers::StringView initialText, Containers::Function<void(Containers::StringView)>&& onCompleted)
 	{
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+		// The same arrangement as on the Vita, with the firmware's `sceUtility` on-screen keyboard: a modal
+		// dialog that collects a whole string and hands it back once confirmed, collected by
+		// UpdateScreenKeyboard() from the frame loop. The status alone cannot say "idle": with no keyboard
+		// ever started the call returns an error code, so the flag is what says one is up.
+		if (_oskActive) {
+			return false;
+		}
+
+		std::memset(_oskInputBuffer, 0, sizeof(_oskInputBuffer));
+		std::memset(_oskOutputBuffer, 0, sizeof(_oskOutputBuffer));
+		std::memset(_oskTitle, 0, sizeof(_oskTitle));
+		_imeOnCompleted = std::move(onCompleted);
+
+		// Seed the editor with what the field already holds, so the user edits it instead of retyping it.
+		// UTF-8 in, UCS-2 out; a code point the encoding cannot hold (outside the BMP) is dropped.
+		{
+			std::size_t out = 0;
+			for (std::size_t i = 0; i < initialText.size() && out < ImeMaxTextLength; ) {
+				auto [codePoint, nextI] = Death::Utf8::NextChar(initialText, i);
+				i = nextI;
+				if (codePoint == U'\0') {
+					break;
+				}
+				if (codePoint <= 0xFFFF) {
+					_oskInputBuffer[out++] = (unsigned short)codePoint;
+				}
+			}
+			_oskInputBuffer[out] = 0;
+		}
+		static constexpr char TitleText[] = "Enter text";
+		for (std::size_t i = 0; i < sizeof(TitleText) - 1; i++) {
+			_oskTitle[i] = (unsigned short)TitleText[i];
+		}
+
+		std::memset(&_oskData, 0, sizeof(_oskData));
+		_oskData.language = PSP_UTILITY_OSK_LANGUAGE_DEFAULT;
+		_oskData.lines = 1;
+		_oskData.unk_24 = 1;
+		_oskData.inputtype = PSP_UTILITY_OSK_INPUTTYPE_ALL;
+		_oskData.desc = _oskTitle;
+		_oskData.intext = _oskInputBuffer;
+		_oskData.outtextlength = (int)ImeMaxTextLength;
+		_oskData.outtextlimit = (int)ImeMaxTextLength;
+		_oskData.outtext = _oskOutputBuffer;
+
+		std::memset(&_oskParams, 0, sizeof(_oskParams));
+		_oskParams.base.size = sizeof(_oskParams);
+		sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &_oskParams.base.language);
+		sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_BUTTON_SWAP, &_oskParams.base.buttonSwap);
+		// The dialog's own threads run above the game's main thread (32), the usual arrangement from the
+		// SDK samples, so the keyboard stays responsive whatever the frame behind it is doing
+		_oskParams.base.graphicsThread = 17;
+		_oskParams.base.accessThread = 19;
+		_oskParams.base.fontThread = 18;
+		_oskParams.base.soundThread = 16;
+		_oskParams.datacount = 1;
+		_oskParams.data = &_oskData;
+
+		const std::int32_t result = sceUtilityOskInitStart(&_oskParams);
+		if (result < 0) {
+			LOGW("sceUtilityOskInitStart() failed with 0x{:.8x}, the on-screen keyboard is unavailable", std::uint32_t(result));
+			_imeOnCompleted = {};
+			return false;
+		}
+		_oskActive = true;
+		return true;
+#elif defined(DEATH_TARGET_VITA)
 		// The console has no keyboard overlay that feeds keystrokes the way the desktop ones do - what it has
 		// is the IME, a modal dialog that collects a whole string and hands it back when the user confirms.
 		// So this opens the dialog and VitaImeDialog::Update() below turns the result into the text input
@@ -877,7 +1005,14 @@ namespace nCine
 
 	bool MainApplication::HideScreenKeyboard()
 	{
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+		if (sceUtilityOskGetStatus() != PSP_UTILITY_DIALOG_VISIBLE) {
+			return false;
+		}
+		// Nothing is collected from a dialog shut down this way: the result reads as cancelled
+		_oskData.result = PSP_UTILITY_OSK_RESULT_CANCELLED;
+		return (sceUtilityOskShutdownStart() >= 0);
+#elif defined(DEATH_TARGET_VITA)
 		if (sceImeDialogGetStatus() != SCE_COMMON_DIALOG_STATUS_RUNNING) {
 			return false;
 		}

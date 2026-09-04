@@ -301,6 +301,8 @@ namespace Jazz2
 		Vector4f _defaultAmbientLight;
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
+		// Frames left before the level music opened on load starts playing (see OnBeginFrame()), or 0
+		std::int32_t _musicStartDelay = 0;
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 		std::shared_ptr<AudioBufferPlayer> _sugarRushMusic;
 #endif

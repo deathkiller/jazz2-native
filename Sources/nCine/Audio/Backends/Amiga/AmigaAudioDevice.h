@@ -44,6 +44,7 @@ namespace nCine
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
 		std::int32_t nativeFrequency() override;
+		void setMixingFrequency(std::int32_t frequency) override;
 
 		std::uint32_t registerPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;

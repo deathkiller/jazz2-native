@@ -126,6 +126,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 	protected:
+		void RecreateSections() override;
 		Rendering::UpscaleRenderPassWithClipping& GetUpscalePass() override {
 			return _root->GetActiveOverlayPass();
 		}

@@ -128,6 +128,13 @@ namespace Jazz2::UI::Menu
 
 	void MenuContainerBase::UpdateActiveSection(float timeMult)
 	{
+		// Deferred from the widget that asked (see the flag); here no widget is on the stack, so the sections
+		// can rebuild their content freely
+		if (_sectionsRelayoutPending) {
+			_sectionsRelayoutPending = false;
+			RelayoutSections();
+		}
+
 		if (_transition.IsActive() && _transition.Update(timeMult)) {
 			// Transition finished - restore the precise clip rectangle of the now-active section
 			if (auto* current = GetCurrentSection()) {
@@ -141,11 +148,26 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void MenuContainerBase::RelayoutSections()
+	{
+		// The content bounds already follow the view (see OnInitializeViewport()); this is for what a section
+		// decided when it was built, which the hidden ones below the top get to redo as well
+		for (auto& section : _sections) {
+			section->OnLayoutChanged(this);
+		}
+		if (auto* current = GetCurrentSection()) {
+			GetUpscalePass().SetClipRectangle(current->GetClipRectangle(_contentBounds));
+		}
+	}
+
 	void MenuContainerBase::UpdateContentBounds(Vector2i viewSize)
 	{
-		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
-		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
-		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
+		// The full layout's header grows with a taller aspect ratio (portrait phones) and the compact one is
+		// a fixed sliver; the sizes between the two blend between them (see MenuLayout)
+		float fullHeaderY = std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f);
+		float headerY = MenuLayout::Blend(8.0f, fullHeaderY, viewSize);
+		float footerY = MenuLayout::Blend(14.0f, 30.0f, viewSize);
+		_contentBounds = Recti(0, (std::int32_t)(headerY + 30.0f), viewSize.X, viewSize.Y - (std::int32_t)(headerY + footerY));
 	}
 
 	void MenuContainerBase::UpdatePressedActions()

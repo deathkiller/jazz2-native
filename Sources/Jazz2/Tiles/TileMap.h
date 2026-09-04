@@ -476,7 +476,13 @@ namespace Jazz2::Tiles
 
 		/** @} */
 
-		/** @brief Creates a generic debris */
+		/**
+		 * @brief Creates a generic debris
+		 *
+		 * All of the debris producers honour @ref PreferencesCache::Particles: nothing is created when
+		 * particles are off, and the bursts (@ref CreateParticleDebris(), @ref CreateSpriteDebris()) are
+		 * halved at the low quality. The console budgets above apply on top of that.
+		 */
 		void CreateDebris(const DestructibleDebris& debris);
 		/** @brief Creates a tile debris */
 		void CreateTileDebris(std::int32_t tileId, std::int32_t x, std::int32_t y);

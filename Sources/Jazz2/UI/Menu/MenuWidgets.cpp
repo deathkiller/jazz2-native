@@ -40,7 +40,7 @@ namespace Jazz2::UI::Menu
 	{
 		Bounds = bounds;
 		float centerX = bounds.X + bounds.W * 0.5f;
-		float y = bounds.Y + bounds.H * 0.5f;
+		float y = bounds.Y + LabelOffset;
 		root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
 		if (Value) {
 			StringView value = Value();
@@ -56,8 +56,10 @@ namespace Jazz2::UI::Menu
 		if (input.Left || input.Right || input.Fire) {
 			if (!ReadOnly && OnChange) {
 				root->PlaySfx("MenuSelect"_s, 0.6f);
-				OnChange(input.Left ? -1 : 1);
+				// The handler goes last: one that recreates the whole menu (the rendering resolution, see
+				// GraphicsOptionsSection) destroys this widget with it, so nothing of it may be touched afterwards
 				Animation.Restart(0.0f);
+				OnChange(input.Left ? -1 : 1);
 			}
 			return true;
 		}
@@ -78,8 +80,9 @@ namespace Jazz2::UI::Menu
 		}
 		float x = event.pointers[pointerIndex].x * viewSize.X;
 		root->PlaySfx("MenuSelect"_s, 0.6f);
-		OnChange(x < Bounds.X + Bounds.W * 0.5f ? -1 : 1);
+		// The handler goes last, see OnNavigate()
 		Animation.Restart(0.0f);
+		OnChange(x < Bounds.X + Bounds.W * 0.5f ? -1 : 1);
 		return true;
 	}
 
@@ -196,7 +199,7 @@ namespace Jazz2::UI::Menu
 		float total = 0.0f;
 		for (const auto& child : _children) {
 			if (child->Visible) {
-				total += child->GetHeight();
+				total += child->MarginTop + child->GetHeight();
 			}
 		}
 		return total;
@@ -345,8 +348,11 @@ namespace Jazz2::UI::Menu
 					}
 					float h = child->GetHeight();
 					child->Selected = (i == _selectedIndex);
-					float cy = bounds.Y + initial + visibleIndex * step;
-					child->Draw(root, canvas, Rectf(bounds.X, cy - h * 0.5f, bounds.W, h), charOffset);
+					// The slots are equidistant, so a margin only nudges its own item down within its slot
+					float cy = bounds.Y + initial + visibleIndex * step + child->MarginTop;
+					// The slot centre is where the row's label goes (see Widget::LabelOffset), so the row is
+					// hung from it rather than centred on it - a tall row then extends downwards, not both ways
+					child->Draw(root, canvas, Rectf(bounds.X, cy - Widget::LabelOffset, bounds.W, h), charOffset);
 					visibleIndex++;
 				}
 			}
@@ -362,6 +368,7 @@ namespace Jazz2::UI::Menu
 			}
 			float h = child->GetHeight();
 			child->Selected = (i == _selectedIndex);
+			y += child->MarginTop;
 			child->Draw(root, canvas, Rectf(bounds.X, y, bounds.W, h), charOffset);
 			y += h;
 		}
@@ -440,11 +447,13 @@ namespace Jazz2::UI::Menu
 				if (firstHeight <= 0.0f) {
 					firstHeight = child->GetHeight();
 				}
-				content += child->GetHeight();
+				content += child->MarginTop + child->GetHeight();
 			}
 		}
-		// Reserve extra space before the first and after the last item (for rows with oversized content)
-		content += ContentPadding * 2.0f;
+		// Reserve extra space before the first and after the last item (for rows with oversized content); a
+		// compact view (the handhelds) has none to spare, so the padding shrinks with it (see MenuLayout)
+		const float contentPadding = MenuLayout::Blend(ContentPadding * 0.25f, ContentPadding, root->GetViewSize());
+		content += contentPadding * 2.0f;
 		_contentHeight = content;
 
 		if (_availableHeight - _contentHeight < 0.0f) {
@@ -462,10 +471,10 @@ namespace Jazz2::UI::Menu
 				float before = 0.0f;
 				for (std::int32_t i = 0; i < _selectedIndex; i++) {
 					if (_children[i]->Visible) {
-						before += _children[i]->GetHeight();
+						before += _children[i]->MarginTop + _children[i]->GetHeight();
 					}
 				}
-				float desired = (_availableHeight * 0.5f) - (firstHeight * 0.5f) - ContentPadding - before;
+				float desired = (_availableHeight * 0.5f) - (firstHeight * 0.5f) - contentPadding - before;
 				_scrollY = std::clamp(desired, _availableHeight - _contentHeight, 0.0f);
 			}
 		}
@@ -473,7 +482,7 @@ namespace Jazz2::UI::Menu
 		float centerX = bounds.X + bounds.W * 0.5f;
 		float topLine = bounds.Y;
 		float bottomLine = bounds.Y + bounds.H;
-		float cy = topLine + ContentPadding + (firstHeight * 0.5f) + _scrollY;
+		float cy = topLine + contentPadding + (firstHeight * 0.5f) + _scrollY;
 
 		for (std::int32_t i = 0; i < (std::int32_t)_children.size(); i++) {
 			auto& child = _children[i];
@@ -482,6 +491,7 @@ namespace Jazz2::UI::Menu
 			}
 			float h = child->GetHeight();
 			child->Selected = (i == _selectedIndex);
+			cy += child->MarginTop;
 			Rectf childRect(bounds.X, cy - h * 0.5f, bounds.W, h);
 			if (cy > topLine - ItemSpacing && cy < bottomLine + ItemSpacing) {
 				child->Draw(root, canvas, childRect, charOffset);
@@ -612,7 +622,7 @@ namespace Jazz2::UI::Menu
 	{
 		Bounds = bounds;
 		float centerX = bounds.X + bounds.W * 0.5f;
-		float centerY = bounds.Y + bounds.H * 0.5f;
+		float centerY = bounds.Y + LabelOffset;
 
 		root->DrawMenuListItem(charOffset, Label, centerX, centerY, Selected, Animation.Raw());
 
@@ -694,7 +704,7 @@ namespace Jazz2::UI::Menu
 	{
 		Bounds = bounds;
 		float centerX = bounds.X + bounds.W * 0.5f;
-		float y = bounds.Y + bounds.H * 0.5f;
+		float y = bounds.Y + LabelOffset;
 
 		root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
 

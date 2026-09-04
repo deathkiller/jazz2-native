@@ -1970,6 +1970,12 @@ namespace Jazz2::Tiles
 
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
 	{
+		// The user can switch the effect off altogether (see ParticleQuality); the reduced quality is applied by
+		// the producers, which know what half of their burst is - a single particle handed in here is left alone
+		if (PreferencesCache::Particles == ParticleQuality::Off) {
+			return;
+		}
+
 		// Every live particle pins a pooled render command and a slice of the streaming uniform buffers, so on the
 		// consoles the effect has a budget (see MaxDebrisCount) and new particles are dropped once it is used up
 		if (MaxDebrisCount > 0 && (std::int32_t)_debrisList.size() >= MaxDebrisCount) {
@@ -2009,7 +2015,7 @@ namespace Jazz2::Tiles
 		constexpr std::int32_t QuarterSize = TileSet::DefaultTileSize / 2;
 
 		// Tile #0 is always empty
-		if (tileId == 0) {
+		if (tileId == 0 || PreferencesCache::Particles == ParticleQuality::Off) {
 			return;
 		}
 
@@ -2080,7 +2086,7 @@ namespace Jazz2::Tiles
 	{
 		constexpr std::int32_t DebrisSize = 3;
 
-		if (res->Base->TextureDiffuse == nullptr) {
+		if (res->Base->TextureDiffuse == nullptr || PreferencesCache::Particles == ParticleQuality::Off) {
 			return;
 		}
 
@@ -2095,12 +2101,19 @@ namespace Jazz2::Tiles
 		// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
 		const std::int32_t step = GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
 		const float particleSize = (float)(step - 1);
+		// The low quality leaves out every other cell of the walk (a checkerboard), which halves the burst while
+		// still covering the whole sprite - the particles keep their size, the cloud just comes out thinner
+		const bool halved = (PreferencesCache::Particles == ParticleQuality::Low);
 
 		for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
 			if (MaxDebrisCount > 0 && (std::int32_t)_debrisList.size() >= MaxDebrisCount) {
 				break;
 			}
 			for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+				if (halved && (((fx + fy) / step) & 1) != 0) {
+					continue;
+				}
+
 				float currentSize = particleSize * Random().FastFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
@@ -2136,13 +2149,19 @@ namespace Jazz2::Tiles
 
 	void TileMap::CreateSpriteDebris(const GraphicResource* res, Vector3f pos, std::int32_t count)
 	{
-		if (res->Base->TextureDiffuse == nullptr) {
+		if (res->Base->TextureDiffuse == nullptr || PreferencesCache::Particles == ParticleQuality::Off) {
 			return;
 		}
 
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
+
+		if (PreferencesCache::Particles == ParticleQuality::Low) {
+			// Half the burst, but never none of it (the speed below scales with the count, so the survivors
+			// also fly a little slower - a smaller burst reads as one either way)
+			count = (count + 1) / 2;
+		}
 
 		if (MaxDebrisCount > 0) {
 			// Clamped instead of dropped: the count is the caller's intent (and also scales the speed below),

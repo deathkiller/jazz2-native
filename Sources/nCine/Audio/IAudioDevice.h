@@ -183,6 +183,18 @@ namespace nCine
 
 		/** @brief Returns the native sample rate of the device */
 		virtual std::int32_t nativeFrequency() = 0;
+		/**
+		 * @brief Changes the rate the device mixes at, if the backend has one to change
+		 *
+		 * Only the software-mixing backends whose cost is linear in this rate honour it (the PSP's, where the
+		 * mix is upsampled to the hardware's fixed rate, and the Amiga's, where AHI resamples the output);
+		 * @ref nativeFrequency() then reports the new rate, so the module music decoders that size themselves
+		 * by it follow on the next stream they open. A rate the backend cannot run at, or `0`, is ignored.
+		 * Everywhere else this is a no-op.
+		 */
+		virtual void setMixingFrequency(std::int32_t frequency) {
+			static_cast<void>(frequency);
+		}
 
 		/** @{ @name Buffers */
 

@@ -55,6 +55,18 @@ namespace Jazz2::UI::Menu
 		bool Selected;
 		/** @brief Whether the widget is laid out and drawn */
 		bool Visible;
+		/** @brief Extra space a vertical layout leaves above the widget (in addition to @ref GetHeight()) */
+		float MarginTop = 0.0f;
+
+		/**
+		 * @brief Distance of a row's label from the top of the row
+		 *
+		 * Every labelled row (@ref ChoiceItem, @ref Slider, @ref TextInput) puts its label here and whatever
+		 * it shows underneath below it, whatever its own height, so the first row of every section starts at
+		 * the same distance from the frame - it is also where a default-height @ref ListItem centers its text.
+		 * Rows used to center the label instead, which put a taller row's label visibly lower than a list's.
+		 */
+		static constexpr float LabelOffset = 20.0f;
 
 		/** @brief Returns the height the widget occupies in a vertical layout */
 		virtual float GetHeight() const {

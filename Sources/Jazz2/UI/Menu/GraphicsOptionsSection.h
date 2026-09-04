@@ -22,6 +22,7 @@ namespace Jazz2::UI::Menu
 		bool _isDirty = false;
 		// Backing storage for the formatted (non-catalog) values, so those choice rows can hand out a stable view
 		String _resolutionValue;
+		String _renderingResolutionValue;
 		String _lightingResolutionValue;
 	};
 }

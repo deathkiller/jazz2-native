@@ -176,6 +176,19 @@ namespace Jazz2::Multiplayer
 		static bool IsDomainValid(StringView domain);
 		/** @brief Attempts to split the specified endpoint into address and port */
 		static bool TrySplitAddressAndPort(StringView input, StringView& address, std::uint16_t& port);
+
+		/**
+		 * @brief Switches the transport between Wi-Fi (infrastructure) and ad hoc (local wireless) mode
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform, a no-op that
+		 *   returns `false` elsewhere. In ad hoc mode an endpoint is `GROUP/AA:BB:CC:DD:EE:FF` - the ad hoc
+		 *   group to join and the MAC address of the console hosting the server in it - and no access point
+		 *   is used; the server list discovers groups in reach instead of broadcasting (see
+		 *   @ref ServerDiscovery). Switching brings the console's WLAN into the corresponding mode.
+		 */
+		static bool SetAdhocMode(bool enabled);
+		/** @brief Whether the transport is in ad hoc mode (see @ref SetAdhocMode()) */
+		static bool IsAdhocMode();
 		/** @brief Converts the specified reason to the string representation */
 		static const char* ReasonToString(Reason reason);
 
@@ -261,6 +274,11 @@ namespace Jazz2::Multiplayer
 
 		static void InitializeBackend();
 		static void ReleaseBackend();
+
+		/** @brief Whether the transport is in ad hoc mode (only ever `true` on the PSP), see @ref SetAdhocMode() */
+		static bool _adhocMode;
+		/** @brief Ad hoc group a client joins before connecting (see @ref CreateClient()) */
+		String _adhocGroup;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		static void OnClientThread(void* param);

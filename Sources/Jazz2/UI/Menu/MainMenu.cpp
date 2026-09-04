@@ -57,6 +57,9 @@ namespace Jazz2::UI::Menu
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);
 
+		// Opened here, started a couple of frames in (see OnBeginFrame()): the stream is fed from the main
+		// thread once per frame, and the first frames still load the sections' deferred resources - a stream
+		// started now ran dry against that and came back with an audible gap after a second of playing
 		PlayMenuMusic();
 
 		resolver.EndLoading();
@@ -125,6 +128,11 @@ namespace Jazz2::UI::Menu
 		UpdateDebris(timeMult);
 
 #if defined(WITH_AUDIO)
+		// Music opened by PlayMenuMusic() is started only after the first frames have loaded what they load
+		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
+			_music->play();
+		}
+
 		// Destroy stopped players
 		auto it = _playingSounds.begin();
 		while (it != _playingSounds.end()) {
@@ -161,20 +169,10 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
-		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
-		float currentRatio = (float)width / height;
-
-		std::int32_t w, h;
-		if (currentRatio > defaultRatio) {
-			w = std::min(DefaultWidth, width);
-			h = (std::int32_t)roundf(w / currentRatio);
-		} else if (currentRatio < defaultRatio) {
-			h = std::min(DefaultHeight, height);
-			w = (std::int32_t)roundf(h * currentRatio);
-		} else {
-			w = std::min(DefaultWidth, width);
-			h = std::min(DefaultHeight, height);
-		}
+		// The same rule as the level's, so the sizes the options quote here are the ones the level will use
+		Vector2i viewSize = Rendering::UpscaleRenderPass::CalculateViewSize(width, height, DefaultWidth, DefaultHeight);
+		std::int32_t w = viewSize.X;
+		std::int32_t h = viewSize.Y;
 
 		_upscalePass.Initialize(w, h, width, height);
 		UpdateContentBounds(Vector2i(w, h));
@@ -256,8 +254,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
-		float titleY = _owner->_contentBounds.Y - (ViewSize.Y >= 300 ? 30.0f : 12.0f);
-		float logoBaseScale = (ViewSize.Y >= 300 ? 1.0f : 0.85f);
+		float titleOffset = MenuLayout::GetTitleOffset(ViewSize);
+		float titleY = _owner->_contentBounds.Y - titleOffset;
+		float logoBaseScale = MenuLayout::Blend(0.85f, 1.0f, ViewSize);
 		float logoScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 7.0f;
 		float logoTextScale = logoBaseScale + (1.0f - _owner->_logoTransition) * 2.0f;
 		float logoTranslateX = logoBaseScale + (1.0f - _owner->_logoTransition) * 1.2f;
@@ -265,8 +264,8 @@ namespace Jazz2::UI::Menu
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
-			float arrowScale = (ViewSize.Y >= 300 ? 1.0f : 0.7f);
-			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - (ViewSize.Y >= 300 ? 30.0f : 12.0f), ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
+			float arrowScale = MenuLayout::Blend(0.7f, 1.0f, ViewSize);
+			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - titleOffset, ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
 
 		// Title
@@ -303,7 +302,7 @@ namespace Jazz2::UI::Menu
 			// Version
 			Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
 			bottomRight.X = ViewSize.X - 24.0f;
-			bottomRight.Y -= (ViewSize.Y >= 300 ? 10.0f : 4.0f);
+			bottomRight.Y -= MenuLayout::Blend(4.0f, 10.0f, ViewSize);
 
 			auto newestVersion = _owner->_root->GetNewestVersion();
 			if (!newestVersion.empty() && newestVersion != NCINE_VERSION) {
@@ -420,9 +419,11 @@ namespace Jazz2::UI::Menu
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
-			_transition.Skip();
-			_sections.clear();
-			SwitchToSection<BeginSection>();
+			RecreateSections();
+		} else if ((type & ChangedPreferencesType::Layout) == ChangedPreferencesType::Layout) {
+			// A new view size keeps the stack and lets every section lay itself out again - at the next
+			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection)
+			_sectionsRelayoutPending = true;
 		}
 
 		if ((type & ChangedPreferencesType::ControlScheme) == ChangedPreferencesType::ControlScheme) {
@@ -454,6 +455,13 @@ namespace Jazz2::UI::Menu
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
 
+	void MainMenu::RecreateSections()
+	{
+		_transition.Skip();
+		_sections.clear();
+		SwitchToSection<BeginSection>();
+	}
+
 	void MainMenu::PlayMenuMusic()
 	{
 #if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP))
@@ -473,7 +481,10 @@ namespace Jazz2::UI::Menu
 			_music->setLooping(true);
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			_music->setSourceRelative(true);
-			_music->play();
+			// Started by OnBeginFrame() once the frames that follow have loaded their resources, so the stream
+			// is not starved right after it begins (see the constructor); two frames is imperceptible when the
+			// music is merely restarted later on
+			_musicStartDelay = 2;
 		}
 #endif
 	}

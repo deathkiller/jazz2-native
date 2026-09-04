@@ -4,7 +4,7 @@
 
 #include <IO/WebRequest.h>
 
-#if defined(WITH_CURL) && defined(DEATH_TARGET_VITA)
+#if defined(WITH_CURL) && (defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
 #	include "ContentResolver.h"
 
 #	include <Containers/String.h>
@@ -23,7 +23,9 @@ namespace Jazz2
 		point an application's sandbox does not contain - opening it fails with `ENOENT`, not a permission
 		error - and the TLS stack linked into the executable is not the system one that iTLS-Enso and friends
 		patch, so nothing installed on the console supplies it either. Without this every HTTPS request fails
-		to verify, which takes the server list, the update check and script web requests with it.
+		to verify, which takes the server list, the update check and script web requests with it. The PSP is
+		in the same position for a simpler reason: its libcurl is built on mbedTLS with a Unix default path
+		(`/etc/ssl/certs/ca-certificates.crt`) that exists nowhere on a memory stick.
 
 		The bundle therefore travels with the content (the CMake packaging fetches it at configure time) and
 		is named here rather than inside @relativeref{Death::IO,WebRequest}: where a game keeps its files is
@@ -31,7 +33,7 @@ namespace Jazz2
 	*/
 	inline void ApplyPlatformWebRequestOptions(Death::IO::WebRequest& request)
 	{
-#if defined(WITH_CURL) && defined(DEATH_TARGET_VITA)
+#if defined(WITH_CURL) && (defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
 		using namespace Death::Containers::Literals;
 
 		// Resolved once - the path cannot change while the game is running, and a missing bundle leaves the
@@ -49,6 +51,10 @@ namespace Jazz2
 		if (!caBundlePath.empty()) {
 			if (CURL* handle = (CURL*)request.GetNativeHandle()) {
 				curl_easy_setopt(handle, CURLOPT_CAINFO, caBundlePath.data());
+				// The build's default CA *directory* has to go too: mbedTLS reads the whole directory before it
+				// looks at the file, and on the PSP that is a Unix path that does not exist ("Error reading ca
+				// cert path /etc/ssl/certs"), which fails the verification before the bundle is ever opened
+				curl_easy_setopt(handle, CURLOPT_CAPATH, nullptr);
 			}
 		}
 #else

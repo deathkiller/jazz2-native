@@ -249,6 +249,13 @@ decoding thread gets the whole of the vblank wait to catch up, which is what act
 A platform with no decoding thread at all is the one exception and still decodes in place, because
 there is nothing else that ever would.
 
+The same reasoning decides *when* a level's or the menu's music starts. The stream is fed from the main
+thread once per frame, and the frames right after a level or the main menu is created are the ones that
+still load deferred resources --- a stream started during that loading ran dry against it and came back
+with an audible gap after a second of playing, on every console. So @ref Jazz2::LevelHandler and
+@ref Jazz2::UI::Menu::MainMenu open the music while loading but start it only two frames in
+@m_span{m-text m-dim} (`_musicStartDelay`) @m_endspan, once those frames are through.
+
 @m_class{m-block m-info}
 
 @par A player nobody can hear does no work
@@ -600,7 +607,11 @@ crash also loses everything written since the last flush.
 -   The engine keeps several console-only budgets for this reason: live debris particles are capped
     @m_span{m-text m-dim} (bursts are coarsened rather than truncated, so an explosion still looks
     like one) @m_endspan, the outgoing level's assets are released before the incoming level loads,
-    and the host copies of PVR textures are kept RLE-compressed.
+    and the host copies of PVR textures are kept RLE-compressed. On top of the budgets the user has the
+    **"Particle Quality"** option in Options > Graphics @m_span{m-text m-dim}
+    (@ref Jazz2::ParticleQuality, on every platform) @m_endspan: *Low* leaves out every other particle of
+    a burst and halves the weather density, *Off* drops the debris and weather effects entirely, and
+    *High* is the unrestricted effect; every producer in @ref Jazz2::Tiles::TileMap honours it.
 -   **Audio costs almost nothing in main memory here**, which is worth knowing on a console whose
     heap is the binding constraint: the AICA has its own **2 MB of sound RAM** and every fully
     loaded sound effect lives there, not on the 13.8 MB heap. What main memory does hold is the
@@ -1013,15 +1024,24 @@ anything else can fail, so the console always has a way out even if initializati
     arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
     sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
     read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
--   **Modules are mixed at 22050 Hz here, not the device's 44100.** A module mixer's cost scales with
-    its output rate, and this one is the most expensive thing the Allegrex is asked to do outside the
-    renderer: measured in `prince/02_castle1n`, mixing at the device rate cost around 420 ms of every
-    second --- more CPU than the whole renderer. Half the rate is half of that, for music that comes out
-    of a pair of centimetre-wide speakers, and the samples inside the original modules were recorded at
-    around this rate to begin with; the device resamples back up to its own 44100 Hz for a fraction of
-    what the mixer costs. @ref nCine::AudioLoaderMpt and @ref nCine::AudioLoaderXmp both cap it, which
-    matters because **only the libxmp one is reachable on this console** --- the cap had been written
-    for libopenmpt alone and was dead code here until it was noticed.
+-   **Everything is mixed at 22050 Hz here, not the hardware's 44100 --- and the user can go lower.** A
+    module mixer's cost scales with its output rate, and this one is the most expensive thing the
+    Allegrex is asked to do outside the renderer: measured in `prince/02_castle1n`, mixing at the device
+    rate cost around 420 ms of every second --- more CPU than the whole renderer. Half the rate is half of
+    that, for music that comes out of a pair of centimetre-wide speakers, and the samples inside the
+    original modules were recorded at around this rate to begin with. @ref nCine::AudioLoaderMpt and
+    @ref nCine::AudioLoaderXmp both cap the module decoder, which matters because **only the libxmp one
+    is reachable on this console** --- the cap had been written for libopenmpt alone and was dead code
+    here until it was noticed. The sound effects mixer runs at the same rate: @ref nCine::PspAudioDevice
+    mixes its sources at a **mixing rate** below the hardware's and upsamples each block to 44100 Hz with
+    a linear interpolation on the way out, so the per-source loop --- where the mixer's time goes --- runs
+    half or a quarter as often. The rate is the **"Sample Rate"** option in Options > Sounds
+    @m_span{m-text m-dim} (11025 or 22050 Hz here; offered only on this console and the Amiga, the two
+    software-mixing consoles with a rate to trade) @m_endspan, stored in
+    @ref Jazz2::PreferencesCache::AudioSampleRate and applied through
+    @ref nCine::IAudioDevice::setMixingFrequency(). Effects follow at once, the music when the next stream
+    is opened (the menu reopens its own on leaving the section), because a stream keeps decoding at the
+    rate it was opened with.
 -   **This platform's libm is startlingly slow --- a `sinf()` costs about 13.5 us, some 4500 cycles.**
     That is enough for a handful of light sources flickering to cost several milliseconds a frame on
     their own, so anything that only drives appearance --- a flicker phase, a pulse, an orbit --- goes
@@ -1042,7 +1062,61 @@ anything else can fail, so the console always has a way out even if initializati
     @m_span{m-text m-dim} (`PSP_HEAP_SIZE_KB(-1)`) @m_endspan while `sceKernelCreateThread` allocates
     stacks out of what the firmware kept back, and that pool holds one 256 KB stack but not two. The
     second creation then fails with `NO_MEMORY` --- silently losing whichever thread starts later,
-    in practice the audio decode thread --- so raising this is not free.
+    in practice the audio decode thread --- so raising this is not free. The pool is tight even at 64 KB:
+    with the audio decoder and the server list's discovery thread alive, the **multiplayer client thread
+    did not fit** --- `pthread_create()` came back with `EAGAIN` and the game sat on a black screen with
+    nothing to time out. So the server list stops discovering
+    @m_span{m-text m-dim} (@ref Jazz2::Multiplayer::ServerDiscovery::Stop()) @m_endspan before it
+    connects, and a client whose thread cannot start now reports the failure instead of waiting for it.
+-   **A spinlock deadlocks this console, and the engine's now sleeps here.** The kernel runs one core with
+    strict priorities and no time-slicing: a running thread keeps the CPU until it waits, and nothing of
+    equal or lower priority ever preempts it. @ref Death::Threading::Spinlock is a pure busy-wait, and
+    the multiplayer code guards its ENet host with one --- so the moment the client thread was descheduled
+    inside a socket call while holding it, the main thread's first send (the "level ready" packet) spun
+    forever, the holder never ran again, and the game froze on a black screen with nothing left to time
+    out. On this target the lock now sleeps @m_span{m-text m-dim} (`sceKernelDelayThread(50)`) @m_endspan
+    while contended, which hands the CPU to the holder. The same scheduler is why the multiplayer client
+    thread raises itself above the main thread's priority 32 @m_span{m-text m-dim}
+    (`sceKernelChangeThreadPriority(0, 24)`) @m_endspan: at the default it ran only while the main thread
+    waited for the vblank, so packets went out a frame late and acknowledgements later still, which
+    measured as a 200-300 ms ping where every other platform sees 20. It sleeps between polls and in
+    every wait, so the game loses nothing to it. The console's own WLAN power saving is the other half of
+    the latency and is a system setting, not something the game can turn off.
+-   **The race minimap's track is rasterized once here, not drawn as a mesh.** The HUD draws it as a
+    textured triangle strip through a mesh-sprite program that the fixed-function tier does not have, so
+    only the markers appeared. Drawing the up to a thousand segments as individual sprites instead cost
+    this console two thirds of its frame rate, so on that tier
+    @ref Jazz2::UI::Multiplayer::MpHUD::RefreshMinimapTrackTexture() rasterizes the whole track on the CPU
+    into an alpha mask the size of the minimap box --- once, redone only when the track or the box
+    changes --- and the frame draws it as two sprites, the shadow being the same texture offset and darkened.
+-   **The C library's clock is broken, and the game replaces it.** pspdev's libcglue implements
+    `_gettimeofday()` --- what `time()`, `gettimeofday()` and `std::chrono::system_clock` all rest on ---
+    as the time OF DAY: seconds since midnight, so the C library believes it is the 1st of January 1970.
+    Nothing in the engine noticed @m_span{m-text m-dim} (its timestamps come straight from
+    `sceRtcGetCurrentClock()`) @m_endspan until HTTPS did: mbedTLS checks a certificate's validity period
+    against that clock, found every certificate "not yet valid", and the libcurl in pspdev
+    @m_span{m-text m-dim} (7.64.1, on mbedTLS 2.28) @m_endspan reports that particular verdict without a
+    word of detail. @cpp "Sources/nCine/Backends/Psp/PspLibcCompat.cpp" @ce defines `_gettimeofday()`
+    from the RTC tick; the executable's definition wins over libcglue's object, whose only symbol it is.
+-   **HTTPS needs a CA bundle of its own, and only that.** mbedTLS has no trust store on a memory stick
+    and pspdev's libcurl defaults to a Unix path for one, so the configure step downloads curl.se's
+    `cacert.pem` and stages it under `Content/`, exactly as for the @ref consoles-vita-limits "Vita" ---
+    and @cpp "Sources/Jazz2/PlatformWebRequest.h" @ce points `CURLOPT_CAINFO` at it while **clearing
+    `CURLOPT_CAPATH`**: mbedTLS reads the default directory (`/etc/ssl/certs`) before the file and fails
+    on the directory alone. Both of the above were found from a console log by temporarily routing
+    libcurl's verbose handshake commentary (`CURLOPT_DEBUGFUNCTION`) into the trace and logging what
+    `time()` returned - worth remembering, as this libcurl reports a failed verification with no detail.
+-   **Text is entered through the firmware's on-screen keyboard.** The console has no keyboard that
+    feeds keystrokes, so @ref nCine::MainApplication::ShowScreenKeyboard() opens the `sceUtility` OSK
+    --- a modal dialog that collects a whole string, as the Vita's IME does --- and
+    @ref nCine::MainApplication::UpdateScreenKeyboard() collects the result from the frame loop. Two
+    details are the console's own: the dialog draws itself over the finished frame and the SDK wants that
+    between the display list's completion and the flip, so @ref nCine::RHI::GU::GuDevice::PresentFrame()
+    refreshes it there; and the dialog reads the pad without taking it away from the application, so
+    @ref nCine::Backends::PspInputManager reports the pad idle for as long as the dialog exists ---
+    otherwise the Cross that confirms a key would fire the menu item behind it. The status call returns
+    an error code rather than "none" when no keyboard was ever started, which is why every check matches
+    the dialog states explicitly.
 -   **Online multiplayer works, over ENet only.** `WITH_WEBSOCKET` is forced off: pspdev has neither
     @cpp "netinet/ip.h" @ce nor a @cpp "poll.h" @ce header, both of which IXWebSocket includes
     unconditionally. `ENET_IPV6=0` selects ENet's IPv4 arm, as on the Switch, because `sceNetInet`
@@ -1053,6 +1127,23 @@ anything else can fail, so the console always has a way out even if initializati
     switched with `setsockopt(SO_NONBLOCK)` rather than `fcntl()`, which does not reach the firmware's
     sockets, and receiving goes through `recvfrom()` rather than `recvmsg()`
     @m_span{m-text m-dim} (see @ref consoles-psp-deploy for why) @m_endspan.
+-   **Ad hoc (local wireless) multiplayer is available next to Wi-Fi.** The console's ad hoc mode is not
+    IP: peers are addressed by MAC address and port over PDP datagram sockets (`sceNetAdhocPdp*`), and a
+    session is an ad hoc *group* that one console creates and the others find by scanning the air. ENet
+    only needs datagrams, so the whole of it sits behind the vendored transport's socket functions as a
+    second arm, switched at runtime with `enet_psp_set_adhoc()` --- an `ENetAddress` stays a 32-bit host,
+    which in this mode indexes a table of the MAC addresses seen, and the address functions parse and
+    format `AA:BB:CC:DD:EE:FF` instead of dotted quads. Above the socket layer nothing changes: the same
+    packets, channels and reliability. @ref nCine::Backends::PspNetwork::AdhocBegin() drops the access
+    point association (the WLAN is one or the other) and brings `sceNetAdhoc` / `sceNetAdhocctl` up;
+    @ref Jazz2::Multiplayer::NetworkManagerBase::SetAdhocMode() is the switch the menus use. Hosting
+    creates a group named after the server (8 alphanumeric characters, see
+    @ref nCine::Backends::PspNetwork::MakeAdhocGroupName()) before the server binds its PDP socket in it
+    --- the *Connection* row of *Create Server* picks Wi-Fi or ad hoc --- and *Connect To Server* toggles
+    the mode with Left/Right, whereupon @ref Jazz2::Multiplayer::ServerDiscovery lists the groups a scan
+    finds instead of broadcasting and asking the public list; an endpoint is then `GROUP/MAC`, and the
+    client thread joins the group where it would otherwise join an access point. Ad hoc groups are only
+    visible to other PSPs (and Vitas running Adrenaline), and an ad hoc server publishes itself nowhere.
 -   **Nothing has joined an access point at boot.** `PspNetwork::Initialize()`
     @m_span{m-text m-dim} (@cpp "Sources/nCine/Backends/Psp/PspNetwork.cpp" @ce) @m_endspan loads the
     two network PRXes and brings the stack up during startup, which is cheap, but joining an access
@@ -1587,6 +1678,24 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     stack needs no explicit bring-up --- newlib calls @cpp "_vita_net_init()" @ce lazily from
     @cpp "socket()" @ce and the resolver entry points, which is why there is no counterpart here to the
     PSP's `PspNetwork::Initialize()`.
+-   **The frame is rendered smaller than the panel, and the user picks how much smaller.** The `GXM`
+    backend renders the whole frame --- scene, upscale pass and UI --- into an intermediate screen surface
+    that @ref nCine::RHI::GXM::GxmDevice::PresentFrame() stretches onto the 960x544 panel, so a smaller
+    surface takes fragments off every full-screen pass for free (the present blit has to resample anyway).
+    The default is half the panel, 480x272 @m_span{m-text m-dim} (a clean 2x point doubling, see
+    @ref nCine::RHI::GXM::GxmDevice::ScreenWidth) @m_endspan, and the **"Rendering Resolution"** option
+    in Options > Graphics offers 60% (576x326) and 75% (720x408, the logical view's own size) as well ---
+    nothing above that, because the full panel would only upscale the same 720x408 scene fractionally at
+    the cost of another full-panel pass. The surface is recreated live through
+    @ref nCine::IGfxDevice::setDrawableSize() / @ref nCine::RHI::GXM::GxmDevice::ResizeScreenSurface(),
+    the drawable size follows it and the logical view follows the drawable
+    @m_span{m-text m-dim} (@ref Jazz2::Rendering::UpscaleRenderPass::CalculateViewSize()) @m_endspan. On
+    every other shader-tier platform the same option scales the 720x405 bound of the logical view instead,
+    so it is the most the scene is rendered at; the direct-tier consoles render at their own small panel
+    size already and do not offer it. The menu blends its header, footer and logo metrics between the
+    compact (272-row) and full (400-row) layouts by view height @m_span{m-text m-dim}
+    (`Jazz2::UI::Menu::MenuLayout`) @m_endspan, so the sizes in between look right, and a change lays
+    every open section out again in place rather than rebuilding the menu.
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.

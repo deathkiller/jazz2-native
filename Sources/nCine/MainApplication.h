@@ -2,7 +2,9 @@
 
 #include "Application.h"
 
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+#	include <psputility.h>
+#elif defined(DEATH_TARGET_VITA)
 #	include <psp2/ime_dialog.h>
 #endif
 
@@ -42,13 +44,15 @@ namespace nCine
 		String GetUserName() override;
 		bool OpenUrl(StringView url) override;
 		
-#if defined(DEATH_TARGET_VITA) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 			@brief Advances the on-screen keyboard, turning a finished IME dialog into text input events
 
 			The PS Vita has no keyboard overlay that feeds keystrokes - it has the IME, a modal dialog that
 			collects a whole string - so the result has to be polled and handed to the input event handler as
-			the text input the caller expected. Called once per frame from @ref Run().
+			the text input the caller expected. Called once per frame from @ref Run(). The PSP's `sceUtility`
+			on-screen keyboard is the same kind of dialog and is driven the same way (its drawing is the one
+			part that lives elsewhere: the GU backend refreshes it at present time, see `GuDevice::PresentFrame()`).
 		*/
 		void UpdateScreenKeyboard();
 #endif
@@ -61,7 +65,22 @@ namespace nCine
 		bool HideScreenKeyboard() override;
 
 	private:
-#if defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+		/** @brief Longest string the on-screen keyboard collects (a player name or a server address, not prose) */
+		static constexpr std::size_t ImeMaxTextLength = 256;
+
+		// The keyboard reads and writes these for as long as the dialog is up (UCS-2, the firmware's text
+		// encoding), so they belong to the application rather than to the call that opened it
+		SceUtilityOskParams _oskParams;
+		SceUtilityOskData _oskData;
+		unsigned short _oskInputBuffer[ImeMaxTextLength + 1];
+		unsigned short _oskOutputBuffer[ImeMaxTextLength + 1];
+		unsigned short _oskTitle[32];
+		/** Whether a keyboard opened by @ref ShowScreenKeyboard() has not been collected yet */
+		bool _oskActive = false;
+		/** Invoked with the finished string when the dialog is confirmed, see @ref ShowScreenKeyboard() */
+		Containers::Function<void(Containers::StringView)> _imeOnCompleted;
+#elif defined(DEATH_TARGET_VITA)
 		/** @brief Longest string the on-screen keyboard collects (a player name or a server address, not prose) */
 		static constexpr std::size_t ImeMaxTextLength = 256;
 

@@ -83,9 +83,14 @@ namespace Jazz2
 	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
 	// it costs the SGX a quarter of that work for a difference the light falloff largely hides
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 50;
+	// Half the panel in both axes (480x272): 45% fewer fragments for every full-screen pass, and the present
+	// blit becomes a clean 2x point doubling instead of a fractional resample (see GxmDevice::ScreenWidth)
+	std::uint8_t PreferencesCache::RenderingResolutionPercent = 50;
 #else
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
+	std::uint8_t PreferencesCache::RenderingResolutionPercent = 100;
 #endif
+	ParticleQuality PreferencesCache::Particles = ParticleQuality::High;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
@@ -116,6 +121,13 @@ namespace Jazz2
 	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
+#if defined(DEATH_TARGET_PSP)
+	// Half the hardware's 44100 Hz: the mixer's cost is linear in the rate, the game's samples are 11-22 kHz
+	// to begin with and the module music is rendered at this rate anyway (see AudioLoaderMpt)
+	std::int32_t PreferencesCache::AudioSampleRate = 22050;
+#else
+	std::int32_t PreferencesCache::AudioSampleRate = 0;
+#endif
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE)
@@ -1388,6 +1400,22 @@ namespace
 						PlayerFurColor = uc.ReadValueAsLE<std::uint32_t>();
 						PlayerColors = (PlayerColorMode)uc.ReadValue<std::uint8_t>();
 					}
+
+					if (version >= 16) {
+#if defined(WITH_RHI_GXM)
+						// The Vita's menu stops at 75% (see GraphicsOptionsSection), so a file cannot put it above that
+						RenderingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(25), std::uint8_t(75));
+#else
+						RenderingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(25), std::uint8_t(100));
+#endif
+						std::uint8_t particles = uc.ReadValue<std::uint8_t>();
+						Particles = (particles <= (std::uint8_t)ParticleQuality::Ultra ? (ParticleQuality)particles : ParticleQuality::High);
+						// `0` keeps the platform's default; anything outside what a mixer can sensibly run at is a corrupted value
+						std::int32_t sampleRate = uc.ReadValueAsLE<std::uint16_t>();
+						if (sampleRate == 0 || (sampleRate >= 8000 && sampleRate <= 48000)) {
+							AudioSampleRate = sampleRate;
+						}
+					}
 				} else {
 					// The file is too new or corrupted
 					resetConfig = true;
@@ -1629,11 +1657,36 @@ namespace
 		co.WriteValueAsLE<std::uint32_t>(PlayerFurColor);
 		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerColors);
 
+		// Rendering resolution, particle quality and audio sample rate (v16+)
+		co.WriteValue<std::uint8_t>(RenderingResolutionPercent);
+		co.WriteValue<std::uint8_t>((std::uint8_t)Particles);
+		co.WriteValueAsLE<std::uint16_t>((std::uint16_t)AudioSampleRate);
+
 		co.Dispose();
 		so->Dispose();
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		fs::SyncToPersistent();
+#endif
+	}
+
+	void PreferencesCache::ApplyRenderingResolution()
+	{
+#if defined(WITH_RHI_GXM)
+		// The Vita's native backend renders the whole frame into a surface smaller than the panel and stretches
+		// that onto the panel at present time (see GxmDevice::ScreenWidth), so the preference sizes that surface
+		// rather than the logical view: the drawable size follows it, and the view follows the drawable as on
+		// any other display (see UpscaleRenderPass::CalculateViewSize(), which therefore does not apply it a
+		// second time there). The panel is the display's video mode; the window is the panel too on this
+		// console, so it stands in if the mode cannot be queried. The vitaGL build has no surface of its own to
+		// resize (it renders straight into the panel's framebuffer), so it takes the generic path instead.
+		auto& gfxDevice = theApplication().GetGfxDevice();
+		const auto& videoMode = gfxDevice.currentVideoMode();
+		Vector2i panel((std::int32_t)videoMode.width, (std::int32_t)videoMode.height);
+		if (panel.X <= 0 || panel.Y <= 0) {
+			panel = gfxDevice.resolution();
+		}
+		gfxDevice.setDrawableSize(panel.X * RenderingResolutionPercent / 100, panel.Y * RenderingResolutionPercent / 100);
 #endif
 	}
 

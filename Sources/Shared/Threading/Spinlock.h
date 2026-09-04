@@ -4,7 +4,13 @@
 	@brief Class @ref Death::Threading::Spinlock
 */
 
+#include "../Common.h"
+
 #include <atomic>
+
+#if defined(DEATH_TARGET_PSP)
+#	include <pspthreadman.h>
+#endif
 
 namespace Death { namespace Threading {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -25,6 +31,11 @@ namespace Death { namespace Threading {
 		{
 			do {
 				while (_state.load(std::memory_order_relaxed) == State::Locked) {
+#if defined(DEATH_TARGET_PSP)
+					// Single core with no time-slicing: a busy-waiting thread would never let the holder run
+					// again, so the waiter sleeps instead (paid only while the lock is contended)
+					sceKernelDelayThread(50);
+#endif
 					// Keep trying...
 				}
 			} while (_state.exchange(State::Locked, std::memory_order_acquire) == State::Locked);

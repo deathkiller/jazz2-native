@@ -383,6 +383,20 @@ namespace Death {
 #undef DEATH_TARGET_BIG_ENDIAN
 
 /**
+	@brief Whether the platform has little memory and small thread stacks
+
+	Defined for the game consoles (@ref DEATH_TARGET_SWITCH, @ref DEATH_TARGET_PSP, @ref DEATH_TARGET_VITA,
+	@ref DEATH_TARGET_N64, @ref DEATH_TARGET_WII, @ref DEATH_TARGET_GAMECUBE, @ref DEATH_TARGET_DREAMCAST,
+	@ref DEATH_TARGET_PS2, @ref DEATH_TARGET_PS3, @ref DEATH_TARGET_AMIGAOS) and for @ref DEATH_TARGET_EMSCRIPTEN,
+	where both the heap and the stack of a thread are scarce (a thread has 64 KB of stack on the PSP). Code
+	that embeds a large buffer in an object --- which then often lives on the stack --- picks a compact size
+	when this is defined, as the compression streams in @ref Death::IO::Compression do (8 KB instead of 16 KB).
+	Not defined on desktop and mobile platforms.
+*/
+#define DEATH_TARGET_CONSTRAINED_MEMORY
+#undef DEATH_TARGET_CONSTRAINED_MEMORY
+
+/**
 	@brief GCC compiler
 
 	Defined if the code is being compiled by GCC or GCC-compatible Clang (which is

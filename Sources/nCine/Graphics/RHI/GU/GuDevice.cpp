@@ -16,6 +16,7 @@
 #include <pspdisplay.h>
 #include <pspge.h>
 #include <pspgu.h>
+#include <psputility.h>	// The on-screen keyboard refresh in PresentFrame()
 #include <psputils.h>
 
 namespace nCine::RHI::GU
@@ -1021,6 +1022,14 @@ namespace nCine::RHI::GU
 		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below
 		sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 		_listOpen = false;
+
+		// The firmware's on-screen keyboard (see MainApplication::ShowScreenKeyboard) draws itself over the
+		// finished frame, and the SDK wants that between the list's completion and the flip - this is the
+		// one place in the engine where both are true. Its state machine is otherwise driven from the main
+		// loop, only the per-frame refresh has to be here.
+		if (sceUtilityOskGetStatus() == PSP_UTILITY_DIALOG_VISIBLE) {
+			sceUtilityOskUpdate(1);
+		}
 
 		if (TraceDrawStatistics) {
 			// Once a second at 60 Hz, so the trace stays readable while the game runs

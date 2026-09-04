@@ -34,7 +34,8 @@ namespace nCine
 
 	PspAudioDevice::PspAudioDevice()
 		: _valid(false), _suspended(false), _threadShouldQuit(false), _channel(-1), _thread(-1), _lock(-1), _blocks(nullptr),
-			_mixBuffer(nullptr), _buffers(nullptr), _bufferCount(0), _bufferCapacity(0)
+			_mixBuffer(nullptr), _mixFrequency(DefaultMixingFrequency), _lastMixedLeft(0), _lastMixedRight(0), _buffers(nullptr),
+			_bufferCount(0), _bufferCapacity(0)
 	{
 		const std::size_t blockBytes = std::size_t(BlockFrames) * ChannelCount * sizeof(std::int16_t);
 		// The hardware reads the blocks by DMA, so they are kept on their own cache lines
@@ -87,7 +88,8 @@ namespace nCine
 		}
 
 		_valid = true;
-		LOGI("Audio device initialized: sceAudio channel {}, mixing {} Hz stereo in blocks of {} frames", _channel, OutputFrequency, BlockFrames);
+		LOGI("Audio device initialized: sceAudio channel {}, mixing at {} Hz and playing {} Hz stereo in blocks of {} frames",
+			_channel, _mixFrequency, OutputFrequency, BlockFrames);
 	}
 
 	PspAudioDevice::~PspAudioDevice()
@@ -154,7 +156,29 @@ namespace nCine
 
 	std::int32_t PspAudioDevice::nativeFrequency()
 	{
-		return OutputFrequency;
+		// The rate the sources are mixed at rather than the hardware's: the module decoder sizes itself by
+		// this, and rendering it above the mixing rate would only be resampled straight back down
+		return _mixFrequency;
+	}
+
+	void PspAudioDevice::setMixingFrequency(std::int32_t frequency)
+	{
+		// Only the rates that divide the hardware's are mixed for: the upsample in MixInto() is then a whole
+		// number of output frames per mixed frame, and a block of 1024 frames splits evenly
+		if (frequency != 44100 && frequency != 22050 && frequency != 11025) {
+			if (frequency != 0) {
+				LOGW("Cannot mix at {} Hz (only 11025, 22050 and 44100 Hz divide the hardware's rate), keeping {} Hz", frequency, _mixFrequency);
+			}
+			return;
+		}
+
+		SemaphoreLock lock(_lock);
+		if (_mixFrequency != frequency) {
+			_mixFrequency = frequency;
+			_lastMixedLeft = 0;
+			_lastMixedRight = 0;
+			LOGI("Mixing at {} Hz", _mixFrequency);
+		}
 	}
 
 	void PspAudioDevice::updatePlayers()
@@ -321,7 +345,7 @@ namespace nCine
 
 		buffer.BytesPerSample = bytesPerSample;
 		buffer.ChannelCount = channelCount;
-		buffer.Frequency = (frequency > 0 ? frequency : OutputFrequency);
+		buffer.Frequency = (frequency > 0 ? frequency : _mixFrequency);
 		buffer.FrameCount = frameCount;
 		return true;
 	}
@@ -520,7 +544,7 @@ namespace nCine
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);
 		const std::int32_t rightQ15 = std::int32_t(rightGain * 32768.0f + 0.5f);
 
-		std::int64_t step = std::int64_t((double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch) * 4294967296.0);
+		std::int64_t step = std::int64_t((double(buffer->Frequency) / double(_mixFrequency)) * double(source.Pitch) * 4294967296.0);
 		std::int64_t end = std::int64_t(buffer->FrameCount) << 32;
 
 		for (std::int32_t i = 0; i < frames; i++) {
@@ -538,7 +562,7 @@ namespace nCine
 					if (buffer == nullptr) {
 						return false;
 					}
-					step = std::int64_t((double(buffer->Frequency) / double(OutputFrequency)) * double(source.Pitch) * 4294967296.0);
+					step = std::int64_t((double(buffer->Frequency) / double(_mixFrequency)) * double(source.Pitch) * 4294967296.0);
 					end = std::int64_t(buffer->FrameCount) << 32;
 				} else if (source.Looping) {
 					source.Cursor %= end;
@@ -576,29 +600,65 @@ namespace nCine
 		}
 		if (!anyPlaying) {
 			std::memset(output, 0, std::size_t(frames) * ChannelCount * sizeof(std::int16_t));
+			_lastMixedLeft = 0;
+			_lastMixedRight = 0;
 			return;
 		}
 
+		// The sources are mixed at _mixFrequency, which divides the hardware's rate (see setMixingFrequency()),
+		// so a block of `frames` output frames is `frames / ratio` mixed frames
+		const std::int32_t ratio = OutputFrequency / _mixFrequency;
+		const std::int32_t mixFrames = frames / ratio;
+
 		std::int32_t* accumulator = _mixBuffer;
-		std::memset(accumulator, 0, std::size_t(frames) * ChannelCount * sizeof(std::int32_t));
+		std::memset(accumulator, 0, std::size_t(mixFrames) * ChannelCount * sizeof(std::int32_t));
 
 		for (Source& source : _sources) {
 			if (!source.Playing || source.Paused) {
 				continue;
 			}
-			if (!MixSource(source, accumulator, frames)) {
+			if (!MixSource(source, accumulator, mixFrames)) {
 				source.Playing = false;
 				source.Cursor = 0;
 			}
 		}
 
-		// Clamp the wide accumulator into the device's 16 bits
-		const std::int32_t total = frames * ChannelCount;
-		for (std::int32_t i = 0; i < total; i++) {
-			std::int32_t value = accumulator[i];
-			value = (value < -32768 ? -32768 : (value > 32767 ? 32767 : value));
-			output[i] = std::int16_t(value);
+		if (ratio == 1) {
+			// Clamp the wide accumulator into the device's 16 bits
+			const std::int32_t total = frames * ChannelCount;
+			for (std::int32_t i = 0; i < total; i++) {
+				std::int32_t value = accumulator[i];
+				value = (value < -32768 ? -32768 : (value > 32767 ? 32767 : value));
+				output[i] = std::int16_t(value);
+			}
+			return;
 		}
+
+		// Upsample to the hardware's rate: each output frame is interpolated between the previous mixed frame
+		// and the current one, so the last frame of the previous block is carried over rather than the first of
+		// this one being repeated. The ratio is 2 or 4, so the division is a shift. One mixed frame of delay
+		// (45 us at most) is the price, and the interpolation is what keeps the doubled samples from imaging
+		// as a harsh top end the way a plain repeat would.
+		const std::int32_t shift = (ratio == 4 ? 2 : 1);
+		std::int32_t previousLeft = _lastMixedLeft;
+		std::int32_t previousRight = _lastMixedRight;
+		std::int32_t outIndex = 0;
+		for (std::int32_t i = 0; i < mixFrames; i++) {
+			std::int32_t left = accumulator[i * ChannelCount];
+			std::int32_t right = accumulator[i * ChannelCount + 1];
+			left = (left < -32768 ? -32768 : (left > 32767 ? 32767 : left));
+			right = (right < -32768 ? -32768 : (right > 32767 ? 32767 : right));
+			const std::int32_t deltaLeft = left - previousLeft;
+			const std::int32_t deltaRight = right - previousRight;
+			for (std::int32_t k = 1; k <= ratio; k++) {
+				output[outIndex++] = std::int16_t(previousLeft + ((deltaLeft * k) >> shift));
+				output[outIndex++] = std::int16_t(previousRight + ((deltaRight * k) >> shift));
+			}
+			previousLeft = left;
+			previousRight = right;
+		}
+		_lastMixedLeft = previousLeft;
+		_lastMixedRight = previousRight;
 	}
 }
 

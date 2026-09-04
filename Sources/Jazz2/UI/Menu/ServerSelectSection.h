@@ -38,6 +38,15 @@ namespace Jazz2::UI::Menu
 
 		void OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc) override;
 
+#if defined(DEATH_TARGET_PSP) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Switches between Wi-Fi and ad hoc mode and starts discovering servers again
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform.
+		 */
+		void ToggleAdhocMode();
+#endif
+
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -65,7 +74,8 @@ namespace Jazz2::UI::Menu
 		float _touchSpeed;
 		std::int32_t _pressedCount;
 		float _noiseCooldown;
-		Jazz2::Multiplayer::ServerDiscovery _discovery;
+		// Owned indirectly, so it can be restarted when the transport mode changes (see ToggleAdhocMode())
+		std::unique_ptr<Jazz2::Multiplayer::ServerDiscovery> _discovery;
 		std::int8_t _touchDirection;
 
 		Jazz2::Multiplayer::ServerDescription _selectedServer;

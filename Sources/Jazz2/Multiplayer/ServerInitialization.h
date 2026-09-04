@@ -343,6 +343,16 @@ namespace Jazz2::Multiplayer
 		/** @brief Start time of the server as Unix timestamp */
 		std::uint64_t StartUnixTimestamp;
 
+		/**
+		 * @brief Whether the server runs over the console's ad hoc (local wireless) mode instead of Wi-Fi
+		 *
+		 * Chosen in the menu when the server is created, not read from the configuration file.
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_PSP "PlayStation Portable" platform, see
+		 *   @ref NetworkManagerBase::SetAdhocMode(). The group other consoles see is named after the server.
+		 */
+		bool AdhocMode = false;
+
 		/** @} */
 	};
 

@@ -205,8 +205,9 @@ namespace nCine::RHI::GXM
 
 			@param windowHandle Ignored (the Vita has one fixed display, so there is no window to attach to);
 			                    accepted only to keep the uniform swap-chain contract of the other backends
-			@param width        Ignored, the panel is always 960x544
-			@param height       Ignored
+			@param width        Width of the intermediate screen surface the frame is rendered into (see
+			                    @ref ScreenWidth), clamped to the panel; `0` or less for the default
+			@param height       Height of the screen surface, likewise
 			@param vsync        Whether @ref PresentFrame() waits for the display swap to be picked up
 			@returns `true` if sceGxm, the context, the surfaces and the built-in shaders all came up
 		*/
@@ -215,6 +216,26 @@ namespace nCine::RHI::GXM
 		static void DestroySwapchain();
 		/** @brief No-op: the panel resolution is fixed (the logical resolution is a render-target size, not a swap-chain one) */
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
+		/**
+			@brief Recreates the intermediate screen surface at a new size (see @ref ScreenWidth)
+
+			Closes the open scene and waits the GPU out first, so nothing is still reading or writing the
+			surface; the display buffers and the rest of the session are untouched. The size is clamped to
+			the panel and the width rounded up to the 8-pixel alignment a colour surface needs. A size that
+			is already the current one is accepted without doing anything.
+
+			@returns `true` if the surface has the requested size afterwards; `false` if the session is not
+			         up, or the new surface could not be allocated - the old size is restored then
+		*/
+		static bool ResizeScreenSurface(std::int32_t width, std::int32_t height);
+		/** @brief Returns the current width of the intermediate screen surface (see @ref ScreenWidth) */
+		static std::int32_t GetScreenWidth() {
+			return _screenWidth;
+		}
+		/** @brief Returns the current height of the intermediate screen surface (see @ref ScreenWidth) */
+		static std::int32_t GetScreenHeight() {
+			return _screenHeight;
+		}
 		/** @brief Flips the intermediate screen surface into the next display buffer and queues it for scan-out */
 		static void PresentFrame();
 
@@ -268,7 +289,7 @@ namespace nCine::RHI::GXM
 		static constexpr std::int32_t DisplayStride = 960;
 
 		/**
-			@brief Width the frame is rendered at, before the present blit stretches it to the panel
+			@brief Default width the frame is rendered at, before the present blit stretches it to the panel
 
 			The whole frame - the scene, the upscale pass and the UI on top of it - is rendered into the
 			intermediate screen surface, and @ref PresentFrame() has to resample that surface into the display
@@ -285,12 +306,20 @@ namespace nCine::RHI::GXM
 			needs. Note that 272 logical rows put the UI below the 300-row threshold at which
 			@relativeref{Jazz2::UI::Menu,MenuContainerBase::UpdateContentBounds()} switches to the compact
 			header/footer layout, which is the intended look at this size (the PSP renders at 480x272 too).
+
+			It is the default only: the surface is created at the size @ref CreateSwapchain() is given and
+			can be recreated later with @ref ResizeScreenSurface(), which is how the game's rendering
+			resolution preference (@relativeref{Jazz2,PreferencesCache::RenderingResolutionPercent}) reaches
+			this console - 60% is 576x326 and 75% is 720x408, the logical view's own size, so the scene is
+			not upscaled before the present blit stretches it (the game offers nothing above that: the full
+			panel would only upscale the same 720x408 scene fractionally, at the cost of another full-panel
+			pass). @ref GetScreenWidth() and @ref GetScreenHeight() report the current size.
 		*/
 		static constexpr std::int32_t ScreenWidth = 480;
-		/** @brief Height the frame is rendered at, see @ref ScreenWidth */
+		/** @brief Default height the frame is rendered at, see @ref ScreenWidth */
 		static constexpr std::int32_t ScreenHeight = 272;
-		/** @brief Stride of the intermediate screen surface in pixels (a colour surface needs 8-pixel alignment) */
-		static constexpr std::int32_t ScreenStride = 480;
+		/** @brief Alignment of a colour surface's stride in pixels */
+		static constexpr std::int32_t ScreenStrideAlignment = 8;
 
 		/**
 			@brief Returns the largest supported 2D texture dimension
@@ -368,11 +397,15 @@ namespace nCine::RHI::GXM
 
 		// The intermediate surface every draw that is not aimed at a render target lands in, kept bottom-up
 		// like OpenGL and flipped into the display buffer at present time (see the class documentation). It is
-		// smaller than the panel (see ScreenWidth), so it needs a render target describing its own tiling
+		// usually smaller than the panel (see ScreenWidth), so it needs a render target describing its own
+		// tiling; its size is the one CreateScreenSurface() was last given
 		static SceGxmRenderTarget* _screenRenderTarget;
 		static GxmMemory::Block _screenBuffer;
 		static SceGxmColorSurface _screenSurface;
 		static SceGxmTexture _screenTexture;
+		static std::int32_t _screenWidth;
+		static std::int32_t _screenHeight;
+		static std::int32_t _screenStride;
 		// The runtime Cg compiler is loaded on demand (see EnsureShaderCompiler()); the second flag keeps a
 		// failure from being retried, and reported, once per shader
 		// What the stencil plane currently holds for the scissor test, all of it per scene (the plane starts
@@ -411,6 +444,16 @@ namespace nCine::RHI::GXM
 		// re-entering GxmRenderTarget::GetSceneTarget() - which is allowed to end the very scene being set up
 		static std::int32_t _sceneWidth;
 		static std::int32_t _sceneHeight;
+
+		// -- Screen surface (see ScreenWidth) --
+
+		// Clamps a requested screen surface size to the panel and the stride alignment, substituting the
+		// default for a size that is not positive
+		static void ResolveScreenSize(std::int32_t& width, std::int32_t& height);
+		// Creates the screen render target, buffer, colour surface and texture at the given (resolved) size
+		static bool CreateScreenSurface(std::int32_t width, std::int32_t height);
+		// Releases what CreateScreenSurface() created; the sync object is owned by the session and stays
+		static void DestroyScreenSurface();
 
 		// -- Built-in shaders --
 

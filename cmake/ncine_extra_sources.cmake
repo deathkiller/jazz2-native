@@ -302,6 +302,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspLibcCompat.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.cpp
 		)
 	elseif(PLATFORM_PS2)
@@ -1299,6 +1300,11 @@ else()
 			pspctrl
 			psppower
 			pspdebug
+			# The ad hoc (local wireless) transport of the multiplayer: PDP sockets, group control and the
+			# WLAN's own MAC address. None of the three is in the spec's list, so each is scanned once.
+			pspnet_adhoc
+			pspnet_adhocctl
+			pspwlan
 		)
 
 		if(CURL_FOUND)
@@ -1372,6 +1378,33 @@ else()
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PSP_EBOOT_DIR}/Content"
 			COMMENT "Staging memory stick layout with game content"
 			VERBATIM)
+
+		if(CURL_FOUND)
+			# The CA bundle every HTTPS request is verified against, exactly as for the PS Vita below (see the
+			# longer note there): pspdev's libcurl is built on mbedTLS with a Unix default path that exists
+			# nowhere on a memory stick, so without a bundle of its own the server list, the update check and
+			# script web requests all fail to verify. PlatformWebRequest.h points libcurl at the copy staged
+			# next to the content. Fetched at configure time and cached in the build directory.
+			set(_pspCaCert "${CMAKE_BINARY_DIR}/cacert.pem")
+			if(NOT EXISTS "${_pspCaCert}")
+				message(STATUS "Downloading the CA certificate bundle for HTTPS support...")
+				file(DOWNLOAD "https://curl.se/ca/cacert.pem" "${_pspCaCert}"
+					INACTIVITY_TIMEOUT 30 TIMEOUT 120 TLS_VERIFY ON STATUS _pspCaCertStatus SHOW_PROGRESS)
+				list(GET _pspCaCertStatus 0 _pspCaCertResult)
+				if(NOT _pspCaCertResult EQUAL 0)
+					list(GET _pspCaCertStatus 1 _pspCaCertError)
+					message(WARNING "Cannot download the CA certificate bundle (${_pspCaCertError}), so HTTPS "
+						"requests will fail to verify - put a PEM bundle at \"${_pspCaCert}\" and configure again")
+					file(REMOVE "${_pspCaCert}")
+				endif()
+			endif()
+			if(EXISTS "${_pspCaCert}")
+				add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_pspCaCert}" "${PSP_EBOOT_DIR}/Content/cacert.pem"
+					COMMENT "Staging the CA certificate bundle"
+					VERBATIM)
+			endif()
+		endif()
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 

@@ -186,6 +186,9 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include <sys/select.h>
+	#include <pspnet_adhoc.h>
+	#include <pspthreadman.h>
+	#include <pspwlan.h>
 
 	// pspdev's newlib covers most of the BSD sockets API through libcglue (socket, bind, connect, select,
 	// send/recv, setsockopt, gethostbyname, and inet_pton/inet_ntop as macros onto sceNetInet*), but stops
@@ -1166,6 +1169,13 @@ extern "C" {
 
 	/** ENet socket functions */
 	ENET_API ENetSocket enet_socket_create(ENetSocketType);
+#if defined(DEATH_TARGET_PSP)
+	/** Switches the PSP transport between the infrastructure (BSD sockets over sceNetInet) and the ad hoc
+	    (sceNetAdhoc PDP) arm; applies to sockets created afterwards. Ad hoc addresses are MAC addresses
+	    ("AA:BB:CC:DD:EE:FF") behind the same ENetAddress, see the ad hoc section of the implementation. */
+	ENET_API void enet_psp_set_adhoc(int enabled);
+	ENET_API int enet_psp_is_adhoc(void);
+#endif
 	ENET_API int        enet_socket_bind(ENetSocket, const ENetAddress*);
 	ENET_API int        enet_socket_get_address(ENetSocket, ENetAddress*);
 	ENET_API int        enet_socket_listen(ENetSocket, int);
@@ -5645,6 +5655,150 @@ extern "C" {
 	}
 	#endif // __MINGW__
 
+
+#if defined(DEATH_TARGET_PSP)
+	// =============================== PSP ad hoc transport ===============================
+	// The PSP's ad hoc mode is not IP: peers are addressed by MAC address and a 16-bit port, over PDP
+	// datagram sockets (sceNetAdhocPdp*). ENet only needs datagrams, so the whole of it fits behind the
+	// socket functions below, switched at runtime (enet_psp_set_adhoc) so the same binary keeps the
+	// infrastructure arm for Wi-Fi. An ENetAddress stays a 32-bit host: ad hoc hosts are indices into a
+	// table of the MAC addresses seen so far (0xAD000000 | index + 1), which everything above the socket
+	// layer treats as opaque - and the string forms ("AA:BB:CC:DD:EE:FF") are what the address functions
+	// parse and format in this mode. Sockets are slots of a small table too, because a PDP socket cannot
+	// exist before its port is known and ENet binds (or does not bind) after creating.
+	#define ENET_PSP_ADHOC_MAX_PEERS 32
+	#define ENET_PSP_ADHOC_MAX_SOCKETS 4
+	#define ENET_PSP_ADHOC_SOCKET_BASE 0x4000
+	#define ENET_PSP_ADHOC_HOST_BASE 0xAD000000u
+	#define ENET_PSP_ADHOC_PDP_BUFFER_SIZE 8192
+	#define ENET_PSP_ADHOC_ERROR_WOULD_BLOCK 0x80410709
+	#define ENET_PSP_ADHOC_ERROR_TIMEOUT 0x80410715
+
+	typedef struct {
+		int used;
+		int pdpId;
+		unsigned short port;
+	} ENetPspAdhocSocket;
+
+	static int enetPspAdhoc = 0;
+	static unsigned char enetPspAdhocMacs[ENET_PSP_ADHOC_MAX_PEERS][6];
+	static int enetPspAdhocMacCount = 0;
+	static ENetPspAdhocSocket enetPspAdhocSockets[ENET_PSP_ADHOC_MAX_SOCKETS];
+	static enet_uint8 enetPspAdhocSendBuffer[ENET_PROTOCOL_MAXIMUM_MTU];
+
+	void enet_psp_set_adhoc(int enabled) {
+		enetPspAdhoc = enabled;
+	}
+
+	int enet_psp_is_adhoc(void) {
+		return enetPspAdhoc;
+	}
+
+	static enet_uint32 enet_psp_adhoc_register_mac(const unsigned char* mac) {
+		int i;
+		for (i = 0; i < enetPspAdhocMacCount; i++) {
+			if (memcmp(enetPspAdhocMacs[i], mac, 6) == 0) {
+				return ENET_PSP_ADHOC_HOST_BASE | (enet_uint32)(i + 1);
+			}
+		}
+		if (enetPspAdhocMacCount >= ENET_PSP_ADHOC_MAX_PEERS) {
+			// The table is only ever as large as the number of consoles in reach, so this does not happen
+			// in practice; an unknown host cannot be sent to and is dropped by the caller
+			return ENET_PSP_ADHOC_HOST_BASE;
+		}
+		memcpy(enetPspAdhocMacs[enetPspAdhocMacCount], mac, 6);
+		enetPspAdhocMacCount++;
+		return ENET_PSP_ADHOC_HOST_BASE | (enet_uint32)enetPspAdhocMacCount;
+	}
+
+	static const unsigned char* enet_psp_adhoc_mac_of(enet_uint32 host) {
+		int index;
+		if ((host & 0xFF000000u) != ENET_PSP_ADHOC_HOST_BASE) {
+			return NULL;
+		}
+		index = (int)(host & 0x00FFFFFFu) - 1;
+		return (index >= 0 && index < enetPspAdhocMacCount ? enetPspAdhocMacs[index] : NULL);
+	}
+
+	static int enet_psp_adhoc_parse_mac(const char* name, unsigned char* mac) {
+		int i;
+		for (i = 0; i < 6; i++) {
+			unsigned int value = 0;
+			int digits = 0;
+			while (digits < 2) {
+				char c = *name;
+				unsigned int d;
+				if (c >= '0' && c <= '9') d = (unsigned int)(c - '0');
+				else if (c >= 'a' && c <= 'f') d = (unsigned int)(c - 'a' + 10);
+				else if (c >= 'A' && c <= 'F') d = (unsigned int)(c - 'A' + 10);
+				else break;
+				value = (value << 4) | d;
+				digits++;
+				name++;
+			}
+			if (digits == 0) {
+				return -1;
+			}
+			mac[i] = (unsigned char)value;
+			if (i < 5) {
+				if (*name != ':' && *name != '-') {
+					return -1;
+				}
+				name++;
+			}
+		}
+		return (*name == '\0' ? 0 : -1);
+	}
+
+	static ENetPspAdhocSocket* enet_psp_adhoc_socket(ENetSocket socket) {
+		int index = (int)socket - ENET_PSP_ADHOC_SOCKET_BASE;
+		if (index < 0 || index >= ENET_PSP_ADHOC_MAX_SOCKETS || !enetPspAdhocSockets[index].used) {
+			return NULL;
+		}
+		return &enetPspAdhocSockets[index];
+	}
+
+	static int enet_psp_adhoc_ensure_pdp(ENetPspAdhocSocket* s) {
+		unsigned char mac[6];
+		int result;
+		if (s->pdpId >= 0) {
+			return 0;
+		}
+		if (sceWlanGetEtherAddr(mac) < 0) {
+			return -1;
+		}
+		if (s->port == 0) {
+			// An unbound socket gets an ephemeral port, as a UDP one would from the OS
+			s->port = (unsigned short)(0xC000 + (rand() & 0x3FFF));
+		}
+		result = sceNetAdhocPdpCreate(mac, s->port, ENET_PSP_ADHOC_PDP_BUFFER_SIZE, 0);
+		if (result < 0) {
+			#ifdef ENET_DEBUG
+			LOGW("sceNetAdhocPdpCreate() failed with error 0x{:.8x}", (unsigned int)result);
+			#endif
+			return -1;
+		}
+		s->pdpId = result;
+		return 0;
+	}
+
+	static int enet_psp_adhoc_pending(const ENetPspAdhocSocket* s) {
+		// The received-bytes count of every PDP socket comes back as a list; the socket's own entry is the
+		// only one of interest
+		pdpStatStruct stats[ENET_PSP_ADHOC_MAX_SOCKETS + 2];
+		int size = (int)sizeof(stats);
+		const pdpStatStruct* stat;
+		if (s->pdpId < 0 || sceNetAdhocGetPdpStat(&size, stats) < 0) {
+			return 0;
+		}
+		for (stat = stats; stat != NULL; stat = stat->next) {
+			if (stat->pdpId == s->pdpId) {
+				return (stat->rcvdData > 0 ? 1 : 0);
+			}
+		}
+		return 0;
+	}
+#endif
 	int enet_initialize(void) {
 		return 0;
 	}
@@ -5657,6 +5811,16 @@ extern "C" {
 
 #if !ENET_IPV6
 	int enet_address_set_host_ip(ENetAddress* address, const char* name) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			unsigned char mac[6];
+			if (enet_psp_adhoc_parse_mac(name, mac) != 0) {
+				return -1;
+			}
+			address->host = enet_psp_adhoc_register_mac(mac);
+			return 0;
+		}
+#endif
 	/*#ifdef HAS_INET_PTON*/
 		if (!inet_pton(AF_INET, name, &address->host))
 	/*#else
@@ -5668,6 +5832,12 @@ extern "C" {
 	}
 
 	int enet_address_set_host(ENetAddress* address, const char* name) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			// There is no name resolution in ad hoc mode, the address is the MAC address itself
+			return enet_address_set_host_ip(address, name);
+		}
+#endif
 	/*#ifdef HAS_GETADDRINFO*/
 		struct addrinfo hints, *resultList = NULL, *result = NULL;
 
@@ -5715,6 +5885,16 @@ extern "C" {
 	}
 
 	int enet_address_get_host_ip(const ENetAddress* address, char* name, size_t nameLength) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			const unsigned char* mac = enet_psp_adhoc_mac_of(address->host);
+			if (mac == NULL || nameLength < 18) {
+				return -1;
+			}
+			snprintf(name, nameLength, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+			return 0;
+		}
+#endif
 	/*#ifdef HAS_INET_NTOP*/
 		if (inet_ntop(AF_INET, &address->host, name, nameLength) == NULL)
 	/*#else
@@ -5731,6 +5911,11 @@ extern "C" {
 	}
 
 	int enet_address_get_host(const ENetAddress* address, char* name, size_t nameLength) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return enet_address_get_host_ip(address, name, nameLength);
+		}
+#endif
 	/*#ifdef HAS_GETNAMEINFO*/
 		struct sockaddr_in sin;
 		int err;
@@ -5859,6 +6044,16 @@ extern "C" {
 #endif
 
 	int enet_socket_bind(ENetSocket socket, const ENetAddress* address) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			if (s == NULL || s->pdpId >= 0) {
+				return -1;
+			}
+			s->port = (address != NULL ? address->port : 0);
+			return enet_psp_adhoc_ensure_pdp(s);
+		}
+#endif
 #if ENET_IPV6
 		struct sockaddr_in6 sin;
 		memset(&sin, 0, sizeof(struct sockaddr_in6));
@@ -5905,6 +6100,18 @@ extern "C" {
 	}
 
 	int enet_socket_get_address(ENetSocket socket, ENetAddress* address) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			unsigned char mac[6];
+			if (s == NULL || enet_psp_adhoc_ensure_pdp(s) != 0 || sceWlanGetEtherAddr(mac) < 0) {
+				return -1;
+			}
+			address->host = enet_psp_adhoc_register_mac(mac);
+			address->port = s->port;
+			return 0;
+		}
+#endif
 #if ENET_IPV6
 		struct sockaddr_in6 sin;
 		socklen_t sinLength = sizeof(struct sockaddr_in6);
@@ -5932,10 +6139,33 @@ extern "C" {
 	}
 
 	int enet_socket_listen(ENetSocket socket, int backlog) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return -1;	// Datagrams only
+		}
+#endif
 		return listen(socket, backlog < 0 ? SOMAXCONN : backlog);
 	}
 
 	ENetSocket enet_socket_create(ENetSocketType type) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			int i;
+			if (type != ENET_SOCKET_TYPE_DATAGRAM) {
+				return ENET_SOCKET_NULL;
+			}
+			for (i = 0; i < ENET_PSP_ADHOC_MAX_SOCKETS; i++) {
+				if (!enetPspAdhocSockets[i].used) {
+					enetPspAdhocSockets[i].used = 1;
+					enetPspAdhocSockets[i].pdpId = -1;
+					enetPspAdhocSockets[i].port = 0;
+					// The PDP socket itself is created once the port is known (bind, or the first use)
+					return (ENetSocket)(ENET_PSP_ADHOC_SOCKET_BASE + i);
+				}
+			}
+			return ENET_SOCKET_NULL;
+		}
+#endif
 #if ENET_IPV6
 		return socket(PF_INET6, type == ENET_SOCKET_TYPE_DATAGRAM ? SOCK_DGRAM : SOCK_STREAM, 0);
 #else
@@ -5944,6 +6174,12 @@ extern "C" {
 	}
 
 	int enet_socket_set_option(ENetSocket socket, ENetSocketOption option, int value) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			// Non-blocking, buffer sizes and the like are properties of the PDP socket already
+			return 0;
+		}
+#endif
 		int result = -1;
 
 		switch (option) {
@@ -6003,6 +6239,11 @@ extern "C" {
 	} /* enet_socket_set_option */
 
 	int enet_socket_get_option(ENetSocket socket, ENetSocketOption option, int* value) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return -1;
+		}
+#endif
 		int result = -1;
 		socklen_t len;
 
@@ -6016,6 +6257,11 @@ extern "C" {
 	}
 
 	int enet_socket_connect(ENetSocket socket, const ENetAddress* address) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return -1;	// Datagrams only
+		}
+#endif
 #if ENET_IPV6
 		struct sockaddr_in6 sin;
 		int result;
@@ -6063,6 +6309,11 @@ extern "C" {
 	}
 
 	ENetSocket enet_socket_accept(ENetSocket socket, ENetAddress* address) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return ENET_SOCKET_NULL;	// Datagrams only
+		}
+#endif
 #if ENET_IPV6
 		int result;
 		struct sockaddr_in6 sin;
@@ -6100,16 +6351,69 @@ extern "C" {
 	}
 
 	int enet_socket_shutdown(ENetSocket socket, ENetSocketShutdown how) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return 0;
+		}
+#endif
 		return shutdown(socket, (int)how);
 	}
 
 	void enet_socket_destroy(ENetSocket socket) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			if (s != NULL) {
+				if (s->pdpId >= 0) {
+					sceNetAdhocPdpDelete(s->pdpId, 0);
+				}
+				s->used = 0;
+				s->pdpId = -1;
+				s->port = 0;
+			}
+			return;
+		}
+#endif
 		if (socket != -1) {
 			close(socket);
 		}
 	}
 
 	int enet_socket_send(ENetSocket socket, const ENetAddress* address, const ENetBuffer* buffers, size_t bufferCount) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			const unsigned char* mac;
+			size_t total = 0, i;
+			int result;
+			if (s == NULL || address == NULL || enet_psp_adhoc_ensure_pdp(s) != 0) {
+				return -1;
+			}
+			mac = enet_psp_adhoc_mac_of(address->host);
+			if (mac == NULL) {
+				return -1;
+			}
+			// One datagram out of the buffers ENet hands over (a header and a payload, usually)
+			for (i = 0; i < bufferCount; i++) {
+				if (total + buffers[i].dataLength > sizeof(enetPspAdhocSendBuffer)) {
+					return -1;
+				}
+				memcpy(enetPspAdhocSendBuffer + total, buffers[i].data, buffers[i].dataLength);
+				total += buffers[i].dataLength;
+			}
+			result = sceNetAdhocPdpSend(s->pdpId, (unsigned char*)mac, address->port, enetPspAdhocSendBuffer, (unsigned int)total, 0, 1);
+			if (result < 0) {
+				if ((unsigned int)result == ENET_PSP_ADHOC_ERROR_WOULD_BLOCK || (unsigned int)result == ENET_PSP_ADHOC_ERROR_TIMEOUT) {
+					return 0;
+				}
+				#ifdef ENET_DEBUG
+				LOGW("sceNetAdhocPdpSend() failed with error 0x{:.8x}", (unsigned int)result);
+				#endif
+				return -1;
+			}
+			return (int)total;
+		}
+#endif
 #if ENET_IPV6
 		struct msghdr msgHdr;
 		struct sockaddr_in6 sin;
@@ -6183,6 +6487,33 @@ extern "C" {
 	} /* enet_socket_send */
 
 	int enet_socket_receive(ENetSocket socket, ENetAddress* address, ENetBuffer* buffers, size_t bufferCount) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			unsigned char mac[6];
+			unsigned short port = 0;
+			int length, result;
+			if (s == NULL || bufferCount != 1 || enet_psp_adhoc_ensure_pdp(s) != 0) {
+				return -1;
+			}
+			length = (int)buffers[0].dataLength;
+			result = sceNetAdhocPdpRecv(s->pdpId, mac, &port, buffers[0].data, &length, 0, 1);
+			if (result < 0) {
+				if ((unsigned int)result == ENET_PSP_ADHOC_ERROR_WOULD_BLOCK || (unsigned int)result == ENET_PSP_ADHOC_ERROR_TIMEOUT) {
+					return 0;
+				}
+				#ifdef ENET_DEBUG
+				LOGW("sceNetAdhocPdpRecv() failed with error 0x{:.8x}", (unsigned int)result);
+				#endif
+				return -1;
+			}
+			if (address != NULL) {
+				address->host = enet_psp_adhoc_register_mac(mac);
+				address->port = port;
+			}
+			return length;
+		}
+#endif
 #if ENET_IPV6
 		struct msghdr msgHdr;
 		struct sockaddr_in6 sin;
@@ -6303,6 +6634,11 @@ extern "C" {
 	} /* enet_socket_receive */
 
 	int enet_socketset_select(ENetSocket maxSocket, ENetSocketSet* readSet, ENetSocketSet* writeSet, enet_uint32 timeout) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			return 0;	// Not used by the transport in this mode
+		}
+#endif
 		struct timeval timeVal;
 
 		timeVal.tv_sec  = timeout / 1000;
@@ -6312,6 +6648,33 @@ extern "C" {
 	}
 
 	int enet_socket_wait(ENetSocket socket, enet_uint32* condition, enet_uint64 timeout) {
+#if defined(DEATH_TARGET_PSP)
+		if (enetPspAdhoc) {
+			// There is nothing to block on, so the socket is polled until data arrives or the time is up;
+			// sending is always possible
+			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
+			enet_uint64 waited = 0;
+			if (s == NULL) {
+				return -1;
+			}
+			for (;;) {
+				if ((*condition & ENET_SOCKET_WAIT_RECEIVE) && enet_psp_adhoc_pending(s)) {
+					*condition = ENET_SOCKET_WAIT_RECEIVE;
+					return 0;
+				}
+				if (*condition & ENET_SOCKET_WAIT_SEND) {
+					*condition = ENET_SOCKET_WAIT_SEND;
+					return 0;
+				}
+				if (waited >= timeout) {
+					*condition = ENET_SOCKET_WAIT_NONE;
+					return 0;
+				}
+				sceKernelDelayThread(1000);
+				waited++;
+			}
+		}
+#endif
 		struct pollfd pollSocket;
 		int pollCount;
 

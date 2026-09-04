@@ -139,6 +139,16 @@ namespace Jazz2::Multiplayer
 
 	ServerDiscovery::~ServerDiscovery()
 	{
+		Stop();
+	}
+
+	void ServerDiscovery::Stop()
+	{
+		if (_stopped) {
+			return;
+		}
+		_stopped = true;
+
 		_server = nullptr;
 		_observer = nullptr;
 
@@ -841,6 +851,34 @@ namespace Jazz2::Multiplayer
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
 
 #if defined(DEATH_TARGET_PSP)
+		if (NetworkManagerBase::IsAdhocMode()) {
+			// In ad hoc mode there is no network to broadcast into and no internet to ask: the servers in reach
+			// are the ad hoc groups the consoles hosting them created, and a scan of the air finds them. Each
+			// group is listed as a server whose endpoint names the group and the host's MAC address (see
+			// NetworkManagerBase::SetAdhocMode() for the form); the scan is a few seconds of radio work, so it
+			// repeats at a leisurely pace.
+			IServerObserver* adhocObserver = _this->_observer;
+			while (_this->_observer != nullptr) {
+				Backends::PspNetwork::AdhocGroup groups[16];
+				std::int32_t count = Backends::PspNetwork::AdhocScan(groups, std::int32_t(arraySize(groups)));
+				for (std::int32_t i = 0; i < count && _this->_observer != nullptr; i++) {
+					char mac[Backends::PspNetwork::MacAddressStringLength + 1];
+					Backends::PspNetwork::FormatMacAddress(groups[i].Mac, mac, sizeof(mac));
+
+					ServerDescription desc{};
+					desc.Name = groups[i].Name;
+					desc.EndpointString = String(groups[i].Name) + "/"_s + mac;
+					desc.Flags = 0x80000000u;	// Local
+					desc.IsCompatible = true;
+					adhocObserver->OnServerFound(std::move(desc));
+				}
+				for (std::int32_t waited = 0; waited < 5000 && _this->_observer != nullptr; waited += 250) {
+					Thread::Sleep(250);
+				}
+			}
+			return;
+		}
+
 		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
 		// that is not the main one - which is this one
 		Backends::PspNetwork::EnsureConnected();

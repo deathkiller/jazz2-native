@@ -2,6 +2,8 @@
 
 #if defined(WITH_PSP) && defined(WITH_CURL)
 
+#include <Containers/StringView.h>
+
 namespace nCine::Backends
 {
 	/**
@@ -35,6 +37,55 @@ namespace nCine::Backends
 			the same answer to all of them.
 		*/
 		static bool EnsureConnected();
+
+		/** @{ @name Ad hoc mode */
+
+		/** @brief One ad hoc group found by @ref AdhocScan() */
+		struct AdhocGroup
+		{
+			/** @brief Group name (up to 8 alphanumeric characters) */
+			char Name[9];
+			/** @brief MAC address of the console that created the group */
+			std::uint8_t Mac[6];
+		};
+
+		/** @brief Length of a MAC address in its text form (`AA:BB:CC:DD:EE:FF`), without the terminator */
+		static constexpr std::int32_t MacAddressStringLength = 17;
+
+		/**
+			@brief Switches the WLAN to ad hoc mode
+
+			Ad hoc and infrastructure are exclusive on this console, so any access point association is dropped
+			first (and @ref EnsureConnected() joins one again once @ref AdhocEnd() has run). Loads the ad hoc
+			module and brings `sceNetAdhoc` and `sceNetAdhocctl` up; a no-op when already in ad hoc mode.
+
+			@returns `false` if the WLAN switch is off or the ad hoc stack cannot be brought up
+		*/
+		static bool AdhocBegin();
+		/** @brief Leaves any group and tears the ad hoc stack down again, so infrastructure mode can be used */
+		static void AdhocEnd();
+		/** @brief Whether the WLAN is in ad hoc mode (see @ref AdhocBegin()) */
+		static bool IsAdhocActive();
+		/** @brief Creates an ad hoc group with the given name (see @ref MakeAdhocGroupName()) and waits until it is up */
+		static bool AdhocCreateGroup(const char* name);
+		/** @brief Joins the ad hoc group with the given name and waits until the console is connected to it */
+		static bool AdhocJoinGroup(const char* name);
+		/** @brief Leaves the current ad hoc group, if any */
+		static void AdhocLeaveGroup();
+		/**
+			@brief Scans for ad hoc groups in reach and fills the given array with them
+
+			Takes a few seconds, so it belongs on a thread that is not the main one. @returns the number of groups found, or `-1`
+		*/
+		static std::int32_t AdhocScan(AdhocGroup* groups, std::int32_t maxCount);
+		/** @brief Derives a valid group name (up to 8 alphanumeric characters) from any text, such as a server name */
+		static void MakeAdhocGroupName(Death::Containers::StringView source, char (&name)[9]);
+		/** @brief Returns the console's own WLAN MAC address */
+		static bool GetMacAddress(std::uint8_t (&mac)[6]);
+		/** @brief Formats a MAC address as `AA:BB:CC:DD:EE:FF` (the buffer must hold @ref MacAddressStringLength + 1 characters) */
+		static void FormatMacAddress(const std::uint8_t (&mac)[6], char* buffer, std::size_t bufferLength);
+
+		/** @} */
 	};
 }
 

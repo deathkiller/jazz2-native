@@ -8,6 +8,7 @@
 #include "../../../nCine/I18n.h"
 #include "../../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING (a header macro, not a build define)
 
+#include <algorithm>
 #include <Environment.h>
 #include <Utf8.h>
 
@@ -48,13 +49,63 @@ namespace Jazz2::UI::Menu
 
 		// Display-only row (no OnChange): shows the current drawable resolution without arrows
 		// TRANSLATORS: Menu item in Options > Graphics section
-		list->Add<ChoiceItem>(_("Resolution"),
+		list->Add<ChoiceItem>(_("Screen Resolution"),
 			[this]() -> StringView {
 				Vector2i res = theApplication().GetGfxDevice().drawableResolution();
 				_resolutionValue = format("{}x{}", res.X, res.Y);
 				return _resolutionValue;
 			},
 			nullptr);
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The most the scene is rendered at - the logical view is bounded by the default size scaled by this
+		// (see UpscaleRenderPass::CalculateViewSize), and a smaller display keeps a view of its own size. On PS
+		// Vita it sizes the frame surface itself instead (see PreferencesCache::ApplyRenderingResolution), so
+		// the whole frame is rendered at that fraction of the panel, the drawable follows and the view follows
+		// the drawable. The direct rendering tier renders straight into the screen framebuffer at the display's
+		// own (small) size, where there is nothing left to lower, so the option is hidden there.
+		// TRANSLATORS: Menu item in Options > Graphics section
+		list->Add<ChoiceItem>(_("Rendering Resolution"),
+			[this]() -> StringView {
+				// The menu's view is computed by the same rule as the level's, so this is the size the scene will be
+				Vector2i viewSize = _root->GetViewSize();
+				_renderingResolutionValue = format("{}% ({}x{})", PreferencesCache::RenderingResolutionPercent, viewSize.X, viewSize.Y);
+				return _renderingResolutionValue;
+			},
+			[this](std::int32_t direction) {
+				// Ascending presets so Right increases and Left decreases; clamped at the ends (no wraparound)
+#if defined(WITH_RHI_GXM)
+				// The Vita's frame surface is the panel scaled by this, and 75% (720x408) is already the logical
+				// view's own size - the full panel would only upscale that same 720x408 scene fractionally into
+				// 960x544, at the cost of another full-panel pass, and looks worse for it. So it stops at 75%,
+				// with 60% (576x326) as the step between it and the 480x272 default.
+				static const std::int32_t presets[] = { 50, 60, 75 };
+#else
+				static const std::int32_t presets[] = { 50, 75, 100 };
+#endif
+				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
+				std::int32_t index = count - 1;
+				for (std::int32_t i = 0; i < count; i++) {
+					if (PreferencesCache::RenderingResolutionPercent <= presets[i]) {
+						index = i;
+						break;
+					}
+				}
+				index += direction;
+				if (index < 0) {
+					index = 0;
+				} else if (index >= count) {
+					index = count - 1;
+				}
+				PreferencesCache::RenderingResolutionPercent = presets[index];
+				// The drawable itself changes on PS Vita, so the device goes first and the viewports are laid out
+				// for the result; every section in the stack then lays itself out again for the new view size
+				// (at the next update, as this widget is what is asking - see MenuContainerBase)
+				PreferencesCache::ApplyRenderingResolution();
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics | ChangedPreferencesType::Layout);
+				_isDirty = true;
+			});
+#endif
 
 #if defined(NCINE_HAS_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
@@ -165,6 +216,30 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
+		// Debris and weather particles (see TileMap::CreateDebris): off, about half of every burst, or all of
+		// them. Ultra is reserved for a future tier and not offered yet, so the cycle stops at High and a
+		// configuration that carries Ultra reads as High.
+		// TRANSLATORS: Menu item in Options > Graphics section
+		list->Add<ChoiceItem>(_("Particle Quality"),
+			[]() -> StringView {
+				switch (PreferencesCache::Particles) {
+					case ParticleQuality::Off: return _("Off");
+					case ParticleQuality::Low: return _("Low");
+					default: return _("High");
+				}
+			},
+			[this](std::int32_t direction) {
+				std::int32_t index = std::min((std::int32_t)PreferencesCache::Particles, (std::int32_t)ParticleQuality::High) + direction;
+				if (index < (std::int32_t)ParticleQuality::Off) {
+					index = (std::int32_t)ParticleQuality::Off;
+				} else if (index > (std::int32_t)ParticleQuality::High) {
+					index = (std::int32_t)ParticleQuality::High;
+				}
+				PreferencesCache::Particles = (ParticleQuality)index;
+				_isDirty = true;
+			});
+#if defined(RHI_CAP_POSTPROCESSING)
 		// Selects between the two Combine shader variants (see LevelHandler), neither of which the direct
 		// tier uses - its water is the per-row tint and wave applied by the device's software compositor
 		// TRANSLATORS: Menu item in Options > Graphics section

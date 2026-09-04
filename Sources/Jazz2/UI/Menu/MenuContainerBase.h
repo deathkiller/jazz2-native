@@ -87,6 +87,13 @@ namespace Jazz2::UI::Menu
 		std::uint32_t _pressedActions;
 		NavigationFlags _lastNavigationFlags;
 		float _touchButtonsTimer;
+		/**
+		 * @brief Whether every section is to lay itself out again at the next update (see @ref RelayoutSections())
+		 *
+		 * Raised by a rendering resolution change rather than acted on at once, because the request comes
+		 * from a widget of the very section that would rebuild its content underneath it.
+		 */
+		bool _sectionsRelayoutPending = false;
 #	if defined(WITH_AUDIO)
 		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
 #	endif
@@ -114,6 +121,10 @@ namespace Jazz2::UI::Menu
 	protected:
 		/** @brief Returns the upscale render pass used to present the menu (and to set the clip rectangle) */
 		virtual Rendering::UpscaleRenderPassWithClipping& GetUpscalePass() = 0;
+		/** @brief Destroys every section and opens the root one again (after a language change) */
+		virtual void RecreateSections() = 0;
+		/** @brief Lets every section in the stack lay itself out for the current view size, keeping the stack as it is */
+		void RelayoutSections();
 		/** @brief Returns the set of currently pressed keys used for navigation */
 		virtual const BitArray& GetPressedKeys() const = 0;
 	};

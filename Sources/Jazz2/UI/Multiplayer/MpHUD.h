@@ -64,11 +64,27 @@ namespace Jazz2::UI::Multiplayer
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _minimapCommands;
 		std::int32_t _minimapCommandsCount;
 		std::unique_ptr<Texture> _minimapLineTexture;		// 1D alpha-feather texture used to antialias the line edges
+		// Direct rendering tier only: the whole track rasterized once into textures the size of the minimap box
+		// (the line, and its thicker shadow), drawn as two sprites a frame - see RefreshMinimapTrackTextures()
+		std::unique_ptr<Texture> _minimapTrackTexture;
+		std::unique_ptr<Texture> _minimapTrackShadowTexture;
+		std::uint32_t _minimapTrackTextureKey = 0;
+		Vector2i _minimapTrackTextureSize;
 
 		/** @brief Rebuilds the cached smoothed track centerline if the checkpoints changed */
 		void RefreshMinimapTrack(Jazz2::Multiplayer::MpLevelHandler* mpLevelHandler);
 		/** @brief Draws a smoothed thick polyline as a triangle-strip mesh */
 		void DrawMinimapTrackLine(const Vector2f* points, std::int32_t count, Vector2f offset, float halfThickness, std::uint16_t z, const Colorf& color);
+		/**
+		 * @brief Rebuilds the rasterized track textures for the given box size and projection, if anything changed
+		 *
+		 * The fixed-function consoles have no mesh-sprite program for the strip @ref DrawMinimapTrackLine() draws,
+		 * and drawing the up to a thousand segments as individual quads cost the PSP two thirds of its frame rate.
+		 * The track is static in minimap space, so it is rasterized on the CPU once (an antialiased thick polyline
+		 * into an alpha mask the size of the box, at the line's thickness and again at the shadow's) and only redone
+		 * when the track or the box changes.
+		 */
+		void RefreshMinimapTrackTextures(std::int32_t boxWidth, std::int32_t boxHeight, Vector2f localOrigin, Vector2f worldMin, float scale, float lineHalfThickness, float shadowHalfThickness);
 	};
 }
 

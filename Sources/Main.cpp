@@ -25,7 +25,9 @@
 #	include "nCine/Backends/Psp/PspNetwork.h"
 #endif
 #include "nCine/IAppEventHandler.h"
+#include "nCine/ServiceLocator.h"
 #include "nCine/tracy.h"
+#include "nCine/Audio/IAudioDevice.h"
 #include "nCine/Base/Random.h"
 #include "nCine/Graphics/BinaryShaderCache.h"
 #include "nCine/Graphics/RenderResources.h"
@@ -1552,8 +1554,19 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							peerDesc->HasCarryOver = true;
 							peerDesc->Points = previous->Points;
 							peerDesc->Team = previous->Team;
-							peerDesc->PreferredPlayerType = previous->CarryOver.Type;
-							LOGI("Peer \"{}\" [{}] reconnected, restoring progression", peerDesc->PlayerName, peer);
+							// A player who left while spectating carries the spectator actor's type in the snapshot,
+							// which is not a character: spawning it as one produced a player that looked like a
+							// spectator while neither side had it marked as one (the pause menu offered "Spectate"
+							// to someone already spectating). The character is the one chosen before spectating,
+							// and the spectate state itself is restored so the join spawns a spectator again.
+							if (previous->CarryOver.Type != PlayerType::Spectate) {
+								peerDesc->PreferredPlayerType = previous->CarryOver.Type;
+							} else if (previous->PreferredPlayerType != PlayerType::Spectate) {
+								peerDesc->PreferredPlayerType = previous->PreferredPlayerType;
+							}
+							peerDesc->IsSpectating = previous->IsSpectating;
+							LOGI("Peer \"{}\" [{}] reconnected, restoring progression{}", peerDesc->PlayerName, peer,
+								(peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None ? " (as spectator)" : "");
 						}
 					}
 
@@ -1769,6 +1782,16 @@ void GameEventHandler::OnBeginInitialize()
 #endif
 
 	_flags |= Flags::IsInitialized;
+
+#if defined(WITH_AUDIO)
+	// The audio device came up at its platform default; the user's mixing rate (if any) has to be in place
+	// before the first music stream is opened, as the module decoders render at the device's rate
+	if (PreferencesCache::AudioSampleRate > 0) {
+		theServiceLocator().GetAudioDevice().setMixingFrequency(PreferencesCache::AudioSampleRate);
+	}
+#endif
+	// Likewise before the first handler lays its viewport out (a no-op everywhere but on PS Vita)
+	PreferencesCache::ApplyRenderingResolution();
 
 	auto& resolver = ContentResolver::Get();
 
@@ -2071,13 +2094,6 @@ void GameEventHandler::CheckUpdates()
 	if (auto session = WebSession::GetDefault()) {
 		auto request = session.CreateRequest(url);
 		ApplyPlatformWebRequestOptions(request);
-#		if defined(DEATH_TARGET_PSP)
-		// pspdev's libcurl is built with the host's CA bundle path, which does not exist on the console, so
-		// the handshake ends as CURLE_SSL_CACERT_BADFILE. Accepted for this request only instead of shipping
-		// a bundle in Content: the response is just a version string, nothing in it is stored or executed.
-		// Hostname verification needs no CA and stays on, so only the chain of trust is dropped.
-		request.DisablePeerVerify();
-#		endif
 		auto result = request.Execute();
 		if (result) {
 			auto s = request.GetResponse().AsString();

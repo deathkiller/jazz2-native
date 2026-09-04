@@ -160,6 +160,19 @@ namespace nCine
 		 * @note If the application is in full screen this method will have no effect.
 		 */
 		virtual void setWindowSize(int width, int height) = 0;
+		/**
+		 * @brief Sets the pixel size of the drawable (the size the frame is rendered at) without touching the window
+		 *
+		 * Honoured only by a backend that renders the frame into an intermediate surface of its own and
+		 * stretches it onto the display at present time (the sceGxm backend on PS Vita, see
+		 * `GxmDevice::ScreenWidth`), where the surface is recreated at the new size and the application is
+		 * notified through `OnResizeWindow()`. Everywhere else the drawable follows the window and this does
+		 * nothing. Out-of-range sizes are clamped to what the display can show.
+		 */
+		inline virtual void setDrawableSize(int width, int height) {
+			static_cast<void>(width);
+			static_cast<void>(height);
+		}
 
 		/** @brief Returns the window position as a `Vector2i` object */
 		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0); }

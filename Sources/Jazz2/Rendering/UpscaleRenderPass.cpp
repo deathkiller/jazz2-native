@@ -7,6 +7,9 @@
 #include "../../nCine/Graphics/Viewport.h"
 #include "../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING must be resolved before the #if below
 
+#include <algorithm>
+#include <cmath>
+
 #if !defined(RHI_CAP_POSTPROCESSING)
 // The direct tier (no shaders or no framebuffers - the software backend today, fixed-function console
 // backends later) renders straight into the backend screen framebuffer, whose size the pass drives via
@@ -18,6 +21,35 @@ namespace Jazz2::Rendering
 {
 	// Layer assigned to an overlay layer's composite command so it is drawn on top of the scene composite (layer 0)
 	static constexpr std::uint16_t OverlayCompositeLayer = 60000;
+
+	Vector2i UpscaleRenderPass::CalculateViewSize(std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t defaultWidth, std::int32_t defaultHeight)
+	{
+#if defined(WITH_RHI_GXM)
+		// The preference sizes the frame surface itself on the Vita's native backend (see PreferencesCache::
+		// ApplyRenderingResolution()), which the target size already reflects, so it is not applied twice
+		const std::int32_t maxWidth = defaultWidth;
+		const std::int32_t maxHeight = defaultHeight;
+#else
+		const std::int32_t maxWidth = std::max<std::int32_t>(defaultWidth * PreferencesCache::RenderingResolutionPercent / 100, 1);
+		const std::int32_t maxHeight = std::max<std::int32_t>(defaultHeight * PreferencesCache::RenderingResolutionPercent / 100, 1);
+#endif
+
+		const float defaultRatio = (float)maxWidth / maxHeight;
+		const float currentRatio = (float)targetWidth / targetHeight;
+
+		std::int32_t w, h;
+		if (currentRatio > defaultRatio) {
+			w = std::min(maxWidth, targetWidth);
+			h = (std::int32_t)roundf(w / currentRatio);
+		} else if (currentRatio < defaultRatio) {
+			h = std::min(maxHeight, targetHeight);
+			w = (std::int32_t)roundf(h * currentRatio);
+		} else {
+			w = std::min(maxWidth, targetWidth);
+			h = std::min(maxHeight, targetHeight);
+		}
+		return Vector2i(std::max<std::int32_t>(w, 1), std::max<std::int32_t>(h, 1));
+	}
 
 	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
 	{

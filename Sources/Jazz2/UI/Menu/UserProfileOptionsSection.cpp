@@ -383,7 +383,7 @@ namespace Jazz2::UI::Menu
 	{
 		if (_nameInput != nullptr && _nameInput->IsActive() && theApplication().CanShowScreenKeyboard()) {
 			auto contentBounds = _root->GetContentBounds();
-			float titleY = contentBounds.Y - (canvas->ViewSize.Y >= 300 ? 30.0f : 12.0f) - 2.0f;
+			float titleY = contentBounds.Y - MenuLayout::GetTitleOffset(canvas->ViewSize) - 2.0f;
 
 			_root->DrawElement(MenuGlow, 0, 72.0f, titleY - 2.0f, IMenuContainer::MainLayer - 20, Alignment::Center,
 				Colorf(1.0f, 1.0f, 1.0f, 0.16f), 4.0f, 8.0f, true, true);

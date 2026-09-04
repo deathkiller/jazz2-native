@@ -204,6 +204,23 @@ namespace nCine
 		return _outputFrequency;
 	}
 
+	void AmigaAudioDevice::setMixingFrequency(std::int32_t frequency)
+	{
+		// Anything AHI can resample from; the preset picks the default (see MixingRateForPreset()), this is
+		// the user's override. Every block request carries its own frequency, so the blocks already queued
+		// play out at the old rate and the ones mixed from now on at the new - nothing in flight is affected.
+		if (frequency < 8000 || frequency > 48000) {
+			if (frequency != 0) {
+				LOGW("Cannot mix at {} Hz, keeping {} Hz", frequency, _outputFrequency);
+			}
+			return;
+		}
+		if (_outputFrequency != frequency) {
+			_outputFrequency = frequency;
+			LOGI("Mixing at {} Hz", _outputFrequency);
+		}
+	}
+
 	std::uint32_t AmigaAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
 		const std::uint32_t sourceId = AudioDeviceBase::registerPlayer(player);

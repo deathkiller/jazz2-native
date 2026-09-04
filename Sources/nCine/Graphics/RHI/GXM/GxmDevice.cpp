@@ -8,6 +8,7 @@
 
 #include "../../../../Main.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
@@ -221,7 +222,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	GxmDevice::DepthTestState GxmDevice::_depthTest;
 	GxmDevice::CullFaceState GxmDevice::_cullFace;
 	GxmDevice::ScissorState GxmDevice::_scissor;
-	Recti GxmDevice::_viewport(0, 0, GxmDevice::ScreenWidth, GxmDevice::ScreenHeight);
+	Recti GxmDevice::_viewport(0, 0, GxmDevice::ScreenWidth, GxmDevice::ScreenHeight);	// Until the first scene begins
 	Colorf GxmDevice::_clearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	GxmShaderProgram* GxmDevice::_currentProgram = nullptr;
@@ -252,6 +253,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	GxmMemory::Block GxmDevice::_screenBuffer;
 	SceGxmColorSurface GxmDevice::_screenSurface;
 	SceGxmTexture GxmDevice::_screenTexture;
+	std::int32_t GxmDevice::_screenWidth = GxmDevice::ScreenWidth;
+	std::int32_t GxmDevice::_screenHeight = GxmDevice::ScreenHeight;
+	std::int32_t GxmDevice::_screenStride = GxmDevice::ScreenWidth;
 	Recti GxmDevice::_stencilBandRect(0, 0, 0, 0);
 	std::uint8_t GxmDevice::_stencilBandRef = 0;
 	std::uint8_t GxmDevice::_stencilBandCounter = 0;
@@ -585,8 +589,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		if (_currentRenderTarget != nullptr &&
 			_currentRenderTarget->GetSceneTarget(renderTarget, colorSurface, syncObject, width, height)) {
 			// One depth/stencil surface is shared by every scene, and it is the panel's size - which every
-			// off-screen target of this pipeline fits inside (they are all derived from the smaller ScreenWidth;
-			// see CreateSwapchain()). A target that did not would have sceGxm store its depth and stencil tiles
+			// off-screen target of this pipeline fits inside (they are all derived from the screen surface,
+			// which is at most the panel; see CreateSwapchain()). A target that did not would have sceGxm store its depth and stencil tiles
 			// past the end of that buffer, silently, so rather than trust the invariant this drops the
 			// attachment: the pass then loses the exact stencil scissor (the region clip still culls by tile)
 			// instead of corrupting whatever follows the surface.
@@ -604,8 +608,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		renderTarget = _screenRenderTarget;
 		colorSurface = &_screenSurface;
 		syncObject = _screenSyncObject;
-		width = ScreenWidth;
-		height = ScreenHeight;
+		width = _screenWidth;
+		height = _screenHeight;
 	}
 
 	bool GxmDevice::EnsureScene()
@@ -1541,17 +1545,6 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return false;
 		}
 
-		// The frame is rendered smaller than the panel (see ScreenWidth), so the intermediate screen surface
-		// tiles differently and needs a render target of its own
-		renderTargetParams.width = ScreenWidth;
-		renderTargetParams.height = ScreenHeight;
-		result = sceGxmCreateRenderTarget(&renderTargetParams, &_screenRenderTarget);
-		if (result < 0) {
-			LOGE("sceGxmCreateRenderTarget({}x{}) failed with 0x{:.8x}", ScreenWidth, ScreenHeight, std::uint32_t(result));
-			DestroySwapchain();
-			return false;
-		}
-
 		// The display buffers the controller scans out of, with the sync object that keeps the GPU from
 		// overwriting one still on screen
 		const std::uint32_t displayBufferSize = std::uint32_t(DisplayStride) * std::uint32_t(DisplayHeight) * 4u;
@@ -1582,23 +1575,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		// The intermediate surface every screen-targeted draw lands in, kept bottom-up like OpenGL and
 		// flipped into a display buffer at present time - and stretched to the panel on the way, because it is
-		// rendered at ScreenWidth x ScreenHeight rather than at the panel's size
-		const std::uint32_t screenBufferSize = std::uint32_t(ScreenStride) * std::uint32_t(ScreenHeight) * 4u;
-		_screenBuffer = GxmMemory::AllocCdram("Jazz2:ScreenSurface", screenBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
-		if (!_screenBuffer.IsValid()) {
-			LOGE("Failed to allocate the intermediate screen surface");
-			DestroySwapchain();
-			return false;
-		}
-		std::memset(_screenBuffer.Base, 0, screenBufferSize);
-		result = sceGxmColorSurfaceInit(&_screenSurface, SCE_GXM_COLOR_FORMAT_U8U8U8U8_ABGR,
-			SCE_GXM_COLOR_SURFACE_LINEAR, SCE_GXM_COLOR_SURFACE_SCALE_NONE, SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT,
-			ScreenWidth, ScreenHeight, ScreenStride, _screenBuffer.Base);
-		if (result < 0) {
-			LOGE("sceGxmColorSurfaceInit(screen) failed with 0x{:.8x}", std::uint32_t(result));
-			DestroySwapchain();
-			return false;
-		}
+		// (usually) rendered smaller than the panel (see ScreenWidth). Its sync object outlives the surface
+		// itself, which ResizeScreenSurface() can recreate at another size later.
 		result = sceGxmSyncObjectCreate(&_screenSyncObject);
 		if (result < 0) {
 			LOGE("sceGxmSyncObjectCreate(screen) failed with 0x{:.8x}", std::uint32_t(result));
@@ -1606,24 +1584,11 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			DestroySwapchain();
 			return false;
 		}
-		result = sceGxmTextureInitLinear(&_screenTexture, _screenBuffer.Base, SCE_GXM_TEXTURE_FORMAT_U8U8U8U8_ABGR,
-			ScreenWidth, ScreenHeight, 0);
-		if (result < 0) {
-			LOGE("sceGxmTextureInitLinear(screen) failed with 0x{:.8x}", std::uint32_t(result));
+		ResolveScreenSize(width, height);
+		if (!CreateScreenSurface(width, height)) {
 			DestroySwapchain();
 			return false;
 		}
-		// Point sampling is right whenever the stretch is a whole number in both axes - every source texel then
-		// covers the same block of panel pixels, which is the crispest the pixel art can be presented (and at
-		// 1:1 it is a plain copy). A fractional stretch would instead double some rows and columns and not
-		// others, which is far more visible than the softness bilinear costs, so that case takes the filter.
-		constexpr bool integerUpscale = (DisplayWidth % ScreenWidth == 0 && DisplayHeight % ScreenHeight == 0);
-		constexpr SceGxmTextureFilter screenFilter = (integerUpscale
-			? SCE_GXM_TEXTURE_FILTER_POINT : SCE_GXM_TEXTURE_FILTER_LINEAR);
-		sceGxmTextureSetMinFilter(&_screenTexture, screenFilter);
-		sceGxmTextureSetMagFilter(&_screenTexture, screenFilter);
-		sceGxmTextureSetUAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
-		sceGxmTextureSetVAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
 
 		// What a sampler slot the material left unbound reads (see the loops in ApplyPipelineState()). sceGxm
 		// has no "unbind a texture" call, so a slot keeps whatever the previous draw put in it, and a shader
@@ -1771,7 +1736,123 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		_backBufferIndex = 0;
 		_frontBufferIndex = DisplayBufferCount - 1;
 		LOGI("sceGxm initialized ({}x{} rendered, {}x{} displayed, {} display buffers, {} KB of GPU memory reserved)",
-			ScreenWidth, ScreenHeight, DisplayWidth, DisplayHeight, DisplayBufferCount, GxmMemory::GetAllocatedBytes() / 1024);
+			_screenWidth, _screenHeight, DisplayWidth, DisplayHeight, DisplayBufferCount, GxmMemory::GetAllocatedBytes() / 1024);
+		return true;
+	}
+
+	void GxmDevice::ResolveScreenSize(std::int32_t& width, std::int32_t& height)
+	{
+		if (width <= 0 || height <= 0) {
+			width = ScreenWidth;
+			height = ScreenHeight;
+		}
+		// Never larger than the panel: the shared depth/stencil surface is the panel's size (see
+		// GetCurrentTarget()), and there is nothing a surface bigger than the display could show anyway
+		width = std::min(std::max(width, ScreenStrideAlignment), DisplayWidth);
+		height = std::min(std::max<std::int32_t>(height, 1), DisplayHeight);
+		// The stride is aligned separately (see CreateScreenSurface()); the width itself only has to fit in it
+	}
+
+	bool GxmDevice::CreateScreenSurface(std::int32_t width, std::int32_t height)
+	{
+		// The surface tiles differently from the panel, so it needs a render target of its own
+		SceGxmRenderTargetParams renderTargetParams = {};
+		renderTargetParams.flags = 0;
+		renderTargetParams.width = std::uint32_t(width);
+		renderTargetParams.height = std::uint32_t(height);
+		renderTargetParams.scenesPerFrame = 8;
+		renderTargetParams.multisampleMode = SCE_GXM_MULTISAMPLE_NONE;
+		renderTargetParams.multisampleLocations = 0;
+		renderTargetParams.driverMemBlock = GxmMemory::InvalidUid;
+		std::int32_t result = sceGxmCreateRenderTarget(&renderTargetParams, &_screenRenderTarget);
+		if (result < 0) {
+			LOGE("sceGxmCreateRenderTarget({}x{}) failed with 0x{:.8x}", width, height, std::uint32_t(result));
+			_screenRenderTarget = nullptr;
+			return false;
+		}
+
+		const std::int32_t stride = (width + ScreenStrideAlignment - 1) / ScreenStrideAlignment * ScreenStrideAlignment;
+		const std::uint32_t screenBufferSize = std::uint32_t(stride) * std::uint32_t(height) * 4u;
+		_screenBuffer = GxmMemory::AllocCdram("Jazz2:ScreenSurface", screenBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		if (!_screenBuffer.IsValid()) {
+			LOGE("Failed to allocate the {}x{} intermediate screen surface", width, height);
+			DestroyScreenSurface();
+			return false;
+		}
+		std::memset(_screenBuffer.Base, 0, screenBufferSize);
+		result = sceGxmColorSurfaceInit(&_screenSurface, SCE_GXM_COLOR_FORMAT_U8U8U8U8_ABGR,
+			SCE_GXM_COLOR_SURFACE_LINEAR, SCE_GXM_COLOR_SURFACE_SCALE_NONE, SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT,
+			std::uint32_t(width), std::uint32_t(height), std::uint32_t(stride), _screenBuffer.Base);
+		if (result < 0) {
+			LOGE("sceGxmColorSurfaceInit(screen) failed with 0x{:.8x}", std::uint32_t(result));
+			DestroyScreenSurface();
+			return false;
+		}
+		result = sceGxmTextureInitLinear(&_screenTexture, _screenBuffer.Base, SCE_GXM_TEXTURE_FORMAT_U8U8U8U8_ABGR,
+			std::uint32_t(width), std::uint32_t(height), 0);
+		if (result < 0) {
+			LOGE("sceGxmTextureInitLinear(screen) failed with 0x{:.8x}", std::uint32_t(result));
+			DestroyScreenSurface();
+			return false;
+		}
+		// Point sampling is right whenever the stretch is a whole number in both axes - every source texel then
+		// covers the same block of panel pixels, which is the crispest the pixel art can be presented (and at
+		// 1:1 it is a plain copy). A fractional stretch would instead double some rows and columns and not
+		// others, which is far more visible than the softness bilinear costs, so that case takes the filter.
+		const bool integerUpscale = (DisplayWidth % width == 0 && DisplayHeight % height == 0);
+		const SceGxmTextureFilter screenFilter = (integerUpscale
+			? SCE_GXM_TEXTURE_FILTER_POINT : SCE_GXM_TEXTURE_FILTER_LINEAR);
+		sceGxmTextureSetMinFilter(&_screenTexture, screenFilter);
+		sceGxmTextureSetMagFilter(&_screenTexture, screenFilter);
+		sceGxmTextureSetUAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
+		sceGxmTextureSetVAddrMode(&_screenTexture, SCE_GXM_TEXTURE_ADDR_CLAMP);
+
+		_screenWidth = width;
+		_screenHeight = height;
+		_screenStride = stride;
+		return true;
+	}
+
+	void GxmDevice::DestroyScreenSurface()
+	{
+		if (_screenRenderTarget != nullptr) {
+			sceGxmDestroyRenderTarget(_screenRenderTarget);
+			_screenRenderTarget = nullptr;
+		}
+		GxmMemory::Free(_screenBuffer);
+	}
+
+	bool GxmDevice::ResizeScreenSurface(std::int32_t width, std::int32_t height)
+	{
+		if (!_initialized || _context == nullptr) {
+			return false;
+		}
+
+		ResolveScreenSize(width, height);
+		if (width == _screenWidth && height == _screenHeight) {
+			return true;
+		}
+
+		// Nothing may still be reading or writing the surface: close whatever the frame was drawing into it and
+		// wait the GPU out. The display buffers are not involved - the display controller only ever scans out of
+		// those, and the last present blit that sampled the surface is finished with the rest.
+		_currentRenderTarget = nullptr;
+		FinishScene();
+		sceGxmFinish(_context);
+
+		const std::int32_t previousWidth = _screenWidth;
+		const std::int32_t previousHeight = _screenHeight;
+		DestroyScreenSurface();
+		if (!CreateScreenSurface(width, height)) {
+			// Most likely the CDRAM has no run big enough for the larger surface; the old size is known to fit
+			LOGW("Cannot resize the screen surface to {}x{}, keeping {}x{}", width, height, previousWidth, previousHeight);
+			if (!CreateScreenSurface(previousWidth, previousHeight)) {
+				LOGE("Cannot recreate the {}x{} screen surface either, nothing will be presented", previousWidth, previousHeight);
+			}
+			return false;
+		}
+
+		LOGI("Screen surface resized to {}x{} ({}x{} displayed)", _screenWidth, _screenHeight, DisplayWidth, DisplayHeight);
 		return true;
 	}
 
@@ -1832,10 +1913,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			_screenSyncObject = nullptr;
 		}
 
-		if (_screenRenderTarget != nullptr) {
-			sceGxmDestroyRenderTarget(_screenRenderTarget);
-			_screenRenderTarget = nullptr;
-		}
+		DestroyScreenSurface();
 		if (_displayRenderTarget != nullptr) {
 			sceGxmDestroyRenderTarget(_displayRenderTarget);
 			_displayRenderTarget = nullptr;
@@ -1845,7 +1923,6 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			_context = nullptr;
 		}
 
-		GxmMemory::Free(_screenBuffer);
 		GxmMemory::Free(_dummyTextureBuffer);
 		GxmMemory::Free(_depthBuffer);
 		GxmMemory::Free(_stencilBuffer);

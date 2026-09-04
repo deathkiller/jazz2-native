@@ -46,6 +46,7 @@ namespace nCine::Backends
 
 		void setWindowPosition(int x, int y) override;
 		void setWindowSize(int width, int height) override;
+		void setDrawableSize(int width, int height) override;
 
 		void setWindowTitle(StringView windowTitle) override;
 		void setWindowIcon(StringView windowIconFilename) override;

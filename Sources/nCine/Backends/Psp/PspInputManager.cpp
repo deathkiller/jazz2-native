@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include <pspctrl.h>
+#include <psputility.h>
 
 namespace nCine
 {
@@ -224,6 +225,19 @@ namespace nCine::Backends
 		SceCtrlData pad;
 		if (sceCtrlPeekBufferPositive(&pad, 1) < 1) {
 			return;
+		}
+
+		// The firmware's on-screen keyboard (see MainApplication::ShowScreenKeyboard) reads the pad itself but
+		// does not take it away from the application, so while it is up every button it is being driven with
+		// would also reach the game - Cross to confirm a key would fire the menu item behind it. The pad
+		// reads as idle for as long as the dialog exists, its final state included, so the press that closes
+		// it does not land in the game either. Matched against the dialog states rather than "not none": with
+		// no keyboard ever started the status call returns an error code, which is not "none" either.
+		const std::int32_t oskStatus = sceUtilityOskGetStatus();
+		if (oskStatus >= PSP_UTILITY_DIALOG_INIT && oskStatus <= PSP_UTILITY_DIALOG_FINISHED) {
+			pad.Buttons = 0;
+			pad.Lx = 128;
+			pad.Ly = 128;
 		}
 
 		if (!_connected) {

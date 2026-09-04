@@ -209,7 +209,7 @@ namespace Jazz2::UI::Menu
 		_skipSecondItem = !_isPlayable && canGrantPermission && !permissionGranted;
 
 		std::int32_t itemCount = (std::int32_t)_items.size();
-		float baseReduction = (canvas->ViewSize.Y >= 300 ? 10.0f : 24.0f);
+		float baseReduction = MenuLayout::Blend(24.0f, 10.0f, canvas->ViewSize);
 
 		if (!_isPlayable) {
 			itemCount += 2;

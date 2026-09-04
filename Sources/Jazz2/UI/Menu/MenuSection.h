@@ -32,6 +32,14 @@ namespace Jazz2::UI::Menu
 		virtual void OnShow(IMenuContainer* root);
 		/** @brief Called when the section is hidden */
 		virtual void OnHide();
+		/**
+		 * @brief Called when the view size changed (the rendering resolution) while the section is in the stack
+		 *
+		 * The content bounds and everything laid out at draw time follow the view on their own; this is for
+		 * what a section decided when it was built. Reached for every section in the stack, the hidden ones
+		 * included (whose own root is unset while hidden, hence the parameter), and the stack itself is kept.
+		 */
+		virtual void OnLayoutChanged(IMenuContainer* root) {}
 
 		/** @brief Called when the section should be updated */
 		virtual void OnUpdate(float timeMult) = 0;

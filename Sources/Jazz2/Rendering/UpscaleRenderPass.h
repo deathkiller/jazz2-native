@@ -48,6 +48,18 @@ namespace Jazz2::Rendering
 		/** @brief Registers the render pass into the viewport chain */
 		virtual void Register();
 
+		/**
+		 * @brief Returns the logical view size for a target (drawable) of the given size
+		 *
+		 * The default size is the upper bound of the view - a smaller target gets a view of its own size, a
+		 * larger one is aspect-fitted into the bound. The bound is scaled by
+		 * @ref PreferencesCache::RenderingResolutionPercent, which is what makes the preference the most
+		 * the scene (and everything drawn in the same coordinate space) is rendered at. Every handler that
+		 * owns an upscale pass lays itself out through this, so the menu's view is the same size the level's
+		 * will be, and the lighting buffer (a fraction of the viewport, see @ref PlayerViewport) follows it.
+		 */
+		static Vector2i CalculateViewSize(std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t defaultWidth, std::int32_t defaultHeight);
+
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 		/** @brief Returns the input scene node */

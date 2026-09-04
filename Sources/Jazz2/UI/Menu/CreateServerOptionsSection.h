@@ -42,6 +42,10 @@ namespace Jazz2::UI::Menu
 		enum class Item {
 			Character,
 			GameMode,
+#if defined(DEATH_TARGET_PSP)
+			// Wi-Fi or ad hoc (local wireless), which only this console offers
+			Connection,
+#endif
 			Start,
 
 			Count
@@ -72,6 +76,9 @@ namespace Jazz2::UI::Menu
 		float _transitionTime;
 		bool _privateServer;
 		bool _shouldStart;
+#if defined(DEATH_TARGET_PSP)
+		bool _adhocMode;
+#endif
 
 		void ExecuteSelected();
 		void OnAfterTransition();

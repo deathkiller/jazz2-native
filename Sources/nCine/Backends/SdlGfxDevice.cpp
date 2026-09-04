@@ -4,6 +4,9 @@
 #include "../Graphics/ITextureLoader.h"
 
 #include "../Graphics/RHI/Rhi.h"
+#if defined(WITH_RHI_GXM)
+#	include "../Application.h"	// setDrawableSize() re-lays the application out for the resized frame surface
+#endif
 
 #if defined(WITH_RHI_D3D11) && defined(WITH_SDL2)
 // SDL2 only: the native HWND the DXGI swap chain is created for is obtained through SDL_syswm.h.
@@ -176,10 +179,11 @@ namespace nCine::Backends
 #if defined(WITH_RHI_GXM)
 		// The sceGxm backend renders the frame into an intermediate surface of its own and stretches that onto
 		// the panel at present time, so the drawable size is the surface's - smaller than the panel, and nothing
-		// SDL knows about (see GxmDevice::ScreenWidth)
+		// SDL knows about (see GxmDevice::ScreenWidth). Before the session is up this is the default size the
+		// surface is then created with; afterwards it is whatever setDrawableSize() last made it.
 		static_cast<void>(windowHandle);
-		width = RHI::Device::ScreenWidth;
-		height = RHI::Device::ScreenHeight;
+		width = RHI::Device::GetScreenWidth();
+		height = RHI::Device::GetScreenHeight();
 #elif defined(DEATH_TARGET_VITA)
 		// vitaGL owns the framebuffer and renders to the fixed panel; SDL's idea of the window size can be
 		// skewed by HighDPI scaling, and a frame sized after it lands in a corner of the screen
@@ -384,6 +388,24 @@ namespace nCine::Backends
 			resizeSoftwareTarget(_drawableWidth, _drawableHeight);
 #	endif
 		}
+#endif
+	}
+
+	void SdlGfxDevice::setDrawableSize(int width, int height)
+	{
+#if defined(WITH_RHI_GXM)
+		// The only backend here with a drawable of its own: the frame surface is recreated at the new size
+		// (clamped to the panel), and the application lays its viewports out again for it exactly as it does
+		// for a resized window - the swap chain itself (the panel) is untouched, so ResizeSwapchain() has
+		// nothing to do
+		if (RHI::Device::ResizeScreenSurface(width, height)) {
+			_drawableWidth = RHI::Device::GetScreenWidth();
+			_drawableHeight = RHI::Device::GetScreenHeight();
+			theApplication().ResizeScreenViewport(_drawableWidth, _drawableHeight);
+		}
+#else
+		static_cast<void>(width);
+		static_cast<void>(height);
 #endif
 	}
 

@@ -131,7 +131,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, prepare the content in advance as described in [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-psp) to skip the conversion
 * Run the newly installed application
 
-*The game runs in the native 480×272 and reads its content from `ms0:/PSP/GAME/Jazz2/Content/`. Threads are unavailable on this console, so local splitscreen is not available either. Module music plays through _libxmp_ rather than _libopenmpt_, which is too heavy for this CPU – the four `.mo3` tracks are silent, everything else plays. The port has not been tested on real hardware yet.*
+*The game runs in the native 480×272 and reads its content from `ms0:/PSP/GAME/Jazz2/Content/`. Module music plays through _libxmp_ rather than _libopenmpt_, which is too heavy for this CPU – the four `.mo3` tracks are silent, everything else plays – and everything is mixed at 22 kHz by default, which can be lowered to 11 kHz with the *Sample Rate* option in Options > Sounds. Online multiplayer, the public server list and text entry through the console's on-screen keyboard work; the network connection is joined on the first use of the network. Besides Wi-Fi, the game also plays over the console's **ad hoc** (local wireless) mode between PSPs in reach – pick *Ad hoc* in the *Connection* row when creating a server, and switch the *Connect To Server* list to ad hoc with Left/Right to find it. The port has been tested under *Adrenaline* on a PlayStation Vita, not on a PlayStation Portable itself yet.*
 
 ### PlayStation 2
 * As on the Dreamcast, the game plays from a disc that has to carry the converted game content, so the `jazz2.iso` image can't be distributed either and has to be built first – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-ps2)
@@ -156,7 +156,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 * Copy contents of original *Jazz Jackrabbit 2* directory to `ux0:/data/jazz2/Source/`
 * Run the newly installed application
 
-*The `Content` directory is included directly in the VPK file, no action is needed. Cache is recreated in `ux0:/data/jazz2/Cache/` during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up. The port has not been tested on real hardware yet. See [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-vita) for details.*
+*The `Content` directory is included directly in the VPK file, no action is needed. Cache is recreated in `ux0:/data/jazz2/Cache/` during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up. The frame is rendered at half of the panel's resolution by default, which keeps the pixel art crisp and the frame rate up – the *Rendering Resolution* option in Options > Graphics offers 60% and 75% as well. See [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-vita) for details.*
 
 ### Amiga
 * Download the game for the particular system – **AmigaOS 3.x**, **AmigaOS 4.1** or **MorphOS**

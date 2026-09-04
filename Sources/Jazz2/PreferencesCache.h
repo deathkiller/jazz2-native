@@ -72,6 +72,21 @@ namespace Jazz2
 	};
 
 	/**
+		@brief Particle quality
+
+		Scales the debris and weather particle effects (see @ref Tiles::TileMap::CreateDebris() and its
+		siblings): @ref Off emits none of them, @ref Low emits about half of every burst, @ref High is the
+		unrestricted effect. @ref Ultra is reserved for a future quality tier above it and is not offered by
+		the menu yet - a configuration carrying it behaves as @ref High.
+	*/
+	enum class ParticleQuality : std::uint8_t {
+		Off,						/**< No particles */
+		Low,						/**< About half of the particles */
+		High,						/**< All particles (default) */
+		Ultra						/**< Reserved, behaves as @ref High for now */
+	};
+
+	/**
 		@brief Gamepad button labels
 		
 		Selects which controller family's glyphs and button names are shown in the user interface, so
@@ -289,8 +304,19 @@ namespace Jazz2
 		static bool BackgroundDithering;
 		/** @brief Whether blur effects are allowed */
 		static bool BlurEffects;
-		/** @brief Lighting resolution percent */
+		/** @brief Lighting resolution percent (of the rendering resolution) */
 		static std::uint8_t LightingResolutionPercent;
+		/**
+		 * @brief Rendering resolution percent
+		 *
+		 * The most the scene is rendered at, as a fraction of the default view size (see
+		 * @ref Rendering::UpscaleRenderPass::CalculateViewSize()); a display smaller than that keeps getting a
+		 * view of its own size. On PS Vita it sizes the frame surface itself instead, see
+		 * @ref ApplyRenderingResolution().
+		 */
+		static std::uint8_t RenderingResolutionPercent;
+		/** @brief Particle quality */
+		static ParticleQuality Particles;
 
 		// Gameplay
 		/** @brief Whether reforged gameplay is enabled */
@@ -339,6 +365,13 @@ namespace Jazz2
 		static float SfxVolume;
 		/** @brief Music volume */
 		static float MusicVolume;
+		/**
+		 * @brief Sample rate the audio device mixes at in Hz, or `0` to keep the platform's default
+		 *
+		 * Honoured only by the software-mixing backends whose cost is linear in this rate (the PSP and the
+		 * Amiga, see @ref IAudioDevice::setMixingFrequency()); every other backend ignores it.
+		 */
+		static std::int32_t AudioSampleRate;
 
 		// Controls
 		/** @brief Whether toggle Run action is enabled */
@@ -388,6 +421,14 @@ namespace Jazz2
 		static void Save();
 		/** @brief Returns directory path of the preferences file */
 		static StringView GetDirectory();
+		/**
+		 * @brief Applies @ref RenderingResolutionPercent to the graphics device
+		 *
+		 * A no-op everywhere but on the PS Vita's native backend, where the whole frame is rendered into a surface smaller than
+		 * the panel and stretched at present time (see @ref IGfxDevice::setDrawableSize()): the preference
+		 * sizes that surface, and the logical view then follows the drawable size as on any other display.
+		 */
+		static void ApplyRenderingResolution();
 
 		/** @brief Returns device ID of the device currently running this application */
 		static String GetDeviceID();
@@ -448,7 +489,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 15;
+		static constexpr std::uint8_t FileVersion = 16;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

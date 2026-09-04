@@ -29,6 +29,13 @@ namespace nCine
 		kernel semaphore, held for microseconds by the game and for the length of one block's mix (well under
 		a millisecond) by the mixer. A kernel semaphore rather than a spin lock, because the mixer thread has
 		the higher priority - spinning on a lock the main thread holds would never let it be released.
+
+		The hardware plays 44100 Hz and nothing else, but the sources are mixed at a lower rate - 22050 Hz by
+		default, the user's "Sample Rate" option otherwise (see @ref setMixingFrequency()) - and the block is
+		upsampled to the hardware's rate afterwards with a linear interpolation. The per-source loop, which is
+		where the mixer's time goes, then runs half or a quarter as often, for content that is 11-22 kHz
+		samples to begin with; the interpolation is one multiply-add per output sample, whatever the number of
+		sources. @ref nativeFrequency() reports the mixing rate, so the module decoder renders at it too.
 	*/
 	class PspAudioDevice : public AudioDeviceBase
 	{
@@ -42,6 +49,7 @@ namespace nCine
 		void setGain(float gain) override;
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 		std::int32_t nativeFrequency() override;
+		void setMixingFrequency(std::int32_t frequency) override;
 
 		std::uint32_t registerPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
@@ -76,6 +84,8 @@ namespace nCine
 		static constexpr std::int32_t ChannelCount = 2;
 		/** @brief The hardware's native rate; `sceAudioChReserve()` channels play nothing else */
 		static constexpr std::int32_t OutputFrequency = 44100;
+		/** @brief Rate the sources are mixed at unless @ref setMixingFrequency() says otherwise (see the class documentation) */
+		static constexpr std::int32_t DefaultMixingFrequency = 22050;
 		/**
 			@brief Frames per hardware block (a multiple of 64, as `sceAudioChReserve()` requires) - 23 ms
 
@@ -123,6 +133,11 @@ namespace nCine
 		/** @brief Two hardware blocks: one plays while the other is mixed */
 		std::int16_t* _blocks;
 		std::int32_t* _mixBuffer;
+		/** @brief Rate the sources are mixed at; always divides @ref OutputFrequency (44100, 22050 or 11025) */
+		std::int32_t _mixFrequency;
+		/** @brief Last mixed frame of the previous block, the interpolation of the next block's first frames starts from it */
+		std::int32_t _lastMixedLeft;
+		std::int32_t _lastMixedRight;
 		Buffer* _buffers;
 		std::int32_t _bufferCount;
 		std::int32_t _bufferCapacity;

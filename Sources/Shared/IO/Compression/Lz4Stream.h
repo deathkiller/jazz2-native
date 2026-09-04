@@ -63,7 +63,12 @@ namespace Death { namespace IO { namespace Compression {
 			Failed
 		};
 
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+		// Only a buffer size, not a frame format constant, so it can differ per platform
+		static constexpr std::int32_t ChunkSize = 8192;
+#else
 		static constexpr std::int32_t ChunkSize = 16384;
+#endif
 
 		Stream* _inputStream;
 		LZ4F_dctx* _ctx;
@@ -115,7 +120,12 @@ namespace Death { namespace IO { namespace Compression {
 			Failed
 		};
 
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+		// Only a buffer size, not a frame format constant, so it can differ per platform
+		static constexpr std::int32_t ChunkSize = 8192;
+#else
 		static constexpr std::int32_t ChunkSize = 16384;
+#endif
 
 		Stream* _outputStream;
 		LZ4F_cctx* _ctx;
