@@ -55,14 +55,16 @@ namespace nCine::Backends
 		/**
 			@brief Switches the WLAN to ad hoc mode
 
-			Ad hoc and infrastructure are exclusive on this console, so any access point association is dropped
-			first (and @ref EnsureConnected() joins one again once @ref AdhocEnd() has run). Loads the ad hoc
-			module and brings `sceNetAdhoc` and `sceNetAdhocctl` up; a no-op when already in ad hoc mode.
+			Ad hoc and infrastructure are exclusive on this console, down to their firmware modules, so the whole
+			infrastructure half of the stack is torn down first - its module is unloaded and its memory given
+			back, which the ad hoc module needs to load at all. Loads the ad hoc module and brings `sceNetAdhoc`
+			and `sceNetAdhocctl` up; a no-op when already in ad hoc mode, and infrastructure mode is restored
+			again by @ref AdhocEnd() or by any failure here.
 
 			@returns `false` if the WLAN switch is off or the ad hoc stack cannot be brought up
 		*/
 		static bool AdhocBegin();
-		/** @brief Leaves any group and tears the ad hoc stack down again, so infrastructure mode can be used */
+		/** @brief Leaves any group, tears the ad hoc stack down again and brings infrastructure mode back up */
 		static void AdhocEnd();
 		/** @brief Whether the WLAN is in ad hoc mode (see @ref AdhocBegin()) */
 		static bool IsAdhocActive();
