@@ -64,52 +64,61 @@ namespace nCine::RHI::GXM
 		// The shipped pack first, the writable one over it: an entry the console recompiled (because the
 		// shipped pack was built before the last shader change) wins over the shipped one under the same key,
 		// and a key only the shipped pack has stays available
-		LoadPack(fs::CombinePath(PrebakedPath, FileName), false);
-		LoadPack(fs::CombinePath(_writablePath, FileName), true);
+		std::int32_t shippedCount = LoadPack(fs::CombinePath(PrebakedPath, FileName), false);
+		std::int32_t writableCount = LoadPack(fs::CombinePath(_writablePath, FileName), true);
 
 		if (!_entries.empty()) {
 			LOGI("Loaded {} cached GXP shader binaries", _entries.size());
 		}
+
+		// The writable pack is what the next run should be served from on its own, without the shipped one
+		// being consulted - so when it lacks entries only the shipped pack has (a first run, or a shipped pack
+		// newer than the one written back), this run writes it. Flush() only runs when something changed, and
+		// a run served entirely from the packs changes nothing, hence the explicit mark. Not done when the
+		// writable pack already holds everything: a cache that rewrites itself on every start is no cache.
+		if (shippedCount > 0 && std::int32_t(_entries.size()) > writableCount) {
+			_dirty = true;
+		}
 	}
 
-	bool GxmShaderCache::LoadPack(StringView path, bool writable)
+	std::int32_t GxmShaderCache::LoadPack(StringView path, bool writable)
 	{
 		std::unique_ptr<Stream> s = fs::Open(path, FileAccess::Read);
 		if (s == nullptr || !s->IsValid()) {
 			// Not having a pack is the normal first-run state, so only a pack that IS there and is unusable
 			// is worth a line in the log
-			return false;
+			return 0;
 		}
 
 		const std::int64_t fileSize = s->GetSize();
 		if (fileSize <= HeaderSize || fileSize > MaxPackSize) {
 			LOGW("Ignoring GXP shader cache \"{}\": implausible size ({} bytes)", path, fileSize);
-			return false;
+			return 0;
 		}
 
 		std::uint8_t signature[sizeof(Signature)];
 		if (s->Read(signature, sizeof(signature)) != std::int64_t(sizeof(signature)) ||
 			std::memcmp(signature, Signature, sizeof(Signature)) != 0) {
 			LOGW("Ignoring GXP shader cache \"{}\": not a shader cache", path);
-			return false;
+			return 0;
 		}
 
 		const std::uint16_t fileVersion = s->ReadValueAsLE<std::uint16_t>();
 		if (fileVersion != FileVersion) {
 			LOGI("Discarding GXP shader cache \"{}\": format {}, expected {}", path, fileVersion, FileVersion);
-			return false;
+			return 0;
 		}
 
 		const std::uint32_t fileFingerprint = s->ReadValueAsLE<std::uint32_t>();
 		if (fileFingerprint != _compilerFingerprint) {
 			LOGI("Discarding GXP shader cache \"{}\": built by a different Cg compiler", path);
-			return false;
+			return 0;
 		}
 
 		const std::uint32_t entryCount = s->ReadValueAsLE<std::uint32_t>();
 		if (entryCount > MaxEntryCount) {
 			LOGW("Ignoring GXP shader cache \"{}\": {} entries is not plausible", path, entryCount);
-			return false;
+			return 0;
 		}
 
 		DeflateStream ds(*s);
@@ -140,14 +149,7 @@ namespace nCine::RHI::GXM
 			loaded++;
 		}
 
-		if (!writable && loaded > 0) {
-			// Nothing has written the shipped pack's entries into the writable one yet, and Flush() only runs
-			// when something changed - so a first run served entirely by the shipped pack would leave no
-			// writable pack behind. Marking it dirty makes that run write one, which is also what lets the
-			// next run start without the content pack being consulted at all.
-			_dirty = true;
-		}
-		return loaded > 0;
+		return std::int32_t(loaded);
 	}
 
 	GxmShaderCache::Entry* GxmShaderCache::Find(std::uint64_t key)

@@ -244,7 +244,7 @@ namespace
 			"  --spirv-check [--glslang <path>] <input.shader ...> Emit + glslang-compile each stage to SPIR-V; print a pass/fail table\n"
 			"  --emit-cg <output.h> <input.shader ...>            Transform every stage to Cg into the PS Vita aggregate header\n"
 			"  --emit-rsx <output.h> [--cgcomp <path>] <input.shader ...>  Compile every stage to RSX microcode (PlayStation 3)\n"
-			"  --emit-fixed-function <pvr|gx|gu|gs|rdp|legacygl> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
+			"  --emit-fixed-function <pvr|gx|pica|gu|gs|rdp|legacygl> <output.h> <input.shader ...> Transpile fixed_function blocks into a per-backend aggregate header\n");
 	}
 
 	int ReportError(const char* inputPath, const Diagnostic& diag)
@@ -1434,7 +1434,7 @@ namespace
 		return String{path.exceptPrefix(begin)};
 	}
 
-	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" / "RdpGeneratedEffects.h" / "LegacyGlGeneratedEffects.h" contents from the transpiled effects */
+	/** Builds the aggregate "PvrGeneratedEffects.h" / "GxGeneratedEffects.h" / "GuGeneratedEffects.h" / "GsGeneratedEffects.h" / "RdpGeneratedEffects.h" / "LegacyGlGeneratedEffects.h" / "PicaGeneratedEffects.h" contents from the transpiled effects */
 	String BuildFixedFunctionHeader(FixedFunctionBackend backend, const SmallVectorImpl<GeneratedEffectEntry>& entries,
 		const SmallVectorImpl<GeneratedEffectFunction>& functions)
 	{
@@ -1442,14 +1442,17 @@ namespace
 		// after the RENDERING BACKEND rather than after the console it runs on, so the block target, the
 		// mode argument and the engine-side namespace always agree: "pvr" is the Dreamcast's chip, "gx"
 		// the Wii/GameCube one, "gu" the sceGu library that drives the PSP's Graphics Engine, "gs"
-		// the PlayStation 2's Graphics Synthesizer, and "rdp" the Nintendo 64's Reality Display
-		// Processor.
+		// the PlayStation 2's Graphics Synthesizer, "rdp" the Nintendo 64's Reality Display
+		// Processor, and "pica" the Nintendo 3DS's PICA200.
 		const char* backendArg;
 		const char* guard;
 		const char* ns;
 		switch (backend) {
 			case FixedFunctionBackend::Gx:
 				backendArg = "gx"; guard = "WITH_RHI_GX"; ns = "nCine::RHI::GX";
+				break;
+			case FixedFunctionBackend::Pica:
+				backendArg = "pica"; guard = "WITH_RHI_PICA"; ns = "nCine::RHI::PICA";
 				break;
 			case FixedFunctionBackend::Gu:
 				backendArg = "gu"; guard = "WITH_RHI_GU"; ns = "nCine::RHI::GU";
@@ -1580,8 +1583,11 @@ namespace
 		} else if (StringView(backendName) == "legacygl") {
 			backend = FixedFunctionBackend::LegacyGl;
 			overrideTarget = FixedFunctionTarget::LegacyGl;
+		} else if (StringView(backendName) == "pica") {
+			backend = FixedFunctionBackend::Pica;
+			overrideTarget = FixedFunctionTarget::Pica;
 		} else {
-			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, gu, gs, rdp or legacygl)\n", backendName);
+			std::fprintf(stderr, "error: unknown fixed-function backend \"%s\" (expected pvr, gx, pica, gu, gs, rdp or legacygl)\n", backendName);
 			return 2;
 		}
 
@@ -2555,8 +2561,9 @@ namespace
 		}
 
 		const struct { const char* Backend; const char* FileName; } fixedFunctionTargets[] = {
-			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "gu", "GuGeneratedEffects.h" },
-			{ "gs", "GsGeneratedEffects.h" }, { "rdp", "RdpGeneratedEffects.h" }, { "legacygl", "LegacyGlGeneratedEffects.h" }
+			{ "pvr", "PvrGeneratedEffects.h" }, { "gx", "GxGeneratedEffects.h" }, { "pica", "PicaGeneratedEffects.h" },
+			{ "gu", "GuGeneratedEffects.h" }, { "gs", "GsGeneratedEffects.h" }, { "rdp", "RdpGeneratedEffects.h" },
+			{ "legacygl", "LegacyGlGeneratedEffects.h" }
 		};
 		for (const auto& target : fixedFunctionTargets) {
 			String path = fs::CombinePath(outputDirectory, target.FileName);

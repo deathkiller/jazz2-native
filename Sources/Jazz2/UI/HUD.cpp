@@ -1512,7 +1512,7 @@ namespace Jazz2::UI
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 
-#if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_PSP)
+#if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP)
 				// The half-pixel copies thicken the shadow between the whole-pixel ones under GL's line
 				// rasterization, which snaps them to neighbouring pixel columns. The Dreamcast draws
 				// lines as exact-coverage quads instead, where these four land almost entirely on the

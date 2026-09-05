@@ -246,8 +246,8 @@ namespace nCine::RHI::RDP
 			}
 		}
 
-		// CombineWithWater - from CombineWithWater.shader:fixed_function(pvr, gx, gu, gs, rdp, legacygl)
-		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(pvr, gx, gu, gs, rdp, legacygl)]
+		// CombineWithWater - from CombineWithWater.shader:fixed_function(pvr, gx, pica, gu, gs, rdp, legacygl)
+		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(pvr, gx, pica, gu, gs, rdp, legacygl)]
 		void CombineWithWater_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -297,7 +297,7 @@ namespace nCine::RHI::RDP
 			ctx.SubmitQuad(p);
 		}
 
-		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, gu, gs, rdp, legacygl)
+		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, pica, gu, gs, rdp, legacygl)
 		// Shared by: FrozenMask, FrozenMask (USE_PALETTE), BatchedFrozenMask, BatchedFrozenMask (USE_PALETTE)
 		void FrozenMask_Effect(EffectContext& ctx)
 		{
@@ -459,7 +459,7 @@ namespace nCine::RHI::RDP
 			}
 		}
 
-		// Transition - from Transition.shader:fixed_function(gx, gu, gs, rdp, legacygl)
+		// Transition - from Transition.shader:fixed_function(gx, pica, gu, gs, rdp, legacygl)
 		void Transition_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

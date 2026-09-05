@@ -133,7 +133,7 @@ namespace Jazz2::UI
 		// to be decoded, and decoding is nearly the whole cost (applying the palette and uploading the
 		// texture is a few percent on top).
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS)
 		// On a machine that decodes slower than the video's frame rate, catching up buys nothing: it hides
 		// all but the last of the decoded frames while making the stall worse. At most one frame is decoded
 		// per rendered frame, every frame is shown, and the picture may fall behind the music.
@@ -300,7 +300,7 @@ namespace Jazz2::UI
 			widthLimit = heightLimit = (std::uint32_t)maxTextureSize;
 		}
 #if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
 		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		const Vector2i drawableSize = theApplication().GetResolution();
 		if (drawableSize.X > 0 && drawableSize.Y > 0) {

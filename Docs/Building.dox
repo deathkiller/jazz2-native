@@ -154,7 +154,7 @@ See @ref building-config-params-uwp for more details.
 
 @subsection building-consoles Building for consoles
 
-Nine consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
+Ten consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
 The build is configured the same way as above, but every one of them also needs its toolchain
 installed, its own packaging step and, on most of them, a game content tree prepared in advance
 with @ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
@@ -165,6 +165,7 @@ Nintendo 64 | libdragon | @ref consoles-n64
 Sega Dreamcast | KallistiOS | @ref consoles-dreamcast
 Nintendo Wii | devkitPPC + libogc | @ref consoles-wii
 Nintendo GameCube | devkitPPC + libogc | @ref consoles-gamecube
+Nintendo 3DS | devkitARM + libctru + citro3d | @ref consoles-3ds
 Nintendo Switch | devkitA64 | @ref consoles-switch
 PlayStation Portable | pspdev | @ref consoles-psp
 PlayStation 2 | ps2dev | @ref consoles-ps2

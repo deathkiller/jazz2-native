@@ -22,7 +22,9 @@ namespace Jazz2::Input
 		// declares "lefttrigger:a4" / "righttrigger:a5" for axes nothing on the console drives (see
 		// JoyMappingDb.h). Binding them is what left both actions on their face button only. Named here so
 		// the first player below and the loop over the others stay one description of the same layout.
-#if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+#if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+		// The 3DS is the same shape again: L and R are the only shoulder buttons every model has (ZL/ZR exist on
+		// the New 3DS alone, and its backend reports them as the trigger axes), so the bumpers carry the actions
 		constexpr ButtonName FireShoulder = ButtonName::RightBumper;
 		constexpr ButtonName RunShoulder = ButtonName::LeftBumper;
 #else

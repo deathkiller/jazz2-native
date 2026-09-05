@@ -18,7 +18,7 @@
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <winhttp.h>
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 #	include <thread>
 #	include <unordered_map>
 #	include <unistd.h>
@@ -1260,7 +1260,7 @@ namespace Death { namespace IO {
 	};
 
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL;
 	class WebRequestCURL;
@@ -1502,7 +1502,7 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 			result = std::make_unique<WebSessionFactoryWinHTTP>();
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 			result = std::make_unique<WebSessionFactoryCURL>();
 #else
 #	pragma message("Unsupported platform for Death::IO::WebRequest")
@@ -2536,7 +2536,7 @@ namespace Death { namespace IO {
 	}
 
 #elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || \
-		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL : public WebAuthChallengeImpl
 	{

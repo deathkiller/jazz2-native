@@ -18,7 +18,7 @@
 #	include <fcntl.h>
 #	include <sys/stat.h>
 #	include <unistd.h>
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 #		include <sys/file.h>	// For flock()
 #	endif
 #endif
@@ -394,6 +394,10 @@ namespace Death { namespace IO {
 		// libdragon's newlib advertises _POSIX_SYNCHRONIZED_IO but implements neither fdatasync() nor
 		// fsync() - there is nothing to synchronize anyway, the one writable target commits on close
 		return result;
+#elif defined(DEATH_TARGET_3DS)
+		// devkitARM's newlib advertises _POSIX_SYNCHRONIZED_IO as well, but libctru's SD card driver only
+		// implements fsync() (fdatasync() has nothing behind it)
+		return (::fsync(_fileDescriptor) == 0 && result);
 #elif defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 		return (::fdatasync(_fileDescriptor) == 0 && result);
 #elif defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_MORPHOS)
@@ -648,8 +652,8 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && \
-		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
-		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
+		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file

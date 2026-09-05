@@ -3,6 +3,7 @@
 #include "GxmBufferObject.h"
 #include "GxmDevice.h"
 #include "GxmShaderCache.h"
+#include "../../RenderResources.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -125,6 +126,9 @@ namespace nCine::RHI::GXM
 
 	GxmShaderProgram::~GxmShaderProgram()
 	{
+		// The pipeline keys per-shader camera uniform data on the program pointer; drop this program's
+		// entry so RenderResources::Dispose() finds the map empty (mirrors GLShaderProgram's destructor)
+		RenderResources::RemoveCameraUniformData(this);
 		GxmDevice::OnProgramDestroyed(this);
 		ReleaseGpu();
 	}

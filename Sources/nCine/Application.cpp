@@ -81,21 +81,27 @@ extern "C"
 #	include "Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
-#elif defined(DEATH_TARGET_VITA)
-#	include <psp2/kernel/openpsid.h>
-#elif defined(DEATH_TARGET_PSP)
-#	include <pspwlan.h>
+#elif defined(DEATH_TARGET_DREAMCAST)
+#	include <dc/syscalls.h>
 #elif defined(DEATH_TARGET_WII)
 #	include <ogc/conf.h>
 #	include <ogc/es.h>
-#elif defined(DEATH_TARGET_DREAMCAST)
-#	include <dc/syscalls.h>
+#elif defined(DEATH_TARGET_3DS)
+#	include <3ds.h>
+#	include "Backends/Ctr/CtrPlatform.h"
 #elif defined(DEATH_TARGET_PS2)
 extern "C" {
 #	include <libcdvd.h>
 }
 #elif defined(DEATH_TARGET_PS3)
 #	include <ppu-lv2.h>
+#elif defined(DEATH_TARGET_PSP)
+#	include <pspwlan.h>
+#	if defined(WITH_CURL)
+#		include "Backends/Psp/PspNetwork.h"
+#	endif
+#elif defined(DEATH_TARGET_VITA)
+#	include <psp2/kernel/openpsid.h>
 #elif !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_N64)
 #	include <unistd.h>
 #endif
@@ -117,6 +123,8 @@ extern "C" {
 #		include "Audio/Backends/SDL/SdlAudioDevice.h"
 #	elif defined(WITH_PSPAUDIO)
 #		include "Audio/Backends/Psp/PspAudioDevice.h"
+#	elif defined(WITH_NDSP)
+#		include "Audio/Backends/Ndsp/NdspAudioDevice.h"
 #	endif
 #endif
 
@@ -1037,6 +1045,8 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<SdlAudioDevice>());
 #	elif defined(WITH_PSPAUDIO)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<PspAudioDevice>());
+#	elif defined(WITH_NDSP)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<NdspAudioDevice>());
 #	endif
 		}
 #endif
@@ -1371,6 +1381,13 @@ namespace nCine
 
 		theServiceLocator().UnregisterAll();
 
+#if defined(DEATH_TARGET_PSP) && defined(WITH_CURL)
+		// Before the trace goes: taking the firmware's network stack down is a sequence of calls the PS Vita's
+		// PSP emulator has killed the process in before, and a teardown that runs after the log is closed
+		// cannot say which one it was
+		Backends::PspNetwork::Shutdown();
+#endif
+
 #if defined(DEATH_TRACE)
 		ShutdownTrace();
 #endif
@@ -1506,7 +1523,13 @@ namespace nCine
 		if (__geckoAlive) {
 			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);
 		}
-#elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_MORPHOS)
+#elif defined(DEATH_TARGET_3DS)
+		// svcOutputDebugString is the kernel's debug channel: Azahar (and Citra before it) print it into their
+		// log under "Debug.Emulated" (which their default filter hides - see Docs/Consoles.dox), a debugger
+		// attached to the console shows it, and it costs nothing when nobody listens. Until the renderer owns
+		// the display the message also goes to the boot console on the bottom screen, so a startup failure is
+		// readable without any host tool; afterwards only warnings and errors are drawn there, because the
+		// console renders text with the CPU the game is using (see CtrPlatform::WriteBootConsole).
 		std::int32_t length2 = 0;
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
@@ -1514,13 +1537,10 @@ namespace nCine
 		if (length2 >= MaxLogEntryLength - 2) {
 			length2 = MaxLogEntryLength - 2;
 		}
+		svcOutputDebugString(logEntryWithColors, length2);
 		logEntryWithColors[length2++] = '\n';
-
-		// Through the descriptor rather than stdio: neither Amiga system has a crash-time atexit flush,
-		// and the boot-test workflow reads the shell-redirected file after a guru - a buffered line
-		// would be exactly the one that named the crash. On MorphOS the shell redirects this to DEBUG:,
-		// which the emulator writes to its serial log.
-		::write(STDOUT_FILENO, logEntryWithColors, length2);
+		logEntryWithColors[length2] = '\0';
+		Backends::CtrPlatform::WriteBootConsole(logEntryWithColors, length2, level >= TraceLevel::Warning);
 #elif defined(DEATH_TARGET_DREAMCAST)
 		// Write the message to dbgio (SCIF serial by default) - the Flycast/lxdream emulators show it
 		// in their logs and dc-tool/dcload shows it in the console
@@ -1601,6 +1621,21 @@ namespace nCine
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		logEntryWithColors[length2] = '\0';
 		sceClibPrintf("%s", logEntryWithColors);
+#elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_MORPHOS)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+
+		// Through the descriptor rather than stdio: neither Amiga system has a crash-time atexit flush,
+		// and the boot-test workflow reads the shell-redirected file after a guru - a buffered line
+		// would be exactly the one that named the crash. On MorphOS the shell redirects this to DEBUG:,
+		// which the emulator writes to its serial log.
+		::write(STDOUT_FILENO, logEntryWithColors, length2);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
@@ -1776,7 +1811,7 @@ namespace nCine
 
 			if (logFile != nullptr) {
 				logFile->Write(logEntryWithColors, length3);
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_VITA) || \
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_PSP)
 				// This file is the only debugging channel these consoles have, and a hard kill (the PS button,
 				// vitacompanion's "destroy") runs no shutdown code, so an unflushed buffer is exactly the log
@@ -2009,6 +2044,13 @@ namespace nCine
 			}
 		}
 		return result;
+#elif defined(DEATH_TARGET_3DS)
+		// The user name the console was given in its settings is the nearest thing to a host name, the same
+		// choice the Wii and the Switch make. It is stored as UTF-16 in the config savegame block 0x000A0000
+		// (0x1C bytes: up to 10 characters and a terminator); anything outside printable ASCII is dropped
+		// rather than passed on as a stray byte. A console with no usable name is told apart by the console's
+		// unique ID, which every console has
+		return Backends::CtrPlatform::GetDeviceName();
 #elif defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_N64)
 		// Neither console has a host name nor any identifier a program could read: no serial number is stored
 		// anywhere software can reach, and the network adapters that would carry a MAC address are optional
@@ -2397,6 +2439,7 @@ namespace nCine
 		GameCube = 67,
 		Wii = 68,
 		Switch = 70,
+		Nintendo3DS = 77,
 		PlayStationPortable = 101,
 		PlayStationVita = 102,
 		SegaDreamcast = 117,
@@ -2515,18 +2558,20 @@ namespace nCine
 		constexpr MetadataPlatform platform = MetadataPlatform::Android;
 #		elif defined(DEATH_TARGET_SWITCH)
 		constexpr MetadataPlatform platform = MetadataPlatform::Switch;
+		#		elif defined(DEATH_TARGET_N64)
+				constexpr MetadataPlatform platform = MetadataPlatform::Nintendo64;
+#		elif defined(DEATH_TARGET_GAMECUBE)
+		constexpr MetadataPlatform platform = MetadataPlatform::GameCube;
+#		elif defined(DEATH_TARGET_WII)
+		constexpr MetadataPlatform platform = MetadataPlatform::Wii;
+#		elif defined(DEATH_TARGET_3DS)
+		constexpr MetadataPlatform platform = MetadataPlatform::Nintendo3DS;
+#		elif defined(DEATH_TARGET_DREAMCAST)
+		constexpr MetadataPlatform platform = MetadataPlatform::SegaDreamcast;
 #		elif defined(DEATH_TARGET_PSP)
 		constexpr MetadataPlatform platform = MetadataPlatform::PlayStationPortable;
 #		elif defined(DEATH_TARGET_VITA)
 		constexpr MetadataPlatform platform = MetadataPlatform::PlayStationVita;
-#		elif defined(DEATH_TARGET_WII)
-		constexpr MetadataPlatform platform = MetadataPlatform::Wii;
-#		elif defined(DEATH_TARGET_GAMECUBE)
-		constexpr MetadataPlatform platform = MetadataPlatform::GameCube;
-#		elif defined(DEATH_TARGET_N64)
-		constexpr MetadataPlatform platform = MetadataPlatform::Nintendo64;
-#		elif defined(DEATH_TARGET_DREAMCAST)
-		constexpr MetadataPlatform platform = MetadataPlatform::SegaDreamcast;
 #		elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 		constexpr MetadataPlatform platform = MetadataPlatform::Amiga;
 #		elif defined(DEATH_TARGET_IOS)
@@ -2559,7 +2604,7 @@ namespace nCine
 		flags |= 0x04 | 0x20;	// ProcessIdEqualsToMainThreadId | RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
 #		elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-				defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || \
+				defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || \
 				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();

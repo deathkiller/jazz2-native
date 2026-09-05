@@ -155,6 +155,17 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "PICA")
+	# Nintendo 3DS fixed-function PICA200 rendering backend (citro3d)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PICA/PicaUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 	# Sega Dreamcast fixed-function PowerVR rendering backend (KallistiOS)
 	list(APPEND SOURCES

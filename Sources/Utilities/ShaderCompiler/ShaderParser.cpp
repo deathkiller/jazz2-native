@@ -1312,6 +1312,8 @@ R"GLSL(void main()
 							targetKind = FixedFunctionTarget::Pvr;
 						} else if (target == "gx") {
 							targetKind = FixedFunctionTarget::Gx;
+						} else if (target == "pica") {
+							targetKind = FixedFunctionTarget::Pica;
 						} else if (target == "gu") {
 							targetKind = FixedFunctionTarget::Gu;
 						} else if (target == "gs") {
@@ -1321,7 +1323,7 @@ R"GLSL(void main()
 						} else if (target == "legacygl") {
 							targetKind = FixedFunctionTarget::LegacyGl;
 						} else {
-							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, gu, gs, rdp, legacygl, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
+							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, pica, gu, gs, rdp, legacygl, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
 						}
 						for (FixedFunctionTarget listed : targets) {
 							if (listed == targetKind) {

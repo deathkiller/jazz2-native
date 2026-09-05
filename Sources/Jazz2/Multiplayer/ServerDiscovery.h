@@ -25,6 +25,8 @@
 #	undef far
 #endif
 
+#include <atomic>
+
 #include <Base/TypeInfo.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -143,6 +145,18 @@ namespace Jazz2::Multiplayer
 		 */
 		void Stop();
 
+		/**
+		 * @brief Asks the discovery thread to end without waiting for it
+		 *
+		 * For a caller that cannot afford the wait @ref Stop() is - the thread can be seconds inside an access
+		 * point association or a download - and polls @ref HasFinished() instead, calling @ref Stop() once it
+		 * answers `true` (which is then instant). Nothing is discovered after this returns.
+		 */
+		void RequestStop();
+
+		/** @brief Whether the discovery thread has ended (also `true` when it never ran) */
+		bool HasFinished() const;
+
 	private:
 		ServerDiscovery(const ServerDiscovery&) = delete;
 		ServerDiscovery& operator=(const ServerDiscovery&) = delete;
@@ -151,6 +165,8 @@ namespace Jazz2::Multiplayer
 		IServerObserver* _observer;
 		// Whether Stop() has run (it may be called before the destructor runs it again)
 		bool _stopped = false;
+		// Set by the discovery thread as its last act, read by HasFinished() on another one
+		std::atomic<bool> _finished{true};
 		std::weak_ptr<IServerStatusProvider> _statusProvider;
 		TimeStamp _lastOnlineRequestTime;
 		bool _onlineSuccess;

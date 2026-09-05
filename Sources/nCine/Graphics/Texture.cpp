@@ -250,10 +250,11 @@ namespace nCine
 
 	void Texture::ReleaseHostCopy()
 	{
-#if defined(WITH_RHI_GU)
-		// Only the GU backend has a release to do today: the GE samples a padded, swizzled store that the
-		// backend builds from the decoded texels, so once that store exists the texels are a second copy of
-		// the whole texture. The other backends either hand their texels to a driver or sample them in place.
+#if defined(WITH_RHI_GU) || defined(WITH_RHI_PICA)
+		// Only the GU and PICA backends have a release to do today: the GE and the PICA200 sample a padded,
+		// swizzled store that the backend builds from the decoded texels, so once that store exists the texels
+		// are a second copy of the whole texture. The other backends either hand their texels to a driver or
+		// sample them in place.
 		if (_rhiTexture != nullptr) {
 			_rhiTexture->ReleaseHostCopy();
 		}
@@ -283,8 +284,8 @@ namespace nCine
 	{
 		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
 		const std::int32_t maxTextureSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
-#if defined(WITH_RHI_GU) || defined(WITH_RHI_LEGACYGL)
-		// Two backends page an oversized image instead of refusing it: the PSP's GE tops out at 512 texels
+#if defined(WITH_RHI_GU) || defined(WITH_RHI_PICA) || defined(WITH_RHI_LEGACYGL)
+		// Three backends page an oversized image instead of refusing it (the PICA200 tops out at 1024 texels per axis): the PSP's GE tops out at 512 texels
 		// per axis, the legacy GL backend at whatever `GL_MAX_TEXTURE_SIZE` reports. Content assembled at
 		// load time is sized against what they advertise, but an image that ships at a fixed size can
 		// still exceed it, and their texture types split such an image into pages that the draw path

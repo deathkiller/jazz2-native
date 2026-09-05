@@ -108,7 +108,7 @@ void fixed_function(pvr) {
 	}
 }
 
-void fixed_function(gx, gu, gs, rdp, legacygl) {
+void fixed_function(gx, pica, gu, gs, rdp, legacygl) {
 	// The same iris the PVR block above synthesizes, at the detail the GP, the GE, the GS and the RDP can afford: 64
 	// angular segments instead of 32 (a segment's flat chord then misses the true circle by under half a
 	// pixel at 640x480, where 32 segments were off by about one and a half), and the soft edge is

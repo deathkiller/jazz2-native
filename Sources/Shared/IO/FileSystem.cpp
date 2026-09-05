@@ -232,9 +232,9 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 				return AndroidAssetStream::Prefix.size();
 			}
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-			defined(DEATH_TARGET_VITA)
-			// Switch mount points: romfs:, sdmc:, etc.
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
+			defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+			// Switch and 3DS mount points: romfs:, sdmc:, etc.
 			// N64 mount points: rom:, eeprom:, sd:, etc.
 			// PS2 mount points: cdfs:, cdrom0:, mc0:, mass:, host:, etc.
 			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
@@ -551,8 +551,9 @@ namespace Death { namespace IO {
 
 #	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64) && \
-		!defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
+		!defined(DEATH_TARGET_MORPHOS)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -567,10 +568,10 @@ namespace Death { namespace IO {
 			static_cast<void>(path);
 			return false;
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || \
 		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS) || \
 		defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
-			// nftw() is missing in libnx, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
+			// nftw() is missing in libnx, libctru, Vita, libogc, KOS and the PS3's newlib (which has no <ftw.h> at
 			// all), and on PSPSDK and PS2SDK it is only declared
 			// (there is no implementation behind it), so the walk is done by hand everywhere on the consoles.
 			// On the PS2 the declaration is additionally unusable: its callback takes `int` parameters, and
@@ -1381,13 +1382,14 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
-		// realpath() is missing in libnx, libdragon, Vita and PS2SDK, and unreliable in KOS (lstat() fails on iso9660)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		// realpath() is missing in libnx, libctru, libdragon, Vita and PS2SDK, and unreliable in KOS (lstat() fails on iso9660)
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
 		std::size_t resultLength = 0;
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_VITA)
 		std::int32_t symlinks = 0;
 #	endif
 
@@ -1470,8 +1472,8 @@ namespace Death { namespace IO {
 				}
 				return {};
 			}
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
-			// readlink() is missing in libnx and Vita
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_VITA)
+			// readlink() is missing in libnx, libctru and Vita (none of them has symbolic links to read)
 			if (S_ISLNK(sb.st_mode)) {
 				if (++symlinks > 8) {
 					// Too many symlinks
@@ -2575,11 +2577,11 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PS2) && \
-		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && \
-		!defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS3) && \
-		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
-		!defined(DEATH_TARGET_MORPHOS) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_3DS) && \
+		!defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS) && \
+		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -2634,9 +2636,10 @@ namespace Death { namespace IO {
 		constexpr std::size_t BufferSize = 128 * 1024;
 #		endif
 #		if defined(DEATH_TARGET_SWITCH)|| defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_GAMECUBE) || \
-			defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
-			defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
-			defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
+			defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || \
+			defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_PSP) || \
+			defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || \
+			defined(DEATH_TARGET_MORPHOS)
 		// On devices with smaller stack size, use heap buffer instead - the alternative is not a performance
 		// question there but a crash: BufferSize is larger than the whole stack these platforms give a thread
 		// (the PSP's are 64 KB), so the array below would run off the end of it before a single byte was copied.
@@ -2680,7 +2683,7 @@ namespace Death { namespace IO {
 #	endif
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && \
-		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3)
+		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_3DS)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		// PSL1GHT is excluded because its newlib declares fchmod() without implementing it - lv2 has only a
 		// path-based chmod - and the copy is no less correct for leaving the destination's own mode alone.

@@ -73,6 +73,9 @@ elseif(PLATFORM_N64)
 elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 	set(NCINE_NATIVE_WINDOW_BACKEND "Ogc")
 	set(NCINE_PLATFORM_SUMMARY "Nintendo Wii/GameCube (libogc backend)")
+elseif(NINTENDO_3DS)
+	set(NCINE_NATIVE_WINDOW_BACKEND "Ctr")
+	set(NCINE_PLATFORM_SUMMARY "Nintendo 3DS (libctru backend)")
 elseif(PLATFORM_DREAMCAST)
 	set(NCINE_NATIVE_WINDOW_BACKEND "Dc")
 	set(NCINE_PLATFORM_SUMMARY "Sega Dreamcast (KallistiOS backend)")
@@ -187,6 +190,19 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX")
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii/GameCube (expected GX)")
+		endif()
+	elseif(NINTENDO_3DS)
+		# Nintendo 3DS (the devkitPro 3DS.cmake toolchain file sets NINTENDO_3DS): the only rendering backend is
+		# the fixed-function PICA200 one, driven through citro3d (the GPU command buffer, the render targets and
+		# the display transfer - the same layer sceGu is on the PSP), presented through the bespoke Ctr window
+		# backend. The PICA200 has a programmable VERTEX stage but no fragment shaders at all - six texture
+		# combiner stages in the GX's TEV mould - so like PVR/GX/GU/GS/RDP this backend consumes the transpiled
+		# `fixed_function` effect tables; the one vertex program it needs is a passthrough assembled by picasso
+		# at build time. citro2d is layered on citro3d and adds nothing the engine would use.
+		set(NCINE_PREFERRED_RHI "PICA" CACHE STRING "Rendering backend on Nintendo 3DS: PICA")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "PICA")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "PICA")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo 3DS (expected PICA)")
 		endif()
 	elseif(PLATFORM_DREAMCAST)
 		# Sega Dreamcast (the KallistiOS toolchain file sets PLATFORM_DREAMCAST): the only rendering backend
@@ -483,7 +499,11 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 # (Not the PlayStation 2, even though libxmp builds for its toolchain and the machine has the memory:
 # that port has no audio backend at all yet, so there is nothing for a decoder to play through. When
 # one appears, this is the line to add it to.)
-if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR VITA)
+# The Nintendo 3DS joins the list for CPU and memory at once: a 268 MHz ARM11 (804 MHz on the New 3DS) is
+# the PSP's class, and the application memory of an Old 3DS is 64 MB shared with the GPU-visible linear heap
+# every texture lives in - so the module decoder that costs 0.5-4 MB rather than 4.6-12.5 MB is the one that
+# leaves room for the tilesets
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR VITA)
 	set(_ncineXmpDefault ON)
 else()
 	set(_ncineXmpDefault OFF)
@@ -572,7 +592,10 @@ option(DEATH_TRACE "Enable runtime event tracing" ON)
 # The PSP is excluded for the second half of that reason alone - it does have working threads - because the
 # trace stream is the only debugging channel the console has, and a queued line is a line that is not there
 # after a crash.
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
+# The Nintendo 3DS is excluded for the PSP's reason: the trace file on the SD card (and the emulator's log)
+# is the only debugging channel, and a line still sitting in the worker's queue when the game dies is a line
+# that is not there.
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT NINTENDO_3DS;NOT PLATFORM_PS2;NOT NCINE_BUILD_LIBRETRO" OFF)
 # Every file open, read, seek and close raises a trace line of its own. That is what makes a missing or
 # truncated asset findable, so it stays on wherever tracing is on - but on a console where tracing is
 # synchronous (see DEATH_TRACE_ASYNC above) the formatting and the emit both land on the thread doing the
@@ -654,7 +677,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT NCINE_PREFERRED_RHI STREQUAL LegacyGL;NOT VITA" ON)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT NCINE_PREFERRED_RHI STREQUAL GS;NOT NCINE_PREFERRED_RHI STREQUAL RDP;NOT NCINE_PREFERRED_RHI STREQUAL PICA;NOT NCINE_PREFERRED_RHI STREQUAL LegacyGL;NOT VITA" ON)
 # The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
 # rasterizes per tile. The GX, PVR, GU and LegacyGL backends all consume the whole-layer mesh directly
 # (see GxDevice::DispatchTileMesh and its counterparts), so they keep it on - on the GU it is also what
@@ -685,6 +708,14 @@ cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_W
 # ENet read that as "yes, an address" (see the file). The <sys/ioctl.h> that used to be given as the Vita's
 # blocker turned out to be an unused include - ENet only ever calls ioctl() in its _WIN32 arm.
 # Both verified against a real ENet peer, under PPSSPP and Vita3K respectively.
+# The Nintendo 3DS is not excluded either. libctru's BSD sockets (soc:u) come with getaddrinfo() and
+# poll(), unlike pspdev's, so the vendored enet.h needs only arms for the two calls libctru has no spelling
+# of at all - sendmsg() and recvmsg(), which go through sendto() and recvfrom() there - and ENET_IPV6=0 like
+# the Sony handhelds (see ncine_extra_sources.cmake). What the service does need is a dedicated 1 MB
+# buffer at bring-up, which CtrPlatform::Initialize() hands it once per process, before anything can open
+# a socket; the WLAN itself is the system's business on this console, so there is no counterpart to
+# PspNetwork::ScopedConnection. Verified under Azahar against an ENet peer on the host and with an HTTPS
+# request (the update check) through the staged CA bundle.
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT PLATFORM_N64;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PS2;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
@@ -698,7 +729,9 @@ cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_
 # The PSP is excluded for both of the reasons above at once: pspdev has neither <netinet/ip.h> nor a
 # <poll.h> header (the shim that gets ENet past that is a private engine header, not something the
 # library's own `#include <poll.h>` can find). The ENet transport carries online play there.
-cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
+# The Nintendo 3DS is excluded for the Vita's reason: libctru has <poll.h>, but no <netinet/ip.h>. ENet
+# carries online play there as well.
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT NINTENDO_3DS;NOT PLATFORM_PSP;NOT VITA;NOT PLATFORM_AMIGAOS4;NOT PLATFORM_MORPHOS" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
 	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners

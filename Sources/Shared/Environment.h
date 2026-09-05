@@ -252,7 +252,7 @@ namespace Death { namespace Environment {
 		sysGetCurrentTime(&sec, &nsec);
 		return sec * 1000ULL + nsec / 1000000ULL;
 #elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4) || \
+		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS4) || \
 		defined(DEATH_TARGET_MORPHOS)
 		// These platforms have no coarse clock (it is a Linux-specific one), so the precise monotonic clock stands in
 		struct timespec ts;

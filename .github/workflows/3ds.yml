@@ -1,0 +1,67 @@
+name: 'Nintendo 3DS'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container:
+      # Contains devkitARM and the 3ds-dev group (libctru, citro3d, the 3DS.cmake toolchain file and the
+      # picasso/bin2s/3dsxtool/smdhtool the packaging step runs); the ports the game needs are installed
+      # below, which is a no-op when the image already carries them
+      image: devkitpro/devkitarm:latest
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Install Dependencies'
+      run: |
+        # zlib for the compressed game content, libcurl and mbedTLS for the update check and the online
+        # server list (see Docs/Consoles.dox, "Nintendo 3DS" / "Toolchain"). libxmp is picked up from the
+        # 3ds-libxmp port when the image has it and built from source otherwise (cmake/Findlibxmp.cmake)
+        dkp-pacman -Sy --noconfirm --needed 3ds-zlib 3ds-curl 3ds-mbedtls
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/3DS.cmake
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The "sdmc" directory contains the staged SD card layout ("3ds/Jazz2" with the .3dsx, its SMDH,
+        # the game content and the CA certificate bundle)
+        mkdir ./_package/
+        cp -r ./_build/sdmc/. ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_Nintendo3DS
+        path: ./_package/

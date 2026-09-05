@@ -123,7 +123,7 @@ void fixed_function(pvr, gu, gs, rdp) {
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
-void fixed_function(gx, legacygl) {
+void fixed_function(gx, pica, legacygl) {
 	// The same banded trapezoid rebuild as above, from the same include - the geometry is portable
 	// vocabulary. The GX additionally folds the horizon tint into each band piece's own draw with a
 	// TINT_MIX combiner stage instead of laying a second gradient pass over it (same pixels, half

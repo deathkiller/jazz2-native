@@ -420,7 +420,7 @@ namespace Jazz2::Tiles
 			so the effect stays unbounded there.
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_AMIGAOS)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxDebrisCount = 448;
 #elif defined(DEATH_TARGET_N64)
 		// Half the other consoles' budget, because 8 MB of RDRAM is half the heap the smallest of them has
@@ -436,7 +436,7 @@ namespace Jazz2::Tiles
 			leave nothing for a death burst, which is the effect that actually matters.
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_AMIGAOS)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxWeatherDebrisCount = 128;
 #elif defined(DEATH_TARGET_N64)
 		// Half again, see MaxDebrisCount
@@ -453,7 +453,7 @@ namespace Jazz2::Tiles
 			get proportionally fewer and bigger (see @ref GetParticleDebrisStep()).
 		*/
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_AMIGAOS)
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGAOS)
 		static constexpr std::int32_t MaxParticleDebrisPerBurst = 256;
 #elif defined(DEATH_TARGET_N64)
 		// Half again, see MaxDebrisCount

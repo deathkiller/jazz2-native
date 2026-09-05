@@ -35,6 +35,9 @@ namespace Jazz2::UI::Menu
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
 		_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(std::make_unique<Jazz2::Multiplayer::ServerDiscovery>(this)),
 		_touchDirection(0), _transitionTime(0.0f), _shouldStart(false), _isConnecting(false),
+#if defined(DEATH_TARGET_PSP)
+		_switchingMode(false),
+#endif
 		_waitForIpInput(false), _keyboardVisible(false), _ipInput(64)
 #if defined(DEATH_TARGET_ANDROID)
 		, _recalcVisibleBoundsTimeLeft(30.0f)
@@ -82,6 +85,33 @@ namespace Jazz2::UI::Menu
 		if (_animation < 1.0f) {
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
+
+#if defined(DEATH_TARGET_PSP)
+		if (_switchingMode) {
+			// The second half of ToggleAdhocMode(): the old discovery thread was asked to end and has to be gone
+			// before the WLAN changes mode (its sockets and its access point belong to the old one). Waiting
+			// for it here would stall the menu for as long as an association or a download takes, so each
+			// frame only looks whether it is done; the input is ignored until the new discovery runs.
+			if (_discovery == nullptr || _discovery->HasFinished()) {
+				if (_discovery != nullptr) {
+					_discovery->Stop();
+					_discovery = nullptr;
+				}
+				bool adhoc = !Jazz2::Multiplayer::NetworkManagerBase::IsAdhocMode();
+				if (!Jazz2::Multiplayer::NetworkManagerBase::SetAdhocMode(adhoc)) {
+					LOGW("Cannot switch to {} mode", adhoc ? "ad hoc"_s : "Wi-Fi"_s);
+				}
+				_discovery = std::make_unique<Jazz2::Multiplayer::ServerDiscovery>(this);
+				_switchingMode = false;
+			} else if (_root->ActionHit(PlayerAction::Menu)) {
+				// Leaving is the one thing that must not wait for the switch: the section's destructor
+				// joins the thread, which is what the user asked for by leaving
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_root->LeaveSection();
+			}
+			return;
+		}
+#endif
 
 		if (_touchSpeed > 0.0f) {
 			if (_touchStart == Vector2f::Zero && _availableHeight < _height) {
@@ -257,6 +287,14 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 
 		if (_items.empty()) {
+#if defined(DEATH_TARGET_PSP)
+			if (_switchingMode) {
+				// TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
+				_root->DrawStringShadow(_("Switching connection mode…"), charOffset, centerX, contentBounds.Y + contentBounds.H * 0.33f, IMenuContainer::FontLayer,
+					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
+				return;
+			}
+#endif
 			_root->DrawStringShadow(_("No servers found, but still searchin'!"), charOffset, centerX, contentBounds.Y + contentBounds.H * 0.33f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f, 0.4f, 0.6f, 0.6f, 0.8f, 0.88f);
 			return;
@@ -679,20 +717,19 @@ namespace Jazz2::UI::Menu
 	void ServerSelectSection::ToggleAdhocMode()
 	{
 		// The discovery is bound to the mode it was started in (broadcast and the public list, or the ad hoc
-		// scan), so it is stopped before the WLAN changes mode and started over afterwards; the list starts
-		// empty, as the servers of one mode are not reachable in the other
-		_discovery->Stop();
-		_discovery = nullptr;
+		// scan), so it is stopped before the WLAN changes mode and started over afterwards - in OnUpdate(),
+		// once its thread has ended on its own (see _switchingMode). The list starts empty, as the servers of
+		// one mode are not reachable in the other; nothing is added to it from here on, RequestStop() sees to that.
+		if (_switchingMode) {
+			return;
+		}
+		if (_discovery != nullptr) {
+			_discovery->RequestStop();
+		}
 		_items.clear();
 		_selectedIndex = 0;
 		_y = 0.0f;
-
-		bool adhoc = !Jazz2::Multiplayer::NetworkManagerBase::IsAdhocMode();
-		if (!Jazz2::Multiplayer::NetworkManagerBase::SetAdhocMode(adhoc)) {
-			LOGW("Cannot switch to {} mode", adhoc ? "ad hoc"_s : "Wi-Fi"_s);
-		}
-
-		_discovery = std::make_unique<Jazz2::Multiplayer::ServerDiscovery>(this);
+		_switchingMode = true;
 	}
 #endif
 

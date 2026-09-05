@@ -43,7 +43,7 @@ ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] 
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|pica|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 ```
@@ -439,7 +439,7 @@ void fixed_function() {
 `void fixed_function()` (empty parentheses) is the generic implementation — the spelling matches
 the `void vertex()` / `void fragment()` entry points; `void fixed_function(pvr)`,
 `void fixed_function(gx)`, `void fixed_function(gu)`, `void fixed_function(gs)`,
-`void fixed_function(rdp)` and `void fixed_function(legacygl)` override it for
+`void fixed_function(rdp)`, `void fixed_function(legacygl)` and `void fixed_function(pica)` override it for
 one backend, and a comma-separated **target list** overrides it for several at once:
 
 | Spelling | Serves |
@@ -451,6 +451,7 @@ one backend, and a comma-separated **target list** overrides it for several at o
 | `void fixed_function(gs) { ... }` | the PlayStation 2 only |
 | `void fixed_function(rdp) { ... }` | the Nintendo 64 only |
 | `void fixed_function(legacygl) { ... }` | the fixed-function OpenGL 1.x backend only (MorphOS' TinyGL, and a desktop GL in a compatibility context) |
+| `void fixed_function(pica) { ... }` | the Nintendo 3DS only |
 | `void fixed_function(pvr, gu) { ... }` | the Dreamcast **and** the PlayStation Portable, from one body |
 | `void fixed_function(pvr, gu, gs) { ... }` | the three no-combiner consoles, from one body |
 | `void fixed_function(gu, gx, pvr) { ... }` | any subset in any order; whitespace is free (`(pvr,gu)` and `( pvr , gu )` are the same declaration) |
@@ -466,7 +467,7 @@ instead of two that can drift apart; when the bodies genuinely differ, write sep
 The standalone mode
 
 ```
-ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|pica|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
 ```
 
 transpiles the applicable block of every program variant into a
@@ -572,7 +573,7 @@ reaches a backend without one is a hard error rather than a silently wrong frame
   TEV stage, the RDP because its colour combiner computes `(A - B) * C + D` per cycle and one cycle
   of `(PRIM - TEX) * PRIM_ALPHA + TEX` IS that lerp, and LegacyGL because `GL_INTERPOLATE` is the
   same operation again — so it is allowed in any block whose targets are drawn from
-  `gx`/`rdp`/`legacygl` only, and rejected as soon as the list drags in a backend without a
+  `gx`/`pica`/`rdp`/`legacygl` only, and rejected as soon as the list drags in a backend without a
   lerping combiner.
 - `LUMA_RAMP` — a silhouette whose tone is picked per texel instead of being flat: `grey` is the
   texel's Rec.601 luminance amplified by `p.luma_gain` and saturated, and the tone is
@@ -604,7 +605,7 @@ would be accepted while being silently wrong on the other backends it serves. Co
 | --- | --- |
 | Extended vocabulary (strip builder, pre-clip quad axes, resolved uniforms) | allowed — every backend a list names is named in it, so nothing is implicit. Only the generic block is restricted to the portable core |
 | `LUMA_RAMP` (GX-only) | allowed **only** in a block targeting `gx` and nothing else; `void fixed_function(gx, gu)` is rejected, because the GE cannot express it |
-| `TINT_MIX` (lerping combiner: GX, RDP, LegacyGL) | allowed only when **every** listed target has one — any subset of `gx`, `rdp`, `legacygl`; `void fixed_function(gx, gu)` is rejected, because the GE cannot express it |
+| `TINT_MIX` (lerping combiner: GX, PICA, RDP, LegacyGL) | allowed only when **every** listed target has one — any subset of `gx`, `pica`, `rdp`, `legacygl`; `void fixed_function(gx, gu)` is rejected, because the GE cannot express it |
 | `MODULATE_X2` / `MODULATE_X4` (combiner output scale) | rejected as soon as `gu` or `gs` appears in the list; `void fixed_function(pvr, gu)` cannot use them even while the PVR header is being written. The RDP's two combiner cycles reach the x2 but not the x4, so `rdp` in a list rejects `MODULATE_X4` only. `gx` and `legacygl` have both |
 | Strip-builder capacity | the **minimum** across the listed targets — `void fixed_function(pvr, gx)` is limited to the PVR's 8 vertices, so a literal index `8` or a count above `8` is an error there |
 
@@ -757,7 +758,7 @@ order:
 4. `SwGeneratedShaders.h` — the software-renderer fragment functions (`--emit-sw-generated`).
 5. `PvrGeneratedEffects.h`, `GxGeneratedEffects.h`, `GuGeneratedEffects.h`,
    `GsGeneratedEffects.h`, `RdpGeneratedEffects.h` and `LegacyGlGeneratedEffects.h` — the
-   fixed-function effects (`--emit-fixed-function pvr` / `gx` / `gu` / `gs` / `rdp` / `legacygl`).
+   fixed-function effects (`--emit-fixed-function pvr` / `gx` / `pica` / `gu` / `gs` / `rdp` / `legacygl`).
 
 ```
 Sources\Utilities\ShaderCompiler\x64\Release\ShaderCompiler.exe --generate-all

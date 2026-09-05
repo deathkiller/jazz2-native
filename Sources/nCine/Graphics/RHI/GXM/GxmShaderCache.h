@@ -112,8 +112,8 @@ namespace nCine::RHI::GXM
 
 		/** @brief Hash identifying one stage source: its bytes plus which stage it is compiled as */
 		static std::uint64_t KeyOf(const char* source, bool vertexStage);
-		/** @brief Reads one pack into @ref _entries, overwriting entries that are already there */
-		static bool LoadPack(StringView path, bool writable);
+		/** @brief Reads one pack into @ref _entries, overwriting entries that are already there; returns how many entries it read (`0` when there is none) */
+		static std::int32_t LoadPack(StringView path, bool writable);
 		static Entry* Find(std::uint64_t key);
 
 		static String _writablePath;

@@ -64,6 +64,21 @@
 #include "GX/GxDevice.h"
 #include "GX/GxRhiCapabilities.h"
 
+#elif defined(WITH_RHI_PICA)
+
+#include "PICA/PicaDebug.h"
+#include "PICA/PicaShader.h"
+#include "PICA/PicaBuffer.h"
+#include "PICA/PicaTexture.h"
+#include "PICA/PicaVertexFormat.h"
+#include "PICA/PicaShaderTypes.h"
+#include "PICA/PicaUniformCache.h"
+#include "PICA/PicaShaderUniforms.h"
+#include "PICA/PicaShaderProgram.h"
+#include "PICA/PicaRenderTarget.h"
+#include "PICA/PicaDevice.h"
+#include "PICA/PicaRhiCapabilities.h"
+
 #elif defined(WITH_RHI_PVR)
 
 #include "PVR/PvrDebug.h"

@@ -99,6 +99,7 @@ namespace ShaderCompiler
 	{
 		Pvr,		/**< Dreamcast-specific override (wins over the generic block for that backend) */
 		Gx,			/**< Wii/GameCube-specific override (wins over the generic block for that backend) */
+		Pica,		/**< Nintendo 3DS-specific override (wins over the generic block for that backend) */
 		Gu,			/**< PlayStation Portable-specific override (wins over the generic block for that backend) */
 		Gs,			/**< PlayStation 2-specific override (wins over the generic block for that backend) */
 		Rdp,		/**< Nintendo 64-specific override (wins over the generic block for that backend) */
@@ -110,6 +111,7 @@ namespace ShaderCompiler
 	{
 		switch (target) {
 			case FixedFunctionTarget::Gx: return "gx";
+			case FixedFunctionTarget::Pica: return "pica";
 			case FixedFunctionTarget::Gu: return "gu";
 			case FixedFunctionTarget::Gs: return "gs";
 			case FixedFunctionTarget::Rdp: return "rdp";

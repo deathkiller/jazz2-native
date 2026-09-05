@@ -116,7 +116,7 @@ void fixed_function(pvr, gu, gs, rdp) {
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
-void fixed_function(gx, legacygl) {
+void fixed_function(gx, pica, legacygl) {
 	// The circular ("tube") variant borrows the same planar rebuild on this tier as well, with the
 	// horizon tint folded into the band pieces' own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR

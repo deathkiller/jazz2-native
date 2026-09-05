@@ -76,6 +76,11 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
 	# Selects the Nintendo GameCube/Wii fixed-function GX backend in RhiFwd.h/Rhi.h
 	message(STATUS "Rendering backend: GX (Nintendo GameCube/Wii)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GX")
+elseif(NCINE_PREFERRED_RHI STREQUAL "PICA")
+	# Selects the Nintendo 3DS fixed-function PICA200 backend in RhiFwd.h/Rhi.h. The GPU is driven through
+	# citro3d, which is linked with the platform packaging below together with libctru itself
+	message(STATUS "Rendering backend: PICA200 (Nintendo 3DS)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_PICA")
 elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 	# Selects the Sega Dreamcast fixed-function PowerVR backend in RhiFwd.h/Rhi.h - the KOS toolchain
 	# environment links the PVR/maple libraries itself
@@ -280,6 +285,26 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		else()
 			target_link_libraries(${NCINE_APP} PRIVATE fat ogc m)
 		endif()
+	elseif(NINTENDO_3DS)
+		# libctru window/input backend. devkitPro does package an SDL for the 3DS, but it is SDL 1.2 (and a
+		# software-rendered one), and the whole job here is presenting the PICA backend's frame on the top
+		# screen and reading one built-in pad, which libctru does directly. citro3d is the graphics stack the
+		# rendering backend calls into; libctru is on the toolchain's own link line already (-lctru -lm in
+		# CTR_STANDARD_LIBRARIES), so only citro3d has to be named, and it has to precede libctru.
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_CTR")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrGfxDevice.h
+		)
+		# CtrLibcCompat.cpp is the one library function the engine calls that the toolchain declares but does not
+		# implement (see the file)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrPlatform.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ctr/CtrLibcCompat.cpp
+		)
+		target_link_libraries(${NCINE_APP} PRIVATE citro3d)
 	elseif(PLATFORM_DREAMCAST)
 		# KallistiOS window/input backend (no SDL/GLFW); the KOS toolchain links its own libraries
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_DC")
@@ -399,7 +424,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
@@ -471,6 +496,13 @@ if(NOT DEDICATED_SERVER)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Psp/PspAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Psp/PspAudioDevice.cpp)
+		elseif(NDSP_FOUND)
+			set(_NCINE_AUDIO_BACKEND "NDSP (software mixer into a 3DS DSP channel)")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_NDSP")
+			# NDSP is part of libctru, which the toolchain links itself
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ndsp/NdspAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ndsp/NdspAudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
 			set(_NCINE_AUDIO_BACKEND "PS3 (PSL1GHT libaudio mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")
@@ -1044,6 +1076,68 @@ else()
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${OGC_SD_APP_DIR}/Content"
 			COMMENT "Staging SD card layout with game content"
 			VERBATIM)
+	elseif(NINTENDO_3DS)
+		# The one vertex program the PICA backend needs (Sources/Shaders/Pica/Sprite.v.pica, a passthrough of
+		# screen-space vertices under an orthographic matrix) is assembled by picasso - the shader assembler
+		# that ships with the toolchain, so unlike the PS3's cgcomp it is always there - into a .shbin, which
+		# bin2s then wraps into an object the device translation unit links (`Sprite_shbin`, `Sprite_shbin_size`
+		# from the generated "Sprite_shbin.h"). Both helpers are devkitPro's own (3DS.cmake).
+		ctr_add_shader_library(jazz2_pica_shaders "${NCINE_SOURCE_DIR}/Shaders/Pica/Sprite.v.pica" OUTPUT "${CMAKE_BINARY_DIR}/Sprite.shbin")
+		dkp_add_embedded_binary_library(jazz2_pica_shaders_bin jazz2_pica_shaders)
+		target_link_libraries(${NCINE_APP} PRIVATE jazz2_pica_shaders_bin)
+
+		# Package a .3dsx with its SMDH (the icon and the titles the Homebrew Launcher lists it under) into the
+		# standard homebrew layout ("sdmc:/3ds/Jazz2/"), staged under "sdmc/" in the build directory together
+		# with the game content, so its contents can be copied straight onto the SD card (or into the folder
+		# Azahar serves as the virtual SD card). The content sits next to the executable in "Content", which is
+		# where the 3DS branch of ContentResolver::GetContentPath() looks for it.
+		set(CTR_SDMC_APP_DIR "${CMAKE_BINARY_DIR}/sdmc/3ds/Jazz2")
+		file(MAKE_DIRECTORY "${CTR_SDMC_APP_DIR}")
+		# The SMDH holds a 48x48 icon; smdhtool scales what it is given, so the existing 48px icon is reused
+		ctr_generate_smdh(OUTPUT "${CMAKE_BINARY_DIR}/${NCINE_APP}.smdh"
+			NAME "${NCINE_APP_NAME}"
+			DESCRIPTION "${NCINE_APP_DESCRIPTION}"
+			AUTHOR "${NCINE_APP_VENDOR}"
+			ICON "${NCINE_SOURCE_DIR}/Icons/48px.png")
+		ctr_create_3dsx(${NCINE_APP} SMDH "${CMAKE_BINARY_DIR}/${NCINE_APP}.smdh" OUTPUT "${CMAKE_BINARY_DIR}/${NCINE_APP}.3dsx")
+		add_custom_command(TARGET ${NCINE_APP}_3dsx POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${NCINE_APP}.3dsx" "${CTR_SDMC_APP_DIR}/Jazz2.3dsx"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${NCINE_APP}.smdh" "${CTR_SDMC_APP_DIR}/Jazz2.smdh"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CTR_SDMC_APP_DIR}/Content"
+			COMMENT "Staging SD card layout with game content"
+			VERBATIM)
+
+		if(CURL_FOUND)
+			# devkitPro's libcurl is an autotools build with no CMake config of its own, so CMake's FindCURL knows
+			# the library but not what it is built on - mbedTLS, three archives - and libcurl.pc, which does list
+			# them, is only mined for hints. Named here, after CURL::libcurl on the link line (that one is added
+			# where the module is found); zlib is linked already.
+			target_link_libraries(${NCINE_APP} PRIVATE mbedtls mbedx509 mbedcrypto)
+
+			# The CA bundle every HTTPS request is verified against, for the PSP's reason (see that arm and the
+			# longer note in the PS Vita one): this libcurl is built on mbedTLS with a Unix default path that
+			# exists nowhere on an SD card, and the console's own trust store is not readable by a homebrew
+			# title. PlatformWebRequest.h points libcurl at the copy staged next to the content.
+			set(_ctrCaCert "${CMAKE_BINARY_DIR}/cacert.pem")
+			if(NOT EXISTS "${_ctrCaCert}")
+				message(STATUS "Downloading the CA certificate bundle for HTTPS support")
+				file(DOWNLOAD "https://curl.se/ca/cacert.pem" "${_ctrCaCert}"
+					INACTIVITY_TIMEOUT 30 TIMEOUT 120 TLS_VERIFY ON STATUS _ctrCaCertStatus)
+				list(GET _ctrCaCertStatus 0 _ctrCaCertResult)
+				if(NOT _ctrCaCertResult EQUAL 0)
+					list(GET _ctrCaCertStatus 1 _ctrCaCertError)
+					message(WARNING "Cannot download the CA certificate bundle (${_ctrCaCertError}), so HTTPS "
+						"requests will fail to verify - put a PEM bundle at \"${_ctrCaCert}\" and configure again")
+					file(REMOVE "${_ctrCaCert}")
+				endif()
+			endif()
+			if(EXISTS "${_ctrCaCert}")
+				add_custom_command(TARGET ${NCINE_APP}_3dsx POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_ctrCaCert}" "${CTR_SDMC_APP_DIR}/Content/cacert.pem"
+					COMMENT "Staging the CA certificate bundle"
+					VERBATIM)
+			endif()
+		endif()
 	elseif(PLATFORM_DREAMCAST)
 		# Package a bootable CDI image with the game content included ("/cd/Content/"), so it can be
 		# started directly in an emulator (Flycast) or burned to a disc; requires mkdcdisc
@@ -1365,7 +1459,8 @@ else()
 			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
 			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
 			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"
-			BACKGROUND_PATH NULL
+			# PIC1, the 480x272 backdrop the firmware's game list shows behind the icon when it is selected
+			BACKGROUND_PATH "${NCINE_SOURCE_DIR}/Icons/Psp/Background.png"
 			PREVIEW_PATH NULL
 			OUTPUT_DIR "${PSP_EBOOT_DIR}"
 			# MEMSIZE=1 asks the firmware for the extra memory of the 2000/3000 models (and is what PPSSPP
@@ -1739,9 +1834,10 @@ if(WITH_MULTIPLAYER)
 			message(STATUS "Building the game with online multiplayer support")
 		endif()
 		
-		if(NINTENDO_SWITCH OR PLATFORM_PSP OR VITA)
-			# None of these three stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no
-			# address family for it at all - so ENet is built on its IPv4 arm
+		if(NINTENDO_SWITCH OR NINTENDO_3DS OR PLATFORM_PSP OR VITA)
+			# None of these four stacks has IPv6 in it - sceNetInet on the two Sony handhelds has no address
+			# family for it at all, and libctru's <netinet/in.h> declares no in6_addr - so ENet is built on
+			# its IPv4 arm
 			target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
 		elseif(WIN32)
 			# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)

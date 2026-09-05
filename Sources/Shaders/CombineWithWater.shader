@@ -133,7 +133,7 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, gx, gu, gs, rdp, legacygl) {
+void fixed_function(pvr, gx, pica, gu, gs, rdp, legacygl) {
 	// The lightmap half of the composite stays in the backend stage: converting the compositor's
 	// half-resolution float lightmap into a factor texture is a per-texel loop over the whole map every
 	// frame, and its store format (ARGB4444 in video memory, tiled RGBA8, IA16, an attenuation-only I8)

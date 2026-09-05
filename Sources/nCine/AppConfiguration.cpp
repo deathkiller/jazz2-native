@@ -94,7 +94,7 @@ namespace nCine
 #endif
 
 #if defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || defined(WITH_RHI_GX) || \
-		defined(WITH_RHI_GS) || defined(WITH_RHI_SOFTWARE)
+		defined(WITH_RHI_GS) || defined(WITH_RHI_PICA) || defined(WITH_RHI_SOFTWARE)
 		// These tiers have no device memory at all: a buffer object is a host allocation, and the draw
 		// dispatch reads the vertices and indices out of it with the CPU. Mapping it is therefore the
 		// identity, and it is the unmapped path that costs something - RenderBuffersManager::FlushUnmap()

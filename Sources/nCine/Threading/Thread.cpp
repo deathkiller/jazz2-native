@@ -164,7 +164,7 @@ namespace nCine
 	}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && \
 		!defined(DEATH_TARGET_MORPHOS)
 
@@ -297,9 +297,10 @@ namespace nCine
 		return (exitCode == STILL_ACTIVE);
 #else
 		pthread_t handle = _sharedBlock->_handle;
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4)
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_AMIGAOS4)
 		// pthread_kill() is available neither in KOS, in AmigaOS 4's newlib nor in libnx (which has
-		// no signals at all, so the function is declared but never defined)
+		// no signals at all, so the function is declared but never defined); the 3DS shim over libctru
+		// has no signals to deliver either
 		return (handle != 0);
 #	else
 		return (handle != 0 && pthread_kill(handle, 0) == 0);
@@ -316,6 +317,12 @@ namespace nCine
 #elif defined(DEATH_TARGET_SWITCH)
 		return svcGetCurrentProcessorNumber();
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
+		return 1;
+#elif defined(DEATH_TARGET_3DS)
+		// What a homebrew application can actually run threads on: the ARM11 MPCore has two cores (four on the
+		// New 3DS), but the system reserves the second one for itself and hands an application only a slice
+		// of it (APT_SetAppCpuTimeLimit, at most 80%), so every thread the engine starts shares core 0 with
+		// the game and runs when it yields - reported as one processor so the pools stay small
 		return 1;
 #else
 		long int confRet = -1;
@@ -349,7 +356,7 @@ namespace nCine
 			return false;
 		}
 #else
-#	if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		// Both handhelds default to a stack smaller than the engine wants on a thread that decodes audio or
 		// runs the update check's TLS handshake - 32 KB from pspdev's pthread-embedded.
 		//
@@ -368,6 +375,11 @@ namespace nCine
 		pthread_attr_init(&attr);
 #		if defined(DEATH_TARGET_PSP)
 		pthread_attr_setstacksize(&attr, 64 * 1024);
+#		elif defined(DEATH_TARGET_3DS)
+		// devkitARM's pthreads (libsysbase over libctru's threads) default to a stack meant for small workers;
+		// 128 KB fits the asset conversion chain with room to spare and there are only a handful of threads, so
+		// the 64 KB ceiling the PSP's memory forced is not needed here
+		pthread_attr_setstacksize(&attr, 128 * 1024);
 #		else
 		pthread_attr_setstacksize(&attr, 256 * 1024);
 #		endif
@@ -448,7 +460,7 @@ namespace nCine
 		SetThreadName(_sharedBlock->_handle, name);
 #elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && \
 		!defined(DEATH_TARGET_AMIGAOS4) && !defined(DEATH_TARGET_MORPHOS)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
@@ -469,7 +481,7 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
 #elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && \
 		!defined(DEATH_TARGET_MORPHOS)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
@@ -493,7 +505,7 @@ namespace nCine
 	}
 
 #if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2)
 	std::int32_t Thread::GetPriority() const
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
@@ -534,7 +546,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		return static_cast<std::uintptr_t>(::GetCurrentThreadId());
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_PS2) || \
 		defined(__FreeBSD__) || defined(__DragonFly__)
 		return reinterpret_cast<std::uintptr_t>(pthread_self());
 #else
@@ -645,7 +657,7 @@ namespace nCine
 				return true;
 			}
 		}
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || \
 		defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 		// Stack information is not available on these platforms
 		return false;
@@ -709,8 +721,9 @@ namespace nCine
 
 	bool Thread::Abort()
 	{
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-		// TerminateThread() is not supported on WinRT and Android doesn't have any similar function
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST)
+		// TerminateThread() is not supported on WinRT and Android doesn't have any similar function (and
+		// the 3DS kernel has no way to end another thread)
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return (_sharedBlock != nullptr && ::TerminateThread(_sharedBlock->_handle, 1));
@@ -720,7 +733,7 @@ namespace nCine
 	}
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && \
-		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && \
+		!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_AMIGAOS4) && \
 		!defined(DEATH_TARGET_MORPHOS)
 	ThreadAffinityMask Thread::GetAffinityMask() const

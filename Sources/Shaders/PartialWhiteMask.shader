@@ -42,7 +42,7 @@ void fixed_function(pvr, gu, gs, rdp) {
 	p.offset_color = vec3(96.0 / 255.0);
 	submit_quad(p);
 }
-void fixed_function(gx, legacygl) {
+void fixed_function(gx, pica, legacygl) {
 	// GX: no post-texture add exists, so the combiner's clamped x2 output scale stands in for the boost
 	pass p;
 	p.tev = MODULATE_X2;

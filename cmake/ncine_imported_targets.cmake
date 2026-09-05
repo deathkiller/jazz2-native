@@ -235,6 +235,9 @@ if(EMSCRIPTEN)
 endif()
 
 if(NCINE_WITH_THREADS)
+	# This also succeeds on the Nintendo 3DS: devkitARM ships a complete pthread implementation in libsysbase
+	# (linked through 3dsx.specs), built over the lock and condition-variable hooks libctru fills with its
+	# LightLock and CondVar, so the threading layer links against it unchanged
 	find_package(Threads)
 endif()
 
@@ -586,6 +589,14 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			# devkitPro ships no OpenAL for these consoles. libogc's ASND drives the DSP mixer instead
 			# and comes with the toolchain, so there is nothing to look for - see AsndAudioDevice
 			set(ASND_FOUND 1)
+		elseif(NINTENDO_3DS)
+			# devkitPro ships no OpenAL for the 3DS either. The console's sound path is NDSP - libctru's driver
+			# for the DSP's 24 hardware channels, which resample and mix in hardware - but the engine mixes in
+			# software into one of them anyway, the way the PSP backend does (see NdspAudioDevice for why); NDSP
+			# is part of libctru, so there is nothing to look for.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(NDSP_FOUND 1)
 		elseif(PLATFORM_DREAMCAST)
 			# There is no OpenAL worth using on this console - the kos-ports one (ALdc) neither applies
 			# the source gain nor drives the AICA correctly against current KallistiOS. The backend talks
@@ -659,12 +670,18 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			find_package(libopenmpt)
 		endif()
 		if(NCINE_WITH_XMP AND (OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR
-				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND))
+				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND))
 			# Always built from source (there is nothing to find on the platforms that select it), so this
 			# only has to run where the option is on - see cmake/Findlibxmp.cmake. The audio-backend test
 			# is the same one the sources are guarded by: with no device to play through, downloading and
-			# compiling a module decoder would be work for nothing
-			find_package(libxmp)
+			# compiling a module decoder would be work for nothing.
+			# MODULE is required, not a hint: the devkitPro toolchain files set
+			# CMAKE_FIND_PACKAGE_PREFER_CONFIG, under which a plain find_package() looks for a config
+			# package only and, finding none, returns without ever running cmake/Findlibxmp.cmake - so the
+			# target is never created and the link line ends with "cannot find -lLibxmp" (seen with CMake
+			# 3.31 in the devkitpro/devkitarm image). The find module is the only thing that is meant to
+			# answer here, so it is named explicitly.
+			find_package(libxmp MODULE)
 		endif()
 	endif()
 	if(NCINE_WITH_LUA)
@@ -699,7 +716,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
-	if(NINTENDO_SWITCH OR PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
+	if(NINTENDO_SWITCH OR PLATFORM_N64 OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR PLATFORM_PSP OR VITA OR PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
 		# These platforms support only static linking
 		set(LIBRARY_LINKAGE STATIC)
 	else()

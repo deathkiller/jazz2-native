@@ -114,6 +114,7 @@ namespace ShaderCompiler
 	{
 		Pvr,	/**< Dreamcast (CLX2 via KallistiOS) */
 		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
+		Pica,	/**< Nintendo 3DS (PICA200 via citro3d) */
 		Gu,		/**< PlayStation Portable (Graphics Engine via sceGu) */
 		Gs,		/**< PlayStation 2 (Graphics Synthesizer via PS2SDK's libdraw) */
 		Rdp,	/**< Nintendo 64 (Reality Display Processor via libdragon) */

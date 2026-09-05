@@ -4,7 +4,7 @@
 
 #include <IO/WebRequest.h>
 
-#if defined(WITH_CURL) && (defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
+#if defined(WITH_CURL) && (defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
 #	include "ContentResolver.h"
 
 #	include <Containers/String.h>
@@ -25,7 +25,9 @@ namespace Jazz2
 		patch, so nothing installed on the console supplies it either. Without this every HTTPS request fails
 		to verify, which takes the server list, the update check and script web requests with it. The PSP is
 		in the same position for a simpler reason: its libcurl is built on mbedTLS with a Unix default path
-		(`/etc/ssl/certs/ca-certificates.crt`) that exists nowhere on a memory stick.
+		(`/etc/ssl/certs/ca-certificates.crt`) that exists nowhere on a memory stick. The Nintendo 3DS is the
+		PSP's case again: devkitPro's libcurl is built on mbedTLS with the same default path, and the console's
+		own trust store is not something a homebrew title can read.
 
 		The bundle therefore travels with the content (the CMake packaging fetches it at configure time) and
 		is named here rather than inside @relativeref{Death::IO,WebRequest}: where a game keeps its files is
@@ -33,7 +35,7 @@ namespace Jazz2
 	*/
 	inline void ApplyPlatformWebRequestOptions(Death::IO::WebRequest& request)
 	{
-#if defined(WITH_CURL) && (defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
+#if defined(WITH_CURL) && (defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA))
 		using namespace Death::Containers::Literals;
 
 		// Resolved once - the path cannot change while the game is running, and a missing bundle leaves the

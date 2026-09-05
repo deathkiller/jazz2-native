@@ -56,6 +56,7 @@ Vulkan | `VkVsSpirv` / `VkFsSpirv` --- SPIR-V words compiled offline through `gl
 Software renderer | @cpp "SwGeneratedShaders.h" @ce --- transpiled C++ fragment functions | `--emit-sw-generated`
 Dreamcast (PVR) | @cpp "PvrGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function pvr`
 Wii / GameCube (GX) | @cpp "GxGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gx`
+Nintendo 3DS (PICA) | @cpp "PicaGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function pica`
 PlayStation Portable (GU) | @cpp "GuGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gu`
 PlayStation 2 (GS) | @cpp "GsGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function gs`
 Nintendo 64 (RDP) | @cpp "RdpGeneratedEffects.h" @ce --- transpiled `fixed_function` effects | `--emit-fixed-function rdp`
@@ -98,7 +99,7 @@ ShaderCompiler --generate-all [--shaders-dir <dir>] [--out-dir <dir>] [--check] 
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
 ShaderCompiler --emit-cg <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|pica|gu|gs|rdp|legacygl> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 @endcode
@@ -126,7 +127,7 @@ Mode or option | Meaning
 `--emit-sw-generated <output.h> <in ...>` | Transpiles the fragment stage of every variant of every input to C++ and writes the aggregate software-renderer header
 `--emit-cg <output.h> <in ...>` | Transforms every variant of every input to Cg and writes the aggregate PS Vita header
 `--emit-rsx <output.h> <in ...>` | Transforms every variant to Cg, compiles each stage with `cgcomp` and writes the aggregate PlayStation 3 microcode header. The only path that builds stage sources with `NO_DYNAMIC_BRANCHING` defined, see @ref shader-compiler-input-preprocessor "the conditionals below"
-`--emit-fixed-function <pvr\|gx\|gu\|gs\|rdp\|legacygl> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
+`--emit-fixed-function <pvr\|gx\|pica\|gu\|gs\|rdp\|legacygl> <output.h> <in ...>` | Transpiles the applicable `fixed_function` block of every variant of every input and writes the aggregate per-backend effect header
 `--hlsl-check <in ...>` | Emits the VS + PS HLSL of every variant and compiles each stage via `D3DCompile` (`vs_5_0` / `ps_5_0`), printing a pass/fail table @m_span{m-text m-dim} (Windows only, uses `d3dcompiler_47.dll`) @m_endspan
 `--spirv-check [--glslang <path>] <in ...>` | Emits the Vulkan GLSL of every variant and compiles each stage to SPIR-V via `glslangValidator`, printing a pass/fail table
 `--help`, `-h`, `/?` | Prints the usage text (to stderr) and exits successfully
@@ -400,6 +401,7 @@ Spelling | Serves
 @cpp void fixed_function(gs) @ce | the PlayStation 2 only
 @cpp void fixed_function(rdp) @ce | the Nintendo 64 only
 @cpp void fixed_function(legacygl) @ce | the fixed-function OpenGL 1.x backend only @m_span{m-text m-dim} (MorphOS' TinyGL, and a desktop GL in a compatibility context) @m_endspan
+@cpp void fixed_function(pica) @ce | the Nintendo 3DS only
 @cpp void fixed_function(pvr, gu, gs) @ce | all three of those, from ONE body --- the list form
 @cpp void fixed_function(gu, gx, pvr) @ce | any subset in any order. Whitespace is free: `(pvr,gu)` and `( pvr , gu )` are the same declaration
 
@@ -514,7 +516,7 @@ Field | Type | Meaning
 `SILHOUETTE` | `Silhouette` | vertex colour where the texture has alpha (flat masks, shadows, glows)
 `MODULATE_X2` | `ModulateX2` | modulate with the combiner's x2 output scale. **Not on the PSP or the PS2** --- neither the GE's texture environment nor the GS's texture function has an output scale, so every block whose targets include `gu` or `gs` rejects it. The RDP reaches it with its second combiner cycle, LegacyGL with `GL_RGB_SCALE`
 `MODULATE_X4` | `ModulateX4` | modulate with the combiner's x4 output scale. **Not on the PSP or the PS2**, same reason, and **not on the N64** either --- doubling again would need a third combiner cycle the RDP does not have
-`TINT_MIX` | `TintMix` | `mix(texel, colour, alpha)` with an opaque result, one combiner stage. Needs a **lerping combiner**: the GX's TEV stage, the RDP's `(PRIM - TEX) * PRIM_ALPHA + TEX` cycle or `GL_INTERPOLATE`, so a block targeting any of `gx`/`rdp`/`legacygl` may use it
+`TINT_MIX` | `TintMix` | `mix(texel, colour, alpha)` with an opaque result, one combiner stage. Needs a **lerping combiner**: the GX's TEV stage, the RDP's `(PRIM - TEX) * PRIM_ALPHA + TEX` cycle, `GL_INTERPOLATE` or the PICA200's `GPU_INTERPOLATE`, so a block targeting any of `gx`/`pica`/`rdp`/`legacygl` may use it
 `LUMA_RAMP` | `LumaRamp` | silhouette whose tone is picked per texel from a two-endpoint ramp --- `color.rgb` is the tone at luminance 0, `offset_color` the tone at 1, with `luma_gain` amplifying and saturating the texel's Rec.601 luminance in between; coverage stays `texel alpha * color.a`. **GX only** --- needs a block targeting `gx` and nothing else
 
 @m_class{m-noindent}
@@ -560,15 +562,15 @@ Built-in | Type | Meaning | Generic block?
 `texel_size()` | `vec2` | displacement of one texel in the quad's own coordinate space, already converted per backend (raster space on the PVR, logical pixels on the GX, screen pixels on the GU) | yes
 `has_texel_size()` | `bool` | whether that step is derivable at all (a zero `texRect` has no scale) --- blocks guard their `texel_size()` uses with it | yes
 `submit_quad(p)` | statement | submits one pass over the current instance's quad | yes
-`quad_origin()` | `vec2` | **pre-clip** raster position of the sprite's (0,0) corner | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Synthesized geometry uses these instead of the post-scissor-clip corner arrays, so clipping cannot distort it | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`has_uniform(uName)` | `bool` | whether the program resolved that uniform. An unresolved name loads zeros, so blocks guard with this exactly like the code they replaced null-checked its pointers | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | the program's resolved uniforms by name, through the backend's existing `ResolveUniform` machinery. The argument is an **identifier**, not a string literal | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_position(i, <vec2>)` | statement | strip-builder vertex position | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_uv(i, <vec2>)` | statement | strip-builder vertex UV, in the shader's texture space (the backend folds its padded-store scale) | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`strip_color(i, <vec4>)` | statement | strip-builder per-vertex colour | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`submit_strip(p, count)` | statement | submits the first `count` strip vertices textured, under the pass's flat colour | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
-`submit_strip_shaded(p, count)` | statement | submits them with their per-vertex colours --- gradients without a fragment shader. **Untextured** unless the pass's preset consumes the texel too (`TINT_MIX`), in which case the strip keeps its texture and UVs | no --- `pvr`/`gx`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`quad_origin()` | `vec2` | **pre-clip** raster position of the sprite's (0,0) corner | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`quad_axis_x()`, `quad_axis_y()` | `vec2` | pre-clip raster displacements of the sprite's local axes. Synthesized geometry uses these instead of the post-scissor-clip corner arrays, so clipping cannot distort it | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`has_uniform(uName)` | `bool` | whether the program resolved that uniform. An unresolved name loads zeros, so blocks guard with this exactly like the code they replaced null-checked its pointers | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`uniform_vec2(uName)`, `uniform_vec4(uName)` | `vec2`, `vec4` | the program's resolved uniforms by name, through the backend's existing `ResolveUniform` machinery. The argument is an **identifier**, not a string literal | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`strip_position(i, <vec2>)` | statement | strip-builder vertex position | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`strip_uv(i, <vec2>)` | statement | strip-builder vertex UV, in the shader's texture space (the backend folds its padded-store scale) | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`strip_color(i, <vec4>)` | statement | strip-builder per-vertex colour | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`submit_strip(p, count)` | statement | submits the first `count` strip vertices textured, under the pass's flat colour | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
+`submit_strip_shaded(p, count)` | statement | submits them with their per-vertex colours --- gradients without a fragment shader. **Untextured** unless the pass's preset consumes the texel too (`TINT_MIX`), in which case the strip keeps its texture and UVs | no --- `pvr`/`gx`/`pica`/`gu`/`gs`/`rdp`/`legacygl`, alone or in a list
 
 @m_class{m-noindent}
 
@@ -590,9 +592,9 @@ body that is silently wrong on the other backends the same block serves.
 Rule | On a target list
 ---- | ----------------
 Extended vocabulary @m_span{m-text m-dim} (strip builder, pre-clip quad axes, resolved uniforms) @m_endspan | allowed --- every backend a list names is spelled out in it, so nothing is implicit. Only the *generic* block is held to the portable core
-`TINT_MIX` | allowed only when **every** listed target has a lerping combiner --- any subset of `gx`, `rdp`, `legacygl`. @cpp void fixed_function(gx, gu) @ce is rejected --- the GE has no combiner
+`TINT_MIX` | allowed only when **every** listed target has a lerping combiner --- any subset of `gx`, `pica`, `rdp`, `legacygl`. @cpp void fixed_function(gx, gu) @ce is rejected --- the GE has no combiner
 `LUMA_RAMP` | allowed only in a block targeting `gx` and nothing else --- the RDP's combiner has no dot product to derive the luminance from
-`MODULATE_X2` / `MODULATE_X4` | rejected as soon as `gu` or `gs` appears in the list. @cpp void fixed_function(pvr, gu) @ce cannot use them even while the PVR's own header is being written; `rdp` in a list rejects `MODULATE_X4` only, and `gx`/`legacygl` have both
+`MODULATE_X2` / `MODULATE_X4` | rejected as soon as `gu` or `gs` appears in the list. @cpp void fixed_function(pvr, gu) @ce cannot use them even while the PVR's own header is being written; `rdp` in a list rejects `MODULATE_X4` only, and `gx`/`legacygl`/`pica` have both
 Strip-builder capacity | the **minimum** across the listed targets. @cpp void fixed_function(pvr, gx) @ce is limited to 8 vertices, so a literal index `8` is an error there
 
 @m_class{m-noindent}
@@ -691,8 +693,8 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
 5.  @cpp "CgGeneratedShaders.h" @ce --- the PS Vita's Cg stage sources (`--emit-cg`)
 6.  @cpp "PvrGeneratedEffects.h" @ce, @cpp "GxGeneratedEffects.h" @ce,
     @cpp "GuGeneratedEffects.h" @ce, @cpp "GsGeneratedEffects.h" @ce,
-    @cpp "RdpGeneratedEffects.h" @ce and @cpp "LegacyGlGeneratedEffects.h" @ce --- the fixed-function
-    effects (`--emit-fixed-function pvr` / `gx` / `gu` / `gs` / `rdp` / `legacygl`)
+    @cpp "RdpGeneratedEffects.h" @ce, @cpp "LegacyGlGeneratedEffects.h" @ce and @cpp "PicaGeneratedEffects.h" @ce ---
+    the fixed-function effects (`--emit-fixed-function pvr` / `gx` / `pica` / `gu` / `gs` / `rdp` / `legacygl`)
 
 7.  @cpp "RsxGeneratedShaders.h" @ce --- the PlayStation 3's RSX microcode (`--emit-rsx`), **only on a
     host that has `cgcomp`**, see the note below
@@ -836,7 +838,7 @@ Where the cursor is | What is offered
 Brace depth 0 | The directives, the entry points, `#include`, types, and the names this file declares
 After `shader_type`, `render_mode` or `precision` | Only that directive's legal values --- nothing else
 After the `:` of a `uniform` | Only the seven uniform hints
-Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `gu`, `gs`, `rdp`, `legacygl`
+Inside the parentheses of `void fixed_function(...)` | Only `pvr`, `gx`, `pica`, `gu`, `gs`, `rdp`, `legacygl`
 Inside a `fixed_function` body | The fixed-function statements, the `submit_*` calls, the pass fields with their enum values, the context facilities, and the small maths subset the transpiler accepts
 Inside `vertex()` or `fragment()` | GLSL built-ins and `gl_*`, the mode-appropriate canvas built-ins, and this file's uniforms, varyings, attributes, block members, structs, `#define`s, `variant` names and helper functions
 Inside an `#include "..."` | The sibling `.inc` / `.shader` files, walked directory by directory

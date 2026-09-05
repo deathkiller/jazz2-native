@@ -118,16 +118,17 @@ namespace Jazz2
 	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
-#if defined(DEATH_TARGET_PSP)
+#if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP)
 	// Half the hardware's 44100 Hz: the mixer's cost is linear in the rate, the game's samples are 11-22 kHz
-	// to begin with and the module music is rendered at this rate anyway (see AudioLoaderMpt)
+	// to begin with and the module music is rendered at this rate anyway (see AudioLoaderMpt). The 3DS's DSP
+	// resamples the channel to its own 32728 Hz in hardware, so the mixing rate is a free choice there too.
 	std::int32_t PreferencesCache::AudioSampleRate = 22050;
 #else
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
 #endif
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_PS3)
@@ -930,7 +931,7 @@ namespace
 
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
@@ -1078,7 +1079,7 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS)
+				defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS)
 			// Save config file next to `Source` directory (on the storage device the content is read from;
 			// on the Amiga that is the game's own directory, the conventional home of a program's settings)
 			auto& resolver = ContentResolver::Get();
@@ -1117,7 +1118,7 @@ namespace
 		// using any command-line argument
 #	if defined(DEATH_TRACE)
 #		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || \
-			defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+			defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
@@ -1444,7 +1445,7 @@ namespace
 #if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
 			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_3DS)
 			// Use Switch button labels (on the N64 they are the closest fit, see the static initializer)
 			GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
@@ -1467,7 +1468,7 @@ namespace
 
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3) && \
 		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA)
 		// Override some settings by command-line arguments
 		for (std::int32_t i = 0; i < config.argc(); i++) {
@@ -1816,6 +1817,8 @@ namespace
 		String deviceDesc = format("{}|Nintendo Wii||14|{}", hostName, arch);
 #elif defined(DEATH_TARGET_GAMECUBE)
 		String deviceDesc = format("{}|Nintendo GameCube||15|{}", hostName, arch);
+#elif defined(DEATH_TARGET_3DS)
+		String deviceDesc = format("{}|Nintendo 3DS||19|{}", hostName, arch);
 #elif defined(DEATH_TARGET_PS2)
 		String deviceDesc = format("{}|PlayStation 2||11|{}", hostName, arch);
 #elif defined(DEATH_TARGET_PS3)

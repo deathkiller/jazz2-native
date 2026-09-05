@@ -23,10 +23,24 @@ namespace nCine::Backends
 	static bool _initialized = false;
 	// Whether the infrastructure half of the stack is up (see BeginInfrastructure()), whether an access point
 	// is joined on top of it (see ScopedConnection), and whether the WLAN is in ad hoc mode instead - the two
-	// halves are exclusive, so switching to ad hoc takes the infrastructure one down completely
+	// USES are exclusive (an access point or a group, never both), the libraries behind them are not
 	static bool _inetActive = false;
 	static bool _apConnected = false;
 	static bool _adhocActive = false;
+
+	// The firmware modules of the two halves are loaded once, at startup, and stay resident until shutdown -
+	// the way a retail game loads every net module it will ever use at boot. Loading the ad hoc module in
+	// the middle of a session, after the infrastructure one had been unloaded, killed the process on the
+	// PS Vita's PSP emulator (Adrenaline) with nothing returned (2026-09-05); only the libraries on top of
+	// the modules are initialized and terminated as the mode switches.
+	static bool _inetModuleLoaded = false;
+	static bool _adhocModuleLoaded = false;
+
+	// The same holds for the libraries on top of the modules: re-initializing pspnet_inet after a
+	// sceNetInetTerm() killed the process the same way (2026-09-05), so once a library is up it stays up
+	// until Shutdown(). `_adhocActive` is then only the MODE - which of the two the WLAN is being used for -
+	// and switching it is nothing but dropping the access point one way and leaving the group the other.
+	static bool _adhocLibrariesActive = false;
 
 	// How many ScopedConnection instances are alive, and the semaphore that keeps their bookkeeping and the
 	// association itself in step. A semaphore and not the spinlock the shared code uses: the holder of this
@@ -120,16 +134,19 @@ namespace nCine::Backends
 			return true;
 		}
 
-		LogFreeMemory();
-		std::int32_t result = sceUtilityLoadNetModule(PSP_NET_MODULE_INET);
-		if (result < 0) {
-			LOGW("Cannot load the infrastructure module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
-			return false;
+		std::int32_t result;
+		if (!_inetModuleLoaded) {
+			LogFreeMemory();
+			result = sceUtilityLoadNetModule(PSP_NET_MODULE_INET);
+			if (result < 0) {
+				LOGW("Cannot load the infrastructure module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
+				return false;
+			}
+			_inetModuleLoaded = true;
 		}
 		result = sceNetInetInit();
 		if (result < 0) {
 			LOGW("Failed to initialize the network stack, sceNetInetInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
 			return false;
 		}
 		// Host names are resolved through gethostbyname(), which the newlib port routes into this resolver -
@@ -138,7 +155,6 @@ namespace nCine::Backends
 		if (result < 0) {
 			LOGW("Failed to initialize the network stack, sceNetResolverInit() failed with error 0x{:.8x}", std::uint32_t(result));
 			sceNetInetTerm();
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
 			return false;
 		}
 		result = sceNetApctlInit(0x8000, 48);
@@ -146,7 +162,6 @@ namespace nCine::Backends
 			LOGW("Failed to initialize the network stack, sceNetApctlInit() failed with error 0x{:.8x}", std::uint32_t(result));
 			sceNetResolverTerm();
 			sceNetInetTerm();
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
 			return false;
 		}
 
@@ -156,21 +171,49 @@ namespace nCine::Backends
 
 	// Takes the infrastructure half down again, in the reverse order, so ad hoc mode can have the module slot
 	// and the memory it holds
+	// Drops the access point association, if there is one, and waits for the control to report it gone
+	static void DisconnectAccessPoint()
+	{
+		if (!_inetActive) {
+			return;
+		}
+
+		_apConnected = false;
+		_lingerArmed = false;
+		_lingerDeadline = 0;
+
+		// Disconnecting is asynchronous - the control's own thread walks the state machine back to
+		// DISCONNECTED - and terminating the library or unloading its module while that is still under way
+		// pulls the code out from under that thread. So the state is polled until it is back, with a bound
+		// in case the firmware never gets there (then the teardown proceeds as it always has).
+		int state = PSP_NET_APCTL_STATE_DISCONNECTED;
+		std::int32_t stateResult = sceNetApctlGetState(&state);
+		if (stateResult >= 0 && state != PSP_NET_APCTL_STATE_DISCONNECTED) {
+			sceNetApctlDisconnect();
+			constexpr std::int32_t DisconnectTimeoutMs = 5000;
+			constexpr std::int32_t DisconnectPollIntervalMs = 100;
+			std::int32_t elapsed = 0;
+			for (; elapsed < DisconnectTimeoutMs; elapsed += DisconnectPollIntervalMs) {
+				if (sceNetApctlGetState(&state) < 0 || state == PSP_NET_APCTL_STATE_DISCONNECTED) {
+					break;
+				}
+				sceKernelDelayThread(DisconnectPollIntervalMs * 1000);
+			}
+		}
+	}
+
+	// Takes the infrastructure libraries down; only at shutdown, see _adhocLibrariesActive
 	static void EndInfrastructure()
 	{
 		if (!_inetActive) {
 			return;
 		}
 
+		DisconnectAccessPoint();
 		_inetActive = false;
-		_apConnected = false;
-		_lingerArmed = false;
-		_lingerDeadline = 0;
-		sceNetApctlDisconnect();
 		sceNetApctlTerm();
 		sceNetResolverTerm();
 		sceNetInetTerm();
-		sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
 	}
 
 	void PspNetwork::Initialize()
@@ -198,21 +241,35 @@ namespace nCine::Backends
 		_initialized = true;
 		_connectionLock = sceKernelCreateSema("nCineNetConnection", 0, 1, 1, nullptr);
 
+		// The ad hoc module goes first, so that a load that cannot succeed fails (or, on the PS Vita's PSP
+		// emulator, dies) before anything else is in memory and is easy to tell apart in the log; it is only
+		// the module, nothing of it runs until AdhocBegin(). Not having it costs only the ad hoc mode.
+		LogFreeMemory();
+		result = sceUtilityLoadNetModule(PSP_NET_MODULE_ADHOC);
+		if (result >= 0) {
+			_adhocModuleLoaded = true;
+		} else {
+			LOGW("Cannot load the ad hoc module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
+		}
+
 		// Infrastructure is the half everything but ad hoc multiplayer wants, so it is the one brought up
-		// here - but only as far as its modules and libraries: no access point is joined until something
+		// here - but only as far as its module and libraries: no access point is joined until something
 		// takes a ScopedConnection. Failing it is not fatal, because ad hoc mode needs none of it.
 		BeginInfrastructure();
+		LogFreeMemory();
 	}
 
-	// Leaves any group and takes the ad hoc half of the stack down, without bringing the infrastructure one
-	// back up - which is what PspNetwork::AdhocEnd() adds and what shutting down must not do
+	// Leaves any group and takes the ad hoc libraries down; only at shutdown, see _adhocLibrariesActive
 	static void EndAdhoc()
 	{
 		PspNetwork::AdhocLeaveGroup();
+		_adhocActive = false;
+		if (!_adhocLibrariesActive) {
+			return;
+		}
+		_adhocLibrariesActive = false;
 		sceNetAdhocctlTerm();
 		sceNetAdhocTerm();
-		sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
-		_adhocActive = false;
 	}
 
 	void PspNetwork::Shutdown()
@@ -222,11 +279,23 @@ namespace nCine::Backends
 		}
 
 		_initialized = false;
-		if (_adhocActive) {
-			EndAdhoc();
-		}
+		EndAdhoc();
 		EndInfrastructure();
+
+		// The core goes down BEFORE the modules that plugged into it are unloaded - the order the SDK's own
+		// samples use. The other way round killed the process on the PS Vita's PSP emulator (Adrenaline) once
+		// ad hoc mode had been used in the session (2026-09-05): with the ad hoc module gone first, sceNetTerm()
+		// died, and leaving the core to sceKernelExitGame() died inside that instead - the ad hoc PRXes leave
+		// registrations in the core that only its termination takes back, and by then their code was gone.
 		sceNetTerm();
+		if (_adhocModuleLoaded) {
+			_adhocModuleLoaded = false;
+			sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
+		}
+		if (_inetModuleLoaded) {
+			_inetModuleLoaded = false;
+			sceUtilityUnloadNetModule(PSP_NET_MODULE_INET);
+		}
 		sceUtilityUnloadNetModule(PSP_NET_MODULE_COMMON);
 
 		// Every thread that could hold a connection is joined before the application gets here, so the count
@@ -392,7 +461,7 @@ namespace nCine::Backends
 				// a deadline and Update() is what ends it (see ConnectionLingerSecs)
 				_lingerDeadline = sceKernelGetSystemTimeWide() + std::int64_t(ConnectionLingerSecs) * 1000000;
 				_lingerArmed = true;
-				LOGI("Nothing needs the network connection, releasing it in {} seconds", ConnectionLingerSecs);
+				LOGD("Nothing needs the network connection, releasing it in {} seconds", ConnectionLingerSecs);
 			}
 		}
 	}
@@ -458,47 +527,53 @@ namespace nCine::Backends
 			return false;
 		}
 
-		// The WLAN is either associated with an access point or an ad hoc peer, never both, and neither are the
-		// two modules: this one is five PRXes (adhoc, adhocctl, matching, download, discover) against the
-		// infrastructure one's three, and the loader has only what the heap left free to put them in, so the
-		// whole infrastructure half goes away rather than just its association. AdhocEnd() brings it back.
-		EndInfrastructure();
-
-		LogFreeMemory();
-		std::int32_t result = sceUtilityLoadNetModule(PSP_NET_MODULE_ADHOC);
-		if (result < 0) {
-			LOGW("Cannot load the ad hoc module, sceUtilityLoadNetModule() failed with error 0x{:.8x}", std::uint32_t(result));
-			// The module is a set of PRXes and the loader stops at the first one it cannot place, so the ones
-			// before it stay resident and hold the memory infrastructure mode is about to want back
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
-			BeginInfrastructure();
+		// No ScopedConnection may be halfway through an association while the infrastructure half is taken
+		// down underneath it - the lock is what every holder takes for the duration of its association
+		if (!_adhocModuleLoaded) {
+			LOGW("Cannot enter ad hoc mode, the ad hoc module is not loaded");
 			return false;
 		}
-		result = sceNetAdhocInit();
+
+		ConnectionLockGuard guard;
+
+		// The WLAN is either associated with an access point or an ad hoc peer, never both - so the
+		// association goes, and nothing else: the infrastructure libraries stay initialized (see
+		// _adhocLibrariesActive for why), and AdhocEnd() has nothing to bring back
+		DisconnectAccessPoint();
+
+		if (_adhocLibrariesActive) {
+			_adhocActive = true;
+			LOGI("Ad hoc mode entered");
+			return true;
+		}
+
+		std::int32_t result = sceNetAdhocInit();
 		if (result < 0) {
 			LOGW("Cannot enter ad hoc mode, sceNetAdhocInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
-			BeginInfrastructure();
 			return false;
 		}
 		// The product code is what keeps groups of this game apart from other games' on the same channel. All
 		// 9 characters of it are matched, so the application name is padded out with zeroes the way a retail
 		// disc code is (4 letters and 5 digits), and it has to stay the same across builds to remain joinable.
-		struct productStruct product = {};
+		// Static, in case the firmware keeps the pointer rather than a copy - its own thread is what uses it
+		static struct productStruct product;
+		std::memset(&product, 0, sizeof(product));
 		product.unknown = 0;
 		std::int32_t productLength = NormalizeAdhocName(NCINE_APP, product.product, std::int32_t(sizeof(product.product)));
 		for (std::int32_t i = productLength; i < std::int32_t(sizeof(product.product)); i++) {
 			product.product[i] = '0';
 		}
-		result = sceNetAdhocctlInit(0x2000, 0x30, &product);
+		// The header suggests an 8 KB stack for the control's thread, the SDK's own game sharing sample gives
+		// it 32 KB - and an overflow inside a firmware thread kills the process with nothing in the log
+		result = sceNetAdhocctlInit(32 * 1024, 0x30, &product);
 		if (result < 0) {
 			LOGW("Cannot enter ad hoc mode, sceNetAdhocctlInit() failed with error 0x{:.8x}", std::uint32_t(result));
-			sceNetAdhocTerm();
-			sceUtilityUnloadNetModule(PSP_NET_MODULE_ADHOC);
-			BeginInfrastructure();
+			// The ad hoc library is deliberately left initialized: terminating it only to initialize it
+			// again on the next attempt is the very sequence that kills the process
 			return false;
 		}
 
+		_adhocLibrariesActive = true;
 		_adhocActive = true;
 		LOGI("Ad hoc mode entered");
 		return true;
@@ -510,12 +585,12 @@ namespace nCine::Backends
 			return;
 		}
 
-		EndAdhoc();
+		ConnectionLockGuard guard;
+		AdhocLeaveGroup();
+		// The libraries stay up (see _adhocLibrariesActive); the infrastructure ones never went down, so the
+		// next ScopedConnection joins the access point as if nothing happened
+		_adhocActive = false;
 		LOGI("Ad hoc mode left");
-
-		// The infrastructure half was taken down to make room for ad hoc mode, so it is brought back here
-		// rather than at the next EnsureConnected() - a caller that finds no network is not told why
-		BeginInfrastructure();
 	}
 
 	bool PspNetwork::IsAdhocActive()
@@ -590,6 +665,10 @@ namespace nCine::Backends
 			LOGW("Cannot scan for ad hoc groups, sceNetAdhocctlScan() failed with error 0x{:.8x}", std::uint32_t(result));
 			return -1;
 		}
+		// The scan is asynchronous, so the control may still report DISCONNECTED for a moment before it moves
+		// to SCANNING - waiting for the end state alone would then return at once with nothing to read. The
+		// first wait is what catches that, and it not happening at all is fine (a scan that finished already)
+		WaitForAdhocctlState(AdhocctlStateScanning, 2000);
 		if (!WaitForAdhocctlState(AdhocctlStateDisconnected, 15000)) {
 			LOGW("Timed out scanning for ad hoc groups");
 			return -1;
@@ -597,14 +676,16 @@ namespace nCine::Backends
 
 		// The results are a linked list the firmware lays out in the buffer it is given; its size is queried first
 		int length = 0;
-		if (sceNetAdhocctlGetScanInfo(&length, nullptr) < 0 || length <= 0) {
+		result = sceNetAdhocctlGetScanInfo(&length, nullptr);
+		if (result < 0 || length <= 0) {
 			return 0;
 		}
 		SceNetAdhocctlScanInfo buffer[32];
 		if (length > (int)sizeof(buffer)) {
 			length = (int)sizeof(buffer);
 		}
-		if (sceNetAdhocctlGetScanInfo(&length, buffer) < 0) {
+		result = sceNetAdhocctlGetScanInfo(&length, buffer);
+		if (result < 0) {
 			return -1;
 		}
 
@@ -631,7 +712,13 @@ namespace nCine::Backends
 
 	bool PspNetwork::GetMacAddress(std::uint8_t (&mac)[6])
 	{
-		return (sceWlanGetEtherAddr(mac) >= 0);
+		// The SDK header warns that the firmware asks for an 8-byte buffer even though it fills 6 of it
+		std::uint8_t buffer[8] = {};
+		if (sceWlanGetEtherAddr(buffer) < 0) {
+			return false;
+		}
+		std::memcpy(mac, buffer, sizeof(mac));
+		return true;
 	}
 
 	void PspNetwork::FormatMacAddress(const std::uint8_t (&mac)[6], char* buffer, std::size_t bufferLength)

@@ -8,7 +8,7 @@
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
 #if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && \
-		!defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && \
+		!defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PICA) && !defined(WITH_RHI_PVR) && \
 		!defined(WITH_RHI_GU) && !defined(WITH_RHI_GS) && !defined(WITH_RHI_RDP) && \
 		!defined(WITH_RHI_GXM) && !defined(WITH_RHI_RSX) && !defined(WITH_RHI_LEGACYGL)
 #	define WITH_RHI_GL
@@ -256,6 +256,99 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::GX::GxDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_PICA)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The PICA
+// backend (Nintendo 3DS "PICA200" via citro3d) is a fixed-function hardware backend of the GX/GU kind: the GPU
+// renders into any tiled colour buffer in memory and a render target is a texture the display transfer never
+// touches, so off-screen render targets are available (needed by the textured-background passes) and
+// `RHI_CAP_FRAMEBUFFERS` is defined; but its fragment stage is six texture-combiner stages with no program
+// behind them (the one programmable stage, the vertex shader, is a passthrough here), so `RHI_CAP_SHADERS`
+// stays undefined and the game runs the direct tier (scene straight to the display at the logical
+// resolution, CPU lightmap composited by the device's lighting hook).
+//
+// `RHI_CAP_PALETTED_TEXTURES` is deliberately NOT defined: unlike the GE and the GX, the PICA200 has no
+// colour lookup table of any kind - its eight-bit formats are luminance and alpha - so an R8 texture of
+// palette indices has to be baked through its palette row into colour on the CPU before the GPU can sample
+// it, exactly the way the legacy GL backend and the other consoles' RG8 content already are.
+//
+// `RHI_CAP_STREAMING_TEXTURES` is NOT defined either, for the GS's reason rather than the GL's: the PICA200
+// samples only TILED textures (8x8 blocks in Morton order), so there is no linear store a CPU writer could
+// fill row by row, and `PicaTexture::MapStreamingTexels()` always declines. The cinematics take the
+// copy-through-a-buffer path and the backend tiles each frame as it uploads it - one conversion pass over a
+// 320x200 frame, which the ARM11 does in well under a millisecond.
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_BATCHING
+
+namespace nCine::RHI::PICA
+{
+	class PicaDevice;
+	class PicaTexture;
+	class PicaBuffer;
+	class PicaShader;
+	class PicaShaderProgram;
+	class PicaShaderUniforms;
+	class PicaShaderUniformBlocks;
+	class PicaUniform;
+	class PicaUniformBlock;
+	class PicaUniformCache;
+	class PicaUniformBlockCache;
+	class PicaAttribute;
+	class PicaFramebuffer;
+	class PicaRenderbuffer;
+	class PicaRenderTarget;
+	class PicaVertexArray;
+	class PicaVertexFormat;
+	class PicaRhiCapabilities;
+	class PicaDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::PICA::PicaDevice;
+	using Texture = RHI::PICA::PicaTexture;
+	using Buffer = RHI::PICA::PicaBuffer;
+	using Shader = RHI::PICA::PicaShader;
+	using ShaderProgram = RHI::PICA::PicaShaderProgram;
+	using ShaderUniforms = RHI::PICA::PicaShaderUniforms;
+	using ShaderUniformBlocks = RHI::PICA::PicaShaderUniformBlocks;
+	using Uniform = RHI::PICA::PicaUniform;
+	using UniformBlock = RHI::PICA::PicaUniformBlock;
+	using UniformCache = RHI::PICA::PicaUniformCache;
+	using UniformBlockCache = RHI::PICA::PicaUniformBlockCache;
+	using Attribute = RHI::PICA::PicaAttribute;
+	using Framebuffer = RHI::PICA::PicaFramebuffer;
+	using Renderbuffer = RHI::PICA::PicaRenderbuffer;
+	using RenderTarget = RHI::PICA::PicaRenderTarget;
+	using VertexArray = RHI::PICA::PicaVertexArray;
+	using VertexFormat = RHI::PICA::PicaVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::PICA::PicaRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::PICA::PicaDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

@@ -35,6 +35,8 @@ matches the current implementation.
   see @ref consoles-switch
 - **Nintendo Wii** and **Nintendo GameCube** using devkitPro toolchain and a fixed-function GX
   rendering backend, see @ref consoles-wii and @ref consoles-gamecube
+- **Nintendo 3DS** using devkitPro toolchain with **libctru** and **citro3d** and a fixed-function
+  PICA200 rendering backend, see @ref consoles-3ds
 - **Nintendo 64** using [libdragon](https://github.com/DragonMinded/libdragon) and a fixed-function
   RDP rendering backend, see @ref consoles-n64 @m_span{m-text m-dim} (experimental --- it is by far
   the smallest machine here and does not hold a steady frame rate) @m_endspan
@@ -60,10 +62,10 @@ The code is mainly optimized to run on 64-bit **x86** and **ARM** processors inc
 instruction sets. Additionally, the application requires a rendering backend --- **OpenGL**
 3.3, **OpenGL|ES** 3.0, **WebGL** 2.0, **Direct3D** 11, **Vulkan** and a CPU software rasterizer
 are all fully supported and interchangeable, so any of them can be used depending on the target
-platform. The platforms above are where that stops being a free choice: six of the consoles have no
-programmable shaders at all and are driven by one of five rendering backends written for their
+platform. The platforms above are where that stops being a free choice: seven of the consoles have no
+programmable shaders at all and are driven by one of six rendering backends written for their
 fixed-function graphics hardware @m_span{m-text m-dim} (the Wii and the GameCube share one)
-@m_endspan, a sixth such backend drives the fixed-function OpenGL 1.x of the two PowerPC Amigas, while
+@m_endspan, a seventh such backend drives the fixed-function OpenGL 1.x of the two PowerPC Amigas, while
 the PlayStation Vita and the
 PlayStation 3 have real shaders and drive their native APIs --- **sceGxm** and **libgcm** ---
 directly. The classic Amiga has no usable graphics hardware at all, so there the software rasterizer
@@ -188,6 +190,21 @@ See also @ref third-party for the licenses of the libraries used.
 	@ref nCine::RHI::FixedFunctionPass that the device turns into a TEV and blending setup.
 */
 /** @namespace nCine::RHI::GX::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
+/** @dir nCine/Graphics/RHI/PICA
+	@brief Namespace @ref nCine::RHI::PICA
+*/
+/** @namespace nCine::RHI::PICA
+	@brief Nintendo 3DS fixed-function PICA200 backend on top of citro3d, selected by `WITH_RHI_PICA`
+
+	The GPU's one programmable stage is its vertex shader, which here is a passthrough of screen-space
+	vertices the CPU has transformed, so like @ref nCine::RHI::GX it has render targets but no
+	programmable fragment stage and consumes @ref nCine::RHI::FixedFunctionPass, translated into
+	texture-combiner and blending setups. Textures live 8x8-tiled in the linear heap and the GPU
+	samples them bottom-up, which the texture stores are written for.
+*/
+/** @namespace nCine::RHI::PICA::UniformTypeInfo
 	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
 /** @dir nCine/Graphics/RHI/PVR

@@ -184,6 +184,16 @@ namespace Death {
 #undef DEATH_TARGET_ANDROID
 
 /**
+	@brief Nintendo 64 target
+
+	Defined if the library is built for Nintendo 64 (libdragon). The VR4300 is a big-endian MIPS core
+	used through a 32-bit ABI, so @ref DEATH_TARGET_MIPS, @ref DEATH_TARGET_BIG_ENDIAN and
+	@ref DEATH_TARGET_32BIT are also defined.
+*/
+#define DEATH_TARGET_N64
+#undef DEATH_TARGET_N64
+
+/**
 	@brief Nintendo GameCube target
 
 	Defined if the library is built for Nintendo GameCube. Gekko is a PowerPC core, so
@@ -202,6 +212,16 @@ namespace Death {
 */
 #define DEATH_TARGET_WII
 #undef DEATH_TARGET_WII
+
+/**
+	@brief Nintendo 3DS target
+
+	Defined if the library is built for Nintendo 3DS (devkitARM and libctru). Its ARM11 MPCore is a 32-bit
+	ARM core, so @ref DEATH_TARGET_ARM and @ref DEATH_TARGET_32BIT are also defined; the toolchain targets
+	ARMv6K with the VFPv2 unit, so there is no NEON.
+*/
+#define DEATH_TARGET_3DS
+#undef DEATH_TARGET_3DS
 
 /**
 	@brief Nintendo Switch target
@@ -261,6 +281,48 @@ namespace Death {
 */
 #define DEATH_TARGET_DREAMCAST
 #undef DEATH_TARGET_DREAMCAST
+
+/**
+	@brief AmigaOS 3.x target
+
+	Defined if the library is built for classic AmigaOS 3.x on m68k. The 68k is, together with the
+	Dreamcast's SH-4, one of the supported architectures that none of @ref DEATH_TARGET_X86,
+	@ref DEATH_TARGET_ARM, @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_RISCV, @ref DEATH_TARGET_MIPS
+	or @ref DEATH_TARGET_WASM matches, so code that branches on those has to treat it as the unknown
+	case; @ref DEATH_TARGET_BIG_ENDIAN, @ref DEATH_TARGET_32BIT and @ref DEATH_TARGET_CONSTRAINED_MEMORY
+	are defined. Despite the shared name this is a target of its own and *not* implied by
+	@ref DEATH_TARGET_AMIGAOS4 --- see there. Note that @ref DEATH_TARGET_UNIX is not defined on any of
+	the Amiga systems, even though the file and process APIs are largely POSIX ones.
+*/
+#define DEATH_TARGET_AMIGAOS
+#undef DEATH_TARGET_AMIGAOS
+
+/**
+	@brief AmigaOS 4.1 target
+
+	Defined if the library is built for AmigaOS 4.1 (adtools). It is a 32-bit PowerPC system, so
+	@ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and @ref DEATH_TARGET_32BIT are also
+	defined. This is a separate target from @ref DEATH_TARGET_AMIGAOS and not a superset of it --- the
+	two share a system API in name only, this one being a PowerPC platform with a newlib that has
+	threads and most of POSIX --- so the two are never defined together, and neither is
+	@ref DEATH_TARGET_UNIX. Unlike the classic Amiga, @ref DEATH_TARGET_CONSTRAINED_MEMORY is not
+	defined here.
+*/
+#define DEATH_TARGET_AMIGAOS4
+#undef DEATH_TARGET_AMIGAOS4
+
+/**
+	@brief MorphOS target
+
+	Defined if the library is built for MorphOS. Like @ref DEATH_TARGET_AMIGAOS4 it is a 32-bit
+	PowerPC system, so @ref DEATH_TARGET_POWERPC, @ref DEATH_TARGET_BIG_ENDIAN and
+	@ref DEATH_TARGET_32BIT are also defined, but it is a system of its own --- its own kernel and its
+	own C library --- so it shares no target macro with the other two Amiga systems, and
+	@ref DEATH_TARGET_UNIX is not defined either. @ref DEATH_TARGET_CONSTRAINED_MEMORY is not defined
+	here.
+*/
+#define DEATH_TARGET_MORPHOS
+#undef DEATH_TARGET_MORPHOS
 
 /**
 	@brief x86 target
@@ -386,11 +448,12 @@ namespace Death {
 	@brief Whether the platform has little memory and small thread stacks
 
 	Defined for the game consoles (@ref DEATH_TARGET_SWITCH, @ref DEATH_TARGET_PSP, @ref DEATH_TARGET_VITA,
-	@ref DEATH_TARGET_N64, @ref DEATH_TARGET_WII, @ref DEATH_TARGET_GAMECUBE, @ref DEATH_TARGET_DREAMCAST,
-	@ref DEATH_TARGET_PS2, @ref DEATH_TARGET_PS3, @ref DEATH_TARGET_AMIGAOS) and for @ref DEATH_TARGET_EMSCRIPTEN,
-	where both the heap and the stack of a thread are scarce (a thread has 64 KB of stack on the PSP). Code
-	that embeds a large buffer in an object --- which then often lives on the stack --- picks a compact size
-	when this is defined, as the compression streams in @ref Death::IO::Compression do (8 KB instead of 16 KB).
+	@ref DEATH_TARGET_N64, @ref DEATH_TARGET_WII, @ref DEATH_TARGET_GAMECUBE, @ref DEATH_TARGET_3DS, @ref DEATH_TARGET_DREAMCAST,
+	@ref DEATH_TARGET_PS2, @ref DEATH_TARGET_PS3), for the classic @ref DEATH_TARGET_AMIGAOS and for
+	@ref DEATH_TARGET_EMSCRIPTEN, where both the heap and the stack of a thread are scarce (a thread has 64 KB
+	of stack on the PSP). Code that embeds a large buffer in an object --- which then often lives on the stack
+	--- picks a compact size when this is defined, as the compression streams in @ref Death::IO::Compression do
+	(8 KB instead of 16 KB).
 	Not defined on desktop and mobile platforms.
 */
 #define DEATH_TARGET_CONSTRAINED_MEMORY

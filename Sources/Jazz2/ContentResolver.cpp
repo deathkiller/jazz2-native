@@ -168,6 +168,11 @@ namespace Jazz2
 		return "sd:/apps/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
 		return "carda:/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_3DS)
+		// Next to the .3dsx in the standard Homebrew Launcher layout ("sdmc:/3ds/<application>/"). The SD card is
+		// mounted as "sdmc:" by libctru before main() runs, so ContentResolver can open files while the application
+		// is still being constructed; the absolute form is what shows up in the trace log when a file is missing
+		return "sdmc:/3ds/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Content/"_s;
 #elif defined(DEATH_TARGET_PS2)
@@ -213,6 +218,8 @@ namespace Jazz2
 		return "sd:/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
 		return "carda:/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_3DS)
+		return "sdmc:/3ds/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Cache/"_s;
 #elif defined(DEATH_TARGET_PS2)
@@ -248,6 +255,8 @@ namespace Jazz2
 		return "sd:/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
 		return "carda:/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_3DS)
+		return "sdmc:/3ds/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Source/"_s;
 #elif defined(DEATH_TARGET_PS2)
@@ -1618,7 +1627,7 @@ namespace Jazz2
 		// limit that is a power of two can hold.
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(WITH_RHI_LEGACYGL)
+		defined(DEATH_TARGET_3DS) || defined(WITH_RHI_LEGACYGL)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
 #else
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
@@ -1700,7 +1709,7 @@ namespace Jazz2
 		// broken up. Half-height chunks are 32 pages each for the same total.
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
-		defined(WITH_RHI_LEGACYGL)
+		defined(DEATH_TARGET_3DS) || defined(WITH_RHI_LEGACYGL)
 		constexpr std::int32_t PreferredChunkHeight = 512;
 #else
 		constexpr std::int32_t PreferredChunkHeight = 0;

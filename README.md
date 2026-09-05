@@ -123,6 +123,14 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 
 *The game reads its content from `carda:/Jazz2/Content/`, which is slot A by definition. The console has 24 MB of memory and no second pool, which makes it the tightest of the two PowerPC targets – and the reason module music plays through _libxmp_ here as well – and only GameCube controllers are read. Everything noted for the Wii applies here as well, including that the port has not been tested on real hardware yet.*
 
+### Nintendo 3DS
+* The console can't convert the game data itself in any reasonable time, so the content has to be prepared in advance from an original *Jazz Jackrabbit 2* installation and can't be distributed – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-3ds)
+* Copy the resulting `sdmc` directory contents to the root of the SD card (custom firmware or another way to start homebrew is needed)
+  * For *Azahar*, copy them into the emulator's configured SD card directory instead
+* Start `Jazz2` from the **Homebrew Launcher**
+
+*The game runs on the top screen in its native 400×240 and reads its content from `sdmc:/3ds/Jazz2/Content/`; the bottom screen shows the startup log. Sound needs the DSP firmware that every console running homebrew has at `sdmc:/3ds/dspfirm.cdc` (dump it with **DSP1** once), without it the game runs silently. **New 3DS** runs the game at its full 804 MHz clock, on an **Old 3DS** the frame rate drops in busy scenes. The port has been tested in the *Azahar* emulator only, not on real hardware yet.*
+
 ### PlayStation Portable
 * Download the game
 * Copy the provided `PSP/GAME/Jazz2` directory to the memory stick at exactly that path (custom firmware is needed)
@@ -258,7 +266,7 @@ cmake -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake -D NCINE_PREFERRED
 ```
 
 ### Other consoles
-The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
+The game runs on **Nintendo 64**, **Sega Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PlayStation 3** and **PlayStation Vita** as well. Each of them is cross-compiled with its own SDK and *CMake* toolchain file, most of them have a bespoke window and rendering backend for their fixed-function graphics hardware, and on most of them the game content has to be prepared in advance with *AssetPacker* and passed to the build with `NCINE_CONTENT_DIR` option (a few, such as the Wii, PSP, PS3 and Vita, can also convert the original game data directly on the device).
 
 Please refer to [the console documentation](https://de4th.dev/jazz2/docs/consoles.html) for the toolchain, build, packaging, deployment and logging steps of each console.
 

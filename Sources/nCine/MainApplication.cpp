@@ -17,6 +17,10 @@
 #elif defined(WITH_OGC)
 #	include "Backends/Ogc/OgcGfxDevice.h"
 #	include "Backends/Ogc/OgcInputManager.h"
+#elif defined(WITH_CTR)
+#	include "Backends/Ctr/CtrGfxDevice.h"
+#	include "Backends/Ctr/CtrInputManager.h"
+#	include "Backends/Ctr/CtrPlatform.h"
 #elif defined(WITH_DC)
 #	include "Backends/Dc/DcGfxDevice.h"
 #	include "Backends/Dc/DcInputManager.h"
@@ -49,6 +53,8 @@
 #	include <switch.h>
 #elif defined(DEATH_TARGET_DREAMCAST)
 #	include <kos.h>
+#elif defined(DEATH_TARGET_N64)
+#	include <libdragon.h>
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 #	include <gccore.h>
 #	include <fat.h>
@@ -57,8 +63,8 @@
 #	if defined(DEATH_TARGET_WII)
 #		include <wiiuse/wpad.h>
 #	endif
-#elif defined(DEATH_TARGET_N64)
-#	include <libdragon.h>
+#elif defined(DEATH_TARGET_3DS)
+#	include <3ds.h>
 #elif defined(DEATH_TARGET_PS2)
 extern "C" {
 #	include <kernel.h>
@@ -92,7 +98,7 @@ extern "C" {
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3) || defined(WITH_N64) || defined(WITH_AMIGA)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_CTR) || defined(WITH_DC) || defined(WITH_PSP) || defined(WITH_PS2) || defined(WITH_PS3) || defined(WITH_N64) || defined(WITH_AMIGA)
 using namespace nCine::Backends;
 #endif
 
@@ -375,6 +381,14 @@ namespace nCine
 			ogcShutdownRequested = true;
 		});
 #	endif
+#elif defined(DEATH_TARGET_3DS)
+		// The system services (graphics, the boot console on the bottom screen, the CPU speed-up of a New 3DS)
+		// come up before any device exists; the SD card is already mounted as "sdmc:" by libctru's own startup,
+		// which is what lets ContentResolver open files while the application is still being constructed
+		if (!CtrPlatform::Initialize()) {
+			CtrPlatform::Shutdown();
+			return EXIT_FAILURE;
+		}
 #elif defined(DEATH_TARGET_PS2)
 		// The CDVD device is not registered by default, so any "cdrom0:" path fails with EPERM until its IOP
 		// side is brought up - and ContentResolver opens one while the application is still being constructed,
@@ -549,6 +563,12 @@ namespace nCine
 			if (ogcShutdownRequested) {
 				app.Quit();
 			}
+#	elif defined(DEATH_TARGET_3DS)
+			// The system asks the application to leave through the APT event queue (the HOME menu closing it, a
+			// power-off), and an application that ignores that keeps running until it is killed
+			if (!CtrPlatform::Update()) {
+				app.Quit();
+			}
 #	elif defined(DEATH_TARGET_PSP)
 			if (pspShutdownRequested) {
 				app.Quit();
@@ -573,15 +593,6 @@ namespace nCine
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
 		socketExit();
-#elif defined(DEATH_TARGET_VITA)
-		sceKernelExitProcess(0);
-#elif defined(DEATH_TARGET_PSP)
-#	if defined(WITH_CURL)
-		PspNetwork::Shutdown();
-#	endif
-		// Returning from main() would land back in the crt0 stub, which halts; the firmware expects a
-		// finished application to hand control back to whatever launched it instead
-		sceKernelExitGame();
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// Returning from main() only reaches a loader when one left its return stub behind (the Homebrew
 		// Channel and friends); booted directly there is nothing to return to, so the console is asked to
@@ -595,6 +606,17 @@ namespace nCine
 #	else
 		SYS_ResetSystem(SYS_HOTRESET, 0, 0);
 #	endif
+#elif defined(DEATH_TARGET_3DS)
+		// The gfx device and the audio device are gone after ShutdownCommon(); returning from main() hands
+		// control back to the Homebrew Launcher
+		CtrPlatform::Shutdown();
+#elif defined(DEATH_TARGET_PSP)
+		// The network stack went down inside ShutdownCommon(), while the trace could still record it.
+		// Returning from main() would land back in the crt0 stub, which halts; the firmware expects a
+		// finished application to hand control back to whatever launched it instead
+		sceKernelExitGame();
+#elif defined(DEATH_TARGET_VITA)
+		sceKernelExitProcess(0);
 #elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
 #endif
@@ -1169,6 +1191,9 @@ namespace nCine
 #elif defined(WITH_OGC)
 			_gfxDevice = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<OgcInputManager>();
+#elif defined(WITH_CTR)
+			_gfxDevice = std::make_unique<CtrGfxDevice>(windowMode, contextInfo, displayMode);
+			_inputManager = std::make_unique<CtrInputManager>();
 #elif defined(WITH_DC)
 			_gfxDevice = std::make_unique<DcGfxDevice>(windowMode, contextInfo, displayMode);
 			_inputManager = std::make_unique<DcInputManager>();
@@ -1221,6 +1246,10 @@ namespace nCine
 #elif defined(WITH_OGC)
 			// No window events on a console; polling the controller ports is the whole event pump
 			OgcInputManager::updateJoystickStates();
+#elif defined(WITH_CTR)
+			// No window events on a console; polling the HID service is the whole event pump (the APT events that
+			// ask the game to quit are drained from the main loop in Run() instead)
+			CtrInputManager::updateJoystickStates();
 #elif defined(WITH_DC)
 			// No window events on a console; polling the maple bus is the whole event pump
 			DcInputManager::updateJoystickStates();

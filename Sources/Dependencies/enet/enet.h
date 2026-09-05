@@ -5759,7 +5759,7 @@ extern "C" {
 	}
 
 	static int enet_psp_adhoc_ensure_pdp(ENetPspAdhocSocket* s) {
-		unsigned char mac[6];
+		unsigned char mac[8];	// sceWlanGetEtherAddr() asks for 8 bytes and fills 6 (pspwlan.h)
 		int result;
 		if (s->pdpId >= 0) {
 			return 0;
@@ -6103,7 +6103,7 @@ extern "C" {
 #if defined(DEATH_TARGET_PSP)
 		if (enetPspAdhoc) {
 			ENetPspAdhocSocket* s = enet_psp_adhoc_socket(socket);
-			unsigned char mac[6];
+			unsigned char mac[8];	// sceWlanGetEtherAddr() asks for 8 bytes and fills 6 (pspwlan.h)
 			if (s == NULL || enet_psp_adhoc_ensure_pdp(s) != 0 || sceWlanGetEtherAddr(mac) < 0) {
 				return -1;
 			}
@@ -6208,6 +6208,7 @@ extern "C" {
 				result = setsockopt(socket, SOL_SOCKET, SO_SNDBUF, (char *)&value, sizeof(int));
 				break;
 
+#if defined(SO_RCVTIMEO)
 			case ENET_SOCKOPT_RCVTIMEO: {
 				struct timeval timeVal;
 				timeVal.tv_sec  = value / 1000;
@@ -6215,7 +6216,9 @@ extern "C" {
 				result = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeVal, sizeof(struct timeval));
 				break;
 			}
+#endif
 
+#if defined(SO_SNDTIMEO)
 			case ENET_SOCKOPT_SNDTIMEO: {
 				struct timeval timeVal;
 				timeVal.tv_sec  = value / 1000;
@@ -6223,6 +6226,7 @@ extern "C" {
 				result = setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeVal, sizeof(struct timeval));
 				break;
 			}
+#endif
 
 			case ENET_SOCKOPT_NODELAY:
 				result = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char *)&value, sizeof(int));
@@ -6449,6 +6453,43 @@ extern "C" {
 		}
 
 		return sentLength;
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP)
+		// libctru's socket layer spells neither sendmsg() nor recvmsg() (see enet_socket_receive), only
+		// sendto(): the buffers - ENet hands the protocol header and the commands over as separate ones - are
+		// gathered into one datagram first. The stack copy is bounded by the MTU, which is the most the protocol
+		// ever puts into a single send; anything past it is refused rather than sent truncated.
+		// The PSP has sendmsg(), but pspdev's libcglue wrapper of it returns 0 on success instead of the byte
+		// count (its sendto() wrapper returns the count), so every send looked like "nothing sent" - the
+		// discovery request reported a failure for a packet that had left, and the traffic counters stayed 0.
+		struct sockaddr_in sin;
+		unsigned char datagram[ENET_PROTOCOL_MAXIMUM_MTU];
+		size_t total = 0, i;
+		int sentLength;
+		for (i = 0; i < bufferCount; i++) {
+			if (total + buffers[i].dataLength > sizeof(datagram)) {
+				return -1;
+			}
+			memcpy(datagram + total, buffers[i].data, buffers[i].dataLength);
+			total += buffers[i].dataLength;
+		}
+		if (address != NULL) {
+			memset(&sin, 0, sizeof(struct sockaddr_in));
+			sin.sin_family = AF_INET;
+			sin.sin_port = ENET_HOST_TO_NET_16(address->port);
+			sin.sin_addr.s_addr = address->host;
+		}
+		sentLength = (int)sendto(socket, datagram, total, MSG_NOSIGNAL,
+			(address != NULL ? (struct sockaddr*)&sin : NULL), (address != NULL ? (socklen_t)sizeof(struct sockaddr_in) : 0));
+		if (sentLength == -1) {
+			if (errno == EWOULDBLOCK || errno == ENOBUFS) {
+				return 0;
+			}
+			#ifdef ENET_DEBUG
+			LOGW("enet_socket_send() failed with error {}", errno);
+			#endif
+			return -1;
+		}
+		return sentLength;
 #else
 		struct msghdr msgHdr;
 		struct sockaddr_in sin;
@@ -6552,7 +6593,8 @@ extern "C" {
 		}
 
 		return recvLength;
-#elif defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+		// libctru has no recvmsg() at all (nor sendmsg(), see enet_socket_send), so the 3DS takes this route too.
 		// Both Sony handhelds export recvmsg() in firmware, and neither emulator implements it - PPSSPP
 		// logs "UNIMPL sceNetInetRecvmsg", Vita3K "Unimplemented sceNetRecvmsg import called" - while both
 		// do implement sendmsg, so only the receive side needs another route. Nothing is given up by

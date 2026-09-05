@@ -118,7 +118,11 @@ namespace Jazz2::Multiplayer
 		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
+		_finished = false;
 		_thread = Thread(ServerDiscovery::OnServerThread, this);
+		if (!_thread) {
+			_finished = true;
+		}
 #endif
 	}
 
@@ -133,7 +137,11 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		DownloadPublicServerListAsync();
 #elif defined(WITH_ONLINE_MULTIPLAYER)
+		_finished = false;
 		_thread = Thread(ServerDiscovery::OnClientThread, this);
+		if (!_thread) {
+			_finished = true;
+		}
 #endif
 	}
 
@@ -166,6 +174,19 @@ namespace Jazz2::Multiplayer
 
 		NetworkManagerBase::ReleaseBackend();
 #endif
+	}
+
+	void ServerDiscovery::RequestStop()
+	{
+		// The thread loops on these two, so clearing them is what ends it - the same thing Stop() does before
+		// it waits; everything else Stop() does is left to the Stop() that follows
+		_server = nullptr;
+		_observer = nullptr;
+	}
+
+	bool ServerDiscovery::HasFinished() const
+	{
+		return _finished.load(std::memory_order_acquire);
 	}
 
 	void ServerDiscovery::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
@@ -1008,6 +1029,12 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnClientThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+		// Marks the thread finished on every way out of here (the ad hoc arm below returns early), which is
+		// what HasFinished() reports to a caller that cannot afford to join
+		struct FinishedGuard {
+			std::atomic<bool>& Finished;
+			~FinishedGuard() { Finished.store(true, std::memory_order_release); }
+		} finishedGuard{_this->_finished};
 
 #if defined(DEATH_TARGET_PSP)
 		if (NetworkManagerBase::IsAdhocMode()) {
@@ -1106,6 +1133,12 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnServerThread(void* param)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(param);
+		// Marks the thread finished on every way out of here (the ad hoc arm below returns early), which is
+		// what HasFinished() reports to a caller that cannot afford to join
+		struct FinishedGuard {
+			std::atomic<bool>& Finished;
+			~FinishedGuard() { Finished.store(true, std::memory_order_release); }
+		} finishedGuard{_this->_finished};
 
 #if defined(DEATH_TARGET_PSP)
 		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread

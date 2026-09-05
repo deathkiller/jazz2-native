@@ -36,6 +36,9 @@
 #		include "../../nCine/Backends/Psp/PspNetwork.h"
 #	elif defined(DEATH_TARGET_VITA)
 #		include <psp2/net/netctl.h>
+#	elif defined(DEATH_TARGET_3DS)
+#		include <unistd.h>		// gethostid()
+#		include <arpa/inet.h>
 #	elif !defined(DEATH_TARGET_EMSCRIPTEN)
 #		include <ifaddrs.h>
 #	endif
@@ -343,6 +346,15 @@ namespace Jazz2::Multiplayer
 			if (p[0]) {
 				StringView address; std::uint16_t port;
 				if (TrySplitAddressAndPort(p[0], address, port)) {
+#		if !ENET_IPV6
+					// A server advertises every address it has, IPv6 ones included, and this build cannot even
+					// parse those - so they are passed over quietly rather than reported as a failure every time
+					if (address.contains(':')) {
+						LOGD("Skipping IPv6 endpoint \"{}\", not supported on this platform", address);
+						endpoints = p[2];
+						continue;
+					}
+#		endif
 					ENetAddress addr = {};
 					String nullTerminatedAddress = String::nullTerminatedView(address);
 					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
@@ -632,6 +644,21 @@ namespace Jazz2::Multiplayer
 			if (sceNetCtlInetGetInfo(SCE_NETCTL_INFO_GET_IP_ADDRESS, &info) == 0 &&
 				inet_aton(info.ip_address, &vitaAddr) == 1) {
 				String addressString = AddressToString(vitaAddr, _host->address.port);
+				LOGI("Found 1 interface:");
+				LOGI(" -\t{}", addressString);
+				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
+					arrayAppend(result, std::move(addressString));
+				}
+			} else {
+				LOGW("Failed to get server endpoints");
+			}
+#	elif defined(DEATH_TARGET_3DS)
+			// The same single address as on the two Sony handhelds - libctru has no interface list either, and
+			// reports the one address the WLAN got as gethostid() (0.0.0.0 while the console is offline)
+			struct in_addr ctrAddr;
+			ctrAddr.s_addr = std::uint32_t(::gethostid());
+			if (ctrAddr.s_addr != 0) {
+				String addressString = AddressToString(ctrAddr, _host->address.port);
 				LOGI("Found 1 interface:");
 				LOGI(" -\t{}", addressString);
 				if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {

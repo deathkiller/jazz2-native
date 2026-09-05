@@ -70,7 +70,7 @@
 /** @brief Whether the current platform has non-fullscreen windows */
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
 		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && \
-		!defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS2) && \
+		!defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PS2) && \
 		!defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_AMIGAOS)
 #	define NCINE_HAS_WINDOWS
 #endif

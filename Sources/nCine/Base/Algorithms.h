@@ -282,7 +282,7 @@ namespace nCine
 	inline float sinApprox(float x)
 	{
 #if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || \
-		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
 		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 		// The fold below subtracts a whole number of turns found with a truncating cast, and both halves
 		// of that fail on a large angle: past about 4096 radians a float no longer resolves the fraction

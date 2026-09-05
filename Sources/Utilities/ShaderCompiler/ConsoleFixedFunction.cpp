@@ -166,6 +166,7 @@ namespace ShaderCompiler
 				case FixedFunctionTarget::Gs: return FixedFunctionBackend::Gs;
 				case FixedFunctionTarget::Rdp: return FixedFunctionBackend::Rdp;
 				case FixedFunctionTarget::LegacyGl: return FixedFunctionBackend::LegacyGl;
+				case FixedFunctionTarget::Pica: return FixedFunctionBackend::Pica;
 				default: return FixedFunctionBackend::Pvr;
 			}
 		}
@@ -192,6 +193,7 @@ namespace ShaderCompiler
 				case FixedFunctionBackend::Gs: return "gs";
 				case FixedFunctionBackend::Rdp: return "rdp";
 				case FixedFunctionBackend::LegacyGl: return "legacygl";
+				case FixedFunctionBackend::Pica: return "pica";
 				default: return "pvr";
 			}
 		}
@@ -207,8 +209,10 @@ namespace ShaderCompiler
 		// have no scale stage either.
 		bool HasCombinerOutputScale(FixedFunctionBackend backend, bool x4)
 		{
-			// OpenGL 1.3's GL_COMBINE has GL_RGB_SCALE, which takes 1, 2 or 4 - both scales, exactly
-			if (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::LegacyGl) return true;
+			// OpenGL 1.3's GL_COMBINE has GL_RGB_SCALE, which takes 1, 2 or 4 - both scales, exactly; the
+			// PICA200's combiner stages have the same three-valued scale register (GPU_TEVSCALE_1/2/4)
+			if (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::LegacyGl ||
+				backend == FixedFunctionBackend::Pica) return true;
 			if (backend == FixedFunctionBackend::Rdp) return !x4;
 			return false;
 		}
@@ -221,9 +225,11 @@ namespace ShaderCompiler
 		bool HasTintMixCombiner(FixedFunctionBackend backend)
 		{
 			// GL_INTERPOLATE is that lerp: Arg0 * Arg2 + Arg1 * (1 - Arg2), with the texel in Arg0, the
-			// pass colour in the texture environment colour and the interpolated alpha in Arg2
+			// pass colour in the texture environment colour and the interpolated alpha in Arg2 - and the PICA200's
+			// GPU_INTERPOLATE is the same operation on the same three operands (GL_COMBINE is what its combiner
+			// was modelled on)
 			return (backend == FixedFunctionBackend::Gx || backend == FixedFunctionBackend::Rdp ||
-				backend == FixedFunctionBackend::LegacyGl);
+				backend == FixedFunctionBackend::LegacyGl || backend == FixedFunctionBackend::Pica);
 		}
 
 		// --- Statement AST ---------------------------------------------------------------------------
@@ -693,7 +699,7 @@ namespace ShaderCompiler
 			bool RequireExtended(StringView what)
 			{
 				if (_targets.empty()) {
-					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs), (rdp) or a list of them (generic blocks keep the portable quad-only core)"_s);
+					Fail(what + " is only available in a backend-specific fixed_function block that names its targets - fixed_function(pvr), (gx), (gu), (gs), (rdp), (legacygl), (pica) or a list of them (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;
@@ -802,7 +808,7 @@ namespace ShaderCompiler
 					// The list form: the block would have been valid without that target in it
 					why += ", which this block also names"_s;
 				}
-				why += " (keep TINT_MIX in a fixed_function block that only targets gx, rdp and/or legacygl, and give the other backends their own block)"_s;
+				why += " (keep TINT_MIX in a fixed_function block that only targets gx, rdp, legacygl and/or pica, and give the other backends their own block)"_s;
 				Fail(std::move(why));
 				return false;
 			}

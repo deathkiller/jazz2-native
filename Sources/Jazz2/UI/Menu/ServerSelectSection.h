@@ -82,6 +82,11 @@ namespace Jazz2::UI::Menu
 		float _transitionTime;
 		bool _shouldStart;
 		bool _isConnecting;
+#if defined(DEATH_TARGET_PSP)
+		// A transport mode switch in progress (see ToggleAdhocMode()): the discovery thread has been asked to
+		// end and OnUpdate() finishes the switch once it has, so the menu never waits on it
+		bool _switchingMode;
+#endif
 		bool _waitForIpInput;
 		bool _keyboardVisible;
 		TextInputBuffer _ipInput;
