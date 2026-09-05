@@ -319,6 +319,11 @@ namespace Jazz2::Multiplayer
 			return ENET_SOCKET_NULL;
 		}
 
+		// Restricted to IPv6 on purpose: the IPv4 half of discovery is a socket of its own on the same port
+		// (see TryCreateLocalBroadcastSocket()), and a dual-stack socket would be claiming its addresses too -
+		// which is a failed bind on one platform and a coin toss over who receives what on the next
+		enet_socket_set_option(socket, ENET_SOCKOPT_IPV6_V6ONLY, 1);
+
 		std::int32_t on = 1, hops = 3;
 		if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
@@ -381,15 +386,177 @@ namespace Jazz2::Multiplayer
 			return ENET_SOCKET_NULL;
 		}
 #	else
-		// TODO: Use broadcast on IPv4
-		LOGW("Local server discovery is not supported on IPv4");
-		ENetSocket socket = ENET_SOCKET_NULL;
+		// The IPv4-only platforms (see ENET_IPV6=0 in the build) have no multicast group to join, so this goes
+		// over the broadcast address instead: everyone binds the discovery port, requests go to
+		// 255.255.255.255 and reach the same link ff02::1 does. A build with IPv6 opens a second socket for
+		// this same conversation (see TryCreateLocalBroadcastSocket()), which is how the two sides of the
+		// address families find each other. The multicast address the caller names is an IPv6 literal with no
+		// IPv4 equivalent to parse, hence it is unused.
+		static_cast<void>(multicastAddress);
+
+#		if defined(DEATH_TARGET_PSP)
+		if (Backends::PspNetwork::IsAdhocActive()) {
+			// In ad hoc mode the group is the announcement - a scan is what finds it (see AdhocScan) - and
+			// every socket is a PDP socket addressed by MAC, so there is no broadcast address to send to
+			return ENET_SOCKET_NULL;
+		}
+#		endif
+
+		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
+		if (socket == ENET_SOCKET_NULL) {
+			LOGE("Failed to create socket for local server discovery (error: {})", errno);
+			return ENET_SOCKET_NULL;
+		}
+
+		// Reusing the address is what lets a server and the client looking for it share the port on one
+		// device, the way the multicast arm above does
+		if (enet_socket_set_option(socket, ENET_SOCKOPT_REUSEADDR, 1) < 0 ||
+			enet_socket_set_option(socket, ENET_SOCKOPT_BROADCAST, 1) < 0) {
+			LOGE("Failed to enable broadcast on socket for local server discovery (error: {})", errno);
+			enet_socket_destroy(socket);
+			return ENET_SOCKET_NULL;
+		}
+
+		ENetAddress bindAddress = {};
+		bindAddress.host = ENET_HOST_ANY;
+		bindAddress.port = DiscoveryPort;
+		if (enet_socket_bind(socket, &bindAddress) < 0) {
+			LOGE("Failed to bind socket for local server discovery (error: {})", errno);
+			enet_socket_destroy(socket);
+			return ENET_SOCKET_NULL;
+		}
+
+		parsedAddress = {};
+		parsedAddress.host = ENET_HOST_BROADCAST;
+		parsedAddress.port = DiscoveryPort;
 #	endif
 
 		return socket;
 	}
 
-	void ServerDiscovery::SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address)
+#	if ENET_IPV6
+	// The IPv4 addresses below live in an ENetAddress in their IPv4-mapped form (::ffff:a.b.c.d), which is the
+	// only shape an address of this family has in an IPv6 build - the last four bytes of the host are the
+	// address the AF_INET socket actually needs
+	static void SockAddrFromAddressV4(const ENetAddress& address, struct sockaddr_in& out)
+	{
+		std::memset(&out, 0, sizeof(out));
+		out.sin_family = AF_INET;
+		out.sin_port = htons(address.port);
+		std::memcpy(&out.sin_addr.s_addr, ((const std::uint8_t*)&address.host) + 12, 4);
+	}
+
+	static void AddressFromSockAddrV4(const struct sockaddr_in& in, ENetAddress& out)
+	{
+		out = {};
+		std::memcpy(&out.host, &enet_v4_anyaddr, sizeof(out.host));
+		std::memcpy(((std::uint8_t*)&out.host) + 12, &in.sin_addr.s_addr, 4);
+		out.port = ntohs(in.sin_port);
+	}
+
+	ENetSocket ServerDiscovery::TryCreateLocalBroadcastSocket(ENetAddress& parsedAddress)
+	{
+		// A socket of its own and not the multicast one above: an IPv4-only peer cannot be reached over the
+		// multicast group at all, and while a dual-stack socket receives IPv4 datagrams, sending to the IPv4
+		// broadcast address through one is not something every platform allows. So this is plain AF_INET,
+		// which every platform does agree about.
+		ENetSocket socket = ::socket(AF_INET, SOCK_DGRAM, 0);
+		if (socket == ENET_SOCKET_NULL) {
+#		if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#		else
+			std::int32_t error = errno;
+#		endif
+			LOGW("Failed to create IPv4 socket for local server discovery (error: {})", error);
+			return ENET_SOCKET_NULL;
+		}
+
+		std::int32_t on = 1;
+		if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) != 0 ||
+			setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof(on)) != 0) {
+#		if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#		else
+			std::int32_t error = errno;
+#		endif
+			LOGW("Failed to enable broadcast on IPv4 socket for local server discovery (error: {})", error);
+			enet_socket_destroy(socket);
+			return ENET_SOCKET_NULL;
+		}
+
+		struct sockaddr_in saddr;
+		std::memset(&saddr, 0, sizeof(saddr));
+		saddr.sin_family = AF_INET;
+		saddr.sin_port = htons(DiscoveryPort);
+		saddr.sin_addr.s_addr = INADDR_ANY;
+
+		if (bind(socket, (struct sockaddr*)&saddr, sizeof(saddr))) {
+#		if defined(DEATH_TARGET_WINDOWS)
+			std::int32_t error = ::WSAGetLastError();
+#		else
+			std::int32_t error = errno;
+#		endif
+			LOGW("Failed to bind IPv4 socket for local server discovery (error: {})", error);
+			enet_socket_destroy(socket);
+			return ENET_SOCKET_NULL;
+		}
+
+		// enet_v4_noaddr is ::ffff:255.255.255.255 - the broadcast address in the mapped form above
+		parsedAddress = {};
+		std::memcpy(&parsedAddress.host, &enet_v4_noaddr, sizeof(parsedAddress.host));
+		parsedAddress.port = DiscoveryPort;
+		return socket;
+	}
+#	endif
+
+	// An address of a family ENet was not compiled for cannot go through enet_socket_send()/receive(): both
+	// build a sockaddr of ENet's own family. The IPv4 half of discovery therefore does its own two calls, and
+	// on the platforms where ENet is already IPv4 there is nothing to distinguish and the flag does nothing.
+	static std::int32_t SendDiscoveryPacket(ENetSocket socket, const ENetAddress& address, const void* data, std::size_t length, bool ipv4)
+	{
+#	if ENET_IPV6
+		if (ipv4) {
+			struct sockaddr_in sin;
+			SockAddrFromAddressV4(address, sin);
+			return (std::int32_t)sendto(socket, (const char*)data, (int)length, 0, (struct sockaddr*)&sin, sizeof(sin));
+		}
+#	else
+		static_cast<void>(ipv4);
+#	endif
+
+		ENetBuffer sendbuf;
+		sendbuf.data = (void*)data;
+		sendbuf.dataLength = length;
+		return enet_socket_send(socket, &address, &sendbuf, 1);
+	}
+
+	static std::int32_t ReceiveDiscoveryPacket(ENetSocket socket, ENetAddress& address, void* data, std::size_t length, bool ipv4)
+	{
+#	if ENET_IPV6
+		if (ipv4) {
+			struct sockaddr_in sin;
+#		if defined(DEATH_TARGET_WINDOWS)
+			int sinLength = sizeof(sin);
+#		else
+			socklen_t sinLength = sizeof(sin);
+#		endif
+			std::int32_t result = (std::int32_t)recvfrom(socket, (char*)data, (int)length, 0, (struct sockaddr*)&sin, &sinLength);
+			if (result > 0) {
+				AddressFromSockAddrV4(sin, address);
+			}
+			return result;
+		}
+#	else
+		static_cast<void>(ipv4);
+#	endif
+
+		ENetBuffer recvbuf;
+		recvbuf.data = data;
+		recvbuf.dataLength = length;
+		return enet_socket_receive(socket, &address, &recvbuf, 1);
+	}
+
+	void ServerDiscovery::SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address, bool ipv4)
 	{
 		if (socket == ENET_SOCKET_NULL) {
 			return;
@@ -399,11 +566,9 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint64_t>(PacketSignature);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)BroadcastPacketType::DiscoveryRequest);
 
-		ENetBuffer sendbuf;
-		sendbuf.data = (void*)packet.GetBuffer();
-		sendbuf.dataLength = packet.GetSize();
-		std::int32_t result = enet_socket_send(socket, &address, &sendbuf, 1);
-		if (result != (std::int32_t)sendbuf.dataLength) {
+		std::size_t length = packet.GetSize();
+		std::int32_t result = SendDiscoveryPacket(socket, address, packet.GetBuffer(), length, ipv4);
+		if (result != (std::int32_t)length) {
 #	if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
 #	else
@@ -483,7 +648,7 @@ namespace Jazz2::Multiplayer
 #	endif
 	}
 
-	bool ServerDiscovery::ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs)
+	bool ServerDiscovery::ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs, bool ipv4)
 	{
 		if (socket == ENET_SOCKET_NULL) {
 			return false;
@@ -498,10 +663,7 @@ namespace Jazz2::Multiplayer
 
 		ENetAddress endpoint;
 		std::uint8_t buffer[512];
-		ENetBuffer recvbuf;
-		recvbuf.data = buffer;
-		recvbuf.dataLength = sizeof(buffer);
-		const std::int32_t bytesRead = enet_socket_receive(socket, &endpoint, &recvbuf, 1);
+		const std::int32_t bytesRead = ReceiveDiscoveryPacket(socket, endpoint, buffer, sizeof(buffer), ipv4);
 		if (bytesRead <= 0) {
 			return false;
 		}
@@ -554,7 +716,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	bool ServerDiscovery::ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs)
+	bool ServerDiscovery::ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs, bool ipv4)
 	{
 		if (socket == ENET_SOCKET_NULL) {
 			return false;
@@ -569,10 +731,7 @@ namespace Jazz2::Multiplayer
 
 		ENetAddress endpoint;
 		std::uint8_t buffer[512];
-		ENetBuffer recvbuf;
-		recvbuf.data = buffer;
-		recvbuf.dataLength = sizeof(buffer);
-		const std::int32_t bytesRead = enet_socket_receive(socket, &endpoint, &recvbuf, 1);
+		const std::int32_t bytesRead = ReceiveDiscoveryPacket(socket, endpoint, buffer, sizeof(buffer), ipv4);
 		if (bytesRead <= 0) {
 			return false;
 		}
@@ -587,7 +746,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	void ServerDiscovery::SendLocalDiscoveryResponse(ENetSocket socket, NetworkManager* server)
+	void ServerDiscovery::SendLocalDiscoveryResponse(ENetSocket socket, const ENetAddress& address, NetworkManager* server, bool ipv4)
 	{
 		if (socket == ENET_SOCKET_NULL) {
 			return;
@@ -647,11 +806,11 @@ namespace Jazz2::Multiplayer
 			}
 #	endif
 
-			ENetBuffer sendbuf;
-			sendbuf.data = (void*)packet.GetBuffer();
-			sendbuf.dataLength = packet.GetSize();
-			std::int32_t result = enet_socket_send(socket, &_localMulticastAddress, &sendbuf, 1);
-			if (result != (std::int32_t)sendbuf.dataLength) {
+			// Answered to the same group or broadcast address the request came in on, so every client on that
+			// side of the network hears it, not only the one that asked
+			std::size_t length = packet.GetSize();
+			std::int32_t result = SendDiscoveryPacket(socket, address, packet.GetBuffer(), length, ipv4);
+			if (result != (std::int32_t)length) {
 #	if defined(DEATH_TARGET_WINDOWS)
 				std::int32_t error = ::WSAGetLastError();
 #	else
@@ -880,8 +1039,9 @@ namespace Jazz2::Multiplayer
 		}
 
 		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
-		// that is not the main one - which is this one
-		Backends::PspNetwork::EnsureConnected();
+		// that is not the main one - which is this one. Held for as long as this thread looks for servers,
+		// so the radio is up while the server list is open and goes down again when it is closed.
+		Backends::PspNetwork::ScopedConnection connection;
 #endif
 
 		IServerObserver* observer = _this->_observer;
@@ -890,11 +1050,21 @@ namespace Jazz2::Multiplayer
 
 		ENetSocket socket = TryCreateLocalSocket("ff02::1", _this->_localMulticastAddress);
 		_this->_socket = socket;
+#	if ENET_IPV6
+		ENetSocket socketV4 = TryCreateLocalBroadcastSocket(_this->_localBroadcastAddress);
+		_this->_socketV4 = socketV4;
+#	endif
 
 		while (_this->_observer != nullptr) {
 			if (_this->_lastLocalRequestTime.secondsSince() > 10) {
 				_this->_lastLocalRequestTime = TimeStamp::now();
-				_this->SendLocalDiscoveryRequest(socket, _this->_localMulticastAddress);
+				// Asked over every address family the platform has, because a server reachable on one of them
+				// is not reachable on the other - a server that answers both is folded back into one entry by
+				// the observer (see ServerSelectSection::OnServerFound)
+				_this->SendLocalDiscoveryRequest(socket, _this->_localMulticastAddress, false);
+#	if ENET_IPV6
+				_this->SendLocalDiscoveryRequest(socketV4, _this->_localBroadcastAddress, true);
+#	endif
 			}
 
 			if (_this->_lastOnlineRequestTime.secondsSince() > 60) {
@@ -903,7 +1073,15 @@ namespace Jazz2::Multiplayer
 			}
 
 			ServerDescription discoveredServer{};
-			if (_this->ProcessLocalDiscoveryResponses(socket, discoveredServer, 0)) {
+			bool found = _this->ProcessLocalDiscoveryResponses(socket, discoveredServer, 0, false);
+#	if ENET_IPV6
+			if (!found) {
+				// A refused packet can leave fields behind it, and none of them belong to the next answer
+				discoveredServer = {};
+				found = _this->ProcessLocalDiscoveryResponses(socketV4, discoveredServer, 0, true);
+			}
+#	endif
+			if (found) {
 				observer->OnServerFound(std::move(discoveredServer));
 			} else {
 				// No responses, sleep for a while
@@ -915,6 +1093,12 @@ namespace Jazz2::Multiplayer
 			enet_socket_destroy(_this->_socket);
 			_this->_socket = ENET_SOCKET_NULL;
 		}
+#	if ENET_IPV6
+		if (_this->_socketV4 != ENET_SOCKET_NULL) {
+			enet_socket_destroy(_this->_socketV4);
+			_this->_socketV4 = ENET_SOCKET_NULL;
+		}
+#	endif
 
 		LOGD("Server discovery thread exited");
 	}
@@ -925,8 +1109,8 @@ namespace Jazz2::Multiplayer
 
 #if defined(DEATH_TARGET_PSP)
 		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
-		// that is not the main one - which is this one
-		Backends::PspNetwork::EnsureConnected();
+		// that is not the main one - which is this one. Held for as long as this server is announced.
+		Backends::PspNetwork::ScopedConnection connection;
 #endif
 
 		NetworkManager* server = _this->_server;
@@ -936,18 +1120,32 @@ namespace Jazz2::Multiplayer
 
 		ENetSocket socket = TryCreateLocalSocket("ff02::1", _this->_localMulticastAddress);
 		_this->_socket = socket;
+#	if ENET_IPV6
+		ENetSocket socketV4 = TryCreateLocalBroadcastSocket(_this->_localBroadcastAddress);
+		_this->_socketV4 = socketV4;
+#	endif
 
 		while (_this->_server != nullptr) {
 			delayCount--;
 			if (delayCount <= 0) {
 				delayCount = 10;
 
-				while (_this->_localMulticastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0)) {
+				// Each address family is answered on its own, and throttled on its own: a client asking over
+				// one of them must not swallow the answer a client on the other one is waiting for
+				while (_this->_localMulticastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socket, 0, false)) {
 					if (_this->_lastLocalRequestTime.secondsSince() > 15) {
 						_this->_lastLocalRequestTime = TimeStamp::now();
-						_this->SendLocalDiscoveryResponse(socket, server);
+						_this->SendLocalDiscoveryResponse(socket, _this->_localMulticastAddress, server, false);
 					}
 				}
+#	if ENET_IPV6
+				while (_this->_localBroadcastAddress.port != 0 && _this->ProcessLocalDiscoveryRequests(socketV4, 0, true)) {
+					if (_this->_lastLocalRequestTimeV4.secondsSince() > 15) {
+						_this->_lastLocalRequestTimeV4 = TimeStamp::now();
+						_this->SendLocalDiscoveryResponse(socketV4, _this->_localBroadcastAddress, server, true);
+					}
+				}
+#	endif
 
 				if (_this->_lastOnlineRequestTime.secondsSince() > 300) {
 					_this->_lastOnlineRequestTime = TimeStamp::now();
@@ -964,6 +1162,12 @@ namespace Jazz2::Multiplayer
 			enet_socket_destroy(_this->_socket);
 			_this->_socket = ENET_SOCKET_NULL;
 		}
+#	if ENET_IPV6
+		if (_this->_socketV4 != ENET_SOCKET_NULL) {
+			enet_socket_destroy(_this->_socketV4);
+			_this->_socketV4 = ENET_SOCKET_NULL;
+		}
+#	endif
 
 		LOGD("Server discovery thread exited");
 	}

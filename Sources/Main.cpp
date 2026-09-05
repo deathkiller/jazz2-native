@@ -2086,8 +2086,10 @@ void GameEventHandler::CheckUpdates()
 
 #	if defined(DEATH_TARGET_PSP)
 	// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread that
-	// is not the main one - which this is, the whole check runs on the parallel initialization thread
-	Backends::PspNetwork::EnsureConnected();
+	// is not the main one - which this is, the whole check runs on the parallel initialization thread. The
+	// association lasts no longer than this one request: unless the player goes looking for a game, the
+	// update check is all a session does with the network, and the radio has no reason to stay up for it.
+	Backends::PspNetwork::ScopedConnection connection;
 #	endif
 
 	String url = "https://de4th.dev/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();

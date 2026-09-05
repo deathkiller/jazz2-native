@@ -64,10 +64,10 @@ namespace nCine::RHI::GXM
 		/**
 			@brief Where a pack shipped inside the VPK is looked for, read-only
 
-			The application's own directory is mounted at "app0:" and the content travels inside the VPK
-			(the same path @relativeref{Jazz2,ContentResolver::GetContentPath()} returns on this platform).
-			It is spelled here rather than plumbed down from the game layer because only this backend has a
-			shipped shader cache at all - the path is as much a property of the console as "ur0:/data/" is.
+			The application's own directory is mounted at "app0:" and the content travels inside the VPK, so
+			this is the content path on this platform. It is spelled here rather than plumbed down from the
+			application because only this backend has a shipped shader cache at all - the path is as much a
+			property of the console as "ur0:/data/" is.
 		*/
 		static constexpr const char* PrebakedPath = "app0:/Content/Shaders/";
 

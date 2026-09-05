@@ -22,11 +22,58 @@ namespace nCine::Backends
 	// Set once the stack itself is up, so it is not torn down again when it never came up
 	static bool _initialized = false;
 	// Whether the infrastructure half of the stack is up (see BeginInfrastructure()), whether an access point
-	// is joined on top of it (see EnsureConnected()), and whether the WLAN is in ad hoc mode instead - the two
+	// is joined on top of it (see ScopedConnection), and whether the WLAN is in ad hoc mode instead - the two
 	// halves are exclusive, so switching to ad hoc takes the infrastructure one down completely
 	static bool _inetActive = false;
 	static bool _apConnected = false;
 	static bool _adhocActive = false;
+
+	// How many ScopedConnection instances are alive, and the semaphore that keeps their bookkeeping and the
+	// association itself in step. A semaphore and not the spinlock the shared code uses: the holder of this
+	// can be inside a 15 second association, and spinning through that on a single-core console would starve
+	// the very thread the waiter is waiting for.
+	static std::int32_t _connectionCount = 0;
+	static SceUID _connectionLock = -1;
+
+	// The association outlives its last holder by this much, because the next one is usually seconds away -
+	// leaving a game for the server list, or opening the list again - and re-associating costs seconds of
+	// DHCP every time. `_lingerArmed` is what Update() tests every frame; the deadline itself is 64-bit and
+	// is only read under the lock, where it cannot be seen half-updated.
+	static constexpr std::int32_t ConnectionLingerSecs = 30;
+	static bool _lingerArmed = false;
+	static std::int64_t _lingerDeadline = 0;
+
+	struct ConnectionLockGuard
+	{
+		explicit ConnectionLockGuard(bool blocking = true)
+			: _locked(false)
+		{
+			if (_connectionLock < 0) {
+				return;
+			}
+			_locked = (blocking
+				? sceKernelWaitSema(_connectionLock, 1, nullptr) >= 0
+				: sceKernelPollSema(_connectionLock, 1) >= 0);
+		}
+
+		~ConnectionLockGuard() {
+			if (_locked) {
+				sceKernelSignalSema(_connectionLock, 1);
+			}
+		}
+
+		ConnectionLockGuard(const ConnectionLockGuard&) = delete;
+		ConnectionLockGuard& operator=(const ConnectionLockGuard&) = delete;
+
+		// Whether the caller may go ahead: it holds the semaphore, or there is no semaphore to hold - which
+		// is the case when it could not be created, and running unguarded then beats never running at all
+		explicit operator bool() const {
+			return _locked || _connectionLock < 0;
+		}
+
+	private:
+		bool _locked;
+	};
 
 	// The states sceNetAdhocctlGetState() reports; the SDK header names none of them
 	static constexpr int AdhocctlStateDisconnected = 0;
@@ -117,6 +164,8 @@ namespace nCine::Backends
 
 		_inetActive = false;
 		_apConnected = false;
+		_lingerArmed = false;
+		_lingerDeadline = 0;
 		sceNetApctlDisconnect();
 		sceNetApctlTerm();
 		sceNetResolverTerm();
@@ -147,9 +196,11 @@ namespace nCine::Backends
 		}
 
 		_initialized = true;
+		_connectionLock = sceKernelCreateSema("nCineNetConnection", 0, 1, 1, nullptr);
 
 		// Infrastructure is the half everything but ad hoc multiplayer wants, so it is the one brought up
-		// here; failing it is not fatal, because ad hoc mode needs none of it
+		// here - but only as far as its modules and libraries: no access point is joined until something
+		// takes a ScopedConnection. Failing it is not fatal, because ad hoc mode needs none of it.
 		BeginInfrastructure();
 	}
 
@@ -177,6 +228,14 @@ namespace nCine::Backends
 		EndInfrastructure();
 		sceNetTerm();
 		sceUtilityUnloadNetModule(PSP_NET_MODULE_COMMON);
+
+		// Every thread that could hold a connection is joined before the application gets here, so the count
+		// is not consulted - and a ScopedConnection outliving this finds the semaphore gone and skips the lock
+		if (_connectionLock >= 0) {
+			SceUID connectionLock = _connectionLock;
+			_connectionLock = -1;
+			sceKernelDeleteSema(connectionLock);
+		}
 	}
 
 	// sceNetApctlConnect() takes no access point of its own but the index of one of the connections saved in
@@ -223,8 +282,16 @@ namespace nCine::Backends
 
 		std::int32_t result = sceNetApctlConnect(configuration);
 		if (result < 0) {
-			LOGW("No network connection is available, sceNetApctlConnect() failed with error 0x{:.8x}", std::uint32_t(result));
-			return false;
+			// The firmware refuses a connect while its state machine is already running, which is exactly what
+			// a second caller arriving during the first one's association gets (0x80410a80). That is not a
+			// failure: the association it is waiting for is the one already in progress, so it polls that to
+			// the same answer instead of giving up - which is what it used to do, and what left the server list
+			// unresolvable for a whole discovery interval.
+			int state = PSP_NET_APCTL_STATE_DISCONNECTED;
+			if (sceNetApctlGetState(&state) < 0 || state == PSP_NET_APCTL_STATE_DISCONNECTED) {
+				LOGW("No network connection is available, sceNetApctlConnect() failed with error 0x{:.8x}", std::uint32_t(result));
+				return false;
+			}
 		}
 
 		// The budget is only spent in full when the state machine keeps making progress without finishing;
@@ -263,22 +330,85 @@ namespace nCine::Backends
 		return false;
 	}
 
-	bool PspNetwork::EnsureConnected()
+	PspNetwork::ScopedConnection::ScopedConnection(bool acquire)
+		: _acquired(false), _connected(false)
 	{
-		if (!_initialized || _adhocActive || !_inetActive) {
+		if (!acquire || !_initialized || _adhocActive || !_inetActive) {
 			// In ad hoc mode there is no access point to join - the WLAN is busy being the network itself -
 			// and without the infrastructure half of the stack there is nothing to join one with either
-			return false;
+			return;
 		}
 
-		// There is one association at a time, and more than one thread can arrive here - the update check,
-		// the server list and the multiplayer transport all do. A second caller while the first is still
-		// associating has its sceNetApctlConnect() refused and then polls the same state machine to the same
-		// answer, so no lock is needed for them to agree.
+		ConnectionLockGuard guard;
+
+		// The count is raised whether or not the association below succeeds, so that the destructor stays
+		// symmetric with this and a holder that failed does not drop an association a later holder made
+		_acquired = true;
+		_connectionCount++;
+
+		// Anything still lingering from an earlier holder is this one's association now, and it is instant
+		_lingerArmed = false;
+		_lingerDeadline = 0;
+
 		if (!_apConnected) {
+			// More than one holder can arrive here - the update check, the server list and the transport all
+			// do - and the lock is what makes the second one wait for the first one's answer instead of
+			// starting a second association the firmware would refuse anyway
 			_apConnected = DoEnsureConnected();
 		}
-		return _apConnected;
+		_connected = _apConnected;
+	}
+
+	PspNetwork::ScopedConnection::~ScopedConnection()
+	{
+		if (!_acquired) {
+			return;
+		}
+
+		ConnectionLockGuard guard;
+
+		_connectionCount--;
+		if (_connectionCount <= 0) {
+			_connectionCount = 0;
+			if (_apConnected) {
+				// Not dropped here: the next holder is usually seconds away, so the association is only given
+				// a deadline and Update() is what ends it (see ConnectionLingerSecs)
+				_lingerDeadline = sceKernelGetSystemTimeWide() + std::int64_t(ConnectionLingerSecs) * 1000000;
+				_lingerArmed = true;
+				LOGI("Nothing needs the network connection, releasing it in {} seconds", ConnectionLingerSecs);
+			}
+		}
+	}
+
+	void PspNetwork::Update()
+	{
+		if (!_lingerArmed) {
+			return;
+		}
+
+		// This runs on the main thread, which must never wait: a holder can be inside a 15 second association
+		// with the lock held, and the deadline is not worth a dropped frame - so it gives up and the next
+		// frame tries again
+		ConnectionLockGuard guard(false);
+		if (!guard) {
+			return;
+		}
+
+		// A holder that arrived while this was taking the lock has already disarmed the deadline
+		if (!_lingerArmed || sceKernelGetSystemTimeWide() < _lingerDeadline) {
+			return;
+		}
+
+		_lingerArmed = false;
+		_lingerDeadline = 0;
+		if (_connectionCount <= 0 && _apConnected) {
+			// Disassociating is all a user-mode application can do about the radio - attaching and detaching
+			// the WLAN device itself is a kernel-only interface - but it is what stops the console from
+			// talking to the access point, which is what costs the battery
+			sceNetApctlDisconnect();
+			_apConnected = false;
+			LOGI("Network connection released, nothing has needed it for {} seconds", ConnectionLingerSecs);
+		}
 	}
 
 	// Waits until the ad hoc control reaches the given state, or the given number of milliseconds passed

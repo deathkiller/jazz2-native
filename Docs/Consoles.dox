@@ -97,7 +97,7 @@ GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
 PlayStation 2 | @cpp "cdfs:/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "cdfs:/Cache/" @ce --- read-only, and nothing is staged there
 PlayStation 3 | @cpp "/app_home/Content/" @ce @m_span{m-text m-dim} (next to the `EBOOT.BIN`, see below) @m_endspan | @cpp "/dev_hdd0/game/JAZZ20000/USRDIR/Cache/" @ce --- writable
-PS Vita | @cpp "app0:/Content/" @ce @m_span{m-text m-dim} (inside the VPK) @m_endspan | @cpp "ux0:/data/jazz2/Cache/" @ce
+PlayStation Vita | @cpp "app0:/Content/" @ce @m_span{m-text m-dim} (inside the VPK) @m_endspan | @cpp "ux0:/data/jazz2/Cache/" @ce
 Switch | @cpp "romfs:/" @ce @m_span{m-text m-dim} (embedded in the `.nro`) @m_endspan | @cpp "sdmc:/Games/Jazz2/Cache/" @ce
 
 @m_class{m-noindent}
@@ -291,7 +291,7 @@ Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-
 PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console, plus the **debug screen** on the display until the GU session takes the framebuffer over
 PlayStation 2 | The Emotion Engine's **SIO transmit register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan --- a bare ELF has no connected stdout. **PCSX2** captures it as EE console output with `EnableEEConsole` on, and a serial cable picks it up on hardware
 PlayStation 3 | `sysTtyWrite` --- PSL1GHT routes fd 1 and 2 straight to that lv2 syscall, so an ordinary write reaches the console TTY on hardware and **RPCS3**'s log in the emulator. No cable and no on-screen fallback are needed
-PS Vita | `sceClibPrintf` --- picked up by the usual host-side console tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
+PlayStation Vita | `sceClibPrintf` --- picked up by the usual host-side console tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
 Switch | `svcOutputDebugString` --- picked up by a debug logger on the host, writing the trace to a file on the SD card is forced on this platform as well
 
 @m_class{m-noindent}
@@ -300,6 +300,17 @@ Switch | `svcOutputDebugString` --- picked up by a debug logger on the host, wri
 platforms with writable storage @m_span{m-text m-dim} (not the Dreamcast, whose only medium is a
 read-only disc) @m_endspan. Verbose I/O lines use the deferred trace level and are only flushed when
 an error follows them, so a sparse log is normal and does not mean files are not being opened.
+
+The header of that file names the machine it came from, which on a desktop is the host name. A console
+has none, so @ref nCine::Application::GetDeviceHostname() answers with the nearest thing it has --- the
+nickname the console was given in its settings @m_span{m-text m-dim} (Wii, Switch) @m_endspan, or an
+identifier that is fixed for the device where there is no name at all: the WLAN MAC address
+@m_span{m-text m-dim} (PSP) @m_endspan, the OpenPSID @m_span{m-text m-dim} (PS Vita, PS3) @m_endspan,
+the i.Link ID from the EEPROM @m_span{m-text m-dim} (PS2) @m_endspan, the console ID in the factory
+partition of the flashrom @m_span{m-text m-dim} (Dreamcast) @m_endspan. The GameCube and the Nintendo 64
+keep nothing of the kind, so the slot stays empty there. The same value opens the device ID the update
+check and the public server list send, so a console is counted once on the server side rather than as
+a new device on every launch.
 
 @subsection consoles-common-indexedquads Tile layers are indexed meshes
 
@@ -915,7 +926,7 @@ The update check and online multiplayer both need **Enable networking/WLAN** tur
 emulator's settings; without it `sceNetApctlConnect()` fails with
 @cpp "SCE_NET_APCTL_ERROR_WLAN_SWITCH_OFF" @ce and nothing else is attempted. The emulator also steps
 its access-point state machine on a timer and takes a little over **6 seconds** to reach `GOT_IP`,
-which is why the wait in `PspNetwork::EnsureConnected()` is not budgeted more tightly. One gap is
+which is why the wait in `PspNetwork::ScopedConnection` is not budgeted more tightly. One gap is
 worth knowing about: PPSSPP does not implement `sceNetInetRecvmsg()` @m_span{m-text m-dim} (`sendmsg`
 it does) @m_endspan, which is why the ENet transport receives through `recvfrom()` here --- exact,
 because ENet only ever receives into a single buffer.
@@ -1144,12 +1155,31 @@ anything else can fail, so the console always has a way out even if initializati
     finds instead of broadcasting and asking the public list; an endpoint is then `GROUP/MAC`, and the
     client thread joins the group where it would otherwise join an access point. Ad hoc groups are only
     visible to other PSPs (and Vitas running Adrenaline), and an ad hoc server publishes itself nowhere.
--   **Nothing has joined an access point at boot.** `PspNetwork::Initialize()`
+-   **Nothing has joined an access point at boot, and nothing stays joined.** `PspNetwork::Initialize()`
     @m_span{m-text m-dim} (@cpp "Sources/nCine/Backends/Psp/PspNetwork.cpp" @ce) @m_endspan loads the
-    two network PRXes and brings the stack up during startup, which is cheap, but joining an access
-    point and waiting out a DHCP lease is seconds of work and is left to `PspNetwork::EnsureConnected()`
-    --- called by every consumer of the network on its own thread, so the wait overlaps with the rest
-    of the application coming up instead of stalling in front of it.
+    network PRXes and brings the stack up during startup, which is cheap, but joining an access point
+    and waiting out a DHCP lease is seconds of work and is left to `PspNetwork::ScopedConnection` ---
+    constructed by every consumer of the network on its own thread, so the wait overlaps with the rest
+    of the application coming up instead of stalling in front of it. The association is what keeps the
+    radio talking and it is reference counted, so it lasts about as long as something needs it: the
+    update check holds one for its request, @ref Jazz2::Multiplayer::ServerDiscovery while the server
+    list is open, the transport while a game is connected or hosted. The last holder to go away only
+    starts a **30 second** grace period --- `PspNetwork::Update()`, called once a frame, is what ends
+    it --- so leaving a game and opening the server list again reuses the association instead of paying
+    for a second one. Only disassociating is available to a user-mode application --- attaching and
+    detaching the WLAN device is a kernel interface --- and the infrastructure modules stay loaded
+    either way, because unloading them under a live libcurl session is not safe.
+-   **Local discovery goes over the IPv4 broadcast address.** The console's stack has no IPv6 at all
+    @m_span{m-text m-dim} (hence @cpp "ENET_IPV6=0" @ce) @m_endspan, so `TryCreateLocalSocket()` binds
+    the discovery port and sends to `255.255.255.255` where a desktop build joins the `ff02::1`
+    multicast group. A build that has both runs both --- a second `AF_INET` socket from
+    `TryCreateLocalBroadcastSocket()`, because a dual-stack socket cannot be relied on to send to a
+    broadcast address --- so the console and the desktop do find each other. The desktop's multicast
+    socket is pinned to `IPV6_V6ONLY` for that reason: the two sockets share a port and must not
+    claim each other's addresses. A server reachable over both answers both, which is why
+    @ref Jazz2::UI::Menu::ServerSelectSection folds answers carrying one announced identifier into a
+    single entry whose endpoints are `|`-joined in the order they were found. Ad hoc mode skips all of
+    this: the group itself is the announcement.
 -   **The PSPSDK stub libraries must not be linked twice.** psp-gcc's own `*lib` spec appends
     `-lpsputility -lpsprtc -lpspnet_inet -lpspnet_resolver -lpspsdk -lpspmodinfo -lpspuser` after
     everything CMake emits, and an archive scanned at two points of the link line has its stubs

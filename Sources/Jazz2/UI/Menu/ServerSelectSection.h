@@ -91,6 +91,12 @@ namespace Jazz2::UI::Menu
 		float _recalcVisibleBoundsTimeLeft;
 #endif
 
+		// Two answers describe the same server when they carry the same announced identifier, which is how the
+		// IPv4 and IPv6 halves of local discovery are folded into one entry (see ServerDiscovery)
+		static bool HasSameUniqueServerID(const Jazz2::Multiplayer::ServerDescription& a, const Jazz2::Multiplayer::ServerDescription& b);
+		// Adds an endpoint to an entry's list, keeping the order they were found in and skipping one already there
+		static String AppendEndpoint(StringView existing, StringView added);
+
 		void ExecuteSelected();
 		void OnAfterTransition();
 		void EnsureVisibleSelected(std::int32_t offset = 0);

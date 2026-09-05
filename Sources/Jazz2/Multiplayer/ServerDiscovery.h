@@ -167,18 +167,36 @@ namespace Jazz2::Multiplayer
 #elif defined(WITH_ONLINE_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
 
-		ENetSocket _socket;
+		// Both are assigned by the discovery thread, but they are read by the loop conditions around it, so
+		// they start out as "no socket" rather than as whatever the stack held
+		ENetSocket _socket = ENET_SOCKET_NULL;
 		Thread _thread;
 		TimeStamp _lastLocalRequestTime;
-		ENetAddress _localMulticastAddress;
+		ENetAddress _localMulticastAddress = {};
+#	if ENET_IPV6
+		// The IPv4 half of local discovery, which exists only where the transport itself is IPv6: an IPv4-only
+		// peer - every console, see ENET_IPV6=0 in the build - can neither join the multicast group above nor
+		// be reached through it, and a dual-stack socket cannot be relied on to send to a broadcast address.
+		// So this is a second, plain AF_INET socket, addressed through the IPv4-mapped form of ENetAddress.
+		ENetSocket _socketV4 = ENET_SOCKET_NULL;
+		ENetAddress _localBroadcastAddress = {};
+		// Answering is throttled per address family, so a request over one never consumes the answer a client
+		// on the other one is waiting for
+		TimeStamp _lastLocalRequestTimeV4;
+
+		static ENetSocket TryCreateLocalBroadcastSocket(ENetAddress& parsedAddress);
+#	endif
 
 		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 
-		void SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address);
+		// `ipv4` marks the socket as the IPv4 half of discovery in a build whose transport is IPv6 - the one
+		// case where a socket's family is not the family ENet's own send and receive build addresses for. It
+		// means nothing where ENet is IPv4 already (ENET_IPV6=0), because there the two halves are one thing.
+		void SendLocalDiscoveryRequest(ENetSocket socket, const ENetAddress& address, bool ipv4);
 		void DownloadPublicServerList(IServerObserver* observer);
-		bool ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs = 0);
-		bool ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs = 0);
-		void SendLocalDiscoveryResponse(ENetSocket socket, NetworkManager* server);
+		bool ProcessLocalDiscoveryResponses(ENetSocket socket, ServerDescription& discoveredServer, std::int32_t timeoutMs, bool ipv4);
+		bool ProcessLocalDiscoveryRequests(ENetSocket socket, std::int32_t timeoutMs, bool ipv4);
+		void SendLocalDiscoveryResponse(ENetSocket socket, const ENetAddress& address, NetworkManager* server, bool ipv4);
 		void PublishToPublicServerList(NetworkManager* server);
 		void DelistFromPublicServerList(NetworkManager* server);
 

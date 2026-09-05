@@ -709,15 +709,65 @@ namespace Jazz2::UI::Menu
 #endif
 
 		for (auto& item : _items) {
-			if (item.Desc.EndpointString == desc.EndpointString) {
-				std::uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
-				item.Desc = std::move(desc);
-				item.Desc.Flags |= prevFlags;
-				return;
+			bool sameEndpoint = (item.Desc.EndpointString == desc.EndpointString);
+			if (!sameEndpoint && !HasSameUniqueServerID(item.Desc, desc)) {
+				continue;
 			}
+
+			std::uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
+			// One server answers local discovery once per address family it can be reached on, and each answer
+			// carries the endpoint of that family alone - so they are collected into the endpoint list the
+			// client already knows how to walk through in order, instead of becoming two entries
+			String endpoints = (sameEndpoint
+				? std::move(desc.EndpointString)
+				: AppendEndpoint(item.Desc.EndpointString, desc.EndpointString));
+
+			item.Desc = std::move(desc);
+			item.Desc.EndpointString = std::move(endpoints);
+			item.Desc.Flags |= prevFlags;
+			return;
 		}
 
 		_items.push_back(std::move(desc));
+	}
+
+	bool ServerSelectSection::HasSameUniqueServerID(const Jazz2::Multiplayer::ServerDescription& a, const Jazz2::Multiplayer::ServerDescription& b)
+	{
+		// Only a server found locally announces an identifier - the public list describes its servers by
+		// endpoint instead - so an all-zero one is "unknown" and never matches another unknown
+		bool isSet = false, isEqual = true;
+		for (std::size_t i = 0; i < a.UniqueServerID.size(); i++) {
+			if (a.UniqueServerID[i] != b.UniqueServerID[i]) {
+				isEqual = false;
+				break;
+			}
+			if (a.UniqueServerID[i] != 0) {
+				isSet = true;
+			}
+		}
+		return isSet && isEqual;
+	}
+
+	String ServerSelectSection::AppendEndpoint(StringView existing, StringView added)
+	{
+		if (existing.empty()) {
+			return added;
+		}
+		if (added.empty()) {
+			return existing;
+		}
+
+		// A refresh brings the same endpoint back around, and the order of the rest is the order they were
+		// found in - which is the order the client tries them in
+		StringView remaining = existing;
+		while (remaining) {
+			auto p = remaining.partition('|');
+			if (p[0] == added) {
+				return existing;
+			}
+			remaining = p[2];
+		}
+		return existing + "|"_s + added;
 	}
 
 	void ServerSelectSection::ExecuteSelected()

@@ -172,8 +172,8 @@ namespace nCine::RHI::GXM
 			// A colour attachment additionally wants the address it had last time the pipeline built this target
 			// (see GxmMemory::AcquireSurface()), which is why it does not go through the plain allocator
 			_gpuBlock = (_isRenderTarget
-				? GxmMemory::AcquireSurface("Jazz2:RenderTarget", _gpuStride, alignedHeight)
-				: GxmMemory::Alloc("Jazz2:Texture", size, SCE_GXM_MEMORY_ATTRIB_READ));
+				? GxmMemory::AcquireSurface("nCine:RenderTarget", _gpuStride, alignedHeight)
+				: GxmMemory::Alloc("nCine:Texture", size, SCE_GXM_MEMORY_ATTRIB_READ));
 			if (!_gpuBlock.IsValid()) {
 				LOGE("Failed to allocate {}x{} texture ({} bytes) in GPU-visible memory", _width, _height, size);
 				return false;

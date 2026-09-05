@@ -257,7 +257,7 @@ namespace nCine
 	static int PspCallbackThread(SceSize args, void* argp)
 	{
 		static_cast<void>(args); static_cast<void>(argp);
-		int callbackId = sceKernelCreateCallback("JazzExitCallback", PspExitCallback, nullptr);
+		int callbackId = sceKernelCreateCallback("nCineExitCallback", PspExitCallback, nullptr);
 		sceKernelRegisterExitCallback(callbackId);
 		sceKernelSleepThreadCB();
 		return 0;
@@ -458,7 +458,7 @@ namespace nCine
 		// Brings up the socket stack that nothing on this console has at boot. It has to happen before
 		// Init() below, because the first thing that uses the network - the update check - is started from
 		// the event handler's OnInit(), which that call reaches. Only the stack is brought up here, no
-		// access point is joined (see PspNetwork::EnsureConnected), so it costs nothing.
+		// access point is joined (see PspNetwork::ScopedConnection), so it costs nothing.
 		PspNetwork::Initialize();
 #	endif
 #elif defined(DEATH_TARGET_VITA)
@@ -553,6 +553,12 @@ namespace nCine
 			if (pspShutdownRequested) {
 				app.Quit();
 			}
+#		if defined(WITH_CURL)
+			// Drops the access point association once nothing has needed it for a while - it is deliberately
+			// not dropped the moment the last user goes away (see PspNetwork::ScopedConnection), and this is
+			// what notices that the grace period is over. Never waits, so a frame is never held up by it.
+			PspNetwork::Update();
+#		endif
 #	endif
 		}
 #endif

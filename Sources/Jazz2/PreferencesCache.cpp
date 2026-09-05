@@ -16,7 +16,6 @@
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
-#include <Utf8.h>
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidApplication.h"
@@ -37,8 +36,6 @@
 extern "C" {
 #	include <libmc.h>
 }
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
-#	include <unistd.h>
 #endif
 #if defined(WITH_LIBRETRO)
 #	include "../nCine/Backends/Libretro/LibretroApplication.h"
@@ -1743,6 +1740,8 @@ namespace
 		arch |= 0x400000;
 #endif
 
+		String hostName = Application::GetDeviceHostname();
+
 #if defined(DEATH_TARGET_ANDROID)
 		auto sanitizeName = [](char* dst, std::size_t dstMaxLength, std::size_t& dstLength, StringView name, bool isBrand) {
 			bool wasSpace = true;
@@ -1784,7 +1783,6 @@ namespace
 		};
 
 		auto sdkVersion = Backends::AndroidJniHelper::SdkVersion();
-		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
 		auto deviceBrand = Backends::AndroidJniClass_Version::deviceBrand();
 		auto deviceModel = Backends::AndroidJniClass_Version::deviceModel();
 
@@ -1803,47 +1801,29 @@ namespace
 		}
 		deviceName[deviceNameLength] = '\0';
 
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "{}|Android {}|{}|2|{}", androidId, sdkVersion, deviceName, arch);
+		String deviceDesc = format("{}|Android {}|{}|2|{}", hostName, sdkVersion, deviceName, arch);
 #elif defined(DEATH_TARGET_APPLE)
-		char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
-		if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
-			DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
-			DeviceDescLength = std::strlen(DeviceDesc);
-		} else {
-			DeviceDescLength = 0;
-		}
 		String appleVersion = Environment::GetAppleVersion();
-		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
-			"|macOS {}||5|{}", appleVersion, arch);
+		String deviceDesc = format("{}|macOS {}||5|{}", hostName, appleVersion, arch);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|WASM||8|{}", arch);
+		String deviceDesc = format("{}|WASM||8|{}", hostName, arch);
 #elif defined(DEATH_TARGET_SWITCH)
 		std::uint32_t switchVersion = Environment::GetSwitchVersion();
 		bool isAtmosphere = Environment::HasSwitchAtmosphere();
-
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Switch {}.{}.{}{}||9|{}",
+		String deviceDesc = format("{}|Nintendo Switch {}.{}.{}{}||9|{}", hostName,
 			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, arch);
 #elif defined(DEATH_TARGET_WII)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Wii||14|{}", arch);
+		String deviceDesc = format("{}|Nintendo Wii||14|{}", hostName, arch);
 #elif defined(DEATH_TARGET_GAMECUBE)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo GameCube||15|{}", arch);
+		String deviceDesc = format("{}|Nintendo GameCube||15|{}", hostName, arch);
 #elif defined(DEATH_TARGET_PS2)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 2||11|{}", arch);
+		String deviceDesc = format("{}|PlayStation 2||11|{}", hostName, arch);
 #elif defined(DEATH_TARGET_PS3)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation 3||12|{}", arch);
+		String deviceDesc = format("{}|PlayStation 3||12|{}", hostName, arch);
 #elif defined(DEATH_TARGET_VITA)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Vita||10|{}", arch);
+		String deviceDesc = format("{}|PlayStation Vita||10|{}", hostName, arch);
 #elif defined(DEATH_TARGET_PSP)
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|PlayStation Portable||16|{}", arch);
+		String deviceDesc = format("{}|PlayStation Portable||16|{}", hostName, arch);
 #elif defined(DEATH_TARGET_AMIGAOS) || defined(DEATH_TARGET_AMIGAOS4) || defined(DEATH_TARGET_MORPHOS)
 #	if defined(DEATH_TARGET_AMIGAOS)
 		StringView systemName = "AmigaOS 3.x"_s;
@@ -1852,37 +1832,20 @@ namespace
 #	else
 		StringView systemName = "MorphOS"_s;
 #	endif
-		char DeviceDesc[128];
-		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|{}||13|{}", systemName, arch);
+		String deviceDesc = format("{}|{}||13|{}", hostName, systemName, arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
 #	endif
 
-		char DeviceDesc[256] {}; std::int32_t DeviceDescLength;
-		if (::gethostname(DeviceDesc, arraySize(DeviceDesc)) == 0) {
-			DeviceDesc[arraySize(DeviceDesc) - 1] = '\0';
-			DeviceDescLength = std::strlen(DeviceDesc);
-		} else {
-			DeviceDescLength = 0;
-		}
 		String unixFlavor = Environment::GetUnixFlavor();
-		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength }, "|{}||4|{}",
-			unixFlavor.empty() ? "Unix"_s : StringView(unixFlavor), arch);
+		String deviceDesc = format("{}|{}||4|{}", hostName, unixFlavor.empty() ? "Unix"_s : StringView(unixFlavor), arch);
 #elif defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_WINDOWS_RT)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
 #	endif
 
 		auto osVersion = Environment::WindowsVersion;
-		wchar_t deviceNameW[128]; DWORD DeviceDescLength = DWORD(arraySize(deviceNameW));
-		if (!::GetComputerNameW(deviceNameW, &DeviceDescLength)) {
-			DeviceDescLength = 0;
-		}
-
-		char DeviceDesc[256];
-		DeviceDescLength = Utf8::FromUtf16(DeviceDesc, deviceNameW, DeviceDescLength);
-
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		const char* deviceType;
 		switch (Environment::CurrentDeviceType) {
@@ -1892,18 +1855,17 @@ namespace
 			case DeviceType::Xbox: deviceType = "Xbox"; break;
 			default: deviceType = "Unknown"; break;
 		}
-		DeviceDescLength += DWORD(formatInto(MutableStringView(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength), "|Windows {}.{}.{} ({})||7|{}",
-			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), deviceType, arch));
+		String deviceDesc = format("{}|Windows {}.{}.{} ({})||7|{}", hostName,
+			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), deviceType, arch);
 #	else
 		bool isWine = Environment::IsWine();
-		DeviceDescLength += DWORD(formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
-			isWine ? "|Windows {}.{}.{} (Wine)||3|{}" : "|Windows {}.{}.{}||3|{}",
-			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), arch));
+		String deviceDesc = format(isWine ? "{}|Windows {}.{}.{} (Wine)||3|{}" : "{}|Windows {}.{}.{}||3|{}", hostName,
+			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), arch);
 #	endif
 #else
-		static const char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;
+		String deviceDesc = format("{}||||", hostName);
 #endif
-		return toBase64Url(DeviceDesc, DeviceDesc + DeviceDescLength);
+		return toBase64Url(deviceDesc.begin(), deviceDesc.end());
 	}
 
 	String PreferencesCache::GetEffectivePlayerName()

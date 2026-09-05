@@ -42,8 +42,8 @@ namespace nCine::RHI::GXM
 		// A store the GPU reads has to be a mapped memory block. Growing means a fresh block: the pipeline's
 		// ring buffers size themselves once at startup, so this is not a per-frame path
 		GxmMemory::Free(_gpuBlock);
-		const char* name = (_target == BufferTarget::Index ? "Jazz2:IndexBuffer"
-			: (_target == BufferTarget::Uniform ? "Jazz2:UniformBuffer" : "Jazz2:VertexBuffer"));
+		const char* name = (_target == BufferTarget::Index ? "nCine:IndexBuffer"
+			: (_target == BufferTarget::Uniform ? "nCine:UniformBuffer" : "nCine:VertexBuffer"));
 		_gpuBlock = GxmMemory::Alloc(name, std::uint32_t(size), SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!_gpuBlock.IsValid()) {
 			LOGE("Failed to allocate {} bytes of GPU-visible memory for a buffer object", size);

@@ -77,8 +77,8 @@ extern "C" unsigned long wcstoul(const wchar_t* nptr, wchar_t** endptr, int base
 }
 
 /*
-	No symlinks exist on the volumes this game runs from, and AmigaDOS paths need no normalization: a path
-	is absolute when it names a volume, device or assign ("Work:Games/Jazz2" - the colon IS the root, there
+	No symlinks exist on the volumes this runs from, and AmigaDOS paths need no normalization: a path is
+	absolute when it names a volume, device or assign ("Work:Games/MyGame" - the colon IS the root, there
 	is no separator after it), and anything else is relative to the current directory, which is what joining
 	it onto getcwd() means. What AmigaDOS spells with a leading or doubled slash - the parent directory - is
 	deliberately left alone rather than resolved: the filesystem understands it, and rewriting it here would

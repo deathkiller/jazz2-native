@@ -75,6 +75,31 @@ extern "C"
 #include <Containers/StringView.h>
 #include <IO/FileSystem.h>
 
+#if defined(DEATH_TARGET_WINDOWS)
+#	include <Utf8.h>
+#elif defined(DEATH_TARGET_ANDROID)
+#	include "Backends/Android/AndroidJniHelper.h"
+#elif defined(DEATH_TARGET_SWITCH)
+#	include <switch.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <psp2/kernel/openpsid.h>
+#elif defined(DEATH_TARGET_PSP)
+#	include <pspwlan.h>
+#elif defined(DEATH_TARGET_WII)
+#	include <ogc/conf.h>
+#	include <ogc/es.h>
+#elif defined(DEATH_TARGET_DREAMCAST)
+#	include <dc/flashrom.h>
+#elif defined(DEATH_TARGET_PS2)
+extern "C" {
+#	include <libcdvd.h>
+}
+#elif defined(DEATH_TARGET_PS3)
+#	include <ppu-lv2.h>
+#elif !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_N64)
+#	include <unistd.h>
+#endif
+
 #if defined(WITH_AUDIO)
 #	if defined(WITH_OPENAL)
 #		include "Audio/Backends/AL/ALAudioDevice.h"
@@ -1875,6 +1900,176 @@ namespace nCine
 		return {};
 	}
 
+#if defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3)
+	// Formats a binary identifier as uppercase hex, with `separator` (if any) between the bytes. All zeros or
+	// all ones is what unprogrammed storage reads back as - an emulator with a blank NVRAM, a console whose ID
+	// was never written - so that is reported as no identifier at all rather than as one every such device
+	// would share
+	static String FormatIdentifierBytes(const std::uint8_t* bytes, std::size_t count, char separator)
+	{
+		bool allZeros = true, allOnes = true;
+		for (std::size_t i = 0; i < count; i++) {
+			if (bytes[i] != 0x00) {
+				allZeros = false;
+			}
+			if (bytes[i] != 0xFF) {
+				allOnes = false;
+			}
+		}
+		if (count == 0 || allZeros || allOnes) {
+			return {};
+		}
+
+		static const char Digits[] = "0123456789ABCDEF";
+		String result(NoInit, count * 2 + (separator != '\0' ? count - 1 : 0));
+		char* dst = result.data();
+		for (std::size_t i = 0; i < count; i++) {
+			if (i > 0 && separator != '\0') {
+				*dst++ = separator;
+			}
+			*dst++ = Digits[bytes[i] >> 4];
+			*dst++ = Digits[bytes[i] & 0x0F];
+		}
+		return result;
+	}
+#endif
+
+#if defined(DEATH_TARGET_PS3)
+	// PSL1GHT wraps no `sys_ss_get_open_psid` (lv2 syscall 872), so it's issued directly the way the SDK's own
+	// inline wrappers are written - the macro leaves the result in a register variable `return_to_user_prog`
+	// reads, which is why it needs a function of its own
+	static s32 Ps3GetOpenPsId(std::uint8_t (&psid)[16])
+	{
+		lv2syscall1(872, (u64)(std::uintptr_t)psid);
+		return_to_user_prog(s32);
+	}
+#endif
+
+	String Application::GetDeviceHostname()
+	{
+#if defined(DEATH_TARGET_WINDOWS)
+		wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
+		if (::GetComputerNameW(hostNameW, &hostNameWLength) && hostNameWLength > 0) {
+			return Utf8::FromUtf16(hostNameW, hostNameWLength);
+		}
+		return {};
+#elif defined(DEATH_TARGET_ANDROID)
+		// A device has no host name a user would recognize; the Android ID (64 bits as hex, fixed per device,
+		// user and signing key) stands in for it
+		return Backends::AndroidJniWrap_Secure::getAndroidId();
+#elif defined(DEATH_TARGET_SWITCH)
+		// The nickname the console was given in its settings is the nearest thing to a host name - what libnx's
+		// gethostname() answers is the current IP address, which is neither a name nor stable. A console with
+		// the nickname left empty is told apart by its serial number instead. set:sys is opened for the query
+		// only, libnx itself closes it right after reading the firmware version at startup.
+		String result;
+		if (R_SUCCEEDED(setsysInitialize())) {
+			SetSysDeviceNickName nickname {};
+			if (R_SUCCEEDED(setsysGetDeviceNickname(&nickname))) {
+				nickname.nickname[sizeof(nickname.nickname) - 1] = '\0';
+				result = nickname.nickname;
+			}
+			if (result.empty()) {
+				// The SDK asks for 0x18 bytes of room
+				char serialNumber[0x18 + 1] {};
+				if (R_SUCCEEDED(setsysGetSerialNumber(serialNumber))) {
+					result = serialNumber;
+				}
+			}
+			setsysExit();
+		}
+		return result;
+#elif defined(DEATH_TARGET_VITA)
+		// No host name on this console, the OpenPSID - the 16-byte console identifier the system exposes to
+		// applications - stands in for it. The function is exported by SceLibKernel, which is linked anyway.
+		SceKernelOpenPsId psid {};
+		if (sceKernelGetOpenPsId(&psid) >= 0) {
+			return FormatIdentifierBytes(psid.id, sizeof(psid.id), '\0');
+		}
+		return {};
+#elif defined(DEATH_TARGET_PSP)
+		// No host name on this console, the WLAN's MAC address stands in for it. It's read from the console's
+		// flash rather than from a running stack, so it's available with the WLAN switch off as well and needs
+		// nothing of PspNetwork. The SDK documents the call as writing 6 bytes but asking for 8.
+		std::uint8_t mac[8] {};
+		if (sceWlanGetEtherAddr(mac) >= 0) {
+			return FormatIdentifierBytes(mac, 6, ':');
+		}
+		return {};
+#elif defined(DEATH_TARGET_WII)
+		// The nickname the console was given in its settings is the nearest thing to a host name. The console
+		// stores it as UTF-16 and libogc narrows each character to a byte, so anything outside printable ASCII
+		// is dropped here rather than passed on as a stray byte. A console with no usable nickname is told apart
+		// by the ES device ID instead, which is unique per console. CONF_Init() is idempotent, so it doesn't
+		// matter whether the startup code already did it.
+		String result;
+		if (CONF_Init() >= 0) {
+			u8 nickname[32] {};
+			if (CONF_GetNickName(nickname) >= 0) {
+				char sanitized[sizeof(nickname)]; std::size_t length = 0;
+				for (std::size_t i = 0; i < sizeof(nickname) - 1 && nickname[i] != '\0'; i++) {
+					if (nickname[i] >= 0x20 && nickname[i] < 0x7F) {
+						sanitized[length++] = (char)nickname[i];
+					}
+				}
+				result = StringView(sanitized, length).trimmed();
+			}
+		}
+		if (result.empty()) {
+			u32 deviceId = 0;
+			if (ES_GetDeviceID(&deviceId) >= 0 && deviceId != 0) {
+				result = format("{:.8x}", deviceId);
+			}
+		}
+		return result;
+#elif defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_N64)
+		// Neither console has a host name nor any identifier a program could read: no serial number is stored
+		// anywhere software can reach, and the network adapters that would carry a MAC address are optional
+		// accessories
+		return {};
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// No host name, but the factory settings partition of the flashrom (partition 0, at 0x1A000) carries
+		// an 8-byte identifier unique to the console at offset 0x56 - the "Dreamcast ID" the original firmware
+		// and its browser showed. An emulator's default flashrom image holds the same bytes for everyone, which
+		// is as good as it gets on a console with no other storage of its own.
+		std::uint8_t id[8] {};
+		if (flashrom_read(0x1A056, id, sizeof(id)) == (int)sizeof(id)) {
+			return FormatIdentifierBytes(id, sizeof(id), '\0');
+		}
+		return {};
+#elif defined(DEATH_TARGET_PS2)
+		// No host name, the i.Link ID - the 8-byte identifier the console keeps in its EEPROM for the FireWire
+		// port, unique per console and present whether or not the port is - stands in for it. It comes over
+		// the CDVD RPC, which MainApplication brings up before anything reaches here; bit 7 of the status is
+		// the drive's error flag.
+		u8 id[8] {}; u32 status = 0;
+		if (sceCdRI(id, &status) != 0 && (status & 0x80) == 0) {
+			return FormatIdentifierBytes(id, sizeof(id), '\0');
+		}
+		return {};
+#elif defined(DEATH_TARGET_PS3)
+		// No host name, the OpenPSID - the 16-byte console identifier the system hands out to applications -
+		// stands in for it
+		std::uint8_t psid[16] {};
+		if (Ps3GetOpenPsId(psid) == 0) {
+			return FormatIdentifierBytes(psid, sizeof(psid), '\0');
+		}
+		return {};
+#elif !defined(DEATH_TARGET_MORPHOS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Not on MorphOS: gethostname() there lives in bsdsocket.library, and a reference to it makes the loader
+		// open that library before the program starts - so a machine with no TCP/IP stack running would refuse
+		// to start the game. Not on the web either, where the libc answers with a constant that tells nothing.
+		char hostName[256] {};
+		if (::gethostname(hostName, sizeof(hostName)) == 0) {
+			hostName[sizeof(hostName) - 1] = '\0';
+			return hostName;
+		}
+		return {};
+#else
+		return {};
+#endif
+	}
+
 	bool Application::OpenUrl(StringView url)
 	{
 		// Not implemented in base class
@@ -2039,7 +2234,10 @@ namespace nCine
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (__startupTimestampMs == 0) {
-			__startupTimestampMs = DateTime::UtcNow().ToUnixMilliseconds();
+			// A millisecond back, so the header can never land after the first entry it belongs to - the entries
+			// are stamped from a clock of their own (rdtsc with DEATH_TRACE_ASYNC) and truncated to milliseconds
+			std::int64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 1;
+			__startupTimestampMs = (timestampMs > 0 ? timestampMs : 0);
 		}
 #	endif
 
@@ -2319,13 +2517,7 @@ namespace nCine
 
 #		if defined(DEATH_TARGET_WINDOWS)
 		std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
-		wchar_t bufferW[128]; DWORD hostNameWLength = (DWORD)arraySize(bufferW);
-		if (!::GetComputerNameW(bufferW, &hostNameWLength)) {
-			hostNameWLength = 0;
-		}
-		char hostName[128];
-		std::int32_t hostNameLength = Utf8::FromUtf16(hostName, bufferW, hostNameWLength);
-
+		wchar_t bufferW[128];
 		DWORD compatLayerLength = ::GetEnvironmentVariable(L"__COMPAT_LAYER", bufferW, (DWORD)arraySize(bufferW));
 		if (compatLayerLength > 0) {
 			flags |= 0x1000;	// HasAppCompatLayer
@@ -2336,16 +2528,11 @@ namespace nCine
 #		elif defined(DEATH_TARGET_ANDROID)
 		flags |= 0x04 | 0x20;	// ProcessIdEqualsToMainThreadId | RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
-		const char* hostName = androidId.data();
-		std::int32_t hostNameLength = (std::int32_t)androidId.size();
 #		elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 				defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PS3) || \
 				defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-		// TODO: Hostname is not implemented on Vita, libogc, KOS, PSPSDK, PS2SDK and PSL1GHT
-		char hostName[32] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			flags |= 0x04;	// ProcessIdEqualsToMainThreadId
@@ -2354,17 +2541,9 @@ namespace nCine
 			flags |= 0x20;	// RemoteDevice
 #			endif
 		std::uint32_t processId = (std::uint32_t)getpid();
-		char hostName[128] {}; std::int32_t hostNameLength = 0;
-#			if !defined(DEATH_TARGET_MORPHOS)
-		// Not on MorphOS: gethostname() there lives in bsdsocket.library, and a reference to it makes
-		// the loader open that library before the program starts - so a machine with no TCP/IP stack
-		// running would refuse to start the game
-		if (::gethostname(hostName, arraySize(hostName)) == 0) {
-			hostName[arraySize(hostName) - 1] = '\0';
-			hostNameLength = std::strlen(hostName);
-		}
-#			endif
 #		endif
+
+		String hostName = GetDeviceHostname();
 
 		// Try to store the application version numerically, the string form is used only as a fallback
 		auto parseDecimal = [](StringView value, std::uint32_t& result) {
@@ -2552,7 +2731,7 @@ namespace nCine
 		StringView strings[5];
 		std::int32_t stringCount = 0;
 		strings[stringCount++] = executableFileName;
-		strings[stringCount++] = { hostName, (std::size_t)hostNameLength };
+		strings[stringCount++] = hostName;
 		strings[stringCount++] = { arguments.data(), arguments.size() };
 		if ((flags & 0x1000) != 0) {	// HasAppCompatLayer
 			strings[stringCount++] = compatLayer;

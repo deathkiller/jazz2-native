@@ -206,7 +206,7 @@ namespace nCine::RHI::Software
 		/**
 			@brief Queues a dynamic lightmap to be composited over a viewport during the next matching Combine draw
 
-			Software-lighting entry point used by the viewport compositor (@c Jazz2::Rendering::CombineRenderer). The
+			Software-lighting entry point for whatever composites the viewport. The
 			scene renders straight to the screen buffer with no shader post-processing, so the dynamic lighting is
 			applied on the CPU here instead: the compositor builds the half-resolution lightmap in the Visit
 			(queue-building) phase and calls this, then the Combine draw it queues is intercepted in @ref Dispatch()

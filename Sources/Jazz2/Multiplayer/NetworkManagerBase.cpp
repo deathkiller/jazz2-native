@@ -371,6 +371,11 @@ namespace Jazz2::Multiplayer
 			endpoints = p[2];
 		}
 
+		// Everything above runs on the calling thread, name resolution included, and none of it says so in the
+		// log unless it fails - so a run that stops between "Preparing connection" and the client thread's
+		// first line cannot be told apart without this
+		LOGD("Resolved {} endpoint(s), starting the client thread", _desiredEndpoints.size());
+
 		_thread = Thread(NetworkManagerBase::OnClientThread, this);
 		if (!_thread) {
 			// Nobody would report this connection's fate otherwise - the client thread is what does, and it
@@ -1698,20 +1703,19 @@ namespace Jazz2::Multiplayer
 		Thread::SetCurrentName("Multiplayer client");
 
 #if defined(DEATH_TARGET_PSP)
-		{
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one. Held for as long as this connection lives, so the
+		// radio goes down again when the player leaves the game. Ad hoc mode joins a group instead and needs
+		// no access point at all, hence the condition.
+		Backends::PspNetwork::ScopedConnection connection(!_adhocMode);
+		if (_adhocMode) {
+			// The ad hoc group takes the place of the access point: it is joined here, on this thread, for
+			// the same reason - it is seconds of work. A group that cannot be joined leaves nothing to
+			// connect to, and the connection then fails the way an unreachable server does.
 			NetworkManagerBase* self = static_cast<NetworkManagerBase*>(param);
-			if (_adhocMode) {
-				// The ad hoc group takes the place of the access point: it is joined here, on this thread, for
-				// the same reason - it is seconds of work. A group that cannot be joined leaves nothing to
-				// connect to, and the connection then fails the way an unreachable server does.
-				String group = String::nullTerminatedView(self->_adhocGroup);
-				if (group.empty() || !Backends::PspNetwork::AdhocJoinGroup(group.data())) {
-					self->_desiredEndpoints.clear();
-				}
-			} else {
-				// Nothing on this console has joined an access point yet, and the wait for one belongs on a
-				// thread that is not the main one - which is this one
-				Backends::PspNetwork::EnsureConnected();
+			String group = String::nullTerminatedView(self->_adhocGroup);
+			if (group.empty() || !Backends::PspNetwork::AdhocJoinGroup(group.data())) {
+				self->_desiredEndpoints.clear();
 			}
 		}
 		// Above the main thread (32): the kernel never preempts a running thread for one of equal or lower
@@ -1863,11 +1867,10 @@ namespace Jazz2::Multiplayer
 		Thread::SetCurrentName("Multiplayer server");
 
 #if defined(DEATH_TARGET_PSP)
-		if (!_adhocMode) {
-			// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
-			// that is not the main one - which is this one (an ad hoc server created its group before it started)
-			Backends::PspNetwork::EnsureConnected();
-		}
+		// Nothing on this console has joined an access point yet, and the wait for one belongs on a thread
+		// that is not the main one - which is this one. Held for as long as this server is hosted; an ad hoc
+		// server created its group before it started and needs no access point.
+		Backends::PspNetwork::ScopedConnection connection(!_adhocMode);
 #endif
 
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);

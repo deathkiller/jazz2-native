@@ -869,7 +869,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			newCount = 63999;
 		}
 
-		GxmMemory::Block block = GxmMemory::Alloc("Jazz2:SequentialIndices", newCount * sizeof(std::uint16_t), SCE_GXM_MEMORY_ATTRIB_READ);
+		GxmMemory::Block block = GxmMemory::Alloc("nCine:SequentialIndices", newCount * sizeof(std::uint16_t), SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!block.IsValid()) {
 			return false;
 		}
@@ -909,7 +909,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		// Two indices per vertex, so the window starting at 2 * firstVertex reads (first, first+1),
 		// (first+1, first+2), ... - the segments of a strip that begins at firstVertex
-		GxmMemory::Block block = GxmMemory::Alloc("Jazz2:LineStripIndices",
+		GxmMemory::Block block = GxmMemory::Alloc("nCine:LineStripIndices",
 			newCount * 2u * sizeof(std::uint16_t), SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!block.IsValid()) {
 			return false;
@@ -1459,9 +1459,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 
 		// Their geometry, in GPU-visible memory like every other stream
-		_clearVertices = GxmMemory::Alloc("Jazz2:ClearQuad",
+		_clearVertices = GxmMemory::Alloc("nCine:ClearQuad",
 			ClearQuadRingSize * 4u * sizeof(ClearVertex), SCE_GXM_MEMORY_ATTRIB_READ);
-		_presentVertices = GxmMemory::Alloc("Jazz2:PresentQuad", sizeof(PresentQuad), SCE_GXM_MEMORY_ATTRIB_READ);
+		_presentVertices = GxmMemory::Alloc("nCine:PresentQuad", sizeof(PresentQuad), SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!_clearVertices.IsValid() || !_presentVertices.IsValid()) {
 			return false;
 		}
@@ -1498,11 +1498,11 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		_initialized = true;
 
 		// The context's ring buffers, then the context itself
-		_contextHostMem = GxmMemory::Alloc("Jazz2:GxmContextHost", ContextHostMemSize, SCE_GXM_MEMORY_ATTRIB_RW);
-		_vdmRingBuffer = GxmMemory::Alloc("Jazz2:GxmVdmRing", VdmRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
-		_vertexRingBuffer = GxmMemory::Alloc("Jazz2:GxmVertexRing", VertexRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
-		_fragmentRingBuffer = GxmMemory::Alloc("Jazz2:GxmFragmentRing", FragmentRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
-		_fragmentUsseRingBuffer = GxmMemory::AllocFragmentUsse("Jazz2:GxmFragmentUsseRing", FragmentUsseRingBufferSize);
+		_contextHostMem = GxmMemory::Alloc("nCine:GxmContextHost", ContextHostMemSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		_vdmRingBuffer = GxmMemory::Alloc("nCine:GxmVdmRing", VdmRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
+		_vertexRingBuffer = GxmMemory::Alloc("nCine:GxmVertexRing", VertexRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
+		_fragmentRingBuffer = GxmMemory::Alloc("nCine:GxmFragmentRing", FragmentRingBufferSize, SCE_GXM_MEMORY_ATTRIB_READ);
+		_fragmentUsseRingBuffer = GxmMemory::AllocFragmentUsse("nCine:GxmFragmentUsseRing", FragmentUsseRingBufferSize);
 		if (!_contextHostMem.IsValid() || !_vdmRingBuffer.IsValid() || !_vertexRingBuffer.IsValid() ||
 			!_fragmentRingBuffer.IsValid() || !_fragmentUsseRingBuffer.IsValid()) {
 			LOGE("Failed to allocate the sceGxm context ring buffers");
@@ -1549,7 +1549,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// overwriting one still on screen
 		const std::uint32_t displayBufferSize = std::uint32_t(DisplayStride) * std::uint32_t(DisplayHeight) * 4u;
 		for (std::uint32_t i = 0; i < DisplayBufferCount; i++) {
-			_displayBuffers[i] = GxmMemory::AllocCdram("Jazz2:DisplayBuffer", displayBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+			_displayBuffers[i] = GxmMemory::AllocCdram("nCine:DisplayBuffer", displayBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
 			if (!_displayBuffers[i].IsValid()) {
 				LOGE("Failed to allocate display buffer {}", i);
 				DestroySwapchain();
@@ -1595,7 +1595,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// that samples a unit its material does not bind would read an unrelated texture - which is what the
 		// composite did with the two blur inputs once blur effects were switched off, sampling the tileset
 		// atlas into the darkness term. Transparent black is what the other backends' unbound unit reads.
-		_dummyTextureBuffer = GxmMemory::Alloc("Jazz2:DummyTexture", 4, SCE_GXM_MEMORY_ATTRIB_READ);
+		_dummyTextureBuffer = GxmMemory::Alloc("nCine:DummyTexture", 4, SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!_dummyTextureBuffer.IsValid()) {
 			LOGE("Failed to allocate the placeholder texture");
 			DestroySwapchain();
@@ -1620,8 +1620,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// (see ApplyViewportAndScissor()) - and DF32_S8 keeps it in a buffer of its own, one byte per sample.
 		const std::uint32_t depthBufferSize = std::uint32_t(DisplayStride) * std::uint32_t(DisplayHeight) * 4u;
 		const std::uint32_t stencilBufferSize = std::uint32_t(DisplayStride) * std::uint32_t(DisplayHeight);
-		_depthBuffer = GxmMemory::Alloc("Jazz2:DepthSurface", depthBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
-		_stencilBuffer = GxmMemory::Alloc("Jazz2:StencilSurface", stencilBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		_depthBuffer = GxmMemory::Alloc("nCine:DepthSurface", depthBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		_stencilBuffer = GxmMemory::Alloc("nCine:StencilSurface", stencilBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
 		if (!_depthBuffer.IsValid() || !_stencilBuffer.IsValid()) {
 			LOGE("Failed to allocate the depth/stencil surface");
 			DestroySwapchain();
@@ -1640,9 +1640,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		sceGxmDepthStencilSurfaceSetBackgroundStencil(&_depthSurface, 0);
 
 		// The shader patcher every program's vertex/fragment programs are created through
-		_patcherBufferMem = GxmMemory::Alloc("Jazz2:PatcherBuffer", PatcherBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
-		_patcherVertexUsseMem = GxmMemory::AllocVertexUsse("Jazz2:PatcherVertexUsse", PatcherVertexUsseSize);
-		_patcherFragmentUsseMem = GxmMemory::AllocFragmentUsse("Jazz2:PatcherFragmentUsse", PatcherFragmentUsseSize);
+		_patcherBufferMem = GxmMemory::Alloc("nCine:PatcherBuffer", PatcherBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		_patcherVertexUsseMem = GxmMemory::AllocVertexUsse("nCine:PatcherVertexUsse", PatcherVertexUsseSize);
+		_patcherFragmentUsseMem = GxmMemory::AllocFragmentUsse("nCine:PatcherFragmentUsse", PatcherFragmentUsseSize);
 		if (!_patcherBufferMem.IsValid() || !_patcherVertexUsseMem.IsValid() || !_patcherFragmentUsseMem.IsValid()) {
 			LOGE("Failed to allocate the sceGxm shader patcher pools");
 			DestroySwapchain();
@@ -1709,8 +1709,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 
 		// The two static streams feeding the vertex-ID-free sprite layouts
-		_quadCornerStream = GxmMemory::Alloc("Jazz2:QuadCorners", sizeof(QuadCorners), SCE_GXM_MEMORY_ATTRIB_READ);
-		_batchedCornerStream = GxmMemory::Alloc("Jazz2:BatchedCorners", MaxBatchSize * 6u * 3u * sizeof(float), SCE_GXM_MEMORY_ATTRIB_READ);
+		_quadCornerStream = GxmMemory::Alloc("nCine:QuadCorners", sizeof(QuadCorners), SCE_GXM_MEMORY_ATTRIB_READ);
+		_batchedCornerStream = GxmMemory::Alloc("nCine:BatchedCorners", MaxBatchSize * 6u * 3u * sizeof(float), SCE_GXM_MEMORY_ATTRIB_READ);
 		if (!_quadCornerStream.IsValid() || !_batchedCornerStream.IsValid()) {
 			LOGE("Failed to allocate the static vertex streams");
 			DestroySwapchain();
@@ -1773,7 +1773,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		const std::int32_t stride = (width + ScreenStrideAlignment - 1) / ScreenStrideAlignment * ScreenStrideAlignment;
 		const std::uint32_t screenBufferSize = std::uint32_t(stride) * std::uint32_t(height) * 4u;
-		_screenBuffer = GxmMemory::AllocCdram("Jazz2:ScreenSurface", screenBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
+		_screenBuffer = GxmMemory::AllocCdram("nCine:ScreenSurface", screenBufferSize, SCE_GXM_MEMORY_ATTRIB_RW);
 		if (!_screenBuffer.IsValid()) {
 			LOGE("Failed to allocate the {}x{} intermediate screen surface", width, height);
 			DestroyScreenSurface();

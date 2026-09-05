@@ -295,25 +295,25 @@ namespace nCine::RHI::GXM
 			intermediate screen surface, and @ref PresentFrame() has to resample that surface into the display
 			buffer anyway (the OpenGL-to-native flip). Making the surface smaller than the panel therefore costs
 			nothing extra and takes fragments off every full-screen pass, which is what the SGX543 runs out of
-			first. The gfx device reports this as the drawable resolution, so the logical view the game lays out
-			(@relativeref{Jazz2,LevelHandler::OnInitializeViewport()}) follows it and the scene is rendered at
-			this size too, rather than at 720x405 stretched into 960x544.
+			first. The gfx device reports this as the drawable resolution, so the logical view the application
+			lays out follows it and the scene is rendered at this size too, rather than at 720x405 stretched
+			into 960x544.
 
 			This is exactly half the panel in both axes, which is worth as much as the 45% fewer fragments: the
 			present blit becomes a clean 2x point doubling instead of a fractional resample, so the pixel art
 			stops shimmering as the camera moves, and the aspect ratio matches the panel's 1.765:1 exactly
 			rather than approximating it. 480 also satisfies the 8-pixel stride alignment a colour surface
-			needs. Note that 272 logical rows put the UI below the 300-row threshold at which
-			@relativeref{Jazz2::UI::Menu,MenuContainerBase::UpdateContentBounds()} switches to the compact
-			header/footer layout, which is the intended look at this size (the PSP renders at 480x272 too).
+			needs. Note that 272 logical rows put the UI below the 300-row threshold at which a user interface
+			laid out against the drawable size is expected to switch to a compact layout, which is the intended
+			look here (the PSP renders at 480x272 too).
 
-			It is the default only: the surface is created at the size @ref CreateSwapchain() is given and
-			can be recreated later with @ref ResizeScreenSurface(), which is how the game's rendering
-			resolution preference (@relativeref{Jazz2,PreferencesCache::RenderingResolutionPercent}) reaches
-			this console - 60% is 576x326 and 75% is 720x408, the logical view's own size, so the scene is
-			not upscaled before the present blit stretches it (the game offers nothing above that: the full
-			panel would only upscale the same 720x408 scene fractionally, at the cost of another full-panel
-			pass). @ref GetScreenWidth() and @ref GetScreenHeight() report the current size.
+			It is the default only: the surface is created at the size @ref CreateSwapchain() is given and can
+			be recreated later with @ref ResizeScreenSurface(), which is how an application's own rendering
+			resolution setting reaches this console - 60% of the panel is 576x326 and 75% is 720x408, the
+			logical view's own size, so the scene is not upscaled before the present blit stretches it (there
+			is no point going above that: the full panel would only upscale the same 720x408 scene
+			fractionally, at the cost of another full-panel pass). @ref GetScreenWidth() and
+			@ref GetScreenHeight() report the current size.
 		*/
 		static constexpr std::int32_t ScreenWidth = 480;
 		/** @brief Default height the frame is rendered at, see @ref ScreenWidth */

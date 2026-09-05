@@ -209,6 +209,18 @@ namespace nCine
 		virtual bool EnablePlayStationExtendedSupport(bool enable);
 		/** @brief Returns the username of the logged-in user */
 		virtual String GetUserName();
+		/**
+		 * @brief Returns the name of the device the application is running on
+		 *
+		 * The host name wherever the platform has one - the computer name on Windows, `gethostname()` on
+		 * the POSIX systems, the nickname the console was given in its settings on the Wii and the Switch.
+		 * A console with no name of its own answers with another identifier that is stable for the device,
+		 * formatted as text: the Android ID, the WLAN MAC address of the PlayStation Portable, the OpenPSID
+		 * of the PS Vita and the PlayStation 3, the i.Link ID of the PlayStation 2, the console ID kept in
+		 * the Dreamcast's flashrom. Empty where nothing of the kind exists (GameCube, Nintendo 64, web) or
+		 * when the query fails.
+		 */
+		static String GetDeviceHostname();
 		/** @brief Opens the specified URL in a default web browser */
 		virtual bool OpenUrl(StringView url);
 		

@@ -13,7 +13,8 @@ namespace nCine::Backends
 		and an access point has to be joined on top of that before anything can leave the console. The two
 		halves are deliberately separate, because they cost very different amounts: @ref Initialize() is
 		cheap and runs during startup, while joining an access point is seconds of work and is left to
-		whichever thread is about to use the network (see @ref EnsureConnected()).
+		whichever thread is about to use the network, for only as long as it needs it (see
+		@ref ScopedConnection).
 	*/
 	class PspNetwork
 	{
@@ -28,15 +29,50 @@ namespace nCine::Backends
 		static void Shutdown();
 
 		/**
-			@brief Joins an access point and waits until it has handed out an address
+			@brief Ends an access point association whose grace period has run out
 
-			The association and the DHCP lease behind it are seconds of work, so this is not done during
-			startup: every consumer of the network calls it first instead, on its own thread, and the wait
-			overlaps with the application coming up rather than stalling in front of it. One association is
-			made and shared, so this is cheap to call, safe to call from more than one thread, and returns
-			the same answer to all of them.
+			Called once a frame from the main loop, because @ref ScopedConnection deliberately does not drop
+			the association the moment its last holder goes away - the next one is usually seconds off. Never
+			waits for anything: when the association is busy being made on another thread it returns and the
+			next frame tries again, so a frame is never held up by it.
 		*/
-		static bool EnsureConnected();
+		static void Update();
+
+		/**
+			@brief Holds an access point association for as long as it exists
+
+			An association is what keeps the WLAN radio talking, and most of a session needs none - so it is
+			reference counted rather than made once and left up: the first holder joins an access point and
+			the last one to go away starts a grace period, after which @ref Update() drops the association.
+			Everything that needs the network takes one of these for exactly as long as it does: the update
+			check for its request, server discovery while the server list is open, the transport while a game
+			is connected or hosted. The grace period is what makes the common sequence of those - leaving a
+			game and opening the server list again - cost nothing instead of a second association.
+
+			The association and the DHCP lease behind it are seconds of work, so a holder is taken on a thread
+			that is not the main one, and the wait overlaps with whatever that thread is about to do. Holders
+			are counted under a lock: one association is made and shared, so constructing one is cheap once
+			the first exists, and concurrent constructions all wait for and receive the same answer.
+		*/
+		class ScopedConnection
+		{
+		public:
+			/** @brief Joins an access point, unless @p acquire is `false`, in which case this holds nothing */
+			explicit ScopedConnection(bool acquire = true);
+			~ScopedConnection();
+
+			ScopedConnection(const ScopedConnection&) = delete;
+			ScopedConnection& operator=(const ScopedConnection&) = delete;
+
+			/** @brief Whether an access point is joined */
+			explicit operator bool() const {
+				return _connected;
+			}
+
+		private:
+			bool _acquired;
+			bool _connected;
+		};
 
 		/** @{ @name Ad hoc mode */
 
