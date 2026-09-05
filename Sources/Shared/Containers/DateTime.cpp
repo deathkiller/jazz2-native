@@ -12,6 +12,8 @@
 #	include <sys/time.h>
 #	if defined(DEATH_TARGET_VITA)
 #		include <psp2/rtc.h>
+#	elif defined(DEATH_TARGET_PSP)
+#		include <psprtc.h>
 #	endif
 #endif
 
@@ -85,10 +87,41 @@ namespace Death { namespace Containers {
 						+ (month * DAYS_PER_5_MONTHS + 2) / 5 + day - JDN_OFFSET;
 		}
 
+#if defined(DEATH_TARGET_PSP)
+		// Seconds east of UTC according to the firmware's own settings. PSPSDK's newlib has no timezone database
+		// and exposes neither `timezone` nor `_timezone`, so localtime() is gmtime() here and every local time in
+		// the application would be UTC - but the RTC converts between the two, and the difference is the offset,
+		// daylight saving included. Taken once, the setting cannot be changed without leaving the game.
+		static std::int32_t GetLocalTimeZoneOffset() noexcept
+		{
+			static const std::int32_t offset = []() -> std::int32_t {
+				// Both ticks come out of the same reading, so the difference is the offset exactly
+				u64 utcTick = 0, localTick = 0;
+				if (sceRtcGetCurrentTick(&utcTick) < 0 || sceRtcConvertUtcToLocalTime(&utcTick, &localTick) < 0) {
+					return 0;
+				}
+
+				return (std::int32_t)(((std::int64_t)localTick - (std::int64_t)utcTick) / 1000000);
+			}();
+			return offset;
+		}
+#endif
+
 		static struct tm* GetLocalTm(const time_t* ticks, struct tm* temp) noexcept
 		{
 #if defined(DEATH_TARGET_WINDOWS)
 			return (localtime_s(temp, ticks) == 0 ? temp : nullptr);
+#elif defined(DEATH_TARGET_PSP)
+			// Shift the value by the firmware's offset and format that as UTC, because localtime() knows nothing
+			// about timezones on this console (see GetLocalTimeZoneOffset())
+			const time_t local = *ticks + (time_t)GetLocalTimeZoneOffset();
+			const tm* const result = gmtime(&local);
+			if (result == nullptr) {
+				return nullptr;
+			}
+
+			std::memcpy(temp, result, sizeof(struct tm));
+			return temp;
 #else
 			// TODO: This function is not thread-safe on Unix - use localtime_r instead
 			const tm* const result = localtime(ticks);
@@ -126,8 +159,12 @@ namespace Death { namespace Containers {
 
 		static std::int32_t GetTimeZone() noexcept
 		{
+#if defined(DEATH_TARGET_PSP)
+			// This one is read from the firmware and not from the C library, so it stands before every branch
+			// below - including the tm_gmtoff one, which newlib fills with a zero here (see GetLocalTimeZoneOffset())
+			return -GetLocalTimeZoneOffset();
+#elif defined(DEATH_USE_GMTOFF_IN_TM)
 			// Struct tm doesn't always have the tm_gmtoff field, define this if it does
-#if defined(DEATH_USE_GMTOFF_IN_TM)
 			static std::atomic<std::int32_t> _gmtoffset{INT32_MAX}; // Invalid timezone
 			if (_gmtoffset == INT32_MAX) {
 				time_t t = time(nullptr);
@@ -168,11 +205,9 @@ namespace Death { namespace Containers {
 		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || \
 		defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 			return _timezone;
-#	elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
-			// PS2SDK's and PSPSDK's newlib exposes neither `timezone` nor `_timezone`, and the console has
-			// no timezone database at all - the firmware keeps the offset in its own settings, reachable through
-			// sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_TIMEZONE), which returns minutes east of UTC.
-			// TODO: Read that instead of assuming UTC, once the utility library is linked
+#	elif defined(DEATH_TARGET_PS2)
+			// PS2SDK's newlib exposes neither `timezone` nor `_timezone`, and the console has no timezone
+			// database at all
 			return 0;
 #	else // Unknown platform - assume it has timezone variable
 			return timezone;

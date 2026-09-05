@@ -89,7 +89,7 @@ extern "C"
 #	include <ogc/conf.h>
 #	include <ogc/es.h>
 #elif defined(DEATH_TARGET_DREAMCAST)
-#	include <dc/flashrom.h>
+#	include <dc/syscalls.h>
 #elif defined(DEATH_TARGET_PS2)
 extern "C" {
 #	include <libcdvd.h>
@@ -1970,32 +1970,19 @@ namespace nCine
 				result = nickname.nickname;
 			}
 			if (result.empty()) {
-				// The SDK asks for 0x18 bytes of room
-				char serialNumber[0x18 + 1] {};
-				if (R_SUCCEEDED(setsysGetSerialNumber(serialNumber))) {
-					result = serialNumber;
+				// The field is not terminated when the number fills it entirely
+				SetSysSerialNumber serialNumber {};
+				if (R_SUCCEEDED(setsysGetSerialNumber(&serialNumber))) {
+					std::size_t length = 0;
+					while (length < sizeof(serialNumber.number) && serialNumber.number[length] != '\0') {
+						length++;
+					}
+					result = StringView(serialNumber.number, length);
 				}
 			}
 			setsysExit();
 		}
 		return result;
-#elif defined(DEATH_TARGET_VITA)
-		// No host name on this console, the OpenPSID - the 16-byte console identifier the system exposes to
-		// applications - stands in for it. The function is exported by SceLibKernel, which is linked anyway.
-		SceKernelOpenPsId psid {};
-		if (sceKernelGetOpenPsId(&psid) >= 0) {
-			return FormatIdentifierBytes(psid.id, sizeof(psid.id), '\0');
-		}
-		return {};
-#elif defined(DEATH_TARGET_PSP)
-		// No host name on this console, the WLAN's MAC address stands in for it. It's read from the console's
-		// flash rather than from a running stack, so it's available with the WLAN switch off as well and needs
-		// nothing of PspNetwork. The SDK documents the call as writing 6 bytes but asking for 8.
-		std::uint8_t mac[8] {};
-		if (sceWlanGetEtherAddr(mac) >= 0) {
-			return FormatIdentifierBytes(mac, 6, ':');
-		}
-		return {};
 #elif defined(DEATH_TARGET_WII)
 		// The nickname the console was given in its settings is the nearest thing to a host name. The console
 		// stores it as UTF-16 and libogc narrows each character to a byte, so anything outside printable ASCII
@@ -2028,22 +2015,25 @@ namespace nCine
 		// accessories
 		return {};
 #elif defined(DEATH_TARGET_DREAMCAST)
-		// No host name, but the factory settings partition of the flashrom (partition 0, at 0x1A000) carries
-		// an 8-byte identifier unique to the console at offset 0x56 - the "Dreamcast ID" the original firmware
-		// and its browser showed. An emulator's default flashrom image holds the same bytes for everyone, which
-		// is as good as it gets on a console with no other storage of its own.
-		std::uint8_t id[8] {};
-		if (flashrom_read(0x1A056, id, sizeof(id)) == (int)sizeof(id)) {
-			return FormatIdentifierBytes(id, sizeof(id), '\0');
+		// No host name, the 64-bit identifier the BIOS keeps for the console stands in for it. The SYSINFO
+		// syscall behind it answers out of the area the firmware copies the flashrom into, which KOS prepares
+		// during its own initialization (syscall_sysinfo_init), so nothing has to be brought up here. The bytes
+		// are taken out of the value in the order they have in memory on this little-endian machine, which is
+		// the order they have in the flashrom. Not to be confused with the factory settings partition, which
+		// holds the region code and the default language and no identifier at all.
+		std::uint64_t systemId = syscall_sysinfo_id();
+		std::uint8_t id[8];
+		for (std::size_t i = 0; i < sizeof(id); i++) {
+			id[i] = (std::uint8_t)(systemId >> (i * 8));
 		}
-		return {};
+		return FormatIdentifierBytes(id, sizeof(id), '\0');
 #elif defined(DEATH_TARGET_PS2)
-		// No host name, the i.Link ID - the 8-byte identifier the console keeps in its EEPROM for the FireWire
-		// port, unique per console and present whether or not the port is - stands in for it. It comes over
-		// the CDVD RPC, which MainApplication brings up before anything reaches here; bit 7 of the status is
-		// the drive's error flag.
+		// No host name, the i.Link ID - the 8-byte identifier every console has, whether or not it has the
+		// physical port - stands in for it. It comes over the CDVD RPC, which MainApplication brings up long
+		// before a trace file or a device ID is asked for. The call answers 1 when it succeeded, the status
+		// it fills in describes what went wrong otherwise.
 		u8 id[8] {}; u32 status = 0;
-		if (sceCdRI(id, &status) != 0 && (status & 0x80) == 0) {
+		if (sceCdRI(id, &status) == 1) {
 			return FormatIdentifierBytes(id, sizeof(id), '\0');
 		}
 		return {};
@@ -2053,6 +2043,24 @@ namespace nCine
 		std::uint8_t psid[16] {};
 		if (Ps3GetOpenPsId(psid) == 0) {
 			return FormatIdentifierBytes(psid, sizeof(psid), '\0');
+		}
+		return {};
+#elif defined(DEATH_TARGET_PSP)
+		// No host name on this console, the WLAN's MAC address stands in for it. It's read from the console's
+		// flash rather than from a running stack, so it's available with the WLAN switch off as well and needs
+		// nothing of PspNetwork. The SDK documents the call as writing 6 bytes but asking for 8.
+		std::uint8_t mac[8] {};
+		if (sceWlanGetEtherAddr(mac) >= 0) {
+			return FormatIdentifierBytes(mac, 6, ':');
+		}
+		return {};
+#elif defined(DEATH_TARGET_VITA)
+		// No host name on this console, the OpenPSID - the 16-byte console identifier the system exposes to
+		// applications - stands in for it. The function is exported by SceLibKernel, which is linked anyway.
+		SceKernelOpenPsId psid {};
+		if (sceKernelGetOpenPsId(&psid) >= 0) {
+			// The SDK declares the identifier as `char`, but it's 16 arbitrary bytes rather than text
+			return FormatIdentifierBytes(reinterpret_cast<const std::uint8_t*>(psid.id), sizeof(psid.id), '\0');
 		}
 		return {};
 #elif !defined(DEATH_TARGET_MORPHOS) && !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -2431,6 +2439,23 @@ namespace nCine
 	static constexpr char MetadataStringMixedCaseAlphabet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-";
 	static_assert(sizeof(MetadataStringMixedCaseAlphabet) == 64 + 1, "MetadataStringMixedCaseAlphabet must contain exactly 64 characters");
 
+	// Minutes east of UTC that the entries are formatted in. `TimeZone::GetOffset()` leaves daylight saving out
+	// on purpose, but the entries go through `Partitioned()` and localtime(), which puts it in - so the offset is
+	// taken from what the two renderings of one instant differ by, and matches the entries on every platform
+	static std::int32_t GetLocalTimeZoneOffsetMinutes(std::int64_t timestampMs)
+	{
+		DateTime dt = DateTime::FromUnixMilliseconds(timestampMs);
+		DateTime::Tm local = dt.Partitioned(DateTime::Local);
+		DateTime::Tm utc = dt.Partitioned(DateTime::UTC);
+		if (!local.IsValid() || !utc.IsValid()) {
+			return 0;
+		}
+
+		// The two never differ by more than a day, so a year boundary is a single day either way
+		std::int32_t days = (local.Year != utc.Year ? (local.Year > utc.Year ? 1 : -1) : local.DayOfYear - utc.DayOfYear);
+		return days * 1440 + (local.Hour * 60 + local.Minute) - (utc.Hour * 60 + utc.Minute);
+	}
+
 	void Application::AppendLogFileHeader(Stream& s)
 	{
 		// Write TraceDigger metadata header, the payload is encoded with URL-safe Base64 (without padding):
@@ -2440,6 +2465,8 @@ namespace nCine
 		//   varint   Flags
 		//   u8       Platform - `MetadataPlatform`
 		//   varint   Timestamp - Unix time in milliseconds
+		//   varint   Timezone offset (only if `HasTimeZoneOffset` is set) - zig-zag quarter hours east of UTC
+		//            that the entries are formatted in, so the reader can put the timestamp above next to them
 		//   varint   Process ID
 		//   varint   Main thread ID as zig-zag delta from the process ID
 		//   ...      Application version according to `MetadataVersionForm`
@@ -2476,6 +2503,9 @@ namespace nCine
 #		if defined(DEATH_TARGET_BIG_ENDIAN)
 		flags |= 0x80;	// IsBigEndian
 #		endif
+		// Always reported, even for UTC itself - the flag is what tells a header that knows its timezone from one
+		// written before there was a field for it, which the reader must not take for UTC
+		flags |= 0x08;	// HasTimeZoneOffset
 
 #		if defined(DEATH_TARGET_WINDOWS_RT)
 		constexpr MetadataPlatform platform = MetadataPlatform::WindowsRT;
@@ -2620,6 +2650,10 @@ namespace nCine
 		ms.WriteVariableUint32(flags);
 		ms.WriteValue<std::uint8_t>((std::uint8_t)platform);
 		ms.WriteVariableUint64((std::uint64_t)timestampMs);
+		// In quarter hours, rounded to the nearest: every timezone in use is a multiple of 15 minutes, and the whole
+		// -12:00..+14:00 range then fits a single zig-zag byte, where minutes would take two from ±1:04 on
+		std::int32_t timeZoneOffsetMinutes = GetLocalTimeZoneOffsetMinutes(timestampMs);
+		ms.WriteVariableInt32((timeZoneOffsetMinutes + (timeZoneOffsetMinutes >= 0 ? 7 : -7)) / 15);
 		ms.WriteVariableUint32(processId);
 		// Thread IDs are usually assigned close to the process ID, so the delta is much shorter than the ID itself
 		ms.WriteVariableInt64((std::int64_t)_mainThreadId - (std::int64_t)processId);

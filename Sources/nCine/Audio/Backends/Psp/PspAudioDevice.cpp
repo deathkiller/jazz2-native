@@ -177,7 +177,7 @@ namespace nCine
 			_mixFrequency = frequency;
 			_lastMixedLeft = 0;
 			_lastMixedRight = 0;
-			LOGI("Mixing at {} Hz", _mixFrequency);
+			LOGI("Mixing sound at {} Hz", _mixFrequency);
 		}
 	}
 

@@ -243,6 +243,14 @@ namespace nCine::Backends
 	// under with 0x80110601. Emulators always answer for the first slot, a console only has one once the user
 	// has created it - and not necessarily in the first slot, because deleting a connection leaves its slot
 	// empty - so the slots are probed and the first one that exists is used.
+	//
+	// The PS Vita's PSP emulator is the exception: it has no saved connections at all, because it does not
+	// connect through them - whatever the emulated console asks for is routed through the Vita's own network,
+	// no matter which profile is named. So the probe finds nothing there, and the firmware's own "connect
+	// automatically" profile, which is configuration 0, is what the emulator is given instead. A real console
+	// with nothing saved refuses that one the same way it refuses any other, so nothing is lost by trying.
+	static constexpr std::int32_t AutomaticNetworkConfiguration = 0;
+
 	static std::int32_t FindNetworkConfiguration()
 	{
 		// The firmware's own settings run out of slots long before this, so it is only a stop for the search
@@ -275,9 +283,12 @@ namespace nCine::Backends
 		}
 
 		std::int32_t configuration = FindNetworkConfiguration();
-		if (configuration < 0) {
-			LOGW("No network connection is available, no network configuration is saved on this console");
-			return false;
+		const bool automatic = (configuration < 0);
+		if (automatic) {
+			// Nothing saved - either a console the user never set up, or the PS Vita's emulator, which never
+			// has one (see AutomaticNetworkConfiguration)
+			LOGI("No network configuration is saved on this console, trying the automatic one");
+			configuration = AutomaticNetworkConfiguration;
 		}
 
 		std::int32_t result = sceNetApctlConnect(configuration);
@@ -289,7 +300,13 @@ namespace nCine::Backends
 			// unresolvable for a whole discovery interval.
 			int state = PSP_NET_APCTL_STATE_DISCONNECTED;
 			if (sceNetApctlGetState(&state) < 0 || state == PSP_NET_APCTL_STATE_DISCONNECTED) {
-				LOGW("No network connection is available, sceNetApctlConnect() failed with error 0x{:.8x}", std::uint32_t(result));
+				if (automatic) {
+					// The one cause the user can do something about on a real console is named, the code is for
+					// the case where it is something else
+					LOGW("No network connection is available, no network configuration is saved on this console (sceNetApctlConnect() failed with error 0x{:.8x})", std::uint32_t(result));
+				} else {
+					LOGW("No network connection is available, sceNetApctlConnect() failed with error 0x{:.8x}", std::uint32_t(result));
+				}
 				return false;
 			}
 		}
