@@ -23,15 +23,43 @@
 // a stack overflow - which on this console is a silent data abort with no trace - into a non-event.
 extern "C" u32 __stacksize__ = 1024 * 1024;
 
+// libctru splits the application memory region between the two heaps before main() and its default is wrong
+// for this engine on the smaller consoles. The default splits what is free in half, then caps the
+// application heap at 24 MB "to prefer growing the linear heap", and finally caps the linear heap at 32 MB -
+// so on an Old 3DS / 2DS, whose application region is 64 MB, the linear heap takes its full 32 MB and the
+// application heap is left with the ~27 MB remainder. That is the wrong way round here: the linear heap is
+// only what the GPU reads out of (the framebuffers, the command buffer, the vertex arenas and the texture
+// stores, see PicaTexture) and measures 3.3 MB in the menu and 5.3 MB in a level, while the application heap
+// carries everything else - the level, the actors, the asset conversion that builds the cache, a downloaded
+// tileset, a music module - and 27 MB of it is not enough: it runs out during the on-device cache build
+// (zlib answers Z_MEM_ERROR) and again a few multiplayer levels into a session. A New 3DS hides this
+// completely, because its larger region leaves the application heap ~87 MB.
+//
+// 12 MB is a bit over twice the measured peak, and the two heaps fail very differently, which is why the
+// margin sits on this side: linear memory running out is a logged `Out of linear memory allocating a ... GPU
+// store` and a texture without one, while the application heap running out is a failed `operator new`, which
+// under -fno-exceptions is an immediate abort (see ReportFailedAllocation). Leaving `__ctru_heap_size` at 0
+// hands the whole remainder to the application heap - ~47 MB on an Old 3DS. CtrPlatform::LogMemoryStatus()
+// traces both every ten seconds, so a session's log says whether this is still the right split.
+extern "C" u32 __ctru_linear_heap_size = 12 * 1024 * 1024;
+
 using namespace Death;
 using namespace Death::Containers;
 
 namespace nCine::Backends
 {
+	namespace
+	{
+		// Often enough to see a level load move the numbers, rarely enough that a long session's log stays
+		// readable; the trace itself allocates nothing that would show up in what it reports
+		constexpr std::uint32_t MemoryLogIntervalMs = 10 * 1000;
+	}
+
 	bool CtrPlatform::_initialized = false;
 	bool CtrPlatform::_bootConsoleQuiet = false;
 	bool CtrPlatform::_isNew3DS = false;
 	void* CtrPlatform::_socketBuffer = nullptr;
+	std::uint32_t CtrPlatform::_lastMemoryLogTicks = 0;
 
 #if defined(WITH_CURL) || defined(WITH_ONLINE_MULTIPLAYER)
 	namespace
@@ -122,9 +150,33 @@ namespace nCine::Backends
 
 	bool CtrPlatform::Update()
 	{
+		// Every ten seconds, so a session's log carries the trend of both heaps without the line itself
+		// becoming the noise (see LogMemoryStatus)
+		const std::uint32_t now = std::uint32_t(osGetTime());
+		if (_lastMemoryLogTicks == 0 || now - _lastMemoryLogTicks >= MemoryLogIntervalMs) {
+			_lastMemoryLogTicks = now;
+			LogMemoryStatus("periodic");
+		}
+
 		// Handles the APT events - the HOME menu, sleep mode when the lid closes, the power button - and
 		// returns false once the system wants the application gone
 		return aptMainLoop();
+	}
+
+	void CtrPlatform::LogMemoryStatus(const char* reason)
+	{
+		// `uordblks` is what newlib has actually handed out, `arena` what it has taken from the heap region
+		// libctru gave it: the gap between them is free-list the allocator kept, which a large request can
+		// still fail to fit into, and the gap between `arena` and the region is what it can still grow by
+		const struct ::mallinfo info = ::mallinfo();
+		const std::uint32_t heapSize = std::uint32_t(envGetHeapSize());
+		const std::uint32_t linearSize = std::uint32_t(envGetLinearHeapSize());
+		const std::uint32_t linearFree = std::uint32_t(linearSpaceFree());
+		LOGI("Memory ({}): heap {} KB used of {} KB ({} KB reserved by the allocator, {} KB never touched), "
+			"linear {} KB used of {} KB, VRAM {} KB free",
+			reason, std::uint32_t(info.uordblks) / 1024, heapSize / 1024, std::uint32_t(info.arena) / 1024,
+			(heapSize - std::uint32_t(info.arena)) / 1024, (linearSize - linearFree) / 1024, linearSize / 1024,
+			std::uint32_t(vramSpaceFree()) / 1024);
 	}
 
 	void CtrPlatform::Shutdown()

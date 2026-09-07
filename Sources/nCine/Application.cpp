@@ -999,8 +999,17 @@ namespace nCine
 		*/
 		void ReportFailedAllocation()
 		{
+#if defined(DEATH_TARGET_3DS)
+			// The handler is called in a loop until the allocation succeeds, so it must not return. The
+			// fatal line goes out first - it is the one that must survive even if reporting the numbers
+			// cannot allocate - and the heap status after it, because which of the two heaps ran out and
+			// how much of it the content had taken is not guessable from the failure itself
+			LOGF("Out of memory: an allocation failed and the process cannot continue");
+			Backends::CtrPlatform::LogMemoryStatus("allocation failed");
+#else
 			// The handler is called in a loop until the allocation succeeds, so it must not return
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
+#endif
 			std::abort();
 		}
 	}
