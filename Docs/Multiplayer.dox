@@ -1,0 +1,335 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page multiplayer Multiplayer
+@brief Guide how to run, configure and join multiplayer servers
+
+@tableofcontents
+
+@m_class{m-noindent}
+
+Multiplayer comes in two flavors, both of them optional at build time:
+
+-   **Local splitscreen** @m_span{m-text m-dim} (`WITH_MULTIPLAYER`) @m_endspan --- two to four players
+    on a single machine, no networking involved. Every game mode can be played this way.
+-   **Online multiplayer** @m_span{m-text m-dim} (`WITH_ONLINE_MULTIPLAYER`, and `WITH_WEBSOCKET` for the
+    additional WebSocket transport) @m_endspan --- players connect over a network to a server, which can be
+    the game itself or a headless dedicated server.
+
+@m_class{m-noindent}
+
+Every online session is **server-authoritative**: one side simulates the level, decides about damage,
+collectibles, scores and round transitions, and everyone else sends input and receives state. Because of
+that, a server is not a passive relay --- it runs the whole game and the level has to be present on it. The
+role a machine plays is decided when the session starts, so the same executable is both the game and the
+server unless it was built with `DEDICATED_SERVER`. Multiplayer also requires threads
+@m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan, so it's compiled out on the few platforms that
+have none, see @ref building-config-params-game.
+
+@section multiplayer-hosting Running a server
+
+@subsection multiplayer-hosting-listen Hosting from the game
+
+Choose **Play Multiplayer** in the main menu and then one of:
+
+-   **Create Public Server** --- the server announces itself, see @ref multiplayer-visibility
+-   **Create Private Server** --- the server stays hidden and can only be joined by address
+-   **Create Local Splitscreen Game** --- no networking at all, the additional players use gamepads
+    or a shared keyboard on the same machine
+
+@m_class{m-noindent}
+
+The next screens select the level (or the configured playlist) and the game mode. The host plays as an
+ordinary player, but its process is the authority for everyone else, which also means it has to be reachable
+--- see @ref multiplayer-visibility for the port to forward. Everything else comes from the very same
+configuration file the dedicated server reads @m_span{m-text m-dim} (@cpp "Jazz2.Server.config" @ce, see
+@ref multiplayer-config) @m_endspan, only the game mode, the level and the public/private choice are taken
+from the menu instead of from the file.
+
+@subsection multiplayer-hosting-dedicated Running a dedicated server
+
+A dedicated server is the same executable started with the `/server` argument, optionally followed by the
+path to its configuration file:
+
+@code{.sh}
+./jazz2 /server Jazz2.Server.config
+@endcode
+
+@m_class{m-noindent}
+
+In this mode the application opens no window and initializes neither graphics nor audio, runs the simulation
+at a fixed rate of 60 frames per second, and reads console commands from standard input, so it can be run
+over SSH, from a service manager or in a container. The argument is available on **Linux**, **macOS** and ---
+in a debug build only --- on **Windows**; a release server for Windows is the `DEDICATED_SERVER` build, where
+the executable is always a server and takes the configuration path as its **first argument** without
+`/server`. See @ref building-config-params-game for both build parameters.
+
+@m_class{m-noindent}
+
+A dedicated server needs the same game files as a normal installation --- the original **Jazz Jackrabbit 2**
+data in the @cpp "Source" @ce directory, which it converts into @cpp "Cache" @ce on the first start --- and
+it needs a **playlist**: the level it starts with is taken from the current playlist entry, so a
+configuration without one is refused with *"Server cannot be started because of invalid configuration"*. The
+configuration path is relative to the directory of the preferences file @m_span{m-text m-dim} (the same
+directory @cpp "Jazz2.config" @ce lives in, which `/config` can move elsewhere) @m_endspan; an absolute path
+is used as it is, and if the argument is omitted, @cpp "Jazz2.Server.config" @ce is loaded from there.
+
+@m_class{m-noindent}
+
+Everything typed on standard input is sent to the server: a line starting with `/` is a command
+@m_span{m-text m-dim} (see @ref multiplayer-commands) @m_endspan, anything else is broadcast as a chat
+message from the server. `/exit` or `/quit` stops the server, and so do `Ctrl+C` and a termination signal
+@m_span{m-text m-dim} (`SIGINT` and `SIGTERM`; on Windows the console close events) @m_endspan --- all of
+them shut it down cleanly, disconnecting the peers and delisting the server from the online list before the
+process exits. A second signal during an already running shutdown terminates the process the usual way.
+
+@subsection multiplayer-hosting-container Running a dedicated server as a container
+
+The dedicated server is also published as a multi-architecture container image, which needs nothing to be
+built and comes with the `DEDICATED_SERVER` configuration already applied. See @ref building-docker for the
+image, the volumes it expects and the `docker-compose.yml` that describes the whole setup, including running
+several instances on a single host.
+
+@section multiplayer-config Configuring a server
+
+@subsection multiplayer-config-file Configuration file
+
+The server is configured by a single JSON file, by default @cpp "Jazz2.Server.config" @ce next to the
+preferences file. Comments are allowed in it, both the block and the single-line form, and the
+@cpp "$include" @ce directive merges another file into it @m_span{m-text m-dim} (recursively, but each file
+only once, so an include loop is harmless) @m_endspan --- which is how several instances can share their
+common settings and only differ in a few properties. A minimal configuration of a server that rotates two
+levels looks like this:
+
+@code{.json}
+{
+	"ServerName": "{PlayerName}'s Server",
+	"ServerPort": 7438,
+	"MaxPlayerCount": 16,
+	"MinPlayerCount": 2,
+
+	"Playlist": [
+		{ "LevelName": "battle1", "GameMode": "battle", "TotalKills": 15 },
+		{ "LevelName": "arace1", "GameMode": "race", "TotalLaps": 3 }
+	],
+	"PlaylistIndex": 0
+}
+@endcode
+
+@m_class{m-noindent}
+
+See @ref Jazz2::Multiplayer::ServerConfiguration for the description of **every** supported property,
+their default values and a fully annotated example configuration. The properties fall into a few groups:
+
+-   **Identity and reachability** --- @cpp "ServerName" @ce, @cpp "ServerPort" @ce,
+    @cpp "ServerAddressOverride" @ce, @cpp "IsPrivate" @ce and the WebSocket transport
+    @m_span{m-text m-dim} (@cpp "WsPort" @ce, @cpp "WsCertPath" @ce, @cpp "WsKeyPath" @ce) @m_endspan
+-   **Access control** --- @cpp "ServerPassword" @ce, @cpp "MaxPlayerCount" @ce,
+    @cpp "AllowedPlayerTypes" @ce, @cpp "RequiresDiscordAuth" @ce and the player ID lists, see
+    @ref multiplayer-config-access
+-   **Rules of a round** --- @cpp "GameMode" @ce, @cpp "InitialPlayerHealth" @ce, @cpp "TotalKills" @ce,
+    @cpp "TotalLaps" @ce, @cpp "TotalTreasureCollected" @ce, @cpp "MaxGameTimeSecs" @ce,
+    @cpp "Elimination" @ce, the team properties and the gameplay switches such as
+    @cpp "ReforgedGameplay" @ce, @cpp "AllowLedgeClimb" @ce or @cpp "PlayerStacking" @ce
+-   **Session flow** --- @cpp "MinPlayerCount" @ce and @cpp "PreGameSecs" @ce decide when a round starts,
+    @cpp "TotalPlayerPoints" @ce how long a championship of several rounds lasts,
+    @cpp "AllowJoinDuringRound" @ce, @cpp "JoinCooldownSecs" @ce, @cpp "ReconnectWindowSecs" @ce and
+    @cpp "IdleKickTimeSecs" @ce how players enter and leave it
+-   **Operations** --- @cpp "AllowAssetStreaming" @ce lets clients download levels they don't have from
+    the server, and @cpp "WebhookUrl" @ce with @cpp "WebhookEvents" @ce post selected server events to a
+    **Discord** channel
+
+@m_class{m-noindent}
+
+@cpp "{PlayerName}" @ce and @cpp "{ServerName}" @ce can be used in @cpp "ServerName" @ce and
+@cpp "WelcomeMessage" @ce, and both properties also support @ref Jazz2-UI-Font-format "text formatting".
+
+@subsection multiplayer-config-playlist Playlist
+
+@cpp "Playlist" @ce is an array of rounds, each of them at least a level name and usually a game mode. Every
+property a playlist entry doesn't specify is inherited from the root of the configuration, so the root can
+carry the common rules and an entry only override what makes its round different --- see
+@ref Jazz2::Multiplayer::PlaylistEntry for the properties an entry may contain. The entry that is played
+first is @cpp "PlaylistIndex" @ce, and once a round ends, the server advances to the next entry, wrapping
+around at the end. With @cpp "RandomizePlaylist" @ce the list is shuffled when the server starts and again
+on every wrap.
+
+@m_class{m-noindent}
+
+The playlist is also the only way for a dedicated server to know which level to load at all
+@m_span{m-text m-dim} (see @ref multiplayer-hosting-dedicated) @m_endspan. A server hosted from the menu
+uses it only when the level selection is left at the playlist, otherwise @cpp "PlaylistIndex" @ce is
+@cpp -1 @ce and the chosen level is played until an admin changes it.
+
+@subsection multiplayer-config-access Admins, whitelist and bans
+
+Players are identified by a **Unique Player ID**, which every installation generates for itself. A player
+finds their own in *Options* → *User Profile* @m_span{m-text m-dim} (the item copies it to the clipboard)
+@m_endspan, and an admin can look up a connected one with the `/ip` command. Four properties of the
+configuration take these IDs:
+
+Property | Effect
+-------- | ------
+@cpp "AdminUniquePlayerIDs" @ce | Players in this map may use the admin commands. The value is reserved for a list of privileges, @cpp "*" @ce meaning all of them
+@cpp "WhitelistedUniquePlayerIDs" @ce | If the map is not empty, **only** the players in it can join. The value is a user-defined comment
+@cpp "BannedUniquePlayerIDs" @ce | Players in this map are rejected. The value is a user-defined comment, e.g. the reason
+@cpp "BannedIPAddresses" @ce | The same for addresses, for a player whose ID is not known
+
+@m_class{m-noindent}
+
+@cpp "ServerPassword" @ce is the simpler alternative to a whitelist --- the server is visible to everybody,
+but only a player who knows the password can enter it. @cpp "RequiresDiscordAuth" @ce additionally requires
+a running **Discord** client, which limits the server to players on Linux, macOS and Windows.
+@cpp "AllowCheats" @ce is off by default; when it's on, admins may use cheats in any game mode and other
+players only in Cooperation, and always only on themselves.
+
+@subsection multiplayer-config-reload Applying changes
+
+The configuration file is read when the server starts. An admin can reload it at runtime with the
+`/refresh` command, which re-reads the file and re-applies the welcome message, the game mode and the
+current playlist entry, so most changes don't require a restart. Individual properties can also be changed
+temporarily with `/set` @m_span{m-text m-dim} (see @ref multiplayer-commands) @m_endspan --- those changes
+live only until the next `/refresh` or restart, they are never written back to the file.
+
+@section multiplayer-visibility Public and private servers
+
+Whether a server announces itself is decided by the @cpp "IsPrivate" @ce property
+@m_span{m-text m-dim} (or by the menu item the host started it with) @m_endspan:
+
+Behavior | Public server | Private server
+-------- | ------------- | --------------
+Announced on the local network | Yes, answers discovery requests on UDP port 7439 | No
+Published to the online server list | Yes, to `https://de4th.dev/jazz2/servers` | No
+Shown in **Join Server** | Yes, in both lists | No, has to be entered by address
+Requires a reachable address | Yes, otherwise nobody can connect | Yes, for everyone who is given the address
+Password, whitelist and bans | Apply the same way | Apply the same way
+
+@m_class{m-noindent}
+
+A private server runs no discovery at all, which is what makes it private: it appears in neither list, and
+the only way in is its address. It is *not* an access restriction on its own --- anyone who learns the
+address can connect --- so a server that should stay among friends is usually a private server **and** a
+password-protected one.
+
+@m_class{m-noindent}
+
+A public server re-publishes itself to the online list every 5 minutes and delists itself when it shuts
+down cleanly. The address it publishes is the one it detects for itself, which is of no use when the server
+is behind NAT or in a container --- @cpp "ServerAddressOverride" @ce then specifies the address (and, if it
+differs, the port) players on the internet should use. The port itself has to be reachable in any case:
+@cpp "ServerPort" @ce over **UDP** for the default transport, and @cpp "WsPort" @ce over **TCP** if the
+WebSocket transport is enabled. The `/endpoints` command lists the endpoints the server knows about,
+including the override.
+
+@section multiplayer-joining Joining a server
+
+Choose **Play Multiplayer** → **Join Server** in the main menu. The list is filled from two sources at once
+--- servers discovered on the local network and the public online list --- and shows the name, the player
+count, the version and the address of each of them, marked with @cpp "ws" @ce for a server offering the
+WebSocket transport, @cpp "R" @ce for reforged gameplay and @cpp "^" @ce for one found on the local
+network. A version the client cannot join is highlighted. A server can also be entered by address, which
+is the only way to reach a private server.
+
+@m_class{m-noindent}
+
+An endpoint is an IPv4 address, an IPv6 address in brackets or a domain name, optionally followed by a port
+@m_span{m-text m-dim} (@cpp 7438 @ce is used when none is given) @m_endspan, or a `ws://` / `wss://` URL to
+connect over the WebSocket transport:
+
+@code{.sh}
+192.168.1.10          # Local network, default port
+example.com:7438      # Domain name and an explicit port
+[2001:db8::1]:7438    # IPv6 address
+wss://example.com:443 # WebSocket transport (browsers always use this one)
+@endcode
+
+@m_class{m-noindent}
+
+The game can also connect right after it starts, without going through the menu, which is what a server
+browser or a shortcut would use:
+
+@code{.sh}
+./jazz2 /connect example.com:7438 secret123
+@endcode
+
+@m_class{m-noindent}
+
+The second argument is the endpoint and the optional third one is the server password. On joining, the
+client and the server first check that their protocol versions match @m_span{m-text m-dim} (the patch part
+is ignored, so only compatible releases are refused) @m_endspan, then the player is authenticated against
+the whitelist, the ban lists and the password, and finally the client is asked for the assets of the level.
+Anything it is missing --- levels, tilesets, music --- is downloaded from the server if the server allows
+it with @cpp "AllowAssetStreaming" @ce; otherwise the player has to install the missing files manually.
+Once in, an in-game lobby offers the character selection and the welcome message of the server.
+
+@m_class{m-noindent}
+
+If the connection drops, reconnecting within @cpp "ReconnectWindowSecs" @ce restores the progression of the
+player --- weapons, lives, score, gems and championship points --- instead of starting over.
+
+@section multiplayer-commands Server commands
+
+Commands are typed into the in-game console @m_span{m-text m-dim} (the *backquote* or **T** key by default)
+@m_endspan or, on a dedicated server, directly into its standard input. Anything that isn't a command is a
+chat message. These are available to every player:
+
+Command | Description
+------- | -----------
+`/info` | Name of the server, current level and game mode, player count, load and uptime
+`/players` | List of connected players with their ping, points, kills, deaths and idle time
+`/team <team>` | Requests a change to the `blue`, `red`, `green` or `yellow` team, or back to `auto`, if the server allows it in the current mode
+`/kill` | Kills your own player
+`/vote <type>` | Starts a poll to `restart` the playlist, `skip` the current level or `reset points`. It stays open for 60 seconds
+`/yes` | Votes in the active poll
+
+@m_class{m-noindent}
+
+The remaining commands require admin rights, i.e. an entry in @cpp "AdminUniquePlayerIDs" @ce
+@m_span{m-text m-dim} (the console of a dedicated server is always an admin) @m_endspan:
+
+Command | Description
+------- | -----------
+`/set mode <mode>` | Changes the game mode, which restarts the round. Accepts the same values as the @cpp "GameMode" @ce property
+`/set level <level>` | Loads another level and leaves the playlist
+`/set name <name>` | Renames the server. An empty name stops publishing it to the online list
+`/set welcome <message>` | Changes the welcome message of the in-game lobby, `\n` starts a new line
+`/set kills`, `/set laps`, `/set treasure <n>` | Changes the win target of the current round
+`/set teamcount <2-4>` | Changes the number of teams, which re-splits them and restarts the round
+`/set autobalance`, `/set teamselect`, `/set friendlyfire <on/off>` | Team rules of the current round
+`/set cheats <on/off>` | Allows or forbids cheats
+`/set spawning <on/off>` | Stops or resumes spawning of players
+`/next` | Ends the current round and continues with the next one
+`/playlist [<index>]` | Jumps to a playlist entry, or advances to the next one
+`/skip` | Skips the remaining pre-game countdown
+`/balance` | Rebalances the teams immediately
+`/setteam <player#> <team>` | Moves a player to a team
+`/reset points` | Resets the championship points of all players
+`/alert <message>` | Shows a message over the HUD of every player
+`/kick <player>` | Disconnects a player, by name or by `#` and their index
+`/kill <player>` | Kills a player without counting it as a death
+`/ip <player>` | Address and Unique Player ID of a player
+`/endpoints` | Endpoints the server is reachable at, including @cpp "ServerAddressOverride" @ce
+`/refresh` | Reloads the configuration file, see @ref multiplayer-config-reload
+`/vote cancel` | Cancels the active poll
+`/exit`, `/quit` | Shuts the dedicated server down @m_span{m-text m-dim} (its own console only) @m_endspan
+
+@section multiplayer-args Command-line arguments
+
+Argument | Description
+-------- | -----------
+`/server [<config>]` | Runs the application as a dedicated server, see @ref multiplayer-hosting-dedicated. `--server` is accepted as well
+`/connect <endpoint> [<password>]` | Connects to a server right after the start instead of showing the main menu. `--connect` and `-c` are accepted as well
+`/config <path>` | Path to the preferences file, which is also the directory a relative server configuration path is resolved against
+`/log` | Attaches a console to the process @m_span{m-text m-dim} (**Windows** only, where a non-server build has none) @m_endspan
+`/log:file[:<name>]` | Writes the trace log into a file in the preferences directory, @cpp "Jazz2.log" @ce if no name is given
+
+@m_class{m-noindent}
+
+`/server` is available on **Linux** and **macOS**, and on **Windows** only in a debug build --- a release
+server for Windows is the `DEDICATED_SERVER` build, where no argument is needed to become one and the first
+argument is the path to the configuration file. In a `DEDICATED_SERVER` build the arguments of a client are
+naturally not available either.
+
+*/
+
+}

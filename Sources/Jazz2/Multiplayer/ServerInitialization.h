@@ -31,6 +31,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether reforged gameplay is enabled */
 		bool ReforgedGameplay;
+		/** @brief Whether players are allowed to climb ledges, inherits @ref ReforgedGameplay if not specified */
+		bool AllowLedgeClimb;
 		/** @brief Number of teams in team game modes (2-4, ignored in non-team modes) */
 		std::uint8_t TeamCount;
 		/** @brief Whether teams are automatically rebalanced when they become uneven */
@@ -150,6 +152,8 @@ namespace Jazz2::Multiplayer
 			-   If not specified, the default set is used (everything except @cpp "RoundStarted" @ce, @cpp "ChatMessages" @ce, @cpp "PlayerRoasted" @ce, @cpp "PlayerLapFinished" @ce and @cpp "FlagCaptured" @ce)
 		-   @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled
 			-   Has a higher priority than settings of the player
+		-   @cpp "AllowLedgeClimb" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are allowed to climb ledges (default is the value of @cpp "ReforgedGameplay" @ce)
+			-   Players can still disable ledge climbing for themselves, but they can never enable it if the server doesn't allow it
 		-   @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
 			-   If enabled, the list is shuffled when the server is started and when the end of the list is reached
 		-   @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship, @cpp 0 @ce to disable (default is **50**)
@@ -196,6 +200,8 @@ namespace Jazz2::Multiplayer
 		-   @cpp "Playlist" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of game configurations per round, each entry may contain:
 			-   @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
 			-   @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
+			-   @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled for this round
+			-   @cpp "AllowLedgeClimb" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are allowed to climb ledges in this round (default is the value of @cpp "ReforgedGameplay" @ce)
 			-   @cpp "Elimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled for this round
 			-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players for this round
 			-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum game duration for this round
@@ -277,6 +283,13 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether reforged gameplay is enabled, see @ref PreferencesCache::EnableReforgedGameplay */
 		bool ReforgedGameplay;
+		/**
+		 * @brief Whether players are allowed to climb ledges, inherits @ref ReforgedGameplay if not specified
+		 *
+		 * Players can still turn ledge climbing off for themselves with @ref PreferencesCache::EnableLedgeClimb,
+		 * but they can never turn it on if the server doesn't allow it.
+		 */
+		bool AllowLedgeClimb;
 		/** @brief Number of teams in team game modes (2-4, ignored in non-team modes) */
 		std::uint8_t TeamCount;
 		/** @brief Whether teams are automatically rebalanced when they become uneven */

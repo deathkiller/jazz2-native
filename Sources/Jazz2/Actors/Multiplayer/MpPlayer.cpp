@@ -68,6 +68,13 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		return _peerDesc;
 	}
+
+	bool MpPlayer::IsLedgeClimbAllowed() const
+	{
+		// The server decides whether ledge climbing can be used at all, the local player can only turn it off
+		auto* mpLevelHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+		return (mpLevelHandler->IsLedgeClimbAllowed() && Player::IsLedgeClimbAllowed());
+	}
 }
 
 #endif

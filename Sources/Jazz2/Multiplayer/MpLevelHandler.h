@@ -117,9 +117,8 @@ namespace Jazz2::Multiplayer
 		 * @param root             Root controller
 		 * @param networkManager   Network manager that handles the connection
 		 * @param levelState       Initial level state
-		 * @param enableLedgeClimb Whether ledge climbing is enabled
 		 */
-		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState, bool enableLedgeClimb);
+		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState);
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
@@ -366,6 +365,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerBumped(Actors::Player* player);
 		/** @brief Returns `true` if players can stand on top of each other (per-level @ref ServerConfiguration::PlayerStacking) */
 		bool IsPlayerStackingEnabled() const;
+		/** @brief Returns `true` if players are allowed to climb ledges (per-level @ref ServerConfiguration::AllowLedgeClimb) */
+		bool IsLedgeClimbAllowed() const;
 		/** @brief Returns the player actor the given player is standing/landing on (one-way platform check), or `nullptr` */
 		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) override;
 		/** @brief Called when a player requests to synchronize weapon ammo */
@@ -541,7 +542,6 @@ namespace Jazz2::Multiplayer
 		Threading::Spinlock _lock;
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;
-		bool _enableLedgeClimb;
 		bool _controllableExternal;
 		bool _autoWeightTreasure;
 		VoteType _activePoll;

@@ -977,12 +977,14 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 				serverConfig.GameMode = MpGameMode::Cooperation;
 				serverConfig.MinPlayerCount = 1;
 				serverConfig.PreGameSecs = 0;
+				// There is no server to restrict anything in a local session, so the local preference decides alone
+				serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
 
 				_networkManager = std::make_unique<NetworkManager>();
 				_networkManager->CreateLocalServer(this, std::move(serverConfig));
 
 				levelHandler = std::make_shared<MpLevelHandler>(this,
-					_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, PreferencesCache::EnableLedgeClimb);
+					_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 			} else
 #endif
 			{
@@ -1279,6 +1281,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 		// Override properties
 		serverInit.Configuration.ReforgedGameplay = playlistEntry.ReforgedGameplay;
+		serverInit.Configuration.AllowLedgeClimb = playlistEntry.AllowLedgeClimb;
 		serverInit.Configuration.Elimination = playlistEntry.Elimination;
 		serverInit.Configuration.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
 		serverInit.Configuration.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
@@ -1310,7 +1313,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
-			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(serverInit.InitialLevel)) {
 			LOGE("Failed to load initial level \"{}\", shutting down server", serverInit.InitialLevel.LevelName);
 			theApplication().Quit();
@@ -1714,6 +1717,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					serverConfig.GameMode = gameMode;
 					serverConfig.ReforgedGameplay = isReforged;
+					serverConfig.AllowLedgeClimb = enableLedgeClimb;
 					serverConfig.Elimination = elimination;
 						serverConfig.EnableSpectate = enableSpectate;
 						serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
@@ -1725,7 +1729,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					serverConfig.TotalTreasureCollected = totalTreasureCollected;
 
 					auto levelHandler = std::make_shared<MpLevelHandler>(this,
-						_networkManager.get(), levelState, enableLedgeClimb);
+						_networkManager.get(), levelState);
 					if (levelHandler->Initialize(levelInit)) {
 						SetStateHandler(std::move(levelHandler));
 						return;
@@ -2131,9 +2135,9 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 {
 #if defined(WITH_MULTIPLAYER)
 	if (!levelInit.IsLocalSession) {
-		// TODO: Set proper game mode and ledge climb
+		// TODO: Set proper game mode
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
-			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}
@@ -2147,12 +2151,14 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 		serverConfig.ReforgedGameplay = levelInit.IsReforged;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.PreGameSecs = 0;	// Start the round immediately, no waiting for remote players
+		// There is no server to restrict anything in a local session, so the local preference decides alone
+		serverConfig.AllowLedgeClimb = PreferencesCache::EnableLedgeClimb;
 
 		_networkManager = std::make_unique<NetworkManager>();
 		_networkManager->CreateLocalServer(this, std::move(serverConfig));
 
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
-			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, PreferencesCache::EnableLedgeClimb);
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending);
 		if (!levelHandler->Initialize(levelInit)) {
 			return false;
 		}

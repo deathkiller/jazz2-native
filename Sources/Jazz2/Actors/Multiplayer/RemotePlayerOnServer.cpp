@@ -65,7 +65,9 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::IsLedgeClimbAllowed() const
 	{
-		return (_peerDesc->EnableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
+		// Same rule as for any other player, but the preference of the owning client applies here instead of the local one
+		auto* mpLevelHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+		return (mpLevelHandler->IsLedgeClimbAllowed() && _peerDesc->EnableLedgeClimb);
 	}
 
 	bool RemotePlayerOnServer::OnHandleCollision(ActorBase* other)

@@ -207,6 +207,11 @@ const TEV_SUPPORT_TABLE = 'Support is **per backend**, and a block is validated 
 // not by meaning: the body is transpiled to C++ that the console's CPU runs once per draw to BUILD a
 // pass, so none of the GLSL entries' per-backend lowering notes apply. Saying so once, here, is what
 // lets the hover pick the right entry for the cursor's context.
+// The scratch the strip builder writes into is a backend capability, and a LITERAL index or count
+// outside it is a hard error rather than a clamp, because at runtime an out-of-range index is
+// dropped and an oversized count clamped - which would silently draw the wrong geometry.
+const STRIP_CAPACITY = '\n\nThe strip scratch holds **8** vertices on the `pvr` and **16** everywhere else, and a block serving several targets is held to the smallest among them. A literal index or count outside that is a hard error; a computed one is not checked.';
+
 const FF_SUBSET = '\n\nOne of the small maths subset a `fixed_function` body accepts (`abs`, `ceil`, `clamp`, `cos`, `float`, `floor`, `int`, `max`, `min`, `mix`, `sin`, `sqrt`) — transpiled to C++ and evaluated **once per draw** while the pass is built, not per pixel.';
 
 /** The fixed-function DSL: statements, pass fields, context facilities and the allowed maths */
@@ -217,13 +222,14 @@ const FIXED_FUNCTION = {
 	],
 	submits: [
 		{ name: 'submit_quad', insert: 'submit_quad(${1:p})', doc: 'Emits the configured pass over the sprite quad.' },
-		{ name: 'submit_strip', insert: 'submit_strip(${1:p})', doc: 'Emits the pass over a triangle strip built with `strip_position` / `strip_uv` / `strip_color`. Requires the strip-builder facility.' },
-		{ name: 'submit_strip_shaded', insert: 'submit_strip_shaded(${1:p})', doc: 'Like `submit_strip`, but with per-vertex colours taken from the strip builder.' }
+		{ name: 'submit_strip', insert: 'submit_strip(${1:p}, ${2:4})', detail: 'submit_strip(<pass>, <count>)', doc: 'Emits the pass over a triangle strip of `count` vertices built with `strip_position` / `strip_uv` / `strip_color` — textured, with the pass\'s flat colour. Requires the strip-builder facility.' + STRIP_CAPACITY },
+		{ name: 'submit_strip_shaded', insert: 'submit_strip_shaded(${1:p}, ${2:4})', detail: 'submit_strip_shaded(<pass>, <count>)', doc: 'Like `submit_strip`, but with the per-vertex colours taken from the strip builder — **untextured**, unless the pass\'s TEV preset consumes the texel as well (`TINT_MIX`), in which case the strip keeps its texture and UVs.' + STRIP_CAPACITY }
 	],
+	// The strip builder is INDEXED: every helper takes the vertex slot first and the value second
 	stripHelpers: [
-		{ name: 'strip_position', insert: 'strip_position(${1:x}, ${2:y})', doc: 'Appends a vertex position to the strip being built.' },
-		{ name: 'strip_uv', insert: 'strip_uv(${1:u}, ${2:v})', doc: 'Appends a texture coordinate to the strip being built.' },
-		{ name: 'strip_color', insert: 'strip_color(${1:rgba})', doc: 'Appends a vertex colour to the strip being built.' }
+		{ name: 'strip_position', insert: 'strip_position(${1:0}, ${2:vec2(0.0, 0.0)})', detail: 'strip_position(<index>, <vec2>)', doc: 'Writes the position of vertex `index` in the strip being built.' + STRIP_CAPACITY },
+		{ name: 'strip_uv', insert: 'strip_uv(${1:0}, ${2:vec2(0.0, 0.0)})', detail: 'strip_uv(<index>, <vec2>)', doc: 'Writes the texture coordinate of vertex `index`, in the shader\'s own texture space — the backend folds its padded-store scale in.' + STRIP_CAPACITY },
+		{ name: 'strip_color', insert: 'strip_color(${1:0}, ${2:vec4(1.0, 1.0, 1.0, 1.0)})', detail: 'strip_color(<index>, <vec4>)', doc: 'Writes the colour of vertex `index`, which only `submit_strip_shaded` reads.' + STRIP_CAPACITY }
 	],
 	context: [
 		{ name: 'texel_size', doc: 'The texel step of the bound texture (`vec2`). Sets the `NeedsTexelStep` requirement, so `Dispatch` only computes it for effects that ask.' },

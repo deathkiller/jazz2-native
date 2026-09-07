@@ -117,10 +117,10 @@ namespace Jazz2::Multiplayer
 
 
 	// TODO: levelState is unused, it needs to be set after LevelState::InitialUpdatePending is processed
-	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
+	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _spectateFollowActorId(SpectateFreeCamera), _waitingForPlayerCount(0),
-			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false), _enableLedgeClimb(enableLedgeClimb),
+			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
 			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f),
@@ -2348,7 +2348,7 @@ namespace Jazz2::Multiplayer
 		if (_isReforged) {
 			flags |= 0x01;
 		}
-		if (PreferencesCache::EnableLedgeClimb) {
+		if (serverConfig.AllowLedgeClimb) {
 			flags |= 0x02;
 		}
 		if (serverConfig.Elimination) {
@@ -4654,6 +4654,7 @@ namespace Jazz2::Multiplayer
 				serverConfig.GameMode = gameMode;
 				serverConfig.ColorizePlayersByTeam = colorizePlayersByTeam;
 				serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
+				serverConfig.AllowLedgeClimb = (flags & 0x02) != 0;
 				serverConfig.Elimination = (flags & 0x04) != 0;
 				serverConfig.EnableSpectate = (flags & 0x08) != 0;
 				serverConfig.PlayerStacking = (flags & 0x10) != 0;
@@ -7046,6 +7047,11 @@ namespace Jazz2::Multiplayer
 	bool MpLevelHandler::IsPlayerStackingEnabled() const
 	{
 		return _networkManager->GetServerConfiguration().PlayerStacking;
+	}
+
+	bool MpLevelHandler::IsLedgeClimbAllowed() const
+	{
+		return _networkManager->GetServerConfiguration().AllowLedgeClimb;
 	}
 
 	Actors::ActorBase* MpLevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
@@ -10188,6 +10194,7 @@ namespace Jazz2::Multiplayer
 
 		// Override properties
 		serverConfig.ReforgedGameplay = playlistEntry.ReforgedGameplay;
+		serverConfig.AllowLedgeClimb = playlistEntry.AllowLedgeClimb;
 		serverConfig.TeamCount = playlistEntry.TeamCount;
 		serverConfig.AutoBalanceTeams = playlistEntry.AutoBalanceTeams;
 		serverConfig.AllowTeamSelection = playlistEntry.AllowTeamSelection;
@@ -10476,7 +10483,7 @@ namespace Jazz2::Multiplayer
 		if (_isReforged) {
 			flags |= 0x01;
 		}
-		if (PreferencesCache::EnableLedgeClimb) {
+		if (serverConfig.AllowLedgeClimb) {
 			flags |= 0x02;
 		}
 		if (serverConfig.Elimination) {

@@ -306,6 +306,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.ReconnectWindowSecs = 300;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
+		serverConfig.AllowLedgeClimb = serverConfig.ReforgedGameplay;
 		serverConfig.PreGameSecs = 30;
 		serverConfig.SpawnInvulnerableSecs = 4;
 		serverConfig.PlaylistIndex = -1;
@@ -558,6 +559,13 @@ namespace Jazz2::Multiplayer
 				bool reforgedGameplay;
 				if (doc["ReforgedGameplay"].get(reforgedGameplay) == Json::SUCCESS) {
 					serverConfig.ReforgedGameplay = reforgedGameplay;
+					// Ledge climbing is a part of reforged gameplay, so it follows it unless it's specified explicitly
+					serverConfig.AllowLedgeClimb = reforgedGameplay;
+				}
+
+				bool allowLedgeClimb;
+				if (doc["AllowLedgeClimb"].get(allowLedgeClimb) == Json::SUCCESS) {
+					serverConfig.AllowLedgeClimb = allowLedgeClimb;
 				}
 
 				bool randomizePlaylist;
@@ -687,6 +695,7 @@ namespace Jazz2::Multiplayer
 						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
 						playlistEntry.ReforgedGameplay = serverConfig.ReforgedGameplay;
+						playlistEntry.AllowLedgeClimb = serverConfig.AllowLedgeClimb;
 						playlistEntry.TeamCount = serverConfig.TeamCount;
 						playlistEntry.AutoBalanceTeams = serverConfig.AutoBalanceTeams;
 						playlistEntry.AllowTeamSelection = serverConfig.AllowTeamSelection;
@@ -716,6 +725,13 @@ namespace Jazz2::Multiplayer
 						bool reforgedGameplay;
 						if (entry["ReforgedGameplay"].get(reforgedGameplay) == Json::SUCCESS) {
 							playlistEntry.ReforgedGameplay = reforgedGameplay;
+							// Ledge climbing is a part of reforged gameplay, so it follows it unless it's specified explicitly
+							playlistEntry.AllowLedgeClimb = reforgedGameplay;
+						}
+
+						bool entryAllowLedgeClimb;
+						if (entry["AllowLedgeClimb"].get(entryAllowLedgeClimb) == Json::SUCCESS) {
+							playlistEntry.AllowLedgeClimb = entryAllowLedgeClimb;
 						}
 
 						bool elimination;

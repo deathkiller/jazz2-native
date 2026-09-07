@@ -56,6 +56,10 @@
 	   "PlayerKicked", "LevelChanged", "RoundEnded", "ChampionshipEnded" ],*/
 
 	"ReforgedGameplay": true,
+	/* "AllowLedgeClimb" defaults to the value of "ReforgedGameplay", players can still
+	   disable ledge climbing for themselves, but they can never enable it if the server
+	   doesn't allow it */
+	"AllowLedgeClimb": true,
 	"RandomizePlaylist": false,
 	"TotalPlayerPoints": 100,
 	"PlayerStacking": true,

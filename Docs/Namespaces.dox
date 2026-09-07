@@ -409,6 +409,8 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace Jazz2::Multiplayer
 	@brief Multiplayer-related classes, compiled only if `WITH_MULTIPLAYER`
 
+	See @ref multiplayer for how to run, configure and join a server.
+
 	@experimental
 */
 /** @dir Jazz2/Multiplayer/GameModes

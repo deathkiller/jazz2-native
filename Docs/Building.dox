@@ -303,8 +303,8 @@ configuration from the first command-line argument @m_span{m-text m-dim} (defaul
 @cpp "docker attach" @ce opens the server console. The @cpp "./Config/" @ce directory has to be
 writable by uid 1000, the unprivileged user the server runs as. Both `SIGINT` and `SIGTERM` shut the
 server down cleanly, so @cpp "docker stop" @ce disconnects the peers and delists the server from the
-online server list before the process exits. See
-@relativeref{Jazz2::Multiplayer,ServerConfiguration} for all configuration properties.
+online server list before the process exits. See @ref multiplayer for how to configure and administer
+the server, and @relativeref{Jazz2::Multiplayer,ServerConfiguration} for all configuration properties.
 
 @m_class{m-noindent}
 

@@ -31,8 +31,17 @@ code --install-extension death-shader-1.0.0.vsix
 
 ### Highlighting
 
-A self-contained TextMate grammar — it does not depend on any other GLSL extension. Beyond ordinary
-GLSL it knows the language's own vocabulary and colours it distinctly:
+A self-contained TextMate grammar — it does not depend on any other GLSL extension. It treats the
+file as the two languages it really is: the GLSL stages, and the fixed-function DSL of a
+`fixed_function` block. The block is a brace-counted region, so a nested `if` or `for` inside it
+cannot end it early, and inside it only the maths subset the transpiler accepts (`abs`, `ceil`,
+`clamp`, `cos`, `float`, `floor`, `int`, `max`, `min`, `mix`, `sin`, `sqrt`) reads as a built-in —
+`smoothstep` there is an ordinary call, which is what the hover says about it too. The DSL vocabulary
+is written so that it is unambiguous on its own (the statements need their terminator, the pass
+fields an assignment, `p.blend`/`p.tev` their value), which is what lets an `.inc` holding a block's
+body colour correctly even though it is pasted into a block that lives in another file.
+
+Beyond ordinary GLSL it knows the language's own vocabulary and colours it distinctly:
 
 - the top-level directives `program`, `shader_type`, `variant`, `render_mode`, `precision`,
   `batched`, `attribute`, `varying`, and the `uniform … : hint` hint list
@@ -49,7 +58,10 @@ GLSL it knows the language's own vocabulary and colours it distinctly:
 
 Things the language rejects are scoped as errors, so a theme paints them as mistakes on sight:
 `fragColor`, a `#version` line, an unsupported canvas built-in (`TIME`, `SCREEN_UV`, …), an unknown
-render mode or hint, and `#define` / `#undef` of a compile-time macro.
+render mode, hint, `shader_type`, `precision` qualifier, `fixed_function` target, `pipeline` stage or
+`p.blend` / `p.tev` value, and `#define` / `#undef` of a compile-time macro. Nothing the compiler
+accepts is scoped as an error — the grammar tests hold that by tokenizing every `.shader` and `.inc`
+in `Sources/Shaders`.
 
 ### Completion
 
@@ -184,6 +196,7 @@ src/tool.js                           locating and running ShaderCompiler
 src/extension.js                      the editor providers
 test/run-tests.js                     tests for the two pure modules
 test/run-provider-tests.js            tests for the providers, against a mock vscode API
+test/run-grammar-tests.js             tests for the grammar, tokenizing the tree's own shaders
 ```
 
 `language.js` and `analysis.js` deliberately import nothing, which is what makes them testable.
@@ -191,11 +204,11 @@ test/run-provider-tests.js            tests for the providers, against a mock vs
 ## Tests
 
 ```
-node test/run-tests.js && node test/run-provider-tests.js
+node test/run-tests.js && node test/run-provider-tests.js && node test/run-grammar-tests.js
 ```
 
-Both suites also run under `gjs` — they need no dependencies and no Node installation, because the
-harness works in any plain JS engine.
+All three suites also run under `gjs` — they need no dependencies and no Node installation, because
+the harness works in any plain JS engine.
 
 `run-tests.js` covers comment stripping, the document scan, cursor-context classification, the three
 diagnostic line shapes, and every built-in check — including the cases that must **not** fire (a
@@ -209,6 +222,29 @@ a canvas shader with no `vertex()`, and any file containing an `#include`).
 compiler diagnostic is mapped onto the buffer. The mock is wrapped in a Proxy that throws on any
 member it does not define, so a mistyped `vscode.*` API name fails in the test rather than in the
 editor.
+
+`run-grammar-tests.js` has two layers. The first needs nothing: it reads the grammar as JSON and
+checks that it holds together (every `include` resolves, every repository entry is reachable, every
+capture index exists in its own pattern, every scope belongs to this language) and that it still
+spells the same language `language.js` documents — every directive, hint, target, preset, pass field
+and built-in has to appear in both, so the two cannot drift apart unnoticed.
+
+The second layer tokenizes, which is the only way to prove what a rule actually *does*: fixtures for
+the cases a hand-written grammar gets wrong (a statement after a nested block, a ternary that is not
+a hint list, `precision highp float;` that is not the directive, an unclosed brace, a block body in an
+include fragment), and then **every `.shader` and `.inc` under `Sources/Shaders`** — nothing the
+compiler accepts may scope as an error, and no line of a `fixed_function` body may fall out of its
+block. That needs an Oniguruma-backed TextMate engine, and since this tree has no npm dependencies it
+borrows the copy inside an installed VS Code:
+
+```
+set ELECTRON_RUN_AS_NODE=1
+"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe" test/run-grammar-tests.js
+```
+
+Set `DEATH_SHADER_VSCODE_APP` to the `resources/app` directory if it is not found on its own. With no
+engine around that layer prints `SKIP` and the run still passes — it is a stricter check, not a
+required one.
 
 ## Notes
 

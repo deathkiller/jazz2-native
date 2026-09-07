@@ -4707,10 +4707,25 @@ namespace Death { namespace Backward {
 		__attribute__((noreturn))
 #	endif
 		static void SignalHandler(int sig, siginfo_t* info, void* _ctx) {
+			// A crash inside the handler itself (or the re-raise below reaching it again, which is what macOS does
+			// despite SA_RESETHAND) must not report a second time: the unwinder is not re-entrant and the process
+			// then hung inside it instead of dying
+			static volatile sig_atomic_t handling = 0;
+			if (handling != 0) {
+				_exit(ExceptionExitCode);
+			}
+			handling = 1;
+
 			auto* current = GetSingleton();
 			current->HandleSignal(sig, info, _ctx);
 
-			// Try to forward the signal
+			// Try to forward the signal - to the default disposition, restored explicitly (SA_RESETHAND alone
+			// does not reliably do it on every system)
+			struct sigaction defaultAction;
+			std::memset(&defaultAction, 0, sizeof(defaultAction));
+			defaultAction.sa_handler = SIG_DFL;
+			sigemptyset(&defaultAction.sa_mask);
+			sigaction(info->si_signo, &defaultAction, nullptr);
 			raise(info->si_signo);
 
 			// Terminate the process immediately
