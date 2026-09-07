@@ -4,8 +4,6 @@
 
 #include <Containers/String.h>
 
-#include <cstdint>
-
 using namespace Death::Containers;
 
 namespace nCine::Backends
@@ -48,8 +46,8 @@ namespace nCine::Backends
 			The console is the tightest memory target the engine runs on and the two heaps are split before
 			`main()` by libctru (see the note on `__ctru_linear_heap_size` in the implementation), so a
 			failed allocation says very little on its own: what matters is which of the two ran out and how
-			much of it the content had taken. Called on an interval from @ref Update(), so a log covering a
-			session shows the trend rather than one number, and from the allocation-failure handler.
+			much of it the content had taken. Called from the allocation-failure handler, and worth calling
+			by hand around whatever is being investigated when a heap has to be watched over time.
 		*/
 		static void LogMemoryStatus(const char* reason);
 
@@ -65,7 +63,6 @@ namespace nCine::Backends
 		static bool _bootConsoleQuiet;
 		static bool _isNew3DS;
 		static void* _socketBuffer;
-		static std::uint32_t _lastMemoryLogTicks;
 	};
 }
 

@@ -253,8 +253,16 @@ namespace Jazz2::Rendering
 		// locked 60 fps. Nothing in the map has sharp detail to lose: every light is a smooth cubic falloff
 		// and the map is stretched over the viewport with bilinear filtering at any scale.
 		constexpr std::int32_t Scale = 6;
+#elif defined(DEATH_TARGET_3DS)
+		// The 3DS sits with the PSP rather than with the consoles below. An Old 3DS / 2DS - which is the
+		// model to budget for, since the 804 MHz clock and the L2 cache only exist on a New one - runs its
+		// Arm11 at 268 MHz, slower than the Allegrex, and has nothing like the VFPU the PSP splats with, so
+		// it pays more per texel than the console that already needed a sixth. Its 400x240 viewport makes a
+		// sixth 67x40 = 2680 texels, fewer even than the PSP's 80x46, and the device pass over the padded
+		// texture drops with it (see ApplyPendingSoftwareLighting, which converts only the live part).
+		constexpr std::int32_t Scale = 6;
 #elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the

@@ -67,6 +67,11 @@ namespace nCine::RHI::PICA
 
 		// Per-frame draw statistics, logged when the switch below is on
 		constexpr bool TraceDrawStatistics = false;
+		// CPU time the software-lighting composite spends converting and tiling the lightmap, accumulated
+		// over the frames between two statistics lines. svcGetSystemTick() runs at SYSCLOCK_ARM11 whether or
+		// not a New 3DS is sped up, so the number is comparable across models
+		std::uint64_t lightingTicks = 0;
+		std::int32_t lightingFrames = 0;
 		std::uint32_t frameDrawCalls = 0;
 		std::uint32_t frameVertices = 0;
 		std::uint32_t frameSkippedDraws = 0;
@@ -1116,9 +1121,13 @@ namespace nCine::RHI::PICA
 		if (TraceDrawStatistics) {
 			// Once a second at 60 Hz, so the trace stays readable while the game runs
 			if ((_sceneCounter % 60) == 0) {
-				LOGI("Frame {}: {} draw calls, {} vertices, {} KB of the vertex arena, {} skipped draws, {}% GPU, {}% CPU",
+				LOGI("Frame {}: {} draw calls, {} vertices, {} KB of the vertex arena, {} skipped draws, {}% GPU, {}% CPU, "
+					"lighting {} us/frame",
 					_sceneCounter, frameDrawCalls, frameVertices, (frameArenaUsed * sizeof(Vertex)) / 1024, frameSkippedDraws,
-					std::int32_t(C3D_GetDrawingTime() * 6.0f), std::int32_t(C3D_GetProcessingTime() * 6.0f));
+					std::int32_t(C3D_GetDrawingTime() * 6.0f), std::int32_t(C3D_GetProcessingTime() * 6.0f),
+					lightingFrames > 0 ? std::int32_t(double(lightingTicks) / (CPU_TICKS_PER_USEC * lightingFrames)) : 0);
+				lightingTicks = 0;
+				lightingFrames = 0;
 			}
 		}
 
@@ -1535,6 +1544,8 @@ namespace nCine::RHI::PICA
 			return;
 		}
 
+		const std::uint64_t lightingStartTick = (TraceDrawStatistics ? svcGetSystemTick() : 0);
+
 		EnsureFrame();
 		ApplyDrawTarget();
 		ApplyScissor();
@@ -1575,12 +1586,21 @@ namespace nCine::RHI::PICA
 			LightingCombineFactors(ClampLightmapChannel(last[0]), ClampLightmapChannel(last[1]), light.AmbR, light.AmbG, light.AmbB, factorR, factorG, factorB);
 			lastRowTexel = std::uint16_t((Quantize4Bit(factorR) << 12) | (Quantize4Bit(factorG) << 8) | (Quantize4Bit(factorB) << 4) | 0xF);
 		}
-		for (std::int32_t bandY = 0; bandY < texH; bandY += 8) {
+		// Only the part of the padded texture the sampler can actually reach is converted, tiled and flushed.
+		// The quad's texture coordinates stop at (LmW, LmH) and a bilinear tap reads one texel either side of
+		// its centre, so nothing past column LmW is ever read - and because the store is bottom-up, the dead
+		// ROWS are the FIRST ones in memory rather than the last (lightmap row 0 lives in the last). The tiles
+		// left untouched are never sampled, so they are simply not written: the arena hands out uninitialized
+		// memory and this is the one pass over it. A sixth of a 400x240 viewport is a 67x40 map in a 128x64
+		// texture, of which 72x48 is live - 42% of the texels the full surface would cost.
+		const std::int32_t usedW = std::min(texW, (light.LmW + 1 + 7) & ~7);
+		const std::int32_t firstBand = std::max<std::int32_t>(0, texH - 1 - light.LmH) & ~7;
+		for (std::int32_t bandY = firstBand; bandY < texH; bandY += 8) {
 			for (std::int32_t row = 0; row < 8; row++) {
 				const std::int32_t y = texH - 1 - (bandY + row);
-				std::uint16_t* DEATH_RESTRICT dst = band + std::size_t(row) * texW;
+				std::uint16_t* DEATH_RESTRICT dst = band + std::size_t(row) * usedW;
 				if (y >= light.LmH) {
-					for (std::int32_t x = 0; x < texW; x++) {
+					for (std::int32_t x = 0; x < usedW; x++) {
 						dst[x] = lastRowTexel;
 					}
 					continue;
@@ -1607,14 +1627,17 @@ namespace nCine::RHI::PICA
 					prevTexel = std::uint16_t((Quantize4Bit(factorR) << 12) | (Quantize4Bit(factorG) << 8) | (Quantize4Bit(factorB) << 4) | 0xF);
 					dst[x] = prevTexel;
 				}
-				// The padding columns are reached by the bilinear tap at the last texel
-				for (std::int32_t x = light.LmW; x < texW; x++) {
+				// The one padding column the bilinear tap reaches at the last texel
+				for (std::int32_t x = light.LmW; x < usedW; x++) {
 					dst[x] = prevTexel;
 				}
 			}
-			PicaTexture::TileBand16(surface + std::size_t(bandY) * texW, band, texW);
+			// A tile row starts at bandY * texW whatever its width, so tiling only its first usedW / 8 tiles
+			// writes exactly the live prefix of it
+			PicaTexture::TileBand16(surface + std::size_t(bandY) * texW, band, usedW);
 		}
-		GSPGPU_FlushDataCache(surface, std::uint32_t(size));
+		const std::size_t flushOffset = std::size_t(firstBand) * std::size_t(texW) * 2;
+		GSPGPU_FlushDataCache(reinterpret_cast<std::uint8_t*>(surface) + flushOffset, std::uint32_t(size - flushOffset));
 
 		DrawState state;
 		state.TextureData = surface;
@@ -1632,15 +1655,21 @@ namespace nCine::RHI::PICA
 		state.BlendSrcAlpha = GPU_ZERO;
 		state.BlendDstAlpha = GPU_ONE;
 
-		// The lightmap's row 0 is the TOP of the displayed viewport (CombineRenderer builds it in the scene's
-		// own top-down raster space), and the bottom-up store above puts that row where v = 0 samples, so V
-		// runs 0 -> used from top to bottom - verified in the emulator with a lightmap darkened everywhere but
-		// one quadrant
+		// The lightmap's row 0 is the BOTTOM of the displayed viewport: CombineRenderer maps the world onto
+		// it as `row = camY - worldY + vpH/2`, so a light below the camera centre lands on a low row. Every
+		// other backend that consumes this map says the same (GU, GS, GX, PVR, RDP, LegacyGL) - so V runs
+		// used -> 0 from top to bottom, and the bottom-up store above (row 0 in the last memory row, which
+		// is what v = 0 samples) then puts row 0 along the bottom edge.
 		const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
 		const float py[4] = { vpY, vpY + vpH, vpY, vpY + vpH };
 		const float pu[4] = { float(light.LmW), float(light.LmW), 0.0f, 0.0f };
-		const float pv[4] = { 0.0f, float(light.LmH), 0.0f, float(light.LmH) };
+		const float pv[4] = { float(light.LmH), 0.0f, float(light.LmH), 0.0f };
 		SubmitQuadPrimitive(state, px, py, pu, pv, PackRgba(255, 255, 255, 255));
+
+		if (TraceDrawStatistics) {
+			lightingTicks += svcGetSystemTick() - lightingStartTick;
+			lightingFrames++;
+		}
 	}
 
 	// ------------------------------------------------------------------ draw dispatch

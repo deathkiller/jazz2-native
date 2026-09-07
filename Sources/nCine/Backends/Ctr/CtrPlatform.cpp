@@ -40,7 +40,8 @@ extern "C" u32 __stacksize__ = 1024 * 1024;
 // store` and a texture without one, while the application heap running out is a failed `operator new`, which
 // under -fno-exceptions is an immediate abort (see ReportFailedAllocation). Leaving `__ctru_heap_size` at 0
 // hands the whole remainder to the application heap - ~47 MB on an Old 3DS. CtrPlatform::LogMemoryStatus()
-// traces both every ten seconds, so a session's log says whether this is still the right split.
+// reports both, and the allocation-failure handler calls it, so an out-of-memory log says which of the two
+// this split got wrong.
 extern "C" u32 __ctru_linear_heap_size = 12 * 1024 * 1024;
 
 using namespace Death;
@@ -48,18 +49,10 @@ using namespace Death::Containers;
 
 namespace nCine::Backends
 {
-	namespace
-	{
-		// Often enough to see a level load move the numbers, rarely enough that a long session's log stays
-		// readable; the trace itself allocates nothing that would show up in what it reports
-		constexpr std::uint32_t MemoryLogIntervalMs = 10 * 1000;
-	}
-
 	bool CtrPlatform::_initialized = false;
 	bool CtrPlatform::_bootConsoleQuiet = false;
 	bool CtrPlatform::_isNew3DS = false;
 	void* CtrPlatform::_socketBuffer = nullptr;
-	std::uint32_t CtrPlatform::_lastMemoryLogTicks = 0;
 
 #if defined(WITH_CURL) || defined(WITH_ONLINE_MULTIPLAYER)
 	namespace
@@ -150,14 +143,6 @@ namespace nCine::Backends
 
 	bool CtrPlatform::Update()
 	{
-		// Every ten seconds, so a session's log carries the trend of both heaps without the line itself
-		// becoming the noise (see LogMemoryStatus)
-		const std::uint32_t now = std::uint32_t(osGetTime());
-		if (_lastMemoryLogTicks == 0 || now - _lastMemoryLogTicks >= MemoryLogIntervalMs) {
-			_lastMemoryLogTicks = now;
-			LogMemoryStatus("periodic");
-		}
-
 		// Handles the APT events - the HOME menu, sleep mode when the lid closes, the power button - and
 		// returns false once the system wants the application gone
 		return aptMainLoop();
