@@ -53,12 +53,19 @@ namespace nCine::Backends
 			return true;
 		}
 
-		// The framebuffers of both screens live in VRAM (there is 6 MB of it and the renderer's own colour
-		// buffer is small), which keeps them out of the linear heap the textures compete for. 16-bit output is
-		// all the panels can show and it halves what the display transfer has to move every frame; the
-		// renderer draws into a 16-bit target as well (see PicaDevice::InitializePica). No stereoscopic 3D:
-		// the game renders one view, and the parallax barrier would only dim it.
-		gfxInit(GSP_RGB565_OES, GSP_RGB565_OES, true);
+		// The framebuffers of both screens are allocated from the linear heap and NOT from VRAM, even though
+		// the 6 MB of it would hold them comfortably. CPU access to VRAM is granted by the process exheader,
+		// and a homebrew process does not get write permission: the boot console below draws its glyphs with
+		// the CPU straight into the framebuffer, so a VRAM framebuffer turns the very first character into a
+		// data abort (permission fault, section) inside consoleInit() - before there is a log file or even a
+		// visible console to report it with. The GPU is not affected, because it reaches VRAM by physical
+		// address rather than through the process' page tables, which is why the render targets still live
+		// there (see PicaTexture::SetRenderTarget) and why keeping the roughly 1 MB of framebuffers out of
+		// VRAM leaves more of it for them. 16-bit output is all the panels can show and it halves what the
+		// display transfer has to move every frame; the renderer draws into a 16-bit target as well (see
+		// PicaDevice::InitializePica). No stereoscopic 3D: the game renders one view, and the parallax
+		// barrier would only dim it.
+		gfxInit(GSP_RGB565_OES, GSP_RGB565_OES, false);
 		gfxSet3D(false);
 
 		// Early boot console on the bottom screen: startup messages (including all trace messages) are shown
