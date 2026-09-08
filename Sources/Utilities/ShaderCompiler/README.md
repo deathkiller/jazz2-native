@@ -148,10 +148,20 @@ value depends on the emission rather than on the stage:
 |---|---|---|
 | `SOFTWARE_RENDERER` | `--emit-sw-generated` only | A fragment path that is too expensive to interpret per pixel can carry a cheaper CPU form |
 | `NO_DYNAMIC_BRANCHING` | `--emit-rsx` (PlayStation 3) only | A fragment stage compiling to NV40 `IF`/`LOOP`/`BRK` control flow does not survive cgcomp — the branch body overwrites registers the surrounding code still holds |
-| `LOW_POWER_GPU` | `--emit-cg` (PS Vita, sceGxm) only | Says nothing about what the SGX543 *can* compile (it runs every shader as written), only about how much per-pixel work it can sustain — an operation invisible on a desktop GPU can be most of its frame, so the shader gates a cheaper approximation on it instead of dropping the feature for everyone |
+| `LOW_POWER_GPU` | `--emit-cg` (PS Vita, sceGxm) and the ESSL 100 (OpenGL\|ES 2.0) lowering | Says nothing about what such a part *can* compile (they run every shader as written), only about how much per-pixel work it can sustain — an operation invisible on a desktop GPU can be most of its frame, so the shader gates a cheaper approximation on it instead of dropping the feature for everyone |
+
+`LOW_POWER_GPU` is the one of the three that is not tied to a single emission mode: the `_Vs100`/`_Fs100`
+sources every per-shader header carries next to the modern ones are lowered from the *low-power* view of
+the stage, while the modern GL, HLSL, SPIR-V and MSL artifacts of the same header come from the plain
+one. The ES2 profile is never a default — it is selected only for hardware that has nothing else (the
+Vita's vitaGL, WebGL 1, old mobile parts), the same class of part `--emit-cg` builds for. Exactly one of
+the two GL source pairs is compiled into a binary (`RHI_GL_PROFILE_ES2` picks it), and the engine's
+`RHI_LOW_POWER_GPU` in `RhiFwd.h` mirrors which view that binary ended up with, for game code whose
+options would otherwise steer something the shader no longer contains. Runtime-compiled `.shader` files
+follow along in `RuntimeShader.cpp`, and `--essl100-check` checks the same view it emits.
 
 None of the macros ever appears in a built source, and reflection is always taken from the view where
-both are undefined (desktop GL), so the two sides must agree on declarations that reflect. Gating a
+all three are undefined (desktop GL), so the sides must agree on declarations that reflect. Gating a
 block therefore changes nothing for any other backend:
 
 ```glsl
@@ -214,7 +224,7 @@ is one flat chain rather than a nest of two-way conditionals:
 #if SOFTWARE_RENDERER
 	float horizonDepth = distance;                    // Cheap polynomial for the CPU
 #elif LOW_POWER_GPU
-	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance;   // One sqrt() on the SGX543
+	float horizonDepth = 0.8 * distancePow15 + 0.2 * distance;   // One sqrt() instead of a pow()
 #else
 	float horizonDepth = pow(distance, 1.4);
 #endif

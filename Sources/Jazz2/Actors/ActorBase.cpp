@@ -82,7 +82,7 @@ namespace Jazz2::Actors
 	{
 		_state |= details.State | ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation;
 		_levelHandler = details.LevelHandler;
-		_pos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
+		_pos = _frameStartPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((std::int32_t)details.Pos.X / 32, (std::int32_t)details.Pos.Y / 32);
 		_spawnFrames = _levelHandler->GetElapsedFrames();
 
@@ -90,6 +90,12 @@ namespace Jazz2::Actors
 		_renderer.setLayer(layer);
 
 		bool success = async_await OnActivatedAsync(details);
+
+		// Several objects offset themselves from the event position while activating (a pole by its event
+		// parameters, a steam note by a fixed amount, a floating enemy onto the water surface). That offset is
+		// where the object was placed, not a distance it travelled, so it must not linger as a path until the
+		// first update overwrites it (see ResetPathTracking())
+		ResetPathTracking();
 
 		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
 
@@ -242,152 +248,77 @@ namespace Jazz2::Actors
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
-		if (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f) {
-			if (GetState(ActorState::CanJump | ActorState::ApplyGravitation)) {
-				// All ground-bound movement is handled here. In the basic case, the actor
-				// moves horizontally, but it can also logically move up or down if it is
-				// moving across a slope. In here, angles between about 45 degrees down
-				// to 45 degrees up are attempted with some intervals to attempt to keep
-				// the actor attached to the slope in question.
+		Vector2f posBefore = _pos;
+		bool movementAttempted = (std::abs(effectiveSpeedX) > 0.0f || std::abs(effectiveSpeedY) > 0.0f);
+		if (movementAttempted) {
+			// The distance of a whole frame is resolved in several shorter sub-steps. Every check below only ever
+			// tests the destination of a move, so one long step can pass straight through thin geometry, and the
+			// slope tolerance derived from its length can snap the actor diagonally across a wall corner into a
+			// pocket it cannot leave again. Both scale with `timeMult`, which is why actors used to get stuck in
+			// walls at low frame rates.
+			//
+			// The number of sub-steps is driven by two things. `timeMult` splits a long frame into as many
+			// collision steps as the same amount of time would have taken at the nominal 60 Hz, which is what
+			// makes the outcome frame-rate independent, and the distance itself caps a single step at
+			// `MaxMovementStep` so that even full speed cannot skip over anything.
+			float distance = std::max(std::abs(effectiveSpeedX), std::abs(effectiveSpeedY));
+			std::int32_t substepCount = std::max<std::int32_t>((std::int32_t)timeMult, 1);
+			if ((float)substepCount < timeMult) {
+				substepCount++;
+			}
+			if (distance > substepCount * MaxMovementStep) {
+				substepCount = (std::int32_t)(distance / MaxMovementStep) + 1;
+			}
+			if (substepCount > MaxMovementSubsteps) {
+				substepCount = MaxMovementSubsteps;
+			}
+			float stepX = effectiveSpeedX / substepCount;
+			float stepY = effectiveSpeedY / substepCount;
 
-				// Always try values a bit over the 45 degree incline; subpixel coordinates
-				// may mean the actor actually needs to move a pixel up or down even though
-				// the speed wouldn't warrant that large of a change.
-				// Not doing this will cause hiccups with uphill slopes in particular.
-				// Beach tileset also has some spots where two properly set up adjacent
-				// tiles have a 2px jump, so adapt to that.
-				bool success = false;
-				float maxYDiff = std::max(3.0f, std::abs(effectiveSpeedX) + 2.5f);
-				for (float yDiff = maxYDiff + effectiveSpeedY; yDiff >= -maxYDiff + effectiveSpeedY; yDiff -= CollisionCheckStep) {
-					if (MoveInstantly(Vector2f(effectiveSpeedX, yDiff), MoveType::Relative, params)) {
-						success = true;
-						break;
-					}
+			MovementResult result = {};
+			for (std::int32_t i = 0; i < substepCount; i++) {
+				MovementResult stepResult = {};
+				bool stepMoved = TryMoveSubstep(stepX, stepY, currentGravity, currentElasticity, params, stepResult);
+
+				result.HitWall |= stepResult.HitWall;
+				result.HitCeiling |= stepResult.HitCeiling;
+				result.HitFloor |= stepResult.HitFloor;
+
+				// Don't keep pushing into whatever was hit for the rest of the frame - the remaining sub-steps
+				// would just repeat the same blocked move
+				if (stepResult.HitWall) {
+					stepX = 0.0f;
 				}
-
-				// Also try to move horizontally as far as possible
-				float xDiff = std::abs(effectiveSpeedX);
-				float maxXDiff = -xDiff;
-				if (!success) {
-					std::int32_t sign = (effectiveSpeedX > 0.0f ? 1 : -1);
-					for (; xDiff >= maxXDiff; xDiff -= CollisionCheckStep) {
-						if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
-							success = true;
-							break;
-						}
-					}
-
-					bool moved = false;
-					if (!success && _unstuckCooldown <= 0.0f) {
-						AABBf aabb = AABBInner;
-						float t = aabb.B - 14.0f;
-						if (aabb.T < t) {
-							aabb.T = t;
-						}
-						TileCollisionParams params2 = { TileDestructType::None, true };
-						if (!_levelHandler->IsPositionEmpty(this, aabb, params2)) {
-							for (float yDiff = -2.0f; yDiff >= -12.0f; yDiff -= 2.0f) {
-								if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
-									moved = true;
-									_unstuckCooldown = 60.0f;
-									break;
-								}
-							}
-
-							if (!moved) {
-								for (float yDiff = 2.0f; yDiff <= 14.0f; yDiff += 2.0f) {
-									if (MoveInstantly(Vector2f(0.0f, yDiff), MoveType::Relative, params)) {
-										moved = true;
-										_unstuckCooldown = 60.0f;
-										break;
-									}
-								}
-							}
-						}
-					}
-
-					if (!moved) {
-						// If no angle worked in the previous step, the actor is facing a wall
-						if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
-							_speed.X = -(currentElasticity * _speed.X);
-							_externalForce.X = 0.0f;
-						}
-						OnHitWall(timeMult);
-					}
+				if (stepResult.HitCeiling || stepResult.HitFloor) {
+					stepY = 0.0f;
 				}
-			} else {
-				// Airborne movement is handled here
-				// First, attempt to move directly based on the current speed values
-				if (!MoveInstantly(Vector2f(effectiveSpeedX, effectiveSpeedY), MoveType::Relative, params)) {
-					// First, attempt to move horizontally as much as possible
-					float maxDiff = std::abs(effectiveSpeedX);
-					float xDiff = maxDiff;
-					// For mostly-horizontal airborne movement (e.g., Spaz/Lori sidekick), climb gentle upslopes
-					// instead of stopping at their foot: if the straight horizontal step is blocked, retry the
-					// full step with an increasing upward offset. Flat ground / open air succeed on the straight
-					// step, so there is no upward drift, and steep walls still block (xDiff stays full on success).
-					bool movedHorizontally = MoveInstantly(Vector2f(effectiveSpeedX, 0.0f), MoveType::Relative, params);
-					if (!movedHorizontally && std::abs(effectiveSpeedX) > std::abs(effectiveSpeedY)) {
-						float maxClimb = std::abs(effectiveSpeedX) + 2.5f;
-						for (float yUp = CollisionCheckStep; yUp <= maxClimb; yUp += CollisionCheckStep) {
-							if (MoveInstantly(Vector2f(effectiveSpeedX, -yUp), MoveType::Relative, params)) {
-								movedHorizontally = true;
-								break;
-							}
-						}
-					}
-					if (!movedHorizontally) {
-						for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-							if (MoveInstantly(Vector2f(std::copysign(xDiff, effectiveSpeedX), 0.0f), MoveType::Relative, params)) {
-								break;
-							}
-						}
-					}
-
-					// Then, try the same vertically
-					bool hitCalled = false;
-					maxDiff = std::abs(effectiveSpeedY);
-					float yDiff = maxDiff;
-					for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
-						float yDiffSigned = std::copysign(yDiff, effectiveSpeedY);
-						if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
-							// Add horizontal tolerance
-							MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
-							MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
-							break;
-						}
-					}
-
-					if (effectiveSpeedY < 0.0f) {
-						if (-yDiff > effectiveSpeedY) {
-							// Reset speed and also internal force, mainly because of player jump
-							_speed.Y = 0.0f;
-							if (_internalForceY < 0.0f) {
-								_internalForceY = 0.0f;
-							}
-							OnHitCeiling(timeMult);
-							hitCalled = true;
-						}
-					} else if (effectiveSpeedY > 0.0f && yDiff < effectiveSpeedY && currentGravity <= 0.0f) {
-						// If there is no gravity and actor is touching floor, the callback wouldn't be called otherwise
-						OnHitFloor(timeMult);
-						hitCalled = true;
-					}
-
-					// If the actor didn't move all the way horizontally, it hit a wall (or was already touching it)
-					if (xDiff < std::abs(effectiveSpeedX) * 0.3f) {
-						if (xDiff > 0.0f && currentElasticity > 0.0f) {
-							_speed.X = -(currentElasticity * _speed.X);
-							_externalForce.X = 0.0f;
-						}
-
-						// Don't call OnHitWall() if OnHitFloor() or OnHitCeiling() was called this step
-						if (!hitCalled) {
-							OnHitWall(timeMult);
-						}
-					}
+				if (!stepMoved || (stepX == 0.0f && stepY == 0.0f)) {
+					break;
 				}
 			}
+
+			// The callbacks are reported once per frame, however many sub-steps it took
+			bool hitCalled = false;
+			if (result.HitCeiling) {
+				OnHitCeiling(timeMult);
+				hitCalled = true;
+			} else if (result.HitFloor) {
+				OnHitFloor(timeMult);
+				hitCalled = true;
+			}
+			if (result.HitWall && !hitCalled) {
+				OnHitWall(timeMult);
+			}
+		}
+
+		// The actor didn't get anywhere, so it might have ended up inside solid geometry - either it was spawned
+		// there, a moving solid object swept over it, or a tile appeared around it. An actor completely at rest
+		// is covered as well (the old attempt was only reachable from the ground branch after a failed move, so
+		// an actor whose speed had already been zeroed had no way out at all), but only while gravity applies to
+		// it - an actor being warped or carried along has its position dictated from elsewhere. Note that merely
+		// standing on the floor or leaning against a wall is not stuck and `TryUnstuck()` leaves it alone.
+		if (_pos == posBefore && (movementAttempted || (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation)) {
+			TryUnstuck(params);
 		}
 
 		// Reduce all forces if they are present
@@ -399,8 +330,12 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Handle gravity and collision with floor
-		if (currentGravity > 0.0f) {
+		// Handle gravity and collision with floor. The state is re-checked instead of trusting `currentGravity`
+		// from the top of the function, because one of the hit callbacks above may have turned gravitation off
+		// during the move (the player's ledge climb does exactly that). Applying a whole frame of gravity on top
+		// of the speed such a callback just assigned would scale that speed with the frame rate, and since
+		// gravity stays off afterwards the actor would keep the reduced speed for as long as the move lasts.
+		if (currentGravity > 0.0f && (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
 			if (_speed.Y >= 0.0f) {
 				// Actor is going down
 				AABBf aabb = AABBInner;
@@ -429,6 +364,178 @@ namespace Jazz2::Actors
 			_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);
 			_internalForceY = std::min(_internalForceY + currentGravity * 0.33f * timeMult, 0.0f);
 		}
+	}
+
+	bool ActorBase::TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, TileCollisionParams& params, MovementResult& result)
+	{
+		if (GetState(ActorState::CanJump | ActorState::ApplyGravitation)) {
+			// All ground-bound movement is handled here. In the basic case, the actor
+			// moves horizontally, but it can also logically move up or down if it is
+			// moving across a slope. In here, angles between about 45 degrees down
+			// to 45 degrees up are attempted with some intervals to attempt to keep
+			// the actor attached to the slope in question.
+
+			// Always try values a bit over the 45 degree incline; subpixel coordinates
+			// may mean the actor actually needs to move a pixel up or down even though
+			// the speed wouldn't warrant that large of a change.
+			// Not doing this will cause hiccups with uphill slopes in particular.
+			// Beach tileset also has some spots where two properly set up adjacent
+			// tiles have a 2px jump, so adapt to that.
+			bool success = false;
+			float maxYDiff = std::max(3.0f, std::abs(stepX) + 2.5f);
+			for (float yDiff = maxYDiff + stepY; yDiff >= -maxYDiff + stepY; yDiff -= CollisionCheckStep) {
+				if (MoveInstantly(Vector2f(stepX, yDiff), MoveType::Relative, params)) {
+					success = true;
+					break;
+				}
+			}
+
+			if (success) {
+				return true;
+			}
+
+			// Also try to move horizontally as far as possible
+			float xDiff = std::abs(stepX);
+			if (xDiff > CollisionCheckStep) {
+				float sign = (stepX > 0.0f ? 1.0f : -1.0f);
+				for (; xDiff > CollisionCheckStep; xDiff -= CollisionCheckStep) {
+					if (MoveInstantly(Vector2f(xDiff * sign, 0.0f), MoveType::Relative, params)) {
+						// The actor slid up against a wall instead of going all the way, so this still counts
+						// as hitting it - the wall response was previously skipped in this case
+						success = true;
+						break;
+					}
+				}
+			}
+
+			// No angle worked, so the actor is facing a wall - it either couldn't move at all or only slid part
+			// of the way into it. Its horizontal speed is spent on the wall (or reflected off it for an elastic
+			// actor) just like in the airborne branch, otherwise it would keep pressing into the wall at full
+			// speed - and keep reporting the hit - for as long as the speed is applied.
+			if (xDiff > CollisionCheckStep || (xDiff > 0.0f && currentElasticity > 0.0f)) {
+				_speed.X = -(currentElasticity * _speed.X);
+				_externalForce.X = 0.0f;
+			}
+			result.HitWall = true;
+			return success;
+		}
+
+		// Airborne movement is handled here
+		// First, attempt to move directly based on the current speed values
+		if (MoveInstantly(Vector2f(stepX, stepY), MoveType::Relative, params)) {
+			return true;
+		}
+
+		// First, attempt to move horizontally as much as possible
+		float xDiff = std::abs(stepX);
+		// For mostly-horizontal airborne movement (e.g., Spaz/Lori sidekick), climb gentle upslopes
+		// instead of stopping at their foot: if the straight horizontal step is blocked, retry the
+		// full step with an increasing upward offset. Flat ground / open air succeed on the straight
+		// step, so there is no upward drift, and steep walls still block (xDiff stays full on success).
+		bool movedHorizontally = MoveInstantly(Vector2f(stepX, 0.0f), MoveType::Relative, params);
+		if (!movedHorizontally && std::abs(stepX) > std::abs(stepY)) {
+			float maxClimb = std::abs(stepX) + 2.5f;
+			for (float yUp = CollisionCheckStep; yUp <= maxClimb; yUp += CollisionCheckStep) {
+				if (MoveInstantly(Vector2f(stepX, -yUp), MoveType::Relative, params)) {
+					movedHorizontally = true;
+					break;
+				}
+			}
+		}
+		if (!movedHorizontally) {
+			for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
+				if (MoveInstantly(Vector2f(std::copysign(xDiff, stepX), 0.0f), MoveType::Relative, params)) {
+					break;
+				}
+			}
+		}
+
+		// Then, try the same vertically
+		float yDiff = std::abs(stepY);
+		for (; yDiff > std::numeric_limits<float>::epsilon(); yDiff -= CollisionCheckStep) {
+			float yDiffSigned = std::copysign(yDiff, stepY);
+			if (MoveInstantly(Vector2f(0.0f, yDiffSigned), MoveType::Relative, params) ||
+				// Add horizontal tolerance
+				MoveInstantly(Vector2f(yDiff * 0.2f, yDiffSigned), MoveType::Relative, params) ||
+				MoveInstantly(Vector2f(yDiff * -0.2f, yDiffSigned), MoveType::Relative, params)) {
+				break;
+			}
+		}
+
+		if (stepY < 0.0f) {
+			if (-yDiff > stepY) {
+				// Reset speed and also internal force, mainly because of player jump
+				_speed.Y = 0.0f;
+				if (_internalForceY < 0.0f) {
+					_internalForceY = 0.0f;
+				}
+				result.HitCeiling = true;
+			}
+		} else if (stepY > 0.0f && yDiff < stepY && currentGravity <= 0.0f) {
+			// If there is no gravity and actor is touching floor, the callback wouldn't be called otherwise
+			result.HitFloor = true;
+		}
+
+		// If the actor didn't move all the way horizontally, it hit a wall (or was already touching it)
+		if (xDiff < std::abs(stepX) * 0.3f) {
+			if (xDiff > 0.0f && currentElasticity > 0.0f) {
+				_speed.X = -(currentElasticity * _speed.X);
+				_externalForce.X = 0.0f;
+			}
+			result.HitWall = true;
+		}
+
+		return (xDiff > std::numeric_limits<float>::epsilon() || yDiff > std::numeric_limits<float>::epsilon());
+	}
+
+	bool ActorBase::TryUnstuck(TileCollisionParams& params, float cooldown)
+	{
+		if (_unstuckCooldown > 0.0f || !GetState(ActorState::CollideWithTileset)) {
+			return false;
+		}
+
+		// Only the lower part of the hitbox decides whether the actor is stuck - the upper part regularly
+		// overlaps a tile while the actor stands in a doorway or under a low ceiling, which is perfectly fine
+		AABBf aabb = AABBInner;
+		float t = aabb.B - 14.0f;
+		if (aabb.T < t) {
+			aabb.T = t;
+		}
+		TileCollisionParams paramsProbe = { TileDestructType::None, true };
+		if (_levelHandler->IsPositionEmpty(this, aabb, paramsProbe)) {
+			// Nearly every actor asking about this is standing perfectly fine, and this runs for all of them
+			// that are at rest, so the check itself is throttled as well. A few frames before an actor that
+			// just got trapped starts looking for a way out make no perceptible difference.
+			_unstuckCooldown = std::min(cooldown, 8.0f);
+			return false;
+		}
+
+		// Probe outwards in growing distances and take the first free spot. Straight up comes first, because
+		// ending up on top of whatever the actor sank into is almost always the intended resolution, then
+		// sideways, then down; the diagonals cover corners where no single axis is free on its own. Unlike
+		// the old vertical-only search this also gets an actor out of a wall it was pushed into sideways.
+		static const Vector2f Directions[] = {
+			{ 0.0f, -1.0f }, { -1.0f, 0.0f }, { 1.0f, 0.0f }, { 0.0f, 1.0f },
+			{ -0.7f, -0.7f }, { 0.7f, -0.7f }, { -0.7f, 0.7f }, { 0.7f, 0.7f }
+		};
+
+		for (float distance = 2.0f; distance <= MaxUnstuckDistance; distance += 2.0f) {
+			for (const Vector2f& direction : Directions) {
+				if (MoveInstantly(direction * distance, MoveType::Relative, params)) {
+					// The escape is a forced relocation, not a path the actor took - it's expressed as a relative
+					// move only because the free spot is searched for around the actor - so nothing on the way to
+					// it was touched and the path has to be discarded (see ResetPathTracking())
+					ResetPathTracking();
+					_unstuckCooldown = cooldown;
+					return true;
+				}
+			}
+		}
+
+		// Nowhere to go - wait before burning another full search, but retry sooner than after a successful
+		// escape, because whatever traps the actor may well move away on its own
+		_unstuckCooldown = std::min(cooldown, 20.0f);
+		return false;
 	}
 
 	void ActorBase::UpdateHitbox(std::int32_t w, std::int32_t h)
@@ -1288,6 +1395,73 @@ namespace Jazz2::Actors
 		return false;
 	}
 
+	bool ActorBase::HasCrossedOver(const ActorBase* other) const
+	{
+		Vector2f delta = _pos - _frameStartPos;
+
+		// Anything that moved less than a single collision step per frame cannot have skipped over the other
+		// object - the plain overlap test would have caught it - so the common case costs nothing. A forced
+		// relocation covers no distance at all here, it resets the path (see ResetPathTracking()).
+		if (std::max(std::abs(delta.X), std::abs(delta.Y)) <= MaxMovementStep) {
+			return false;
+		}
+
+		// The hitbox swept along the path that was taken, tested as the segment its center travelled against the
+		// other hitbox grown by this one's half extents (a Minkowski sum). Stretching the hitbox backwards on
+		// each axis on its own would instead cover the whole bounding rectangle of the path and report a hit in
+		// the two corners a diagonal move never passed through - corners as large as the move itself, so at a
+		// low frame rate the object would collect and hit things it visibly flew past. Note this is a box test
+		// even for objects that normally collide per pixel: the object crossed the other one entirely, so which
+		// pixels happen to line up where it ended up says nothing about whether the two met.
+		Vector2f extents = AABBInner.GetExtents();
+		AABBf expanded = AABBf(other->AABBInner.L - extents.X, other->AABBInner.T - extents.Y,
+			other->AABBInner.R + extents.X, other->AABBInner.B + extents.Y);
+
+		// Clipping the segment against the box one axis at a time (the slab test). The parameter is kept inside
+		// [0, 1], the part of the path that was really travelled, so a hit is never reported for a point the
+		// object would only reach by carrying on. An axis that didn't move has no slab to clip against, only
+		// the standing coordinate to keep inside the box - and dividing by its zero delta would yield a NaN
+		// that the comparisons below silently swallow.
+		Vector2f end = AABBInner.GetCenter();
+		Vector2f start = end - delta;
+		float tMin = 0.0f;
+		float tMax = 1.0f;
+
+		if (delta.X == 0.0f) {
+			if (start.X < expanded.L || start.X > expanded.R) {
+				return false;
+			}
+		} else {
+			float t1 = (expanded.L - start.X) / delta.X;
+			float t2 = (expanded.R - start.X) / delta.X;
+			tMin = std::max(tMin, std::min(t1, t2));
+			tMax = std::min(tMax, std::max(t1, t2));
+		}
+
+		if (delta.Y == 0.0f) {
+			if (start.Y < expanded.T || start.Y > expanded.B) {
+				return false;
+			}
+		} else {
+			float t1 = (expanded.T - start.Y) / delta.Y;
+			float t2 = (expanded.B - start.Y) / delta.Y;
+			tMin = std::max(tMin, std::min(t1, t2));
+			tMax = std::min(tMax, std::max(t1, t2));
+		}
+
+		return (tMin <= tMax);
+	}
+
+	void ActorBase::UpdateRendererPosition()
+	{
+		Vector2f pos = _pos;
+		if (!PreferencesCache::UnalignedViewport || (_state & ActorState::IsDirty) != ActorState::IsDirty) {
+			pos.X = std::floor(pos.X);
+			pos.Y = std::floor(pos.Y);
+		}
+		_renderer.setPosition(pos.X, pos.Y);
+	}
+
 	void ActorBase::UpdateAABB()
 	{
 		if ((_state & (ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject)) == ActorState::None) {
@@ -1494,6 +1668,11 @@ namespace Jazz2::Actors
 		if (free) {
 			AABBInner = aabb;
 			_pos = newPos;
+			if ((type & MoveType::Relative) != MoveType::Relative) {
+				// An absolute move places the object somewhere instead of walking it there, so nothing between
+				// the two positions was touched, however far apart they are (see ResetPathTracking())
+				ResetPathTracking();
+			}
 			if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
 				_state |= ActorState::IsDirty;
 			}
@@ -1624,14 +1803,13 @@ namespace Jazz2::Actors
 
 	void ActorBase::ActorRenderer::OnUpdate(float timeMult)
 	{
+		// Remember where the frame started, so whatever the update does with the position, the path the object
+		// took stays available to the swept tests that run afterwards (see ActorBase::HasCrossedOver())
+		_owner->_frameStartPos = _owner->_pos;
+
 		_owner->OnUpdate(timeMult);
 
-		Vector2f pos = _owner->_pos;
-		if (!PreferencesCache::UnalignedViewport || (_owner->_state & ActorState::IsDirty) != ActorState::IsDirty) {
-			pos.X = std::floor(pos.X);
-			pos.Y = std::floor(pos.Y);
-		}
-		setPosition(pos.X, pos.Y);
+		_owner->UpdateRendererPosition();
 
 		if (IsAnimationRunning()) {
 			switch (LoopMode) {

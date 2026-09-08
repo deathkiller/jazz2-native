@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Creates a new instance */
 		RemoteThunderbolt();
 
-		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType) override;
+		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType, DrawableNode::BlendingPreset blendingPreset) override;
 
 	protected:
 		void OnUpdate(float timeMult) override;

@@ -52,6 +52,10 @@ namespace Jazz2::Actors::Enemies
 			if (adjustedWaterLevel < _pos.Y) {
 				// Water is above the enemy, return the enemy on the surface
 				_pos.Y = adjustedWaterLevel;
+				// The enemy is put back on the surface instead of swimming there, and a `ModifierSetWater` can
+				// move that surface across the whole level at once, so the snap must not be taken for a path
+				// travelled straight through everything in the column (see ResetPathTracking())
+				ResetPathTracking();
 			} else if (adjustedWaterLevel > _pos.Y) {
 				// Water is below the enemy, apply gravitation and pause the animation 
 				_speed.X = 0.0f;
@@ -62,6 +66,7 @@ namespace Jazz2::Actors::Enemies
 			if (adjustedWaterLevel <= _pos.Y) {
 				// Water is above the enemy, return the enemy on the surface
 				_pos.Y = adjustedWaterLevel;
+				ResetPathTracking();
 				SetState(ActorState::ApplyGravitation, false);
 				_onWater = true;
 

@@ -13,6 +13,17 @@ namespace ShaderCompiler
 
 	namespace
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// The engine's OpenGL|ES 2.0 profile is only ever built for hardware that has nothing else (the PS
+		// Vita's vitaGL, WebGL 1, old mobile parts), so runtime-compiled shaders are assembled from the same
+		// LOW_POWER_GPU view the precompiled ones get offline (see Emit.cpp). The ESSL 100 lowering of what
+		// comes out happens later, in Shader::LoadFromMemory. Reflection is unaffected: it runs on the
+		// preprocessed declaration stream, which no backend conditional is allowed to change.
+		constexpr bool LowPowerGpu = true;
+#else
+		constexpr bool LowPowerGpu = false;
+#endif
+
 		std::uint16_t ToViewArraySize(std::uint32_t arraySize, bool symbolic)
 		{
 			return (symbolic ? SymbolicArraySize : std::uint16_t(arraySize));
@@ -158,8 +169,10 @@ namespace ShaderCompiler
 				return false;
 			}
 
-			v.VsSource = ShaderParser::BuildStageSource(document, true, v.Define);
-			v.FsSource = ShaderParser::BuildStageSource(document, false, v.Define);
+			v.VsSource = ShaderParser::BuildStageSource(document, true, v.Define,
+				/*softwareRenderer*/ false, /*noDynamicBranching*/ false, LowPowerGpu);
+			v.FsSource = ShaderParser::BuildStageSource(document, false, v.Define,
+				/*softwareRenderer*/ false, /*noDynamicBranching*/ false, LowPowerGpu);
 		}
 
 		// Apply "texture_unit(N)" hint unit assignments across all variants

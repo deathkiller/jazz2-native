@@ -409,6 +409,7 @@ namespace Jazz2::Multiplayer
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct RemotingActorInfo {
 			std::uint32_t ActorID;
+			bool IsMirrored;			// Whether clients recreate the actor from the event map instead (see ActorShouldBeMirrored())
 			std::int32_t LastPosX;
 			std::int32_t LastPosY;
 			std::uint32_t LastAnimation;
@@ -416,6 +417,7 @@ namespace Jazz2::Multiplayer
 			std::uint16_t LastScaleX;
 			std::uint16_t LastScaleY;
 			std::uint8_t LastRendererType;
+			SmallVector<std::uint8_t, 0> LastLights;	// Encoded light block last broadcast, so an unchanged one isn't resent
 		};
 
 		struct PlayerName {
@@ -661,7 +663,7 @@ namespace Jazz2::Multiplayer
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
 		void InitializeValidateAssetsPacket(MemoryStream& packet);
 		void InitializeLoadLevelPacket(MemoryStream& packet);
-		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor);
+		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, Actors::ActorBase* actor);
 
 		// Per-packet handlers dispatched from OnPacketReceived(); they run on the network thread,
 		// so all gameplay mutations inside go through InvokeAsync()

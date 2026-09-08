@@ -47,6 +47,8 @@ namespace Jazz2::Actors::Multiplayer
 		float _bumpCooldown;
 		/** @brief Whether player-vs-player collision dispatch has been enabled (done lazily after activation) */
 		bool _bumpInitialized;
+		/** @brief Encoded light block last broadcast for this player, so an unchanged one isn't resent */
+		SmallVector<std::uint8_t, 0> _lastRemotedLights;
 
 		void OnUpdate(float timeMult) override;
 

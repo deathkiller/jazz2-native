@@ -66,7 +66,7 @@ namespace Jazz2::Actors::Weapons
 
 	void PepperShot::OnUpdate(float timeMult)
 	{
-		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = GetMovementSubstepCount(timeMult);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Pepper, _strength };
 		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);

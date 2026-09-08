@@ -11,9 +11,9 @@ namespace Jazz2::Actors::Multiplayer
 	{
 	}
 
-	void RemoteThunderbolt::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType)
+	void RemoteThunderbolt::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType, DrawableNode::BlendingPreset blendingPreset)
 	{
-		RemoteActor::AssignMetadata(flags, state, path, anim, rotation, scaleX, scaleY, rendererType);
+		RemoteActor::AssignMetadata(flags, state, path, anim, rotation, scaleX, scaleY, rendererType, blendingPreset);
 
 		// The first bolt of a burst is carried in the synced animation state (aliased beam states)
 		_muzzleFlash = ((std::uint32_t)anim >= Weapons::Thunderbolt::InitialShotAnimOffset);

@@ -106,6 +106,24 @@ namespace nCine
 		return _renderCommand.GetMaterial().GetDestBlendingFactor();
 	}
 
+	DrawableNode::BlendingPreset DrawableNode::blendingPreset() const
+	{
+		const BlendingFactor src = srcBlendingFactor();
+		const BlendingFactor dest = destBlendingFactor();
+
+		if (src == BlendingFactor::One && dest == BlendingFactor::Zero) {
+			return BlendingPreset::Disabled;
+		} else if (src == BlendingFactor::One && dest == BlendingFactor::OneMinusSrcAlpha) {
+			return BlendingPreset::PremultipliedAlpha;
+		} else if (src == BlendingFactor::SrcAlpha && dest == BlendingFactor::One) {
+			return BlendingPreset::Additive;
+		} else if (src == BlendingFactor::DstColor && dest == BlendingFactor::Zero) {
+			return BlendingPreset::Multiply;
+		} else {
+			return BlendingPreset::Alpha;
+		}
+	}
+
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
 		switch (blendingPreset) {

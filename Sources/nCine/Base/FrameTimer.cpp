@@ -34,7 +34,7 @@ namespace nCine
 
 		// Smooth out time multiplier using last 3 frames to prevent microstuttering
 		const float timeMultLast = _timeMults[0];
-		_timeMults[0] = (_timeMults[2] + _timeMults[1] + timeMultLast + (std::min(_frameDuration, SecondsPerFrame * 2) / SecondsPerFrame)) * 0.25f;
+		_timeMults[0] = (_timeMults[2] + _timeMults[1] + timeMultLast + std::min(_frameDuration / SecondsPerFrame, MaxTimeMult)) * 0.25f;
 		_timeMults[2] = _timeMults[1];
 		_timeMults[1] = timeMultLast;
 

@@ -409,6 +409,27 @@ namespace Jazz2::Actors
 		static constexpr float LegacyFrameRateScaleSqr = LegacyFrameRateScale * LegacyFrameRateScale;
 		/** @brief Non-Reforged ground max-speed scale */
 		static constexpr float LegacyGroundSpeedScale = LegacyFrameRateScale * 1.05f;
+		/** @brief Non-Reforged applied dash-speed cap (original JJ2 clamps the dash to 8 px/tick) */
+		static constexpr float LegacyMaxDashingSpeed = 8.0f;
+		/**
+		 * @brief Non-Reforged multiplier on the airborne acceleration while braking against the current momentum
+		 *
+		 * The ground skid (@ref LegacyRunBrakeScale, @ref LegacyWalkBrakeScale) has no place in the air, but the
+		 * plain acceleration alone leaves a jump barely steerable, so braking gets this much more. It is a
+		 * multiplier rather than a target time on purpose: with a constant acceleration the time it takes to turn
+		 * around is proportional to the speed carried into the jump, so heavier momentum takes visibly longer to
+		 * shed and reverse. Note that this rules out landing back on the launch spot after a full-speed dashing
+		 * jump - see @ref HandleHorizontalMovement() - which needs the turn to take the same time at every speed.
+		 */
+		static constexpr float LegacyAirBrakeScale = 1.2f;
+		/**
+		 * @brief Extra non-Reforged jump impulse per unit of horizontal speed above @ref MaxRunningSpeed
+		 *
+		 * The applied rise cap (@ref LegacyRiseSpeedCap) makes the jump height linear in the launch speed, at
+		 * `LegacyRiseSpeedCap / risingGravity` (about 20.7) pixels per unit, so this scale sets how much height a
+		 * full-speed dash adds over a standing jump - a little over two tiles.
+		 */
+		static constexpr float LegacySpeedJumpScale = 0.567f;
 		/** @brief Non-Reforged ground acceleration/braking scale */
 		static constexpr float LegacyGroundAccelScale = 0.95f;
 		/** @brief Non-Reforged coast factor when reversing at running speed - low so pressing the opposite way keeps momentum
@@ -551,6 +572,7 @@ namespace Jazz2::Actors
 		void OnUpdateHitbox() override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
+		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override;
 
 		bool OnHandleCollision(ActorBase* other) override;
 		void OnHitFloor(float timeMult) override;
@@ -643,8 +665,29 @@ namespace Jazz2::Actors
 		void HandleWeaponFire(bool areaWeaponAllowed);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
+		// What a single point of the path travelled this frame is allowed to act on, because the two halves of
+		// a tile event apply to different parts of the path (see Player::OnHandleAreaEvents())
+		enum class AreaEventPass {
+			None = 0x00,
+			// The one-shot effects the tile triggers - a warp, a pole, a text, a script callback. None of them
+			// is idempotent, so only the sample that first enters a tile may run them
+			Effects = 0x01,
+			// The state the tile describes - whether weapons may fire, how deep the shallow water is, the
+			// ambient light. Only the tile the player ended the frame in decides those
+			States = 0x02,
+		};
+
+		DEATH_PRIVATE_ENUM_FLAGS(AreaEventPass);
+
+		// Handles the tile event at a single point of the path travelled this frame, returns `true` when the
+		// event took the player over (a warp, a pole, a tube, ...) and the rest of the path must be ignored
+		bool HandleAreaEventAt(float x, float y, float timeMult, AreaEventPass pass, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
 		void DoWarpOut(Vector2f pos, WarpFlags flags);
-		void InitialPoleStage(bool horizontal);
+		// Attaches the player to a pole, returns `false` if it was declined (already on one, just came off this
+		// one, wrong character, ...). `eventPos` is where the pole event was actually met, which is not
+		// necessarily where the player ended the frame - at speed it can be a tile or two further on (see
+		// Player::OnHandleAreaEvents())
+		bool InitialPoleStage(bool horizontal, Vector2f eventPos);
 		void NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed);
 		void StopAllActiveSounds();
 

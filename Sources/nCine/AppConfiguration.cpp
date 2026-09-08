@@ -30,12 +30,22 @@ namespace nCine
 #else
 		fixedBatchSize(0),
 #endif
-#if defined(WITH_IMGUI)
-		vboSize(512 * 1024),
-		iboSize(128 * 1024),
-#else
+		// These two also decide how many draws an aggregated mesh costs: a tile layer goes out as one command
+		// per RenderResources::GetMaxQuadsPerDraw() quads, and a quad is 128 bytes of vertices and 12 of
+		// indices. The 64 KB / 8 KB pair held 512 of the ~2200 quads a 1080p viewport of a layer covers, so a
+		// layer took several draws, each out of a buffer newly created because nothing in hand had room - and
+		// how many of those a frame needed moved with the camera. 512 KB / 128 KB is a whole layer in one
+		// draw at any resolution the game runs at, for under 2 MB. The console backends keep the small pair,
+		// where a few hundred quads fit either way and buffer memory is what is short, keyed on the backend
+		// like `useBufferMapping` below, the ES2 profile being Vita's vitaGL.
+#if !defined(WITH_IMGUI) && (defined(WITH_RHI_RDP) || defined(WITH_RHI_GU) || defined(WITH_RHI_PVR) || \
+		defined(WITH_RHI_GX) || defined(WITH_RHI_GS) || defined(WITH_RHI_PICA) || defined(WITH_RHI_SOFTWARE) || \
+		defined(WITH_RHI_LEGACYGL) || defined(WITH_RHI_GXM) || defined(WITH_RHI_RSX) || defined(RHI_GL_PROFILE_ES2))
 		vboSize(64 * 1024),
 		iboSize(8 * 1024),
+#else
+		vboSize(512 * 1024),
+		iboSize(128 * 1024),
 #endif
 		vaoPoolSize(16),
 		renderCommandPoolSize(32),

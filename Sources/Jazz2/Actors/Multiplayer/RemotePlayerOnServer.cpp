@@ -38,8 +38,6 @@ namespace Jazz2::Actors::Multiplayer
 
 		PlayerOnServer::OnUpdate(timeMult);
 
-		_renderer.setPosition(_displayPos);
-
 		// The owning client predicts this player locally and can't tell when another player stands on it, so push the
 		// server-authoritative "being stood on" state to it (only on change) to drive its cosmetic lift animation.
 		if (_beingStoodOn != _beingStoodOnLastSent) {
@@ -95,6 +93,14 @@ namespace Jazz2::Actors::Multiplayer
 		return PlayerCarryOver{};
 	}
 
+	void RemotePlayerOnServer::UpdateRendererPosition()
+	{
+		// This player is simulated at the position its client reports, but drawn at the interpolated one, so
+		// the generic implementation (which uses the simulated position) must not run for it - it would undo
+		// the smoothing, both here and when the level re-applies every actor's position at the end of a frame
+		_renderer.setPosition(_displayPos);
+	}
+
 	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, PlayerFlags flags)
 	{
 		if (_health <= 0) {
@@ -115,12 +121,15 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Set actual pos and speed to the newest value
 		_pos = pos;
 		_speed = speed;
+		// The position comes from the owning client, it's not a path this player walked here on the server
+		ResetPathTracking();
 	}
 
 	void RemotePlayerOnServer::ForceResyncWithServer(Vector2f pos, Vector2f speed)
 	{
 		_pos = pos;
 		_speed = speed;
+		ResetPathTracking();
 
 		_stateBuffer.Reset(pos, StateInterpolationBuffer::Now());
 	}

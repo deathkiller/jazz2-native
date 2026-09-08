@@ -1297,3 +1297,21 @@ namespace nCine::RHI
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 #	define RHI_CAP_POSTPROCESSING
 #endif
+
+// Derived tier macro: this build's shaders were assembled with the `.shader` language's LOW_POWER_GPU
+// conditional resolved as DEFINED, so wherever such a block substitutes a cheaper approximation for an
+// expensive per-pixel path, this binary got the substitute. Unlike the capability macros above it says
+// nothing about what the backend CAN do - both of the backends below run every shipped shader as written
+// - only about how much per-pixel work the part can sustain. Game code gates on it when an option would
+// be steering something the shader no longer contains (see the background dithering item in
+// GraphicsOptionsSection), which would otherwise be a menu entry with no effect.
+//
+// It must stay in lockstep with what actually builds the shader sources with the macro defined: the
+// sceGxm backend, whose Cg is emitted offline by `ShaderCompiler --emit-cg` (the PS Vita's PowerVR
+// SGX543 - a handheld part shading a full screen from a shared memory bus), and the OpenGL family's ES2
+// profile, whose baked ESSL 100 sources come from the same view (see Emit.cpp) and whose runtime-compiled
+// ".shader" files are assembled that way too (see RuntimeShader.cpp). That profile is never a default -
+// it is selected only for hardware with nothing else, which is the same class of part.
+#if defined(WITH_RHI_GXM) || defined(RHI_GL_PROFILE_ES2)
+#	define RHI_LOW_POWER_GPU
+#endif

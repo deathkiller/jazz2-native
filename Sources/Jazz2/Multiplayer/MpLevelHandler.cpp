@@ -29,6 +29,7 @@
 #include "../Actors/Multiplayer/Flag.h"
 #include "../Actors/Multiplayer/CtfBase.h"
 
+#include "../Actors/Collectibles/CollectibleBase.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
 #include "../Actors/Environment/AirboardGenerator.h"
 #include "../Actors/Environment/SteamNote.h"
@@ -101,6 +102,65 @@ namespace Jazz2::Multiplayer
 			c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
 		}
 		return c;
+	}
+
+	// A remote actor runs none of the object's logic, so the lights it emits have to be described to it. They are
+	// encoded as offsets from the object's own position, which means an object carrying a steady light costs
+	// nothing at all while it moves. The quantization is deliberately coarse: the encoded bytes are what decides
+	// whether an update is sent, so a light nobody could tell apart from the previous one must not cost anything.
+	static constexpr std::uint32_t MaxRemotedLights = 16;
+	static constexpr std::uint32_t MaxRemotedLightsSize = 1 + MaxRemotedLights * 10;
+
+	static void AppendUint16(SmallVectorImpl<std::uint8_t>& target, std::uint16_t value)
+	{
+		target.push_back((std::uint8_t)(value & 0xFF));
+		target.push_back((std::uint8_t)(value >> 8));
+	}
+
+	static void EncodeRemotedLights(SmallVectorImpl<std::uint8_t>& target, Vector2f origin, ArrayView<const LightEmitter> lights)
+	{
+		std::uint32_t total = (std::uint32_t)lights.size();
+		std::uint32_t count = std::min<std::uint32_t>(total, MaxRemotedLights);
+
+		target.clear();
+		target.push_back((std::uint8_t)count);
+
+		for (std::uint32_t i = 0; i < count; i++) {
+			// The lights are picked evenly across the whole list, so an object emitting more of them than fit in
+			// a single update keeps its shape - an expanding ring stays a ring, only a sparser one
+			const LightEmitter& light = lights[i * total / count];
+
+			AppendUint16(target, (std::uint16_t)(std::int16_t)std::clamp(light.Pos.X - origin.X, -32768.0f, 32767.0f));
+			AppendUint16(target, (std::uint16_t)(std::int16_t)std::clamp(light.Pos.Y - origin.Y, -32768.0f, 32767.0f));
+			target.push_back((std::uint8_t)(std::clamp(light.Intensity, 0.0f, 1.0f) * 255.0f));
+			target.push_back((std::uint8_t)(std::clamp(light.Brightness, 0.0f, 1.0f) * 255.0f));
+			AppendUint16(target, (std::uint16_t)std::clamp(light.RadiusNear, 0.0f, 65535.0f));
+			AppendUint16(target, (std::uint16_t)std::clamp(light.RadiusFar, 0.0f, 65535.0f));
+		}
+	}
+
+	// Returns `false` on a malformed block, which leaves the stream mid-packet - the caller must stop reading
+	static bool DecodeRemotedLights(Stream& packet, SmallVectorImpl<LightEmitter>& lights)
+	{
+		std::uint32_t count = packet.ReadValue<std::uint8_t>();
+		if DEATH_UNLIKELY(count > MaxRemotedLights) {
+			return false;
+		}
+
+		lights.clear();
+		lights.reserve(count);
+
+		for (std::uint32_t i = 0; i < count; i++) {
+			auto& light = lights.emplace_back();
+			light.Pos.X = (float)(std::int16_t)packet.ReadValueAsLE<std::uint16_t>();
+			light.Pos.Y = (float)(std::int16_t)packet.ReadValueAsLE<std::uint16_t>();
+			light.Intensity = packet.ReadValue<std::uint8_t>() / 255.0f;
+			light.Brightness = packet.ReadValue<std::uint8_t>() / 255.0f;
+			light.RadiusNear = (float)packet.ReadValueAsLE<std::uint16_t>();
+			light.RadiusFar = (float)packet.ReadValueAsLE<std::uint16_t>();
+		}
+
+		return true;
 	}
 
 	struct TileCoordHash {
@@ -765,6 +825,10 @@ namespace Jazz2::Multiplayer
 					packet.WriteVariableUint64((std::uint64_t)_elapsedFrames);
 					packet.WriteVariableUint32((actorCount << 1) | (_forceResyncPending ? 1 : 0));
 
+					// Reused across all actors below, so sampling and encoding the lights costs no allocations
+					SmallVector<LightEmitter, MaxRemotedLights> lights;
+					SmallVector<std::uint8_t, MaxRemotedLightsSize> lightBlock;
+
 					for (Actors::Player* player : _players) {
 						auto* mpPlayer = static_cast<PlayerOnServer*>(player);
 
@@ -818,6 +882,14 @@ namespace Jazz2::Multiplayer
 							mpPlayer->_justWarped = false;
 							flags |= 0x40;
 						}
+
+						lights.clear();
+						mpPlayer->OnEmitRemotedLights(lights);
+						EncodeRemotedLights(lightBlock, pos, lights);
+						bool lightsChanged = (_forceResyncPending || lightBlock != mpPlayer->_lastRemotedLights);
+						if (lightsChanged) {
+							flags |= 0x80;
+						}
 						packet.WriteValue<std::uint8_t>(flags);
 
 						packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
@@ -836,6 +908,11 @@ namespace Jazz2::Multiplayer
 							rendererType = Actors::ActorRendererType::Default;
 						}
 						packet.WriteValue<std::uint8_t>((std::uint8_t)rendererType);
+
+						if (lightsChanged) {
+							packet.Write(lightBlock.data(), (std::uint32_t)lightBlock.size());
+							mpPlayer->_lastRemotedLights.assign(lightBlock.begin(), lightBlock.end());
+						}
 					}
 
 					// TODO: Does this need to be locked?
@@ -859,6 +936,16 @@ namespace Jazz2::Multiplayer
 							bool animationChanged = (_forceResyncPending || newAnimation != remotingActorInfo.LastAnimation || newRotation != remotingActorInfo.LastRotation ||
 								newScaleX != remotingActorInfo.LastScaleX || newScaleY != remotingActorInfo.LastScaleY || newRendererType != remotingActorInfo.LastRendererType);
 
+							// A mirrored actor is recreated from its real class on the client, which emits its own
+							// lights - describing them to it would be a stream of updates nobody applies
+							bool lightsChanged = false;
+							if (!remotingActorInfo.IsMirrored) {
+								lights.clear();
+								remotingActor->OnEmitRemotedLights(lights);
+								EncodeRemotedLights(lightBlock, remotingActor->_pos, lights);
+								lightsChanged = (_forceResyncPending || lightBlock != remotingActorInfo.LastLights);
+							}
+
 							std::uint8_t flags = 0;
 							if (positionChanged) {
 								flags |= 0x01;
@@ -877,6 +964,9 @@ namespace Jazz2::Multiplayer
 							}
 							if (remotingActor->_renderer.isFlippedY()) {
 								flags |= 0x20;
+							}
+							if (lightsChanged) {
+								flags |= 0x80;
 							}
 							packet.WriteValue<std::uint8_t>(flags);
 
@@ -899,6 +989,11 @@ namespace Jazz2::Multiplayer
 								remotingActorInfo.LastScaleX = newScaleX;
 								remotingActorInfo.LastScaleY = newScaleY;
 								remotingActorInfo.LastRendererType = newRendererType;
+							}
+							if (lightsChanged) {
+								packet.Write(lightBlock.data(), (std::uint32_t)lightBlock.size());
+
+								remotingActorInfo.LastLights.assign(lightBlock.begin(), lightBlock.end());
 							}
 						}
 					}
@@ -1026,9 +1121,9 @@ namespace Jazz2::Multiplayer
 					drawList->AddText(aabbMin, ImColor(255, 255, 255), actorIdString);
 				}
 
-				for (const auto& [actor, actorId] : _remotingActors) {
+				for (const auto& [actor, remotingActorInfo] : _remotingActors) {
 					char actorIdString[16];
-					formatString(actorIdString, "%u", actorId);
+					formatString(actorIdString, "%u", remotingActorInfo.ActorID);
 
 					auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
 					aabbMin.x += 4.0f;
@@ -1141,18 +1236,19 @@ namespace Jazz2::Multiplayer
 		// announcement packet is built (every other consumer of _remotingActors is gated the same way)
 		if (!_suppressRemoting && _isServer && !_isLocalSession) {
 			Actors::ActorBase* actorPtr = actor.get();
+			bool isMirrored = ActorShouldBeMirrored(actorPtr);
 
 			std::uint32_t actorId;
 			{
 				std::unique_lock lock(_lock);
 				actorId = FindFreeActorId();
-				_remotingActors[actorPtr] = { actorId };
+				_remotingActors[actorPtr] = { actorId, isMirrored };
 
 				// Store only used IDs on server-side
 				_remoteActors[actorId] = nullptr;
 			}
 
-			if (ActorShouldBeMirrored(actorPtr)) {
+			if (isMirrored) {
 				Vector2i originTile = actorPtr->_originTile;
 				const auto& eventTile = _eventMap->GetEventTile(originTile.X, originTile.Y);
 				if (eventTile.Event != EventType::Empty) {
@@ -3587,6 +3683,9 @@ namespace Jazz2::Multiplayer
 
 					// Move the player out of the bounds to avoid triggering events
 					player->_pos = OutOfBounds;
+					// ... including everything on the way there, which the swept collision tests would
+					// otherwise walk through
+					player->ResetPathTracking();
 					player->SetState(Actors::ActorState::IsDestroyed, true);
 
 					MemoryStream packet(4);
@@ -5141,11 +5240,23 @@ namespace Jazz2::Multiplayer
 		float scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
 		float scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
 		Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
+		std::uint8_t blendingPresetRaw = packet.ReadValue<std::uint8_t>();
+		if DEATH_UNLIKELY(blendingPresetRaw > (std::uint8_t)DrawableNode::BlendingPreset::Multiply) {
+			LOGW("[MP] ServerPacketType::CreateRemoteActor - Malformed packet");
+			return true;
+		}
+		auto blendingPreset = (DrawableNode::BlendingPreset)blendingPresetRaw;
+
+		SmallVector<LightEmitter, MaxRemotedLights> lights;
+		if DEATH_UNLIKELY(!DecodeRemotedLights(packet, lights)) {
+			LOGW("[MP] ServerPacketType::CreateRemoteActor - Malformed packet");
+			return true;
+		}
 
 		//LOGD("Remote actor {} created on [{};{}] with metadata \"{}\"", actorId, posX, posY, metadataPath);
 		LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: {}, metadata: \"{}\", x: {}, y: {}", actorId, metadataPath, posX, posY);
 
-		InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType]() {
+		InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType, blendingPreset, lights = std::move(lights)]() {
 			{
 				std::unique_lock lock(_lock);
 				if (_remoteActors.contains(actorId)) {
@@ -5168,7 +5279,8 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
-			remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
+			remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType, blendingPreset);
+			remoteActor->SyncLightsWithServer(lights);
 
 			{
 				std::unique_lock lock(_lock);
@@ -5282,12 +5394,21 @@ namespace Jazz2::Multiplayer
 
 		actorCount >>= 1;
 
+		SmallVector<LightEmitter, MaxRemotedLights> lights;
+		// Lights can't be handed to the actors from here - this runs on the network thread and the renderer
+		// walks an actor's light list while it draws, so replacing it underneath would leave it iterating a
+		// freed buffer. They are collected into one flat block instead and applied on the main thread, the
+		// same way a newly created remote actor gets them. Everything else here only overwrites values.
+		SmallVector<std::pair<std::uint32_t, std::uint32_t>, 16> pendingLightRanges;
+		SmallVector<LightEmitter, MaxRemotedLights> pendingLights;
+
 		for (std::uint32_t i = 0; i < actorCount; i++) {
 			std::uint32_t actorId = packet.ReadVariableUint32();
 			std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 
 			bool positionChanged = (flags & 0x01) != 0;
 			bool animationChanged = (flags & 0x02) != 0;
+			bool lightsChanged = (flags & 0x80) != 0;
 
 			float posX, posY, rotation, scaleX, scaleY;
 			AnimState anim; Actors::ActorRendererType rendererType;
@@ -5314,6 +5435,15 @@ namespace Jazz2::Multiplayer
 				rendererType = Actors::ActorRendererType::Default;
 			}
 
+			if (lightsChanged) {
+				// A malformed block leaves the stream in the middle of this actor's entry, so every remaining
+				// actor in the packet would be misread - drop the rest of it and let the next update recover
+				if DEATH_UNLIKELY(!DecodeRemotedLights(packet, lights)) {
+					LOGW("[MP] ServerPacketType::UpdateAllActors - Malformed packet");
+					break;
+				}
+			}
+
 			auto it = _remoteActors.find(actorId);
 			if (it != _remoteActors.end()) {
 				if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
@@ -5323,9 +5453,32 @@ namespace Jazz2::Multiplayer
 					if (animationChanged) {
 						remoteActor->SyncAnimationWithServer(anim, rotation, scaleX, scaleY, rendererType);
 					}
+					if (lightsChanged) {
+						pendingLightRanges.emplace_back(actorId, (std::uint32_t)lights.size());
+						pendingLights.append(lights.begin(), lights.end());
+					}
 					remoteActor->SyncMiscWithServer(flags);
 				}
 			}
+		}
+
+		if (!pendingLightRanges.empty()) {
+			lock.unlock();
+
+			InvokeAsync([this, pendingLightRanges = std::move(pendingLightRanges), pendingLights = std::move(pendingLights)]() {
+				std::unique_lock lock(_lock);
+
+				std::uint32_t offset = 0;
+				for (const auto& [actorId, count] : pendingLightRanges) {
+					auto it = _remoteActors.find(actorId);
+					if (it != _remoteActors.end()) {
+						if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+							remoteActor->SyncLightsWithServer(arrayView(pendingLights.data() + offset, count));
+						}
+					}
+					offset += count;
+				}
+			});
 		}
 
 		if (forceResyncRequired) {
@@ -10511,7 +10664,7 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint8_t>(serverConfig.AllowedPlayerTypes);
 	}
 
-	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)
+	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, Actors::ActorBase* actor)
 	{
 		String metadataPath = fs::FromNativeSeparators(actor->_metadata->Path);
 
@@ -10529,14 +10682,24 @@ namespace Jazz2::Multiplayer
 			flags |= 0x20;
 		}
 
-		packet.ReserveCapacity(36 + metadataPath.size());
+		// The remoted `ActorState::Illuminated` is what makes an observer reproduce the orbiting light swarm on its
+		// own instead of being told about two dozen constantly moving lights. It's the generic per-event
+		// "Illuminate" flag though (see `Events::EventMap::ReadEvents()`), and only a collectible acts on it here,
+		// so it's cleared for everything else - otherwise an event authored with it would glow on every client
+		// while emitting nothing on the server.
+		Actors::ActorState state = actor->_state;
+		if (runtime_cast<Actors::Collectibles::CollectibleBase>(actor) == nullptr) {
+			state &= ~Actors::ActorState::Illuminated;
+		}
+
+		packet.ReserveCapacity(37 + MaxRemotedLightsSize + metadataPath.size());
 
 		packet.WriteVariableUint32(actorId);
 		packet.WriteValue<std::uint8_t>(flags);
 		packet.WriteVariableInt32((std::int32_t)actor->_pos.X);
 		packet.WriteVariableInt32((std::int32_t)actor->_pos.Y);
 		packet.WriteVariableInt32((std::int32_t)actor->_renderer.layer());
-		packet.WriteVariableUint32((std::uint32_t)actor->_state);
+		packet.WriteVariableUint32((std::uint32_t)state);
 		packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
 		packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
 		packet.WriteVariableUint32((std::uint32_t)(actor->_currentTransition != nullptr ? actor->_currentTransition->State : actor->_currentAnimation->State));
@@ -10548,6 +10711,16 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
+		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.blendingPreset());
+
+		// The periodic update only resends lights that changed, so a newly created actor (and a peer that just
+		// joined, which gets one of these for every actor already in the level) needs the current state here
+		SmallVector<LightEmitter, MaxRemotedLights> lights;
+		actor->OnEmitRemotedLights(lights);
+
+		SmallVector<std::uint8_t, MaxRemotedLightsSize> lightBlock;
+		EncodeRemotedLights(lightBlock, actor->_pos, lights);
+		packet.Write(lightBlock.data(), (std::uint32_t)lightBlock.size());
 	}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)

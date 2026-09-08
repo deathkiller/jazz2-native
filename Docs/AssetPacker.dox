@@ -312,12 +312,16 @@ as UTF-8 without one.
     there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
     GameCube have no conversion compiled in at all and *require* the prepared tree, the PSP and the
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
-    why they are given a prepared tree as well.
+    why they are given a prepared tree as well. The Dreamcast additionally authors the tree into a
+    read-only disc image at build time, which is a procedure of its own ---
+    see @ref consoles-dreamcast-content.
 -   **PlayStation 2 and PlayStation 3** consume the same tree under the generic `--target=console`
     profile --- neither has a name of its own, because neither needs anything the profile does not
     already do. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as
-    the Dreamcast does. The PS3 has a writable hard disk and could in principle convert, but is given
-    a prepared tree for the same reason the PSP is --- doing it on the console is slow.
+    the Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
+    @ref consoles-ps2-content) @m_endspan. The PS3 has a writable hard disk and could in principle
+    convert, but is given a prepared tree for the same reason the PSP is --- doing it on the console is
+    slow.
 -   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
     only a way to skip that wait there.
 -   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically
@@ -341,6 +345,14 @@ as UTF-8 without one.
 -   **The source must contain a supported version of the game data.** The tool looks for
     `Anims.j2a` (or `AnimsSw.j2a`) at the top of the source directory or in its `Source`
     subdirectory and refuses to run without it.
+-   **A non-desktop tree is only self-contained if the source was an installation.** Carrying the
+    game's own `Content` over is what makes it so, and that only happens when the original files were
+    found one level down, in a `Source` subdirectory with a `Content` beside it. Pointed at a bare
+    directory of original files the tool converts them and exits successfully --- and the tree then has
+    the sprites and sounds from the original data and none of the game's own: no `.font` files, no
+    `Metadata` at all, none of the UI graphics and no translations. Nothing reports it, and on the
+    target it presents as a game that cannot draw its own menu. The line the tool prints for the
+    carry-over (`Copying "…"`) is how to tell the two runs apart.
 -   **Skipped levels are listed on purpose.** The list of original levels is maintained by
     hand, so read the skipped-levels output after a `--originals-only` conversion --- a level
     that should have been kept shows up there by name.

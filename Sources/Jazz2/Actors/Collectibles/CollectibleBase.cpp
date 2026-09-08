@@ -12,6 +12,38 @@
 
 namespace Jazz2::Actors::Collectibles
 {
+	void CollectibleBase::IlluminateLights::Create()
+	{
+		_lights.reserve(LightCount);
+		for (std::int32_t i = 0; i < LightCount; i++) {
+			auto& light = _lights.emplace_back();
+			light.Intensity = Random().NextFloat(0.22f, 0.42f);
+			light.Distance = Random().NextFloat(4.0f, 36.0f);
+			light.Phase = Random().NextFloat(0.0f, fTwoPi);
+			light.Speed = Random().NextFloat(-0.12f, -0.04f);
+		}
+	}
+
+	void CollectibleBase::IlluminateLights::OnUpdate(float timeMult)
+	{
+		for (auto& current : _lights) {
+			current.Phase += current.Speed * timeMult;
+		}
+	}
+
+	void CollectibleBase::IlluminateLights::OnEmitLights(SmallVectorImpl<LightEmitter>& lights, Vector2f pos) const
+	{
+		for (const auto& current : _lights) {
+			auto& light = lights.emplace_back();
+			light.Pos = Vector2f(pos.X + cosApprox(current.Phase + cosApprox(current.Phase * 0.33f) * 0.33f) * current.Distance,
+				pos.Y + sinApprox(current.Phase + sinApprox(current.Phase) * 0.33f) * current.Distance);
+			light.Intensity = current.Intensity * 0.7f;
+			light.Brightness = current.Intensity;
+			light.RadiusNear = 0.0f;
+			light.RadiusFar = current.Intensity * 86.0f;
+		}
+	}
+
 	CollectibleBase::CollectibleBase()
 		: _untouched(true), _scoreValue(0), _phase(0.0f), _timeLeft(0.0f), _startingY(0.0f)
 	{
@@ -41,14 +73,7 @@ namespace Jazz2::Actors::Collectibles
 		}
 
 		if ((details.State & ActorState::Illuminated) == ActorState::Illuminated) {
-			_illuminateLights.reserve(IlluminateLightCount);
-			for (std::int32_t i = 0; i < IlluminateLightCount; i++) {
-				auto& light = _illuminateLights.emplace_back();
-				light.Intensity = Random().NextFloat(0.22f, 0.42f);
-				light.Distance = Random().NextFloat(4.0f, 36.0f);
-				light.Phase = Random().NextFloat(0.0f, fTwoPi);
-				light.Speed = Random().NextFloat(-0.12f, -0.04f);
-			}
+			_illuminateLights.Create();
 		}
 
 		async_return true;
@@ -71,22 +96,12 @@ namespace Jazz2::Actors::Collectibles
 			}
 		}
 
-		for (auto& current : _illuminateLights) {
-			current.Phase += current.Speed * timeMult;
-		}
+		_illuminateLights.OnUpdate(timeMult);
 	}
 
 	void CollectibleBase::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		for (auto& current : _illuminateLights) {
-			auto& light = lights.emplace_back();
-			light.Pos = Vector2f(_pos.X + cosApprox(current.Phase + cosApprox(current.Phase * 0.33f) * 0.33f) * current.Distance,
-				_pos.Y + sinApprox(current.Phase + sinApprox(current.Phase) * 0.33f) * current.Distance);
-			light.Intensity = current.Intensity * 0.7f;
-			light.Brightness = current.Intensity;
-			light.RadiusNear = 0.0f;
-			light.RadiusFar = current.Intensity * 86.0f;
-		}
+		_illuminateLights.OnEmitLights(lights, _pos);
 	}
 
 	bool CollectibleBase::OnHandleCollision(ActorBase* other)

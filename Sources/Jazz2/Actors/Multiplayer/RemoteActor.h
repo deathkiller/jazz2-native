@@ -4,6 +4,7 @@
 
 #include "../ActorBase.h"
 #include "StateInterpolationBuffer.h"
+#include "../Collectibles/CollectibleBase.h"
 #include "../../ShieldType.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -34,7 +35,7 @@ namespace Jazz2::Actors::Multiplayer
 		static std::shared_ptr<RemoteActor> Create(StringView metadataPath);
 
 		/** @brief Initializes the actor from metadata received from the server */
-		virtual void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
+		virtual void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType, DrawableNode::BlendingPreset blendingPreset);
 		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
 		void SetPlayerColor(std::uint32_t furColor);
 		/** @brief Changes the metadata (e.g., on character change), keeping the current recolor applied */
@@ -45,6 +46,12 @@ namespace Jazz2::Actors::Multiplayer
 		void SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType);
 		/** @brief Synchronizes miscellaneous state flags with the server */
 		void SyncMiscWithServer(std::uint8_t flags);
+		/**
+		 * @brief Synchronizes the emitted lights with the server
+		 *
+		 * @param lights  Lights to emit, positioned relative to the actor
+		 */
+		void SyncLightsWithServer(ArrayView<const LightEmitter> lights);
 		/** @brief Sets the active shield shown around this remote player (synced from the server) */
 		void SetShield(ShieldType shieldType, float timeLeft);
 
@@ -60,21 +67,36 @@ namespace Jazz2::Actors::Multiplayer
 		std::uint32_t _furColor;
 		// Allocated palette offset into the shared palette texture for this player's recolor (-1 = none)
 		std::int32_t _paletteOffset;
+		// Blending mode the object draws itself with on the server, kept because it has to be re-applied
+		// whenever the sprite's shader changes (see ApplyBlendingPreset())
+		DrawableNode::BlendingPreset _blendingPreset;
 		// Active shield shown around this player (synced from the server). The decoration is drawn in OnDraw; the
 		// time decays locally, mirroring the owning player (the server only sends shield state changes).
 		ShieldType _activeShield;
 		float _activeShieldTime;
 		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
+		// Lights the object emits on the server (see ActorBase::OnEmitRemotedLights()). A remote actor runs none
+		// of the object's logic, so it can only replay what it was told. Positions are relative to the actor, so
+		// they keep following the interpolated sprite between updates.
+		SmallVector<LightEmitter, 0> _lights;
+		// Swarm of lights around an illuminated collectible, seeded locally from the remoted
+		// ActorState::Illuminated - it's decoration nobody can tell apart from the server's own
+		Collectibles::CollectibleBase::IlluminateLights _illuminateLights;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
+		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		void OnAttach(ActorBase* parent) override;
 		void OnDetach(ActorBase* parent) override;
 
 		// Allocates/updates/releases this player's palette row from _furColor and selects it on the renderer
 		void RefreshColorPalette();
+		// (Re)applies the synchronized blending mode. Assigning a shader to the sprite's material - which a
+		// renderer type change and every recolor do - resets the blending factors to that shader's own default,
+		// so anything not drawn with plain alpha blending has to set them again afterwards.
+		void ApplyBlendingPreset();
 	};
 }
 

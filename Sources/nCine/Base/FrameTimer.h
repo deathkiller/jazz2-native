@@ -19,6 +19,17 @@ namespace nCine
 		static constexpr float FramesPerSecond = 60.0f;
 		/** @brief Nominal seconds per frame */
 		static constexpr float SecondsPerFrame = 1.0f / FramesPerSecond;
+		/**
+		 * @brief Lowest frame rate the time multiplier still keeps up with
+		 *
+		 * Below this rate the game runs in slow motion instead of taking ever longer steps, which keeps the
+		 * per-frame integration error bounded. Collision resolution itself is frame-rate independent (see
+		 * @ref Jazz2::Actors::ActorBase::TryStandardMovement()), so this only limits how coarse the trajectories
+		 * of a single frame may get.
+		 */
+		static constexpr float LowestFrameRate = 24.0f;
+		/** @brief Upper bound on the value returned by @ref GetTimeMult() */
+		static constexpr float MaxTimeMult = FramesPerSecond / LowestFrameRate;
 
 #if defined(WITH_LIBRETRO)
 		/** @brief Fixed timestep used instead of the wall clock, set by the libretro glue to 1/fps of the frontend */

@@ -254,13 +254,18 @@ namespace ShaderCompiler
 			the surrounding code is still holding, which silently corrupted the textured background's
 			horizon tint - so a shader gates any dynamically branching block on it.
 
-			Only the PS Vita (Cg / sceGxm) emission sets @p lowPowerGpu. Unlike the two above it says
-			nothing about what the target CAN compile - the SGX543 runs every one of these shaders as
-			written - only about how much per-pixel work it can sustain: it is a handheld part shading a
-			full screen from a shared memory bus, and an operation that is invisible on a desktop GPU (a
-			nine-tap voronoi of sin()-based hashes, say) is most of its frame. A shader gates a cheaper
-			approximation of such a path on it, so a low-power part gets a substitute rather than the
-			feature being dropped for everyone.
+			The PS Vita (Cg / sceGxm) emission and the ESSL 100 (OpenGL|ES 2.0) lowering set
+			@p lowPowerGpu. Unlike the two above it says nothing about what the target CAN compile - both
+			run every one of these shaders as written - only about how much per-pixel work it can sustain:
+			these are handheld and mobile parts shading a full screen from a shared memory bus, and an
+			operation that is invisible on a desktop GPU (a nine-tap voronoi of sin()-based hashes, say)
+			is most of their frame. A shader gates a cheaper approximation of such a path on it, so a
+			low-power part gets a substitute rather than the feature being dropped for everyone.
+
+			It is therefore the one flag that is not tied to a single emission: a per-shader header's
+			ES2 sources are built with it while the modern GL, HLSL, SPIR-V and MSL artifacts beside them
+			are not (see Emit.cpp), and the ES2 profile's runtime-compiled ".shader" files are built with
+			it too (see RuntimeShader.cpp).
 		*/
 		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define,
 			bool softwareRenderer = false, bool noDynamicBranching = false, bool lowPowerGpu = false);

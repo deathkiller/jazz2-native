@@ -112,6 +112,13 @@ namespace nCine
 		/** @brief Returns the destination blending factor */
 		BlendingFactor destBlendingFactor() const;
 
+		/**
+		 * @brief Returns the preset matching the current source and destination blending factors
+		 *
+		 * Factors that don't correspond to any preset (set with @ref setBlendingFactors()) are reported as
+		 * @relativeref{BlendingPreset,Alpha}.
+		 */
+		BlendingPreset blendingPreset() const;
 		/** @brief Sets source and destination blending factors from a preset */
 		void setBlendingPreset(BlendingPreset blendingPreset);
 		/** @brief Sets specific source and destination blending factors */

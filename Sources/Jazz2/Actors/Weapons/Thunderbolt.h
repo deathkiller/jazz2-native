@@ -51,6 +51,9 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
+		// The beam lights are spread along the whole bolt and `Multiplayer::RemoteThunderbolt` replays them
+		// client-side, so there is nothing to describe to remote peers
+		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override { }
 		void OnAnimationFinished() override;
 		void OnHitWall(float timeMult) override;
 		void OnRicochet() override;

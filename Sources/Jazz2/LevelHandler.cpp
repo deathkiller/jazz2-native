@@ -705,6 +705,17 @@ namespace Jazz2
 		_tileMap->OnEndFrame();
 
 		if (!IsPausable() || _pauseMenu == nullptr) {
+			// Every actor applies its position to its renderer when it updates itself, but an actor can still be
+			// moved afterwards by another actor that updates later - a platform carrying it, most visibly - and
+			// would then be drawn a whole frame behind. This runs after all the updates and before the scene is
+			// visited, so the drawn position is always the final one. It has to happen before ResolveCollisions()
+			// clears `IsDirty`, which is what decides whether the position keeps its sub-pixel part.
+			if (!resolver.IsHeadless()) {
+				for (auto& actor : _actors) {
+					actor->UpdateRendererPosition();
+				}
+			}
+
 			ResolveCollisions(timeMult);
 
 			if (!resolver.IsHeadless()) {
@@ -1895,7 +1906,29 @@ namespace Jazz2
 			
 			if (actor->GetState(Actors::ActorState::IsDirty) && actor->_collisionProxyID != Collisions::NullNode) {
 				actor->UpdateAABB();
-				_collisions.MoveProxy(actor->_collisionProxyID, actor->AABB, actor->_speed * timeMult);
+
+				// The proxy has to cover the path the actor took, not just where it ended up. The tree only
+				// extends a proxy *forwards* (it predicts the next step from the speed), so a small object the
+				// actor passed over during this frame ends up behind the proxy and the pair is never reported
+				// to UpdatePairs() at all - no amount of testing in OnPairAdded() can recover it then. Stretching
+				// the box back over the path only widens the candidate set; both the pair handler and
+				// FindCollisionActorsByAABB() still decide with a precise test. A warp or any other forced
+				// relocation is not a path and resets it (see Actors::ActorBase::ResetPathTracking()), so the
+				// box stays as small as the actor's own movement.
+				AABBf sweptAABB = actor->AABB;
+				Vector2f delta = actor->_pos - actor->_frameStartPos;
+				if (delta.X > 0.0f) {
+					sweptAABB.L -= delta.X;
+				} else {
+					sweptAABB.R -= delta.X;
+				}
+				if (delta.Y > 0.0f) {
+					sweptAABB.T -= delta.Y;
+				} else {
+					sweptAABB.B -= delta.Y;
+				}
+
+				_collisions.MoveProxy(actor->_collisionProxyID, sweptAABB, actor->_speed * timeMult);
 				actor->SetState(Actors::ActorState::IsDirty, false);
 			}
 			++it;
@@ -1909,7 +1942,10 @@ namespace Jazz2
 					return;
 				}
 
-				if (actorA->IsCollidingWith(actorB)) {
+				// The swept tests catch the pair that a fast object skipped over between two frames, which
+				// the plain overlap test at the end positions cannot see (a spring or another small object
+				// is easy to jump clean over at a low frame rate)
+				if (actorA->IsCollidingWith(actorB) || actorA->HasCrossedOver(actorB) || actorB->HasCrossedOver(actorA)) {
 					if (!actorA->OnHandleCollision(actorB)) {
 						actorB->OnHandleCollision(actorA);
 					}

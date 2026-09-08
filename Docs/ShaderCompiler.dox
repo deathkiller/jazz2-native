@@ -299,10 +299,15 @@ Four macros are resolved by the tool and therefore never survive into any emitte
     builds with it defined: a fragment stage that compiles to NV40 `IF`/`LOOP`/`BRK` control flow does
     not survive that toolchain --- the branch body overwrites registers the surrounding code is still
     holding --- so a shader gates any dynamically branching block on it.
--   `LOW_POWER_GPU` is resolved the same way, and only `--emit-cg` (the PS Vita's sceGxm dialect) builds
-    with it defined. It says nothing about what the SGX543 *can* compile --- it runs every shader as
-    written --- only about how much per-pixel work it can sustain, so a shader gates a cheaper
-    approximation of an expensive path on it rather than dropping the feature for everyone.
+-   `LOW_POWER_GPU` is resolved the same way, and `--emit-cg` (the PS Vita's sceGxm dialect) together
+    with the ESSL 100 (OpenGL|ES 2.0) lowering builds with it defined --- the ES2 profile is never a
+    default, it is selected only for hardware that has nothing else, which is the same class of part.
+    It says nothing about what such a part *can* compile --- both run every shader as written --- only
+    about how much per-pixel work it can sustain, so a shader gates a cheaper approximation of an
+    expensive path on it rather than dropping the feature for everyone. It is thus the one macro not
+    tied to a single emission: a per-shader header's `_Vs100`/`_Fs100` sources are built with it while
+    the modern GL, HLSL, SPIR-V and MSL artifacts beside them are not, and the engine's
+    `RHI_LOW_POWER_GPU` (`RhiFwd.h`) mirrors which of the two views a binary ended up compiling.
 
 All five work in @cpp #ifdef @ce / @cpp #ifndef @ce **and** in @cpp #if @ce / @cpp #elif @ce
 expressions, which is what lets one directive replace a nest of them

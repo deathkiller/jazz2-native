@@ -70,24 +70,122 @@ steps below.
 
 @subsection consoles-common-content Preparing the game content
 
-The content tree is prepared with @ref asset-packer "AssetPacker", built as part of an ordinary
-desktop build. Every data-prepared console consumes the **same** tree, so it is built once
-@m_span{m-text m-dim} (the Nintendo 64 is the one exception --- it additionally needs its cinematics
-re-encoded, see @ref consoles-n64-content) @m_endspan:
+The content tree is prepared with @ref asset-packer "AssetPacker", a host tool built as part of an
+ordinary desktop build. Every data-prepared console consumes the **same** tree, so it is prepared
+once and pointed at from each console build. Only the cinematics are ever decided per console: the
+@ref consoles-dreamcast-content "Dreamcast" wants a profile of its own and the
+@ref consoles-n64-content "Nintendo 64" one further step on top of the shared tree. The whole
+procedure is five steps.
+
+@m_class{m-block m-info}
+
+@par What this needs beforehand
+An installed copy of the **original Jazz Jackrabbit 2** --- the tool converts that data, it cannot
+produce it. Any of the retail versions works, as does the Shareware Demo
+@m_span{m-text m-dim} (which ships @cpp "AnimsSw.j2a" @ce in place of @cpp "Anims.j2a" @ce)
+@m_endspan. Nothing else has to be obtained: the game's own half of the tree is the repository's
+@cpp "Content" @ce directory.
+
+@m_class{m-noindent}
+
+**1. Build the tool.** It is host-only and part of the regular desktop configuration
+@m_span{m-text m-dim} (`NCINE_BUILD_ASSET_PACKER`) @m_endspan, so any desktop build directory
+already has it. Naming the target builds only the tool rather than the whole game:
 
 @code{.sh}
-# Build the tool first (part of the regular desktop build)
-cmake -B build -D CMAKE_BUILD_TYPE=Release
-make -j $(nproc) -C build
-
-# Convert an installed copy of the original game into a console content tree
-./build/Sources/Utilities/AssetPacker/AssetPacker <path to the game installation> ./build/ConsoleContent --target=console
+cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
+cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 @endcode
 
 @m_class{m-noindent}
 
-Point the console build at that directory with `NCINE_CONTENT_DIR`, the build stages it into the
-package it creates, under the name @cpp "Content" @ce, at the place the console looks for it:
+The binary lands at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
+
+**2. Assemble the source directory.** This is the step that decides whether the tree comes out
+complete, and the easiest one to get wrong. The tool accepts two source layouts and only one of them
+produces a tree a console can boot:
+
+Source directory | What the tool makes of it
+---------------- | -------------------------
+A **game installation** --- the original files in a @cpp "Source" @ce subdirectory, with the game's own @cpp "Content" @ce beside it | Converts @cpp "Source" @ce **and** carries @cpp "Content" @ce over, so the output is self-contained. **This is the layout to use for a console**
+A bare directory of original files @m_span{m-text m-dim} (@cpp "Anims.j2a" @ce, @cpp "*.j2l" @ce, @cpp "*.j2t" @ce, ...) @m_endspan | Converts those and nothing else. The result holds the sprites and sounds of the original data and none of the game's own: no fonts, no @cpp "Metadata" @ce, no UI graphics, no translations --- the game cannot draw so much as its menu from it
+
+@m_class{m-noindent}
+
+Nothing has to be installed to get the first layout, because the repository's own @cpp "Content" @ce
+*is* its second half. A staging directory of two entries is all of it:
+
+@code{.sh}
+mkdir -p ./build/GameSource
+cp -r ./Content ./build/GameSource/Content
+cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
+
+# The ".po" files are the sources the ".mo" the game reads are compiled from, and nothing reads them
+# at runtime - so drop them from the copy, which matters most on media that cannot be rewritten
+rm -f ./build/GameSource/Content/Translations/*.po
+@endcode
+
+@m_class{m-noindent}
+
+**3. Convert.** The target directory *is* the content directory --- the tree is written straight
+into it rather than into a @cpp "Content" @ce subdirectory of it, and it is created if it does not
+exist:
+
+@code{.sh}
+./build/Sources/Utilities/AssetPacker/AssetPacker \
+    ./build/GameSource ./build/ConsoleContent --target=console
+@endcode
+
+@m_class{m-noindent}
+
+Which profile to pass is decided by the cinematics and by nothing else, because every console
+consumes the same layout:
+
+`--target=` | For | Cinematics
+----------- | --- | ----------
+`console` | Every console below except the Dreamcast @m_span{m-text m-dim} (`wii`, `gamecube` and `psp` are accepted spellings of it and do exactly the same thing) @m_endspan | The original `.j2v` files copied unchanged
+`dreamcast` | @ref consoles-dreamcast "Sega Dreamcast" | Re-encoded into @ref Jazz2::VideoFormat, whose decoder is a @cpp memcpy() @ce --- the SH-4 cannot inflate the original container inside a frame
+
+@m_class{m-noindent}
+
+Four options are worth knowing here, the rest are in @ref asset-packer-usage: `--originals-only`
+keeps only the episodes the original game shipped, `--shareware-only` narrows that to the Shareware
+Demo, `--skip-non-episode-levels` drops the levels belonging to no episode, and
+`--video-downscale=N` @m_span{m-text m-dim} (2 to 4; it re-encodes on any profile, since downscaling
+means re-encoding either way) @m_endspan shrinks the cinematics. All four exist to make the tree
+smaller, which is what a read-only disc and a cartridge care about.
+
+**4. Check what came out.** A complete tree looks like this, and the conversion prints what it wrote
+as it goes:
+
+@code{.shell-session}
+build/ConsoleContent/Prebaked.pak          # sprites and sounds, plus "Animations" and "Metadata"
+build/ConsoleContent/Episodes/…            # the episodes and their levels
+build/ConsoleContent/Tilesets/…
+build/ConsoleContent/Music/…
+build/ConsoleContent/Cinematics/intro.j2v  # and "ending.j2v"
+build/ConsoleContent/Translations/…        # the ".mo" files
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "Prebaked.pak" @ce is the one to look for --- see below for why its *name* is what makes the
+tree work. A tree with @cpp "Source.pak" @ce in its place came from the `desktop` profile and is not
+what a console wants.
+
+**5. Point the console build at it** with `NCINE_CONTENT_DIR`:
+
+@code{.sh}
+cmake -B ./build/<console>/ … -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+@endcode
+
+@m_class{m-noindent}
+
+The variable is **cached**, so it has to be given on the first configuration of a build directory ---
+or set again by re-running CMake on an existing one. Left unset it defaults to the repository's own
+@cpp "Content" @ce, which builds and boots into the main menu with no episode to play. Each console
+build then stages that directory into whatever it packages, under the name @cpp "Content" @ce, at the
+place the console looks for it:
 
 Console | Content directory the game reads | Cache / save data
 ------- | -------------------------------- | -----------------
@@ -120,6 +218,26 @@ as ordinary files. Finding that file is how a platform that *could* convert
 skips the conversion, leaves the `Cache` directory alone and never looks for the original game files,
 which are not deployed with such a tree anyway. To convert on the device instead, leave the prepared
 tree out and put an original installation into the console's `Source` directory.
+
+@m_class{m-noindent}
+
+Three of them have nowhere to put anything at runtime, and the tree is authored into the medium they
+boot from rather than copied onto one: the @ref consoles-n64-content "Nintendo 64" packs it into the
+ROM's DragonFS image, the @ref consoles-dreamcast-content "Dreamcast" and the
+@ref consoles-ps2-content "PlayStation 2" into a disc image. Two things follow for all three and are
+worth having in mind before authoring one:
+
+-   **What is on the medium is all the game will ever have.** There is no first-run conversion
+    compiled in @m_span{m-text m-dim} (`NCINE_HAS_WRITABLE_CACHE`) @m_endspan and no writable
+    `Cache`, so these three do not check their content at all --- they mark it as verified and load
+    it. An incomplete tree is not reported, it simply presents as a main menu with nothing to play.
+-   **The staging directory the image is authored from is a build artifact, and it is added to
+    rather than replaced.** Each of the three copies `NCINE_CONTENT_DIR` into a `Content`
+    subdirectory of it on every build, so the directory on the disc is always named `Content` no
+    matter what the source directory is called --- but a file that has since been *removed* from the
+    tree survives there and is packed into every later image. The N64 arm deletes the staging
+    directory first for exactly that reason, the Dreamcast and PS2 arms do not: delete
+    @cpp "<build dir>/cd/" @ce by hand after regenerating a tree.
 
 @m_class{m-block m-warning}
 
@@ -408,9 +526,9 @@ cp libz.a "$N64_INST/mips64-elf/lib/" && cp zlib.h zconf.h "$N64_INST/mips64-elf
 Unlike the other consoles this one does not consume the shared tree unchanged --- its cinematics
 have to be re-encoded, both to halve their resolution for the 320x240 output and, more importantly,
 to convert them out of the original format into the game's own @m_span{m-text m-dim} (whose decoder
-is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. Make a copy of
-the shared console tree (`cp -al` hard-links it, so the copy costs no disk space) and re-encode the
-cinematics in the copy:
+is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. Build the shared
+tree first as described in @ref consoles-common-content, then make a copy of it
+(`cp -al` hard-links it, so the copy costs no disk space) and re-encode the cinematics in the copy:
 
 @code{.sh}
 for video in intro ending; do
@@ -565,28 +683,106 @@ meson setup build && ninja -C build
 sudo cp ./build/mkdcdisc /usr/local/bin/
 @endcode
 
+@subsection consoles-dreamcast-content Preparing the content tree
+
+A disc is this console's only medium. There is no first-run conversion compiled in, no writable
+`Cache` and nothing to copy a tree onto afterwards --- what is authored into the image is the whole of
+what the game will ever have, and the **build** is what authors it, so the tree has to exist before
+the build runs. Prepare it as in @ref consoles-common-content, with one difference specific to this
+console:
+
+@code{.sh}
+# 1. The tool (any desktop build directory already has it)
+cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
+cmake --build ./build/ --target AssetPacker --parallel $(nproc)
+
+# 2. A source directory in the installation layout: the game's own content beside the original files
+mkdir -p ./build/GameSource
+cp -r ./Content ./build/GameSource/Content
+cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
+rm -f ./build/GameSource/Content/Translations/*.po
+
+# 3. Convert, with the Dreamcast profile - NOT "--target=console"
+./build/Sources/Utilities/AssetPacker/AssetPacker \
+    ./build/GameSource ./build/DreamcastContent --target=dreamcast
+
+# 4. Prebaked.pak is what makes it a prepared tree; the cinematics have to be the re-encoded ones
+ls ./build/DreamcastContent
+@endcode
+
+@m_class{m-block m-warning}
+
+@par The profile is `dreamcast`, and it is not interchangeable with `console`
+The two produce the very same layout and differ only in the cinematics, so a tree built with
+`console` boots and plays perfectly well --- and then the intro runs at a few frames a second. The
+original `.j2v` container is four interleaved zlib streams that have to be inflated per frame, which
+costs the SH-4 **55--115 ms** against a 42 ms budget; `dreamcast` re-encodes them into
+@ref Jazz2::VideoFormat, whose decoder is @cpp memcpy() @ce and @cpp memset() @ce, and costs under a
+millisecond @m_span{m-text m-dim} (see @ref asset-packer-cinematics-format) @m_endspan. The
+re-encoded files are *larger* than the originals, which is the deliberate trade.
+
+@m_class{m-noindent}
+
+Two more things this console does not forgive, both because it never gets a second chance at runtime:
+
+-   **The tree must already carry @cpp "Prebaked.pak" @ce.** Unlike the PlayStation 2 and Nintendo 64
+    packaging steps, the Dreamcast one does not rename a @cpp "Source.pak" @ce on the way in, so a
+    `desktop` profile cache handed to it produces a disc the game marks as verified, loads nothing
+    from, and shows a main menu with no episode on. Check for the file, not for the directory.
+-   **Trim the tree before authoring, not after.** Nothing can be added to or removed from the image
+    once it is written, and `--originals-only`, `--skip-non-episode-levels` and
+    `--video-downscale=N` are the knobs for it. Note that `Music` has to stay --- unlike on the
+    PlayStation 2, this console does play it @m_span{m-text m-dim} (through libxmp, see
+    @ref consoles-dreamcast-limits) @m_endspan.
+
 @subsection consoles-dreamcast-build Building
 
 @code{.sh}
 source <path to KOS>/environ.sh
 cmake -B ./build/dreamcast/ -D CMAKE_BUILD_TYPE=Release \
     -D CMAKE_TOOLCHAIN_FILE=${KOS_BASE}/utils/cmake/kallistios.toolchain.cmake \
-    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+    -D NCINE_CONTENT_DIR=$PWD/build/DreamcastContent
 make -j $(nproc) -C ./build/dreamcast/
 @endcode
 
 @m_class{m-noindent}
 
-It leaves `NCINE_CONTENT_DIR` at its default, which is the repository's own
-@cpp "Content" @ce --- enough to reach the main menu, but pass the parameter on the first
-configuration of the build directory to get a playable disc.
-Link-time optimization is force-disabled for this platform because it makes the
+`NCINE_CONTENT_DIR` is a cached variable and has to be passed on the **first** configuration of the
+build directory @m_span{m-text m-dim} (or set again by re-running CMake on it) @m_endspan --- left out
+it defaults to the repository's own @cpp "Content" @ce, which reaches the main menu and has no episode
+to play. Link-time optimization is force-disabled for this platform because it makes the
 `sh-elf` GCC 15.2 abort, and `Release` compiles with `-O2` rather than the default `-O3` --- code size
 matters here, and `DEATH_USE_FAST_MATH` is never applied on this platform because fast-math reordering is
 untested on the SH-4.
 
 The build produces @cpp "build/dreamcast/jazz2.elf" @ce and, if `mkdcdisc` was found, the bootable
-@cpp "build/dreamcast/jazz2.cdi" @ce with the content tree included as @cpp "/cd/Content" @ce.
+@cpp "build/dreamcast/jazz2.cdi" @ce with the content tree included as @cpp "/cd/Content" @ce. The
+disc is authored by a POST_BUILD step that does two things:
+
+@code{.sh}
+# 1. Stage the tree under a directory literally named "Content"
+cmake -E copy_directory <NCINE_CONTENT_DIR> ./build/dreamcast/cd/Content
+# 2. Author the image from the ELF and that directory
+mkdcdisc -e ./build/dreamcast/jazz2.elf -d ./build/dreamcast/cd/Content \
+    -n "Jazz2 Resurrection" -o ./build/dreamcast/jazz2.cdi
+@endcode
+
+@m_class{m-noindent}
+
+The staging step exists because `mkdcdisc` puts the directory it is handed onto the disc **under its
+own name**, and the game looks for @cpp "/cd/Content/" @ce. That is what lets `NCINE_CONTENT_DIR`
+point at a directory called anything at all --- and it is also what makes a hand-written `mkdcdisc`
+invocation against @cpp "build/DreamcastContent" @ce produce a disc with a @cpp "/cd/DreamcastContent/" @ce
+on it that the game never finds.
+
+@m_class{m-block m-danger}
+
+@par The staging directory is added to, never cleared
+@cpp "cmake -E copy_directory" @ce leaves files at the destination that are no longer in the source, so
+anything ever staged into @cpp "build/dreamcast/cd/" @ce is packed into every later image ---
+a level dropped by `--originals-only`, a renamed package, a stale `Source.pak`. Regenerating the
+content tree is therefore two commands: `rm -rf ./build/dreamcast/cd/` and then the build. The
+Nintendo 64 arm deletes its staging directory itself, this one does not.
 
 @m_class{m-block m-danger}
 
@@ -1482,23 +1678,110 @@ Not even under a login shell, so CMake fails its compiler check with
 `PATH=$PS2DEV/ee/bin:$PS2DEV/bin:$PS2SDK/bin:$PATH` before configuring. `xorriso` is what authors the
 disc image in the packaging step, hence the `apk add` above.
 
+@subsection consoles-ps2-content Preparing the content tree
+
+This console boots from a read-only disc and has no working directory of any kind: there is no
+first-run conversion compiled in, nothing is staged into `Cache/` and not even
+@cpp "Jazz2.config" @ce can be written @m_span{m-text m-dim} (see @ref consoles-ps2-limits)
+@m_endspan. The tree therefore has to be complete before the image is authored. It is the plain
+`console` profile, prepared exactly as in @ref consoles-common-content:
+
+@code{.sh}
+# 1. The tool (any desktop build directory already has it)
+cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
+cmake --build ./build/ --target AssetPacker --parallel $(nproc)
+
+# 2. A source directory in the installation layout: the game's own content beside the original files
+mkdir -p ./build/GameSource
+cp -r ./Content ./build/GameSource/Content
+cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
+rm -f ./build/GameSource/Content/Translations/*.po
+
+# 3. Convert
+./build/Sources/Utilities/AssetPacker/AssetPacker \
+    ./build/GameSource ./build/ConsoleContent --target=console
+
+# 4. Prebaked.pak is what makes it a prepared tree
+ls ./build/ConsoleContent
+@endcode
+
+@m_class{m-noindent}
+
+Pass the result as `NCINE_CONTENT_DIR` on the first configuration of the build directory, as below.
+The packaging step then assembles the whole disc under @cpp "build/ps2/cd/" @ce and authors it:
+
+@code{.shell-session}
+build/ps2/cd/SYSTEM.CNF     # BOOT2 = cdrom0:\JAZZ2.ELF;1, VER, VMODE = NTSC
+build/ps2/cd/CDFS.IRX       # copied from the SDK; loaded at startup so newlib can see the disc
+build/ps2/cd/JAZZ2.ELF      # the stripped executable
+build/ps2/cd/Content/…      # NCINE_CONTENT_DIR, with "Source.pak" renamed if it has one
+@endcode
+
+@m_class{m-noindent}
+
+Turning that into the image is one command, run for you by the same step:
+
+@code{.sh}
+xorrisofs -quiet -iso-level 2 -l -V JAZZ2 -o ./build/ps2/jazz2.iso ./build/ps2/cd
+@endcode
+
+@m_class{m-noindent}
+
+`mkisofs` and `genisoimage` are accepted in its place and take the same options. Because this is
+ISO 9660 level 2 with `-l`, a file name on the disc may be **31 characters** at most --- irrelevant
+for the converted original data, worth knowing if custom levels or tilesets with longer names are put
+into the tree.
+
+@m_class{m-block m-warning}
+
+@par "No Source.pak" during configure is expected here
+The packaging step renames a @cpp "Source.pak" @ce it finds in the content tree to
+@cpp "Prebaked.pak" @ce, so that a `desktop` profile cache can be put on a disc as well. A tree from
+the `console` profile carries @cpp "Prebaked.pak" @ce already, so there is nothing to rename and the
+configuration says `No "Source.pak" in "<path>", the disc image will not be marked as prebaked`.
+@par
+That line is **harmless in the normal case** and says nothing about whether the tree is usable ---
+verify by looking for @cpp "Prebaked.pak" @ce in the tree instead. It is only a real warning when
+neither package is in there, which means the conversion never ran or the wrong directory was passed.
+
+@m_class{m-block m-danger}
+
+@par The staging directory is added to, never cleared
+As on the Dreamcast, @cpp "cmake -E copy_directory" @ce keeps destination files that are no longer in
+the source, so anything ever staged into @cpp "build/ps2/cd/" @ce ends up in every later image.
+Regenerating the content tree means `rm -rf ./build/ps2/cd/` and then building again.
+
+@m_class{m-noindent}
+
+One thing can be dropped from a tree meant only for this console: nothing here decodes
+@cpp "Music" @ce, because the port has no audio backend yet
+@m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan, so those files are dead weight on the
+disc. Keep them if the same tree is shared with the other consoles, which do play them.
+
 @subsection consoles-ps2-build Building
 
 @code{.sh}
 cmake -S . -B build/ps2 -DCMAKE_TOOLCHAIN_FILE=$PS2SDK/ps2dev.cmake \
     -DCMAKE_BUILD_TYPE=Release -DNCINE_STRIP_BINARIES=ON \
-    -DNCINE_CONTENT_DIR=<path to the console content tree>
+    -DNCINE_CONTENT_DIR=$PWD/build/ConsoleContent
 cmake --build build/ps2 -j$(nproc)
 @endcode
 
 @m_class{m-noindent}
 
-The toolchain file defines `PLATFORM_PS2`, from which `NCINE_PREFERRED_RHI` is pinned to `GS`. The
+The toolchain file defines `PLATFORM_PS2`, from which `NCINE_PREFERRED_RHI` is pinned to `GS`.
+`NCINE_CONTENT_DIR` is cached, so it belongs on the first configuration of the build directory
+@m_span{m-text m-dim} (see @ref consoles-ps2-content for how that tree is produced) @m_endspan. The
 build produces a stripped `jazz2.elf` and stages a bootable `jazz2.iso` around it: `SYSTEM.CNF`
 @m_span{m-text m-dim} (`BOOT2 = cdrom0:\JAZZ2.ELF;1`, `VMODE = NTSC`) @m_endspan, the ELF as
 `JAZZ2.ELF`, `CDFS.IRX` from the SDK, and the content tree as `Content/`, whose `Source.pak` is
 renamed to `Prebaked.pak` on the way in so the game recognizes it as a prepared tree. Nothing is
 staged into `Cache/`: a prepared tree needs none, and the disc is read-only anyway.
+
+Without an ISO author on `PATH` at configure time the build prints
+`xorrisofs/mkisofs not found, bootable ISO image will not be created` and produces only the ELF. That
+is enough to bring the engine up in PCSX2 with `-elf`, but such a run has no disc and therefore no
+content at all --- the game reads everything from @cpp "cdfs:/" @ce here.
 
 @subsection consoles-ps2-deploy Deploying and running
 
@@ -2062,11 +2345,34 @@ boot into the main menu and need a content tree prepared as described in
 
 @section consoles-troubleshooting Troubleshooting
 
--   **The game starts, but no episode can be played.** The content tree is missing. The Dreamcast,
-    the GameCube and the PlayStation 2 mark their content as verified without checking it, and the others find no
-    @cpp "Prebaked.pak" @ce and no original files to convert, so this is what a missing or misplaced
-    @cpp "Content" @ce directory looks like, check the path for the console in
-    @ref consoles-common-content.
+-   **The game starts, but no episode can be played.** The content tree is missing, incomplete or
+    not marked as prepared. The Nintendo 64, the Dreamcast, the GameCube and the PlayStation 2 mark
+    their content as verified without checking it, and the others find no @cpp "Prebaked.pak" @ce and
+    no original files to convert, so all three faults present identically. In order of likelihood:
+    the tree was never passed as `NCINE_CONTENT_DIR` @m_span{m-text m-dim} (it is a **cached**
+    variable --- passing it to a build directory that was already configured without it does nothing)
+    @m_endspan, the tree carries @cpp "Source.pak" @ce instead of @cpp "Prebaked.pak" @ce
+    @m_span{m-text m-dim} (a `desktop` profile conversion) @m_endspan, or it ended up on the medium
+    under a name other than @cpp "Content" @ce. See @ref consoles-common-content for the procedure and
+    the per-console path.
+-   **The menu itself is unreadable or empty, not just the episode list.** The conversion was pointed
+    at a bare directory of original files rather than at a game installation, so the tree carries the
+    converted original data and none of the game's own @m_span{m-text m-dim} (the fonts, the UI
+    graphics, the whole of @cpp "Metadata" @ce, the translations) @m_endspan. Step 2 of
+    @ref consoles-common-content is the fix: the source directory needs a @cpp "Content" @ce beside its
+    @cpp "Source" @ce.
+-   **`No "Source.pak" in …, the disc image will not be marked as prebaked` at configure time**
+    @m_span{m-text m-dim} (PlayStation 2 and Nintendo 64) @m_endspan is **expected** for a tree built
+    with the `console` profile, which names that package @cpp "Prebaked.pak" @ce already and has
+    nothing to rename, see @ref consoles-ps2-content. It is only a real problem when neither package
+    is in the tree.
+-   **A file removed from the content tree is still on the disc.** The staging directory the image is
+    authored from is added to and never cleared on the Dreamcast and the PlayStation 2
+    @m_span{m-text m-dim} (the Nintendo 64 rebuilds its own) @m_endspan, so delete
+    @cpp "<build dir>/cd/" @ce and build again, see @ref consoles-dreamcast-build.
+-   **The intro cinematic crawls on the Dreamcast.** The tree was built with `--target=console`
+    instead of `--target=dreamcast`, so the cinematics are the original zlib-compressed files and the
+    SH-4 is inflating 640x480 pixels per frame, see @ref consoles-dreamcast-content.
 -   **Text is missing, tilesets look wrong, or a level refuses to load.** Almost always a **stale**
     content tree --- regenerate it with an AssetPacker built from the current sources. On the Wii
     and GameCube also make sure the card really was rewritten, an emulator's SD image and a physical

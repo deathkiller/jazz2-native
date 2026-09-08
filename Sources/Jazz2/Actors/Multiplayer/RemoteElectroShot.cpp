@@ -15,9 +15,9 @@ namespace Jazz2::Actors::Multiplayer
 		_alwaysInterpolate = true;
 	}
 
-	void RemoteElectroShot::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType)
+	void RemoteElectroShot::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType, DrawableNode::BlendingPreset blendingPreset)
 	{
-		RemoteActor::AssignMetadata(flags, state, path, anim, rotation, scaleX, scaleY, rendererType);
+		RemoteActor::AssignMetadata(flags, state, path, anim, rotation, scaleX, scaleY, rendererType, blendingPreset);
 
 		_poweredUp = (anim == Weapons::ElectroShot::PoweredUpAnimState);
 	}

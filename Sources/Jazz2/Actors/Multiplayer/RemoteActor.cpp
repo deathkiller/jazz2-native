@@ -35,7 +35,8 @@ namespace Jazz2::Actors::Multiplayer
 
 	RemoteActor::RemoteActor()
 		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _alwaysInterpolate(false), _furColor(0),
-			_paletteOffset(-1), _activeShield(ShieldType::None), _activeShieldTime(0.0f)
+			_paletteOffset(-1), _blendingPreset(DrawableNode::BlendingPreset::Alpha),
+			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
 	{
 	}
 
@@ -78,6 +79,15 @@ namespace Jazz2::Actors::Multiplayer
 		}
 		_paletteOffset = newOffset;
 		_renderer.SetPalette(_paletteOffset);
+
+		// Selecting a palette switches the sprite to (or away from) the palette-aware shader, which takes the
+		// material's blending factors with it
+		ApplyBlendingPreset();
+	}
+
+	void RemoteActor::ApplyBlendingPreset()
+	{
+		_renderer.setBlendingPreset(_blendingPreset);
 	}
 
 	Task<bool> RemoteActor::OnActivatedAsync(const ActorActivationDetails& details)
@@ -100,6 +110,8 @@ namespace Jazz2::Actors::Multiplayer
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 			}
 		}
+
+		_illuminateLights.OnUpdate(timeMult);
 
 		// Shield time decays locally (the server sends only state changes, not per-frame expiry), so the decoration
 		// fades out on remote players just like on the owning player
@@ -126,6 +138,16 @@ namespace Jazz2::Actors::Multiplayer
 		return ActorBase::OnDraw(renderQueue);
 	}
 
+	void RemoteActor::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		for (const auto& current : _lights) {
+			auto& light = lights.emplace_back(current);
+			light.Pos += _pos;
+		}
+
+		_illuminateLights.OnEmitLights(lights, _pos);
+	}
+
 	void RemoteActor::OnAttach(ActorBase* parent)
 	{
 		_isAttachedLocally = true;
@@ -136,7 +158,7 @@ namespace Jazz2::Actors::Multiplayer
 		_isAttachedLocally = false;
 	}
 
-	void RemoteActor::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType)
+	void RemoteActor::AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType, DrawableNode::BlendingPreset blendingPreset)
 	{
 		constexpr ActorState RemotedFlags = ActorState::Illuminated | ActorState::IsInvulnerable |
 			ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject |
@@ -150,9 +172,18 @@ namespace Jazz2::Actors::Multiplayer
 		_lastAnim = anim;
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 
+		if (GetState(ActorState::Illuminated) && _illuminateLights.IsEmpty()) {
+			_illuminateLights.Create();
+		}
+
+		// Objects that draw themselves with a non-default blending mode (additive shots, for instance) look
+		// nothing like the original without it, and it isn't derivable from anything else the client receives
+		_blendingPreset = blendingPreset;
+
 		_renderer.Initialize(rendererType);
 		_renderer.setRotation(rotation);
 
+		// Applies the blending preset too, so it has to come after Initialize()
 		RefreshColorPalette();
 
 		SyncMiscWithServer(flags);
@@ -205,6 +236,8 @@ namespace Jazz2::Actors::Multiplayer
 		_renderer.setRotation(rotation);
 		_renderer.setScale(scaleX, scaleY);
 		_renderer.Initialize(rendererType);
+
+		ApplyBlendingPreset();
 	}
 
 	void RemoteActor::SyncMiscWithServer(std::uint8_t flags)
@@ -219,6 +252,11 @@ namespace Jazz2::Actors::Multiplayer
 			// Collapse the buffer to the most recent position, so the actor teleports instead of interpolating
 			_stateBuffer.Reset(_stateBuffer.GetLatest(), StateInterpolationBuffer::Now());
 		}
+	}
+
+	void RemoteActor::SyncLightsWithServer(ArrayView<const LightEmitter> lights)
+	{
+		_lights.assign(lights.begin(), lights.end());
 	}
 
 	void RemoteActor::SetShield(ShieldType shieldType, float timeLeft)

@@ -7,6 +7,7 @@
 #include "../nCine/Application.h"
 #include "../nCine/I18n.h"
 #include "../nCine/Base/Random.h"
+#include "../nCine/Graphics/RHI/RhiFwd.h"	// RHI_LOW_POWER_GPU (a header macro, not a build define)
 
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
@@ -64,16 +65,23 @@ namespace Jazz2
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = true;
-#if defined(DEATH_TARGET_VITA)
-	// Both are forced off on this console rather than merely defaulted off, because both are measurably
-	// unaffordable there and neither has a menu item left to turn it back on (see GraphicsOptionsSection).
-	// Dithering is a dependent second texture sample over the whole background - the shader compiles it out
-	// on this target anyway - and the blur chain is five more full-view off-screen passes, each of them a
-	// scene the backend has to wait out before the next one can sample it. Load() puts them back to these.
+	// Each of the next two is forced off rather than merely defaulted off wherever its condition holds,
+	// because it is measurably unaffordable there and has no menu item left to turn it back on (see
+	// GraphicsOptionsSection). Load() puts them back to these.
+#if defined(RHI_LOW_POWER_GPU)
+	// Dithering is a dependent second texture sample over the whole background, which the shader compiles
+	// out on a low-power build anyway - leaving the value on would only pick the Dither variant of the
+	// background programs and compile a second copy of identical code (see TileMap and MainMenu)
 	bool PreferencesCache::BackgroundDithering = false;
-	bool PreferencesCache::BlurEffects = false;
 #else
 	bool PreferencesCache::BackgroundDithering = true;
+#endif
+#if defined(DEATH_TARGET_VITA)
+	// The blur chain is five more full-view off-screen passes, each of them a scene the backend has to wait
+	// out before the next one can sample it. Unlike the dithering this is a per-console call rather than a
+	// consequence of how the shaders were built, so it stays keyed on the platform.
+	bool PreferencesCache::BlurEffects = false;
+#else
 	bool PreferencesCache::BlurEffects = true;
 #endif
 #if defined(DEATH_TARGET_VITA)
@@ -1291,12 +1299,14 @@ namespace
 						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
 
-#if defined(DEATH_TARGET_VITA)
-					// Outside every version arm above, because both are read there under different ones and
-					// what matters is that no config can end up with them on: neither is offered on this
-					// console (see GraphicsOptionsSection), so there would be no menu item left to turn a
-					// value the file switched on back off again
+					// Outside every version arm above, because these are read there under different ones and
+					// what matters is that no config can end up with them on: neither is offered where it is
+					// forced off (see GraphicsOptionsSection and the static initializers), so there would be
+					// no menu item left to turn a value the file switched on back off again
+#if defined(RHI_LOW_POWER_GPU)
 					BackgroundDithering = false;
+#endif
+#if defined(DEATH_TARGET_VITA)
 					BlurEffects = false;
 #endif
 
@@ -1504,7 +1514,7 @@ namespace
 				char* end;
 				unsigned long paramValue = strtoul(arg.exceptPrefix("/max-fps:"_s).data(), &end, 10);
 				if (paramValue > 0) {
-					MaxFps = std::max(paramValue, 30ul);
+					MaxFps = std::max(paramValue, 24ul);
 				}
 			}
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)

@@ -56,6 +56,15 @@ namespace Jazz2::Actors::Weapons
 		virtual void OnRicochet();
 
 		void TryMovement(float timeMult, Tiles::TileCollisionParams& params);
+		/**
+		 * @brief Returns how many sub-steps a shot's movement should be split into
+		 *
+		 * @ref TryMovement() only tests the destination of a move, so the length of a single step has to stay
+		 * independent of the frame rate --- otherwise a fast shot passes straight through thin geometry once the
+		 * frame rate drops. At the nominal 60 Hz this is two steps per frame, and a longer frame gets
+		 * proportionally more of them.
+		 */
+		static std::int32_t GetMovementSubstepCount(float timeMult);
 
 	private:
 		TimeStamp _lastRicochetTime;

@@ -46,6 +46,9 @@ namespace Jazz2::Actors::Weapons
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
+		// The swirling particles carry the whole light, and `Multiplayer::RemoteElectroShot` replays them
+		// client-side, so there is nothing to describe to remote peers
+		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override { }
 		bool OnPerish(ActorBase* collider) override;
 		void OnHitWall(float timeMult) override;
 		void OnRicochet() override;

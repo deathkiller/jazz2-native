@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Weapons
 
 	void FreezerShot::OnUpdate(float timeMult)
 	{
-		std::int32_t n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = GetMovementSubstepCount(timeMult);
 		TileCollisionParams params = { TileDestructType::Weapon, _speed.Y >= 0.0f, WeaponType::Freezer, _strength };
 		for (std::int32_t i = 0; i < n; i++) {
 			TryMovement(timeMult / n, params);

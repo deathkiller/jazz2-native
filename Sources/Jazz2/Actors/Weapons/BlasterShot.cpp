@@ -68,9 +68,9 @@ namespace Jazz2::Actors::Weapons
 
 	void BlasterShot::OnUpdate(float timeMult)
 	{
-		int n = (timeMult > 0.9f ? 2 : 1);
+		std::int32_t n = GetMovementSubstepCount(timeMult);
 		TileCollisionParams params = { TileDestructType::Weapon, false, WeaponType::Blaster, _strength };
-		for (int i = 0; i < n && params.WeaponStrength > 0; i++) {
+		for (std::int32_t i = 0; i < n && params.WeaponStrength > 0; i++) {
 			TryMovement(timeMult / n, params);
 		}
 		if (params.TilesDestroyed > 0) {

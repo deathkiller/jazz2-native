@@ -291,7 +291,10 @@ namespace
 				for (std::int32_t stage = 0; stage < 2; stage++) {
 					bool vertexStage = (stage == 0);
 					dump += (vertexStage ? "--- vertex (essl100) ---\n" : "--- fragment (essl100) ---\n");
-					String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
+					// The ES2 profile is a low-power target, so the dump has to be built the way EmitProgram
+					// builds the baked _Vs100/_Fs100 sources - from the LOW_POWER_GPU view of the stage
+					String modern = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define,
+						/*softwareRenderer*/ false, /*noDynamicBranching*/ false, /*lowPowerGpu*/ true);
 					String es2;
 					Diagnostic diag;
 					if (Essl100Emitter::Transform(modern, vertexStage, es2, diag)) {

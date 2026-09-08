@@ -62,7 +62,8 @@ void fragment() {
 	// field entirely; the visible loss is the faint stars and a slightly different horizon falloff.
 	float horizonDepth = distance;	// Approximates pow(distance, 1.4)
 #elif LOW_POWER_GPU
-	// pow() is two transcendentals on the SGX543's USSE and this shader ran two of them per pixel over a
+	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): pow() is two
+	// transcendentals on parts like the SGX543's USSE and this shader ran two of them per pixel over a
 	// full-screen background. sqrt() is one cheap instruction and gives pow(distance, 1.5) EXACTLY as
 	// distance * sqrt(distance), which is the second curve below for free; blending that against the
 	// linear term lands on pow(distance, 1.4) to within 0.007 over the whole range this takes ([0.3, 1.3]),

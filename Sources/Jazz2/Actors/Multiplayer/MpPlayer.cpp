@@ -53,6 +53,7 @@ namespace Jazz2::Actors::Multiplayer
 			// Snap the (invisible, collision-less) spectator onto the followed player - the camera targets this
 			// actor, so it cuts over to the new player the same way a broadcast camera would
 			_pos = followedPos;
+			ResetPathTracking();
 			return;
 		}
 

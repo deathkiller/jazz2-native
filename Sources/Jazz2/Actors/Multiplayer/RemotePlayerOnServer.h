@@ -85,6 +85,8 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Forcefully resynchronizes the player with server (e.g., after respawning or warping) */
 		void ForceResyncWithServer(Vector2f pos, Vector2f speed);
 
+		void UpdateRendererPosition() override;
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		StateInterpolationBuffer _stateBuffer;

@@ -146,15 +146,17 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(RHI_LOW_POWER_GPU)
 		// The dithering is a second texture sample inside the warped background shader, which the direct
-		// tier never runs: the fixed-function backends draw those layers as a flat repeating tilemap (see
-		// TileMap's SupportsTexturedBackground), and the shader itself compiles the dither sample out for
-		// the software renderer. The option would have no effect anywhere on this tier. On PS Vita it does
-		// have an effect and the effect is unaffordable: the second sample is a DEPENDENT one (its
-		// coordinate comes out of a sin()-based hash), which is the access pattern the SGX543 is worst at,
-		// and it measured at a sixth of the frame rate over a full-screen background. The shader compiles
-		// it out there (see LOW_POWER_GPU in TexturedBackground.shader) and the option goes with it.
+		// tier never takes: the fixed-function backends rebuild the warp out of bands from a fixed_function
+		// block that has no dither pass, and the shader compiles the sample out for the software renderer -
+		// on both, the Dither variant deduplicates to the plain effect. The option would have no effect
+		// anywhere on this tier, which is why the gate starts at RHI_CAP_POSTPROCESSING. On a low-power part
+		// it does have an effect and the effect is unaffordable: the second sample is a DEPENDENT one (its
+		// coordinate comes out of a sin()-based hash), which is the access pattern such GPUs are worst at,
+		// and it measured at a sixth of the frame rate over a full-screen background on the Vita's SGX543.
+		// The shader compiles it out on those builds (see LOW_POWER_GPU in TexturedBackground.shader) and
+		// the option goes with it - that covers both PS Vita backends and the OpenGL|ES 2.0 profile.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Background Dithering"),
 			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },

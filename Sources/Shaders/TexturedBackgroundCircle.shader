@@ -84,8 +84,8 @@ void fragment() {
 	// CPU, so the pow() is approximated polynomially and dither/stars are dropped entirely.
 	float horizonOpacity = 1.0 - clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.4)
 #elif LOW_POWER_GPU
-	// See TexturedBackground.shader: sqrt() is one USSE instruction where pow() is two transcendentals,
-	// and 0.8 * d^1.5 + 0.2 * d tracks pow(d, 1.4) closely enough that the horizon keeps its shape
+	// See TexturedBackground.shader: sqrt() is one instruction where pow() is two transcendentals, and
+	// 0.8 * d^1.5 + 0.2 * d tracks pow(d, 1.4) closely enough that the horizon keeps its shape
 	float horizonOpacity = 1.0 - clamp(0.8 * (distance * sqrt(distance)) + 0.2 * distance - 0.3, 0.0, 1.0);
 #else
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);

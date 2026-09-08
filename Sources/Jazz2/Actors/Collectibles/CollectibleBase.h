@@ -21,28 +21,50 @@ namespace Jazz2::Actors::Collectibles
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/**
+			@brief Swarm of lights orbiting an illuminated collectible
+
+			The effect is decoration, seeded at random and animated on its own, which is why it's reusable: an
+			illuminated collectible in an online session is drawn by a stand-in that runs none of the object's
+			logic, and reproducing the swarm there costs nothing --- whereas describing two dozen constantly
+			moving lights to every client on every update would be by far the most expensive object in the level.
+		*/
+		class IlluminateLights
+		{
+		public:
+			/** @brief Seeds the swarm */
+			void Create();
+			/** @brief Returns `true` if the swarm hasn't been seeded yet */
+			bool IsEmpty() const {
+				return _lights.empty();
+			}
+			/** @brief Advances the swarm */
+			void OnUpdate(float timeMult);
+			/** @brief Emits the swarm around the specified position */
+			void OnEmitLights(SmallVectorImpl<LightEmitter>& lights, Vector2f pos) const;
+
+		private:
+			// Number of lights the swarm consists of
+			static constexpr std::int32_t LightCount = 20;
+
+			struct Light {
+				float Intensity;
+				float Distance;
+				float Phase;
+				float Speed;
+			};
+
+			SmallVector<Light, 0> _lights;
+		};
+
 		/** @brief Creates a new instance */
 		CollectibleBase();
 
 		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
-		/** @{ @name Constants */
-
-		/** @brief Number of lights emitted when the collectible is illuminated */
-		static constexpr std::int32_t IlluminateLightCount = 20;
-
-		/** @} */
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
-		struct IlluminateLight {
-			float Intensity;
-			float Distance;
-			float Phase;
-			float Speed;
-		};
-
 		bool _untouched;
 		std::int32_t _scoreValue;
 		float _timeLeft;
@@ -51,6 +73,8 @@ namespace Jazz2::Actors::Collectibles
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
+		// Every observer reproduces the swarm from the remoted ActorState::Illuminated instead
+		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override { }
 
 		/** @brief Called when the collectible is collected */
 		virtual void OnCollect(Player* player);
@@ -61,6 +85,6 @@ namespace Jazz2::Actors::Collectibles
 	private:
 		float _phase;
 		float _startingY;
-		SmallVector<IlluminateLight, 0> _illuminateLights;
+		IlluminateLights _illuminateLights;
 	};
 }

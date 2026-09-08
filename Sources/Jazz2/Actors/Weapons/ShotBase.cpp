@@ -99,4 +99,16 @@ namespace Jazz2::Actors::Weapons
 			OnHitWall(timeMult);
 		}
 	}
+
+	std::int32_t ShotBase::GetMovementSubstepCount(float timeMult)
+	{
+		constexpr float SubstepsPerNominalFrame = 2.0f;
+
+		float substeps = timeMult * SubstepsPerNominalFrame;
+		std::int32_t result = std::max<std::int32_t>((std::int32_t)substeps, 1);
+		if ((float)result < substeps) {
+			result++;
+		}
+		return result;
+	}
 }

@@ -1628,6 +1628,9 @@ namespace Jazz2::Scripting
 		}
 		float jjPLAYER::set_xPos(float value) {
 			_player->_pos.X = value;
+			// A scripted move is a teleport, not a path the player walked, so nothing between the two positions
+			// may be collided with or triggered (see Actors::ActorBase::ResetPathTracking())
+			_player->ResetPathTracking();
 			return _player->_pos.X;
 		}
 		float jjPLAYER::get_yPos() const {
@@ -1635,6 +1638,7 @@ namespace Jazz2::Scripting
 		}
 		float jjPLAYER::set_yPos(float value) {
 			_player->_pos.Y = value;
+			_player->ResetPathTracking();
 			return _player->_pos.Y;
 		}
 		float jjPLAYER::get_xAcc() const {

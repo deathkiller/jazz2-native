@@ -512,13 +512,8 @@ namespace Jazz2::Actors
 			params.DestructType |= TileDestructType::Speed;
 			params.Speed = (_sugarRushLeft > 0.0f ? 64.0f : std::max(std::abs(_speed.X), std::abs(_speed.Y)));
 		}
-
-		if (timeMult * (std::abs(_speed.X + _externalForce.X) + std::abs(_speed.Y + _externalForce.Y)) > 20.0f) {
-			TryStandardMovement(timeMult * 0.5f, params);
-			TryStandardMovement(timeMult * 0.5f, params);
-		} else {
-			TryStandardMovement(timeMult, params);
-		}
+		
+		TryStandardMovement(timeMult, params);
 
 		if ((GetState() & ActorState::ApplyGravitation) != ActorState::ApplyGravitation) {
 			_externalForce.Y = std::min(_externalForce.Y + 0.002f * timeMult, 0.0f);
@@ -969,15 +964,27 @@ namespace Jazz2::Actors
 				_isActivelyPushing = _wasActivelyPushing = true;
 
 				float acceleration = (_levelHandler->IsReforged() ? Acceleration : Acceleration * 2.0f * LegacyGroundAccelScale);
-				// Skid (original turn-around): when the player is moving fast and the input flips to the opposite
-				// direction, bleed the existing momentum off gently instead of snapping around, so they keep
-				// drifting the original way for a few frames before accelerating back.
 				if (!_levelHandler->IsReforged()) {
-					bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
-					if (reversing) {
-						// Coast in the original direction before turning - even at walking speed, just less than running
-						acceleration *= (std::abs(_speed.X) > MaxRunningSpeed * LegacyGroundSpeedScale
-							? LegacyRunBrakeScale : LegacyWalkBrakeScale);
+					if (CanJump()) {
+						// Skid (the original's ground turn-around): when the player is moving fast and the input
+						// flips to the opposite direction, bleed the existing momentum off gently instead of
+						// snapping around, so they keep drifting the original way for a few frames before
+						// accelerating back - even at walking speed, just less than running.
+						bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
+						if (reversing) {
+							acceleration *= (std::abs(_speed.X) > MaxRunningSpeed * LegacyGroundSpeedScale
+								? LegacyRunBrakeScale : LegacyWalkBrakeScale);
+						}
+					} else if (_suspendType == SuspendType::None && !_inWater && _activeModifier == Modifier::None) {
+						// There is no skid in the air, only a plain constant acceleration, so the momentum carried
+						// into the jump takes proportionally longer to shed the faster the player was going - a
+						// walking jump turns around in about half the time a full-speed dashing one does. Braking
+						// against the momentum gets a bit more than accelerating with it, otherwise a fast jump is
+						// barely steerable at all.
+						bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
+						if (reversing) {
+							acceleration *= LegacyAirBrakeScale;
+						}
 					}
 				}
 
@@ -990,7 +997,7 @@ namespace Jazz2::Actors
 				} else {
 					if (_suspendType == SuspendType::None && !_inWater && _isRunPressed) {
 						// Original JJ2 caps the applied dash speed at 8 px/tick
-						float maxDashSpeed = (_levelHandler->IsReforged() ? MaxDashingSpeed : 8.0f * LegacyGroundSpeedScale);
+						float maxDashSpeed = (_levelHandler->IsReforged() ? MaxDashingSpeed : LegacyMaxDashingSpeed * LegacyGroundSpeedScale);
 						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxDashSpeed * playerMovementVelocity, maxDashSpeed * playerMovementVelocity);
 					} else if (_suspendType == SuspendType::Vine) {
 						if (_wasFirePressed) {
@@ -1232,20 +1239,29 @@ namespace Jazz2::Actors
 						// Original-style instant jump impulse (-10 reference). The applied rise cap then holds the
 						// ascent at a constant speed for the first frames (original feel); vertical scale carries
 						// the 70/60 framerate plus the playtest slow-down (height preserved: velocity x s, gravity x s^2).
-						_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+						// Horizontal speed above walking pace is partly carried over into the launch, so a running
+						// jump clears more than a standing one.
+						_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - MaxRunningSpeed) * LegacySpeedJumpScale);
 					}
 				}
 			}
 		} else {
 			if (_wasJumpPressed) {
 				_wasJumpPressed = false;
-				if (_levelHandler->IsReforged()) {
+
+				// Releasing jump early cuts the ascent, but only an ascent the player is responsible for - a
+				// spring throws them up whether they touch the button or not, so tapping jump on the way up
+				// must not shorten it (`_isSpring` is cleared the moment they start falling).
+				if (!_isSpring) {
+					// A Reforged jump rises on an internal force, so clearing that is all there is to it, while
+					// the original-style jump rises on speed alone and is cut by the clamp below (the original
+					// tap-hop, -4 reference). Spaz's double jump uses the internal force in both modes, which is
+					// why that is cleared either way - without it the double jump always reached its full
+					// height, with no way to make a shorter one.
 					if (_internalForceY < 0.0f) {
 						_internalForceY = 0.0f;
 					}
-				} else {
-					// Releasing jump early cuts the ascent (original tap-hop). -4 reference, vertical scale.
-					if (_speed.Y < -4.0f * LegacyVerticalSpeedScale) {
+					if (!_levelHandler->IsReforged() && _speed.Y < -4.0f * LegacyVerticalSpeedScale) {
 						_speed.Y = -4.0f * LegacyVerticalSpeedScale;
 					}
 				}
@@ -1296,13 +1312,23 @@ namespace Jazz2::Actors
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 						_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 						_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
+						// The dash starts from a crouch, so the player is standing and `CanJump()` is true. Gravity
+						// is off for its duration, which means nothing clears that flag again (only the gravity
+						// handling does) and the player would still count as grounded when the dash ends in mid-air
+						// - good for a full jump straight out of it. Clearing it here leaves the double jump as the
+						// only option, and landing re-establishes it normally.
+						SetState(ActorState::CanJump, false);
 						SetState(ActorState::ApplyGravitation, false);
 						SetPlayerTransition(AnimState::TransitionUppercutB, true, false, SpecialMoveType::Sidekick);
 					});
 
 					PlayPlayerSfx("Sidekick"_s);
 				} else {
-					if (!CanJump() && _canDoubleJump) {
+					// The double jump assigns the vertical speed outright, so allowing it while a spring is still
+					// carrying the player up would replace a launch of -16 or so with its own -0.6 and cut the arc
+					// short. `_isSpring` covers exactly the rising part of a spring launch (it is cleared as soon
+					// as the player starts falling), so the jump simply waits for the apex instead.
+					if (!CanJump() && _canDoubleJump && !_isSpring) {
 						_canDoubleJump = false;
 						_isFreefall = false;
 
@@ -1325,6 +1351,10 @@ namespace Jazz2::Actors
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 						_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 						_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
+						// As with Spaz above, the dash would otherwise leave the player counting as grounded when
+						// it ends in mid-air (Lori has copter ears rather than a double jump, so for her that
+						// simply means no jump until she lands)
+						SetState(ActorState::CanJump, false);
 						SetState(ActorState::ApplyGravitation, false);
 					});
 				} else {
@@ -1756,6 +1786,17 @@ namespace Jazz2::Actors
 
 	void Player::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
+		OnEmitRemotedLights(lights);
+
+		for (std::int32_t i = 0; i < (std::int32_t)_trail.size(); i++) {
+			lights.emplace_back(_trail[i]);
+		}
+	}
+
+	void Player::OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights)
+	{
+		// The trail is left out on purpose - it's a local decoration controlled by a client-side preference
+		// (and a long trail would be a stream of constantly changing lights on the wire)
 		auto& light = lights.emplace_back();
 		light.Pos = _pos;
 		light.Intensity = 1.0f;
@@ -1766,10 +1807,6 @@ namespace Jazz2::Actors
 		} else {
 			light.RadiusNear = 40.0f;
 			light.RadiusFar = 110.0f;
-		}
-
-		for (std::int32_t i = 0; i < (std::int32_t)_trail.size(); i++) {
-			lights.emplace_back(_trail[i]);
 		}
 	}
 
@@ -1901,8 +1938,10 @@ namespace Jazz2::Actors
 				}
 			}
 		} else if (auto* spring = runtime_cast<Environment::Spring>(other)) {
-			// Collide only with hitbox here
-			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
+			// Collide only with hitbox here, not with the (larger) sprite box - but a spring is small enough to
+			// be jumped clean over in one step at a low frame rate, so the path taken counts as well
+			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f &&
+				(spring->AABBInner.Overlaps(AABBInner) || HasCrossedOver(spring))) {
 				Vector2f force = spring->Activate();
 				OnHitSpring(spring->GetPos(), force, spring->KeepSpeedX, spring->KeepSpeedY, removeSpecialMove);
 			}
@@ -2083,10 +2122,15 @@ namespace Jazz2::Actors
 							SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects, false);
 
 							_speed.X = 0.0f;
-							_speed.Y = -1.4f;
-							if (timeMult < 1.0f) {
-								_speed.Y += (1.0f - timeMult) * 0.4f;
-							}
+							// Gravitation is off for the whole climb, so this one speed carries the player all
+							// the way up - the distance is simply the speed times the transition's duration.
+							// `TryStandardMovement()` used to add one frame of rising gravity on top of it right
+							// after this callback returned, which made the effective climb speed depend on the
+							// frame rate (at 24 FPS barely a third of the 60 Hz rise was left). That tick is gone
+							// now, so the 60 Hz amount of it is folded into the constant to keep the climb looking
+							// exactly as it did, at any frame rate. This replaces the old `0.4` correction, which
+							// only ever applied above 60 FPS.
+							_speed.Y = -1.4f + GetGravityModifier(_levelHandler->GetGravity(), /*isRising:*/true);
 
 							_externalForce.X = 0.0f;
 							_externalForce.Y = 0.0f;
@@ -2157,6 +2201,8 @@ namespace Jazz2::Actors
 			_externalForce.X = force.X * 0.6f * springScaleX;
 			_springCooldown = 10.0f;
 			SetState(ActorState::CanJump, false);
+			// Being thrown by a spring hands the double jump back, exactly like landing does
+			_canDoubleJump = true;
 
 			_wasActivelyPushing = false;
 			_keepRunningTime = (_levelHandler->IsReforged() ? 100.0f : 80.0f);
@@ -2224,6 +2270,10 @@ namespace Jazz2::Actors
 			} else {
 				removeSpecialMove = true;
 				_isSpring = true;
+				// A spring hands the double jump back, exactly like landing does - otherwise a player who had
+				// already spent it in mid-air has nothing left for the whole of the (usually long) spring arc.
+				// It only becomes usable once the rise is over, see HandleSpecialJump().
+				_canDoubleJump = true;
 				if (_activeModifier == Modifier::None) {
 					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 				}
@@ -2750,208 +2800,63 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		std::uint8_t* p;
-		EventType tileEvent = events->GetEventByPosition(_pos.X, _pos.Y, &p);
-		switch (tileEvent) {
-			case EventType::LightAmbient: { // Intensity, Red, Green, Blue, Flicker
-				// TODO: Change only player view, handle splitscreen multiplayer
-				_levelHandler->SetAmbientLight(this, p[0] / 255.0f);
-				break;
-			}
-			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
-				// Allow warping only if not in non-cancellable transition, except for some cosmetic but non-cancellable ones
-				if (_currentTransition == nullptr || _currentTransitionCancellable ||
-					   (_currentTransition->State == (AnimState::Dash | AnimState::Jump) ||
-						_currentTransition->State == AnimState::Spring ||
-						_currentTransition->State == AnimState::TransitionCopterShootToCopter ||
-						_currentTransition->State == AnimState::TransitionFallShootToFall ||
-						_currentTransition->State == AnimState::TransitionHookShootToHook ||
-						_currentTransition->State == AnimState::TransitionShootToIdle ||
-						_currentTransition->State == AnimState::TransitionUppercutEnd)) {
-					Vector2f c = events->GetWarpTarget(p[0]);
-					if (c.X >= 0.0f && c.Y >= 0.0f) {
-						WarpFlags flags = WarpFlags::Default;
-						if (p[1] != 0) {
-							flags |= WarpFlags::Fast;
-						}
-						if (p[2] != 0) {
-							flags |= WarpFlags::IncrementLaps;
-						}
+		// Tile events are sampled along the whole path travelled this frame, not only where the player ended
+		// up: at a low frame rate and high speed the player crosses several tiles in a single step and would
+		// otherwise miss every trigger in between - a pole or a tube most noticeably. The step is half a tile,
+		// so no tile the path passes through can fall between two samples.
+		constexpr float SweepStep = Tiles::TileSet::DefaultTileSize / 2;
+		// A teleport (a warp, a respawn, a multiplayer re-sync) is no distance travelled and doesn't reach the
+		// sampling at all - it resets the path, so only the destination is left to examine (see
+		// ActorBase::ResetPathTracking()). This is only an upper bound on the work a single frame can ask for,
+		// well above what the movement itself can produce.
+		constexpr std::int32_t MaxSweepSamples = 16;
 
-						WarpToPosition(c, flags);
-					}
-				}
-				break;
-			}
-			case EventType::ModifierDeath: {
-				TakeDamage(INT32_MAX, 0.0f, true);
-				break;
-			}
-			case EventType::ModifierSetWater: {
-				_levelHandler->BroadcastTriggeredEvent(this, EventType::ModifierSetWater, p);
-				break;
-			}
-			case EventType::ModifierLimitCameraView: { // Left, Width
-				// Through EventParamsReader, which memcpy()s. The parameters are a byte array starting at an
-				// ODD offset inside EventTile (4-byte flags, 2-byte event type, 1-byte active flag, then
-				// these), so a `*(std::uint16_t*)` of them is an unaligned halfword load - and on MIPS and
-				// SH-4 that is not a slow path but an address error that takes the process down with no
-				// chance to log anything. See the AreaEndOfLevel case below, where it was reproducible.
-				EventParamsReader eventParams(p);
-				std::uint16_t left = eventParams.GetUint16(0);
-				std::uint16_t width = eventParams.GetUint16(2);
-				_levelHandler->LimitCameraView(this, _pos,
-					(left == 0 ? (std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize,
-					width * Tiles::TileSet::DefaultTileSize);
-				break;
-			}
-			case EventType::ModifierHPole: {
-				InitialPoleStage(true);
-				break;
-			}
-			case EventType::ModifierVPole: {
-				InitialPoleStage(false);
-				break;
-			}
-			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become No-clip, No-clip Only
-				// TODO: Implement other parameters
-				bool becomeNoclip = (p[4] != 0);
-				bool noclipOnly = (p[5] != 0);
-				if (noclipOnly == GetState(ActorState::CollideWithTileset)) {
-					// A player in Noclip Mode cannot use a tube event with Noclip Only set to false,
-					// nor can a player not in Noclip Mode use a tube event with Noclip Only set to true
-					break;
-				}
+		Vector2f delta = _pos - _frameStartPos;
+		float distance = std::max(std::abs(delta.X), std::abs(delta.Y));
+		std::int32_t sampleCount = (distance > SweepStep
+			? std::min<std::int32_t>((std::int32_t)(distance / SweepStep) + 1, MaxSweepSamples)
+			: 1);
 
-				EndDamagingMove();
+		// The step is deliberately shorter than a tile, so consecutive samples usually land in the same one. Only
+		// the sample that first enters a tile may act on its event, otherwise a single frame would run a script
+		// callback, show a text or broadcast a water change several times over. The path is a straight line, so
+		// a tile it leaves is never entered again and remembering only the previous one is enough.
+		Vector2i lastTile = Vector2i(INT32_MIN, INT32_MIN);
+		bool statesHandled = false;
 
-				SetAnimation(AnimState::Dash | AnimState::Jump);
+		for (std::int32_t i = 1; i <= sampleCount; i++) {
+			// The path is walked from just past the frame's start position (the previous frame already handled
+			// that point) to exactly the current position
+			bool isLastSample = (i == sampleCount);
+			Vector2f samplePos = (isLastSample ? _pos : _frameStartPos + delta * ((float)i / sampleCount));
 
-				_controllable = false;
-				SetState(ActorState::CanJump | ActorState::ApplyGravitation, false);
+			// Rounded exactly the way Events::EventMap::GetEventByPosition() does, so two samples are treated as
+			// the same tile precisely when they would read the same event
+			Vector2i tile = Vector2i((std::int32_t)samplePos.X / Tiles::TileSet::DefaultTileSize,
+				(std::int32_t)samplePos.Y / Tiles::TileSet::DefaultTileSize);
 
-				_speed.X = (float)(std::int8_t)p[0];
-				_speed.Y = (float)(std::int8_t)p[1];
-
-				Vector2f pos = _pos;
-				if (_speed.X == 0.0f) {
-					pos.X = (std::floor(pos.X / 32) * 32) + 16;
-					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-					OnUpdateHitbox();
-				} else if (_speed.Y == 0.0f) {
-					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
-					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-					OnUpdateHitbox();
-				} else if (_inTubeTime <= 0.0f) {
-					pos.X = (std::floor(pos.X / 32) * 32) + 16;
-					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
-					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
-					OnUpdateHitbox();
-				}
-
-				SetState(ActorState::CollideWithTileset, !becomeNoclip);
-				_inTubeTime = (becomeNoclip ? 600.0f : 10.0f);
-				break;
+			AreaEventPass pass = (isLastSample ? AreaEventPass::States : AreaEventPass::None);
+			if (tile != lastTile) {
+				pass |= AreaEventPass::Effects;
+				lastTile = tile;
 			}
-			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
-				if (_levelExiting == LevelExitingState::None) {
-					// TODO: Implement Fast parameter
-					// memcpy'd through EventParamsReader rather than cast, because EventTile puts these
-					// parameters at an odd offset - see ModifierLimitCameraView above. This exact line killed
-					// the PSP build every time the player reached a level exit: the unaligned `lhu` raised an
-					// address error inside Player::OnUpdate, before even the exit sound was played, so the
-					// log always just stopped. PPSSPP never reproduced it - its JIT lowers the load to an x86
-					// access, which permits unaligned - only real hardware faults.
-					std::uint16_t coinsRequired = EventParamsReader(p).GetUint16(4);
-					if (coinsRequired <= _inventory.Coins) {
-						_inventory.Coins -= coinsRequired;
-
-						ExitType exitType = (ExitType)p[0];
-						if (p[1] != 0) {
-							exitType |= ExitType::FastTransition;
-						}
-						StringView nextLevel;
-						if (p[2] != 0) {
-							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
-						}
-						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
-					} else if (_bonusWarpTimer <= 0.0f) {
-						_levelHandler->HandlePlayerCoins(this, _inventory.Coins, _inventory.Coins);
-						PlaySfx("BonusWarpNotEnoughCoins"_s);
-
-						_bonusWarpTimer = 400.0f;
-					}
-				}
-				break;
-			}
-			case EventType::AreaText: { // Text, TextOffset, Vanish
-				std::uint8_t index = p[1];
-				StringView text = _levelHandler->GetLevelText(p[0], index != 0 ? index : -1, '|');
-				_levelHandler->ShowLevelText(text, this);
-
-				if (p[2] != 0) {
-					events->StoreTileEvent((std::int32_t)(_pos.X / 32), (std::int32_t)(_pos.Y / 32), EventType::Empty);
-				}
-				break;
-			}
-			case EventType::AreaCallback: { // Function, Param, Vanish
-				// Skip AreaCallbacks if player is currently warping
-				if (_currentTransition == nullptr ||
-					(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpOut &&
-					 _currentTransition->State != AnimState::TransitionWarpInFreefall && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-					_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
-				}
-				break;
-			}
-			case EventType::AreaActivateBoss: { // Music
-				_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaActivateBoss, p);
-
-				// Deactivate sugar rush if it's active
-				if (_sugarRushLeft > 1.0f) {
-					_sugarRushLeft = 1.0f;
-				}
-				break;
-			}
-			case EventType::AreaFlyOff: {
-				if (_activeModifier == Modifier::Airboard && !IsFlyCheatActive()) {
-					SetModifier(Modifier::None);
-				}
-				break;
-			}
-			case EventType::AreaRevertMorph: {
-				if (_playerType != _playerTypeOriginal) {
-					MorphRevert();
-				}
-				break;
-			}
-			case EventType::AreaMorphToFrog: {
-				if (_playerType != PlayerType::Frog) {
-					MorphTo(PlayerType::Frog);
-				}
-				break;
-			}
-			case EventType::AreaNoFire: {
-				switch (p[0]) {
-					case 0: areaWeaponAllowed = false; break;
-					case 1: _weaponAllowed = true; break;
-					case 2: _weaponAllowed = false; break;
-				}
-				break;
-			}
-			case EventType::AreaWaterBlock: {
-				areaWaterBlock = ((std::int32_t)_pos.Y / 32) * 32 + p[0];
-				break;
-			}
-			case EventType::TriggerZone: { // Trigger ID, Turn On, Switch
-				// TODO: Implement Switch parameter
-				_levelHandler->SetTrigger(p[0], p[1] != 0);
-				break;
+			if (pass == AreaEventPass::None) {
+				continue;
 			}
 
-			case EventType::RollingRockTrigger: { // Rock ID
-				_levelHandler->BroadcastTriggeredEvent(this, EventType::RollingRockTrigger, p);
+			statesHandled |= isLastSample;
+
+			if (HandleAreaEventAt(samplePos.X, samplePos.Y, timeMult, pass, areaWeaponAllowed, areaWaterBlock)) {
 				break;
 			}
+		}
+
+		// An event that took the player over stops the walk, which for an intermediate sample means the state pass
+		// never ran. Those aren't effects that fire but a description of where the player is, and leaving them at
+		// their defaults for the frame would drop the ambient light and the water/weapon restrictions of the tile
+		// the player is standing in, so they're read at the position it ended up at.
+		if (!statesHandled) {
+			HandleAreaEventAt(_pos.X, _pos.Y, timeMult, AreaEventPass::States, areaWeaponAllowed, areaWaterBlock);
 		}
 
 		// TODO: Implement Slide modifier with JJ2+ parameter
@@ -2961,6 +2866,7 @@ namespace Jazz2::Actors
 		// float events, so checking for a wider box is necessary.
 		constexpr float ExtendedHitbox = 2.0f;
 
+		std::uint8_t* p;
 		if (!_isAttachedToPole && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb)) {
 			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
 				if ((events->GetEventByPosition(_pos.X, _pos.Y, &p) == EventType::AreaFloatUp) ||
@@ -2999,8 +2905,7 @@ namespace Jazz2::Actors
 
 			if (GetState(ActorState::CanJump)) {
 				// Floor events
-				tileEvent = events->GetEventByPosition(_pos.X, _pos.Y + 32, &p);
-				switch (tileEvent) {
+				switch (events->GetEventByPosition(_pos.X, _pos.Y + 32, &p)) {
 					case EventType::AreaHForce: {
 						std::uint8_t p1 = p[0];
 						std::uint8_t p2 = p[1];
@@ -3017,6 +2922,248 @@ namespace Jazz2::Actors
 				}
 			}
 		}
+	}
+
+	bool Player::HandleAreaEventAt(float x, float y, float timeMult, AreaEventPass pass, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock)
+	{
+		auto events = _levelHandler->EventMap();
+
+		std::uint8_t* p;
+		EventType tileEvent = events->GetEventByPosition(x, y, &p);
+
+		// The state half of a tile event describes where the player *is*, so it is read only from the tile the
+		// player ended the frame in. A sample in between must not latch it, or a player falling past a strip of
+		// shallow water would keep that water for the rest of the frame - splashing in and straight back out of
+		// something it only flew through - and one crossing a no-fire area mid-frame would stay unable to fire
+		// after it had already left.
+		if ((pass & AreaEventPass::States) == AreaEventPass::States) {
+			switch (tileEvent) {
+				case EventType::LightAmbient: { // Intensity, Red, Green, Blue, Flicker
+					// TODO: Change only player view, handle splitscreen multiplayer
+					_levelHandler->SetAmbientLight(this, p[0] / 255.0f);
+					break;
+				}
+				case EventType::AreaNoFire: {
+					if (p[0] == 0) {
+						areaWeaponAllowed = false;
+					}
+					break;
+				}
+				case EventType::AreaWaterBlock: {
+					areaWaterBlock = ((std::int32_t)y / 32) * 32 + p[0];
+					break;
+				}
+				default: {
+					break;
+				}
+			}
+		}
+
+		if ((pass & AreaEventPass::Effects) != AreaEventPass::Effects) {
+			return false;
+		}
+
+		switch (tileEvent) {
+			case EventType::WarpOrigin: { // Warp ID, Fast, Set Lap
+				// Allow warping only if not in non-cancellable transition, except for some cosmetic but non-cancellable ones
+				if (_currentTransition == nullptr || _currentTransitionCancellable ||
+					   (_currentTransition->State == (AnimState::Dash | AnimState::Jump) ||
+						_currentTransition->State == AnimState::Spring ||
+						_currentTransition->State == AnimState::TransitionCopterShootToCopter ||
+						_currentTransition->State == AnimState::TransitionFallShootToFall ||
+						_currentTransition->State == AnimState::TransitionHookShootToHook ||
+						_currentTransition->State == AnimState::TransitionShootToIdle ||
+						_currentTransition->State == AnimState::TransitionUppercutEnd)) {
+					Vector2f c = events->GetWarpTarget(p[0]);
+					if (c.X >= 0.0f && c.Y >= 0.0f) {
+						WarpFlags flags = WarpFlags::Default;
+						if (p[1] != 0) {
+							flags |= WarpFlags::Fast;
+						}
+						if (p[2] != 0) {
+							flags |= WarpFlags::IncrementLaps;
+						}
+
+						WarpToPosition(c, flags);
+						return true;
+					}
+				}
+				break;
+			}
+			case EventType::ModifierDeath: {
+				TakeDamage(INT32_MAX, 0.0f, true);
+				return true;
+			}
+			case EventType::ModifierSetWater: {
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::ModifierSetWater, p);
+				break;
+			}
+			case EventType::ModifierLimitCameraView: { // Left, Width
+				// Through EventParamsReader, which memcpy()s. The parameters are a byte array starting at an
+				// ODD offset inside EventTile (4-byte flags, 2-byte event type, 1-byte active flag, then
+				// these), so a `*(std::uint16_t*)` of them is an unaligned halfword load - and on MIPS and
+				// SH-4 that is not a slow path but an address error that takes the process down with no
+				// chance to log anything. See the AreaEndOfLevel case below, where it was reproducible.
+				EventParamsReader eventParams(p);
+				std::uint16_t left = eventParams.GetUint16(0);
+				std::uint16_t width = eventParams.GetUint16(2);
+				_levelHandler->LimitCameraView(this, _pos,
+					(left == 0 ? (std::int32_t)(x / Tiles::TileSet::DefaultTileSize) : left) * Tiles::TileSet::DefaultTileSize,
+					width * Tiles::TileSet::DefaultTileSize);
+				break;
+			}
+			case EventType::ModifierHPole: {
+				// A declined pole (the one just left behind, a character that can't use it) doesn't take the
+				// player over, so the rest of the path still gets examined
+				return InitialPoleStage(true, Vector2f(x, y));
+			}
+			case EventType::ModifierVPole: {
+				return InitialPoleStage(false, Vector2f(x, y));
+			}
+			case EventType::ModifierTube: { // XSpeed, YSpeed, Wait Time, Trig Sample, Become No-clip, No-clip Only
+				// TODO: Implement other parameters
+				bool becomeNoclip = (p[4] != 0);
+				bool noclipOnly = (p[5] != 0);
+				if (noclipOnly == GetState(ActorState::CollideWithTileset)) {
+					// A player in Noclip Mode cannot use a tube event with Noclip Only set to false,
+					// nor can a player not in Noclip Mode use a tube event with Noclip Only set to true
+					break;
+				}
+
+				EndDamagingMove();
+
+				SetAnimation(AnimState::Dash | AnimState::Jump);
+
+				_controllable = false;
+				SetState(ActorState::CanJump | ActorState::ApplyGravitation, false);
+
+				_speed.X = (float)(std::int8_t)p[0];
+				_speed.Y = (float)(std::int8_t)p[1];
+
+				// The tube snaps the player onto its own tile, which is the tile the event was found in - not
+				// necessarily the one the player ended the frame in, if it entered the tube mid-step
+				Vector2f pos = Vector2f(x, y);
+				if (_speed.X == 0.0f) {
+					pos.X = (std::floor(pos.X / 32) * 32) + 16;
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+					OnUpdateHitbox();
+				} else if (_speed.Y == 0.0f) {
+					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+					OnUpdateHitbox();
+				} else if (_inTubeTime <= 0.0f) {
+					pos.X = (std::floor(pos.X / 32) * 32) + 16;
+					pos.Y = (std::floor(pos.Y / 32) * 32) + 8;
+					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
+					OnUpdateHitbox();
+				}
+
+				SetState(ActorState::CollideWithTileset, !becomeNoclip);
+				_inTubeTime = (becomeNoclip ? 600.0f : 10.0f);
+				return true;
+			}
+			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
+				if (_levelExiting == LevelExitingState::None) {
+					// TODO: Implement Fast parameter
+					// memcpy'd through EventParamsReader rather than cast, because EventTile puts these
+					// parameters at an odd offset - see ModifierLimitCameraView above. This exact line killed
+					// the PSP build every time the player reached a level exit: the unaligned `lhu` raised an
+					// address error inside Player::OnUpdate, before even the exit sound was played, so the
+					// log always just stopped. PPSSPP never reproduced it - its JIT lowers the load to an x86
+					// access, which permits unaligned - only real hardware faults.
+					std::uint16_t coinsRequired = EventParamsReader(p).GetUint16(4);
+					if (coinsRequired <= _inventory.Coins) {
+						_inventory.Coins -= coinsRequired;
+
+						ExitType exitType = (ExitType)p[0];
+						if (p[1] != 0) {
+							exitType |= ExitType::FastTransition;
+						}
+						StringView nextLevel;
+						if (p[2] != 0) {
+							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
+						}
+						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
+						return true;
+					} else if (_bonusWarpTimer <= 0.0f) {
+						_levelHandler->HandlePlayerCoins(this, _inventory.Coins, _inventory.Coins);
+						PlaySfx("BonusWarpNotEnoughCoins"_s);
+
+						_bonusWarpTimer = 400.0f;
+					}
+				}
+				break;
+			}
+			case EventType::AreaText: { // Text, TextOffset, Vanish
+				std::uint8_t index = p[1];
+				StringView text = _levelHandler->GetLevelText(p[0], index != 0 ? index : -1, '|');
+				_levelHandler->ShowLevelText(text, this);
+
+				if (p[2] != 0) {
+					events->StoreTileEvent((std::int32_t)(x / 32), (std::int32_t)(y / 32), EventType::Empty);
+				}
+				break;
+			}
+			case EventType::AreaCallback: { // Function, Param, Vanish
+				// Skip AreaCallbacks if player is currently warping
+				if (_currentTransition == nullptr ||
+					(_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpOut &&
+					 _currentTransition->State != AnimState::TransitionWarpInFreefall && _currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
+					_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaCallback, p);
+				}
+				break;
+			}
+			case EventType::AreaActivateBoss: { // Music
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::AreaActivateBoss, p);
+
+				// Deactivate sugar rush if it's active
+				if (_sugarRushLeft > 1.0f) {
+					_sugarRushLeft = 1.0f;
+				}
+				break;
+			}
+			case EventType::AreaFlyOff: {
+				if (_activeModifier == Modifier::Airboard && !IsFlyCheatActive()) {
+					SetModifier(Modifier::None);
+				}
+				break;
+			}
+			case EventType::AreaRevertMorph: {
+				if (_playerType != _playerTypeOriginal) {
+					MorphRevert();
+					return true;
+				}
+				break;
+			}
+			case EventType::AreaMorphToFrog: {
+				if (_playerType != PlayerType::Frog) {
+					MorphTo(PlayerType::Frog);
+					return true;
+				}
+				break;
+			}
+			case EventType::AreaNoFire: {
+				// Only the two permanent switches are an effect, the temporary block (0) lasts just as long as
+				// the player stands in the area and belongs to the state pass above
+				switch (p[0]) {
+					case 1: _weaponAllowed = true; break;
+					case 2: _weaponAllowed = false; break;
+				}
+				break;
+			}
+			case EventType::TriggerZone: { // Trigger ID, Turn On, Switch
+				// TODO: Implement Switch parameter
+				_levelHandler->SetTrigger(p[0], p[1] != 0);
+				break;
+			}
+
+			case EventType::RollingRockTrigger: { // Rock ID
+				_levelHandler->BroadcastTriggeredEvent(this, EventType::RollingRockTrigger, p);
+				break;
+			}
+		}
+
+		return false;
 	}
 
 	void Player::OnHandleSpectate(float timeMult)
@@ -3961,17 +4108,27 @@ namespace Jazz2::Actors
 		_levelHandler->SetAmbientLight(this, _checkpointLight);
 	}
 
-	void Player::InitialPoleStage(bool horizontal)
+	bool Player::InitialPoleStage(bool horizontal, Vector2f eventPos)
 	{
 		if (_isAttachedToPole || _playerType == PlayerType::Frog || _activeModifier == Modifier::Copter || _activeModifier == Modifier::Airboard) {
-			return;
+			return false;
 		}
-		
-		std::int32_t x = (std::int32_t)_pos.X / Tiles::TileSet::DefaultTileSize;
-		std::int32_t y = (std::int32_t)_pos.Y / Tiles::TileSet::DefaultTileSize;
 
-		if (_lastPoleTime > 0.0f && _lastPolePos.X == x && _lastPolePos.Y == y) {
-			return;
+		// The tile the pole is grabbed at is the one the event was found in, not the one the player happens to
+		// have ended the frame in - at a low frame rate and high speed those are one or two tiles apart, and
+		// snapping to the latter starts the whole animation past the pole
+		std::int32_t x = (std::int32_t)eventPos.X / Tiles::TileSet::DefaultTileSize;
+		std::int32_t y = (std::int32_t)eventPos.Y / Tiles::TileSet::DefaultTileSize;
+
+		// A pole covers more than one tile, and being launched off it crosses the rest of them, so the single
+		// tile that was just used is not enough to recognise the same pole again - the tiles around it count as
+		// well. Without this the launch grabs the very same pole a second time. The window is deliberately kept
+		// short (see NextPoleStage()) rather than the area small, because poles are chained in some levels and
+		// the next one has to stay grabbable - two distinct poles are never this close together.
+		constexpr std::int32_t SamePoleTolerance = 2;
+
+		if (_lastPoleTime > 0.0f && std::abs(x - _lastPolePos.X) <= SamePoleTolerance && std::abs(y - _lastPolePos.Y) <= SamePoleTolerance) {
+			return false;
 		}
 
 		_lastPoleTime = 80.0f;
@@ -3994,12 +4151,12 @@ namespace Jazz2::Actors
 			auto* events = _levelHandler->EventMap();
 			std::uint8_t* p;
 			if (horizontal) {
-				if (events->GetEventByPosition(x, (_pos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
-					ty = _pos.Y;
+				if (events->GetEventByPosition(x, (eventPos.Y < ty ? y - 1 : y + 1), &p) == EventType::ModifierHPole) {
+					ty = eventPos.Y;
 				}
 			} else {
-				if (events->GetEventByPosition((_pos.X < tx ? x - 1 : x + 1), y, &p) == EventType::ModifierVPole) {
-					tx = _pos.X;
+				if (events->GetEventByPosition((eventPos.X < tx ? x - 1 : x + 1), y, &p) == EventType::ModifierVPole) {
+					tx = eventPos.X;
 				}
 			}
 		}
@@ -4035,6 +4192,7 @@ namespace Jazz2::Actors
 		_controllableTimeout = 80.0f;
 
 		PlayPlayerSfx("Pole"_s, 0.8f, 0.6f);
+		return true;
 	}
 
 	void Player::NextPoleStage(bool horizontal, bool positive, std::int32_t stagesLeft, float lastSpeed)

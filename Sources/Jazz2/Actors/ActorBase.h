@@ -375,8 +375,28 @@ namespace Jazz2::Actors
 		bool IsCollidingWith(ActorBase* other);
 		/** @brief Returns `true` if this object is colliding with a given AABB */
 		bool IsCollidingWith(const AABBf& aabb);
+		/**
+		 * @brief Returns `true` if this object crossed over a given object during the current frame
+		 *
+		 * @ref IsCollidingWith() only compares the two objects where they ended up, so a fast object can pass
+		 * a small one between two frames without ever overlapping it - the faster the object and the lower the
+		 * frame rate, the more likely that is. This tests the path the object took instead, and only for
+		 * movement long enough to clear the other object in a single step, so it can only ever report a hit
+		 * that was missed.
+		 */
+		bool HasCrossedOver(const ActorBase* other) const;
 		/** @brief Updates AABB for current position, rotation and animation frame */
 		void UpdateAABB();
+		/**
+		 * @brief Re-applies the current position to the renderer
+		 *
+		 * Called automatically after the object updates itself. It has to be called again for an object that
+		 * is moved by something else afterwards (a platform carrying it, for instance), otherwise it would be
+		 * drawn where it was before that move for one frame. An object that is drawn somewhere else than where
+		 * it is simulated (a server-side shadow of a remote player showing its interpolated position) overrides
+		 * this instead of assigning the position to the renderer on its own.
+		 */
+		virtual void UpdateRendererPosition();
 
 		/** @brief Returns current position */
 		Vector2f GetPos() {
@@ -500,6 +520,12 @@ namespace Jazz2::Actors
 		static constexpr std::uint8_t AlphaThreshold = MaskAlphaThreshold;
 		/** @brief Step for collision checking */
 		static constexpr float CollisionCheckStep = 0.5f;
+		/** @brief Longest distance resolved by a single collision sub-step of @ref TryStandardMovement() */
+		static constexpr float MaxMovementStep = 8.0f;
+		/** @brief Upper bound on collision sub-steps performed by @ref TryStandardMovement() in a single frame */
+		static constexpr std::int32_t MaxMovementSubsteps = 24;
+		/** @brief Farthest @ref TryUnstuck() displaces an actor to get it out of solid geometry */
+		static constexpr float MaxUnstuckDistance = 24.0f;
 		/** @brief Step for per-pixel collisions */
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		/** @brief Maximum number of animation candidates */
@@ -512,6 +538,8 @@ namespace Jazz2::Actors
 		ILevelHandler* _levelHandler;
 
 		Vector2f _pos;
+		/** @brief Position the object had when the current frame started, i.e. the beginning of the path it took */
+		Vector2f _frameStartPos;
 		Vector2f _speed;
 		Vector2f _externalForce;
 		float _internalForceY;
@@ -564,6 +592,20 @@ namespace Jazz2::Actors
 		virtual bool OnDraw(RenderQueue& renderQueue);
 		/** @brief Called when emitting lights */
 		virtual void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) { }
+		/**
+		 * @brief Called when emitting lights that have to be replicated to remote peers
+		 *
+		 * An object simulated on a multiplayer server is drawn on the clients by a stand-in that runs none of its
+		 * logic, so the lights it emits have to be described to them explicitly. This defaults to
+		 * @ref OnEmitLights(), which is right for anything whose lighting belongs to the object itself.
+		 *
+		 * Overriding it describes only the part that every observer must see. Lights that a client already
+		 * produces on its own --- decoration driven by a local preference, or an object whose stand-in replays
+		 * the whole effect --- are left out, so they aren't sent (and applied) twice.
+		 */
+		virtual void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) {
+			OnEmitLights(lights);
+		}
 		/** @brief Called when the object hits a floor */
 		virtual void OnHitFloor(float timeMult);
 		/** @brief Called when the object hits a ceiling */
@@ -580,6 +622,30 @@ namespace Jazz2::Actors
 
 		/** @brief Performs standard movement behavior */
 		void TryStandardMovement(float timeMult, Tiles::TileCollisionParams& params);
+		/**
+		 * @brief Discards the path the object travelled so far during the current frame
+		 *
+		 * The swept collision tests treat the distance between the position the object had when the frame
+		 * started and its current position as a path it physically travelled, so everything along that line
+		 * is checked as well (see @ref HasCrossedOver()). A forced relocation --- a warp, a respawn, a
+		 * multiplayer re-sync --- covers the distance without passing through anything in between, so the
+		 * path has to be discarded, otherwise the object would collect, hit or trigger everything on the
+		 * straight line to its destination. @ref MoveInstantly() does this on its own for every absolute
+		 * move, only code assigning the position directly has to call it.
+		 */
+		void ResetPathTracking() {
+			_frameStartPos = _pos;
+		}
+		/**
+		 * @brief Tries to push the actor out of solid geometry it ended up inside of
+		 *
+		 * @param params     Collision parameters used for the probing moves
+		 * @param cooldown   Upper bound on frames before the next attempt is allowed, so neither a permanently
+		 *                   trapped nor a perfectly fine actor probes every frame; an actor that is still
+		 *                   looking for a way out retries sooner than one that just found it
+		 * @return `true` if the actor was moved to a free position
+		 */
+		bool TryUnstuck(Tiles::TileCollisionParams& params, float cooldown = 60.0f);
 		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
 		/** @brief Updates frozen state of the object */
@@ -670,9 +736,19 @@ namespace Jazz2::Actors
 		ActorBase(const ActorBase&) = delete;
 		ActorBase& operator=(const ActorBase&) = delete;
 
+		// What the sub-steps of a single frame ran into, so the callbacks fire at most once per frame
+		struct MovementResult {
+			bool HitWall;
+			bool HitCeiling;
+			bool HitFloor;
+		};
+
 		std::int32_t _collisionProxyID;
 		ActorState _state;
 		Function<void()> _currentTransitionCallback;
+
+		// Resolves one bounded sub-step of the standard movement, returns `false` if the actor couldn't move at all
+		bool TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, Tiles::TileCollisionParams& params, MovementResult& result);
 
 		bool IsCollidingWithAngled(ActorBase* other);
 		bool IsCollidingWithAngled(const AABBf& aabb);

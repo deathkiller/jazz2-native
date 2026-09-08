@@ -396,13 +396,21 @@ namespace ShaderCompiler
 					output += "#endif\n";
 					output += "\n";
 
-					// OpenGL|ES 2.0 (ESSL 100) lowering of the same stage. A decline here should not happen
-					// for committed shaders (enforced by --essl100-check); fall back to the modern source so
-					// the field is never null for a precompiled program.
+					// OpenGL|ES 2.0 (ESSL 100) lowering of the same stage, lowered from the LOW_POWER_GPU view
+					// of it rather than from the source above. The ES2 profile is never a default: it is
+					// selected only for hardware that has nothing else (the Vita's vitaGL, WebGL 1, old mobile
+					// parts), which is the same class of part the sceGxm emission builds for, so the cheaper
+					// approximations those shaders carry apply here too. Every other consumer of this loop -
+					// the modern GL source, HLSL, SPIR-V, MSL - keeps the macro-undefined `source`, and
+					// reflection is taken from that view as well, so the two must agree on whatever reflects.
+					String lowPowerSource = ShaderParser::BuildStageSource(document, vertexStage, v.Define,
+						/*softwareRenderer*/ false, /*noDynamicBranching*/ false, /*lowPowerGpu*/ true);
+					// A decline here should not happen for committed shaders (enforced by --essl100-check);
+					// fall back to the untransformed source so the field is never null for a precompiled program.
 					String es2source;
 					Diagnostic es2diag;
-					if (!Essl100Emitter::Transform(source, vertexStage, es2source, es2diag)) {
-						es2source = source;
+					if (!Essl100Emitter::Transform(lowPowerSource, vertexStage, es2source, es2diag)) {
+						es2source = std::move(lowPowerSource);
 					}
 					if (es2source.contains(")__SHDR__\""_s)) {
 						diag.Message = "ES2 shader source contains the raw string terminator sequence )__SHDR__\"";

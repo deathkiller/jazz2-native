@@ -6,6 +6,14 @@
 
 namespace nCine
 {
+	namespace
+	{
+		// Stands for "the element array buffer currently bound is not known", matching the value the GL
+		// backend writes into its own cache in InvalidateCachedBindings(). No buffer handle can equal it, so
+		// the next bind through the cache always reaches the driver.
+		constexpr std::uint32_t UnknownBufferHandle = ~std::uint32_t(0);
+	}
+
 	RenderVaoPool::RenderVaoPool(std::uint32_t vaoPoolSize)
 	{
 		_vaoPool.reserve(vaoPoolSize);
@@ -31,16 +39,21 @@ namespace nCine
 				vaoFound = true;
 				const bool bindChanged = binding.object->Bind();
 				const std::uint32_t iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
-				if (bindChanged) {
-					if (RHI::Debug::IsAvailable()) {
-						InsertGLDebugMessage(binding);
-					}
-					// Binding a VAO changes the current bound element array buffer
-					RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), iboHandle);
-				} else {
-					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
-					RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
+				if (bindChanged && RHI::Debug::IsAvailable()) {
+					InsertGLDebugMessage(binding);
 				}
+				// Binding a VAO restores the element array buffer recorded IN THAT VAO, and that is not
+				// necessarily still this format's index buffer: the element array binding is VAO state, so any
+				// bind of one issued while this VAO was current rewrote what it records - which is exactly what
+				// the buffers manager does whenever it creates, maps or flushes an index buffer, and it does
+				// that between draws as soon as a frame streams more indices than the buffers in hand can hold.
+				// Recording the format's handle as bound would then leave the draw pulling its indices out of
+				// whichever buffer was touched last; dropping the cached handle first makes the bind below
+				// reach the driver, which also repairs the VAO that the stale handle was recorded in.
+				if (bindChanged) {
+					RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), UnknownBufferHandle);
+				}
+				RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				binding.lastBindIndex = ++_bindIndex;
 #if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolBinding();
@@ -85,12 +98,17 @@ namespace nCine
 
 			const bool bindChanged = _vaoPool[index].object->Bind();
 			DEATH_ASSERT(bindChanged || _vaoPool.size() == 1);
-			// Binding a VAO changes the current bound element array buffer
-			const std::uint32_t oldIboHandle = _vaoPool[index].format.GetIbo() ? _vaoPool[index].format.GetIbo()->GetGLHandle() : 0;
-			RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), oldIboHandle);
+			// Binding a VAO restores the element array buffer recorded in it, which is not known here for the
+			// reason given above - and the format being replaced cannot be asked for it either, as the buffer
+			// it names may be gone by now. Dropping the cached handle makes Define() below bind the new index
+			// buffer for real; a format that has none unbinds instead, so the VAO ends up recording none.
+			RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), UnknownBufferHandle);
 			_vaoPool[index].format = vertexFormat;
 			_vaoPool[index].fingerprint = fingerprint;
 			_vaoPool[index].format.Define();
+			if (vertexFormat.GetIbo() == nullptr) {
+				RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), 0);
+			}
 			_vaoPool[index].lastBindIndex = ++_bindIndex;
 #if defined(NCINE_PROFILING)
 			RenderStatistics::AddVaoPoolBinding();
