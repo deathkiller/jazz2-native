@@ -294,8 +294,11 @@ namespace Jazz2::Scripting
 		switch (GetContextType()) {
 			case ScriptContextType::Legacy: {
 				asIScriptFunction* onPlayer = GetMainModule()->GetFunctionByDecl("void onPlayer(jjPLAYER@)");
+				// Runs before onPlayer() within the same tick, which is where a script belongs that wants to
+				// change what the player believes its controls are doing (see jjPLAYER's key properties)
+				asIScriptFunction* onPlayerInput = GetMainModule()->GetFunctionByDecl("void onPlayerInput(jjPLAYER@)");
 
-				if (_onLevelUpdate == nullptr && onPlayer == nullptr) {
+				if (_onLevelUpdate == nullptr && onPlayer == nullptr && onPlayerInput == nullptr) {
 					_onLevelUpdateLastFrame = (std::int32_t)_levelHandler->_elapsedFrames;
 					break;
 				}
@@ -307,6 +310,19 @@ namespace Jazz2::Scripting
 				// It should update at 70 FPS instead of 60 FPS
 				std::int32_t currentFrame = (std::int32_t)(_levelHandler->_elapsedFrames * (70.0f / 60.0f));
 				while (_onLevelUpdateLastFrame <= currentFrame) {
+					if (onPlayerInput != nullptr) {
+						for (auto* player : _levelHandler->_players) {
+							ctx->Prepare(onPlayerInput);
+
+							jjPLAYER* p = GetPlayerBackingStore(player);
+							ctx->SetArgObject(0, p);
+
+							std::int32_t r = ctx->Execute();
+							if (r == asEXECUTION_EXCEPTION) {
+								AS_LOG_EXCEPTION(ctx);
+							}
+						}
+					}
 					if (_onLevelUpdate != nullptr) {
 						ctx->Prepare(_onLevelUpdate);
 						std::int32_t r = ctx->Execute();
@@ -865,14 +881,14 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keySelect() const", asMETHOD(jjPLAYER, get_playerKeySelectPressed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyJump() const", asMETHOD(jjPLAYER, get_playerKeyJumpPressed), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_keyRun() const", asMETHOD(jjPLAYER, get_playerKeyRunPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyLeft(bool)", asMETHOD(jjPLAYER, set_playerKeyLeftPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRight(bool)", asMETHOD(jjPLAYER, set_playerKeyRightPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyUp(bool)", asMETHOD(jjPLAYER, set_playerKeyUpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyDown(bool)", asMETHOD(jjPLAYER, set_playerKeyDownPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyFire(bool)", asMETHOD(jjPLAYER, set_playerKeyFirePressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keySelect(bool)", asMETHOD(jjPLAYER, set_playerKeySelectPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyJump(bool)", asMETHOD(jjPLAYER, set_playerKeyJumpPressed), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjPLAYER", "bool set_keyRun(bool)", asMETHOD(jjPLAYER, set_playerKeyRunPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyLeft(bool)", asMETHOD(jjPLAYER, set_playerKeyLeftPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyRight(bool)", asMETHOD(jjPLAYER, set_playerKeyRightPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyUp(bool)", asMETHOD(jjPLAYER, set_playerKeyUpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyDown(bool)", asMETHOD(jjPLAYER, set_playerKeyDownPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyFire(bool)", asMETHOD(jjPLAYER, set_playerKeyFirePressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keySelect(bool)", asMETHOD(jjPLAYER, set_playerKeySelectPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyJump(bool)", asMETHOD(jjPLAYER, set_playerKeyJumpPressed), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjPLAYER", "void set_keyRun(bool)", asMETHOD(jjPLAYER, set_playerKeyRunPressed), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "bool get_powerup(uint8) const", asMETHOD(jjPLAYER, get_powerup), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool set_powerup(uint8, bool)", asMETHOD(jjPLAYER, set_powerup), asCALL_THISCALL);
@@ -3508,6 +3524,54 @@ namespace Jazz2::Scripting
 		// Game-specific classes
 		ScriptActorWrapper::RegisterFactory(engine, module);
 		ScriptPlayerWrapper::RegisterFactory(engine);
+	}
+
+	void LevelScriptLoader::OverridePlayerInput(Actors::Player* player, PlayerAction action, bool value)
+	{
+		if (player == nullptr) {
+			return;
+		}
+
+		// `_playerInputs` is only as wide as the local control schemes, but a multiplayer player index comes
+		// from MpLevelHandler::FindFreePlayerId() and is not bounded by that at all - writing at such an index
+		// would run off the end of the array. Remote players have no local input state to override anyway.
+		std::int32_t playerIndex = player->GetPlayerIndex();
+		if (playerIndex < 0 || playerIndex >= ControlScheme::MaxSupportedPlayers) {
+			return;
+		}
+
+		// Written straight into the state the input was collected into, rather than kept as a separate
+		// override: the collection happens once at the start of the frame and everything downstream
+		// (PlayerActionPressed(), PlayerActionHit(), PlayerHorizontalMovement()) reads it from here, so a
+		// script tick that runs afterwards is simply the last word on what was pressed. It also means the
+		// press/release edges keep working, because next frame's PressedActionsLast comes from this.
+		auto& input = _levelHandler->_playerInputs[playerIndex];
+		std::uint64_t bit = (1ull << (std::int32_t)action);
+		if (value) {
+			input.PressedActions |= bit;
+		} else {
+			input.PressedActions &= ~bit;
+		}
+
+		// The directions are also read as an axis, which is what the movement code actually uses, so the two
+		// representations have to be kept in step. Both directions are re-read from the bitmask rather than
+		// derived from the one action being written: a script that releases one direction while the other is
+		// still held ("p.keyRight = true; p.keyLeft = false;") would otherwise zero the whole axis and stop
+		// the player dead, and the outcome would depend on the order the two properties were assigned.
+		switch (action) {
+			case PlayerAction::Left:
+			case PlayerAction::Right:
+				input.RequiredMovement.X = ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Right)) != 0
+					? 1.0f
+					: ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Left)) != 0 ? -1.0f : 0.0f));
+				break;
+			case PlayerAction::Up:
+			case PlayerAction::Down:
+				input.RequiredMovement.Y = ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Down)) != 0
+					? 1.0f
+					: ((input.PressedActions & (1ull << (std::int32_t)PlayerAction::Up)) != 0 ? -1.0f : 0.0f));
+				break;
+		}
 	}
 
 	jjPLAYER* LevelScriptLoader::GetPlayerBackingStore(Actors::Player* player)

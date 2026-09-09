@@ -119,6 +119,10 @@ namespace
 		Command Action = Command::Convert;
 		String SourcePath;
 		String TargetPath;
+		/** @brief The source directory named by `--source=` instead of as a positional argument */
+		String SourceOverride;
+		/** @brief The game's own content directory named by `--content=`, wherever the originals are */
+		String ContentOverride;
 		TargetProfile Profile = TargetProfile::Desktop;
 		/** @brief How much the cinematics are downscaled; 1 keeps their original resolution */
 		std::int32_t VideoDownscale = 1;
@@ -140,11 +144,16 @@ namespace
 		The source can be either a directory of original game files or a whole game installation, which keeps
 		them in a `Source` subdirectory next to the `Content` the game ships and the `Cache` it converts into.
 		Pointing the tool at the installation is the convenient thing to do, so it looks for both layouts.
+
+		The two halves do not have to sit together, though, and outside an installation they usually do not ---
+		a checkout has the game's content and no original data, and a copy of the original game is the other way
+		round. `--content=` therefore names @ref ContentPath on its own, which is what lets a console tree be
+		built from the two directories where they already are.
 	*/
 	struct SourceLayout {
 		/** @brief Directory holding `Anims.j2a` and the rest of the original files */
 		String OriginalsPath;
-		/** @brief The game's own content directory, if the source turned out to be an installation */
+		/** @brief The game's own content directory, if one was found beside the originals or named explicitly */
 		String ContentPath;
 	};
 
@@ -188,13 +197,20 @@ namespace
 
 	void PrintUsage()
 	{
-		LOGI("Usage: AssetPacker [<command>] <source> <target> [options]");
+		LOGI("Usage: AssetPacker [<command>] [<source>] <target> [options]");
 		LOGI("");
-		LOGI("  convert <source directory> <target directory>   (the default command)");
+		LOGI("  convert [<source directory>] <target directory>   (the default command)");
 		LOGI("    <source directory>   Directory containing the original game files (Anims.j2a, *.j2l, *.j2t, ...),");
 		LOGI("                         or a game installation that keeps them in a \"Source\" subdirectory - in which");
-		LOGI("                         case its \"Content\" is copied to the target as well");
+		LOGI("                         case its \"Content\" is copied to the target as well. May be given as");
+		LOGI("                         --source= instead, leaving <target directory> the only positional argument");
 		LOGI("    <target directory>   Directory the converted data is written to (created if needed)");
+		LOGI("    --source=<dir>       The same directory as <source directory>, named explicitly");
+		LOGI("    --content=<dir>      Directory holding the game's own content - the fonts, \"Animations\",");
+		LOGI("                         \"Metadata\" and translations that are not derived from the original data,");
+		LOGI("                         which is the repository's \"Content\". Overrides one found beside the");
+		LOGI("                         originals, and is what makes a console or web tree self-contained when");
+		LOGI("                         the two halves are not kept together");
 		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | emscripten");
 		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 (the default) keeps them as they are.");
 		LOGI("                         Cinematics are re-encoded for dreamcast (or any N > 1) and otherwise");
@@ -237,6 +253,10 @@ namespace
 					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
 					return false;
 				}
+			} else if (arg.hasPrefix("--source="_s)) {
+				options.SourceOverride = arg.exceptPrefix("--source="_s);
+			} else if (arg.hasPrefix("--content="_s)) {
+				options.ContentOverride = arg.exceptPrefix("--content="_s);
 			} else if (arg.hasPrefix("--video-downscale="_s)) {
 				options.VideoDownscale = std::atoi(String(arg.exceptPrefix("--video-downscale="_s)).data());
 				if (options.VideoDownscale < 1 || options.VideoDownscale > 4) {
@@ -264,6 +284,19 @@ namespace
 			}
 		}
 
+		// `--source=` names exactly what the positional source argument does, so with it the target is the only
+		// positional left and a lone one is that target. Giving both is a mistake rather than an override,
+		// because there is no sensible reading in which the tool converts two different source directories.
+		if (options.Action == Command::Convert && !options.SourceOverride.empty()) {
+			if (options.TargetPath.empty()) {
+				options.TargetPath = std::move(options.SourcePath);
+				options.SourcePath = String{};
+			} else if (!options.SourcePath.empty()) {
+				LOGE("A source directory and \"--source=\" were both given, which name the same thing");
+				return false;
+			}
+		}
+
 		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
 		// was asked for; every other target needs them in the output tree
 		if (options.VideoDownscale > 1 || isDreamcast) {
@@ -274,6 +307,9 @@ namespace
 			options.Videos = VideoHandling::Recompress;
 		}
 
+		if (options.Action == Command::Convert) {
+			return !options.TargetPath.empty() && (!options.SourcePath.empty() || !options.SourceOverride.empty());
+		}
 		return !options.SourcePath.empty() && !options.TargetPath.empty();
 	}
 
@@ -312,9 +348,11 @@ namespace
 	/**
 		@brief Copies a directory tree, adding to whatever is already at the target
 
-		@param skippedNames	Entries of the top level that are not copied at all
+		@param skippedNames			Entries of the top level that are not copied at all
+		@param skippedExtensions	Extensions, lower-case and without the dot, that are not copied at any level
 	*/
-	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath, ArrayView<const StringView> skippedNames = {})
+	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath, ArrayView<const StringView> skippedNames = {},
+		ArrayView<const StringView> skippedExtensions = {})
 	{
 		if (!fs::CreateDirectories(targetPath)) {
 			return false;
@@ -336,8 +374,26 @@ namespace
 
 			String targetItem = fs::CombinePath(targetPath, itemName);
 			if (fs::DirectoryExists(item)) {
-				success &= CopyDirectoryRecursive(item, targetItem);
-			} else if (!fs::Copy(item, targetItem)) {
+				// The name filter names top-level entries and so does not descend, the extension filter applies
+				// to the tree as a whole - the files it is meant for are one level down
+				success &= CopyDirectoryRecursive(item, targetItem, {}, skippedExtensions);
+				continue;
+			}
+
+			if (!skippedExtensions.empty()) {
+				String extension = fs::GetExtension(item);
+				for (StringView skippedExtension : skippedExtensions) {
+					if (extension == skippedExtension) {
+						skipped = true;
+						break;
+					}
+				}
+				if (skipped) {
+					continue;
+				}
+			}
+
+			if (!fs::Copy(item, targetItem)) {
 				LOGW("Cannot copy \"{}\" to \"{}\"", item, targetItem);
 				success = false;
 			}
@@ -434,16 +490,39 @@ namespace
 			return 0;
 		}
 
-		if (!fs::DirectoryExists(options.SourcePath)) {
-			LOGE("Source directory \"{}\" does not exist", options.SourcePath);
+		// `--source=` and the positional argument name the same thing, so both go through the same resolution
+		// and a whole game installation is recognized either way
+		StringView sourcePath = (options.SourceOverride.empty()
+			? StringView(options.SourcePath)
+			: StringView(options.SourceOverride));
+		if (!fs::DirectoryExists(sourcePath)) {
+			LOGE("Source directory \"{}\" does not exist", sourcePath);
 			return 1;
 		}
 
-		SourceLayout layout = ResolveSourceLayout(options.SourcePath);
+		SourceLayout layout = ResolveSourceLayout(sourcePath);
 		String animsPath = FindAnimsFile(layout.OriginalsPath);
 		if (!fs::IsReadableFile(animsPath)) {
-			LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", options.SourcePath);
+			LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", sourcePath);
 			return 1;
+		}
+
+		// An explicit content directory wins over one found beside the originals, which is what allows the two
+		// halves to be kept where they already are - a checkout's "Content" beside a copy of the original game
+		if (!options.ContentOverride.empty()) {
+			if (!fs::DirectoryExists(options.ContentOverride)) {
+				LOGE("Content directory \"{}\" does not exist", options.ContentOverride);
+				return 1;
+			}
+			layout.ContentPath = options.ContentOverride;
+		}
+
+		// Producing a tree that is loaded as it is and has none of the game's own content is not an error
+		// anywhere downstream - it converts, it writes, and the result cannot draw so much as a menu - so it is
+		// worth saying out loud here, which is the only place that knows both halves were expected
+		if (layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop) {
+			LOGW("No game content directory was found beside the original files, so the output will have no fonts, "
+				"no \"Metadata\" and no translations. Pass \"--content=<dir>\" to point at the game's own \"Content\".");
 		}
 
 		// The desktop game keeps the converted data in a "Cache" subdirectory and looks for it there; the other
@@ -460,12 +539,18 @@ namespace
 		// Everything else the tree carries is read as a loose file and has to stay one.
 		static const StringView PackedContentDirectories[] = { "Animations"_s, "Metadata"_s };
 
+		// The ".po" files beside the translations are the sources the ".mo" the game reads are compiled from, and
+		// nothing loads one at run time - both the language list and the About section's translator credits
+		// require the ".mo" extension. They are larger than the ".mo" they produce, so a tree that is deployed as
+		// it is, onto a memory card or a disc that cannot be rewritten, is better off without them.
+		static const StringView SkippedContentExtensions[] = { "po"_s };
+
 		// The game's own content (fonts, animations, metadata, translations) is not derived from anything in the
 		// original data, so a target that has to be self-contained needs it carried over alongside
 		const bool selfContained = (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop);
 		if (selfContained) {
 			LOGI("Copying \"{}\"...", layout.ContentPath);
-			CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories);
+			CopyDirectoryRecursive(layout.ContentPath, outputPath, PackedContentDirectories, SkippedContentExtensions);
 		}
 
 		// A tree that is loaded as it is gets the package name the game recognizes as "already converted", so it

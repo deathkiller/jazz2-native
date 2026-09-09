@@ -284,6 +284,17 @@ namespace Jazz2
 		static bool EnableFullscreen;
 		/** @brief Maximum frace rate */
 		static std::int32_t MaxFps;
+#if defined(WITH_PHYSICS_PROBE) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Whether the movement probe takes over the first player
+		 *
+		 * Set with `/physics-probe`. The player is driven through a fixed list of scenarios with scripted input
+		 * and its position and speed are logged every tick, so the result can be compared against the same run
+		 * in the original game (see @ref Tests::PhysicsProbe). Combine with `/log:file:` to get the trace into
+		 * a file and `/max-fps:` to pin the tick rate being measured.
+		 */
+		static bool PhysicsProbe;
+#endif
 		/** @brief Whether performance metrics (FPS counter) are visible */
 		static bool ShowPerformanceMetrics;
 		/** @brief Whether cinematics should keep original aspect ratio */

@@ -190,6 +190,7 @@
     <ClInclude Include="..\..\Jazz2\UI\FontFormat.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\AssetConverter.h" />
+    <ClInclude Include="..\..\Jazz2\Compatibility\ConversionProgress.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\EventConverter.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\J2vRecompressor.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\JJ2Anims.h" />

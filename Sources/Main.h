@@ -16,13 +16,25 @@
 /**
 	@brief Application multiplayer protocol version
 
-	Decides whether a client and a server can play together, independently of @ref NCINE_VERSION. Set it to the
-	application version in which the protocol last changed incompatibly --- packet types, property types, field
-	layouts or the meaning of a field --- and leave it alone for releases that don't touch the wire, so those can
-	still play together.
+	Decides whether a client and a server can play together, independently of @ref NCINE_VERSION. Bump it
+	whenever the wire changes incompatibly --- packet types, property types, field layouts or the meaning of a
+	field --- and leave it alone for releases that don't touch the wire, so those can still play together.
+
+	It is compared in full, patch included, so a bump of any component is enough to separate two builds and the
+	number is free to move independently of the release it ships in. Only ever set here: it is deliberately not
+	derived from the build or from Git, so two builds of the same wire format always agree on it.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
-#	define NCINE_PROTOCOL_VERSION "3.8.0"
+// Bumped past the released 3.8.0: `ServerPacketType::UpdateAllActors` gained a variable-length light block
+// behind flag bit 0x80 and `CreateRemoteActor` gained a blending-preset byte plus a light block, so the field
+// layout no longer matches what a 3.8.0 peer parses. A player always emits at least one remoted light, so the
+// flag is set on the very first update - an unbumped 3.8.0 client reads the light bytes as the next entry's
+// actor id and every remote actor after the first one in the packet gets a garbage id, flags and position.
+//
+// A patch bump is enough because the comparison is exact (see GameEventHandler::OnPacketReceived()); this
+// number tracks the wire format, not the release it happens to ship in, so it does not have to wait for the
+// next minor.
+#	define NCINE_PROTOCOL_VERSION "3.8.1"
 #endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)

@@ -75,7 +75,7 @@ ordinary desktop build. Every data-prepared console consumes the **same** tree, 
 once and pointed at from each console build. Only the cinematics are ever decided per console: the
 @ref consoles-dreamcast-content "Dreamcast" wants a profile of its own and the
 @ref consoles-n64-content "Nintendo 64" one further step on top of the shared tree. The whole
-procedure is five steps.
+procedure is four steps.
 
 @m_class{m-block m-info}
 
@@ -101,40 +101,26 @@ cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 The binary lands at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
 
-**2. Assemble the source directory.** This is the step that decides whether the tree comes out
-complete, and the easiest one to get wrong. The tool accepts two source layouts and only one of them
-produces a tree a console can boot:
-
-Source directory | What the tool makes of it
----------------- | -------------------------
-A **game installation** --- the original files in a @cpp "Source" @ce subdirectory, with the game's own @cpp "Content" @ce beside it | Converts @cpp "Source" @ce **and** carries @cpp "Content" @ce over, so the output is self-contained. **This is the layout to use for a console**
-A bare directory of original files @m_span{m-text m-dim} (@cpp "Anims.j2a" @ce, @cpp "*.j2l" @ce, @cpp "*.j2t" @ce, ...) @m_endspan | Converts those and nothing else. The result holds the sprites and sounds of the original data and none of the game's own: no fonts, no @cpp "Metadata" @ce, no UI graphics, no translations --- the game cannot draw so much as its menu from it
-
-@m_class{m-noindent}
-
-Nothing has to be installed to get the first layout, because the repository's own @cpp "Content" @ce
-*is* its second half. A staging directory of two entries is all of it:
+**2. Convert.** A conversion has **two** inputs --- the original game data and the game's own content,
+none of which is derived from the other --- and they are named separately, so nothing has to be staged
+or copied together first. The second of them is the repository's own @cpp "Content" @ce:
 
 @code{.sh}
-mkdir -p ./build/GameSource
-cp -r ./Content ./build/GameSource/Content
-cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
-
-# The ".po" files are the sources the ".mo" the game reads are compiled from, and nothing reads them
-# at runtime - so drop them from the copy, which matters most on media that cannot be rewritten
-rm -f ./build/GameSource/Content/Translations/*.po
+./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContent \
+    --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=console
 @endcode
 
 @m_class{m-noindent}
 
-**3. Convert.** The target directory *is* the content directory --- the tree is written straight
-into it rather than into a @cpp "Content" @ce subdirectory of it, and it is created if it does not
-exist:
-
-@code{.sh}
-./build/Sources/Utilities/AssetPacker/AssetPacker \
-    ./build/GameSource ./build/ConsoleContent --target=console
-@endcode
+The target directory *is* the content directory --- the tree is written straight into it rather than
+into a @cpp "Content" @ce subdirectory of it, and it is created if it does not exist. A whole game
+installation keeps the two halves together already, in @cpp "Source" @ce and @cpp "Content" @ce, and
+can be given as a single positional argument instead
+@m_span{m-text m-dim} (@cpp "AssetPacker <installation> ./build/ConsoleContent --target=console" @ce)
+@m_endspan. A checkout is not one of those, though, and a bare copy of the original game is only half
+of one: convert that without @cpp "--content=" @ce and the tree comes out with no fonts, no
+@cpp "Metadata" @ce and no translations, which is a game that cannot draw so much as its menu. The
+conversion warns when it is about to produce one.
 
 @m_class{m-noindent}
 
@@ -155,7 +141,7 @@ Demo, `--skip-non-episode-levels` drops the levels belonging to no episode, and
 means re-encoding either way) @m_endspan shrinks the cinematics. All four exist to make the tree
 smaller, which is what a read-only disc and a cartridge care about.
 
-**4. Check what came out.** A complete tree looks like this, and the conversion prints what it wrote
+**3. Check what came out.** A complete tree looks like this, and the conversion prints what it wrote
 as it goes:
 
 @code{.shell-session}
@@ -173,7 +159,7 @@ build/ConsoleContent/Translations/…        # the ".mo" files
 tree work. A tree with @cpp "Source.pak" @ce in its place came from the `desktop` profile and is not
 what a console wants.
 
-**5. Point the console build at it** with `NCINE_CONTENT_DIR`:
+**4. Point the console build at it** with `NCINE_CONTENT_DIR`:
 
 @code{.sh}
 cmake -B ./build/<console>/ … -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
@@ -696,17 +682,11 @@ console:
 cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
 cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
-# 2. A source directory in the installation layout: the game's own content beside the original files
-mkdir -p ./build/GameSource
-cp -r ./Content ./build/GameSource/Content
-cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
-rm -f ./build/GameSource/Content/Translations/*.po
+# 2. Convert, with the Dreamcast profile - NOT "--target=console"
+./build/Sources/Utilities/AssetPacker/AssetPacker ./build/DreamcastContent \
+    --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=dreamcast
 
-# 3. Convert, with the Dreamcast profile - NOT "--target=console"
-./build/Sources/Utilities/AssetPacker/AssetPacker \
-    ./build/GameSource ./build/DreamcastContent --target=dreamcast
-
-# 4. Prebaked.pak is what makes it a prepared tree; the cinematics have to be the re-encoded ones
+# 3. Prebaked.pak is what makes it a prepared tree; the cinematics have to be the re-encoded ones
 ls ./build/DreamcastContent
 @endcode
 
@@ -1691,17 +1671,11 @@ first-run conversion compiled in, nothing is staged into `Cache/` and not even
 cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
 cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
-# 2. A source directory in the installation layout: the game's own content beside the original files
-mkdir -p ./build/GameSource
-cp -r ./Content ./build/GameSource/Content
-cp -r <path to the original Jazz Jackrabbit 2> ./build/GameSource/Source
-rm -f ./build/GameSource/Content/Translations/*.po
+# 2. Convert - the original game data and the game's own content are named separately
+./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContent \
+    --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=console
 
-# 3. Convert
-./build/Sources/Utilities/AssetPacker/AssetPacker \
-    ./build/GameSource ./build/ConsoleContent --target=console
-
-# 4. Prebaked.pak is what makes it a prepared tree
+# 3. Prebaked.pak is what makes it a prepared tree
 ls ./build/ConsoleContent
 @endcode
 
@@ -2355,12 +2329,12 @@ boot into the main menu and need a content tree prepared as described in
     @m_span{m-text m-dim} (a `desktop` profile conversion) @m_endspan, or it ended up on the medium
     under a name other than @cpp "Content" @ce. See @ref consoles-common-content for the procedure and
     the per-console path.
--   **The menu itself is unreadable or empty, not just the episode list.** The conversion was pointed
-    at a bare directory of original files rather than at a game installation, so the tree carries the
-    converted original data and none of the game's own @m_span{m-text m-dim} (the fonts, the UI
-    graphics, the whole of @cpp "Metadata" @ce, the translations) @m_endspan. Step 2 of
-    @ref consoles-common-content is the fix: the source directory needs a @cpp "Content" @ce beside its
-    @cpp "Source" @ce.
+-   **The menu itself is unreadable or empty, not just the episode list.** The conversion never got
+    the game's own content, so the tree carries the converted original data and none of the rest
+    @m_span{m-text m-dim} (the fonts, the UI graphics, the whole of @cpp "Metadata" @ce, the
+    translations) @m_endspan. The conversion warns about this as it happens --- *"No game content
+    directory was found beside the original files"* --- and @cpp "--content=<dir>" @ce, pointed at the
+    repository's @cpp "Content" @ce, is the fix. See step 2 of @ref consoles-common-content.
 -   **`No "Source.pak" in …, the disc image will not be marked as prebaked` at configure time**
     @m_span{m-text m-dim} (PlayStation 2 and Nintendo 64) @m_endspan is **expected** for a tree built
     with the `console` profile, which names that package @cpp "Prebaked.pak" @ce already and has

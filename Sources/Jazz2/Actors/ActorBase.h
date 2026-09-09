@@ -56,6 +56,13 @@ namespace Jazz2::UI::Multiplayer
 }
 #endif
 
+#if defined(WITH_PHYSICS_PROBE)
+namespace Jazz2::Tests
+{
+	class PhysicsProbe;
+}
+#endif
+
 namespace Jazz2::Actors
 {
 	class Player;
@@ -327,6 +334,10 @@ namespace Jazz2::Actors
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 		friend class Jazz2::UI::Multiplayer::MpInGameCanvasLayer;
 #endif
+#if defined(WITH_PHYSICS_PROBE)
+		// Reads the position and speed it logs, and puts the player back on its mark between scenarios
+		friend class Jazz2::Tests::PhysicsProbe;
+#endif
 
 	public:
 		/** @brief Creates a new instance */
@@ -526,6 +537,12 @@ namespace Jazz2::Actors
 		static constexpr std::int32_t MaxMovementSubsteps = 24;
 		/** @brief Farthest @ref TryUnstuck() displaces an actor to get it out of solid geometry */
 		static constexpr float MaxUnstuckDistance = 24.0f;
+		/** @brief Frames before @ref TryUnstuck() probes again after finding the actor was not stuck at all */
+		static constexpr float UnstuckRetryNotStuck = 8.0f;
+		/** @brief Frames before @ref TryUnstuck() searches again for an actor it found no way out for */
+		static constexpr float UnstuckRetryTrapped = 20.0f;
+		/** @brief Frames before @ref TryUnstuck() runs again for an actor it successfully freed */
+		static constexpr float UnstuckCooldown = 60.0f;
 		/** @brief Step for per-pixel collisions */
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		/** @brief Maximum number of animation candidates */
@@ -549,6 +566,25 @@ namespace Jazz2::Actors
 		float _maxRiseSpeed = 0.0f;
 		/** @brief Per-frame clamp on @ref _speed Y; raised for forced transport (e.g. sucker tubes) so high launch speeds aren't truncated */
 		float _verticalSpeedLimit = 16.0f;
+		/** @brief Per-frame clamp on @ref _speed X; raised for the non-Reforged dash, whose cap is above the default */
+		float _horizontalSpeedLimit = 16.0f;
+		/**
+		 * @brief Optional cap on applied horizontal movement per frame (0 = no cap)
+		 *
+		 * The counterpart of @ref _maxRiseSpeed: internal @ref _speed X keeps its (larger) momentum while the
+		 * actor only actually travels at the capped rate. The original does this on both axes with the same
+		 * limit, which is why a dash reports twice the speed it visibly moves at - and why the momentum still
+		 * counts where the speed itself is read, such as the jump launch boost.
+		 */
+		float _maxAppliedSpeedX = 0.0f;
+		/**
+		 * @brief How far below a ledge's surface a descending actor may arrive and still be put on top of it (0 = only as far as the sub-step reaches)
+		 *
+		 * Without it the reach is whatever the horizontal sub-step happens to be, about 6 px, which catches a
+		 * descending actor on the ledge's side instead of putting it on top. Only the player sets this, from a
+		 * figure measured off the original - see @ref Player::LegacyLandingTolerance and @ref TryMoveSubstep().
+		 */
+		float _landingTolerance = 0.0f;
 		float _unstuckCooldown;
 		float _frozenTimeLeft;
 		std::int32_t _maxHealth;
@@ -606,6 +642,21 @@ namespace Jazz2::Actors
 		virtual void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) {
 			OnEmitLights(lights);
 		}
+		/**
+		 * @brief Whether an observer reproduces this object's @ref ActorState::Illuminated decoration itself
+		 *
+		 * @ref ActorState::Illuminated is a generic per-event flag (see @ref Events::EventMap::ReadEvents()),
+		 * so it may only be remoted for an object that actually turns it into lights --- an observer would
+		 * otherwise glow for an event that emits nothing on the server. An object that answers `true` leaves
+		 * those lights out of @ref OnEmitRemotedLights() and lets every observer seed an equivalent swarm
+		 * locally, which is far cheaper than describing two dozen constantly moving lights on every update.
+		 *
+		 * Declared here rather than tested for by type in the packet builder, so adding another such object
+		 * is a matter of overriding this and nothing else has to know the class exists.
+		 */
+		virtual bool IsIlluminatedStateRemoted() const {
+			return false;
+		}
 		/** @brief Called when the object hits a floor */
 		virtual void OnHitFloor(float timeMult);
 		/** @brief Called when the object hits a ceiling */
@@ -639,13 +690,12 @@ namespace Jazz2::Actors
 		/**
 		 * @brief Tries to push the actor out of solid geometry it ended up inside of
 		 *
-		 * @param params     Collision parameters used for the probing moves
-		 * @param cooldown   Upper bound on frames before the next attempt is allowed, so neither a permanently
-		 *                   trapped nor a perfectly fine actor probes every frame; an actor that is still
-		 *                   looking for a way out retries sooner than one that just found it
+		 * Probes with its own non-destructive collision parameters, so neither the check nor the search for a
+		 * free spot can destroy a tile or count as a weapon hit.
+		 *
 		 * @return `true` if the actor was moved to a free position
 		 */
-		bool TryUnstuck(Tiles::TileCollisionParams& params, float cooldown = 60.0f);
+		bool TryUnstuck();
 		/** @brief Updates hitbox to a given size */
 		void UpdateHitbox(std::int32_t w, std::int32_t h);
 		/** @brief Updates frozen state of the object */
@@ -747,6 +797,8 @@ namespace Jazz2::Actors
 		ActorState _state;
 		Function<void()> _currentTransitionCallback;
 
+		// Returns `true` if the actor would still have ground under it after a given relative move
+		bool IsSupportedAfterMove(float stepX, float stepY);
 		// Resolves one bounded sub-step of the standard movement, returns `false` if the actor couldn't move at all
 		bool TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, Tiles::TileCollisionParams& params, MovementResult& result);
 

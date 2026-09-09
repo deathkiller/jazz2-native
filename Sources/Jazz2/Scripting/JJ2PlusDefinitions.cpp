@@ -1,4 +1,4 @@
-#if defined(WITH_ANGELSCRIPT)
+﻿#if defined(WITH_ANGELSCRIPT)
 
 #include "JJ2PlusDefinitions.h"
 #include "LevelScriptLoader.h"
@@ -22,7 +22,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <regex>
+#include <IO/FileSystem.h>
 
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
@@ -58,6 +60,30 @@ namespace Jazz2::Scripting
 			return s;
 		}
 		return resolver.OpenSourceFile(path);
+	}
+
+	// A filename that came from a script has to stay inside the game's own data directory. `fs::CombinePath()`
+	// normalizes nothing, so without this a downloaded level could read or overwrite any file the process can
+	// open just by prefixing enough `..` segments.
+	static bool IsScriptFileNameSafe(StringView filename) {
+		if (filename.empty() || fs::IsAbsolutePath(filename)) {
+			return false;
+		}
+
+		// Walked as path segments rather than searched as a substring, so only a real `..` segment is rejected
+		// and a filename that merely contains dots ("save..1.asdat") still works
+		const char* begin = filename.data();
+		const char* end = begin + filename.size();
+		const char* segment = begin;
+		for (const char* it = begin; it <= end; it++) {
+			if (it == end || *it == '/' || *it == '\\') {
+				if (it - segment == 2 && segment[0] == '.' && segment[1] == '.') {
+					return false;
+				}
+				segment = it + 1;
+			}
+		}
+		return true;
 	}
 
 	// Returns true if any pixel in the given AABB is solid in the sprite (collision) layer's mask. Read-only
@@ -600,26 +626,40 @@ namespace Jazz2::Scripting
 			return (std::uint8_t)bestIndex;
 		}
 
-		jjSTREAM::jjSTREAM() : _refCount(1) {
-			noop();
+		jjSTREAM::jjSTREAM() : _refCount(1), _readPos(0) {
 		}
 		jjSTREAM::~jjSTREAM() {
-			noop();
 		}
 
 		jjSTREAM* jjSTREAM::Create() {
-
-			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-
 			void* mem = asAllocMem(sizeof(jjSTREAM));
 			return new(mem) jjSTREAM();
 		}
 		jjSTREAM* jjSTREAM::CreateFromFile(const String& filename) {
-
-			auto owner = ScriptLoader::FromActiveContext<LevelScriptLoader>();
-
 			void* mem = asAllocMem(sizeof(jjSTREAM));
-			return new(mem) jjSTREAM();
+			jjSTREAM* result = new(mem) jjSTREAM();
+
+			// A missing file is not an error - scripts check isEmpty() to tell "no saved data yet" apart from
+			// "saved data that happens to be empty", which is how the original's scripts use it. A rejected
+			// path is reported the same way, so a script can't probe the filesystem for what exists either.
+			if (!IsScriptFileNameSafe(filename)) {
+				LOGW("Script tried to read \"{}\", which is outside the game's data directory", filename);
+				return result;
+			}
+
+			auto s = fs::Open(fs::CombinePath(ContentResolver::Get().GetSourcePath(), filename), FileAccess::Read);
+			if (s->IsValid()) {
+				std::int64_t size = s->GetSize();
+				if (size > 0 && size < std::numeric_limits<std::int32_t>::max()) {
+					result->_data.resize_for_overwrite((std::size_t)size);
+					// `resize_for_overwrite()` leaves the bytes uninitialized, so the stream is truncated to what
+					// was actually read - the reported size is only an upper bound for a file that is being written
+					// to concurrently, and the tail would otherwise hand uninitialized heap to the script
+					std::int32_t read = s->Read(result->_data.data(), (std::int32_t)size);
+					result->_data.truncate(read > 0 ? (std::size_t)read : 0);
+				}
+			}
+			return result;
 		}
 
 		void jjSTREAM::AddRef()
@@ -638,160 +678,260 @@ namespace Jazz2::Scripting
 		// Assignment operator
 		jjSTREAM& jjSTREAM::operator=(const jjSTREAM& o)
 		{
+			// jjSTREAM is a reference type on the script side, so two handles can name one object and
+			// `s = s;` is expressible - the assign() below would then read from storage it has already cleared
+			if (&o == this) {
+				// Still has to drop the consumed prefix, because that is the one visible effect of assigning
+				if (_readPos > 0) {
+					_data.erase(_data.begin(), _data.begin() + _readPos);
+					_readPos = 0;
+				}
+				return *this;
+			}
+
 			// Copy only the content, not the script proxy class
-			//_value = o._value;
+			_data.assign(o._data.begin() + o._readPos, o._data.end());
+			_readPos = 0;
 			return *this;
 		}
 
+		const std::uint8_t* jjSTREAM::PeekFront(std::uint32_t count) const {
+			if (count > getSize()) {
+				return nullptr;
+			}
+			return _data.data() + _readPos;
+		}
+
+		bool jjSTREAM::Take(void* target, std::uint32_t count) {
+			const std::uint8_t* front = PeekFront(count);
+			if (front == nullptr) {
+				return false;
+			}
+			std::memcpy(target, front, count);
+			_readPos += count;
+			// Reclaim the consumed prefix once it dominates the buffer, so a stream that is written and read
+			// in turns doesn't grow without bound
+			if (_readPos > 4096 && _readPos * 2 > _data.size()) {
+				_data.erase(_data.begin(), _data.begin() + _readPos);
+				_readPos = 0;
+			}
+			return true;
+		}
+
+		void jjSTREAM::Append(const void* source, std::uint32_t count) {
+			if (count == 0) {
+				return;
+			}
+
+			// A stream can be appended to itself - `s.write(s)`, `s.push(s)`, `s.get(s, n)`, `s.pop(s)` all
+			// reach here with `source` pointing into `_data` - and the resize below moves the buffer, so what
+			// is carried across it is the offset rather than the pointer
+			std::uintptr_t begin = (std::uintptr_t)_data.data();
+			std::uintptr_t at = (std::uintptr_t)source;
+			bool selfReferential = (at >= begin && at < begin + _data.size());
+			std::size_t sourceOffset = (selfReferential ? (std::size_t)(at - begin) : 0);
+
+			std::size_t offset = _data.size();
+			_data.resize_for_overwrite(offset + count);
+			std::memcpy(_data.data() + offset, (selfReferential ? _data.data() + sourceOffset : (const std::uint8_t*)source), count);
+		}
+
 		std::uint32_t jjSTREAM::getSize() const {
-			noop();
-			return 0;
+			return (std::uint32_t)(_data.size() - _readPos);
 		}
 
 		bool jjSTREAM::isEmpty() const {
-			noop();
-			return false;
+			return (getSize() == 0);
 		}
 
-		bool jjSTREAM::save(const String& tilename) const {
-			noop();
+		bool jjSTREAM::save(const String& filename) const {
+			// Written next to the game's other data, which is where the original puts it, so a script that
+			// saves and reloads its own file finds it again - but only there, see IsScriptFileNameSafe()
+			if (!IsScriptFileNameSafe(filename)) {
+				LOGW("Script tried to write \"{}\", which is outside the game's data directory", filename);
+				return false;
+			}
+
+			auto s = fs::Open(fs::CombinePath(ContentResolver::Get().GetSourcePath(), filename), FileAccess::Write);
+			if (!s->IsValid()) {
+				return false;
+			}
+			std::uint32_t size = getSize();
+			if (size > 0) {
+				s->Write(_data.data() + _readPos, size);
+			}
 			return true;
 		}
 
 		void jjSTREAM::clear() {
-			noop();
+			_data.clear();
+			_readPos = 0;
 		}
 
 		bool jjSTREAM::discard(std::uint32_t count) {
-			noop();
-			return false;
+			if (count > getSize()) {
+				return false;
+			}
+			_readPos += count;
+			return true;
 		}
 
 		bool jjSTREAM::write(const String& value) {
-			noop();
+			// Raw bytes, no length prefix - this is the text-friendly counterpart to push(String)
+			Append(value.data(), (std::uint32_t)value.size());
 			return true;
 		}
 		bool jjSTREAM::write(const jjSTREAM& value) {
-			noop();
+			Append(value._data.data() + value._readPos, value.getSize());
 			return true;
 		}
 		bool jjSTREAM::get(String& value, std::uint32_t count) {
-			noop();
-			return false;
+			const std::uint8_t* front = PeekFront(count);
+			if (front == nullptr) {
+				return false;
+			}
+			value = String((const char*)front, count);
+			_readPos += count;
+			return true;
 		}
 		bool jjSTREAM::get(jjSTREAM& value, std::uint32_t count) {
-			noop();
-			return false;
+			const std::uint8_t* front = PeekFront(count);
+			if (front == nullptr) {
+				return false;
+			}
+			value.Append(front, count);
+			_readPos += count;
+			return true;
 		}
 		bool jjSTREAM::getLine(String& value, const String& delim) {
-			noop();
-			return false;
+			std::uint32_t size = getSize();
+			if (size == 0 || delim.empty()) {
+				return false;
+			}
+
+			const std::uint8_t* front = _data.data() + _readPos;
+			StringView remaining((const char*)front, size);
+			StringView found = remaining.find(delim);
+			if (found == nullptr) {
+				// No delimiter left, so the remainder is the last line
+				value = String((const char*)front, size);
+				_readPos += size;
+				return true;
+			}
+
+			std::uint32_t lineLength = (std::uint32_t)(found.data() - (const char*)front);
+			value = String((const char*)front, lineLength);
+			// The delimiter itself is consumed but not returned
+			_readPos += lineLength + (std::uint32_t)delim.size();
+			return true;
 		}
 
 		bool jjSTREAM::push(bool value) {
-			noop();
-			return false;
+			std::uint8_t raw = (value ? 1 : 0);
+			return PushValue(raw);
 		}
 		bool jjSTREAM::push(std::uint8_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::int8_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::uint16_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::int16_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::uint32_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::int32_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::uint64_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(std::int64_t value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(float value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(double value) {
-			noop();
-			return false;
+			return PushValue(value);
 		}
 		bool jjSTREAM::push(const String& value) {
-			noop();
-			return false;
+			// Length-prefixed, so pop(String) can recover it without a delimiter
+			std::uint32_t length = (std::uint32_t)value.size();
+			PushValue(length);
+			Append(value.data(), length);
+			return true;
 		}
 		bool jjSTREAM::push(const jjSTREAM& value) {
-			noop();
-			return false;
+			return write(value);
 		}
 
 		bool jjSTREAM::pop(bool& value) {
-			noop();
-			return false;
+			std::uint8_t raw;
+			if (!PopValue(raw)) {
+				return false;
+			}
+			value = (raw != 0);
+			return true;
 		}
 		bool jjSTREAM::pop(std::uint8_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::int8_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::uint16_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::int16_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::uint32_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::int32_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::uint64_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(std::int64_t& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(float& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(double& value) {
-			noop();
-			return false;
+			return PopValue(value);
 		}
 		bool jjSTREAM::pop(String& value) {
-			noop();
-			return false;
+			// The length prefix is validated before it is consumed, so a truncated payload leaves the stream
+			// exactly where it was. Reading it first and rolling back afterwards cannot work: `Take()` may
+			// compact the buffer and reset `_readPos` to 0 during that read, and the rollback then underflows
+			// the unsigned position to ~4 GB instead of pointing at the length again.
+			std::uint32_t length;
+			const std::uint8_t* front = PeekFront(sizeof(length));
+			if (front == nullptr) {
+				return false;
+			}
+			std::memcpy(&length, front, sizeof(length));
+
+			// `PeekFront()` above proved there are at least `sizeof(length)` bytes left, so this cannot underflow
+			if (length > getSize() - sizeof(length)) {
+				// Truncated or not written by push(String)
+				return false;
+			}
+
+			_readPos += sizeof(length);
+			return get(value, length);
 		}
 		bool jjSTREAM::pop(jjSTREAM& value) {
-			noop();
-			return false;
+			return get(value, getSize());
 		}
 
 		jjRNG::jjRNG(std::uint64_t seed) : _refCount(1) {
@@ -2018,28 +2158,28 @@ namespace Jazz2::Scripting
 			return _player->_levelHandler->PlayerActionPressed(_player, PlayerAction::Run);
 		}
 		void jjPLAYER::set_playerKeyLeftPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Left, value);
 		}
 		void jjPLAYER::set_playerKeyRightPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Right, value);
 		}
 		void jjPLAYER::set_playerKeyUpPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Up, value);
 		}
 		void jjPLAYER::set_playerKeyDownPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Down, value);
 		}
 		void jjPLAYER::set_playerKeyFirePressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Fire, value);
 		}
 		void jjPLAYER::set_playerKeySelectPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::ChangeWeapon, value);
 		}
 		void jjPLAYER::set_playerKeyJumpPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Jump, value);
 		}
 		void jjPLAYER::set_playerKeyRunPressed(bool value) {
-			noop();
+			ScriptLoader::FromActiveContext<LevelScriptLoader>()->OverridePlayerInput(_player, PlayerAction::Run, value);
 		}
 
 		bool jjPLAYER::get_powerup(std::uint8_t index) {

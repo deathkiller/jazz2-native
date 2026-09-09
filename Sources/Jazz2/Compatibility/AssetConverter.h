@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "ConversionProgress.h"
 #include "JJ2Version.h"
 
 #include <Containers/SmallVector.h>
@@ -88,25 +89,26 @@ namespace Jazz2::Compatibility
 		static constexpr StringView PrebakedPackage = "Prebaked.pak"_s;
 
 		/**
-			@brief Converts @cb{.cpp} Anims.j2a @ce (and @cb{.cpp} Data.j2d @ce, if present) into a package
-
-			@param packageName	Which package to write, @ref SourcePackage or @ref PrebakedPackage
-		*/
+		 * @brief Converts @cb{.cpp} Anims.j2a @ce (and @cb{.cpp} Data.j2d @ce, if present) into a package
+		 *
+		 * @param packageName	Which package to write, @ref SourcePackage or @ref PrebakedPackage
+		 * @param progress		Reports how far the conversion has got, see @ref ConversionProgress
+		 */
 		static Result ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath,
-			JJ2Version& version, StringView packageName = SourcePackage);
+			JJ2Version& version, StringView packageName = SourcePackage, ConversionProgress progress = {});
 		/**
-			@brief Converts the same into a package that is already open, and is not finalized here
-
-			For a caller that has more to put in the same package --- @ref asset-packer "AssetPacker" embeds the
-			game's own assets alongside the converted ones, after these, so that what the original data provides
-			is what a path present in both resolves to.
-		*/
+		 * @brief Converts the same into a package that is already open, and is not finalized here
+		 *
+		 * For a caller that has more to put in the same package --- @ref asset-packer "AssetPacker" embeds the
+		 * game's own assets alongside the converted ones, after these, so that what the original data provides
+		 * is what a path present in both resolves to.
+		 */
 		static Result ConvertSourceAssets(StringView animsPath, StringView sourcePath,
-			Death::IO::PakWriter& pakWriter, JJ2Version& version);
+			Death::IO::PakWriter& pakWriter, JJ2Version& version, ConversionProgress progress = {});
 
 		/** @brief Converts every episode, level and used tileset into the output directory */
-		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll);
+		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, ConversionProgress progress = {});
 		/** @brief Converts the episodes, levels and used tilesets that @p options allow into the output directory */
-		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options);
+		static void ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options, ConversionProgress progress = {});
 	};
 }

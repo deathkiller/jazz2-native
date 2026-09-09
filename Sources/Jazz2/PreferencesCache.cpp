@@ -6,6 +6,7 @@
 
 #include "../nCine/Application.h"
 #include "../nCine/I18n.h"
+#include "../nCine/Base/FrameTimer.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/RHI/RhiFwd.h"	// RHI_LOW_POWER_GPU (a header macro, not a build define)
 
@@ -57,6 +58,9 @@ namespace Jazz2
 	RescaleMode PreferencesCache::ActiveRescaleMode = RescaleMode::None;
 	bool PreferencesCache::EnableFullscreen = false;
 	std::int32_t PreferencesCache::MaxFps = PreferencesCache::UseVsync;
+#if defined(WITH_PHYSICS_PROBE)
+	bool PreferencesCache::PhysicsProbe = false;
+#endif
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
@@ -1514,9 +1518,22 @@ namespace
 				char* end;
 				unsigned long paramValue = strtoul(arg.exceptPrefix("/max-fps:"_s).data(), &end, 10);
 				if (paramValue > 0) {
-					MaxFps = std::max(paramValue, 24ul);
+					// Floored at the rate the time multiplier is still bounded for - below it `MaxTimeMult`
+					// stops keeping up and every trajectory silently runs in slow motion. Taken from
+					// FrameTimer rather than written out again, so raising that floor to tighten collision
+					// accuracy can't leave the command line accepting a rate it no longer covers.
+					MaxFps = std::max<unsigned long>(paramValue, (unsigned long)FrameTimer::LowestFrameRate);
 				}
 			}
+#	if defined(WITH_PHYSICS_PROBE)
+			else if (arg == "/physics-probe"_s) {
+				// Takes over the first player and drives it through a fixed list of movement scenarios,
+				// logging one line per tick, so the result can be compared against the same run in the
+				// original game (see Tests/PhysicsProbe.h). Only useful together with /log:file: and a
+				// pinned /max-fps:.
+				PhysicsProbe = true;
+			}
+#	endif
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			else if (arg == "/gpu-workaround"_s) {
 				if (i + 1 < config.argc() && config.argv(i + 1) == "fixed-batch-size"_s) {

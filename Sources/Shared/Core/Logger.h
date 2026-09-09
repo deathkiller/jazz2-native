@@ -208,6 +208,25 @@ namespace Death { namespace Trace {
 		*/
 		static constexpr std::chrono::microseconds LogTimestampOrderingGracePeriod{250};
 
+		/**
+			@brief How long the backend keeps yielding before it starts blocking when the frontend queues can't be drained
+
+			Entries held back by @ref LogTimestampOrderingGracePeriod become eligible within microseconds, so
+			yielding covers the common case without delaying them. A wall clock stepped backwards can hold the
+			queue heads back until the next @ref RdtscResyncInterval instead, which is far too long to keep
+			a core busy for.
+		*/
+		static constexpr std::chrono::milliseconds StalledSpinDuration{2};
+
+		/**
+			@brief How long a thread waiting for a flush keeps yielding before it starts sleeping
+
+			@ref Logger::Flush() can't be answered sooner than @ref LogTimestampOrderingGracePeriod, while
+			sleeping rounds up to the granularity of the system timer, which is milliseconds rather than the
+			requested nanoseconds on most platforms. Yielding covers the expected wait far more cheaply.
+		*/
+		static constexpr std::chrono::milliseconds FlushSpinDuration{4};
+
 		/** @brief Special value for level to force immediate flushing of all buffers */
 		static constexpr TraceLevel FlushRequested = TraceLevel(UINT8_MAX);
 		/** @brief Special value for level to initialize backtrace storage */
@@ -259,23 +278,11 @@ namespace Death { namespace Trace {
 			__asm__ volatile("mrs %0, cntvct_el0" : "=r"(virtualTimerValue));
 			return static_cast<std::uint64_t>(virtualTimerValue);
 #	elif (defined(__ARM_ARCH) && !defined(DEATH_TARGET_MSVC))
-#		if (__ARM_ARCH >= 6)
-			// V6 is the earliest arch that has a standard cyclecount
-			std::uint32_t pmccntr;
-			std::uint32_t pmuseren;
-			std::uint32_t pmcntenset;
-
-			__asm__ volatile("mrc p15, 0, %0, c9, c14, 0" : "=r"(pmuseren));
-			if (pmuseren & 1) {
-				__asm__ volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset));
-				if (pmcntenset & 0x80000000ul) {
-					__asm__ volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
-					return (static_cast<std::uint64_t>(pmccntr)) * 64u;
-				}
-			}
-#		endif
-
-			// The PMU cycle counter is commonly not enabled for user mode, so this is the usual path on ARMv6/v7.
+			// 32-bit ARM has PMCCNTR, but it's only a 32-bit cycle counter that wraps within minutes and it
+			// also assumes the PMCR.D divider is set. After a wrap, RdtscClock computes a hugely negative
+			// difference that never exceeds the resync interval, so it never resyncs again and every following
+			// timestamp lands far in the past. The steady clock, which was already the usual path here because
+			// user-mode PMU access is commonly disabled, is used unconditionally instead.
 			return static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
 #	elif defined(_M_ARM64)
 			// The same virtual counter the __aarch64__ arm above reads, spelled for MSVC
@@ -320,6 +327,22 @@ namespace Death { namespace Trace {
 #	endif
 		}
 
+		/**
+			@brief Whether @ref rdtsc() returns @relativeref{std::chrono,steady_clock} ticks verbatim
+
+			The list mirrors the targets that @ref rdtsc() answers with a dedicated timestamp counter, so
+			everything else falls back to the steady clock and its tick rate is known exactly instead of
+			having to be measured.
+		*/
+		static constexpr bool RdtscIsSteadyClock =
+#	if defined(__aarch64__) || defined(_M_ARM64) || defined(__riscv) || defined(__loongarch64) || \
+		defined(__s390x__) || defined(__PPC64__) || defined(__powerpc64__) || defined(__PPC__) || \
+		defined(__powerpc__) || defined(DEATH_TARGET_X86)
+			false;
+#	else
+			true;
+#	endif
+
 		/** @brief Allows to convert timestamp counter values to Unix nanoseconds */
 		class RdtscClock
 		{
@@ -340,7 +363,16 @@ namespace Death { namespace Trace {
 			};
 
 		public:
-			explicit RdtscClock(std::chrono::nanoseconds resyncInterval);
+			RdtscClock();
+
+			/**
+			 * @brief Determines the tick rate and takes the initial base time
+			 *
+			 * Measuring the tick rate can busy-wait for tens of milliseconds on targets that don't publish it,
+			 * so this is separate from the constructor to let the backend thread pay that cost instead of
+			 * whoever attaches the first sink. Must be called before any other method.
+			 */
+			void initialize(std::chrono::nanoseconds resyncInterval);
 
 			std::uint64_t timeSinceEpoch(std::uint64_t rdtscValue) const noexcept;
 			std::uint64_t timeSinceEpochSafe(std::uint64_t rdtscValue) const noexcept;
@@ -363,11 +395,11 @@ namespace Death { namespace Trace {
 				std::uint64_t BaseTsc;
 			};
 
-			mutable std::int64_t _resyncIntervalTicks;
-			std::int64_t _resyncIntervalOriginal;
-			double _nanosecondsPerTick;
+			mutable std::int64_t _resyncIntervalTicks{std::numeric_limits<std::int64_t>::max()};
+			std::int64_t _resyncIntervalOriginal{std::numeric_limits<std::int64_t>::max()};
+			double _nanosecondsPerTick{1.0};
 
-			alignas(CacheLineAligned) mutable std::atomic<std::uint32_t> _version;
+			alignas(CacheLineAligned) mutable std::atomic<std::uint32_t> _version{0};
 			mutable Containers::StaticArray<2, BaseTimeTsc> _base;
 
 			static inline std::uint64_t fastAverage(std::uint64_t x, std::uint64_t y) noexcept {
@@ -1327,7 +1359,13 @@ namespace Death { namespace Trace {
 		std::atomic<bool> _workerThreadAlive;
 		Implementation::RdtscClock _rdtscClock;
 		Containers::SmallVector<ThreadContext*, 0> _activeThreadContextsCache;
-		std::chrono::system_clock::time_point _lastRdtscResyncTime;
+		// Deliberately a steady clock: a backward wall clock correction would otherwise make the elapsed
+		// interval negative and silence the periodic resync until wall time caught back up
+		std::chrono::steady_clock::time_point _lastRdtscResyncTime;
+		// When the frontend queues stopped yielding entries, or a default-constructed value while they still do
+		std::chrono::steady_clock::time_point _stalledSince;
+		// Whether anything reached the sinks since they were last flushed
+		bool _sinksDirty;
 
 		void CleanUpBeforeExit() noexcept;
 		void UpdateActiveThreadContextsCache() noexcept;
@@ -1352,7 +1390,10 @@ namespace Death { namespace Trace {
 			std::size_t queueCapacity = frontendQueue.capacity();
 			std::size_t totalBytesRead = 0;
 
-			do {
+			// Reads a maximum of one full frontend queue or up to the transit events' hard limit to prevent
+			// getting stuck on the same producer. The buffer size is checked before each read, so a buffer
+			// already at the hard limit doesn't accept another event and expand to twice the limit.
+			while (totalBytesRead < queueCapacity && threadContext->_transitEventBuffer.size() < Implementation::TransitEventsHardLimit) {
 				const std::uint8_t* readPos;
 				if constexpr (std::is_same_v<TThreadQueue, Implementation::UnboundedSPSCQueue>) {
 					readPos = ReadUnboundedThreadQueue(frontendQueue, threadContext);
@@ -1376,8 +1417,7 @@ namespace Death { namespace Trace {
 				std::size_t bytesRead = static_cast<std::size_t>(readPos - readBegin);
 				frontendQueue.finishRead(bytesRead);
 				totalBytesRead += bytesRead;
-				// Reads a maximum of one full frontend queue or the transit events' hard limit to prevent getting stuck on the same producer.
-			} while (totalBytesRead < queueCapacity && threadContext->_transitEventBuffer.size() < Implementation::TransitEventsHardLimit);
+			}
 
 			if (totalBytesRead != 0) {
 				// If we read something from the queue, we commit all the reads together at the end. This strategy

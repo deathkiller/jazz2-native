@@ -106,42 +106,51 @@ namespace nCine
 		return _renderCommand.GetMaterial().GetDestBlendingFactor();
 	}
 
+	namespace
+	{
+		struct BlendingPresetFactors
+		{
+			DrawableNode::BlendingPreset Preset;
+			BlendingFactor Src;
+			BlendingFactor Dest;
+		};
+
+		// One table for both directions. The multiplayer blending sync writes what blendingPreset() reports
+		// and replays it through setBlendingPreset() on the far side, so the mapping has to round-trip - and a
+		// hand-written reverse of the switch is exactly the kind of pair no compiler cross-checks: adding a
+		// preset would still warn about the unhandled `switch` case while silently reporting the new mode as
+		// `Alpha` here, and every additive object in an online game would draw with plain alpha on clients.
+		constexpr BlendingPresetFactors BlendingPresets[] = {
+			{ DrawableNode::BlendingPreset::Disabled, BlendingFactor::One, BlendingFactor::Zero },
+			{ DrawableNode::BlendingPreset::Alpha, BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha },
+			{ DrawableNode::BlendingPreset::PremultipliedAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha },
+			{ DrawableNode::BlendingPreset::Additive, BlendingFactor::SrcAlpha, BlendingFactor::One },
+			{ DrawableNode::BlendingPreset::Multiply, BlendingFactor::DstColor, BlendingFactor::Zero }
+		};
+	}
+
 	DrawableNode::BlendingPreset DrawableNode::blendingPreset() const
 	{
 		const BlendingFactor src = srcBlendingFactor();
 		const BlendingFactor dest = destBlendingFactor();
 
-		if (src == BlendingFactor::One && dest == BlendingFactor::Zero) {
-			return BlendingPreset::Disabled;
-		} else if (src == BlendingFactor::One && dest == BlendingFactor::OneMinusSrcAlpha) {
-			return BlendingPreset::PremultipliedAlpha;
-		} else if (src == BlendingFactor::SrcAlpha && dest == BlendingFactor::One) {
-			return BlendingPreset::Additive;
-		} else if (src == BlendingFactor::DstColor && dest == BlendingFactor::Zero) {
-			return BlendingPreset::Multiply;
-		} else {
-			return BlendingPreset::Alpha;
+		for (const auto& entry : BlendingPresets) {
+			if (entry.Src == src && entry.Dest == dest) {
+				return entry.Preset;
+			}
 		}
+
+		// Anything set through setBlendingFactors() has no preset to report, so it falls back to the default
+		return BlendingPreset::Alpha;
 	}
 
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
-		switch (blendingPreset) {
-			case BlendingPreset::Disabled:
-				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::Zero);
-				break;
-			case BlendingPreset::Alpha:
-				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
-				break;
-			case BlendingPreset::PremultipliedAlpha:
-				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
-				break;
-			case BlendingPreset::Additive:
-				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
-				break;
-			case BlendingPreset::Multiply:
-				_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero);
-				break;
+		for (const auto& entry : BlendingPresets) {
+			if (entry.Preset == blendingPreset) {
+				_renderCommand.GetMaterial().SetBlendingFactors(entry.Src, entry.Dest);
+				return;
+			}
 		}
 	}
 

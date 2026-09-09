@@ -34,21 +34,68 @@ namespace Jazz2::Actors::Solid
 		}
 
 		if (_cooldown <= 0.0f) {
-			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 16.0f, [this, timeMult](ActorBase* actor) {
+			// Measured against the original by dropping the player past a bumper at a set horizontal offset,
+			// leftwards where no second bumper is overhead: it fires at 0 and at 16 px and misses from 48 px
+			// out. This engine fired at 48 as well - the player's own hitbox extends whatever is asked for
+			// here by about half its width - so the reach is pulled in to match. Vertically both games
+			// already agreed, catching the player about 36 px above or below the centre.
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, TriggerRadius, [this, timeMult](ActorBase* actor) {
 				if (auto* player = runtime_cast<Player>(actor)) {
 					_cooldown = 16.0f;
 
 					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
 					PlaySfx("Hit"_s, 0.8f);
 
-					float forceMult = (_levelHandler->IsReforged() ? 12.0f : 15.0f);
-					Vector2f force = (player->GetPos() - _pos).Normalize() * forceMult;
-					if (!_levelHandler->IsReforged()) {
-						force.Y *= 1.1f;
-					}
-
 					// Move the player back
 					player->MoveInstantly(-player->_speed * timeMult, MoveType::Relative);
+
+					if (!_levelHandler->IsReforged()) {
+						// A straight speed **assignment**, linear in the offset from the bumper's centre and
+						// independent of how fast the player arrived. Not a normalised radial impulse: the
+						// launch scales with the distance rather than only with the direction. In the
+						// original's own units it is exactly
+						//
+						//     speed = (playerPos - bumperPos + 1) / 4
+						//
+						// on both axes, which reproduces every hit measured - a drop through the centre
+						// caught 36 px up leaves at -8.75; one 16 px to the side caught 28 px up leaves at
+						// (-3.75, -6.75); an approach from below caught 47.25 px down is driven back down at
+						// +12.0625; and a later bounce at an offset of (0.134, -38.12) leaves at
+						// (0.2834, -9.2803). All four to four decimal places.
+						//
+						// **The `+1` is the whole reason a player ever escapes a bumper.** A dead-centre drop
+						// is otherwise a perfect fixed point - zero horizontal, straight back up, forever -
+						// and that is what this engine did: `pb_bump_fall` bounced on the spot thirteen times
+						// in 800 ticks and was still going. The bias breaks the symmetry, the offset grows
+						// with every bounce because the rule is linear in it, and the original's player is
+						// thrown clear after about eight.
+						Vector2f offset = player->GetPos() - _pos;
+						player->_speed.X = (offset.X + LegacyImpulseBias) * LegacyImpulseScale * Player::LegacyFrameRateScale;
+						player->_speed.Y = (offset.Y + LegacyImpulseBias) * LegacyImpulseScale * Player::LegacyFrameRateScale;
+
+						if (player->_activeModifier == Player::Modifier::None) {
+							// End a copter properly rather than just shortening it, the way a spring does:
+							// Jazz's copter switches gravity **off**, and setting `_copterFramesLeft` alone
+							// does not turn it back on, so a player launched out of one keeps the launch
+							// speed indefinitely instead of arcing.
+							if (player->_copterFramesLeft > 0.0f) {
+								player->_copterFramesLeft = 0.0f;
+								player->SetAnimation(player->_currentAnimation->State & ~AnimState::Copter);
+							}
+							player->SetState(ActorState::ApplyGravitation, true);
+
+							player->_externalForceCooldown = 10.0f;
+							player->_controllable = true;
+							player->SetState(ActorState::CanJump, false);
+							player->EndDamagingMove();
+						}
+
+						player->AddScore(500);
+						_levelHandler->HandlePlayerPushed(player);
+						return true;
+					}
+
+					Vector2f force = (player->GetPos() - _pos).Normalize() * 12.0f;
 
 					// Reset speed if the force acts on the other side
 					if (force.X < 0.0f) {

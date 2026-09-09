@@ -59,12 +59,12 @@ namespace Jazz2::Actors::Weapons
 		/**
 		 * @brief Returns how many sub-steps a shot's movement should be split into
 		 *
-		 * @ref TryMovement() only tests the destination of a move, so the length of a single step has to stay
-		 * independent of the frame rate --- otherwise a fast shot passes straight through thin geometry once the
-		 * frame rate drops. At the nominal 60 Hz this is two steps per frame, and a longer frame gets
-		 * proportionally more of them.
+		 * @ref TryMovement() only tests the destination of a move, so no single step may be long enough to
+		 * pass through thin geometry. The count therefore comes from the distance the shot actually covers
+		 * this frame, bounded against @ref MaxMovementStep exactly as @ref ActorBase::TryStandardMovement()
+		 * bounds it, which makes it independent of both the frame rate and the shot's speed.
 		 */
-		static std::int32_t GetMovementSubstepCount(float timeMult);
+		std::int32_t GetMovementSubstepCount(float timeMult) const;
 
 	private:
 		TimeStamp _lastRicochetTime;

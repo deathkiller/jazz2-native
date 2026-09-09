@@ -136,8 +136,12 @@ namespace Jazz2::Compatibility
 		return true;
 	}
 
-	JJ2Version JJ2Anims::Convert(StringView path, PakWriter& pakWriter, bool isPlus)
+	JJ2Version JJ2Anims::Convert(StringView path, PakWriter& pakWriter, bool isPlus, ConversionProgress progress)
 	{
+		// Reading the sets decompresses the whole file, but writing the sprite sheets out has to compress
+		// everything again, which is the slower direction by far - so that step is given most of the range
+		ConversionProgress readProgress = progress.Narrow(0.0f, 0.2f);
+
 		JJ2Version version;
 		SmallVector<AnimSection, 0> anims;
 		SmallVector<SampleSection, 0> samples;
@@ -374,6 +378,8 @@ namespace Jazz2::Compatibility
 					sampleDataBlock.DiscardBytes(totalSize - chunkSize - 12);
 				}
 			}
+
+			readProgress.ReportStep(i + 1, setCount);
 		}
 
 		// Detect version to import
@@ -412,13 +418,13 @@ namespace Jazz2::Compatibility
 			LOGE("Could not determine the version, header size: {} bytes", headerLen);
 		}
 
-		ImportAnimations(pakWriter, version, anims);
-		ImportAudioSamples(pakWriter, version, samples);
+		ImportAnimations(pakWriter, version, anims, progress.Narrow(0.2f, 0.9f));
+		ImportAudioSamples(pakWriter, version, samples, progress.Narrow(0.9f, 1.0f));
 
 		return version;
 	}
 
-	void JJ2Anims::ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims)
+	void JJ2Anims::ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims, ConversionProgress progress)
 	{
 		if (anims.empty()) {
 			return;
@@ -428,7 +434,12 @@ namespace Jazz2::Compatibility
 
 		AnimSetMapping animMapping = AnimSetMapping::GetAnimMapping(version);
 
+		std::int32_t animsDone = 0;
 		for (auto& anim : anims) {
+			// Reported before the animation is written rather than after, because the loop skips the rest of
+			// the body in a few places
+			progress.ReportStep(++animsDone, (std::int32_t)anims.size());
+
 			if (anim.FrameCount == 0) {
 				continue;
 			}
@@ -677,7 +688,7 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	void JJ2Anims::ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples)
+	void JJ2Anims::ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples, ConversionProgress progress)
 	{
 		if (samples.empty()) {
 			return;
@@ -687,7 +698,12 @@ namespace Jazz2::Compatibility
 
 		AnimSetMapping mapping = AnimSetMapping::GetSampleMapping(version);
 
+		std::int32_t samplesDone = 0;
 		for (auto& sample : samples) {
+			// Reported before the sample is written rather than after, because the loop skips the rest of the
+			// body in a few places
+			progress.ReportStep(++samplesDone, (std::int32_t)samples.size());
+
 			AnimSetMapping::Entry* entry = mapping.Get(sample.Set, sample.IdInSet);
 			if (entry == nullptr || entry->Category == AnimSetMapping::Discard) {
 				continue;

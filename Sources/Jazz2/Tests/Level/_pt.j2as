@@ -1,0 +1,1613 @@
+﻿const bool MLLESetupSuccessful = MLLE::Setup(); ///@MLLE-Generated
+#include "MLLE-Include-1.8.asc" ///@MLLE-Generated
+#pragma require "_pt.j2l" ///@MLLE-Generated
+
+/*
+	Trajectory probe.
+
+	Drives the local player through a fixed matrix of movement scenarios with scripted input and writes one
+	CSV row per tick, so the exact same runs can be compared between the original game and Jazz2
+	Resurrection. Nothing here depends on a human playing: input comes from ApplyInput() below, keyed on the
+	scenario and the tick within it, so two runs of the same build agree to about a hundredth of a pixel (not
+	bit for bit - the settle before each scenario ends on real-time frame pacing).
+
+	The matrix deliberately covers each input on its own and in combination - held throughout, released
+	early, released late, released and re-pressed, reversed, reversed and released, reversed and reversed
+	back - both on the ground and in the air, with and without Run. That is what makes the whole movement
+	model recoverable from the traces rather than just the few constants one manoeuvre happens to expose.
+
+	Output goes to _pt_trace.asdat next to the game (jjSTREAM::save() forces that extension). Columns:
+		scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy
+	where x/y/xs/ys are sampled AFTER the tick's movement and the key columns are the input applied during
+	it. `ms` is a wall-clock offset, so the real tick rate is recoverable from any trace - the original runs
+	at a fixed 70 Hz while this engine's tick rate follows the frame rate.
+*/
+
+const string OutputFile = "_pt_trace.csv";
+
+// Upper bound on the wait for the player to come to rest before a scenario starts. The wait itself ends as
+// soon as the player is actually standing still - the spawn is above the floor, so a fixed number of ticks
+// would start the scenario mid-fall.
+const int MaxSettleTicks = 120;
+// Length of each scenario. The original runs at 70 ticks/s, so this is a bit over two seconds - long enough
+// for the longest arc (a dashing jump is ~93 ticks of airtime) to finish and land.
+// A single pole takes about 140 ticks from grab to launch, so a chain of five needs well over 700 - the
+// earlier 250-tick window cut the chains off part way and made them look weaker than a single pole
+const int ScenarioTicks = 250;
+// Tick at which the scenarios that jump press the jump key. Late enough that the player has reached top
+// ground speed first, which is what makes the speed-dependent launch boost measurable.
+const int J = 45;
+
+const int ScenarioCount = 329;
+// Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
+// ones, which turns a seven-minute run into half a minute while iterating.
+const int FirstScenario = 0;
+
+// JJ2 event ids for the things the object scenarios put in front of the player. Springs and pushables are
+// spawned as objects; the poles are tile events.
+const uint8 EV_HPOLE = 6, EV_VPOLE = 7;
+const uint8 EV_SPRING_GREEN_FROZEN = 60;
+const uint8 EV_SPRING_RED = 85, EV_SPRING_GREEN = 86, EV_SPRING_BLUE = 87;
+const uint8 EV_SPRING_RED_H = 91, EV_SPRING_GREEN_H = 92, EV_SPRING_BLUE_H = 93;
+const uint8 EV_PUSHABLE_ROCK = 231, EV_PUSHABLE_BOX = 232;
+const uint8 EV_VINE = 3;
+// Area that lifts the player against gravity
+const uint8 EV_FLOAT_UP = 20;
+// The events that move the player horizontally without being touched. Wind applies anywhere; belts and the
+// slide tile are floor events, read from the tile below.
+const uint8 EV_SLIDE = 5;
+const uint8 EV_BELT_RIGHT = 10, EV_BELT_LEFT = 11;
+const uint8 EV_ACC_BELT_RIGHT = 12, EV_ACC_BELT_LEFT = 13;
+const uint8 EV_WIND_LEFT = 15, EV_WIND_RIGHT = 16;
+// Sucker tube: assigns a speed on each axis and takes control of the player for a window. 0xCE, not the
+// 0x04 that sits next to the other modifiers - that one is the hook.
+const uint8 EV_TUBE = 206;
+// Tube turtle: an enemy that holds still, so a buttstomp aimed at it lands where it was aimed
+const uint8 EV_TURTLETUBE = 191;
+
+// Whatever the current scenario spawned or wrote into the event map, so it can be taken back out again
+// before the next one starts - otherwise they pile up and every later scenario is polluted
+int SpawnedObject = -1;
+array<int> PoleTilesX;
+array<int> PoleTilesY;
+
+// Where the level's own pushable object sits, found once by scanning the event map. Spawning one at runtime
+// doesn't give it its solid behaviour, so the real one has to be used.
+float PushableX = 0, PushableY = 0;
+// Likewise the level's own tube turtle, for the buttstomp-on-an-enemy scenarios
+float TurtleX = 0, TurtleY = 0;
+// The live pushable object's position, sampled each tick, or -1 when no such object exists right now
+float ObjX = -1, ObjY = -1;
+
+// PRIME waits for the player to land after the level starts and remembers where that was; every scenario is
+// then RESET to exactly that spot, SETTLEd until it is standing still again, and RUN
+const int StatePrime = 0, StateReset = 1, StateSettle = 2, StateRun = 3, StateDone = 4;
+
+int State = StatePrime;
+int Scenario = FirstScenario;
+int Tick = 0;
+int SettleWaited = 0;
+
+// The resting spot on the floor, captured during PRIME and reused as the origin of every scenario
+float GroundX = 0, GroundY = 0;
+
+// Rest detection: the player is at rest once its position has stopped changing for a few ticks. The
+// comparison is tolerant on purpose - standing on the floor does not necessarily mean an exactly constant
+// position or an exactly zero speed, and requiring that hangs the wait forever.
+float LastY = 0;
+int StillTicks = 0;
+int PrimeWaited = 0;
+
+// Wall clock at the start of the run, so every row can carry a millisecond offset
+uint64 StartMs = 0;
+
+// The input that ApplyInput() put in for the current tick, remembered so onPlayer() can log it next to the
+// state it produced
+bool InRight = false, InLeft = false, InRun = false, InJump = false, InDown = false;
+
+jjSTREAM@ Log = jjSTREAM();
+
+// Poles are slow - about 140 ticks from grab to launch - so anything involving them needs a much longer
+// window than the rest, while giving every scenario that window would make a full sweep take 17 minutes
+int ScenarioTicksFor(int s) {
+	// The spring chain gets longer than anything else: it is the one scenario measured by how far it gets in
+	// a set *time* rather than by a single manoeuvre. It was 15 seconds until the layout gained a zig-zag of
+	// horizontal springs down the shaft at x=59-64, and now needs 30. Kept identical to GetScenarioTicks()
+	// in this engine's probe.
+	if (s == 170) {
+		return 2200;
+	}
+	// The apex sweep is thirty plain standing jumps, so the default window is plenty - and thirty scenarios
+	// at the long one would add six minutes to every sweep for nothing
+	if (s >= 251 && s <= 280) {
+		return ScenarioTicks;
+	}
+	// The pinball chamber left to itself, the same way sp_chain is
+	if (s == 294) {
+		return 1100;
+	}
+	if (s == 52 || s == 53 || s >= 82) {
+		return 800;
+	}
+	return ScenarioTicks;
+}
+
+string ScenarioName(int i) {
+	switch (i) {
+		// Ground only - acceleration, the caps, deceleration and turning around
+		case 0: return "g_stand";			// nothing held: confirms the player really is at rest
+		case 1: return "g_walk";			// hold right: walk acceleration and walk cap
+		case 2: return "g_dash";			// hold right+run: dash acceleration and dash cap
+		case 3: return "g_walk_rel20";		// let go before the cap: deceleration from a partial speed
+		case 4: return "g_walk_rel45";		// let go at the cap: deceleration from full walk speed
+		case 5: return "g_dash_rel";		// let go at the dash cap: deceleration from full dash speed
+		case 6: return "g_dash_relrun";		// keep right, drop Run only: does the speed decay to the walk cap?
+		case 7: return "g_walk_opp";		// walk, then press the opposite way: the ground turn-around
+		case 8: return "g_dash_opp";		// dash, then press the opposite way with Run still held
+		case 9: return "g_dash_oppnr";		// dash, then press the opposite way and drop Run
+		case 10: return "g_walk_repress";	// walk, let go, press again: re-acceleration from a coast
+		case 11: return "g_runlate";		// walk to the walk cap, then add Run: how the cap changes
+		// Vertical only - the launch, the rise, and what releasing jump does
+		case 12: return "a_jump";			// standing jump, jump held for the rest of the scenario
+		case 13: return "a_jump_r5";		// released after 5 ticks
+		case 14: return "a_jump_r10";		// released after 10
+		case 15: return "a_jump_r20";		// released after 20
+		case 16: return "a_jump_r30";		// released after 30 (past the apex)
+		// Jump with horizontal speed - the launch boost and the arc
+		case 17: return "a_wjump";			// walking jump, direction and jump held
+		case 18: return "a_wjump_r10";		// walking jump, jump released after 10
+		case 19: return "a_djump";			// dashing jump, everything held
+		case 20: return "a_djump_r10";		// dashing jump, jump released after 10
+		// Air control - the direction key released, reversed, reversed and released, reversed back
+		case 21: return "a_wjump_rel50";	// release the direction just after the launch
+		case 22: return "a_wjump_rel75";	// release the direction around the apex
+		case 23: return "a_wjump_opp50";	// reverse just after the launch
+		case 24: return "a_wjump_opp75";	// reverse around the apex
+		case 25: return "a_wjump_opp90";	// reverse well into the descent
+		case 26: return "a_wjump_opp75_rel";	// reverse at the apex, then let go entirely
+		case 27: return "a_wjump_opp75_bk";		// reverse at the apex, then reverse back
+		case 28: return "a_djump_opp83";	// dashing, reverse at the apex with Run held
+		case 29: return "a_djump_opp83nr";	// dashing, reverse at the apex and drop Run
+		case 30: return "a_djump_rel83";	// dashing, release the direction at the apex
+		case 31: return "a_jump_press60";	// standing jump, then press a direction in mid-air
+		case 32: return "a_jump_press60r";	// standing jump, then press a direction with Run in mid-air
+		case 33: return "a_wjump_runmid";	// walking jump, add Run in mid-air: does the air cap rise?
+		case 34: return "a_djump_relrun";	// dashing jump, drop Run in mid-air: does the air speed decay?
+		case 35: return "a_wjump_opp60_bk";	// reverse during the rise, then reverse back before the apex
+		// Special moves. Each morphs to the character that owns the move first, since they differ per rabbit.
+		case 36: return "sp_jazz_upper";	// Jazz: crouch then jump = uppercut
+		case 37: return "sp_spaz_dj_hold";	// Spaz: double jump with the second press held
+		case 38: return "sp_spaz_dj_tap";	// Spaz: double jump with the second press released at once
+		case 39: return "sp_spaz_side";		// Spaz: crouch then jump = sidekick
+		case 40: return "sp_lori_side";		// Lori: the same move, her own numbers
+		case 41: return "sp_jazz_butt";		// Jazz: jump then press down = buttstomp
+		case 42: return "sp_spaz_butt";
+		case 43: return "sp_lori_butt";
+		case 44: return "sp_jazz_dj";		// Jazz has no double jump - this is the copter instead
+		// Springs, one scenario per type. The vertical ones are spawned under the player's feet so they fire
+		// from a standstill; the horizontal ones sit ahead and are walked into.
+		case 45: return "ob_spring_red";
+		case 46: return "ob_spring_green";
+		case 47: return "ob_spring_blue";
+		case 48: return "ob_spring_frozen";
+		case 49: return "ob_spring_red_h";
+		case 50: return "ob_spring_green_h";
+		case 51: return "ob_spring_blue_h";
+		// Poles: the vertical one is jumped into, the horizontal one is run into
+		case 52: return "ob_vpole";
+		case 53: return "ob_hpole";
+		// Pushables - what matters here is the speed the player is held to while pushing
+		case 54: return "ob_push_box";
+		case 55: return "ob_push_rock";
+		// Copter ears. Jazz and Lori get them by tapping jump again while falling, and keep them alive by
+		// tapping it repeatedly - so the input pattern is a 2-tick press every 6. Measured both drifting
+		// straight down and with a direction held, since the copter has its own speeds on both axes.
+		case 56: return "sp_jazz_copter";
+		case 57: return "sp_jazz_copter_fwd";
+		case 58: return "sp_lori_copter";
+		case 59: return "sp_lori_copter_fwd";
+		case 60: return "sp_spaz_copter";	// Spaz has no copter - this is the double jump for contrast
+		// Steering during a buttstomp. The player drifts sideways slowly while stomping; these measure that
+		// speed and whether holding Run changes it.
+		case 61: return "sp_butt_right";
+		case 62: return "sp_butt_right_run";
+		// Buttstomping while already moving. Pressing a direction from a standstill gave exactly nothing, so
+		// the question is whether the speed carried into the stomp is kept rather than gained.
+		case 63: return "sp_butt_moving";
+		// The sidekick has to be tested with jump RELEASED - holding it makes Spaz jump out of the dash at the
+		// end, which is not what the move does on its own. Both are measured.
+		case 64: return "sp_spaz_side_rel";
+		case 65: return "sp_lori_side_rel";
+		// Copter steering: reverse twice, to get the horizontal acceleration as well as the top speed
+		case 66: return "sp_copter_lrl";
+		// Vines: climbing speed and acceleration, with and without Run
+		case 67: return "ob_vine";
+		case 68: return "ob_vine_run";
+		// Slopes. The level has them at both ends, so these just travel far enough to reach one; the y column
+		// shows where the slope starts and whether it changes the speed or the acceleration.
+		case 69: return "sl_walk_right";
+		case 70: return "sl_run_right";
+		case 71: return "sl_run_left";
+		// Buttstomp from a real height, with the direction re-pressed part way down - the stomp resets
+		// everything as it starts, so a direction held from before it may simply be ignored
+		case 72: return "sp_butt_high";
+		// The level's slopes, reached by teleporting beside them rather than running the whole way
+		case 73: return "sl_down_walk";
+		case 74: return "sl_down_run";
+		case 75: return "sl_down_jump";
+		case 76: return "sl_up_walk";
+		case 77: return "sl_up_run";
+		// The level's vine, entered from just above it
+		case 78: return "ob_vine2";
+		case 79: return "ob_vine2_run";
+		// Buttstomp steering, once more from height. The earlier runs held Down for the whole stomp, which
+		// may itself be what suppressed the horizontal input, so this compares a short Down tap that only
+		// triggers the move against holding it all the way down.
+		case 80: return "sp_butt_tap_r";
+		case 81: return "sp_butt_hold_r";
+		// Chained poles, and poles entered off a spring - both are said to compound the launch
+		case 82: return "ob_vpole_x2";
+		case 83: return "ob_vpole_x3";
+		case 84: return "ob_vpole_x5";
+		case 85: return "ob_hpole_x3";
+		case 86: return "ob_spring_vpole";
+		case 87: return "ob_spring_hpole";
+		case 88: return "ob_hpole_walk";	// same pole entered at walking speed, for a second fit point
+		// Spaz's double jump: how long the second press is held, at each horizontal speed, and what happens
+		// when the direction is flipped either as it is triggered or part way up
+		case 89: return "sp_dj_hold";		// second press held to the end
+		case 90: return "sp_dj_tap";		// second press let go after 4 ticks
+		case 91: return "sp_dj_walk";		// held, at walking speed
+		case 92: return "sp_dj_dash";		// held, at dash speed
+		case 93: return "sp_dj_flip";		// direction flipped on the same tick as the double jump
+		case 94: return "sp_dj_flip_mid";	// direction flipped after the double jump is under way
+		// Lori kicks one after another while Down+Jump are held, so a single kick needs a very short press
+		case 95: return "sp_lori_kick1";	// one kick only - 2-tick press
+		case 96: return "sp_lori_kick_rep";	// repeated kicks - a 2-tick press every 15
+		// Sweep the delay before the second jump press. The first jump is held to its full height (apex about
+		// 27 ticks in, so falling from ~t72), and the second press is tried at a range of offsets - pressing
+		// it 40 ticks into the fall did nothing at all, so there may be a window rather than just "falling".
+		case 97: return "sp_dj_d05";		// second press 5 ticks after the apex
+		case 98: return "sp_dj_d10";
+		case 99: return "sp_dj_d20";
+		case 100: return "sp_dj_d30";
+		case 101: return "sp_dj_d40";
+		case 102: return "sp_dj_early";		// pressed before the apex, while still rising
+		// Narrowing the window: it works at +20 ticks past the apex and not at +30
+		case 103: return "sp_dj_d22";
+		case 104: return "sp_dj_d25";
+		case 105: return "sp_dj_d28";
+		// Reaching the platform by bouncing off the wall, and by blasting off it with an RF shot
+		case 106: return "wb_dash_j130";	// jump about 8 tiles short of the wall
+		case 107: return "wb_dash_j145";	// about 5 tiles short
+		case 108: return "wb_dash_j155";	// about 2 tiles short
+		case 109: return "wb_dash_j164";	// flat against it, so no speed left to convert
+		case 110: return "wb_walk_j300";	// the same at walking speed
+		case 111: return "wb_rf_g0";		// fired point blank from the ground
+		case 112: return "wb_rf_g5";		// fired about 5 tiles out
+		case 113: return "wb_rf_j0";		// fired point blank from a jump
+		case 114: return "wb_rf_j5";		// fired about 5 tiles out from a jump
+		case 115: return "wb_wallfind";		// finds where the wall is: x simply stops
+		// How far from the wall an RF blast still reaches: the dash stops at the fire tick so the player
+		// coasts, and the shot goes off two ticks later. The wall is reached at t164, so an earlier tick
+		// means roughly 8 px more distance per tick.
+		case 116: return "wb_rf_r12";
+		case 117: return "wb_rf_r24";
+		case 118: return "wb_rf_r36";
+		case 119: return "wb_rf_r48";
+		case 120: return "wb_rf_r64";
+		// Crossing a gap: row 11's floor runs from tile 153 and is broken by gaps of 1, 2, 3, 4, 5 and 6
+		// tiles at 180, 209, 238, 269, 300 and 336, each with a full run-up before it
+		case 121: return "lh_g1_walk";
+		case 122: return "lh_g1_dash";
+		case 123: return "lh_g2_walk";
+		case 124: return "lh_g2_dash";
+		case 125: return "lh_g3_walk";
+		case 126: return "lh_g3_dash";
+		case 127: return "lh_g4_walk";
+		case 128: return "lh_g4_dash";
+		case 129: return "lh_g5_walk";
+		case 130: return "lh_g5_dash";
+		case 131: return "lh_g6_walk";
+		case 132: return "lh_g6_dash";
+		// Explosive knockback, one weapon at a time, fired from a standstill at one to six tiles from the
+		// wall. This engine has three unrelated pieces of code here - a measured blast for RF, an
+		// unmeasured flat force for the Seeker, nothing for TNT - so the point is to find out whether the
+		// original has one explosion mechanic or three.
+		case 133: return "wb_rf_t1";
+		case 134: return "wb_rf_t2";
+		case 135: return "wb_rf_t3";
+		case 136: return "wb_rf_t4";
+		case 137: return "wb_rf_t5";
+		case 138: return "wb_rf_t6";
+		case 139: return "wb_sk_t1";
+		case 140: return "wb_sk_t2";
+		case 141: return "wb_sk_t3";
+		// TNT is placed at the player rather than fired forward, so the wall distance is not the variable
+		case 142: return "wb_tnt_t1";
+		case 143: return "wb_tnt_t2";
+		// Buttstomping an enemy, and the bounce at the end of it. Two drop heights, so the impact speed
+		// differs - the question is whether the bounce depends on it.
+		case 144: return "en_butt_turtle";
+		case 145: return "en_butt_turtle_low";
+		// The RF blast taken on a slope: the throw is a horizontal speed and a slope turns horizontal travel
+		// into vertical, so the incline could change how far it carries. Each fires into the rising side,
+		// the only way the shot meets anything within its one-tile reach.
+		case 146: return "sl_rf_up";
+		case 147: return "sl_rf_down";
+		// Jumping into a ceiling. The test section is a staircase of 2-tile-wide bays over the row-16 floor
+		// with 2, 3, 4, 5 and 6 tiles of clearance; the player is parked in the middle of one so a standing
+		// jump stays inside it. Jump is held throughout - what the ascent does after the head hits is the
+		// measurement, and releasing would confound it with the released-gravity switch.
+		case 148: return "cl_j2";
+		case 149: return "cl_j3";
+		case 150: return "cl_j4";
+		case 151: return "cl_j5";
+		case 152: return "cl_j6";
+		// The same bays with Spaz's double jump, which can be spent before the ceiling, against it, or after
+		// bouncing off it
+		case 153: return "cl_dj2";
+		case 154: return "cl_dj3";
+		case 155: return "cl_dj4";
+		case 156: return "cl_dj5";
+		case 157: return "cl_dj6";
+		// Moving, which cannot be pinned to one bay - these start on the open run-up west of the section and
+		// head into it with jump held, so the ceiling above them rises as they go. Which bay each strike
+		// happened in is read from the `x` column, and the launch boost varies the jump strength with speed.
+		case 158: return "cl_walk_j";
+		case 159: return "cl_dash_j";
+		case 160: return "cl_dj_walk";
+		case 161: return "cl_dj_dash";
+		// Pinning the lower edge of the double-jump window: it is refused at a fall speed of 0.0000 and
+		// accepted at 1.2500, and the sp_dj_d* family samples nothing between. The number is the tick of the
+		// second press. The first is released just past the apex, since releasing only changes the rise
+		// gravity and so cannot alter an arc that is already falling.
+		case 162: return "sp_dj_p64";
+		case 163: return "sp_dj_p68";
+		case 164: return "sp_dj_p72";
+		case 165: return "sp_dj_p76";
+		// Two pole events immediately next to each other, side by side and stacked, for each type. This
+		// engine ignores the second of an adjacent pair; the question is whether the original does.
+		case 166: return "ob_vpole_adjx";
+		case 167: return "ob_vpole_adjy";
+		case 168: return "ob_hpole_adjx";
+		case 169: return "ob_hpole_adjy";
+		// The level's own spring-and-pole chain, the one scenario built entirely out of the level rather than
+		// out of props the probe places. Nothing is held for fifteen seconds: the fall from (34,16) lands on
+		// the horizontal blue spring at (34,24) and the springs at (51,26), (56,22), (54,24), (56,29) and
+		// (51,32) and the poles at (44,31) and (54,10) carry the player around on their own.
+		//
+		// A chain this long amplifies any difference between the two games, so what the comparison is read for
+		// is *when each spring fires*, not a position at tick 900 - by then one tick of early divergence has
+		// put the player somewhere else entirely.
+		case 170: return "sp_chain";
+		// The part of it a player was reported to get stuck in, on its own: the vertical blue spring at
+		// (54,24) fires up the one-tile shaft at x=54 into the vertical pole at (54,10). The question is what
+		// the pole does with a player who arrives falling.
+		case 171: return "sp_pole_loop";
+		// A horizontal pole entered with no horizontal speed at all, which sp_chain turned up as the one entry
+		// the launch curve was never fitted on: of the three points it was fitted on - 4 -> 12, 9.34 -> 20,
+		// 16 -> 20 - only the first is unclamped, so the low end is undetermined. The same jump into the same
+		// overhead pole three times, facing whichever way the tap at the start left the player, which pins the
+		// magnitude and the sign at zero separately. A jump straight up arrives with x speed exactly 0, and
+		// the tap's speed has 33 ticks of ground friction to bleed off before the jump.
+		case 172: return "ob_hpole_z0";
+		case 173: return "ob_hpole_zl";
+		case 174: return "ob_hpole_zr";
+		// Two tiles away rather than four, so the player is still accelerating on arrival and enters below the
+		// walk cap - a fourth fit point, in the stretch of the curve that has none
+		case 175: return "ob_hpole_near";
+		// Float-up areas, which lift the player against gravity. The test level has a diagonal ladder of them
+		// climbing right from (34,49) to (46,37), reached by jumping off the block at (32,49) - so riding it
+		// needs Right held as well as the lift, and what each of the two contributes is the question. None of
+		// this has been measured against the original before: `AreaFloatUp` has no non-Reforged branch at all
+		// in this engine, and its lift is written as an external force scaled by `timeMult`, which is the
+		// shape that made push speed frame-rate dependent before it was measured.
+		case 176: return "fu_jump_right";
+		case 177: return "fu_jump_right_rel";
+		case 178: return "fu_right_then_jump";
+		case 179: return "fu_jump_left";
+		case 180: return "fu_jump_only";
+		// This engine skips the whole float branch while a buttstomp is running, so it refuses the lift
+		// outright; whether the original does is exactly what this measures
+		case 181: return "fu_butt";
+		// Nothing pressed: a float area under a standing player either lifts them off the ground or does not
+		case 182: return "fu_stand";
+		// The same mechanic in isolation. The ladder in the level answers "does riding it work", but not what
+		// the rule *is*: its tiles are discrete and unevenly spaced, so a re-arm that looks like it happens
+		// 1 tick after the rise expires with jump held and 6 with it released may be the rule or may just be
+		// where the next tile was. A solid column placed by the probe removes the geometry - no gaps, and no
+		// horizontal motion to carry the player out of it - so the ys profile alone is the rule.
+		//
+		// fu_col_none is also the test fu_stand was meant to be and is not: the level has no float event at
+		// (32,49), so fu_stand only shows that nothing happens where there is nothing. Here the column covers
+		// the player's own tile, so a grounded player really is inside one.
+		case 183: return "fu_col_hold";
+		case 184: return "fu_col_rel";
+		case 185: return "fu_col_none";
+		// Wind, belts and the slide tile - the three remaining event families that move the player without
+		// being touched, and none of them measured before. All probe-placed, which the float column showed
+		// to be worth doing: a controlled field beats whatever a level happens to contain.
+		//
+		// Wind applies anywhere, air or ground. The three standing variants exist because this engine's
+		// *conversion* is under test as much as the mechanic: it folds WIND_LEFT and WIND_RIGHT onto one
+		// event with a left slot and a right slot, and reads MODIFIER_WIND_LEFT with a positive parameter
+		// into the right slot - so wd_stand_l and wd_stand_r are the same native event over there while
+		// being genuinely different events here. wd_stand_l248 is wind-left with 248, which it does read
+		// leftward.
+		case 186: return "wd_stand_r";
+		case 187: return "wd_stand_l";
+		case 188: return "wd_stand_l248";
+		case 189: return "wd_walk_into";
+		case 190: return "wd_air_r";
+		// Belts, floor events read from the tile below the player. The plain pair move by position, the
+		// accelerating pair add to the speed. Placed with the parameter a level author gets by default.
+		case 191: return "bl_right";
+		case 192: return "bl_left";
+		case 193: return "bl_acc_right";
+		case 194: return "bl_acc_left";
+		case 195: return "bl_walk_against";
+		// The slide tile, which makes the floor slippery. Not implemented at all in that engine - the event
+		// is converted and then read by nothing - so these two are expected to match g_dash_rel and
+		// g_walk_rel45 exactly there while sliding further here. Same release ticks as those two.
+		case 196: return "sd_dash";
+		case 197: return "sd_walk";
+		// A second strength for each, because one point does not determine a factor - the mistake the
+		// horizontal pole's launch curve was recorded with. The default belt gives 2.0 px/tick here, which
+		// fits "strength 4 x 0.5" and "strength 3 x 0.667" equally well, and those disagree everywhere else;
+		// an explicit 8 separates them, 4.0 against 5.33. The accelerating belt's default caps at 6.0, which
+		// fits "2 x strength", so 8 should cap at 16. The extra wind strength confirms linearity.
+		case 198: return "bl_right_p8";
+		case 199: return "bl_acc_right_p8";
+		case 200: return "wd_stand_r_p4";
+		// A slide tile carries a 2-bit Strength parameter, and the measurement the other engine's constants
+		// came from was taken at 0 - so this says whether the number means anything at all.
+		case 201: return "sd_dash_s3";
+		// Sucker tubes: the event assigns a speed outright and takes control for a window. Four directions
+		// and a high speed measure the assignment; tb_wait measures a parameter the other engine parses and
+		// then ignores.
+		case 202: return "tb_right";
+		case 203: return "tb_left";
+		case 204: return "tb_up";
+		case 205: return "tb_down";
+		case 206: return "tb_diag";
+		case 207: return "tb_fast";
+		case 208: return "tb_wait";
+		// Tubes in a row, one to five empty tiles apart. The other engine holds its tube state for a fixed
+		// 10 ticks, which at 8 px/tick is 80 px - so a 1-tile gap is inside that window and a 5-tile gap is
+		// well outside it. Where the chain stops carrying the player is the measurement.
+		case 209: return "tb_gap1";
+		case 210: return "tb_gap2";
+		case 211: return "tb_gap3";
+		case 212: return "tb_gap4";
+		case 213: return "tb_gap5";
+		// The spring parameters, none of which any scenario had set before - every spring measured so far
+		// was placed with its defaults. A vertical spring can fire *downwards*, either axis' entry speed can
+		// be kept rather than zeroed, the whole thing can be delayed, and a horizontal one can be reversed.
+		case 214: return "ob_spring_down";
+		case 215: return "ob_spring_keepx";
+		case 216: return "ob_spring_keepy";
+		case 217: return "ob_spring_delay";
+		case 218: return "ob_spring_h_rev";
+		// The two middle slide strengths. Strength is a 2-bit field, and 0 and 3 measured 4000/12000 and
+		// 1600/4500 of a 65536th - ratios of 2.5 and 2.67, so not one divisor applied to both. A 2-bit
+		// parameter with four unrelated pairs is a lookup table, and then all four are needed and enough.
+		case 219: return "sd_dash_s1";
+		case 220: return "sd_dash_s2";
+		// Does a tube hold for a fixed time, or for as long as the player is still inside one? A single tile
+		// cannot tell the two apart - the player leaves it in four ticks either way. A *row* of them can: on
+		// a timer the hold still lapses after ~19 ticks, and if it is the tile the player is carried the whole
+		// length. The column does the same for the vertical case, which let go after 3.
+		case 221: return "tb_row";
+		case 222: return "tb_col_up";
+		// Letting the direction *go* rather than reversing it, before and after the double jump, and a
+		// second press held for twelve ticks - between the four-tick tap and the indefinite hold, which is
+		// where the released-gravity switch decides how much of the arc survives. The other combinations
+		// (held, tapped, walking, dashing, flipped either way) already exist above as sp_dj_hold onwards.
+		case 223: return "sp_dj_relbefore";
+		case 224: return "sp_dj_relafter";
+		case 225: return "sp_dj_tap12";
+		// Is the window a fall *speed* or a *timer*? The sp_dj_d* family cannot tell - it releases the first
+		// press at one fixed tick, so delay and fall speed grow together. The nine above release at 50 and
+		// are refused at a fall speed of 3.00 that sp_dj_d25 is accepted at, which says timer. These three
+		// pin it: a third release tick either side of the boundary, plus the missing 29.
+		case 226: return "sp_dj_r60_d28";
+		case 227: return "sp_dj_r60_d30";
+		case 228: return "sp_dj_d29";
+		// Every direction combination measured so far uses a delay of 35, which the timer refuses - so they
+		// say what a *refused* press does and nothing about what the move itself does with the arrow keys.
+		// These repeat the same combinations inside the window: first press released at 72 like the sp_dj_d*
+		// family, second at 85, thirteen ticks later.
+		case 229: return "sp_dj_a_none";
+		case 230: return "sp_dj_a_walk";
+		case 231: return "sp_dj_a_dash";
+		case 232: return "sp_dj_a_flip";		// direction flipped on the tick of the double jump
+		case 233: return "sp_dj_a_flipmid";		// flipped after it is under way
+		case 234: return "sp_dj_a_dashflip";	// flipped at dash speed, Run still held
+		case 235: return "sp_dj_a_relb";		// direction let go before the double jump
+		case 236: return "sp_dj_a_rela";		// let go after it
+		case 237: return "sp_dj_a_lr";			// held the *other* way first, flipped on the press
+		case 238: return "sp_dj_a_press";		// no direction until the press
+		case 239: return "sp_dj_a_tap";			// second press let go after 4 ticks
+		case 240: return "sp_dj_a_tap12";		// after 12
+		case 241: return "sp_dj_a_re";			// a third press, after the double jump is spent
+		// A fourth release tick. Delays 15/25/29 accepted and 30 refused would put the boundary at the same
+		// place as the ones at 60 and 72, at fall speeds that overlap all three. Not 10: released this early
+		// the apex is only at 61, so a press at 60 is refused for still rising rather than for the timer.
+		case 242: return "sp_dj_r50_d15";
+		case 243: return "sp_dj_r50_d25";
+		case 244: return "sp_dj_r50_d29";
+		case 245: return "sp_dj_r50_d30";
+		// The jump key held to well past the apex, which is the one way to get a delay *inside* the window
+		// at a fall speed above the 3.75 the window was first read as. The release opens the timer at tick
+		// 85, twelve ticks into the fall; d20 and d25 then sit at about 4.0 and 4.6, and the original
+		// double jumps at both - which is what retired that cap.
+		case 246: return "sp_dj_r85_d10";
+		case 247: return "sp_dj_r85_d20";
+		case 248: return "sp_dj_r85_d25";
+		// No first jump at all - dropped in from 420 px up. If the timer is armed by *letting go* of the
+		// jump key, a player who never touched it has no window and a fall off a ledge cannot be double
+		// jumped out of. ff presses once and holds; ff_rel taps first, arming the timer with no jump ever
+		// having happened, then presses again fifteen ticks later.
+		case 249: return "sp_dj_ff";
+		case 250: return "sp_dj_ff_rel";
+	}
+	// The apex of the rise, swept one release tick at a time. Where the rise deceleration carries the speed
+	// across zero this game takes a *partial* step, and what it lands on is not a function of the speed and
+	// the rate alone: from -0.625, -0.500 and -0.375 the step is 0.625, but from -0.250 it is 0.375 and from
+	// -0.125 it is 0.25. Every other scenario samples that transition only incidentally, so the values that
+	// turn up are whatever the four release ticks happen to give.
+	//
+	// Thirty plain standing jumps, released after 1 to 30 ticks, sample it on purpose: the launch is the same
+	// -10 every time and the only thing that varies is how many ticks of the light rise gravity come before
+	// the heavy one, which walks the pre-apex speed through every value it can take. Nothing else is pressed,
+	// so there is no horizontal speed and no launch boost to confound it.
+	if (i >= 251 && i <= 280) {
+		int hold = i - 250;
+		return "ap_r" + (hold < 10 ? "0" : "") + hold;
+	}
+	// The pinball section, tiles 57-80 of rows 4-19: bumpers at (62,15), (69,15) and (66,9) over a floor at
+	// row 20, and a right-facing paddle at (80,18) mounted against the wall at x=81. The engine's own
+	// implementation of both is guesswork - a 16 px bumper radius where the section is built for something
+	// nearer two tiles, and a paddle that fires the moment the player is inside it rather than waiting to be
+	// activated - so these are approach-shaped: the same bumper met from below, above and either side.
+	switch (i) {
+		case 281: return "pb_bump_tap";		// jumped into from directly below, key tapped
+		case 282: return "pb_bump_hold";	// ... and held
+		case 283: return "pb_bump_hold_r";	// ... and held with Right, to see if input alters the launch
+		case 284: return "pb_bump_fall";	// dropped onto from above, nothing pressed
+		case 285: return "pb_bump_fall_j";	// ... with jump held throughout
+		case 286: return "pb_bump_right";	// arriving at its own height from the right at dash speed
+		case 287: return "pb_bump_right_in";	// ... still holding the direction that carries it in
+		case 288: return "pb_bump_left";
+		case 289: return "pb_bump_left_in";
+		// The trigger radius, swept by dropping past the bumper at a measured horizontal offset. A miss
+		// lands on the floor below; a hit does not. Swept leftwards, because the bumper at (66,9) sits above
+		// and to the right of this one: a first version stepped right and the 80 and 112 px drops hit that
+		// one on the way down instead, at an offset and a height nobody chose.
+		case 290: return "pb_bump_off16";
+		case 291: return "pb_bump_off48";
+		case 292: return "pb_bump_off80";
+		case 293: return "pb_bump_off112";
+		case 294: return "pb_bump_chain";	// dropped into the top of the chamber, nothing held, 15 s
+		// The paddle. pb_pad_fall is the decisive one: dropped on with nothing pressed at all, so whether it
+		// launches on its own is read straight off the trace.
+		case 295: return "pb_pad_fall";
+		case 296: return "pb_pad_tap";
+		case 297: return "pb_pad_hold";
+		case 298: return "pb_pad_h10";
+		case 299: return "pb_pad_h20";
+		// The same activation at three distances from the mounted end, which is what the launch is said to
+		// scale with. The paddle's tile is its right-hand end, so these step away from it leftwards.
+		case 300: return "pb_pad_x1";
+		case 301: return "pb_pad_x2";
+		case 302: return "pb_pad_x3";
+		case 303: return "pb_pad_below";
+		case 304: return "pb_pad_side";
+		case 305: return "pb_pad_copter";	// launched, then jump worked repeatedly - Jazz
+		case 306: return "pb_pad_dj";		// ... and Spaz
+		// Two more steps of the right paddle's own length, since 64 px out already misses it entirely -
+		// whatever the launch scales with, the body it scales across is barely two tiles
+		case 307: return "pb_pad_xm16";
+		case 308: return "pb_pad_xm48";
+		// The left paddle at (83,18), mounted against the same wall from the other side and extending right,
+		// so its distance-from-the-mount axis runs the opposite way. Measured rather than assumed to be the
+		// right one mirrored: this engine implements both from one sprite and one code path with a
+		// `facingLeft` flag, and that is exactly where a sign error would live.
+		case 309: return "pb_lpad_fall";
+		case 310: return "pb_lpad_tap";
+		case 311: return "pb_lpad_hold";
+		case 312: return "pb_lpad_x1";
+		case 313: return "pb_lpad_x2";
+		case 314: return "pb_lpad_below";
+		// The launch against distance from the mounted end, finely enough to fit rather than guess. Three
+		// points measured 4, 15 and 31 at 16, 32 and 48 px out, which is a steep ramp no straight line or
+		// square fits - and three points is how the horizontal pole's launch was "fitted exactly" to a curve
+		// that turned out to be wrong in two ways. Eight px apart across both paddles instead.
+		case 315: return "pb_pad_d08";
+		case 316: return "pb_pad_d24";
+		case 317: return "pb_pad_d40";
+		case 318: return "pb_pad_d56";
+		case 319: return "pb_lpad_d08";
+		case 320: return "pb_lpad_d16";
+		case 321: return "pb_lpad_d24";
+		case 322: return "pb_lpad_d40";
+		case 323: return "pb_lpad_d48";
+		case 324: return "pb_lpad_d56";
+		// Does a paddle block a player coming up from underneath, or is it one-way? pb_pad_below was meant to
+		// answer that and does not: the chamber floor is 48 px under the paddle and the player is taller than
+		// that, so one placed below it lands *inside* and is pushed out on top - its trace is another stand
+		// at 48 px out. These start just above the floor with upward momentum instead, which is the only way
+		// to meet the underside at all in this geometry.
+		case 325: return "pb_pad_thru";
+		case 326: return "pb_lpad_thru";
+		// Is a paddle launch shortened by letting the jump key go, the way an ordinary jump is? Same spot as
+		// pb_pad_x1 - 48 px out, a -31 launch - but the key is released four ticks after it fires. If the
+		// first apex matches pb_pad_x1 the launch is immune; if it is lower, the original shortens it.
+		case 327: return "pb_pad_rel";
+		// And does it stay shortened? Launch, let go, then hold again from tick 100 so the second launch
+		// fires on landing. A tall second launch means the original clears whatever makes a released rise
+		// heavy when the paddle fires.
+		case 328: return "pb_pad_rel2";
+	}
+	return "?";
+}
+
+// Picks the character the scenario's move belongs to. Done at the RESET, before the settle, so the morph
+// has time to finish - morphing at the start of the run leaves the player mid-transition and its very first
+// jump comes out wrong (Jazz launched at -7.5 instead of -10 that way).
+void SetupCharacter(jjPLAYER@ play, int s) {
+	CHAR::Char wanted = CHAR::JAZZ;
+	if (s == 37 || s == 38 || s == 39 || s == 42 || s == 60 || s == 61 || s == 62 || s == 63 || s == 64 || s == 80 || s == 81 ||
+		(s >= 89 && s <= 94) || (s >= 97 && s <= 105) ||
+		// The cl_dj* ceiling and sp_dj_* window scenarios need the double jump, so they need Spaz
+		(s >= 153 && s <= 157) || s == 160 || s == 161 || (s >= 162 && s <= 165) || (s >= 223 && s <= 250) ||
+		s == 306) {
+		wanted = CHAR::SPAZ;
+	} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 95 || s == 96) {
+		wanted = CHAR::LORI;
+	}
+	if (play.charCurr != wanted) {
+		play.morphTo(wanted, false);
+	}
+
+	// The pushable scenarios start beside the object the level itself contains - a spawned one never became
+	// solid. Moved here rather than after the settle so the player actually comes to rest on that ground.
+
+	// The pushable has to be approached in two stages: the object only exists in jjObjects while the player
+	// is near it, so the reset moves in using the event-map tile (which is readable regardless) and leaves
+	// the run start to line up with the object itself. Three tiles clear, since a pushable rock is that wide
+	// and its position is its middle.
+	if ((s == 54 || s == 55) && PushableX > 0) {
+		play.xPos = PushableX - 96;
+		// A couple of tiles clear of the floor - dropped in level with it, the player ends up embedded and
+		// cannot move at all. The settle then lowers it onto whatever ground is actually there.
+		play.yPos = GroundY - 64;
+	}
+
+	// The level's slopes, by tile coordinate. Placed a couple of tiles short of each so the player is up to
+	// speed by the time it reaches the incline, and slightly above the floor so the settle drops it on.
+	if (s == 73 || s == 74 || s == 75) {
+		// Long slope down, tiles (193,41) to (210,57)
+		play.xPos = 190 * 32 + 16;
+		play.yPos = 41 * 32;
+	} else if (s == 76 || s == 77) {
+		// Slope up, tiles (222,57) to (228,52)
+		play.xPos = 219 * 32 + 16;
+		play.yPos = 57 * 32;
+	} else if (s >= 148 && s <= 161) {
+		// The ceiling staircase. Row 16 is the floor (tiles 35..53) and the bays above it are 2 tiles wide:
+		// 43-44 clears 2 tiles, 45-46 three, 47-48 four, 49-50 five, 51-52 six. Parked in the middle of a
+		// bay so a standing jump cannot drift into the next one, or on the open run-up west of the section
+		// for the moving ones. A tile above the floor, so the settle drops the player onto it.
+		array<float> bayCentres = { 1408, 1472, 1536, 1600, 1664 };
+		if (s <= 152) {
+			play.xPos = bayCentres[s - 148];
+		} else if (s <= 157) {
+			play.xPos = bayCentres[s - 153];
+		} else {
+			play.xPos = 53 * 32 + 16;	// east end of the floor, just clear of the highest bay
+		}
+		play.yPos = 15 * 32;
+	} else if (s >= 176 && s <= 182) {
+		// The block at (32,50), west of the float-up ladder, which is where jumping right catches the first
+		// of them. Half a tile above it so the settle drops the player on, as the ceiling scenarios do -
+		// and here rather than at the run start, because these begin *grounded*.
+		play.xPos = 32 * 32 + 16;
+		play.yPos = 49 * 32;
+	} else if (s >= 214 && s <= 218) {
+		// The parameterised springs, and they have to be written **here**, at the reset, rather than in
+		// SetupProps at the run start like every other prop. A spring is not read from the event map the way
+		// a pole or a belt is - the game has to *spawn an object* from the event, and it only does that when
+		// it scans the region around the player. By the run start that region has already been scanned, so a
+		// spring written then never appears at all and the trace is a player standing next to nothing. That
+		// is exactly how the first attempt at these five measured nothing.
+		//
+		// Writing it here gives the settle's ~120 ticks to activate it - but that alone is not enough. The
+		// region *around the origin* was scanned when the level started, so an event written there never
+		// spawns, whenever it is written from - two attempts six tiles aside measured a player standing next
+		// to nothing. Forty tiles east is far enough that the region is still untouched, and arriving there
+		// activates it the way a level's own events are. ClearProps() deletes the spawned object too, since
+		// clearing the tile alone would leave a live spring behind for whatever runs next.
+		// SetupCharacter() has no tx/ty of its own - SetupProps() is where those are computed
+		int btx = int(GroundX) / 32, bty = int(GroundY) / 32;
+		int stx = btx + 46, sty = bty;
+		btx += 40;
+		if (s == 214) {
+			// Fires downwards, three tiles overhead - a standing jump reaches ~132 px, so five tiles (160 px) was
+			// out of reach and measured nothing but the jump
+			PlaceSpring(btx, bty - 3, EV_SPRING_BLUE, 1, 0, 0, 0, 0);
+		} else if (s == 215) {
+			PlaceSpring(stx, sty, EV_SPRING_BLUE, 0, 1, 0, 0, 0);
+		} else if (s == 216) {
+			PlaceSpring(stx, sty, EV_SPRING_BLUE, 0, 0, 1, 0, 0);
+		} else if (s == 217) {
+			PlaceSpring(stx, sty, EV_SPRING_BLUE, 0, 0, 0, 8, 0);
+		} else {
+			PlaceSpring(stx, sty, EV_SPRING_BLUE_H, 0, 0, 0, 0, 1);
+		}
+	} else if (s == 146 || s == 147) {
+		// Partway onto the same two slopes, standing still, so the blast is taken on the incline itself
+		// rather than on the flat before it
+		if (s == 146) {
+			play.xPos = 225 * 32 + 16;
+			play.yPos = 54 * 32;
+		} else {
+			play.xPos = 200 * 32 + 16;
+			play.yPos = 47 * 32;
+		}
+		play.ammo[WEAPON::RF] = 50;
+		play.currWeapon = WEAPON::RF;
+	} else if (s >= 106 && s <= 120) {
+		// The upper floor, tiles (192,28) to (233,28), with a wall at its right end whose face is at tile
+		// 234, and a platform at (221,22) to (225,22). A couple of tiles up so the settle drops the player
+		// onto the floor rather than into it.
+		if (s >= 116) {
+			// Parked a set distance short of the wall face, which is the distance the blast has to cross.
+			// Firing while dashing does not measure this: the shot inherits the player's speed, so it
+			// reaches the wall long before the player does.
+			array<float> gaps = { 12, 24, 36, 48, 64 };
+			play.xPos = 234 * 32 - gaps[s - 116];
+		} else {
+			// Started at the left end, with room to reach top speed before the wall
+			play.xPos = 195 * 32 + 16;
+		}
+		play.yPos = 26 * 32;
+		// RF is the only weapon whose own blast moves the player, so it has to be both stocked and selected
+		if ((s >= 111 && s <= 114) || (s >= 116 && s <= 120)) {
+			play.ammo[WEAPON::RF] = 50;
+			play.currWeapon = WEAPON::RF;
+		}
+	} else if (s >= 133 && s <= 143) {
+		// The same upper floor and wall as the wb_* scenarios above, parked at whole tiles this time, with
+		// one of three weapons stocked and selected - the probe never touches the weapon-cycling keys
+		array<float> tileGaps = { 32, 64, 96, 128, 160, 192 };
+		int step;
+		uint weapon;
+		if (s <= 138) { weapon = WEAPON::RF; step = s - 133; }
+		else if (s <= 141) { weapon = WEAPON::SEEKER; step = s - 139; }
+		else { weapon = WEAPON::TNT; step = s - 142; }
+		play.xPos = 234 * 32 - tileGaps[step];
+		play.yPos = 26 * 32;
+		play.ammo[weapon] = 50;
+		play.currWeapon = weapon;
+	} else if (s >= 121 && s <= 132) {
+		// The gap floor on row 10, tiles 153 onwards, broken at 177 (1 wide), 188 (2), 200 (3) and 212 (4).
+		// Each scenario starts on the stretch before the gap it is about to meet, a couple of tiles up so
+		// the settle drops the player onto the floor rather than into it.
+		array<int> startTiles = { 156, 156, 185, 185, 214, 214, 245, 245, 276, 276, 312, 312 };
+		play.xPos = startTiles[s - 121] * 32 + 16;
+		play.yPos = 9 * 32;
+	}
+}
+
+// Writes a tile event and remembers it, so SetupProps() can take it back out before the next scenario
+void PlaceTileEvent(int tx, int ty, uint8 ev) {
+	jjEventSet(tx, ty, ev);
+	PoleTilesX.insertLast(tx);
+	PoleTilesY.insertLast(ty);
+}
+// The same, with the event's parameter set. Wind and belts carry their strength there, as a single 8-bit
+// field at offset 0 - which is what the other engine's converter reads, so 248 is the negative of 8.
+void PlaceTileEventP(int tx, int ty, uint8 ev, int param) {
+	PlaceTileEvent(tx, ty, ev);
+	jjParameterSet(tx, ty, 0, 8, param);
+}
+// Wind fills the space the player occupies; it applies in the air as well as on the ground
+void FillWind(int tx, int ty, uint8 ev, int param) {
+	for (int dx = -2; dx <= 2; dx++) {
+		for (int dy = -1; dy <= 0; dy++) { PlaceTileEventP(tx + dx, ty + dy, ev, param); }
+	}
+}
+// A belt or a slide tile is read from the tile below the player, so it goes one row down
+void FillFloor(int tx, int ty, uint8 ev, int param) {
+	for (int dx = -6; dx <= 40; dx++) { PlaceTileEventP(tx + dx, ty + 1, ev, param); }
+}
+// A sucker tube. Its JJ2 parameter packs six fields: a signed 7-bit speed on each axis, then single bits
+// for the trigger sample and the two JJ2+ no-clip flags, then a 3-bit wait time.
+void PlaceTube(int tx, int ty, int xSpeed, int ySpeed, int wait) {
+	PlaceTileEvent(tx, ty, EV_TUBE);
+	jjParameterSet(tx, ty, 0, 7, xSpeed);
+	jjParameterSet(tx, ty, 7, 7, ySpeed);
+	jjParameterSet(tx, ty, 17, 3, wait);
+}
+// A spring placed as a tile event rather than spawned, which is what lets its parameters be set: a single
+// bit each for orientation (vertical only), keep-X, keep-Y, then a 4-bit delay and the JJ2+ reverse bit.
+void PlaceSpring(int tx, int ty, uint8 ev, int orientation, int keepX, int keepY, int delay, int reverse) {
+	PlaceTileEvent(tx, ty, ev);
+	jjParameterSet(tx, ty, 0, 1, orientation);
+	jjParameterSet(tx, ty, 1, 1, keepX);
+	jjParameterSet(tx, ty, 2, 1, keepY);
+	jjParameterSet(tx, ty, 3, 4, delay);
+	jjParameterSet(tx, ty, 7, 1, reverse);
+}
+// Takes out whatever the previous scenario put in the world. Called at the RESET rather than just before
+// the run: a pole left behind by the scenario before is still grabbable during the settle, and the player
+// then starts the next scenario hanging on it, several tiles up, with a launch already under way. That is
+// what made the five-pole chain look like it began mid-air at tick 10.
+void ClearProps() {
+	if (SpawnedObject >= 0) {
+		jjObjects[SpawnedObject].delete();
+		SpawnedObject = -1;
+	}
+	for (uint i = 0; i < PoleTilesX.length; i++) {
+		jjEventSet(PoleTilesX[i], PoleTilesY[i], 0);
+	}
+	PoleTilesX.resize(0);
+	PoleTilesY.resize(0);
+
+	// A spring written as a tile event has *spawned an object*, and clearing the tile does not remove it -
+	// so the parameterised spring scenarios would each leave a live spring behind for whatever ran next.
+	// Scoped to a few hundred pixels of the scenario origin so the level's own springs, which live around
+	// tiles 34-68 and are thousands of pixels away, are left alone.
+	for (int i = 1; i < 512; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (o.eventID != EV_SPRING_BLUE && o.eventID != EV_SPRING_BLUE_H &&
+			o.eventID != EV_SPRING_RED && o.eventID != EV_SPRING_GREEN) {
+			continue;
+		}
+		float odx = o.xPos - GroundX, ody = o.yPos - GroundY;
+		if (odx > -400 && odx < 1600 && ody > -400 && ody < 400) {
+			o.delete();
+		}
+	}
+}
+// Puts the scenario's props in place. Called once the player has settled, just before the run starts.
+void SetupProps(jjPLAYER@ play, int s) {
+	// The previous scenario's leftovers are already gone - ClearProps() takes them out at the RESET, before
+	// the settle, so a pole cannot still be held while the next scenario is lining up
+
+	int tx = int(GroundX) / 32;
+	int ty = int(GroundY) / 32;
+
+	switch (s) {
+		// Vertical springs go under the feet, so they fire immediately from rest
+		case 45: SpawnedObject = jjAddObject(EV_SPRING_RED, GroundX, GroundY); break;
+		case 46: SpawnedObject = jjAddObject(EV_SPRING_GREEN, GroundX, GroundY); break;
+		case 47: SpawnedObject = jjAddObject(EV_SPRING_BLUE, GroundX, GroundY); break;
+		case 48: SpawnedObject = jjAddObject(EV_SPRING_GREEN_FROZEN, GroundX, GroundY); break;
+		// Horizontal ones sit a few tiles ahead to be walked into
+		case 49: SpawnedObject = jjAddObject(EV_SPRING_RED_H, GroundX + 96, GroundY); break;
+		case 50: SpawnedObject = jjAddObject(EV_SPRING_GREEN_H, GroundX + 96, GroundY); break;
+		case 51: SpawnedObject = jjAddObject(EV_SPRING_BLUE_H, GroundX + 96, GroundY); break;
+		// The vertical pole goes overhead to be jumped into, the horizontal one ahead to be run into
+		case 52: PlaceTileEvent(tx, ty - 3, EV_VPOLE); break;
+		case 53: PlaceTileEvent(tx + 4, ty, EV_HPOLE); break;
+		case 67: case 68: PlaceTileEvent(tx, ty - 3, EV_VINE); break;
+		// Chains of poles. The launch off one carries the player into the next, and the effect is supposed to
+		// compound, so 2, 3 and 5 in a row are measured against the single-pole case.
+		case 82: for (int k = 0; k < 2; k++) { PlaceTileEvent(tx, ty - 3 - k * 5, EV_VPOLE); } break;
+		case 83: for (int k = 0; k < 3; k++) { PlaceTileEvent(tx, ty - 3 - k * 5, EV_VPOLE); } break;
+		case 84: for (int k = 0; k < 5; k++) { PlaceTileEvent(tx, ty - 3 - k * 5, EV_VPOLE); } break;
+		case 85: for (int k = 0; k < 3; k++) { PlaceTileEvent(tx + 4 + k * 5, ty, EV_HPOLE); } break;
+		case 88: PlaceTileEvent(tx + 4, ty, EV_HPOLE); break;
+		// Two adjacent poles, side by side and stacked, for each type
+		case 166:
+			PlaceTileEvent(tx, ty - 3, EV_VPOLE);
+			PlaceTileEvent(tx + 1, ty - 3, EV_VPOLE);
+			break;
+		case 167:
+			PlaceTileEvent(tx, ty - 3, EV_VPOLE);
+			PlaceTileEvent(tx, ty - 4, EV_VPOLE);
+			break;
+		case 168:
+			PlaceTileEvent(tx + 4, ty, EV_HPOLE);
+			PlaceTileEvent(tx + 5, ty, EV_HPOLE);
+			break;
+		case 169:
+			PlaceTileEvent(tx + 4, ty, EV_HPOLE);
+			PlaceTileEvent(tx + 4, ty - 1, EV_HPOLE);
+			break;
+		// Overhead, where the vertical-pole scenario puts its pole, so a straight-up jump reaches it with no
+		// x speed at all
+		case 172: case 173: case 174: PlaceTileEvent(tx, ty - 3, EV_HPOLE); break;
+		case 175: PlaceTileEvent(tx + 2, ty, EV_HPOLE); break;
+		// A solid column of float-up areas, ten tiles tall and including the player's own tile, so a grounded
+		// player is inside one and a rising player never leaves it. No gaps and no horizontal motion, which
+		// is what the level's diagonal ladder cannot offer.
+		case 183: case 184: case 185:
+			for (int k = 0; k <= 9; k++) { PlaceTileEvent(tx, ty - k, EV_FLOAT_UP); }
+			break;
+		// Wind fills the space the player is standing in. The parameter is a single 8-bit field at offset 0,
+		// which is what the other engine's converter reads, so 8 is a rightward wind and 248 is its negative.
+		case 186: FillWind(tx, ty, EV_WIND_RIGHT, 8); break;
+		case 187: FillWind(tx, ty, EV_WIND_LEFT, 8); break;
+		case 188: FillWind(tx, ty, EV_WIND_LEFT, 248); break;
+		case 189: FillWind(tx, ty, EV_WIND_RIGHT, 8); break;
+		case 190: FillWind(tx, ty, EV_WIND_RIGHT, 8); break;
+		// A belt or a slide tile is a *floor* event, read from the tile below the player, so those go one
+		// row down - and a few tiles either side, so the player cannot walk out of what is being measured.
+		// Parameter 0 throughout: that is what a level author placing a plain belt gets.
+		case 191: FillFloor(tx, ty, EV_BELT_RIGHT, 0); break;
+		case 192: FillFloor(tx, ty, EV_BELT_LEFT, 0); break;
+		case 193: FillFloor(tx, ty, EV_ACC_BELT_RIGHT, 0); break;
+		case 194: FillFloor(tx, ty, EV_ACC_BELT_LEFT, 0); break;
+		case 195: FillFloor(tx, ty, EV_BELT_RIGHT, 0); break;
+		case 196: case 197: FillFloor(tx, ty, EV_SLIDE, 0); break;
+		// The second strength of each, for the fit
+		case 198: FillFloor(tx, ty, EV_BELT_RIGHT, 8); break;
+		case 199: FillFloor(tx, ty, EV_ACC_BELT_RIGHT, 8); break;
+		case 200: FillWind(tx, ty, EV_WIND_RIGHT, 4); break;
+		// A slide tile with its Strength parameter at the top of its 2-bit range
+		case 201: FillFloor(tx, ty, EV_SLIDE, 3); break;
+		// One tube on the player's own tile, so it triggers from rest with nothing held
+		case 202: PlaceTube(tx, ty, 8, 0, 0); break;
+		case 203: PlaceTube(tx, ty, -8, 0, 0); break;
+		case 204: PlaceTube(tx, ty, 0, -8, 0); break;
+		case 205: PlaceTube(tx, ty, 0, 8, 0); break;
+		case 206: PlaceTube(tx, ty, 6, -6, 0); break;
+		case 207: PlaceTube(tx, ty, 20, 0, 0); break;
+		case 208: PlaceTube(tx, ty, 8, 0, 3); break;
+		// Nine tubes in a row with 1..5 empty tiles between them, all pulling right
+		case 209: case 210: case 211: case 212: case 213: {
+			int spacing = (s - 209) + 2;
+			for (int k = 0; k < 9; k++) { PlaceTube(tx + k * spacing, ty, 8, 0, 0); }
+			break;
+		}
+		// The spring parameters. A downward-firing spring goes above the player and a reversed horizontal
+		// one to their right, since those are the sides they act on.
+		// The spring events themselves are written at the RESET, by SetupCharacter - see the note there.
+		// All that is left here is putting the player where the scenario needs them.
+		// All five are brought out to the spring, forty tiles east, which is where the event could be
+		// activated at all. Those that need a run-up start six tiles short of it - which is also what keeps
+		// the spring from spawning on top of the player, since one that does never fires.
+		case 214: case 215: case 217: case 218:
+			play.xPos = GroundX + 1280;
+			play.yPos = GroundY;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+		case 216:
+			// Keep Y Speed only shows on a spring hit while *falling*, so drop in from well above it - and
+			// above the spring itself, six tiles east, rather than onto the player's own spot. A spring that
+			// spawns from a tile event *inside* the player never fires at all, which is what made this one
+			// and the delay measure nothing twice over.
+			play.xPos = GroundX + 1472;
+			play.yPos = GroundY - 420;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+		// The middle two slide strengths
+		case 219: FillFloor(tx, ty, EV_SLIDE, 1); break;
+		case 220: FillFloor(tx, ty, EV_SLIDE, 2); break;
+		// A row and a column of tubes, long enough that the player never leaves the field
+		case 221: for (int k = 0; k < 30; k++) { PlaceTube(tx + k, ty, 8, 0, 0); } break;
+		case 222: for (int k = 0; k < 30; k++) { PlaceTube(tx, ty - k, 0, -8, 0); } break;
+		// Entering a pole off a spring rather than off a jump or a run
+		case 86:
+			SpawnedObject = jjAddObject(EV_SPRING_BLUE, GroundX, GroundY);
+			PlaceTileEvent(tx, ty - 6, EV_VPOLE);
+			break;
+		case 87:
+			SpawnedObject = jjAddObject(EV_SPRING_BLUE_H, GroundX + 96, GroundY);
+			PlaceTileEvent(tx + 8, ty, EV_HPOLE);
+			break;
+		// The pinball section. Every one of these starts the player somewhere in the chamber rather than at
+		// the scenario origin, and several start them already moving - a bumper met at speed from the side
+		// cannot be reached any other way, since the chamber's floor is five tiles below it.
+		case 281: case 282: case 283:
+			// On the floor directly under the bumper at (62,15), a jump's height below it
+			play.xPos = 62 * 32 + 16; play.yPos = 600; play.xSpeed = 0; play.ySpeed = 0;
+			break;
+		case 284: case 285:
+			play.xPos = 62 * 32 + 16; play.yPos = 208; play.xSpeed = 0; play.ySpeed = 0;
+			break;
+		// Arriving at the bumper's own height with a dash's worth of speed. Started a little above it: 320 px
+		// of travel at that speed takes about seventeen ticks, in which gravity pulls the player down some
+		// 24 px, so entering level with the bumper would mean arriving below it.
+		case 286: case 287:
+			play.xPos = 62 * 32 + 16 + 320; play.yPos = 472; play.xSpeed = -16; play.ySpeed = 0;
+			break;
+		case 288: case 289:
+			play.xPos = 62 * 32 + 16 - 320; play.yPos = 472; play.xSpeed = 16; play.ySpeed = 0;
+			break;
+		// The trigger radius, swept by dropping past the bumper at a measured horizontal offset, leftwards so
+		// the bumper at (66,9) is not in the way
+		case 290: play.xPos = 62 * 32 + 16 - 16; play.yPos = 208; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 291: play.xPos = 62 * 32 + 16 - 48; play.yPos = 208; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 292: play.xPos = 62 * 32 + 16 - 80; play.yPos = 208; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 293: play.xPos = 62 * 32 + 16 - 112; play.yPos = 208; play.xSpeed = 0; play.ySpeed = 0; break;
+		// The top of the chamber, midway between the three bumpers
+		case 294: play.xPos = 66 * 32 + 16; play.yPos = 160; play.xSpeed = 0; play.ySpeed = 0; break;
+		// Above the paddle at (80,18). Its tile is its mounted end, so the offsets step leftwards.
+		case 295: case 296: case 297: case 298: case 299: case 305: case 306:
+			play.xPos = 80 * 32 + 16; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0;
+			break;
+		case 300: play.xPos = 80 * 32 + 16 - 32; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 301: play.xPos = 80 * 32 + 16 - 64; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 302: play.xPos = 80 * 32 + 16 - 96; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		// On the floor below the paddle, so the jump arrives from underneath
+		case 303: play.xPos = 80 * 32 + 16 - 32; play.yPos = 600; play.xSpeed = 0; play.ySpeed = 0; break;
+		// And along the paddle's own row from the far side of the chamber
+		case 304: play.xPos = 80 * 32 + 16 - 320; play.yPos = 570; play.xSpeed = 16; play.ySpeed = 0; break;
+		case 307: play.xPos = 80 * 32 + 16 - 16; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 308: play.xPos = 80 * 32 + 16 - 48; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		// The left paddle at (83,18). Its tile is its mounted end too, so its offsets step *rightwards*.
+		case 309: case 310: case 311:
+			play.xPos = 83 * 32 + 16; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0;
+			break;
+		case 312: play.xPos = 83 * 32 + 16 + 32; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 313: play.xPos = 83 * 32 + 16 + 64; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 314: play.xPos = 83 * 32 + 16 + 32; play.yPos = 600; play.xSpeed = 0; play.ySpeed = 0; break;
+		// Just above the chamber floor, thrown upward at the underside of each paddle. The speed is well over
+		// the applied rise cap on purpose - the cap holds the actual travel to 8 px a tick, so the player
+		// cannot tunnel straight through whatever is above them.
+		case 325: play.xPos = 80 * 32 + 16 - 32; play.yPos = 624; play.xSpeed = 0; play.ySpeed = -20; break;
+		case 326: play.xPos = 83 * 32 + 16 + 32; play.yPos = 624; play.xSpeed = 0; play.ySpeed = -20; break;
+		// Same spot as pb_pad_x1, so the two apexes can be compared directly
+		case 327: play.xPos = 80 * 32 + 16 - 32; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 328: play.xPos = 80 * 32 + 16 - 32; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		// The fine offset sweep, stepping away from each paddle's mounted end 8 px at a time
+		case 315: play.xPos = 80 * 32 + 16 - 8;  play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 316: play.xPos = 80 * 32 + 16 - 24; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 317: play.xPos = 80 * 32 + 16 - 40; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 318: play.xPos = 80 * 32 + 16 - 56; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 319: play.xPos = 83 * 32 + 16 + 8;  play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 320: play.xPos = 83 * 32 + 16 + 16; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 321: play.xPos = 83 * 32 + 16 + 24; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 322: play.xPos = 83 * 32 + 16 + 40; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 323: play.xPos = 83 * 32 + 16 + 48; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		case 324: play.xPos = 83 * 32 + 16 + 56; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
+		// The last two are the double-jump scenarios that have to reach the air without ever jumping - same
+		// drop, nothing under it, so the whole run is one long fall with nothing else happening in it
+		case 72: case 80: case 81: case 249: case 250:
+			// Drop in from well above the floor, so the stomp has room to run its course
+			play.yPos = GroundY - 420;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+		// Dropped in above the level's own tube turtle, from two different heights. Directly above it, so
+		// the stomp lands on the turtle rather than on the floor beside it.
+		case 144: case 145:
+			if (TurtleX > 0) {
+				play.xPos = TurtleX;
+				play.yPos = TurtleY - (s == 144 ? 420 : 200);
+				play.xSpeed = 0;
+				play.ySpeed = 0;
+			}
+			break;
+		case 78: case 79:
+			// The level's own vine spans tiles (241,50) to (254,50); come in just above it so the player grabs on
+			play.xPos = 244 * 32 + 16;
+			play.yPos = 50 * 32 + 4;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+		// Dropped into the level's own spring chain. Done here rather than at the reset for the same reason as
+		// the stomp scenarios: both start in mid-air, and the settle would undo that by waiting for a landing.
+		case 170:
+			// Top of the shaft at tile (34,16), which drops onto the horizontal blue spring at (34,24)
+			play.xPos = 34 * 32 + 16;
+			play.yPos = 16 * 32 + 16;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+		case 171:
+			// Six tiles above the vertical blue spring at (54,24), in the shaft that leads up to the pole
+			play.xPos = 54 * 32 + 16;
+			play.yPos = 18 * 32 + 16;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			break;
+
+	}
+}
+
+void ApplyInput(jjPLAYER@ play, int s, int t) {
+	bool right = false, left = false, run = false, jump = false, down = false, fire = false;
+
+	switch (s) {
+		case 0: break;
+		case 1: right = true; break;
+		case 2: right = true; run = true; break;
+		case 3: right = (t < 20); break;
+		case 4: right = (t < 45); break;
+		case 5: right = (t < 60); run = (t < 60); break;
+		case 6: right = true; run = (t < 60); break;
+		case 7: right = (t < 45); left = (t >= 45); break;
+		case 8: run = true; right = (t < 60); left = (t >= 60); break;
+		case 9: right = (t < 60); run = (t < 60); left = (t >= 60); break;
+		case 10: right = (t < 45 || t >= 60); break;
+		case 11: right = true; run = (t >= 45); break;
+
+		case 12: jump = (t >= J); break;
+		case 13: jump = (t >= J && t < J + 5); break;
+		case 14: jump = (t >= J && t < J + 10); break;
+		case 15: jump = (t >= J && t < J + 20); break;
+		case 16: jump = (t >= J && t < J + 30); break;
+
+		case 17: right = true; jump = (t >= J); break;
+		case 18: right = true; jump = (t >= J && t < J + 10); break;
+		case 19: right = true; run = true; jump = (t >= J); break;
+		case 20: right = true; run = true; jump = (t >= J && t < J + 10); break;
+
+		case 21: right = (t < 50); jump = (t >= J); break;
+		case 22: right = (t < 75); jump = (t >= J); break;
+		case 23: right = (t < 50); left = (t >= 50); jump = (t >= J); break;
+		case 24: right = (t < 75); left = (t >= 75); jump = (t >= J); break;
+		case 25: right = (t < 90); left = (t >= 90); jump = (t >= J); break;
+		case 26: right = (t < 75); left = (t >= 75 && t < 90); jump = (t >= J); break;
+		case 27: right = (t < 75 || t >= 100); left = (t >= 75 && t < 100); jump = (t >= J); break;
+
+		case 28: run = true; right = (t < 83); left = (t >= 83); jump = (t >= J); break;
+		case 29: right = (t < 83); run = (t < 83); left = (t >= 83); jump = (t >= J); break;
+		case 30: right = (t < 83); run = (t < 83); jump = (t >= J); break;
+
+		case 31: jump = (t >= J); right = (t >= 60); break;
+		case 32: jump = (t >= J); right = (t >= 60); run = (t >= 60); break;
+		case 33: right = true; run = (t >= 60); jump = (t >= J); break;
+		case 34: right = true; run = (t < 60); jump = (t >= J); break;
+		case 35: right = (t < 60 || t >= 75); left = (t >= 60 && t < 75); jump = (t >= J); break;
+
+		// Special moves. The crouch-then-jump ones need Down held first, then Down and Jump together.
+		case 36: down = (t >= 20); jump = (t >= 40); break;					// Jazz uppercut
+		case 37: jump = (t >= J && t < 50) || (t >= 60); break;				// Spaz double jump, second held
+		case 38: jump = (t >= J && t < 50) || (t >= 60 && t < 64); break;	// ...second released at once
+		case 39: down = (t >= 20); jump = (t >= 40); break;					// Spaz sidekick
+		case 40: down = (t >= 20); jump = (t >= 40); break;					// Lori sidekick
+		case 41: jump = (t >= J && t < 55); down = (t >= 70); break;		// buttstomp
+		case 42: jump = (t >= J && t < 55); down = (t >= 70); break;
+		case 43: jump = (t >= J && t < 55); down = (t >= 70); break;
+		case 44: jump = (t >= J && t < 50) || (t >= 60); break;				// Jazz: copter, not a double jump
+		// Springs: the vertical ones fire on their own, the horizontal ones are walked into
+		case 45: case 46: case 47: case 48: break;
+		case 49: case 50: case 51: right = true; break;
+		// Poles
+		case 52: jump = (t >= J); break;									// jump up into the vertical pole
+		case 53: right = true; run = true; break;							// run into the horizontal pole
+		// Pushables - walk into the box, dash into the rock
+		case 54: right = true; break;
+		case 55: right = true; run = true; break;
+		// Copter: one jump to get airborne, then a 2-tick tap every 6 ticks from just after the apex on
+		case 56: case 58: case 60: jump = (t >= J && t < J + 5) || (t >= 75 && ((t - 75) % 6) < 2); break;
+		case 57: case 59: right = true; jump = (t >= J && t < J + 5) || (t >= 75 && ((t - 75) % 6) < 2); break;
+		// Buttstomp with a direction held from just after it starts, once without Run and once with
+		case 61: jump = (t >= J && t < 55); down = (t >= 70); right = (t >= 75); break;
+		case 62: jump = (t >= J && t < 55); down = (t >= 70); right = (t >= 75); run = (t >= 75); break;
+		case 63: right = true; jump = (t >= J && t < 55); down = (t >= 70); break;
+		// Crouch, then a single 4-tick jump press and let go - the dash should end with Spaz on the floor
+		case 64: case 65: down = (t >= 20 && t < 44); jump = (t >= 40 && t < 44); break;
+		// Copter, then right, then left, then right again
+		case 66: jump = (t >= J && t < J + 5) || (t >= 75 && ((t - 75) % 6) < 2);
+			right = (t >= 80 && t < 130) || (t >= 180);
+			left = (t >= 130 && t < 180); break;
+		// Vine: climb up it, then across
+		case 67: jump = (t >= J && t < J + 5); right = (t >= 60); break;
+		case 68: jump = (t >= J && t < J + 5); right = (t >= 60); run = true; break;
+		// Slopes
+		case 69: right = true; break;
+		case 70: right = true; run = true; break;
+		case 71: left = true; run = true; break;
+		// Falls from height, stomps at t20, then presses right - and lets go and presses again, in case the
+		// stomp ignores a direction that was already held when it began
+		case 72: down = (t >= 20); right = (t >= 40 && t < 70) || (t >= 90 && t < 140) || (t >= 160); break;
+		case 73: case 76: right = true; break;
+		case 74: case 77: right = true; run = true; break;
+		case 75: right = true; run = true; jump = (t >= 30 && t < 40); break;
+		case 78: right = (t >= 10); break;
+		case 79: right = (t >= 10); run = true; break;
+		case 80: down = (t >= 20 && t < 24); right = (t >= 26); break;
+		case 81: down = (t >= 20); right = (t >= 26); break;
+		case 82: case 83: case 84: jump = (t >= J); break;	// jump up into the first pole
+		case 85: right = true; run = true; break;			// run into the first pole
+		case 86: break;										// the vertical spring fires on its own
+		case 87: right = true; break;						// walk into the horizontal spring first
+		case 88: right = true; break;						// enter the pole at walking speed
+		case 89: jump = (t >= J && t < 50) || (t >= 85); break;
+		case 90: jump = (t >= J && t < 50) || (t >= 85 && t < 89); break;
+		case 91: right = true; jump = (t >= J && t < 50) || (t >= 85); break;
+		case 92: right = true; run = true; jump = (t >= J && t < 50) || (t >= 85); break;
+		case 93: right = (t < 85); left = (t >= 85); jump = (t >= J && t < 50) || (t >= 85); break;
+		case 94: right = (t < 100); left = (t >= 100); jump = (t >= J && t < 50) || (t >= 85); break;
+		case 95: down = (t >= 20 && t < 43); jump = (t >= 40 && t < 42); break;
+		case 96: down = (t >= 20); jump = (t >= 40 && ((t - 40) % 15) < 2); break;
+		// First jump held from t45 to its apex at ~t72, then a second press held from the offset onwards
+		case 97: jump = (t >= J && t < 72) || (t >= 77); break;
+		case 98: jump = (t >= J && t < 72) || (t >= 82); break;
+		case 99: jump = (t >= J && t < 72) || (t >= 92); break;
+		case 100: jump = (t >= J && t < 72) || (t >= 102); break;
+		case 101: jump = (t >= J && t < 72) || (t >= 112); break;
+		case 102: jump = (t >= J && t < 60) || (t >= 65); break;
+		case 103: jump = (t >= J && t < 72) || (t >= 94); break;
+		case 104: jump = (t >= J && t < 72) || (t >= 97); break;
+		case 105: jump = (t >= J && t < 72) || (t >= 100); break;
+		// Wall bounce: run into the wall at the right end of the upper floor, jump off it and turn back,
+		// which is how the platform above and to the left is reached. Where exactly the wall stops the
+		// player does not need to be known - they are simply held against it until t80.
+		case 106: right = (t < 130); run = true; jump = (t >= 130 && t < 160); left = (t >= 134); break;
+		case 107: right = (t < 145); run = true; jump = (t >= 145 && t < 175); left = (t >= 149); break;
+		case 108: right = (t < 155); run = true; jump = (t >= 155 && t < 185); left = (t >= 159); break;
+		case 109: right = (t < 164); run = true; jump = (t >= 164 && t < 194); left = (t >= 168); break;
+		case 110: right = (t < 300); jump = (t >= 300 && t < 330); left = (t >= 304); break;
+		case 111: right = (t < 164); run = true; fire = (t >= 166 && t < 172); break;
+		case 112: right = (t < 145); run = true; fire = (t >= 147 && t < 153); break;
+		case 113: right = (t < 164); run = true; jump = (t >= 164 && t < 194); fire = (t >= 168 && t < 174); break;
+		case 114: right = (t < 145); run = true; jump = (t >= 145 && t < 175); fire = (t >= 149 && t < 155); break;
+		case 115: right = true; run = true; break;
+		case 116: right = (t < 2); fire = (t >= 60 && t < 66); break;
+		case 117: right = (t < 2); fire = (t >= 60 && t < 66); break;
+		case 118: right = (t < 2); fire = (t >= 60 && t < 66); break;
+		case 119: right = (t < 2); fire = (t >= 60 && t < 66); break;
+		case 120: right = (t < 2); fire = (t >= 60 && t < 66); break;
+		case 121: right = true; break;
+		case 122: right = true; run = true; break;
+		case 123: right = true; break;
+		case 124: right = true; run = true; break;
+		case 125: right = true; break;
+		case 126: right = true; run = true; break;
+		case 127: right = true; break;
+		case 128: right = true; run = true; break;
+		case 129: right = true; break;
+		case 130: right = true; run = true; break;
+		case 131: right = true; break;
+		case 132: right = true; run = true; break;
+		// Fired from a standstill; the wall is ahead, so no direction is held at all
+		case 133: case 134: case 135: case 136: case 137: case 138:
+		case 139: case 140: case 141:
+		case 142: case 143: fire = (t >= 60 && t < 66); break;
+		// Buttstomp: Down held from early in the drop
+		case 144: case 145: down = (t >= 20); break;
+		case 146: fire = (t >= 60 && t < 66); break;
+		// Downhill needs the player turned round first, which is what the brief left press is for
+		case 147: left = (t < 10); fire = (t >= 60 && t < 66); break;
+		// Standing jump into each ceiling bay, jump held
+		case 148: case 149: case 150: case 151: case 152: jump = (t >= J); break;
+		// Standing double jump into each bay - same press pattern as sp_spaz_dj_hold
+		case 153: case 154: case 155: case 156: case 157: jump = (t >= J && t < 50) || (t >= 60); break;
+		// Walking and dashing into the section, jump held
+		// Heading LEFT from the east end, so the ceiling drops from 6 tiles to 2 as they go. Going the other
+		// way sends them past the section into the 17-tile wall at tiles 55-56, which they then climb.
+		case 158: left = true; jump = (t >= J); break;
+		case 159: left = true; run = true; jump = (t >= J); break;
+		case 160: left = true; jump = (t >= J && t < 50) || (t >= 60); break;
+		case 161: left = true; run = true; jump = (t >= J && t < 50) || (t >= 60); break;
+		// Double-jump window, lower edge: second press at ticks 64, 68, 72 and 76
+		case 162: jump = (t >= J && t < 62) || (t >= 64); break;
+		case 163: jump = (t >= J && t < 62) || (t >= 68); break;
+		case 164: jump = (t >= J && t < 62) || (t >= 72); break;
+		case 165: jump = (t >= J && t < 62) || (t >= 76); break;
+		// Adjacent poles: jump into the vertical pair, run into the horizontal pair
+		case 166: case 167: jump = (t >= J); break;
+		case 168: case 169: right = true; run = true; break;
+		// The level's own spring chain runs with nothing held at all; the springs and poles do the work
+		case 170: case 171: break;
+		// Jump straight up into the overhead horizontal pole, facing whichever way the opening tap left the
+		// player, then walk into one two tiles away
+		// The tap is three ticks and not twelve: twelve moves the player 33 px, more than half a tile, and the
+		// pole is then no longer overhead - the first attempt at these two missed it and measured a player
+		// jumping on the spot instead. Three ticks moves about a pixel.
+		case 172: jump = (t >= J); break;
+		case 173: left = (t < 3); jump = (t >= J); break;
+		case 174: right = (t < 3); jump = (t >= J); break;
+		case 175: right = true; break;
+		// Float-up areas. The intended route is the first one - jump off the block at (32,49) and hold Right,
+		// which rides the diagonal ladder of them up to about (48,35). The rest depart from it one way each:
+		// jump released rather than held (which picks the rise gravity, and may not matter once something
+		// else is lifting), walking in before jumping instead of jumping first, the same ride *against* the
+		// ladder's direction, no direction at all, a buttstomp inside it, and nothing pressed at all.
+		case 176: jump = (t >= 5); right = (t >= 5); break;
+		case 177: jump = (t >= 5 && t < 25); right = (t >= 5); break;
+		case 178: right = true; jump = (t >= 20); break;
+		case 179: jump = (t >= 5); left = (t >= 5); break;
+		case 180: jump = (t >= 5); break;
+		case 181: jump = (t >= 5 && t < 25); right = (t >= 5); down = (t >= 60); break;
+		case 182: break;
+		// A probe-placed column of them: jump held, jump released, nothing pressed
+		case 183: jump = (t >= 5); break;
+		case 184: jump = (t >= 5 && t < 25); break;
+		case 185: break;
+		// Wind: standing in it three ways, walking into it, and taking it in the air
+		case 186: case 187: case 188: break;
+		case 189: left = true; break;
+		case 190: jump = (t >= 5); break;
+		// Belts: standing on each of the four, and walking against one
+		case 191: case 192: case 193: case 194: break;
+		case 195: left = true; break;
+		// Slide: same release ticks as g_dash_rel and g_walk_rel45, which are the no-slide baselines
+		case 196: right = (t < 60); run = (t < 60); break;
+		case 197: right = (t < 45); break;
+		// The second strength of each: nothing held, the belt or wind does the work
+		case 198: case 199: case 200: break;
+		// Slide again, at the top of its strength range - same release tick as sd_dash
+		case 201: right = (t < 60); run = (t < 60); break;
+		// Tubes: nothing held, the tube takes control anyway
+		case 202: case 203: case 204: case 205: case 206: case 207: case 208: break;
+		case 209: case 210: case 211: case 212: case 213: break;
+		// Spring parameters. A downward spring can only act on a player who hits it from below, so that one
+		// jumps into it; keep-X and the reversed horizontal spring need entry speed, so those run into theirs.
+		case 214: jump = (t >= 5); break;
+		case 215: right = true; run = true; break;
+		case 216: break;
+		case 217: right = true; run = true; break;
+		case 218: right = true; run = true; break;
+		// The middle slide strengths, same release tick as sd_dash
+		case 219: case 220: right = (t < 60); run = (t < 60); break;
+		// A row and a column of tubes: nothing held, the tubes do the work
+		case 221: case 222: break;
+		// Double jump: direction released before it, released after it, and a twelve-tick second press
+		case 223: right = (t < 80); jump = (t >= J && t < 50) || (t >= 85); break;
+		case 224: right = (t < 100); jump = (t >= J && t < 50) || (t >= 85); break;
+		case 225: jump = (t >= J && t < 50) || (t >= 85 && t < 97); break;
+		// Third release tick either side of the boundary, plus the missing 29 on the original release tick
+		case 226: jump = (t >= J && t < 60) || (t >= 88); break;
+		case 227: jump = (t >= J && t < 60) || (t >= 90); break;
+		case 228: jump = (t >= J && t < 72) || (t >= 101); break;
+		// The direction combinations again, this time at a delay the window accepts
+		case 229: jump = (t >= J && t < 72) || (t >= 85); break;
+		case 230: right = true; jump = (t >= J && t < 72) || (t >= 85); break;
+		case 231: right = true; run = true; jump = (t >= J && t < 72) || (t >= 85); break;
+		case 232: right = (t < 85); left = (t >= 85); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 233: right = (t < 100); left = (t >= 100); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 234: run = true; right = (t < 85); left = (t >= 85); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 235: right = (t < 80); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 236: right = (t < 100); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 237: left = (t < 85); right = (t >= 85); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 238: right = (t >= 85); jump = (t >= J && t < 72) || (t >= 85); break;
+		case 239: jump = (t >= J && t < 72) || (t >= 85 && t < 89); break;
+		case 240: jump = (t >= J && t < 72) || (t >= 85 && t < 97); break;
+		case 241: jump = (t >= J && t < 72) || (t >= 85 && t < 91) || (t >= 100); break;
+		// A fourth release tick, either side of the boundary
+		case 242: jump = (t >= J && t < 50) || (t >= 65); break;
+		case 243: jump = (t >= J && t < 50) || (t >= 75); break;
+		case 244: jump = (t >= J && t < 50) || (t >= 79); break;
+		case 245: jump = (t >= J && t < 50) || (t >= 80); break;
+		// Held past the apex, so the window opens at a fall speed that is already high
+		case 246: jump = (t >= J && t < 85) || (t >= 95); break;
+		case 247: jump = (t >= J && t < 85) || (t >= 105); break;
+		case 248: jump = (t >= J && t < 85) || (t >= 110); break;
+		// Dropped in and falling, with no first jump to open a window. Nothing before tick 40: the scenario
+		// ahead of these holds jump to its last tick, so clearing the input at the reset is itself a release
+		// and arms the timer - a first version pressed at 5 and 20 and both games double jumped, off a
+		// window opened by the previous scenario. The fall lasts about 82 ticks, so there is room to wait.
+		case 249: jump = (t >= 55); break;
+		case 250: jump = (t >= 40 && t < 45) || (t >= 60); break;
+		// Blasting yourself off the wall with an RF shot fired into it
+		// Dash right for the whole scenario, which finds where the wall actually is: x simply stops
+	}
+
+	// The apex sweep: a plain standing jump with the key let go after 1 to 30 ticks. Outside the switch
+	// because thirty cases that differ only in one number are better written as one - see ScenarioName().
+	if (s >= 251 && s <= 280) {
+		jump = (t >= J && t < J + (s - 250));
+	}
+
+	// The pinball section
+	switch (s) {
+		case 281: jump = (t >= J && t < J + 5); break;
+		case 282: jump = (t >= J); break;
+		case 283: jump = (t >= J); right = true; break;
+		case 285: jump = true; break;
+		case 287: left = true; break;
+		case 289: right = true; break;
+		case 296: jump = (t >= 60 && t < 64); break;
+		case 297: case 300: case 301: case 302: jump = (t >= 60); break;
+		case 298: jump = (t >= 60 && t < 70); break;
+		case 299: jump = (t >= 60 && t < 80); break;
+		case 303: jump = (t >= J); break;
+		case 305: case 306: jump = (t >= 60 && t < 70) || (t >= 110 && ((t - 110) % 6) < 2); break;
+		case 307: case 308: jump = (t >= 60); break;
+		case 310: jump = (t >= 60 && t < 64); break;
+		case 311: case 312: case 313: jump = (t >= 60); break;
+		case 314: jump = (t >= J); break;
+		case 315: case 316: case 317: case 318: case 319: case 320:
+		case 321: case 322: case 323: case 324: jump = (t >= 60); break;
+		// pb_pad_thru / pb_lpad_thru press nothing - they only test the underside. pb_pad_rel releases four
+		// ticks after the launch, to see whether that shortens it.
+		case 327: jump = (t >= 60 && t < 64); break;
+		case 328: jump = (t >= 60 && t < 64) || (t >= 100); break;
+	}
+
+	play.keyDown = down;
+	play.keyRight = right;
+	play.keyLeft = left;
+	play.keyRun = run;
+	play.keyJump = jump;
+	play.keyFire = fire;
+
+	InRight = right;
+	InLeft = left;
+	InRun = run;
+	InJump = jump;
+	InDown = down;
+}
+
+void ClearInput(jjPLAYER@ play) {
+	play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = false;
+	InRight = InLeft = InRun = InJump = InDown = false;
+}
+
+// Whether the player has stopped moving vertically for long enough to call it standing on the floor
+bool CheckAtRest(jjPLAYER@ play) {
+	float dy = play.yPos - LastY;
+	if (dy < 0) {
+		dy = -dy;
+	}
+	// Standing still is not enough on its own: a player hanging on a pole is perfectly stable, so a pole
+	// left over from the previous scenario passed this check on the first tick and the next scenario began
+	// with the player several tiles up and a launch already under way. Being back at the recorded ground
+	// height is what separates "landed" from "held". The pole itself is taken out at the reset, so the
+	// player falls and this then waits for the landing. The threshold has to be tight: a pole at the ground
+	// tile centre sits only 3.5 px above the resting height, so 8 px let it through. MaxSettleTicks (120) is
+	// long enough to cover a whole pole cycle of ~90 ticks, which is what the wait now needs to outlast.
+	// PRIME is what discovers GroundY, so it cannot test against it - there the position going quiet is all
+	// there is to go on.
+	float dyGround = play.yPos - GroundY;
+	if (dyGround < 0) {
+		dyGround = -dyGround;
+	}
+	if (dy < 0.05f && (State == StatePrime || dyGround < 1.5f)) {
+		StillTicks++;
+	} else {
+		StillTicks = 0;
+	}
+	LastY = play.yPos;
+	return (StillTicks >= 5);
+}
+
+void onPlayerInput(jjPLAYER@ play) {
+	switch (State) {
+		case StateDone:
+			return;
+
+		case StatePrime: {
+			// Let the player fall out of the spawn onto the floor and remember where it ended up
+			ClearInput(play);
+			PrimeWaited++;
+			// The cap keeps a player that never settles (no floor under the spawn) from hanging the whole run
+			if (CheckAtRest(play) || PrimeWaited >= MaxSettleTicks) {
+				GroundX = play.xPos;
+				GroundY = play.yPos;
+				State = StateReset;
+			}
+			return;
+		}
+
+		case StateReset: {
+			// The previous scenario's props go first, before the player is moved: a pole left in the event
+			// map is still grabbable during the settle, and the player then starts the next scenario hanging
+			// on it several tiles up with a launch already under way - see ClearProps().
+			ClearProps();
+
+			// Put the player back exactly where it landed, at rest. Everything is measured relative to this,
+			// so it has to be the same spot for every scenario.
+			play.xPos = GroundX;
+			play.yPos = GroundY;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
+			ClearInput(play);
+			SetupCharacter(play, Scenario);
+
+			Tick = 0;
+			SettleWaited = 0;
+			StillTicks = 0;
+			State = StateSettle;
+			return;
+		}
+
+		case StateSettle: {
+			ClearInput(play);
+			SettleWaited++;
+			// The cap only exists so a scenario can still run if the player somehow never settles
+			if (CheckAtRest(play) || SettleWaited >= MaxSettleTicks) {
+				SetupProps(play, Scenario);
+				State = StateRun;
+			}
+			return;
+		}
+	}
+
+	ApplyInput(play, Scenario, Tick);
+
+	ObjX = ObjY = -1;
+	// The tube and pinball scenarios carry the player's own **animation** instead, because what is being
+	// asked of them is partly a pose: the paddle is supposed to hold the player in the same curled-up ball a
+	// sucker tube does, and no position column can show whether it does. Logging the tube rides alongside
+	// gives the comparison its own reference - whatever id shows during tb_right is the ball, and the paddle
+	// either matches it or does not.
+	if ((Scenario >= 202 && Scenario <= 213) || Scenario == 221 || Scenario == 222 ||
+		(Scenario >= 281 && Scenario <= 324)) {
+		ObjX = play.curAnim;
+		ObjY = play.curFrame;
+	} else
+	// The RF scenarios have no pushable, so the two object columns carry the remaining ammo and the current
+	// weapon instead - without which a trace that shows no blast cannot be told from one where the shot was
+	// never fired in the first place
+	if ((Scenario >= 111 && Scenario <= 114) || (Scenario >= 116 && Scenario <= 120)) {
+		ObjX = play.ammo[WEAPON::RF];
+		ObjY = play.currWeapon;
+	} else if (Scenario >= 133 && Scenario <= 143) {
+		// Same again for the per-weapon sweep, reporting whichever weapon that scenario selected
+		ObjX = play.ammo[play.currWeapon];
+		ObjY = play.currWeapon;
+	} else if (Scenario == 144 || Scenario == 145) {
+		// The enemy's own live position, so a stomp that hit nothing is distinguishable from an enemy that
+		// was never there - and so it is visible whether the stomp killed it
+		for (int i = 1; i < 512; i++) {
+			jjOBJ@ t = jjObjects[i];
+			if (t.eventID == EV_TURTLETUBE) {
+				ObjX = t.xPos;
+				ObjY = t.yPos;
+				break;
+			}
+		}
+	}
+	// Only if nothing above claimed the two columns - the pushable is far away in those scenarios, but a
+	// silent overwrite here would be indistinguishable from the thing it is meant to be reporting
+	if (ObjX < 0) {
+		for (int i = 1; i < 512; i++) {
+			jjOBJ@ o = jjObjects[i];
+			if (o.eventID == EV_PUSHABLE_BOX || o.eventID == EV_PUSHABLE_ROCK) {
+				ObjX = o.xPos;
+				ObjY = o.yPos;
+				break;
+			}
+		}
+	}
+
+	// Logged from onPlayerInput() rather than onPlayer() so both games record the same thing: the state the
+	// previous tick left behind, next to the input about to be applied. onPlayer() runs after the movement in
+	// the original but before it here, which would have offset the two traces by a tick.
+	Log.write(
+		ScenarioName(Scenario) + "," + Tick + "," +
+		formatFloat(play.xPos, "", 0, 3) + "," + formatFloat(play.yPos, "", 0, 3) + "," +
+		formatFloat(play.xSpeed, "", 0, 4) + "," + formatFloat(play.ySpeed, "", 0, 4) + "," +
+		(InRight ? "1" : "0") + "," + (InLeft ? "1" : "0") + "," +
+		(InRun ? "1" : "0") + "," + (InJump ? "1" : "0") + "," + (InDown ? "1" : "0") + "," + play.specialMove + "," +
+		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + "," + formatFloat(ObjX, "", 0, 1) + "," + formatFloat(ObjY, "", 0, 1) + "\n");
+
+	Tick++;
+	if (Tick >= ScenarioTicksFor(Scenario)) {
+		Scenario++;
+		if (Scenario >= ScenarioCount) {
+			State = StateDone;
+			Log.save(OutputFile);
+			jjAlert("Trajectory probe finished, wrote " + OutputFile);
+		} else {
+			Log.save(OutputFile);
+			State = StateReset;
+		}
+	}
+}
+
+void onLevelBegin() {
+	StartMs = jjUnixTimeMs();
+
+	// Locate the objects the level was built with. The event map is readable whether or not the object has
+	// been activated yet, unlike jjObjects, which only fills in near the player. Both of these have to be
+	// the level's own: a jjAddObject'ed pushable never becomes solid, and a spawned enemy cannot be stomped
+	// either - a buttstomp passes straight through one and lands on the floor beyond it.
+	for (int ty = 0; ty < int(jjLayerHeight[4]); ty++) {
+		for (int tx = 0; tx < int(jjLayerWidth[4]); tx++) {
+			uint8 ev = jjEventGet(tx, ty);
+			if ((ev == EV_PUSHABLE_BOX || ev == EV_PUSHABLE_ROCK) && PushableX == 0) {
+				PushableX = tx * 32 + 16;
+				PushableY = ty * 32 + 16;
+			} else if (ev == EV_TURTLETUBE && TurtleX == 0) {
+				TurtleX = tx * 32 + 16;
+				TurtleY = ty * 32 + 16;
+			}
+		}
+	}
+	jjAlert("probe: pushable at " + PushableX + "," + PushableY + " turtle at " + TurtleX + "," + TurtleY);
+	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy\n");
+}

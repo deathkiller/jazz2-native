@@ -35,7 +35,8 @@ namespace Jazz2::Actors::Enemies
 
 	void Caterpillar::OnUpdate(float timeMult)
 	{
-		EnemyBase::OnUpdate(timeMult);
+		// Caterpillar doesn't move and we also need to suppress unstucking logic, so we don't call the base class OnUpdate() here
+		//EnemyBase::OnUpdate(timeMult);
 
 		if (_frozenTimeLeft > 0.0f) {
 			return;

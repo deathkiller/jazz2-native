@@ -824,3 +824,10 @@ endif()
 cmake_dependent_option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
 cmake_dependent_option(NCINE_BUILD_SHADER_COMPILER "Build the offline ShaderCompiler tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
 unset(_ncineBuildOfflineTools)
+
+# The movement probe (see `Sources/Jazz2/Tests`) drives the player through a fixed matrix of scenarios and
+# logs its trajectory, so a run can be compared against the same run in the original game. It is a
+# measurement harness rather than a game feature - it takes the first player over completely - so it is off
+# by default and only a developer investigating movement accuracy turns it on. Debug builds get it for free
+# because that is where it is used; with it off, none of it is compiled and `/physics-probe` is not a switch.
+option(WITH_PHYSICS_PROBE "Build the movement trajectory probe (see Sources/Jazz2/Tests)" OFF)

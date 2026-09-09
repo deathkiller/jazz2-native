@@ -32,18 +32,28 @@ engine, so it has no renderer, no window backend and no networking. After a regu
 @section asset-packer-usage Command-line reference
 
 @code{.sh}
-AssetPacker [<command>] <source> <target> [options]
+AssetPacker [<command>] [<source>] <target> [options]
 @endcode
 
 @m_class{m-noindent}
 
 The command may be omitted, in which case `convert` is assumed:
 
--   `convert <source directory> <target directory>` --- Converts the original game data
+-   `convert [<source directory>] <target directory>` --- Converts the original game data
     -   `<source directory>` --- Directory containing the original game files (`Anims.j2a`,
         `*.j2l`, `*.j2t`, ...), or a game installation that keeps them in a `Source`
-        subdirectory --- in which case its `Content` is copied to the target as well
+        subdirectory --- in which case its `Content` is copied to the target as well. May be
+        given as `--source=` instead, which leaves `<target directory>` the only positional
+        argument
     -   `<target directory>` --- Directory the converted data is written to (created if needed)
+    -   `--source=<dir>` --- The same directory as `<source directory>`, named explicitly.
+        Giving both is an error rather than an override, since they name the same thing
+    -   `--content=<dir>` --- Directory holding the game's own content --- the fonts,
+        `Animations`, `Metadata` and translations that are not derived from the original data,
+        which is the repository's `Content`. Overrides one found beside the originals, and is
+        what makes a console or web tree self-contained when the two halves are not kept
+        together @m_span{m-text m-dim} (which outside a game installation they usually are
+        not) @m_endspan
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
         `gamecube` | `psp` | `emscripten` (or `web`)
     -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 (the default) keeps
@@ -84,6 +94,23 @@ converted from it into a package --- `Source.pak` for the desktop profile, `Preb
 others, which is what tells the game the tree needs no conversion --- and the levels, tilesets,
 episodes and music follow via @ref Jazz2::Compatibility::AssetConverter.
 
+A conversion therefore has **two inputs**, and an installation is simply the case where they
+happen to sit together. Working from a checkout they do not: the repository has the game's own
+`Content` and no original data, and a copy of the original game is the other way round. Naming
+them separately is what that case wants, and it needs nothing staged:
+
+@code{.sh}
+AssetPacker ./build/ConsoleContent --source=<original Jazz Jackrabbit 2> --content=./Content --target=console
+@endcode
+
+@m_class{m-noindent}
+
+`--source=` names exactly what the positional argument does, so both go through the same
+resolution and an installation is still recognized through either; giving both is an error
+rather than an override. `--content=` wins over a `Content` found beside the originals, which is
+the one way the two can disagree. With `--source=` given, the target is the only positional
+argument left --- which is why a lone one is read as the target and not as the source.
+
 @subsection asset-packer-convert-profiles Target profiles
 
 What the output directory is going to be loaded by decides its layout:
@@ -120,6 +147,13 @@ file and stays one. The conversion writes its own files first, so an asset the o
 is what a path present in both resolves to, exactly as when the two are kept apart. The desktop
 profile is untouched by this: its `Source.pak` holds only what was converted, and the game reads its
 `Content` from where it is installed.
+
+They also leave the `.po` files of a `Translations` directory behind. Those are the sources the `.mo`
+the game reads are compiled from and nothing loads one at run time --- both the language list and the
+About section's translator credits require the `.mo` extension --- while being about twice the size of
+the `.mo` they produce. That is a megabyte and a half of a tree that will be burnt onto a disc or
+packed into a cartridge, so it is not carried. The desktop profile copies no `Content` at all and is
+again unaffected.
 
 @subsection asset-packer-convert-filters Level filters
 
@@ -345,14 +379,14 @@ as UTF-8 without one.
 -   **The source must contain a supported version of the game data.** The tool looks for
     `Anims.j2a` (or `AnimsSw.j2a`) at the top of the source directory or in its `Source`
     subdirectory and refuses to run without it.
--   **A non-desktop tree is only self-contained if the source was an installation.** Carrying the
-    game's own `Content` over is what makes it so, and that only happens when the original files were
-    found one level down, in a `Source` subdirectory with a `Content` beside it. Pointed at a bare
-    directory of original files the tool converts them and exits successfully --- and the tree then has
-    the sprites and sounds from the original data and none of the game's own: no `.font` files, no
-    `Metadata` at all, none of the UI graphics and no translations. Nothing reports it, and on the
-    target it presents as a game that cannot draw its own menu. The line the tool prints for the
-    carry-over (`Copying "…"`) is how to tell the two runs apart.
+-   **A non-desktop tree is self-contained only if it got the game's own content from somewhere.**
+    That is either a `Content` beside the originals or an explicit `--content=`. Without one the
+    tool still converts and exits successfully, and the tree then holds the sprites and sounds of
+    the original data and none of the game's own: no `.font` files, no `Metadata` at all, none of
+    the UI graphics and no translations --- which presents on the target as a game that cannot draw
+    its own menu. Nothing downstream can catch it, so the conversion **warns** about it instead,
+    naming the option to fix it; the `Copying "…"` line is what a run that did get the content
+    prints.
 -   **Skipped levels are listed on purpose.** The list of original levels is maintained by
     hand, so read the skipped-levels output after a `--originals-only` conversion --- a level
     that should have been kept shows up there by name.

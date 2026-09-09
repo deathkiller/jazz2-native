@@ -29,7 +29,6 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	static constexpr std::uint64_t CurrentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
-	constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL;
 
 	ServerSelectSection::ServerSelectSection()
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
@@ -736,7 +735,8 @@ namespace Jazz2::UI::Menu
 	void ServerSelectSection::OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc)
 	{
 		std::uint64_t serverVersion = parseVersion(desc.Version);
-		desc.IsCompatible = ((serverVersion & VersionMask) == (CurrentVersion & VersionMask));
+		// Full comparison, patch included, matching the server's own check in GameEventHandler::OnPacketReceived()
+		desc.IsCompatible = (serverVersion == CurrentVersion);
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		// On Emscripten (WS-only client), mark servers without WebSocket support as unavailable

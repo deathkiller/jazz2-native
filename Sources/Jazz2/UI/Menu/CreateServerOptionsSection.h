@@ -16,7 +16,7 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		/** @brief Special value for LevelName to create a server from configured playlist */
-		static constexpr StringView FromPlaylist = "\0:playlist"_s;
+		static constexpr StringView FromPlaylist = ":playlist"_s;
 
 		/**
 		 * @brief Creates a new instance

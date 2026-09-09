@@ -1487,9 +1487,8 @@ else()
 			TITLE "${NCINE_APP_NAME}"
 			#VERSION "${NCINE_VERSION}"
 			VERSION "01.00"
-			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
-			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
-			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"
+			# ICON0 is nominally 144x82, the firmware (and PPSSPP) scale whatever they are given
+			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/Psp/Icon.png"
 			# PIC1, the 480x272 backdrop the firmware's game list shows behind the icon when it is selected
 			BACKGROUND_PATH "${NCINE_SOURCE_DIR}/Icons/Psp/Background.png"
 			PREVIEW_PATH NULL
@@ -1765,6 +1764,18 @@ endif()
 if(TILEMAP_USE_SINGLE_DRAW)
 	message(STATUS "Building the game with tilemap layer draw call aggregation")
 	target_compile_definitions(${NCINE_APP} PUBLIC "TILEMAP_USE_SINGLE_DRAW")
+endif()
+
+if(WITH_PHYSICS_PROBE)
+	message(STATUS "Building the game with the movement trajectory probe")
+	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_PHYSICS_PROBE")
+
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Jazz2/Tests/PhysicsProbe.h
+	)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/Jazz2/Tests/PhysicsProbe.cpp
+	)
 endif()
 
 if(WITH_MULTIPLAYER)

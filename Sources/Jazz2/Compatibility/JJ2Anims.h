@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../../Main.h"
+#include "ConversionProgress.h"
 #include "JJ2Version.h"
 #include "AnimSetMapping.h"
 
@@ -31,8 +32,12 @@ namespace Jazz2::Compatibility
 		static constexpr std::uint16_t CacheVersion = 37;
 #endif
 
-		/** @brief Converts the specified animation file and writes the result to a `.pak` file */
-		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false);
+		/**
+		 * @brief Converts the specified animation file and writes the result to a `.pak` file
+		 *
+		 * @param progress	Reports how far the conversion has got, see @ref ConversionProgress
+		 */
+		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false, ConversionProgress progress = {});
 
 		/** @brief Writes raw image content to the specified stream */
 		static void WriteImageContent(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
@@ -117,8 +122,8 @@ namespace Jazz2::Compatibility
 		static bool PackFramesTightly(const AnimSection& anim, std::int32_t border,
 			SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight);
 
-		static void ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims);
-		static void ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples);
+		static void ImportAnimations(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<AnimSection>& anims, ConversionProgress progress);
+		static void ImportAudioSamples(PakWriter& pakWriter, JJ2Version version, SmallVectorImpl<SampleSection>& samples, ConversionProgress progress);
 
 		static void WriteImageToFile(StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry);
 		static void WriteImageToStream(Stream& targetStream, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry, const PackedSheet& packedSheet);

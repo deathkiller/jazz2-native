@@ -108,14 +108,22 @@ namespace Jazz2::Actors::Weapons
 
 	bool SeekerShot::OnPerish(ActorBase* collider)
 	{
-		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
-			if (auto* player = runtime_cast<Player>(actor)) {
-				bool pushLeft = (_pos.X > player->GetPos().X);
-				player->AddExternalForce(pushLeft ? -8.0f : 8.0f, 0.0f);
-				_levelHandler->HandlePlayerPushed(player);
-			}
-			return true;
-		});
+		// Only the RF blast throws the player in the original - measured with the ammo count logged, so a
+		// trace showing no knockback could be told from one where the shot was never fired, a Seeker
+		// detonating one, two or three tiles away moves the player by exactly nothing, and neither does a
+		// TNT going off at their feet. There is no shared "explosion pushes the player" mechanic to share,
+		// so this reproduces nothing and is left to Reforged, where it is somebody's design choice rather
+		// than a claim about the original. See Player::ApplyBlastKnockback() for the one that is measured.
+		if (_levelHandler->IsReforged()) {
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
+				if (auto* player = runtime_cast<Player>(actor)) {
+					bool pushLeft = (_pos.X > player->GetPos().X);
+					player->AddExternalForce(pushLeft ? -8.0f : 8.0f, 0.0f);
+					_levelHandler->HandlePlayerPushed(player);
+				}
+				return true;
+			});
+		}
 
 		Explosion::Create(_levelHandler, Vector3i((std::int32_t)(_pos.X + _speed.X), (std::int32_t)(_pos.Y + _speed.Y), _renderer.layer() + 2), Explosion::Type::Large);
 

@@ -446,6 +446,8 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.h
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTreeBroadPhase.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AnimSetMapping.h
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AssetConverter.h
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/ConversionProgress.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/EventConverter.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.h
 	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.Palettes.h

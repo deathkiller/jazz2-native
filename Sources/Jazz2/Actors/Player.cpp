@@ -73,6 +73,8 @@ namespace Jazz2::Actors
 		_activeModifier(Modifier::None),
 		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
+		_dashGraceLeft(0.0f), _sidekickDistanceLeft(0.0f), _sidekickTime(0.0f), _rfBlastLeft(0.0f),
+		_uppercutTimeLeft(0.0f), _jumpReleased(false), _poleEnteredOnSpring(false),
 		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true),
 		_carryingObject(nullptr), _stackCarrying(false), _beingStoodOn(false),
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
@@ -388,6 +390,8 @@ namespace Jazz2::Actors
 		}
 
 		bool canJumpPrev = CanJump();
+		// Captured before the physics, which is where gravity lands - see `_frameStartSpeedY`
+		_frameStartSpeedY = _speed.Y;
 		OnUpdatePhysics(timeMult);
 
 		UpdateAnimation(timeMult);
@@ -449,17 +453,30 @@ namespace Jazz2::Actors
 			return baseGravity;
 		}
 
-		// Original JJ2: in air the rise decelerates ~3x faster than the fall accelerates, which gives
-		// the recognizable "snappy up, floaty down" arc. The original per-tick constants are scaled by (70/60)^2
-		// to match this engine's 60 Hz timeMult baseline (the caller then multiplies by timeMult), so the descent
-		// runs at the original's real-time acceleration, not ~26% slow.
+		// Original JJ2: in air the rise decelerates ~3x faster than the fall accelerates, which gives the
+		// recognizable "snappy up, floaty down" arc. All three figures are the original's own, measured with
+		// the trajectory probe (see the constants in Player.h).
 		if (_pos.Y >= _levelHandler->GetWaterLevel()) {
-			return 0.015625f * LegacyVerticalGravityScale;	// 1024/65536 - very weak underwater gravity (slow sink)
+			return LegacyWaterGravity;
 		}
-		// Rising and falling use different scales: the original's descent accelerates slightly faster than the
-		// (height-preserving) ascent slow-down, which matches the snappier initial fall after the jump apex.
-		return isRising ? (0.375f * LegacyVerticalGravityScale)	// 3*8192/65536 rising
-						: (0.125f * LegacyFallGravityScale);	// 8192/65536 falling
+		// An uppercut is nearly weightless for its whole length, which is what lets 7.5 px/tick climb 228 px
+		if (_uppercutTimeLeft > 0.0f) {
+			return LegacyUppercutGravity;
+		}
+		if (!isRising) {
+			return LegacyFallGravity;
+		}
+		// Letting go of jump makes the rest of the ascent heavier rather than truncating the speed, which is
+		// how the original shortens a jump - and why a tap hop has its own arc instead of a clipped one.
+		//
+		// That heavier rate then eases off for the last pixel per tick of the rise. The held rate does not:
+		// it is a flat 0.375 all the way to the apex, on 379 measured samples.
+		if (!_jumpReleased) {
+			return LegacyRiseGravity;
+		}
+		return (std::abs(_speed.Y) > LegacyRiseBrakeEaseSpeed
+			? LegacyRiseGravityReleased
+			: LegacyRiseGravityReleasedNearApex);
 	}
 
 	void Player::OnUpdatePhysics(float timeMult)
@@ -474,7 +491,61 @@ namespace Jazz2::Actors
 		// for a long time (high) instead of being clamped to 16 the instant the tube ends.
 		if (!_levelHandler->IsReforged()) {
 			_maxRiseSpeed = (_currentSpecialMove == SpecialMoveType::None ? LegacyRiseSpeedCap : 0.0f);
-			_verticalSpeedLimit = ((_inTubeTime > 0.0f || _speed.Y < -16.0f) ? 32.0f : 16.0f);
+			// This limit is on the *internal* speed, and since applied movement is capped at 8 regardless, it
+			// costs nothing in travel - it only governs how long a launch keeps rising at that cap. The
+			// original's own limit is 32 of its units, read straight off a pole launch: it assigns 40.125 and
+			// the very next tick reports exactly 32.00. That is 37.33 here, which is also precisely a blue
+			// spring's own launch, so a spring fits without being truncated while a pole is clamped the way
+			// the original clamps it. An earlier 32 *here* was below the spring and cost it 5.33 on the tick
+			// it fired; a later 64 cleared everything but then never clamped the pole either.
+			_verticalSpeedLimit = ((_inTubeTime > 0.0f || _speed.Y < -16.0f) ? LegacyVerticalSpeedLimit : 16.0f);
+			// The original's limit is the same 32 px/tick on both axes, so this is LegacyVerticalSpeedLimit as
+			// well. Pinning it to the dash instead (the engine default 16, lifted to LegacyDashSpeed's 18.67)
+			// looked right - the dash is the fastest thing the player *steers* - but every horizontal launch is
+			// assigned above it and was then clamped away on the very next tick: green and blue horizontal
+			// springs (28 and 37.33) both came back down to 18.67, which is exactly a red one, and a pole
+			// launch could never reach the 20 px/tick ceiling it is clamped to. A sidekick outruns even the
+			// original's limit - Lori's is nearly 50 - so it keeps the room it needs, the same way it is exempt
+			// from the applied cap below.
+			_horizontalSpeedLimit = (_currentSpecialMove == SpecialMoveType::Sidekick
+				? std::max(LegacyLoriSidekickSpeed, LegacySpazSidekickSpeed)
+				: LegacyVerticalSpeedLimit);
+			// ...but only half of that is ever actually travelled: applied movement is capped the same way the
+			// rise is. The full momentum still matters wherever the speed itself is read, notably the jump
+			// launch boost, which is why a dashing jump launches at -14 while moving at the cap. This holds for
+			// spring and pole launches too - measured, a blue spring assigns a speed of 32 and still only
+			// climbs at 8.
+			// Lori's kick is the one move that outruns the cap - measured, its last tick alone travels 42 px -
+			// so hers is exempt. Spaz's is not: his speed sits at a flat 16 while he visibly travels 8, which
+			// is the cap doing its job. In both cases the dash covers a *fixed* distance, so the cap is also
+			// reused to keep the final frame from overshooting it.
+			if (_currentSpecialMove == SpecialMoveType::Sidekick && _sidekickDistanceLeft > 0.0f) {
+				float remainingPerTick = _sidekickDistanceLeft / std::max(timeMult, 0.01f);
+				_maxAppliedSpeedX = (_playerType == PlayerType::Lori
+					? remainingPerTick
+					: std::min(LegacyAppliedSpeedCap, remainingPerTick));
+
+				// Her kick accelerates from a sixth of its peak rather than starting there
+				if (_playerType == PlayerType::Lori) {
+					_sidekickTime += timeMult;
+					_speed.X = std::copysign(LegacyLoriKickRamp * _sidekickTime * _sidekickTime, _speed.X);
+				}
+			} else if (_inTubeTime > 0.0f) {
+				// A sucker tube drives the player directly and asks for speeds well above the cap (a level can
+				// set 20 or more), so it is exempt here for the same reason the vertical limit is exempt above -
+				// otherwise a horizontal tube crawls at less than half the rate the level asked for.
+				_maxAppliedSpeedX = std::max(LegacyAppliedSpeedCap, std::abs(_speed.X));
+			} else if (GetAccBeltStrength() != 0) {
+				// An accelerating belt is exempt for the same reason: measured, a strength-8 one moves the
+				// original's player 12 px/tick, straight through a cap of 8. The plain belt and the wind
+				// need no exemption because they move the *position* and never touch the speed at all.
+				_maxAppliedSpeedX = std::max(LegacyAppliedSpeedCap, std::abs(_speed.X));
+			} else {
+				_maxAppliedSpeedX = LegacyAppliedSpeedCap;
+			}
+			// Only the player gets the original's landing allowance - it is measured off the player, and the
+			// shared collision code would otherwise hand it to every enemy and pickup in the level as well
+			_landingTolerance = LegacyLandingTolerance;
 		}
 
 		// Process level bounds (if not warping)
@@ -515,14 +586,45 @@ namespace Jazz2::Actors
 		
 		TryStandardMovement(timeMult, params);
 
+		// The original's rise never overshoots the apex by more than one tick of fall gravity. Where the
+		// deceleration would carry the speed further than that, it ends the rise at zero instead and only
+		// gravity is added, so the first falling tick reads exactly +0.125 however fast the rise was being
+		// braked. Measured across `ap_r01`..`ap_r30`: from -0.375 a released rise lands on +0.250, which is
+		// one step past zero and kept, but from -0.250 and -0.125 it lands on +0.125 rather than the +0.375
+		// and +0.500 the deceleration alone would give.
+		//
+		// Without this the engine carries a full frame of the heavy released rate across zero - up to +0.94
+		// in the original's units - and that overshoot is not a one-tick artefact: it becomes a permanent
+		// offset on the whole descent that follows, which is what left `sp_dj_r50_d25` 11 px short.
+		//
+		// The guard has to be tight, because plenty of things assign an upward or downward speed during the
+		// move: this only fires when the frame *started* the player rising and ended with a small positive
+		// speed that nothing but gravity could have produced.
+		if (!_levelHandler->IsReforged() && _frameStartSpeedY < 0.0f &&
+			(GetState() & ActorState::ApplyGravitation) == ActorState::ApplyGravitation) {
+			float oneStep = LegacyFallGravity * timeMult;
+			if (_speed.Y > oneStep && _speed.Y <= LegacyRiseGravityReleased * timeMult) {
+				_speed.Y = oneStep;
+			}
+		}
+
 		if ((GetState() & ActorState::ApplyGravitation) != ActorState::ApplyGravitation) {
 			_externalForce.Y = std::min(_externalForce.Y + 0.002f * timeMult, 0.0f);
 		}
 
 		// Original JJ2 terminal velocity. Only the downward cap is applied,
 		// so the upward jump impulse keeps its momentum.
-		if (!_levelHandler->IsReforged() && _speed.Y > 12.0f * LegacyVerticalSpeedScale) {
-			_speed.Y = 12.0f * LegacyVerticalSpeedScale;
+		//
+		// A buttstomp descends at its own, lower speed, and the original *governs* it: read off a long drop,
+		// its `ys` sits at exactly 10.0 for every tick of the descent. Assigning the speed once and letting
+		// gravity take over from there - which is what the transition callback does - accelerates instead,
+		// so a stomp entered from a short hop was about right while one entered from a long fall ran away to
+		// the ordinary fall cap, 20% too fast, and hit whatever was below that much harder.
+		if (!_levelHandler->IsReforged()) {
+			float fallCap = (_currentSpecialMove == SpecialMoveType::Buttstomp ? LegacyButtstompSpeed : LegacyFallSpeedCap);
+			if (_speed.Y > fallCap) {
+				_speed.Y = fallCap;
+			}
 		}
 
 		if (params.TilesDestroyed > 0) {
@@ -651,6 +753,30 @@ namespace Jazz2::Actors
 		}
 		if (_springCooldown > 0.0f) {
 			_springCooldown -= timeMult;
+		}
+		if (_uppercutTimeLeft > 0.0f) {
+			_uppercutTimeLeft -= timeMult;
+			if (_uppercutTimeLeft < 0.0f) {
+				_uppercutTimeLeft = 0.0f;
+			}
+		}
+		// Runs before HandleSpecialJump() does, which is what makes this count the same way the original's
+		// does: armed on the tick of the release and already one lower by the time the next tick reads it
+		if (_doubleJumpWindowLeft > 0.0f) {
+			_doubleJumpWindowLeft -= timeMult;
+		}
+		if (_onPinballPaddleTime > 0.0f) {
+			_onPinballPaddleTime -= timeMult;
+		}
+		if (_rfBlastLeft > 0.0f) {
+			_rfBlastLeft -= timeMult;
+			if (_rfBlastLeft <= 0.0f) {
+				_rfBlastLeft = 0.0f;
+				// When the hold ends the original snaps the speed to the walk cap and lets the ordinary
+				// walking deceleration take it from there - the same ending as Spaz's sidekick, and the
+				// reason the throw covers ~302 px rather than the 240 the held part alone would give
+				_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
+			}
 		}
 		if (_weaponCooldown > 0.0f) {
 			_weaponCooldown -= timeMult;
@@ -855,6 +981,14 @@ namespace Jazz2::Actors
 			if (_inTubeTime <= 0.0f) {
 				_controllable = true;
 				SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset, true);
+
+				// The original does not hand the tube's speed back: when the window lapses it clamps to the
+				// walk cap and coasts from there. Measured on a tube set to 20 px/tick, where `xs` reads a
+				// flat 20 until the window ends and then **4.0** on the very next tick. Without it the player
+				// keeps the whole tube speed, which took that tube 1066.9 px against the original's 407.5.
+				if (!_levelHandler->IsReforged()) {
+					_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
+				}
 			} else {
 				// Skip controls, player is not controllable in tube
 #if defined(WITH_AUDIO)
@@ -883,19 +1017,14 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		// Original-style ledge hop: running off a ledge at (at least) walking speed gives a small upward boost so
-		// the player clears small gaps instead of dropping straight in. Fires once on the ground->air transition,
-		// only when not already rising (so deliberate jumps/springs/uppercuts are untouched), and only over a real
-		// gap (a probe below finds no ground within ~1.5 tiles - a step/slope down has ground there, so no hop).
-		if (!_levelHandler->IsReforged() && canJumpPrev && !CanJump() && _speed.Y >= 0.0f &&
-			_controllable && _controllableExternal && !_isLifting && std::abs(_speed.X) >= MaxRunningSpeed &&
-			_suspendType == SuspendType::None && _currentSpecialMove == SpecialMoveType::None && _activeModifier == Modifier::None) {
-			AABBf gapProbe = AABBf(AABBInner.L + 6.0f, AABBInner.B + 4.0f, AABBInner.R - 6.0f, AABBInner.B + 44.0f);
-			TileCollisionParams params = { TileDestructType::None, true };
-			if (_levelHandler->IsPositionEmpty(this, gapProbe, params)) {
-				_speed.Y = -1.5f * LegacyVerticalSpeedScale;
-			}
-		}
+		// There was an "original-style ledge hop" here - a small upward boost on running off a ledge, so the
+		// player would clear a gap instead of dropping into it. Measured over gaps of one to four tiles, the
+		// original gives **no** such boost: running off the edge, `ys` goes straight into the fall gravity
+		// (0, 0.125, 0.250, ... ) and the player crosses a four-tile gap having dropped under 10 px, landing
+		// on the far edge purely because 8 px of travel a tick outruns the fall. A walk drops far enough to
+		// miss the far edge of a three-tile gap and falls in, which is the same arithmetic and not a
+		// separate rule. So gap-clearing needs no code at all: the applied speed cap and the fall gravity
+		// already produce it, and both are measured exactly.
 
 		HandleHorizontalMovement(timeMult);
 
@@ -926,18 +1055,129 @@ namespace Jazz2::Actors
 		HandleWeaponFire(areaWeaponAllowed);
 	}
 
+	bool Player::IsDashActive() const
+	{
+		return (_isRunPressed || _dashGraceLeft > 0.0f);
+	}
+
+	std::int32_t Player::GetSlideStrength() const
+	{
+		// Only underfoot counts: it is a floor event, read one tile down like a belt is, and it cannot apply
+		// to a player who is not standing on it
+		if (!GetState(ActorState::CanJump)) {
+			return -1;
+		}
+
+		std::uint8_t* p;
+		if (_levelHandler->EventMap()->GetEventByPosition(_pos.X, _pos.Y + 32, &p) != EventType::ModifierSlide) {
+			return -1;
+		}
+
+		// The parameter is 2 bits wide, so anything else would be a malformed level - but the arithmetic
+		// below turns a large value into a *negative* brake, which would accelerate the player for ever
+		return std::min((std::int32_t)p[0], 3);
+	}
+
+	std::int32_t Player::GetAccBeltStrength() const
+	{
+		if (!GetState(ActorState::CanJump)) {
+			return 0;
+		}
+
+		std::uint8_t* p;
+		if (_levelHandler->EventMap()->GetEventByPosition(_pos.X, _pos.Y + 32, &p) != EventType::AreaHForce) {
+			return 0;
+		}
+
+		// Slots 2 and 3 of an `AreaHForce` are the accelerating belt, left and right - see EventConverter.cpp
+		return (std::int32_t)p[3] - (std::int32_t)p[2];
+	}
+
+	void Player::UpdateDashState(float timeMult)
+	{
+		if (_levelHandler->IsReforged()) {
+			return;
+		}
+
+		if (_isRunPressed) {
+			_dashGraceLeft = LegacyDashGraceTicks;
+			return;
+		}
+		if (_dashGraceLeft <= 0.0f) {
+			return;
+		}
+
+		// The original's dash doesn't bleed away when Run is let go - it keeps the full speed for its grace and
+		// then drops to the walk cap in a single tick, in mid-air just the same as on the ground
+		_dashGraceLeft -= timeMult;
+		if (_dashGraceLeft <= 0.0f) {
+			_dashGraceLeft = 0.0f;
+			// Only the dash's *own* speed is dropped. Anything still carrying the player owns the horizontal
+			// speed for its whole length and has nothing to do with the Run key - a spring or pole launch
+			// (`_keepRunningTime`), a sidekick, an RF blast - so clamping here would cut a launch the player
+			// cannot steer down to walking pace a quarter of a second in, and make how far it goes depend on
+			// whether Run happened to be held on the way into it.
+			if (_keepRunningTime <= 0.0f && _rfBlastLeft <= 0.0f && _currentSpecialMove != SpecialMoveType::Sidekick) {
+				_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
+			}
+		}
+	}
+
+	void Player::ResetLegacyMovementState()
+	{
+		// `_dashGraceLeft` is advanced by UpdateDashState(), reached only through HandleHorizontalMovement(),
+		// which OnHandleMovement() skips while `_health <= 0` and OnUpdate() skips for the whole warp-in
+		// window - so a player who died or warped mid-dash came back with the grace still at full value and
+		// dashed for a moment with nothing held, then had the speed clamped out from under them.
+		_dashGraceLeft = 0.0f;
+		// Likewise `_rfBlastLeft`, which suppresses all horizontal handling while it lasts: a warp during a
+		// blast left the player unable to steer for the rest of the hold on the far side of it.
+		_rfBlastLeft = 0.0f;
+		// A kick's remaining distance never belongs to the next life or the far side of a warp
+		_sidekickDistanceLeft = 0.0f;
+		_sidekickTime = 0.0f;
+		// Nothing is rising, so the next ascent must pick its own gravity rather than inherit this one
+		_jumpReleased = false;
+		_isSpring = false;
+		_poleEnteredOnSpring = false;
+	}
+
 	void Player::HandleHorizontalMovement(float timeMult)
 	{
+		UpdateDashState(timeMult);
+
 		if (_keepRunningTime <= 0.0f) {
+			// While an RF blast is carrying the player, nothing touches the horizontal speed - not friction,
+			// not the direction keys. See ApplyBlastKnockback(). Only this branch is skipped: the
+			// `_keepRunningTime` branch below merely reads the speed, and bailing out of the whole function
+			// also froze that countdown - the only one in the class - so a spring's no-control window grew by
+			// the length of the blast and the push/facing state stayed latched wherever the blast caught it.
+			if (_rfBlastLeft > 0.0f) {
+				return;
+			}
+
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
 				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
 
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
-				_speed.X = 0.2f * playerMovement;
-				if (_isRunPressed) {
-					_speed.X *= 2.6f;
+				if (_levelHandler->IsReforged()) {
+					_speed.X = 0.2f * playerMovement;
+					if (_isRunPressed) {
+						_speed.X *= 2.6f;
+					}
+				} else if (playerMovementVelocity > 0.4f) {
+					// Measured: a stomp drops whatever speed was carried into it and then drifts sideways at a
+					// flat rate, the same through the pause at the top and the descent, doubled while Run is
+					// held. Assigned as a speed here; the original moves the position directly and leaves its
+					// xSpeed at zero, but nothing reads the speed during a stomp so the result is the same.
+					_speed.X = LegacyButtstompDriftSpeed * (playerMovement < 0.0f ? -1.0f : 1.0f);
+					if (_isRunPressed) {
+						_speed.X *= 2.0f;
+					}
+				} else {
+					_speed.X = 0.0f;
 				}
 			} else if (canWalk && playerMovementVelocity > 0.4f) {
 				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
@@ -963,30 +1203,12 @@ namespace Jazz2::Actors
 
 				_isActivelyPushing = _wasActivelyPushing = true;
 
-				float acceleration = (_levelHandler->IsReforged() ? Acceleration : Acceleration * 2.0f * LegacyGroundAccelScale);
-				if (!_levelHandler->IsReforged()) {
-					if (CanJump()) {
-						// Skid (the original's ground turn-around): when the player is moving fast and the input
-						// flips to the opposite direction, bleed the existing momentum off gently instead of
-						// snapping around, so they keep drifting the original way for a few frames before
-						// accelerating back - even at walking speed, just less than running.
-						bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
-						if (reversing) {
-							acceleration *= (std::abs(_speed.X) > MaxRunningSpeed * LegacyGroundSpeedScale
-								? LegacyRunBrakeScale : LegacyWalkBrakeScale);
-						}
-					} else if (_suspendType == SuspendType::None && !_inWater && _activeModifier == Modifier::None) {
-						// There is no skid in the air, only a plain constant acceleration, so the momentum carried
-						// into the jump takes proportionally longer to shed the faster the player was going - a
-						// walking jump turns around in about half the time a full-speed dashing one does. Braking
-						// against the momentum gets a bit more than accelerating with it, otherwise a fast jump is
-						// barely steerable at all.
-						bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
-						if (reversing) {
-							acceleration *= LegacyAirBrakeScale;
-						}
-					}
-				}
+				// The original has a single acceleration for everything - same on the ground and in the air,
+				// applied in the direction of the input whichever way the player is moving - and it depends
+				// only on whether the dash is up. Turning around is therefore symmetric and keeps its momentum,
+				// which is exactly what makes it slow in the air.
+				float acceleration = (_levelHandler->IsReforged() ? Acceleration
+					: (IsDashActive() ? LegacyDashAccel : LegacyWalkAccel));
 
 				if (_dizzyTime > 0.0f || _playerType == PlayerType::Frog) {
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
@@ -995,23 +1217,23 @@ namespace Jazz2::Actors
 					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
-					if (_suspendType == SuspendType::None && !_inWater && _isRunPressed) {
-						// Original JJ2 caps the applied dash speed at 8 px/tick
-						float maxDashSpeed = (_levelHandler->IsReforged() ? MaxDashingSpeed : LegacyMaxDashingSpeed * LegacyGroundSpeedScale);
+					if (_suspendType == SuspendType::None && !_inWater && (_levelHandler->IsReforged() ? _isRunPressed : IsDashActive())) {
+						float maxDashSpeed = (_levelHandler->IsReforged() ? MaxDashingSpeed : LegacyDashSpeed);
 						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxDashSpeed * playerMovementVelocity, maxDashSpeed * playerMovementVelocity);
 					} else if (_suspendType == SuspendType::Vine) {
 						if (_wasFirePressed) {
 							_speed.X = 0.0f;
 						} else {
-							// If Run is pressed, player moves faster on vines
+							// If Run is pressed, player moves faster on vines - measured as exactly double,
+							// which takes it from half the walk cap up to the walk cap
+							float maxVineSpeed = (_levelHandler->IsReforged() ? MaxVineSpeed : LegacyVineSpeed);
 							if (_isRunPressed) {
-								playerMovementVelocity *= 1.6f;
+								maxVineSpeed *= (_levelHandler->IsReforged() ? 1.6f : 2.0f);
 							}
-							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);
+							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxVineSpeed * playerMovementVelocity, maxVineSpeed * playerMovementVelocity);
 						}
 					} else if (_suspendType != SuspendType::Hook) {
-						// Original JJ2 walk cap is 4 px/tick
-						float maxRunSpeed = (_levelHandler->IsReforged() ? MaxRunningSpeed : MaxRunningSpeed * LegacyGroundSpeedScale);
+						float maxRunSpeed = (_levelHandler->IsReforged() ? MaxRunningSpeed : LegacyWalkSpeed);
 						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxRunSpeed * playerMovementVelocity, maxRunSpeed * playerMovementVelocity);
 					}
 				}
@@ -1019,18 +1241,51 @@ namespace Jazz2::Actors
 				if (CanJump()) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
-			} else if (_inTubeTime <= 0.0f) {
+			} else if (_inTubeTime <= 0.0f && _currentSpecialMove != SpecialMoveType::Sidekick) {
+				// A sidekick covers a fixed distance and owns its speed until that distance runs out (see
+				// CheckEndOfSpecialMoves()), so it must not be braked here. It reaches this branch because the
+				// move takes control away, which makes `canWalk` false with nothing held - and with the dash
+				// brake being ~3.8x the walk brake, a kick begun with Run still down bled out after ~225 px of
+				// its measured 440, leaving the rest of the distance armed to fire later.
 				float absSpeedX = std::abs(_speed.X);
-				float deceleration = Deceleration;
-				if (!_levelHandler->IsReforged()) {
-					deceleration *= LegacyReleaseBrakeScale;
-					// Releasing the key stops the player fairly quickly, only walking coasts a little longer. (Pressing
-					// the opposite direction is the slow, momentum-keeping case - handled as the reversal skid above.)
-					if (absSpeedX <= MaxRunningSpeed * LegacyGroundSpeedScale) {
-						deceleration *= LegacyWalkBrakeScale;
+				// With nothing held the original coasts to a stop, braking harder while the dash is still up -
+				// and braking *less* on a slide tile, which is the whole of what that event does. It adds no
+				// speed of its own; it only swaps the brake, so a player who lets go slides further.
+				float deceleration;
+				if (_levelHandler->IsReforged()) {
+					deceleration = Deceleration;
+				} else {
+					std::int32_t slideStrength = GetSlideStrength();
+					if (slideStrength >= 0) {
+						deceleration = (IsDashActive()
+							? LegacySlideDashDecel - slideStrength * LegacySlideDashDecelStep
+							: LegacySlideWalkDecel - slideStrength * LegacySlideWalkDecelStep);
+					} else {
+						deceleration = (IsDashActive() ? LegacyDashDecel : LegacyWalkDecel);
 					}
 				}
 				_speed.X = std::max((absSpeedX - deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+
+				// An accelerating belt is applied *after* the brake, and that ordering is the measurement: the
+				// original ramps xs 2.0, 3.878, 5.756 and then holds exactly 6.000, which is a step of half
+				// the strength added on top of a friction step of 0.122 each tick, clamped to the target. Adding
+				// it before the brake instead - which is where the floor-event handler runs - leaves the steady
+				// state one friction step short, at 5.862.
+				if (!_levelHandler->IsReforged()) {
+					std::int32_t accBelt = GetAccBeltStrength();
+					if (accBelt != 0) {
+						float target = accBelt * LegacyAccBeltSpeed;
+						_speed.X = std::clamp(_speed.X + accBelt * LegacyAccBeltStep * timeMult,
+							std::min(target, 0.0f), std::max(target, 0.0f));
+					} else if (_wasOnAccBelt) {
+						// Leaving one clamps to the walk cap, exactly as leaving a sucker tube does. Measured:
+						// the original coasts ~87 px past the end of a belt where keeping the belt speed carries
+						// the player 182, and 560 past on a strength-8 one.
+						_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
+					}
+					_wasOnAccBelt = (accBelt != 0);
+				}
+
 				_isActivelyPushing = false;
 
 				absSpeedX = std::abs(_speed.X);
@@ -1138,8 +1393,9 @@ namespace Jazz2::Actors
 					SetState(ActorState::ApplyGravitation, false);
 					SetAnimation(AnimState::Buttstomp);
 					SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
-						// Original JJ2 buttstomp falls at 10 px/tick
-						_speed.Y = (_levelHandler->IsReforged() ? 9.0f : 10.0f * LegacyVerticalSpeedScale);
+						// Measured: the original's buttstomp falls at exactly 10 px/tick, the same for all three
+						// characters, and it is well under the applied cap so it really does descend that fast
+						_speed.Y = (_levelHandler->IsReforged() ? 9.0f : LegacyButtstompSpeed);
 						SetState(ActorState::ApplyGravitation, true);
 						SetAnimation(AnimState::Buttstomp);
 						PlaySfx("Buttstomp"_s, 1.0f, 0.8f);
@@ -1215,6 +1471,14 @@ namespace Jazz2::Actors
 				if (_copterFramesLeft > 0.0f) {
 					SetCopterFlight(70.0f, IsFlyCheatActive() ? FlightType::Cheat : FlightType::Normal);
 				}
+			// The Down gate is NOT what the original uses, but dropping it for non-Reforged was tried and is
+			// worse, so it stays until the real rule is known. Measured with Down and Jump both held through
+			// a sidekick: Spaz jumps - at tick 111, launching -13.939, so with the kick's ~15.7 of
+			// horizontal speed still feeding the launch boost, and with the special move already over -
+			// while Lori never jumps at all. So the original is gating on some crouch-or-coast state rather
+			// than on the key, and the two characters differ because his kick runs 81 ticks and hers 5.
+			// Ignoring the key outright gets Spaz 147.8 px against his 216 and gives Lori 128.3 where the
+			// original gives 0, which is one mismatch traded for another. See the reference page.
 			} else if (_currentSpecialMove == SpecialMoveType::None && _jumpTime <= 0.0f && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down)) {
 				// Standard jump
 				if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
@@ -1236,12 +1500,12 @@ namespace Jazz2::Actors
 							_speed.Y *= 1.3f;
 						}
 					} else {
-						// Original-style instant jump impulse (-10 reference). The applied rise cap then holds the
-						// ascent at a constant speed for the first frames (original feel); vertical scale carries
-						// the 70/60 framerate plus the playtest slow-down (height preserved: velocity x s, gravity x s^2).
-						// Horizontal speed above walking pace is partly carried over into the launch, so a running
-						// jump clears more than a standing one.
-						_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - MaxRunningSpeed) * LegacySpeedJumpScale);
+						// The original's instant launch impulse, measured: a flat -10 plus a quarter of whatever
+						// horizontal speed is being carried, with no threshold - so a standing jump leaves at -10
+						// and a full dash at -14. The applied rise cap then holds the ascent at a constant speed
+						// for the first frames, which is the original's feel.
+						_speed.Y = -(LegacyJumpSpeed + std::abs(_speed.X) * LegacySpeedJumpScale);
+						_jumpReleased = false;
 					}
 				}
 			}
@@ -1249,22 +1513,26 @@ namespace Jazz2::Actors
 			if (_wasJumpPressed) {
 				_wasJumpPressed = false;
 
-				// Releasing jump early cuts the ascent, but only an ascent the player is responsible for - a
-				// spring throws them up whether they touch the button or not, so tapping jump on the way up
-				// must not shorten it (`_isSpring` is cleared the moment they start falling).
-				if (!_isSpring) {
-					// A Reforged jump rises on an internal force, so clearing that is all there is to it, while
-					// the original-style jump rises on speed alone and is cut by the clamp below (the original
-					// tap-hop, -4 reference). Spaz's double jump uses the internal force in both modes, which is
-					// why that is cleared either way - without it the double jump always reached its full
-					// height, with no way to make a shorter one.
-					if (_internalForceY < 0.0f) {
-						_internalForceY = 0.0f;
-					}
-					if (!_levelHandler->IsReforged() && _speed.Y < -4.0f * LegacyVerticalSpeedScale) {
-						_speed.Y = -4.0f * LegacyVerticalSpeedScale;
-					}
+				// A Reforged jump rises on an internal force, so clearing that is all there is to it. Spaz's
+				// double jump uses the internal force in both modes, which is why this is cleared either way:
+				// without it the double jump always reached its full height, with no way to make a shorter
+				// one. It stays outside the `_isSpring` guard below for exactly that reason - putting it
+				// inside meant a double jump taken into a spring could no longer be shortened at all.
+				if (_internalForceY < 0.0f) {
+					_internalForceY = 0.0f;
 				}
+
+				// The original-style jump rises on speed alone and is shortened by the rest of the ascent
+				// becoming heavier instead - see GetGravityModifier(). Releasing jump early cuts that ascent,
+				// but only one the player is responsible for: a spring throws them up whether they touch the
+				// button or not, so tapping jump on the way up must not shorten it (`_isSpring` is cleared the
+				// moment they start falling).
+				if (!_isSpring) {
+					_jumpReleased = true;
+				}
+
+				// Letting go is also what opens the double-jump window - see LegacyDoubleJumpWindowTime
+				_doubleJumpWindowLeft = LegacyDoubleJumpWindowTime;
 			}
 		}
 	}
@@ -1277,16 +1545,25 @@ namespace Jazz2::Actors
 					_controllable = false;
 					SetAnimation(AnimState::Uppercut);
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-						// Non-Reforged launch is boosted to keep the original height against the steeper rise gravity
-						_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f * LegacySpecialMoveScale);
-						_speed.Y = (_levelHandler->IsReforged() ? -2.0f : -2.0f * LegacySpecialMoveScale);
+						if (_levelHandler->IsReforged()) {
+							_externalForce.Y = -1.4f;
+							_speed.Y = -2.0f;
+						} else {
+							// Measured: a plain speed assignment, and the height comes from gravity being nearly
+							// switched off for a fixed number of ticks rather than from a sustained force. Arming
+							// the countdown here rather than at the trigger is what makes the ~14-tick wind-up
+							// (during which the original does not move at all) come out right.
+							_speed.Y = -LegacyUppercutSpeed;
+							_externalForce.Y = 0.0f;
+							_uppercutTimeLeft = LegacyUppercutTicks;
+						}
 						SetState(ActorState::CanJump, false);
 						SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 					});
 				} else {
 					if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 						SetState(ActorState::ApplyGravitation, false);
-						_speed.Y = 1.5f;
+						_speed.Y = (_levelHandler->IsReforged() ? 1.5f : LegacyCopterDescentSpeed);
 						_externalForce.Y = 0.0f;
 						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 							SetAnimation(AnimState::Copter);
@@ -1307,11 +1584,18 @@ namespace Jazz2::Actors
 			case PlayerType::Spaz: {
 				if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 					_controllable = false;
-					_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);	// Non-Reforged Spaz sidekick travels ~2x as far (dash runs until controllable)
+					_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);
 					SetAnimation(AnimState::Uppercut);
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 						_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-						_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
+						_speed.X = (_levelHandler->IsReforged() ? 14.4f : LegacySpazSidekickSpeed) * (IsFacingLeft() ? -1.0f : 1.0f);
+						// The dash begins here, after the wind-up, so this is where its length is armed. It is
+						// counted down in CheckEndOfSpecialMoves() rather than left to `_controllableTimeout`,
+						// which is only read a frame later and so overshot badly at low frame rates.
+						if (!_levelHandler->IsReforged()) {
+							_sidekickDistanceLeft = LegacySpazSidekickDistance;
+							_sidekickTime = 0.0f;
+						}
 						// The dash starts from a crouch, so the player is standing and `CanJump()` is true. Gravity
 						// is off for its duration, which means nothing clears that flag again (only the gravity
 						// handling does) and the player would still count as grounded when the dash ends in mid-air
@@ -1328,13 +1612,48 @@ namespace Jazz2::Actors
 					// carrying the player up would replace a launch of -16 or so with its own -0.6 and cut the arc
 					// short. `_isSpring` covers exactly the rising part of a spring launch (it is cleared as soon
 					// as the player starts falling), so the jump simply waits for the apex instead.
-					if (!CanJump() && _canDoubleJump && !_isSpring) {
+					//
+					// The original also only accepts the second press while the player is falling and within
+					// LegacyDoubleJumpWindowTime of letting the first press go, so a press that comes too
+					// late is simply lost. Nothing else gates it - in particular not the fall speed, which
+					// `sp_dj_r85_d20` and `sp_dj_r85_d25` settle: both are accepted at about 4.0 and 4.6
+					// px/tick, well past the 3.75 the window was first read as.
+					//
+					// The falling half is tested against the speed at the *start* of the frame, not the live
+					// one. The original applies its gravity after this check, so a press landing on the exact
+					// apex reads 0.0000 there and is refused; reading the live value here turns that same
+					// press into +0.44 and accepts it, which made `sp_spaz_dj_hold` rise 166.8 px against 132.1.
+					//
+					// Non-Reforged only, like the rest of this rework: in Reforged the double jump has always
+					// been accepted during a spring rise and changing that is a separate decision.
+					bool inDoubleJumpWindow = (_levelHandler->IsReforged() ||
+						(!_isSpring && _frameStartSpeedY > 0.0f && _doubleJumpWindowLeft > 0.0f));
+					if (!CanJump() && _canDoubleJump && inDoubleJumpWindow) {
 						_canDoubleJump = false;
 						_isFreefall = false;
 
-						_internalForceY = -1.15f - 0.1f * (1.0f - timeMult);
-						_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-						_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
+						if (_levelHandler->IsReforged()) {
+							_internalForceY = -1.15f - 0.1f * (1.0f - timeMult);
+							_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+							_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
+						} else {
+							// Measured: a straight speed assignment, exactly like the first jump, and the height
+							// is then governed by how long the key is held through the same released-gravity
+							// switch.
+							//
+							// The horizontal speed is thrown away outright - a dash double jump leaves at
+							// zero and has to build its speed up again from the air acceleration, which is
+							// what makes the move a way to *stop* as well as to climb. Measured directly:
+							// `sp_dj_a_dash` reads 16.00 the tick before the press and 0.3662 - exactly one
+							// dash acceleration step - the tick after, and the walking cases the same with a
+							// 0.1831 step. Reforged only damps it (x0.4 clamped to 1), which is why this was
+							// long read as "the speed carries over": every earlier measurement was a travel
+							// to a wall that both games reach either way.
+							_speed.Y = -LegacyDoubleJumpSpeed;
+							_speed.X = 0.0f;
+							_internalForceY = 0.0f;
+							_jumpReleased = false;
+						}
 
 						PlayPlayerSfx("DoubleJump"_s);
 
@@ -1344,13 +1663,24 @@ namespace Jazz2::Actors
 				break;
 			}
 			case PlayerType::Lori: {
+				// Unlike Spaz she kicks over and over while Down and Jump are worked, and the repeats need no
+				// pacing of their own: the move holds control for its whole length and the crouch has to come
+				// back before the next press counts, which measures out to a kick every 45 of the original's
+				// ticks against a press every 15 - exactly what the original does with that input
 				if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 					_controllable = false;
 					_controllableTimeout = 40.0f;
 					SetAnimation(AnimState::Uppercut);
 					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 						_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-						_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
+						_speed.X = (_levelHandler->IsReforged() ? 9.3f : LegacyLoriSidekickSpeed) * (IsFacingLeft() ? -1.0f : 1.0f);
+						// As for Spaz: the kick begins here, after the wind-up, and its length is counted down
+						// where the move ends. Armed at the trigger instead, a four-tick kick expires during the
+						// wind-up and dies on the tick it starts - which is what a ~5 px kick looked like.
+						if (!_levelHandler->IsReforged()) {
+							_sidekickDistanceLeft = LegacyLoriSidekickDistance;
+							_sidekickTime = 0.0f;
+						}
 						// As with Spaz above, the dash would otherwise leave the player counting as grounded when
 						// it ends in mid-air (Lori has copter ears rather than a double jump, so for her that
 						// simply means no jump until she lands)
@@ -1360,7 +1690,7 @@ namespace Jazz2::Actors
 				} else {
 					if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 						SetState(ActorState::ApplyGravitation, false);
-						_speed.Y = 1.5f;
+						_speed.Y = (_levelHandler->IsReforged() ? 1.5f : LegacyCopterDescentSpeed);
 						_externalForce.Y = 0.0f;
 						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 							SetAnimation(AnimState::Copter);
@@ -1902,7 +2232,17 @@ namespace Jazz2::Actors
 					}
 					if ((_currentAnimation->State & AnimState::Buttstomp) == AnimState::Buttstomp) {
 						removeSpecialMove = true;
-						_speed.Y *= -0.6f;
+						if (_levelHandler->IsReforged()) {
+							_speed.Y *= -0.6f;
+						} else {
+							// Measured: a flat -13, not a fraction of the impact. The stomp's own descent is
+							// governed at 10, and the bounce leaves at 13 - faster than the fall that caused
+							// it - so scaling the impact could not produce this figure whatever the factor.
+							// The ascent then decays at the *released* rise rate, like a pole launch and
+							// unlike a spring, which is what `_jumpReleased` selects.
+							_speed.Y = -LegacyEnemyStompBounce;
+							_jumpReleased = true;
+						}
 						SetState(ActorState::CanJump, false);
 						SetInvulnerability(FrameTimer::FramesPerSecond, InvulnerableType::Transient);
 					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() > 0) {
@@ -1992,6 +2332,10 @@ namespace Jazz2::Actors
 
 	void Player::OnHitFloor(float timeMult)
 	{
+		// The heavier rise gravity only lasts for the ascent it was triggered in, so landing arms the next jump
+		// with the light one again whether or not the key was ever let go
+		_jumpReleased = false;
+
 		if (_activeModifier == Modifier::None && (_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 			_copterFramesLeft = 0.0f;
 			SetAnimation(_currentAnimation->State & ~AnimState::Copter);
@@ -2124,13 +2468,33 @@ namespace Jazz2::Actors
 							_speed.X = 0.0f;
 							// Gravitation is off for the whole climb, so this one speed carries the player all
 							// the way up - the distance is simply the speed times the transition's duration.
-							// `TryStandardMovement()` used to add one frame of rising gravity on top of it right
-							// after this callback returned, which made the effective climb speed depend on the
-							// frame rate (at 24 FPS barely a third of the 60 Hz rise was left). That tick is gone
-							// now, so the 60 Hz amount of it is folded into the constant to keep the climb looking
+							// `TryStandardMovement()` used to add one frame of gravity on top of it right after
+							// this callback returned, which made the effective climb speed depend on the frame
+							// rate (at 24 FPS barely a third of the 60 Hz rise was left). That tick is gone now,
+							// so the 60 Hz amount of it is folded into the constant to keep the climb looking
 							// exactly as it did, at any frame rate. This replaces the old `0.4` correction, which
 							// only ever applied above 60 FPS.
-							_speed.Y = -1.4f + GetGravityModifier(_levelHandler->GetGravity(), /*isRising:*/true);
+							//
+							// It has to be the plain level gravity and not GetGravityModifier(): climbing a ledge
+							// is not an original JJ2 move at all, so the original's much heavier rise gravity has
+							// no business shaping it. Taking the modifier made the climb 24% shorter, and 82%
+							// shorter once `_jumpReleased` was set - which it is on any approach that involved
+							// letting go of jump, i.e. nearly all of them - leaving the player short of the ledge.
+							//
+							// Clamped so the climb always actually lifts. Gravitation is off for the whole
+							// transition, so this one value is the entire rise: a level handler reporting a
+							// gravity of 1.4 or more would turn it into a descent and drop the player back
+							// below the ledge they just grabbed. Today GetGravity() only ever returns 0.3 or
+							// 0.24, so the clamp never binds - it is here because this is an invented move
+							// with no original to match, and folding a shared physics value into one has
+							// already cost it most of its lift once before.
+							_speed.Y = std::min(-1.4f + _levelHandler->GetGravity(), -0.5f);
+
+#if defined(WITH_PHYSICS_PROBE)
+							if (PreferencesCache::PhysicsProbe) {
+								LOGI("[climb] start y={:.1f} speed={:.4f} jumpReleased={}", _pos.Y, _speed.Y, _jumpReleased ? 1 : 0);
+							}
+#endif
 
 							_externalForce.X = 0.0f;
 							_externalForce.Y = 0.0f;
@@ -2164,6 +2528,12 @@ namespace Jazz2::Actors
 										break;
 									}
 								}
+
+#if defined(WITH_PHYSICS_PROBE)
+								if (PreferencesCache::PhysicsProbe) {
+									LOGI("[climb] end y={:.1f} onFloor={}", _pos.Y, GetState(ActorState::CanJump) ? 1 : 0);
+								}
+#endif
 							});
 						}
 					}
@@ -2177,7 +2547,15 @@ namespace Jazz2::Actors
 	void Player::OnPushSolidObject(float timeMult, float pushSpeedX)
 	{
 		if (std::abs(pushSpeedX) > 0.0f) {
-			_speed.X = pushSpeedX * 1.2f * timeMult;
+			if (_levelHandler->IsReforged()) {
+				_speed.X = pushSpeedX * 1.2f * timeMult;
+			} else {
+				// Measured: the player and the object travel together at a flat rate, and holding Run makes no
+				// difference - walking into a box and dashing into a rock push at exactly the same speed. Note
+				// this is a speed, so it must not be scaled by timeMult the way the Reforged line does: that
+				// made the push two and a half times faster at 24 FPS than at 60.
+				_speed.X = std::copysign(LegacyPushSpeed, pushSpeedX);
+			}
 			_pushFramesLeft = 12.0f;
 			_pushContactThisFrame = true;
 			_fireFramesLeft = 0.0f;
@@ -2191,18 +2569,37 @@ namespace Jazz2::Actors
 	{
 		std::int32_t sign = ((force.X + force.Y) > std::numeric_limits<float>::epsilon() ? 1 : -1);
 		if (std::abs(force.X) > 0.0f) {
-			MoveInstantly(Vector2f(_pos.X, (_pos.Y + pos.Y) * 0.5f), MoveType::Absolute);
+			// Reforged pulls the player halfway towards the spring's own centre. The original does not move
+			// them at all: read off Diamondus 3's chain, where a blue horizontal spring catches a player
+			// falling down a one-tile shaft, its y reads 1428.001, 1428.126, 1428.376 over the launch tick
+			// and the two after it - creeping only as gravity rebuilds `ys` from zero.
+			//
+			// This is invisible to every scenario built out of props, because they all *walk* into a
+			// horizontal spring at the height it already sits at, where the midpoint is a no-op. It only
+			// shows when something falls onto one, and there it is worth 10 px - enough, on that layout, to
+			// decide whether the player clears a wall at tile 12 and escapes the chain or hits it and loops.
+			if (_levelHandler->IsReforged()) {
+				MoveInstantly(Vector2f(_pos.X, (_pos.Y + pos.Y) * 0.5f), MoveType::Absolute);
+			}
 
 			_copterFramesLeft = 0.0f;
-			//speedX = force.X;
-			// Match the original real-time launch speed (70/60 baseline) when not Reforged
-			float springScaleX = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale * 0.95f);
-			_speed.X = (1.0f + std::abs(force.X)) * sign * springScaleX;
-			_externalForce.X = force.X * 0.6f * springScaleX;
+			if (!_levelHandler->IsReforged()) {
+				// The original simply assigns the spring's speed - no formula, no added external force. The
+				// spring already carries the converted figure (see Spring::OnActivatedAsync()).
+				_speed.X = force.X;
+				_externalForce.X = 0.0f;
+			} else {
+				_speed.X = (1.0f + std::abs(force.X)) * sign;
+				_externalForce.X = force.X * 0.6f;
+			}
 			_springCooldown = 10.0f;
 			SetState(ActorState::CanJump, false);
-			// Being thrown by a spring hands the double jump back, exactly like landing does
-			_canDoubleJump = true;
+			// Being thrown by a spring hands the double jump back, exactly like landing does. Non-Reforged
+			// only: in Reforged a spring has never refilled it, and handing Spaz an extra air jump per spring
+			// there would change level routing that has always been balanced without it.
+			if (!_levelHandler->IsReforged()) {
+				_canDoubleJump = true;
+			}
 
 			_wasActivelyPushing = false;
 			_keepRunningTime = (_levelHandler->IsReforged() ? 100.0f : 80.0f);
@@ -2236,16 +2633,30 @@ namespace Jazz2::Actors
 				SetState(ActorState::ApplyGravitation, true);
 			}
 
-			// The applied rise cap (_maxRiseSpeed) holds the launch at a constant speed for the first frames like
-			// the original, so the big gravity-compensation boost is gone.
-			float springScaleY = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale * 1.18f);
-			_speed.Y = (4.0f + std::abs(force.Y)) * sign * springScaleY;
-			if (!GetState(ActorState::ApplyGravitation)) {
-				_externalForce.Y = force.Y * 0.14f;
-			} else if (_levelHandler->IsReforged()) {
-				_externalForce.Y = force.Y;
+			if (!_levelHandler->IsReforged()) {
+				// As with the horizontal case: the speed is the spring's, verbatim. The applied rise cap then
+				// holds the actual climb to 8 px/tick, so a blue spring rises no faster than a red one - it
+				// just keeps going for twice as long, which is what makes it reach further.
+				_speed.Y = force.Y;
+				_externalForce.Y = 0.0f;
+				// A spring ascent decays at the HELD rate whatever the jump key is doing - measured at exactly
+				// 0.375 over the whole rise, with the probe pressing nothing at all. Leaving `_jumpReleased`
+				// alone made the spring inherit the player's last jump instead, and a spring is not a solid
+				// object, so descending onto one never calls OnHitFloor() to clear the flag on the way in.
+				// A blue spring then rose 399 px instead of 602 - measured, see `jr_spring_fall*` - which is
+				// the difference between reaching what is above it and not, from the same spring, decided by
+				// something the player did on the way down. The pole launch deliberately does the opposite
+				// (see NextPoleStage()), which is why this belongs to the launch source rather than being
+				// left to whatever preceded it. `_isSpring` already stops a *later* release from shortening
+				// the rise; this is the same intent applied to a stale one.
+				_jumpReleased = false;
 			} else {
-				_externalForce.Y = force.Y * 0.8f * springScaleY;
+				_speed.Y = (4.0f + std::abs(force.Y)) * sign;
+				if (!GetState(ActorState::ApplyGravitation)) {
+					_externalForce.Y = force.Y * 0.14f;
+				} else {
+					_externalForce.Y = force.Y;
+				}
 			}
 			_springCooldown = 10.0f;
 			SetState(ActorState::CanJump, false);
@@ -2272,8 +2683,11 @@ namespace Jazz2::Actors
 				_isSpring = true;
 				// A spring hands the double jump back, exactly like landing does - otherwise a player who had
 				// already spent it in mid-air has nothing left for the whole of the (usually long) spring arc.
-				// It only becomes usable once the rise is over, see HandleSpecialJump().
-				_canDoubleJump = true;
+				// It only becomes usable once the rise is over, see HandleSpecialJump(). Non-Reforged only,
+				// for the same reason as the horizontal case above.
+				if (!_levelHandler->IsReforged()) {
+					_canDoubleJump = true;
+				}
 				if (_activeModifier == Modifier::None) {
 					SetAnimation(_currentAnimation->State & ~(AnimState::Crouch | AnimState::Lookup));
 				}
@@ -2308,6 +2722,11 @@ namespace Jazz2::Actors
 			newState = AnimState::Hook;
 		} else if (_suspendType == SuspendType::SwingingVine) {
 			newState = AnimState::Swing;
+		} else if (_onPinballPaddleTime > 0.0f) {
+			// Standing on a pinball paddle, which the original shows as the sucker tube's curled-up ball -
+			// see `_onPinballPaddleTime`. It has to be decided here rather than assigned by the paddle,
+			// because everything below would otherwise overwrite it on the very next frame.
+			newState = AnimState::Dash | AnimState::Jump;
 		} else if (_isLifting || (_beingStoodOn && CanJump() && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f)) {
 			// `_isLifting` is the movement-restricting lift (solid object, or a player in local co-op); `_beingStoodOn`
 			// is the cosmetic online case - only show its pose while grounded and still, so a moving (unrestricted)
@@ -2333,7 +2752,7 @@ namespace Jazz2::Actors
 				float absSpeedX = std::abs(_speed.X);
 				// Threshold must track the actual walk cap, otherwise the higher non-Reforged walk speed would
 				// keep triggering the Dash animation while merely walking.
-				float dashAnimThreshold = (_levelHandler->IsReforged() ? MaxRunningSpeed : MaxRunningSpeed * LegacyGroundSpeedScale);
+				float dashAnimThreshold = (_levelHandler->IsReforged() ? MaxRunningSpeed : LegacyWalkSpeed);
 				if (absSpeedX > dashAnimThreshold) {
 					composite |= AnimState::Dash;
 				} else if (_keepRunningTime > 0.0f) {
@@ -2578,13 +2997,43 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Uppercut
-		if (_currentSpecialMove == SpecialMoveType::Uppercut && _currentTransition == nullptr && ((_currentAnimation->State & AnimState::Uppercut) == AnimState::Uppercut) && _speed.Y > -2) {
+		// Uppercut. Reforged ends it once the rise has decayed, which with its sustained force is what sets
+		// the height. The original instead drives for a fixed 30 ticks and is still doing -6.59 when it ends,
+		// so waiting for -2 there would overshoot by a long way - it counts the ticks out instead.
+		if (_currentSpecialMove == SpecialMoveType::Uppercut && _currentTransition == nullptr && ((_currentAnimation->State & AnimState::Uppercut) == AnimState::Uppercut) &&
+			(_levelHandler->IsReforged() ? _speed.Y > -2.0f : _uppercutTimeLeft <= 0.0f)) {
 			EndDamagingMove();
 		}
 
-		// Sidekick
-		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransition == nullptr && (_controllable || std::abs(_speed.X) < 0.01f)) {
+		// Sidekick - the dash covers a fixed distance, so what is counted here is the distance itself rather
+		// than a duration. `_controllableTimeout` cannot do it: this function only ever sees that a frame
+		// stale, since OnUpdateTimers() runs after it. Counting ticks instead still rounded up to whole
+		// frames, which on a four-tick kick was a 20% overshoot at 60 FPS and worse at 24. Zeroing the speed
+		// lets the existing exit condition below finish the move on this same tick.
+		bool sidekickSpent = false;
+		// Gated on the move actually being in progress: the budget is persistent state and every other way a
+		// kick can end (a wall, an enemy that survives it, a spring, water, a warp, damage) leaves a remainder
+		// behind. Counting that remainder down against ordinary running fired the terminal speed fix-up
+		// hundreds of pixels later - a dash silently dropping to walking pace, or Lori stopping dead mid-run.
+		// EndDamagingMove() clears it, so this only ever sees a live kick.
+		if (_currentSpecialMove == SpecialMoveType::Sidekick && _sidekickDistanceLeft > 0.0f) {
+			_sidekickDistanceLeft -= std::abs(_pos.X - _frameStartPos.X);
+			if (_sidekickDistanceLeft <= 0.0f) {
+				_sidekickDistanceLeft = 0.0f;
+				_externalForce.X = 0.0f;
+				sidekickSpent = true;
+				// Lori's kick stops dead - measured, her speed reads 0 on the very next tick. Spaz's does not:
+				// his snaps back to the walk cap and the ordinary deceleration coasts him the rest of the way,
+				// which is where the last ~65 px of his ~505 px come from.
+				if (_playerType == PlayerType::Lori) {
+					_speed.X = 0.0f;
+				} else {
+					_speed.X = std::clamp(_speed.X, -LegacyWalkSpeed, LegacyWalkSpeed);
+				}
+			}
+		}
+
+		if (_currentSpecialMove == SpecialMoveType::Sidekick && _currentTransition == nullptr && (sidekickSpent || _controllable || std::abs(_speed.X) < 0.01f)) {
 			EndDamagingMove();
 			_controllable = true;
 			_controllableTimeout = 0.0f;
@@ -2601,7 +3050,8 @@ namespace Jazz2::Actors
 				cancelCopter = (CanJump() || _suspendType != SuspendType::None || _copterFramesLeft <= 0.0f);
 
 				SetCopterFlight(_copterFramesLeft - timeMult, FlightType::Normal);
-				_speed.Y = std::min(_speed.Y + _levelHandler->GetGravity() * timeMult, 1.5f);
+				_speed.Y = std::min(_speed.Y + _levelHandler->GetGravity() * timeMult,
+					(_levelHandler->IsReforged() ? 1.5f : LegacyCopterDescentSpeed));
 			} else {
 				cancelCopter = ((_currentAnimation->State & AnimState::Fall) == AnimState::Fall && _copterFramesLeft > 0.0f);
 			}
@@ -2879,6 +3329,15 @@ namespace Jazz2::Actors
 					if (_externalForceCooldown <= 0.0f || _speed.Y < 0.0f) {
 						if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 							_speed.Y = std::max(_speed.Y - _levelHandler->GetGravity() * timeMult * 8.0f, -6.0f);
+						} else if (!_levelHandler->IsReforged() && GetState(ActorState::ApplyGravitation)) {
+							// The original simply holds the player at a fixed rise speed while they are in
+							// the field - not an acceleration, and no force. Measured inside a solid ten-tile
+							// column: exactly -8.0 on every one of the 43 ticks inside it, decaying only once
+							// the player leaves. Reforged's continuous `-2 * gravity * timeMult` force never
+							// assigns a real upward speed and oscillates around zero instead, so riding the
+							// test level's diagonal ladder gained 149.8 px against the original's 520.3.
+							_speed.Y = -LegacyFloatUpSpeed;
+							_externalForce.Y = 0.0f;
 						} else if (GetState(ActorState::ApplyGravitation)) {
 							float gravity = _levelHandler->GetGravity();
 							_externalForce.Y = -2.0f * gravity * timeMult;
@@ -2899,7 +3358,12 @@ namespace Jazz2::Actors
 				std::uint8_t p1 = p[4];
 				std::uint8_t p2 = p[5];
 				if ((p2 != 0 || p1 != 0)) {
-					MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+					// Measured at 0.5 px/tick per unit of strength, against Reforged's 0.7 - so a wind blew
+					// the player along 20% too fast. Which way it blows is *not* decided by the event being
+					// WIND_LEFT or WIND_RIGHT: the parameter is signed, and the original blows a
+					// `MODIFIER_WIND_LEFT` with a positive 8 rightward exactly as our converter reads it.
+					float factor = (_levelHandler->IsReforged() ? 0.7f : LegacyWindFactor);
+					MoveInstantly(Vector2f((p2 - p1) * factor * timeMult, 0), MoveType::Relative);
 				}
 			}
 
@@ -2912,9 +3376,19 @@ namespace Jazz2::Actors
 						std::uint8_t p3 = p[2];
 						std::uint8_t p4 = p[3];
 						if (p2 != 0 || p1 != 0) {
-							MoveInstantly(Vector2f((p2 - p1) * 0.7f * timeMult, 0), MoveType::Relative);
+							// A position move like the wind above, but at twice its strength - measured at
+							// 1.0 px/tick per unit against Reforged's 0.7
+							float factor = (_levelHandler->IsReforged() ? 0.7f : LegacyBeltFactor);
+							MoveInstantly(Vector2f((p2 - p1) * factor * timeMult, 0), MoveType::Relative);
 						}
-						if (p4 != 0 || p3 != 0) {
+						// The accelerating belt is the one of the three that works on the *speed*, and Reforged
+						// adds a fixed step per frame with no ceiling - and, because that step is not scaled
+						// by `timeMult`, at a rate that depends on the frame rate. It crawled to the
+						// original's speed over 45 frames and then sailed past it.
+						//
+						// The non-Reforged one is not applied here at all: it has to come *after* the brake,
+						// so it lives in HandleHorizontalMovement(). See @ref LegacyAccBeltStep.
+						if ((p4 != 0 || p3 != 0) && _levelHandler->IsReforged()) {
 							_speed.X += (p4 - p3) * 0.1f;
 						}
 						break;
@@ -3035,10 +3509,22 @@ namespace Jazz2::Actors
 				SetAnimation(AnimState::Dash | AnimState::Jump);
 
 				_controllable = false;
-				SetState(ActorState::CanJump | ActorState::ApplyGravitation, false);
+				SetState(ActorState::CanJump, false);
+				// The original keeps gravity **on** through a tube: the speed is re-assigned every tick the
+				// player is inside a tile, and the moment they leave, the ascent decays at the ordinary rise
+				// gravity. Switching it off for the whole control window made a tube firing straight up rise
+				// 222 px against the original's 99.7, and a 30-tile column of them 1151 against 1027.
+				if (_levelHandler->IsReforged()) {
+					SetState(ActorState::ApplyGravitation, false);
+				}
 
-				_speed.X = (float)(std::int8_t)p[0];
-				_speed.Y = (float)(std::int8_t)p[1];
+				// The parameters are in the original's units - pixels per 70 Hz tick - so they need the same
+				// conversion every other measured speed gets. Both traces *display* 8.0 for a tube set to 8,
+				// which is what made this look right at first: 8 px per frame here is 480 px/s against the
+				// original's 560, and the travel came out at exactly 6/7 of it.
+				float tubeScale = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale);
+				_speed.X = (float)(std::int8_t)p[0] * tubeScale;
+				_speed.Y = (float)(std::int8_t)p[1] * tubeScale;
 
 				// The tube snaps the player onto its own tile, which is the tile the event was found in - not
 				// necessarily the one the player ended the frame in, if it entered the tube mid-step
@@ -3059,7 +3545,7 @@ namespace Jazz2::Actors
 				}
 
 				SetState(ActorState::CollideWithTileset, !becomeNoclip);
-				_inTubeTime = (becomeNoclip ? 600.0f : 10.0f);
+				_inTubeTime = (becomeNoclip ? 600.0f : (_levelHandler->IsReforged() ? 10.0f : LegacyTubeControlTime));
 				return true;
 			}
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
@@ -4029,6 +4515,8 @@ namespace Jazz2::Actors
 		SetState(ActorState::IsInvulnerable, false);
 		SetState(ActorState::ApplyGravitation | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors, true);
 
+		ResetLegacyMovementState();
+
 		return true;
 	}
 
@@ -4057,6 +4545,8 @@ namespace Jazz2::Actors
 			_fireFramesLeft = 0.0f;
 			_copterFramesLeft = 0.0f;
 			_pushFramesLeft = 0.0f;
+
+			ResetLegacyMovementState();
 
 			// For warping from the water
 			_renderer.setRotation(0.0f);
@@ -4120,14 +4610,19 @@ namespace Jazz2::Actors
 		std::int32_t x = (std::int32_t)eventPos.X / Tiles::TileSet::DefaultTileSize;
 		std::int32_t y = (std::int32_t)eventPos.Y / Tiles::TileSet::DefaultTileSize;
 
-		// A pole covers more than one tile, and being launched off it crosses the rest of them, so the single
-		// tile that was just used is not enough to recognise the same pole again - the tiles around it count as
-		// well. Without this the launch grabs the very same pole a second time. The window is deliberately kept
-		// short (see NextPoleStage()) rather than the area small, because poles are chained in some levels and
-		// the next one has to stay grabbable - two distinct poles are never this close together.
-		constexpr std::int32_t SamePoleTolerance = 2;
-
-		if (_lastPoleTime > 0.0f && std::abs(x - _lastPolePos.X) <= SamePoleTolerance && std::abs(y - _lastPolePos.Y) <= SamePoleTolerance) {
+		// Only the exact tile just used is excluded, and only for as long as `_lastPoleTime` runs, which stops
+		// the launch re-grabbing the pole it came off.
+		//
+		// It used to exclude everything within two tiles on both axes, on the assumption that two distinct
+		// poles are never that close together. Measured against the original, they can be: a V-Pole event
+		// directly above another is a real construction, and the original grabs the second and chains off it
+		// - launching -22.25 and then -37.38, for 406.7 px against the 270.6 one pole gives. The old area
+		// swallowed the pole one tile up, so the second was silently ignored and a third of the height lost.
+		//
+		// Side by side is different and needs no exclusion to get right: the original does *not* chain there
+		// either, because a launch straight up the column simply never overlaps the neighbouring tile. Both
+		// games rise 270 px for that layout, so the geometry decides it rather than any rule.
+		if (_lastPoleTime > 0.0f && x == _lastPolePos.X && y == _lastPolePos.Y) {
 			return false;
 		}
 
@@ -4142,7 +4637,15 @@ namespace Jazz2::Actors
 			activeForce = _speed.Y;
 			lastSpeed = _speed.Y;
 		}
-		bool positive = (activeForce >= 0.0f);
+		// Zero is the one entry speed where the comparison matters, and `>= 0` gets it wrong for a horizontal
+		// pole: measured, the original launches one *left* when the player arrives with no horizontal speed at
+		// all - which is what dropping onto a pole from above does. Together with LegacyHPoleMinLaunch that is
+		// what stops such a player re-grabbing the same pole for ever.
+		//
+		// Reforged keeps `>= 0`. Its launch is a fixed 10 either way, so the direction there is cosmetic and
+		// nothing is being matched to; and the vertical pole keeps it too, since a vertical entry of exactly
+		// zero has never been measured on either side.
+		bool positive = (horizontal && !_levelHandler->IsReforged() ? activeForce > 0.0f : activeForce >= 0.0f);
 
 		float tx = static_cast<float>(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
 		float ty = static_cast<float>(y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
@@ -4172,6 +4675,10 @@ namespace Jazz2::Actors
 		SetState(ActorState::ApplyGravitation, false);
 		_renderer.setRotation(0.0f);
 		_isAttachedToPole = true;
+		// Which rise gravity the launch will decay under depends on how the player got here, and it has to be
+		// remembered now: `_isSpring` covers only the rising part of a spring launch, and a pole holds the
+		// player at zero speed for about 140 ticks, which clears it long before the launch happens.
+		_poleEnteredOnSpring = _isSpring;
 		if (_inIdleTransition) {
 			_inIdleTransition = false;
 			CancelTransition();
@@ -4221,8 +4728,23 @@ namespace Jazz2::Actors
 					}
 				}
 
-				_speed.X = 10 * sign + lastSpeed * 0.2f;
-				_externalForce.X = 10.0f * sign;
+				if (_levelHandler->IsReforged()) {
+					_speed.X = 10 * sign + lastSpeed * 0.2f;
+					_externalForce.X = 10.0f * sign;
+				} else {
+					// Measured: this one multiplies the entry speed and clamps the result, where the vertical
+					// pole adds a fixed bonus instead. Entering at a walk gives 12, and anything from a run up
+					// hits the ceiling - but the multiply only decides the middle of the range. Fitted on four
+					// entry speeds: 0 -> 8 (leftward), 4 -> 12, 9.34 -> 20 and 16 -> 20, the last two clamped.
+					//
+					// The floor is what the zero case needs. Without it a player who drops onto a pole is
+					// launched at nothing, never leaves the tile, and re-grabs it once `_lastPoleTime` runs
+					// out - forever. The original does the same run around the test level's spring chain
+					// without ever sticking.
+					_speed.X = std::clamp(std::abs(lastSpeed) * LegacyHPoleLaunchScale,
+						LegacyHPoleMinLaunch, LegacyHPoleMaxLaunch) * sign;
+					_externalForce.X = 0.0f;
+				}
 				SetFacingLeft(!positive);
 
 				_keepRunningTime = 60.0f;
@@ -4232,8 +4754,27 @@ namespace Jazz2::Actors
 				MoveInstantly(Vector2f(0.0f, sign * 16.0f), MoveType::Relative | MoveType::Force);
 
 				// Non-Reforged: stronger vertical launch so spring->pole chains gain ~50% more height
-				_speed.Y = (4.0f * sign + lastSpeed * 1.4f) * (_levelHandler->IsReforged() ? 1.0f : 2.5f);
-				_externalForce.Y = 1.3f * sign * (_levelHandler->IsReforged() ? 1.0f : 2.5f);
+				if (_levelHandler->IsReforged()) {
+					_speed.Y = 4.0f * sign + lastSpeed * 1.4f;
+					_externalForce.Y = 1.3f * sign;
+				} else {
+					// Measured: the pole returns the speed it was entered with and adds a fixed bonus on top,
+					// which is what makes chained poles and spring-into-pole compound the way they do
+					_speed.Y = (LegacyPoleLaunchBonus + std::abs(lastSpeed)) * sign;
+					_externalForce.Y = 0.0f;
+					// The ascent that follows decays at the *released* rate - measured over 25 consecutive
+					// ticks as exactly 0.875 a tick, against the 0.375 a held jump gets - even with jump held.
+					// Without it the rise is nearly three times too long, and since a chained pole is entered
+					// with whatever survives the previous ascent, the error compounds down a chain: two poles
+					// reached 772 px instead of 440.
+					//
+					// Except off a spring, where the same pole decays at 0.375 instead. Read off the original:
+					// ob_vpole, reached by jumping, gives 0.875 a tick; ob_spring_vpole, reached off a
+					// spring with no key ever pressed, gives 0.375 for 25+ consecutive ticks. Same pole, same
+					// key state, so what decides it is how the player arrived - and forcing the released rate
+					// left a spring-fed pole rising 535 px against the original's 804.
+					_jumpReleased = !_poleEnteredOnSpring;
+				}
 			}
 
 			SetState(ActorState::ApplyGravitation, true);
@@ -4506,6 +5047,9 @@ namespace Jazz2::Actors
 				SetTransition(AnimState::TransitionUppercutEnd, false);
 			}
 			_controllable = true;
+			// Cleared here as well as when it runs out, so a move cut short - by a ceiling, water, damage -
+			// hands the weightless gravity back instead of carrying it into the fall
+			_uppercutTimeLeft = 0.0f;
 
 			if (_externalForce.Y < 0.0f) {
 				_externalForce.Y = 0.0f;
@@ -4514,6 +5058,13 @@ namespace Jazz2::Actors
 			CancelTransition();
 			_controllable = true;
 			_controllableTimeout = 10;
+
+			// Whether the dash stops dead or coasts on is decided where its distance runs out, in
+			// CheckEndOfSpecialMoves() - Lori's stops, Spaz's keeps the walk cap and decelerates normally -
+			// so no speed is forced here. The remaining distance is dropped, though: it belongs to this kick
+			// and a move cut short must not leave it armed to fire during ordinary movement later.
+			_sidekickDistanceLeft = 0.0f;
+			_sidekickTime = 0.0f;
 		}
 
 		_currentSpecialMove = SpecialMoveType::None;
@@ -4815,6 +5366,39 @@ namespace Jazz2::Actors
 		bool wasNotDizzy = (_dizzyTime <= 0.0f);
 		_dizzyTime = timeLeft;
 		return wasNotDizzy;
+	}
+
+	bool Player::ApplyBlastKnockback(bool pushLeft, float distanceSqr)
+	{
+		float sign = (pushLeft ? -1.0f : 1.0f);
+		if (_levelHandler->IsReforged()) {
+			AddExternalForce(4.0f * sign, 0.0f);
+		} else {
+			// The caller's search tests the player's box rather than their centre, so it reaches about 52 px
+			// - measurably further than the original, which throws the player at 36 px and not at 48
+			if (distanceSqr > LegacyRFBlastReach * LegacyRFBlastReach) {
+				return false;
+			}
+			// A straight speed assignment held for a fixed time, which is what the original does - the throw
+			// is the same on the ground as in the air and does not decay while it lasts.
+			//
+			// The upward kick applies only off the ground. Standing on the floor the original does lift the
+			// player, but by an amount that depends on the range: about 10 px parked a tile out (it assigns
+			// ys = -4.2488 there) and 0.7 px fired point blank into the wall, which is what happens here
+			// already. Two points do not settle that curve, so nothing is applied on the ground rather than
+			// trading one measured scenario for the other - see the reference page.
+			_speed.X = LegacyRFBlastSpeed * sign;
+			_rfBlastLeft = LegacyRFBlastHoldTicks;
+			if (!GetState(ActorState::CanJump)) {
+				_speed.Y = -LegacyRFBlastRiseSpeed;
+				// The original's rise after a blast decays at the released rate even with jump still held,
+				// which is 29 px of height - so the blast ends the player's claim on the ascent
+				_internalForceY = 0.0f;
+				_jumpReleased = true;
+			}
+		}
+
+		return true;
 	}
 
 	bool Player::SetShield(ShieldType shieldType, float time)

@@ -136,7 +136,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -185,7 +185,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL2;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -207,7 +207,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;WITH_PHYSICS_PROBE;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_RHI_GL;RHI_GL_PROFILE_CORE;WITH_AUDIO;WITH_OPENAL;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -467,6 +467,7 @@
     <ClInclude Include="Jazz2\AnimationLoopMode.h" />
     <ClInclude Include="Jazz2\Compatibility\AnimSetMapping.h" />
     <ClInclude Include="Jazz2\Compatibility\AssetConverter.h" />
+    <ClInclude Include="Jazz2\Compatibility\ConversionProgress.h" />
     <ClInclude Include="Jazz2\Compatibility\EventConverter.h" />
     <ClInclude Include="Jazz2\Compatibility\J2vRecompressor.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Anims.h" />
@@ -763,6 +764,7 @@
     <ClInclude Include="Jazz2\ILevelHandler.h" />
     <ClInclude Include="Jazz2\IStateHandler.h" />
     <ClInclude Include="Jazz2\LevelHandler.h" />
+    <ClInclude Include="Jazz2\Tests\PhysicsProbe.h" />
     <ClInclude Include="Jazz2\LevelInitialization.h" />
     <ClInclude Include="Jazz2\Tiles\TileMap.h" />
     <ClInclude Include="Jazz2\Tiles\TileSet.h" />
@@ -1157,6 +1159,7 @@
     <ClCompile Include="Jazz2\Events\EventMap.cpp" />
     <ClCompile Include="Jazz2\Events\EventSpawner.cpp" />
     <ClCompile Include="Jazz2\LevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Tests\PhysicsProbe.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileMap.cpp" />
     <ClCompile Include="Jazz2\Tiles\TileSet.cpp" />
     <ClCompile Include="Main.cpp" />

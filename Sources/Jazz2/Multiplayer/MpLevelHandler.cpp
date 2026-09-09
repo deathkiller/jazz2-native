@@ -5462,9 +5462,12 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		if (!pendingLightRanges.empty()) {
-			lock.unlock();
+		// Released unconditionally, before anything below can send. Unlocking only on the branch that had
+		// lights to queue made it depend on the contents of a packet whether the SendTo() further down runs
+		// with the lock held, so any lock ordering inside the network manager was exercised both ways.
+		lock.unlock();
 
+		if (!pendingLightRanges.empty()) {
 			InvokeAsync([this, pendingLightRanges = std::move(pendingLightRanges), pendingLights = std::move(pendingLights)]() {
 				std::unique_lock lock(_lock);
 
@@ -10684,11 +10687,12 @@ namespace Jazz2::Multiplayer
 
 		// The remoted `ActorState::Illuminated` is what makes an observer reproduce the orbiting light swarm on its
 		// own instead of being told about two dozen constantly moving lights. It's the generic per-event
-		// "Illuminate" flag though (see `Events::EventMap::ReadEvents()`), and only a collectible acts on it here,
-		// so it's cleared for everything else - otherwise an event authored with it would glow on every client
-		// while emitting nothing on the server.
+		// "Illuminate" flag though (see `Events::EventMap::ReadEvents()`), so it's cleared for every object that
+		// doesn't actually act on it - otherwise an event authored with it would glow on every client while
+		// emitting nothing on the server. The object answers for itself rather than being recognized by type
+		// here, so this stays out of the business of knowing which gameplay classes exist.
 		Actors::ActorState state = actor->_state;
-		if (runtime_cast<Actors::Collectibles::CollectibleBase>(actor) == nullptr) {
+		if (!actor->IsIlluminatedStateRemoted()) {
 			state &= ~Actors::ActorState::Illuminated;
 		}
 

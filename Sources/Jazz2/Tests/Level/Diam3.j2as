@@ -1,0 +1,97 @@
+/*
+	Trajectory probe, cut down to one scenario and pointed at a level nobody built for a test.
+
+	The counterpart of scenario 172 in `PhysicsProbe.cpp`, and the reason it exists: `_pt.j2l` is a level
+	written to measure things, so every constant in the movement model was fitted against layouts chosen to
+	expose it. Diamondus 3 is shipped geometry, and its far west end happens to hold a spring chain of its
+	own - a one-tile shaft at x=1 with a horizontal blue spring at (1,45) at the bottom, feeding red and
+	green springs and a horizontal pole at (11,52). Dropping the player in at (1,36) and pressing nothing
+	for fifteen seconds therefore checks the model against a layout it was not tuned on.
+
+	Drop this next to Diam3.j2l in the original game's directory; JJ2+ picks up `<level>.j2as` on its own.
+	Nothing else in the level is touched, and the level file itself is not modified.
+
+	Written standalone rather than by copying `_pt.j2as`: that one opens with an MLLE include its own level
+	requires, and Diam3 is an original 1.20 level with no MLLE data. The state machine is simpler too, since
+	there is only one scenario and it starts by teleporting - so there is no need for the PRIME/SETTLE pair
+	that gives every `_pt` scenario the same starting spot.
+
+	Output goes to diam3_trace.asdat next to the game (jjSTREAM::save() forces that extension). Columns are
+	identical to `_pt_trace`, so `Tools/ExtractTrace.ps1` and `Tools/CompareTraces.ps1` read it unchanged:
+		scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy
+	x/y/xs/ys are sampled AFTER the previous tick's movement and BEFORE this tick's input is applied, which
+	is the same point in the tick both probes log at.
+*/
+
+const string OutputFile = "diam3_trace.csv";
+
+// Fifteen seconds at the original's 70 ticks/s, which is what the chain needs to run its course. Kept
+// identical to GetScenarioTicks(172) in this engine's probe.
+const int ScenarioTicks = 1100;
+
+// Ticks to let the level start up before the player is moved. Nothing is measured in them - they exist
+// because a teleport on the very first tick does not always stick, and because the two probes have to begin
+// their runs from the same state rather than mid-fade.
+const int WarmupTicks = 20;
+
+// Tile the player is dropped at: the top of the shaft at the level's west end
+const int StartTileX = 1, StartTileY = 36;
+
+const int StateWarmup = 0, StateRun = 1, StateDone = 2;
+
+int State = StateWarmup;
+int Tick = 0;
+int Warmed = 0;
+
+uint64 StartMs = 0;
+
+jjSTREAM@ Log = jjSTREAM();
+
+void onLevelBegin() {
+	StartMs = jjUnixTimeMs();
+	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy\n");
+	jjAlert("Diamondus 3 trajectory probe armed");
+}
+
+void onPlayerInput(jjPLAYER@ play) {
+	switch (State) {
+		case StateDone:
+			return;
+
+		case StateWarmup: {
+			play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = false;
+			Warmed++;
+			if (Warmed >= WarmupTicks) {
+				play.xPos = StartTileX * 32 + 16;
+				play.yPos = StartTileY * 32 + 16;
+				play.xSpeed = 0;
+				play.ySpeed = 0;
+				Tick = 0;
+				State = StateRun;
+			}
+			return;
+		}
+	}
+
+	// Nothing is held for the whole run - the springs and the pole do all of the work, which is the point:
+	// no scripted input means nothing about the result depends on when a key was pressed
+	play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = false;
+
+	// Logged from onPlayerInput() rather than onPlayer() for the same reason `_pt.j2as` does: onPlayer() runs
+	// after the movement in the original but before it in this engine, which would offset the two traces by
+	// a tick. The two object columns have nothing to report here, so they carry -1 as `_pt` does when no
+	// pushable exists.
+	Log.write(
+		"dm_chain," + Tick + "," +
+		formatFloat(play.xPos, "", 0, 3) + "," + formatFloat(play.yPos, "", 0, 3) + "," +
+		formatFloat(play.xSpeed, "", 0, 4) + "," + formatFloat(play.ySpeed, "", 0, 4) + "," +
+		"0,0,0,0,0," + play.specialMove + "," +
+		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + ",-1.0,-1.0\n");
+
+	Tick++;
+	if (Tick >= ScenarioTicks) {
+		State = StateDone;
+		Log.save(OutputFile);
+		jjAlert("Diamondus 3 probe finished, wrote " + OutputFile);
+	}
+}

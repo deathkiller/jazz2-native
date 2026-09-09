@@ -329,6 +329,10 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Jazz2::Actors
 	@brief Implementation of all objects
+
+	@ref Jazz2::Actors::Player and @ref Jazz2::Actors::ActorBase carry the movement model. Its non-Reforged
+	half is measured against the original game rather than tuned by feel --- see @ref movement-accuracy for
+	every constant, where it came from, and where the two still differ.
 */
 /** @dir Jazz2/Actors/Collectibles
 	@brief Namespace @ref Jazz2::Actors::Collectibles
@@ -442,6 +446,16 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Legacy JJ2+ definitions
 	
 	@experimental
+*/
+/** @dir Jazz2/Tests
+	@brief Namespace @ref Jazz2::Tests
+*/
+/** @namespace Jazz2::Tests
+	@brief Measurement harnesses, compiled only if `WITH_PHYSICS_PROBE`
+
+	Not unit tests --- these drive the game and record what it does, so the result can be compared against
+	a reference capture of the *original* Jazz Jackrabbit 2 rather than against an expectation somebody
+	wrote down. See @ref movement-accuracy for the model that came out of it.
 */
 /** @dir Jazz2/Tiles
 	@brief Namespace @ref Jazz2::Tiles

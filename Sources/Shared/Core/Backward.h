@@ -745,6 +745,57 @@ namespace Death { namespace Backward {
 
 		ResolvedTrace() : Trace(), ObjectBaseAddress(nullptr) {}
 		ResolvedTrace(const Trace& baseTrace) : Trace(baseTrace), ObjectBaseAddress(nullptr) {}
+
+		/**
+		 * @brief Relabels every source location with the function that actually contains it
+		 *
+		 * DWARF describes an inlined call as the name of the function that was inlined paired with the
+		 * location it was called from --- and that location lies in the caller, not in the named function.
+		 * A resolver that copies both verbatim mislabels every line of the report by one step: @ref Source
+		 * ends up holding the line the address maps to (which is inside the innermost inlined function) next
+		 * to the name of the concrete function containing the whole chain, and each @ref Inliners entry holds
+		 * a call site next to the name of the function that call enters.
+		 *
+		 * This shifts the names one step inwards to undo it. It expects @ref Inliners ordered innermost-first
+		 * and @ref Source's function holding the concrete function's name, which is how the two DWARF
+		 * resolvers fill them in --- BFD reports both correctly on its own and must not call this.
+		 */
+		void ShiftInlinerFunctionNames() {
+			if (Inliners.empty()) {
+				return;
+			}
+
+			std::string concreteFunction = std::move(Source.Function);
+			Source.Function = std::move(Inliners[0].Function);
+			for (std::size_t i = 0; i + 1 < Inliners.size(); i++) {
+				Inliners[i].Function = std::move(Inliners[i + 1].Function);
+			}
+			Inliners.back().Function = std::move(concreteFunction);
+		}
+	};
+
+	/** @brief Number of stack frames captured in a crash report */
+	constexpr std::size_t MaxStackFrames = 64;
+
+	/**
+		@brief Description of the memory access that crashed the application
+
+		Tells apart the failures that a bare signal number leaves indistinguishable --- a null dereference (a
+		very low address), a use-after-free (a plausible heap address) and a wild or corrupted pointer (anything
+		else) --- and, where the platform reports it, whether the access was a read, a write or an instruction
+		fetch. Every other field is meaningless unless @ref IsValid is set.
+	*/
+	struct FaultDescription {
+		/** @brief Whether the rest of the description was filled in, `nullptr` being a valid faulting address */
+		bool IsValid;
+		/** @brief Address the faulting instruction tried to access */
+		void* Address;
+		/** @brief How the address was accessed, as a phrase, or `nullptr` if the platform doesn't report it */
+		const char* Access;
+		/** @brief Why the access failed, or `nullptr` if the platform doesn't report it */
+		const char* Cause;
+
+		FaultDescription() : IsValid(false), Address(nullptr), Access(nullptr), Cause(nullptr) {}
 	};
 
 	/** @brief Base class of stack trace */
@@ -893,7 +944,7 @@ namespace Death { namespace Backward {
 
 	class StackTrace : public StackTraceBase {
 	public:
-		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadThreadInfo();
 			SetContext(context);
 			SetErrorAddress(errorAddr);
@@ -906,7 +957,7 @@ namespace Death { namespace Backward {
 			SetSkipFrames(0);
 			return size();
 		}
-		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		std::size_t LoadFrom(void* addr, std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadHere(depth + 8, context, errorAddr);
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
@@ -935,7 +986,7 @@ namespace Death { namespace Backward {
 
 	class StackTrace : public StackTraceBase {
 	public:
-		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context_ = nullptr, void* errorAddr = nullptr) {
+		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = MaxStackFrames, void* context_ = nullptr, void* errorAddr = nullptr) {
 			SetContext(context_);
 			SetErrorAddress(errorAddr);
 			LoadThreadInfo();
@@ -1087,7 +1138,7 @@ namespace Death { namespace Backward {
 			return size();
 		}
 
-		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		std::size_t LoadFrom(void* addr, std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadHere(depth + 8, context, errorAddr);
 
 			for (std::size_t i = 0; i < _stacktrace.size(); i++) {
@@ -1107,7 +1158,7 @@ namespace Death { namespace Backward {
 
 	class StackTrace : public StackTraceBase {
 	public:
-		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			SetContext(context);
 			SetErrorAddress(errorAddr);
 			LoadThreadInfo();
@@ -1121,7 +1172,7 @@ namespace Death { namespace Backward {
 			return size();
 		}
 
-		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		std::size_t LoadFrom(void* addr, std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadHere(depth + 8, context, errorAddr);
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
@@ -1158,7 +1209,7 @@ namespace Death { namespace Backward {
 			_thread = handle;
 		}
 
-		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		DEATH_NEVER_INLINE std::size_t LoadHere(std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			SetContext(&(static_cast<ExceptionContext*>(context)->Context));
 			SetErrorAddress(errorAddr);
 			
@@ -1268,7 +1319,7 @@ namespace Death { namespace Backward {
 			return size();
 		}
 
-		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		std::size_t LoadFrom(void* addr, std::size_t depth = MaxStackFrames, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadHere(depth + 8, context, errorAddr);
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
@@ -2070,6 +2121,9 @@ namespace Death { namespace Backward {
 				trace.Source.Function = trace.ObjectFunction;
 			}
 
+			// Has to run after the fallback above, which supplies the name this hands to the outermost call site
+			trace.ShiftInlinerFunctionNames();
+
 			return trace;
 		}
 
@@ -2403,6 +2457,7 @@ namespace Death { namespace Backward {
 
 			std::vector<std::string> namespace_stack;
 			deep_first_search_by_pc(fobj, die, address, namespace_stack, inliners_search_cb(trace, fobj, die));
+			trace.ShiftInlinerFunctionNames();
 
 			dwarf_dealloc(fobj.dwarf_handle.get(), die, DW_DLA_DIE);
 
@@ -4148,6 +4203,8 @@ namespace Death { namespace Backward {
 		bool Object;
 		std::int32_t InlinerContextSize;
 		std::int32_t TraceContextSize;
+		/** @brief Faulting access to describe in the header, left default when the platform reports none */
+		FaultDescription Fault;
 
 		Printer()
 			: FeatureFlags(Flags::None), Address(false), Object(false), InlinerContextSize(5), TraceContextSize(7) {}
@@ -4303,8 +4360,19 @@ namespace Death { namespace Backward {
 				pathMap.insert({ raw, newPath });
 			}
 
-			for (std::size_t traceIdx = 0; traceIdx < st.size(); ++traceIdx) {
-				PrintTrace(os, resolvedTrace[traceIdx], colorize, pathMap);
+			for (std::size_t traceIdx = 0; traceIdx < st.size(); ) {
+				// Runaway recursion would otherwise fill the whole report with copies of a single frame. The same
+				// call site pushes the same return address every time, so neighbouring frames sharing an address
+				// are one cycle repeated and only the first of them says anything new - print that one with a
+				// count. Two distinct call sites never share a return address, so this can't merge unrelated
+				// frames; recursion through several functions still lists every turn of the cycle
+				std::size_t repeatCount = 1;
+				while (traceIdx + repeatCount < st.size() && st[traceIdx + repeatCount].Address == st[traceIdx].Address) {
+					repeatCount++;
+				}
+
+				PrintTrace(os, resolvedTrace[traceIdx], colorize, pathMap, repeatCount);
+				traceIdx += repeatCount;
 			}
 
 #	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
@@ -4376,16 +4444,32 @@ namespace Death { namespace Backward {
 #		endif
 #	endif
 			}
+
+			// The faulting address is what separates a null dereference from a use-after-free and from an
+			// outright corrupted pointer, all of which look the same in the frame list alone
+			if (Fault.IsValid) {
+				os << " " << (Fault.Access != nullptr ? Fault.Access : "when accessing");
+				colorize.SetColor(Implementation::Color::BrightGreen);
+				os << " 0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+					<< std::uint64_t(Fault.Address) << std::dec << std::setw(0) << std::setfill(' ');
+				colorize.SetColor(Implementation::Color::Reset);
+				if (Fault.Cause != nullptr) {
+					os << " (" << Fault.Cause << ")";
+				}
+			}
+
 			os << " with following stack trace:\n";
 		}
 
-		void PrintTrace(std::ostream& os, const ResolvedTrace& trace, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap) {
+		void PrintTrace(std::ostream& os, const ResolvedTrace& trace, Implementation::Colorize& colorize,
+						std::unordered_map<std::string, std::string>& pathMap, std::size_t repeatCount = 1) {
 			if ((std::uintptr_t)trace.Address == UINTPTR_MAX) {
 				// Skip usually the last frame on Linux
 				return;
 			}
 
 			os << "#" << std::left << std::setw(2) << (trace.Index + 1) << std::right;
+			// The repeat count goes on whichever row comes out first, which `alreadyIndented` still marks
 			bool alreadyIndented = true;
 
 			if (!trace.Source.Filename.size() || Object) {
@@ -4420,30 +4504,41 @@ namespace Death { namespace Backward {
 					colorize.SetColor(Implementation::Color::Reset);
 				}
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-					<< std::uint64_t(trace.Address) << std::dec << std::setfill(' ') << "]\n";
+					<< std::uint64_t(trace.Address) << std::dec << std::setfill(' ') << "]";
+				PrintRepeatCount(os, colorize, repeatCount);
+				os << "\n";
 				alreadyIndented = false;
 			}
 
-			for (std::size_t inlinerIdx = trace.Inliners.size(); inlinerIdx > 0; --inlinerIdx) {
-				if (!alreadyIndented) {
-					os << "   ";
-				}
-				const ResolvedTrace::SourceLoc& inlinerLoc = trace.Inliners[inlinerIdx - 1];
-				PrintSourceLocation(os, colorize, pathMap, " │ ", inlinerLoc);
-				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
-					PrintSnippet(os, "    │ ", inlinerLoc, colorize, Implementation::Color::Purple, InlinerContextSize);
-				}
-				alreadyIndented = false;
-			}
-
+			// Inlined calls are listed innermost-first, the same direction the frames themselves run in, so the
+			// whole report reads as one continuous chain outwards from the crash site: the location the address
+			// maps to comes first, then every call site on the way out to the function that physically contains
+			// them all, and the next `#` frame carries on from there. The bar marks a row the group continues past
+			bool hasInliners = !trace.Inliners.empty();
 			if (trace.Source.Filename.size()) {
+				std::size_t rowRepeatCount = (alreadyIndented ? repeatCount : 1);
 				if (!alreadyIndented) {
 					os << "   ";
 				}
-				PrintSourceLocation(os, colorize, pathMap, "   ", trace.Source, trace.Address);
+				PrintSourceLocation(os, colorize, pathMap, hasInliners ? " │ " : "   ", trace.Source, trace.Address, rowRepeatCount);
 				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
-					PrintSnippet(os, "      ", trace.Source, colorize, Implementation::Color::Yellow, TraceContextSize);
+					PrintSnippet(os, hasInliners ? "    │ " : "      ", trace.Source, colorize, Implementation::Color::Yellow, TraceContextSize);
 				}
+				alreadyIndented = false;
+			}
+
+			for (std::size_t inlinerIdx = 0; inlinerIdx < trace.Inliners.size(); inlinerIdx++) {
+				std::size_t rowRepeatCount = (alreadyIndented ? repeatCount : 1);
+				if (!alreadyIndented) {
+					os << "   ";
+				}
+				bool isLastInliner = (inlinerIdx + 1 == trace.Inliners.size());
+				const ResolvedTrace::SourceLoc& inlinerLoc = trace.Inliners[inlinerIdx];
+				PrintSourceLocation(os, colorize, pathMap, isLastInliner ? "   " : " │ ", inlinerLoc, nullptr, rowRepeatCount);
+				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
+					PrintSnippet(os, isLastInliner ? "      " : "    │ ", inlinerLoc, colorize, Implementation::Color::Purple, InlinerContextSize);
+				}
+				alreadyIndented = false;
 			}
 		}
 
@@ -4466,7 +4561,7 @@ namespace Death { namespace Backward {
 		}
 
 		void PrintSourceLocation(std::ostream& os, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap,
-								 const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr) {
+								 const char* indent, const ResolvedTrace::SourceLoc& sourceLoc, void* addr = nullptr, std::size_t repeatCount = 1) {
 			os << indent << "Source ";
 			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"";
@@ -4491,7 +4586,19 @@ namespace Death { namespace Backward {
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
 					<< std::uint64_t(addr) << std::dec << std::setfill(' ') << "]";
 			}
+			PrintRepeatCount(os, colorize, repeatCount);
 			os << "\n";
+		}
+
+		// Appended to the first line of a frame that the one below it repeats, rather than spending a line of
+		// its own on saying so
+		void PrintRepeatCount(std::ostream& os, Implementation::Colorize& colorize, std::size_t repeatCount) {
+			if (repeatCount <= 1) {
+				return;
+			}
+			colorize.SetColor(Implementation::Color::Dark);
+			os << " " << repeatCount << "\xC3\x97";	// U+00D7 MULTIPLICATION SIGN
+			colorize.SetColor(Implementation::Color::Reset);
 		}
 	};
 
@@ -4607,6 +4714,10 @@ namespace Death { namespace Backward {
 #		warning "Unsupported CPU architecture"
 #	endif
 
+			// Taken before the fix-up below moves `errorAddr` on to the caller, so the report can still tell that
+			// the address the process died on was the one it tried to execute rather than one it tried to read
+			bool isInstructionFetch = ((sig == SIGSEGV || sig == SIGBUS) && errorAddr != nullptr && errorAddr == info->si_addr);
+
 			// A SIGSEGV/SIGBUS whose faulting address is the instruction pointer itself is an instruction fetch
 			// fault - the code jumped somewhere unmapped, typically through a null or dangling function pointer
 			// (an empty `Function<>`, a stale vtable, ...). There is no code at that address to unwind from, so
@@ -4642,9 +4753,9 @@ namespace Death { namespace Backward {
 			}
 
 			if (errorAddr != nullptr) {
-				st.LoadFrom(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
+				st.LoadFrom(errorAddr, MaxStackFrames, reinterpret_cast<void*>(uctx), info->si_addr);
 			} else {
-				st.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
+				st.LoadHere(MaxStackFrames, reinterpret_cast<void*>(uctx), info->si_addr);
 			}
 
 			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
@@ -4658,6 +4769,10 @@ namespace Death { namespace Backward {
 
 			Printer printer;
 			printer.Address = true;
+			printer.Fault = DescribeFault(info);
+			if (printer.Fault.IsValid && isInstructionFetch) {
+				printer.Fault.Access = "while executing";
+			}
 
 			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
@@ -4674,6 +4789,66 @@ namespace Death { namespace Backward {
 
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
+
+		// Building the report allocates, which deadlocks if the crash came out of the allocator itself (heap
+		// corruption, a double free) - the process would hang instead of dying. `SIGALRM` is not handled here,
+		// so its default action kills it once this expires
+		static constexpr std::uint32_t WatchdogTimeoutSecs = 15;
+
+		/** @brief Describes the faulting access of a signal that carries one */
+		static FaultDescription DescribeFault(const siginfo_t* info) {
+			FaultDescription result;
+			const char* cause = nullptr;
+
+			// `si_addr` only describes an address for the signals raised by a faulting access or instruction;
+			// elsewhere (`SIGABRT` and friends) the same union member holds the sending process instead
+			switch (info->si_signo) {
+				case SIGSEGV:
+					switch (info->si_code) {
+						case SEGV_MAPERR: cause = "address not mapped"; break;
+						case SEGV_ACCERR: cause = "permission denied"; break;
+					}
+					break;
+				case SIGBUS:
+					switch (info->si_code) {
+						case BUS_ADRALN: cause = "misaligned address"; break;
+						case BUS_ADRERR: cause = "nonexistent physical address"; break;
+						case BUS_OBJERR: cause = "hardware error"; break;
+					}
+					break;
+				case SIGILL:
+					switch (info->si_code) {
+						case ILL_ILLOPC: cause = "illegal opcode"; break;
+						case ILL_ILLOPN: cause = "illegal operand"; break;
+						case ILL_ILLADR: cause = "illegal addressing mode"; break;
+						case ILL_ILLTRP: cause = "illegal trap"; break;
+						case ILL_PRVOPC: cause = "privileged opcode"; break;
+						case ILL_PRVREG: cause = "privileged register"; break;
+						case ILL_COPROC: cause = "coprocessor error"; break;
+						case ILL_BADSTK: cause = "internal stack error"; break;
+					}
+					break;
+				case SIGFPE:
+					switch (info->si_code) {
+						case FPE_INTDIV: cause = "integer division by zero"; break;
+						case FPE_INTOVF: cause = "integer overflow"; break;
+						case FPE_FLTDIV: cause = "floating-point division by zero"; break;
+						case FPE_FLTOVF: cause = "floating-point overflow"; break;
+						case FPE_FLTUND: cause = "floating-point underflow"; break;
+						case FPE_FLTRES: cause = "inexact floating-point result"; break;
+						case FPE_FLTINV: cause = "invalid floating-point operation"; break;
+						case FPE_FLTSUB: cause = "subscript out of range"; break;
+					}
+					break;
+				default:
+					return result;
+			}
+
+			result.IsValid = true;
+			result.Address = info->si_addr;
+			result.Cause = cause;
+			return result;
+		}
 
 		static constexpr std::int32_t PosixSignals[] = {
 			// Signals for which the default action is "Core".
@@ -4715,6 +4890,9 @@ namespace Death { namespace Backward {
 				_exit(ExceptionExitCode);
 			}
 			handling = 1;
+
+			// Arm the watchdog before anything that can block, see `WatchdogTimeoutSecs`
+			::alarm(WatchdogTimeoutSecs);
 
 			auto* current = GetSingleton();
 			current->HandleSignal(sig, info, _ctx);
@@ -4997,6 +5175,29 @@ namespace Death { namespace Backward {
 			}
 		}
 
+		/** @brief Describes the faulting access of an exception that carries one */
+		static FaultDescription DescribeFault(const EXCEPTION_RECORD& record) {
+			FaultDescription result;
+
+			// Only the two memory exceptions fill `ExceptionInformation` in, with the kind of access first and
+			// the inaccessible address second (`EXCEPTION_IN_PAGE_ERROR` adds the underlying NTSTATUS third)
+			if (record.ExceptionCode != EXCEPTION_ACCESS_VIOLATION && record.ExceptionCode != EXCEPTION_IN_PAGE_ERROR) {
+				return result;
+			}
+			if (record.NumberParameters < 2) {
+				return result;
+			}
+
+			result.IsValid = true;
+			result.Address = reinterpret_cast<void*>(record.ExceptionInformation[1]);
+			switch (record.ExceptionInformation[0]) {
+				case 0: result.Access = "while reading"; break;
+				case 1: result.Access = "while writing"; break;
+				case 8: result.Access = "while executing"; break;
+			}
+			return result;
+		}
+
 		void HandleStacktrace() {
 			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
 			bool shouldWriteToStdErr = ((FeatureFlags & Flags::UseStdError) == Flags::UseStdError && ::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
@@ -5012,11 +5213,12 @@ namespace Death { namespace Backward {
 
 			Printer printer;
 			printer.Address = true;
+			printer.Fault = DescribeFault(_context.ExceptionRecord);
 
 			StackTrace st;
 			st.SetMachineType(printer.GetResolver().GetMachineType());
 			st.SetThreadHandle(_crashedThread);
-			st.LoadHere(32 + skipFrames, &_context);
+			st.LoadHere(MaxStackFrames + skipFrames, &_context);
 			st.SetSkipFrames(skipFrames);
 
 			if (shouldWriteToStdErr) {

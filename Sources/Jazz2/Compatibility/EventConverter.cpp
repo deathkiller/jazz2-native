@@ -258,7 +258,10 @@ namespace Jazz2::Compatibility
 			// TODO: Use single variable
 			std::uint8_t left, right;
 			if (jj2Params == 0) {
-				left = 3;
+				// Measured, not guessed: a parameterless belt moves the original's player 2.0 px/tick and an
+				// explicit 8 moves them 8.0, so the substituted default is 2 and the factor is 1. It was 3
+				// here, which made every belt in a converted level half again too fast.
+				left = 2;
 				right = 0;
 			} else if (jj2Params > 127) {
 				left = 0;
@@ -274,8 +277,9 @@ namespace Jazz2::Compatibility
 			// TODO: Use single variable
 			std::uint8_t left, right;
 			if (jj2Params == 0) {
+				// See MODIFIER_BELT_LEFT above: the measured default is 2, not 3
 				left = 0;
-				right = 3;
+				right = 2;
 			} else if (jj2Params > 127) {
 				left = (std::uint8_t)(256 - jj2Params);
 				right = 0;
@@ -288,14 +292,18 @@ namespace Jazz2::Compatibility
 		});
 		Add(JJ2Event::MODIFIER_ACC_BELT_LEFT, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {
 			if (jj2Params == 0) {
-				jj2Params = 3;
+				// Measured: a parameterless accelerating belt drives the original's player to 6.0 px/tick
+				// and an explicit 8 drives them to 12.0, so the substituted default is 4 and the speed is
+				// 1.5 per unit. The plain belt's default is 2 - the two events do not share one.
+				jj2Params = 4;
 			}
 
 			return { EventType::AreaHForce, { 0, 0, (std::uint8_t)jj2Params } };
 		});
 		Add(JJ2Event::MODIFIER_ACC_BELT_RIGHT, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {
 			if (jj2Params == 0) {
-				jj2Params = 3;
+				// See MODIFIER_ACC_BELT_LEFT above
+				jj2Params = 4;
 			}
 
 			return { EventType::AreaHForce, { 0, 0, 0, (std::uint8_t)jj2Params } };

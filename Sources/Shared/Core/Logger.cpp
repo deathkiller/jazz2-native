@@ -27,9 +27,50 @@ namespace Death { namespace Trace {
 			return inst;
 		}
 
-		RdtscClock::RdtscTicks::RdtscTicks()
-			: _nanosecondsPerTick(0.0)
+		// Returns the exact number of nanoseconds per rdtsc() tick on targets that publish it, or 0.0 if
+		// the rate has to be measured instead
+		static double GetFixedNanosecondsPerTick() noexcept
 		{
+#	if defined(__aarch64__)
+			// The ARM generic timer that rdtsc() reads runs at a fixed frequency published in CNTFRQ_EL0,
+			// so there is nothing to measure. Reading it also avoids calibrating the counter against a
+			// steady clock that is itself derived from the very same counter.
+			std::uint64_t frequency;
+			__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(frequency));
+
+			// Typically exactly 24 MHz, 19.2 MHz, 25 MHz or 1 GHz depending on the SoC, but some bootloaders
+			// never program the register at all, so an implausible value falls back to measuring
+			if (frequency >= 1000000ull && frequency <= 10000000000ull) {
+				return 1000000000.0 / static_cast<double>(frequency);
+			}
+
+			return 0.0;
+#	elif defined(_M_ARM64)
+			// The same counter as above, spelled for MSVC - QueryPerformanceCounter() is driven directly
+			// from the generic timer here, so its frequency is the counter frequency
+			LARGE_INTEGER frequency;
+			if (::QueryPerformanceFrequency(&frequency) && frequency.QuadPart >= 1000000ll && frequency.QuadPart <= 10000000000ll) {
+				return 1000000000.0 / static_cast<double>(frequency.QuadPart);
+			}
+
+			return 0.0;
+#	else
+			if constexpr (RdtscIsSteadyClock) {
+				// rdtsc() returns steady clock ticks verbatim, so the rate is known exactly
+				return 1000000000.0 * std::chrono::steady_clock::period::num / std::chrono::steady_clock::period::den;
+			} else {
+				return 0.0;
+			}
+#	endif
+		}
+
+		RdtscClock::RdtscTicks::RdtscTicks()
+			: _nanosecondsPerTick(GetFixedNanosecondsPerTick())
+		{
+			if (_nanosecondsPerTick > 0.0) {
+				return;
+			}
+
 			constexpr std::chrono::milliseconds SpinDuration = std::chrono::milliseconds{10};
 			constexpr std::int32_t MaxTrials = 15;
 			constexpr std::int32_t MinTrials = 3;
@@ -70,10 +111,14 @@ namespace Death { namespace Trace {
 			_nanosecondsPerTick = 1.0 / ticksPerNanoseconds;
 		}
 
-		RdtscClock::RdtscClock(std::chrono::nanoseconds resyncInterval)
-			: _nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick())
-
+		RdtscClock::RdtscClock()
 		{
+		}
+
+		void RdtscClock::initialize(std::chrono::nanoseconds resyncInterval)
+		{
+			_nanosecondsPerTick = RdtscTicks::instance().nanosecondsPerTick();
+
 			const double calcValue = static_cast<double>(resyncInterval.count()) / _nanosecondsPerTick;
 
 			// Check for overflow and negative values
@@ -311,7 +356,7 @@ namespace Death { namespace Trace {
 	LoggerBackend::LoggerBackend()
 		: _backtraceFlushLevel(TraceLevel::Unknown)
 #if defined(DEATH_TRACE_ASYNC)
-			, _rdtscClock(Implementation::RdtscResyncInterval), _lastRdtscResyncTime(std::chrono::system_clock::now()), _workerThreadAlive(false)
+			, _workerThreadAlive(false), _lastRdtscResyncTime(std::chrono::steady_clock::now()), _sinksDirty(false)
 #endif
 	{
 	}
@@ -376,7 +421,13 @@ namespace Death { namespace Trace {
 		}
 
 		std::thread workerThread([this]() {
+			// Marked as alive before the clock is initialized, so the thread that attaches the first sink
+			// isn't blocked by the tick rate measurement below. Nothing but this thread touches the clock,
+			// and it's initialized before any entry can be processed.
 			_workerThreadAlive.store(true);
+
+			_rdtscClock.initialize(Implementation::RdtscResyncInterval);
+			_lastRdtscResyncTime = std::chrono::steady_clock::now();
 
 			while DEATH_LIKELY(_workerThreadAlive.load(std::memory_order_relaxed)) {
 				ProcessEvents();
@@ -441,6 +492,10 @@ namespace Death { namespace Trace {
 					// been cached in the transit event buffer. Logging only the cached messages can result in out-of-order
 					// log entries, as messages with larger timestamps in the queue might be missed.
 				}
+			} else {
+				// Nothing could be cached, so the queue heads are still held back by the ordering grace period.
+				// There is no point in asking again at full speed while waiting for them to become eligible.
+				std::this_thread::yield();
 			}
 		}
 
@@ -550,8 +605,9 @@ namespace Death { namespace Trace {
 			transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
 		}*/ else if DEATH_LIKELY(transitEvent->Level != FlushBacktraceRequested) {
 			transitEvent->FunctionName = reinterpret_cast<const char*>(functionName);
-			transitEvent->Message.resize(length);
-			std::memcpy(&transitEvent->Message[0], readPos, length);
+			// assign() instead of resize() and memcpy(): TransitEvents are reused, so the capacity is
+			// already there and resize() would only zero-fill the bytes that are overwritten right after
+			transitEvent->Message.assign(reinterpret_cast<const char*>(readPos), length);
 		}
 
 		readPos += length;
@@ -636,7 +692,7 @@ namespace Death { namespace Trace {
 	{
 		using namespace Implementation;
 
-		if (auto now = std::chrono::system_clock::now();
+		if (auto now = std::chrono::steady_clock::now();
 			(now - _lastRdtscResyncTime) > RdtscResyncInterval) {
 			if (_rdtscClock.resync(ResyncLagCycles)) {
 				_lastRdtscResyncTime = now;
@@ -652,10 +708,21 @@ namespace Death { namespace Trace {
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			_sinks[i]->OnTraceReceived(transitEvent.Level, transitEvent.Timestamp, threadId, functionNameView, contentView);
 		}
+
+		_sinksDirty = true;
 	}
 
 	void LoggerBackend::FlushActiveSinks() noexcept
 	{
+		if (!_sinksDirty) {
+			// Nothing reached the sinks since the last flush, so there is nothing for them to write out.
+			// The idle branch of ProcessEvents() calls this on every iteration, and a sink flush is
+			// usually a file write, so repeating it would turn waiting into a storm of I/O.
+			return;
+		}
+
+		_sinksDirty = false;
+
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			_sinks[i]->OnTraceFlushed();
 		}
@@ -768,6 +835,8 @@ namespace Death { namespace Trace {
 
 		if (cachedTransitEventsCount != 0) {
 			// There are cached events to process
+			_stalledSince = {};
+
 			if (cachedTransitEventsCount < TransitEventsSoftLimit) {
 				// Process a single transit event, then give priority to reading the thread queues again
 				ProcessLowestTimestampTransitEvent();
@@ -795,10 +864,29 @@ namespace Death { namespace Trace {
 			if (queuesAndEventsEmpty) {
 				CleanUpInvalidatedThreadContexts();
 
+				_stalledSince = {};
+
 				// There is nothing left to do, and we can let this thread sleep for a while
 				_wakeUpEvent.Wait();
 
 				ResyncRdtscClock();
+			} else {
+				// The queues aren't empty, yet nothing could be cached, so every queue head is still held back
+				// by LogTimestampOrderingGracePeriod. That normally clears within microseconds, so the wait
+				// starts out as a plain yield to avoid delaying those entries. A wall clock stepped backwards
+				// can hold the heads back until the next clock resync instead, which is far too long to keep
+				// a core busy for, so the wait turns blocking after StalledSpinDuration. Any new entry or
+				// flush request signals the event and cuts it short.
+				auto now = std::chrono::steady_clock::now();
+				if (_stalledSince == std::chrono::steady_clock::time_point{}) {
+					_stalledSince = now;
+				}
+
+				if ((now - _stalledSince) < StalledSpinDuration) {
+					std::this_thread::yield();
+				} else {
+					_wakeUpEvent.Wait(1);
+				}
 			}
 		}
 	}
@@ -924,24 +1012,29 @@ namespace Death { namespace Trace {
 		std::atomic<bool> threadFlushed{false};
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
+		// The backend cannot answer sooner than LogTimestampOrderingGracePeriod, and sleeping for
+		// sleepDurationNs rounds up to the granularity of the system timer, which is milliseconds rather
+		// than the requested nanoseconds on most platforms. Yielding covers the expected wait at a fraction
+		// of that cost, so the sleep is kept only as a backstop once the answer is clearly overdue.
+		auto const startTime = std::chrono::steady_clock::now();
+		auto waitForBackend = [startTime, sleepDurationNs]() {
+			if (sleepDurationNs == 0 || (std::chrono::steady_clock::now() - startTime) < FlushSpinDuration) {
+				std::this_thread::yield();
+			} else {
+				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
+			}
+		};
+
 		// We do not want to drop the message if a dropping queue is used
 		while (!EnqueueEntry(FlushRequested, timestamp, threadFlushedPtr, nullptr, 0)) {
-			if (sleepDurationNs > 0) {
-				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
-			} else {
-				std::this_thread::yield();
-			}
+			waitForBackend();
 		}
 
 		_backend.Notify();
 
 		// The caller thread keeps checking the flag until the backend thread flushes
 		while (!threadFlushed.load()) {
-			if (sleepDurationNs > 0) {
-				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
-			} else {
-				std::this_thread::yield();
-			}
+			waitForBackend();
 		}
 #endif
 	}

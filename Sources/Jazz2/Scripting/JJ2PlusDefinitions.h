@@ -9,6 +9,7 @@
 
 #include <angelscript.h>
 
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -1445,6 +1446,24 @@ namespace Jazz2::Scripting
 
 		private:
 			std::int32_t _refCount;
+			SmallVector<std::uint8_t, 0> _data;
+			// Reads advance this instead of erasing from the front, so reading a large stream stays linear
+			std::uint32_t _readPos;
+
+			const std::uint8_t* PeekFront(std::uint32_t count) const;
+			bool Take(void* target, std::uint32_t count);
+			void Append(const void* source, std::uint32_t count);
+
+			template<class T>
+			bool PushValue(const T& value) {
+				Append(&value, sizeof(T));
+				return true;
+			}
+
+			template<class T>
+			bool PopValue(T& value) {
+				return Take(&value, sizeof(T));
+			}
 		};
 
 		/** @brief A seedable pseudo-random number generator */

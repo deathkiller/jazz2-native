@@ -1,6 +1,7 @@
 #include "Spring.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
+#include "../Player.h"
 #include "../Weapons/ShieldFireShot.h"
 #include "../Weapons/ToasterShot.h"
 #include "../Weapons/Thunderbolt.h"
@@ -94,24 +95,44 @@ namespace Jazz2::Actors::Environment
 		SetAnimation((AnimState)(((_type + 1) << 10) | (orientationBit << 12)));
 		_renderer.setLayer(_renderer.layer() - 8);
 
-		if (_orientation == Orientation::Right || _orientation == Orientation::Left) {
+		if (!_levelHandler->IsReforged()) {
+			// Measured off the original with the trajectory probe: a spring sets the player's speed outright,
+			// the same figure on either axis, and only the colour matters - 16, 24 and 32 px/tick at its 70 Hz.
+			// (The engine's own horizontal springs all shared one strength and the vertical ones used a
+			// different scale entirely, which is why neither matched.) The applied-movement cap then holds the
+			// actual rise to 8 px/tick, so the difference between the colours is how long they keep pushing
+			// rather than how fast the player visibly moves.
+			// The same 70->60 Hz velocity conversion as every other Legacy* constant, taken from Player rather
+			// than spelled out again: the blue spring's 32 has to stay bit-identical to
+			// Player::LegacyVerticalSpeedLimit, which is what lets a spring pass through the speed limit
+			// untouched while a pole is clamped. Two independently written copies of 70/60 would keep that
+			// equality only by luck, and re-measuring the tick rate would silently cost the blue spring its
+			// launch on the tick it fires.
+			switch (_type) {
+				default:
+				case 0: _strength = 16.0f * Player::LegacyFrameRateScale; break;	// Red
+				case 1: _strength = 24.0f * Player::LegacyFrameRateScale; break;	// Green
+				case 2: _strength = 32.0f * Player::LegacyFrameRateScale; break;	// Blue
+			}
+		} else if (_orientation == Orientation::Right || _orientation == Orientation::Left) {
 			// Horizontal springs all seem to have the same strength.
 			// This constant strength gives about the correct amount of horizontal push.
-			_strength = (_levelHandler->IsReforged() ? 9.5f : 9.5f * 0.95f);
+			_strength = 9.5f;
 		} else {
 			// Vertical springs should work as follows:
 			// Red spring lifts the player 9 tiles, green 14, and blue 19.
 			// Vertical strength currently works differently from horizontal, that explains
 			// the otherwise inexplicable difference of scale between the two types.
 			switch (_type) {
+				default:
 				case 0: // Red
-					_strength = (_levelHandler->IsReforged() ? 1.25f : 1.15f);
+					_strength = 1.25f;
 					break;
 				case 1: // Green
-					_strength = (_levelHandler->IsReforged() ? 1.50f : 1.7f);
+					_strength = 1.50f;
 					break;
 				case 2: // Blue
-					_strength = (_levelHandler->IsReforged() ? 1.68f : 3.1f);
+					_strength = 1.68f;
 					break;
 			}
 		}

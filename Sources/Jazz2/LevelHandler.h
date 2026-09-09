@@ -63,6 +63,13 @@ namespace Jazz2
 		class InGameMenu;
 	}
 
+#if defined(WITH_PHYSICS_PROBE)
+	namespace Tests
+	{
+		class PhysicsProbe;
+	}
+#endif
+
 	/**
 		@brief Level handler of a local game session
 		
@@ -83,6 +90,9 @@ namespace Jazz2
 #endif
 		friend class UI::HUD;
 		friend class UI::Menu::InGameMenu;
+#if defined(WITH_PHYSICS_PROBE)
+		friend class Tests::PhysicsProbe;
+#endif
 
 	public:
 		/** @{ @name Constants */
@@ -296,6 +306,12 @@ namespace Jazz2
 		Rectf _viewBoundsTarget;
 		std::int64_t _elapsedMillisecondsBegin;
 		float _elapsedFrames;
+
+#if defined(WITH_PHYSICS_PROBE)
+		// Created on the first frame of a `/physics-probe` run and owns the whole harness (see Tests/)
+		std::unique_ptr<Tests::PhysicsProbe> _physicsProbe;
+#endif
+
 		float _checkpointFrames;
 		float _waterLevel;
 		Vector4f _defaultAmbientLight;

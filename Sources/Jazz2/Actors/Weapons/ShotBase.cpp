@@ -100,15 +100,22 @@ namespace Jazz2::Actors::Weapons
 		}
 	}
 
-	std::int32_t ShotBase::GetMovementSubstepCount(float timeMult)
+	std::int32_t ShotBase::GetMovementSubstepCount(float timeMult) const
 	{
-		constexpr float SubstepsPerNominalFrame = 2.0f;
-
-		float substeps = timeMult * SubstepsPerNominalFrame;
-		std::int32_t result = std::max<std::int32_t>((std::int32_t)substeps, 1);
-		if ((float)result < substeps) {
-			result++;
+		// What decides whether a step can pass through thin geometry is its *length*, so that is what is
+		// bounded here - the same way and against the same limit as ActorBase::TryStandardMovement().
+		//
+		// Deriving the count from `timeMult` alone was a proxy for this. It did keep the length independent of
+		// the frame rate, but left it proportional to the shot's speed, so the two halves of the problem were
+		// each still wrong in one direction: a fast shot tunnelled through a one-tile wall at *any* frame rate,
+		// and a slow one paid the fast one's cost anyway (five sub-steps at `MaxTimeMult` where one is already
+		// tunnel-proof, times every shot on screen).
+		float distance = std::max(std::abs(_speed.X + _externalForce.X * timeMult),
+			std::abs(_speed.Y + _externalForce.Y * timeMult)) * timeMult;
+		if (distance <= MaxMovementStep) {
+			return 1;
 		}
-		return result;
+
+		return std::min<std::int32_t>((std::int32_t)(distance / MaxMovementStep) + 1, MaxMovementSubsteps);
 	}
 }

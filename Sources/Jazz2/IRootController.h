@@ -2,6 +2,7 @@
 
 #include "../Main.h"
 #include "LevelInitialization.h"
+#include "Compatibility/ConversionProgress.h"
 
 #if defined(WITH_MULTIPLAYER)
 #	include "Multiplayer/ServerInitialization.h"
@@ -72,8 +73,21 @@ namespace Jazz2
 		virtual Flags GetFlags() const = 0;
 		/** @brief Returns version of the latest update */
 		virtual StringView GetNewestVersion() const = 0;
+		/**
+		 * @brief Returns progress of the initialization in the range 0-1, or -1 if there is nothing to show
+		 *
+		 * Converting the original game files is the one part of the first start that can take long enough to be
+		 * worth showing, so the loading screen turns this into a progress bar. It's -1 whenever no conversion is
+		 * running --- including before one has reported anything at all, so a loading screen that is shown for
+		 * some other reason never shows a bar.
+		 */
+		virtual float GetInitializationProgress() const = 0;
 
-		/** @brief Recreates level cache from `Source` directory */
-		virtual void RefreshCacheLevels(bool recreateAll) = 0;
+		/**
+		 * @brief Recreates level cache from `Source` directory
+		 *
+		 * @param progress	Reports how far the conversion has got, see @relativeref{Compatibility,ConversionProgress}
+		 */
+		virtual void RefreshCacheLevels(bool recreateAll, Compatibility::ConversionProgress progress = {}) = 0;
 	};
 }

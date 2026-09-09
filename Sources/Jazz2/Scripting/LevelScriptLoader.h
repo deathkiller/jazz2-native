@@ -129,6 +129,9 @@ namespace Jazz2::Scripting
 		/** @brief Returns list of players */
 		ArrayView<Actors::Player* const> GetPlayers() const;
 
+		/** @brief Overrides what the specified player believes one of its controls is doing for the rest of the frame */
+		void OverridePlayerInput(Actors::Player* player, PlayerAction action, bool value);
+
 		/** @brief Returns script backing store for specified player */
 		jjPLAYER* GetPlayerBackingStore(Actors::Player* player);
 		/** @overload */

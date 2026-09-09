@@ -27,6 +27,10 @@
 #include "Actors/Enemies/Bosses/BossBase.h"
 #include "Actors/Environment/IceBlock.h"
 
+#if defined(WITH_PHYSICS_PROBE)
+#	include "Tests/PhysicsProbe.h"
+#endif
+
 #include <float.h>
 
 #include <Containers/StaticArray.h>
@@ -680,6 +684,17 @@ namespace Jazz2
 
 			ProcessEvents(timeMult);
 			ProcessWeather(timeMult);
+
+#if defined(WITH_PHYSICS_PROBE)
+			// Before the actors update, so the input it puts in takes effect this tick and the state it logs
+			// is what the previous tick left behind
+			if (PreferencesCache::PhysicsProbe) {
+				if (_physicsProbe == nullptr) {
+					_physicsProbe = std::make_unique<Tests::PhysicsProbe>(this);
+				}
+				_physicsProbe->OnUpdate(timeMult);
+			}
+#endif
 
 			// Active Boss
 			if (_activeBoss != nullptr && _activeBoss->GetHealth() <= 0) {
@@ -1774,8 +1789,12 @@ namespace Jazz2
 	void LevelHandler::ProcessWeather(float timeMult)
 	{
 		// Weather is by far the busiest particle producer (it respawns every frame), so the particle quality
-		// preference reaches it too: none of it when particles are off, half the density at the low quality
-		if (_weatherType == WeatherType::None || PreferencesCache::Particles == ParticleQuality::Off) {
+		// preference reaches it too: none of it when particles are off, half the density at the low quality.
+		// A headless server has no viewport to spawn the debris around and loads no textures to size it by,
+		// so none of the work below applies there - and the weather type turns non-empty as soon as the first
+		// player activates an `AreaWeather` tile.
+		if (_weatherType == WeatherType::None || PreferencesCache::Particles == ParticleQuality::Off ||
+			ContentResolver::Get().IsHeadless()) {
 			return;
 		}
 

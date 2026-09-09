@@ -75,6 +75,9 @@ namespace Jazz2::Actors::Collectibles
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		// Every observer reproduces the swarm from the remoted ActorState::Illuminated instead
 		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override { }
+		bool IsIlluminatedStateRemoted() const override {
+			return true;
+		}
 
 		/** @brief Called when the collectible is collected */
 		virtual void OnCollect(Player* player);

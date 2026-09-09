@@ -72,6 +72,8 @@ using namespace Jazz2::Multiplayer;
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
 
+#include <atomic>
+
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
@@ -178,16 +180,29 @@ public:
 		return _newestVersion;
 	}
 
+	float GetInitializationProgress() const override {
+		if ((_flags & Flags::IsVerified) == Flags::IsVerified) {
+			// Nothing is being converted anymore, so the last reported value must not be shown
+			return -1.0f;
+		}
+
+		std::int32_t permille = _initializationProgress.load(std::memory_order_relaxed);
+		return (permille < 0 ? -1.0f : permille * 0.001f);
+	}
+
 #if defined(NCINE_HAS_WRITABLE_CACHE)
-	void RefreshCacheLevels(bool recreateAll) override;
+	void RefreshCacheLevels(bool recreateAll, Compatibility::ConversionProgress progress) override;
 #else
-	void RefreshCacheLevels(bool recreateAll) override {}
+	void RefreshCacheLevels(bool recreateAll, Compatibility::ConversionProgress progress) override {}
 #endif
 
 private:
 	constexpr static std::uint32_t MaxPlayerNameLength = 32;
 
 	Flags _flags = Flags::None;
+	// Written by the conversion (on the parallel initialization thread) and read by the loading screen, in
+	// per mille to avoid relying on a lock-free `std::atomic<float>`; -1 until something is reported
+	std::atomic<std::int32_t> _initializationProgress{-1};
 	std::int32_t _backInvokedTimeLeft = 0;
 	std::shared_ptr<IStateHandler> _currentHandler;
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
@@ -1478,10 +1493,14 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(gameID, 4);
 				std::uint64_t protocolVersion = packet.ReadVariableUint64();
 
-				constexpr std::uint64_t VersionMask = ~0xFFFFFFFFULL; // Exclude patch from version check
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
 
-				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (protocolVersion & VersionMask) != (currentVersion & VersionMask)) {
+				// Compared in full, patch included. `NCINE_PROTOCOL_VERSION` is a hand-maintained literal that
+				// moves only when the wire format does (it is never derived from the build or from Git), so any
+				// difference at all is a genuine incompatibility. Masking the patch out meant a wire change
+				// could only be announced by moving the *minor*, which tied protocol versioning to release
+				// numbering and left no way to express "the protocol changed in a patch release".
+				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || protocolVersion != currentVersion) {
 					LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
@@ -1941,6 +1960,12 @@ void GameEventHandler::RefreshCache()
 		return;
 	}
 
+	// Kept alive for the whole conversion, every reporter handed out below only points at it
+	Function<void(float)> reportProgress = [this](float value) {
+		_initializationProgress.store((std::int32_t)(value * 1000.0f), std::memory_order_relaxed);
+	};
+	Compatibility::ConversionProgress progress(&reportProgress);
+
 	auto& resolver = ContentResolver::Get();
 	if (resolver.IsContentPrebaked()) {
 		// The content tree already holds everything the conversion would produce, so there is nothing to
@@ -2005,7 +2030,8 @@ void GameEventHandler::RefreshCache()
 		// Close the file, so it can be writable for possible update
 		s = nullptr;
 
-		RefreshCacheLevels(false);
+		// Only the levels that aren't converted yet are left to do here, so they get the whole range
+		RefreshCacheLevels(false, progress);
 
 		if (currentVersion != lastVersion) {
 			if ((lastVersion & 0xFFFFFFFFULL) == 0x0FFFFFFFULL) {
@@ -2061,7 +2087,8 @@ RecreateCache:
 			if (t > 1) {
 				Thread::Sleep(t * 100);
 			}
-			result = Compatibility::AssetConverter::ConvertSourceAssets(animsPath, resolver.GetSourcePath(), resolver.GetCachePath(), version);
+			result = Compatibility::AssetConverter::ConvertSourceAssets(animsPath, resolver.GetSourcePath(), resolver.GetCachePath(),
+				version, Compatibility::AssetConverter::SourcePackage, progress.Narrow(0.0f, 0.25f));
 		}
 
 		if (result == Compatibility::AssetConverter::Result::CannotWriteTarget) {
@@ -2075,7 +2102,9 @@ RecreateCache:
 		}
 	}
 
-	RefreshCacheLevels(true);
+	// A source directory that has collected levels from everywhere has far more of them than the original game
+	// came with, so the levels get most of the range and the sprites and sounds only its beginning
+	RefreshCacheLevels(true, progress.Narrow(0.25f, 1.0f));
 
 	LOGI("Cache was recreated");
 	std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
@@ -2091,12 +2120,12 @@ RecreateCache:
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 }
 
-void GameEventHandler::RefreshCacheLevels(bool recreateAll)
+void GameEventHandler::RefreshCacheLevels(bool recreateAll, Compatibility::ConversionProgress progress)
 {
 	ZoneScopedC(0x888888);
 
 	auto& resolver = ContentResolver::Get();
-	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll);
+	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll, progress);
 }
 #endif
 

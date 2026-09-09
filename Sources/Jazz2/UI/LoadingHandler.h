@@ -13,6 +13,10 @@ namespace Jazz2::UI
 		
 		State handler for the loading screen shown while content is being prepared, drawing an animated loading
 		indicator over a light or dark background. An optional callback is invoked once loading completes.
+		
+		A conversion of the original game files that is still running is shown as a progress bar as well, because
+		on a slow device it can take long enough that an indicator alone says too little --- see
+		@relativeref{Jazz2,IRootController::GetInitializationProgress()}.
 	*/
 	class LoadingHandler : public IStateHandler
 	{
@@ -70,6 +74,10 @@ namespace Jazz2::UI
 		Metadata* _metadata;
 		Function<bool(IRootController*)> _callback;
 		float _transition;
+		// Eased towards the last reported conversion progress, and negative until the first one arrives, which
+		// is also how "there is no progress bar to draw" is carried
+		float _progress;
+		float _progressTransition;
 		bool _darkMode;
 	};
 }

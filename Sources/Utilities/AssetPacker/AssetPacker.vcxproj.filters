@@ -218,6 +218,9 @@
     <ClInclude Include="..\..\Jazz2\Compatibility\AssetConverter.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Jazz2\Compatibility\ConversionProgress.h">
+      <Filter>Header Files\Jazz2\Compatibility</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Jazz2\Compatibility\EventConverter.h">
       <Filter>Header Files\Jazz2\Compatibility</Filter>
     </ClInclude>

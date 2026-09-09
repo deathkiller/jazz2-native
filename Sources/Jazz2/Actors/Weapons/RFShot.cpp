@@ -116,9 +116,18 @@ namespace Jazz2::Actors::Weapons
 	{
 		_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 36.0f, [this](ActorBase* actor) {
 			if (auto* player = runtime_cast<Player>(actor)) {
-				bool pushLeft = (_pos.X > player->GetPos().X);
-				player->AddExternalForce(pushLeft ? -4.0f : 4.0f, 0.0f);
-				_levelHandler->HandlePlayerPushed(player);
+				// Fired point blank into a wall the player is touching, the shot ends up within a pixel of
+				// them and can easily come to rest marginally behind - so the side it went off on is noise,
+				// and taking it literally throws the player into the wall instead of off it. Which way the
+				// shot was travelling is what decides it there.
+				float dx = _pos.X - player->GetPos().X;
+				float dy = _pos.Y - player->GetPos().Y;
+				bool pushLeft = (std::abs(dx) > 4.0f ? dx > 0.0f : !IsFacingLeft());
+				// The search above tests the player's box rather than their centre, so it reaches further
+				// than the original does - the player decides whether it was actually close enough
+				if (player->ApplyBlastKnockback(pushLeft, dx * dx + dy * dy)) {
+					_levelHandler->HandlePlayerPushed(player);
+				}
 			}
 			return true;
 		});

@@ -226,7 +226,7 @@ namespace Jazz2::Actors
 
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
-		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
+		_speed.X = std::clamp(_speed.X, -_horizontalSpeedLimit, _horizontalSpeedLimit);
 		_speed.Y = std::clamp(_speed.Y + accelY, -_verticalSpeedLimit, _verticalSpeedLimit);
 
 		float effectiveSpeedX, effectiveSpeedY;
@@ -239,12 +239,35 @@ namespace Jazz2::Actors
 			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
 			effectiveSpeedY = _speed.Y + 0.5f * accelY;
 		}
+		// Gravity is applied to `_speed.Y` at the *end* of this function, after the move, so the distance
+		// travelled this frame would otherwise be `v * dt` where the exact figure is `v * dt + g * dt^2 / 2`.
+		// That missing half-step grows with `dt^2`, which made jump height depend on the frame rate: measured
+		// about 5% high at 24 FPS and 1.5% low at 144. Folding half a step of gravity in here is the
+		// velocity-Verlet form and makes the position exact for a constant acceleration, which is what a jump
+		// arc is. It has to come *before* the rise cap below, or a capped rise ends up travelling slower than
+		// the cap and the correction lands twice as hard as it should.
+		//
+		// Only while the actor is actually in flight, which is the same condition the tail applies gravity
+		// under: an actor standing on the floor has its gravity cancelled by the floor, so half a step of it
+		// is not a correction but a spurious nudge downwards, and one that costs a slope search every frame
+		// and jitters the actor by a fraction of a pixel as that search answers it.
+		if (currentGravity > 0.0f && (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation &&
+			(_speed.Y < 0.0f || (_state & ActorState::CanJump) != ActorState::CanJump)) {
+			effectiveSpeedY += 0.5f * GetGravityModifier(currentGravity, /*isRising:*/_speed.Y < 0.0f) * timeMult;
+		}
+
 		// Cap applied upward speed if requested. Internal `_speed.Y` keeps its (larger) momentum, so the actor
 		// rises at a constant capped speed for the first frames while gravity bleeds the momentum off - this is
 		// how the original JJ2 springs/jumps behave (applied vertical movement clamped to 8 px/tick).
 		if (_maxRiseSpeed > 0.0f && effectiveSpeedY < -_maxRiseSpeed) {
 			effectiveSpeedY = -_maxRiseSpeed;
 		}
+		// Same idea on the horizontal axis: the momentum in `_speed.X` is kept, but the actor only travels at
+		// the capped rate, which is how the original's dash reports twice the speed it visibly moves at
+		if (_maxAppliedSpeedX > 0.0f) {
+			effectiveSpeedX = std::clamp(effectiveSpeedX, -_maxAppliedSpeedX, _maxAppliedSpeedX);
+		}
+
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
@@ -261,16 +284,23 @@ namespace Jazz2::Actors
 			// collision steps as the same amount of time would have taken at the nominal 60 Hz, which is what
 			// makes the outcome frame-rate independent, and the distance itself caps a single step at
 			// `MaxMovementStep` so that even full speed cannot skip over anything.
+			// A whole frame that already fits inside one safe step needs neither: it cannot skip over anything,
+			// and splitting it anyway only multiplies the slope search below. At `MaxTimeMult` that was three
+			// full searches for an actor drifting a fraction of a pixel, on the weakest hardware - which is
+			// where a low frame rate, and therefore this whole path, is reached in the first place.
 			float distance = std::max(std::abs(effectiveSpeedX), std::abs(effectiveSpeedY));
-			std::int32_t substepCount = std::max<std::int32_t>((std::int32_t)timeMult, 1);
-			if ((float)substepCount < timeMult) {
-				substepCount++;
-			}
-			if (distance > substepCount * MaxMovementStep) {
-				substepCount = (std::int32_t)(distance / MaxMovementStep) + 1;
-			}
-			if (substepCount > MaxMovementSubsteps) {
-				substepCount = MaxMovementSubsteps;
+			std::int32_t substepCount = 1;
+			if (distance > MaxMovementStep) {
+				substepCount = std::max<std::int32_t>((std::int32_t)timeMult, 1);
+				if ((float)substepCount < timeMult) {
+					substepCount++;
+				}
+				if (distance > substepCount * MaxMovementStep) {
+					substepCount = (std::int32_t)(distance / MaxMovementStep) + 1;
+				}
+				if (substepCount > MaxMovementSubsteps) {
+					substepCount = MaxMovementSubsteps;
+				}
 			}
 			float stepX = effectiveSpeedX / substepCount;
 			float stepY = effectiveSpeedY / substepCount;
@@ -318,7 +348,7 @@ namespace Jazz2::Actors
 		// it - an actor being warped or carried along has its position dictated from elsewhere. Note that merely
 		// standing on the floor or leaning against a wall is not stuck and `TryUnstuck()` leaves it alone.
 		if (_pos == posBefore && (movementAttempted || (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation)) {
-			TryUnstuck(params);
+			TryUnstuck();
 		}
 
 		// Reduce all forces if they are present
@@ -366,6 +396,22 @@ namespace Jazz2::Actors
 		}
 	}
 
+	bool ActorBase::IsSupportedAfterMove(float stepX, float stepY)
+	{
+		// Would the actor have ground under it after moving there? Used to tell a downhill slope, where the
+		// ground continues just below, from a gap, where nothing does - see TryMoveSubstep().
+		//
+		// Deliberately does not take the caller's TileCollisionParams: this is a question, not a move, and
+		// passing those through would let a probe destroy a tile or count as a weapon hit. It costs one
+		// extra tilemap query per downward candidate in the slope search, alongside the MoveInstantly() that
+		// candidate already needs, so the downward half of the search is about twice the work it was.
+		AABBf aabb = AABBInner + Vector2f(stepX, stepY);
+		aabb.T = aabb.B;
+		aabb.B += CollisionCheckStep;
+		TileCollisionParams probeParams = { TileDestructType::None, true };
+		return !_levelHandler->IsPositionEmpty(this, aabb, probeParams);
+	}
+
 	bool ActorBase::TryMoveSubstep(float stepX, float stepY, float currentGravity, float currentElasticity, TileCollisionParams& params, MovementResult& result)
 	{
 		if (GetState(ActorState::CanJump | ActorState::ApplyGravitation)) {
@@ -381,9 +427,20 @@ namespace Jazz2::Actors
 			// Not doing this will cause hiccups with uphill slopes in particular.
 			// Beach tileset also has some spots where two properly set up adjacent
 			// tiles have a 2px jump, so adapt to that.
+			// The candidates are tried from the most downward angle upwards, so a downhill slope is followed
+			// rather than walked off. A downward candidate is only worth taking if there is actually ground
+			// under it, though: over a *gap* every one of them is free, so the first one tried wins and the
+			// actor is dropped by the full search range the instant the floor ends - and since the range
+			// grows with the horizontal step, running faster dropped the actor deeper instead of carrying it
+			// further. That made a two-tile gap uncrossable at full speed, where the original clears four.
+			// Requiring support turns those candidates down and leaves the fall to gravity, which is what
+			// the original does: `ys` goes straight into the fall gravity with no snap at all.
 			bool success = false;
 			float maxYDiff = std::max(3.0f, std::abs(stepX) + 2.5f);
 			for (float yDiff = maxYDiff + stepY; yDiff >= -maxYDiff + stepY; yDiff -= CollisionCheckStep) {
+				if (yDiff > stepY && !IsSupportedAfterMove(stepX, yDiff)) {
+					continue;
+				}
 				if (MoveInstantly(Vector2f(stepX, yDiff), MoveType::Relative, params)) {
 					success = true;
 					break;
@@ -435,6 +492,19 @@ namespace Jazz2::Actors
 		bool movedHorizontally = MoveInstantly(Vector2f(stepX, 0.0f), MoveType::Relative, params);
 		if (!movedHorizontally && std::abs(stepX) > std::abs(stepY)) {
 			float maxClimb = std::abs(stepX) + 2.5f;
+			// Coming down onto the edge of a ledge, the reach has to be the landing allowance the actor asks
+			// for rather than whatever the horizontal sub-step happens to be - see `_landingTolerance`. With
+			// only the sub-step to work with, a descending actor is caught by the ledge's side instead of
+			// being put on top of it, which lands a whole gap short of the original at every speed.
+			//
+			// It takes a real descent, not merely a non-negative one. One frame past the apex of a jump the
+			// step is a hair below zero (half a step of gravity and nothing else), so `stepY > 0.0f` was also
+			// true for a player rising against a wall and holding into it - which made every wall in the game
+			// `_landingTolerance` easier to mount than the jump arc allows, and put geometry a level author
+			// had deliberately placed out of reach back within it.
+			if (stepY > CollisionCheckStep && _landingTolerance > 0.0f) {
+				maxClimb = std::max(maxClimb, _landingTolerance);
+			}
 			for (float yUp = CollisionCheckStep; yUp <= maxClimb; yUp += CollisionCheckStep) {
 				if (MoveInstantly(Vector2f(stepX, -yUp), MoveType::Relative, params)) {
 					movedHorizontally = true;
@@ -488,7 +558,7 @@ namespace Jazz2::Actors
 		return (xDiff > std::numeric_limits<float>::epsilon() || yDiff > std::numeric_limits<float>::epsilon());
 	}
 
-	bool ActorBase::TryUnstuck(TileCollisionParams& params, float cooldown)
+	bool ActorBase::TryUnstuck()
 	{
 		if (_unstuckCooldown > 0.0f || !GetState(ActorState::CollideWithTileset)) {
 			return false;
@@ -506,7 +576,7 @@ namespace Jazz2::Actors
 			// Nearly every actor asking about this is standing perfectly fine, and this runs for all of them
 			// that are at rest, so the check itself is throttled as well. A few frames before an actor that
 			// just got trapped starts looking for a way out make no perceptible difference.
-			_unstuckCooldown = std::min(cooldown, 8.0f);
+			_unstuckCooldown = UnstuckRetryNotStuck;
 			return false;
 		}
 
@@ -519,14 +589,21 @@ namespace Jazz2::Actors
 			{ -0.7f, -0.7f }, { 0.7f, -0.7f }, { -0.7f, 0.7f }, { 0.7f, 0.7f }
 		};
 
+		// Non-destructive, deliberately, and not the caller's params: this is a search for somewhere to stand,
+		// not a move the actor makes, and up to 8 directions x 12 distances of it. Handing it the caller's
+		// params let a single stuck frame carve destructible tiles out of everything within MaxUnstuckDistance
+		// in eight directions - and, because `TilesDestroyed` accumulates into the same struct, award the
+		// player score for a hole they never moved through. IsSupportedAfterMove() avoids this the same way.
+		TileCollisionParams paramsEscape = { TileDestructType::None, true };
+
 		for (float distance = 2.0f; distance <= MaxUnstuckDistance; distance += 2.0f) {
 			for (const Vector2f& direction : Directions) {
-				if (MoveInstantly(direction * distance, MoveType::Relative, params)) {
+				if (MoveInstantly(direction * distance, MoveType::Relative, paramsEscape)) {
 					// The escape is a forced relocation, not a path the actor took - it's expressed as a relative
 					// move only because the free spot is searched for around the actor - so nothing on the way to
 					// it was touched and the path has to be discarded (see ResetPathTracking())
 					ResetPathTracking();
-					_unstuckCooldown = cooldown;
+					_unstuckCooldown = UnstuckCooldown;
 					return true;
 				}
 			}
@@ -534,7 +611,7 @@ namespace Jazz2::Actors
 
 		// Nowhere to go - wait before burning another full search, but retry sooner than after a successful
 		// escape, because whatever traps the actor may well move away on its own
-		_unstuckCooldown = std::min(cooldown, 20.0f);
+		_unstuckCooldown = UnstuckRetryTrapped;
 		return false;
 	}
 
@@ -1458,6 +1535,14 @@ namespace Jazz2::Actors
 		if (!PreferencesCache::UnalignedViewport || (_state & ActorState::IsDirty) != ActorState::IsDirty) {
 			pos.X = std::floor(pos.X);
 			pos.Y = std::floor(pos.Y);
+		}
+
+		// LevelHandler::OnEndFrame() calls this again for every actor in the level, to catch the ones that were
+		// moved after they had already updated themselves - carried by a platform, most visibly. For all the
+		// rest the value is the one that was just assigned, and setting it again would re-dirty the node's
+		// transform and bounding box for a bit-identical result, on every actor, every frame.
+		if (_renderer.position() == pos) {
+			return;
 		}
 		_renderer.setPosition(pos.X, pos.Y);
 	}
