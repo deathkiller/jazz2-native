@@ -1075,7 +1075,7 @@ namespace Jazz2::Actors
 
 		// The parameter is 2 bits wide, so anything else would be a malformed level - but the arithmetic
 		// below turns a large value into a *negative* brake, which would accelerate the player for ever
-		return std::min((std::int32_t)p[0], 3);
+		return std::min<std::int32_t>(p[0], 3);
 	}
 
 	std::int32_t Player::GetAccBeltStrength() const
