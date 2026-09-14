@@ -108,6 +108,17 @@ namespace Jazz2::Actors
 			Shielded			/**< Invulnerable due to an active shield */
 		};
 
+		/**
+			@brief How much of an effect a @ref InvulnerableType shows, for comparing two of them
+
+			@ref GrantInvulnerability() will not replace a running effect with one that ranks lower. The
+			order is the declaration order, but spelled out here because it is a rule rather than an
+			accident of it.
+		*/
+		static constexpr std::int32_t GetInvulnerableStrength(InvulnerableType type) {
+			return (type == InvulnerableType::Shielded ? 2 : (type == InvulnerableType::Blinking ? 1 : 0));
+		}
+
 		/** @brief Type of copter flight state */
 		enum class FlightType {
 			Normal,				/**< Timed/regular flight */
@@ -244,8 +255,29 @@ namespace Jazz2::Actors
 		virtual bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false);
 		/** @brief Freezes the player for specified time */
 		virtual bool Freeze(float timeLeft);
-		/** @brief Sets invulnerability */
+		/**
+			@brief Sets invulnerability to exactly @p timeLeft of @p type, replacing whatever is running
+
+			The unconditional setter, and the one a server's authoritative state is applied through - so it
+			has to be able to LOWER the value and to swap a stronger effect for a weaker one, otherwise a
+			correction can never arrive. @cpp timeLeft <= 0 @ce clears it.
+
+			Gameplay wants @ref GrantInvulnerability() instead: picking something up should not be able to
+			cut short an invulnerability that is already running.
+		*/
 		virtual void SetInvulnerability(float timeLeft, InvulnerableType type);
+		/**
+			@brief Grants invulnerability without ever weakening what is already running
+
+			Keeps whichever of the two is longer and whichever effect is stronger
+			@m_span{m-text m-dim} (@ref InvulnerableType::Shielded > @ref InvulnerableType::Blinking >
+			@ref InvulnerableType::Transient) @m_endspan, then applies the result through
+			@ref SetInvulnerability(). This is what every pickup, hurt and enemy bounce goes through; a
+			grant of nothing does nothing.
+		*/
+		void GrantInvulnerability(float timeLeft, InvulnerableType type);
+		/** @brief Returns the effect the currently running invulnerability is showing */
+		InvulnerableType GetInvulnerableType() const;
 
 		/** @brief Returns score */
 		std::int32_t GetScore() const;

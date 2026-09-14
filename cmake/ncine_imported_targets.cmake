@@ -642,12 +642,19 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			unset(OPENAL_LIBRARY CACHE)
 			set(PS3AUDIO_FOUND 1)
 		elseif(PLATFORM_PS2)
-			# PS2SDK carries no OpenAL, and this is also the one console with no audio backend in the engine
-			# yet: the SPU2 is reached through audsrv, which is unwritten (see Docs/Consoles.dox). So there is
-			# nothing to look for and nothing to fall back to - the build has no audio, which is what the
-			# summary reports, and no OpenAL path left in the cache by an earlier configure can suggest otherwise.
+			# PS2SDK carries no OpenAL. The SPU2 is not on the Emotion Engine's side of the machine at all -
+			# it hangs off the I/O Processor - so the backend hands mixed blocks to `audsrv`, the IRX that
+			# owns the chip, and the SPU2 resamples them in hardware (see Ps2AudioDevice). `libaudsrv` is the
+			# EE side of that and is part of the SDK, so like the ASND/AICA arms there is nothing to look for.
 			unset(OPENAL_INCLUDE_DIR CACHE)
 			unset(OPENAL_LIBRARY CACHE)
+			# Only where the PS2 platform backend is built too: `Ps2AudioDevice` starts `audsrv.irx` through
+			# `Ps2Modules`, which ncine_extra_sources.cmake compiles under the same NOT-libretro condition as
+			# the rest of the backend. Selecting the audio arm on its own would compile a translation unit
+			# whose `Ps2Modules.h` had expanded to nothing.
+			if(NOT NCINE_BUILD_LIBRETRO)
+				set(PS2AUDIO_FOUND 1)
+			endif()
 		elseif(PLATFORM_PSP)
 			# pspdev does ship an OpenAL - an OpenAL Soft 1.6 from 2008 - and the engine ran on it, but its
 			# mixer thread alone measured 12-24% of the console's single core in game, as much as the whole
@@ -705,7 +712,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			find_package(libopenmpt)
 		endif()
 		if(NCINE_WITH_XMP AND (OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR
-				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND))
+				PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND OR
+				PS2AUDIO_FOUND))
 			# Always built from source (there is nothing to find on the platforms that select it), so this
 			# only has to run where the option is on - see cmake/Findlibxmp.cmake. The audio-backend test
 			# is the same one the sources are guarded by: with no device to play through, downloading and

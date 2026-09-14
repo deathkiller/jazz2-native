@@ -213,7 +213,18 @@ namespace Jazz2::UI
 		static constexpr std::int32_t TouchButtonsCount = 11;
 		static constexpr float WeaponWheelAnimDuration = 20.0f;
 		static constexpr std::int32_t WeaponWheelMaxVertices = 768;
-		static constexpr float DefaultRef = LevelHandler::DefaultWidth * 0.5f; // = 360.0f
+		/**
+			@brief Reference width the touch layout is measured in, in pixels
+
+			A fixed number, NOT derived from @relativeref{Jazz2,LevelHandler::DefaultWidth} - which it used
+			to equal half of, back when that was 720 everywhere. It is the unit the persisted
+			@relativeref{Jazz2,PreferencesCache::TouchButtons} offsets are stored in and the one
+			`TouchControlsOptionsSection` drags them around in, so it belongs to the config format rather
+			than to the view: letting it follow the view bound would have made a layout written on one
+			platform land 12.5% out on the 640-wide consoles, and would have put the editor and the runtime
+			at odds on the same machine.
+		*/
+		static constexpr float DefaultRef = 360.0f;
 
 		float _rgbAmbientLight;
 		float _rgbHealthLast;

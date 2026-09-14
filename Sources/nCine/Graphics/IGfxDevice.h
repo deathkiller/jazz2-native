@@ -195,6 +195,17 @@ namespace nCine
 		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(_drawableWidth), static_cast<float>(_drawableHeight)); }
 		/** @brief Returns the window drawable resolution aspect ratio */
 		inline float drawableAspect() const { return _drawableWidth / static_cast<float>(_drawableHeight); }
+		/**
+		 * @brief Returns the aspect ratio the drawable is actually DISPLAYED at
+		 *
+		 * The same as @ref drawableAspect() wherever a pixel of the drawable is square on the display, which
+		 * is every desktop and handheld target and most consoles. It is not the same on hardware whose video
+		 * mode does not have square pixels: the PlayStation 2's 640x448 NTSC field pair (1.43) fills a 4:3
+		 * television, so a scene composed for the drawable's own ratio comes out stretched by 7% vertically.
+		 * Anything that decides how much of the world to show - see
+		 * @ref Jazz2::Rendering::UpscaleRenderPass::CalculateViewSize() - has to use this ratio instead.
+		 */
+		inline virtual float displayAspect() const { return drawableAspect(); }
 
 		/** @brief Highlights the application window to notify the user */
 		inline virtual void flashWindow() const { }

@@ -43,10 +43,10 @@ namespace Jazz2::UI::Menu
 	public:
 		/** @{ @name Constants */
 
-		/** @brief Default width of viewport */
-		static constexpr int32_t DefaultWidth = 720;
+		/** @brief Default width of viewport (see @ref Rendering::UpscaleRenderPass::DefaultViewWidth) */
+		static constexpr int32_t DefaultWidth = Rendering::UpscaleRenderPass::DefaultViewWidth;
 		/** @brief Default height of viewport */
-		static constexpr int32_t DefaultHeight = 405;
+		static constexpr int32_t DefaultHeight = Rendering::UpscaleRenderPass::DefaultViewHeight;
 
 		/** @} */
 
@@ -171,6 +171,9 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_AUDIO)
 		std::unique_ptr<AudioStreamPlayer> _music;
 		// Frames left before the opened music starts playing (see PlayMenuMusic()), or 0
+		// Frames between two attempts to restart music that was stopped from outside the game
+		static constexpr std::int32_t MusicRestartDelay = 60;
+
 		std::int32_t _musicStartDelay = 0;
 #endif
 		SmallVector<Tiles::TileMap::DestructibleDebris, 0> _debrisList;

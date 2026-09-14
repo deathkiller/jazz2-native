@@ -4,8 +4,13 @@
 #include "MenuResources.h"
 #include "../Font.h"
 #include "../../PreferencesCache.h"
+#include "../../Rendering/UpscaleRenderPass.h"
 
 #include "../../../nCine/I18n.h"
+#if defined(WITH_AUDIO)
+#	include "../../../nCine/ServiceLocator.h"
+#	include "../../../nCine/Audio/IAudioDevice.h"
+#endif
 
 #if defined(WITH_MULTIPLAYER)
 #	include "CreateServerOptionsSection.h"
@@ -30,6 +35,13 @@ namespace Jazz2::UI::Menu
 	{
 		auto& resolver = ContentResolver::Get();
 
+#if defined(WITH_AUDIO)
+		// Twenty-odd episodes read from storage, each with a title and a backdrop to decode and upload - long
+		// enough on a disc to starve a device fed once per frame (see IAudioDevice::beginBlockingOperation())
+		auto& audioDevice = theServiceLocator().GetAudioDevice();
+		audioDevice.beginBlockingOperation();
+#endif
+
 		// Search both "Content/Episodes/" and "Cache/Episodes/"
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
 			AddEpisode(item);
@@ -38,6 +50,10 @@ namespace Jazz2::UI::Menu
 		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Episodes"_s), fs::EnumerationOptions::SkipDirectories)) {
 			AddEpisode(item);
 		}
+
+#if defined(WITH_AUDIO)
+		audioDevice.endBlockingOperation();
+#endif
 
 		std::int32_t maxPosition = 0;
 		for (const EpisodeData& item : _episodes) {
@@ -193,6 +209,15 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// A 4:3 television renders a taller view than the 16:9 layout these backdrops were composed against,
+		// and a backdrop is drawn at its own pixel size - so on those consoles the extra lines were left as
+		// bare background and the episode list ran off the bottom of the picture onto it. The difference is
+		// given to the backdrop's height, which leaves its width (and so the list's margins) exactly as
+		// composed; these are soft paintings drawn at 40% alpha, where a fifth more height has nothing to
+		// see. Zero on every view that is not taller than the layout, which is every other platform.
+		const std::int32_t backgroundExtraHeight = std::max<std::int32_t>(0,
+			canvas->ViewSize.Y - Rendering::UpscaleRenderPass::ReferenceViewHeight);
+
 		std::int32_t row = GetSelectedRow();
 		bool inTransition = false;
 		if (_transitionFromEpisode != -1 && _transitionFromEpisode != row) {
@@ -200,6 +225,7 @@ namespace Jazz2::UI::Menu
 			if (item.Description.BackgroundImage != nullptr) {
 				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
 				Vector2i backgroundSize = item.Description.BackgroundImage->GetSize();
+				backgroundSize.Y += backgroundExtraHeight;
 
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
@@ -219,6 +245,7 @@ namespace Jazz2::UI::Menu
 			if (item.Description.BackgroundImage != nullptr) {
 				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
 				Vector2i backgroundSize = item.Description.BackgroundImage->GetSize();
+				backgroundSize.Y += backgroundExtraHeight;
 
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));

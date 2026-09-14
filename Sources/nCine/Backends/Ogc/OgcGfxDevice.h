@@ -40,6 +40,19 @@ namespace nCine::Backends
 
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 
+		/**
+			@brief What the television actually spreads the 640x480 framebuffer over
+
+			The video mode is 4:3 on both consoles, but a Wii whose system settings say the set is widescreen
+			does not render anything differently - it tells the TV to stretch the same 640x480 picture across
+			16:9. A scene composed for 4:3 is then 33% too wide there, which is what the game looked like on
+			one. The setting lives in SYSCONF and is read once in the constructor (there is no equivalent on
+			the GameCube, whose answer is always 4:3).
+		*/
+		inline float displayAspect() const override {
+			return _displayAspect;
+		}
+
 	protected:
 		void setResolutionInternal(int width, int height) override;
 
@@ -49,6 +62,7 @@ namespace nCine::Backends
 		GXRModeObj* _rmode;
 		void* _xfb[2];
 		std::int32_t _fbIndex;
+		float _displayAspect;
 
 		void update() override;
 

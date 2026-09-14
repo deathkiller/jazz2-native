@@ -130,6 +130,8 @@
 #	define _i7 "\nPS3 audio (software mixer)"
 #elif defined(WITH_PSPAUDIO)
 #	define _i7 "\nsceAudio (software mixer)"
+#elif defined(WITH_PS2AUDIO)
+#	define _i7 "\naudsrv (software mixer)"
 #elif defined(WITH_AHIAUDIO)
 #	define _i7 "\nAHI audio (software mixer)"
 #elif defined(WITH_SDLAUDIO)

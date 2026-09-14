@@ -542,14 +542,15 @@ cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" 
 # this picks the SDK's copy up rather than compiling it. The price is the 4 ".mo3" tracks of the 56
 # shipped, which libxmp cannot read and which are silent until the AssetPacker converts them offline.
 #
-# (Not the PlayStation 2, even though libxmp builds for its toolchain and the machine has the memory:
-# that port has no audio backend at all yet, so there is nothing for a decoder to play through. When
-# one appears, this is the line to add it to.)
+# The PlayStation 2 is on the list because libopenmpt cannot be built for it at all - see the arm below -
+# while libxmp's C89 compiles for the EE toolchain unchanged and the console has the memory for a module
+# several times over. Now that the SPU2 is reachable (see Ps2AudioDevice) that is the difference between a
+# soundtrack and silence, at the same cost of the 4 ".mo3" tracks every libxmp target pays.
 # The Nintendo 3DS joins the list for CPU and memory at once: a 268 MHz ARM11 (804 MHz on the New 3DS) is
 # the PSP's class, and the application memory of an Old 3DS is 64 MB shared with the GPU-visible linear heap
 # every texture lives in - so the module decoder that costs 0.5-4 MB rather than 4.6-12.5 MB is the one that
 # leaves room for the tilesets
-if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR VITA)
+if(PLATFORM_AMIGA OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_DREAMCAST OR NINTENDO_WII OR NINTENDO_GAMECUBE OR NINTENDO_3DS OR VITA)
 	set(_ncineXmpDefault ON)
 else()
 	set(_ncineXmpDefault OFF)
@@ -568,7 +569,8 @@ elseif(PLATFORM_N64 OR PLATFORM_PSP OR PLATFORM_PS2 OR PLATFORM_AMIGA)
 	#    double-precision unit. There is nowhere to hide that on a handheld.
 	#  - PS2: it does not compile for the EE toolchain - `mpt/format/default_floatingpoint.hpp` calls
 	#    `std::to_chars(char*, char*, const double&)`, ambiguous against newlib's overloads on GCC 15.
-	#    libxmp does build there, but the console has no audio backend yet, so neither is of any use.
+	#    This console is therefore the one place where turning libxmp OFF really does mean silence rather
+	#    than falling back to libopenmpt, which is why it defaults ON there (see the block above).
 	#  - N64: a decoded module's runtime state plus the streaming buffers do not fit next to the game
 	#    in 8 MB of RDRAM, so it is not even worth the code size. That is also why libxmp is not the
 	#    default there despite being far lighter - its own per-module cost (up to 4 MB, see above) is

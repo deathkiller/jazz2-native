@@ -147,7 +147,8 @@ namespace Jazz2
 		_elapsedMillisecondsBegin = levelInit.ElapsedMilliseconds;
 
 		auto& resolver = ContentResolver::Get();
-		resolver.BeginLoading();
+		// Scoped, because both overloads return early when the level cannot be loaded - see LoadingScope
+		ContentResolver::LoadingScope loadingScope(resolver);
 
 #if defined(RHI_CAP_POSTPROCESSING)
 		// Only the post-processing combine samples it (see CombineRenderer); the direct tier never binds it,
@@ -176,7 +177,6 @@ namespace Jazz2
 		SpawnPlayers(levelInit);		
 
 		OnInitialized();
-		resolver.EndLoading();
 
 		return true;
 	}
@@ -206,7 +206,8 @@ namespace Jazz2
 		_checkpointFrames = src.ReadValue<float>();
 
 		auto& resolver = ContentResolver::Get();
-		resolver.BeginLoading();
+		// Scoped, because both overloads return early when the level cannot be loaded - see LoadingScope
+		ContentResolver::LoadingScope loadingScope(resolver);
 
 #if defined(RHI_CAP_POSTPROCESSING)
 		// Only the post-processing combine samples it (see CombineRenderer); the direct tier never binds it,
@@ -260,7 +261,6 @@ namespace Jazz2
 		_hud->BeginFadeIn(false);
 
 		OnInitialized();
-		resolver.EndLoading();
 
 		// Set it at the end, so ambient light transition is skipped
 		_elapsedFrames = _checkpointFrames;
@@ -616,6 +616,15 @@ namespace Jazz2
 		// loading above); it keeps playing under the pause menu, so a pause in the meantime changes nothing
 		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
 			_music->play();
+		} else if (_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
+			// A looping stream that reports itself stopped was stopped by something other than the game:
+			// the only in-game paths either replace it or clear the pointer, and a pause does not stop it.
+			// The audio device releases every player when it decides the output has gone away (see
+			// AudioDeviceBase::checkForStalledSources() and ALAudioDevice::checkDeviceConnection()), which
+			// frees the sources for new sounds but leaves anything long-lived stopped for good - nothing
+			// else in the game ever starts the music a second time. Rescheduling the start handles that,
+			// and costs one retry a second rather than one a frame if the device is genuinely gone.
+			_musicStartDelay = MusicRestartDelay;
 		}
 #endif
 
@@ -2563,7 +2572,7 @@ namespace Jazz2
 	void LevelHandler::CheatGod(ArrayView<Actors::Player* const> targets)
 	{
 		for (auto* player : targets) {
-			player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
+			player->GrantInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 		}
 	}
 

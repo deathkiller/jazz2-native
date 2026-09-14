@@ -2,7 +2,7 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/I18n.h"
-#if defined(WITH_PSPAUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
+#if defined(WITH_PSPAUDIO) || defined(WITH_PS2AUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
 #	include "../../../nCine/ServiceLocator.h"
 #	include "../../../nCine/Audio/IAudioDevice.h"
 #endif
@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 			_isDirty = false;
 			PreferencesCache::Save();
 		}
-#if defined(WITH_PSPAUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
+#if defined(WITH_PSPAUDIO) || defined(WITH_PS2AUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
 		if (_sampleRateChanged && _root != nullptr) {
 			// The mixer already runs at the new rate, but a stream that was open keeps decoding at the one it
 			// was opened with (the mixer resamples it, so it plays at the right pitch, only at the old cost).
@@ -72,13 +72,13 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 
-#if defined(WITH_PSPAUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
+#if defined(WITH_PSPAUDIO) || defined(WITH_PS2AUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
 		// Only the software-mixing consoles have a mixing rate to trade for CPU time (the mixer's cost is linear
 		// in it, and so is the module decoder's, which renders at the device's rate): the PSP mixes at half or a
-		// quarter of its hardware's 44100 Hz (see PspAudioDevice), the 3DS at any rate its DSP then resamples to
-		// its own 32728 Hz (see NdspAudioDevice), the Amiga at whatever AHI resamples from. The change applies
-		// to the effects at once; the music is reopened at the new rate when the section is left (see the
-		// destructor).
+		// quarter of its hardware's 44100 Hz (see PspAudioDevice), the PS2 at any rate audsrv accepts and the
+		// SPU2 then resamples from (see Ps2AudioDevice), the 3DS at any rate its DSP then resamples to its own
+		// 32728 Hz (see NdspAudioDevice), the Amiga at whatever AHI resamples from. The change applies to the
+		// effects at once; the music is reopened at the new rate when the section is left (see the destructor).
 		// TRANSLATORS: Menu item in Options > Sounds section
 		auto* sampleRateItem = list->Add<ChoiceItem>(_("Sample Rate"),
 			[this]() -> StringView {
@@ -100,6 +100,9 @@ namespace Jazz2::UI::Menu
 				// spend CPU on samples the hardware resamples straight back down
 				static const std::int32_t presets[] = { 11025, 22050, 32728 };
 #	else
+				// The full set, which is also what the PlayStation 2 takes: the SPU2 runs at 48000 Hz and audsrv
+				// pitches the stream up to it, so any of these plays back correctly, and the EE has the headroom
+				// for 44100 in a way the handhelds do not (see Ps2AudioDevice)
 				static const std::int32_t presets[] = { 11025, 22050, 44100 };
 #	endif
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
@@ -125,7 +128,7 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 		// Set apart a little from the volume sliders above it, which it is not one of
-		sampleRateItem->MarginTop = 12.0f;
+		sampleRateItem->MarginTop = 8.0f;
 #endif
 
 		SetContent(std::move(list));

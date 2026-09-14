@@ -81,11 +81,10 @@ namespace nCine
 					break;
 				}
 
-				const unsigned int source = device.registerPlayer(this);
-				if (source == IAudioDevice::UnavailableSource) {
-					if (device.isValid()) {
-						LOGW("No more available audio sources for playing");
-					}
+				// A refusal is reported by the device itself, which can say what is holding the sources
+				// and can keep a caller that retries every frame from flooding the log
+				const std::uint32_t source = device.registerPlayer(this);
+				if DEATH_UNLIKELY(source == IAudioDevice::UnavailableSource) {
 					break;
 				}
 				_sourceId = source;

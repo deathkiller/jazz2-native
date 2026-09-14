@@ -642,7 +642,7 @@ namespace nCine
 		// fixed point), which is where both the source's pitch and the rate difference between the
 		// buffer and the AI are applied. Computed in floating point once per block and per buffer -
 		// the per-sample loop below never touches the FPU.
-		std::int64_t step = std::int64_t((double(buffer->Frequency) / double(_outputFrequency)) * double(source.Pitch) * 4294967296.0);
+		std::int64_t step = AudioMixer::ComputeResampleStep(buffer->Frequency, _outputFrequency, source.Pitch);
 		std::int64_t end = std::int64_t(buffer->FrameCount) << 32;
 
 		for (std::int32_t i = 0; i < frames; i++) {
@@ -664,7 +664,7 @@ namespace nCine
 					// The next buffer may be stored at another rate (or decimation), so the step follows
 					// it - and the loop re-tests rather than skipping this output frame, so a buffer
 					// boundary no longer costs a one-sample gap
-					step = std::int64_t((double(buffer->Frequency) / double(_outputFrequency)) * double(source.Pitch) * 4294967296.0);
+					step = AudioMixer::ComputeResampleStep(buffer->Frequency, _outputFrequency, source.Pitch);
 					end = std::int64_t(buffer->FrameCount) << 32;
 				} else if (source.Looping) {
 					// Wrapped rather than reset, so a step that overshoots the end does not lose the
@@ -744,8 +744,8 @@ namespace nCine
 		for (std::int32_t i = 0; i < total; i += 2) {
 			std::int32_t left = accumulator[i];
 			std::int32_t right = accumulator[i + 1];
-			left = (left < -32768 ? -32768 : (left > 32767 ? 32767 : left));
-			right = (right < -32768 ? -32768 : (right > 32767 ? 32767 : right));
+			left = AudioMixer::ClampToInt16(left);
+			right = AudioMixer::ClampToInt16(right);
 			output32[i >> 1] = (std::uint32_t(std::uint16_t(left)) << 16) | std::uint32_t(std::uint16_t(right));
 		}
 	}

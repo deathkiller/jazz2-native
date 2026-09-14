@@ -1818,10 +1818,10 @@ namespace Jazz2::UI
 	{
 		TouchButtonInfo info;
 		info.Action = action;
-		info.Left = std::round(x * LevelHandler::DefaultWidth * 0.5f);
-		info.Top = std::round(y * LevelHandler::DefaultWidth * 0.5f);
-		info.Width = std::round(w * LevelHandler::DefaultWidth * 0.5f);
-		info.Height = std::round(h * LevelHandler::DefaultWidth * 0.5f);
+		info.Left = std::round(x * DefaultRef);
+		info.Top = std::round(y * DefaultRef);
+		info.Width = std::round(w * DefaultRef);
+		info.Height = std::round(h * DefaultRef);
 		info.State = state;
 		info.CurrentPointerId = -1;
 		info.Align = align;

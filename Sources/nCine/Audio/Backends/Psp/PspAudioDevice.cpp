@@ -544,7 +544,7 @@ namespace nCine
 		const std::int32_t leftQ15 = std::int32_t(leftGain * 32768.0f + 0.5f);
 		const std::int32_t rightQ15 = std::int32_t(rightGain * 32768.0f + 0.5f);
 
-		std::int64_t step = std::int64_t((double(buffer->Frequency) / double(_mixFrequency)) * double(source.Pitch) * 4294967296.0);
+		std::int64_t step = AudioMixer::ComputeResampleStep(buffer->Frequency, _mixFrequency, source.Pitch);
 		std::int64_t end = std::int64_t(buffer->FrameCount) << 32;
 
 		for (std::int32_t i = 0; i < frames; i++) {
@@ -562,7 +562,7 @@ namespace nCine
 					if (buffer == nullptr) {
 						return false;
 					}
-					step = std::int64_t((double(buffer->Frequency) / double(_mixFrequency)) * double(source.Pitch) * 4294967296.0);
+					step = AudioMixer::ComputeResampleStep(buffer->Frequency, _mixFrequency, source.Pitch);
 					end = std::int64_t(buffer->FrameCount) << 32;
 				} else if (source.Looping) {
 					source.Cursor %= end;
@@ -627,9 +627,7 @@ namespace nCine
 			// Clamp the wide accumulator into the device's 16 bits
 			const std::int32_t total = frames * ChannelCount;
 			for (std::int32_t i = 0; i < total; i++) {
-				std::int32_t value = accumulator[i];
-				value = (value < -32768 ? -32768 : (value > 32767 ? 32767 : value));
-				output[i] = std::int16_t(value);
+				output[i] = AudioMixer::ClampToInt16(accumulator[i]);
 			}
 			return;
 		}
@@ -646,8 +644,8 @@ namespace nCine
 		for (std::int32_t i = 0; i < mixFrames; i++) {
 			std::int32_t left = accumulator[i * ChannelCount];
 			std::int32_t right = accumulator[i * ChannelCount + 1];
-			left = (left < -32768 ? -32768 : (left > 32767 ? 32767 : left));
-			right = (right < -32768 ? -32768 : (right > 32767 ? 32767 : right));
+			left = AudioMixer::ClampToInt16(left);
+			right = AudioMixer::ClampToInt16(right);
 			const std::int32_t deltaLeft = left - previousLeft;
 			const std::int32_t deltaRight = right - previousRight;
 			for (std::int32_t k = 1; k <= ratio; k++) {

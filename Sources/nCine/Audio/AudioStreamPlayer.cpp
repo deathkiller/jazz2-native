@@ -34,11 +34,9 @@ namespace nCine
 		switch (_state) {
 			case PlayerState::Initial:
 			case PlayerState::Stopped: {
-				const unsigned int source = device.registerPlayer(this);
+				// A refusal is reported by the device itself, see AudioBufferPlayer::play()
+				const std::uint32_t source = device.registerPlayer(this);
 				if DEATH_UNLIKELY(source == IAudioDevice::UnavailableSource) {
-					if (device.isValid()) {
-						LOGW("No more available audio sources for playing");
-					}
 					break;
 				}
 				_sourceId = source;

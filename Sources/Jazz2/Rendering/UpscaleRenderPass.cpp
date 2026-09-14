@@ -34,21 +34,43 @@ namespace Jazz2::Rendering
 		const std::int32_t maxHeight = std::max<std::int32_t>(defaultHeight * PreferencesCache::RenderingResolutionPercent / 100, 1);
 #endif
 
-		const float defaultRatio = (float)maxWidth / maxHeight;
-		const float currentRatio = (float)targetWidth / targetHeight;
+		// The view is fitted to the ratio the drawable is DISPLAYED at, which is not always the ratio of its
+		// own pixel counts: the PlayStation 2 renders 640x448 (1.43) and a television shows it as 4:3, so
+		// fitting the view to 640/448 there produced a view the hardware then stretched by a further 7%
+		// vertically - everything in the game was that much too tall. A Wii whose system settings say the
+		// television is widescreen is the same question the other way round: it renders the same 640x480 and
+		// asks the set to stretch it to 16:9. Where a pixel is square - every other target, and the Wii on a
+		// 4:3 set - the correction is exactly 1 and this is the ratio it always was.
+		const IGfxDevice& gfxDevice = theApplication().GetGfxDevice();
+		const float drawableRatio = gfxDevice.drawableAspect();
+		const float pixelAspect = (drawableRatio > 0.0f && drawableRatio < HUGE_VALF ? gfxDevice.displayAspect() / drawableRatio : 1.0f);
+		float currentRatio = ((float)targetWidth / targetHeight) * pixelAspect;
 
-		std::int32_t w, h;
-		if (currentRatio > defaultRatio) {
-			w = std::min(maxWidth, targetWidth);
-			h = (std::int32_t)roundf(w / currentRatio);
-		} else if (currentRatio < defaultRatio) {
-			h = std::min(maxHeight, targetHeight);
-			w = (std::int32_t)roundf(h * currentRatio);
-		} else {
-			w = std::min(maxWidth, targetWidth);
-			h = std::min(maxHeight, targetHeight);
+		// A zero-sized target is not hypothetical - a minimized window reports one, and so does a resize
+		// delivered after the surface is gone - and 0/0 is a NaN that every comparison below is false for,
+		// including the clamp. It would reach `(std::int32_t)roundf()` unclamped, which is undefined: the
+		// x86-64 conversion happens to yield INT_MIN and hides it, but the R5900 and PowerPC saturate to
+		// INT_MAX, and a two-billion-pixel view size is then handed to the framebuffer allocation. Anything
+		// not a usable ratio falls back to the bound's own, which is what the three-branch form this
+		// replaced did implicitly by taking an integer `std::min()` in its last arm.
+		if (!(currentRatio > 0.0f && currentRatio < HUGE_VALF)) {
+			currentRatio = (float)std::max<std::int32_t>(maxWidth, 1) / (float)std::max<std::int32_t>(maxHeight, 1);
 		}
-		return Vector2i(std::max<std::int32_t>(w, 1), std::max<std::int32_t>(h, 1));
+
+		// The largest box of that ratio fitting inside both the bound and the target's own pixel dimensions.
+		// Written as a fit rather than as three branches on how the two ratios compare, because the ratio the
+		// view has to keep is no longer the target's own: where the two used to be the same number, the
+		// "equal" branch could take the width from one and the height from the other and still be right, and
+		// once they are not, it cannot - a widescreen Wii (640x480 shown as 16:9, against a 720x405 bound
+		// whose ratio is also 16:9) came out 640x405, which is neither.
+		float w = (float)std::min(maxWidth, targetWidth);
+		float h = w / currentRatio;
+		const float heightLimit = (float)std::min(maxHeight, targetHeight);
+		if (h > heightLimit) {
+			h = heightLimit;
+			w = h * currentRatio;
+		}
+		return Vector2i(std::max<std::int32_t>((std::int32_t)roundf(w), 1), std::max<std::int32_t>((std::int32_t)roundf(h), 1));
 	}
 
 	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)

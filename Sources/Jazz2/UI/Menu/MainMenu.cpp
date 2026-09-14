@@ -46,23 +46,26 @@ namespace Jazz2::UI::Menu
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
 		auto& resolver = ContentResolver::Get();
-		resolver.BeginLoading();
+		{
+			// Scoped, because the DEATH_ASSERT below returns out of the constructor and would otherwise
+			// leave the load unfinished - see LoadingScope. The block keeps the window exactly where it
+			// was: the sections constructed after it request their own resources outside it.
+			ContentResolver::LoadingScope loadingScope(resolver);
 
-		// It will also replace palette for subsequent `RequestMetadata()`
-		PrepareTexturedBackground();
+			// It will also replace palette for subsequent `RequestMetadata()`
+			PrepareTexturedBackground();
 
-		_metadata = resolver.RequestMetadata("UI/MainMenu"_s);
-		DEATH_ASSERT(_metadata != nullptr, "Cannot load required metadata", );
+			_metadata = resolver.RequestMetadata("UI/MainMenu"_s);
+			DEATH_ASSERT(_metadata != nullptr, "Cannot load required metadata", );
 
-		_smallFont = resolver.GetFont(FontType::Small);
-		_mediumFont = resolver.GetFont(FontType::Medium);
+			_smallFont = resolver.GetFont(FontType::Small);
+			_mediumFont = resolver.GetFont(FontType::Medium);
 
-		// Opened here, started a couple of frames in (see OnBeginFrame()): the stream is fed from the main
-		// thread once per frame, and the first frames still load the sections' deferred resources - a stream
-		// started now ran dry against that and came back with an audible gap after a second of playing
-		PlayMenuMusic();
-
-		resolver.EndLoading();
+			// Opened here, started a couple of frames in (see OnBeginFrame()): the stream is fed from the main
+			// thread once per frame, and the first frames still load the sections' deferred resources - a stream
+			// started now ran dry against that and came back with an audible gap after a second of playing
+			PlayMenuMusic();
+		}
 
 		// Mark Fire and Menu button as already pressed to avoid some issues
 		_pressedActions = (1 << (int32_t)PlayerAction::Fire) | (1 << ((int32_t)PlayerAction::Fire + 16)) |
@@ -131,6 +134,15 @@ namespace Jazz2::UI::Menu
 		// Music opened by PlayMenuMusic() is started only after the first frames have loaded what they load
 		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
 			_music->play();
+		} else if (_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
+			// A looping stream that reports itself stopped was stopped by something other than the game:
+			// the only in-game paths either replace it or clear the pointer, and a pause does not stop it.
+			// The audio device releases every player when it decides the output has gone away (see
+			// AudioDeviceBase::checkForStalledSources() and ALAudioDevice::checkDeviceConnection()), which
+			// frees the sources for new sounds but leaves anything long-lived stopped for good - nothing
+			// else in the game ever starts the music a second time. Rescheduling the start handles that,
+			// and costs one retry a second rather than one a frame if the device is genuinely gone.
+			_musicStartDelay = MusicRestartDelay;
 		}
 
 		// Destroy stopped players

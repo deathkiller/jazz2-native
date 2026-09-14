@@ -242,10 +242,10 @@ Feature | N64 | Dreamcast | Wii | GameCube | 3DS | PSP | PS2 | PS3 | Vita | Swit
 ------- | --- | --------- | --- | -------- | --- | --- | --- | --- | ---- | ------
 Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (a pthread shim over libctru) @m_endspan | Yes | **No** | **No** | Yes | Yes
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No | No
-Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `NDSP` @m_span{m-text m-dim} (software mixer into a DSP channel) @m_endspan | `PSP` @m_span{m-text m-dim} (software mixer into an `sceAudio` channel) @m_endspan | **none yet** @m_span{m-text m-dim} (audsrv is unwritten) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
-Sound effects | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs the DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | **No** | Yes | SDK-dependent | SDK-dependent
-Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | **No** --- no audio backend | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
-Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | **No** --- no audio backend | **No** --- no filter stage in the mixer | SDK-dependent | Yes
+Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `NDSP` @m_span{m-text m-dim} (software mixer into a DSP channel) @m_endspan | `PSP` @m_span{m-text m-dim} (software mixer into an `sceAudio` channel) @m_endspan | `PS2` @m_span{m-text m-dim} (software mixer into the `audsrv` stream) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs the DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | Yes | Yes | SDK-dependent | SDK-dependent
+Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
+Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
 Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
@@ -272,11 +272,20 @@ Backend | `WITH_*` | What it drives
 @ref nCine::PspAudioDevice "PSP" | `WITH_PSPAUDIO` | One `sceAudio` hardware channel. pspdev does ship an OpenAL, but the console cannot afford it (see below), so this is the N64/SDL mixer again --- on a thread of its own here, which is the one thing that sets it apart from the others
 @ref nCine::NdspAudioDevice "NDSP" | `WITH_NDSP` | One channel of libctru's NDSP, the 3DS's DSP driver. The PSP backend's design again --- the same mixer on a thread of higher priority than the game's, woken by the DSP's frame callback --- with the one difference that the DSP resamples the channel from the mixing rate itself, so any rate the option offers is valid and no upsampling pass is needed. Needs the DSP firmware, see @ref consoles-3ds-limits
 @ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's AI ring. The console has no sound chip at all --- the AI is a bare stereo DAC fed by DMA --- so this backend is the mixer too, on the VR4300; the same arrangement as the PS3, except it mixes in integers to spare the 93 MHz core's FPU
+@ref nCine::Ps2AudioDevice "PS2" | `WITH_PS2AUDIO` | `audsrv`, the IRX that owns the SPU2 --- the sound chip is on the I/O Processor, so the only thing the EE can do with it is hand it PCM. The same mixer again, topped up from the frame like the N64's because this console has no threads; the SPU2 resamples the stream from the mixing rate in hardware, so that rate is a free choice here too
 none | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
 
 Nothing has to be installed by hand for any of them --- each console's own SDK provides what its
 backend needs. `NCINE_WITH_AUDIO` is left at @cpp ON @ce everywhere and turns the whole subsystem
 off when cleared.
+
+The backends that mix on the main thread are fed once per rendered frame, so anything that blocks that
+thread for longer than they have queued ahead starves them --- a level load above all. What starving
+*sounds* like is the hardware's business and is not always silence, so the engine announces such an
+operation rather than leaving each backend to discover it: @ref nCine::IAudioDevice::beginBlockingOperation()
+and its counterpart are called around the level load and the episode scan, and are a no-op on every
+backend but the PlayStation 2's, which stops its stream for the duration
+@m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan.
 
 @m_class{m-block m-info}
 
@@ -574,7 +583,7 @@ EEPROM the preferences are saved to.
     resolution.
 -   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
     a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
-    like the PlayStation 2 this console has sound effects and no soundtrack. The lighter **libxmp**
+    this console has sound effects and no soundtrack. The lighter **libxmp**
     the PSP and the Dreamcast use does not rescue it either: one of this game's modules costs it
     between 0.5 MB and 4 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan,
     which is most of the console's 8 MB, and the ROM packaging drops the whole `Music` directory to
@@ -792,6 +801,14 @@ crash also loses everything written since the last flush.
 
 @subsection consoles-dreamcast-limits Limits and known issues
 
+-   **The logical view is 640x480**, not the 720x405 bound the 16:9 platforms use. These panels are
+    4:3 and 480 lines tall, so the shared bound would have fitted a 540x405 view into them and let
+    the hardware stretch it by a sixth; the raised one reaches the panel exactly, which is one less
+    resampling stage and sprites drawn at the size they are shown at. It is about **1.4x the
+    pixels**, so it is also the first thing to turn down through *Rendering Resolution* in
+    Options > Graphics if the frame rate matters more
+    @m_span{m-text m-dim} (see @cpp Jazz2::Rendering::UpscaleRenderPass::DefaultViewWidth @ce)
+    @m_endspan.
 -   **Main memory is the binding constraint.** The heap window between the loaded ELF and the top of
     RAM is roughly **13.8 MB**. Exhaustion is not a clean error --- it appears in the log as
     `Out of memory. Requested sbrk_base …` followed by `std::bad_alloc` and an abort, which the
@@ -922,6 +939,14 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
 
 @subsection consoles-wii-limits Limits and known issues
 
+-   **The logical view is 640x480 on a 4:3 set**, not the 720x405 bound the 16:9 platforms use ---
+    the panel is 480 lines tall, so the shared bound would have fitted a 540x405 view into it and let
+    the hardware stretch it by a sixth. It is about 1.4x the pixels, which *Rendering Resolution* in
+    Options > Graphics scales back down. A Wii whose system settings say the television is widescreen
+    is a different case and unaffected by the bound: it renders the same 640x480 and asks the set to
+    stretch it, so the view is fitted to 16:9 instead @m_span{m-text m-dim} (640x360 --- see
+    @cpp nCine::Backends::OgcGfxDevice::displayAspect() @ce, which reads `CONF_GetAspectRatio()`;
+    without it a 4:3 composition was 33% too wide there) @m_endspan.
 -   **Module music plays through libxmp, not libopenmpt.** Both play the whole soundtrack, but they
     do not cost the same: measured over this game's tracks, one loaded module costs libopenmpt
     4.6-12.5 MB against libxmp's 0.5-4 MB, and neither devkitPro SDK packages libopenmpt, so that
@@ -1661,10 +1686,9 @@ disc image in the packaging step, hence the `apk add` above.
 @subsection consoles-ps2-content Preparing the content tree
 
 This console boots from a read-only disc and has no working directory of any kind: there is no
-first-run conversion compiled in, nothing is staged into `Cache/` and not even
-@cpp "Jazz2.config" @ce can be written @m_span{m-text m-dim} (see @ref consoles-ps2-limits)
-@m_endspan. The tree therefore has to be complete before the image is authored. It is the plain
-`console` profile, prepared exactly as in @ref consoles-common-content:
+first-run conversion compiled in and nothing is staged into `Cache/`, so the tree has to be complete
+before the image is authored. It is prepared exactly as in @ref consoles-common-content, with the
+`ps2` profile rather than the plain `console` one:
 
 @code{.sh}
 # 1. The tool (any desktop build directory already has it)
@@ -1672,12 +1696,27 @@ cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
 cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 # 2. Convert - the original game data and the game's own content are named separately
-./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContent \
-    --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=console
+./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContentPs2 \
+    --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=ps2
 
 # 3. Prebaked.pak is what makes it a prepared tree
-ls ./build/ConsoleContent
+ls ./build/ConsoleContentPs2
 @endcode
+
+@m_class{m-block m-info}
+
+@par Why `--target=ps2` and not `--target=console`
+The two produce the same tree except for the cinematics, and they are worth the separate directory.
+`console` copies them across as the original `.j2v`, four interleaved **zlib** streams at 640x480 ---
+which is both more than this console can inflate inside a frame and four times the pixels it can
+display, since the player caps the frame texture at the 640x448 drawable and then picks every second
+index back out on the CPU, per frame. `ps2` re-encodes them into the game's own container
+@m_span{m-text m-dim} (whose decoder is @cb{.cpp} memcpy @ce and @cb{.cpp} memset @ce over a reused
+frame buffer --- see @ref Jazz2::VideoFormat) @m_endspan **at 320x240**, which is exactly what ends
+up on screen. The same trade is available to any profile through `--video-downscale=`.
+@par
+A tree from `console` still plays; it is just the slow way round. A tree from `ps2` is equally
+usable on the other consoles, which would simply be showing a smaller cinematic than they could.
 
 @m_class{m-noindent}
 
@@ -1727,10 +1766,58 @@ Regenerating the content tree means `rm -rf ./build/ps2/cd/` and then building a
 
 @m_class{m-noindent}
 
-One thing can be dropped from a tree meant only for this console: nothing here decodes
-@cpp "Music" @ce, because the port has no audio backend yet
-@m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan, so those files are dead weight on the
-disc. Keep them if the same tree is shared with the other consoles, which do play them.
+@cpp "Music" @ce belongs on the disc: this console plays the soundtrack through **libxmp**
+@m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan.
+
+@subsection consoles-ps2-mx4sio Running from an MX4SIO SD adapter
+
+An **MX4SIO** adapter puts an SD card on a controller port and is how most of these consoles are
+loaded today. The game supports it as a first-class alternative to the disc: it looks for a content
+tree on the card at startup and, finding one, reads everything from there --- and writes there too,
+which a disc cannot offer and an 8 MB memory card barely can @m_span{m-text m-dim} (the level cache
+alone is larger than one) @m_endspan.
+
+Nothing has to be built differently. The game lives under `Games/Jazz2/` on the card --- a card is
+shared storage, alongside a loader's own `APPS`, `DVD` and `CFG`, and a tree at its root would claim
+names that belong to whatever else is on it. It is the same layout the game uses on the one other
+machine where it is a guest on a shared card @m_span{m-text m-dim} (the Switch,
+@cpp "sdmc:/Games/Jazz2/" @ce) @m_endspan:
+
+@code{.shell-session}
+mass0:/Games/Jazz2/JAZZ2.ELF      # wherever the loader is pointed at; this is the tidy place for it
+mass0:/Games/Jazz2/Content/…      # what the probe looks for
+mass0:/Games/Jazz2/Cache/…        # created by the game, unlike on a disc
+mass0:/Games/Jazz2/Jazz2.config   # likewise
+@endcode
+
+@m_class{m-noindent}
+
+Units `mass0:` to `mass3:` are probed in order, so a card partitioned more than once still works. The
+three IOP modules this needs --- `bdm`, `bdmfs_fatfs` and `mx4sio_bd`
+@m_span{m-text m-dim} (FAT12/16/32 and exFAT) @m_endspan --- are **linked into the executable**,
+because a driver that is the only way to reach a device obviously cannot be read from it
+@m_span{m-text m-dim} (see @cpp nCine::Backends::Ps2Modules @ce; `audsrv` rides along for the same
+reason, a card boot having no disc to read it from either) @m_endspan.
+
+The split between the two halves is worth knowing if this is ever ported to another application.
+@cpp nCine::Backends::Ps2Storage @ce brings the modules up and reports which units mounted, and that
+is all it does --- it does not know what the game is called or how its files are laid out. The
+directory name, the `Content`/`Cache`/`Source` layout and the rule that a disc wins over a card all
+live together in @cpp Jazz2::ContentResolver::InitializePaths() @ce, which is also what drives the
+probe in the first place: a build that finds its content on the disc never loads a module or waits
+for a card at all.
+
+A build running from a card also writes a **log file** next to its content, `Jazz2.log`, which is the
+only practical way to read a trace from this console --- the alternative is the EE's SIO register and
+a serial cable. It is deliberately not written when the game runs from a disc: the writable storage
+there is a memory card, which is 8 MB shared with every game on the console and no place for a log.
+
+@m_class{m-block m-warning}
+
+@par A disc that carries content always wins
+The probe runs only when @cpp "cdfs:/Content" @ce is absent, so booting from a disc costs nothing for
+a feature it is not using --- and a disc build never silently picks up a stale tree from a card left
+in the adapter. To run from the card, run the ELF from the card.
 
 @subsection consoles-ps2-build Building
 
@@ -1785,19 +1872,43 @@ exists.
     The allocator hands out whole 8 KB **pages**, because within a page the texel-to-block swizzle
     depends on the pixel storage mode and two buffers of different modes sharing a page would
     corrupt each other.
--   **There is no audio backend yet.** `audsrv` is the intended path, until it exists the game runs
-    silent and `NCINE_WITH_OPENMPT` is forced off @m_span{m-text m-dim} (libopenmpt's
-    `to_chars(char*, char*, const double&)` is ambiguous against PS2SDK's newlib) @m_endspan. The
-    lighter **libxmp** does build for the EE toolchain, so once there is a device to play through,
-    module music is one default away @m_span{m-text m-dim} (`NCINE_WITH_XMP`, see
-    "ncine_options.cmake") @m_endspan.
+-   **Sound goes through `audsrv`**, the IRX that owns the SPU2 --- the chip is on the I/O Processor,
+    so the Emotion Engine can only hand it finished PCM @m_span{m-text m-dim} (see
+    @ref nCine::Ps2AudioDevice) @m_endspan. Two consequences are worth knowing. The module's ring
+    buffer is **small** @m_span{m-text m-dim} (about 50 ms at the default 22050 Hz, measured at
+    startup and reported in the trace) @m_endspan and there is no mixer thread to keep it full, so a
+    frame that runs much longer than that is audible --- and audible as a *repeat* rather than a gap,
+    because `audsrv` plays its last buffer over again for as long as nothing replaces it
+    @m_span{m-text m-dim} (measured; fed silence, by contrast, comes out as silence) @m_endspan. The
+    backend submits in blocks of a quarter of the ring so that ordinary frames keep it full, and
+    anything that blocks the main thread for longer than the ring says so first through
+    @ref nCine::IAudioDevice::beginBlockingOperation() --- a level load, and the episode list, which
+    reads twenty-odd episodes off the disc --- which stops the stream, so those are silent instead of
+    a loop. Gameplay running sustained below about 19 fps still repeats; that is a frame rate problem
+    rather than an audio one. `NCINE_WITH_OPENMPT` is forced off
+    @m_span{m-text m-dim} (libopenmpt's `to_chars(char*, char*, const double&)` is ambiguous against
+    PS2SDK's newlib) @m_endspan, so the soundtrack is **libxmp**'s, which is on by default here ---
+    and which cannot read the 4 `.mo3` tracks of the 56 shipped, exactly as on every other libxmp
+    target.
+-   **The picture is composed for 4:3, not for 640x448.** A television spreads an NTSC field pair
+    over the whole 4:3 screen, so a pixel of this drawable is a seventh taller than it is wide;
+    @cpp Ps2GfxDevice::displayAspect() @ce reports that and the logical view is fitted to it rather
+    than to the framebuffer's own ratio, without which everything in the game was 7% too tall. The
+    view is **597x448** at the default rendering resolution --- 4:3, and as many lines as the
+    framebuffer has, so nothing is resampled vertically
+    @m_span{m-text m-dim} (see @cpp Jazz2::Rendering::UpscaleRenderPass::DefaultViewWidth @ce, which
+    is what raises the bound from the 16:9 720x405 the other platforms use) @m_endspan.
 -   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
     is compiled out and asset loading is synchronous.
 -   Two pipeline stages are still unimplemented: the weapon wheel's line strip
     @m_span{m-text m-dim} (`line_strip_mesh`) @m_endspan and the CPU-lightmap compositor
     @m_span{m-text m-dim} (`lighting_combine`, so a level renders unlit) @m_endspan.
--   `Jazz2.config` cannot be written --- a disc is read-only and the PS2 has no working directory, so
-    preferences need a memory-card path @m_span{m-text m-dim} (`mc0:/`) @m_endspan.
+-   **Saving needs writable storage that a disc is not.** Preferences and progress go to a memory
+    card @m_span{m-text m-dim} (`mc0:/Jazz2/`, the first usable slot, with the `icon.sys` the
+    console's own browser needs or it calls the save "Corrupted Data") @m_endspan --- or, when the
+    game was booted from an SD card in an **MX4SIO** adapter, to the card it is already reading from
+    @m_span{m-text m-dim} (see @ref consoles-ps2-content) @m_endspan, which is the only configuration
+    in which the level cache has somewhere to live.
 -   The GS has no post-texture additive term for a colour and no combiner output scale, so an
     `offset_color` pass expands into a modulated draw plus an additive silhouette
     @m_span{m-text m-dim} (which the GS reaches through a white-RGB CLUT --- see

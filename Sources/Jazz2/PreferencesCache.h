@@ -187,7 +187,7 @@ namespace Jazz2
 		@ref TouchButtonSlot in @ref PreferencesCache::TouchButtons.
 	*/
 	struct TouchButtonLayout {
-		/** @brief Offset from the anchor edge in reference pixels (DefaultWidth * 0.5 = 360) */
+		/** @brief Offset from the anchor edge in reference pixels (`HUD::DefaultRef` = 360) */
 		Vector2f EdgeOffset;
 		/** @brief Size scale factor (0.5 = half size, 1.0 = default, 3.0 = triple size) */
 		float Scale;
@@ -326,7 +326,12 @@ namespace Jazz2
 		 * @ref ApplyRenderingResolution().
 		 */
 		static std::uint8_t RenderingResolutionPercent;
-		/** @brief Particle quality */
+		/**
+		 * @brief Particle quality
+		 *
+		 * @ref ParticleQuality::High everywhere but the consoles that cannot spare the fill rate for it -
+		 * the PlayStation 2, Dreamcast, GameCube and Nintendo 64 start at @ref ParticleQuality::Low.
+		 */
 		static ParticleQuality Particles;
 
 		// Gameplay
@@ -379,8 +384,8 @@ namespace Jazz2
 		/**
 		 * @brief Sample rate the audio device mixes at in Hz, or `0` to keep the platform's default
 		 *
-		 * Honoured only by the software-mixing backends whose cost is linear in this rate (the PSP and the
-		 * Amiga, see @ref IAudioDevice::setMixingFrequency()); every other backend ignores it.
+		 * Honoured only by the software-mixing backends whose cost is linear in this rate (the PSP, the PS2,
+		 * the 3DS and the Amiga, see @ref IAudioDevice::setMixingFrequency()); every other backend ignores it.
 		 */
 		static std::int32_t AudioSampleRate;
 

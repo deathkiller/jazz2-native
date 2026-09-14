@@ -1482,7 +1482,7 @@ msgstr "\f[c:#d0705d]{}\f[/c] liittyi"
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7121
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
-msgstr "\f[c:#d0705d]{}\f[/c] kärvensi pelaajan \f[c:#d0705d]{}\f[/c]"
+msgstr "\f[c:#d0705d]{1}\f[/c] kärvensi pelaajan \f[c:#d0705d]{0}\f[/c]"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4665
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7147
@@ -2565,7 +2565,7 @@ msgstr "Pelaaja"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:184
 msgid "Pts"
-msgstr "pts"
+msgstr "Pts"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:186
 msgid "Ping"
@@ -2578,7 +2578,7 @@ msgstr "Yhdistä Palvelimeen"
 #. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:293
 msgid "Switching connection mode…"
-msgstr "Vaihdetaan yhteystilaa...."
+msgstr "Vaihdetaan yhteystilaa..."
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:298
 msgid "No servers found, but still searchin'!"

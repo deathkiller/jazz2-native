@@ -30,7 +30,7 @@ namespace Jazz2::Actors::Collectibles
 
 	void CarrotInvincibleCollectible::OnCollect(Player* player)
 	{
-		player->SetInvulnerability(30.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
+		player->GrantInvulnerability(30.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
 
 		CollectibleBase::OnCollect(player);
 	}

@@ -211,7 +211,14 @@ namespace nCine
 			}
 			case APP_CMD_WINDOW_REDRAW_NEEDED: {
 				LOGI("APP_CMD_WINDOW_REDRAW_NEEDED event received");
-				theAndroidApplication().Step();
+				// Only while the application is running - this arrives outside the main loop, which is
+				// itself careful not to step a suspended application. A frame stepped while the audio
+				// device is stopped starts sounds that cannot be played and cannot finish either, so each
+				// one holds a source of the pool until the device runs again (see IAudioDevice)
+				AndroidApplication& app = theAndroidApplication();
+				if (app.IsInitialized() && !app.ShouldSuspend()) {
+					app.Step();
+				}
 				break;
 			}
 			case APP_CMD_GAINED_FOCUS: {

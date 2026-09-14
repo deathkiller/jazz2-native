@@ -325,6 +325,12 @@ Argument | Description
 
 @m_class{m-noindent}
 
+Opening the log file discards what the previous session wrote into it, so that content is first appended to
+@cpp "Jazz2.log.gz" @ce next to it --- a plain **gzip** file holding one member per session, oldest first,
+which any **gzip** tool reads back as one file with the sessions in order. It is trimmed from the front once
+it outgrows 4 MB or 32 sessions, so the most recent sessions are always the ones kept. A log file named
+explicitly with @cpp "/log:file:<name>" @ce is left as the single file it was asked for and gets no archive.
+
 `/server` is available on **Linux** and **macOS**, and on **Windows** only in a debug build --- a release
 server for Windows is the `DEDICATED_SERVER` build, where no argument is needed to become one and the first
 argument is the path to the configuration file. In a `DEDICATED_SERVER` build the arguments of a client are

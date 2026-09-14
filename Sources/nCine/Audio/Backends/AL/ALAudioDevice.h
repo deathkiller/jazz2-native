@@ -74,9 +74,7 @@ namespace nCine
 		void suspendDevice() override;
 		void resumeDevice() override;
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		void updatePlayers() override;
-#endif
 
 	private:
 		/** @brief Maximum number of OpenAL sources */
@@ -113,6 +111,23 @@ namespace nCine
 		ALuint* filterForSource(std::uint32_t sourceId);
 #endif
 
+#if defined(ALC_SOFT_reopen_device)
+		/** @brief `alcReopenDeviceSOFT()` of the `ALC_SOFT_reopen_device` extension, `nullptr` when unavailable */
+		LPALCREOPENDEVICESOFT _alcReopenDeviceSOFT;
+#endif
+#if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
+		/** @brief Number of calls to @ref updatePlayers() between two checks of the device connection */
+		static constexpr std::int32_t ConnectionCheckInterval = 30;
+
+		/** @brief Frames left until the next check of the device connection */
+		std::int32_t _connectionCheckLeft;
+		/** @brief Whether the device was disconnected the last time it was checked */
+		bool _deviceDisconnected;
+
+		/** @brief Notices a device that went away and tries to bring it back, see @ref updatePlayers() */
+		void checkDeviceConnection();
+#endif
+
 		void Init();
 
 #if defined(WITH_LIBRETRO)
@@ -123,7 +138,6 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::uint64_t DeviceChangeLimitMs = 250;
 
-		LPALCREOPENDEVICESOFT _alcReopenDeviceSOFT;
 		IMMDeviceEnumerator* _pEnumerator;
 		std::uint64_t _lastDeviceChangeTime;
 		String _lastDeviceId;

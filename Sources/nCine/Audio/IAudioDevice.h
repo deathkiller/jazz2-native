@@ -264,6 +264,23 @@ namespace nCine
 		virtual bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) = 0;
 #endif
 
+		/**
+		 * @brief Tells the device the caller is about to stop feeding it for a long time
+		 *
+		 * A device that mixes on the main thread is fed once per frame, so an operation that blocks that
+		 * thread for longer than it has queued ahead - a level load, above all - starves it. What starving
+		 * sounds like is the hardware's business and not always silence: the PlayStation 2's `audsrv` repeats
+		 * its last buffer for as long as nothing replaces it (measured), which turns a two second load into
+		 * two seconds of the same fragment of music over and over. A device that has something better to do
+		 * with the gap says so here and puts itself back together in @ref endBlockingOperation().
+		 *
+		 * A no-op for every device that mixes on a thread of its own or hands whole sounds to hardware, which
+		 * is all of them but one - they carry on playing through the block and should.
+		 */
+		virtual void beginBlockingOperation() { }
+		/** @brief Ends what @ref beginBlockingOperation() started, and resumes playback */
+		virtual void endBlockingOperation() { }
+
 		/** @brief Suspends the audio device */
 		virtual void suspendDevice() = 0;
 		/** @brief Resumes the audio device */

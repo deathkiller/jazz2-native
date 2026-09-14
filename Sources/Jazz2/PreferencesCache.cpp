@@ -99,7 +99,19 @@ namespace Jazz2
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
 	std::uint8_t PreferencesCache::RenderingResolutionPercent = 100;
 #endif
-	ParticleQuality PreferencesCache::Particles = ParticleQuality::High;
+#if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_N64)
+	// A particle is a blended sprite over whatever is already there, and a busy scene has no bound on how
+	// many - which is the fill rate these consoles have least of. Raisable in Options > Graphics. (The Wii
+	// shares the GameCube's port but not its constraints, so it keeps the default.)
+	static constexpr ParticleQuality DefaultParticleQuality = ParticleQuality::Low;
+#else
+	static constexpr ParticleQuality DefaultParticleQuality = ParticleQuality::High;
+#endif
+	// Named rather than written twice, because Load() has to fall back to the SAME value when the file
+	// carries something out of range - a hardcoded `High` there would quietly undo the console default
+	// above on exactly the machines it exists for, and survive every later Save()
+	ParticleQuality PreferencesCache::Particles = DefaultParticleQuality;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
@@ -167,7 +179,7 @@ namespace Jazz2
 
 	void PreferencesCache::ResetTouchButtons()
 	{
-		// Default positions derived from HUD constants × (DefaultWidth * 0.5f = 360):
+		// Default positions derived from HUD constants × (HUD::DefaultRef = 360):
 		//	DpadSize=0.37 → 133px, DpadLeft=0.02 → 7px, DpadBottom=0.1 → 36px
 		//	ButtonSize=0.172 → 62px, SmallButtonSize=0.098 → 35px
 		TouchButtons[(std::size_t)TouchButtonSlot::Dpad]			= { Vector2f(  7.0f,  36.0f), 1.0f, TouchButtonAnchor::BottomLeft  };
@@ -1002,16 +1014,25 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_PS2)
-			// Same situation as the Dreamcast: the game runs from a disc, so the only writable storage is a
-			// memory card. Once a slot has been probed, MCMAN serves it through the original `ioman` - the
-			// I/O manager the newlib port's POSIX calls reach - so a card is an ordinary "mc0:" / "mc1:"
-			// path and the config file needs no special-case I/O at all. The probe is not optional: before
-			// it, MCMAN answers for the slot as if it were empty and an mkdir on a good card returns ENOENT.
+			// An SD card in an MX4SIO adapter, if the game was booted from one, is both larger and faster
+			// than any memory card and already holds the content, so it wins outright - and a console with
+			// no memory card in it at all can then still save. The directory needs no creating: it is the
+			// one the content was found under (see ContentResolver::GetWritablePath()).
+			//
+			// Otherwise the situation is the Dreamcast's: the game runs from a disc, so the only writable
+			// storage is a memory card. Once a slot has been probed, MCMAN serves it through the original
+			// `ioman` - the I/O manager the newlib port's POSIX calls reach - so a card is an ordinary
+			// "mc0:" / "mc1:" path and the config file needs no special-case I/O at all. The probe is not
+			// optional: before it, MCMAN answers for the slot as if it were empty and an mkdir on a good
+			// card returns ENOENT.
 			//
 			// The save lives in a directory of its own, as every PlayStation 2 save does. The first usable
 			// card wins, exactly as the Dreamcast takes the first attached VMU; with neither slot usable the
 			// path is left on the disc, where opening it for writing simply fails as before.
-			{
+			StringView writablePath = ContentResolver::Get().GetWritablePath();
+			if (!writablePath.empty()) {
+				_configPath = fs::CombinePath(writablePath, "Jazz2.config"_s);
+			} else {
 				bool memoryCardFound = false;
 				// Plain `int`: PS2SDK takes `int*` here and `std::int32_t` is `long` on the Emotion Engine,
 				// so the two are distinct types even though they are the same width
@@ -1137,6 +1158,18 @@ namespace
 #			else
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
 #			endif
+#		elif defined(DEATH_TARGET_PS2)
+		// The only channel here by default is the EE's SIO register, which needs a serial cable to read, so a
+		// file is worth much more than on the consoles above. Conditional because the usual writable storage
+		// is a memory card, which is no place for a log - only an MX4SIO card gets one, which is exactly when
+		// `configDir` is that card. The SIO output stays on either way.
+		if (!ContentResolver::Get().GetWritablePath().empty()) {
+#			if defined(DEATH_TRACE_LOG_PATH)
+			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
+#			else
+			theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+#			endif
+		}
 #		elif defined(DEATH_TARGET_IOS)
 		// No terminal and no command line on a phone, so the log always goes to a file - into "Documents", where
 		// the user can reach it through the Files app (next to "Source", see ContentResolver)
@@ -1153,7 +1186,9 @@ namespace
 			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
 				fs::CreateDirectories(configDir);
 				if (arg.size() > "/log:file:"_s.size()) {
-					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)));
+					// A path the user named is the one file they asked for, so it is not archived into a
+					// "<name>.gz" beside it the way the default log is
+					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)), false);
 					logFileSpecified = true;
 				}
 #			if !defined(DEATH_TRACE_LOG_PATH)
@@ -1430,7 +1465,7 @@ namespace
 						RenderingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(25), std::uint8_t(100));
 #endif
 						std::uint8_t particles = uc.ReadValue<std::uint8_t>();
-						Particles = (particles <= (std::uint8_t)ParticleQuality::Ultra ? (ParticleQuality)particles : ParticleQuality::High);
+						Particles = (particles <= (std::uint8_t)ParticleQuality::Ultra ? (ParticleQuality)particles : DefaultParticleQuality);
 						// `0` keeps the platform's default; anything outside what a mixer can sensibly run at is a corrupted value
 						std::int32_t sampleRate = uc.ReadValueAsLE<std::uint16_t>();
 						if (sampleRate == 0 || (sampleRate >= 8000 && sampleRate <= 48000)) {

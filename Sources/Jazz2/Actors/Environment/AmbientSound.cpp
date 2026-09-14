@@ -5,6 +5,7 @@
 namespace Jazz2::Actors::Environment
 {
 	AmbientSound::AmbientSound()
+		: _sfx(0), _gain(0.0f), _restartDelay(0.0f)
 	{
 	}
 
@@ -46,5 +47,25 @@ namespace Jazz2::Actors::Environment
 		}
 
 		async_return true;
+	}
+
+	void AmbientSound::OnUpdate(float timeMult)
+	{
+		ActorBase::OnUpdate(timeMult);
+
+		// A looping ambience that reports itself stopped was stopped by something other than this actor,
+		// which starts it once and otherwise only stops it in the destructor. The audio device releases
+		// every player when it decides the output has gone away (see
+		// AudioDeviceBase::checkForStalledSources()), and nothing would ever start this one again - the
+		// region would simply be silent for the rest of the level. Retried about once a second, so a
+		// device that is genuinely gone is not asked every frame.
+		if (_sound != nullptr && _sound->isStopped()) {
+			if (_restartDelay > 0.0f) {
+				_restartDelay -= timeMult;
+			} else {
+				_restartDelay = RestartDelay;
+				_sound->play();
+			}
+		}
 	}
 }

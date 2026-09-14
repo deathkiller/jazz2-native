@@ -357,20 +357,37 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		# tier anyway (see the Dc/Ogc/Psp arms above). The PS2 libraries are linked with the packaging below.
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS2")
 
+		# The IOP modules the console cannot reach a device without are linked into the executable rather
+		# than staged on the disc: the MX4SIO driver is the only way to read the SD card it is loaded FROM,
+		# and a build booted from that card has no disc to read audsrv off either (see Ps2Modules.h)
+		include("${CMAKE_SOURCE_DIR}/cmake/ncine_ps2_embed_irx.cmake")
+		ncine_ps2_embed_irx_modules(PS2_EMBEDDED_MODULES_SOURCE
+			"Audsrv=audsrv.irx"
+			"Bdm=bdm.irx"
+			"BdmfsFatfs=bdmfs_fatfs.irx"
+			"Mx4sioBd=mx4sio_bd.irx")
+
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Modules.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Storage.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Modules.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Storage.cpp
+			${PS2_EMBEDDED_MODULES_SOURCE}
 		)
 		# The R5900 has no load-linked/store-conditional for sub-word sizes, so GCC lowers the engine's
 		# `std::atomic<bool>`/`<std::uint8_t>` operations to libatomic calls rather than inline instructions
 		# `mc` is libmc: the memory card is read and written through ordinary POSIX paths (MCMAN registers
 		# with the same ioman the newlib port uses), but a slot has to be probed through libmc before MCMAN
 		# will answer for it at all - see the mcGetInfo() call in MainApplication
-		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd kernel atomic)
+		# `patches` is libpatches, the SBV patches that give the ROM's loadfile service the LoadModuleBuffer
+		# entry point it lacks - without it none of the modules embedded above can be started (see Ps2Modules.h)
+		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd patches kernel atomic)
 	elseif(PLATFORM_PS3)
 		# PSL1GHT window/input backend (no SDL/GLFW: PSL1GHT ships neither, and the console's video output is
 		# configured through sysutil rather than through anything a windowing library would wrap). The RSX
@@ -448,7 +465,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND OR N64AUDIO_FOUND OR PS3AUDIO_FOUND OR AHIAUDIO_FOUND OR SDLAUDIO_FOUND OR PSPAUDIO_FOUND OR NDSP_FOUND OR PS2AUDIO_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 
 		list(APPEND HEADERS
@@ -527,6 +544,15 @@ if(NOT DEDICATED_SERVER)
 
 			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ndsp/NdspAudioDevice.h)
 			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ndsp/NdspAudioDevice.cpp)
+		elseif(PS2AUDIO_FOUND)
+			set(_NCINE_AUDIO_BACKEND "audsrv (software mixer into the PS2 SPU2 stream)")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS2AUDIO")
+			# The EE side of audsrv is `libaudsrv`; the IRX itself is embedded in the executable by the
+			# PLATFORM_PS2 arm above, because a build booted from an SD card has no disc to read it from
+			target_link_libraries(${NCINE_APP} PRIVATE audsrv)
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ps2/Ps2AudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/Ps2/Ps2AudioDevice.cpp)
 		elseif(PS3AUDIO_FOUND)
 			set(_NCINE_AUDIO_BACKEND "PS3 (PSL1GHT libaudio mixer)")
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PS3AUDIO")

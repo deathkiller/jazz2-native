@@ -15,7 +15,7 @@ namespace Jazz2::UI::Menu
 	using Jazz2::TouchButtonAnchor;
 	using Jazz2::TouchButtonLayout;
 
-	static constexpr float DefaultRef = 360.0f;			// = LevelHandler::DefaultWidth * 0.5f
+	static constexpr float DefaultRef = 360.0f;			// Must match HUD::DefaultRef - the unit the layout is stored in
 	static constexpr float DockThreshold = 0.5f;
 	static constexpr float HandleRadius = 15.0f;
 

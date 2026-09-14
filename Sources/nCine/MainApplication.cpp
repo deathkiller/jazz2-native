@@ -73,6 +73,7 @@ extern "C" {
 #	include <loadfile.h>
 #	include <libcdvd.h>
 #	include <libmc.h>
+#	include <delaythread.h>
 }
 #	include <cstdio>
 #elif defined(DEATH_TARGET_PSP)
@@ -405,8 +406,43 @@ namespace nCine
 		SifLoadModule("rom0:CDVDFSV", 0, nullptr);
 		sceCdInit(SCECdINIT);
 
-		// Wait for the disc to be ready before anything tries to read a module off it
-		while (sceCdDiskReady(0) != SCECdComplete) { }
+		// Wait for the disc to be ready before anything tries to read a module off it - but only for a
+		// while. This console is as often booted from an SD card in an MX4SIO adapter as from a disc, and
+		// with an empty tray (or a lid the drive never reports closing) an unbounded wait here is a hang
+		// with nothing on screen to explain it. The timeout costs a boot from disc nothing: a disc that is
+		// spinning up answers well inside it.
+		bool discReady = false;
+		{
+			// Both counted in milliseconds, and the loop sleeps in milliseconds so they mean what they say
+			constexpr std::int32_t DiscReadyTimeoutMs = 10000;
+			constexpr std::int32_t DiscReadyPollIntervalMs = 10;
+
+			for (std::int32_t waited = 0; waited < DiscReadyTimeoutMs; waited += DiscReadyPollIntervalMs) {
+				if (sceCdDiskReady(0) == SCECdComplete) {
+					discReady = true;
+					break;
+				}
+				// An empty tray is not something to wait out: the drive knows there is nothing in it as
+				// soon as CDVDMAN is up, and without this the SD-card boot - the one the timeout was added
+				// for - would spend the entire ten seconds on a black screen before anything else happens.
+				// A disc that is merely spinning up answers SCECdDETCT or similar and is waited for.
+				//
+				// Asked only after the first sleep. `sceCdInit()` is documented as returning once commands
+				// can be SENT, which is not the same as the mechacon having reported what is in the drive,
+				// and `SCECdNODISC` is the zero value of the media-type enum - so however the driver's
+				// cached type is initialized, one tick of settling costs an SD boot 10 ms and takes the
+				// question out of the answer.
+				DelayThread(DiscReadyPollIntervalMs * 1000);
+				if (sceCdGetDiskType() == SCECdNODISC) {
+					break;
+				}
+			}
+			if (!discReady) {
+				// Tracked with a flag rather than inferred from the counter, which cannot tell a timeout
+				// from a drive that became ready on the very last poll
+				LOGW("The disc drive did not become ready, continuing without a disc");
+			}
+		}
 
 		// The BIOS "cdrom0:" handler is not reachable through the newlib port's open() - it answers ENODEV - so
 		// the disc is mounted as a filesystem by cdfs, which registers a "cdfs:" device with the ORIGINAL
@@ -414,7 +450,13 @@ namespace nCine
 		// tried and is wrong: those route the POSIX calls to the *other* manager, where "cdfs" does not exist.)
 		// The module is loaded from the disc itself, which works because SifLoadModule() goes through the IOP's
 		// loadfile service rather than through the EE's file I/O - the reason this is not a chicken-and-egg.
-		{
+		//
+		// Only when the drive actually answered. The unbounded wait this replaced made that implicit - it
+		// could not reach this point otherwise - and loading CDFS off a drive that is not ready fails, which
+		// leaves no "cdfs:" device registered at all. ContentResolver then reads that as "the disc carries
+		// no content" and goes looking for an MX4SIO card, so a disc that was merely slow would boot into
+		// "no episode found" rather than into the game.
+		if (discReady) {
 			static const char* const ps2Modules[] = {
 				"cdrom0:\\CDFS.IRX;1"
 			};
@@ -447,6 +489,13 @@ namespace nCine
 		// through that: an mkdir on a perfectly good card comes back ENOENT until then. The probe itself, and
 		// the choice of which slot to save on, belong to PreferencesCache and are done there.
 		mcInit(MC_TYPE_MC);
+
+		// Nothing brings an SD card in an MX4SIO adapter up here, even though this is where the rest of the
+		// I/O stack is assembled: the probe costs three module loads and a wait on hardware that may not be
+		// there, and only whoever is looking for files on it knows whether it is needed at all. It is
+		// therefore driven from ContentResolver, which is also where the layout on such a card is decided
+		// (see Backends::Ps2Storage). It stays reachable from here in load order - the adapter shares the
+		// SIO2 with the pads and memory cards, so SIO2MAN above has to be up first, and it is.
 #elif defined(DEATH_TARGET_PSP)
 		// Before anything else does any floating-point arithmetic at all
 		Thread::DisableFpuTraps(true);

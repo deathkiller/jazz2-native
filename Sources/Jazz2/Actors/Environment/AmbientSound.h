@@ -25,10 +25,15 @@ namespace Jazz2::Actors::Environment
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+		void OnUpdate(float timeMult) override;
 
 	private:
+		/** @brief Frames between two attempts to restart a loop that was stopped from outside the game */
+		static constexpr float RestartDelay = 60.0f;
+
 		std::shared_ptr<AudioBufferPlayer> _sound;
 		std::uint8_t _sfx;
 		float _gain;
+		float _restartDelay;
 	};
 }

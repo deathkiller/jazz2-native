@@ -527,6 +527,27 @@ namespace Jazz2::Compatibility
 	#endif
 		}
 
+		if (options.CopyUsedMusic) {
+			// Not every track the game plays is named by a level. The main menu picks one of three, and each
+			// cinematic plays the file beside its own name, and none of those appear in any ".j2l" - so a
+			// tree built only from what the levels ask for left the menu and both cinematics silent on every
+			// console.
+			static const StringView musicOutsideLevels[] = {
+				"menu.j2b"_s, "bonus2.j2b"_s, "bonus3.j2b"_s,	// See MainMenu::PlayMenuMusic()
+				"intro.j2b"_s, "ending.j2b"_s					// See Cinematics::Initialize()
+			};
+			for (StringView music : musicOutsideLevels) {
+				// Only what this data set actually ships. Unlike the tracks a level names - where a missing
+				// file means the conversion is incomplete and the warning below is the point - these are
+				// simply absent from some editions: the Shareware Demo has no ending cinematic and so no
+				// "ending.j2b". Seeding them unconditionally warned about content that is correctly not
+				// there, in a log people read to decide whether the conversion worked.
+				if (fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, music)))) {
+					usedMusic.emplace(music, true);
+				}
+			}
+		}
+
 		if (options.CopyUsedMusic && !usedMusic.empty()) {
 			// The music is not converted, only carried over - but only what the levels that survived the filter
 			// ask for, the same way the tilesets are. The game looks for it in a "Music" directory of its own,

@@ -123,6 +123,8 @@ extern "C" {
 #		include "Audio/Backends/SDL/SdlAudioDevice.h"
 #	elif defined(WITH_PSPAUDIO)
 #		include "Audio/Backends/Psp/PspAudioDevice.h"
+#	elif defined(WITH_PS2AUDIO)
+#		include "Audio/Backends/Ps2/Ps2AudioDevice.h"
 #	elif defined(WITH_NDSP)
 #		include "Audio/Backends/Ndsp/NdspAudioDevice.h"
 #	endif
@@ -273,6 +275,325 @@ static void DiscardLogHistory()
 	LogHistoryState expected = LogHistoryState::Open;
 	__logHistoryState.compare_exchange_strong(expected, LogHistoryState::Closed,
 		std::memory_order_release, std::memory_order_relaxed);
+}
+#endif
+
+#if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN) && (defined(WITH_ZLIB) || defined(WITH_MINIZ))
+#	include <Containers/SmallVector.h>
+#	include <IO/Compression/DeflateStream.h>
+#	define NCINE_HAS_LOG_ARCHIVE
+
+// What the previous session left in the log file is kept next to it as "<log file>.gz", a plain gzip file
+// holding one member per session, oldest first. Concatenated members are what the format is specified to
+// allow (RFC 1952) and what every gzip tool already understands, so the whole history still comes out of a
+// single `gunzip` with the sessions in order - and a report about something that went wrong two sessions ago
+// is still there to be looked at, which it was not while each run simply overwrote the file.
+//
+// Every member records the size of the member itself in a gzip extra field, which is what lets the oldest of
+// them be dropped without inflating anything: the archive is walked header to header and copied through byte
+// for byte, minus the members that no longer fit. Readers that don't know the field ignore it, as the format
+// requires them to.
+namespace
+{
+	// gzip magic, the only compression method it has, and the header flags used here
+	constexpr std::uint8_t GzipMagic0 = 0x1F, GzipMagic1 = 0x8B, GzipDeflate = 0x08;
+	constexpr std::uint8_t GzipFlagExtra = 0x04, GzipFlagName = 0x08;
+	// Identifies the subfield holding the member size, an extra field can hold subfields of other writers too
+	constexpr std::uint8_t MemberSizeFieldId0 = 'D', MemberSizeFieldId1 = 'z';
+	constexpr std::uint8_t MemberSizeFieldLength = sizeof(std::uint32_t);
+	constexpr std::uint16_t ExtraFieldLength = 2 + 2 + MemberSizeFieldLength;
+	// Where that subfield sits in a member written here: fixed header, extra field length, subfield header
+	constexpr std::int64_t MemberSizeFieldOffset = 10 + 2 + 4;
+
+	// How large the archive may get and how many sessions it holds at the very most. A text log deflates to
+	// something like a tenth of its size, so the limit on the count is what usually decides.
+	constexpr std::int64_t MaxLogArchiveSize = 4 * 1024 * 1024;
+	constexpr std::uint32_t MaxLogArchiveParts = 32;
+	// What a trim cuts back to, rather than to just inside the limits. Trimming means rewriting the whole
+	// archive, and cutting back only as far as necessary makes that the cost of EVERY launch once the
+	// archive is full - several megabytes read and written on the boot path of a console, for one session
+	// dropped. Overshooting pays it once per this many sessions instead.
+	constexpr std::uint32_t TrimLogArchiveToParts = MaxLogArchiveParts / 2;
+
+	// Deflate level the archive is written at. This runs before the first frame (see AttachTraceTarget()),
+	// so on the consoles - where it is also the only place a log can go - the CPU is what is scarce, not the
+	// card. For line-oriented text the ratio between the fastest and the slowest setting is a few percent,
+	// against several times the time to produce it.
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+	constexpr std::int32_t LogArchiveCompressionLevel = 1;
+#else
+	constexpr std::int32_t LogArchiveCompressionLevel = 6;
+#endif
+
+	// Transfer buffer, on the stack of whoever attaches the trace target - the same sizes the deflate
+	// streams themselves use (see Compression::DeflateWriter)
+#if defined(DEATH_TARGET_CONSTRAINED_MEMORY)
+	constexpr std::int32_t LogArchiveBufferSize = 8 * 1024;
+#else
+	constexpr std::int32_t LogArchiveBufferSize = 16 * 1024;
+#endif
+
+	struct LogArchivePart {
+		std::int64_t Offset;
+		std::int64_t Size;
+	};
+
+	// Returns the size the member at the given offset recorded for itself, or zero if there is no member
+	// written by this there
+	std::int64_t ReadLogArchivePartSize(Stream& s, std::int64_t offset, std::int64_t fileSize)
+	{
+		if (offset + MemberSizeFieldOffset + MemberSizeFieldLength > fileSize ||
+			s.Seek(offset, SeekOrigin::Begin) < 0) {
+			return 0;
+		}
+
+		std::uint8_t header[10];
+		if (s.Read(header, sizeof(header)) != sizeof(header) ||
+			header[0] != GzipMagic0 || header[1] != GzipMagic1 || header[2] != GzipDeflate ||
+			(header[3] & GzipFlagExtra) != GzipFlagExtra) {
+			return 0;
+		}
+
+		// The subfield is written first, so it is the only one that has to be looked at
+		const std::uint16_t extraLength = s.ReadValueAsLE<std::uint16_t>();
+		std::uint8_t subfield[4];
+		if (extraLength < ExtraFieldLength || s.Read(subfield, sizeof(subfield)) != sizeof(subfield) ||
+			subfield[0] != MemberSizeFieldId0 || subfield[1] != MemberSizeFieldId1 ||
+			subfield[2] != MemberSizeFieldLength || subfield[3] != 0) {
+			return 0;
+		}
+
+		const std::int64_t memberSize = s.ReadValueAsLE<std::uint32_t>();
+		// A member reaching past the end of the file is a file that was cut short, which makes it and
+		// everything that would follow it unusable
+		if (memberSize <= MemberSizeFieldOffset || offset + memberSize > fileSize) {
+			return 0;
+		}
+		return memberSize;
+	}
+
+	// Compresses the whole input stream into one gzip member appended to the output stream
+	bool WriteLogArchivePart(Stream& output, Stream& input, Containers::StringView originalName)
+	{
+		const std::int64_t startOffset = output.GetPosition();
+
+		const std::uint8_t header[4] = {
+			GzipMagic0, GzipMagic1, GzipDeflate, std::uint8_t(GzipFlagExtra | GzipFlagName)
+		};
+		output.Write(header, sizeof(header));
+		// Modification time in seconds since the Unix epoch, or zero when it is not known - which is what
+		// the format says to write then
+		output.WriteValueAsLE<std::uint32_t>(std::uint32_t(__startupTimestampMs > 0 ? __startupTimestampMs / 1000 : 0));
+		// The XFL byte the level above corresponds to
+		output.WriteValue<std::uint8_t>(LogArchiveCompressionLevel >= 9 ? 0x02 : (LogArchiveCompressionLevel <= 1 ? 0x04 : 0x00));
+		output.WriteValue<std::uint8_t>(0xFF);	// Unknown operating system
+
+		output.WriteValueAsLE<std::uint16_t>(ExtraFieldLength);
+		const std::uint8_t subfield[4] = { MemberSizeFieldId0, MemberSizeFieldId1, MemberSizeFieldLength, 0 };
+		output.Write(subfield, sizeof(subfield));
+		output.WriteValueAsLE<std::uint32_t>(0);	// Size of the member, filled in at the end
+
+		// The original name, so the archive still says what it is an archive of
+		output.Write(originalName.data(), originalName.size());
+		output.WriteValue<std::uint8_t>(0);
+
+		std::uint32_t crc = std::uint32_t(crc32(0, nullptr, 0));
+		std::uint64_t uncompressedSize = 0;
+		{
+			// Raw deflate - the gzip container is the header above and the trailer below
+			Compression::DeflateWriter deflater(output, LogArchiveCompressionLevel, true);
+			if (!deflater.IsValid()) {
+				return false;
+			}
+
+			char buffer[LogArchiveBufferSize];
+			for (;;) {
+				const std::int64_t bytesRead = input.Read(buffer, sizeof(buffer));
+				if (bytesRead <= 0) {
+					break;
+				}
+				crc = std::uint32_t(crc32(crc, reinterpret_cast<const Bytef*>(buffer), uInt(bytesRead)));
+				uncompressedSize += std::uint64_t(bytesRead);
+				if (deflater.Write(buffer, bytesRead) != bytesRead) {
+					return false;
+				}
+			}
+			// Ends the deflate stream, so the trailer below lands right after it
+			deflater.Dispose();
+		}
+
+		output.WriteValueAsLE<std::uint32_t>(crc);
+		output.WriteValueAsLE<std::uint32_t>(std::uint32_t(uncompressedSize));
+
+		// Only now is the size of the member known, and it is what lets the next session skip over this
+		// member without inflating it
+		const std::int64_t endOffset = output.GetPosition();
+		if (output.Seek(startOffset + MemberSizeFieldOffset, SeekOrigin::Begin) < 0) {
+			return false;
+		}
+		output.WriteValueAsLE<std::uint32_t>(std::uint32_t(endOffset - startOffset));
+		return (output.Seek(endOffset, SeekOrigin::Begin) >= 0);
+	}
+
+	// Copies a range of one stream to the current position of another
+	bool CopyLogArchiveRange(Stream& output, Stream& input, std::int64_t offset, std::int64_t size)
+	{
+		if (input.Seek(offset, SeekOrigin::Begin) < 0) {
+			return false;
+		}
+
+		char buffer[LogArchiveBufferSize];
+		while (size > 0) {
+			const std::int64_t bytesToRead = (size < std::int64_t(sizeof(buffer)) ? size : std::int64_t(sizeof(buffer)));
+			const std::int64_t bytesRead = input.Read(buffer, bytesToRead);
+			if (bytesRead <= 0 || output.Write(buffer, bytesRead) != bytesRead) {
+				return false;
+			}
+			size -= bytesRead;
+		}
+		return true;
+	}
+
+	// Moves what the previous session left in the log file into the archive next to it. Called before the
+	// file is opened for writing, which is what would otherwise discard it.
+	void ArchivePreviousLogFile(Containers::StringView targetPath)
+	{
+		String archivePath = targetPath + ".gz"_s;
+		String stagingPath = targetPath + ".gz.tmp"_s;
+
+		// Asked before opening it, so the first run of all doesn't report a missing file it only guessed at
+		if (fs::GetFileSize(targetPath) <= 0) {
+			return;
+		}
+
+		{
+			auto previousLog = fs::Open(targetPath, FileAccess::Read | FileAccess::Sequential);
+			if (!previousLog->IsValid() || previousLog->GetSize() <= 0) {
+				return;
+			}
+
+			// Compressed on its own first, because how much of the archive has to go depends on how large
+			// this turns out to be - and because a session that dies in the middle of it then loses the
+			// staging file and nothing else
+			auto staging = fs::Open(stagingPath, FileAccess::Write);
+			if (!staging->IsValid() || !WriteLogArchivePart(*staging, *previousLog, fs::GetFileName(targetPath))) {
+				staging->Dispose();
+				fs::RemoveFile(stagingPath);
+				return;
+			}
+		}
+
+		const std::int64_t newPartSize = fs::GetFileSize(stagingPath);
+		if (newPartSize <= 0) {
+			fs::RemoveFile(stagingPath);
+			return;
+		}
+
+		// Walk the members already in the archive and see which of them still fit next to the new one
+		SmallVector<LogArchivePart, 16> parts;
+		auto archive = fs::Open(archivePath, FileAccess::Read);
+		const std::int64_t archiveSize = (archive->IsValid() ? archive->GetSize() : 0);
+		std::int64_t parsedSize = 0, totalPartSize = 0;
+		for (std::int64_t offset = 0; offset < archiveSize; ) {
+			const std::int64_t partSize = ReadLogArchivePartSize(*archive, offset, archiveSize);
+			if (partSize <= 0) {
+				// Not something written here, or the file ends in the middle of a member - either way
+				// nothing beyond this point can be skipped over safely, so none of it is kept
+				break;
+			}
+			parts.push_back(LogArchivePart{offset, partSize});
+			offset += partSize;
+			parsedSize = offset;
+			totalPartSize += partSize;
+		}
+
+		// A session killed in the middle of a write - the reset switch, a debugger detaching - leaves the
+		// archive ending in a short member, which the walk above stops at. Appending past it would bury
+		// every later session behind bytes no decompressor reads, and the size accounting would be wrong
+		// from then on, so the archive never comes back inside its limits. Rewriting is what drops it.
+		const bool endsInGarbage = (parsedSize != archiveSize);
+
+		// While everything still fits, nothing is rewritten at all - the new member is appended and the
+		// archive is read but not copied. Only once it does not fit is it trimmed, and then well past the
+		// point where it would fit again (see TrimLogArchiveToParts).
+		const bool fitsAsIs = (!endsInGarbage && !parts.empty() &&
+			totalPartSize + newPartSize <= MaxLogArchiveSize && parts.size() + 1 <= MaxLogArchiveParts);
+		const std::int64_t sizeLimit = (fitsAsIs ? MaxLogArchiveSize : MaxLogArchiveSize / 2);
+		const std::uint32_t partsLimit = (fitsAsIs ? MaxLogArchiveParts : TrimLogArchiveToParts);
+
+		// Keeping the newest members that fit, so the oldest are the ones that go
+		std::size_t firstKept = parts.size();
+		std::int64_t keptSize = 0;
+		std::uint32_t keptCount = 0;
+		for (std::size_t i = parts.size(); i > 0; i--) {
+			if (keptSize + parts[i - 1].Size + newPartSize > sizeLimit ||
+				keptCount + 1 >= partsLimit) {
+				break;
+			}
+			keptSize += parts[i - 1].Size;
+			keptCount++;
+			firstKept = i - 1;
+		}
+
+		bool archived = false;
+		// Whether the archive was actually written to, which is what tells a failure apart from the case
+		// where there was simply nothing worth keeping next to the new member
+		bool updateAttempted = false;
+		if (fitsAsIs && firstKept == 0) {
+			updateAttempted = true;
+			// Everything that was there stays, so the new member only has to be appended
+			archive->Dispose();
+			auto appendTo = fs::Open(archivePath, FileAccess::ReadWrite);
+			auto staging = fs::Open(stagingPath, FileAccess::Read | FileAccess::Sequential);
+			archived = (appendTo->IsValid() && staging->IsValid() &&
+				appendTo->Seek(0, SeekOrigin::End) >= 0 && staging->CopyTo(*appendTo) == newPartSize);
+		} else if (firstKept < parts.size()) {
+			updateAttempted = true;
+
+			// Some of the oldest members have to go, which means writing the archive anew
+			String rebuiltPath = targetPath + ".gz.new"_s;
+
+			{
+				auto rebuilt = fs::Open(rebuiltPath, FileAccess::Write);
+				auto staging = fs::Open(stagingPath, FileAccess::Read | FileAccess::Sequential);
+				archived = (rebuilt->IsValid() && staging->IsValid() &&
+					CopyLogArchiveRange(*rebuilt, *archive, parts[firstKept].Offset, keptSize) &&
+					staging->CopyTo(*rebuilt) == newPartSize);
+			}
+			archive->Dispose();
+			if (archived) {
+				fs::RemoveFile(archivePath);
+				// If the move fails the old archive is already gone, and what was rebuilt is the only copy
+				// of everything that was to be kept - so it is left where it is rather than deleted. A
+				// ".gz.new" next to the log can be renamed by hand, and the next launch rebuilds it anyway.
+				archived = fs::Move(rebuiltPath, archivePath);
+			} else {
+				fs::RemoveFile(rebuiltPath);
+			}
+		}
+
+		if (archived) {
+			fs::RemoveFile(stagingPath);
+		} else if (!updateAttempted) {
+			// There was nothing worth keeping - no archive yet, one that holds nothing this recognizes, or
+			// a new member so large that none of the old ones fit beside it - and the new member is a valid
+			// archive on its own, so it simply becomes the archive
+			archive->Dispose();
+			fs::RemoveFile(archivePath);
+			if (!fs::Move(stagingPath, archivePath)) {
+				fs::RemoveFile(stagingPath);
+			}
+		} else {
+			// The archive holds sessions this DOES recognize and updating it did not work - a full card, a
+			// file something else still holds open. Replacing it here would trade up to MaxLogArchiveParts
+			// sessions of history for the one that just ended, which is the wrong way round: the previous
+			// log has already been copied out of harm's way, so losing only the newest member costs the
+			// least. It is written again at the next launch that succeeds.
+			archive->Dispose();
+			LOGW("Cannot add the previous session to \"{}\", the archive is left as it is", archivePath);
+			fs::RemoveFile(stagingPath);
+		}
+	}
 }
 #endif
 
@@ -1054,6 +1375,8 @@ namespace nCine
 			theServiceLocator().RegisterAudioDevice(std::make_unique<SdlAudioDevice>());
 #	elif defined(WITH_PSPAUDIO)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<PspAudioDevice>());
+#	elif defined(WITH_PS2AUDIO)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<Ps2AudioDevice>());
 #	elif defined(WITH_NDSP)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<NdspAudioDevice>());
 #	endif
@@ -1820,27 +2143,21 @@ namespace nCine
 
 			if (logFile != nullptr) {
 				logFile->Write(logEntryWithColors, length3);
-#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || \
-		defined(DEATH_TARGET_PSP)
-				// This file is the only debugging channel these consoles have, and a hard kill (the PS button,
-				// vitacompanion's "destroy") runs no shutdown code, so an unflushed buffer is exactly the log
-				// that would have said why. Flushing every entry guaranteed that at 8-13 ms per line on a
-				// memory card, measured on a Vita, which the continuously logging asset conversion could not
-				// afford. So Info or worse still flushes at once and the rest at most once per
-				// FlushInterval, which costs a hard kill some Debug chatter but never the diagnosis.
-				// Info is on the immediate side of that line because Info is what the one-off milestones
-				// use - a level finishing loading, a texture being split into pages - and those are
-				// exactly what localizes a crash. Leaving them buffered cost a diagnosis: three runs all
-				// ended on the same Warning, which read as "died here" when it only meant "last thing
-				// flushed", and the Info line that would have said otherwise was still in the buffer.
-				// Held as 32 bits of milliseconds rather than the raw 64-bit nanosecond timestamp, because a
-				// 64-bit atomic is not lock-free on every console in this list: PowerPC has no 8-byte atomic
-				// instruction, so on the Wii and GameCube std::atomic<std::uint64_t> lowers to
-				// __atomic_load_8 / __atomic_compare_exchange_8 libcalls that devkitPPC does not ship, and
-				// the link fails on them while every other target builds. A 32-bit atomic is lock-free
-				// everywhere here (lwarx/stwcx on PowerPC), and truncating to 32 bits is harmless because
-				// only the difference is ever read - that stays correct across the wrap, which at
-				// millisecond resolution comes round every 49 days.
+#	if defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
+				// This file is effectively the only debugging channel these consoles have, and a hard kill
+				// (the PS button, vitacompanion's "destroy", the PS2's reset switch) runs no shutdown code,
+				// so an unflushed buffer is exactly the log that would have said why. Flushing every entry
+				// guarantees that at 8-13 ms per line on a memory card (measured on a Vita), which the
+				// continuously logging asset conversion cannot afford - so Info or worse flushes at once and
+				// the rest at most once per FlushIntervalMs, costing a hard kill some Debug chatter but never
+				// the diagnosis. Info is on the immediate side because the one-off milestones are what
+				// localize a crash; leaving them buffered once made three runs all appear to die on the same
+				// Warning, which only meant "last thing flushed".
+				// The timestamp is held as 32 bits of milliseconds because a 64-bit atomic is not lock-free
+				// everywhere in this list: on PowerPC std::atomic<std::uint64_t> lowers to __atomic_*_8
+				// libcalls devkitPPC does not ship, and the Wii and GameCube fail to link. Only the
+				// difference is ever read, so truncating is harmless across the 49-day wrap.
 				constexpr std::uint32_t FlushIntervalMs = 250;
 				static std::atomic<std::uint32_t> lastFlushMs{0};
 				const std::uint32_t nowMs = (std::uint32_t)(timestamp / 1000000);
@@ -2175,7 +2492,7 @@ namespace nCine
 		// Not implemented in base class
 	}
 
-	void Application::AttachTraceTarget(Containers::StringView targetPath)
+	void Application::AttachTraceTarget(Containers::StringView targetPath, DEATH_UNUSED bool archivePrevious)
 	{
 #if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (targetPath == ConsoleTarget) {
@@ -2210,6 +2527,14 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(NCINE_HAS_LOG_ARCHIVE)
+		// Opening the file for writing below discards what the previous session wrote, so this is the last
+		// moment at which it can be kept
+		if (archivePrevious) {
+			ArchivePreviousLogFile(targetPath);
+		}
+#	endif
+
 		auto logFile = fs::Open(targetPath, FileAccess::Write);
 		if (logFile->IsValid()) {
 			// Written into a file the sink cannot reach yet - it is handed over only at the end of this

@@ -249,8 +249,15 @@ namespace nCine
 		/** @brief Hides the screen (software) keyboard */
 		virtual bool HideScreenKeyboard();
 
-		/** @brief Adds the specified target as a sink for tracing */
-		void AttachTraceTarget(Containers::StringView targetPath);
+		/**
+		 * @brief Adds the specified target as a sink for tracing
+		 *
+		 * Opening the file discards what the previous session left in it, so unless @p archivePrevious is
+		 * `false` that content is first appended to "<targetPath>.gz" - a plain gzip file holding one member
+		 * per session, oldest first, trimmed from the front once it outgrows its limit. Pass `false` where
+		 * the path came from the user, who asked for that one file and nothing beside it.
+		 */
+		void AttachTraceTarget(Containers::StringView targetPath, bool archivePrevious = true);
 
 		/** @brief Overrides the base directory where crash memory dumps are written; no-op if crash handling is not enabled */
 		void SetCrashDumpDirectory(Containers::StringView path);

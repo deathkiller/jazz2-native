@@ -133,10 +133,16 @@ namespace Jazz2::UI
 		// to be decoded, and decoding is nearly the whole cost (applying the palette and uploading the
 		// texture is a few percent on top).
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS)
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2)
 		// On a machine that decodes slower than the video's frame rate, catching up buys nothing: it hides
 		// all but the last of the decoded frames while making the stall worse. At most one frame is decoded
 		// per rendered frame, every frame is shown, and the picture may fall behind the music.
+		//
+		// The PlayStation 2 is on this list for the display rather than the decoder: it presents on vertical
+		// sync at 60 Hz and the cinematics run at 24, so one decode per presented frame is already more than
+		// twice what the video asks for. Letting it decode three in a row could therefore only happen once
+		// it was already behind - and it turned a frame that was merely late into one three times as long,
+		// which is what a burst of catch-up looks like on a television.
 		constexpr std::int32_t MaxDecodesPerFrame = 1;
 #else
 		// Decoding is cheap here, but a single long frame (a window drag, a driver compiling shaders) would
@@ -499,6 +505,9 @@ namespace Jazz2::UI
 		_videoFile = std::move(s);
 
 		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames)", path, _width, _height, _framesLeft);
+
+		LoadSfxList(path);
+
 		return true;
 	}
 

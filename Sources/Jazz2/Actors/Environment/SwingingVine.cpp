@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Environment
 
 		float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
 		for (std::int32_t i = 0; i < ChunkCount; i++) {
-			_angle = sinApprox(currentPhase - i * (0.64f / ChunkCount)) * 1.2f + fPiOver2;
+			_angle = sinApprox(currentPhase - i * ChunkPhaseStep) * 1.2f + fPiOver2;
 
 			float distance = chunkDistances[i];
 			_chunkPos[i].X = _pos.X + cosApprox(_angle) * distance;
@@ -91,7 +91,11 @@ namespace Jazz2::Actors::Environment
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
 			if (player->GetCarryingObject() == this) {
-				float chunkAngle = sinApprox(currentPhase - ChunkCount * 0.08f) * 0.6f;
+				// The phase of the chunk the player is actually hanging from - `lastChunk` below is
+				// `_chunkPos[ChunkCount - 1]`, so the offset has to be that index, not the count. Taking it
+				// one step further along evaluated a phase the tip of the vine never has, which let the
+				// rabbit lean and slide against the chunk they are holding at the ends of the swing.
+				float chunkAngle = sinApprox(currentPhase - (ChunkCount - 1) * ChunkPhaseStep) * 0.6f;
 				Vector2f prevPos = player->GetPos();
 				Vector2 newPos = lastChunk + Vector2(chunkAngle * -22.0f, 20.0f + std::abs(chunkAngle) * -10.0f);
 				player->MoveInstantly(newPos, MoveType::Absolute);
@@ -137,15 +141,21 @@ namespace Jazz2::Actors::Environment
 				resolver.ConfigureSpriteShader(*command, indexed);
 
 				float chunkTexSize = ChunkSize / texSize.Y;
-				float chunkAngle = sinApprox(currentPhase - i * 0.08f) * 1.2f;
+				float chunkAngle = sinApprox(currentPhase - i * ChunkPhaseStep) * 1.2f;
 
 				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
-				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X - texSize.X / 2, _chunkPos[i].Y - ChunkSize / 2, 0.0f);
+				// `RotateZ()` post-multiplies, so translating first would rotate the chunk around its top-left
+				// CORNER rather than its middle - which swung each chunk up to half its own width away from
+				// the position `OnUpdate()` computed for it, and drew the vine as a scattered zigzag instead
+				// of a chain. The order here is the engine's own (see `SceneNode::updateWorldMatrix()`):
+				// translate to the position, rotate, then step back by half the sprite to centre it.
+				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X, _chunkPos[i].Y, 0.0f);
 				worldMatrix.RotateZ(chunkAngle);
+				worldMatrix.Translate(texSize.X * -0.5f, ChunkSize * -0.5f, 0.0f);
 				command->SetTransformation(worldMatrix);
 				command->SetLayer(_renderer.layer());
 				resolver.BindSpritePalette(*command, *resBase->TextureDiffuse, indexed, _currentAnimation->PaletteOffset);

@@ -9,11 +9,14 @@
 
 #include <ogc/system.h>
 #include <ogc/video.h>
+#if defined(DEATH_TARGET_WII)
+#	include <ogc/conf.h>
+#endif
 
 namespace nCine::Backends
 {
 	OgcGfxDevice::OgcGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(windowMode, contextInfo, displayMode), _rmode(nullptr), _fbIndex(0)
+		: IGfxDevice(windowMode, contextInfo, displayMode), _rmode(nullptr), _fbIndex(0), _displayAspect(4.0f / 3.0f)
 	{
 		// VIDEO_Init() ran in MainApplication::Run() before any device exists
 		_rmode = VIDEO_GetPreferredMode(nullptr);
@@ -44,14 +47,29 @@ namespace nCine::Backends
 		_currentVideoMode.height = std::uint32_t(_height);
 		_currentVideoMode.refreshRate = ((_rmode->viTVMode >> 2) == VI_PAL ? 50.0f : 60.0f);
 
+#if defined(DEATH_TARGET_WII)
+		// A widescreen Wii renders the very same 640x480 and asks the set to stretch it, so the only place
+		// that can compensate is what the game composes into it (see `displayAspect()`). The GameCube has no
+		// such setting, so its aspect stays at the 4:3 the member is initialized to.
+		//
+		// CONF_Init() is what loads SYSCONF off the NAND, and every getter is gated on it having run: until
+		// then they return CONF_ENOTINIT rather than a setting, which is not 16:9 and would therefore have
+		// read as a correct 4:3 detection on every console. It is idempotent and cheap to call again (the
+		// same reason Application::GetDeviceHostname() calls it for the nickname).
+		if (CONF_Init() >= 0 && CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
+			_displayAspect = 16.0f / 9.0f;
+		}
+#endif
+
 		updateMonitors();
 
 		RHI::Device::InitializeGx(_rmode);
 
 		initDeviceViewport();
 
-		LOGI("Video mode initialized: {}x{} ({})", _width, _height,
-			((_rmode->viTVMode >> 2) == VI_PAL ? "PAL" : "NTSC"));
+		LOGI("Video mode initialized: {}x{} ({}, displayed as {})", _width, _height,
+			((_rmode->viTVMode >> 2) == VI_PAL ? "PAL" : "NTSC"),
+			(_displayAspect > 1.5f ? "16:9" : "4:3"));
 	}
 
 	OgcGfxDevice::~OgcGfxDevice()

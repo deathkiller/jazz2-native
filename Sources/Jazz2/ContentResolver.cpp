@@ -18,6 +18,12 @@
 #include "../nCine/Graphics/RenderResources.h"
 #include "../nCine/Graphics/RenderCommand.h"
 #include "../nCine/Base/Random.h"
+#if defined(WITH_PS2)
+// Brings an SD card in an MX4SIO adapter up, so InitializePaths() below can look for the content on it.
+// Guarded on WITH_PS2, not DEATH_TARGET_PS2: the header's own contents are, and it is the narrower of
+// the two (a dedicated-server or libretro configure targets the PS2 without building its backend)
+#	include "../nCine/Backends/Ps2/Ps2Storage.h"
+#endif
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
@@ -153,6 +159,13 @@ namespace Jazz2
 		}
 	}
 
+#if defined(DEATH_TARGET_PS2)
+	StringView ContentResolver::GetWritablePath() const
+	{
+		return StringView(_writablePath);
+	}
+#endif
+
 	StringView ContentResolver::GetContentPath() const
 	{
 #if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_WINDOWS_RT)
@@ -177,9 +190,10 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Content/"_s;
 #elif defined(DEATH_TARGET_PS2)
-		// The disc image built by the PS2 packaging carries "Content" at its root (see SYSTEM.CNF there);
-		// "cdrom0:" is the CDVD device PS2SDK's file I/O exposes, and ISO9660 names arrive uppercased.
-		return "cdfs:/Content/"_s;
+		// Not a constant on this console: the game boots either from a disc, where the content is under
+		// "cdfs:/" (see SYSTEM.CNF in the PS2 packaging), or from an SD card in an MX4SIO adapter. Which of
+		// the two it was is decided once, in InitializePaths() below.
+		return (_contentPath.empty() ? "cdfs:/Content/"_s : StringView(_contentPath));
 #elif defined(DEATH_TARGET_PS3)
 		// Next to the EBOOT inside the package. "/app_home" is the alias the loader maps the running
 		// executable's OWN directory to - which is USRDIR, not the package root - so the content sits
@@ -224,7 +238,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Cache/"_s;
 #elif defined(DEATH_TARGET_PS2)
-		return "cdfs:/Cache/"_s;
+		// Read-only on a disc, writable when the game runs from an SD card
+		return (_cachePath.empty() ? "cdfs:/Cache/"_s : StringView(_cachePath));
 #elif defined(DEATH_TARGET_PS3)
 		// Unlike the read-only trees the other consoles ship, the PS3 has a writable hard disk, so the cache
 		// goes to the title's own game-data directory rather than next to the (read-only) package content.
@@ -261,7 +276,7 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Source/"_s;
 #elif defined(DEATH_TARGET_PS2)
-		return "cdfs:/Source/"_s;
+		return (_sourcePath.empty() ? "cdfs:/Source/"_s : StringView(_sourcePath));
 #elif defined(DEATH_TARGET_PS3)
 		return "/app_home/Source/"_s;
 #elif defined(DEATH_TARGET_PSP)
@@ -483,6 +498,43 @@ namespace Jazz2
 			_cachePath = fs::CombinePath(appData, "Cache\\"_s);
 		}
 		_contentPath = "Content\\"_s;
+#elif defined(WITH_PS2)
+		// The game boots either from a disc or from an SD card in an MX4SIO adapter, which is how most of
+		// these consoles are loaded today. The disc is preferred and settles the question outright: probing
+		// for a card costs three IOP module loads and a wait on hardware that may not be there, so a disc
+		// build pays nothing at all for a path it is not taking - and never silently picks up a stale tree
+		// from a card somebody left in the adapter. To run from the card, run the executable from the card.
+		//
+		// Leaving the three members empty is what selects the "cdfs:/" literals in the accessors above.
+		if (!fs::DirectoryExists("cdfs:/Content"_s)) {
+			// A card is shared storage - the whole point of one of these adapters is that it holds
+			// everything the console runs, next to a loader's own "APPS", "DVD" and "CFG" - so the game
+			// lives under "Games/Jazz2/" rather than at the root, where "Content", "Cache" and "Source"
+			// would collide with whatever else is there. That is also the layout it already uses on the
+			// other machine where it is a guest on a shared card (the Switch, see GetContentPath()).
+			// The units are walked in order because a card partitioned more than once mounts as more than
+			// one, and the game may be on any of them.
+			nCine::Backends::Ps2Storage::Initialize();
+			for (StringView device : nCine::Backends::Ps2Storage::GetMountedDevices()) {
+				String root = device + "Games/Jazz2/"_s;
+				String contentPath = root + "Content/"_s;
+				// Through Ps2Storage, because fs::DirectoryExists() cannot see a directory on a FAT volume
+				// at all and would report every card as carrying nothing - see the note on that function
+				if (nCine::Backends::Ps2Storage::DirectoryExists(contentPath)) {
+					_contentPath = std::move(contentPath);
+					_cachePath = root + "Cache/"_s;
+					_sourcePath = root + "Source/"_s;
+					// Unlike a disc, this is somewhere the game can write - the level cache has somewhere
+					// to live, and PreferencesCache saves here instead of on a memory card
+					_writablePath = std::move(root);
+					LOGI("Reading content from \"{}\" (MX4SIO), which is also writable", _writablePath);
+					break;
+				}
+			}
+			if (_contentPath.empty()) {
+				LOGW("No MX4SIO card carries \"Games/Jazz2/Content\", and the disc does not carry one either");
+			}
+		}
 #endif
 
 		DetectPrebakedContent();
@@ -577,6 +629,14 @@ namespace Jazz2
 	void ContentResolver::BeginLoading()
 	{
 		_isLoading = true;
+
+#if defined(WITH_AUDIO)
+		// Loading blocks the thread that feeds the audio device on the platforms that have no mixer thread,
+		// for much longer than any of them queues ahead. Most devices have nothing to do about that and this
+		// is a no-op for them; the one that does is the PlayStation 2, whose sound module repeats its last
+		// buffer while it is starved instead of falling silent.
+		theServiceLocator().GetAudioDevice().beginBlockingOperation();
+#endif
 
 #if defined(WITH_AUDIO)
 		// Where the samples are read on demand they are also given up here: dropping the pointers means the
@@ -677,6 +737,10 @@ namespace Jazz2
 #endif
 
 		_isLoading = false;
+
+#if defined(WITH_AUDIO)
+		theServiceLocator().GetAudioDevice().endBlockingOperation();
+#endif
 	}
 
 	void ContentResolver::OverridePathHandler(Function<String(StringView)>&& callback)

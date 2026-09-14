@@ -2244,7 +2244,7 @@ namespace Jazz2::Actors
 							_jumpReleased = true;
 						}
 						SetState(ActorState::CanJump, false);
-						SetInvulnerability(FrameTimer::FramesPerSecond, InvulnerableType::Transient);
+						GrantInvulnerability(FrameTimer::FramesPerSecond, InvulnerableType::Transient);
 					} else if (_currentSpecialMove != SpecialMoveType::None && enemy->GetHealth() > 0) {
 						removeSpecialMove = true;
 						_externalForce.X = 0.0f;
@@ -2270,7 +2270,7 @@ namespace Jazz2::Actors
 					if (_activeShieldTime > 0.0f) {
 						DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 						float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
-						SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
+						GrantInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 						PlayPlayerSfx("HurtSoft"_s);
 					} else {
 						TakeDamage(1, 4 * (_pos.X > enemy->GetPos().X ? 1.0f : -1.0f));
@@ -2349,7 +2349,7 @@ namespace Jazz2::Actors
 				if (_activeShieldTime > 0.0f) {
 					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
-					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
+					GrantInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -2396,7 +2396,7 @@ namespace Jazz2::Actors
 				if (_activeShieldTime > 0.0f) {
 					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
-					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
+					GrantInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -2418,7 +2418,7 @@ namespace Jazz2::Actors
 				if (_activeShieldTime > 0.0f) {
 					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
-					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
+					GrantInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
 				} else {
 					TakeDamage(1, _speed.X * 0.25f);
@@ -4970,7 +4970,7 @@ namespace Jazz2::Actors
 			});
 
 			float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
-			SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
+			GrantInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 			PlayPlayerSfx("Hurt"_s);
 			_levelHandler->PlayerExecuteRumble(this, "Hurt"_s);
 		} else {
@@ -5031,6 +5031,46 @@ namespace Jazz2::Actors
 
 		SetState(ActorState::IsInvulnerable, true);
 		_invulnerableTime = timeLeft;
+	}
+
+	Player::InvulnerableType Player::GetInvulnerableType() const
+	{
+		if (_shieldSpawnTime > ShieldDisabled) {
+			return InvulnerableType::Shielded;
+		}
+		// `Transient` is the one that asked for no visual effect at all, which is how it is recorded
+		return (_invulnerableBlinkTime >= 0.0f ? InvulnerableType::Blinking : InvulnerableType::Transient);
+	}
+
+	void Player::GrantInvulnerability(float timeLeft, InvulnerableType type)
+	{
+		if (timeLeft <= 0.0f) {
+			// A grant of nothing is not a revocation - clearing is SetInvulnerability()'s job
+			return;
+		}
+
+		if (_invulnerableTime > 0.0f) {
+			// A grant never shortens an invulnerability that is still running, nor trades its effect for a
+			// weaker one. Both used to happen, and the visible consequence was that `jjgod` - ten minutes of
+			// shield - ended the moment the player touched anything granting less: an ordinary carrot is
+			// 0.8 s, a full-energy carrot 5 s, the invincibility carrot 30 s, and bouncing off an enemy
+			// grants 1 s with no effect at all. Each simply overwrote what was there.
+			//
+			// The effect and the time are held to that rule separately, because they come apart: a Transient
+			// grant landing on a running Blinking one kept the longer time but still cancelled the blink,
+			// which left the player invulnerable for seconds with nothing on screen saying so - strictly
+			// worse than the overwrite it replaced, and the opposite of what this rule is for.
+			if (GetInvulnerableStrength(GetInvulnerableType()) > GetInvulnerableStrength(type)) {
+				type = GetInvulnerableType();
+			}
+			if (timeLeft < _invulnerableTime) {
+				timeLeft = _invulnerableTime;
+			}
+		}
+
+		// Through the virtual, so the resolved values - not the requested ones - are what a server
+		// replicates to the peer that owns this player (see RemotePlayerOnServer::SetInvulnerability())
+		SetInvulnerability(timeLeft, type);
 	}
 
 	void Player::EndDamagingMove()

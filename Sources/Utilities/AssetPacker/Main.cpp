@@ -91,10 +91,12 @@ namespace
 		/**
 			@brief Re-encoded into the container the game decodes cheaply
 
-			Only the Dreamcast needs this: the original container costs 55-115 ms a frame to inflate there
-			against a 42 ms budget, where the re-encoded one costs under one. Everything else decodes the
-			original perfectly well and is better off with the smaller file. Downscaling also requires it,
-			since the frames have to be re-encoded either way.
+			The consoles whose CPU cannot inflate the original container inside a frame need this: it costs
+			55-115 ms a frame on the Dreamcast against a 42 ms budget, and the PlayStation 2 - which also
+			draws the cinematics at a quarter of their pixels, see @ref DefaultVideoDownscaleForProfile() -
+			is in the same position, where the re-encoded one costs under a millisecond on either. Everything
+			else decodes the original perfectly well and is better off with the smaller file. Downscaling also
+			requires it, since the frames have to be re-encoded either way.
 		*/
 		Recompress
 	};
@@ -177,16 +179,42 @@ namespace
 		return true;
 	}
 
-	bool TryParseProfile(StringView value, TargetProfile& profile, bool& isDreamcast)
+	/**
+		@brief How far a platform's cinematics are downscaled when nothing asks for a particular factor
+
+		A console that cannot show a 640x480 frame decodes three quarters of every one of them for nothing:
+		the player caps the frame texture at the drawable and picks every n-th index back out, per frame, on
+		the CPU. Doing it here instead costs the same picture and none of the work - the decoder then walks a
+		quarter of the pixels, the player's downscale pass disappears, and the file that has to come off the
+		disc is smaller as well.
+
+		The PlayStation 2 is 640x448 and fits the video into it, so a 640x480 cinematic is already halved at
+		run time - 2 gives exactly what it displays. The Dreamcast halves at run time too, but its default
+		stays 1 because it has been shipping that way and the re-encoded container alone is what it needed;
+		`--video-downscale=` is there for anyone who wants the rest of the trade on that console as well.
+		Zero means the profile makes no choice and the videos are copied across as they are.
+	*/
+	std::int32_t DefaultVideoDownscaleForProfile(StringView value)
 	{
-		isDreamcast = false;
+		if (value == "ps2"_s) {
+			return 2;
+		}
+		if (value == "dreamcast"_s) {
+			return 1;	// Re-encoded, but at the original resolution
+		}
+		return 0;
+	}
+
+	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale)
+	{
+		defaultVideoDownscale = DefaultVideoDownscaleForProfile(value);
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
-		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s || value == "psp"_s) {
+		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s ||
+				value == "psp"_s || value == "ps2"_s) {
 			// The consoles all consume the same staged tree, so they share one profile - only the cinematics
 			// are decided per platform, so that is tracked separately
 			profile = TargetProfile::Console;
-			isDreamcast = (value == "dreamcast"_s);
 		} else if (value == "emscripten"_s || value == "web"_s) {
 			profile = TargetProfile::Emscripten;
 		} else {
@@ -211,10 +239,13 @@ namespace
 		LOGI("                         which is the repository's \"Content\". Overrides one found beside the");
 		LOGI("                         originals, and is what makes a console or web tree self-contained when");
 		LOGI("                         the two halves are not kept together");
-		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | emscripten");
-		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 (the default) keeps them as they are.");
-		LOGI("                         Cinematics are re-encoded for dreamcast (or any N > 1) and otherwise");
-		LOGI("                         copied unchanged; desktop gets none, as the game reads the originals");
+		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | ps2 |");
+		LOGI("                         emscripten");
+		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 keeps them at their original size.");
+		LOGI("                         Cinematics are re-encoded for dreamcast and ps2 (or any N > 1) and");
+		LOGI("                         otherwise copied unchanged; desktop gets none, as the game reads the");
+		LOGI("                         originals. Defaults to what the profile asks for - 2 for ps2, which is");
+		LOGI("                         what that console displays - and to 1 everywhere else");
 		LOGI("    --originals-only     Convert only the episodes and levels the original game shipped");
 		LOGI("    --shareware-only     Convert only what the Shareware Demo shipped (implies --originals-only)");
 		LOGI("    --all-videos         Deploy every cinematic found, not just the two the game plays");
@@ -239,7 +270,7 @@ namespace
 	bool ParseOptions(ArrayView<const StringView> args, Options& options)
 	{
 		bool videoDownscaleSet = false;
-		bool isDreamcast = false;
+		std::int32_t profileVideoDownscale = 0;
 
 		std::size_t firstArgument = 1;
 		if (args.size() > 1 && TryParseCommand(args[1], options.Action)) {
@@ -249,7 +280,7 @@ namespace
 		for (std::size_t i = firstArgument; i < args.size(); i++) {
 			StringView arg = args[i];
 			if (arg.hasPrefix("--target="_s)) {
-				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, isDreamcast)) {
+				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, profileVideoDownscale)) {
 					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
 					return false;
 				}
@@ -297,9 +328,15 @@ namespace
 			}
 		}
 
+		// A profile that names a downscale of its own supplies it unless the command line already did, so
+		// "--target=ps2" alone produces what that console actually plays
+		if (!videoDownscaleSet && profileVideoDownscale > 0) {
+			options.VideoDownscale = profileVideoDownscale;
+		}
+
 		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
 		// was asked for; every other target needs them in the output tree
-		if (options.VideoDownscale > 1 || isDreamcast) {
+		if (options.VideoDownscale > 1 || profileVideoDownscale > 0) {
 			options.Videos = VideoHandling::Recompress;
 		} else if (options.Profile != TargetProfile::Desktop) {
 			options.Videos = VideoHandling::Copy;

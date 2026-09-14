@@ -428,13 +428,13 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop; the consoles use their own backends, see @ref consoles-common-audio
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Wii** and the **GameCube**) --- Enable module music audio file support, requires **libopenmpt** library
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **Nintendo 64**, **PlayStation Portable**, **PlayStation 2**, the **classic Amiga**, and wherever `NCINE_WITH_XMP` is on --- which by default also covers the **Dreamcast**, the **Wii**, the **GameCube**, the **3DS** and the **PS Vita**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce, forced @cpp ON @ce on **PlayStation Portable** and **PlayStation 3**) --- Download and compile **libopenmpt** library from source automatically. Neither SDK packages the library, and the runtime fallback the desktop platforms use needs a dynamic loader no console has
     -   See @ref consoles-n64-limits, @ref consoles-psp-limits and @ref consoles-ps2-limits for why it's
         disabled on those --- the reasons are unrelated to each other. The **PlayStation 3** builds it
         from source in the library's single-threaded mode @m_span{m-text m-dim} (see @ref consoles-ps3)
         @m_endspan
--   `NCINE_WITH_XMP` (default @cpp ON @ce on **Nintendo Wii**, **Nintendo GameCube**, **PlayStation Portable** and the **classic Amiga**, @cpp OFF @ce elsewhere) --- Play module music with **libxmp** *instead of* libopenmpt. Available on every platform: it is how a machine that cannot afford libopenmpt gets music at all, and a legitimate choice anywhere else that would rather spend the CPU elsewhere
+-   `NCINE_WITH_XMP` (default @cpp ON @ce on the **Dreamcast**, **Nintendo Wii**, **Nintendo GameCube**, **Nintendo 3DS**, **PlayStation Portable**, **PlayStation 2**, **PS Vita** and the **classic Amiga**, @cpp OFF @ce elsewhere) --- Play module music with **libxmp** *instead of* libopenmpt. Available on every platform: it is how a machine that cannot afford libopenmpt gets music at all, and a legitimate choice anywhere else that would rather spend the CPU elsewhere
     -   The two are alternatives --- turning this on turns `NCINE_WITH_OPENMPT` off
     -   The library is downloaded and built from source by the configure step
         @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`, pinned by hash) @m_endspan, so nothing has to

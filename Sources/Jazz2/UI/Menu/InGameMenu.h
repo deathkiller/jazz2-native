@@ -30,10 +30,10 @@ namespace Jazz2::UI::Menu
 	public:
 		/** @{ @name Constants */
 
-		/** @brief Default width of viewport */
-		static constexpr std::int32_t DefaultWidth = 720;
+		/** @brief Default width of viewport (see @ref Rendering::UpscaleRenderPass::DefaultViewWidth) */
+		static constexpr std::int32_t DefaultWidth = Rendering::UpscaleRenderPass::DefaultViewWidth;
 		/** @brief Default height of viewport */
-		static constexpr std::int32_t DefaultHeight = 405;
+		static constexpr std::int32_t DefaultHeight = Rendering::UpscaleRenderPass::DefaultViewHeight;
 
 		/** @} */
 

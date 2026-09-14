@@ -21,6 +21,57 @@ namespace Jazz2::Rendering
 	class UpscaleRenderPass : public SceneNode
 	{
 	public:
+		/** @{ @name Constants */
+
+		/**
+		 * @brief Upper bound of the logical view, which every handler's own `DefaultWidth`/`DefaultHeight` is
+		 *
+		 * 720x405 is a 16:9 box, which is the shape of every display the game runs on except the televisions.
+		 * Those are 4:3, and there the bound is what decides whether the view is rendered at something close
+		 * to the panel's own resolution or at something much smaller that the hardware then stretches: a 4:3
+		 * display fits a 405-line view as 540x405, which a 480-line framebuffer then upscales by a sixth.
+		 * 640x480 lets the fit reach the panel instead - 640x480 on an NTSC Dreamcast, Wii and GameCube, and
+		 * 597x448 on the PlayStation 2, whose 448 lines cap the height - so on those modes the vertical
+		 * mapping is 1:1 and the sprites are drawn at the size they are shown at.
+		 *
+		 * "On those modes" is the caveat: the numbers here are the NTSC ones. A console running a 50 Hz PAL
+		 * mode renders taller - libogc's `TVPal528IntDf` is 640x528 - and the fit still returns 640x480
+		 * there, because the view's width is bounded by the framebuffer's 640 columns and its height then
+		 * follows from the 4:3 display aspect. That leaves a 1.1x vertical upscale on the way out. It is a
+		 * deliberate trade rather than an oversight: the alternative is a 704x528 view, which would map 1:1
+		 * vertically but has to be squeezed horizontally into the same 640 columns, costing more fill and a
+		 * softer picture for the same geometry. Shapes are correct either way - that is what
+		 * @ref IGfxDevice::displayAspect() guarantees - and only the resampling differs.
+		 *
+		 * It costs fill rate in proportion: about 1.2x the pixels on the PlayStation 2 and 1.4x on the other
+		 * three, which @ref PreferencesCache::RenderingResolutionPercent scales back down for anyone who
+		 * would rather have the frame rate.
+		 *
+		 * Only the 4:3 consoles are listed. A widescreen Wii is unaffected either way (its view is bounded by
+		 * the framebuffer's 640 columns, not by this, and comes out 640x360 whichever bound is in force), and
+		 * every remaining console already has a panel shorter than 405 lines - the Nintendo 64, the 3DS and
+		 * the PSP all render 1:1 as they are.
+		 */
+#if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		static constexpr std::int32_t DefaultViewWidth = 640;
+		static constexpr std::int32_t DefaultViewHeight = 480;
+#else
+		static constexpr std::int32_t DefaultViewWidth = 720;
+		static constexpr std::int32_t DefaultViewHeight = 405;
+#endif
+
+		/**
+		 * @brief Height of the 16:9 view every screen in the game was laid out against
+		 *
+		 * The same as @ref DefaultViewHeight everywhere except the 4:3 televisions, which render taller than
+		 * that - so anything drawn at a fixed pixel size (rather than as a fraction of the view) leaves the
+		 * difference as bare background there. A layout that has to make up that difference measures it
+		 * against this, not against the bound, which on those consoles is the taller number.
+		 */
+		static constexpr std::int32_t ReferenceViewHeight = 405;
+
+		/** @} */
+
 		/** @brief Creates a new instance */
 		UpscaleRenderPass()
 			: _supersample(1), _resizeAtLogicalScale(false)	

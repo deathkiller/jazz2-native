@@ -49,7 +49,13 @@ namespace Jazz2::UI::Menu
 		} else {
 			// TRANSLATORS: Menu item in Options > Controls section
 			list->Add<ListItem>(_("Remap Controls"),
-				[root]() { root->SwitchToSection<RemapControlsSection>(0); }, RemapHeight);
+				[root]() { root->SwitchToSection<RemapControlsSection>(0); },
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+				RemapHeight
+#else
+				ActionHeight
+#endif
+			);
 		}
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)

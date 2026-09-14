@@ -152,8 +152,9 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 ### PlayStation 2
 * As on the Dreamcast, the game plays from a disc that has to carry the converted game content, so the `jazz2.iso` image can't be distributed either and has to be built first – see [the developer documentation](https://de4th.dev/jazz2/docs/consoles.html#consoles-ps2)
 * Burn the resulting image to a disc, or load it in *PCSX2*
+* It can equally be run from an SD card in an **MX4SIO** adapter: copy the ELF and the content tree to `mass0:/Games/Jazz2/`, and the game reads *and saves* there (a card is shared storage, so the game keeps to a directory of its own – the same layout it uses on the Switch)
 
-*The game runs in NTSC 640×448 and the disc is read-only, so `Jazz2.config` can't be written and settings aren't preserved. There is no audio backend for this console yet, so the game runs silent, threads are unavailable, so local splitscreen is not available either, and the Graphics Synthesizer is fixed-function, so there are no rescale filters. The port has not been tested on real hardware yet.*
+*The game runs in NTSC 640×448, which a television shows as 4:3, and the picture is composed for that ratio rather than for the framebuffer's own. Sound plays through `audsrv` on the SPU2, with module music through _libxmp_ rather than _libopenmpt_, which doesn't compile for this toolchain – the four `.mo3` tracks are silent, everything else plays – mixed at 22 kHz by default, which the *Sample Rate* option in Options > Sounds can change. Settings and progress are saved to a memory card, or to the SD card when the game runs from one. Threads are unavailable, so local splitscreen is not available, and the Graphics Synthesizer is fixed-function, so there are no rescale filters.*
 
 ### PlayStation 3
 * Download the game

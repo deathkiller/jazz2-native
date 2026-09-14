@@ -38,11 +38,17 @@ namespace nCine
 #if defined(OPENAL_FILTERS_SUPPORTED)
 		, _filters{}
 #endif
+#if defined(ALC_SOFT_reopen_device)
+		, _alcReopenDeviceSOFT(nullptr)
+#endif
+#if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
+		, _connectionCheckLeft(ConnectionCheckInterval), _deviceDisconnected(false)
+#endif
 #if defined(WITH_LIBRETRO)
 		, _alcRenderSamplesSOFT(nullptr)
 #endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		, _alcReopenDeviceSOFT(nullptr), _pEnumerator(nullptr), _lastDeviceChangeTime(0), _shouldRecreate(false)
+		, _pEnumerator(nullptr), _lastDeviceChangeTime(0), _shouldRecreate(false)
 #endif
 	{
 		Init();
@@ -130,17 +136,26 @@ namespace nCine
 		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 		alListenerf(AL_GAIN, _gain);
 
-#if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Don't stop sources when device is disconnected if supported
+#if defined(AL_STOP_SOURCES_ON_DISCONNECT_SOFT) && defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		// Don't stop sources when device is disconnected, so a device that comes back carries on playing
+		// what it was playing. That is only safe while something notices a device that does NOT come back:
+		// with the mixer gone the sources stay AL_PLAYING for good, no player ever hands its source back
+		// and the pool runs dry within seconds. checkDeviceConnection() is what notices, so this is left
+		// to OpenAL's default (stop them) wherever the connection cannot be queried at all.
 		alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(ALC_SOFT_reopen_device)
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device, it's a context
-		// extension, so it has to be queried with alcGetProcAddress() and the device
+		// extension, so it has to be queried with alcGetProcAddress() and the device. It is not only
+		// Windows that needs it: every platform has to be able to recover a device that went away,
+		// see checkDeviceConnection().
 		if (alcIsExtensionPresent(_device, "ALC_SOFT_reopen_device")) {
 			_alcReopenDeviceSOFT = (LPALCREOPENDEVICESOFT)alcGetProcAddress(_device, "alcReopenDeviceSOFT");
 		}
+#endif
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		registerAudioEvents();
 #endif
 
@@ -524,20 +539,92 @@ namespace nCine
 			alcDeviceResumeSOFT(_device);
 		}
 #endif
+#if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
+		// Starting the backend again is where a device that went away while the application was in the
+		// background gives up, so the very next frame is the one that should look - not half a second of
+		// sounds later, every one of which would be spending a source that cannot come back
+		_connectionCheckLeft = 0;
+#endif
 	}
 
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	void ALAudioDevice::updatePlayers()
 	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		// Audio device cannot be recreated in event callback, so do it here
 		if (_shouldRecreate) {
 			_shouldRecreate = false;
 			recreateAudioDevice();
 		}
+#endif
+#if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
+		checkDeviceConnection();
+#endif
 
 		AudioDeviceBase::updatePlayers();
 	}
 
+#if defined(ALC_EXT_disconnect) && !defined(WITH_LIBRETRO)
+	void ALAudioDevice::checkDeviceConnection()
+	{
+		if (_device == nullptr) {
+			return;
+		}
+		// Hardware is not unplugged often enough to be worth a query every frame
+		if (_connectionCheckLeft > 0) {
+			_connectionCheckLeft--;
+			return;
+		}
+		_connectionCheckLeft = ConnectionCheckInterval;
+
+		ALCint connected = ALC_TRUE;
+		alcGetIntegerv(_device, ALC_CONNECTED, 1, &connected);
+		if (connected != ALC_FALSE) {
+			if (_deviceDisconnected) {
+				_deviceDisconnected = false;
+				LOGI("Audio device is connected again");
+			}
+			return;
+		}
+
+		// A device that has gone away takes its mixer with it, and the sources are deliberately not stopped
+		// when that happens (see Init()) so that a device which comes back carries on playing what it was
+		// playing. The sources are then frozen mid-sample: nothing advances them, alGetSourcei() keeps
+		// answering AL_PLAYING and no player ever reaches the "finished" branch of its updateState() that
+		// would hand the source back. Every source in the pool is spent within seconds of the disconnection
+		// and stays spent, so from then on the game is silent for good and every play() fails - which, with
+		// the players that keep a looping sound around retrying once a frame, is thousands of
+		// "No more available audio sources for playing" lines a second for the rest of the session.
+		if (!_deviceDisconnected) {
+			_deviceDisconnected = true;
+			LOGW("Audio device has been disconnected");
+		}
+
+#	if defined(ALC_SOFT_reopen_device)
+		if (_alcReopenDeviceSOFT != nullptr && _alcReopenDeviceSOFT(_device, nullptr, nullptr)) {
+			// The sources survive the reopen and resume from where they stopped
+			_deviceDisconnected = false;
+			_deviceName = alcGetString(_device, ALC_DEVICE_SPECIFIER);
+
+			ALCint nativeFreq = 0;
+			alcGetIntegerv(_device, ALC_FREQUENCY, 1, &nativeFreq);
+			if (nativeFreq >= 44100 && nativeFreq <= 192000) {
+				_nativeFreq = nativeFreq;
+			}
+
+			LOGI("Audio device has been reopened as \"{}\"", _deviceName);
+			return;
+		}
+#	endif
+
+		// There is nothing to reopen onto, so let the players go instead of leaving them holding sources
+		// that can never finish. Nothing is audible either way, but the pool goes back to full, the game
+		// can keep starting (inaudible) sounds as usual and a device that reappears is picked up by the
+		// next check rather than found by a player that has no source left to ask for.
+		stopPlayers();
+	}
+#endif
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	void ALAudioDevice::recreateAudioDevice()
 	{
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device

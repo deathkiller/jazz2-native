@@ -34,6 +34,8 @@ namespace Jazz2::Actors::Environment
 	private:
 		static constexpr std::int32_t ChunkCount = 16;
 		static constexpr float ChunkSize = 136.0f / ChunkCount;
+		/** @brief How much of the swing's phase one chunk is behind the one before it */
+		static constexpr float ChunkPhaseStep = 0.64f / ChunkCount;
 
 		float _angle;
 		float _phase;

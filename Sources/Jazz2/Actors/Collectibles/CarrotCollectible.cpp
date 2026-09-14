@@ -46,12 +46,12 @@ namespace Jazz2::Actors::Collectibles
 			bool healthNotFull = player->AddHealth(-1);
 			// Always collect if Reforged is enabled
 			if (healthNotFull || _levelHandler->IsReforged()) {
-				player->SetInvulnerability(5.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
+				player->GrantInvulnerability(5.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
 				CollectibleBase::OnCollect(player);
 			}
 		} else {
 			if (player->AddHealth(1)) {
-				player->SetInvulnerability(0.8f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
+				player->GrantInvulnerability(0.8f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
 				CollectibleBase::OnCollect(player);
 			}
 		}

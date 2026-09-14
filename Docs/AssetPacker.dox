@@ -55,10 +55,12 @@ The command may be omitted, in which case `convert` is assumed:
         together @m_span{m-text m-dim} (which outside a game installation they usually are
         not) @m_endspan
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
-        `gamecube` | `psp` | `emscripten` (or `web`)
-    -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 (the default) keeps
-        them as they are. Cinematics are re-encoded for `dreamcast` (or any N > 1) and
-        otherwise copied unchanged, `desktop` gets none, as the game reads the originals
+        `gamecube` | `psp` | `ps2` | `emscripten` (or `web`)
+    -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 keeps them at their
+        original size. Cinematics are re-encoded for `dreamcast` and `ps2` (or any N > 1) and
+        otherwise copied unchanged, `desktop` gets none, as the game reads the originals.
+        Defaults to what the profile asks for --- 2 for `ps2`, which is what that console
+        displays --- and to 1 everywhere else
     -   `--originals-only` --- Convert only the episodes and levels the original game shipped
     -   `--shareware-only` --- Convert only what the Shareware Demo shipped
         @m_span{m-text m-dim} (implies `--originals-only`) @m_endspan
@@ -124,10 +126,10 @@ What the output directory is going to be loaded by decides its layout:
     disagrees. Music is not copied, because the desktop game reads it from its own
     `Content/Music`, and cinematics are left alone, because the game reads the originals
     where they are.
--   **console** (also selected by `dreamcast`, `wii`, `gamecube` and `psp`) --- A staged `Content`
-    tree written directly into the target, holding everything the console loads. The consoles all
-    consume the same staged tree, so they share one profile --- only the cinematics are decided per
-    platform, which is why `dreamcast` is tracked separately (see below). The sprite and sound package
+-   **console** (also selected by `dreamcast`, `wii`, `gamecube`, `psp` and `ps2`) --- A staged
+    `Content` tree written directly into the target, holding everything the console loads. The consoles
+    all consume the same staged tree, so they share one profile --- only the cinematics are decided per
+    platform, which is why `dreamcast` and `ps2` are tracked separately (see below). The sprite and sound package
     is named `Prebaked.pak` here, and that name is the marker: a console that *can* convert (the PSP,
     the Wii and the PlayStation 3, whose content is on writable storage) finds it and skips the
     conversion instead of looking for original files that were never deployed --- see
@@ -163,6 +165,13 @@ from one of them, `--shareware-only` narrows that to the Shareware Demo content,
 is listed by name rather than only counted --- the list of levels the original game shipped
 is maintained by hand, and this is how a name missing from it shows up.
 
+Music follows the same rule with one addition: a track is carried if a level that survived the filter
+asks for it, **plus** the five the game plays outside any level --- `menu`, `bonus2` and `bonus3` for
+the main menu, and `intro` and `ending` for the cinematics. Those appear in no `.j2l`, so a tree built
+only from what the levels name left the menu and both cinematics silent on every console
+@m_span{m-text m-dim} (the desktop build never noticed, because it reads the originals in place)
+@m_endspan.
+
 @section asset-packer-cinematics Cinematics
 
 Only two cinematics are ever played by the game (`Intro` and `Ending`), `Logo` is present in
@@ -171,14 +180,17 @@ files land in a `Cinematics` subdirectory under lowercase names, which is how th
 looks them up. What happens to them depends on the target:
 
 -   **Nothing** for the desktop profile --- the game reads the original files where they are
--   **Copied unchanged** for every other target except the Dreamcast --- they decode the
+-   **Copied unchanged** for every target but the Dreamcast and the PlayStation 2 --- they decode the
     original format perfectly well and are better off with the smaller file
--   **Re-encoded** for `dreamcast`, or whenever `--video-downscale` is greater than 1 (on any
-    profile), since downscaling means re-encoding either way
+-   **Re-encoded** for `dreamcast` and `ps2`, or whenever `--video-downscale` is greater than 1 (on
+    any profile), since downscaling means re-encoding either way
 
-Only the Dreamcast needs the re-encoding: inflating the original container there costs
-55--115 ms per frame against a 42 ms budget, where the re-encoded one costs under one
-millisecond.
+Two consoles need the re-encoding, for the same reason at different sizes: inflating the original
+container costs the Dreamcast 55--115 ms per frame against a 42 ms budget, where the re-encoded one
+costs under one millisecond, and the PlayStation 2 is in the same position. The PS2 additionally
+defaults to `--video-downscale=2`, because it can only *draw* a 640×480 cinematic at 320×240 --- the
+player caps the frame texture at the drawable and then picks every second index back out, per frame,
+on the CPU. Doing that here instead costs the same picture and none of the work.
 
 @subsection asset-packer-cinematics-format The .j2v recompression
 
@@ -349,13 +361,16 @@ as UTF-8 without one.
     why they are given a prepared tree as well. The Dreamcast additionally authors the tree into a
     read-only disc image at build time, which is a procedure of its own ---
     see @ref consoles-dreamcast-content.
--   **PlayStation 2 and PlayStation 3** consume the same tree under the generic `--target=console`
-    profile --- neither has a name of its own, because neither needs anything the profile does not
-    already do. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as
-    the Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
-    @ref consoles-ps2-content) @m_endspan. The PS3 has a writable hard disk and could in principle
-    convert, but is given a prepared tree for the same reason the PSP is --- doing it on the console is
-    slow.
+-   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
+    `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* halved to
+    the 320×240 the console actually displays. A `console` tree still plays, it is just the slow way
+    round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
+    Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
+    @ref consoles-ps2-content) @m_endspan; it can equally be run from an SD card in an MX4SIO adapter,
+    which consumes the same tree @m_span{m-text m-dim} (see @ref consoles-ps2-mx4sio) @m_endspan.
+-   **PlayStation 3** consumes the generic `--target=console` tree --- it needs nothing the profile
+    does not already do. It has a writable hard disk and could in principle convert, but is given a
+    prepared tree for the same reason the PSP is: doing it on the console is slow.
 -   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
     only a way to skip that wait there.
 -   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically

@@ -22,13 +22,15 @@
 #	include <cerrno>
 #	include <cstdio>
 #	include <cstring>
-#	if !defined(DEATH_TARGET_N64)
+#	if defined(DEATH_TARGET_N64)
 		// libdragon's newlib carries no <dirent.h> at all (its <sys/dirent.h> is the stub that refuses the
 		// include), the directory API it has instead is its own <dir.h>, adapted back into the POSIX surface
 		// this file is written against right below the includes
-#		include <dirent.h>
-#	else
 #		include <dir.h>
+#	elif !defined(DEATH_TARGET_PS2)
+		// The PS2 has a <dirent.h>, but the calls behind it cannot answer for every device the console
+		// mounts - so it is left out and the same POSIX surface is adapted onto `fio` below instead
+#		include <dirent.h>
 #	endif
 #	include <fcntl.h>
 #	if !defined(DEATH_TARGET_PS3) && !defined(DEATH_TARGET_AMIGAOS) && !defined(DEATH_TARGET_AMIGAOS4) && \
@@ -123,6 +125,106 @@ static struct dirent* readdir(DIR* d)
 
 static int closedir(DIR* d)
 {
+	delete d;
+	return 0;
+}
+#endif
+
+#if defined(DEATH_TARGET_PS2)
+// The POSIX face of PS2SDK's `fio` directory API, for the same reason the N64 has one above: what
+// <dirent.h> would have provided cannot answer for every device this console mounts. newlib's opendir() is
+// built on open(), and `bdmfs_fatfs` - an SD card in an MX4SIO adapter - passes that straight to FatFs
+// `f_open()`, which rejects a directory. Nobody sees an error, only a card that reads as carrying nothing.
+// `dopen`/`dread`/`dclose` reach `f_opendir()` instead, through the same `ioman`, and the disc's `cdfs`
+// implements them too - so one path serves both devices. (PS2SDK marks `fioDread()` "unstable": it does not
+// suspend interrupts around its DMA. It is the only directory API the card answers at all, and it is paid
+// on a handful of entries at load time rather than anywhere hot.)
+#define NEWLIB_PORT_AWARE
+extern "C" {
+#include <fileio.h>
+}
+
+// Only this file ever sets or reads them, so the values are just the usual ones
+#define DT_DIR 4
+#define DT_REG 8
+#define DT_LNK 10
+
+struct dirent
+{
+	char d_name[256];
+	int d_type;
+};
+
+struct DIR
+{
+	int dd;
+	struct dirent current;
+};
+
+static DIR* opendir(const char* path)
+{
+	// FatFs accepts a volume root written either way, but rejects a deeper path that ends in a separator -
+	// its segmenter runs once more after the trailing one and refuses the empty name it gets. Every caller
+	// here builds paths by concatenation, so trimming it is what makes the two agree.
+	char trimmed[1024];
+	std::size_t pathLength = std::strlen(path);
+	if (pathLength >= sizeof(trimmed)) {
+		errno = ENAMETOOLONG;
+		return nullptr;
+	}
+	while (pathLength > 1 && (path[pathLength - 1] == '/' || path[pathLength - 1] == '\\') &&
+			path[pathLength - 2] != ':') {
+		pathLength--;
+	}
+	std::memcpy(trimmed, path, pathLength);
+	trimmed[pathLength] = '\0';
+
+	const int dd = fioDopen(trimmed);
+	if (dd < 0) {
+		errno = ENOENT;
+		return nullptr;
+	}
+
+	DIR* d = new DIR();
+	d->dd = dd;
+	return d;
+}
+
+static struct dirent* readdir(DIR* d)
+{
+	io_dirent_t entry;
+	std::memset(&entry, 0, sizeof(entry));
+	if (fioDread(d->dd, &entry) <= 0) {
+		return nullptr;
+	}
+
+	std::size_t nameLength = std::strlen(entry.name);
+	if (nameLength >= sizeof(dirent::d_name)) {
+		nameLength = sizeof(dirent::d_name) - 1;
+	}
+	std::memcpy(d->current.d_name, entry.name, nameLength);
+	d->current.d_name[nameLength] = '\0';
+
+	// Which spelling arrives depends on the driver: the IOP's own `iox_stat.h` bits (FIO_S_IFDIR 0x1000)
+	// are what a driver fills a dirent with, while the EE glue elsewhere reads the older FIO_SO_* layout
+	// (FIO_SO_IFDIR 0x0020). The two cannot simply be OR-ed together - 0x0020 is FIO_S_IRGRP in the newer
+	// layout, so a plain file readable by its group would read as a directory - but they can be told apart
+	// first, because each carries its file type in a field the other leaves clear: FIO_S_IFMT is 0xF000 and
+	// FIO_SO_IFMT is 0x0038. Anything that fills in neither is not a directory.
+	const std::uint32_t mode = (std::uint32_t)entry.stat.mode;
+	bool isDirectory;
+	if ((mode & 0xF000) != 0) {
+		isDirectory = ((mode & 0xF000) == 0x1000);
+	} else {
+		isDirectory = ((mode & 0x0038) == 0x0020);
+	}
+	d->current.d_type = (isDirectory ? DT_DIR : DT_REG);
+	return &d->current;
+}
+
+static int closedir(DIR* d)
+{
+	fioDclose(d->dd);
 	delete d;
 	return 0;
 }
