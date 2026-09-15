@@ -77,7 +77,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableInt32(c.Gems[i]);
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			packet.WriteValue<std::uint16_t>(c.Ammo[i]);
+			packet.WriteValue<std::uint16_t>(Actors::Player::AmmoToWire(c.Ammo[i]));
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
 			packet.WriteValue<std::uint8_t>(c.WeaponUpgrades[i]);
@@ -96,7 +96,7 @@ namespace Jazz2::Multiplayer
 			c.Gems[i] = packet.ReadVariableInt32();
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			c.Ammo[i] = packet.ReadValue<std::uint16_t>();
+			c.Ammo[i] = Actors::Player::AmmoFromWire(packet.ReadValue<std::uint16_t>());
 		}
 		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
 			c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
@@ -6064,7 +6064,7 @@ namespace Jazz2::Multiplayer
 				std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
 				InvokeAsync([this, weaponType, weaponAmmo]() {
 					if (!_players.empty() && weaponType < arraySize(_players[0]->_inventory.WeaponAmmo)) {
-						_players[0]->_inventory.WeaponAmmo[weaponType] = (weaponAmmo == UINT16_MAX ? Actors::Player::AmmoUnlimited : weaponAmmo);
+						_players[0]->_inventory.WeaponAmmo[weaponType] = Actors::Player::AmmoFromWire(weaponAmmo);
 					}
 				});
 				break;

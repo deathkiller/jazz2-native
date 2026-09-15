@@ -4,6 +4,9 @@
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
 #include "../PreferencesCache.h"
+#if defined(WITH_MULTIPLAYER)
+#	include "../Multiplayer/MpLevelHandler.h"
+#endif
 #include "SolidObjectBase.h"
 #include "Explosion.h"
 #include "PlayerCorpse.h"
@@ -5261,9 +5264,18 @@ namespace Jazz2::Actors
 		constexpr std::int32_t DefaultLimit = 99;
 		constexpr std::int32_t ExtendedLimit = 999;
 
-		// Extended limit applies to local sessions only, multiplayer keeps the original limit
-		return (PreferencesCache::ExtendedAmmoLimit && _levelHandler != nullptr && _levelHandler->IsLocalSession()
-			? ExtendedLimit : DefaultLimit);
+		if (!PreferencesCache::ExtendedAmmoLimit || _levelHandler == nullptr || !_levelHandler->IsLocalSession()) {
+			return DefaultLimit;
+		}
+#if defined(WITH_MULTIPLAYER)
+		// Local splitscreen also uses the multiplayer handler, keep the original limit in competitive modes
+		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelHandler)) {
+			if (mpLevelHandler->GetGameMode() != Jazz2::Multiplayer::MpGameMode::Cooperation) {
+				return DefaultLimit;
+			}
+		}
+#endif
+		return ExtendedLimit;
 	}
 
 	bool Player::AddAmmo(WeaponType weaponType, std::int16_t count)

@@ -207,9 +207,14 @@ namespace Jazz2::Actors
 		/** @brief Returns current ammo limit per weapon (in whole units) */
 		std::int32_t GetAmmoLimit() const;
 
-		/** @brief Converts ammo to the 16-bit representation used by multiplayer packets */
+		/** @brief Converts ammo to the 16-bit representation used by packets and continuation state */
 		static std::uint16_t AmmoToWire(std::uint32_t ammo) {
 			return (ammo == AmmoUnlimited ? UINT16_MAX : (std::uint16_t)std::min(ammo, (std::uint32_t)(UINT16_MAX - 1)));
+		}
+
+		/** @brief Converts ammo from the 16-bit representation used by packets and continuation state */
+		static std::uint32_t AmmoFromWire(std::uint16_t ammo) {
+			return (ammo == UINT16_MAX ? AmmoUnlimited : ammo);
 		}
 
 		/** @brief Returns weapon upgrades */
