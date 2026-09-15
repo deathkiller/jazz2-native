@@ -224,7 +224,7 @@ namespace Jazz2
 		/** @brief Gems collected */
 		std::int32_t Gems[4];
 		/** @brief Weapon ammo */
-		StaticArray<(std::int32_t)WeaponType::Count, std::uint16_t> Ammo;
+		StaticArray<(std::int32_t)WeaponType::Count, std::uint32_t> Ammo;
 		/** @brief Weapon upgrades */
 		StaticArray<(std::int32_t)WeaponType::Count, std::uint8_t> WeaponUpgrades;
 	};
@@ -508,7 +508,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 16;
+		static constexpr std::uint8_t FileVersion = 17;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

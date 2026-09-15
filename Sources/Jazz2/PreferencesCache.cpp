@@ -1,6 +1,7 @@
 ﻿#include "PreferencesCache.h"
 #include "ContentResolver.h"
 #include "LevelHandler.h"
+#include "Actors/Player.h"
 #include "Input/ControlScheme.h"
 #include "UI/DiscordRpcClient.h"
 
@@ -192,7 +193,12 @@ namespace Jazz2
 		TouchButtons[(std::size_t)TouchButtonSlot::Console]			= { Vector2f(  7.0f,   7.0f), 1.0f, TouchButtonAnchor::TopLeft     };
 	}
 
-	static void ReadEpisodeContinuationState(Stream& s, EpisodeContinuationState& state)
+	// Size of EpisodeContinuationState before FileVersion 17, when ammo was stored as 16-bit values
+	static constexpr std::size_t LegacyEpisodeContinuationStateSize =
+		(offsetof(EpisodeContinuationState, Ammo) + sizeof(std::uint16_t) * (std::int32_t)WeaponType::Count
+			+ sizeof(EpisodeContinuationState::WeaponUpgrades) + alignof(EpisodeContinuationState) - 1) & ~(alignof(EpisodeContinuationState) - 1);
+
+	static void ReadEpisodeContinuationState(Stream& s, EpisodeContinuationState& state, bool legacyAmmo)
 	{
 		state.Flags = EpisodeContinuationFlags(s.ReadValue<std::uint8_t>());
 		state.DifficultyAndPlayerType = s.ReadValue<std::uint8_t>();
@@ -205,7 +211,7 @@ namespace Jazz2
 			state.Gems[i] = s.ReadValueAsLE<std::int32_t>();
 		}
 		for (std::size_t i = 0; i < arraySize(state.Ammo); i++) {
-			state.Ammo[i] = s.ReadValueAsLE<std::uint16_t>();
+			state.Ammo[i] = (legacyAmmo ? Actors::Player::AmmoFromWire(s.ReadValueAsLE<std::uint16_t>()) : s.ReadValueAsLE<std::uint32_t>());
 		}
 		for (std::size_t i = 0; i < arraySize(state.WeaponUpgrades); i++) {
 			state.WeaponUpgrades[i] = s.ReadValue<std::uint8_t>();
@@ -225,7 +231,7 @@ namespace Jazz2
 			s.WriteValueAsLE<std::int32_t>(state.Gems[i]);
 		}
 		for (std::size_t i = 0; i < arraySize(state.Ammo); i++) {
-			s.WriteValueAsLE<std::uint16_t>(state.Ammo[i]);
+			s.WriteValueAsLE<std::uint32_t>(state.Ammo[i]);
 		}
 		for (std::size_t i = 0; i < arraySize(state.WeaponUpgrades); i++) {
 			s.WriteValue<std::uint8_t>(state.WeaponUpgrades[i]);
@@ -1417,8 +1423,9 @@ namespace
 						uc.Read(episodeName.data(), nameLength);
 
 						EpisodeContinuationState state = {};
-						if (episodeEndSize == sizeof(EpisodeContinuationState)) {
-							ReadEpisodeContinuationState(uc, state);
+						bool legacyState = (episodeEndSize == LegacyEpisodeContinuationStateSize);
+						if (legacyState || episodeEndSize == sizeof(EpisodeContinuationState)) {
+							ReadEpisodeContinuationState(uc, state, legacyState);
 						} else {
 							// Struct has different size, so it's better to skip it
 							uc.Seek(episodeEndSize, SeekOrigin::Current);
@@ -1437,13 +1444,14 @@ namespace
 						String episodeName{NoInit, nameLength};
 						uc.Read(episodeName.data(), nameLength);
 
-						if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
+						bool legacyState = (episodeContinueSize == LegacyEpisodeContinuationStateSize);
+						if (legacyState || episodeContinueSize == sizeof(EpisodeContinuationState)) {
 							EpisodeContinuationStateWithLevel stateWithLevel = {};
 							nameLength = uc.ReadValue<std::uint8_t>();
 							stateWithLevel.LevelName = String(NoInit, nameLength);
 							uc.Read(stateWithLevel.LevelName.data(), nameLength);
 
-							ReadEpisodeContinuationState(uc, stateWithLevel.State);
+							ReadEpisodeContinuationState(uc, stateWithLevel.State, legacyState);
 							_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
 						} else {
 							// Struct has different size, so it's better to skip it

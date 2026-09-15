@@ -2293,9 +2293,7 @@ void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
 			episodeEnd->Score = firstPlayer->Score;
 			episodeEnd->ElapsedMilliseconds = levelInit.ElapsedMilliseconds;
 			std::memcpy(episodeEnd->Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
-			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-				episodeEnd->Ammo[i] = Actors::Player::AmmoToWire(firstPlayer->Ammo[i]);
-			}
+			std::memcpy(episodeEnd->Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 			std::memcpy(episodeEnd->WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 		}
 	}
@@ -2343,9 +2341,7 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 		episodeContinue->State.Score = firstPlayer->Score;
 		episodeContinue->State.ElapsedMilliseconds = levelInit.ElapsedMilliseconds;
 		std::memcpy(episodeContinue->State.Gems, firstPlayer->Gems, sizeof(firstPlayer->Gems));
-		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			episodeContinue->State.Ammo[i] = Actors::Player::AmmoToWire(firstPlayer->Ammo[i]);
-		}
+		std::memcpy(episodeContinue->State.Ammo, firstPlayer->Ammo, sizeof(firstPlayer->Ammo));
 		std::memcpy(episodeContinue->State.WeaponUpgrades, firstPlayer->WeaponUpgrades, sizeof(firstPlayer->WeaponUpgrades));
 
 		PreferencesCache::TutorialCompleted = true;

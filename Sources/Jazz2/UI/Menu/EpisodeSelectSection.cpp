@@ -4,7 +4,6 @@
 #include "MenuResources.h"
 #include "../Font.h"
 #include "../../PreferencesCache.h"
-#include "../../Actors/Player.h"
 #include "../../Rendering/UpscaleRenderPass.h"
 
 #include "../../../nCine/I18n.h"
@@ -546,9 +545,7 @@ namespace Jazz2::UI::Menu
 		firstPlayer.Lives = episodeContinue->State.Lives;
 		firstPlayer.Score = episodeContinue->State.Score;
 		std::memcpy(firstPlayer.Gems, episodeContinue->State.Gems, sizeof(firstPlayer.Gems));
-		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-			firstPlayer.Ammo[i] = Actors::Player::AmmoFromWire(episodeContinue->State.Ammo[i]);
-		}
+		std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(firstPlayer.Ammo));
 		std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
 
 		_root->ChangeLevel(std::move(levelInit));
