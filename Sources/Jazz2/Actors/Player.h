@@ -150,6 +150,9 @@ namespace Jazz2::Actors
 			Grouped into one value struct so the checkpoint snapshot and its rollback are single assignments
 			instead of a hand-maintained set of parallel fields.
 		*/
+		/** @brief Ammo value that means unlimited (blaster) */
+		static constexpr std::uint32_t AmmoUnlimited = UINT32_MAX;
+
 		struct InventoryState {
 			/** @brief Number of collected coins */
 			std::int32_t Coins;
@@ -157,8 +160,8 @@ namespace Jazz2::Actors
 			std::int32_t FoodEaten;
 			/** @brief Number of collected gems, by gem type */
 			std::int32_t Gems[4];
-			/** @brief Remaining weapon ammo (in 1/256 units), by weapon type; `UINT16_MAX` means unlimited */
-			std::uint16_t WeaponAmmo[(std::int32_t)WeaponType::Count];
+			/** @brief Remaining weapon ammo (in 1/256 units), by weapon type; `AmmoUnlimited` means unlimited */
+			std::uint32_t WeaponAmmo[(std::int32_t)WeaponType::Count];
 			/** @brief Weapon upgrade flags, by weapon type */
 			std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
 		};
@@ -197,8 +200,16 @@ namespace Jazz2::Actors
 		}
 
 		/** @brief Return weapon ammo */
-		ArrayView<const std::uint16_t> GetWeaponAmmo() const {
+		ArrayView<const std::uint32_t> GetWeaponAmmo() const {
 			return _inventory.WeaponAmmo;
+		}
+
+		/** @brief Returns current ammo limit per weapon (in whole units) */
+		std::int32_t GetAmmoLimit() const;
+
+		/** @brief Converts ammo to the 16-bit representation used by multiplayer packets */
+		static std::uint16_t AmmoToWire(std::uint32_t ammo) {
+			return (ammo == AmmoUnlimited ? UINT16_MAX : (std::uint16_t)std::min(ammo, (std::uint32_t)(UINT16_MAX - 1)));
 		}
 
 		/** @brief Returns weapon upgrades */

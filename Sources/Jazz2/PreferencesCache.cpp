@@ -65,6 +65,7 @@ namespace Jazz2
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
 	bool PreferencesCache::ShowMinimap = true;
+	bool PreferencesCache::ExtendedAmmoLimit = false;
 	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
@@ -1453,6 +1454,7 @@ namespace
 
 					if (version >= 15) {
 						ShowMinimap = ((boolOptions & BoolOptions::ShowMinimap) == BoolOptions::ShowMinimap);
+						ExtendedAmmoLimit = ((boolOptions & BoolOptions::ExtendedAmmoLimit) == BoolOptions::ExtendedAmmoLimit);
 						PlayerFurColor = uc.ReadValueAsLE<std::uint32_t>();
 						PlayerColors = (PlayerColorMode)uc.ReadValue<std::uint8_t>();
 					}
@@ -1647,6 +1649,7 @@ namespace
 		if (EnableTouchJoystick) boolOptions |= BoolOptions::EnableTouchJoystick;
 		if (EnableTouchVibration) boolOptions |= BoolOptions::EnableTouchVibration;
 		if (ShowMinimap) boolOptions |= BoolOptions::ShowMinimap;
+		if (ExtendedAmmoLimit) boolOptions |= BoolOptions::ExtendedAmmoLimit;
 		co.WriteValueAsLE<std::uint64_t>(std::uint64_t(boolOptions));
 
 		if (Language[0] != '\0') {

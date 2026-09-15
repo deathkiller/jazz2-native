@@ -6064,7 +6064,7 @@ namespace Jazz2::Multiplayer
 				std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
 				InvokeAsync([this, weaponType, weaponAmmo]() {
 					if (!_players.empty() && weaponType < arraySize(_players[0]->_inventory.WeaponAmmo)) {
-						_players[0]->_inventory.WeaponAmmo[weaponType] = weaponAmmo;
+						_players[0]->_inventory.WeaponAmmo[weaponType] = (weaponAmmo == UINT16_MAX ? Actors::Player::AmmoUnlimited : weaponAmmo);
 					}
 				});
 				break;
@@ -6220,8 +6220,8 @@ namespace Jazz2::Multiplayer
 				std::memset(player->_inventory.WeaponUpgrades, 0, sizeof(player->_inventory.WeaponUpgrades));
 				std::memset(player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(player->_inventoryCheckpoint.WeaponUpgrades));
 
-				player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-				player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = Actors::Player::AmmoUnlimited;
+				player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = Actors::Player::AmmoUnlimited;
 				player->_currentWeapon = WeaponType::Blaster;
 			}
 		});
@@ -7285,7 +7285,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_inventory.WeaponAmmo[(std::uint8_t)weaponType]);
+				packet.WriteValue<std::uint16_t>(Actors::Player::AmmoToWire(mpPlayer->_inventory.WeaponAmmo[(std::uint8_t)weaponType]));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -7412,7 +7412,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 			packet.WriteVariableUint32(mpPlayer->_playerIndex);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)i);
-			packet.WriteValue<std::uint16_t>(mpPlayer->_inventory.WeaponAmmo[i]);
+			packet.WriteValue<std::uint16_t>(Actors::Player::AmmoToWire(mpPlayer->_inventory.WeaponAmmo[i]));
 			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 
 			MemoryStream packet2(7);
@@ -9036,8 +9036,8 @@ namespace Jazz2::Multiplayer
 				std::memset(peerDesc->Player->_inventory.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventory.WeaponUpgrades));
 				std::memset(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades));
 
-				peerDesc->Player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-				peerDesc->Player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				peerDesc->Player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = Actors::Player::AmmoUnlimited;
+				peerDesc->Player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = Actors::Player::AmmoUnlimited;
 				peerDesc->Player->_currentWeapon = WeaponType::Blaster;
 				peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
 					? serverConfig.InitialPlayerHealth

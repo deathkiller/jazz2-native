@@ -71,6 +71,10 @@ namespace Jazz2::UI::Menu
 			[]() -> StringView { return (PreferencesCache::SwitchToNewWeapon ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon; _isDirty = true; });
 		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Ammo Limit"),
+			[]() -> StringView { return (PreferencesCache::ExtendedAmmoLimit ? "999"_s : "99"_s); },
+			[this](std::int32_t) { PreferencesCache::ExtendedAmmoLimit = !PreferencesCache::ExtendedAmmoLimit; _isDirty = true; });
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Show Minimap"),
 			[]() -> StringView { return (PreferencesCache::ShowMinimap ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::ShowMinimap = !PreferencesCache::ShowMinimap; _isDirty = true; });
