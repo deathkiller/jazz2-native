@@ -4,6 +4,9 @@
 #include "../Events/EventMap.h"
 #include "../Tiles/TileMap.h"
 #include "../PreferencesCache.h"
+#if defined(WITH_MULTIPLAYER)
+#	include "../Multiplayer/MpLevelHandler.h"
+#endif
 #include "SolidObjectBase.h"
 #include "Explosion.h"
 #include "PlayerCorpse.h"
@@ -250,8 +253,8 @@ namespace Jazz2::Actors
 		std::memset(_inventory.WeaponUpgrades, 0, sizeof(_inventory.WeaponUpgrades));
 		std::memset(_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = AmmoUnlimited;
+		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = AmmoUnlimited;
 
 		if (_playerType == PlayerType::Spectate) {
 			// Spectate mode - no collision, no gravity, invisible
@@ -4375,8 +4378,8 @@ namespace Jazz2::Actors
 		std::memcpy(_inventory.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventory.WeaponUpgrades));
 		std::memcpy(_inventoryCheckpoint.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = AmmoUnlimited;
+		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = AmmoUnlimited;
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
@@ -4462,7 +4465,16 @@ namespace Jazz2::Actors
 		std::int32_t weaponCount = src.ReadVariableInt32();
 		DEATH_ASSERT(weaponCount == std::int32_t(arraySize(_inventoryCheckpoint.WeaponAmmo)), "Weapon count mismatch", );
 		_currentWeapon = (WeaponType)src.ReadVariableInt32();
-		src.Read(_inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		if (version >= 5) {
+			src.Read(_inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		} else {
+			// Older states stored ammo as 16-bit values with UINT16_MAX meaning unlimited
+			std::uint16_t legacyAmmo[(std::int32_t)WeaponType::Count];
+			src.Read(legacyAmmo, sizeof(legacyAmmo));
+			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+				_inventoryCheckpoint.WeaponAmmo[i] = (legacyAmmo[i] == UINT16_MAX ? AmmoUnlimited : legacyAmmo[i]);
+			}
+		}
 		src.Read(_inventoryCheckpoint.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
 		std::memcpy(_inventory.WeaponAmmo, _inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
@@ -5247,18 +5259,37 @@ namespace Jazz2::Actors
 		}
 	}
 
+	std::int32_t Player::GetAmmoLimit() const
+	{
+		constexpr std::int32_t DefaultLimit = 99;
+		constexpr std::int32_t ExtendedLimit = 999;
+
+		if (!PreferencesCache::ExtendedAmmoLimit || _levelHandler == nullptr || !_levelHandler->IsLocalSession()) {
+			return DefaultLimit;
+		}
+#if defined(WITH_MULTIPLAYER)
+		// Local splitscreen also uses the multiplayer handler, keep the original limit in competitive modes
+		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_levelHandler)) {
+			if (mpLevelHandler->GetGameMode() != Jazz2::Multiplayer::MpGameMode::Cooperation) {
+				return DefaultLimit;
+			}
+		}
+#endif
+		return ExtendedLimit;
+	}
+
 	bool Player::AddAmmo(WeaponType weaponType, std::int16_t count)
 	{
-		constexpr std::int16_t Multiplier = 256;
-		constexpr std::int16_t AmmoLimit = 99 * Multiplier;
+		constexpr std::int32_t Multiplier = 256;
+		const std::uint32_t ammoLimit = GetAmmoLimit() * Multiplier;
 
-		if (weaponType >= WeaponType::Count || _inventory.WeaponAmmo[(std::int32_t)weaponType] < 0 || _inventory.WeaponAmmo[(std::int32_t)weaponType] >= AmmoLimit) {
+		if (weaponType >= WeaponType::Count || _inventory.WeaponAmmo[(std::int32_t)weaponType] == AmmoUnlimited || _inventory.WeaponAmmo[(std::int32_t)weaponType] >= ammoLimit) {
 			return false;
 		}
 
 		bool switchTo = (_inventory.WeaponAmmo[(std::int32_t)weaponType] == 0);
 
-		_inventory.WeaponAmmo[(std::int32_t)weaponType] = (std::int16_t)std::min((std::int32_t)_inventory.WeaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
+		_inventory.WeaponAmmo[(std::int32_t)weaponType] = std::min(_inventory.WeaponAmmo[(std::int32_t)weaponType] + (std::uint32_t)(count * Multiplier), ammoLimit);
 
 		if (switchTo) {
 			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddAmmo);

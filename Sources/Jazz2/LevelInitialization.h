@@ -41,7 +41,7 @@ namespace Jazz2
 		/** @brief Gems collected */
 		StaticArray<4, std::int32_t> Gems;
 		/** @brief Weapon ammo */
-		StaticArray<WeaponCount, std::uint16_t> Ammo;
+		StaticArray<WeaponCount, std::uint32_t> Ammo;
 		/** @brief Weapon upgrades */
 		StaticArray<WeaponCount, std::uint8_t> WeaponUpgrades;
 	};

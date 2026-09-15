@@ -255,7 +255,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
-		std::uint16_t prevAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
+		std::uint32_t prevAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
 		bool success = PlayerOnServer::FireCurrentWeapon(weaponType);
 
 		if (prevAmmo != _inventory.WeaponAmmo[(std::int32_t)weaponType]) {

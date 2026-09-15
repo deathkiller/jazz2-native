@@ -761,7 +761,7 @@ namespace Jazz2::UI
 
 		char stringBuffer[32];
 		StringView ammoCount;
-		if (player->_inventory.WeaponAmmo[(int32_t)weapon] == UINT16_MAX) {
+		if (player->_inventory.WeaponAmmo[(int32_t)weapon] == Actors::Player::AmmoUnlimited) {
 			ammoCount = "x\u221E"_s;
 		} else {
 			stringBuffer[0] = 'x';
@@ -1506,7 +1506,7 @@ namespace Jazz2::UI
 				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
 					char stringBuffer[32];
 					StringView ammoCount;
-					if (player->_inventory.WeaponAmmo[i] == UINT16_MAX) {
+					if (player->_inventory.WeaponAmmo[i] == Actors::Player::AmmoUnlimited) {
 						ammoCount = "x\u221E"_s;
 					} else {
 						stringBuffer[0] = 'x';

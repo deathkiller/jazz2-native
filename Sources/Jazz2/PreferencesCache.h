@@ -224,7 +224,7 @@ namespace Jazz2
 		/** @brief Gems collected */
 		std::int32_t Gems[4];
 		/** @brief Weapon ammo */
-		StaticArray<(std::int32_t)WeaponType::Count, std::uint16_t> Ammo;
+		StaticArray<(std::int32_t)WeaponType::Count, std::uint32_t> Ammo;
 		/** @brief Weapon upgrades */
 		StaticArray<(std::int32_t)WeaponType::Count, std::uint8_t> WeaponUpgrades;
 	};
@@ -303,6 +303,8 @@ namespace Jazz2
 		static bool ShowPlayerTrails;
 		/** @brief Whether the race minimap is shown in multiplayer (if provided by the server) */
 		static bool ShowMinimap;
+		/** @brief Use the extended ammo limit (999) instead of the original 99 in single-player */
+		static bool ExtendedAmmoLimit;
 		/** @brief Whether low quality water effects are enabled */
 		static bool LowWaterQuality;
 		/** @brief Whether viewport should be unaligned */
@@ -500,12 +502,13 @@ namespace Jazz2
 			EnableTouchJoystick = 0x40000000,
 			EnableTouchVibration = 0x80000000,
 
-			ShowMinimap = 0x100000000
+			ShowMinimap = 0x100000000,
+			ExtendedAmmoLimit = 0x200000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 16;
+		static constexpr std::uint8_t FileVersion = 17;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;
