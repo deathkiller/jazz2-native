@@ -56,9 +56,13 @@ namespace Jazz2::Rendering::SoftwareLighting
 	 * @brief Adds one light to a two-channel (intensity, brightness) float lightmap
 	 *
 	 * @param lightmap        `lmW * lmH` texels of two floats each, row-major
+	 * @param lmW             Lightmap width in texels
+	 * @param lmH             Lightmap height in texels
 	 * @param cx, cy          Light centre in lightmap texels
 	 * @param rLm             Far radius in lightmap texels (at least 0.5)
 	 * @param radiusNearNorm  Near radius as a fraction of the far radius (may exceed 1: no falloff)
+	 * @param intensity       Added to the first channel of every texel the light reaches, scaled by the falloff
+	 * @param brightness      Added to the second channel the same way
 	 *
 	 * The falloff is the one in `LightingFs.inc`: strength is 1 out to the near radius and then
 	 * `((1 - dist) / (1 - near))^3` to the far radius, in units of the far radius. Instead of visiting the

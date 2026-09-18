@@ -1562,7 +1562,7 @@ namespace Jazz2::Actors
 			// low enough that it settles after two or three hops instead of skittering away
 			spark.Elasticity = 0.45f;
 
-			std::int32_t frame = Random().Fast(0, std::max(1, resBase->FrameCount));
+			std::int32_t frame = Random().Fast(0, std::max<std::int32_t>(1, resBase->FrameCount));
 			Recti frameRect = resBase->GetFrameRect(frame);
 			Vector2i frameOffset = resBase->GetFrameOffset(frame);
 			// Without this a trimmed frame is stretched across its whole cell, which is what made the sparks

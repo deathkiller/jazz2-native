@@ -35,9 +35,11 @@ if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 		endif()
 
 		if(VITA)
-			# PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation that is linked (together with
-			# its Sce stub libraries) further below. find_package(OpenGLES2) cannot locate it - that module only
-			# probes for GLES2/gl2.h and libGLESv2/libEGL.
+			# This arm is only reached with NCINE_PREFERRED_RHI=OpenGL, where the PS Vita renders through
+			# vitaGL, a static OpenGL|ES 2.0 implementation layered on sceGxm. It is linked (together with its
+			# Sce stub libraries) further below, and unconditionally - see the note there, the SDL2 window
+			# backend needs it under GXM too. find_package(OpenGLES2) cannot locate it either way: that module
+			# only probes for GLES2/gl2.h and libGLESv2/libEGL.
 		elseif(ANDROID OR EMSCRIPTEN)
 			# Android links libGLESv2/libGLESv3 and libEGL from the NDK (see the Android bridge CMakeLists);
 			# Emscripten's WebGL implementation is part of the runtime the linker provides itself
@@ -215,10 +217,13 @@ if(NCINE_RHI_USE_FB16)
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
-	if(VITA AND WITH_ONLINE_MULTIPLAYER)
+	if(VITA)
 		# The Vita reaches the display and the input devices through SDL2 and vitaGL, so it has no backend
-		# of its own - this is one library function VitaSDK does implement, but not to the contract its
-		# callers rely on (see the file; it is what makes HTTPS verify and ENet parse an address)
+		# of its own - this is where the handful of things VitaSDK gets wrong for us are patched up. Two of
+		# them: a library function it implements but not to the contract its callers rely on (it is what
+		# makes HTTPS verify and ENet parse an address), and one libstdc++ symbol prebuilt vitaGL still
+		# expects out of line. Not gated on WITH_ONLINE_MULTIPLAYER any more, because the second of those is
+		# needed to link at all; the networking half guards itself inside the file.
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Vita/VitaLibcCompat.cpp)
 	endif()
 
@@ -1561,6 +1566,12 @@ else()
 
 		# Link to all required libraries and stubs
 		target_link_libraries(${NCINE_APP} PRIVATE
+			# Linked for **every** backend, not only NCINE_PREFERRED_RHI=OpenGL, and it is worth knowing why
+			# before anyone tries to drop it from a GXM build: nothing in this engine calls a `vgl*` function
+			# under GXM, but VitaSDK's SDL2 has exactly one Vita video driver and it is built against vitaGL.
+			# Its bootstrap table pulls `SDL_vitagles_vgl.c.obj` in whatever the renderer is, so the window
+			# backend needs vitaGL even when the renderer does not. Taking it off the line trades one link
+			# error for a page of undefined `vgl*` ones.
 			vitaGL
 			vitashark
 			SceShaccCgExt
@@ -1580,6 +1591,10 @@ else()
 			SceGxm_stub
 			SceHid_stub
 			SceHttp_stub
+			# Not for anything this application asks for: SDL2's vitaGL video backend calls sceImeUpdate()
+			# from its SwapWindow, so every frame drawn needs it whether or not the on-screen keyboard is
+			# ever shown. It began failing to link when VitaSDK's SDL2 picked that call up.
+			SceIme_stub
 			SceKernelDmacMgr_stub
 			SceMotion_stub
 			SceNet_stub
