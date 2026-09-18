@@ -354,7 +354,7 @@ namespace Jazz2::Resources
 		is parsed as usual, but none of its sheets are read until an animation is actually looked up --- the
 		descriptions needed to load them are kept in @ref DeferredAnimations and @ref FindAnimation() resolves
 		an entry the first time it is asked for. This is what a set of assets that are *declared* together but
-		*used* apart wants: the UI metadata describes every gamepad button label, touch button and menu icon in
+		<em>used</em> apart wants: the UI metadata describes every gamepad button label, touch button and menu icon in
 		the game, while a given run of the game only ever draws the labels of one gamepad type. Everything else
 		then costs a few dozen bytes of description instead of a decoded sheet and a texture, and the ordinary
 		mark-and-sweep of the resolver still releases whatever was loaded once the metadata itself goes away.

@@ -29,7 +29,7 @@ namespace nCine::RHI::GXM
 		for that stage again - and, when nothing is missing, never has to be *loaded* either (`libshacccg.suprx`
 		is only brought up on the first miss, see @ref GxmDevice::EnsureShaderCompiler()).
 
-		**How an entry is invalidated.** Every entry is keyed by a 64-bit hash of the exact Cg source string it
+		<b>How an entry is invalidated.</b> Every entry is keyed by a 64-bit hash of the exact Cg source string it
 		was compiled from. Those sources are generated artifacts (`Shaders/Generated/CgGeneratedShaders.h`), so
 		editing a ".shader" file and regenerating changes the hash of every stage it produced and leaves the
 		rest of the cache alone: the changed stages miss and are recompiled, everything else is still a hit.
@@ -42,7 +42,7 @@ namespace nCine::RHI::GXM
 		truncated or corrupt one - in every case the console recompiles and writes a fresh pack rather than
 		failing, so a cache is never something the game needs to have.
 
-		**Two packs.** A read-only one shipped in the VPK next to the content (@ref PrebakedPath) is loaded
+		<b>Two packs.</b> A read-only one shipped in the VPK next to the content (@ref PrebakedPath) is loaded
 		first, then the writable one under the cache path is loaded over it. Writes only ever go to the
 		writable one. That is what makes
 		"precompiled offline" work without an offline compiler: run once on a console, pull the written pack

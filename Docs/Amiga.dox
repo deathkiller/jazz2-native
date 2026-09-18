@@ -84,7 +84,7 @@ export AMIGA_INST=/opt/m68k-amigaos-gcc-16.2
 @m_class{m-noindent}
 
 The release already carries everything this port compiles against except one library. **NDK 3.2**, the
-**CyberGraphX and AHI headers** @m_span{m-text m-dim} (which the NDK itself does not include) @m_endspan
+<b>CyberGraphX and AHI headers</b> @m_span{m-text m-dim} (which the NDK itself does not include) @m_endspan
 and **vasm** @m_span{m-text m-dim} (`vasmm68k_mot`, needed only for `NCINE_WITH_AMMX` -- the AMMX
 kernels are hand-written assembly that no GCC can emit) @m_endspan are all in the archive. What is
 left is **zlib**, the one third-party library the game cannot run without:
@@ -129,9 +129,9 @@ resolves a sibling call @m_span{m-text m-dim} (`bra.l`, and `ld`'s own `60FF`/`6
 conversion) @m_endspan to a *weak* symbol against the wrong address, so any tail call into an inline
 or template function jumps into garbage. Ordinary `jsr` calls to the same symbols are fine, which is
 why the mitigation is this narrow. `-fno-weak` is **not** an alternative: it also removes weak
-*data*, and template statics such as `Vector2f::Zero` then fail to link.</li>
+<em>data</em>, and template statics such as `Vector2f::Zero` then fail to link.</li>
 <li>`-std=gnu++17`, pinned rather than left to CMake. `target_compile_features(cxx_std_17)` is a
-*minimum*, so on a compiler that already defaults higher -- GCC 16 defaults to `gnu++20` -- CMake
+<em>minimum</em>, so on a compiler that already defaults higher -- GCC 16 defaults to `gnu++20` -- CMake
 adds no `-std` flag at all and this target alone would build as C++20. Beyond the inconsistency, the
 toolchain's `<math.h>` pulls `using std::lerp;` into the global namespace under C++20, which is
 ambiguous against the engine's own `nCine::lerp` at every call site.</li>
@@ -149,7 +149,7 @@ even though the library provides it globally.
 Unlike the consoles that play from read-only media, an Amiga has somewhere to write: `Source` and
 `Cache` are resolved next to the executable, so an original *Jazz Jackrabbit 2* installation copied
 into `Source` is converted on the machine on the first start, exactly as on the desktop. It is only
-*slow* --- the conversion decodes every animation, tileset and level and writes a compressed package
+<em>slow</em> --- the conversion decodes every animation, tileset and level and writes a compressed package
 out of them, which is minutes of work on a desktop CPU and a great deal more on a 68060 --- so the
 build is normally pointed at a **prebaked** tree produced once on the host with
 @ref asset-packer "AssetPacker" instead:
@@ -258,7 +258,7 @@ Preset | Pixel budget @m_span{m-text m-dim} (screen mode is chosen to fit) @m_en
 @m_class{m-noindent}
 
 The screen mode is not requested by number: the display database is searched for the RTG mode whose
-*logical* resolution @m_span{m-text m-dim} (the 720×405-clamped aspect fit the game renders at)
+<em>logical</em> resolution @m_span{m-text m-dim} (the 720×405-clamped aspect fit the game renders at)
 @m_endspan is largest within the preset's pixel budget. That is why a 640×400 mode is chosen over a
 640×480 one where both exist — it yields more logical pixels for less work.
 
@@ -578,7 +578,7 @@ online multiplayer is off here anyway.</li>
 @m_class{m-block m-warning}
 
 @par What has been run, and what has not
-**MorphOS has been run**: under QEMU as described above it boots, loads its content from the CD, opens
+<b>MorphOS has been run</b>: under QEMU as described above it boots, loads its content from the CD, opens
 its SDL2 window, initializes the SDL audio backend at 44.1 kHz and renders the menu correctly - all of
 that with the `Software` renderer, which is what the emulator can run. `LegacyGL`, the default on both
 PowerPC Amigas, builds and links for both and is verified against a desktop OpenGL, but **neither

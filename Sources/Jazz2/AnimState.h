@@ -48,6 +48,7 @@ namespace Jazz2
 		Freefall = 0x00010000,				/**< Free-falling */
 		Lift = 0x00020000,					/**< Being lifted */
 		Spring = 0x0040000,					/**< Launched by a spring */
+		RevUp = 0x00080000,					/**< Revving up on the spot before launching into a run */
 
 		// 30th bit: Transition range
 		TransitionRunToIdle = 0x40000000,				/**< Transition from running to idle */
@@ -88,6 +89,13 @@ namespace Jazz2
 
 		TransitionLedge = 0x40000025,					/**< Hanging on a ledge */
 		TransitionLedgeClimb = 0x40000026,				/**< Climbing up a ledge */
+
+		TransitionRevUpStart = 0x40000027,				/**< Start of revving up on the spot */
+		TransitionRevUpEnd = 0x40000028,				/**< End of revving up, as the player launches away */
+
+		TransitionWalkToIdle = 0x40000029,				/**< Last stage of sliding to a halt, below walking pace */
+		TransitionHookIdleFlavor = 0x4000002A,			/**< Idle flourish played while hanging still on a vine */
+		TransitionSidekick = 0x4000002B,				/**< A sidekick played as one animation, ending included */
 
 		TransitionFallShootToFall = 0x40000030,			/**< Transition from shooting while falling back to falling */
 

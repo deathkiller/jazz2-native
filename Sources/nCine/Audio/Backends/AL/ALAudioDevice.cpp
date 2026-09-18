@@ -72,7 +72,10 @@ namespace nCine
 #else
 		_device = alcOpenDevice(nullptr);
 #endif
-		DEATH_ASSERT(_device != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
+		if (_device == nullptr) {
+			LOGE("alcOpenDevice() failed with error 0x{:x}, continuing without audio", alGetError());
+			return;
+		}
 		_deviceName = alcGetString(_device, ALC_DEVICE_SPECIFIER);
 
 #if defined(WITH_LIBRETRO)
@@ -89,8 +92,10 @@ namespace nCine
 		_context = alcCreateContext(_device, nullptr);
 #endif
 		if (_context == nullptr) {
+			LOGE("alcCreateContext() failed with error 0x{:x}, continuing without audio", alGetError());
 			alcCloseDevice(_device);
-			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
+			_device = nullptr;
+			_deviceName = nullptr;
 			return;
 		}
 
@@ -104,9 +109,12 @@ namespace nCine
 #endif
 
 		if (!alcMakeContextCurrent(_context)) {
+			LOGE("alcMakeContextCurrent() failed with error 0x{:x}, continuing without audio", alGetError());
 			alcDestroyContext(_context);
 			alcCloseDevice(_device);
-			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
+			_context = nullptr;
+			_device = nullptr;
+			_deviceName = nullptr;
 			return;
 		}
 
@@ -267,6 +275,10 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		unregisterAudioEvents();
 #endif
+
+		if (_device == nullptr) {
+			return;
+		}
 
 #if defined(OPENAL_FILTERS_SUPPORTED)
 		for (std::int32_t i = 0; i < MaxSources; i++) {

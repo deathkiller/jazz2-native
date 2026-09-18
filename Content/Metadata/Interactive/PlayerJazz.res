@@ -1,4 +1,4 @@
-{
+﻿{
 	"Version": {
 		"Target": "Jazz² Resurrection"
 	},
@@ -98,6 +98,11 @@
 			"Path": "Jazz/buttstomp.aura",
 			"States": [ 256 ]
 		},
+		"HookIdleFlavor": {
+			"Path": "Jazz/vine_idle_flavor.aura",
+			"FrameRate": 8.75,
+			"States": [ 1073741866 ]
+		},
 		"Hook": {
 			"Path": "Jazz/vine_idle.aura",
 			"States": [ 12 ]
@@ -137,7 +142,32 @@
 		},
 		"RunToIdle": {
 			"Path": "Jazz/run_stop.aura",
+			"FrameRate": 10.9,
 			"States": [ 1073741824 ]
+		},
+		"WalkToIdle": {
+			"Path": "Jazz/walk_stop.aura",
+			"FrameRate": 29.2,
+			"States": [ 1073741865 ]
+		},
+		"RevUpSpark": {
+			"Path": "Common/explosion_tiny.aura",
+			"States": [ 1325400080 ]
+		},
+		"RevUp": {
+			"Path": "Jazz/revup.aura",
+			"FrameRate": 5,
+			"States": [ 524288 ]
+		},
+		"RevUpStart": {
+			"Path": "Jazz/revup_start.aura",
+			"FrameRate": 80,
+			"States": [ 1073741863 ]
+		},
+		"RevUpEnd": {
+			"Path": "Jazz/revup_end.aura",
+			"FrameRate": 23,
+			"States": [ 1073741864 ]
 		},
 		"RunToDash": {
 			"Path": "Jazz/dash_start.aura",
@@ -145,6 +175,7 @@
 		},
 		"DashToIdle": {
 			"Path": "Jazz/dash_stop.aura",
+			"FrameRate": 16.7,
 			"States": [ 1073741856 ]
 		},
 		"FallToIdle": {

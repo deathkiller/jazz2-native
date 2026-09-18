@@ -69,11 +69,11 @@ namespace nCine::RHI::GXM
 		the scene in progress and opens a new one over this surface (sceGxm has no "switch the framebuffer"
 		operation - a scene *is* a pass over one surface).
 
-		**One colour attachment.** sceGxm binds a single colour surface per scene, so unlike the desktop
+		<b>One colour attachment.</b> sceGxm binds a single colour surface per scene, so unlike the desktop
 		backends there is no multi-attachment case to bound: the published `MAX_COLOR_ATTACHMENTS` is 1,
 		which is also all the render pipeline uses (every off-screen pass here is a single-target one).
 
-		**No depth storage.** The engine is a 2D renderer that never needs a depth buffer's contents to
+		<b>No depth storage.</b> The engine is a 2D renderer that never needs a depth buffer's contents to
 		survive a pass, and a tile-based architecture gives depth testing *within* a scene from the on-chip
 		tile buffer for free. Every scene therefore shares the one panel-sized depth/stencil surface the
 		device allocates, rather than each target carrying its own - the surface is only ever a scratch area,

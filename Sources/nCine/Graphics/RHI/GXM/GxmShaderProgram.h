@@ -274,7 +274,7 @@ namespace nCine::RHI::GXM
 
 			A **batched** block does not go through the default uniform buffer at all. Its instance array is
 			tens of kilobytes, far past what the SGX's uniform registers hold, so the compiler places it in a
-			*uniform buffer container* - reported as `SCE_GXM_PARAMETER_CATEGORY_UNIFORM_BUFFER` - which is
+			<em>uniform buffer container</em> - reported as `SCE_GXM_PARAMETER_CATEGORY_UNIFORM_BUFFER` - which is
 			bound by address rather than written into. That is why the pipeline's uniform buffers are
 			GPU-visible memory (see @ref GxmBufferObject): the range the batcher filled is handed to sceGxm as
 			a pointer, with no copy at all. Mistaking this case for the copied one is invisible at load time

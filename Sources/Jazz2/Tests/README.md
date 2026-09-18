@@ -1,4 +1,4 @@
-# Movement trajectory probe
+﻿# Movement trajectory probe
 
 A two-sided measurement harness for the game's movement. It drives the player through a fixed matrix of
 scenarios with scripted input and logs its position and speed every tick — **in this engine and in the
@@ -37,8 +37,10 @@ feature. Nothing of it is compiled with the option off, and `/physics-probe` is 
 
 ### This engine
 
-```
-Jazz2.exe /physics-probe /level _pt /log:file:"<path>\test.log" /max-fps:60
+```powershell
+$p = Start-Process Jazz2.exe -ArgumentList '/physics-probe','/level','_pt',
+    '/log:file:"<path>\test.log"','/max-fps:60' -PassThru
+$p.PriorityClass = 'High'
 ```
 
 - `/level _pt` is needed — the probe does not load the level itself, and without it the game sits in the
@@ -46,8 +48,67 @@ Jazz2.exe /physics-probe /level _pt /log:file:"<path>\test.log" /max-fps:60
 - `/max-fps:` pins the tick rate being measured. Run 24, 60 and 144 to check frame-rate independence; the
   probe's own counter runs at the original's 70.021 Hz regardless, so every scenario reaches each of its
   steps at the same *real* time whatever this is set to.
-- A full sweep takes about 20 minutes in a Debug build. The window is per scenario, so it does not shrink
-  much with a higher frame rate.
+- **High priority**, because a sweep runs for the best part of an hour on a machine somebody is still
+  using. It is a precaution rather than a fix for a measured problem — four full sweeps captured during
+  normal desktop use contain no frame interval slower than 30 ms/tick against a nominal 14.3, and the
+  scenario clock runs off `timeMult` rather than wall time, so a hitch cannot move a trajectory. What a
+  hitch *can* move is the settle, which ends on real-time pacing and leaves the player a few hundredths of
+  a pixel apart from run to run — and that is enough to flip the knife-edge scenarios. Cheap insurance.
+- A full sweep takes about **80 minutes** in a Debug build. The window is per scenario, so it does not shrink
+  much with a higher frame rate — selecting fewer scenarios is what shortens a run. See the next section.
+- **It closes itself when the run ends.** `FinishRun()` logs the marker and then quits, so `WaitForExit` is
+  all a runner needs. That matters beyond convenience: the alternative was killing the process by hand,
+  which is fine until the kill lands while the trace is still being written. Quitting goes through the
+  ordinary shutdown, so the asynchronous trace sink is flushed first.
+
+  **The original's probe does not**, and JJ2+ exposes nothing to make it. Its trace is complete either way —
+  it saves after every scenario, not at the end — so a runner there waits for the file to stop growing and
+  then kills the process.
+
+### Measuring only some of the scenarios
+
+A full sweep is about **80 minutes on each side**, so most runs should not be one. Comparisons join on the
+scenario **name**, so a short trace merges with the committed one rather than replacing it — nothing already
+measured is lost by not re-running it.
+
+Three controls, on both probes, and they combine:
+
+| | what it does |
+|---|---|
+| `ScenarioFilter` | comma-separated name **prefixes**; empty runs everything |
+| `FirstScenario` | index to start at |
+| `LastScenario` | index to stop after; `-1` for "to the end" |
+
+**Prefer the filter.** It selects by name, and the same string works unchanged on both probes — which matters
+because the two have never numbered scenarios alike (`sp_lori_side_rock` is 386 here and 381 there), so a
+pair of index ranges has to be re-derived for each side and quietly selects different scenarios when it is
+got wrong. Prefixes let a family be named at whatever depth is useful:
+
+```
+ScenarioFilter = "sp_lori"                  // all of Lori's
+ScenarioFilter = "sp_lori_side_rock"        // just the four pushable ones
+ScenarioFilter = "ob_vine,ob_vpole"         // two families at once
+```
+
+A skipped scenario costs one frame rather than its settle plus its 800 ticks, so four out of four hundred
+take seconds. **Set all three back to their defaults before committing** (`""`, `0`, `-1`): a filtered run is
+not a sweep, and once extracted the two look alike — a CSV with fewer scenarios in it is also what a run cut
+short produces. Each probe writes a `PARTIAL RUN` line into its own header when any of the three is set, so a
+capture says which it is; on the engine's side that line is logged under `[probe-info]` rather than `[probe]`,
+because `ExtractTrace.ps1` turns every `[probe]` line into a row.
+
+One input was long believed to exist on the engine's side only: JJ2+ **does** expose `keyUp`, alongside the
+other seven, and the original's probe simply never drove it. It does now, so a scenario needing Up mirrors
+like any other. What remains true is that `fc_carrot`'s target came from a free-run recording rather than
+from a paired run.
+
+A scenario whose *input* changed needs re-running just as much as a new one, and is much easier to miss —
+its name is already in the capture, so a comparison pairs the two traces happily and reports a difference
+that is really two different manoeuvres. `fc_carrot` did exactly that. When you re-order a scenario's input,
+include its name in the filter for the next run.
+
+The same applies to a scenario whose *props* changed, which is easier still to miss because the input looks
+untouched. Both are why the filter takes names: whatever was edited, its name is the thing you already know.
 
 ### The original game
 
@@ -68,15 +129,15 @@ position snap, which no prop scenario could reach.
 
 ```powershell
 # This engine — the scenario is guarded on the level, so FirstScenario has to be raised to reach it
-#   (set FirstScenario to the index of `dm_chain`, the last case in ApplyInput(), and rebuild)
+#   (set FirstScenario to the index of `dm_chain`, the last case in ApplyInput() — 363 — and rebuild)
 Jazz2.exe /physics-probe /level flash/02_diam3 /log:file:"<path>\d3.log" /max-fps:60
 
 # The original — copy Level/Diam3.j2as next to Diam3.j2l, then
 Jazz2.exe Diam3.j2l          # writes diam3_trace.asdat
 ```
 
-The guard is what keeps it out of a normal sweep: on `_pt` scenario 172 falls through to `return false`, the
-probe reports finished after 171, and the committed `_pt` traces never contain it. **Its traces are
+The guard is what keeps it out of a normal sweep: on `_pt` scenario 363 falls through to `return false`, the
+probe reports finished after 362, and the committed `_pt` traces never contain it. **Its traces are
 committed separately** (`Results/*-diam3.csv.gz`) rather than merged into the main pair — one trace, one
 level's geometry, or the level-version caveat in `Results/README.md` stops meaning anything.
 
@@ -86,22 +147,210 @@ shipped level has **live enemies**, which the test level deliberately does not. 
 original's player nudged by a Turtle Goon that walks over at tick ~1091 — level content arriving, not
 movement, but it is the kind of thing to expect in the tail of a long run.
 
+### Recording a run by hand (free-run mode)
+
+Some mechanics cannot be driven from a script at all. The run-in-place rev-up is the one that forced this:
+`jjPLAYER.keyRun` taps produce **nothing** in the original at any cadence from 2 to 16 taps, with or without a
+release, because it reads the raw key upstream of the script override. The only way to measure something like
+that is to play it by hand and read the trace.
+
+Free-run mode skips the scenario matrix entirely and writes no input at all — the game plays normally, and
+every tick is logged under the scenario name `free` with whatever is really being pressed in the key columns.
+Every other column is exactly as in a sweep, so the same tools read it.
+
+| | Switch | Where |
+|---|---|---|
+| This engine | `FreeRunMode = true` | `PhysicsProbe.h` (rebuild) |
+| The original | `FreeRun = true` | `Level/_pt.j2as` |
+
+```powershell
+# This engine - same command as a sweep; the probe just stops driving
+Jazz2.exe /physics-probe /level _pt /log:file:"<path>\free.log" /max-fps:60
+
+# The original - as usual; it saves every 70 ticks rather than at a scenario boundary,
+# so closing the game by hand still leaves a complete trace
+Jazz2.exe _pt.j2l
+```
+
+**Turn both back off before committing.** A recording is not a sweep, and a trace of one would be mistaken for
+the other — the scenario name `free` is the only thing that distinguishes them.
+
+Two things to know when reading one. The player is never repositioned, so the trace starts wherever the level
+spawned them and there is no settle — compare by `tick` within the recording, never against a sweep's ticks.
+And the key columns are now an *observation* rather than the script's own intent, which is what makes them
+worth reading: a mechanic that depends on press timing shows up as the pattern in `run`, next to what it
+produced in `xs` and `anim`.
+
 ### Extracting and comparing
+
+The committed traces are **split by category**, one file per category on each side, because a full sweep is
+about eighty minutes a side and adding one scenario should not mean regenerating all of it. `Categories.ps1`
+defines them; each is under ten minutes, and the largest are `doublejump` at about nine and `pinball-pad` at
+about eight.
 
 ```powershell
 cd Sources/Jazz2/Tests/Tools
-./ExtractTrace.ps1 -Path ../../../../x64/Debug/test.log -Destination ../Results/engine-60fps.csv.gz
-./ExtractTrace.ps1 -Path <jj2 dir>/_pt_trace.asdat -Destination ../Results/original-70hz.csv.gz
-./CompareTraces.ps1 -Engine ../Results/engine-60fps.csv.gz -Original ../Results/original-70hz.csv.gz
+./ExtractTrace.ps1 -Path ../../../../x64/Debug/test.log -Destination ../Results/engine -Split -Gzip
+./ExtractTrace.ps1 -Path <jj2 dir>/_pt_trace.asdat -Destination ../Results/original -Split -Gzip
+./CompareTraces.ps1 -Engine ../Results/engine -Original ../Results/original
 ```
+
+Both scripts take a directory wherever they used to take a file. `-Split` writes only the categories the
+capture actually holds, so a filtered run replaces exactly those files and leaves the rest of the committed
+set alone. The comparison reads the whole directory back as one set and joins on the scenario **name**, so it
+does not matter which file a scenario came out of, nor whether the categories have been redrawn since.
+
+**To re-measure one category**, ask for its filter and paste that into both probes:
+
+```powershell
+. ./Categories.ps1; Get-CategoryFilter objects      # -> ob_,fc_
+```
+
+Set `ScenarioFilter` to that on both sides, run both, extract each with `-Split`, and the two `objects` files
+are replaced while every other category keeps the capture it already had. Then set the filter back to `""`.
+
+A scenario that matches no category lands in `misc`, and the extractor says so by name rather than letting it
+disappear — that is the prompt to give it a home in `Categories.ps1`.
+
+**A filtered run does not reproduce a sweep's scenario ordering**, and anything that carries between scenarios
+can therefore differ. The reset clears a great deal, but not everything — the morph contamination above is
+proof that the list is incomplete in ways nobody has enumerated. So a filtered run is the right tool for
+"did my change do what I meant", and the wrong one for "did my change break anything else": two scenarios
+moving by 19 px and 2 px in a filtered regression check could not be told apart from their neighbours having
+changed. Confirm a regression against a full sweep of both sides, not a filtered one.
+
+**A filter is often narrower than a category**, which is the case it exists for: re-measuring two scenarios of
+`doublejump`'s fifty. `-Split` therefore **merges** into an existing category file, scenario by scenario —
+what the capture holds replaces what was there, and everything else in that file is kept. It prints how many
+rows it kept, so a narrow run says out loud that it did not just overwrite the category. Without that, one
+filtered extract silently discarded forty-eight scenarios' traces and the only clue was a row count looking
+too small; the ones already committed were only recoverable by re-running them.
+
+`CompareTraces.ps1` compares three things, and the third exists because the first two missed a whole class
+of bug. Positions and the speed *distribution* are the trajectory; **`anim` is the pose**, and a pose can be
+completely wrong while every position and speed is exact — the stop chain is drawn over the base animation
+and moves the player not at all, so a rev-up launch ran its whole length in the sliding-to-a-halt pose and
+scored perfect on both other measures. What it reports depends on which two traces are being compared:
+
+- **Two engine traces** (`-Baseline`): the animation ids mean the same thing on both sides, so it reports
+  **`AnimSame`**, the percentage of ticks where they are equal. That is the sharpest regression check in the
+  tool — a pose that moved by one frame shows up.
+- **Engine against the original**: the two games number their animations differently, so the ids cannot be
+  compared at all. It reports the **segment count** instead (`AnimSegE`/`AnimSegO`) — how many runs of a
+  constant pose each passes through — which is what catches a pose one game shows and the other does not.
+  Reading *which* poses differ still means looking at the two traces by hand, as the stop-chain work did.
+
+`AnimSame` is deliberately strict and that makes it noisy between two separate runs: the idle/bored cycle
+runs for hundreds of ticks, so a scenario that ends up one step out of phase — which the settle's few
+hundredths of a pixel are enough to cause — scores far below 90% while being identical in every way that
+matters. Read it as "which scenarios changed", then look at *what* changed before concluding anything. A
+real change is usually a different id, not the same two ids swapping places.
+
+### Checking the model is frame-rate independent
+
+The movement model is written in the original's per-tick units and scaled onto whatever frame the engine is
+running (`LegacyFrameRateScale`), so a trajectory should depend on elapsed time and not on how finely that
+time was sampled. `CompareFrameRates.ps1` checks that directly, across captures of **one build** taken at
+different `/max-fps:N`:
+
+```powershell
+./CompareFrameRates.ps1 -Traces ../Results/engine,fps60,fps30,fps24 -Labels 144,60,30,24
+```
+
+**Run the four sweeps in parallel** — measured, they do not interfere. Four instances at 24, 30, 60 and
+144 FPS on an 8-core/16-thread machine each held their target with essentially no jitter: within a scenario
+the median frame times were 41.70, 33.30, 16.70 and 7.00 ms with p99 at 41.70, 33.70, 16.70 and 7.00 and
+maxima of 41.70, 34.30, 16.90 and 7.20 — the same figures each produces running alone, at 65% CPU. So a
+four-rate validation is ~70 minutes rather than four and a half hours. Give each its own log file.
+
+**Measure the achieved rate from within a scenario, never across the whole log.** The `ms` column does not
+advance during the reset and settle between scenarios, so a naive diff of consecutive rows reports the gap
+as a 300 ms frame and makes a clean run look like it is hitching badly. Group by the scenario name first.
+This matters more than it sounds: `timeMult` scales with the real frame time, so a genuine 300 ms frame
+would advance the physics by twenty frames' worth in one step and a trajectory really would move.
+
+Nothing needs converting first, which is the part worth knowing: `x`/`y` are absolute pixels, `tick` is
+already in the original's tick units on every capture (the probe advances it by `timeMult * 70.021/60`, so a
+frame is 2.92 ticks at 24 FPS and 0.49 at 144 and the tick *range* is the same either way), and `xs`/`ys` are
+pixels per 60 Hz-equivalent frame by the engine's own convention and so are already normalised — which is
+also why `CompareTraces.ps1` multiplies by a fixed 60 whatever rate a capture was taken at. The comparison
+is therefore a plain position difference on a shared tick grid, taken from the **coarsest** capture, with
+the others interpolated onto it.
+
+**This and the cross-game check answer different questions, and you want both.** All four rates can agree
+with each other and all four disagree with the original — that is a model error, not a sampling one — so run
+`CompareTraces.ps1` against the original at each rate as well. The reverse also happens: two rates can score
+the same against the original while taking visibly different routes, because the speed-distribution metric
+is phase-insensitive by design.
+
+Expect the low rates to be the interesting ones. A 24 FPS frame is nearly three of the original's ticks, so
+anything decided by a key edge, a tile boundary or a one-tick window is sampled coarsely enough to fall on
+the other side of it — and that is a genuine property of running the game at 24 FPS, not a harness artefact.
+
+### What the original's animation ids mean
+
+The original logs `jjPLAYER.curAnim`, a bare number with no name attached, and nothing maps it. These were
+read off scenarios whose pose is not in doubt, which is the only way to get at them — the id is whatever
+that scenario is visibly doing. They are **Jazz's**; the other two characters number their own sets.
+
+| id | Pose | Read from |
+|---|---|---|
+| 66 | Idle | `g_stand`, and the tail of most scenarios |
+| 59 | Walk | `g_walk` |
+| 60 | `dash_start`, the spinning feet between 4 and 8 px/tick | `g_dash`, ticks 12–22 |
+| 61 | Dash | `g_dash` |
+| 63 / 62 / 64 | The stop chain: skid, slide, settle | `an_slide_stop`, at ticks 91, 103 and 131 |
+| 44 | Rising | `a_jump`, `fu_col_none` |
+| 16 | Falling | `a_jump`, `fu_col_none` |
+| 26 / 27 | Vine hang / vine idle flourish | `ob_vine_low`, alternating 70 ticks each |
+| 29 / 28 | Vine shoot pose (held) / vine shoot return (3 frames) | `an_vine_shoot` |
+| 58 | The curled ball a pole or tube ride holds | `ob_vpole`, and all 800 ticks of `tb_down` |
+| 36, 37, 38 | Sucker tube, other directions — not separated yet | `tb_right`, `tb_row` |
+| 10 | Crouch | `sp_jazz_upper` holds it from t21 to the uppercut at t41 |
+| 65 | Buttstomp, the hold at the top | `sp_jazz_butt` t71–t105, at `ys` 0.0625 |
+| 17 | Buttstomp, the descent | `sp_jazz_butt` t110, at `ys` 10 |
+
+**Lori's** are her own, derived the same way from `sp_lori_side`, `sp_lori_butt`, `sp_lori_copter` and
+`sp_lori_copter_fwd`:
+
+| id | Pose | id | Pose |
+|---|---|---|---|
+| 226 | Idle | 204 | Rising |
+| 170 | Crouch | 176 | Falling |
+| 229 | Sidekick (the whole kick, 9 frames) | 190 | Copter |
+| 225 | Buttstomp, the hover | 177 | Buttstomp, the descent |
+| 219 | Walking | 217 / 216 | Rising / falling with speed |
+
+**Spaz's** three ground-run ids fell out of the animation-rate measurement rather than being read by eye, and
+that is a second way to get at an id worth knowing about: 137, 138 and 139 hold a frame for exactly the same
+number of ticks as Jazz's 59, 60 and 61 do at every speed either of them is ever seen at — 8 ticks at speed 4,
+1 tick from 11 up — which no other pair of animations does. So they are his walk, `dash_start` and dash. The
+rest of his set is still underived; `sp_spaz_side` shows 145, 143, 94 and 122 cycling, which is where to start.
+
+Add to these rather than re-deriving them: each row cost a scenario read by hand, and a wrong guess about an
+id is indistinguishable from a wrong guess about a mechanic.
+
+Two things make that cross-game count mean anything, and without either it is mostly noise:
+
+- What this engine **draws** is `tranim` when a transition is playing and `anim` otherwise; the original
+  logs one `curAnim` that already is whichever is on screen. Comparing our base state against that
+  undercounts every pose the stop chain and the special moves draw over it — `g_dash_rel` reads 4 poses
+  against the original's 7 that way, and 7 against 7 with the transition folded in.
+- Poses shorter than **4 ticks** are dropped. The two traces do not have the same number of rows for the
+  same scenario (686 against 800), so a pose lasting a tick or two can land in one sampling and fall
+  between rows in the other. Four ticks is where the plain scenarios start agreeing exactly — `g_walk`
+  1/1, `g_dash` 3/3, `a_jump` 7/7 — instead of differing by sampling alone.
+
+Captures made before the `anim` column existed simply report nothing for it; the column is located by
+**name** rather than by index, because the two sides do not agree on column order.
 
 ## Columns
 
 Close but not identical on the two sides, and each CSV's header says which it is:
 
 ```
-original   scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy
-engine     scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr
+original   scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame
+engine     scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp
 ```
 
 `x`/`y`/`xs`/`ys` are sampled **after** the tick's movement; the key columns are the input applied *during*
@@ -113,6 +362,25 @@ previous move, and crouching, which is what tells a move that *did not happen* a
 differently. `jrel`/`spr` are the two flags that pick the rise gravity — jump released, and launched by a
 spring — logged because which one an ascent decays under does not show up in the position for several
 ticks, and a stale `jrel` once cut a blue spring from 597 px to 256.
+
+`camx`/`camy` are the **camera's offset from the player**, not its absolute position, so the two games are
+comparable without either one's view size entering into it. They are appended at the end on both sides
+rather than inserted, because the two column sets already disagree about where `objx` sits and anything
+reading a fixed index would move under it. They are logged on *every* scenario, so the whole existing matrix
+doubles as camera coverage — the horizontal pan at both speeds is in `g_walk*`/`g_dash*`, the vertical
+behaviour through a jump is in `a_*`, and the sidekick's camera is in `sp_spaz_side*`. No `cm_*` family was
+needed.
+
+**The two sides do not log the same convention**, and it was read off the data rather than assumed: on
+`g_stand`, where the player is at rest, the original reports exactly `−400.000, −225.000`, so its
+`jjPLAYER::cameraX`/`cameraY` are the view's **top-left corner** on an 800×450 subscreen. This engine logs
+the **centre** (`LevelHandler::GetCameraPos`). Add half the subscreen to the original's figures to compare
+them — `Tools/CompareCam.ps1`-style analysis does exactly that. Forget it and every original row looks like
+a camera lagging the player by a third of a screen.
+
+Worth knowing separately: this engine's own `jjPLAYER::get_cameraX()` returns the centre, so it does *not*
+match JJ2+ here. That is a script-compatibility bug rather than a probe one, but it is why the engine-side
+column needed no adjustment while the original's did.
 
 ## Scenario groups
 
@@ -147,8 +415,12 @@ ticks, and a stale `jrel` once cut a blue spring from 597 px to 256.
 | `tb_*` | Sucker tubes. `tb_right/left/up/down/diag` measure the speed assignment on each axis, `tb_fast` at 20 px/tick, `tb_wait` a parameter this engine parses and ignores, and `tb_gap1`–`tb_gap5` nine tubes in a row with one to five empty tiles between them. Read the **speed profile**, not the travel: the assignment matches exactly on both sides and what differs is how long the hold lasts and what the release does |
 | `ob_spring_down`, `ob_spring_keepx`, `ob_spring_keepy`, `ob_spring_delay`, `ob_spring_h_rev` | The spring parameters — orientation-down, Keep X, Keep Y, Delay and Reverse, none of which any other spring scenario sets. **Two rules make these work, and both were learned the hard way.** A spring must be placed as a *tile event at the reset* and **forty tiles east** of the origin: the game only spawns an object from an event when it first scans that region, and the region around the origin was scanned at level start, so an event written there never appears at all — at the reset or at the run start. And it must not spawn **on top of** the player, or it never fires; the two scenarios that stood on their own spring measured nothing until they were moved aside and the player made to arrive. `ClearProps()` deletes the spawned object as well as the tile, out to 1600 px, or each scenario runs in the pile the last one left |
 | `dm_chain` | **Runs in a different level**: the original game's own Diamondus 3, whose west end holds a spring chain nobody built for a test — a one-tile shaft at x=1 with a horizontal blue spring at (1,45) at the bottom, feeding red and green springs and a horizontal pole at (11,52). Dropped in at (1,36) with nothing held for 15 s. Shipped geometry the constants were never fitted against, which is exactly what makes it worth running: it found the horizontal spring's position snap. See *Running it in another level* below |
+| `sl_up_j*` | Jumping into a 45-degree up-slope, the same face `sl_up_walk`/`sl_up_run` climb, entered with the same run-up. What these measure is **`xs` over the climb, not a height**: the report is that the original keeps its horizontal speed and re-jumps off the slope face over and over, where this engine mostly kills the speed or refuses the jump. `_jhold` dashes, `_jhold_walk` does not, and `_jtap` taps the key — the tapped one is what tells a re-jump that needs a fresh press apart from one continuous jump produces on its own, which a single trace cannot separate |
+| `sl_up45_*` | The same question as `sl_up_j*` against a **true** 45-degree face, which is what that trio turned out to lack: the level's designated "up" slope is 6 tiles by 5, shallower than the 45 degrees a dashing jump travels at, so the jump clears it and both games keep their speed. These run **leftwards up the long slope** at tiles (193,41)–(210,57), 17 by 16, entered three tiles clear of its foot. This is the geometry where `TryMoveSubstep()`'s airborne climb gate, `abs(stepX) > abs(stepY)`, is false at exactly equal steps |
+| `rt_*` | Tapping Run **on the spot**, nothing else pressed, so any `xs` at all is the mechanic — a standing player has no other way to acquire one. `rt_hold` is the control and the other three tap at 6-, 10- and 20-tick periods; three cadences because one cannot tell "each press adds something" from "a press has to land inside some window". All four end with the same jump, so the launch speeds are directly comparable and the reported extra tile of height is readable off the arc |
 | `lc_*` | Ledge climb — **engine only**, the original has no such move, so these have no counterpart |
 | `jr_*` | Which rise gravity a spring launch decays under — **engine only**, a regression guard rather than a measurement: both reach the same spring the same way and differ only in whether jump was released on the way in, so the two traces must agree |
+| `ow_*` | One-way floors, on the ladder of seven 3-tile platforms at tiles 27..29, rows 33, 31, 29, 26, 23, 19 and 15, standing on the bottom rung. `ow_jump` rises through two and comes down on one, `ow_hop` peaks level with the next one up, `ow_down` and `ow_down_fall` hold Down standing on one and through the fall onto one, and `ow_hold` never lets the jump key go. Read **`ow_hold`**: crossing a platform with jump held relaunches the jump, so any scenario that *releases* the key near a crossing is decided by that tick rather than by the rule (see the hazard below) |
 
 ## Scenarios that do not measure the same thing on both sides
 
@@ -201,9 +473,71 @@ geometry at the bottom opens out — read it launch by launch, as with any chain
 
 ## Things that have gone wrong before
 
+- **Re-running a category at a different frame rate from the rest of the set.** The committed engine
+  capture is at **144 FPS**, not the 60 `Results/README.md` claimed until 2026-09-17, and the whole set is
+  at that rate. Four categories re-captured with `/max-fps:60` as documented dropped eleven scenarios out
+  of the 25 px/s band with no change capable of reaching most of them — nine of those moving from *exactly*
+  12.5 to *exactly* 29.9, which is the shape of a sampling artefact and not of a movement one. The metric
+  is a distribution over sampled ticks, so scenarios that spend most of their run standing still
+  (`wb_wallfind`, `ob_vine_run`, `wb_dash_j*`) are the ones it moves, and they are exactly the scenarios
+  nobody looks at twice. **Check the rate before trusting a partial re-run**: divide a scenario's row count
+  by its last `tick`, which is ~2.06 at 144 FPS and ~0.86 at 60, or read the `ms` column, which steps
+  7.00 ms against 16.70. Pass `/max-fps:` explicitly every time; an uncapped Debug build lands near 143 on
+  one machine and somewhere else on another.
+- **Reading one scenario's divergence as a regression.** Most scenarios repeat to a hundredth of a pixel,
+  but a few decide something late on a margin of a few pixels — whether the player clears a wall, catches a
+  ledge, lands on a platform — and those swing wildly. `sp_dj_a_dashflip` is the known one: three runs of
+  the *same* build gave a final x of 1936.8, 1999.6 and 1996.2, and a fourth, inside a full sweep, flew
+  1900 px further by missing a wall the other three hit. Against the original that read as a 1899 px travel
+  regression. **`lh_g3_walk` is the other**, and it is worse: three runs of the same build gave 10014.3,
+  8149.0 and 10014.8 — a 1865 px swing between two outcomes, because the walk reaches the gap's edge with
+  the same few hundredths of a pixel that the settle varies by. Four consecutive sweeps had agreed on 8149
+  before the fifth did not, which is exactly how it gets mistaken for a regression. Before blaming a change,
+  re-run the one scenario two or three times on the current build — it takes a minute, and the alternative
+  is bisecting a build.
+- **Using the machine while a sweep runs.** Mostly harmless, and measured rather than assumed: across four
+  full sweeps captured while the PC was in use there is **not one** frame interval slower than 30 ms/tick
+  against a nominal 14.3, and the scenario clock runs off `timeMult` rather than wall time, so even a real
+  hitch would not move a trajectory. What *can* reach the player is any input action the probe does not
+  overwrite — it drives seven and there are twenty-one. The weapon bindings were the dangerous half, since
+  `wb_rf_*`, `wb_sk_t*` and `wb_tnt_t*` select a weapon at setup and assume it is still selected when they
+  fire; a stray number key would have read as a knockback constant being wrong. The probe now clears
+  `ChangeWeapon` and all ten `SwitchTo*` every tick. `Menu` and `Console` are left alone on purpose: they
+  open UI rather than moving the player, and taking them away would trap whoever is at the keyboard.
+- **A powerup monitor is *consumed*, so the scenario that uses one takes it away from every scenario after
+  it.** The same class as the pushable below and worse, because the object does not merely move — it stops
+  existing. Three scenarios were written to land on the same monitor and only the first one found it; the
+  other two fell to the floor and measured a player standing on nothing, which looks exactly like the
+  mechanic under test failing. The tell was in `objx`: the ammo count changed at the moment of contact, which
+  is the powerup being collected. **One monitor per scenario that breaks one**, and if there are not enough
+  in the level, add them rather than sharing — a shared one is a scenario that silently stops measuring.
+- **The level's own pushable is never reset, so a scenario that moves it poisons every later one.**
+  `ClearProps()` takes out what a scenario *spawned*; the rock and the box belong to the level and stay
+  wherever they were last shoved. `ob_push_box` and `ob_push_rock` shove them deliberately, and so does
+  anything that drives into one. It cost `sp_spaz_side_rock` its whole measurement: `sp_lori_side_rock` ran
+  first and pushed the rock 96 px along, and his start — computed from the **event map**, which does not
+  move — then put him past it, so he kicked his full unobstructed distance and never met it. The symptom is
+  a scenario that measures a clean *unobstructed* number when it was aimed at an obstacle.
+
+  **Restoring it at the reset was tried and reverted — do not repeat it.** Writing `xPos`/`yPos` straight
+  onto the object leaves the original's rock hanging **in mid-air**: nothing re-settles it, so it simply
+  stays where it was put. It also has to be scoped, because the level holds more than one pushable and
+  `PushableX` is only the first the event scan met, so a blanket loop stacks them all on one spot. Neither
+  problem is worth solving for this: **order the scenarios so the one that moves it runs last**, which costs
+  nothing and cannot break the level. The pair that need a rock in front of them are deliberately run with a
+  raised `FirstScenario` for the same reason.
 - **`FirstScenario` left raised.** Both probes have one, meant for re-measuring only the newest scenarios
   while iterating. A raised value silently skips everything before it, which has been mistaken for
   scenarios that stopped working more than once. Leave both at 0 when committing.
+- **Putting a key edge next to the event it decides.** This engine's probe reaches a scenario's step about
+  two of the original's ticks behind the original probe, throughout. That costs nothing where the
+  measurement is where the player ends up, and everything where a *release tick* lands near something the
+  key state decides. `ow_jump` used to release jump at tick 50, with the original crossing a one-way
+  platform at 49 and this engine at 52 — and since crossing one with jump held relaunches the jump, the two
+  runs differed by a whole jump's height and it read as a 50 px physics error. Keep such an edge several
+  ticks clear of the event, or hold the key for the whole scenario the way `ow_hold` does. The same shape
+  as the chaotic-outcome hazard above, but deliberate rather than accidental: here the scenario's own input
+  put the edge there.
 - **Extracting while the run is still going.** Neither game is a console application, so PowerShell's call
   operator does **not** wait for it: `& .\Jazz2.exe /physics-probe ...` returns immediately and
   `$LASTEXITCODE` comes back empty. Extract at that point and you get however much of the log had been
@@ -226,6 +560,87 @@ geometry at the bottom opens out — read it launch by launch, as with any chain
   suspend state, the special move and the controllable flags, and takes the tile events out before the
   settle rather than after it. Any trace captured before that fix may be contaminated in whatever followed
   a `ob_vpole*`, `ob_hpole*` or `ob_vine*` scenario.
+- **A morph at the reset doubles the next scenario's ground acceleration, in the original only.** The worst
+  kind of contamination: it is invisible, it is *plausible* — a slightly fast scenario reads as a physics gap
+  rather than a harness fault — and it applies to every scenario the original runs after a character change,
+  which is a large and scattered set. Found by accident. A new scenario came out 10% short, and chasing it
+  through the units (engine columns are px/frame, the original's px/tick — the launch speeds were identical
+  once converted) left only the walking approach, where the original reached the 4 px/tick cap in 12 ticks
+  against our 24. The original was the odd one: its own `g_walk` accelerates at our rate, and so does
+  `ob_spring_red_h` with the same prop and the same input.
+
+  Three runs settled it, each a couple of minutes thanks to the filter. **Alone**, the scenario matched
+  perfectly. **After a Jazz scenario** it doubled. **After an already-Spaz scenario** it matched again. Only
+  a `morphTo` in between reproduces it, and it is not a held key — clearing the inputs at the reset and
+  releasing Up before the boundary both changed nothing.
+
+  The settle is what let it through: a morphed player stands perfectly still, so the at-rest test ends the
+  settle immediately and hands the contamination straight to the run. The reset now records that it morphed
+  and the settle waits `MorphSettleTicks` out regardless of how still the player is.
+
+  **How much it actually mattered, measured rather than assumed.** Re-sweeping the original with the fix and
+  diffing against the previous capture moves **8 scenarios** by more than a pixel, not the large scattered
+  set the character lists suggested: `cl_dj_walk` by 214 px, `sl_up45_jhold` by 69, `sp_dj_hspring` by 22 and
+  five others by about 4. Most scenarios either never accelerate from rest or reach a cap so quickly that
+  twice the acceleration makes no difference by the time anything is measured. Worth knowing before warning
+  anyone that a whole baseline is suspect — I did, and it was not.
+
+  It is also worth knowing that the bug this was found while chasing was **not** this one: `sp_dj_hspring`'s
+  10% gap survived the fix nearly untouched. Two real faults in the same trace, and the loud one was the
+  harness.
+- **Writing a scenario whose input cannot reach the prop it places.** The same failure as the one below and
+  harder to spot, because the event *is* there. `ob_vine` and `ob_vine_run` placed a vine three tiles up and
+  jumped for five ticks: that rises 77 px against the 96 it needed, so for as long as they have existed
+  neither has grabbed anything. Both games did nothing, so both agreed, and two scenarios sat in the suite
+  measuring a plain short jump under a name that said otherwise. `sp_dj_vine` and `ob_vpole_exit` were
+  written by copying them and inherited it on the first run.
+
+  Dropping the vine a tile did not fix it either, and the reason is worth knowing: `ty` in `SetupProps()` is
+  derived from `_groundY`, which is where the player's **centre** rests, not where the floor tile is. Two
+  tiles up is therefore 80 px and not 64, so a 77 px jump was still 3 px short — and being 3 px short reads
+  exactly like being 19 px short. Both now jump for eight ticks instead of five, which clears it with about
+  25 px to spare. What catches this is the **`susp` column**: a
+  vine or pole scenario that never shows a non-zero suspend state never engaged, whatever its positions look
+  like. Worth checking against a scenario known to work — `ob_vine_low`, `ob_vine_drop` and `an_vine_shoot`
+  all suspend, and they all meet the level's own low vine from below rather than placing one overhead.
+- **Writing a scenario against an event the level does not contain.** It does not fail; it measures a player
+  standing still and reads as perfect agreement, because both games have nothing to interact with. The prime
+  step now prints a `[census]` line per event type the level holds, with a count and the first tile, so this
+  can be checked before a scenario is written rather than after it has quietly passed. What `_pt` contains
+  today: vines, one-way modifiers, both pole kinds, float-up and fly-off areas, springs, the pushable, both
+  pinball parts, a turtle and the flying carrot. What it does **not** contain: warps, morph monitors and the
+  powerup monitors — so the reported behaviours around those have no scenario yet. Most props are placed at
+  the reset rather than authored into the level (see `SetupProps()`), so a monitor could be placed the same
+  way; a warp could not, because its target is registered when the level loads.
+- **The two object columns do not always carry the same thing on the two sides.** `objx`/`objy` are shared
+  between a pushable's position, an ammo count, an animation id and an enemy's position, and which one a
+  scenario gets is decided by a list of index ranges in each probe separately. One of this engine's was
+  open-ended — `scenario >= 142` — where every one of the original's is bounded, so the four scenarios whose
+  entire question is what a kick does to a rock were quietly answering with an ammo count while the original
+  answered with the rock. Nothing in a diff of the two says so; the column has a number in it either way.
+  Check what each side puts in those two columns before reading a single value out of them.
+
+  Chasing that one down found the same split running the other way and much wider: everything from `sl_rf_up`
+  onwards — `142` here, `146` there, two hundred-odd scenarios — got the ammo on this side and the pushable
+  on the original's, because the original had no clause for the tail at all. Both now read: the weapon
+  sweep and everything after it carry the ammo, except the four `*_side_rock` ones, where the rock *is* the
+  measurement. The two probes number scenarios differently, so a range written on one side has to be
+  re-derived from the **names** on the other, never offset — 142 here is 146 there, but 383 here is 378.
+- **The reset does not restore the facing, so a scenario with no direction key inherits it.** Which is fine
+  until the scenarios are reordered. Moving the four `sp_*_side_rock` ones so that the one that shoves the
+  rock ran last put it straight after the one that turns the player round to kick leftwards — and with no
+  direction of its own it kicked a thousand pixels the *other* way, away from the rock entirely. Worse, it
+  did so on both sides at once and therefore in perfect agreement: the totals matched to a pixel and the
+  scenario measured nothing whatsoever. A two-tick direction tap at the start fixes the facing and is over
+  long before anything else in the scenario begins; every one of the four now carries one, including the
+  three that already faced the right way.
+
+  Looking for others found `sp_lori_kick_rep`, which had been doing this since it was written: the original's
+  runs after a double-jump scenario that ends with Left held and this engine's does not, so the two sides had
+  been kicking in **opposite directions** and comparing the distances. Every sidekick scenario without a
+  direction of its own now taps too — `sp_spaz_side`, `sp_lori_side`, both `_rel`, `sp_lori_kick1`,
+  `sp_lori_kick_rep`, `sp_lori_side_hold`, `sp_lori_side_fire`. A scenario with no direction key is worth a
+  second look whenever one near it is reordered, renumbered or added.
 - **A prop left over from the previous scenario acts on the player during the settle.** Spawned objects
   used to be removed just before the run rather than at the reset — so a spring still sitting under the
   player's feet launched them while the next scenario was lining up, and that scenario's first logged tick

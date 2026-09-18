@@ -36,7 +36,7 @@ The rendering backend is not a choice on the first eight --- `NCINE_PREFERRED_RH
 one backend the console has and any other value is a configure error. The PlayStation 3 is the
 exception among them: its pin is to `RSX`, which unlike the six fixed-function backends is a full
 shader backend, so it keeps the post-processing chain and differs from a desktop build mainly in
-*when* its shaders are compiled @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita
+<em>when</em> its shaders are compiled @m_span{m-text m-dim} (see @ref consoles-ps3) @m_endspan. The PS Vita
 and the Switch are ordinary shader platforms that happen to be consoles, so most of what follows
 applies to them only in the deployment part.
 
@@ -88,7 +88,7 @@ produce it. Any of the retail versions works, as does the Shareware Demo
 
 @m_class{m-noindent}
 
-**1. Build the tool.** It is host-only and part of the regular desktop configuration
+<b>1. Build the tool.</b> It is host-only and part of the regular desktop configuration
 @m_span{m-text m-dim} (`NCINE_BUILD_ASSET_PACKER`) @m_endspan, so any desktop build directory
 already has it. Naming the target builds only the tool rather than the whole game:
 
@@ -101,7 +101,7 @@ cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 The binary lands at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
 
-**2. Convert.** A conversion has **two** inputs --- the original game data and the game's own content,
+<b>2. Convert.</b> A conversion has **two** inputs --- the original game data and the game's own content,
 none of which is derived from the other --- and they are named separately, so nothing has to be staged
 or copied together first. The second of them is the repository's own @cpp "Content" @ce:
 
@@ -141,7 +141,7 @@ Demo, `--skip-non-episode-levels` drops the levels belonging to no episode, and
 means re-encoding either way) @m_endspan shrinks the cinematics. All four exist to make the tree
 smaller, which is what a read-only disc and a cartridge care about.
 
-**3. Check what came out.** A complete tree looks like this, and the conversion prints what it wrote
+<b>3. Check what came out.</b> A complete tree looks like this, and the conversion prints what it wrote
 as it goes:
 
 @code{.shell-session}
@@ -159,7 +159,7 @@ build/ConsoleContent/Translations/…        # the ".mo" files
 tree work. A tree with @cpp "Source.pak" @ce in its place came from the `desktop` profile and is not
 what a console wants.
 
-**4. Point the console build at it** with `NCINE_CONTENT_DIR`:
+<b>4. Point the console build at it</b> with `NCINE_CONTENT_DIR`:
 
 @code{.sh}
 cmake -B ./build/<console>/ … -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
@@ -281,7 +281,7 @@ off when cleared.
 
 The backends that mix on the main thread are fed once per rendered frame, so anything that blocks that
 thread for longer than they have queued ahead starves them --- a level load above all. What starving
-*sounds* like is the hardware's business and is not always silence, so the engine announces such an
+<em>sounds</em> like is the hardware's business and is not always silence, so the engine announces such an
 operation rather than leaving each backend to discover it: @ref nCine::IAudioDevice::beginBlockingOperation()
 and its counterpart are called around the level load and the episode scan, and are a no-op on every
 backend but the PlayStation 2's, which stops its stream for the duration
@@ -356,7 +356,7 @@ creates on the first streamed sound, and `enqueue()` **never waits for it**. Nei
 obvious, and both were measured on the PSP, where decoding the module music of a level costs about a
 quarter of the whole CPU. Filling every free buffer per call looks harmless but is not: only one chunk
 is ever decoded ahead, so after consuming it the loop would find the request idle and decode the rest
-*on the calling thread* --- 8 ms of every frame, while the decoding thread sat unused. Waiting for a
+<em>on the calling thread</em> --- 8 ms of every frame, while the decoding thread sat unused. Waiting for a
 chunk that is still being decoded is worse again, because a decoding thread only gets the CPU the main
 thread is not using: a frame that had fallen to 130 ms spent 55 ms of it stopped in that wait, and the
 wait made the next frame later still. So a chunk that is not ready yet simply is not queued. The music
@@ -457,7 +457,7 @@ does more work rather than less:
 
 -   The backends with shaders @m_span{m-text m-dim} (`GL`, `GXM`, `RSX`, `D3D11`, `Vulkan`) @m_endspan
     let the hardware pull vertices through the index buffer, which is also where the third fewer
-    *shaded* vertices come from. Base-vertex addressing makes every chunk index from zero; the
+    <em>shaded</em> vertices come from. Base-vertex addressing makes every chunk index from zero; the
     OpenGL|ES profiles below 3.2 have no @cpp glDrawElementsBaseVertex() @ce and fold the base into the
     vertex format's offset instead @m_span{m-text m-dim} (@cpp RenderCommand::Issue() @ce) @m_endspan.
 -   The fixed-function backends @m_span{m-text m-dim} (`GU`, `GX`, `PVR`, `GS`, `RDP`, `PICA`, `LegacyGL`) @m_endspan
@@ -714,7 +714,7 @@ re-encoded files are *larger* than the originals, which is the deliberate trade.
 
 Two more things this console does not forgive, both because it never gets a second chance at runtime:
 
--   **The tree must already carry @cpp "Prebaked.pak" @ce.** Unlike the PlayStation 2 and Nintendo 64
+-   <b>The tree must already carry @cpp "Prebaked.pak" @ce.</b> Unlike the PlayStation 2 and Nintendo 64
     packaging steps, the Dreamcast one does not rename a @cpp "Source.pak" @ce on the way in, so a
     `desktop` profile cache handed to it produces a disc the game marks as verified, loads nothing
     from, and shows a main menu with no episode on. Check for the file, not for the directory.
@@ -818,10 +818,10 @@ crash also loses everything written since the last flush.
     @m_span{m-text m-dim} (bursts are coarsened rather than truncated, so an explosion still looks
     like one) @m_endspan, the outgoing level's assets are released before the incoming level loads,
     and the host copies of PVR textures are kept RLE-compressed. On top of the budgets the user has the
-    **"Particle Quality"** option in Options > Graphics @m_span{m-text m-dim}
+    <b>"Particle Quality"</b> option in Options > Graphics @m_span{m-text m-dim}
     (@ref Jazz2::ParticleQuality, on every platform) @m_endspan: *Low* leaves out every other particle of
     a burst and halves the weather density, *Off* drops the debris and weather effects entirely, and
-    *High* is the unrestricted effect; every producer in @ref Jazz2::Tiles::TileMap honours it.
+    <em>High</em> is the unrestricted effect; every producer in @ref Jazz2::Tiles::TileMap honours it.
 -   **Audio costs almost nothing in main memory here**, which is worth knowing on a console whose
     heap is the binding constraint: the AICA has its own **2 MB of sound RAM** and every fully
     loaded sound effect lives there, not on the 13.8 MB heap. What main memory does hold is the
@@ -1067,7 +1067,7 @@ transition and the 2x/4x output scales of the combine passes are single-pass com
 
 @subsection consoles-3ds-toolchain Toolchain
 
-**devkitPro** publishes everything through its pacman repository: the `3ds-dev` group
+<b>devkitPro</b> publishes everything through its pacman repository: the `3ds-dev` group
 @m_span{m-text m-dim} (devkitARM, libctru, citro3d, the `3ds-cmake` toolchain files and the
 `3dstools`, `picasso` and `bin2s` the packaging step runs) @m_endspan and three ports: `3ds-zlib` for
 the compressed content, `3ds-curl` and `3ds-mbedtls` for the update check and the online server list:
@@ -1374,7 +1374,7 @@ anything else can fail, so the console always has a way out even if initializati
     Adrenaline. Nothing is written to the log, because the thread that would write it is already gone.
     What did this was one line of the HUD, which resolved an animation's current frame as
     @cpp animTime * FrameCount / AnimDuration @ce --- correct for an animation, a division by zero for a
-    *static* image, which legitimately has no duration. The weapon wheel's dim backing sprite
+    <em>static</em> image, which legitimately has no duration. The weapon wheel's dim backing sprite
     @m_span{m-text m-dim} (`UI/dim.aura`, a single 16x16 frame) @m_endspan is one, so opening the wheel
     killed the game every time. On a desktop the division yields infinity, the `% FrameCount` that
     follows hides it, and the frame comes out as 0 anyway --- which is exactly why no emulator and no
@@ -1385,11 +1385,11 @@ anything else can fail, so the console always has a way out even if initializati
     division for a looping animation of no duration.
 
     The general lesson for this port: an expression that is merely *sloppy* on a desktop can be
-    *terminal* here, and it will not leave a diagnosis behind. It was found by making the weapon wheel
+    <em>terminal</em> here, and it will not leave a diagnosis behind. It was found by making the weapon wheel
     enable its parts in stages and logging each one, which is worth remembering as a technique --- no
     amount of logging can localize a fault that stops the machine, because the log dies with it.
 
--   **A GE store must not be freed while a display list still references it** @m_span{m-text m-dim} (a latent hazard found while chasing the above, not its cause) @m_endspan**.** Commands are written
+-   **A GE store must not be freed while a display list still references it** @m_span{m-text m-dim} (a latent hazard found while chasing the above, not its cause) @m_endspan<b>.</b> Commands are written
     into a list that is only kicked at `sceGuFinish()` in `GuDevice::PresentFrame()`, so between a draw
     being recorded and the GE reading it there is a whole frame's worth of window --- and a level load
     creates, replaces and drops textures right in the middle of it, while the loading screen is being
@@ -2294,7 +2294,7 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     ENet includes was once given as the blocker here turned out to be an unused include --- the only
     @cpp "ioctl()" @ce in the library is @cpp "ioctlsocket(FIONBIO)" @ce in its `_WIN32` arm, and every
     POSIX target uses @cpp "fcntl()" @ce instead --- so it is simply not included on this target.
--   **VitaSDK's @cpp "inet_pton()" @ce does not follow POSIX**, and it takes HTTPS down with it. Its
+-   <b>VitaSDK's @cpp "inet_pton()" @ce does not follow POSIX</b>, and it takes HTTPS down with it. Its
     `AF_INET` arm forwards to @cpp "sceNetInetPton()" @ce and collapses any negative result to -1, so a
     host name comes back as -1 where POSIX requires 0 @m_span{m-text m-dim} (-1 is reserved for an
     unsupported address family) @m_endspan. Both callers here test the result for truth rather than for a
@@ -2305,7 +2305,7 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     @cpp "if (!inet_pton(...)) return -1;" @ce, accepts an address it never parsed. Replacing the function
     fixes both --- see @cpp "Sources/nCine/Backends/Vita/VitaLibcCompat.cpp" @ce. Until it was, the update
     check and the public server list had been failing here for the same reason.
--   **@cpp "sceNetSendmsg()" @ce caps the number of iovecs**, well below the 65 buffers ENet may hand
+-   <b>@cpp "sceNetSendmsg()" @ce caps the number of iovecs</b>, well below the 65 buffers ENet may hand
     over for one datagram @m_span{m-text m-dim} (the protocol header plus two per command) @m_endspan. A
     send of 33 buffers came back `EMSGSIZE` @m_span{m-text m-dim} (SCE error 0x28) @m_endspan, which
     happens exactly when a burst of reliable commands is acknowledged at once --- right after a level

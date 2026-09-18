@@ -865,18 +865,33 @@ namespace Jazz2::Multiplayer
 
 		length += formatInto({ input + length, sizeof(input) - length }, "\",\"e\":\"");
 
-		StringView address; std::uint16_t port;
-		if (NetworkManagerBase::TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port)) {
-			String addressEscaped = StringUtils::replaceAll(StringUtils::replaceAll(address,
-				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
-			if (port == 0) {
-				port = server->_host->address.port;
-			}
-			// Bare IPv6 address must be enclosed in brackets, otherwise the appended port can't be told apart from it
-			if (address.contains(':')) {
-				length += formatInto({ input + length, sizeof(input) - length }, "[{}]:{}", addressEscaped, port);
-			} else {
-				length += formatInto({ input + length, sizeof(input) - length }, "{}:{}", addressEscaped, port);
+		if (!serverConfig.ServerAddressOverrides.empty()) {
+			bool isFirst = true;
+			for (const auto& addressOverride : serverConfig.ServerAddressOverrides) {
+				StringView address; std::uint16_t port;
+				if (!NetworkManagerBase::TrySplitAddressAndPort(addressOverride, address, port)) {
+					continue;
+				}
+				if (length > 1228) { // It's usually enough for all the overrides
+					break;
+				}
+				if (isFirst) {
+					isFirst = false;
+				} else {
+					length += formatInto({ input + length, sizeof(input) - length }, "|");
+				}
+
+				String addressEscaped = StringUtils::replaceAll(StringUtils::replaceAll(address,
+					"\\"_s, "\\\\"_s), "\""_s, "\\\""_s);
+				if (port == 0) {
+					port = server->_host->address.port;
+				}
+				// Bare IPv6 address must be enclosed in brackets, otherwise the appended port can't be told apart from it
+				if (address.contains(':')) {
+					length += formatInto({ input + length, sizeof(input) - length }, "[{}]:{}", addressEscaped, port);
+				} else {
+					length += formatInto({ input + length, sizeof(input) - length }, "{}:{}", addressEscaped, port);
+				}
 			}
 		} else {
 			bool isFirst = true;

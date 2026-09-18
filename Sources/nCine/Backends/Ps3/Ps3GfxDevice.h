@@ -22,7 +22,7 @@ namespace nCine::Backends
 
 		Two PlayStation 3 particulars shape this backend.
 
-		**The output resolution is negotiated, not fixed.** Where the PS2 has one 640x448 mode and the Vita
+		<b>The output resolution is negotiated, not fixed.</b> Where the PS2 has one 640x448 mode and the Vita
 		one 960x544 panel, a PS3 is attached to whatever display the user owns and the firmware publishes the
 		set of modes that display accepts. The mode is therefore picked at startup (see
 		`RsxDevice::CreateSwapchain()`, which asks `videoGetResolutionAvailability()` down a preference list)
@@ -30,7 +30,7 @@ namespace nCine::Backends
 		The logical (game) resolution is a render-target size driven separately by the render pipeline, as
 		on every other backend.
 
-		**The system can ask the title to quit.** Pressing the PS button and choosing "Quit Game", or
+		<b>The system can ask the title to quit.</b> Pressing the PS button and choosing "Quit Game", or
 		shutting the console down, sends `SYSUTIL_EXIT_GAME`; the firmware kills a title that does not leave
 		promptly. `Ps3InputManager` records that request when it drains the callback queue, and @ref update()
 		turns it into the engine's ordinary quit on the next frame - which lets the running frame finish and

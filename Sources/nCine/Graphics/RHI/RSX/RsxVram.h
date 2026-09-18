@@ -15,7 +15,7 @@ namespace nCine::RHI::RSX
 		together, which is what the command builders need: `rsxSetSurface()`, `rsxBindVertexArrayAttrib()`
 		and `rsxLoadTexture()` all take an offset plus a location, never a pointer.
 
-		**Two locations, and the choice is not free.** `Local` is the 256 MB of GDDR3 on the far side of the
+		<b>Two locations, and the choice is not free.</b> `Local` is the 256 MB of GDDR3 on the far side of the
 		GPU: the RSX reads it at full speed, but the PPE reaches it over the bus with *uncached, write-combined*
 		access, so writing texels into it is fast and reading them back is catastrophically slow (a read is
 		roughly two orders of magnitude worse than main memory). `Main` is ordinary XDR that the GPU reads
@@ -27,7 +27,7 @@ namespace nCine::RHI::RSX
 		This is also why nothing here ever reads back through a mapping. `RsxTexture::GetTexImage()` and the
 		streaming-texture path both write forward only - a caller that wants texels back keeps its own copy.
 
-		**Fragment programs are a third case that looks like a fourth.** The RSX fetches fragment microcode
+		<b>Fragment programs are a third case that looks like a fourth.</b> The RSX fetches fragment microcode
 		by offset exactly like a texture, so it is allocated here too rather than through a shader-specific
 		allocator - but it MUST be `Local`, because the fragment engine cannot fetch microcode from main
 		memory at all. @ref AllocFragmentProgram() only names that constraint; it is otherwise @ref Alloc().

@@ -968,7 +968,11 @@ namespace nCine::Backends
 		// SDL3 identifies displays by opaque SDL_DisplayID (enumerated via SDL_GetDisplays), not a 0-based index
 		int monitorCount = 0;
 		SDL_DisplayID* displays = SDL_GetDisplays(&monitorCount);
-		DEATH_ASSERT(monitorCount >= 1);
+		if (displays == nullptr || monitorCount < 1) {
+			LOGD("No monitors reported, keeping the previous list of {}", _numMonitors);
+			SDL_free(displays);
+			return;
+		}
 		_numMonitors = (monitorCount < (int)MaxMonitors) ? monitorCount : MaxMonitors;
 
 		for (unsigned int i = 0; i < _numMonitors; i++) {
@@ -999,7 +1003,10 @@ namespace nCine::Backends
 		LOGD("Updating list of monitors...");
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
-		DEATH_ASSERT(monitorCount >= 1);
+		if (monitorCount < 1) {
+			LOGD("No monitors reported, keeping the previous list of {}", _numMonitors);
+			return;
+		}
 		_numMonitors = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
 
 		for (unsigned int i = 0; i < _numMonitors; i++) {

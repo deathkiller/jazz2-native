@@ -563,6 +563,11 @@ namespace Death { namespace IO {
 				return;
 		}
 
+		// Exclusive access shares nothing, so it is not widened by an unpinned name either
+		if (shareMode != 0 && (mode & FileAccess::Unpinned) == FileAccess::Unpinned) {
+			shareMode |= FILE_SHARE_DELETE;
+		}
+
 		SECURITY_ATTRIBUTES securityAttribs = { sizeof(SECURITY_ATTRIBUTES) };
 		securityAttribs.bInheritHandle = (mode & FileAccess::InheritHandle) == FileAccess::InheritHandle;
 

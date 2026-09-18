@@ -70,7 +70,7 @@ namespace nCine::RHI::RSX
 		from which it imports uniforms, uniform blocks and attributes, and gets its two stage *binaries* from
 		the identity @ref SetProgramIdentity() plumbs in - the generated `RsxGeneratedShaders.h` table.
 
-		**Everything about this class follows from there being no shader compiler on the console.** The Vita
+		<b>Everything about this class follows from there being no shader compiler on the console.</b> The Vita
 		backend this otherwise mirrors ships Cg source and compiles it at link time through SceShaccCg; the
 		PS3 has no such thing, so the same Cg is compiled to NV40 microcode offline by cgcomp and embedded as
 		a `rsxVertexProgram` / `rsxFragmentProgram` blob. Linking is therefore not a compile at all - it
@@ -87,7 +87,7 @@ namespace nCine::RHI::RSX
 		`rsxBindVertexArrayAttrib()` at draw time, blending through `rsxSetBlendFunc()` - so one program
 		object serves every layout and every blend configuration.
 
-		**Fragment constants are the one genuinely awkward part.** The RSX patches a fragment program's
+		<b>Fragment constants are the one genuinely awkward part.</b> The RSX patches a fragment program's
 		constants *into its microcode* rather than into a register file, which is why
 		`rsxSetFragmentProgramParameter()` needs the microcode's address and location, and why each program
 		owns a private copy of its fragment microcode in local memory (@ref _fragmentUcode) rather than

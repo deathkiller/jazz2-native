@@ -49,7 +49,7 @@ jjSTREAM@ Log = jjSTREAM();
 
 void onLevelBegin() {
 	StartMs = jjUnixTimeMs();
-	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy\n");
+	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy\n");
 	jjAlert("Diamondus 3 trajectory probe armed");
 }
 
@@ -86,7 +86,9 @@ void onPlayerInput(jjPLAYER@ play) {
 		formatFloat(play.xPos, "", 0, 3) + "," + formatFloat(play.yPos, "", 0, 3) + "," +
 		formatFloat(play.xSpeed, "", 0, 4) + "," + formatFloat(play.ySpeed, "", 0, 4) + "," +
 		"0,0,0,0,0," + play.specialMove + "," +
-		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + ",-1.0,-1.0\n");
+		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + ",-1.0,-1.0," +
+		// Kept in step with _pt.j2as, or ExtractTrace.ps1 writes a header this trace has no columns for
+		formatFloat(play.cameraX - play.xPos, "", 0, 3) + "," + formatFloat(play.cameraY - play.yPos, "", 0, 3) + "\n");
 
 	Tick++;
 	if (Tick >= ScenarioTicks) {

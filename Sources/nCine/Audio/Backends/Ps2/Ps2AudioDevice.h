@@ -16,7 +16,7 @@ namespace nCine
 		the Nintendo 64, PS3, Amiga, SDL and PSP backends are - whose output stage is `audsrv_play_audio()`
 		rather than a DMA queue.
 
-		*There is no mixer thread.* The engine's threading is off on this console (a thread created through
+		<em>There is no mixer thread.</em> The engine's threading is off on this console (a thread created through
 		PS2SDK's `libpthreadglue` is never scheduled, see the `NCINE_WITH_THREADS` arm in `ncine_options.cmake`),
 		so the ring is topped up from @ref updatePlayers(), once per frame, on the main thread - the N64
 		backend's arrangement rather than the PSP's. That works because the ring is deep: whatever `audsrv`
@@ -25,7 +25,7 @@ namespace nCine
 		the hardware: only as much is submitted as @ref audsrv_available() says will fit, which is why
 		`audsrv_wait_audio()` - the call the module's own samples are written around - is never used.
 
-		*The mixing rate is not the hardware's rate.* The SPU2 runs at 48 kHz and `audsrv` programs the voice
+		<em>The mixing rate is not the hardware's rate.</em> The SPU2 runs at 48 kHz and `audsrv` programs the voice
 		pitch from the format it is handed, so a stream submitted at 22050 Hz is resampled by the SPU2 itself,
 		in hardware, for free. The mixer's cost is linear in its rate and the game's content is 8- and 16-bit
 		samples at 11-22 kHz, so the default is 22050 Hz and the per-source loop runs half as often as it

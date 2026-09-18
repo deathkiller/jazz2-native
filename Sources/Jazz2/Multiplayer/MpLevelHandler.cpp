@@ -1,4 +1,4 @@
-#include "MpLevelHandler.h"
+﻿#include "MpLevelHandler.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -2453,7 +2453,8 @@ namespace Jazz2::Multiplayer
 		if (serverConfig.EnableSpectate) {
 			flags |= 0x08;
 		}
-		if (serverConfig.PlayerStacking) {
+		// The resolved value, so a client does not have to know whether it was configured or inferred
+		if (IsPlayerStackingEnabled()) {
 			flags |= 0x10;
 		}
 		if (serverConfig.AllowTeamSelection) {
@@ -2537,8 +2538,11 @@ namespace Jazz2::Multiplayer
 					SendMessage(peer, UI::MessageLevel::Confirm, endpoint);
 				}
 				auto& serverConfig = _networkManager->GetServerConfiguration();
-				StringView address; std::uint16_t port;
-				if (NetworkManagerBase::TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port)) {
+				for (const auto& addressOverride : serverConfig.ServerAddressOverrides) {
+					StringView address; std::uint16_t port;
+					if (!NetworkManagerBase::TrySplitAddressAndPort(addressOverride, address, port)) {
+						continue;
+					}
 					if (port == 0) {
 						port = serverConfig.ServerPort;
 					}
@@ -4756,7 +4760,9 @@ namespace Jazz2::Multiplayer
 				serverConfig.AllowLedgeClimb = (flags & 0x02) != 0;
 				serverConfig.Elimination = (flags & 0x04) != 0;
 				serverConfig.EnableSpectate = (flags & 0x08) != 0;
+				// Already resolved by the server, so it counts as explicit here and the game mode is not re-applied
 				serverConfig.PlayerStacking = (flags & 0x10) != 0;
+				serverConfig.PlayerStackingSet = true;
 				serverConfig.AllowTeamSelection = (flags & 0x20) != 0;
 				serverConfig.FriendlyFire = (flags & 0x40) != 0;
 				serverConfig.AutoBalanceTeams = (flags & 0x80) != 0;
@@ -7202,7 +7208,21 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::IsPlayerStackingEnabled() const
 	{
-		return _networkManager->GetServerConfiguration().PlayerStacking;
+		// An explicit setting wins outright, in whatever mode. Left unset, the game mode decides, and only
+		// Cooperation gets it: standing on a team-mate is a way of helping them reach somewhere, while in a mode
+		// where the others are opponents it is a way of pinning them, which none of those modes is built around.
+		//
+		// Independent of Reforged - the two modes differ in what *jumping out from under* someone does (see
+		// Player::HandleJump), not in whether the stack exists at all.
+		//
+		// A client reaches this with `PlayerStackingSet` already true: the server packs the **resolved** value
+		// into the level-property flags, so the mode has been taken into account before it arrives and must not
+		// be applied a second time. See the flag packing, which calls this rather than reading the field.
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.PlayerStackingSet) {
+			return serverConfig.PlayerStacking;
+		}
+		return (serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
 	bool MpLevelHandler::IsLedgeClimbAllowed() const
@@ -7217,8 +7237,9 @@ namespace Jazz2::Multiplayer
 		// How close the feet must be to the other player's head to count as standing/landing on it
 		constexpr float StandThreshold = 6.0f;
 
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (!serverConfig.PlayerStacking) {
+		// Through the shared predicate rather than reading `PlayerStacking` again, so the game-mode restriction
+		// cannot apply to the bump path and miss this one
+		if (!IsPlayerStackingEnabled()) {
 			return nullptr;
 		}
 
@@ -10363,6 +10384,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalLaps = playlistEntry.TotalLaps;
 		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
 		serverConfig.PlayerStacking = playlistEntry.PlayerStacking;
+		serverConfig.PlayerStackingSet = playlistEntry.PlayerStackingSet;
 		serverConfig.AllowMinimap = playlistEntry.AllowMinimap;
 		serverConfig.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
 
@@ -10648,7 +10670,8 @@ namespace Jazz2::Multiplayer
 		if (serverConfig.EnableSpectate) {
 			flags |= 0x08;
 		}
-		if (serverConfig.PlayerStacking) {
+		// The RESOLVED value, so a client does not have to know whether it was configured or inferred
+		if (IsPlayerStackingEnabled()) {
 			flags |= 0x10;
 		}
 

@@ -49,15 +49,15 @@ namespace nCine::Backends
 
 		Three PlayStation 3 particulars are handled here rather than left to the caller.
 
-		**The pads report through one flat port array, not through physical ports.** `ioPadGetInfo2()`
+		<b>The pads report through one flat port array, not through physical ports.</b> `ioPadGetInfo2()`
 		publishes a `port_status` bit per port and the pads occupy the low ports in connection order, so a
 		port's index is a stable joystick ID for as long as that pad stays connected - which is what the
 		engine's connection events mean.
 
-		**The buttons are active high, unlike the PS2's.** A `padData` field is 1 when pressed, so no
+		<b>The buttons are active high, unlike the PS2's.</b> A `padData` field is 1 when pressed, so no
 		inversion happens here; the raw bits are read the obvious way round.
 
-		**L2/R2 are real analogue triggers.** Where the PS2 backend has to synthesize the trigger axes from
+		<b>L2/R2 are real analogue triggers.</b> Where the PS2 backend has to synthesize the trigger axes from
 		digital button bits, the DualShock 3 reports 0..255 pressures for them - but only after the port has
 		been put into pressure-sensitive mode, which is what the constructor's `ioPadSetPortSetting()` does.
 		If a controller does not support that (the Bluray remote, third-party pads), the pressures stay zero

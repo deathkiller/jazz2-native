@@ -253,6 +253,13 @@ namespace Jazz2::Actors
 		// and jitters the actor by a fraction of a pixel as that search answers it.
 		if (currentGravity > 0.0f && (_state & ActorState::ApplyGravitation) == ActorState::ApplyGravitation &&
 			(_speed.Y < 0.0f || (_state & ActorState::CanJump) != ActorState::CanJump)) {
+			// An Euler bias was tried here and taken out again; see *Standing jump is 3% short* in
+			// `Docs/MovementAccuracyReference.dox` for the measurements. In short: subtracting half a step of
+			// the original's own tick makes the fully-uncapped rises exact - `a_jump`, `ap_r30` and
+			// `an_shoot_air` all land on 132.0 against 132.0 - and breaks everything whose rise gravity was
+			// *fitted* rather than derived, because those fits already absorb whatever the original integrates
+			// with. `ap_r05` went from +0.2 to +4.2, the copter with it, and two of the three springs by 5 and
+			// 8. Do not re-apply it as a blanket rule.
 			effectiveSpeedY += 0.5f * GetGravityModifier(currentGravity, /*isRising:*/_speed.Y < 0.0f) * timeMult;
 		}
 
@@ -490,7 +497,15 @@ namespace Jazz2::Actors
 		// full step with an increasing upward offset. Flat ground / open air succeed on the straight
 		// step, so there is no upward drift, and steep walls still block (xDiff stays full on success).
 		bool movedHorizontally = MoveInstantly(Vector2f(stepX, 0.0f), MoveType::Relative, params);
-		if (!movedHorizontally && std::abs(stepX) > std::abs(stepY)) {
+		// The comparison has to include the equal case, and that is not a rounding nicety - it is the whole of
+		// "jumping into a 45 degree slope kills your momentum". A dashing jump travels 8 px across while rising
+		// at the applied cap of 8, so against a 45 degree face the two steps are *exactly* equal; a strict `>`
+		// turns the climb off at precisely the angle it exists for, the loop below then grinds the horizontal
+		// step down to nothing, this reports `HitWall`, and Player::OnHitWall() zeroes the speed. Measured
+		// (`sl_up45_jhold`): the original holds 16.0 px/tick the whole way up such a face, where this engine
+		// dropped to 1.0. Shared with Reforged rather than gated, like the other two collision fixes, because
+		// it makes the search cover the range the comment above it already claims - up to about 45 degrees.
+		if (!movedHorizontally && std::abs(stepX) >= std::abs(stepY)) {
 			float maxClimb = std::abs(stepX) + 2.5f;
 			// Coming down onto the edge of a ledge, the reach has to be the landing allowance the actor asks
 			// for rather than whatever the horizontal sub-step happens to be - see `_landingTolerance`. With

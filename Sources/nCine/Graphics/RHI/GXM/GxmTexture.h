@@ -26,7 +26,7 @@ namespace nCine::RHI::GXM
 		channel swizzle in the texture format, but only for a fixed set of patterns).
 
 		A texture bound as a colour attachment is the exception: the GPU writes it, so its GPU-visible copy
-		*is* the truth and the host store is only kept for a readback. That is also why the two live in
+		<em>is</em> the truth and the host store is only kept for a readback. That is also why the two live in
 		separate allocations at all - the render target's surface has to stay put across frames while the
 		host store may be reallocated by an upload.
 

@@ -1117,48 +1117,9 @@ namespace Death { namespace Trace {
 		return scopedThreadContext.GetThreadContext();
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
+	// Serializes one entry into reserved queue space, the layout is decoded by LoggerBackend::PopulateTransitEventFromThreadQueue()
+	static DEATH_ALWAYS_INLINE void WriteQueueEntry(std::uint8_t* writeBuffer, TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, std::size_t totalSize) noexcept
 	{
-		using namespace Implementation;
-
-		if DEATH_UNLIKELY(_threadContext == nullptr) {
-			_threadContext = GetLocalThreadContext();
-		}
-
-		std::size_t totalSize = /*Level*/ sizeof(std::uint8_t) + /*Timestamp*/ sizeof(std::uint64_t) +
-			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ std::size_t(contentLength);
-		
-		auto& queue = _threadContext->GetSpscQueue<DefaultQueueType>();
-		auto const reservation = queue.prepareWriteReserveCached(totalSize);
-		auto* writeBuffer = reservation.writeBuffer;
-
-		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
-					  DefaultQueueType == QueueType::UnboundedDropping) {
-			if DEATH_UNLIKELY(writeBuffer == nullptr) {
-				// Not enough space to push to queue, message is dropped
-				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
-					_threadContext->IncrementFailureCounter();
-				}
-				return false;
-			}
-		} else if constexpr (DefaultQueueType == QueueType::BoundedBlocking ||
-							 DefaultQueueType == QueueType::UnboundedBlocking) {
-			if DEATH_UNLIKELY(writeBuffer == nullptr) {
-				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
-					_threadContext->IncrementFailureCounter();
-				}
-
-				do {
-					if constexpr (BlockingQueueRetryIntervalNanoseconds > 0) {
-						std::this_thread::sleep_for(std::chrono::nanoseconds{BlockingQueueRetryIntervalNanoseconds});
-					}
-
-					// Not enough space to push to queue, keep trying
-					writeBuffer = _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
-				} while (writeBuffer == nullptr);
-			}
-		}
-
 #	if defined(DEATH_DEBUG)
 		std::uint8_t* writeBegin = writeBuffer;
 		DEATH_DEBUG_ASSERT(writeBegin != nullptr);
@@ -1182,9 +1143,73 @@ namespace Death { namespace Trace {
 #	if defined(DEATH_DEBUG)
 		DEATH_DEBUG_ASSERT(writeBuffer > writeBegin);
 		DEATH_DEBUG_ASSERT(totalSize == (static_cast<std::size_t>(writeBuffer - writeBegin)));
+#	else
+		(void)totalSize;
 #	endif
+	}
 
-		queue.finishAndCommitWriteReservation(reservation.writerPos + totalSize);
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
+	{
+		using namespace Implementation;
+
+		if DEATH_UNLIKELY(_threadContext == nullptr) {
+			_threadContext = GetLocalThreadContext();
+		}
+
+		std::size_t totalSize = /*Level*/ sizeof(std::uint8_t) + /*Timestamp*/ sizeof(std::uint64_t) +
+			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ std::size_t(contentLength);
+
+		// Fast path: the reservation checks only the cached reader position and never touches the atomics.
+		// It fails when the cache is stale or the queue is really full, both are handled by the slow path.
+		auto const reservation = _threadContext->GetSpscQueue<DefaultQueueType>().prepareWriteReserveCached(totalSize);
+		if DEATH_UNLIKELY(reservation.writeBuffer == nullptr) {
+			return EnqueueEntrySlow(level, timestamp, functionName, content, contentLength, totalSize);
+		}
+
+		WriteQueueEntry(reservation.writeBuffer, level, timestamp, functionName, content, contentLength, totalSize);
+
+		reservation.boundedQueue->finishAndCommitWriteReservation(reservation.writerPos + totalSize);
+
+		return true;
+	}
+
+	bool Logger::EnqueueEntrySlow(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, std::size_t totalSize) noexcept
+	{
+		using namespace Implementation;
+
+		// prepareWrite() reloads the reader position and, for an unbounded queue, may switch the producer to
+		// a new node whose writer position starts at zero. The reservation taken by the caller then no longer
+		// describes the queue that is actually written to, so this path always commits through the queue's
+		// current writer position. Committing the stale offset onto the new node made the backend read
+		// uninitialized storage as entries.
+		auto& queue = _threadContext->GetSpscQueue<DefaultQueueType>();
+		std::uint8_t* writeBuffer = queue.prepareWrite(totalSize);
+
+		if DEATH_UNLIKELY(writeBuffer == nullptr) {
+			if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
+				_threadContext->IncrementFailureCounter();
+			}
+
+			if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
+						  DefaultQueueType == QueueType::UnboundedDropping) {
+				// Not enough space to push to queue, message is dropped
+				return false;
+			} else {
+				// BoundedBlocking or UnboundedBlocking
+				do {
+					if constexpr (BlockingQueueRetryIntervalNanoseconds > 0) {
+						std::this_thread::sleep_for(std::chrono::nanoseconds{BlockingQueueRetryIntervalNanoseconds});
+					}
+
+					// Not enough space to push to queue, keep trying
+					writeBuffer = queue.prepareWrite(totalSize);
+				} while (writeBuffer == nullptr);
+			}
+		}
+
+		WriteQueueEntry(writeBuffer, level, timestamp, functionName, content, contentLength, totalSize);
+
+		queue.finishAndCommitWrite(totalSize);
 
 		return true;
 	}

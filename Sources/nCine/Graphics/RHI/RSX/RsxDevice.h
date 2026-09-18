@@ -30,20 +30,20 @@ namespace nCine::RHI::RSX
 
 		Three properties of the hardware shape everything below.
 
-		**The RSX is immediate-mode, which is what makes this simpler than the sceGxm backend.** There is no
+		<b>The RSX is immediate-mode, which is what makes this simpler than the sceGxm backend.</b> There is no
 		scene to begin and end and no tile buffer whose contents start undefined: a render target is a set of
 		addresses in a state register, `rsxSetSurface()` changes it, and `rsxClearSurface()` is a real
 		hardware clear rather than a full-screen quad standing in for one. A target can be re-entered
 		mid-frame without discarding what an earlier pass drew, so the pipeline's viewport chain needs no
 		special handling at all.
 
-		**The output resolution is negotiated with the display.** Unlike every other console backend here,
+		<b>The output resolution is negotiated with the display.</b> Unlike every other console backend here,
 		the panel is not fixed: @ref CreateSwapchain() walks a preference list through
 		`videoGetResolutionAvailability()` and takes the first mode the attached display accepts, so
 		@ref GetDisplayWidth() and @ref GetDisplayHeight() are only known after the session is up. The
 		logical (game) resolution remains a render-target size driven separately by the render pipeline.
 
-		**The display scans out top-down.** The engine renders in the OpenGL convention, and this backend
+		<b>The display scans out top-down.</b> The engine renders in the OpenGL convention, and this backend
 		replays it faithfully: every viewport is programmed so clip -Y lands on row 0 and every surface - the
 		screen and each off-screen render target - is stored bottom-up exactly like OpenGL. That is what
 		keeps a texture's V axis and its viewport's Y axis pointing the same way, so an off-screen round trip

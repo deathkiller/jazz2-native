@@ -213,12 +213,24 @@ private:
 #if defined(WITH_MULTIPLAYER)
 	std::unique_ptr<NetworkManager> _networkManager;
 	std::unique_ptr<Stream> _streamedAsset;
+	// `_currentHandler` is owned by the main thread, so no other thread may read it directly. The network thread
+	// goes through `AcquireNetworkLevelHandler()`, which hands out a strong reference taken under the lock - that
+	// both keeps the handler alive for the whole call and can't observe a half-written pointer. Anything that
+	// mutates the level (the stdin console commands) is marshaled to the main thread with `InvokeAsync()` instead
+	std::shared_ptr<MpLevelHandler> _networkLevelHandler;
+#	if defined(WITH_THREADS)
+	std::mutex _networkLevelHandlerLock;
+#	endif
 #endif
 
 	void OnBeginInitialize();
 	void OnAfterInitialize();
 	void SetStateHandler(std::shared_ptr<IStateHandler>&& handler);
 	void ReleasePreviousHandler();
+#if defined(WITH_MULTIPLAYER)
+	void RefreshNetworkLevelHandler();
+	std::shared_ptr<MpLevelHandler> AcquireNetworkLevelHandler();
+#endif
 	void WaitForVerify();
 #if defined(NCINE_HAS_WRITABLE_CACHE)
 	void RefreshCache();
@@ -573,19 +585,26 @@ void GameEventHandler::OnInitialize()
 
 void GameEventHandler::OnBeginFrame()
 {
-	if (!_pendingCallbacks.empty()) {
-		ZoneScopedNC("Pending callbacks", 0x888888);
-
-		std::weak_ptr<void> emptyRef;
-		Function<void()> callbackFunc;
-		std::size_t i = 0;
-
-		while (true) {
-			{
+	{
+		// Every access to the queue has to be under the lock, including the emptiness check and the final removal:
+		// `InvokeAsync()` is called from the network thread on every received packet, so an unsynchronized read or
+		// write here races with its `emplace_back()`
 #if defined(WITH_THREADS)
-				std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
+		std::unique_lock<std::mutex> lock(_pendingCallbacksLock);
 #endif
+		if (!_pendingCallbacks.empty()) {
+			ZoneScopedNC("Pending callbacks", 0x888888);
+
+			std::weak_ptr<void> emptyRef;
+			Function<void()> callbackFunc;
+			std::size_t i = 0;
+
+			while (true) {
 				if (i >= _pendingCallbacks.size()) {
+					// The queue is emptied under the same lock acquisition that observed it as drained, otherwise
+					// a callback appended in between would be destroyed without ever being invoked - and a growing
+					// `emplace_back()` frees the old buffer this would be walking
+					_pendingCallbacks.clear();
 					break;
 				}
 
@@ -593,20 +612,26 @@ void GameEventHandler::OnBeginFrame()
 				auto& callbackRef = callback.first();
 				// Invoke the callback only if it has no corresponding reference or the reference is still alive
 				if (!callbackRef.expired() || !(callbackRef.owner_before(emptyRef) || emptyRef.owner_before(callbackRef))) {
-					// Callback cannot be invoked under the lock, because it can invoke another callback and it would cause deadlock
-					callbackFunc = std::move(callback.second());
+					callbackFunc = Death::move(callback.second());
 				} else {
 					LOGW("Deferred callback dropped due to dead reference");
 					i++;
 					continue;
 				}
+
+				// Callback cannot be invoked under the lock, because it can invoke another callback and it would cause
+				// deadlock - the index is revalidated on the next iteration, because it can also grow the queue
+#if defined(WITH_THREADS)
+				lock.unlock();
+#endif
+				callbackFunc();
+				callbackFunc = nullptr;
+#if defined(WITH_THREADS)
+				lock.lock();
+#endif
+				i++;
 			}
-
-			callbackFunc();
-			i++;
 		}
-
-		_pendingCallbacks.clear();
 	}
 
 	_currentHandler->OnBeginFrame();
@@ -652,13 +677,21 @@ void GameEventHandler::OnShutdown()
 	ApplyActivityIcon();
 #endif
 
-	_currentHandler = nullptr;
 #if defined(WITH_MULTIPLAYER)
+	// The network manager has to go down first, because `Dispose()` joins the network thread and the callbacks
+	// running on it reach the current handler through `_currentHandler` - resetting it any earlier both races
+	// with that (a `std::shared_ptr` is not safe against a concurrent read and write of the same instance) and
+	// can destroy the handler while a packet is still being processed on it
 	if (_networkManager != nullptr) {
 		_networkManager->Dispose();
 		_networkManager = nullptr;
 		_streamedAsset = nullptr;
 	}
+#endif
+	_currentHandler = nullptr;
+#if defined(WITH_MULTIPLAYER)
+	// Drops the last reference the network side was holding, so the handler is actually destroyed here
+	RefreshNetworkLevelHandler();
 #endif
 
 	if ((_flags & Flags::IsInitialized) == Flags::IsInitialized) {
@@ -1246,16 +1279,22 @@ void GameEventHandler::StartProcessingStdin()
 
 			if (!line.empty()) {
 				if (line == "/exit"_s || line == "/quit"_s) {
-					if (_this->_networkManager != nullptr) {
-						_this->_networkManager->Dispose();
-						_this->_networkManager = nullptr;
-					}
+					// The network manager is torn down by `OnShutdown()` on the main thread, which owns it - doing
+					// it from here would race with every other use of it, exactly like the termination signal
+					// handler leaves the shutdown itself to the frame loop
 					theApplication().Quit();
 					break;
-				} else if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
-					if (!levelHandler->ProcessCommand({}, line, true) && !line.hasPrefix('/')) {
-						levelHandler->SendMessageToAll(line, true);
-					}
+				} else {
+					// The command runs on the main thread, because it reaches deep into the level handler and the
+					// network manager, neither of which is safe to touch from here - the line has to be copied,
+					// because `buffer` is gone by the time the callback runs
+					_this->InvokeAsync([_this, command = String{line}]() {
+						if (auto levelHandler = runtime_cast<MpLevelHandler>(_this->_currentHandler)) {
+							if (!levelHandler->ProcessCommand({}, command, true) && !command.hasPrefix('/')) {
+								levelHandler->SendMessageToAll(command, true);
+							}
+						}
+					});
 				}
 			}
 		}
@@ -1425,7 +1464,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 		LOGI("Peer disconnected [{}]: {} ({})", peer, NetworkManagerBase::ReasonToString(reason), reason);
 	}
 
-	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
+	if (auto multiLevelHandler = AcquireNetworkLevelHandler()) {
 		if (multiLevelHandler->OnPeerDisconnected(peer)) {
 			return;
 		}
@@ -1741,9 +1780,10 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					serverConfig.ReforgedGameplay = isReforged;
 					serverConfig.AllowLedgeClimb = enableLedgeClimb;
 					serverConfig.Elimination = elimination;
-						serverConfig.EnableSpectate = enableSpectate;
-						serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
-						serverConfig.PlayerStacking = playerStacking;
+					serverConfig.EnableSpectate = enableSpectate;
+					serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
+					serverConfig.PlayerStacking = playerStacking;
+					serverConfig.PlayerStackingSet = true;
 					serverConfig.InitialPlayerHealth = initialPlayerHealth;
 					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 					serverConfig.TotalKills = totalKills;
@@ -1783,7 +1823,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 	std::int32_t n = 0;
 Retry:
-	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
+	if (auto multiLevelHandler = AcquireNetworkLevelHandler()) {
 		if (multiLevelHandler->OnPacketReceived(peer, channelId, packetType, data)) {
 			return;
 		}
@@ -1917,6 +1957,9 @@ void GameEventHandler::ReleasePreviousHandler()
 
 	Viewport::GetChain().clear();
 	_currentHandler = nullptr;
+#if defined(WITH_MULTIPLAYER)
+	RefreshNetworkLevelHandler();
+#endif
 
 	auto& resolver = ContentResolver::Get();
 	resolver.BeginLoading();
@@ -1925,18 +1968,48 @@ void GameEventHandler::ReleasePreviousHandler()
 
 void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 {
-	_currentHandler = std::move(handler);
+	_currentHandler = Death::move(handler);
 
 	Viewport::GetChain().clear();
 	Vector2i res = theApplication().GetResolution();
 	_currentHandler->OnInitializeViewport(res.X, res.Y);
 
 #if defined(WITH_MULTIPLAYER)
+	// Published only once the handler is fully initialized, because the network thread can pick it up immediately
+	RefreshNetworkLevelHandler();
+
 	if (_networkManager != nullptr) {
 		_networkManager->SetStatusProvider(runtime_cast<IServerStatusProvider>(_currentHandler));
 	}
 #endif
 }
+
+#if defined(WITH_MULTIPLAYER)
+void GameEventHandler::RefreshNetworkLevelHandler()
+{
+	auto nextHandler = runtime_cast<MpLevelHandler>(_currentHandler);
+
+	// A thread that already took a copy keeps the outgoing handler alive by itself, but the reference dropped
+	// here can still be the last one - `previousHandler` carries it out of the critical section, so the handler
+	// is never destroyed under the lock
+	std::shared_ptr<MpLevelHandler> previousHandler;
+	{
+#	if defined(WITH_THREADS)
+		std::unique_lock<std::mutex> lock(_networkLevelHandlerLock);
+#	endif
+		previousHandler = Death::move(_networkLevelHandler);
+		_networkLevelHandler = Death::move(nextHandler);
+	}
+}
+
+std::shared_ptr<MpLevelHandler> GameEventHandler::AcquireNetworkLevelHandler()
+{
+#	if defined(WITH_THREADS)
+	std::unique_lock<std::mutex> lock(_networkLevelHandlerLock);
+#	endif
+	return _networkLevelHandler;
+}
+#endif
 
 void GameEventHandler::WaitForVerify()
 {

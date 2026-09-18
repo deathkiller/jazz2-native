@@ -137,7 +137,7 @@ their default values and a fully annotated example configuration. The properties
     @cpp "IdleKickTimeSecs" @ce how players enter and leave it
 -   **Operations** --- @cpp "AllowAssetStreaming" @ce lets clients download levels they don't have from
     the server, and @cpp "WebhookUrl" @ce with @cpp "WebhookEvents" @ce post selected server events to a
-    **Discord** channel
+    <b>Discord</b> channel
 
 @m_class{m-noindent}
 
@@ -216,10 +216,16 @@ password-protected one.
 A public server re-publishes itself to the online list every 5 minutes and delists itself when it shuts
 down cleanly. The address it publishes is the one it detects for itself, which is of no use when the server
 is behind NAT or in a container --- @cpp "ServerAddressOverride" @ce then specifies the address (and, if it
-differs, the port) players on the internet should use. The port itself has to be reachable in any case:
+differs, the port) players on the internet should use. It takes either a single address or an array of them,
+for a server reachable at several addresses at once (e.g. IPv4 and IPv6, or a domain name next to a bare
+address); clients then try them in the listed order. A domain name does not need a list of its own to cover
+both protocols --- a client resolves every endpoint it is given, a domain name among them, to **all** of the
+addresses behind it @m_span{m-text m-dim} (up to four) @m_endspan and tries each one in the order the
+resolver returned them, so a server whose name carries both an `A` and an `AAAA` record is reachable over
+either. The port itself has to be reachable in any case:
 @cpp "ServerPort" @ce over **UDP** for the default transport, and @cpp "WsPort" @ce over **TCP** if the
 WebSocket transport is enabled. The `/endpoints` command lists the endpoints the server knows about,
-including the override.
+including the overrides.
 
 @section multiplayer-joining Joining a server
 

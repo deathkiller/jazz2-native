@@ -112,12 +112,13 @@ namespace Jazz2
 	// carries something out of range - a hardcoded `High` there would quietly undo the console default
 	// above on exactly the machines it exists for, and survive every later Save()
 	ParticleQuality PreferencesCache::Particles = DefaultParticleQuality;
-	bool PreferencesCache::EnableReforgedGameplay = true;
-	bool PreferencesCache::EnableReforgedHUD = true;
-	bool PreferencesCache::EnableReforgedMainMenu = true;
+	bool PreferencesCache::EnableReforgedGameplay = false;
+	bool PreferencesCache::EnableReforgedCamera = false;
+	bool PreferencesCache::EnableReforgedHUD = false;
+	bool PreferencesCache::EnableReforgedMainMenu = false;
 #if defined(DEATH_TARGET_ANDROID)
 	// Used to swap Android activity icons on exit/suspend
-	bool PreferencesCache::EnableReforgedMainMenuInitial = true;
+	bool PreferencesCache::EnableReforgedMainMenuInitial = false;
 #endif
 	bool PreferencesCache::EnableContinuousJump = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
@@ -1266,6 +1267,14 @@ namespace
 #endif
 					}
 
+					if (version >= 17) {
+						EnableReforgedCamera = ((boolOptions & BoolOptions::EnableReforgedCamera) == BoolOptions::EnableReforgedCamera);
+					} else {
+						// The camera used to follow the gameplay setting, so a configuration written before the
+						// split keeps doing that rather than silently changing how the view behaves
+						EnableReforgedCamera = EnableReforgedGameplay;
+					}
+
 					if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {
 						WeaponWheel = WeaponWheelStyle::EnabledWithAmmoCount;
 					}
@@ -1626,6 +1635,7 @@ namespace
 		if (PreferZoomOut) boolOptions |= BoolOptions::PreferZoomOut;
 		if (BackgroundDithering) boolOptions |= BoolOptions::BackgroundDithering;
 		if (EnableReforgedGameplay) boolOptions |= BoolOptions::EnableReforgedGameplay;
+		if (EnableReforgedCamera) boolOptions |= BoolOptions::EnableReforgedCamera;
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) boolOptions |= BoolOptions::ShowWeaponWheelAmmoCount;

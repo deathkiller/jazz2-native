@@ -12,8 +12,12 @@
 	"WsCertPath": "cert.pem",
 	"WsKeyPath": "key.pem",
 
-	/* "ServerAddressOverride" allows to specify alternative public server address */
+	/* "ServerAddressOverride" allows to specify alternative public server address,
+	   an array can be used if the server is reachable at more than one address;
+	   a domain name needs no array to cover both IPv4 and IPv6, because a client
+	   resolves it to every address it has and tries all of them */
 	/*"ServerAddressOverride": "123.123.123.123",*/
+	/*"ServerAddressOverride": [ "123.123.123.123", "[2001:db8::1]:7438", "example.com" ],*/
 	
 	"WelcomeMessage": "Welcome to the {PlayerName}'s server!",
 	"MaxPlayerCount": 16,

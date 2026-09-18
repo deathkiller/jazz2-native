@@ -72,10 +72,10 @@ namespace nCine::RHI::RSX
 		targets is a state change like any other, with no lifecycle to manage and no risk of discarding what
 		an earlier pass drew.
 
-		**One colour attachment.** The RSX can bind four, but the published `MAX_COLOR_ATTACHMENTS` is 1,
+		<b>One colour attachment.</b> The RSX can bind four, but the published `MAX_COLOR_ATTACHMENTS` is 1,
 		which is all the render pipeline uses (every off-screen pass here is a single-target one).
 
-		**No depth storage of its own.** The engine is a 2D renderer that never needs a depth buffer's
+		<b>No depth storage of its own.</b> The engine is a 2D renderer that never needs a depth buffer's
 		contents to survive a pass, so every target shares the one display-sized depth surface the device
 		allocates rather than carrying its own. That surface is only ever scratch, and its pitch covers any
 		target the pipeline creates.

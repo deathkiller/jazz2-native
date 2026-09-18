@@ -19,14 +19,14 @@ namespace nCine
 		verbatim. Everything above that - mixing, resampling, panning, looping, stream queues - is this
 		class, on the PPE.
 
-		**Two consequences shape the whole design.**
+		<b>Two consequences shape the whole design.</b>
 
-		*Everything is mixed by hand into one output.* There is no per-source volume or pitch register to
+		<em>Everything is mixed by hand into one output.</em> There is no per-source volume or pitch register to
 		program, so @ref setSourceGain() and friends only record a value that @ref MixInto() applies while
 		it walks the sources. That also means a source costs CPU only while it is audible, which is why
 		@ref MaxSources can be generous.
 
-		*There is no mixer thread.* PSL1GHT ships no pthreads (see the `NCINE_WITH_THREADS` arm in
+		<em>There is no mixer thread.</em> PSL1GHT ships no pthreads (see the `NCINE_WITH_THREADS` arm in
 		`ncine_options.cmake`), so the ring cannot be topped up from a callback the way every other backend
 		does it - it is filled from @ref updatePlayers(), once per frame, on the main thread. That works
 		because the ring is deliberately long: @ref BlockCount blocks of 256 samples at 48 kHz is about

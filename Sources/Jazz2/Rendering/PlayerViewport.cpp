@@ -240,37 +240,68 @@ namespace Jazz2::Rendering
 			focusSpeed.Y = 0.0f;
 		}
 
-		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
-		float maxLookAheadX = halfView.X * MaxLookAheadFraction;
-		float maxLookAheadY = halfView.Y * MaxLookAheadFraction;
-		float targetLookAheadX = (focusVelocity.X > CameraStickSpeed
-			? (focusSpeed.X < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.X - CameraStickSpeed) * LookAheadFactorX, maxLookAheadX) : 0.0f);
-		float targetLookAheadY = (focusVelocity.Y > CameraStickSpeed
-			? (focusSpeed.Y < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.Y - CameraStickSpeed) * LookAheadFactorY, maxLookAheadY) : 0.0f);
-		// Ease the look-ahead toward its target, but once the player has stopped (target zero) and the remaining lead
-		// is small, freeze it instead of crawling all the way to zero: the camera is pixel-snapped, so easing through
-		// the last few pixels shows up as visible 1px jumps. Holding a small constant lead avoids that; easing resumes
-		// the moment the player moves again (target != 0).
-		static constexpr float LookAheadFreezeThreshold = 4.0f;
-		if (targetLookAheadX != 0.0f || std::abs(_cameraDistanceFactor.X) >= LookAheadFreezeThreshold) {
-			_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LookAheadSmoothing, timeMult);
-		}
-		if (targetLookAheadY != 0.0f || std::abs(_cameraDistanceFactor.Y) >= LookAheadFreezeThreshold) {
-			_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LookAheadSmoothing, timeMult);
-		}
+		if (PreferencesCache::EnableReforgedCamera) {
+			Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
+			float maxLookAheadX = halfView.X * MaxLookAheadFraction;
+			float maxLookAheadY = halfView.Y * MaxLookAheadFraction;
+			float targetLookAheadX = (focusVelocity.X > CameraStickSpeed
+				? (focusSpeed.X < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.X - CameraStickSpeed) * LookAheadFactorX, maxLookAheadX) : 0.0f);
+			float targetLookAheadY = (focusVelocity.Y > CameraStickSpeed
+				? (focusSpeed.Y < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.Y - CameraStickSpeed) * LookAheadFactorY, maxLookAheadY) : 0.0f);
+			// Ease the look-ahead toward its target, but once the player has stopped (target zero) and the remaining lead
+			// is small, freeze it instead of crawling all the way to zero: the camera is pixel-snapped, so easing through
+			// the last few pixels shows up as visible 1px jumps. Holding a small constant lead avoids that; easing resumes
+			// the moment the player moves again (target != 0).
+			static constexpr float LookAheadFreezeThreshold = 4.0f;
+			if (targetLookAheadX != 0.0f || std::abs(_cameraDistanceFactor.X) >= LookAheadFreezeThreshold) {
+				_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LookAheadSmoothing, timeMult);
+			}
+			if (targetLookAheadY != 0.0f || std::abs(_cameraDistanceFactor.Y) >= LookAheadFreezeThreshold) {
+				_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LookAheadSmoothing, timeMult);
+			}
 
-		// Vertical deadzone: hold the camera's vertical anchor while the player stays within +-VerticalDeadzone of it,
-		// so small bumps on uneven ground (steps, slopes, landing jitter) don't make the view bob. Snap to follow once
-		// the player leaves the band, and recenter slowly within it (freezing when nearly centered, to avoid a 4px
-		// crawl) so the camera doesn't stay offset after a jump. The anchor stays whole-pixel and is floored downstream,
-		// so the player itself stays crisp - this only desensitizes the vertical follow, it doesn't smear it.
-		float verticalOffset = focusPos.Y - _cameraViewCenterY;
-		if (verticalOffset > VerticalDeadzone) {
-			_cameraViewCenterY = focusPos.Y - VerticalDeadzone;
-		} else if (verticalOffset < -VerticalDeadzone) {
-			_cameraViewCenterY = focusPos.Y + VerticalDeadzone;
-		} else if (std::abs(verticalOffset) >= VerticalRecenterThreshold) {
-			_cameraViewCenterY = lerpByTime(_cameraViewCenterY, focusPos.Y, VerticalRecenter, timeMult);
+			// Vertical deadzone: hold the camera's vertical anchor while the player stays within +-VerticalDeadzone of it,
+			// so small bumps on uneven ground (steps, slopes, landing jitter) don't make the view bob. Snap to follow once
+			// the player leaves the band, and recenter slowly within it (freezing when nearly centered, to avoid a 4px
+			// crawl) so the camera doesn't stay offset after a jump. The anchor stays whole-pixel and is floored downstream,
+			// so the player itself stays crisp - this only desensitizes the vertical follow, it doesn't smear it.
+			float verticalOffset = focusPos.Y - _cameraViewCenterY;
+			if (verticalOffset > VerticalDeadzone) {
+				_cameraViewCenterY = focusPos.Y - VerticalDeadzone;
+			} else if (verticalOffset < -VerticalDeadzone) {
+				_cameraViewCenterY = focusPos.Y + VerticalDeadzone;
+			} else if (std::abs(verticalOffset) >= VerticalRecenterThreshold) {
+				_cameraViewCenterY = lerpByTime(_cameraViewCenterY, focusPos.Y, VerticalRecenter, timeMult);
+			}
+		} else {
+			// The original's camera, measured tick by tick. Three things differ from the above and each one is a
+			// separate complaint about how this engine pans:
+			//
+			// - The target is aimed by the direction being *held*, not by the speed being carried. That is what
+			//   holds the view still through a sidekick - 16 px/tick with nothing pressed pans the original not at
+			//   all, where reading the speed runs the lead out to 117 px here.
+			// - It is a flat distance per movement state (28 px walking, 120 dashing) rather than something
+			//   proportional to the speed. Reforged leads 80 px at a walk, nearly three times the original.
+			// - It closes half the gap per tick but never by more than a pixel, so almost the whole approach is a
+			//   straight 1 px/tick ramp that stops dead on arrival - not an exponential ease that is still
+			//   creeping after 140 frames.
+			float targetLookAheadX = 0.0f;
+			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
+				targetLookAheadX = player->GetCameraLookAhead();
+			}
+			// The constants are per one of the original's 70 Hz ticks, so the elapsed frame is converted into
+			// ticks once and both the fraction and the clamp are applied in that unit
+			float ticks = timeMult * Actors::Player::LegacyFrameRateScale;
+			float wanted = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LegacyCameraApproach, ticks);
+			float maxStep = LegacyCameraMaxStep * ticks;
+			_cameraDistanceFactor.X += std::clamp(wanted - _cameraDistanceFactor.X, -maxStep, maxStep);
+
+			// No vertical lead and no deadzone. Measured, the original's camera holds the player's own Y to within
+			// one tick of its vertical movement - +7.75 px at the launch of a 132 px jump, back to zero by the apex
+			// - so there is nothing here to reproduce but the player's position. The deadzone above is what leaves
+			// this engine holding a stale 21 px offset into the next scenario, which is the opposite of fixed.
+			_cameraDistanceFactor.Y = 0.0f;
+			_cameraViewCenterY = focusPos.Y;
 		}
 
 		if (_shakeDuration > 0.0f) {

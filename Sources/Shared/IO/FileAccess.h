@@ -34,7 +34,17 @@ namespace Death { namespace IO {
 		/** @brief A child process can inherit this handle */
 		InheritHandle = 0x20,
 		/** @brief Indicates that the file is to be accessed sequentially from beginning to end */
-		Sequential = 0x40
+		Sequential = 0x40,
+		/**
+		 * @brief The handle does not pin the file's name: other processes may delete, rename or replace the
+		 *        file while it is open
+		 *
+		 * On Windows, an open file cannot be deleted, renamed or replaced by anyone else unless every handle to
+		 * it was opened with this flag --- which is what a reader following a log another process rotates wants.
+		 * Has no effect together with @ref Exclusive. On Unix, a name is never pinned by an open descriptor, so
+		 * the flag is accepted and ignored.
+		 */
+		Unpinned = 0x80
 	};
 
 	DEATH_ENUM_FLAGS(FileAccess);

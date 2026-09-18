@@ -11,6 +11,7 @@
 #include "../../nCine/Threading/Thread.h"
 
 #include <atomic>
+#include <cstring>
 #include <mutex>
 
 #include <Environment.h>
@@ -357,26 +358,7 @@ namespace Jazz2::Multiplayer
 						continue;
 					}
 #		endif
-					ENetAddress addr = {};
-					String nullTerminatedAddress = String::nullTerminatedView(address);
-					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
-					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
-					if (r == 0) {
-#		if ENET_IPV6
-						if (addr.sin6_scope_id == 0) {
-							addr.sin6_scope_id = (std::uint16_t)ifidx;
-						}
-#		endif
-						addr.port = (port != 0 ? port : defaultPort);
-						_desiredEndpoints.push_back(std::move(addr));
-					} else {
-#		if defined(DEATH_TARGET_WINDOWS)
-						std::int32_t error = ::WSAGetLastError();
-#		else
-						std::int32_t error = errno;
-#		endif
-						LOGW("Failed to parse specified address \"{}\" with error {}", nullTerminatedAddress, error);
-					}
+					AddResolvedEndpoints(address, (port != 0 ? port : defaultPort), ifidx);
 				} else {
 					LOGW("Failed to parse specified endpoint \"{}\"", p[0]);
 				}
@@ -407,6 +389,91 @@ namespace Jazz2::Multiplayer
 		_handler = nullptr;
 #endif
 	}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
+	std::int32_t NetworkManagerBase::AddResolvedEndpoints(StringView host, std::uint16_t port, std::int32_t ifidx)
+	{
+		String nullTerminatedHost = String::nullTerminatedView(host);
+
+		// enet_address_set_host() stops at the first address the resolver answers with, so a domain name that
+		// has both an A and an AAAA record - or several A records - would reach the client as a single
+		// endpoint, and the connection would fail if that one address happened to be unreachable although
+		// another address of the same server would have worked. This walks the whole answer instead, and
+		// every address becomes an endpoint of its own for the client thread to try in turn.
+		struct addrinfo hints;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;
+		// Without it the resolver answers once per socket type, so every address would arrive two or three times
+		hints.ai_socktype = SOCK_DGRAM;
+
+		struct addrinfo* resultList = nullptr;
+		std::int32_t r = getaddrinfo(nullTerminatedHost.data(), nullptr, &hints, &resultList);
+		if (r != 0) {
+			LOGW("Failed to resolve specified address \"{}\" with error {}", nullTerminatedHost, r);
+			return 0;
+		}
+
+		std::int32_t added = 0, usable = 0;
+		for (struct addrinfo* result = resultList; result != nullptr && added < MaxAddressesPerHost; result = result->ai_next) {
+			if (result->ai_addr == nullptr || (std::size_t)result->ai_addrlen < sizeof(struct sockaddr_in)) {
+				continue;
+			}
+
+			ENetAddress addr = {};
+#	if ENET_IPV6
+			if (result->ai_family == AF_INET) {
+				// The transport carries IPv4 addresses in their IPv4-mapped form, the way ENet's own resolver does
+				enet_inaddr_map4to6(((struct sockaddr_in*)result->ai_addr)->sin_addr, &addr.host);
+			} else if (result->ai_family == AF_INET6 && (std::size_t)result->ai_addrlen >= sizeof(struct sockaddr_in6)) {
+				std::memcpy(&addr.host, &((struct sockaddr_in6*)result->ai_addr)->sin6_addr, sizeof(struct in6_addr));
+				addr.sin6_scope_id = (std::uint16_t)((struct sockaddr_in6*)result->ai_addr)->sin6_scope_id;
+			} else {
+				continue;
+			}
+			if (addr.sin6_scope_id == 0) {
+				addr.sin6_scope_id = (std::uint16_t)ifidx;
+			}
+#	else
+			if (result->ai_family != AF_INET) {
+				continue;
+			}
+			addr.host = ((struct sockaddr_in*)result->ai_addr)->sin_addr.s_addr;
+#	endif
+			addr.port = port;
+			usable++;
+
+			// The same address can come back more than once, and each duplicate would cost the client thread
+			// another connection attempt with the full timeout behind it. Endpoints resolved earlier in this
+			// connection are compared too, because a server is usually listed under both its name and its address.
+			bool isDuplicate = false;
+			for (const auto& existing : _desiredEndpoints) {
+				if (existing.port == addr.port && enet_host_equal(existing.host, addr.host)
+#	if ENET_IPV6
+					&& existing.sin6_scope_id == addr.sin6_scope_id
+#	endif
+				) {
+					isDuplicate = true;
+					break;
+				}
+			}
+			if (!isDuplicate) {
+				_desiredEndpoints.push_back(addr);
+				added++;
+			}
+		}
+
+		freeaddrinfo(resultList);
+
+		if (usable == 0) {
+			// Every answer was of an address family this build cannot carry, which is not the same as the
+			// name not resolving - and unlike a duplicate, it leaves nothing of the endpoint behind
+			LOGW("Specified address \"{}\" resolved to no usable address", nullTerminatedHost);
+		} else {
+			LOGD("Resolved \"{}\" to {} address(es), {} of them new", nullTerminatedHost, usable, added);
+		}
+		return added;
+	}
+#endif
 
 	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)
 	{

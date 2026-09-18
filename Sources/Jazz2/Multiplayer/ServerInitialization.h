@@ -59,8 +59,20 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalTreasureCollected;
 		/** @brief Duration of overtime in seconds after the first player finishes, default is 60; 0 ends the round right away (Race only) */
 		std::uint32_t OvertimeSecs;
-		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
+		/**
+		 * @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis
+		 *
+		 * Only meaningful together with @ref PlayerStackingSet - left unconfigured, the game mode decides.
+		 */
 		bool PlayerStacking;
+		/**
+		 * @brief Whether @ref PlayerStacking was given explicitly
+		 *
+		 * Unset, stacking is enabled for @ref MpGameMode::Cooperation and for nothing else: standing on a
+		 * team-mate helps them reach somewhere, while in a mode where the others are opponents it is a way of
+		 * pinning them. Set, the configured value wins outright in every mode.
+		 */
+		bool PlayerStackingSet;
 		/** @brief Whether the race minimap is available to clients (Race only) */
 		bool AllowMinimap;
 		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
@@ -109,10 +121,12 @@ namespace Jazz2::Multiplayer
 		-   @cpp "$include" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Include configuration from another file by path
 			-   If the JSON contains a @cpp "$include" @ce directive, it will load the referenced files recursively, but only once to avoid infinite loops
 		-   @cpp "ServerName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the server
-		-   @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Address override allows to specify an alternate address
-			-   The address is used only in the public list to be able to connect to the server from the outside
+		-   @cpp "ServerAddressOverride" @ce : @m_span{m-label m-danger m-flat} string @m_endspan or @m_span{m-label m-success m-flat} array @m_endspan Address override allows to specify one or more alternate addresses
+			-   The addresses are used only in the public list to be able to connect to the server from the outside
 			-   IPv4 address, IPv6 address or domain name can be used
 			-   It is also possible to specify a different port if it is different from the local port
+			-   An array lists alternative addresses the same server can be reached at (e.g. IPv4 and IPv6), clients try them in order
+			-   A domain name needs no such list to cover both protocols --- a client resolves it to **every** address it has and tries all of them
 		-   @cpp "ServerPassword" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Password to join the server
 		-   @cpp "WelcomeMessage" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Message displayed to players upon joining
 		-   @cpp "MaxPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players allowed to join
@@ -192,7 +206,9 @@ namespace Jazz2::Multiplayer
 		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish after the first one does, in seconds (default is **60** seconds, Race)
 			-   Set to **0** to end the round as soon as the first player finishes
 		-   @cpp "EnableSpectate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether spectate mode is enabled (default is **true**)
-		-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other (and jump off); if disabled, they bump apart on every axis as before (default is **true**)
+		-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other (and jump off); if disabled, they bump apart on every axis as before
+			-   Omit it and the game mode decides: stacking is on for @cpp "Cooperation" @ce and off everywhere else
+			-   Give it explicitly and that value wins in every mode
 		-   @cpp "EnableFreeCamera" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether free camera is enabled in spectate mode (default is **true**)
 		-   @cpp "AllowJoinDuringRound" @ce : @m_span{m-label m-default m-flat} bool @m_endspan  Whether players can join in the middle of a round (default is **true**)
 		-   @cpp "JoinCooldownSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Cooldown duration in seconds for players who join mid-round (default is **0** seconds)
@@ -228,8 +244,14 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Server name */
 		String ServerName;
-		/** @brief Server address override allows to specify an alternate address under which the server will be listed */
-		String ServerAddressOverride;
+		/**
+		 * @brief Server address overrides allow to specify alternate addresses under which the server will be listed
+		 *
+		 * If non-empty, these addresses replace the automatically detected endpoints in the public server list.
+		 * More than one entry can be given for a server reachable at several addresses (e.g. IPv4 and IPv6),
+		 * clients then try them in the listed order.
+		 */
+		SmallVector<String, 0> ServerAddressOverrides;
 		/** @brief Password of the server */
 		String ServerPassword;
 		/** @brief Welcome message displayed to players upon joining */
@@ -329,8 +351,20 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether spectate mode is enabled */
 		bool EnableSpectate;
-		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
+		/**
+		 * @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis
+		 *
+		 * Only meaningful together with @ref PlayerStackingSet - left unconfigured, the game mode decides.
+		 */
 		bool PlayerStacking;
+		/**
+		 * @brief Whether @ref PlayerStacking was given explicitly
+		 *
+		 * Unset, stacking is enabled for @ref MpGameMode::Cooperation and for nothing else: standing on a
+		 * team-mate helps them reach somewhere, while in a mode where the others are opponents it is a way of
+		 * pinning them. Set, the configured value wins outright in every mode.
+		 */
+		bool PlayerStackingSet;
 		/** @brief Whether free camera is enabled in spectate mode */
 		bool EnableFreeCamera;
 		/** @brief Whether players can join in the middle of a round */

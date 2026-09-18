@@ -153,6 +153,7 @@ namespace Jazz2::UI::Menu
 			};
 			item->OnActivate = [this, reforged]() {
 				PreferencesCache::EnableReforgedGameplay = reforged;
+				PreferencesCache::EnableReforgedCamera = reforged;
 				PreferencesCache::EnableReforgedHUD = reforged;
 				PreferencesCache::EnableLedgeClimb = reforged;
 				PreferencesCache::Save();

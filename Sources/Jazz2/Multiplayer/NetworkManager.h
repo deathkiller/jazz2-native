@@ -148,6 +148,7 @@ namespace Jazz2::Multiplayer
 		String OnOverrideContentPath(StringView path);
 
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
+		static void AddServerAddressOverride(ServerConfiguration& serverConfig, StringView value);
 		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);
 		static WebhookEventType StringToWebhookEvent(StringView value);
 	};

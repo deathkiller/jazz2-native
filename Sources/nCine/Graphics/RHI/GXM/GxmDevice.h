@@ -30,7 +30,7 @@ namespace nCine::RHI::GXM
 
 		Three properties of the hardware shape everything below.
 
-		**sceGxm renders in scenes.** The PowerVR SGX is a tile-based deferred renderer: primitives are
+		<b>sceGxm renders in scenes.</b> The PowerVR SGX is a tile-based deferred renderer: primitives are
 		binned, then each 32x32 tile is shaded once and written out. A scene (`sceGxmBeginScene()` ...
 		`sceGxmEndScene()`) is one such pass over one surface, so a scene is opened lazily by the first clear
 		or draw that follows a target change (@ref EnsureScene()) and closed when the target changes again or
@@ -44,7 +44,7 @@ namespace nCine::RHI::GXM
 		surface takes exactly one scene per frame, and a render target takes one per pass it is the target of
 		- but it is the constraint any change to the viewport chain has to respect.
 
-		**sceGxm only draws indexed.** There is no `glDrawArrays` equivalent - every `sceGxmDraw()` consumes
+		<b>sceGxm only draws indexed.</b> There is no `glDrawArrays` equivalent - every `sceGxmDraw()` consumes
 		index data - so the device keeps one shared, GPU-visible buffer of increasing indices (0, 1, 2, ...)
 		and hands a window of it to the non-indexed draws, which reproduces `glDrawArrays(first, count)`
 		exactly. The two vertex-ID-free sprite layouts are served the same way: the shaders the Cg emitter
@@ -52,7 +52,7 @@ namespace nCine::RHI::GXM
 		`gl_VertexID`, so the device also owns the two small static streams that feed them (see
 		@ref GetQuadCornerStream()).
 
-		**The display scans out top-down.** The engine renders in the OpenGL convention, and this backend
+		<b>The display scans out top-down.</b> The engine renders in the OpenGL convention, and this backend
 		replays it faithfully: every viewport is programmed with a positive Y scale, so clip -Y lands on row
 		0 and every surface - the screen and each off-screen render target - is stored bottom-up exactly like
 		OpenGL. That is what keeps a texture's V axis and its viewport's Y axis pointing the same way, so an

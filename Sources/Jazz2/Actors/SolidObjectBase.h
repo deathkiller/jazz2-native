@@ -26,6 +26,14 @@ namespace Jazz2::Actors
 
 		/** @brief Pushes the object in a given direction and returns the resulting horizontal speed (0 if it cannot move) */
 		float Push(bool left, float timeMult);
+		/**
+			@brief Stops an in-progress push at once, without the usual @ref PushDecayTime coast
+
+			The coast is what keeps an ordinary push looking smooth across the frames where the contact probe
+			misses. A sidekick has no use for it: the original stops the object on the same tick the kick's
+			drive ends, so leaving it in added seven ticks of free travel to every one of Lori's kicks.
+		*/
+		void StopPushing();
 
 	protected:
 		/** @{ @name Constants */

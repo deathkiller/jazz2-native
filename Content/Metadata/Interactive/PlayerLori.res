@@ -1,4 +1,4 @@
-{
+﻿{
 	"Version": {
 		"Target": "Jazz² Resurrection"
 	},
@@ -103,6 +103,11 @@
 			"Path": "Lori/buttstomp.aura",
 			"States": [ 256 ]
 		},
+		"HookIdleFlavor": {
+			"Path": "Lori/vine_idle_flavor.aura",
+			"FrameRate": 1.56,
+			"States": [ 1073741866 ]
+		},
 		"Hook": {
 			"Path": "Lori/vine_idle.aura",
 			"States": [ 12 ]
@@ -142,7 +147,32 @@
 		},
 		"RunToIdle": {
 			"Path": "Lori/run_stop.aura",
+			"FrameRate": 10.9,
 			"States": [ 1073741824 ]
+		},
+		"WalkToIdle": {
+			"Path": "Lori/walk_stop.aura",
+			"FrameRate": 21.9,
+			"States": [ 1073741865 ]
+		},
+		"RevUpSpark": {
+			"Path": "Common/explosion_tiny.aura",
+			"States": [ 1325400080 ]
+		},
+		"RevUp": {
+			"Path": "Lori/revup.aura",
+			"FrameRate": 5,
+			"States": [ 524288 ]
+		},
+		"RevUpStart": {
+			"Path": "Lori/revup_start.aura",
+			"FrameRate": 80,
+			"States": [ 1073741863 ]
+		},
+		"RevUpEnd": {
+			"Path": "Lori/revup_end.aura",
+			"FrameRate": 23,
+			"States": [ 1073741864 ]
 		},
 		"RunToDash": {
 			"Path": "Lori/dash_start.aura",
@@ -150,6 +180,7 @@
 		},
 		"DashToIdle": {
 			"Path": "Lori/dash_stop.aura",
+			"FrameRate": 25,
 			"States": [ 1073741856 ]
 		},
 		"FallToIdle": {
@@ -183,6 +214,12 @@
 			"FrameOffset": 9,
 			"FrameRate": 100,
 			"States": [ 1073741833 ]
+		},
+		"SidekickFull": {
+			"Path": "Lori/sidekick.aura",
+			"FrameCount": 9,
+			"FrameRate": 9.5,
+			"States": [ 1073741867 ]
 		},
 		"ButtstompStart": {
 			"Path": "Lori/spring.aura",

@@ -114,5 +114,19 @@ namespace Jazz2::Rendering
 		// pixel-by-pixel crawl.
 		static constexpr float VerticalRecenter = 0.05f;
 		static constexpr float VerticalRecenterThreshold = 4.0f;
+
+		// --- The original's camera, used when PreferencesCache::EnableReforgedCamera is off ---
+		// Measured off the original tick by tick; see the camera section of Docs/MovementAccuracyReference.dox.
+		// How far the lead is aimed is a property of the player (Player::GetCameraLookAhead); these two are how
+		// it gets there, and both are per one of the original's 70 Hz ticks.
+		//
+		// Fraction of the remaining gap closed each tick. Read straight off the end of the approach, where the
+		// steps go 1.000, 0.500, 0.250, 0.125, 0.0625 - halving exactly.
+		static constexpr float LegacyCameraApproach = 0.5f;
+		// ...but never more than this per tick, which is what turns the first and longest part of the approach
+		// into a straight 1 px/tick ramp. A velocity, so it scales with the frame rate where the fraction above
+		// does not. This clamp is also active from the very first tick of a walk *and* of a dash, which is how
+		// the target is known to be a distance rather than something proportional to the speed.
+		static constexpr float LegacyCameraMaxStep = 1.0f;
 	};
 }

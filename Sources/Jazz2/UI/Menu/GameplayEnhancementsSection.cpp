@@ -54,6 +54,10 @@ namespace Jazz2::UI::Menu
 			[this](std::int32_t) { PreferencesCache::EnableReforgedGameplay = !PreferencesCache::EnableReforgedGameplay; _isDirty = true; },
 			reforgedGameplayReadOnly)->ArrowSpacing = WideArrowSpacing;
 		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+		list->Add<ChoiceItem>(_("Reforged Camera"),
+			[]() -> StringView { return (PreferencesCache::EnableReforgedCamera ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::EnableReforgedCamera = !PreferencesCache::EnableReforgedCamera; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
+		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 		list->Add<ChoiceItem>(_("Reforged HUD"),
 			[]() -> StringView { return (PreferencesCache::EnableReforgedHUD ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) { PreferencesCache::EnableReforgedHUD = !PreferencesCache::EnableReforgedHUD; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;

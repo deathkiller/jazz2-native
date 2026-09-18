@@ -25,11 +25,11 @@ namespace nCine::RHI::RSX
 		format on the GPU side.
 
 		A texture bound as a colour attachment is the exception: the GPU writes it, so its GPU-visible copy
-		*is* the truth and the host store is only kept for a readback. That is also why the two live in
+		<em>is</em> the truth and the host store is only kept for a readback. That is also why the two live in
 		separate allocations at all - the render target's surface has to stay put across frames while the
 		host store may be reallocated by an upload.
 
-		**The swizzle is free here, and that is the one real difference from the sceGxm backend.** sceGxm can
+		<b>The swizzle is free here, and that is the one real difference from the sceGxm backend.</b> sceGxm can
 		only express a fixed set of channel patterns, so `GxmTexture` bakes the engine's swizzle into the
 		texels and re-bakes them whenever it changes. The RSX has a general `remap` field in its texture
 		control structure: each of the four output channels independently selects a source channel, or a

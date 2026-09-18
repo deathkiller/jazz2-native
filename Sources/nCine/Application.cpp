@@ -407,7 +407,7 @@ namespace
 			}
 
 			char buffer[LogArchiveBufferSize];
-			for (;;) {
+			while (true) {
 				const std::int64_t bytesRead = input.Read(buffer, sizeof(buffer));
 				if (bytesRead <= 0) {
 					break;

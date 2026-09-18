@@ -49,7 +49,7 @@ namespace nCine::Backends
 
 		Two PS2 particulars are handled here rather than left to the caller: the pad libraries live in IRX
 		modules that have to be loaded from ROM before `padInit()` will do anything, and the button word is
-		**active low** - a pressed button reads 0, so the raw value is inverted before use.
+		<b>active low</b> - a pressed button reads 0, so the raw value is inverted before use.
 	*/
 	class Ps2InputManager : public IInputManager
 	{

@@ -1485,6 +1485,8 @@ namespace Death { namespace Trace {
 		static inline DEATH_THREAD_LOCAL ThreadContext* _threadContext = nullptr;
 
 		static ThreadContext* GetLocalThreadContext() noexcept;
+
+		DEATH_NEVER_INLINE bool EnqueueEntrySlow(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, std::size_t totalSize) noexcept;
 #endif
 
 		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;

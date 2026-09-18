@@ -160,7 +160,7 @@ together with the SDK (`CMAKE_OSX_SYSROOT`, `iphoneos` or `iphonesimulator`), th
 (`CMAKE_OSX_ARCHITECTURES`, `arm64` for devices; the simulator runs the Mac's own architecture) and the
 minimum iOS version (`CMAKE_OSX_DEPLOYMENT_TARGET`, `14.0` is the default and the lowest the launch screen
 in the `Info.plist` supports). None of the prebuilt dependency archives cover iOS, so **SDL2**, **OpenAL Soft**,
-**Ogg/Vorbis** and **libcurl** are downloaded as source and compiled as part of the build (CMake 3.18 or newer),
+<b>Ogg/Vorbis</b> and **libcurl** are downloaded as source and compiled as part of the build (CMake 3.18 or newer),
 like **libopenmpt**, **lz4** and **Zstd** already are everywhere; **zlib** comes from the SDK.
 
 @code{.sh}
@@ -209,7 +209,7 @@ xcrun simctl launch --console booted jazz2.resurrection
 
 @m_class{m-noindent}
 
-**Metal** is the default rendering backend (the same backend and offline MSL as on macOS, see
+<b>Metal</b> is the default rendering backend (the same backend and offline MSL as on macOS, see
 `NCINE_PREFERRED_RHI`), with the **OpenGL|ES** 3.0 profile of the `OpenGL` backend as the alternative --- Apple
 deprecated it in iOS 12 but still ships it, and it is the one the iOS Simulator can run on a Mac without a
 Metal-capable GPU. **SDL2** is the only window backend: it provides the UIKit window, the touch, game-controller
@@ -380,17 +380,17 @@ The following parameters can be used to customize the build:
         - `RDP` --- Fixed-function Reality Display Processor backend driving libdragon's rdpq queue
           (**Nintendo 64** only), see @ref consoles-n64
         - `LegacyGL` --- Fixed-function OpenGL 1.x backend, whose targets are **MorphOS**' TinyGL and
-          **AmigaOS 4.1**'s MiniGL, see @ref amiga-morphos-gl and @ref amiga-os4-gl
+          <b>AmigaOS 4.1</b>'s MiniGL, see @ref amiga-morphos-gl and @ref amiga-os4-gl
           @m_span{m-text m-dim} (selectable on the desktop too, where it is how that path is developed
           and looked at) @m_endspan
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
     -   Only `GXM`, `OpenGL` (through **vitaGL**, which pins the profile to `ES2`) and `Software` are
         available on **PS Vita**
     -   Only `LegacyGL` (the default) and `Software` are available on **MorphOS** and **AmigaOS 4.1**;
-        **AmigaOS 3.x** is pinned to `Software`, see @ref amiga
+        <b>AmigaOS 3.x</b> is pinned to `Software`, see @ref amiga
     -   Pinned to the console's only rendering backend on **Nintendo 64** (`RDP`), **Sega Dreamcast**
         (`PVR`), **Nintendo Wii** and **Nintendo GameCube** (`GX`), **PlayStation Portable** (`GU`),
-        **PlayStation 2** (`GS`) and **PlayStation 3** (`RSX`), see @ref consoles
+        <b>PlayStation 2</b> (`GS`) and **PlayStation 3** (`RSX`), see @ref consoles
     -   `RSX` is the only one of those pins that is a **shader** backend --- the RSX is a programmable
         part, so the PlayStation 3 keeps the post-processing chain the fixed-function consoles lose
 -   `NCINE_RHI_GL_PROFILE` --- Which profile of the OpenGL family the `OpenGL` backend targets
@@ -440,7 +440,7 @@ The following parameters can be used to customize the build:
         @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`, pinned by hash) @m_endspan, so nothing has to
         be installed
     -   It is far lighter --- an integer mixer rather than a floating-point one --- but it does not read
-        **MO3**, so four of the game's tracks are silent under it, and its playback is less exact than
+        <b>MO3</b>, so four of the game's tracks are silent under it, and its playback is less exact than
         libopenmpt's on the edge cases
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce is enabled
@@ -466,12 +466,12 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
 -   `NCINE_IOS_BUNDLE_IDENTIFIER` (default @cpp "jazz2.resurrection" @ce) --- Bundle identifier of the application;
     a personal team's provisioning may require an identifier of its own
 -   `NCINE_IOS_DEVELOPMENT_TEAM` --- Apple Developer team ID; the **Xcode** generator signs the application with
-    it (automatic signing), and a **Ninja**/**Makefile** device build derives its entitlements from it. Empty by
+    it (automatic signing), and a <b>Ninja</b>/<b>Makefile</b> device build derives its entitlements from it. Empty by
     default, which leaves the bundle unsigned (simulator only)
 -   `NCINE_IOS_CODESIGN_IDENTITY` --- `codesign` identity (e.g. @cpp "Apple Development" @ce) that signs the bundle
-    after a **Ninja**/**Makefile** device build; not used by the **Xcode** generator, which signs on its own
+    after a <b>Ninja</b>/<b>Makefile</b> device build; not used by the **Xcode** generator, which signs on its own
 -   `NCINE_IOS_PROVISIONING_PROFILE` --- Provisioning profile (`.mobileprovision`) embedded into a
-    **Ninja**/**Makefile** device build next to the signature
+    <b>Ninja</b>/<b>Makefile</b> device build next to the signature
 
 @subsubsection building-config-params-linux Platform-specific parameters for Linux
 

@@ -214,6 +214,14 @@ namespace Jazz2::Multiplayer
 
 	private:
 		static constexpr std::uint32_t ProcessingIntervalMs = 4;
+		/**
+		 * @brief Maximum number of addresses taken from a single host name, see @ref AddResolvedEndpoints()
+		 *
+		 * The client thread walks the endpoints one by one and gives each of them up to 10 seconds, so a
+		 * name behind a large round-robin record set would otherwise keep the player waiting for minutes.
+		 * Two addresses is what a dual-stacked server answers with.
+		 */
+		static constexpr std::int32_t MaxAddressesPerHost = 4;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_ENetHost* _host;
@@ -274,6 +282,17 @@ namespace Jazz2::Multiplayer
 
 		static void InitializeBackend();
 		static void ReleaseBackend();
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
+		/**
+		 * @brief Appends every address the given host resolves to as a separate endpoint
+		 *
+		 * Returns the number of endpoints added, which is @cpp 0 @ce also when the host resolved to
+		 * addresses that are all already among the endpoints. A host that cannot be resolved at all is
+		 * reported by the method itself. See @ref CreateClient().
+		 */
+		std::int32_t AddResolvedEndpoints(StringView host, std::uint16_t port, std::int32_t ifidx);
+#endif
 
 		/** @brief Whether the transport is in ad hoc mode (only ever `true` on the PSP), see @ref SetAdhocMode() */
 		static bool _adhocMode;

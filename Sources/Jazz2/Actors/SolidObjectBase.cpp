@@ -30,7 +30,13 @@ namespace Jazz2::Actors
 				return _pushingSpeedX;
 			}
 
-			float speedX = (left ? -PushSpeed : PushSpeed);
+			// The object and whoever is pushing it travel as one in the original, so the two rates have to be
+			// the same number. They were not: the player got @ref Player::LegacyPushSpeed, a measured 0.375
+			// per original tick, while the object kept a per-frame 0.5 that works out to 0.4286 per tick and
+			// so crept ahead of the player pushing it. Over one of Lori's kicks that is 6 px of rock where
+			// the original moves 4.5.
+			float pushSpeed = (_levelHandler->IsReforged() ? PushSpeed : Player::LegacyPushSpeed);
+			float speedX = (left ? -pushSpeed : pushSpeed);
 			if (TryPushInternal(timeMult, speedX)) {
 				_pushingSpeedX = speedX;
 				_pushingTime = PushDecayTime;
@@ -39,6 +45,11 @@ namespace Jazz2::Actors
 		}
 
 		return 0.0f;
+	}
+
+	void SolidObjectBase::StopPushing()
+	{
+		_pushingTime = 0.0f;
 	}
 
 	void SolidObjectBase::OnUpdate(float timeMult)

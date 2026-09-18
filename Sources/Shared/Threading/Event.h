@@ -98,14 +98,16 @@ namespace Death { namespace Threading {
 		void SetEvent() noexcept
 		{
 			if DEATH_LIKELY(Implementation::IsWaitOnAddressSupported()) {
-				// FYI: 'WakeByAddress*' invokes a full memory barrier
-				_isSignaled.store(1, std::memory_order_release);
-
-				#pragma warning(suppress: 4127) // Conditional expression is constant
-				if constexpr (Type == EventType::AutoReset) {
-					Implementation::WakeByAddressSingle(_isSignaled);
-				} else {
-					Implementation::WakeByAddressAll(_isSignaled);
+				// Nobody can be waiting on an already signaled event, so the wake (a syscall on most platforms)
+				// is skipped then. This must stay an RMW, a plain load could be reordered before the caller's
+				// preceding stores and lose the wake-up.
+				if (_isSignaled.exchange(1, std::memory_order_acq_rel) == 0) {
+					#pragma warning(suppress: 4127) // Conditional expression is constant
+					if constexpr (Type == EventType::AutoReset) {
+						Implementation::WakeByAddressSingle(_isSignaled);
+					} else {
+						Implementation::WakeByAddressAll(_isSignaled);
+					}
 				}
 			} else {
 #if defined(DEATH_TARGET_WINDOWS)

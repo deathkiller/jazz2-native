@@ -320,7 +320,9 @@ namespace Jazz2::Multiplayer
 		serverConfig.OvertimeSecs = 60;
 
 		serverConfig.EnableSpectate = true;
+		// Left unset on purpose: the game mode decides until a configuration says otherwise
 		serverConfig.PlayerStacking = true;
+		serverConfig.PlayerStackingSet = false;
 		serverConfig.EnableFreeCamera = true;
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
@@ -401,18 +403,21 @@ namespace Jazz2::Multiplayer
 					serverConfig.ServerName = serverName;
 				}
 
-				std::string_view serverAddressOverride;
-				if (doc["ServerAddressOverride"].get(serverAddressOverride) == Json::SUCCESS) {
-					serverConfig.ServerAddressOverride = StringView(serverAddressOverride).trimmed();
-					if (!serverConfig.ServerAddressOverride.empty()) {
-						StringView address; std::uint16_t port;
-						if (!TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port) ||
-							(!IsAddressValid(address) && !IsDomainValid(address))) {
-							LOGW("Specified server address override \"{}\" is invalid, ignoring", serverConfig.ServerAddressOverride);
-							serverConfig.ServerAddressOverride = {};
-						} else {
-							LOGI("Using server address override \"{}\"", serverConfig.ServerAddressOverride);
+				Json::Value& serverAddressOverride = doc["ServerAddressOverride"];
+				if (serverAddressOverride.isArray()) {
+					serverConfig.ServerAddressOverrides.clear();
+					for (auto& entry : serverAddressOverride) {
+						std::string_view addressOverride;
+						if (entry.get(addressOverride) == Json::SUCCESS) {
+							AddServerAddressOverride(serverConfig, addressOverride);
 						}
+					}
+				} else {
+					// A single address is still accepted, because that's what most servers need
+					std::string_view addressOverride;
+					if (serverAddressOverride.get(addressOverride) == Json::SUCCESS) {
+						serverConfig.ServerAddressOverrides.clear();
+						AddServerAddressOverride(serverConfig, addressOverride);
 					}
 				}
 
@@ -591,6 +596,7 @@ namespace Jazz2::Multiplayer
 				bool playerStacking;
 				if (doc["PlayerStacking"].get(playerStacking) == Json::SUCCESS) {
 					serverConfig.PlayerStacking = playerStacking;
+					serverConfig.PlayerStackingSet = true;
 				}
 
 				std::int64_t teamCount;
@@ -709,6 +715,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
 						playlistEntry.OvertimeSecs = serverConfig.OvertimeSecs;
 						playlistEntry.PlayerStacking = serverConfig.PlayerStacking;
+						playlistEntry.PlayerStackingSet = serverConfig.PlayerStackingSet;
 						playlistEntry.AllowMinimap = serverConfig.AllowMinimap;
 						playlistEntry.ColorizePlayersByTeam = serverConfig.ColorizePlayersByTeam;
 
@@ -742,6 +749,7 @@ namespace Jazz2::Multiplayer
 						bool entryPlayerStacking;
 						if (entry["PlayerStacking"].get(entryPlayerStacking) == Json::SUCCESS) {
 							playlistEntry.PlayerStacking = entryPlayerStacking;
+							playlistEntry.PlayerStackingSet = true;
 						}
 
 						std::int64_t entryTeamCount;
@@ -833,6 +841,23 @@ namespace Jazz2::Multiplayer
 		} else {
 			LOGE("Configuration file \"{}\" cannot be opened", configPath);
 		}
+	}
+
+	void NetworkManager::AddServerAddressOverride(ServerConfiguration& serverConfig, StringView value)
+	{
+		StringView trimmed = value.trimmed();
+		if (trimmed.empty()) {
+			return;
+		}
+
+		StringView address; std::uint16_t port;
+		if (!TrySplitAddressAndPort(trimmed, address, port) || (!IsAddressValid(address) && !IsDomainValid(address))) {
+			LOGW("Specified server address override \"{}\" is invalid, ignoring", trimmed);
+			return;
+		}
+
+		LOGI("Using server address override \"{}\"", trimmed);
+		serverConfig.ServerAddressOverrides.emplace_back(trimmed);
 	}
 
 	void NetworkManager::VerifyServerConfiguration(ServerConfiguration& serverConfig)

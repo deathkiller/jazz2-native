@@ -337,6 +337,14 @@ namespace Jazz2
 		// Gameplay
 		/** @brief Whether reforged gameplay is enabled */
 		static bool EnableReforgedGameplay;
+		/**
+		 * @brief Whether the reforged camera is enabled
+		 *
+		 * Separated from @ref EnableReforgedGameplay because the camera is a local, purely visual concern --
+		 * a client may well want the original's camera in a session whose physics the server decides. A
+		 * configuration written before this option existed derives it from @ref EnableReforgedGameplay.
+		 */
+		static bool EnableReforgedCamera;
 		/** @brief Whether reforged HUD is enabled */
 		static bool EnableReforgedHUD;
 		/** @brief Whether reforged main menu is enabled */
@@ -500,12 +508,13 @@ namespace Jazz2
 			EnableTouchJoystick = 0x40000000,
 			EnableTouchVibration = 0x80000000,
 
-			ShowMinimap = 0x100000000
+			ShowMinimap = 0x100000000,
+			EnableReforgedCamera = 0x200000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 16;
+		static constexpr std::uint8_t FileVersion = 17;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

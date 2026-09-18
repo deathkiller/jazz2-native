@@ -402,6 +402,11 @@ namespace Jazz2
 
 	Actors::ActorBase* LevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
 	{
+		// No game-mode check here, unlike MpLevelHandler::IsPlayerStackingEnabled(): this handler only ever runs the
+		// campaign, alone or in local splitscreen co-op, so every session it serves is already cooperative. Every
+		// other mode - online and local splitscreen alike - goes through MpLevelHandler, which is where stacking is
+		// restricted to Cooperation.
+		//
 		// Minimum horizontal overlap required to count as "on top of" the other player (not brushing its side)
 		constexpr float MinHorizontalOverlap = 4.0f;
 		// How close the feet must be to the other player's head to count as standing/landing on it
