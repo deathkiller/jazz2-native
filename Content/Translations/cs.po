@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-09-04 19:44+0200\n"
-"PO-Revision-Date: 2026-09-04 19:45+0200\n"
+"POT-Creation-Date: 2026-09-19 01:34+0200\n"
+"PO-Revision-Date: 2026-09-19 01:36+0200\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1368,19 +1368,19 @@ msgstr ""
 "Prosím navštivte\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:169 Sources/Jazz2/LevelHandler.cpp:224
+#: Sources/Jazz2/LevelHandler.cpp:174 Sources/Jazz2/LevelHandler.cpp:229
 #, c++-format
 msgid "Level \"{}\" initialized"
 msgstr "Úroveň \"{}\" inicializována"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:891
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:191
+#: Sources/Jazz2/LevelHandler.cpp:948
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
 msgid "For more information, visit the official website:"
 msgstr "Pro více informací můžete navštívit oficiální webové stránky:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2443
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3732
+#: Sources/Jazz2/LevelHandler.cpp:2529
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4045
 msgid "Cheats are not allowed in current context"
 msgstr "Cheaty nejsou v současném kontextu povoleny"
 
@@ -1400,7 +1400,7 @@ msgstr "položena"
 msgid "Find exit!"
 msgstr "Najděte východ!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:491
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:551
 msgid ""
 "\n"
 "\n"
@@ -1410,7 +1410,7 @@ msgstr ""
 "\n"
 "Hra brzy začne!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:671
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:733
 #, c++-format
 msgid ""
 "\n"
@@ -1421,73 +1421,73 @@ msgstr ""
 "\n"
 "{} vyhrál šampionát!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2681
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2783
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr "Hodnota mimo rozsah (2-{})"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2757
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2859
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr "Použití: /team <blue|red|green|yellow|auto>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2764
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4218
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2866
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4534
 #, c++-format
 msgid "You joined the {} team"
 msgstr "Připojili jste se k {} týmu"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2766
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4220
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2868
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4536
 msgid "Cannot change team right now"
 msgstr "V tuto chvíli nelze změnit tým"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2777
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2789
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2879
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2891
 msgid "Teams are only used in team game modes"
 msgstr "Týmy se používají pouze v týmových herních režimech"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2780
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2882
 msgid "Teams rebalanced"
 msgstr "Týmy byly vyváženy"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2804
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2906
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr "Použití: /setteam <player#> <blue|red|green|yellow>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2819
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2921
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr "Hráč {} přestoupil do týmu {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2821
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
 msgid "Player not found"
 msgstr "Hráč nenalezen"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3346
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4330
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3656
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4646
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] se odpojil"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3623
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4328
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3936
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4644
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] se připojil"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4351
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6743
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4667
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7131
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] byl upečen hráčem \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4354
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6769
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4670
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7157
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] se upekl"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7979
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8399
 msgid ""
 "\n"
 "\n"
@@ -1497,7 +1497,7 @@ msgstr ""
 "\n"
 "Týmy byly znovu vyváženy"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8284
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8704
 #, c++-format
 msgid ""
 "\n"
@@ -1508,7 +1508,7 @@ msgstr ""
 "\n"
 "{} se zmocnil {} vlajky!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8292
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8712
 #, c++-format
 msgid ""
 "\n"
@@ -1519,7 +1519,7 @@ msgstr ""
 "\n"
 "{} vlajka byla vrácena"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8340
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8760
 #, c++-format
 msgid ""
 "\n"
@@ -1530,7 +1530,7 @@ msgstr ""
 "\n"
 "{} tým převzal {} vlajku!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8451
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8871
 #, c++-format
 msgid ""
 "\n"
@@ -1541,7 +1541,7 @@ msgstr ""
 "\n"
 "{} vlajka byla položena"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9482
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9902
 #, c++-format
 msgid ""
 "\n"
@@ -1554,7 +1554,7 @@ msgstr ""
 "{} dokončil závod!\n"
 "Zbývá {} sekund"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9496
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9916
 #, c++-format
 msgid ""
 "\n"
@@ -1565,7 +1565,7 @@ msgstr ""
 "\n"
 "{} skončil jako {}."
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9760
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10180
 #, c++-format
 msgid ""
 "\n"
@@ -1576,7 +1576,7 @@ msgstr ""
 "\n"
 "Vítězem je {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9824
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10244
 #, c++-format
 msgid ""
 "\n"
@@ -1587,7 +1587,7 @@ msgstr ""
 "\n"
 "{} tým vyhrál!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9880
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10300
 msgid ""
 "\n"
 "\n"
@@ -1597,21 +1597,21 @@ msgstr ""
 "\n"
 "Kolo skončilo remízou"
 
-#: Sources/Jazz2/UI/HUD.cpp:544
+#: Sources/Jazz2/UI/HUD.cpp:546 Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:191
 msgid "Spectating"
 msgstr "Sledování"
 
 #. TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
-#: Sources/Jazz2/UI/InGameConsole.cpp:216
+#: Sources/Jazz2/UI/InGameConsole.cpp:220
 msgid "Keyboard"
 msgstr "Klávesnice"
 
-#: Sources/Jazz2/UI/InGameConsole.cpp:524
+#: Sources/Jazz2/UI/InGameConsole.cpp:530
 msgid "Unknown command"
 msgstr "Neznámý příkaz"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:189
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:233
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1624,22 +1624,22 @@ msgstr ""
 "obsahuje některé nové funkce."
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:193
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:237
 msgid "Developers"
 msgstr "Vývojáři"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:195
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:239
 msgid "Contributors"
 msgstr "Přispěvatelé"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:197
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:241
 msgid "Translators"
 msgstr "Překladatelé"
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:199
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:243
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1650,8 +1650,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:99
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:178
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:180
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
 msgid "Play Story"
 msgstr "Hrát příběh"
 
@@ -1690,7 +1690,7 @@ msgstr "Síň slávy"
 #. the character itself cannot be lost when the file is edited
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:112
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:62
 msgid "Options"
@@ -1761,24 +1761,25 @@ msgid "Remap Controls"
 msgstr "Přenastavit ovládání"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:86
 msgid "Touch Controls"
 msgstr "Dotykové ovládací prvky"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:62
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:68
 msgid "Toggle Run"
 msgstr "Přepínat běhání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:79
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:56
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
@@ -1787,25 +1788,26 @@ msgstr "Přepínat běhání"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:101
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:173
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:271
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:279
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:293
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:175
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:258
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:273
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:281
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:295
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:104
 msgid "Enabled"
 msgstr "Povoleno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:96
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:79
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
@@ -1813,50 +1815,50 @@ msgstr "Povoleno"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:101
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:138
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:173
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:271
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:279
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:286
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:293
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:175
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:258
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:273
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:281
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:288
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:295
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:104
 msgid "Disabled"
 msgstr "Zakázáno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:72
 msgid "Gamepad Button Labels"
 msgstr "Popisky tlačítek na gamepadu"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:94
 msgid "Gamepad Rumble"
 msgstr "Vibrace ovladače"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:92
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
 msgid "Strong"
 msgstr "Silné"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:101
 msgid "Weak"
 msgstr "Slabé"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:111
 msgid "Extended PlayStation™ Support"
 msgstr "Rozšířená podpora ovladačů PlayStation™"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:115
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
 msgid "Native Back Button"
 msgstr "Nativní tlačítko Zpět"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "Input Diagnostics"
 msgstr "Diagnostika ovládání"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:128
 msgid "Reset To Default"
 msgstr "Obnovit výchozí"
 
@@ -1934,7 +1936,7 @@ msgstr "Kooperace"
 
 #. TRANSLATORS: Menu item in Multiplayer section (local splitscreen multiplayer)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:217
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:189
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
 msgstr "Vytvořit místní hru pro více hráčů"
@@ -1984,12 +1986,12 @@ msgstr "Vytvořit server"
 #. TRANSLATORS: Transport mode in Create Server section on PSP, local wireless connection between consoles
 #. TRANSLATORS: Transport mode in Connect To Server section on PSP, local wireless connection between consoles
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:425
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Ad hoc"
 msgstr "Ad hoc"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:425
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -2022,7 +2024,7 @@ msgstr ""
 "žádný jiný server, a zkuste to znovu."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:155
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:557
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:584
 msgid "Play Custom Levels"
 msgstr "Hrát vlastní úrovně"
 
@@ -2035,35 +2037,35 @@ msgid "Create server from playlist"
 msgstr "Vytvořit server z playlistu"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a private online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:176
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:192
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:30
 msgid "Create Private Server"
 msgstr "Vytvořit soukromý server"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a publicly listed online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:177
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:28
 msgid "Create Public Server"
 msgstr "Vytvořit veřejný server"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:207
 msgid "No episode found!"
 msgstr "Nebyly nalezeny žádné epizody!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:322
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:323
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:349
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:350
 msgid "Restart episode"
 msgstr "Smazat postup"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:348
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:375
 #, c++-format
 msgid "You must complete \"{}\" first!"
 msgstr "Nejprve musíte dokončit \"{}\"!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:352
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:379
 msgid "Episode is locked!"
 msgstr "Epizoda je zamčena!"
 
@@ -2086,20 +2088,20 @@ msgid "I want to play the game with something new."
 msgstr "Chci hrát hru s něčím novým."
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:193
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:194
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
 msgstr "Vítejte v reimplementaci hry \f[c:#9e7056]Jazz Jackrabbit 2\f[/c]!"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:38
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
 msgid "Gameplay"
 msgstr "Hra"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:111
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:43
 msgid "Enhancements"
 msgstr "Vylepšení"
@@ -2107,7 +2109,7 @@ msgstr "Vylepšení"
 #. TRANSLATORS: Subheader in First Run section
 #. \uE000 is the Discord icon of the menu font's private use area, written as an escape so that
 #. the character itself cannot be lost when the file is edited
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #, c++-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -2127,31 +2129,36 @@ msgstr "Nová hratelnost"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
+msgid "Reforged Camera"
+msgstr "Nové řízení kamery"
+
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
 msgid "Reforged HUD"
 msgstr "Nový HUD"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:65
 msgid "Reforged Main Menu"
 msgstr "Nové hlavní menu"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
 msgid "Ledge Climbing"
 msgstr "Povolit šplhání"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:78
 msgid "Weapon Wheel"
 msgstr "Kolečko zbraní"
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:78
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:82
 msgid "Enabled With Ammo Count"
 msgstr "Povoleno s počtem munice"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Zde můžete zapnout jednotlivá vylepšení přidaná do hry."
 
@@ -2260,83 +2267,83 @@ msgid "Antialiasing"
 msgstr "Antialiasing"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:159
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:161
 msgid "Background Dithering"
 msgstr "Dithering na pozadí"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:172
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
 msgid "Blur Effects"
 msgstr "Efekty rozmazání"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:184
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:186
 msgid "Lighting Resolution"
 msgstr "Rozlišení nasvícení"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:224
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:226
 msgid "Particle Quality"
 msgstr "Kvalita částic"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:227
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:229
 msgid "Off"
 msgstr "Vypnuto"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:228
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:247
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:230
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:249
 msgid "Low"
 msgstr "Nízká"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:229
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:247
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:231
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:249
 msgid "High"
 msgstr "Vysoká"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:246
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:248
 msgid "Water Quality"
 msgstr "Kvalita vody"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:255
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:257
 msgid "Show Player Trails"
 msgstr "Zobrazit stopy hráčů"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:262
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:264
 msgid "Preferred Splitscreen"
 msgstr "Preferované rozdělení obrazovky"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:263
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:265
 msgid "Vertical"
 msgstr "Vertikální"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:263
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:265
 msgid "Horizontal"
 msgstr "Horizontální"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:270
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:272
 msgid "Prefer Zoom Out"
 msgstr "Preferovat oddálení"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:278
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:280
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Zachovat poměr stran u filmů"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:285
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:287
 msgid "Unaligned Viewport"
 msgstr "Nezarovnaný pohled"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:286
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:288
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Povoleno \f[c:#d0705d](Experimentální)\f[/c]"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:292
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:294
 msgid "Performance Metrics"
 msgstr "Metrika výkonu"
 
@@ -2484,8 +2491,8 @@ msgstr "Běh"
 #. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:283
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:408
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:434
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:445
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:471
 msgid "Change Weapon"
 msgstr "Změnit zbraň"
 
@@ -2549,7 +2556,7 @@ msgid "Laps"
 msgstr "Kola"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:449
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:523
 msgid "Treasure"
 msgstr "Poklad"
 
@@ -2569,31 +2576,36 @@ msgstr "Body"
 msgid "Ping"
 msgstr "Ping"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:248
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:277
 msgid "Connect To Server"
 msgstr "Připojit k serveru"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:260
+#. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:292
+msgid "Switching connection mode…"
+msgstr "Přepínání režimu připojení…"
+
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:297
 msgid "No servers found, but still searchin'!"
 msgstr "Nebyly nalezeny žádné servery, ale stále hledám!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:378
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:415
 msgid "IP Address:"
 msgstr "IP adresa:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:385
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:422
 msgid "<ip> or <ip>:<port>"
 msgstr "<ip> nebo <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:416
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:453
 msgid "to show keyboard"
 msgstr "pro zobrazení klávesnice"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:445
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:482
 msgid "to connect to IP address"
 msgstr "pro připojení k IP adrese"
 
@@ -2603,22 +2615,22 @@ msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
 msgstr "Pro pokračování stiskněte tlačítko \f[c:#d0705d]Střelba\f[/c]"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:51
 msgid "Master Volume"
 msgstr "Hlavní hlasitost"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:55
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:59
 msgid "SFX Volume"
 msgstr "Hlasitost zvukových efektů"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:63
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:67
 msgid "Music Volume"
 msgstr "Hlasitost hudby"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:78
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:83
 msgid "Sample Rate"
 msgstr "Vzorkovací frekvence"
 
@@ -2701,12 +2713,22 @@ msgstr "Online i lokálně"
 msgid "Unique Player ID"
 msgstr "Unikátní ID hráče"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:189
+#. TRANSLATORS: Spectator hint, "Fire" and "Run" are the names of the two actions
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:203
+msgid "Fire: next player, Run: free camera"
+msgstr "Střelba: další hráč, Běh: volná kamera"
+
+#. TRANSLATORS: Spectator hint, "Fire" is the name of the action
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:205
+msgid "Fire: follow a player"
+msgstr "Střelba: sledovat hráče"
+
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:220
 #, c++-format
 msgid "Game starts in {}"
 msgstr "Hra začne za {}"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:195
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:226
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
@@ -2714,20 +2736,20 @@ msgstr[0] "Čekání na {} dalšího hráče"
 msgstr[1] "Čekání na {} další hráče"
 msgstr[2] "Čekání na {} dalších hráčů"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:216
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:247
 #, c++-format
 msgid "Finish in {} s"
 msgstr "{} s do konce"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:447
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:521
 msgid "Time"
 msgstr "Čas"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:450
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:524
 msgid "Kills"
 msgstr "Zabití"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:475
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:549
 msgid "Final standings"
 msgstr "Konečné pořadí"
 
@@ -2745,7 +2767,7 @@ msgstr ""
 "Pomocí tlačítek \f[c:#d0705d]Nahoru/Dolů\f[/c] můžete přepínat mezi postavou "
 "a týmem"
 
-#: Sources/Main.cpp:837 Sources/Main.cpp:908
+#: Sources/Main.cpp:888 Sources/Main.cpp:959
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2759,7 +2781,7 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:1000
+#: Sources/Main.cpp:1053
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2773,11 +2795,11 @@ msgstr ""
 "Ujistěte se, že všechny potřebné soubory\n"
 "jsou přístupné, a zkuste to znovu."
 
-#: Sources/Main.cpp:1267
+#: Sources/Main.cpp:1326
 msgid "Unnamed server"
 msgstr "Nepojmenovaný server"
 
-#: Sources/Main.cpp:1433
+#: Sources/Main.cpp:1493
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2789,7 +2811,7 @@ msgstr ""
 "\n"
 "Zadaný parametr je neplatný."
 
-#: Sources/Main.cpp:1434
+#: Sources/Main.cpp:1494
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2801,7 +2823,7 @@ msgstr ""
 "\n"
 "Vaše verze klienta není kompatibilní se serverem."
 
-#: Sources/Main.cpp:1435
+#: Sources/Main.cpp:1495
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2813,7 +2835,7 @@ msgstr ""
 "\n"
 "Klient byl odmítnul z důvodu nesprávné komunikace se serverem."
 
-#: Sources/Main.cpp:1436
+#: Sources/Main.cpp:1496
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2827,7 +2849,7 @@ msgstr ""
 "Připojení bylo odmítnuto webovým prohlížečem.\n"
 "Jeden z důvodů může být použití nezabezpečeného WebSocket připojení."
 
-#: Sources/Main.cpp:1437
+#: Sources/Main.cpp:1497
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2841,7 +2863,7 @@ msgstr ""
 "Ověření se nezdařilo.\n"
 "Další informace získáte od správců serveru."
 
-#: Sources/Main.cpp:1438
+#: Sources/Main.cpp:1498
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2853,7 +2875,7 @@ msgstr ""
 "\n"
 "Zadané heslo není správné."
 
-#: Sources/Main.cpp:1439
+#: Sources/Main.cpp:1499
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2867,7 +2889,7 @@ msgstr ""
 "Zadané jméno hráče je neplatné.\n"
 "Zkontrolujte svůj profil a zkuste to znovu."
 
-#: Sources/Main.cpp:1440
+#: Sources/Main.cpp:1500
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2881,7 +2903,7 @@ msgstr ""
 "Tento klient není na seznamu povolených klientů.\n"
 "Pro více informací kontaktujte správce serveru."
 
-#: Sources/Main.cpp:1441
+#: Sources/Main.cpp:1501
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2895,7 +2917,7 @@ msgstr ""
 "Server vyžaduje ověřovacího poskytovatele třetí strany.\n"
 "Další informace získáte od správců serveru."
 
-#: Sources/Main.cpp:1442
+#: Sources/Main.cpp:1502
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2909,7 +2931,7 @@ msgstr ""
 "Kapacita serveru je plná.\n"
 "Zkuste to prosím později."
 
-#: Sources/Main.cpp:1443
+#: Sources/Main.cpp:1503
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2923,7 +2945,7 @@ msgstr ""
 "Server není ve stavu, kdy může zpracovat váš požadavek.\n"
 "Zkuste to prosím znovu za několik sekund."
 
-#: Sources/Main.cpp:1444
+#: Sources/Main.cpp:1504
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2937,7 +2959,7 @@ msgstr ""
 "Server se vypíná.\n"
 "Zkuste to prosím později."
 
-#: Sources/Main.cpp:1445
+#: Sources/Main.cpp:1505
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2951,7 +2973,7 @@ msgstr ""
 "Server je z důvodu údržby mimo provoz.\n"
 "Zkuste to prosím znovu později."
 
-#: Sources/Main.cpp:1446
+#: Sources/Main.cpp:1506
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2965,7 +2987,7 @@ msgstr ""
 "Server se vypíná kvůli rekonfiguraci.\n"
 "Zkuste to prosím znovu později."
 
-#: Sources/Main.cpp:1447
+#: Sources/Main.cpp:1507
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2979,7 +3001,7 @@ msgstr ""
 "Server se vypíná z důvodu aktualizace.\n"
 "Zkontrolujte verzi svého klienta a zkuste to znovu za chvíli."
 
-#: Sources/Main.cpp:1448
+#: Sources/Main.cpp:1508
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2993,7 +3015,7 @@ msgstr ""
 "Zkuste to znovu a pokud problém přetrvává,\n"
 "zkontrolujte připojení k síti."
 
-#: Sources/Main.cpp:1449
+#: Sources/Main.cpp:1509
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3005,7 +3027,7 @@ msgstr ""
 "\n"
 "Server neodpovídá na požadavek o připojení."
 
-#: Sources/Main.cpp:1450
+#: Sources/Main.cpp:1510
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3019,7 +3041,7 @@ msgstr ""
 "Byli jste \f[c:#907050]vykopnuti\f[/c] ze serveru.\n"
 "Pro více informací kontaktujte správce serveru."
 
-#: Sources/Main.cpp:1451
+#: Sources/Main.cpp:1511
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3033,7 +3055,7 @@ msgstr ""
 "Byli jste \f[c:#725040]zablokováni\f[/c] na serveru.\n"
 "Pro více informací kontaktujte správce serveru."
 
-#: Sources/Main.cpp:1452
+#: Sources/Main.cpp:1512
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3045,7 +3067,7 @@ msgstr ""
 "\n"
 "Zjištěno podvádění (cheatování)."
 
-#: Sources/Main.cpp:1453
+#: Sources/Main.cpp:1513
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3059,7 +3081,7 @@ msgstr ""
 "Váš klient neobsahuje požadované soubory.\n"
 "Stáhněte si požadované soubory a zkuste to znovu."
 
-#: Sources/Main.cpp:1454
+#: Sources/Main.cpp:1514
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3071,7 +3093,7 @@ msgstr ""
 "\n"
 "Server vás odpojil z důvodu nečinnosti."
 
-#: Sources/Main.cpp:1751
+#: Sources/Main.cpp:1817
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"

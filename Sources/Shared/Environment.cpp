@@ -51,7 +51,7 @@ namespace Death { namespace Environment {
 				_currentElevation = (elevation.TokenIsElevated ? ElevationState::Full : ElevationState::Limited);
 			}
 		} else {
-			_currentElevation = ElevationState::Full;;
+			_currentElevation = ElevationState::Full;
 		}
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 		uid_t uid = getuid(), euid = geteuid();

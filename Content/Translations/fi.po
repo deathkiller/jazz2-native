@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-09-08 13:32+0200\n"
+"POT-Creation-Date: 2026-09-19 01:37+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Ikx_1\n"
 "Language-Team: Ikx_1\n"
@@ -1371,19 +1371,19 @@ msgstr ""
 "Vieraile sivulla\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:169 Sources/Jazz2/LevelHandler.cpp:224
+#: Sources/Jazz2/LevelHandler.cpp:174 Sources/Jazz2/LevelHandler.cpp:229
 #, c++-format
 msgid "Level \"{}\" initialized"
 msgstr "Taso\"{}\" alustettu"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:919
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:233
+#: Sources/Jazz2/LevelHandler.cpp:948
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
 msgid "For more information, visit the official website:"
 msgstr "Lisätietoja varten vieraile virallisella verkkosivulla:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2496
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4040
+#: Sources/Jazz2/LevelHandler.cpp:2529
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4045
 msgid "Cheats are not allowed in current context"
 msgstr "Huijaukset eivät ole sallittuja nykyisessä tilanteessa"
 
@@ -1403,7 +1403,7 @@ msgstr "pudotettu"
 msgid "Find exit!"
 msgstr "Löydä poispääsy!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:550
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:551
 msgid ""
 "\n"
 "\n"
@@ -1413,7 +1413,7 @@ msgstr ""
 "\n"
 "Peli alkaa piakkoin!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:732
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:733
 #, c++-format
 msgid ""
 "\n"
@@ -1424,73 +1424,73 @@ msgstr ""
 "\n"
 "{} voitti mestaruuskisat!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2778
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2783
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr "Arvo on sallitun ulkopuolella (2-{})"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2854
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2859
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr "Käyttö: /team <blue|red|green|yellow|auto>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2861
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4529
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2866
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4534
 #, c++-format
 msgid "You joined the {} team"
 msgstr "Liityit {} joukkueeseen"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2863
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4531
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2868
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4536
 msgid "Cannot change team right now"
 msgstr "Et voi vaihtaa joukkuetta juuri nyt"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2874
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2886
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2879
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2891
 msgid "Teams are only used in team game modes"
 msgstr "Joukkueet ovat käytössä vain joukkuepeleissä"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2877
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2882
 msgid "Teams rebalanced"
 msgstr "Joukkueet tasoitettu"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2901
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2906
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr "Käyttö: /setteam <pelaaja#> <blue|red|green|yellow>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2916
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2921
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr "Pelaaja {} siirtyi {} joukkueeseen"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2918
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
 msgid "Player not found"
 msgstr "Pelaajaa ei löytynyt"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3651
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4641
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3656
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4646
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] poistui pelistä"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3931
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4639
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3936
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4644
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] liittyi"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4662
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7121
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4667
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7131
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{1}\f[/c] kärvensi pelaajan \f[c:#d0705d]{0}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4665
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7147
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4670
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7157
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr " Ympäristö kärvensi pelaajan \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8374
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8399
 msgid ""
 "\n"
 "\n"
@@ -1500,7 +1500,7 @@ msgstr ""
 "\n"
 "Jokkueet on tasapainoitettu"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8679
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8704
 #, c++-format
 msgid ""
 "\n"
@@ -1511,7 +1511,7 @@ msgstr ""
 "\n"
 "{} nappasi {} lipun!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8687
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8712
 #, c++-format
 msgid ""
 "\n"
@@ -1522,7 +1522,7 @@ msgstr ""
 "\n"
 "{} joukkueen lippu on palautettu"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8735
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8760
 #, c++-format
 msgid ""
 "\n"
@@ -1533,7 +1533,7 @@ msgstr ""
 "\n"
 "{} nappasivat {} lipun!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8846
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8871
 #, c++-format
 msgid ""
 "\n"
@@ -1544,7 +1544,7 @@ msgstr ""
 "\n"
 "{} lippu on pudotettu"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9877
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9902
 #, c++-format
 msgid ""
 "\n"
@@ -1557,7 +1557,7 @@ msgstr ""
 "{} läpäisi kisan!\n"
 "{} sekuntia jäljellä"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9891
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9916
 #, c++-format
 msgid ""
 "\n"
@@ -1568,7 +1568,7 @@ msgstr ""
 "\n"
 "{} tuli maaliin {}."
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10155
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10180
 #, c++-format
 msgid ""
 "\n"
@@ -1579,7 +1579,7 @@ msgstr ""
 "\n"
 "Voittaja on {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10219
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10244
 #, c++-format
 msgid ""
 "\n"
@@ -1590,7 +1590,7 @@ msgstr ""
 "\n"
 "{} joukkue voittaa!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10275
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10300
 msgid ""
 "\n"
 "\n"
@@ -1614,7 +1614,7 @@ msgid "Unknown command"
 msgstr "Tuntematon komento"
 
 #. TRANSLATORS: Header text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:231
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:233
 msgid ""
 "Reimplementation of the game \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] released "
 "in 1998. Supports various versions of the game (Shareware Demo, Holiday Hare "
@@ -1627,22 +1627,22 @@ msgstr ""
 "tukee osittain joitakin JJ2+ lisäosia."
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:237
 msgid "Developers"
 msgstr "Kehittäjät"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:237
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:239
 msgid "Contributors"
 msgstr "Avustajat"
 
 #. TRANSLATORS: Label in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:239
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:241
 msgid "Translators"
 msgstr "Käännöstyö"
 
 #. TRANSLATORS: Footer text in About section
-#: Sources/Jazz2/UI/Menu/AboutSection.cpp:241
+#: Sources/Jazz2/UI/Menu/AboutSection.cpp:243
 msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
@@ -1653,8 +1653,8 @@ msgstr ""
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:99
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:178
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:180
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:194
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:196
 msgid "Play Story"
 msgstr "Pelaa tarinaa"
 
@@ -1693,7 +1693,7 @@ msgstr "Ennätykset"
 #. the character itself cannot be lost when the file is edited
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:112
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:22
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:62
 msgid "Options"
@@ -1763,24 +1763,25 @@ msgid "Remap Controls"
 msgstr "Säädä Ohjausta"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:86
 msgid "Touch Controls"
 msgstr "Kosketus"
 
 #. TRANSLATORS: Menu item in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:62
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:68
 msgid "Toggle Run"
 msgstr "Juoksutila"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:79
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:56
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
@@ -1799,15 +1800,16 @@ msgstr "Juoksutila"
 msgid "Enabled"
 msgstr "Käytössä"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:96
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:106
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:70
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:79
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
@@ -1826,39 +1828,39 @@ msgstr "Käytössä"
 msgid "Disabled"
 msgstr "Pois käytöstä"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:72
 msgid "Gamepad Button Labels"
 msgstr "Peliohjaimen näppäinnimikointi"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:88
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:94
 msgid "Gamepad Rumble"
 msgstr "Peliohjaimen Tärinä"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:92
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
 msgid "Strong"
 msgstr "Vahva"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:101
 msgid "Weak"
 msgstr "Heikko"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:105
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:111
 msgid "Extended PlayStation™ Support"
 msgstr "Pidennetty PlayStation™ tuki"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:115
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
 msgid "Native Back Button"
 msgstr "Natiivi paluupainike"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:120
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "Input Diagnostics"
 msgstr "Syötön Vianetsintä"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:128
 msgid "Reset To Default"
 msgstr "Palauta Oletukset"
 
@@ -1936,7 +1938,7 @@ msgstr "Yhteistyö"
 
 #. TRANSLATORS: Menu item in Multiplayer section (local splitscreen multiplayer)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:217
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:173
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:189
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
 msgstr "Luo Paikallinen Peli Jaetulla Näytöllä"
@@ -1986,12 +1988,12 @@ msgstr "Luo Palvelin"
 #. TRANSLATORS: Transport mode in Create Server section on PSP, local wireless connection between consoles
 #. TRANSLATORS: Transport mode in Connect To Server section on PSP, local wireless connection between consoles
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:463
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Ad hoc"
 msgstr "Ad hoc"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:256
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:463
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -2024,7 +2026,7 @@ msgstr ""
 "jollakin toisella sovelluksella. Ole hyvä ja tarkista."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:155
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:557
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:584
 msgid "Play Custom Levels"
 msgstr "Pelaa Itsetehtyjä Tasoja"
 
@@ -2037,35 +2039,35 @@ msgid "Create server from playlist"
 msgstr "Luo palvelin toistolistalta"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a private online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:176
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:192
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:30
 msgid "Create Private Server"
 msgstr "Luo Yksityinen Palvelin"
 
 #. TRANSLATORS: Menu item in Multiplayer section (host a publicly listed online server)
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:177
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:193
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:28
 msgid "Create Public Server"
 msgstr "Luo Julkinen Palvelin"
 
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:191
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:207
 msgid "No episode found!"
 msgstr "Jaksoa ei löydeetty!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:322
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:323
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:349
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:350
 msgid "Restart episode"
 msgstr "Aloita jakso alusta"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:348
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:375
 #, c++-format
 msgid "You must complete \"{}\" first!"
 msgstr "Sinun täytyy läpäistä \"{}\" ensin!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:352
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:379
 msgid "Episode is locked!"
 msgstr "Jakso on lukittu!"
 
@@ -2088,20 +2090,20 @@ msgid "I want to play the game with something new."
 msgstr "Haluan pelata peliä uusin höystein."
 
 #. TRANSLATORS: Header in First Run section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:193
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:194
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
 msgstr "Tervetuloa \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] uudelleentoteutukseen!"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:38
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
 msgid "Gameplay"
 msgstr "Pelaaminen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:111
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:43
 msgid "Enhancements"
 msgstr "Parannukset"
@@ -2109,7 +2111,7 @@ msgstr "Parannukset"
 #. TRANSLATORS: Subheader in First Run section
 #. \uE000 is the Discord icon of the menu font's private use area, written as an escape so that
 #. the character itself cannot be lost when the file is edited
-#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:203
+#: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
 #, c++-format
 msgid ""
 "You can choose your preferred play style.\n"
@@ -2129,31 +2131,37 @@ msgstr "Uudelleentaottu pelaaminen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
+#| msgid "Reforged Gameplay"
+msgid "Reforged Camera"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
 msgid "Reforged HUD"
 msgstr "Uudelleentaottu käyttöliittymä"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:65
 msgid "Reforged Main Menu"
 msgstr "Uudelleentaottu päävalikko"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
 msgid "Ledge Climbing"
 msgstr "Reunalta kiipeäminen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:78
 msgid "Weapon Wheel"
 msgstr "Aseenvalintarulla"
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:78
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:82
 msgid "Enabled With Ammo Count"
 msgstr "Käytössä Luotimittarin Kanssa"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:114
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
 msgid "You can enable enhancements that were added to this remake."
 msgstr ""
 "Voit ottaa käyttöön parannukset jotka on lisätty tähän paranneltuun versioon."
@@ -2486,8 +2494,8 @@ msgstr "Juokse"
 #. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:283
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:446
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:472
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:445
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:471
 msgid "Change Weapon"
 msgstr "Vaihda asetta"
 
@@ -2571,36 +2579,36 @@ msgstr "Pts"
 msgid "Ping"
 msgstr "Viive"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:278
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:277
 msgid "Connect To Server"
 msgstr "Yhdistä Palvelimeen"
 
 #. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:293
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:292
 msgid "Switching connection mode…"
 msgstr "Vaihdetaan yhteystilaa..."
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:298
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:297
 msgid "No servers found, but still searchin'!"
 msgstr "Palvelimia ei löytynyt, mutta etsintä jatkukoon!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:416
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:415
 msgid "IP Address:"
 msgstr "IP-osoite:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:423
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:422
 msgid "<ip> or <ip>:<port>"
 msgstr "<ip> tai <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:454
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:453
 msgid "to show keyboard"
 msgstr "näyttääksesi näppämistö"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:483
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:482
 msgid "to connect to IP address"
 msgstr "yhdistääksesi IP-osoitteeseen"
 
@@ -2761,7 +2769,7 @@ msgstr ""
 "Käytä \f[c:#d0705d]Ylös/Alas-painkkeita\f[/c] vaihtaaksesi joukkuetta tai "
 "tiimiä"
 
-#: Sources/Main.cpp:840 Sources/Main.cpp:911
+#: Sources/Main.cpp:888 Sources/Main.cpp:959
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2775,7 +2783,7 @@ msgstr ""
 "Varmista, että kaikki tarvittavat\r\n"
 "tiedostot ovat saatavilla ja yritä uudelleen."
 
-#: Sources/Main.cpp:1005
+#: Sources/Main.cpp:1053
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2789,11 +2797,11 @@ msgstr ""
 "Tarkista että kaikki tiedsotot\n"
 "ovat saatavilla ja yritä uudelleen."
 
-#: Sources/Main.cpp:1272
+#: Sources/Main.cpp:1326
 msgid "Unnamed server"
 msgstr "Nimetön palvelin"
 
-#: Sources/Main.cpp:1439
+#: Sources/Main.cpp:1493
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2805,7 +2813,7 @@ msgstr ""
 "\n"
 "Virheellinen parametri säädetty."
 
-#: Sources/Main.cpp:1440
+#: Sources/Main.cpp:1494
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2817,7 +2825,7 @@ msgstr ""
 "\n"
 "Pelisi versio ei ole yhteensopiva tämän palvelimen kanssa."
 
-#: Sources/Main.cpp:1441
+#: Sources/Main.cpp:1495
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2829,7 +2837,7 @@ msgstr ""
 "\n"
 "Palvelin hylkäsi yhteyden virheellisen datan vuoksi."
 
-#: Sources/Main.cpp:1442
+#: Sources/Main.cpp:1496
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2843,7 +2851,7 @@ msgstr ""
 "Verkkoselain esti yhteyden.\n"
 "Yksi syy voi olla turvattoman WebSocketin käyttö."
 
-#: Sources/Main.cpp:1443
+#: Sources/Main.cpp:1497
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2857,7 +2865,7 @@ msgstr ""
 "Tunnistautuminen epäonnistui.\n"
 "Ota yhteyttä palvelimen ylläpitoon lisätietoja varten."
 
-#: Sources/Main.cpp:1444
+#: Sources/Main.cpp:1498
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2869,7 +2877,7 @@ msgstr ""
 "\n"
 "Virheellinen salasana annettu."
 
-#: Sources/Main.cpp:1445
+#: Sources/Main.cpp:1499
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2883,7 +2891,7 @@ msgstr ""
 "Virheellinen pelaajanimi.\n"
 "Tarkistapa profiilisi ja yritä uudelleen."
 
-#: Sources/Main.cpp:1446
+#: Sources/Main.cpp:1500
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2897,7 +2905,7 @@ msgstr ""
 "Tämä tietokone ei ole sallittujen listalla.\n"
 "Otapa yhteyttä palvelimen ylläpitoon."
 
-#: Sources/Main.cpp:1447
+#: Sources/Main.cpp:1501
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2911,7 +2919,7 @@ msgstr ""
 "Palvelin vaatii kolmannen osapuolen tunnistautumisen.\n"
 "Ota yhteyttä palvelimen ylläpitoon lisätietoja varten."
 
-#: Sources/Main.cpp:1448
+#: Sources/Main.cpp:1502
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2925,7 +2933,7 @@ msgstr ""
 "Palvelin on täynnä.\n"
 "Yritä kohta uudelleen."
 
-#: Sources/Main.cpp:1449
+#: Sources/Main.cpp:1503
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2939,7 +2947,7 @@ msgstr ""
 "Palvelin on tilassa jossa se ei voi käsitellä pyyntöäsi.\n"
 "Yritä muutaman sekunnin päästä uudelleen.."
 
-#: Sources/Main.cpp:1450
+#: Sources/Main.cpp:1504
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2953,7 +2961,7 @@ msgstr ""
 "Palvelinta sammutetaan.\n"
 "Yritä myöhemmin uudelleen."
 
-#: Sources/Main.cpp:1451
+#: Sources/Main.cpp:1505
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2967,7 +2975,7 @@ msgstr ""
 "Palvelin siirtyy huoltotauolle.\n"
 "Yritä myöhemmin uudelleen."
 
-#: Sources/Main.cpp:1452
+#: Sources/Main.cpp:1506
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2981,7 +2989,7 @@ msgstr ""
 "Palvelimen asetuksia muutetaan.\n"
 "Yritä myöhemmin uudelleen."
 
-#: Sources/Main.cpp:1453
+#: Sources/Main.cpp:1507
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2995,7 +3003,7 @@ msgstr ""
 "Palvelinta päivitetään.\n"
 "Tarkista myös oma versiosi ja yritä minuutin päästä uudelleen."
 
-#: Sources/Main.cpp:1454
+#: Sources/Main.cpp:1508
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -3009,7 +3017,7 @@ msgstr ""
 "Yritä uudelleen ja jos ongelma jatkuu,\n"
 "tarkistathan oman verkkoyhteytesi."
 
-#: Sources/Main.cpp:1455
+#: Sources/Main.cpp:1509
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3021,7 +3029,7 @@ msgstr ""
 "\n"
 "Palvelinta ei tavoitettu yrityksistä huolimatta."
 
-#: Sources/Main.cpp:1456
+#: Sources/Main.cpp:1510
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3035,7 +3043,7 @@ msgstr ""
 "Sinut on \f[c:#907050]potkaistu\f[/c] ulos palvelimelta.\n"
 "Ota yhteyttä palvelimen ylläpitoon lisätietoja varten."
 
-#: Sources/Main.cpp:1457
+#: Sources/Main.cpp:1511
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3049,7 +3057,7 @@ msgstr ""
 "Sinut on \f[c:#725040]estetty\f[/c] palvelimelta.\n"
 "Ota yhteyttä palvelimen ylläpitoon lisätietoja varten."
 
-#: Sources/Main.cpp:1458
+#: Sources/Main.cpp:1512
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3061,7 +3069,7 @@ msgstr ""
 "\n"
 "Huijaamista havaittu."
 
-#: Sources/Main.cpp:1459
+#: Sources/Main.cpp:1513
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3075,7 +3083,7 @@ msgstr ""
 "Laitteellasi ei ole tarvittavia sisältöjä.\n"
 "Lataa tarvittavat tiedostot ja yritä ystävällisesti uudelleen."
 
-#: Sources/Main.cpp:1460
+#: Sources/Main.cpp:1514
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3087,7 +3095,7 @@ msgstr ""
 "\n"
 "Palvelin on katkaissut yhteyden passiivisuutesi takia."
 
-#: Sources/Main.cpp:1758
+#: Sources/Main.cpp:1817
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
