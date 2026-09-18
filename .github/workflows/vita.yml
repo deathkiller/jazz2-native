@@ -22,7 +22,13 @@ jobs:
 
     runs-on: 'ubuntu-latest'
     container:
-      image: vitasdk/vitasdk:latest
+      # PINNED - `latest` is rebuilt daily, and the 2026-09-18 rebuild broke the link: its GCC 15.2.0
+      # libstdc++ dropped the out-of-line string comparison operators, and the image's **prebuilt**
+      # `libvitaGL.a` still asks for one (`std::operator==(const std::string&, const char*)`, undefined
+      # out of `preprocessor.o`). Not fixable here - it wants a vitaGL rebuilt against that toolchain.
+      # 09-12 is what `latest` pointed at on 09-14, the last known-good build; earlier snapshots exist
+      # if needed. Unpin once VitaSDK ships a rebuilt vitaGL.
+      image: vitasdk/vitasdk:2026.08-20260912
       options: --user root
 
     steps:

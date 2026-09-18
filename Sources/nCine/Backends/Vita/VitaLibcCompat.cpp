@@ -2,29 +2,6 @@
 
 #if defined(DEATH_TARGET_VITA)
 
-#include <string>
-
-// vitaGL ships prebuilt, and its `preprocessor.o` was compiled against a libstdc++ that still put
-// `std::operator==(const std::string&, const char*)` out of line. Up to C++17 `<string>` declares that
-// overload with an `extern template`, which suppresses inlining and sends every call to the explicit
-// instantiation inside libstdc++; C++20 rewrote string comparison around `operator<=>` and the
-// instantiation went away with it. So a library built then against a library built now leaves a dozen
-// undefined references to one symbol, none of them from any source this project owns:
-//
-//   libvitaGL.a(preprocessor.o): undefined reference to
-//     `bool std::operator==<char, std::char_traits<char>, std::allocator<char>>(
-//        std::__cxx11::basic_string<...> const&, char const*)'
-//
-// Instantiating it here puts that one symbol in an object file the link already reads, which is the same
-// mechanism the inet_pton() replacement below relies on. It is a **workaround for a toolchain mismatch**
-// rather than anything about this application: the real fix is for VitaSDK to rebuild vitaGL, and when it
-// does this becomes dead weight - or, if libstdc++ ever restores the instantiation, a duplicate-symbol
-// error, which is loud and points straight back at this comment.
-template bool std::operator==<char, std::char_traits<char>, std::allocator<char>>(
-	const std::basic_string<char, std::char_traits<char>, std::allocator<char>>&, const char*);
-
-#if defined(WITH_ONLINE_MULTIPLAYER)
-
 #include <cstring>
 #include <errno.h>
 #include <sys/socket.h>
@@ -101,7 +78,5 @@ extern "C" int inet_pton(int af, const char* src, void* dst)
 	// an IPv6 literal instead of an IPv4 one.
 	return 0;
 }
-
-#endif
 
 #endif

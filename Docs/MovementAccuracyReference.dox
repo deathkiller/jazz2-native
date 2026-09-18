@@ -1431,7 +1431,7 @@ on the analytic 82.3 px while the original's discrete stepping loses about four 
 
 Two things had to be got right besides the number:
 
--   **The enemy has to be one the level contains.** A @cpp jjAddObject @ceed enemy is inert in the original:
+-   **The enemy has to be one the level contains.** An enemy spawned with @cpp jjAddObject @ce is inert in the original:
     the stomp descends straight through a tube turtle sitting exactly where it was aimed and lands on the
     floor beyond it, with the turtle still alive afterwards. This is the same limitation that defeated the
     pushable scenarios, and the same fix --- both probes now locate the level's own object by scanning the

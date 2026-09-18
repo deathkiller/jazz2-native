@@ -217,13 +217,10 @@ if(NCINE_RHI_USE_FB16)
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
-	if(VITA)
+	if(VITA AND WITH_ONLINE_MULTIPLAYER)
 		# The Vita reaches the display and the input devices through SDL2 and vitaGL, so it has no backend
-		# of its own - this is where the handful of things VitaSDK gets wrong for us are patched up. Two of
-		# them: a library function it implements but not to the contract its callers rely on (it is what
-		# makes HTTPS verify and ENet parse an address), and one libstdc++ symbol prebuilt vitaGL still
-		# expects out of line. Not gated on WITH_ONLINE_MULTIPLAYER any more, because the second of those is
-		# needed to link at all; the networking half guards itself inside the file.
+		# of its own - this is one library function VitaSDK does implement, but not to the contract its
+		# callers rely on (see the file; it is what makes HTTPS verify and ENet parse an address)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Vita/VitaLibcCompat.cpp)
 	endif()
 
