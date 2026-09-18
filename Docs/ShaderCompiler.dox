@@ -321,7 +321,7 @@ GLSL stages and inside a @cpp fixed_function @ce block alike.
 
 @par Conditionals that survive into an emitted source
 Whatever @cpp #if @ce is left after that folding is real GLSL, and <b>GLSL ES rejects an undefined
-macro in an @cpp #if @ce expression</b> where desktop GLSL substitutes `0` like C does. HLSL accepts it
+macro in an `#if` expression</b> where desktop GLSL substitutes `0` like C does. HLSL accepts it
 too and the Vulkan transform is `#version 450` *desktop* GLSL, so a bare `#if SOME_VARIANT` passes
 both `--hlsl-check` and `--spirv-check` while breaking every ES2/ES3/WebGL target. A macro with an
 <b>empty</b> body is worse still: @cpp "#if SLOPE" @ce is a `bad expression` even on desktop. So a purely

@@ -714,7 +714,7 @@ re-encoded files are *larger* than the originals, which is the deliberate trade.
 
 Two more things this console does not forgive, both because it never gets a second chance at runtime:
 
--   <b>The tree must already carry @cpp "Prebaked.pak" @ce.</b> Unlike the PlayStation 2 and Nintendo 64
+-   <b>The tree must already carry `"Prebaked.pak"`.</b> Unlike the PlayStation 2 and Nintendo 64
     packaging steps, the Dreamcast one does not rename a @cpp "Source.pak" @ce on the way in, so a
     `desktop` profile cache handed to it produces a disc the game marks as verified, loads nothing
     from, and shows a main menu with no episode on. Check for the file, not for the directory.
@@ -2294,7 +2294,7 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     ENet includes was once given as the blocker here turned out to be an unused include --- the only
     @cpp "ioctl()" @ce in the library is @cpp "ioctlsocket(FIONBIO)" @ce in its `_WIN32` arm, and every
     POSIX target uses @cpp "fcntl()" @ce instead --- so it is simply not included on this target.
--   <b>VitaSDK's @cpp "inet_pton()" @ce does not follow POSIX</b>, and it takes HTTPS down with it. Its
+-   <b>VitaSDK's `"inet_pton()"` does not follow POSIX</b>, and it takes HTTPS down with it. Its
     `AF_INET` arm forwards to @cpp "sceNetInetPton()" @ce and collapses any negative result to -1, so a
     host name comes back as -1 where POSIX requires 0 @m_span{m-text m-dim} (-1 is reserved for an
     unsupported address family) @m_endspan. Both callers here test the result for truth rather than for a
@@ -2305,7 +2305,7 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     @cpp "if (!inet_pton(...)) return -1;" @ce, accepts an address it never parsed. Replacing the function
     fixes both --- see @cpp "Sources/nCine/Backends/Vita/VitaLibcCompat.cpp" @ce. Until it was, the update
     check and the public server list had been failing here for the same reason.
--   <b>@cpp "sceNetSendmsg()" @ce caps the number of iovecs</b>, well below the 65 buffers ENet may hand
+-   <b>`"sceNetSendmsg()"` caps the number of iovecs</b>, well below the 65 buffers ENet may hand
     over for one datagram @m_span{m-text m-dim} (the protocol header plus two per command) @m_endspan. A
     send of 33 buffers came back `EMSGSIZE` @m_span{m-text m-dim} (SCE error 0x28) @m_endspan, which
     happens exactly when a burst of reliable commands is acknowledged at once --- right after a level

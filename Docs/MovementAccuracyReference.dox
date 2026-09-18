@@ -1,4 +1,4 @@
-﻿namespace Death {
+namespace Death {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 /** @page movement-accuracy Non-Reforged movement accuracy
@@ -322,7 +322,7 @@ Vertical pole launch | @cpp 4*sign + entry*1.4 @ce, ×2.5 | @cpp 15.625 + abs(en
 Horizontal pole launch | @cpp 10*sign + entry*0.2 @ce + force 10 | @cpp clamp(3 * abs(entry), 8, 20) @ce | @cpp clamp(3 * abs(entry), 9.333, 23.333) @ce | wrong shape | exact
 Vine cap, no Run | 2.0 | 2.0 | 2.3333 | −14.3% | exact
 Vine cap, Run held | 3.2 @m_span{m-text m-dim} (×1.6) @m_endspan | 4.0 @m_span{m-text m-dim} (**×2**) @m_endspan | 4.6667 | −31.4% | exact
-Push speed @m_span{m-text m-dim} (solid object) @m_endspan | 0.6 <b>× @cpp timeMult @ce</b> | 0.375 | 0.4375 | frame-rate dependent | exact
+Push speed @m_span{m-text m-dim} (solid object) @m_endspan | 0.6 <b>× `timeMult`</b> | 0.375 | 0.4375 | frame-rate dependent | exact
 
 @subsection movement-accuracy-objects-springs Springs set the speed outright
 
@@ -956,7 +956,7 @@ Spaz double jump horizontal | @cpp clamp(x * 0.4, -1, 1) @ce | **0** | 0 | dampe
 Spaz double jump window | *(none)* | falling, **≤ 29 ticks after the release** | ≤ 25.7 frames | *(absent)* | exact
 Spaz sidekick speed | 14.4 | 16.0 | 18.6667 | −22.9% | exact
 Spaz sidekick driven distance | ~1728 px @m_span{m-text m-dim} (timeout 120) @m_endspan | **440 px**, then coasts to 504 | 440 px, coasts to 503.2 | **+243%** | −0.3%
-Lori kick speed | 9.3 flat | <b>@cpp (n/2)² @ce ramp</b>, peak 42.25 | ramp, peak 49.29 | wrong shape | exact
+Lori kick speed | 9.3 flat | <b>`(n/2)²` ramp</b>, peak 42.25 | ramp, peak 49.29 | wrong shape | exact
 Lori kick distance | ~372 px @m_span{m-text m-dim} (timeout 40) @m_endspan | **204.75 px** | 204.8 px | +82% | +0.02%
 Lori kick period | *(input-paced)* | 45 ticks | 44--45 ticks | *(absent)* | −2% to 0%
 Special move asked for mid-slide | full uppercut/sidekick | **refused**, an 8 px hop then a buttstomp | refused, 3.5 px hop then a buttstomp | 201 px of rise, 700 px of kick | hop −56%
