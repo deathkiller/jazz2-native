@@ -109,7 +109,7 @@ namespace Jazz2::Tests
 		// `dm_chain`, 15 seconds. This tracks the scenario's INDEX, so it moves whenever anything is appended
 		// ahead of it - it was 334 until the slope, run-tap and vine families went in, at which point it was
 		// quietly giving `sl_up_jhold` a long window and `dm_chain` the 800-tick default instead.
-		if (s == 429) {
+		if (s == 431) {
 			return 1100.0f;
 		}
 		// The pinball chamber left to itself, the same way `sp_chain` is
@@ -1317,10 +1317,10 @@ namespace Jazz2::Tests
 			// already running, which is the reported case ("buttstomping any float up event should slow the
 			// fall noticeably").
 			//
-			// These use the isolating column instead of the level's ladder, and `_butt` and `_copter` are
-			// dropped in seven tiles ABOVE it so the move is established in clear air and enters the field at
-			// full speed. `_butt_in` is the control that starts it inside, which is what tells "the field
-			// refuses the move" apart from "the field slows it". `_dj` needs Spaz.
+			// These use the isolating column instead of the level's ladder, and `_butt` is dropped in seven
+			// tiles ABOVE it so the move is established in clear air and enters the field at full speed.
+			// `_butt_in` is the control that starts it inside, which is what tells "the field refuses the
+			// move" apart from "the field slows it". `_dj` needs Spaz.
 			case 425: name = "fu_col_butt"_s; down = (t >= 2); break;
 			case 426: name = "fu_col_butt_in"_s; jump = (t >= 5 && t < 25); down = (t >= 45); break;
 			// The copter cannot be measured in the placed column at all: it is only available after a real
@@ -1334,11 +1334,22 @@ namespace Jazz2::Tests
 			// rather than the player riding them up from inside, which is what every other `fu_` does.
 			case 427: name = "fu_copter"_s; jump = (t >= 5 && t < 11) || (t >= 20 && ((t - 20) % 6) < 2); right = (t >= 20); break;
 			case 428: name = "fu_col_dj"_s; jump = (t >= 5 && t < 10) || (t >= 25 && t < 30); break;
+			// Dropping off a vine onto another one two tiles below, at (28,43)-(29,43) and (28,45)-(29,45) -
+			// added to the level for this. Reported from play: a quick Down on the upper one falls past the
+			// lower one as well. The jump-side drop already takes the short `VineDropCooldown`; the Down-side
+			// drop still takes a hardcoded 12 frames, which is 14 of the original's ticks, and a release at
+			// `LegacyVineDropSpeed` covers the 64 px between the two vines well inside that.
+			//
+			// The climb has to finish before Down goes in, so Jump is held only long enough to reach the upper
+			// vine and then released so the player settles on it. `_hold` keeps Down down, which *should* fall
+			// through both - it is what tells a cooldown that is too long apart from a grab that is refused.
+			case 429: name = "ob_vine_down"_s; jump = (t >= 5 && t < 45); down = (t >= 100 && t < 104); break;
+			case 430: name = "ob_vine_down_hold"_s; jump = (t >= 5 && t < 45); down = (t >= 100); break;
 			// Guarded on the level, and the guard is what keeps it out of a normal sweep: on `_pt` this falls
-			// through to `return false`, the probe reports finished after 428, and the committed trace is
-			// unaffected. To run it, load that level and raise `FirstScenario` to 429 - see `Tests/README.md`.
+			// through to `return false`, the probe reports finished after 430, and the committed trace is
+			// unaffected. To run it, load that level and raise `FirstScenario` to 431 - see `Tests/README.md`.
 			// It has to stay **last**: a sweep of the test level ends here, so anything after it never runs.
-			case 429:
+			case 431:
 				if (!_levelHandler->GetLevelName().contains("diam3"_s)) {
 					return false;
 				}
@@ -1626,6 +1637,10 @@ namespace Jazz2::Tests
 			// Two tiles under the lower of the two stacked vines at (22,44)-(23,44), the same approach every
 			// vine scenario that has ever grabbed uses - met from directly below rather than jumped into
 			player->MoveInstantly(Vector2f(22 * 32 + 16, 46 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
+		} else if (s == 429 || s == 430) {
+			// Two tiles under the lower of the closely stacked pair at (28,45)-(29,45), so the climb starts
+			// the same way - the upper one is only two tiles above it rather than four
+			player->MoveInstantly(Vector2f(28 * 32 + 16, 47 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
 		} else if (s >= 344 && s <= 346) {
 			// The *bottom* of that same slope, run leftwards - which makes its 17-by-16 face a true 45-degree
 			// climb rather than the ~40 degrees of the level's designated "up" slope. Started three tiles clear
@@ -2093,7 +2108,7 @@ namespace Jazz2::Tests
 			// scenario's INDEX and has to move with it whenever anything is appended ahead - it was left at 366
 			// when the `ow_*` family went in, which teleported `ow_jump` into Diamondus 3's coordinates and
 			// dropped it out of the test level.
-			case 429:
+			case 431:
 				// Diamondus 3's own chain: the top of the one-tile shaft at tile (1,36), which drops onto the
 				// horizontal blue spring at (1,45)
 				player->MoveInstantly(Vector2f(1 * 32 + 16, 36 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);

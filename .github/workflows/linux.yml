@@ -18,9 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        # `OfflineTools` builds AssetPacker and ShaderCompiler as well. Neither of them ends up in any
-        # artifact and neither depends on the backend or the RHI, so it's enough to compile them once per
-        # compiler (this entry and the clang one below) instead of in all six configurations.
+        # `OfflineTools` builds AssetPacker and ShaderCompiler as well. Neither of them ends up in the game
+        # package and neither depends on the backend or the RHI, so it's enough to compile them once per
+        # compiler (this entry and the clang one below) instead of in all six configurations. AssetPacker is
+        # published as its own artifact, but only from this entry - see the packaging step below.
         - BuildType: Release
           Platform: x64
           Backend: GLFW
@@ -144,13 +145,32 @@ jobs:
           * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}_${{ matrix.CC }}" ;;
         esac
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
-        
+
     - name: 'Upload Package'
       uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/
-        
+
+    # `AssetPacker` converts the original game data ahead of time, it's a standalone tool that doesn't belong
+    # in the game package, so it's published as its own artifact. Only the GCC entry publishes it - the Clang
+    # one builds it just to keep the tool compiling on both compilers, and the two binaries would be
+    # interchangeable anyway. `ShaderCompiler` is not published, it only regenerates sources that are already
+    # committed to the repository.
+    - name: 'Create Package (AssetPacker)'
+      if: matrix.OfflineTools == 'ON' && matrix.CC == 'gcc'
+      run: |
+        mkdir ./_package_tools/
+        cp -f ./_build/Sources/Utilities/AssetPacker/AssetPacker ./_package_tools/AssetPacker
+        cp -f ./LICENSE ./_package_tools/LICENSE
+
+    - name: 'Upload Package (AssetPacker)'
+      if: matrix.OfflineTools == 'ON' && matrix.CC == 'gcc'
+      uses: actions/upload-artifact@v7
+      with:
+        name: AssetPacker_Linux_${{ matrix.Platform }}
+        path: ./_package_tools/
+
   Build-AppImage:
     strategy:
       fail-fast: false

@@ -30,9 +30,9 @@ jobs:
           Backend: SDL2
           RHI: OpenGL
           
-        # `OfflineTools` builds AssetPacker and ShaderCompiler as well. They are not part of the package and
-        # depend on neither the backend, the RHI nor the architecture extensions, so this one baseline x64
-        # entry compiles them for the whole matrix
+        # `OfflineTools` builds AssetPacker and ShaderCompiler as well. They are not part of the game package
+        # and depend on neither the backend, the RHI nor the architecture extensions, so this one baseline
+        # x64 entry compiles them for the whole matrix - and publishes AssetPacker as its own artifact
         - BuildType: Release
           Platform: x64
           ArchExts: SSE2
@@ -129,6 +129,26 @@ jobs:
         Move-Item -Path ".\_build\Release\*.dll" -Destination ".\_package\"
         Move-Item -Path ".\Content\" -Destination ".\_package\Content\"
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
+
+    # `AssetPacker` converts the original game data ahead of time, it's a standalone tool that doesn't belong
+    # in the game package, so the one entry that builds it (see `OfflineTools` in the matrix above) publishes
+    # it as its own artifact. It's packaged here, before the dedicated server reconfigures the build tree
+    # with `NCINE_BUILD_ASSET_PACKER=OFF`. `ShaderCompiler` is not published, it only regenerates sources
+    # that are already committed to the repository.
+    - name: 'Create Package (AssetPacker)'
+      if: matrix.OfflineTools == 'ON'
+      run: |
+        mkdir _package_tools
+        Move-Item -Path ".\_build\Sources\Utilities\AssetPacker\Release\AssetPacker.exe" -Destination ".\_package_tools\AssetPacker.exe"
+        # The game's `LICENSE` has already been moved into the package by the step above
+        Copy-Item -Path ".\_package\LICENSE" -Destination ".\_package_tools\LICENSE"
+
+    - name: 'Upload Package (AssetPacker)'
+      if: matrix.OfflineTools == 'ON'
+      uses: actions/upload-artifact@v7
+      with:
+        name: AssetPacker_Windows_${{ matrix.Platform }}
+        path: ./_package_tools/
 
     # The dedicated server is renderer-agnostic, so it is built only for the OpenGL entries (avoids
     # redundant and potentially unsupported per-rendering-backend server builds)

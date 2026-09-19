@@ -2174,8 +2174,14 @@ namespace Jazz2::Actors
 					_suspendType = SuspendType::None;
 					// The grab box reaches above the player, so dropping down has to be ignored long enough
 					// for gravity to carry them clear of the vine they just let go of - the 4 px above are
-					// nowhere near enough on their own
-					_suspendTime = 12.0f;
+					// nowhere near enough on their own. The same short window the jump-side drop takes, and
+					// for the same measured reason: 12 frames is 14 of the original's ticks, and a release at
+					// LegacyVineDropSpeed covers the 64 px to a vine two tiles below in about 13 - so the
+					// cooldown swallowed that grab and the player fell past it. Measured on `ob_vine_down`,
+					// where the original catches the lower vine at y=1458 and this engine fell to the floor.
+					// Four or five ticks is all it has to outlast: after the 4 px step down the box clears the
+					// released vine's mask by y=1407, which a 4 px/tick release reaches on the fourth tick.
+					_suspendTime = VineDropCooldown;
 
 					SetState(ActorState::ApplyGravitation, true);
 					// The original does not release into free fall, it *assigns* a speed and lets the ordinary

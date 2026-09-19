@@ -66,7 +66,7 @@ namespace Jazz2::Tests
 		// sweep of the test level stops after 394 of these. Anything added has to go *before* it - and that
 		// renumbering has to reach the case in ApplyInput(), the window in GetScenarioTicks() and the
 		// placement in SetupProps(), all three of which name `dm_chain` by index.
-		static constexpr std::int32_t ScenarioCount = 430;
+		static constexpr std::int32_t ScenarioCount = 432;
 		// Raise this to re-measure only the later scenarios while iterating, which turns a twenty-minute
 		// sweep into half a minute. LEAVE IT AT 0 WHEN COMMITTING: a raised value silently skips everything
 		// before it, which has been mistaken for scenarios that stopped working more than once.
@@ -143,10 +143,12 @@ namespace Jazz2::Tests
 		// told from a trace without knowing which row the second vine is actually on - nor, as `ob_vine_up`
 		// then showed, without knowing where in that row its MASK sits. See ScanTileEvent().
 		static constexpr bool ScanVineTiles = false;
-		// The column and the span the mask sweep covers: the stacked pair at (22,40) and (22,44)
-		static constexpr std::int32_t VineBandScanX = 720;
-		static constexpr std::int32_t VineBandScanTop = 1248;
-		static constexpr std::int32_t VineBandScanBottom = 1472;
+		// The column and the span the mask sweep covers. Point it at whichever pair is being worked on: the
+		// four-tile stack at (22,40)/(22,44) is x=720, y 1248..1472, and the two-tile one at (28,43)/(28,45)
+		// is x=912, y 1344..1536.
+		static constexpr std::int32_t VineBandScanX = 912;
+		static constexpr std::int32_t VineBandScanTop = 1344;
+		static constexpr std::int32_t VineBandScanBottom = 1536;
 		static constexpr std::int32_t EventScanMaxTileX = 400;
 		static constexpr std::int32_t EventScanMaxTileY = 120;
 

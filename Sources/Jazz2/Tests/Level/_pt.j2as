@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 424;
+const int ScenarioCount = 426;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -978,6 +978,12 @@ string ScenarioName(int i) {
 		case 421: return "fu_col_butt_in";
 		case 422: return "fu_copter";
 		case 423: return "fu_col_dj";
+		// Dropping off a vine onto another two tiles below, at (28,43)-(29,43) and (28,45)-(29,45) - added to
+		// the level for this. A quick Down on the upper one is reported to fall past the lower one as well in
+		// the engine. Jump is held only long enough to climb, then released so the player settles on the upper
+		// vine; _hold keeps Down down, which should fall through both.
+		case 424: return "ob_vine_down";
+		case 425: return "ob_vine_down_hold";
 	}
 	return "?";
 }
@@ -1073,6 +1079,10 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		// what gives fu_copter a real jump to start its copter from
 		play.xPos = 32 * 32 + 16;
 		play.yPos = 49 * 32;
+	} else if (s == 424 || s == 425) {
+		// Two tiles under the lower of the closely stacked pair at (28,45)-(29,45)
+		play.xPos = 28 * 32 + 16;
+		play.yPos = 47 * 32;
 	} else if (s == 418 || s == 419) {
 		// Two tiles under the lower of the two stacked vines at (22,44)-(23,44), the same approach every vine
 		// scenario that has ever grabbed uses - met from directly below rather than jumped into
@@ -2024,6 +2034,9 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		// held only from that point so the descent drifts into the float tiles instead of riding them up
 		case 422: jump = (t >= 5 && t < 11) || (t >= 20 && ((t - 20) % 6) < 2); right = (t >= 20); break;
 		case 423: jump = (t >= 5 && t < 10) || (t >= 25 && t < 30); break;
+		// The closely stacked vine pair - climb with Jump, release, then drop with Down
+		case 424: jump = (t >= 5 && t < 45); down = (t >= 100 && t < 104); break;
+		case 425: jump = (t >= 5 && t < 45); down = (t >= 100); break;
 	}
 
 	play.keyDown = down;
