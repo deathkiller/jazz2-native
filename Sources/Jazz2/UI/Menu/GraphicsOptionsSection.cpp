@@ -76,13 +76,15 @@ namespace Jazz2::UI::Menu
 			[this](std::int32_t direction) {
 				// Ascending presets so Right increases and Left decreases; clamped at the ends (no wraparound)
 #if defined(WITH_RHI_GXM)
-				// The Vita's frame surface is the panel scaled by this, and 75% (720x408) is already the logical
-				// view's own size - the full panel would only upscale that same 720x408 scene fractionally into
-				// 960x544, at the cost of another full-panel pass, and looks worse for it. So it stops at 75%,
-				// with 60% (576x326) as the step between it and the 480x272 default.
+				// The Vita's frame surface is the panel scaled by this, and 75% (720x408) already covers the
+				// logical view - the full panel would only resample that same scene into 960x544 for another
+				// full-panel pass, and looks worse for it
 				static const std::int32_t presets[] = { 50, 60, 75 };
 #else
-				static const std::int32_t presets[] = { 50, 75, 100 };
+				// Stepped evenly in fill rate (about 25%, 36%, 56%, 72% and 100% of the unscaled view's
+				// pixels), which is what the option is bought with. It stops at 50% because the preference
+				// bounds the logical view too, so anything lower also shows that much less of the level
+				static const std::int32_t presets[] = { 50, 60, 75, 85, 100 };
 #endif
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
 				std::int32_t index = count - 1;

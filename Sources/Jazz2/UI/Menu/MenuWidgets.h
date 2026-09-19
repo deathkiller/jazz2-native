@@ -74,9 +74,10 @@ namespace Jazz2::UI::Menu
 		/**
 		 * @brief Distance of a row's label from the top of the row
 		 *
-		 * Every labelled row (@ref ChoiceItem, @ref Slider, @ref TextInput) puts its label here and whatever
-		 * it shows underneath below it, whatever its own height, so the first row of every section starts at
-		 * the same distance from the frame - it is also where a default-height @ref ListItem centers its text.
+		 * Every labelled row (@ref ChoiceItem, @ref Slider, @ref TextInput, @ref CustomValueItem) puts its
+		 * label here and whatever it shows underneath below it, whatever its own height, so the first row of
+		 * every section starts at the same distance from the frame - it is also where a default-height
+		 * @ref ListItem centers its text.
 		 * Rows used to center the label instead, which put a taller row's label visibly lower than a list's.
 		 * A row that tightens up on a compact view (see @ref LayoutTransition) moves its label up by a share
 		 * of the removed height, so it keeps step with the compact @ref ListItem rows, which center at 16.

@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 418;
+const int ScenarioCount = 424;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -963,6 +963,21 @@ string ScenarioName(int i) {
 		// the carry is nearly over", which both fit the first two readings.
 		case 416: return "an_crouch_pole_e";
 		case 417: return "an_crouch_spring_l";
+		// Two vines stacked four tiles apart, at (22,44)-(23,44) and (22,40)-(23,40) - added to the level for
+		// this. Holding Jump from under the lower one is reported to carry the player onto it and then on to
+		// the upper one here, while the engine catches the first and never reaches the second. _tap lets go
+		// between attempts so a grab that is refused is told apart from one a re-firing jump never settles.
+		case 418: return "ob_vine_up";
+		case 419: return "ob_vine_up_tap";
+		// What a float-up field does to the three moves that drive their own vertical speed. fu_butt presses
+		// Down while already INSIDE the ladder, which this game simply refuses - specialMove stays 0 for the
+		// rest of the run while the lift carries on - so it measures whether the move can start in a field,
+		// not what a field does to one already running. _butt and _copter are dropped in seven tiles above the
+		// column so the move is established in clear air; _butt_in is the control that starts it inside.
+		case 420: return "fu_col_butt";
+		case 421: return "fu_col_butt_in";
+		case 422: return "fu_copter";
+		case 423: return "fu_col_dj";
 	}
 	return "?";
 }
@@ -976,7 +991,7 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		(s >= 89 && s <= 94) || (s >= 97 && s <= 105) ||
 		// The cl_dj* ceiling and sp_dj_* window scenarios need the double jump, so they need Spaz
 		(s >= 153 && s <= 157) || s == 160 || s == 161 || (s >= 162 && s <= 165) || (s >= 223 && s <= 250) ||
-		s == 306 || s == 345 || s == 347 || s == 348 || s == 354 || s == 355 || s == 356 || s == 378 || s == 383 || s == 387 || s == 388 || s == 396 || s == 397 || s == 398 || s == 400 || s == 407) {
+		s == 306 || s == 345 || s == 347 || s == 348 || s == 354 || s == 355 || s == 356 || s == 378 || s == 383 || s == 387 || s == 388 || s == 396 || s == 397 || s == 398 || s == 400 || s == 407 || s == 423) {
 		wanted = CHAR::SPAZ;
 	} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 95 || s == 96 || s == 370 || s == 371 || s == 379 || s == 380 || s == 381 || s == 384) {
 		wanted = CHAR::LORI;
@@ -1053,6 +1068,16 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		int slot = (s <= 395 ? s - 390 : (s <= 400 ? s - 392 : 9));
 		play.xPos = newSectionTiles[slot] * 32 + 16;
 		play.yPos = newSectionRows[slot] * 32;
+	} else if (s == 422) {
+		// The block at (32,50), west of the float-up ladder - the same start every fu_jump_* uses, which is
+		// what gives fu_copter a real jump to start its copter from
+		play.xPos = 32 * 32 + 16;
+		play.yPos = 49 * 32;
+	} else if (s == 418 || s == 419) {
+		// Two tiles under the lower of the two stacked vines at (22,44)-(23,44), the same approach every vine
+		// scenario that has ever grabbed uses - met from directly below rather than jumped into
+		play.xPos = 22 * 32 + 16;
+		play.yPos = 46 * 32;
 	} else if (s == 67 || s == 68 || s == 342 || s == 343 || s == 357 || s == 369 || s == 388) {
 		// Two tiles under the low vine at (25,45)-(26,45), so the grab is met from directly below
 		play.xPos = 25 * 32 + 16;
@@ -1329,6 +1354,21 @@ void SetupProps(jjPLAYER@ play, int s) {
 		// is what the level's diagonal ladder cannot offer.
 		case 183: case 184: case 185:
 			for (int k = 0; k <= 9; k++) { PlaceTileEvent(tx, ty - k, EV_FLOAT_UP); }
+			break;
+		// The same column cut to six tiles, so there is clear air above it for a move to be established in
+		// before it reaches the field, and fu_col_butt / fu_col_copter dropped in seven tiles over the top.
+		// Placed here rather than at the reset because this runs AFTER the settle - moved at the reset, the
+		// settle would just wait for the player to fall back down and land before starting the run.
+		// 422 is not here: fu_copter needs a jump it can start a copter from, so it rides the level's own
+		// ladder from the block west of it instead
+		case 420: case 421: case 423:
+			for (int k = 0; k <= 5; k++) { PlaceTileEvent(tx, ty - k, EV_FLOAT_UP); }
+			if (s == 420) {
+				play.xPos = tx * 32 + 16;
+				play.yPos = (ty - 12) * 32;
+				play.xSpeed = 0;
+				play.ySpeed = 0;
+			}
 			break;
 		// Wind fills the space the player is standing in. The parameter is a single 8-bit field at offset 0,
 		// which is what the other engine's converter reads, so 8 is a rightward wind and 248 is its negative.
@@ -1972,6 +2012,18 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		case 415: right = (t < 50); down = (t >= 50); break;
 		case 416: right = (t < 122); run = (t < 122); down = (t >= 122); break;
 		case 417: right = (t < 110); down = (t >= 110); break;
+		// The stacked vines. Jump HELD is the reported input; the tap train is the control that tells a
+		// refused grab apart from one a continuously re-firing jump never lets settle into.
+		case 418: jump = (t >= 20); break;
+		case 419: jump = (t >= 20 && ((t - 20) % 40) < 5); break;
+		// The float-up column against the three self-driven vertical moves - see GetScenarioName()
+		case 420: down = (t >= 2); break;
+		case 421: jump = (t >= 5 && t < 25); down = (t >= 45); break;
+		// The copter is only available after a real jump, so this rides the level's own ladder from the block
+		// west of it: a hop, the copter started at the apex with the tap train sp_copter_apex uses, and Right
+		// held only from that point so the descent drifts into the float tiles instead of riding them up
+		case 422: jump = (t >= 5 && t < 11) || (t >= 20 && ((t - 20) % 6) < 2); right = (t >= 20); break;
+		case 423: jump = (t >= 5 && t < 10) || (t >= 25 && t < 30); break;
 	}
 
 	play.keyDown = down;

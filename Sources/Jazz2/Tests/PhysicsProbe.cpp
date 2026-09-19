@@ -1,4 +1,4 @@
-#include "PhysicsProbe.h"
+﻿#include "PhysicsProbe.h"
 
 #if defined(WITH_PHYSICS_PROBE)
 
@@ -109,7 +109,7 @@ namespace Jazz2::Tests
 		// `dm_chain`, 15 seconds. This tracks the scenario's INDEX, so it moves whenever anything is appended
 		// ahead of it - it was 334 until the slope, run-tap and vine families went in, at which point it was
 		// quietly giving `sl_up_jhold` a long window and `dm_chain` the 800-tick default instead.
-		if (s == 423) {
+		if (s == 429) {
 			return 1100.0f;
 		}
 		// The pinball chamber left to itself, the same way `sp_chain` is
@@ -281,6 +281,13 @@ namespace Jazz2::Tests
 			// in 4 px above it, `ob_vine_low` two tiles under it), and none of them jumps up into a placed
 			// one. So these now use the grab that is proven in the same sweep, and keep what actually
 			// distinguishes them: moving along the vine once hanging, with and without Run.
+			//
+			// "Height was never the whole story" turned out to be exactly wrong, and `ob_vine_up` is what
+			// showed it: jumping up into a vine grabs perfectly well, and what those attempts were short of
+			// was the vine's MASK rather than its tile. A placed vine inherits whatever mask the tile already
+			// drawn there carries, which can sit anywhere in its 32 px - the level's own stacked pair holds
+			// one at the very bottom of its tile and one 11 px from the top. Aiming at a tile row is
+			// therefore aiming at up to 32 px of slack; use `ScanVineTiles` to read where the band really is.
 			case 67: name = "ob_vine"_s; jump = (t >= 20 && t < 25); right = (t >= 60); break;
 			case 68: name = "ob_vine_run"_s; jump = (t >= 20 && t < 25); right = (t >= 60); run = true; break;
 			// Slopes, reached by starting beside them rather than travelling there
@@ -1290,11 +1297,48 @@ namespace Jazz2::Tests
 			// first crouches and the second does not; if the time remaining decides, they swap.
 			case 421: name = "an_crouch_pole_e"_s; right = (t < 122); run = (t < 122); down = (t >= 122); break;
 			case 422: name = "an_crouch_spring_l"_s; right = (t < 110); down = (t >= 110); break;
+			// Two vines stacked four tiles apart, at (22,44)-(23,44) and (22,40)-(23,40) - added to the level
+			// for this. Reported from play: in the original, holding Jump from under the lower one carries the
+			// player onto it and then straight on to the upper one, while this engine catches the first and
+			// never reaches the second. This is the first vine scenario that asks for a *second* grab, and the
+			// only measurement behind the cooldown that allows one was of a gap of three tiles (see
+			// `VineDropCooldown` in Player.cpp), so four may be past whatever governs it.
+			//
+			// The pair separates the two things that would both show up as "the second grab never happens".
+			// `_hold` is the reported input, and with continuous jump on it re-fires the release every frame
+			// the key is down. `_tap` lets go between attempts - five ticks on, thirty-five off - so a grab
+			// that is *refused* is told apart from one that a re-firing jump never lets settle into.
+			case 423: name = "ob_vine_up"_s; jump = (t >= 20); break;
+			case 424: name = "ob_vine_up_tap"_s; jump = (t >= 20 && ((t - 20) % 40) < 5); break;
+			// What a float-up field does to the three moves that drive their own vertical speed. `fu_butt` was
+			// meant to be this and is not: it presses Down while the player is already *inside* the ladder, and
+			// the original simply refuses the move there - `sm` stays 0 for the rest of the run while the lift
+			// carries on. So it measures whether the move can START in a field, not what the field does to one
+			// already running, which is the reported case ("buttstomping any float up event should slow the
+			// fall noticeably").
+			//
+			// These use the isolating column instead of the level's ladder, and `_butt` and `_copter` are
+			// dropped in seven tiles ABOVE it so the move is established in clear air and enters the field at
+			// full speed. `_butt_in` is the control that starts it inside, which is what tells "the field
+			// refuses the move" apart from "the field slows it". `_dj` needs Spaz.
+			case 425: name = "fu_col_butt"_s; down = (t >= 2); break;
+			case 426: name = "fu_col_butt_in"_s; jump = (t >= 5 && t < 25); down = (t >= 45); break;
+			// The copter cannot be measured in the placed column at all: it is only available after a real
+			// jump, and being teleported into mid-air never makes it so. Neither a held key nor a tap train
+			// got the original to engage one from there, so the scenario compared this engine's copter
+			// against the original's ordinary fall and its numbers meant nothing.
+			//
+			// It uses the level's own ladder instead, entered the way a player would reach it: a hop off the
+			// block at (32,50), the copter started at the apex with the tap train `sp_copter_apex` uses, and
+			// Right held only from that point - so the descent drifts sideways into the first float tiles
+			// rather than the player riding them up from inside, which is what every other `fu_` does.
+			case 427: name = "fu_copter"_s; jump = (t >= 5 && t < 11) || (t >= 20 && ((t - 20) % 6) < 2); right = (t >= 20); break;
+			case 428: name = "fu_col_dj"_s; jump = (t >= 5 && t < 10) || (t >= 25 && t < 30); break;
 			// Guarded on the level, and the guard is what keeps it out of a normal sweep: on `_pt` this falls
-			// through to `return false`, the probe reports finished after 422, and the committed trace is
-			// unaffected. To run it, load that level and raise `FirstScenario` to 423 - see `Tests/README.md`.
+			// through to `return false`, the probe reports finished after 428, and the committed trace is
+			// unaffected. To run it, load that level and raise `FirstScenario` to 429 - see `Tests/README.md`.
 			// It has to stay **last**: a sweep of the test level ends here, so anything after it never runs.
-			case 423:
+			case 429:
 				if (!_levelHandler->GetLevelName().contains("diam3"_s)) {
 					return false;
 				}
@@ -1518,7 +1562,7 @@ namespace Jazz2::Tests
 		PlayerType wanted = PlayerType::Jazz;
 		if (s == 37 || s == 38 || s == 39 || s == 42 || s == 60 || s == 61 || s == 62 || s == 63 || s == 64 || s == 80 || s == 81 || (s >= 82 && s <= 87) ||
 			(s >= 149 && s <= 153) || s == 156 || s == 157 || (s >= 158 && s <= 161) || (s >= 219 && s <= 255) ||
-			s == 311 || s == 350 || s == 352 || s == 353 || s == 359 || s == 360 || s == 361 || s == 383 || s == 388 || s == 392 || s == 393 || s == 401 || s == 402 || s == 403 || s == 405 || s == 412) {
+			s == 311 || s == 350 || s == 352 || s == 353 || s == 359 || s == 360 || s == 361 || s == 383 || s == 388 || s == 392 || s == 393 || s == 401 || s == 402 || s == 403 || s == 405 || s == 412 || s == 428) {
 			// The `cl_dj*` ceiling and `sp_dj_*` window scenarios need the double jump, so they need Spaz - and
 			// so do the three `an_*` ones about his sidekick and his double jump's pose
 			wanted = PlayerType::Spaz;
@@ -1578,6 +1622,10 @@ namespace Jazz2::Tests
 		} else if (s == 67 || s == 68 || s == 347 || s == 348 || s == 362 || s == 374 || s == 393) {
 			// Two tiles under the low vine at (25,45)-(26,45), so the grab is met from directly below
 			player->MoveInstantly(Vector2f(25 * 32 + 16, 47 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
+		} else if (s == 423 || s == 424) {
+			// Two tiles under the lower of the two stacked vines at (22,44)-(23,44), the same approach every
+			// vine scenario that has ever grabbed uses - met from directly below rather than jumped into
+			player->MoveInstantly(Vector2f(22 * 32 + 16, 46 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
 		} else if (s >= 344 && s <= 346) {
 			// The *bottom* of that same slope, run leftwards - which makes its 17-by-16 face a true 45-degree
 			// climb rather than the ~40 degrees of the level's designated "up" slope. Started three tiles clear
@@ -1651,7 +1699,7 @@ namespace Jazz2::Tests
 			player->MoveInstantly(Vector2f(WallFace - TileGaps[step], 26 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
 			player->AddAmmo(weapon, 50);
 			player->SetCurrentWeapon(weapon, Actors::Player::SetCurrentWeaponReason::User);
-		} else if (s >= 172 && s <= 178) {
+		} else if ((s >= 172 && s <= 178) || s == 427) {
 			// The block at (32,50), west of the float-up ladder, which is where jumping right catches the
 			// first of them. Placed half a tile above it so the settle drops the player on, the same way the
 			// ceiling scenarios do - and at the reset rather than at the run, because these start *grounded*.
@@ -1863,6 +1911,23 @@ namespace Jazz2::Tests
 			case 181:
 				for (std::int32_t k = 0; k <= 9; k++) { placeTileEvent(tx, ty - k, EventType::AreaFloatUp); }
 				break;
+			// The same column cut to six tiles, so there is clear air above it for a move to be established in
+			// before it reaches the field. `fu_col_butt` and `fu_col_copter` are then dropped in seven tiles
+			// over the top of it: the ride in `fu_col_hold` reaches row 28 from this same origin, so everything
+			// between here and there is known to be open. Placed in SetupProps rather than SetupCharacter
+			// because this runs *after* the settle - moved at the reset, the settle would simply wait for the
+			// player to fall back down and land before starting the run.
+			// 427 is not here: `fu_copter` needs a jump it can start a copter from, so it rides the level's
+			// own ladder from the block west of it instead - see the case in ApplyInput()
+			case 425:
+			case 426:
+			case 428:
+				for (std::int32_t k = 0; k <= 5; k++) { placeTileEvent(tx, ty - k, EventType::AreaFloatUp); }
+				if (s == 425) {
+					player->MoveInstantly(Vector2f(tx * 32.0f + 16.0f, (ty - 12) * 32.0f), Actors::MoveType::Absolute | Actors::MoveType::Force);
+					player->_speed = Vector2f::Zero;
+				}
+				break;
 			// Wind, with the strengths the converter produces from a JJ2 parameter of 8. Both `_r` and `_l`
 			// come out in the *right* slot, which is the conversion under test - see ApplyInput().
 			case 182: fillWind(0, 8); break;
@@ -2028,7 +2093,7 @@ namespace Jazz2::Tests
 			// scenario's INDEX and has to move with it whenever anything is appended ahead - it was left at 366
 			// when the `ow_*` family went in, which teleported `ow_jump` into Diamondus 3's coordinates and
 			// dropped it out of the test level.
-			case 423:
+			case 429:
 				// Diamondus 3's own chain: the top of the one-tile shaft at tile (1,36), which drops onto the
 				// horizontal blue spring at (1,45)
 				player->MoveInstantly(Vector2f(1 * 32 + 16, 36 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);
@@ -2189,6 +2254,25 @@ namespace Jazz2::Tests
 						// gaps table's "a second vine higher up is missed" cannot be told from "our grab box
 						// never reaches it" without knowing the second vine's row in the first place
 						ScanTileEvent(EventType::ModifierVine, "vine"_s);
+
+						// Which y values the point sampler actually calls a vine, down the column the stacked
+						// pair shares. The event map says which TILE carries a vine; this says where its MASK
+						// is, and the two are nothing like the same thing - the pair at (22,40) and (22,44)
+						// carries its mask at y 1285..1295 and y 1424..1439 respectively, one near the top of
+						// its tile and one at the bottom, so "four tiles apart" is really 129 px of reach.
+						// Neither the trace nor the event map can answer why a grab did not happen without it.
+						if (auto* tiles = _levelHandler->TileMap()) {
+							std::int32_t runStart = -1;
+							for (std::int32_t y = VineBandScanTop; y <= VineBandScanBottom; y++) {
+								bool here = (tiles->GetTileSuspendState((float)VineBandScanX, (float)y) != SuspendType::None);
+								if (here) {
+									if (runStart < 0) { runStart = y; }
+								} else if (runStart >= 0) {
+									LOGI("[scan] suspend band at x={}: y {}..{} (tile rows {}..{})", VineBandScanX, runStart, y - 1, runStart / 32, (y - 1) / 32);
+									runStart = -1;
+								}
+							}
+						}
 					}
 
 					if (ScanFloorRow > 0) {

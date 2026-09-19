@@ -98,7 +98,11 @@ namespace Jazz2::UI::Menu
 	{
 		Bounds = bounds;
 		float centerX = bounds.X + bounds.W * 0.5f;
-		float y = bounds.Y + bounds.H * 0.5f;
+		// Hung from the label offset like every other labelled row (see Widget::LabelOffset) rather than
+		// centred in the bounds, which put the label lower than its neighbours' in the same list and, on a
+		// row made taller to fit more under it, pushed that content past the height the layout reserved -
+		// the scroll view sizes and clamps itself by GetHeight(), so it was not reachable by scrolling either
+		float y = bounds.Y + LabelOffset;
 		root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
 		if (Selected && !ReadOnly && (bool)OnChange) {
 			root->DrawMenuArrows(charOffset, centerX, y + 22.0f, Animation.Raw(), ArrowSpacing);

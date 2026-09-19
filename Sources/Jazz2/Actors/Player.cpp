@@ -533,7 +533,11 @@ namespace Jazz2::Actors
 		// gravity clamped back off by @ref _maxRiseSpeed and travels the full amount, and this one cannot.
 		// Returning zero here covers both places gravity lands, the velocity-Verlet half-step before the move
 		// and the application after it, which is what "no gravity that tick" has to mean.
-		if (_inFloatUpArea) {
+		// Not while a buttstomp is crossing one: there the field caps the descent instead of assigning a rise
+		// (see LegacyFloatUpFallCap), and the original's `ys` goes on climbing underneath that cap - 12 then
+		// 16 - rather than being held where it was. Zeroing gravity here would freeze it at whatever it
+		// entered with, which is the same speed but a different state to leave the field in.
+		if (_inFloatUpArea && _currentSpecialMove != SpecialMoveType::Buttstomp) {
 			return 0.0f;
 		}
 
@@ -787,8 +791,20 @@ namespace Jazz2::Actors
 		// gravity take over from there - which is what the transition callback does - accelerates instead,
 		// so a stomp entered from a short hop was about right while one entered from a long fall ran away to
 		// the ordinary fall cap, 20% too fast, and hit whatever was below that much harder.
+		//
+		// A float-up field lowers that cap again for a buttstomp crossing it - see LegacyFloatUpFallCap. Only
+		// a buttstomp: it is the one descent that re-asserts its own speed every tick and so never lets the
+		// field assign its rise instead. An ordinary fall does reach the same cap for the single tick before
+		// that assignment takes over, but capping it here as well would put the tighter limit on every frame
+		// of a ladder ride where `_inFloatUpArea` is a frame stale, for one tick of a transition that the
+		// assignment overwrites anyway.
 		if (!_levelHandler->IsReforged()) {
-			float fallCap = (_currentSpecialMove == SpecialMoveType::Buttstomp ? LegacyButtstompSpeed : LegacyFallSpeedCap);
+			float fallCap;
+			if (_currentSpecialMove == SpecialMoveType::Buttstomp) {
+				fallCap = (_inFloatUpArea ? LegacyFloatUpFallCap : LegacyButtstompSpeed);
+			} else {
+				fallCap = LegacyFallSpeedCap;
+			}
 			if (_speed.Y > fallCap) {
 				_speed.Y = fallCap;
 			}
@@ -2310,12 +2326,6 @@ namespace Jazz2::Actors
 						CancelCarryingObject();
 						_springCooldown = 30.0f;
 					} else {
-						// No upward nudge on the way off. It was there to get the player clear of the vine so
-						// they would not re-grab it immediately, which the detach and cooldown below now do
-						// properly - and it put the player 4 px above where the original leaves them. Measured:
-						// the original hangs at 1458 and is at 1438 two ticks later, which is a plain -10 jump
-						// with nothing added, while ours started its jump from 1452 after settling at 1456.
-						//
 						// Letting go has to actually let go. Without this the player stays attached, and since
 						// continuous jump is on by default this whole branch re-fires on **every frame** the key
 						// is held - nudging them 4 px up each time while `_suspendType` still reads Vine. That is
@@ -2334,6 +2344,12 @@ namespace Jazz2::Actors
 						// of the vine just released, which at ~11.7 px a frame is two or three.
 						_suspendTime = VineDropCooldown;
 						SetState(ActorState::ApplyGravitation, true);
+						// The release lifts the player before the jump proper starts - see LegacyVineJumpLift.
+						// Not forced, so it cannot push anyone up through a ceiling; a blocked lift simply
+						// leaves them where they were and the jump carries on from there.
+						if (!_levelHandler->IsReforged()) {
+							MoveInstantly(Vector2f(0.0f, -LegacyVineJumpLift), MoveType::Relative);
+						}
 						// Letting go of a vine has to allow the jump that follows in this same call to fire, or
 						// the player simply drops off it - the cooldown left over from whatever jump carried them
 						// onto the vine is still running, and the standard-jump branch below is gated on it.
@@ -4809,8 +4825,14 @@ namespace Jazz2::Actors
 		constexpr float ExtendedHitbox = 2.0f;
 
 		std::uint8_t* p;
+		// A buttstomp used to skip the field outright, which is why one fell through a float-up column at its
+		// full speed. The original does not refuse the move - it lets it run and holds the descent down to
+		// LegacyFloatUpFallCap - so the field is still looked for here and only its *effect* differs below.
+		// Reforged keeps the old behaviour: its float is a continuous force rather than an assignment, and
+		// there is no measurement for what that should do to a stomp.
+		bool buttstomping = (_currentSpecialMove == SpecialMoveType::Buttstomp);
 		if (!_isAttachedToPole && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb)) {
-			if (_currentSpecialMove != SpecialMoveType::Buttstomp) {
+			if (!buttstomping || !_levelHandler->IsReforged()) {
 				// The float-up field is a *state* rather than a trigger, but it still has to be looked for
 				// along the whole path travelled and not only where the player ended the frame. Measured
 				// across four frame rates on `fu_jump_right_rel`, a ladder of separate float tiles: the
@@ -4838,7 +4860,13 @@ namespace Jazz2::Actors
 				if (floatUpFound) {
 					// External force of pinball bumber has higher priority
 					if (_externalForceCooldown <= 0.0f || _speed.Y < 0.0f) {
-						if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
+						if (buttstomping) {
+							// The stomp drives its own descent and keeps re-asserting it, so there is no rise to
+							// assign - marking the field is the whole effect, and the descent cap in
+							// OnUpdatePhysics() does the rest. Deliberately not `_riseFromFloatUp`: nothing is
+							// rising, and that flag picks the decay rate for an ascent this never has.
+							_inFloatUpArea = true;
+						} else if ((_currentAnimation->State & AnimState::Copter) == AnimState::Copter) {
 							_speed.Y = std::max(_speed.Y - _levelHandler->GetGravity() * timeMult * 8.0f, -6.0f);
 						} else if (!_levelHandler->IsReforged() && GetState(ActorState::ApplyGravitation)) {
 							// The original simply holds the player at a fixed rise speed while they are in

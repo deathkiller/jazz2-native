@@ -43,6 +43,9 @@ namespace Jazz2::UI::Menu
 
 	UserProfileOptionsSection::UserProfileOptionsSection()
 		: _isDirty(false), _nameInput(nullptr)
+#if defined(WITH_MULTIPLAYER)
+			, _uniqueIdItem(nullptr)
+#endif
 #if defined(DEATH_TARGET_ANDROID)
 			, _recalcVisibleBoundsTimeLeft(30.0f)
 #endif
@@ -216,7 +219,7 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in Options > User Profile section
-		auto* uniqueIdItem = list->Add<CustomValueItem>(_("Unique Player ID"), 64.0f);
+		auto* uniqueIdItem = list->Add<CustomValueItem>(_("Unique Player ID"), UniqueIdItemHeight);
 		uniqueIdItem->OnActivate = [this]() {
 			auto& uuid = PreferencesCache::UniquePlayerID;
 			char uniquePlayerId[128];
@@ -233,19 +236,25 @@ namespace Jazz2::UI::Menu
 				uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 			Colorf c = (selected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor);
 			r->DrawStringShadow({ uniquePlayerId, length }, charOffset, centerX, y, IMenuContainer::FontLayer - 10, Alignment::Center, c, 0.8f);
+			// The second line is only drawn where HasSecondaryPlayerId() says there is one, because that is
+			// what the row reserved the extra line of height for
 #	if defined(DEATH_TARGET_ANDROID)
-			r->DrawStringShadow(_deviceId, charOffset, centerX, y + 16.0f, IMenuContainer::FontLayer - 10, Alignment::Center, c, 0.8f);
+			if (!_deviceId.empty()) {
+				r->DrawStringShadow(_deviceId, charOffset, centerX, y + SecondaryIdLineHeight, IMenuContainer::FontLayer - 10, Alignment::Center, c, 0.8f);
+			}
 #	elif (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 			if (DiscordRpcClient::Get().IsSupported()) {
 				std::uint64_t userId = DiscordRpcClient::Get().GetUserId();
 				if (userId != 0) {
 					char discordId[32];
 					std::size_t discordLength = formatInto(discordId, "DC:{:.16}", userId);
-					r->DrawStringShadow({ discordId, discordLength }, charOffset, centerX, y + 16.0f, IMenuContainer::FontLayer - 10, Alignment::Center, c, 0.8f);
+					r->DrawStringShadow({ discordId, discordLength }, charOffset, centerX, y + SecondaryIdLineHeight, IMenuContainer::FontLayer - 10, Alignment::Center, c, 0.8f);
 				}
 			}
 #	endif
 		};
+		_uniqueIdItem = uniqueIdItem;
+		RefreshUniqueIdItemHeight();
 #endif
 
 		SetContent(std::move(list));
@@ -254,6 +263,10 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::OnUpdate(float timeMult)
 	{
 		bool wasEditing = (_nameInput != nullptr && _nameInput->IsActive());
+
+#if defined(WITH_MULTIPLAYER)
+		RefreshUniqueIdItemHeight();
+#endif
 
 		WidgetSection::OnUpdate(timeMult);
 
@@ -464,6 +477,33 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 	}
+
+#if defined(WITH_MULTIPLAYER)
+	bool UserProfileOptionsSection::HasSecondaryPlayerId() const
+	{
+#	if defined(DEATH_TARGET_ANDROID)
+		return !_deviceId.empty();
+#	elif (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+		return (DiscordRpcClient::Get().IsSupported() && DiscordRpcClient::Get().GetUserId() != 0);
+#	else
+		return false;
+#	endif
+	}
+
+	void UserProfileOptionsSection::RefreshUniqueIdItemHeight()
+	{
+		if (_uniqueIdItem == nullptr) {
+			return;
+		}
+
+		// Whether the second identifier is there can change while the section is open - Discord connects
+		// asynchronously, and the option above this row turns it on and off - so the height is refreshed
+		// every frame instead of being decided once. The scroll view reads GetHeight() back on each draw,
+		// which is also what its content height and scroll range are computed from, so the taller row is
+		// scrollable to at once.
+		_uniqueIdItem->Height = (HasSecondaryPlayerId() ? UniqueIdItemHeight + SecondaryIdLineHeight : UniqueIdItemHeight);
+	}
+#endif
 
 	void UserProfileOptionsSection::CycleFurSection(std::int32_t section, std::int32_t direction)
 	{

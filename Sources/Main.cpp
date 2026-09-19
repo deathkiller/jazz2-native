@@ -634,11 +634,18 @@ void GameEventHandler::OnBeginFrame()
 		}
 	}
 
-	_currentHandler->OnBeginFrame();
+	// Null until the first queued callback installs a handler - see the note above OnKeyPressed()
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnBeginFrame();
+	}
 }
 
 void GameEventHandler::OnPostUpdate()
 {
+	if (_currentHandler == nullptr) {
+		return;
+	}
+
 	_currentHandler->OnEndFrame();
 
 	if (_backInvokedTimeLeft > 0) {
@@ -741,6 +748,12 @@ void GameEventHandler::OnBackInvoked()
 	}
 }
 
+// There is a window at startup where the main loop is already running and no state handler exists yet: every
+// path that loads something first defers `SetStateHandler()` through `InvokeAsync()`, and a queued callback
+// only runs at the pending-callback pump in @ref GameEventHandler::OnBeginFrame(). Events are processed
+// BEFORE the update in a frame, so a key press arriving in that first step reached a null handler and
+// crashed. The frame callbacks are guarded on the same grounds - `OnBeginFrame()` survives only because the
+// callback that installs the handler runs earlier in that same function, which is incidental.
 void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 {
 #if defined(NCINE_HAS_WINDOWS)
@@ -765,23 +778,31 @@ void GameEventHandler::OnKeyPressed(const KeyboardEvent& event)
 	}
 #endif
 
-	_currentHandler->OnKeyPressed(event);
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnKeyPressed(event);
+	}
 }
 
 void GameEventHandler::OnKeyReleased(const KeyboardEvent& event)
 {
-	_currentHandler->OnKeyReleased(event);
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnKeyReleased(event);
+	}
 }
 
 void GameEventHandler::OnTextInput(const TextInputEvent& event)
 {
-	_currentHandler->OnTextInput(event);
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnTextInput(event);
+	}
 }
 
 void GameEventHandler::OnTouchEvent(const TouchEvent& event)
 {
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
-	_currentHandler->OnTouchEvent(event);
+	if (_currentHandler != nullptr) {
+		_currentHandler->OnTouchEvent(event);
+	}
 #else
 	// The platform's touch device is not played on (see `NCINE_HAS_TOUCH_CONTROLS` in "Main.h"); the input
 	// backends already drop these, this only keeps a backend that doesn't from reaching the state handlers

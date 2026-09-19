@@ -44,12 +44,21 @@ namespace Jazz2::UI::Menu
 
 	private:
 		constexpr static std::uint32_t MaxPlayerNameLength = 24;
+#if defined(WITH_MULTIPLAYER)
+		// The identifier row is a standard row, plus one more line where a secondary identifier is shown
+		// under the unique player ID
+		constexpr static float UniqueIdItemHeight = 52.0f;
+		constexpr static float SecondaryIdLineHeight = 16.0f;
+#endif
 
 		bool _isDirty;
 		String _localPlayerName;
 		std::uint32_t _furColor;
 		PlayerColorMode _colorMode;
 		TextInput* _nameInput;
+#if defined(WITH_MULTIPLAYER)
+		CustomValueItem* _uniqueIdItem;
+#endif
 		// Live character preview (recolored idle frames of Jazz/Spaz/Lori): indexed metadata + one palette per
 		// character (they use different recolor schemes, so the same fur color yields a different palette each)
 		Jazz2::Resources::Metadata* _previewMetadata;
@@ -64,6 +73,10 @@ namespace Jazz2::UI::Menu
 #endif
 
 		void RecalcLayoutForScreenKeyboard();
+#if defined(WITH_MULTIPLAYER)
+		bool HasSecondaryPlayerId() const;
+		void RefreshUniqueIdItemHeight();
+#endif
 		void CycleFurSection(std::int32_t section, std::int32_t direction);
 		void CycleColorMode(std::int32_t direction);
 	};

@@ -66,7 +66,7 @@ namespace Jazz2::Tests
 		// sweep of the test level stops after 394 of these. Anything added has to go *before* it - and that
 		// renumbering has to reach the case in ApplyInput(), the window in GetScenarioTicks() and the
 		// placement in SetupProps(), all three of which name `dm_chain` by index.
-		static constexpr std::int32_t ScenarioCount = 424;
+		static constexpr std::int32_t ScenarioCount = 430;
 		// Raise this to re-measure only the later scenarios while iterating, which turns a twenty-minute
 		// sweep into half a minute. LEAVE IT AT 0 WHEN COMMITTING: a raised value silently skips everything
 		// before it, which has been mistaken for scenarios that stopped working more than once.
@@ -138,10 +138,15 @@ namespace Jazz2::Tests
 		// grows a new event family and a scenario has to be aimed at the geometry rather than at a
 		// description of it. See ScanTileEvent().
 		static constexpr bool ScanOneWayTiles = false;
-		// The same for vines. `ob_vine2` asks whether the original's second grab, three tiles above the
-		// first, is reachable here at all, and that cannot be told from a trace without knowing which row
-		// the second vine is actually on. See ScanTileEvent().
+		// The same for vines, plus a sweep of the point sampler down one column. `ob_vine2` asks whether the
+		// original's second grab, three tiles above the first, is reachable here at all, and that cannot be
+		// told from a trace without knowing which row the second vine is actually on - nor, as `ob_vine_up`
+		// then showed, without knowing where in that row its MASK sits. See ScanTileEvent().
 		static constexpr bool ScanVineTiles = false;
+		// The column and the span the mask sweep covers: the stacked pair at (22,40) and (22,44)
+		static constexpr std::int32_t VineBandScanX = 720;
+		static constexpr std::int32_t VineBandScanTop = 1248;
+		static constexpr std::int32_t VineBandScanBottom = 1472;
 		static constexpr std::int32_t EventScanMaxTileX = 400;
 		static constexpr std::int32_t EventScanMaxTileY = 120;
 

@@ -1058,6 +1058,23 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacyFloatUpSpeed = 8.0f * LegacyFrameRateScale;
 		/**
+		 * @brief Fastest a non-Reforged player descends while inside a float-up area (original 4 px/tick)
+		 *
+		 * The field cannot simply assign its rise to someone whose move drives its own downward speed, so what
+		 * it does instead is hold their descent down to this. Measured on `fu_col_butt`, a buttstomp dropped
+		 * into the column from clear air: outside it the stomp covers 10 px a tick, and from the tick its feet
+		 * enter the field it covers exactly **4.00**, for all 52 ticks it takes to cross - while `ys` keeps
+		 * climbing underneath, 12 then 16. So it is a cap on the movement, not on the speed.
+		 *
+		 * Three entry speeds land on the same figure - 6 on an ordinary fall, 12 and 16 on the stomp - which
+		 * is what rules out the other reading, that the field's 8 px lift is simply subtracted: 6 − 8 would
+		 * carry the player upwards, and 16 − 8 would be twice what is measured.
+		 *
+		 * This engine skipped the whole field while a buttstomp was running and fell through at the full 10,
+		 * which is the reported "buttstomping a float-up event should slow the fall noticeably".
+		 */
+		static constexpr float LegacyFloatUpFallCap = 4.0f * LegacyFrameRateScale;
+		/**
 		 * @brief Pixels a non-Reforged wind area moves the player per unit of its strength (original 0.5)
 		 *
 		 * A *position* move, not a speed: the original's `xs` reads 0.0000 for the whole time a player is
@@ -1745,6 +1762,25 @@ namespace Jazz2::Actors
 		 * begins four pixels a tick ahead.
 		 */
 		static constexpr float LegacyVineDropSpeed = 4.0f * LegacyFrameRateScale;
+		/**
+		 * @brief How far the player is lifted on the tick they jump off a vine or hook (original 12 px)
+		 *
+		 * A distance rather than a speed, so it is **not** scaled to this engine's frame rate --- the original
+		 * moves the player this far once, on the tick the key is read, and every tick after that moves the 8 px
+		 * @ref LegacyAppliedSpeedCap allows. Measured on `ob_vine_up`, where three grabs at three different
+		 * heights all show it: 1443 to 1431, 1437 to 1425, and 1299 to 1287.
+		 *
+		 * It is worth about 10 px of rise, which does not sound like much until a level stacks two vines four
+		 * tiles apart --- the original clears the upper one with a pixel to spare and this engine, launching
+		 * from the same place without the lift, stopped 13 px under it and could never climb the pair. That is
+		 * the reported "the player cannot reach the second vine".
+		 *
+		 * An earlier reading concluded there was no lift at all, from `ob_vine_low` going 1458 to 1438 over two
+		 * ticks and being taken for two moves of a plain -10 jump. It is not: under the applied cap a plain
+		 * jump moves 8 + 8 and lands at 1442. Only 12 + 8 reaches 1438. Two rates that co-vary again --- see
+		 * the note on fitting in `Tests/README.md`.
+		 */
+		static constexpr float LegacyVineJumpLift = 12.0f;
 		/**
 		 * @brief Fastest descent the copter can still be *started* from (original ~2 px/tick)
 		 *
