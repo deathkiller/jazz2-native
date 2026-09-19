@@ -15,6 +15,21 @@ using namespace Death::Containers;
 
 namespace nCine::Backends::Ps2Modules
 {
+	namespace
+	{
+		bool _discPresent = false;
+	}
+
+	void SetDiscPresent(bool present)
+	{
+		_discPresent = present;
+	}
+
+	bool IsDiscPresent()
+	{
+		return _discPresent;
+	}
+
 	bool EnableLoadingFromMemory()
 	{
 		static bool attempted = false;
@@ -48,6 +63,24 @@ namespace nCine::Backends::Ps2Modules
 
 		succeeded = true;
 		return true;
+	}
+
+	bool Load(StringView name, const char* discPath, const std::uint8_t* image, std::uint32_t size)
+	{
+		// The disc first, and on a disc boot ONLY the disc: reading a module off `cdrom0:` is what this port
+		// has always done for `CDFS.IRX`, where loading one out of EE memory needs a patch written into a
+		// running ROM service (see EnableLoadingFromMemory()). Keeping that patch off the path that already
+		// worked is worth more than the few disc seeks it costs.
+		if (_discPresent) {
+			const int moduleId = SifLoadModule(discPath, 0, nullptr);
+			if (moduleId >= 0) {
+				LOGI("Loaded \"{}\" from the disc = {}", name, moduleId);
+				return true;
+			}
+			LOGW("Cannot load \"{}\" from \"{}\" ({}), falling back to the embedded copy", name, discPath, moduleId);
+		}
+
+		return Load(name, image, size);
 	}
 
 	bool Load(StringView name, const std::uint8_t* image, std::uint32_t size)

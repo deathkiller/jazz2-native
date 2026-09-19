@@ -9,6 +9,18 @@
 #include <cstdint>
 #include <cstring>
 
+// Caps the alignment of an object with static storage duration at what the target's object file format
+// can express. The over-alignment in this backend is always a cache-line/SIMD hint with an unaligned
+// fallback, never a correctness requirement. AmigaOS hunk objects cap it at 8 bytes, and m68k-amigaos-gcc
+// rejects a larger request outright ("requested alignment '64' exceeds object file maximum 8") rather
+// than reducing it - so the request has to be clamped in the source. Locals are unaffected (the stack is
+// aligned at run time), and every other target keeps the alignment written at the use site.
+#if defined(DEATH_TARGET_AMIGAOS)
+#	define SW_ALIGN_STATIC(n) ((n) > 8 ? 8 : (n))
+#else
+#	define SW_ALIGN_STATIC(n) (n)
+#endif
+
 #if defined(DEATH_TARGET_SSE2)
 #	include <emmintrin.h>
 #elif defined(DEATH_TARGET_NEON)

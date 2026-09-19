@@ -127,6 +127,16 @@ namespace nCine::Backends
 		}
 		attempted = true;
 
+		// Not on a console that booted with a disc in it, whatever that disc turned out to carry. Everything
+		// below is the riskiest machinery in the port on hardware that has none of it: a patch written into
+		// a running ROM service, and a driver that drives the SIO2 registers itself while `SIO2MAN`, `MCMAN`
+		// and the pads are already using them. It exists for the boot that has nowhere else to read from,
+		// and that boot is by definition the one with no disc.
+		if (Ps2Modules::IsDiscPresent()) {
+			LOGI("Booted from a disc, so no removable storage is looked for");
+			return;
+		}
+
 		// `bdm` is the block-device manager every removable-storage driver registers with, the filesystem
 		// driver claims the partitions it hands over, and the MX4SIO driver is the block device itself - so
 		// they go up in that order, and a failure at any step just means there is nothing to mount.

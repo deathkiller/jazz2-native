@@ -277,9 +277,9 @@ namespace nCine::RHI::Software
 			// slots 1..MaxWorkers to the workers): 32x32x4 = 4096 bytes per slice, so each slice also starts
 			// on its own cache line
 #if defined(WITH_THREADS)
-			alignas(64) std::uint8_t g_tileScratch[TileState::MaxWorkers + 1][TileSize * TileSize * 4];
+			alignas(SW_ALIGN_STATIC(64)) std::uint8_t g_tileScratch[TileState::MaxWorkers + 1][TileSize * TileSize * 4];
 #else
-			alignas(64) std::uint8_t g_tileScratch[1][TileSize * TileSize * 4];
+			alignas(SW_ALIGN_STATIC(64)) std::uint8_t g_tileScratch[1][TileSize * TileSize * 4];
 #endif
 
 			// =====================================================================

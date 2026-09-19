@@ -27,6 +27,11 @@ namespace nCine
 		  the ARM keeps a ring buffer in sound RAM topped up from a callback. The callback is served
 		  out of the queue this class keeps, so the streaming players still see the queue interface
 		  they expect. There are only @ref MaxStreams of these.
+		- A sound much longer than a channel can address (over @ref MaxSamplesForHalving, about six
+		  seconds at 22 kHz) is an @ref AudioBufferPlayer to the engine but a stream handle here: it
+		  stays in main memory and is fed to the driver from there while it plays, so it sounds whole
+		  and at its full rate. Such a player cannot change its pitch once started, like any stream.
+		  A sound between the two limits is played on a channel at half its rate.
 
 		As with @ref AsndAudioDevice the hardware has no notion of a listener, so panning and
 		distance attenuation are computed here and folded into the channel volume and pan. The AICA
@@ -92,6 +97,16 @@ namespace nCine
 		static constexpr std::int32_t MaxVolume = 255;
 		/** @brief Hardware limit on the sample count of a single channel */
 		static constexpr std::int32_t MaxSamplesPerChannel = 65534;
+		/**
+		 * @brief Longest sound that is still played on a channel, at half its sample rate
+		 *
+		 * A sound over @ref MaxSamplesPerChannel that fits after one halving of its rate loses only
+		 * some high end and keeps a channel of its own; one that would have to be halved again is
+		 * streamed from main memory instead (see @ref startLongSample()). The line is drawn here
+		 * rather than at the channel limit because there are only @ref MaxStreams stream handles,
+		 * shared with the music, and the intro alone plays a dozen sounds between the two limits.
+		 */
+		static constexpr std::int32_t MaxSamplesForHalving = MaxSamplesPerChannel * 2;
 
 		/** @brief One audio buffer, in sound RAM or in main memory depending on what it is for */
 		struct Buffer
@@ -100,6 +115,15 @@ namespace nCine
 			BufferUsage usage;
 			/** @brief Whether this entry is in use */
 			bool used;
+			/**
+			 * @brief Whether this is a static buffer too long for a channel, kept in @ref data instead
+			 *
+			 * A channel addresses at most @ref MaxSamplesPerChannel samples, so a longer sound is kept
+			 * in main memory like a streaming buffer and played through a stream handle that is fed
+			 * from it, see @ref startLongSample(). 8-bit samples are kept as they are (converted to
+			 * signed) and widened to the 16-bit the stream driver plays as they are handed over.
+			 */
+			bool longSample;
 
 			/**
 			 * @brief Sound RAM offsets of a static buffer, one per channel
@@ -128,7 +152,7 @@ namespace nCine
 			std::int32_t bytesPerSample;
 
 			Buffer()
-				: usage(BufferUsage::Static), used(false), spuAddress {}, spuCapacity(0), data(nullptr),
+				: usage(BufferUsage::Static), used(false), longSample(false), spuAddress {}, spuCapacity(0), data(nullptr),
 					capacity(0), size(0), numSamples(0), frequency(0), numChannels(0), bytesPerSample(0) {}
 		};
 
@@ -166,6 +190,19 @@ namespace nCine
 
 			/** @brief Whether the source is fed by the streaming queue instead of a single buffer */
 			bool streaming;
+			/** @brief Whether the stream handle is fed from the attached long sample instead of the queue */
+			bool longSample;
+			/** @brief Next sample frame of the attached long sample to hand to the stream driver */
+			std::int32_t longSamplePos;
+			/** @brief Which half of the staging block the next request of an 8-bit long sample is written to */
+			std::int32_t longSampleStagingHalf;
+			/**
+			 * @brief Time the last sample frame of a long sample was handed to the driver, 0 while playing
+			 *
+			 * The driver keeps a ring buffer ahead of what is heard, so the sound is over only once that
+			 * has played out, see @ref isSourcePlaying().
+			 */
+			std::uint64_t longSampleDrainedAt;
 			/** @brief Whether the hardware has been told to start */
 			bool started;
 			/** @brief Whether playback is paused */
@@ -174,8 +211,8 @@ namespace nCine
 			Source()
 				: attachedBufferId(0), channels { -1, -1 }, pausedOffset(0), streamHandle(-1),
 					queuedBufferIds {}, numQueued(0), numProcessed(0), headOffset(0), gain(1.0f),
-					pitch(1.0f), relative(false), looping(false), streaming(false), started(false),
-					paused(false) {}
+					pitch(1.0f), relative(false), looping(false), streaming(false), longSample(false),
+					longSamplePos(0), longSampleStagingHalf(0), longSampleDrainedAt(0), started(false), paused(false) {}
 		};
 
 		/** @brief Whether the sound processor was brought up successfully */
@@ -184,6 +221,19 @@ namespace nCine
 		SmallVector<Buffer, 0> _buffers;
 		/** @brief State of every source, indexed by source id minus one */
 		Source _sources[MaxSources];
+
+		/**
+		 * @brief Staging blocks a long 8-bit sample is expanded to 16-bit into, one pair per stream handle
+		 *
+		 * The stream driver plays 16-bit PCM, so the samples of an 8-bit long sample are widened on the
+		 * way to it, one request at a time. The driver copies a block with DMA after the callback
+		 * returned, so two are alternated and the one the previous request handed over is never
+		 * written while it may still be read. Each entry holds @ref LongSampleStagingSize bytes and
+		 * is allocated the first time its handle plays one.
+		 */
+		std::uint8_t* _longSampleStaging[MaxStreams];
+		/** @brief Size of each of @ref _longSampleStaging, two blocks of the most the driver asks for at once */
+		static constexpr std::int32_t LongSampleStagingSize = StreamBufferSize;
 
 		/** @brief The one instance, so the C callback of the stream driver can find its way back */
 		static AicaAudioDevice* _current;
@@ -202,6 +252,10 @@ namespace nCine
 		void startSample(std::int32_t index, std::int32_t sampleOffset);
 		/** @brief Stops the AICA channels of a source and returns them to the pool */
 		void stopSample(std::int32_t index);
+		/** @brief Starts the attached long sample of a source on a freshly allocated stream handle */
+		void startLongSample(std::int32_t index, std::int32_t sampleOffset);
+		/** @brief Stops the stream a long sample is playing through and releases its handle */
+		void stopLongSample(std::int32_t index);
 		/** @brief Releases the stream handle of a source */
 		void releaseStream(std::int32_t index);
 		/** @brief Serves the stream driver from the queue of a source */

@@ -481,7 +481,7 @@ namespace nCine::RHI::Software
 	// RGBA8 staging row for the RGB565 screen framebuffer, used by ApplyPendingSoftwareLighting below (its
 	// row kernels operate on 4-byte pixels). Main-thread-only, like the whole Combine intercept. Sized for
 	// the widest surface the tile renderer accepts.
-	alignas(32) static std::uint8_t g_fb16RowStage[8192 * 4];
+	alignas(SW_ALIGN_STATIC(32)) static std::uint8_t g_fb16RowStage[8192 * 4];
 #endif
 
 	void SwDevice::ApplyPendingSoftwareLighting()

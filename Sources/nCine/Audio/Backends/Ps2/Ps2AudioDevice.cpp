@@ -54,7 +54,10 @@ namespace nCine
 			return false;
 		}
 
-		if (!Backends::Ps2Modules::Load("audsrv.irx"_s, Backends::Ps2Modules::Audsrv, Backends::Ps2Modules::AudsrvSize)) {
+		// From the disc where there is one - the packaging stages it next to `CDFS.IRX` - and out of the
+		// executable only where there is not (see Ps2Modules::Load())
+		if (!Backends::Ps2Modules::Load("audsrv.irx"_s, "cdrom0:\\AUDSRV.IRX;1",
+				Backends::Ps2Modules::Audsrv, Backends::Ps2Modules::AudsrvSize)) {
 			LOGE("Cannot load \"audsrv.irx\", sound will be disabled");
 			return false;
 		}

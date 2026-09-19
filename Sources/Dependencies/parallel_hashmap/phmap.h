@@ -332,7 +332,14 @@ static_assert(kDeleted == -2,
 template <class std_alloc_t>
 inline ctrl_t* EmptyGroup() {
   PHMAP_IF_CONSTEXPR (std_alloc_t::value) {
+      // AmigaOS hunk object files cap static alignment at 8 bytes and m68k-amigaos-gcc rejects a
+      // larger request outright. The 16 here is for the SSE2 aligned load in the Group path, which
+      // no m68k build takes.
+#if defined(DEATH_TARGET_AMIGAOS)
+      alignas(8) static constexpr ctrl_t empty_group[] = {
+#else
       alignas(16) static constexpr ctrl_t empty_group[] = {
+#endif
           kSentinel, kEmpty, kEmpty, kEmpty, kEmpty, kEmpty, kEmpty, kEmpty,
           kEmpty,    kEmpty, kEmpty, kEmpty, kEmpty, kEmpty, kEmpty, kEmpty};
 

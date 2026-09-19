@@ -83,6 +83,7 @@ extern "C"
 #	include <switch.h>
 #elif defined(DEATH_TARGET_DREAMCAST)
 #	include <dc/syscalls.h>
+#	include "Backends/Dc/DcPlatform.h"
 #elif defined(DEATH_TARGET_WII)
 #	include <ogc/conf.h>
 #	include <ogc/es.h>
@@ -1327,6 +1328,11 @@ namespace nCine
 			// how much of it the content had taken is not guessable from the failure itself
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
 			Backends::CtrPlatform::LogMemoryStatus("allocation failed");
+#elif defined(DEATH_TARGET_DREAMCAST)
+			// Same reasoning as above: the heap window is the binding constraint of this console, and
+			// how much of it the content had taken is not guessable from the failure itself
+			LOGF("Out of memory: an allocation failed and the process cannot continue");
+			Backends::DcPlatform::LogMemoryStatus("allocation failed");
 #else
 			// The handler is called in a loop until the allocation succeeds, so it must not return
 			LOGF("Out of memory: an allocation failed and the process cannot continue");

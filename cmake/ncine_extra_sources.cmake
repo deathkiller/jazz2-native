@@ -332,10 +332,12 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcPlatform.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcPlatform.cpp
 		)
 	elseif(PLATFORM_PSP)
 		# PSPSDK window/input backend (no SDL/GLFW); the PSP libraries are linked with the packaging below
@@ -1313,12 +1315,20 @@ else()
 		# with the original `ioman`, which is the I/O manager newlib's POSIX calls reach; it does not live in
 		# ROM, so it rides on the disc and is loaded by SifLoadModule() at startup - which reaches it through
 		# the IOP's own loadfile service, a different path from the POSIX open() that cannot resolve it.
+		#
+		# audsrv rides along for the same reason and is loaded the same way. It is also linked into the
+		# executable (see Ps2Modules.h), because a boot from an SD card has no disc to read it from - but
+		# that path needs a patch written into a running ROM service, and a disc boot has no reason to go
+		# anywhere near it. Staging the file here is what lets the disc boot stay on the mechanism that has
+		# always worked.
 		add_custom_command(TARGET ${NCINE_APP} PRE_LINK
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 				"${CMAKE_BINARY_DIR}/ps2/SYSTEM.CNF" "${CMAKE_BINARY_DIR}/cd/SYSTEM.CNF"
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
 				"$ENV{PS2SDK}/iop/irx/cdfs.irx" "${CMAKE_BINARY_DIR}/cd/CDFS.IRX"
-			COMMENT "Staging SYSTEM.CNF and cdfs.irx onto the disc image"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				"$ENV{PS2SDK}/iop/irx/audsrv.irx" "${CMAKE_BINARY_DIR}/cd/AUDSRV.IRX"
+			COMMENT "Staging SYSTEM.CNF, cdfs.irx and audsrv.irx onto the disc image"
 			VERBATIM)
 
 		# Prefer xorrisofs, fall back to the older mkisofs/genisoimage; all three take the same options here
@@ -1334,10 +1344,24 @@ else()
 				message(STATUS "No \"Source.pak\" in \"${NCINE_CONTENT_DIR}\", the disc image will not be marked as prebaked")
 			endif()
 
+			# The staged copy is stripped here rather than relying on the global strip step, which cannot be
+			# relied on: that one is a POST_BUILD command of its own added from "ncine_strip_binaries.cmake",
+			# which CMakeLists.txt includes AFTER this file - and POST_BUILD commands run in the order they
+			# were added, so the copy below would take the executable as it is at that moment, which is
+			# before it has been stripped. The disc was carrying a 15.5 MB executable of which 11 MB was
+			# debug sections. The BIOS only reads the loadable segments and did not care, but a loader that
+			# reads the whole file does - and reading eleven unnecessary megabytes over an MX4SIO adapter is
+			# ten seconds of black screen before a single instruction of the game runs.
+			set(_ps2StripStagedElf "")
+			if(NCINE_STRIP_BINARIES AND NOT NCINE_DEBUG_SYMBOLS_FILE AND CMAKE_BUILD_TYPE MATCHES "Release" AND EXISTS ${CMAKE_STRIP})
+				set(_ps2StripStagedElf COMMAND "${CMAKE_STRIP}" --strip-all "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF")
+			endif()
+
 			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/cd/Content"
 				${_ps2MarkPrebakedCommand}
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF"
+				${_ps2StripStagedElf}
 				COMMAND "${PS2_MKISOFS_EXECUTABLE}" -quiet -iso-level 2 -l -V "${_ps2DiscName}" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.iso" "${CMAKE_BINARY_DIR}/cd"
 				COMMENT "Creating bootable ISO image with game content"
 				VERBATIM)

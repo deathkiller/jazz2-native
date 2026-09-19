@@ -30,6 +30,18 @@ namespace nCine::Backends
 	namespace Ps2Modules
 	{
 		/**
+			@brief Records whether the console booted with a disc in the drive
+
+			Called once from `MainApplication`, from the only place that can know. Everything below reads it
+			rather than asking the drive again, so the answer is the one the startup sequence actually acted
+			on. @ref Load() prefers the disc where there is one, and `Ps2Storage` does not go looking for
+			removable storage at all.
+		*/
+		void SetDiscPresent(bool present);
+		/** @brief What @ref SetDiscPresent() was told; `false` until it has been called */
+		bool IsDiscPresent();
+
+		/**
 			@brief Makes the IOP able to load a module out of EE memory at all
 
 			`SifExecModuleBuffer()` does not work on a stock console: the ROM's `LOADFILE` service has no
@@ -59,6 +71,22 @@ namespace nCine::Backends
 			@param size   Its matching size
 		*/
 		bool Load(Death::Containers::StringView name, const std::uint8_t* image, std::uint32_t size);
+
+		/**
+			@brief Loads a module from the disc where there is one, and out of the executable where there is not
+
+			The embedded path exists for the boot that has no disc to read from, and it is the one that needs
+			@ref EnableLoadingFromMemory() - a patch written into a running ROM service, on a console whose
+			IOP this port deliberately never resets. A disc boot has no need of any of that: `SifLoadModule()`
+            off `cdrom0:` is how this port has always loaded `CDFS.IRX`, and it is left the only mechanism on
+			that path so that the boot which works keeps working.
+
+			@param name       Only for the log line
+			@param discPath   Where the packaging staged it, e.g. @cpp "cdrom0:\\AUDSRV.IRX;1" @ce
+			@param image      The embedded fallback
+			@param size       Its matching size
+		*/
+		bool Load(Death::Containers::StringView name, const char* discPath, const std::uint8_t* image, std::uint32_t size);
 
 		/** @brief `audsrv.irx` - the SPU2 streaming server the audio backend talks to (needs `rom0:LIBSD`) */
 		extern const std::uint8_t Audsrv[];

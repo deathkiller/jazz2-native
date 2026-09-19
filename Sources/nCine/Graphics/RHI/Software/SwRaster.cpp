@@ -93,7 +93,7 @@ namespace nCine::RHI::Software
 		// SwTileRasterizer's per-worker tile scratch instead), so one static buffer safely replaces the
 		// former two 16 KB stack arrays - stack a small-stack platform cannot afford.
 		constexpr std::int32_t MaxScanBuf = 4096;
-		alignas(32) std::uint8_t g_scanBuf[MaxScanBuf * 4];
+		alignas(SW_ALIGN_STATIC(32)) std::uint8_t g_scanBuf[MaxScanBuf * 4];
 
 #if defined(RHI_USE_FB16)
 		// RGBA8 staging row for the 16-bit screen framebuffer: each rasterizer row-loop iteration loads the
@@ -102,7 +102,7 @@ namespace nCine::RHI::Software
 		// like g_scanBuf (the deferred tile workers write RGBA8 tile scratch; only the tile copy converts).
 		// Sized for the widest surface the tile renderer accepts, so any screen row fits.
 		constexpr std::int32_t MaxFbRowStage = 8192;
-		alignas(32) std::uint8_t g_fbRowStage[MaxFbRowStage * 4];
+		alignas(SW_ALIGN_STATIC(32)) std::uint8_t g_fbRowStage[MaxFbRowStage * 4];
 #endif
 
 	}

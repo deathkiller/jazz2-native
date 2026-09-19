@@ -32,6 +32,7 @@
 #elif defined(WITH_PS2)
 #	include "Backends/Ps2/Ps2GfxDevice.h"
 #	include "Backends/Ps2/Ps2InputManager.h"
+#	include "Backends/Ps2/Ps2Modules.h"
 #elif defined(WITH_PS3)
 #	include "Backends/Ps3/Ps3GfxDevice.h"
 #	include "Backends/Ps3/Ps3InputManager.h"
@@ -416,24 +417,32 @@ namespace nCine
 			// Both counted in milliseconds, and the loop sleeps in milliseconds so they mean what they say
 			constexpr std::int32_t DiscReadyTimeoutMs = 10000;
 			constexpr std::int32_t DiscReadyPollIntervalMs = 10;
+			// How long the drive is given to say what is in it before an empty tray is believed - see the
+			// media-type check at the bottom of the loop
+			constexpr std::int32_t DiscTypeSettleMs = 1500;
 
 			for (std::int32_t waited = 0; waited < DiscReadyTimeoutMs; waited += DiscReadyPollIntervalMs) {
-				if (sceCdDiskReady(0) == SCECdComplete) {
+				// The media type is part of the answer, not a separate question: `sceCdDiskReady()` can
+				// complete while the drive has still not identified what it is holding, and continuing on
+				// that would load CDFS against a disc the driver does not know about yet
+				if (sceCdDiskReady(0) == SCECdComplete && sceCdGetDiskType() != SCECdNODISC) {
 					discReady = true;
 					break;
 				}
-				// An empty tray is not something to wait out: the drive knows there is nothing in it as
-				// soon as CDVDMAN is up, and without this the SD-card boot - the one the timeout was added
-				// for - would spend the entire ten seconds on a black screen before anything else happens.
-				// A disc that is merely spinning up answers SCECdDETCT or similar and is waited for.
+				// An empty tray is not something to wait out: without this the SD-card boot - the one the
+				// timeout was added for - would spend the entire ten seconds on a black screen before
+				// anything else happens.
 				//
-				// Asked only after the first sleep. `sceCdInit()` is documented as returning once commands
-				// can be SENT, which is not the same as the mechacon having reported what is in the drive,
-				// and `SCECdNODISC` is the zero value of the media-type enum - so however the driver's
-				// cached type is initialized, one tick of settling costs an SD boot 10 ms and takes the
-				// question out of the answer.
+				// But it is only believed after the drive has had long enough to say otherwise. `sceCdInit()`
+				// returns once commands can be SENT, which is not the same as the mechacon having reported
+				// what is in the drive, and `SCECdNODISC` is the ZERO value of the media-type enum - so a
+				// console that is booting from a disc answers "no disc" for as long as it takes to identify
+				// the media, which is most of a second of mechanical reality and no time at all on an
+				// emulator. Reading the type one tick in therefore worked everywhere it was tested and
+				// failed on hardware, where it skipped CDFS, left the game with no content and no way to
+				// say so, and sent the startup off to look for an SD card that was not there either.
 				DelayThread(DiscReadyPollIntervalMs * 1000);
-				if (sceCdGetDiskType() == SCECdNODISC) {
+				if (waited >= DiscTypeSettleMs && sceCdGetDiskType() == SCECdNODISC) {
 					break;
 				}
 			}
@@ -441,8 +450,15 @@ namespace nCine
 				// Tracked with a flag rather than inferred from the counter, which cannot tell a timeout
 				// from a drive that became ready on the very last poll
 				LOGW("The disc drive did not become ready, continuing without a disc");
+			} else {
+				LOGI("Disc drive ready, media type 0x{:.2x}", std::uint32_t(sceCdGetDiskType()));
 			}
 		}
+
+		// What the drive found decides how the rest of the I/O stack is assembled: with a disc in it the
+		// modules come off the disc and nothing goes looking for removable storage, without one they have
+		// to come out of the executable itself (see Ps2Modules.h)
+		Ps2Modules::SetDiscPresent(discReady);
 
 		// The BIOS "cdrom0:" handler is not reachable through the newlib port's open() - it answers ENODEV - so
 		// the disc is mounted as a filesystem by cdfs, which registers a "cdfs:" device with the ORIGINAL

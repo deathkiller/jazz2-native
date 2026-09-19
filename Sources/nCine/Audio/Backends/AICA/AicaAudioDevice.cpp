@@ -10,6 +10,7 @@
 
 #include <malloc.h>
 
+#include <arch/timer.h>
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
 #include <dc/sound/sfxmgr.h>
@@ -67,6 +68,22 @@ namespace nCine
 			}
 		}
 
+		/**
+		 * @brief Turns a block of unsigned 8-bit PCM into the signed 8-bit PCM the AICA plays, in place
+		 *
+		 * WAV keeps 8-bit samples unsigned with silence at 0x80, the sound processor's 8-bit mode is
+		 * two's complement with silence at 0 like its 16-bit one. Flipping the top bit of every byte is
+		 * exactly that conversion. @p bytes has to be a multiple of 4 and @p block 4-byte aligned, which
+		 * is what every block uploaded to sound RAM is anyway.
+		 */
+		void convertUnsigned8ToSigned8(void* block, std::int32_t bytes)
+		{
+			std::uint32_t* words = static_cast<std::uint32_t*>(block);
+			for (std::int32_t i = 0, n = bytes / 4; i < n; i++) {
+				words[i] ^= 0x80808080u;
+			}
+		}
+
 		/** @brief Frees a `malloc()`ed block when it goes out of scope, whichever way the caller left */
 		struct ScopedAlloc
 		{
@@ -96,7 +113,7 @@ namespace nCine
 	AicaAudioDevice* AicaAudioDevice::_current = nullptr;
 
 	AicaAudioDevice::AicaAudioDevice()
-		: _initialized(false)
+		: _initialized(false), _longSampleStaging {}
 	{
 		LOGD("Initializing AICA audio device...");
 
@@ -152,6 +169,11 @@ namespace nCine
 			std::free(buffer.data);
 		}
 		_buffers.clear();
+
+		for (std::uint8_t*& staging : _longSampleStaging) {
+			std::free(staging);
+			staging = nullptr;
+		}
 
 		_current = nullptr;
 	}
@@ -313,10 +335,60 @@ namespace nCine
 		// A fully loaded sound goes into the sound processor's own memory and stays there. An AICA
 		// channel is mono, so a stereo sample is de-interleaved into one block per channel.
 
+		// Whatever this buffer held before is gone: a long sample being replaced by a short one has to
+		// give its main memory back, the sound RAM blocks are dealt with further down
+		if (buffer->longSample) {
+			std::free(buffer->data);
+			buffer->data = nullptr;
+			buffer->capacity = 0;
+			buffer->longSample = false;
+		}
+
 		// A channel plays at most 65534 samples from wherever it is pointed at, which a long sound
-		// effect can exceed. Cutting it off there would be audible, so the sample rate is halved
-		// until it fits instead: the hardware resamples every channel on playback anyway, so the
-		// sound still plays to its end at its proper pitch and only loses some high end.
+		// effect can exceed - the sugar rush jingle is 21 seconds at 22 kHz. A sound that would have
+		// to be resampled more than once to fit (see MaxSamplesForHalving) is kept in main memory
+		// instead and played through a stream handle that is fed from it (see startLongSample), which
+		// is what the hardware offers for audio longer than a channel: it sounds whole and at its full
+		// rate, for the price of the sample living on the heap rather than in sound RAM. 16-bit
+		// samples are handed to the stream driver as they are (interleaved, it splits a stereo pair
+		// itself), 8-bit ones are kept here converted to signed the same way as below and widened to
+		// 16-bit as they are handed over.
+		if (buffer->numSamples > MaxSamplesForHalving && size > 0 && data != nullptr) {
+			const std::int32_t requiredCapacity = (size + StreamAlignment - 1) & ~(StreamAlignment - 1);
+			std::uint8_t* longData = static_cast<std::uint8_t*>(::memalign(StreamAlignment, requiredCapacity));
+			if (longData != nullptr) {
+				// The driver rounds its last request up to a few bytes past the end, so the padding is
+				// silence in whichever encoding the samples are in
+				std::memcpy(longData, data, size);
+				std::memset(longData + size, (is16Bit ? 0x00 : 0x80), requiredCapacity - size);
+				if (!is16Bit) {
+					convertUnsigned8ToSigned8(longData, requiredCapacity);
+				}
+
+				for (std::uint32_t& address : buffer->spuAddress) {
+					if (address != 0) {
+						snd_mem_free(address);
+						address = 0;
+					}
+				}
+				buffer->spuCapacity = 0;
+				std::free(buffer->data);
+				buffer->data = longData;
+				buffer->capacity = requiredCapacity;
+				buffer->size = size;
+				buffer->longSample = true;
+				LOGD("Audio buffer holds {} samples, more than the {} an AICA channel can address, it will be streamed from main memory",
+					buffer->numSamples, MaxSamplesPerChannel);
+				return true;
+			}
+
+			LOGW("Cannot allocate {} bytes to keep a long audio buffer in main memory, resampling it instead", requiredCapacity);
+		}
+
+		// Otherwise the sample rate is halved until the sound fits a channel: the hardware resamples
+		// every channel on playback anyway, so it still plays to its end at its proper pitch and only
+		// loses some high end. Only a sound the memory above could not be had for is halved more than
+		// once, which loses a lot more.
 		ScopedAlloc decimated;
 		if (buffer->numSamples > MaxSamplesPerChannel) {
 			std::int32_t factor = 2;
@@ -387,8 +459,28 @@ namespace nCine
 		}
 
 		if (size > 0 && data != nullptr) {
+			// 8-bit PCM arrives unsigned, as WAV keeps it, and the hardware plays 8-bit samples as signed
+			// (see convertUnsigned8ToSigned8). Uploaded as they are, every sample is off by half the
+			// range and each zero crossing becomes a full-scale step - the whole effect turns into loud
+			// crackling, not a subtle artifact - so they are re-centred on the way in. It is done on the
+			// temporary block the upload is made from, the caller's data is never touched.
 			if (!isStereo) {
-				spu_memload(buffer->spuAddress[0], data, requiredCapacity);
+				if (is16Bit) {
+					spu_memload(buffer->spuAddress[0], data, requiredCapacity);
+				} else {
+					ScopedAlloc converted(::memalign(32, (requiredCapacity + 31) & ~31));
+					if (converted.Pointer == nullptr) {
+						LOGE("Cannot allocate {} bytes to convert an 8-bit audio buffer", requiredCapacity);
+						buffer->size = 0;
+						return false;
+					}
+					// The padding up to the next word is filled with unsigned silence, so it converts
+					// to signed silence with the rest instead of whatever followed the caller's block
+					std::memset(converted.Pointer, 0x80, requiredCapacity);
+					std::memcpy(converted.Pointer, data, size);
+					convertUnsigned8ToSigned8(converted.Pointer, requiredCapacity);
+					spu_memload(buffer->spuAddress[0], converted.Pointer, requiredCapacity);
+				}
 			} else {
 				// The two halves are built in one temporary block and uploaded separately
 				ScopedAlloc separated(::memalign(32, requiredCapacity * 2));
@@ -404,6 +496,8 @@ namespace nCine
 					snd_pcm16_split((std::uint32_t*)data, (std::uint32_t*)left, (std::uint32_t*)right, size);
 				} else {
 					snd_pcm8_split((std::uint32_t*)data, (std::uint32_t*)left, (std::uint32_t*)right, size);
+					convertUnsigned8ToSigned8(left, requiredCapacity);
+					convertUnsigned8ToSigned8(right, requiredCapacity);
 				}
 
 				spu_memload(buffer->spuAddress[0], left, requiredCapacity);
@@ -461,11 +555,12 @@ namespace nCine
 			return;
 		}
 
-		if (source.streaming) {
+		if (source.streaming || source.longSample) {
 			if (source.streamHandle < 0) {
 				return;
 			}
-			const Buffer* buffer = (source.numQueued > 0 ? bufferForId(source.queuedBufferIds[0]) : nullptr);
+			const Buffer* buffer = (source.longSample ? bufferForId(source.attachedBufferId)
+				: (source.numQueued > 0 ? bufferForId(source.queuedBufferIds[0]) : nullptr));
 			const bool isStereo = (buffer != nullptr && buffer->numChannels == 2);
 
 			std::int32_t volume, pan;
@@ -586,6 +681,69 @@ namespace nCine
 		}
 	}
 
+	void AicaAudioDevice::startLongSample(std::int32_t index, std::int32_t sampleOffset)
+	{
+		Source& source = _sources[index];
+		const Buffer* buffer = bufferForId(source.attachedBufferId);
+		if (buffer == nullptr || !buffer->longSample || buffer->data == nullptr || buffer->frequency <= 0) {
+			return;
+		}
+
+		if (sampleOffset < 0 || sampleOffset >= buffer->numSamples) {
+			sampleOffset = 0;
+		}
+
+		// The handle is taken for the duration of one playback and given back when it ends, so the
+		// few there are (see MaxStreams) are shared between the music and every long effect
+		if (source.streamHandle < 0) {
+			source.streamHandle = snd_stream_alloc(streamCallback, StreamBufferSize);
+			if (source.streamHandle < 0) {
+				LOGW("All {} stream handles are in use, a long sound will not be heard", MaxStreams);
+				return;
+			}
+		}
+
+		// The stream plays 16-bit PCM, so an 8-bit sample is widened on the way (see fillStream) through
+		// a staging block that belongs to the handle
+		if (buffer->bytesPerSample == 1 && source.streamHandle < MaxStreams && _longSampleStaging[source.streamHandle] == nullptr) {
+			_longSampleStaging[source.streamHandle] = static_cast<std::uint8_t*>(::memalign(StreamAlignment, LongSampleStagingSize));
+			if (_longSampleStaging[source.streamHandle] == nullptr) {
+				LOGW("Cannot allocate {} bytes to widen a long 8-bit sound, it will not be heard", LongSampleStagingSize);
+				releaseStream(index);
+				return;
+			}
+		}
+
+		source.longSample = true;
+		source.longSamplePos = sampleOffset;
+		source.longSampleStagingHalf = 0;
+		source.longSampleDrainedAt = 0;
+		source.started = true;
+
+		// Starting prefills the ring buffer through the callback, which serves it from the sample. A
+		// stream is resampled at the rate it is started with, so the pitch is folded in here and
+		// cannot follow later changes.
+		std::int32_t frequency = std::int32_t(buffer->frequency * source.pitch + 0.5f);
+		if (frequency < 1) {
+			frequency = 1;
+		}
+		snd_stream_start(source.streamHandle, std::uint32_t(frequency), (buffer->numChannels == 2 ? 1 : 0));
+		applyVolume(index);
+	}
+
+	void AicaAudioDevice::stopLongSample(std::int32_t index)
+	{
+		Source& source = _sources[index];
+		if (!source.longSample) {
+			return;
+		}
+
+		releaseStream(index);
+		source.longSample = false;
+		source.longSamplePos = 0;
+		source.longSampleDrainedAt = 0;
+	}
+
 	void AicaAudioDevice::releaseStream(std::int32_t index)
 	{
 		Source& source = _sources[index];
@@ -604,6 +762,72 @@ namespace nCine
 	{
 		Source& source = _sources[index];
 		bytesProvided = 0;
+
+		if (source.longSample) {
+			// Served straight out of the sample in main memory, a looping one starts over at its end
+			Buffer* buffer = bufferForId(source.attachedBufferId);
+			if (buffer == nullptr || !buffer->longSample || buffer->data == nullptr) {
+				return nullptr;
+			}
+			const std::int32_t frameSize = buffer->numChannels * buffer->bytesPerSample;
+			std::int32_t offset = source.longSamplePos * frameSize;
+			if (offset >= buffer->size) {
+				if (!source.looping) {
+					// Everything has been handed over, what is left is the ring buffer playing out
+					if (source.longSampleDrainedAt == 0) {
+						source.longSampleDrainedAt = timer_ms_gettime64();
+					}
+					return nullptr;
+				}
+				source.longSamplePos = 0;
+				offset = 0;
+			}
+
+			if (buffer->bytesPerSample == 2) {
+				std::int32_t available = buffer->size - offset;
+				if (available > bytesRequested) {
+					available = bytesRequested;
+				}
+				// Whole frames only, so a stereo pair is never split across two calls
+				available -= available % frameSize;
+				if (available <= 0) {
+					return nullptr;
+				}
+
+				source.longSamplePos += available / frameSize;
+				bytesProvided = available;
+				return buffer->data + offset;
+			}
+
+			// 8-bit samples are widened into the staging block of the handle, which holds two halves
+			// used in turn so the one the previous request may still be read from is left alone
+			std::uint8_t* staging = (source.streamHandle >= 0 && source.streamHandle < MaxStreams
+				? _longSampleStaging[source.streamHandle] : nullptr);
+			if (staging == nullptr) {
+				return nullptr;
+			}
+			const std::int32_t halfSize = LongSampleStagingSize / 2;
+			std::int32_t outBytes = (bytesRequested < halfSize ? bytesRequested : halfSize);
+			std::int32_t frames = outBytes / (2 * buffer->numChannels);
+			const std::int32_t framesLeft = (buffer->size - offset) / frameSize;
+			if (frames > framesLeft) {
+				frames = framesLeft;
+			}
+			if (frames <= 0) {
+				return nullptr;
+			}
+
+			std::int16_t* out = reinterpret_cast<std::int16_t*>(staging + source.longSampleStagingHalf * halfSize);
+			const std::int8_t* in = reinterpret_cast<const std::int8_t*>(buffer->data + offset);
+			const std::int32_t count = frames * buffer->numChannels;
+			for (std::int32_t i = 0; i < count; i++) {
+				out[i] = std::int16_t(std::int32_t(in[i]) << 8);
+			}
+			source.longSampleStagingHalf ^= 1;
+			source.longSamplePos += frames;
+			bytesProvided = count * 2;
+			return out;
+		}
 
 		// Everything before numProcessed is waiting to be reclaimed by the stream, the buffer being
 		// served is the first one after that
@@ -669,6 +893,7 @@ namespace nCine
 		if (bufferId == 0) {
 			// Detaching is how a player releases a source, so everything about it is reset here
 			stopSample(index);
+			stopLongSample(index);
 			releaseStream(index);
 			source.numQueued = 0;
 			source.numProcessed = 0;
@@ -767,7 +992,14 @@ namespace nCine
 		}
 
 		const Source& source = _sources[index];
-		if (source.streaming || !source.started || source.channels[0] < 0) {
+		if (source.streaming || !source.started) {
+			return 0;
+		}
+		if (source.longSample) {
+			// What has been handed to the driver, which runs a ring buffer ahead of what is heard
+			return source.longSamplePos;
+		}
+		if (source.channels[0] < 0) {
 			return 0;
 		}
 		return snd_get_pos(source.channels[0]);
@@ -786,10 +1018,16 @@ namespace nCine
 		}
 
 		// A channel always starts from the beginning of what it is pointed at, so seeking means
-		// keying it on again further into the sample
+		// keying it on again further into the sample - and a long sample is restarted the same way
 		if (source.started) {
-			stopSample(index);
-			startSample(index, offset);
+			const Buffer* buffer = bufferForId(source.attachedBufferId);
+			if (buffer != nullptr && buffer->longSample) {
+				stopLongSample(index);
+				startLongSample(index, offset);
+			} else {
+				stopSample(index);
+				startSample(index, offset);
+			}
 		} else {
 			source.pausedOffset = offset;
 		}
@@ -807,11 +1045,18 @@ namespace nCine
 		source.paused = false;
 
 		if (source.attachedBufferId != 0) {
+			const Buffer* buffer = bufferForId(source.attachedBufferId);
+			const bool isLongSample = (buffer != nullptr && buffer->longSample);
 			if (source.started && !wasPaused) {
 				// Already sounding, restart it from the beginning like alSourcePlay() would
 				stopSample(index);
+				stopLongSample(index);
 			}
-			startSample(index, wasPaused ? source.pausedOffset : 0);
+			if (isLongSample) {
+				startLongSample(index, wasPaused ? source.pausedOffset : 0);
+			} else {
+				startSample(index, wasPaused ? source.pausedOffset : 0);
+			}
 			source.pausedOffset = 0;
 			return;
 		}
@@ -854,6 +1099,15 @@ namespace nCine
 			// from the queue when playback resumes - the queue itself is not touched
 			snd_stream_stop(source.streamHandle);
 			source.started = false;
+		} else if (source.longSample) {
+			// The driver is ahead of what has been heard by up to a ring buffer, so resuming from
+			// where the feeding got to would skip that much - it is taken back instead, and a little
+			// of the sound is heard twice rather than lost
+			// The ring holds StreamBufferSize bytes of 16-bit samples per channel
+			const std::int32_t ringFrames = StreamBufferSize / 2;
+			source.pausedOffset = (source.longSamplePos > ringFrames ? source.longSamplePos - ringFrames : 0);
+			stopLongSample(index);
+			source.started = false;
 		} else {
 			// Remember where the sample got to, so it can be keyed on again from there
 			source.pausedOffset = (source.channels[0] >= 0 ? snd_get_pos(source.channels[0]) : 0);
@@ -878,6 +1132,8 @@ namespace nCine
 			// them through numProcessedBuffers() and unqueueBuffers() right after this
 			source.numProcessed = source.numQueued;
 			source.headOffset = 0;
+		} else if (source.longSample) {
+			stopLongSample(index);
 		} else {
 			stopSample(index);
 		}
@@ -903,6 +1159,21 @@ namespace nCine
 			// The driver plays silence rather than stopping when it runs dry, so the stream is
 			// "playing" for as long as it has been started - AudioStream decides when it is over
 			return true;
+		}
+		if (source.longSample) {
+			// Over once the last of the sample has been handed to the driver AND the ring buffer it
+			// keeps ahead of the output has had time to play out - a whole ring buffer's worth,
+			// which errs on the side of a sound that is reported a little longer than it is heard
+			if (source.longSampleDrainedAt == 0) {
+				return true;
+			}
+			const Buffer* buffer = bufferForId(source.attachedBufferId);
+			std::uint64_t ringMs = 0;
+			if (buffer != nullptr && buffer->frequency > 0) {
+				// The ring holds StreamBufferSize bytes of 16-bit samples per channel
+				ringMs = std::uint64_t(StreamBufferSize / 2) * 1000 / std::uint64_t(buffer->frequency);
+			}
+			return (timer_ms_gettime64() - source.longSampleDrainedAt < ringMs);
 		}
 		return (source.channels[0] >= 0 && snd_is_playing(source.channels[0]));
 	}

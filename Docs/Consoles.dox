@@ -825,7 +825,15 @@ crash also loses everything written since the last flush.
 -   **Audio costs almost nothing in main memory here**, which is worth knowing on a console whose
     heap is the binding constraint: the AICA has its own **2 MB of sound RAM** and every fully
     loaded sound effect lives there, not on the 13.8 MB heap. What main memory does hold is the
-    module decoder and the three 16 KB buffers a stream is refilled through.
+    module decoder, the three 16 KB buffers a stream is refilled through, and the few sounds too
+    long for a channel @m_span{m-text m-dim} (see below) @m_endspan. Measured in Flycast, a level
+    of the first episode has about 100 sounds resident in 1.2 MB of the 1.86 MB of sound RAM the
+    driver leaves, and the heap sits at 3--5 MB after a level has loaded and around 7 MB while it
+    plays with its music; the memory line the port writes to the log after every level load
+    @m_span{m-text m-dim} (`Memory (level loaded): heap … VRAM … sound RAM …`, see
+    @ref nCine::Backends::DcPlatform) @m_endspan is where to read the numbers of a particular level.
+    Deferring sound effects to their first play, as the Nintendo 64 does, would therefore free no
+    main memory here and would put a GD-ROM seek into the middle of gameplay instead.
 -   **Module music plays through libxmp, not libopenmpt** @m_span{m-text m-dim} (`NCINE_WITH_XMP`,
     on by default here) @m_endspan --- and that decoder is the one audio allocation big enough to
     matter on the heap above. Measured over this game's tracks, one loaded module costs libopenmpt
@@ -842,11 +850,22 @@ crash also loses everything written since the last flush.
     finished is read back from the hardware rather than predicted from a timer. Music goes through
     KallistiOS's `snd_stream` driver, of which there are only **four**.
 -   A channel addresses at most **65534 samples** from wherever it is pointed at, which a long
-    sound effect can exceed @m_span{m-text m-dim} (about 3 seconds of 22 kHz audio) @m_endspan.
-    Rather than cutting one off, @ref nCine::AicaAudioDevice::uploadBuffer halves its sample rate
-    until it fits and says so in the log --- the hardware resamples every channel anyway, so the
-    sound still plays to its end at the right pitch and only loses some high end. A sound long
-    enough to need this more than once is really a stream.
+    sound effect can exceed @m_span{m-text m-dim} (about 3 seconds of 22 kHz audio) @m_endspan. A
+    sound that fits after **one** halving of its sample rate is played that way, as the intro's
+    two-second effects at 44 kHz are: @ref nCine::AicaAudioDevice::uploadBuffer halves it and says
+    so in the log, and since the hardware resamples every channel anyway the sound still plays to
+    its end at the right pitch and only loses some high end. A sound that would have to be halved
+    **again** @m_span{m-text m-dim} (the sugar rush jingle is 21 seconds, two of the intro's effects
+    are over three seconds at 44 kHz) @m_endspan is kept in main memory instead and played through
+    one of the four `snd_stream` handles, fed from there while it plays, so it is heard whole and at
+    its full rate --- the price is its size on the heap @m_span{m-text m-dim} (464 KB for the sugar
+    rush) @m_endspan, that the handles are shared with the music, and that, like any stream, it
+    cannot change pitch once started. Only when that memory cannot be had is such a sound halved
+    more than once.
+-   **8-bit samples are converted to signed on upload.** WAV keeps them unsigned, the AICA plays
+    them as two's complement, and a sample uploaded as it is comes out with every zero crossing
+    turned into a full-scale step --- loud crackling over the whole effect. Almost every sound of the
+    original game is 8-bit, so this is what "all sound effects are distorted" means on this console.
 -   Panning and distance attenuation are computed on the SH4 and folded into the channel volume and
     pan, because the hardware has no notion of a listener. Each channel does have a low-pass filter,
     but the KallistiOS driver switches it off and exposes no command to reach it, so nothing is
@@ -1796,16 +1815,21 @@ Units `mass0:` to `mass3:` are probed in order, so a card partitioned more than 
 three IOP modules this needs --- `bdm`, `bdmfs_fatfs` and `mx4sio_bd`
 @m_span{m-text m-dim} (FAT12/16/32 and exFAT) @m_endspan --- are **linked into the executable**,
 because a driver that is the only way to reach a device obviously cannot be read from it
-@m_span{m-text m-dim} (see @cpp nCine::Backends::Ps2Modules @ce; `audsrv` rides along for the same
-reason, a card boot having no disc to read it from either) @m_endspan.
+@m_span{m-text m-dim} (see @cpp nCine::Backends::Ps2Modules @ce; `audsrv` is linked in as well, for
+the same reason) @m_endspan.
+
+Loading a module out of EE memory needs a patch written into a running ROM service, on a console
+whose IOP this port deliberately never resets, and it is the one mechanism here with no track record
+on hardware. So it is confined to the boot that cannot do without it: **a disc boot never goes near
+any of it**. `audsrv` is staged on the disc next to `CDFS.IRX` and loaded from there, and the
+block-device stack is not loaded at all --- see @cpp nCine::Backends::Ps2Modules::Load() @ce, which
+prefers the disc wherever there is one.
 
 The split between the two halves is worth knowing if this is ever ported to another application.
 @cpp nCine::Backends::Ps2Storage @ce brings the modules up and reports which units mounted, and that
 is all it does --- it does not know what the game is called or how its files are laid out. The
-directory name, the `Content`/`Cache`/`Source` layout and the rule that a disc wins over a card all
-live together in @cpp Jazz2::ContentResolver::InitializePaths() @ce, which is also what drives the
-probe in the first place: a build that finds its content on the disc never loads a module or waits
-for a card at all.
+directory name and the `Content`/`Cache`/`Source` layout live in
+@cpp Jazz2::ContentResolver::InitializePaths() @ce.
 
 A build running from a card also writes a **log file** next to its content, `Jazz2.log`, which is the
 only practical way to read a trace from this console --- the alternative is the EE's SIO register and
@@ -1814,10 +1838,21 @@ there is a memory card, which is 8 MB shared with every game on the console and 
 
 @m_class{m-block m-warning}
 
-@par A disc that carries content always wins
-The probe runs only when @cpp "cdfs:/Content" @ce is absent, so booting from a disc costs nothing for
-a feature it is not using --- and a disc build never silently picks up a stale tree from a card left
-in the adapter. To run from the card, run the ELF from the card.
+@par A disc in the drive always wins
+The probe runs only when the drive reported **no disc at all** --- not merely when the disc carries no
+content. Booting from a disc therefore costs nothing for a feature it is not using, never picks up a
+stale tree from a card left in the adapter, and never touches a driver that talks to the SIO2
+registers itself while `SIO2MAN`, `MCMAN` and the pads are already using them. To run from the card,
+run the ELF from the card with no disc in the drive.
+@par
+Which makes the disc detection load-bearing, and it is trickier than it looks: `sceCdInit()` returns
+once commands can be *sent*, not once the drive has identified what it is holding, and `SCECdNODISC`
+is the **zero** value of the media-type enum. Reading the type one tick later therefore says "no
+disc" on a console that is booting from one --- which is no time at all on an emulator and most of a
+second of mechanical reality on hardware. That cost a release: the startup skipped `CDFS.IRX`, left
+the game with no content, went looking for an SD card that was not there either, and showed a black
+screen with nothing logged anywhere a user could read it. The drive is now given
+@cpp DiscTypeSettleMs @ce to say otherwise before an empty tray is believed.
 
 @subsection consoles-ps2-build Building
 

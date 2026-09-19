@@ -16,6 +16,9 @@
 #include "../nCine/MainApplication.h"
 #include "../nCine/ServiceLocator.h"
 #include "../nCine/tracy.h"
+#if defined(DEATH_TARGET_DREAMCAST)
+#	include "../nCine/Backends/Dc/DcPlatform.h"
+#endif
 #include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/Camera.h"
 #include "../nCine/Graphics/Texture.h"
@@ -551,6 +554,12 @@ namespace Jazz2
 			}
 		}
 #endif
+
+#if defined(DEATH_TARGET_DREAMCAST)
+		// The heap window is the binding constraint of this console and a level is the largest thing that
+		// is ever loaded into it, so what one costs is worth a line in the log every time
+		nCine::Backends::DcPlatform::LogMemoryStatus("level loaded");
+#endif
 	}
 
 	std::unique_ptr<UI::HUD> LevelHandler::CreateHUD()
@@ -571,6 +580,9 @@ namespace Jazz2
 			if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
 				spawnPosition = _eventMap->GetSpawnPosition(PlayerType::Jazz);
 				if (spawnPosition.X < 0.0f && spawnPosition.Y < 0.0f) {
+					// Nothing is drawn without a player, so a level that ends up here shows only a black
+					// screen - worth a line in the log, because nothing else will say why
+					LOGW("Level has no start position for player {}, the player cannot be spawned", i);
 					continue;
 				}
 			}

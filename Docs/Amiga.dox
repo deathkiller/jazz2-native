@@ -76,35 +76,31 @@ has to be built. The releases are GCC 16.2; GCC 13 is the floor, this codebase b
 
 @code{.sh}
 # The archive's own directory IS the prefix - the toolchain is relocatable, so unpack it anywhere
-curl -fsSLO https://github.com/AmigaPorts/m68k-amigaos-gcc/releases/download/v16.2-rc6/m68k-amigaos-gcc-16.2-rc6-Linux-x86_64.tar.xz
-tar xJf m68k-amigaos-gcc-16.2-rc6-Linux-x86_64.tar.xz -C /opt
+curl -fsSLO https://github.com/AmigaPorts/m68k-amigaos-gcc/releases/download/v16.2-rc10/m68k-amigaos-gcc-16.2-rc10-x86_64-linux.tar.xz
+tar xJf m68k-amigaos-gcc-16.2-rc10-x86_64-linux.tar.xz -C /opt
 export AMIGA_INST=/opt/m68k-amigaos-gcc-16.2
 @endcode
 
 @m_class{m-noindent}
 
-The release already carries everything this port compiles against except one library. **NDK 3.2**, the
-<b>CyberGraphX and AHI headers</b> @m_span{m-text m-dim} (which the NDK itself does not include) @m_endspan
-and **vasm** @m_span{m-text m-dim} (`vasmm68k_mot`, needed only for `NCINE_WITH_AMMX` -- the AMMX
-kernels are hand-written assembly that no GCC can emit) @m_endspan are all in the archive. What is
-left is **zlib**, the one third-party library the game cannot run without:
+The release carries everything this port compiles against, so nothing has to be cross-compiled by
+hand. **NDK 3.2**, the <b>CyberGraphX and AHI headers</b> @m_span{m-text m-dim} (which the NDK itself
+does not include) @m_endspan, **vasm** @m_span{m-text m-dim} (`vasmm68k_mot`, needed only for
+`NCINE_WITH_AMMX` -- the AMMX kernels are hand-written assembly that no GCC can emit) @m_endspan and
+**zlib** @m_span{m-text m-dim} (1.3.2, prebuilt for every multilib) @m_endspan are all in the archive.
 
-@code{.sh}
-export PATH="$AMIGA_INST/bin:$PATH"
-curl -LO https://zlib.net/zlib-1.3.1.tar.gz && tar xf zlib-1.3.1.tar.gz && cd zlib-1.3.1
-CC=m68k-amigaos-gcc AR=m68k-amigaos-ar RANLIB=m68k-amigaos-ranlib \
-    CFLAGS='-mcpu=68060 -O2 -mcrt=nix20' ./configure --prefix=$AMIGA_INST/m68k-amigaos --static
-make -j$(nproc) libz.a && make install
-@endcode
+@m_class{m-block m-info}
 
-@m_class{m-block m-warning}
-
-@par AR and RANLIB have to be named explicitly
-Left at their defaults, zlib's configure uses the **host** `ar`/`ranlib`, and the host `ranlib`
-writes an ELF-shaped symbol index into the Amiga-format archive. `m68k-amigaos-ld` cannot read that
-index, so `libz.a` contributes no symbols at all and the game's link fails on `crc32`, `inflate*`
-and `deflate*` -- with the archive sitting right there on the command line. Running
-`m68k-amigaos-ranlib libz.a` afterwards repairs an archive already built the wrong way.
+@par zlib used to be built from source here
+Earlier releases of the toolchain shipped no zlib, and these instructions cross-compiled it into
+`$AMIGA_INST/m68k-amigaos`. That is no longer necessary, and no longer possible without patching:
+upstream zlib 1.3.2's `configure` probes `-fPIC` unconditionally, and `m68k-amigaos-gcc` rejects
+that flag outright @m_span{m-text m-dim} (*"'-fpic', '-fPIC' and '-fpie' are not supported on this
+target, use '-fbaserel' instead"*) @m_endspan, so `configure` aborts before it writes a makefile.
+If you do build a replacement anyway, name `AR` and `RANLIB` explicitly -- left at their defaults
+the **host** `ranlib` writes an ELF-shaped symbol index into the Amiga-format archive that
+`m68k-amigaos-ld` cannot read, so `libz.a` contributes no symbols at all and the link fails on
+`crc32`, `inflate*` and `deflate*` with the archive sitting right there on the command line.
 
 @subsubsection amiga-toolchain-flags What the toolchain file sets, and why
 

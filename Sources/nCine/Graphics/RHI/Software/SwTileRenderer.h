@@ -246,7 +246,7 @@ namespace nCine::RHI::Software
 			 * because the command arena may still reallocate (and move every live command) while
 			 * submissions continue; nothing dereferences the pointer between submit and the flush fixup.
 			 */
-			alignas(16) std::uint8_t userDataStorage[MaxFragmentShaderUserDataSize];
+			alignas(SW_ALIGN_STATIC(16)) std::uint8_t userDataStorage[MaxFragmentShaderUserDataSize];
 
 			/**
 			 * @brief Index of this command's @ref SwPaletteLut in the flush window's LUT pool, or `-1`

@@ -55,6 +55,35 @@ namespace Jazz2::Events
 			}
 		}
 
+		// A level made for multiplayer only (the original battle and race levels, and most custom ones of
+		// that kind) has no single-player start at all, only multiplayer ones. Those are not collected
+		// above - the multiplayer handler picks from them by team - but they are the right place to put a
+		// player who starts such a level alone.
+		std::int32_t multiplayerTargetCount = 0;
+		ForEachEvent([&multiplayerTargetCount](EventTile& e, std::int32_t x, std::int32_t y) {
+			if (e.Event == EventType::LevelStartMultiplayer) {
+				multiplayerTargetCount++;
+			}
+			return true;
+		});
+		if (multiplayerTargetCount > 0) {
+			std::int32_t selectedTarget = nCine::Random().Next(0, multiplayerTargetCount);
+			Vector2f result(-1, -1);
+			ForEachEvent([&selectedTarget, &result](EventTile& e, std::int32_t x, std::int32_t y) {
+				if (e.Event != EventType::LevelStartMultiplayer) {
+					return true;
+				}
+				if (selectedTarget == 0) {
+					// Same placement as the multiplayer handler gives these markers
+					result = Vector2f((float)x * Tiles::TileSet::DefaultTileSize, (float)y * Tiles::TileSet::DefaultTileSize - 8.0f);
+					return false;
+				}
+				selectedTarget--;
+				return true;
+			});
+			return result;
+		}
+
 		return Vector2f(-1, -1);
 	}
 

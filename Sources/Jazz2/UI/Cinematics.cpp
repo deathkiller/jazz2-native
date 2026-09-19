@@ -674,6 +674,10 @@ namespace Jazz2::UI
 		auto& resolver = ContentResolver::Get();
 		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2sfx"_s)));
 		if (!s->IsValid()) {
+			// Not an error - the video plays fine without its sound effects - but on a console, where the
+			// content tree is prepared ahead of time and nothing else would say so, a silent intro is the
+			// only symptom of a tree that was converted without "Data.j2d", and this is what tells them apart
+			LOGW("SFX playlist for \"{}.j2v\" not found, the video will play without sound effects", path);
 			return false;
 		}
 

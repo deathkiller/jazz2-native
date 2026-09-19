@@ -1631,7 +1631,15 @@ struct XXH64_state_s {
 
 #ifndef XXH_NO_XXH3
 
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* >= C11 */
+/* AmigaOS hunk object files cap the alignment of an object with static storage duration at 8 bytes,
+   and m68k-amigaos-gcc rejects a larger request outright ("requested alignment '64' exceeds object
+   file maximum 8") instead of quietly reducing it - which is what file-scope XXH3_kSecret asks for.
+   Every one of these alignments is a cache-line hint for the SIMD accumulator paths, and this target
+   takes XXH_SCALAR, so clamping the request costs nothing but a little padding. This file is always
+   compiled as C++, so alignas() is the right spelling here. */
+#if defined(DEATH_TARGET_AMIGAOS)
+#  define XXH_ALIGN(n)      alignas((n) > 8 ? 8 : (n))
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* >= C11 */
 #  define XXH_ALIGN(n)      _Alignas(n)
 #elif defined(__cplusplus) && (__cplusplus >= 201103L) /* >= C++11 */
 /* In C++ alignas() is a keyword */
