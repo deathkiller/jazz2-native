@@ -14,6 +14,11 @@ namespace nCine::Backends
 	Ps2GfxDevice::Ps2GfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, contextInfo, displayMode)
 	{
+		// The last line the boot console shows (see MainApplication::Run()): from here on the trace is on the
+		// SIO register alone, so a screen that stays black after it points past the IOP bring-up, the content
+		// probe and the memory card - into the renderer's own setup or the content loading that follows
+		LOGI("Handing the display over to the renderer");
+
 		// Brings up the Graphics Synthesizer: places the static video-memory regions through GsVram, sets
 		// the video mode and hands `libgraph` the display buffers' addresses
 		RHI::Device::InitializeGs();

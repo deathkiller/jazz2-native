@@ -87,7 +87,8 @@ namespace nCine
 
 			An IRX can only be loaded once per process, but the device is constructed and destroyed with the
 			service locator, which the application may do more than once. So this is idempotent and remembers
-			what it found; the constructor calls it and then only opens a stream format on it.
+			what it found. `MainApplication::Run()` calls it first, while the boot console is still on the
+			display, and the constructor then only opens a stream format on what it found.
 
 			@returns `false` if the modules could not be loaded, which makes the backend report itself invalid
 		*/

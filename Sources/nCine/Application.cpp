@@ -93,6 +93,7 @@ extern "C"
 #elif defined(DEATH_TARGET_PS2)
 extern "C" {
 #	include <libcdvd.h>
+#	include <debug.h>
 }
 #elif defined(DEATH_TARGET_PS3)
 #	include <ppu-lv2.h>
@@ -1909,6 +1910,14 @@ namespace nCine
 			for (std::int32_t i = 0; i < length2; i++) {
 				*sioTx = std::uint8_t(logEntryWithColors[i]);
 			}
+		}
+		// And on the boot console MainApplication::Run() opens, for as long as the renderer has not taken the
+		// Graphics Synthesizer over - the one place a trace can be read on hardware without a serial cable.
+		// Afterwards libdebug would program the GS underneath the frame being drawn, exactly the PSP's
+		// situation above, and there is a picture to look at by then anyway.
+		if (!RHI::Device::HasDisplayOwnership()) {
+			logEntryWithColors[length2] = '\0';
+			scr_printf("%s", logEntryWithColors);
 		}
 #elif defined(DEATH_TARGET_PS3)
 		// PSL1GHT's newlib routes fd 1 and 2 straight to the lv2 `sysTtyWrite` syscall rather than to a

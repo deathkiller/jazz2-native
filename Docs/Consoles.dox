@@ -406,7 +406,7 @@ Dreamcast | `dbgio` --- the **framebuffer console** during startup @m_span{m-tex
 Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup, without the adapter nothing is written and the game runs normally
 Nintendo 3DS | `svcOutputDebugString` --- **Azahar** prints it into its log under `Debug.Emulated` @m_span{m-text m-dim} (hidden by its default filter, see @ref consoles-3ds-deploy) @m_endspan and a debugger attached to the console shows it, plus the **console on the bottom screen**, which shows every line until the renderer takes the top screen over and warnings and errors afterwards. `Jazz2.log` next to the `.3dsx` on the SD card is written as well
 PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console, plus the **debug screen** on the display until the GU session takes the framebuffer over
-PlayStation 2 | The Emotion Engine's **SIO transmit register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan --- a bare ELF has no connected stdout. **PCSX2** captures it as EE console output with `EnableEEConsole` on, and a serial cable picks it up on hardware
+PlayStation 2 | The Emotion Engine's **SIO transmit register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan --- a bare ELF has no connected stdout. **PCSX2** captures it as EE console output with `EnableEEConsole` on, and a serial cable picks it up on hardware. Plus the **boot console** on the display @m_span{m-text m-dim} (PS2SDK's libdebug) @m_endspan until the renderer takes the Graphics Synthesizer over, which is after the disc wait, the IOP module loads and the content and memory-card probes --- so a boot that stops on hardware stops with its last trace line on the television
 PlayStation 3 | `sysTtyWrite` --- PSL1GHT routes fd 1 and 2 straight to that lv2 syscall, so an ordinary write reaches the console TTY on hardware and **RPCS3**'s log in the emulator. No cable and no on-screen fallback are needed
 PlayStation Vita | `sceClibPrintf` --- picked up by the usual host-side console tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
 Switch | `svcOutputDebugString` --- picked up by a debug logger on the host, writing the trace to a file on the SD card is forced on this platform as well
@@ -1896,6 +1896,15 @@ register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan instead of `printf`. 
 as EE console output and a serial cable picks it up on real hardware. The same channel carries the
 early messages the CDVD bring-up in @cpp MainApplication::Run() @ce emits, before the trace system
 exists.
+
+On hardware without a cable the same lines are on the **television**: @cpp MainApplication::Run() @ce
+opens PS2SDK's libdebug text console before it touches the IOP, and every trace line is drawn there
+until @cpp Ps2GfxDevice @ce hands the Graphics Synthesizer to the renderer, which it announces with
+"Handing the display over to the renderer". Everything that can stop a boot on the IOP side --- the
+disc wait, `CDFS.IRX`, the memory card, `LIBSD` and `audsrv`, the MX4SIO probe --- runs before that
+line, so a black screen with the console still showing says exactly which step did not come back, and
+a black screen after that line points at the renderer's own setup or the content loading that follows.
+Report the last lines shown when a boot stops.
 
 @subsection consoles-ps2-limits Limits and known issues
 

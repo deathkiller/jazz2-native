@@ -75,8 +75,12 @@ extern "C" {
 #	include <libcdvd.h>
 #	include <libmc.h>
 #	include <delaythread.h>
+#	include <debug.h>
 }
 #	include <cstdio>
+#	if defined(WITH_PS2AUDIO)
+#		include "Audio/Backends/Ps2/Ps2AudioDevice.h"
+#	endif
 #elif defined(DEATH_TARGET_PSP)
 #	include <pspkernel.h>
 #	include <pspdebug.h>
@@ -402,6 +406,18 @@ namespace nCine
 		//
 		// CDVDMAN is normally already resident, but loading it is harmless and makes the sequence independent
 		// of what the BIOS happened to leave behind; CDVDFSV is what actually serves file reads to the EE.
+		//
+		// But first the boot console: from here until Ps2GfxDevice hands the Graphics Synthesizer to the
+		// renderer, every trace line is also drawn on the television by libdebug's text console (see
+		// Application::OnTraceReceived(), which gates on RHI::Device::HasDisplayOwnership()). The trace's only
+		// other channel on this console is the EE's SIO register, which needs a serial cable to read - so a
+		// boot that stopped on hardware was a black screen with nothing to report, and everything that has ever
+		// stopped one (the disc wait, the module loads, the content and memory-card probes) happens before the
+		// renderer exists. libdebug picks NTSC or PAL from the ROM's region itself and resets only the GIF
+		// channel, so the SIF this block goes on to bring up is untouched.
+		init_scr();
+		scr_printf("Application starting...\n");
+
 		SifInitRpc(0);
 		SifLoadModule("rom0:CDVDMAN", 0, nullptr);
 		SifLoadModule("rom0:CDVDFSV", 0, nullptr);
@@ -505,6 +521,17 @@ namespace nCine
 		// through that: an mkdir on a perfectly good card comes back ENOENT until then. The probe itself, and
 		// the choice of which slot to save on, belong to PreferencesCache and are done there.
 		mcInit(MC_TYPE_MC);
+
+#	if defined(WITH_PS2AUDIO)
+		// The sound modules (`rom0:LIBSD`, `audsrv.irx`) are brought up here as well, not only when the audio
+		// device is constructed. That construction happens after Ps2GfxDevice has taken the display, and the
+		// bring-up is the one part of the IOP side that has been seen to hang - `audsrv_init()` spins forever
+		// on a module that never registered its RPC server - so done here, every step of it is still on the
+		// boot console above. InitializeModules() runs once per process and remembers what it found, so the
+		// device constructor only reads that back. (It costs the ~20 KB of IOP memory the modules take even
+		// when the configuration turns audio off, which is nothing against the 2 MB the IOP has.)
+		Ps2AudioDevice::InitializeModules();
+#	endif
 
 		// Nothing brings an SD card in an MX4SIO adapter up here, even though this is where the rest of the
 		// I/O stack is assembled: the probe costs three module loads and a wait on hardware that may not be

@@ -391,7 +391,11 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		# will answer for it at all - see the mcGetInfo() call in MainApplication
 		# `patches` is libpatches, the SBV patches that give the ROM's loadfile service the LoadModuleBuffer
 		# entry point it lacks - without it none of the modules embedded above can be started (see Ps2Modules.h)
-		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd patches kernel atomic)
+		# `-ldebug` is libdebug, the text console on the GS that shows the boot trace on the television until the
+		# renderer takes the display over - the only way to read a trace on hardware without a serial cable (see
+		# MainApplication::Run() and Application::OnTraceReceived()). Spelled as a flag because a bare `debug`
+		# here is CMake's own per-configuration keyword and silently applies to the NEXT item instead.
+		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd patches -ldebug kernel atomic)
 	elseif(PLATFORM_PS3)
 		# PSL1GHT window/input backend (no SDL/GLFW: PSL1GHT ships neither, and the console's video output is
 		# configured through sysutil rather than through anything a windowing library would wrap). The RSX

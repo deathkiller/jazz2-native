@@ -182,6 +182,17 @@ namespace nCine::RHI::GS
 		*/
 		static void InitializeGs();
 
+		/**
+			@brief Whether the renderer has taken the Graphics Synthesizer over
+
+			Until it has, the only thing on the display is the boot console `MainApplication` opens, which is
+			what makes it worth printing traces to (see @relativeref{nCine,Application::OnTraceReceived()}).
+			Afterwards the same call would program the GS underneath the frame being rendered.
+		*/
+		static bool HasDisplayOwnership() {
+			return _gsInitialized;
+		}
+
 		// -- GS backend extensions (called by the resource types and read by the draw dispatch) --
 
 		/** @brief Records the currently bound shader program */
