@@ -104,7 +104,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t value = (std::int32_t)PreferencesCache::SafeArea[(std::int32_t)edge] + direction * StepSize;
 		// Clamped at both ends rather than wrapped around: rolling a maximised margin back to nothing (or the
 		// other way) with a single press is never what was meant
-		value = std::clamp(value, 0, (std::int32_t)PreferencesCache::MaxSafeArea);
+		value = std::clamp<std::int32_t>(value, 0, PreferencesCache::MaxSafeArea);
 
 		if (PreferencesCache::SafeArea[(std::int32_t)edge] != (std::uint16_t)value) {
 			PreferencesCache::SafeArea[(std::int32_t)edge] = (std::uint16_t)value;
@@ -496,7 +496,7 @@ namespace Jazz2::UI::Menu
 				float extent = ((SafeAreaEdge)_draggedEdge == SafeAreaEdge::Left || (SafeAreaEdge)_draggedEdge == SafeAreaEdge::Right
 					? (float)viewSize.X : (float)viewSize.Y);
 				std::int32_t value = (extent > 0.0f ? (std::int32_t)std::round(inset * 1000.0f / extent) : 0);
-				value = std::clamp(value, 0, (std::int32_t)PreferencesCache::MaxSafeArea);
+				value = std::clamp<std::int32_t>(value, 0, PreferencesCache::MaxSafeArea);
 
 				if (PreferencesCache::SafeArea[_draggedEdge] != (std::uint16_t)value) {
 					PreferencesCache::SafeArea[_draggedEdge] = (std::uint16_t)value;
