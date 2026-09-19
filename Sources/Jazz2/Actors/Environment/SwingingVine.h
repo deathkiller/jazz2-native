@@ -36,10 +36,13 @@ namespace Jazz2::Actors::Environment
 		static constexpr float ChunkSize = 136.0f / ChunkCount;
 		/** @brief How much of the swing's phase one chunk is behind the one before it */
 		static constexpr float ChunkPhaseStep = 0.64f / ChunkCount;
+		/** @brief Horizontal movement in a frame below which the rider's facing is left alone, so the apex of a swing does not flip it on rounding noise */
+		static constexpr float TurnDeadzone = 0.01f;
+		/** @brief Transparent margin around an imported frame (mirrors `JJ2Anims::AddBorder`), excluded so the artwork tiles seamlessly */
+		static constexpr float SpriteBorder = 2.0f;
 
 		float _angle;
 		float _phase;
-		bool _justTurned;
 		Vector2f _chunkPos[ChunkCount];
 		std::unique_ptr<RenderCommand> _chunks[ChunkCount];
 	};

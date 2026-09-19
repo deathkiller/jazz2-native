@@ -167,7 +167,18 @@ namespace Jazz2::UI::Menu
 		float fullHeaderY = std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f);
 		float headerY = MenuLayout::Blend(8.0f, fullHeaderY, viewSize);
 		float footerY = MenuLayout::Blend(14.0f, 30.0f, viewSize);
-		_contentBounds = Recti(0, (std::int32_t)(headerY + 30.0f), viewSize.X, viewSize.Y - (std::int32_t)(headerY + footerY));
+
+		// The header and the footer are the menu's own margins; the safe area is the display's, and comes off
+		// on top of them - but only vertically. The menu is a column of centred rows with plenty of air at the
+		// sides already, so narrowing it horizontally as well would squeeze the one axis that had room to
+		// spare and clip the rows into the bargain (the bounds are what the middle layer is clipped to). What
+		// does sit against the left and right edges - the version and copyright corners, a section's own
+		// bar - takes the horizontal margin off itself instead.
+		std::int32_t safeTop = (std::int32_t)PreferencesCache::GetSafeAreaInset(SafeAreaEdge::Top, viewSize);
+		std::int32_t safeBottom = (std::int32_t)PreferencesCache::GetSafeAreaInset(SafeAreaEdge::Bottom, viewSize);
+
+		_contentBounds = Recti(0, safeTop + (std::int32_t)(headerY + 30.0f), viewSize.X,
+			viewSize.Y - safeTop - safeBottom - (std::int32_t)(headerY + footerY));
 	}
 
 	void MenuContainerBase::UpdatePressedActions()

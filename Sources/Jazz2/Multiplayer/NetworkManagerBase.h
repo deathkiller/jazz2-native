@@ -287,6 +287,8 @@ namespace Jazz2::Multiplayer
 		/**
 		 * @brief Appends every address the given host resolves to as a separate endpoint
 		 *
+		 * The IPv6 addresses of the host are appended before its IPv4 ones, so a dual-stacked server is
+		 * tried over IPv6 first and @ref MaxAddressesPerHost is spent on IPv6 addresses first as well.
 		 * Returns the number of endpoints added, which is @cpp 0 @ce also when the host resolved to
 		 * addresses that are all already among the endpoints. A host that cannot be resolved at all is
 		 * reported by the method itself. See @ref CreateClient().

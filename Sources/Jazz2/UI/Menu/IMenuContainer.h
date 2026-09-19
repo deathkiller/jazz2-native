@@ -128,6 +128,14 @@ namespace Jazz2::UI::Menu
 		virtual Vector2i GetViewSize() const = 0;
 		/** @brief Returns content bounds */
 		virtual Recti GetContentBounds() const = 0;
+		/**
+		 * @brief Returns `true` if the menu is currently being driven by touch
+		 *
+		 * The same recently-touched rule the on-screen controls themselves appear under (see
+		 * @relativeref{Jazz2::UI,HUD::OnTouchEvent()}), rather than whether the platform has a touchscreen at
+		 * all - a desktop build is compiled with touch support and is nevertheless played with a gamepad.
+		 */
+		virtual bool IsTouchInputActive() const = 0;
 
 		/** @brief Draws a textured element */
 		virtual void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align,

@@ -414,7 +414,7 @@ Riding the test level's diagonal ladder of them gained **149.8 px against the or
 horizontal travel matched to 0.2 px the whole way, so the player crossed the ladder without climbing it.
 It is now 520.7.
 
-**And there is no gravity on a tick spent inside the field**, which is a second rule and had to be
+<b>And there is no gravity on a tick spent inside the field</b>, which is a second rule and had to be
 implemented separately. The original travels exactly the 8.0 it assigns; ours travelled 7.79 of the
 original's units because the velocity-Verlet half-step is folded into the move before the applied rise cap
 gets to clamp it. Every *other* launch is immune to that by accident: they are all assigned above the cap,
@@ -504,7 +504,7 @@ Still rising, **Jump** held | brakes at **0.25** | ---
 Still rising, nothing held | brakes at **0.75**, clamped at zero | ---
 Then falling | accelerates 0.0625 to a terminal of 12 | hovers; no gravity whatever
 Climb actually travelled | **8 px/tick**, the ordinary applied cap | ---
-**Down** held | a fixed **1.0625 px/tick**, assigned outright | fixed 3.429 px/tick
+<b>Down</b> held | a fixed **1.0625 px/tick**, assigned outright | fixed 3.429 px/tick
 Horizontally | ordinary ground movement --- 4 walking, 16 with Run | 4
 Duration | until a Fly Off area or a death | **ten seconds**
 
@@ -527,7 +527,7 @@ The accelerations are as clean as measurements on this page get: 934 ticks of th
 exactly −0.25 and 1243 by exactly +0.0625.
 
 The brake has a **held and a released form**, exactly as an ordinary jump does and with its own two numbers:
-**0.25** with Jump down against 0.75 with nothing. The second recording shows both inside one manoeuvre ---
+<b>0.25</b> with Jump down against 0.75 with nothing. The second recording shows both inside one manoeuvre ---
 a jump taken from the ground *into* the carrot decays at the ordinary 0.375 for the six ticks it is still a
 jump, and at 0.25 from the tick the flight animation takes over, for thirty ticks with Jump held throughout.
 Jumping while already flying launches at −10 as usual.
@@ -934,17 +934,6 @@ Quantity | 3.8.0 | Original (70 Hz) | Now (60 Hz) | How far 3.8.0 was off | How 
 Buttstomp descent | 10.967 | 10.0 @m_span{m-text m-dim} (all three characters) @m_endspan | 11.6667 | −6.0% | exact
 Buttstomp descent, *held* | *(accelerated)* | governed: 10.0 every tick | 11.6667 every tick | ran away to the fall cap | exact
 Buttstomp sideways drift | @cpp 0.2 * movement @ce, ×2.6 Run | 0.18311, **×2** Run | 0.21362 / 0.42725 | −6.4%, Run ×1.3 too strong | exact
-
-@m_class{m-block m-warning}
-
-@par The descent is governed, not launched
-Read off a long drop, the original's @cpp ys @ce sits at exactly 10.0 for **every tick** of the descent. The
-transition callback here assigned the speed once and turned gravity back on, so the stomp accelerated away
-from it --- fine on a stomp entered from a short hop, which is why it passed for so long, but a stomp entered
-from a long fall reached the ordinary fall cap of 14.0 and hit whatever was below it 20% too hard. The cap in
-@cpp OnUpdatePhysics() @ce is now @ref Jazz2::Actors::Player::LegacyButtstompSpeed while a stomp is active
-rather than @ref Jazz2::Actors::Player::LegacyFallSpeedCap, which holds it: measured 700.0 px/s against the
-original's 700.2, and now independent of the drop height, as a governed descent has to be.
 Copter descent | 1.5 | 1.0 @m_span{m-text m-dim} (Jazz = Lori) @m_endspan | 1.16667 | +28.6% | exact
 Copter horizontal | *(unrestricted)* | walk accel and walk cap | same | *(uncapped)* | exact
 Uppercut launch | −2.4127 + external force −1.4476 | **−6.59375 of travel** | −7.6927 | wrong mechanism | exact
@@ -969,6 +958,17 @@ RF blast hold before friction | *(none)* | 30 ticks | 25.7 frames | *(absent)* |
 RF blast upward kick, airborne | *(none)* | 12.0 | 14.0 | *(absent)* | exact
 RF blast reach | ~52 px | blasts at 36, not at 48 | 32 px | too generous | fitted
 RF blast travel @m_span{m-text m-dim} (end to end) @m_endspan | *(a few px)* | ~302 px | 304.9 px | **−99%** | +1.0%
+
+@m_class{m-block m-warning}
+
+@par The descent is governed, not launched
+Read off a long drop, the original's @cpp ys @ce sits at exactly 10.0 for **every tick** of the descent. The
+transition callback here assigned the speed once and turned gravity back on, so the stomp accelerated away
+from it --- fine on a stomp entered from a short hop, which is why it passed for so long, but a stomp entered
+from a long fall reached the ordinary fall cap of 14.0 and hit whatever was below it 20% too hard. The cap in
+@cpp OnUpdatePhysics() @ce is now @ref Jazz2::Actors::Player::LegacyButtstompSpeed while a stomp is active
+rather than @ref Jazz2::Actors::Player::LegacyFallSpeedCap, which holds it: measured 700.0 px/s against the
+original's 700.2, and now independent of the drop height, as a governed descent has to be.
 
 @subsection movement-accuracy-special-buttstomp Buttstomp drift bypasses the speed entirely
 
@@ -1636,7 +1636,7 @@ camera) @m_endspan, not the model.
 
 @subsection movement-accuracy-camera-shape The lead is aimed by the input, not by the speed
 
-**This is the finding the other three follow from.** Reforged computes its lead from
+<b>This is the finding the other three follow from.</b> Reforged computes its lead from
 @cpp GetSpeed() @ce; the original aims it at whichever direction is being *held*. Both readings fit an
 ordinary run, and two scenarios separate them:
 
@@ -1744,7 +1744,7 @@ Hold before the speed drops | **~320 ticks**, then a single-tick snap to the wal
 
 @m_class{m-noindent}
 
-**The wind-up is entered on a charge, not on a tap count.** Four recordings were needed to establish that,
+<b>The wind-up is entered on a charge, not on a tap count.</b> Four recordings were needed to establish that,
 and each of the first three suggested a count that the next one contradicted --- 3 taps, then 4 to 5
 depending on cadence, then 2. The shape that fits all of them at once is an accumulator: a press adds a
 fixed amount, holding it adds more up to a cap per press, and it bleeds away while the key is up.
@@ -1761,15 +1761,15 @@ There is a grace in which a tap **resumes** a wind-up | The charge has not decay
 
 @m_class{m-noindent}
 
-**A separate timer decides the launch**, refreshed by each press and by holding, and running only once the
+<b>A separate timer decides the launch</b>, refreshed by each press and by holding, and running only once the
 wind-up is up. That is what reconciles a burst whose gaps ran 21--28 ticks without ever launching and which
 then launched 21 ticks after its last tap: the early gaps had no wind-up to interrupt, because gaps that
 wide never build one --- each press only flashes the start pose before it falls back to idle.
 
-**Charge follows time, not taps.** 15 taps over 75 ticks launched at 15.87; 12 taps over 106 ticks reached
+<b>Charge follows time, not taps.</b> 15 taps over 75 ticks launched at 15.87; 12 taps over 106 ticks reached
 the full 16.0.
 
-**The launch is not steerable.** It goes in the direction the player faces, a direction key held at the
+<b>The launch is not steerable.</b> It goes in the direction the player faces, a direction key held at the
 moment of launch does not change it, and the recording shows Right held for dozens of ticks while the player
 continues to travel left at 16 without the slightest effect. The hold then ends in a *single-tick* snap to
 the walk cap, which is the dash grace's behaviour rather than ordinary friction, so the launch arms
@@ -1843,7 +1843,7 @@ shorter, and why reading the first stage as a band left a light tap with no skid
 Reported from play as "it is possible to crouch even when running or dashing, and it should only be possible
 at lower speeds". The traces say the first half happens and the second half is not the rule. **Let go and
 duck** and the original crouches on the very next tick whatever the player is still carrying: `sp_slide_*` at
-**14.5** px/tick, `an_crouch_slide` @m_span{m-text m-dim} (Down at t48) @m_endspan at **10.62**,
+<b>14.5</b> px/tick, `an_crouch_slide` @m_span{m-text m-dim} (Down at t48) @m_endspan at **10.62**,
 `an_crouch_late` @m_span{m-text m-dim} (t62) @m_endspan at 4.82, `an_crouch_walk` at 2.90 --- and it holds the
 pose from there, not switching back. Ours crouches at 11.06, 5.01 and 3.42 on the same ticks. **Keep the
 direction held** and neither game crouches at any speed at all: `an_crouch_hold` and `an_crouch_hold_walk`
@@ -1857,12 +1857,12 @@ The same question was then asked of a **carry**, and getting it right needed fou
 because the obvious pair supports two different rules. `an_crouch_carry` rides a horizontal pole and presses
 Down ten ticks into the carry; the original crouches three ticks later, still doing 17.70 px/tick.
 `an_crouch_spring` presses Down eighteen ticks into a green horizontal spring's carry and the original does
-**not** --- it runs on at a flat 16 px/tick for another 75 ticks. Read as "the carry type decides", that says
+<b>not</b> --- it runs on at a flat 16 px/tick for another 75 ticks. Read as "the carry type decides", that says
 springs refuse and poles do not. It is the wrong reading, and it was implemented before the control pair was
 run.<br/><br/>
 `an_crouch_pole_e` presses Down at tick **122** instead of 130, with the whole pole carry still to run, and
 `an_crouch_spring_l` presses it fifteen ticks from the end of the spring's. The original crouches at tick
-**133 in both** pole scenarios and at **126 and 125** in the two spring ones --- so moving the press eight
+<b>133 in both</b> pole scenarios and at **126 and 125** in the two spring ones --- so moving the press eight
 ticks earlier, or sixty ticks later, changes nothing at all. The press does not set the time; the forced
 state does. **Both launches refuse the crouch**, and hand it over on the tick their own forced state lapses.
 <br/><br/>
@@ -1982,12 +1982,12 @@ whole of the mechanic: @ref Jazz2::Actors::Player::LegacyRunAnimFrameTicks with
 
 Two things are worth knowing about it.
 
-**The duration is rescaled, not assigned.** Which frame is on screen is @cpp AnimTime / AnimDuration @ce of
+<b>The duration is rescaled, not assigned.</b> Which frame is on screen is @cpp AnimTime / AnimDuration @ce of
 the way through the loop, so changing the duration on its own teleports the animation --- accelerating from
 the walk cap to the dash cap shortens the loop sixteenfold and would jump the feet by three frames on the
 tick it happened. Scaling the time by the same factor keeps the phase and changes only the rate.
 
-**Reforged had a rule of its own in the same place and it has to be turned off, not merely overridden.**
+<b>Reforged had a rule of its own in the same place and it has to be turned off, not merely overridden.</b>
 @ref Jazz2::Actors::Player::OnHandleMovement() ends with an "adjust walking animation speed" line that
 stamps @cpp AnimDuration @ce for @ref Jazz2::AnimState::Walk from the player's speed, and it runs *later in
 the frame* than @ref Jazz2::Actors::Player::UpdateAnimation(). Leaving it in place did not simply cancel the
@@ -2043,7 +2043,7 @@ the two together with no shot and travels 0 px. A `_fireFramesLeft` gate in
 @ref Jazz2::Actors::Player::HandleSpecialJump() was written on the wrong reading and has been taken out.
 
 The real difference is in the gaps table as *Down and Jump pressed on the same tick*, and is deliberately
-**not implemented** yet: three of its four cases are partial rather than absent --- 201.5, 132, 8 px of a
+<b>not implemented</b> yet: three of its four cases are partial rather than absent --- 201.5, 132, 8 px of a
 226 px uppercut --- so it is a strength curve rather than a gate, and fitting it needs the same sweep run
 with Jump held for a range of lengths.
 
@@ -2115,7 +2115,7 @@ at the same rate as the control:
 
 Compared | Median worst per-tick difference | Agree within 1 px
 -------- | -------------------------------- | -----------------
-**Same rate, two runs** | **0.34 px** | **324 / 406**
+<b>Same rate, two runs</b> | **0.34 px** | **324 / 406**
 144 vs 60 | 2.70 px | 153 / 406
 60 vs 30 | 2.84 px | 149 / 406
 30 vs 24 | 4.13 px | 140 / 406

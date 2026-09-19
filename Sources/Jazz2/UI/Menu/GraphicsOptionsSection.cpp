@@ -1,5 +1,6 @@
 #include "GraphicsOptionsSection.h"
 #include "RescaleModeSection.h"
+#include "SafeAreaOptionsSection.h"
 #include "../Font.h"
 #include "../../PreferencesCache.h"
 
@@ -277,6 +278,8 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 		// TRANSLATORS: Menu item in Options > Graphics section
+		list->Add<ListItem>(_("Safe Area"), [root]() { root->SwitchToSection<SafeAreaOptionsSection>(); });
+		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Keep Aspect Ratio In Cinematics"),
 			[]() -> StringView { return (PreferencesCache::KeepAspectRatioInCinematics ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {
@@ -305,19 +308,22 @@ namespace Jazz2::UI::Menu
 	{
 		WidgetSection::OnDraw(canvas);
 
-		// Performance Metrics (FPS counter overlay drawn outside the framed content area)
+		// Performance Metrics (FPS counter overlay drawn outside the framed content area). It sits in the top
+		// corner, which is exactly where a display that crops its edges would swallow it, so it is placed
+		// against the safe area rather than against the view - as its counterpart in the HUD is.
 		if (PreferencesCache::ShowPerformanceMetrics) {
-			Vector2i view = canvas->ViewSize;
+			Vector2i viewSize = canvas->ViewSize;
+			Rectf view = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
 			std::int32_t charOffset = 0;
 			char stringBuffer[32];
 			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
 #if defined(DEATH_TARGET_ANDROID)
 			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-				_root->DrawStringShadow(stringBuffer, charOffset, view.X / 2 + 40.0f, 6.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(stringBuffer, charOffset, view.X + view.W / 2 + 40.0f, view.Y + 6.0f, IMenuContainer::FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			} else
 #endif
-				_root->DrawStringShadow(stringBuffer, charOffset, view.X - 4.0f, 1.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(stringBuffer, charOffset, view.X + view.W - 4.0f, view.Y + 1.0f, IMenuContainer::FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
 	}

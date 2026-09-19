@@ -106,8 +106,12 @@ namespace Jazz2::UI
 		Canvas::OnDraw(renderQueue);
 
 		ViewSize = _levelHandler->GetViewSize();
-		Vector2f currentLinePos = Vector2f(46.0f, ViewSize.Y - 60.0f);
-		float width = ViewSize.X - currentLinePos.X - 24.0f;
+
+		// The dimming and the overlays stay over the whole screen, but everything there is to read is laid out
+		// inside the safe area, so none of it lands on a part of the picture the display doesn't show
+		Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)ViewSize.X, (float)ViewSize.Y), ViewSize);
+		Vector2f currentLinePos = Vector2f(safeView.X + 46.0f, safeView.Y + safeView.H - 60.0f);
+		float width = safeView.X + safeView.W - currentLinePos.X - 24.0f;
 
 		if (_isVisible) {
 			DrawSolid(Vector2f(0.0f, 0.0f), 80, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 5.0f, 0.6f)));
@@ -141,7 +145,7 @@ namespace Jazz2::UI
 		Vector2f historyLinePos = currentLinePos;
 		historyLinePos.Y -= 4.0f;
 		for (std::int32_t i = _logHistory.size() - 1 - _scrollPos; i >= 0; i--) {
-			if (historyLinePos.Y < 50.0f) {
+			if (historyLinePos.Y < safeView.Y + 50.0f) {
 				break;
 			}
 
@@ -197,7 +201,7 @@ namespace Jazz2::UI
 				DrawSolid(Vector2f(0.0f, 0.0f), KeyboardLayer, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
 
 				Colorf color = (_currentLine[0] == '/' ? Colorf(0.38f, 0.48f, 0.69f, 0.5f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f));
-				float topLineY = (ViewSize.Y >= 300 ? 34.0f : 22.0f);
+				float topLineY = safeView.Y + (ViewSize.Y >= 300 ? 34.0f : 22.0f);
 
 				std::int32_t charOffset = 0, charOffsetShadow = 0;
 				_smallFont->DrawString(this, ">"_s, charOffsetShadow, 120.0f - 16.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,

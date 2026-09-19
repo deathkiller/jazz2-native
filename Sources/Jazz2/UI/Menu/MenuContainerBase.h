@@ -47,6 +47,10 @@ namespace Jazz2::UI::Menu
 			return _contentBounds;
 		}
 
+		bool IsTouchInputActive() const override {
+			return (_touchButtonsTimer > 0.0f);
+		}
+
 		// Resolves a menu element, loading its graphics the first time it's drawn (the menu metadata is deferred)
 		GraphicResource* FindElement(AnimState state);
 

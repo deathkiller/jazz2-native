@@ -208,18 +208,18 @@ namespace Jazz2::Multiplayer
 
 #if defined(WITH_ONLINE_MULTIPLAYER)
 #	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
-	StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
-	String proto = MakeClientSubProtocol(clientData);
+		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+		String proto = MakeClientSubProtocol(clientData);
 
-	EmscriptenWebSocketCreateAttributes attrs;
-	emscripten_websocket_init_create_attributes(&attrs);
-	attrs.url = firstEndpoint.data();
-	attrs.protocols = proto.data();
-	attrs.createOnMainThread = EM_TRUE;
+		EmscriptenWebSocketCreateAttributes attrs;
+		emscripten_websocket_init_create_attributes(&attrs);
+		attrs.url = firstEndpoint.data();
+		attrs.protocols = proto.data();
+		attrs.createOnMainThread = EM_TRUE;
 
-	// emscripten_websocket_new doesn't correctly catches exceptions in Emscripten 5.0.7
-	//_emWsSocket = emscripten_websocket_new(&attrs);
-	_emWsSocket = safe_websocket_new(&attrs);
+		// emscripten_websocket_new doesn't correctly catches exceptions in Emscripten 5.0.7
+		//_emWsSocket = emscripten_websocket_new(&attrs);
+		_emWsSocket = safe_websocket_new(&attrs);
 		if (_emWsSocket <= 0) {
 			Reason reason;
 			switch (_emWsSocket) {
@@ -413,52 +413,66 @@ namespace Jazz2::Multiplayer
 			return 0;
 		}
 
-		std::int32_t added = 0, usable = 0;
-		for (struct addrinfo* result = resultList; result != nullptr && added < MaxAddressesPerHost; result = result->ai_next) {
-			if (result->ai_addr == nullptr || (std::size_t)result->ai_addrlen < sizeof(struct sockaddr_in)) {
-				continue;
-			}
-
-			ENetAddress addr = {};
+		// The answer is walked once per address family instead of in the order the resolver returned it, so that
+		// every IPv6 address of the name becomes an endpoint before any of its IPv4 ones - the resolver's own
+		// order is only a hint, and the cap below would otherwise be spent on whichever family happened to come
+		// back first
 #	if ENET_IPV6
-			if (result->ai_family == AF_INET) {
-				// The transport carries IPv4 addresses in their IPv4-mapped form, the way ENet's own resolver does
-				enet_inaddr_map4to6(((struct sockaddr_in*)result->ai_addr)->sin_addr, &addr.host);
-			} else if (result->ai_family == AF_INET6 && (std::size_t)result->ai_addrlen >= sizeof(struct sockaddr_in6)) {
-				std::memcpy(&addr.host, &((struct sockaddr_in6*)result->ai_addr)->sin6_addr, sizeof(struct in6_addr));
-				addr.sin6_scope_id = (std::uint16_t)((struct sockaddr_in6*)result->ai_addr)->sin6_scope_id;
-			} else {
-				continue;
-			}
-			if (addr.sin6_scope_id == 0) {
-				addr.sin6_scope_id = (std::uint16_t)ifidx;
-			}
+		constexpr std::int32_t FamilyOrder[] = { AF_INET6, AF_INET };
 #	else
-			if (result->ai_family != AF_INET) {
-				continue;
-			}
-			addr.host = ((struct sockaddr_in*)result->ai_addr)->sin_addr.s_addr;
+		constexpr std::int32_t FamilyOrder[] = { AF_INET };
 #	endif
-			addr.port = port;
-			usable++;
 
-			// The same address can come back more than once, and each duplicate would cost the client thread
-			// another connection attempt with the full timeout behind it. Endpoints resolved earlier in this
-			// connection are compared too, because a server is usually listed under both its name and its address.
-			bool isDuplicate = false;
-			for (const auto& existing : _desiredEndpoints) {
-				if (existing.port == addr.port && enet_host_equal(existing.host, addr.host)
+		std::int32_t added = 0, usable = 0;
+		for (std::int32_t family : FamilyOrder) {
+			for (struct addrinfo* result = resultList; result != nullptr && added < MaxAddressesPerHost; result = result->ai_next) {
+				if (result->ai_family != family || result->ai_addr == nullptr ||
+					(std::size_t)result->ai_addrlen < sizeof(struct sockaddr_in)) {
+					continue;
+				}
+
+				ENetAddress addr = {};
 #	if ENET_IPV6
-					&& existing.sin6_scope_id == addr.sin6_scope_id
+				if (family == AF_INET) {
+					// The transport carries IPv4 addresses in their IPv4-mapped form, the way ENet's own resolver does
+					enet_inaddr_map4to6(((struct sockaddr_in*)result->ai_addr)->sin_addr, &addr.host);
+				} else if ((std::size_t)result->ai_addrlen >= sizeof(struct sockaddr_in6)) {
+					std::memcpy(&addr.host, &((struct sockaddr_in6*)result->ai_addr)->sin6_addr, sizeof(struct in6_addr));
+					addr.sin6_scope_id = (std::uint16_t)((struct sockaddr_in6*)result->ai_addr)->sin6_scope_id;
+				} else {
+					continue;
+				}
+				if (addr.sin6_scope_id == 0) {
+					addr.sin6_scope_id = (std::uint16_t)ifidx;
+				}
+#	else
+				addr.host = ((struct sockaddr_in*)result->ai_addr)->sin_addr.s_addr;
 #	endif
-				) {
-					isDuplicate = true;
-					break;
+				addr.port = port;
+				usable++;
+
+				// The same address can come back more than once, and each duplicate would cost the client thread
+				// another connection attempt with the full timeout behind it. Endpoints resolved earlier in this
+				// connection are compared too, because a server is usually listed under both its name and its address.
+				bool isDuplicate = false;
+				for (const auto& existing : _desiredEndpoints) {
+					if (existing.port == addr.port && enet_host_equal(existing.host, addr.host)
+#	if ENET_IPV6
+						&& existing.sin6_scope_id == addr.sin6_scope_id
+#	endif
+					) {
+						isDuplicate = true;
+						break;
+					}
+				}
+				if (!isDuplicate) {
+					_desiredEndpoints.push_back(addr);
+					added++;
 				}
 			}
-			if (!isDuplicate) {
-				_desiredEndpoints.push_back(addr);
-				added++;
+
+			if (added >= MaxAddressesPerHost) {
+				break;
 			}
 		}
 

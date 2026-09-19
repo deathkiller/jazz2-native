@@ -12,11 +12,10 @@
 #	include "ServerSelectSection.h"
 #endif
 
-#if defined(SHAREWARE_DEMO_ONLY)
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-#		include "ImportSection.h"
-#	endif
-#	include "../../PreferencesCache.h"
+#include "../../PreferencesCache.h"
+
+#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
+#	include "ImportSection.h"
 #endif
 
 #include "../../../nCine/Application.h"
@@ -216,8 +215,15 @@ namespace Jazz2::UI::Menu
 			baseReduction += (canvas->ViewSize.Y >= 252 ? 50.0f : 60.0f);
 		}
 
+		// The rows are spread over a fraction of the height per item, which has to be the height the list
+		// actually has: the content bounds have already moved it down by the top margin, and spacing it out
+		// over the whole screen from there would walk the last rows off the bottom of the safe area. The same
+		// number as before when no margins are set.
+		float layoutHeight = PreferencesCache::ApplySafeArea(
+			Rectf(0.0f, 0.0f, (float)canvas->ViewSize.X, (float)canvas->ViewSize.Y), canvas->ViewSize).H;
+
 		Recti contentBounds = _root->GetContentBounds();
-		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + baseReduction + (0.2f * (float)canvas->ViewSize.Y / itemCount));
+		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, contentBounds.Y + baseReduction + (0.2f * layoutHeight / itemCount));
 
 		std::int32_t charOffset = 0;
 
@@ -227,7 +233,7 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow(_f("For more information, visit {} and \uE000 Discord!", "\f[c:#707070]https://de4th.dev/jazz2/\f[/c]"_s), charOffset, center.X, center.Y - 30.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 			itemCount++;
-			center.Y += (0.4f * (float)canvas->ViewSize.Y / itemCount);
+			center.Y += (0.4f * layoutHeight / itemCount);
 		}
 #else
 		if (!_isPlayable) {
@@ -310,7 +316,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.9f);
 			}
 
-			center.Y += 6.0f + (0.54f * (float)canvas->ViewSize.Y / itemCount);
+			center.Y += 6.0f + (0.54f * layoutHeight / itemCount);
 		}
 	}
 

@@ -209,21 +209,30 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// The backdrop stands behind the episode list, so it follows it: horizontally on the content bounds,
+		// which the rows are laid out in, and vertically inside the safe area, which is where the list has
+		// been pushed to. Identical to the view when no margins are set, which is the usual case.
+		Rectf safeView = PreferencesCache::ApplySafeArea(
+			Rectf(0.0f, 0.0f, (float)canvas->ViewSize.X, (float)canvas->ViewSize.Y), canvas->ViewSize);
+		Recti contentBounds = _root->GetContentBounds();
+		Vector2f backgroundCenter = Vector2f(contentBounds.X + contentBounds.W * 0.5f, safeView.Y + safeView.H * 0.7f);
+
 		// A 4:3 television renders a taller view than the 16:9 layout these backdrops were composed against,
 		// and a backdrop is drawn at its own pixel size - so on those consoles the extra lines were left as
 		// bare background and the episode list ran off the bottom of the picture onto it. The difference is
 		// given to the backdrop's height, which leaves its width (and so the list's margins) exactly as
 		// composed; these are soft paintings drawn at 40% alpha, where a fifth more height has nothing to
-		// see. Zero on every view that is not taller than the layout, which is every other platform.
+		// see. Zero on every view that is not taller than the layout, which is every other platform. It is
+		// the safe area's height that has to cover the list, not the screen's.
 		const std::int32_t backgroundExtraHeight = std::max<std::int32_t>(0,
-			canvas->ViewSize.Y - Rendering::UpscaleRenderPass::ReferenceViewHeight);
+			(std::int32_t)safeView.H - Rendering::UpscaleRenderPass::ReferenceViewHeight);
 
 		std::int32_t row = GetSelectedRow();
 		bool inTransition = false;
 		if (_transitionFromEpisode != -1 && _transitionFromEpisode != row) {
 			auto& item = _episodes[_transitionFromEpisode];
 			if (item.Description.BackgroundImage != nullptr) {
-				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
+				Vector2f center = backgroundCenter;
 				Vector2i backgroundSize = item.Description.BackgroundImage->GetSize();
 				backgroundSize.Y += backgroundExtraHeight;
 
@@ -243,7 +252,7 @@ namespace Jazz2::UI::Menu
 		if (row >= 0) {
 			auto& item = _episodes[row];
 			if (item.Description.BackgroundImage != nullptr) {
-				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
+				Vector2f center = backgroundCenter;
 				Vector2i backgroundSize = item.Description.BackgroundImage->GetSize();
 				backgroundSize.Y += backgroundExtraHeight;
 
@@ -306,7 +315,9 @@ namespace Jazz2::UI::Menu
 	void EpisodeSelectSection::DrawEpisodeRow(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool isSelected, std::int32_t row)
 	{
 		auto& item = _episodes[row];
-		float centerX = canvas->ViewSize.X * 0.5f;
+		// From the row's own bounds rather than from the view, so the names stay over the backdrop (and inside
+		// the frame) once the safe area has narrowed the content. The same thing when no margins are set.
+		float centerX = bounds.X + bounds.W * 0.5f;
 		float itemY = bounds.Y + bounds.H * 0.5f;
 
 		if ((item.Flags & EpisodeDataFlags::IsMissing) == EpisodeDataFlags::IsMissing) {

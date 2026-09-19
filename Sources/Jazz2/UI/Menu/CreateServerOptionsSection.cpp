@@ -155,7 +155,14 @@ namespace Jazz2::UI::Menu
 	void CreateServerOptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * 0.8f);
+
+		// Placed against the view instead of through the content bounds, so it takes the safe area off itself
+		// - vertically only, as StartGameOptionsSection does and for the same reasons
+		Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+		Vector2f center = Vector2f(viewSize.X * 0.5f, safeView.Y + safeView.H * 0.5f * 0.8f);
+		// Vertical middle of the row block, where the character art is centred. Measured from the top of the
+		// safe area, or the top margin would be multiplied along with the anchor.
+		float artCenterY = safeView.Y + (center.Y - safeView.Y) * 1.4f;
 
 		AnimState selectedDifficultyImage;
 		switch (_selectedPlayerType) {
@@ -165,9 +172,9 @@ namespace Jazz2::UI::Menu
 			case 2: selectedDifficultyImage = MenuDifficultyLori; break;
 		}
 
-		_root->DrawElement(MenuDim, 0, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f, 36.0f);
+		_root->DrawElement(MenuDim, 0, center.X * 0.36f, artCenterY, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f, 36.0f);
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f, 0.88f);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, artCenterY + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f, 0.88f);
 
 		if (_imageTransition < 1.0f) {
 			AnimState lastDifficultyImage;
@@ -177,10 +184,10 @@ namespace Jazz2::UI::Menu
 				case 1: lastDifficultyImage = MenuDifficultySpaz; break;
 				case 2: lastDifficultyImage = MenuDifficultyLori; break;
 			}
-			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f, 0.88f);
+			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, artCenterY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f, 0.88f);
 		}
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, artCenterY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
 
 		std::int32_t charOffset = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
@@ -305,7 +312,9 @@ namespace Jazz2::UI::Menu
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				float halfWidth = viewSize.X * 0.5f;
 
-				if (y < 80.0f) {
+				// The band above the rows that takes a tap back, which moves down with them (see OnDraw)
+				float backBand = PreferencesCache::GetSafeAreaInset(SafeAreaEdge::Top, viewSize) + 80.0f;
+				if (y < backBand) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 					return;

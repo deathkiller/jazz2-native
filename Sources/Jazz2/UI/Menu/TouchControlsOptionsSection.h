@@ -34,8 +34,32 @@ namespace Jazz2::UI::Menu
 			float CenterX, CenterY, HalfW, HalfH;
 		};
 
+		/**
+			@brief Where the section's own bar and its controls sit
+
+			This section is laid out against the screen rather than through the menu's content bounds, so it
+			takes the safe area off itself (see @relativeref{Jazz2,PreferencesCache::SafeArea}). Drawing and
+			hit-testing both go through @ref GetChromeLayout(), which is what keeps them agreeing - they used
+			to carry two copies of these numbers. The touch buttons being edited are not part of this: they
+			keep their own positions against the screen edges, which is what is being configured here.
+		*/
+		struct ChromeLayout {
+			float OriginX, OriginY;		// Top-left corner of the safe area, which the rest is measured from
+			float Width;				// Width of the safe area
+			float CenterX;
+			float SaveLeft, ResetLeft;
+			float Row1Y, Row2Y, Row3Y;
+		};
+
 		static constexpr float MinScale = 0.5f;
 		static constexpr float MaxScale = 3.0f;
+
+		static constexpr float BarHeight = 96.0f;
+		static constexpr float BtnW = 76.0f;
+		static constexpr float BtnGap = 8.0f;
+		static constexpr float BtnH = 20.0f;
+		static constexpr float ToggleW = 30.0f;
+		static constexpr float ToggleH = 16.0f;
 
 		// Focused slot state
 		std::int32_t _focusedSlot;
@@ -63,6 +87,8 @@ namespace Jazz2::UI::Menu
 
 		bool _isDirty;
 
+		// Helper: place the section's own bar and controls inside the safe area
+		static ChromeLayout GetChromeLayout(Vector2i viewSize);
 		// Helper: compute button screen rect for a slot
 		ButtonRect GetButtonRect(Jazz2::TouchButtonSlot slot, Vector2i viewSize) const;
 		// Helper: default half-size (before scale) in reference pixels

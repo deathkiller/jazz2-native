@@ -135,7 +135,9 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Background;
 
-		Vector2i center = ViewSize / 2;
+		// Horizontally the title follows the content bounds, so it stays above the menu whatever the safe area
+		// takes off the sides, exactly as on the main menu (see MenuContainerBase::UpdateContentBounds)
+		Vector2i center = Vector2i(_owner->_contentBounds.X + _owner->_contentBounds.W / 2, ViewSize.Y / 2);
 
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
@@ -342,7 +344,10 @@ namespace Jazz2::UI::Menu
 			RecreateSections();
 		} else if ((type & ChangedPreferencesType::Layout) == ChangedPreferencesType::Layout) {
 			// A new view size keeps the stack and lets every section lay itself out again - at the next
-			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection)
+			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection).
+			// The bounds themselves are recomputed right away, because a changed safe area moves them
+			// without the view size having changed at all (see SafeAreaOptionsSection)
+			UpdateContentBounds(GetUpscalePass().GetViewSize());
 			_sectionsRelayoutPending = true;
 		}
 

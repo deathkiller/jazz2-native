@@ -110,7 +110,13 @@ namespace Jazz2::UI::Menu
 	void StartGameOptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
-		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * 0.86f);
+
+		// This section places itself against the view instead of going through the content bounds, so it takes
+		// the safe area off itself. Vertically only: the menu keeps the whole width of the screen (see
+		// MenuContainerBase::UpdateContentBounds), and the character art is placed as a fraction of the
+		// horizontal middle, which a narrowed one would drag inwards with it.
+		Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+		Vector2f center = Vector2f(viewSize.X * 0.5f, safeView.Y + safeView.H * 0.5f * 0.86f);
 
 		// This section is laid out in absolute pixels, which a panel as small as the PSP's 480x272 cannot
 		// fit: the 176x165 character art would reach into the left option column and "Start" would end up
@@ -126,11 +132,12 @@ namespace Jazz2::UI::Menu
 			// The rows keep nearly their full-size rhythm, so the block is anchored higher instead: the
 			// panel's header ends at 38 px and its footer starts at 250, and leaving the slack above the
 			// first row is what balances the two margins
-			center.Y = viewSize.Y * 0.33f;
+			center.Y = safeView.Y + safeView.H * 0.33f;
 		}
 		// Vertical middle of the row block, which is where the character art is centred - the 1.4x of the
-		// anchor lands there on a full-size view
-		float artCenterY = (compactLayout ? center.Y + itemSpacing + 3.0f : center.Y * 1.4f);
+		// anchor lands there on a full-size view. Measured from the top of the safe area rather than from the
+		// top of the screen, or the top margin would be multiplied along with the anchor.
+		float artCenterY = (compactLayout ? center.Y + itemSpacing + 3.0f : safeView.Y + (center.Y - safeView.Y) * 1.4f);
 
 		AnimState selectedDifficultyImage;
 		switch (_selectedPlayerType) {

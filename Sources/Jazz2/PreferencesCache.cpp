@@ -10,6 +10,8 @@
 #include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/RHI/RhiFwd.h"	// RHI_LOW_POWER_GPU (a header macro, not a build define)
 
+#include <algorithm>
+#include <cmath>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
 #include <Containers/StringUtils.h>
@@ -167,6 +169,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableTouchJoystick = false;
 	bool PreferencesCache::EnableTouchVibration = true;
 	TouchButtonLayout PreferencesCache::TouchButtons[(std::size_t)TouchButtonSlot::Count] = {};
+	std::uint16_t PreferencesCache::SafeArea[(std::size_t)SafeAreaEdge::Count] = {};
 	Uuid PreferencesCache::UniquePlayerID;
 	Uuid PreferencesCache::UniqueServerID;
 	String PreferencesCache::PlayerName;
@@ -190,6 +193,63 @@ namespace Jazz2
 		TouchButtons[(std::size_t)TouchButtonSlot::ChangeWeapon]	= { Vector2f( 66.0f, 115.0f), 1.0f, TouchButtonAnchor::BottomRight };
 		TouchButtons[(std::size_t)TouchButtonSlot::Menu]			= { Vector2f(  7.0f,   7.0f), 1.0f, TouchButtonAnchor::TopRight    };
 		TouchButtons[(std::size_t)TouchButtonSlot::Console]			= { Vector2f(  7.0f,   7.0f), 1.0f, TouchButtonAnchor::TopLeft     };
+	}
+
+	void PreferencesCache::ResetSafeArea()
+	{
+		for (std::size_t i = 0; i < (std::size_t)SafeAreaEdge::Count; i++) {
+			SafeArea[i] = 0;
+		}
+	}
+
+	bool PreferencesCache::IsSafeAreaEnabled()
+	{
+		for (std::size_t i = 0; i < (std::size_t)SafeAreaEdge::Count; i++) {
+			if (SafeArea[i] != 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	float PreferencesCache::GetSafeAreaInset(SafeAreaEdge edge, Vector2i viewSize)
+	{
+		std::uint16_t value = SafeArea[(std::size_t)edge];
+		if (value == 0) {
+			return 0.0f;
+		}
+
+		// The left and right edges are a fraction of the width, the top and bottom ones of the height, so a
+		// configuration written on one display holds its proportions on another of a different aspect ratio
+		float extent = (edge == SafeAreaEdge::Left || edge == SafeAreaEdge::Right ? (float)viewSize.X : (float)viewSize.Y);
+		return std::round(extent * (float)value * 0.001f);
+	}
+
+	Rectf PreferencesCache::ApplySafeArea(const Rectf& bounds, Vector2i viewSize)
+	{
+		if (!IsSafeAreaEnabled()) {
+			return bounds;
+		}
+
+		float left = GetSafeAreaInset(SafeAreaEdge::Left, viewSize);
+		float top = GetSafeAreaInset(SafeAreaEdge::Top, viewSize);
+		float right = GetSafeAreaInset(SafeAreaEdge::Right, viewSize);
+		float bottom = GetSafeAreaInset(SafeAreaEdge::Bottom, viewSize);
+
+		Rectf result = Rectf(bounds.X + left, bounds.Y + top, bounds.W - left - right, bounds.H - top - bottom);
+
+		// A rectangle that was already narrow (a split-screen viewport, or what a large touch layout left of
+		// the view) can be narrower than the insets want to take off it, and a negative size would send
+		// right-aligned elements off to the wrong side of the screen. Keep it degenerate but valid instead.
+		if (result.W < 0.0f) {
+			result.X = bounds.X + bounds.W * 0.5f;
+			result.W = 0.0f;
+		}
+		if (result.H < 0.0f) {
+			result.Y = bounds.Y + bounds.H * 0.5f;
+			result.H = 0.0f;
+		}
+		return result;
 	}
 
 	static void ReadEpisodeContinuationState(Stream& s, EpisodeContinuationState& state)
@@ -1481,6 +1541,12 @@ namespace
 							AudioSampleRate = sampleRate;
 						}
 					}
+
+					if (version >= 19) {
+						for (std::size_t i = 0; i < (std::size_t)SafeAreaEdge::Count; i++) {
+							SafeArea[i] = std::min<std::uint16_t>(uc.ReadValueAsLE<std::uint16_t>(), MaxSafeArea);
+						}
+					}
 				} else {
 					// The file is too new or corrupted
 					resetConfig = true;
@@ -1740,6 +1806,11 @@ namespace
 		co.WriteValue<std::uint8_t>(RenderingResolutionPercent);
 		co.WriteValue<std::uint8_t>((std::uint8_t)Particles);
 		co.WriteValueAsLE<std::uint16_t>((std::uint16_t)AudioSampleRate);
+
+		// Safe area insets (v19+), a word an edge because the range reaches past what a byte of tenths holds
+		for (std::size_t i = 0; i < (std::size_t)SafeAreaEdge::Count; i++) {
+			co.WriteValueAsLE<std::uint16_t>(SafeArea[i]);
+		}
 
 		co.Dispose();
 		so->Dispose();

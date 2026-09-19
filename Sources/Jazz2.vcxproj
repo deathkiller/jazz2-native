@@ -552,6 +552,7 @@
     <ClInclude Include="Jazz2\UI\Menu\GameplayEnhancementsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GameplayOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\GraphicsOptionsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\SafeAreaOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\HighscoresSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\IMenuContainer.h" />
     <ClInclude Include="Jazz2\UI\Menu\ImportSection.h" />
@@ -982,6 +983,7 @@
     <ClCompile Include="Jazz2\UI\Menu\GameplayEnhancementsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GameplayOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\GraphicsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\SafeAreaOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\HighscoresSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ImportSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\InGameMenu.cpp" />

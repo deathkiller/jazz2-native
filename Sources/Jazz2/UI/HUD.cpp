@@ -201,6 +201,14 @@ namespace Jazz2::UI
 			adjustedView.W = adjustedView.W - adjustedView.X - rightMargin;
 		}
 
+		// The safe area comes off last, so what it reserves is measured from whatever is already there rather
+		// than from the physical screen edge: on a device showing touch controls the HUD keeps its margin from
+		// the buttons, which stay where the user put them (they are positioned independently and are not moved
+		// by this). `view` is narrowed too, so the elements that do not go through `adjustedView` - the score,
+		// the coin and gem notifications - are inside it as well.
+		view = PreferencesCache::ApplySafeArea(view, ViewSize);
+		adjustedView = PreferencesCache::ApplySafeArea(adjustedView, ViewSize);
+
 		std::int32_t charOffset = 0;
 		char stringBuffer[32];
 
@@ -215,6 +223,13 @@ namespace Jazz2::UI
 				float right = std::min(adjustedScopedView.X + adjustedScopedView.W, adjustedView.X + adjustedView.W);
 				adjustedScopedView.X = left;
 				adjustedScopedView.W = right - left;
+
+				// Intersecting with the two already narrowed rectangles is what carries the safe area into
+				// split-screen, and it is also what keeps it correct there: only the edges a viewport shares
+				// with the screen get anything taken off it, while the ones it shares with the neighbouring
+				// viewport are well inside the safe rectangle already and stay where they are
+				scopedView.Intersect(view);
+				adjustedScopedView.Intersect(adjustedView);
 
 #if defined(DEATH_TARGET_ANDROID)
 				if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound() && _levelHandler->_assignedViewports.size() == 1) {
@@ -265,11 +280,11 @@ namespace Jazz2::UI
 			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
 #if defined(DEATH_TARGET_ANDROID)
 			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.W / 2 + 40.0f, view.Y + 6.0f, FontLayer,
+				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W / 2 + 40.0f, view.Y + 6.0f, FontLayer,
 					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 			} else
 #endif
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.W - 4.0f, view.Y + 1.0f, FontLayer,
+			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W - 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 		}
 
@@ -811,26 +826,31 @@ namespace Jazz2::UI
 			return;
 		}
 
-		float bottom = adjustedView.Y + adjustedView.H;
+		// The bar hangs a tenth of the way down from the top of the view, so its resting place is measured from
+		// the top edge rather than from the bottom (which is what it was derived from while the rectangle
+		// always started at zero) - otherwise a top inset would push it down by the inset twice over
+		float top = adjustedView.Y;
+		float restY = top + adjustedView.H * 0.1f;
+		float centerX = adjustedView.X + adjustedView.W * 0.5f;
 
 		constexpr float TransitionTime = 60.0f;
 		float y, alpha;
 		if (_activeBossTime < TransitionTime) {
 			y = (TransitionTime - _activeBossTime) / 8.0f;
-			y = bottom * 0.1f - (y * y);
+			y = restY - (y * y);
 			alpha = std::max(_activeBossTime / TransitionTime, 0.0f);
 		} else {
-			y = bottom * 0.1f;
+			y = restY;
 			alpha = 1.0f;
 		}
 
 		float perc = 0.08f + 0.84f * std::min(std::max((float)bossHealth / (float)bossMaxHealth, 0.0f), 1.0f);
 
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+		DrawElement(BossHealthBar, 0, centerX, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
+		DrawElement(BossHealthBar, 0, centerX, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
 
-		DrawElement(BossHealthBar, 0, ViewSize.X * 0.5f, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
-		DrawElementClipped(BossHealthBar, 1, ViewSize.X * 0.5f, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
+		DrawElement(BossHealthBar, 0, centerX, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
+		DrawElementClipped(BossHealthBar, 1, centerX, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
 	}
 
 	void HUD::OnDrawLevelText(int32_t& charOffset)
@@ -852,12 +872,18 @@ namespace Jazz2::UI
 			offset = 0;
 		}
 
+		// The scale is a legibility threshold for a small display, so it stays keyed to the display and not to
+		// the rectangle the text is laid out in
 		float textScale = (ViewSize.X >= 360 ? 1.0f : 0.8f);
 
+		Rectf safeView = GetSafeView();
+		float x = safeView.X + safeView.W * 0.5f + offset;
+		float y = safeView.Y + safeView.H * 0.04f;
+
 		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, _levelText, charOffsetShadow, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f + 2.5f, 50,
+		_smallFont->DrawString(this, _levelText, charOffsetShadow, x, y + 2.5f, 50,
 			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
-		_smallFont->DrawString(this, _levelText, charOffset, ViewSize.X * 0.5f + offset, ViewSize.Y * 0.04f, 60,
+		_smallFont->DrawString(this, _levelText, charOffset, x, y, 60,
 			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
 
 		if (_levelTextTime > TotalTime) {
@@ -1031,6 +1057,11 @@ namespace Jazz2::UI
 			DrawJoystick(_joystickOrigin.X, _joystickOrigin.Y, _joystickMaxRadius, _joystickMaxRadius * 0.75f,
 				thumbPos.X, thumbPos.Y);
 		}
+	}
+
+	Rectf HUD::GetSafeView() const
+	{
+		return PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)ViewSize.X, (float)ViewSize.Y), ViewSize);
 	}
 
 	bool HUD::GetTouchPauseButtonRect(Rectf& bounds) const

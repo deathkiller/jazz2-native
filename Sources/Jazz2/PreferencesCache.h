@@ -4,6 +4,7 @@
 #include "WeaponType.h"
 #include "../nCine/AppConfiguration.h"
 #include "../nCine/Base/HashMap.h"
+#include "../nCine/Primitives/Rect.h"
 
 #include <Containers/StaticArray.h>
 
@@ -195,6 +196,22 @@ namespace Jazz2
 		TouchButtonAnchor Anchor;
 	};
 
+	/**
+		@brief Screen edge a safe area inset is measured from
+
+		Indexes @ref PreferencesCache::SafeArea, the per-edge margin the user reserves for a display that
+		does not show the whole picture - a television that overscans, a panel with a notch or rounded
+		corners, a projector that is not quite aligned. The horizontal edges are a fraction of the view's
+		width and the vertical ones of its height, so the same configuration holds on any resolution.
+	*/
+	enum class SafeAreaEdge : std::uint8_t {
+		Left = 0,					/**< Left edge, as a fraction of the view width */
+		Top = 1,					/**< Top edge, as a fraction of the view height */
+		Right = 2,					/**< Right edge, as a fraction of the view width */
+		Bottom = 3,					/**< Bottom edge, as a fraction of the view height */
+		Count = 4					/**< Number of edges */
+	};
+
 	DEATH_ENUM_FLAGS(EpisodeContinuationFlags);
 
 #	pragma pack(push, 1)
@@ -261,6 +278,14 @@ namespace Jazz2
 		static constexpr std::int32_t UnlimitedFps = 0;
 		/** @brief Value of @ref MaxFps that specifies the frame rate of the monitor being used */
 		static constexpr std::int32_t UseVsync = -1;
+		/**
+		 * @brief Largest value a single @ref SafeArea edge can hold, i.e. 30% of the view
+		 *
+		 * Well past what any display crops - the classic title-safe area is 5% an edge - but the range is
+		 * wide enough to serve a badly misaligned projector, or simply someone who wants the interface
+		 * gathered in. Past 25.5% it no longer fits a byte, which is why the value is stored as a word.
+		 */
+		static constexpr std::uint16_t MaxSafeArea = 300;
 
 		/** @} */
 
@@ -333,6 +358,15 @@ namespace Jazz2
 		 * the PlayStation 2, Dreamcast, GameCube and Nintendo 64 start at @ref ParticleQuality::Low.
 		 */
 		static ParticleQuality Particles;
+		/**
+		 * @brief Safe area inset per screen edge, in tenths of a percent of the view (see @ref SafeAreaEdge)
+		 *
+		 * Keeps the interface clear of the parts of the picture a particular display does not show. Zero on
+		 * every edge by default, which is the whole view and the behaviour of every build before this option
+		 * existed; each edge is capped at @ref MaxSafeArea. Applied through @ref ApplySafeArea(), which the
+		 * HUD, the in-game console and the menu all narrow themselves with.
+		 */
+		static std::uint16_t SafeArea[(std::size_t)SafeAreaEdge::Count];
 
 		// Gameplay
 		/** @brief Whether reforged gameplay is enabled */
@@ -467,6 +501,22 @@ namespace Jazz2
 		static void RemoveEpisodeContinue(StringView episodeName);
 		/** @brief Resets all touch button layouts to their default positions and sizes */
 		static void ResetTouchButtons();
+		/** @brief Resets all @ref SafeArea insets back to zero, i.e. to the whole view */
+		static void ResetSafeArea();
+		/** @brief Returns `true` if any @ref SafeArea edge is set, so the callers can skip the whole thing */
+		static bool IsSafeAreaEnabled();
+		/** @brief Returns the @ref SafeArea inset of a single edge in view pixels */
+		static float GetSafeAreaInset(SafeAreaEdge edge, Vector2i viewSize);
+		/**
+		 * @brief Returns the given rectangle narrowed by the @ref SafeArea insets
+		 *
+		 * The insets are a fraction of @p viewSize rather than of @p bounds, so the same margin comes off
+		 * whatever is passed in: the whole view, a split-screen viewport, or a rectangle that has already
+		 * been narrowed for something else (the HUD hands in what the touch controls left it, so the margin
+		 * ends up measured from the buttons rather than from the screen edge). The result is clamped to stay
+		 * a valid rectangle even when the insets are wider than what was passed in.
+		 */
+		static Rectf ApplySafeArea(const Rectf& bounds, Vector2i viewSize);
 
 	private:
 		enum class BoolOptions : std::uint64_t {
@@ -514,7 +564,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 17;
+		static constexpr std::uint8_t FileVersion = 19;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

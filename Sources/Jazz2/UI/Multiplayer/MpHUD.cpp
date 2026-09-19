@@ -110,6 +110,7 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		std::int32_t charOffset = 0;
+		Rectf safeView = GetSafeView();
 
 		DrawRoundResults();
 
@@ -117,18 +118,21 @@ namespace Jazz2::UI::Multiplayer
 			float textScale = 2.0f - std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 1.0f);
 			Colorf textColor = Font::DefaultColor;
 			textColor.A = std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 0.5f) * 2.0f;
-			_mediumFont->DrawString(this, _countdownText, charOffset, ViewSize.X * 0.5f, ViewSize.Y * 0.5f, FontLayer + 20,
-				Alignment::Center, textColor, textScale, 0.0f, 0.0f, 0.0f);
+			_mediumFont->DrawString(this, _countdownText, charOffset, safeView.X + safeView.W * 0.5f,
+				safeView.Y + safeView.H * 0.5f, FontLayer + 20, Alignment::Center, textColor, textScale, 0.0f, 0.0f, 0.0f);
 		}
 
 		if (PreferencesCache::ShowPerformanceMetrics) {
+			// Sits immediately left of the frame rate counter the base HUD draws, so it follows the same edge
+			float debugX = safeView.X + safeView.W - 44.0f;
+			float debugY = safeView.Y + 1.0f;
 			std::int32_t debugCharOffset = 0;
 			auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
 			if (mpLevelHandler->_isServer) {
 #if defined(DEATH_DEBUG)
 				char debugBuffer[64];
 				std::size_t length = formatInto(debugBuffer, "{} b |", mpLevelHandler->_debugAverageUpdatePacketSize);
-				_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+				_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, debugX, debugY,
 					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 #endif
 			} else {
@@ -136,7 +140,7 @@ namespace Jazz2::UI::Multiplayer
 				if (rtt > 0) {
 					char debugBuffer[64];
 					std::size_t length = formatInto(debugBuffer, "{} ms |", rtt);
-					_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+					_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, debugX, debugY,
 						200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 				}
 			}
@@ -532,10 +536,13 @@ namespace Jazz2::UI::Multiplayer
 		// the level text layer, so the "Winner is ..." alert at the top of the screen stays readable over it.
 		DrawSolid(Vector2f::Zero, 40, Vector2f((float)ViewSize.X, (float)ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.55f));
 
-		float boxWidth = std::min(272.0f, ViewSize.X - 40.0f);
+		// The dimming covers the whole screen, but the board itself is text to read, so it is centred on and
+		// bounded by the safe area
+		Rectf safeView = GetSafeView();
+		float boxWidth = std::min(272.0f, safeView.W - 40.0f);
 		float boxHeight = TitleHeight + LabelHeight + (float)results.size() * RowHeight;
-		float boxX = ViewSize.X * 0.5f - boxWidth * 0.5f;
-		float boxY = ViewSize.Y * 0.5f - boxHeight * 0.5f;
+		float boxX = safeView.X + safeView.W * 0.5f - boxWidth * 0.5f;
+		float boxY = safeView.Y + safeView.H * 0.5f - boxHeight * 0.5f;
 
 		char stringBuffer[48];
 		std::int32_t charOffset = 0, charOffsetShadow = 0;

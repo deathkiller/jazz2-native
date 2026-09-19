@@ -262,7 +262,10 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		Vector2i center = ViewSize / 2;
+		// Horizontally the title follows the content bounds, the same middle the sections lay themselves out
+		// on, so it stays above the menu whatever the safe area takes off the sides (see
+		// MenuContainerBase::UpdateContentBounds); its vertical place comes from `titleY` below
+		Vector2i center = Vector2i(_owner->_contentBounds.X + _owner->_contentBounds.W / 2, ViewSize.Y / 2);
 		std::int32_t charOffset = 0;
 		std::int32_t charOffsetShadow = 0;
 
@@ -311,9 +314,11 @@ namespace Jazz2::UI::Menu
 		if (showCorners)
 #endif
 		{
-			// Version
-			Vector2f bottomRight = Vector2f(ViewSize.X, ViewSize.Y);
-			bottomRight.X = ViewSize.X - 24.0f;
+			// Version. These two are the only text in the menu placed against the view itself rather than
+			// against the content bounds, which already follow the safe area, so they take it off here
+			Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)ViewSize.X, (float)ViewSize.Y), ViewSize);
+			Vector2f bottomRight = Vector2f(safeView.X + safeView.W, safeView.Y + safeView.H);
+			bottomRight.X -= 24.0f;
 			bottomRight.Y -= MenuLayout::Blend(4.0f, 10.0f, ViewSize);
 
 			auto newestVersion = _owner->_root->GetNewestVersion();
@@ -328,7 +333,7 @@ namespace Jazz2::UI::Menu
 
 			// Copyright
 			Vector2f bottomLeft = bottomRight;
-			bottomLeft.X = 24.0f;
+			bottomLeft.X = safeView.X + 24.0f;
 			_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
 				Alignment::BottomLeft, Font::DefaultColor, 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
@@ -434,7 +439,10 @@ namespace Jazz2::UI::Menu
 			RecreateSections();
 		} else if ((type & ChangedPreferencesType::Layout) == ChangedPreferencesType::Layout) {
 			// A new view size keeps the stack and lets every section lay itself out again - at the next
-			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection)
+			// update, as the request comes from a widget of the section on top (see GraphicsOptionsSection).
+			// The bounds themselves are recomputed right away, because a changed safe area moves them
+			// without the view size having changed at all (see SafeAreaOptionsSection)
+			UpdateContentBounds(GetUpscalePass().GetViewSize());
 			_sectionsRelayoutPending = true;
 		}
 
@@ -948,8 +956,11 @@ namespace Jazz2::UI::Menu
 			renderQueue.AddCommand(command);
 		}
 
+		// The glow sits under the title, so it follows it onto the content bounds' middle; the background art
+		// around it keeps the view's own
+		float titleX = (float)(_contentBounds.X + _contentBounds.W / 2);
 		float titleY = _contentBounds.Y - 30;
-		DrawElement(MenuGlow, 0, center.X, titleY, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f),
+		DrawElement(MenuGlow, 0, titleX, titleY, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f),
 			16.0f, 10.0f, true, true);
 
 		return true;

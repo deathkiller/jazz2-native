@@ -66,42 +66,58 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	TouchControlsOptionsSection::ChromeLayout TouchControlsOptionsSection::GetChromeLayout(Vector2i viewSize)
+	{
+		Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+
+		ChromeLayout result;
+		result.OriginX = safeView.X;
+		result.OriginY = safeView.Y;
+		result.Width = safeView.W;
+		result.CenterX = safeView.X + safeView.W * 0.5f;
+		// Row 1: [Save 76px] [8px gap] [Reset 76px] - centered
+		result.SaveLeft = result.CenterX - BtnW - BtnGap * 0.5f;
+		result.ResetLeft = result.CenterX + BtnGap * 0.5f;
+		result.Row1Y = safeView.Y + 28.0f;
+		result.Row2Y = safeView.Y + 54.0f;
+		result.Row3Y = safeView.Y + 74.0f;
+		return result;
+	}
+
 	void TouchControlsOptionsSection::OnDraw(Canvas* canvas)
 	{
 		Vector2i viewSize = canvas->ViewSize;
+		ChromeLayout chrome = GetChromeLayout(viewSize);
 
-		// Dark full-screen background
+		// Dark full-screen background. This one is the whole screen on purpose: it dims the level behind the
+		// editor, and a display that crops its edges is no reason to leave a bright band around it.
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 225, Alignment::TopLeft,
 			Vector2f((float)viewSize.X, (float)viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 
-		// Top bar
+		// Top bar. The panel runs the whole width of the screen from the very top, so it reads as a bar rather
+		// than as a rectangle floating away from the corners; only what is written on it is held inside the
+		// safe area, and the panel grows downwards by the top margin to stay behind it.
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 230, Alignment::TopLeft,
-			Vector2f((float)viewSize.X, 96.0f), Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+			Vector2f((float)viewSize.X, chrome.OriginY + BarHeight), Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 
-		_root->DrawElement(MenuLine, 0, viewSize.X / 2, 99.0f, IMenuContainer::FontLayer + 235, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawElement(MenuLine, 0, chrome.CenterX, chrome.OriginY + 99.0f, IMenuContainer::FontLayer + 235, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
 
 		// Title (centered, tap to go back)
-		_root->DrawStringShadow(_("Touch Controls"), charOffset, (float)viewSize.X * 0.5f, 12.0f,
+		_root->DrawStringShadow(_("Touch Controls"), charOffset, chrome.CenterX, chrome.OriginY + 12.0f,
 			IMenuContainer::FontLayer + 235, Alignment::Center,
 			Colorf(0.46f, 0.46f, 0.46f, 0.9f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		// Row 1: [Save 76px] [8px gap] [Reset 76px] — centered
-		float btnCenterX = (float)viewSize.X * 0.5f;
-		constexpr float BtnW = 76.0f;
-		constexpr float BtnGap = 8.0f;
-		constexpr float Row1Y = 28.0f;
-		constexpr float Row2Y = 54.0f;
-		constexpr float Row3Y = 74.0f;
-		constexpr float BtnH = 20.0f;
-		constexpr float ToggleW = 30.0f;
-		constexpr float ToggleH = 16.0f;
 		// Toggles: text right-aligned at center, toggle starts just right of center
 		constexpr float ToggleGap = 6.0f;
 
-		float saveLeft  = btnCenterX - BtnW - BtnGap * 0.5f;
-		float resetLeft = btnCenterX + BtnGap * 0.5f;
+		float btnCenterX = chrome.CenterX;
+		float saveLeft = chrome.SaveLeft;
+		float resetLeft = chrome.ResetLeft;
+		float Row1Y = chrome.Row1Y;
+		float Row2Y = chrome.Row2Y;
+		float Row3Y = chrome.Row3Y;
 
 		// Save button (green)
 		_root->DrawSolid(saveLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
@@ -143,7 +159,7 @@ namespace Jazz2::UI::Menu
 
 		// Hint (just below top bar)
 		_root->DrawStringShadow(_("Drag to move · Pinch or corner to resize"), charOffset,
-			(float)viewSize.X * 0.5f, 100.0f, IMenuContainer::FontLayer + 235,
+			chrome.CenterX, chrome.OriginY + 100.0f, IMenuContainer::FontLayer + 235,
 			Alignment::Top, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Draw all button previews
@@ -327,19 +343,13 @@ namespace Jazz2::UI::Menu
 
 	void TouchControlsOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		// Layout constants mirrored from OnDraw
-		float btnCenterX = (float)viewSize.X * 0.5f;
-		constexpr float BtnW = 76.0f;
-		constexpr float BtnGap = 8.0f;
-		constexpr float Row1Y = 28.0f;
-		constexpr float Row2Y = 54.0f;
-		constexpr float Row3Y = 74.0f;
-		constexpr float BtnH = 20.0f;
-		constexpr float ToggleW = 30.0f;
-		constexpr float ToggleH = 16.0f;
-
-		float saveLeft  = btnCenterX - BtnW - BtnGap * 0.5f;
-		float resetLeft = btnCenterX + BtnGap * 0.5f;
+		// The same placement OnDraw() uses, safe area included
+		ChromeLayout chrome = GetChromeLayout(viewSize);
+		float Row1Y = chrome.Row1Y;
+		float Row2Y = chrome.Row2Y;
+		float Row3Y = chrome.Row3Y;
+		float saveLeft = chrome.SaveLeft;
+		float resetLeft = chrome.ResetLeft;
 
 		switch (event.type) {
 			case TouchEventType::Down:

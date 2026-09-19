@@ -175,6 +175,15 @@ namespace Jazz2::UI
 		void OnDrawTouchButtons(Actors::Player* player);
 		/** @brief Returns `true` and the on-screen bounds of the touch pause button if it's currently visible */
 		bool GetTouchPauseButtonRect(Rectf& bounds) const;
+		/**
+		 * @brief Returns the whole view narrowed by the configured safe area
+		 *
+		 * For the few elements that are placed against the view itself rather than against one of the
+		 * rectangles @ref OnDraw() hands down - the level text, the frame rate counter. The touch buttons are
+		 * deliberately not among them: the user places those where they can be reached and they keep their
+		 * own edges (see @relativeref{Jazz2,PreferencesCache::SafeArea}).
+		 */
+		Rectf GetSafeView() const;
 
 		/** @brief Draws carrotized health bar (Reforged) */
 		void DrawHealthCarrots(float x, float y, std::int32_t health);
