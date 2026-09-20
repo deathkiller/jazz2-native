@@ -113,7 +113,7 @@ namespace nCine
 	AicaAudioDevice* AicaAudioDevice::_current = nullptr;
 
 	AicaAudioDevice::AicaAudioDevice()
-		: _initialized(false), _longSampleStaging {}
+		: _initialized(false), _inBlockingOperation(false), _longSampleStaging {}
 	{
 		LOGD("Initializing AICA audio device...");
 
@@ -650,6 +650,12 @@ namespace nCine
 			channelData.freq = 1;
 		}
 
+		// The end of a one-shot sample is predicted rather than read back: the hardware's key-on bit
+		// stays set until something keys the channel off, so it cannot say when the sample ran out
+		source.sampleStartOffset = sampleOffset;
+		source.sampleEndAt = (source.looping ? 0 : timer_ms_gettime64()
+			+ std::uint64_t(channelData.length) * 1000 / std::uint64_t(channelData.freq) + SampleEndMarginMs);
+
 		if (!isStereo) {
 			channelData.pan = pan;
 			sendChannelCommand(source.channels[0], channelData);
@@ -679,6 +685,7 @@ namespace nCine
 				channel = -1;
 			}
 		}
+		source.sampleEndAt = 0;
 	}
 
 	void AicaAudioDevice::startLongSample(std::int32_t index, std::int32_t sampleOffset)
@@ -902,6 +909,7 @@ namespace nCine
 			source.streaming = false;
 			source.started = false;
 			source.paused = false;
+			source.stoppedForBlocking = false;
 		} else {
 			source.streaming = false;
 		}
@@ -945,6 +953,15 @@ namespace nCine
 					sendChannelCommand(source.channels[0], channelData);
 					sendChannelCommand(source.channels[1], channelData);
 					snd_sh4_to_aica_start();
+				}
+
+				// What is left of a one-shot sample now plays out at the new rate
+				if (source.sampleEndAt != 0) {
+					const std::int32_t keyedOnLength = buffer->numSamples - source.sampleStartOffset;
+					const std::int32_t position = snd_get_pos(source.channels[0]);
+					const std::int32_t remaining = (position < keyedOnLength ? keyedOnLength - position : 0);
+					source.sampleEndAt = timer_ms_gettime64()
+						+ std::uint64_t(remaining) * 1000 / std::uint64_t(channelData.freq) + SampleEndMarginMs;
 				}
 			}
 		}
@@ -1002,7 +1019,8 @@ namespace nCine
 		if (source.channels[0] < 0) {
 			return 0;
 		}
-		return snd_get_pos(source.channels[0]);
+		// The hardware counts from where the channel was pointed at, not from the start of the sample
+		return source.sampleStartOffset + snd_get_pos(source.channels[0]);
 	}
 
 	void AicaAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
@@ -1053,6 +1071,12 @@ namespace nCine
 				stopLongSample(index);
 			}
 			if (isLongSample) {
+				if (_inBlockingOperation) {
+					// Nothing feeds a stream until the operation is over, so it waits for it instead
+					source.pausedOffset = (wasPaused ? source.pausedOffset : 0);
+					source.stoppedForBlocking = true;
+					return;
+				}
 				startLongSample(index, wasPaused ? source.pausedOffset : 0);
 			} else {
 				startSample(index, wasPaused ? source.pausedOffset : 0);
@@ -1063,6 +1087,16 @@ namespace nCine
 
 		// A streaming source, which cannot start before it has something queued
 		source.streaming = true;
+		if (_inBlockingOperation) {
+			source.stoppedForBlocking = true;
+			return;
+		}
+		startStream(index);
+	}
+
+	void AicaAudioDevice::startStream(std::int32_t index)
+	{
+		Source& source = _sources[index];
 		if (source.streamHandle < 0 || source.numQueued == 0) {
 			return;
 		}
@@ -1089,6 +1123,13 @@ namespace nCine
 		}
 
 		Source& source = _sources[index];
+		if (source.stoppedForBlocking) {
+			// Already stopped for the operation in progress, so it only has to stay stopped afterwards -
+			// the position to resume from is where the stop left it
+			source.stoppedForBlocking = false;
+			source.paused = true;
+			return;
+		}
 		if (!source.started || source.paused) {
 			return;
 		}
@@ -1109,8 +1150,9 @@ namespace nCine
 			stopLongSample(index);
 			source.started = false;
 		} else {
-			// Remember where the sample got to, so it can be keyed on again from there
-			source.pausedOffset = (source.channels[0] >= 0 ? snd_get_pos(source.channels[0]) : 0);
+			// Remember where the sample got to, so it can be keyed on again from there - counted from
+			// the start of the sample, whichever offset the channel was pointed at this time
+			source.pausedOffset = source.sampleStartOffset + (source.channels[0] >= 0 ? snd_get_pos(source.channels[0]) : 0);
 			stopSample(index);
 			source.started = false;
 		}
@@ -1141,6 +1183,7 @@ namespace nCine
 		source.started = false;
 		source.paused = false;
 		source.pausedOffset = 0;
+		source.stoppedForBlocking = false;
 	}
 
 	bool AicaAudioDevice::isSourcePlaying(std::uint32_t sourceId)
@@ -1151,6 +1194,10 @@ namespace nCine
 		}
 
 		const Source& source = _sources[index];
+		if (source.stoppedForBlocking) {
+			// Merely waiting for the load to end, the players must not take it for finished
+			return true;
+		}
 		if (!source.started || source.paused) {
 			return false;
 		}
@@ -1174,6 +1221,13 @@ namespace nCine
 				ringMs = std::uint64_t(StreamBufferSize / 2) * 1000 / std::uint64_t(buffer->frequency);
 			}
 			return (timer_ms_gettime64() - source.longSampleDrainedAt < ringMs);
+		}
+		// A one-shot sample is over when its predicted end has passed. The key-on bit the driver
+		// exposes is asked as well, but only as confirmation of an earlier stop: on the console it is a
+		// control bit that stays set until the channel is keyed off, whatever the sample did, so a
+		// source that waited for it was never given back and the pool ran dry after a few seconds
+		if (source.sampleEndAt != 0 && timer_ms_gettime64() >= source.sampleEndAt) {
+			return false;
 		}
 		return (source.channels[0] >= 0 && snd_is_playing(source.channels[0]));
 	}
@@ -1232,6 +1286,61 @@ namespace nCine
 		}
 		source.numQueued -= count;
 		source.numProcessed -= count;
+	}
+
+	void AicaAudioDevice::onBlockingOperationBegan()
+	{
+		// The stream driver's ring is topped up from updatePlayers(), which the caller is about to stop
+		// calling for far longer than the ring holds - 16 KB is a third of a second of 22 kHz stereo, a
+		// level load off the disc takes several. The channel keeps looping the ring meanwhile, so the
+		// last fragment of the music repeats for the whole load: a grinding sound on every level change
+		// and on the way back to the menu (whose episode scan opens the same window). Stopped here, the
+		// load is silent instead and every stream picks up where it was once it is over. Sounds on
+		// channels play out of sound RAM on their own and are left alone.
+		_inBlockingOperation = true;
+
+		for (std::int32_t i = 0; i < MaxSources; i++) {
+			Source& source = _sources[i];
+			if (source.streamHandle < 0 || !source.started || source.paused) {
+				continue;
+			}
+			if (source.streaming) {
+				// Same as a pause: the queue is kept and the ring is refilled from it when it restarts
+				snd_stream_stop(source.streamHandle);
+				source.started = false;
+				source.stoppedForBlocking = true;
+			} else if (source.longSample) {
+				// Same as a pause of a long sample, see pauseSource()
+				const std::int32_t ringFrames = StreamBufferSize / 2;
+				source.pausedOffset = (source.longSamplePos > ringFrames ? source.longSamplePos - ringFrames : 0);
+				stopLongSample(i);
+				source.started = false;
+				source.stoppedForBlocking = true;
+			}
+		}
+	}
+
+	void AicaAudioDevice::onBlockingOperationEnded()
+	{
+		_inBlockingOperation = false;
+
+		for (std::int32_t i = 0; i < MaxSources; i++) {
+			Source& source = _sources[i];
+			if (!source.stoppedForBlocking) {
+				continue;
+			}
+			source.stoppedForBlocking = false;
+
+			if (source.streaming) {
+				startStream(i);
+			} else if (source.attachedBufferId != 0) {
+				const Buffer* buffer = bufferForId(source.attachedBufferId);
+				if (buffer != nullptr && buffer->longSample) {
+					startLongSample(i, source.pausedOffset);
+					source.pausedOffset = 0;
+				}
+			}
+		}
 	}
 
 	void AicaAudioDevice::suspendDevice()

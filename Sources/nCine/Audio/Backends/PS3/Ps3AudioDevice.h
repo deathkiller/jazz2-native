@@ -81,6 +81,10 @@ namespace nCine
 		void suspendDevice() override;
 		void resumeDevice() override;
 
+	protected:
+		void onBlockingOperationBegan() override;
+		void onBlockingOperationEnded() override;
+
 	private:
 		/** @brief Sources the mixer walks; a silent one costs nothing, so this is generous */
 		static constexpr std::int32_t MaxSources = 32;

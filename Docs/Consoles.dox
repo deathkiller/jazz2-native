@@ -309,7 +309,11 @@ knowing when reading it: the ring is topped up from `updatePlayers()` once per f
 a callback @m_span{m-text m-dim} (PSL1GHT ships no threads, so there is no mixer thread to run one)
 @m_endspan, which is why it is deliberately long enough to survive a late frame, and the mix is **clamped**
 before it is written, because the hardware folds an out-of-range sample into the opposite
-polarity, which sounds far worse than clipping.
+polarity, which sounds far worse than clipping. A frame that outlasts the ring altogether --- a level
+load --- is handled like on the PlayStation 2 and the Dreamcast: the hardware would keep scanning the
+ring and repeat its last 85 ms for the whole load, so the device zeroes it when a load begins
+@m_span{m-text m-dim} (see @ref nCine::IAudioDevice::beginBlockingOperation) @m_endspan and puts its
+write cursor back just ahead of the hardware when the load is over.
 
 @m_class{m-block m-info}
 
@@ -846,8 +850,11 @@ crash also loses everything written since the last flush.
 -   The two kinds of player use two different parts of the sound processor, see
     @ref nCine::AicaAudioDevice. A sound effect is one AICA wavetable channel
     @m_span{m-text m-dim} (two for a stereo sample, since a channel is mono --- the sample is
-    de-interleaved into one block per channel when it is uploaded) @m_endspan, and whether it has
-    finished is read back from the hardware rather than predicted from a timer. Music goes through
+    de-interleaved into one block per channel when it is uploaded) @m_endspan, and when it has
+    finished is **predicted from its length and rate**, not read back: the only state the hardware
+    exposes is the channel's key-on bit, which the console never clears by itself when a one-shot
+    sample runs out @m_span{m-text m-dim} (emulators do, which is how a source pool that ran dry
+    after ten seconds of play went unnoticed in Flycast) @m_endspan. Music goes through
     KallistiOS's `snd_stream` driver, of which there are only **four**.
 -   A channel addresses at most **65534 samples** from wherever it is pointed at, which a long
     sound effect can exceed @m_span{m-text m-dim} (about 3 seconds of 22 kHz audio) @m_endspan. A
@@ -875,6 +882,13 @@ crash also loses everything written since the last flush.
     mixer --- the one place this console has no headroom to spare.
 -   A stream is resampled at the rate it was started with and the driver cannot change it
     afterwards, so pitch changes apply to sound effects only.
+-   **Streams are stopped for the duration of a load.** The driver's ring buffer is topped up once
+    per frame from the main thread, holds a third of a second, and is looped by the channel while it
+    waits for more --- so a level load off the disc, which blocks that thread for several seconds,
+    would play the last fragment of the music over and over until it is done (the PlayStation 2's
+    sound module does the same, see @ref nCine::IAudioDevice::beginBlockingOperation). The device
+    stops every stream when a load begins and starts it again where it was when the load ends, which
+    makes a load silent rather than grinding. Sound effects on channels are unaffected.
 -   Textures are 16-bit @m_span{m-text m-dim} (ARGB4444, or palettized with the hardware's palette
     banks) @m_endspan, the PVR has no hardware scissor @m_span{m-text m-dim} (clipping is
     geometric) @m_endspan, and there is no post-processing tier, so the rescale filters and the
@@ -1905,6 +1919,14 @@ disc wait, `CDFS.IRX`, the memory card, `LIBSD` and `audsrv`, the MX4SIO probe -
 line, so a black screen with the console still showing says exactly which step did not come back, and
 a black screen after that line points at the renderer's own setup or the content loading that follows.
 Report the last lines shown when a boot stops.
+
+Before the console can draw anything, three **solid colours** mark the stages that come earlier
+@m_span{m-text m-dim} (`Ps2BootMarker()` in @cpp "MainApplication.cpp" @ce writes `PMODE = 0` and
+`BGCOLOR`, which needs no framebuffer) @m_endspan: **red** when static initialization begins, **green**
+when @cpp main() @ce reaches @cpp MainApplication::Run() @ce, **blue** once the trace system is up and
+the boot console is about to open. A screen that stays on one of them names the stage that did not
+come back; a screen that stays black shows none of the executable ran --- the loader, the file or the
+video signal, not the game.
 
 @subsection consoles-ps2-limits Limits and known issues
 

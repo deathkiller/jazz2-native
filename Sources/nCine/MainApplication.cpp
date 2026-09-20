@@ -281,6 +281,37 @@ namespace nCine
 	}
 #endif
 
+#if defined(DEATH_TARGET_PS2)
+	namespace
+	{
+		/**
+			@brief Fills the whole display with one colour, with no framebuffer involved at all
+
+			`PMODE = 0` switches both read circuits off, which leaves the raster showing `BGCOLOR` alone - the
+			two GS privileged registers, which are reachable from the very first instruction. Each stage of the
+			startup below sets a different colour, so a boot that stops before the boot console can draw a
+			line still says how far it got: the last colour stays on the television.
+		*/
+		void Ps2BootMarker(std::uint32_t rgb)
+		{
+			*reinterpret_cast<volatile std::uint64_t*>(0x12000000) = 0;		// PMODE
+			*reinterpret_cast<volatile std::uint64_t*>(0x120000E0) = rgb;	// BGCOLOR, R in the low byte
+		}
+
+		constexpr std::uint32_t Ps2MarkerStaticInit = 0x0000FF;	// Red: static initialization has begun
+		constexpr std::uint32_t Ps2MarkerRun = 0x00FF00;			// Green: main() reached MainApplication::Run()
+		constexpr std::uint32_t Ps2MarkerTrace = 0xFF0000;			// Blue: the trace system is up, the boot console is next
+
+		/** @brief Runs ahead of every other static constructor, so red means "the executable started at all" */
+		struct Ps2EarlyMarker {
+			Ps2EarlyMarker() {
+				Ps2BootMarker(Ps2MarkerStaticInit);
+			}
+		};
+		Ps2EarlyMarker ps2EarlyMarker __attribute__((init_priority(101)));
+	}
+#endif
+
 	Application& theApplication()
 	{
 		static MainApplication instance;
@@ -292,6 +323,10 @@ namespace nCine
 		if (createAppEventHandler == nullptr) {
 			return EXIT_FAILURE;
 		}
+
+#if defined(DEATH_TARGET_PS2)
+		Ps2BootMarker(Ps2MarkerRun);
+#endif
 
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 
@@ -414,7 +449,10 @@ namespace nCine
 		// boot that stopped on hardware was a black screen with nothing to report, and everything that has ever
 		// stopped one (the disc wait, the module loads, the content and memory-card probes) happens before the
 		// renderer exists. libdebug picks NTSC or PAL from the ROM's region itself and resets only the GIF
-		// channel, so the SIF this block goes on to bring up is untouched.
+		// channel, so the SIF this block goes on to bring up is untouched. The colour marker right before it
+		// is the last of the three (see Ps2BootMarker()): blue with no text means init_scr() itself did not
+		// come back.
+		Ps2BootMarker(Ps2MarkerTrace);
 		init_scr();
 		scr_printf("Application starting...\n");
 

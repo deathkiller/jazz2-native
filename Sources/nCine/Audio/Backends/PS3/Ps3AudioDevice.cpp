@@ -372,6 +372,25 @@ namespace nCine
 		}
 	}
 
+	void Ps3AudioDevice::onBlockingOperationBegan()
+	{
+		// The ring is topped up from updatePlayers(), which the caller is about to stop calling for far longer
+		// than the ring holds - it is 85 ms, a level load is seconds - and the hardware keeps scanning the ring
+		// meanwhile, so left alone it would play the last 85 ms of the mix over and over for the whole load
+		// (the same artefact the PS2's module and the Dreamcast's stream driver produce). Silenced instead, and
+		// the write cursor is left for the first FillRing() afterwards to put back just ahead of the hardware,
+		// which by then is anywhere in the ring
+		if (_valid && !_suspended) {
+			std::memset(_portBuffer, 0, std::size_t(BlockCount) * BlockSamples * ChannelCount * sizeof(float));
+			_writeBlock = BlockCount;
+		}
+	}
+
+	void Ps3AudioDevice::onBlockingOperationEnded()
+	{
+		// Nothing to do: the next FillRing() resynchronizes the write cursor (see onBlockingOperationBegan())
+	}
+
 	void Ps3AudioDevice::updatePlayers()
 	{
 		// The base class advances the players and retires the finished ones first, so the mix below sees the

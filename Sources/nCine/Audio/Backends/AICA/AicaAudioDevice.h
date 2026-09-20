@@ -20,9 +20,11 @@ namespace nCine
 
 		The two kinds of player map onto two different parts of the hardware:
 		- A @ref AudioBufferPlayer becomes one AICA channel @m_span{m-text m-dim} (two for a stereo
-		  buffer, since a channel is mono) @m_endspan playing a sample out of sound RAM. Whether it
-		  has finished is read back from the hardware with `snd_is_playing()`, so nothing has to be
-		  predicted from timers.
+		  buffer, since a channel is mono) @m_endspan playing a sample out of sound RAM. When it has
+		  finished is predicted from the sample's length and rate: the only state the hardware offers
+		  is the key-on bit `snd_is_playing()` reads, which is a control bit the console never clears
+		  by itself when a one-shot sample runs out (emulators do), so a source that waited for it
+		  was never given back and the pool ran dry after a few seconds of play.
 		- A @ref AudioStreamPlayer becomes one of KallistiOS's `snd_stream` handles, whose driver on
 		  the ARM keeps a ring buffer in sound RAM topped up from a callback. The callback is served
 		  out of the queue this class keeps, so the streaming players still see the queue interface
@@ -82,6 +84,10 @@ namespace nCine
 		void suspendDevice() override;
 		void resumeDevice() override;
 
+	protected:
+		void onBlockingOperationBegan() override;
+		void onBlockingOperationEnded() override;
+
 	private:
 		/** @brief Number of sources, comfortably below the 64 channels the AICA has */
 		static constexpr std::int32_t MaxSources = 24;
@@ -97,6 +103,13 @@ namespace nCine
 		static constexpr std::int32_t MaxVolume = 255;
 		/** @brief Hardware limit on the sample count of a single channel */
 		static constexpr std::int32_t MaxSamplesPerChannel = 65534;
+		/**
+		 * @brief Milliseconds a one-shot sample is considered playing past its computed end
+		 *
+		 * Covers the driver's command latency (it looks at its queue every 10 ms) and the rounding of
+		 * the channel's rate, so a sound is not cut off before its last samples were heard.
+		 */
+		static constexpr std::uint64_t SampleEndMarginMs = 20;
 		/**
 		 * @brief Longest sound that is still played on a channel, at half its sample rate
 		 *
@@ -165,6 +178,20 @@ namespace nCine
 			std::int32_t channels[2];
 			/** @brief Playback position kept across a pause, in sample frames */
 			std::int32_t pausedOffset;
+			/**
+			 * @brief Sample frame the channels were keyed on at
+			 *
+			 * The driver always starts a channel at position zero of whatever it is pointed at, so a
+			 * resume after a pause points it further into the sample and every position the hardware
+			 * reports afterwards is relative to this.
+			 */
+			std::int32_t sampleStartOffset;
+			/**
+			 * @brief Time a one-shot sample will have played out, in the millisecond clock, `0` if none
+			 *
+			 * Set when the channels are keyed on and moved when the pitch changes, see @ref isSourcePlaying().
+			 */
+			std::uint64_t sampleEndAt;
 
 			/** @brief Stream handle of a streaming source, `-1` when it has none */
 			std::int32_t streamHandle;
@@ -207,16 +234,27 @@ namespace nCine
 			bool started;
 			/** @brief Whether playback is paused */
 			bool paused;
+			/**
+			 * @brief Whether a stream was stopped for a blocking operation and is to be started again after it
+			 *
+			 * The driver's ring is topped up from @ref updatePlayers(), which a load stops calling for far
+			 * longer than the ring holds, and the channel keeps looping the ring meanwhile - see
+			 * @ref onBlockingOperationBegan(). A source in this state still reports itself as playing.
+			 */
+			bool stoppedForBlocking;
 
 			Source()
-				: attachedBufferId(0), channels { -1, -1 }, pausedOffset(0), streamHandle(-1),
+				: attachedBufferId(0), channels { -1, -1 }, pausedOffset(0), sampleStartOffset(0), sampleEndAt(0), streamHandle(-1),
 					queuedBufferIds {}, numQueued(0), numProcessed(0), headOffset(0), gain(1.0f),
 					pitch(1.0f), relative(false), looping(false), streaming(false), longSample(false),
-					longSamplePos(0), longSampleStagingHalf(0), longSampleDrainedAt(0), started(false), paused(false) {}
+					longSamplePos(0), longSampleStagingHalf(0), longSampleDrainedAt(0), started(false), paused(false),
+					stoppedForBlocking(false) {}
 		};
 
 		/** @brief Whether the sound processor was brought up successfully */
 		bool _initialized;
+		/** @brief Whether a blocking operation is in progress, so no stream is started until it ends */
+		bool _inBlockingOperation;
 		/** @brief All buffers, the id of a buffer is its index plus one */
 		SmallVector<Buffer, 0> _buffers;
 		/** @brief State of every source, indexed by source id minus one */
@@ -252,6 +290,8 @@ namespace nCine
 		void startSample(std::int32_t index, std::int32_t sampleOffset);
 		/** @brief Stops the AICA channels of a source and returns them to the pool */
 		void stopSample(std::int32_t index);
+		/** @brief Starts the stream of a queue-fed source, once it has something queued */
+		void startStream(std::int32_t index);
 		/** @brief Starts the attached long sample of a source on a freshly allocated stream handle */
 		void startLongSample(std::int32_t index, std::int32_t sampleOffset);
 		/** @brief Stops the stream a long sample is playing through and releases its handle */
