@@ -158,7 +158,7 @@
 				"deathShader.compilerPath": {
 					"type": "string",
 					"default": "",
-					"markdownDescription": "Path to the `ShaderCompiler` executable. Relative paths resolve against the workspace folder. Leave empty to auto-detect the usual build outputs (`Sources/Utilities/ShaderCompiler/x64/Release`, `build*/Sources/Utilities/ShaderCompiler`, `out/build/*/...`) and then `PATH`.",
+					"markdownDescription": "Path to the `ShaderCompiler` executable. Relative paths resolve against the workspace folder. Leave empty to auto-detect the usual build outputs (`Sources/Utilities/ShaderCompiler/x64/Release`, `build*/Utilities/ShaderCompiler`, `out/build/*/...`) and then `PATH`.",
 					"scope": "machine-overridable"
 				},
 				"deathShader.validate.enable": {

@@ -168,8 +168,8 @@ build outputs in the workspace → `ShaderCompiler` on `PATH`. The build outputs
 
 - `Sources/Utilities/ShaderCompiler/{x64,ARM64EC,Win32}/{Release,Debug}/` — where the bundled
   `ShaderCompiler.vcxproj` puts it, and where `GenerateAll.ps1` expects it
-- `<build*|cmake-build*>/Sources/Utilities/ShaderCompiler/` — a CMake build tree at the repo root
-- `out/build/<preset>/Sources/Utilities/ShaderCompiler/` — the Visual Studio CMake integration
+- `<build*|cmake-build*>/Utilities/ShaderCompiler/` — a CMake build tree at the repo root
+- `out/build/<preset>/Utilities/ShaderCompiler/` — the Visual Studio CMake integration
 
 The status-bar item on the right shows which executable is in use, or warns when none was found.
 

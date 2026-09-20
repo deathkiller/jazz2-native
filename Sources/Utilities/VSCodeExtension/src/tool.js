@@ -90,9 +90,9 @@ function candidatesForRoot(root) {
 		buildRoots.push(presets[i]);
 	}
 	for (i = 0; i < buildRoots.length; i++) {
-		out.push(path.join(buildRoots[i], 'Sources', 'Utilities', 'ShaderCompiler', EXECUTABLE_NAME));
+		out.push(path.join(buildRoots[i], 'Utilities', 'ShaderCompiler', EXECUTABLE_NAME));
 		for (j = 0; j < configurations.length; j++) {
-			out.push(path.join(buildRoots[i], 'Sources', 'Utilities', 'ShaderCompiler', configurations[j], EXECUTABLE_NAME));
+			out.push(path.join(buildRoots[i], 'Utilities', 'ShaderCompiler', configurations[j], EXECUTABLE_NAME));
 		}
 		out.push(path.join(buildRoots[i], EXECUTABLE_NAME));
 	}

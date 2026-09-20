@@ -99,14 +99,14 @@ cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 @m_class{m-noindent}
 
-The binary lands at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
+The binary lands at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce.
 
 <b>2. Convert.</b> A conversion has **two** inputs --- the original game data and the game's own content,
 none of which is derived from the other --- and they are named separately, so nothing has to be staged
 or copied together first. The second of them is the repository's own @cpp "Content" @ce:
 
 @code{.sh}
-./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContent \
+./build/Utilities/AssetPacker/AssetPacker ./build/ConsoleContent \
     --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=console
 @endcode
 
@@ -531,7 +531,7 @@ tree first as described in @ref consoles-common-content, then make a copy of it
 
 @code{.sh}
 for video in intro ending; do
-    ./build/Sources/Utilities/AssetPacker/AssetPacker recompress-video \
+    ./build/Utilities/AssetPacker/AssetPacker recompress-video \
         "<shared console tree>/Cinematics/$video.j2v" \
         "<n64 content tree>/Cinematics/$video.j2v" --video-downscale=2
 done
@@ -696,7 +696,7 @@ cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
 cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 # 2. Convert, with the Dreamcast profile - NOT "--target=console"
-./build/Sources/Utilities/AssetPacker/AssetPacker ./build/DreamcastContent \
+./build/Utilities/AssetPacker/AssetPacker ./build/DreamcastContent \
     --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=dreamcast
 
 # 3. Prebaked.pak is what makes it a prepared tree; the cinematics have to be the re-encoded ones
@@ -1729,7 +1729,7 @@ cmake -B ./build/ -D CMAKE_BUILD_TYPE=Release
 cmake --build ./build/ --target AssetPacker --parallel $(nproc)
 
 # 2. Convert - the original game data and the game's own content are named separately
-./build/Sources/Utilities/AssetPacker/AssetPacker ./build/ConsoleContentPs2 \
+./build/Utilities/AssetPacker/AssetPacker ./build/ConsoleContentPs2 \
     --source=<path to the original Jazz Jackrabbit 2> --content=./Content --target=ps2
 
 # 3. Prebaked.pak is what makes it a prepared tree
@@ -2085,7 +2085,7 @@ committed, exactly as the other generated shader headers are:
 
 @code{.sh}
 PS3DEV=<prefix> LD_LIBRARY_PATH=<Cg toolkit>/usr/lib64 \
-    ./build/Sources/Utilities/ShaderCompiler/ShaderCompiler --generate-all
+    ./build/Utilities/ShaderCompiler/ShaderCompiler --generate-all
 @endcode
 
 @m_class{m-noindent}

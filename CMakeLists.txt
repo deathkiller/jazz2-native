@@ -106,8 +106,11 @@ endif()
 # repository (see Sources/Utilities/ShaderCompiler/Main.cpp), so the game's own build never runs it. The
 # option behind it is forced off when cross-compiling - the tool runs on the build machine - and defaults
 # to off where nothing would use it, see `NCINE_BUILD_SHADER_COMPILER` in "ncine_options.cmake".
+# The binary directory is given explicitly: without it CMake mirrors the source layout and the tool would be
+# built into "<build>/Sources/Utilities/ShaderCompiler", one level deeper than it needs to be and under a
+# directory that otherwise holds no build output at all.
 if(NCINE_BUILD_SHADER_COMPILER)
-	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler")
+	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler" "Utilities/ShaderCompiler")
 	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()
 
@@ -181,8 +184,9 @@ target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 # AssetPacker: converts original game data ahead of time (see Sources/Utilities/AssetPacker/Main.cpp). Host-only - it is
 # a build tool, so it is skipped for every cross-compiled target, and it links only the base layer and the
 # converters rather than the engine. See `NCINE_BUILD_ASSET_PACKER` in "ncine_options.cmake" for where it's built.
+# The binary directory is given explicitly, for the same reason as `ShaderCompiler` above.
 if(NCINE_BUILD_ASSET_PACKER)
-	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/AssetPacker")
+	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/AssetPacker" "Utilities/AssetPacker")
 	set_target_properties(AssetPacker PROPERTIES FOLDER "Utilities")
 endif()
 

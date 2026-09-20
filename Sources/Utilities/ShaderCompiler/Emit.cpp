@@ -651,13 +651,13 @@ namespace ShaderCompiler
 		// by this header. Including them here rather than leaving it to the umbrella keeps a single generated
 		// header usable on its own.
 		output += "#if defined(WITH_RHI_D3D11)\n";
-		output += "#	include \"D3d11GeneratedShaders.h\"\n";
+		output += "#\tinclude \"D3d11GeneratedShaders.h\"\n";
 		output += "#endif\n";
 		output += "#if defined(WITH_RHI_VULKAN)\n";
-		output += "#	include \"VulkanGeneratedShaders.h\"\n";
+		output += "#\tinclude \"VulkanGeneratedShaders.h\"\n";
 		output += "#endif\n";
 		output += "#if defined(WITH_RHI_METAL)\n";
-		output += "#	include \"MetalGeneratedShaders.h\"\n";
+		output += "#\tinclude \"MetalGeneratedShaders.h\"\n";
 		output += "#endif\n";
 		output += "\n";
 		// The generated shader data namespace carries no public API and is excluded from the API

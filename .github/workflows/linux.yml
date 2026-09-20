@@ -161,7 +161,7 @@ jobs:
       if: matrix.OfflineTools == 'ON' && matrix.CC == 'gcc'
       run: |
         mkdir ./_package_tools/
-        cp -f ./_build/Sources/Utilities/AssetPacker/AssetPacker ./_package_tools/AssetPacker
+        cp -f ./_build/Utilities/AssetPacker/AssetPacker ./_package_tools/AssetPacker
         cp -f ./LICENSE ./_package_tools/LICENSE
 
     - name: 'Upload Package (AssetPacker)'

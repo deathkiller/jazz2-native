@@ -58,6 +58,18 @@ endif()
 if(TARGET ZLIB::ZLIB)
 	target_link_libraries(AssetPacker PRIVATE ZLIB::ZLIB)
 	target_compile_definitions(AssetPacker PRIVATE "WITH_ZLIB")
+
+	# The prebuilt Windows zlib is a DLL, and the deployment step in "ncine_extra_sources.cmake" copies the
+	# runtime dependencies next to the game only, so the tool has to bring its own copy - without it the
+	# executable doesn't even start. The imported target is a static library or an interface on every other
+	# platform, where `$<TARGET_FILE:>` would point at something that must not be deployed.
+	get_target_property(_zlibTargetType ZLIB::ZLIB TYPE)
+	if(WIN32 AND NCINE_COPY_DEPENDENCIES AND _zlibTargetType STREQUAL "SHARED_LIBRARY")
+		add_custom_command(TARGET AssetPacker POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:ZLIB::ZLIB>" "$<TARGET_FILE_DIR:AssetPacker>"
+			VERBATIM)
+	endif()
+	unset(_zlibTargetType)
 endif()
 if(TARGET Threads::Threads)
 	target_link_libraries(AssetPacker PRIVATE Threads::Threads)

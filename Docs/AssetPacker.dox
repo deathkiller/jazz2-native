@@ -27,7 +27,7 @@ The tool is host-only --- it is built by default as part of the desktop CMake bu
 (`NCINE_BUILD_ASSET_PACKER`, default @cpp ON @ce) and skipped for every cross-compiled
 target. It links only the base layer and the original-data converters, deliberately not the
 engine, so it has no renderer, no window backend and no networking. After a regular
-@ref building "desktop build" the binary is at @cpp "build/Sources/Utilities/AssetPacker/AssetPacker" @ce.
+@ref building "desktop build" the binary is at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce.
 
 @section asset-packer-usage Command-line reference
 

@@ -4346,11 +4346,11 @@ R"GLSL(void main()
 		{
 			lines.push_back({ "#ifdef GL_ES", 0 });
 			if (src.FragmentPrecision == "highp"_s) {
-				lines.push_back({ "#\tifdef GL_FRAGMENT_PRECISION_HIGH", 0 });
+				lines.push_back({ "#ifdef GL_FRAGMENT_PRECISION_HIGH", 0 });
 				lines.push_back({ "precision highp float;", 0 });
-				lines.push_back({ "#\telse", 0 });
+				lines.push_back({ "#else", 0 });
 				lines.push_back({ "precision mediump float;", 0 });
-				lines.push_back({ "#\tendif", 0 });
+				lines.push_back({ "#endif", 0 });
 			} else {
 				lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
 			}
