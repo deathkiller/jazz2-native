@@ -331,18 +331,36 @@ namespace nCine::Backends
 				continue;
 			}
 
-			// Only a STABLE or FINDCTP1 port has a controller that can be read; everything else is a port
-			// still negotiating, or empty
+			// Only an EMPTY port is a disconnection. Everything else the port reports on its way to a
+			// readable pad - FINDPAD while it looks for one, EXECCMD while it runs the mode change
+			// RequestAnalogMode() asks for below - is transient, and reporting it as a disconnection made
+			// the port flap: OnJoyConnected fired fourteen times over the first 1.6 s, and the pad's own
+			// analogue-mode request was the thing causing most of it.
 			const std::int32_t state = padGetState(int(i), 0);
-			if (state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1) {
+			if (state == PAD_STATE_DISCONN || state == PAD_STATE_ERROR) {
 				handleConnection(i, false);
 				_pads[i].AnalogRequested = false;
+				continue;
+			}
+			// A controller that can actually be read is either STABLE or, for a PlayStation 1 pad, parked
+			// in FINDCTP1 - which is why that one is a readable state rather than a stage on the way to
+			// one. Anything else is left exactly as it was and simply not polled this frame.
+			if (state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1) {
 				continue;
 			}
 
 			padButtonStatus status;
 			if (padRead(int(i), 0, &status) == 0) {
-				handleConnection(i, false);
+				continue;
+			}
+
+			// The mode byte names the kind of pad the packet came from (4 = digital, 7 = DualShock), and a
+			// zero there is a packet the port filled in before it had one - not a reading. Believing it is
+			// expensive, because the button word is ACTIVE LOW: the zeroes such a packet is full of invert
+			// into EVERY BUTTON PRESSED. That is how the game used to skip its own intro and then quit
+			// itself from the main menu a minute later, and it is also what a loader's in-game-reset hook
+			// sees when it watches the same pad for its own button combination.
+			if ((status.mode >> 4) == 0) {
 				continue;
 			}
 			handleConnection(i, true);
