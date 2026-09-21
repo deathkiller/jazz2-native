@@ -97,9 +97,10 @@ if(WIN32)
 	endif()
 endif()
 
-ncine_apply_compiler_options(${NCINE_APP} DISABLE_RTTI)
-
 if(EMSCRIPTEN)
+	# Emscripten requires RTTI for `emscripten::val` used in `EmscriptenFileStream`
+	ncine_apply_compiler_options(${NCINE_APP})
+
 	set(EMSCRIPTEN_LINKER_OPTIONS
 		"SHELL:-s WASM=1"
 		"SHELL:-s ASYNCIFY=1"
@@ -166,6 +167,9 @@ if(EMSCRIPTEN)
 	
 	target_link_libraries(${NCINE_APP} PUBLIC idbfs.js)
 	target_link_libraries(${NCINE_APP} PUBLIC websocket.js)
+else()
+	# Build it without RTTI to reduce binary size and improve performance
+	ncine_apply_compiler_options(${NCINE_APP} DISABLE_RTTI)
 endif()
 
 if(MSVC)

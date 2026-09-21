@@ -974,7 +974,7 @@ namespace Jazz2::Compatibility
 	}
 
 	JJ2Anims::ImageContentDecoder::ImageContentDecoder()
-		: _index{}, _px{ 0, 0, 0, 255 }, _run(0)
+		: _index{}, _px{0, 0, 0, 255}, _run(0)
 	{
 	}
 

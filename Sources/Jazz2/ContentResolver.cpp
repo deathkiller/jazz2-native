@@ -1590,22 +1590,31 @@ namespace Jazz2
 		return _cachedGraphics.emplace(Pair(String(path), cacheKeyOffset), std::move(graphics)).first->second.get();
 	}
 
-	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
+	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
+		std::int32_t channelCount, bool contentEndsStream)
 	{
-		// The image content runs to the end of the file, so it is read into memory in one go and decoded
+		// When the image content runs to the end of the file, it is read into memory in one go and decoded
 		// from there: the decoder works a byte at a time, and a byte through the stream is a virtual call
 		// (through a buffer, but a call all the same) where a byte from memory is a load. A sheet of a few
 		// hundred thousand pixels took hundreds of milliseconds through the stream on the Nintendo 64, in
 		// the middle of a frame when a deferred animation was first used. Falls back to the stream when
 		// the copy cannot be placed - a level in progress may not have the contiguous room.
-		const std::int64_t remaining = s->GetSize() - s->GetPosition();
-		if (remaining > 0 && remaining <= 2 * 1024 * 1024) {
-			std::unique_ptr<std::uint8_t[]> content(new (std::nothrow) std::uint8_t[std::size_t(remaining)]);
-			if (content != nullptr && s->Read(content.get(), remaining) == remaining) {
-				Compatibility::JJ2Anims::ImageContentDecoder decoder;
-				const std::uint8_t* src = content.get();
-				decoder.Decode(src, content.get() + remaining, data, width * height, channelCount);
-				return;
+		//
+		// The encoded length of the image is not known in advance, so the copy runs to the end of the stream
+		// and the surplus cannot be given back - a compressed stream out of a .pak cannot seek backwards at
+		// all. So when something follows the image it is decoded through the stream instead, which is the
+		// only way to leave the position exactly at its end. That surplus silently cost the episode
+		// background images, which are read right after the title one.
+		if (contentEndsStream) {
+			const std::int64_t remaining = s->GetSize() - s->GetPosition();
+			if (remaining > 0 && remaining <= 2 * 1024 * 1024) {
+				std::unique_ptr<std::uint8_t[]> content(new (std::nothrow) std::uint8_t[std::size_t(remaining)]);
+				if (content != nullptr && s->Read(content.get(), remaining) == remaining) {
+					Compatibility::JJ2Anims::ImageContentDecoder decoder;
+					const std::uint8_t* src = content.get();
+					decoder.Decode(src, content.get() + remaining, data, width * height, channelCount);
+					return;
+				}
 			}
 		}
 		// The decoder lives next to the encoder that produced the file, so the two can't drift apart
@@ -2480,21 +2489,6 @@ namespace Jazz2
 		s->Read(episode.NextEpisode.data(), nameLength);
 
 		if (withImages && !_isHeadless) {
-			std::uint16_t titleWidth = s->ReadValueAsLE<std::uint16_t>();
-			std::uint16_t titleHeight = s->ReadValueAsLE<std::uint16_t>();
-			if (titleWidth > 0 && titleHeight > 0) {
-				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(titleWidth * titleHeight);
-				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4);
-
-				episode.TitleImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
-				episode.TitleImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
-				episode.TitleImage->SetMinFiltering(SamplerFilter::Nearest);
-				episode.TitleImage->SetMagFiltering(SamplerFilter::Nearest);
-			}
-
-			std::uint16_t backgroundWidth = s->ReadValueAsLE<std::uint16_t>();
-			std::uint16_t backgroundHeight = s->ReadValueAsLE<std::uint16_t>();
-			
 			// Every episode carries a full-colour backdrop of around half a megabyte of video memory once
 			// padded, and the episode list keeps all of them loaded at once. That does not fit next to the
 			// rest of the menu on a console with a few megabytes of it, where they would either fail to
@@ -2515,14 +2509,33 @@ namespace Jazz2
 #else
 			constexpr bool LoadEpisodeBackgrounds = true;
 #endif
-			if (LoadEpisodeBackgrounds && backgroundWidth > 0 && backgroundHeight > 0) {
-				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(backgroundWidth * backgroundHeight);
-				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
 
-				episode.BackgroundImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, backgroundWidth, backgroundHeight);
-				episode.BackgroundImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
-				episode.BackgroundImage->SetMinFiltering(SamplerFilter::Linear);
-				episode.BackgroundImage->SetMagFiltering(SamplerFilter::Linear);
+			std::uint16_t titleWidth = s->ReadValueAsLE<std::uint16_t>();
+			std::uint16_t titleHeight = s->ReadValueAsLE<std::uint16_t>();
+			if (titleWidth > 0 && titleHeight > 0) {
+				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(titleWidth * titleHeight);
+				// The background image follows this one, so the read must stop exactly at its end - unless the
+				// background is skipped on this platform, in which case nothing after it is read at all
+				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4, !LoadEpisodeBackgrounds);
+
+				episode.TitleImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
+				episode.TitleImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
+				episode.TitleImage->SetMinFiltering(SamplerFilter::Nearest);
+				episode.TitleImage->SetMagFiltering(SamplerFilter::Nearest);
+			}
+
+			if constexpr (LoadEpisodeBackgrounds) {
+				std::uint16_t backgroundWidth = s->ReadValueAsLE<std::uint16_t>();
+				std::uint16_t backgroundHeight = s->ReadValueAsLE<std::uint16_t>();
+				if (backgroundWidth > 0 && backgroundHeight > 0) {
+					std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(backgroundWidth * backgroundHeight);
+					ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
+
+					episode.BackgroundImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, backgroundWidth, backgroundHeight);
+					episode.BackgroundImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
+					episode.BackgroundImage->SetMinFiltering(SamplerFilter::Linear);
+					episode.BackgroundImage->SetMagFiltering(SamplerFilter::Linear);
+				}
 			}
 		}
 

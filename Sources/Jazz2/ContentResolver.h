@@ -427,7 +427,10 @@ namespace Jazz2
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		// Reads just the frame size out of a sheet's header, for a deferred metadata's bounding box
 		bool ReadAuraFrameDimensions(StringView path, Vector2i& frameDimensions);
-		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
+		// `contentEndsStream` states that the image is the last thing in the stream, which lets it be read into
+		// memory in one go; pass `false` when anything follows it, so the position is left right after the image
+		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
+			std::int32_t channelCount, bool contentEndsStream = true);
 		// Copies a tile's edge pixels into its 1px atlas padding (so sampling never bleeds across tiles); `bytesPerPixel`
 		// is 1 for an indexed (R8) atlas or 4 for a baked RGBA atlas
 		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel);
