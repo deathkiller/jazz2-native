@@ -1182,13 +1182,26 @@ namespace ShaderCompiler
 					return;
 				}
 
+				if (field == "texture_repeat"_s) {
+					if (rhs == nullptr || rhs->Kind != ExprKind::BoolLit) {
+						Fail("p.texture_repeat takes a bool literal (true or false)"_s);
+						return;
+					}
+					if (!(NamesTarget(FixedFunctionTarget::Rdp) && _targets.size() == 1)) {
+						Fail("p.texture_repeat is an RDP-only capability (hardware texture wrap on the tile descriptor), so it is only available in a fixed_function(rdp) block"_s);
+						return;
+					}
+					out += indent + passName + ".TextureRepeat = "_s + rhs->Text + ";\n"_s;
+					return;
+				}
+
 				Ty expected;
 				const char* member;
 				if (field == "color"_s) { expected = Ty::Vec4; member = "Color"; }
 				else if (field == "offset_color"_s) { expected = Ty::Vec3; member = "OffsetColor"; }
 				else if (field == "screen_offset"_s) { expected = Ty::Vec2; member = "ScreenOffset"; }
 				else {
-					Fail("unknown pass field '."_s + field + "' (fields: color, offset_color, screen_offset, blend, tev, luma_gain)"_s);
+					Fail("unknown pass field '."_s + field + "' (fields: color, offset_color, screen_offset, blend, tev, luma_gain, texture_repeat)"_s);
 					return;
 				}
 				Ty rhsTy;

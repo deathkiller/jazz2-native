@@ -92,7 +92,7 @@ namespace nCine::RHI::RDP
 		return _pixels;
 	}
 
-	bool RdpTexture::AllocatePixels(std::size_t size)
+	bool RdpTexture::AllocatePixels(std::size_t size, bool clear)
 	{
 		FreePixels();
 		if (size == 0) {
@@ -104,7 +104,9 @@ namespace nCine::RHI::RDP
 			return false;
 		}
 		_pixelsSize = size;
-		std::memset(_pixels, 0, size);
+		if (clear) {
+			std::memset(_pixels, 0, size);
+		}
 		return true;
 	}
 
@@ -143,8 +145,11 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	void RdpTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height)
+	void RdpTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height, bool clear)
 	{
+		// `clear` is false when the caller uploads the whole image right after (TexImage2D with data):
+		// zero-filling a store that is then overwritten costs ~5.5 cycles a byte of pure memory traffic
+		// here, which for a sprite sheet read in mid-frame was a third of the texture's cost
 		if (format == _format && width == _width && height == _height) {
 			return;
 		}
@@ -154,6 +159,7 @@ namespace nCine::RHI::RDP
 		_uploadFormat = format;
 		_width = width;
 		_height = height;
+		_storeIa16 = false;
 		_bytesPerPixel = BytesPerPixel(format);
 		FreePixels();
 
@@ -166,8 +172,10 @@ namespace nCine::RHI::RDP
 				_texFormat = FMT_CI8;
 				EnsureStore();
 				if (_store != nullptr) {
-					std::memset(_store, 0, _storeSize);
-					data_cache_hit_writeback(_store, _storeSize);
+					if (clear) {
+						std::memset(_store, 0, _storeSize);
+						data_cache_hit_writeback(_store, _storeSize);
+					}
 					_storeValid = true;
 				}
 				break;
@@ -177,7 +185,7 @@ namespace nCine::RHI::RDP
 				_strideBytes = width * _bytesPerPixel;
 				_storeStride = AlignRow(width * 2);
 				_texFormat = FMT_RGBA16;
-				AllocatePixels(std::size_t(RawPixelsSize()));
+				AllocatePixels(std::size_t(RawPixelsSize()), clear);
 				break;
 			case PixelFormat::RGBA8:
 			case PixelFormat::RGB8:
@@ -193,8 +201,8 @@ namespace nCine::RHI::RDP
 				_strideBytes = width * _bytesPerPixel;
 				_storeStride = AlignRow(width * 2);
 				_texFormat = FMT_RGBA16;
-				if (!_isRenderTarget) {
-					AllocatePixels(std::size_t(RawPixelsSize()));
+				if (!_isRenderTarget && !_directUpload) {
+					AllocatePixels(std::size_t(RawPixelsSize()), clear);
 				}
 				break;
 			default:
@@ -236,6 +244,9 @@ namespace nCine::RHI::RDP
 		// the comments there for why texel channels are read positionally
 		switch (_uploadFormat) {
 			case PixelFormat::RGBA8:
+				if (_storeIa16) {
+					return std::uint16_t((std::uint16_t(texel[0]) << 8) | texel[3]);
+				}
 				return Pack5551(texel[0], texel[1], texel[2], texel[3]);
 			case PixelFormat::RGB8:
 				return Pack5551(texel[0], texel[1], texel[2], 255);
@@ -258,43 +269,68 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	void RdpTexture::RefreshStore()
+	void RdpTexture::ConvertToStore(const std::uint8_t* src, std::int32_t srcStride)
 	{
-		const bool storeExisted = (_store != nullptr);
-		if (!EnsureStore()) {
-			return;
+
+		/*
+			RGBA16 has ONE bit of alpha, which turns a soft sprite - the menu's selection glow, an explosion's
+			halo, anything drawn with a gradient alpha - into a hard-edged cutout. The RDP's IA16 format has
+			eight bits of alpha next to eight of intensity, at the same 16 bits per texel, so a texture whose
+			colour is grey everywhere (r = g = b) loses nothing by living there and gains its alpha ramp; the
+			draw's PRIM colour tints it exactly like the RGBA form. Decided when the image first reaches the
+			store, from the host copy, and only when some texel actually has an in-between alpha - a cutout
+			gains nothing. Render targets and the palette are never routed here.
+		*/
+		if (_uploadFormat == PixelFormat::RGBA8 && !_isRenderTarget && !_isPaletteTexture && !_storeIa16) {
+			bool grey = true, softAlpha = false;
+			for (std::int32_t y = 0; y < _height && grey; y++) {
+				const std::uint8_t* row = src + std::size_t(y) * srcStride;
+				for (std::int32_t x = 0; x < _width; x++) {
+					const std::uint8_t r = row[x * 4], g = row[x * 4 + 1], b = row[x * 4 + 2], a = row[x * 4 + 3];
+					if (r != g || g != b) {
+						grey = false;
+						break;
+					}
+					if (a != 0 && a != 255) {
+						softAlpha = true;
+					}
+				}
+			}
+			if (grey && softAlpha) {
+				_storeIa16 = true;
+				_texFormat = FMT_IA16;
+				_surface = surface_make(_store, FMT_IA16, std::uint16_t(_width), std::uint16_t(_height), std::uint16_t(_storeStride));
+			}
 		}
-		if (_pixels == nullptr) {
-			// The host copy was released after the first conversion (below); the store is the only copy
-			// from then on and sub-uploads convert straight into it, so there is nothing to reconvert
-			_storeValid = storeExisted;
-			return;
-		}
-		// The store's previous contents may still be DMAed by the in-flight frame
-		WaitIfInFlight(_lastSampledFrame);
 
 		// Convert the host image to RGBA5551. TEXEL data is a byte sequence r,g,b,a (the loaders and
 		// ContentResolver write image channels byte-wise), so it is extracted positionally - exactly like
 		// the GX backend's RGBA8 tiling on the other big-endian console. Only PALETTE entries are
 		// value-packed uint32 words instead (see EnsureBakedStore below).
 		for (std::int32_t y = 0; y < _height; y++) {
-			const std::uint8_t* src = _pixels + std::size_t(y) * _strideBytes;
+			const std::uint8_t* row = src + std::size_t(y) * srcStride;
 			std::uint16_t* dst = reinterpret_cast<std::uint16_t*>(_store + std::size_t(y) * _storeStride);
 			switch (_uploadFormat) {
 				case PixelFormat::RGBA8:
-					for (std::int32_t x = 0; x < _width; x++) {
-						dst[x] = Pack5551(src[x * 4], src[x * 4 + 1], src[x * 4 + 2], src[x * 4 + 3]);
+					if (_storeIa16) {
+						for (std::int32_t x = 0; x < _width; x++) {
+							dst[x] = std::uint16_t((std::uint16_t(row[x * 4]) << 8) | row[x * 4 + 3]);
+						}
+					} else {
+						for (std::int32_t x = 0; x < _width; x++) {
+							dst[x] = Pack5551(row[x * 4], row[x * 4 + 1], row[x * 4 + 2], row[x * 4 + 3]);
+						}
 					}
 					break;
 				case PixelFormat::RGB8:
 					for (std::int32_t x = 0; x < _width; x++) {
-						dst[x] = Pack5551(src[x * 3], src[x * 3 + 1], src[x * 3 + 2], 255);
+						dst[x] = Pack5551(row[x * 3], row[x * 3 + 1], row[x * 3 + 2], 255);
 					}
 					break;
 				case PixelFormat::RGB565: {
 					// Engine-packed 565 values in native (big-endian) words; the green LSB is dropped
 					// (blue's five bits move up whole, see PackStoreTexel)
-					const std::uint16_t* src16 = reinterpret_cast<const std::uint16_t*>(src);
+					const std::uint16_t* src16 = reinterpret_cast<const std::uint16_t*>(row);
 					for (std::int32_t x = 0; x < _width; x++) {
 						const std::uint16_t v = src16[x];
 						dst[x] = std::uint16_t(((v >> 11) << 11) | (((v >> 6) & 0x1F) << 6) | ((v & 0x1F) << 1) | 1);
@@ -303,11 +339,11 @@ namespace nCine::RHI::RDP
 				}
 				case PixelFormat::RGB5A1: {
 					// Same bit layout as the hardware format
-					std::memcpy(dst, src, std::size_t(_width) * 2);
+					std::memcpy(dst, row, std::size_t(_width) * 2);
 					break;
 				}
 				case PixelFormat::RGBA4: {
-					const std::uint16_t* src16 = reinterpret_cast<const std::uint16_t*>(src);
+					const std::uint16_t* src16 = reinterpret_cast<const std::uint16_t*>(row);
 					for (std::int32_t x = 0; x < _width; x++) {
 						const std::uint16_t v = src16[x];
 						const std::uint8_t r = std::uint8_t(((v >> 12) & 0xF) * 17);
@@ -325,6 +361,23 @@ namespace nCine::RHI::RDP
 		data_cache_hit_writeback(_store, _storeSize);
 		RdpDevice::TraceStoreRebuild(std::uint32_t(_storeSize), false);
 		_storeValid = true;
+	}
+
+	void RdpTexture::RefreshStore()
+	{
+		const bool storeExisted = (_store != nullptr);
+		if (!EnsureStore()) {
+			return;
+		}
+		if (_pixels == nullptr) {
+			// The host copy was released after the first conversion (below); the store is the only copy
+			// from then on and sub-uploads convert straight into it, so there is nothing to reconvert
+			_storeValid = storeExisted;
+			return;
+		}
+		// The store's previous contents may still be DMAed by the in-flight frame
+		WaitIfInFlight(_lastSampledFrame);
+		ConvertToStore(_pixels, _strideBytes);
 
 		// The image has reached the form the RDP samples, and getting here proves the texture is sampled
 		// rather than read as a palette - the one role a host copy of a direct-color texture serves (see
@@ -527,7 +580,25 @@ namespace nCine::RHI::RDP
 		if (level != 0) {
 			return;		// Level 0 only
 		}
-		Allocate(format, width, height);
+		// A whole direct-colour image with its data is converted straight from the caller's buffer into the
+		// RDP store: the linear host copy Allocate() would have made is a second full-size block (four bytes
+		// a texel) that was freed again right after the same conversion, and on this heap it was the block
+		// that could not be found once a few levels had been loaded - a 256x512 menu image simply went
+		// missing. The palette texture keeps its host copy (the device reads it), render targets have none.
+		const bool direct = (data != nullptr && !_isPaletteTexture && !_isRenderTarget &&
+			(format == PixelFormat::RGBA8 || format == PixelFormat::RGB8 || format == PixelFormat::RGB565 ||
+			 format == PixelFormat::RGB5A1 || format == PixelFormat::RGBA4));
+		_directUpload = direct;
+		Allocate(format, width, height, data == nullptr);
+		_directUpload = false;
+		if (direct) {
+			FreePixels();
+			if (EnsureStore()) {
+				WaitIfInFlight(_lastSampledFrame);
+				ConvertToStore(static_cast<const std::uint8_t*>(data), width * BytesPerPixel(format));
+			}
+			return;
+		}
 		if (data != nullptr) {
 			TexSubImage2D(0, 0, 0, width, height, format, bgr, data);
 			return;

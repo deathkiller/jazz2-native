@@ -261,7 +261,17 @@ namespace Jazz2::Rendering
 		// sixth 67x40 = 2680 texels, fewer even than the PSP's 80x46, and the device pass over the padded
 		// texture drops with it (see ApplyPendingSoftwareLighting, which converts only the live part).
 		constexpr std::int32_t Scale = 6;
-#elif defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+#elif defined(DEATH_TARGET_N64)
+		// One twelfth: a 27x20 map for the 320x240 output. The 93 MHz CPU resets, splats and (in the
+		// device) converts every texel, and the cost is the lit texel count, which made this the most
+		// variable item of a frame in the torch-lit castle levels - 6.5 ms of a 48 ms frame at one
+		// quarter, and still 2.5 to over 10 ms at one eighth depending on how many lights were in view.
+		// The map is stretched over the screen with bilinear filtering and every light is a smooth cubic
+		// falloff spanning eight-plus texels even here, so a coarser map only softens the light edges.
+		// It also keeps the map under 1.1 KB of IA16, which fits TMEM in one load instead of being
+		// blitted in chunks.
+		constexpr std::int32_t Scale = 12;
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
@@ -274,9 +284,6 @@ namespace Jazz2::Rendering
 		// to the storage mode's page geometry. At half resolution a 640x448 viewport wants a 512x256 PSMT8
 		// surface - 16 pages of the very local memory the texture cache is short of, and 128 KB across the
 		// bus every frame. At quarter it is 256x128, which is four pages and 32 KB.
-		//
-		// The Nintendo 64's 93 MHz VR4300 is slower even than the Allegrex, but its 320x240 output keeps
-		// the absolute size small on its own: the quarter-resolution map is 80x60 texels.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;

@@ -678,8 +678,8 @@
 					}
 				},
 				{
-					"comment": "The remaining pass fields: color (vec4), offset_color (vec3), screen_offset (vec2), luma_gain (float). All of them are write-only, so requiring the assignment is exact rather than merely defensive.",
-					"match": "(\\.)(color|offset_color|screen_offset|luma_gain)\\s*(?=[-+*/]?=[^=])",
+					"comment": "The remaining pass fields: color (vec4), offset_color (vec3), screen_offset (vec2), luma_gain (float), texture_repeat (bool, RDP only). All of them are write-only, so requiring the assignment is exact rather than merely defensive.",
+					"match": "(\\.)(color|offset_color|screen_offset|luma_gain|texture_repeat)\\s*(?=[-+*/]?=[^=])",
 					"captures": {
 						"1": {
 							"name": "punctuation.accessor.deathshader"

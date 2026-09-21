@@ -1075,10 +1075,11 @@ namespace
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
 #	elif defined(DEATH_TARGET_PS2)
-			// An SD card in an MX4SIO adapter, if the game was booted from one, is both larger and faster
-			// than any memory card and already holds the content, so it wins outright - and a console with
-			// no memory card in it at all can then still save. The directory needs no creating: it is the
-			// one the content was found under (see ContentResolver::GetWritablePath()).
+			// Removable storage - a USB stick, or an SD card in an MX4SIO adapter - if the game was booted
+			// from one, is both larger and faster than any memory card and already holds the content, so it
+			// wins outright, and a console with no memory card in it at all can then still save. The
+			// directory needs no creating: it is the one the content was found under (see
+			// ContentResolver::GetWritablePath()).
 			//
 			// Otherwise the situation is the Dreamcast's: the game runs from a disc, so the only writable
 			// storage is a memory card. Once a slot has been probed, MCMAN serves it through the original
@@ -1222,8 +1223,9 @@ namespace
 #		elif defined(DEATH_TARGET_PS2)
 		// The only channel here by default is the EE's SIO register, which needs a serial cable to read, so a
 		// file is worth much more than on the consoles above. Conditional because the usual writable storage
-		// is a memory card, which is no place for a log - only an MX4SIO card gets one, which is exactly when
-		// `configDir` is that card. The SIO output stays on either way.
+		// is a memory card, which is no place for a log - only removable storage (a USB stick, or a card in
+		// an MX4SIO adapter) gets one, which is exactly when `configDir` is on it. The SIO output stays on
+		// either way.
 		if (!ContentResolver::Get().GetWritablePath().empty()) {
 #			if defined(DEATH_TRACE_LOG_PATH)
 			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));

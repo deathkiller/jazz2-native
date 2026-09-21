@@ -512,6 +512,7 @@ Field | Type | Meaning
 `p.offset_color` | `vec3` | post-texture additive term (the PVR offset colour; the GX runs a silhouette pass instead; the GU expands the pass into modulate + additive silhouette, which is the same result). Writing it is what enables it, and what sets `usesOffsetColor`
 `p.screen_offset` | `vec2` | displacement of the whole quad in the quad's own coordinate space (the Outline ring taps)
 `p.luma_gain` | `float` | how much `LUMA_RAMP` amplifies the texel's luminance before saturating it; ignored by every other preset
+`p.texture_repeat` | `bool` literal | RDP only: the pass samples with hardware wrap along S (a mask on the tile descriptor), so texture-unit coordinates outside [0, 1] repeat instead of the strip being cut into pieces at the texture's edges --- accepted only in a `fixed_function(rdp)` block. It only ever *adds* wrapping: a texture whose own sampler asks to repeat and whose whole image fits the backend's texture-memory budget is wrapped on both axes anyway, without any pass saying so
 `p.blend` | enum | blend override for this pass
 `p.tev` | enum | GX combiner preset --- portable intent, the PVR always modulates and the GE only knows `MODULATE` and `SILHOUETTE`
 

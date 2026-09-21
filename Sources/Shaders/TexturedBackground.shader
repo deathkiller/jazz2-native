@@ -113,7 +113,7 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, gu, gs, rdp) {
+void fixed_function(pvr, gu, gs) {
 	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader). These consoles
 	// take the include exactly as it is, with the tint macro left UNDEFINED. The PVR, the GE and the GS
 	// cannot lerp a texel toward a colour at all (the PVR only modulates and adds, and the GE's
@@ -121,6 +121,19 @@ void fixed_function(pvr, gu, gs, rdp) {
 	// but it stays on this tier so the band geometry keeps ONE shared body instead of a second copy of
 	// the gx specialization. So the horizon tint stays a second gradient pass over each band, which is
 	// the include's default delivery and the only thing the gx block below changes.
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(rdp) {
+	// The same rebuild, but each band goes out as ONE strip: the RDP wraps texture coordinates in
+	// hardware (a mask on the tile descriptor), so the band's unwrapped U span is sampled straight
+	// from the 256-texel row window instead of being cut into up to eight pieces at the texture's
+	// edges. That is ~130 strips a frame down to ~64, on a CPU where every strip costs more than the
+	// RDP's time to draw it. The horizon tint rides the band's own strip as a per-vertex colour through
+	// the TINT_MIX combiner, exactly like the GX block: one strip per band instead of a textured one
+	// and a gradient one, and no combiner change between them.
+#define WARP_TEXTURE_REPEAT
+#define WARP_TINT_IN_VERTEX_COLOR
 #include "Include/TexturedBackgroundWarp.inc"
 }
 

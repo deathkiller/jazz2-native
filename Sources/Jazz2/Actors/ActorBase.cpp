@@ -138,6 +138,15 @@ namespace Jazz2::Actors
 	void ActorBase::OnUpdateHitbox()
 	{
 		if (_metadata != nullptr) {
+			if DEATH_UNLIKELY(_metadata->BoundingBox == Vector2i(ContentResolver::InvalidValue, ContentResolver::InvalidValue)) {
+				// A metadata without a box (a deferred one whose first sheet could not be read) falls back to
+				// the sprite that is showing, like the box would have been derived from the first sheet
+				// otherwise; INT_MAX passed on as a size made a hitbox a billion pixels wide
+				if (_currentAnimation != nullptr && _currentAnimation->Base != nullptr) {
+					UpdateHitbox(_currentAnimation->Base->FrameDimensions.X - 2, _currentAnimation->Base->FrameDimensions.Y - 2);
+				}
+				return;
+			}
 			UpdateHitbox(_metadata->BoundingBox.X, _metadata->BoundingBox.Y);
 		}
 	}

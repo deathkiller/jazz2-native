@@ -104,7 +104,10 @@ extern "C" {
 #	endif
 #elif defined(DEATH_TARGET_VITA)
 #	include <psp2/kernel/openpsid.h>
-#elif !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_N64)
+#elif defined(DEATH_TARGET_N64)
+#	include <backtrace.h>
+#	include <n64sys.h>
+#elif !defined(DEATH_TARGET_GAMECUBE)
 #	include <unistd.h>
 #endif
 
@@ -1320,6 +1323,11 @@ namespace nCine
 			but it can say what happened first, and `std::set_new_handler` is the only hook the standard
 			gives for it.
 		*/
+#if defined(DEATH_TARGET_N64)
+		/** @brief Size of the allocation that is failing, set by the `operator new` replacement below for the report */
+		std::size_t FailedAllocationSize = 0;
+#endif
+
 		void ReportFailedAllocation()
 		{
 #if defined(DEATH_TARGET_3DS)
@@ -1334,6 +1342,21 @@ namespace nCine
 			// how much of it the content had taken is not guessable from the failure itself
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
 			Backends::DcPlatform::LogMemoryStatus("allocation failed");
+#elif defined(DEATH_TARGET_N64)
+			// 8 MB of RDRAM in total, and what failed is nearly always a contiguous block that the
+			// fragmented heap could not place rather than the heap being full - the two look identical
+			// without the numbers. The requested size comes from the `operator new` replacement below;
+			// the backtrace is logged as raw return addresses (no symbol table is embedded in the ROM),
+			// resolved offline with `mips64-elf-addr2line -f -C -e build/n64/jazz2.elf <pc>`.
+			heap_stats_t stats;
+			sys_get_heap_stats(&stats);
+			LOGF("Out of memory: an allocation of {} bytes failed and the process cannot continue ({} bytes used, {} free of {}, {} free in holes, fragmentation {})",
+				FailedAllocationSize, stats.used, stats.free, stats.total, stats.fragmented, stats.fragmentation);
+			void* frames[24];
+			const std::int32_t frameCount = backtrace(frames, std::int32_t(arraySize(frames)));
+			for (std::int32_t i = 0; i < frameCount; i++) {
+				LOGF("  #{} 0x{:x}", i, std::uintptr_t(frames[i]));
+			}
 #else
 			// The handler is called in a loop until the allocation succeeds, so it must not return
 			LOGF("Out of memory: an allocation failed and the process cannot continue");
@@ -1341,7 +1364,51 @@ namespace nCine
 			std::abort();
 		}
 	}
+}
 
+#if defined(DEATH_TARGET_N64)
+// The standard `operator new` calls the new-handler without telling it what size failed, and on this
+// console the size is the diagnosis (see ReportFailedAllocation). These replace the library ones with the
+// same malloc-backed behavior, remembering the size before reporting. `operator delete` stays the default,
+// which frees with `free()` - the same allocator, so the pairing holds.
+void* operator new(std::size_t size)
+{
+	void* p = std::malloc(size != 0 ? size : 1);
+	if (p == nullptr) {
+		nCine::FailedAllocationSize = size;
+		nCine::ReportFailedAllocation();
+	}
+	return p;
+}
+
+void* operator new[](std::size_t size)
+{
+	void* p = std::malloc(size != 0 ? size : 1);
+	if (p == nullptr) {
+		nCine::FailedAllocationSize = size;
+		nCine::ReportFailedAllocation();
+	}
+	return p;
+}
+
+// The nothrow forms are what the deferred resource loads use (a sprite sheet or a sound read in
+// mid-level, see ContentResolver::RequestGraphicsAura). The library's versions call the throwing
+// `operator new` and catch `bad_alloc`, which with the replacement above would abort instead of
+// returning null - so these go to the allocator directly and hand the failure back to the caller,
+// which has a recoverable answer (a missing sprite) where the process does not
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept
+{
+	return std::malloc(size != 0 ? size : 1);
+}
+
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept
+{
+	return std::malloc(size != 0 ? size : 1);
+}
+#endif
+
+namespace nCine
+{
 	void Application::InitCommon()
 	{
 		TracyGpuContext;

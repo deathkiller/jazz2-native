@@ -327,6 +327,8 @@ namespace nCine::RHI::RDP
 		std::size_t _storeSize;
 		std::int32_t _storeStride;
 		std::int32_t _texFormat;			// tex_format_t of the store (int to keep libdragon out of most includes)
+		bool _directUpload = false;			// TexImage2D converting the caller's data straight into the store (no host copy)
+		bool _storeIa16 = false;			// The store holds IA16 (8-bit intensity + 8-bit alpha) instead of RGBA16, see RefreshStore()
 		surface_t _surface;
 		bool _storeValid;
 		// Whether MapStreamingTexels() handed the store out and its cache lines still have to be written
@@ -356,7 +358,7 @@ namespace nCine::RHI::RDP
 		// frame could still DMA it (see the WaitIfInFlight guards in RdpTexture.cpp)
 		std::uint32_t _lastSampledFrame;
 
-		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
+		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height, bool clear = true);
 		/** @brief Makes sure the RDP store allocation matches the current format/size; returns `false` on failure */
 		bool EnsureStore();
 		/**
@@ -366,9 +368,11 @@ namespace nCine::RHI::RDP
 			the single copy of a sampled image (see the class documentation).
 		*/
 		void RefreshStore();
+		// Converts one full image in the upload format into the RDP store (RGBA16, or IA16 when it qualifies)
+		void ConvertToStore(const std::uint8_t* src, std::int32_t srcStride);
 		void FreeStores();
 		/** @brief Allocates a zeroed host copy of @p size bytes, replacing any previous one */
-		bool AllocatePixels(std::size_t size);
+		bool AllocatePixels(std::size_t size, bool clear = true);
 		/** @brief Releases the host copy */
 		void FreePixels();
 		/**

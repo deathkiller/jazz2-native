@@ -4,6 +4,7 @@
 // the second, in-game way of doing it. This tool exists so the data can be prepared ahead of time - for the
 // platforms that cannot convert anything themselves, and for build pipelines.
 
+#include "DiscImage.h"
 #include "FontPacker.h"
 
 #include "../../Main.h"
@@ -114,7 +115,9 @@ namespace
 		/** @brief Resolve the colors of an image back to palette indices */
 		ToIndices,
 		/** @brief Re-encode one cinematic into the container the game plays, optionally downscaling it */
-		RecompressVideo
+		RecompressVideo,
+		/** @brief Replace the game content of an already built Dreamcast disc image */
+		SwapDiscContent
 	};
 
 	struct Options {
@@ -173,6 +176,8 @@ namespace
 			command = Command::ToIndices;
 		} else if (value == "recompress-video"_s) {
 			command = Command::RecompressVideo;
+		} else if (value == "swap-content"_s) {
+			command = Command::SwapDiscContent;
 		} else {
 			return false;
 		}
@@ -265,6 +270,13 @@ namespace
 		LOGI("    Resolves the colors of an edited image back to the nearest palette indices");
 		LOGI("  recompress-video <source .j2v> <target .j2v> [--video-downscale=N]");
 		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution");
+		LOGI("  swap-content <source image> [<target image>] --content=<dir>");
+		LOGI("    Replaces the \"Content\" directory of an already built console disc image with <dir>, keeping");
+		LOGI("    its bootstrap and its executable exactly as they are - so the disc can be given new game data");
+		LOGI("    without the console toolchain the image was built with. Reads a Dreamcast \".cdi\" and a");
+		LOGI("    PlayStation 2 \".iso\"; <dir> is a directory prepared by \"convert --target=dreamcast\" or");
+		LOGI("    \"--target=ps2\". The image is rewritten in place if no target is given, and a \".cdi\" grows");
+		LOGI("    only if the new content does not fit in the space the disc already has");
 	}
 
 	bool ParseOptions(ArrayView<const StringView> args, Options& options)
@@ -346,6 +358,14 @@ namespace
 
 		if (options.Action == Command::Convert) {
 			return !options.TargetPath.empty() && (!options.SourcePath.empty() || !options.SourceOverride.empty());
+		}
+		// The only command that rewrites what it is given, so it is also the only one whose target is optional
+		if (options.Action == Command::SwapDiscContent) {
+			if (options.ContentOverride.empty()) {
+				LOGE("\"swap-content\" needs the directory that is to become the content of the disc, named by \"--content=\"");
+				return false;
+			}
+			return !options.SourcePath.empty();
 		}
 		return !options.SourcePath.empty() && !options.TargetPath.empty();
 	}
@@ -517,6 +537,9 @@ namespace
 						LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
 							options.VideoDownscale, fs::GetFileSize(options.TargetPath));
 					}
+					break;
+				case Command::SwapDiscContent:
+					success = AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride);
 					break;
 				default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
 			}

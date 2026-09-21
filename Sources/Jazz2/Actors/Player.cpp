@@ -4098,6 +4098,15 @@ namespace Jazz2::Actors
 		// has to go round - the same reason the stopping chain does it, and the same one frame of the static
 		// pose avoided by not waiting for the next frame to notice. Cancelling clears the flag first, so the
 		// callback can tell its own end from being called off.
+		//
+		// SetTransition() invokes the callback at once when the animation cannot be resolved, and the callback
+		// issues the flavor again: on a console that defers its sheets, a read refused for lack of memory
+		// (see ContentResolver::ResolveAnimation) made that an unbounded recursion into a stack overflow in
+		// the middle of a level. The flavor simply stays off until the sheet can be read.
+		if (_metadata == nullptr || _metadata->FindAnimation(AnimState::TransitionHookIdleFlavor) == nullptr) {
+			_inHookIdleFlavor = false;
+			return;
+		}
 		SetTransition(AnimState::TransitionHookIdleFlavor, true, [this]() {
 			if (_inHookIdleFlavor) {
 				IssueHookIdleFlavor();
@@ -5774,10 +5783,15 @@ namespace Jazz2::Actors
 
 					ForceCancelTransition();
 
-					SetPlayerTransition(AnimState::TransitionEndOfLevel, false, true, SpecialMoveType::None, [this]() {
+					if (!SetPlayerTransition(AnimState::TransitionEndOfLevel, false, true, SpecialMoveType::None, [this]() {
 						_renderer.setDrawEnabled(false);
 						_levelExiting = LevelExitingState::Ready;
-					});
+					})) {
+						// The sheet could not be read (a console that defers its sheets, out of memory at the
+						// very end of a level): the callback has just run, so the level is ready to end, but
+						// the player stays in view instead of vanishing without the animation
+						_renderer.setDrawEnabled(true);
+					}
 					PlayPlayerSfx("EndOfLevel1"_s, 1.0f / _levelHandler->GetPlayers().size());
 
 					SetState(ActorState::ApplyGravitation, false);

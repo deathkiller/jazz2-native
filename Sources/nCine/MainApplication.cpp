@@ -33,6 +33,7 @@
 #	include "Backends/Ps2/Ps2GfxDevice.h"
 #	include "Backends/Ps2/Ps2InputManager.h"
 #	include "Backends/Ps2/Ps2Modules.h"
+#	include "Backends/Ps2/Ps2Storage.h"
 #elif defined(WITH_PS3)
 #	include "Backends/Ps3/Ps3GfxDevice.h"
 #	include "Backends/Ps3/Ps3InputManager.h"
@@ -353,6 +354,11 @@ namespace nCine
 		// (and `console_close()` in N64GfxDevice only gives that one slot back).
 		const bool n64EmuLog = N64DebugInitEmuLog();
 		const bool n64UsbLog = N64DebugInitUsbLog();
+		// libdragon's own start-up (`__init_cop1`) enables the FPU overflow, divide-by-zero and invalid-
+		// operation traps when the library is built without NDEBUG, which the toolchain's libdragon.a is.
+		// The game's arithmetic assumes IEEE behaviour like on every other platform. The flush-to-zero
+		// of denormals stays, the CPU has no denormals.
+		C1_WRITE_FCR31((C1_FCR31() & ~C1_ENABLE_MASK) | C1_FCR31_FS);
 		console_init();
 		console_set_debug(true);
 		printf("Application starting...\n");
@@ -455,6 +461,13 @@ namespace nCine
 		Ps2BootMarker(Ps2MarkerTrace);
 		init_scr();
 		scr_printf("Application starting...\n");
+
+		// Where the loader read the executable from is the only thing that says where the game's own files
+		// are when it was not booted from a disc, and it is only knowable here: `argv` belongs to whoever
+		// started the process, and ContentResolver - which is what needs the answer - is constructed from
+		// inside Init() below, with no arguments of its own. Recorded rather than acted on; see
+		// Ps2Storage::SetBootPath().
+		Ps2Storage::SetBootPath(argc > 0 ? argv[0] : nullptr);
 
 		SifInitRpc(0);
 		SifLoadModule("rom0:CDVDMAN", 0, nullptr);
@@ -571,12 +584,13 @@ namespace nCine
 		Ps2AudioDevice::InitializeModules();
 #	endif
 
-		// Nothing brings an SD card in an MX4SIO adapter up here, even though this is where the rest of the
-		// I/O stack is assembled: the probe costs three module loads and a wait on hardware that may not be
-		// there, and only whoever is looking for files on it knows whether it is needed at all. It is
-		// therefore driven from ContentResolver, which is also where the layout on such a card is decided
-		// (see Backends::Ps2Storage). It stays reachable from here in load order - the adapter shares the
-		// SIO2 with the pads and memory cards, so SIO2MAN above has to be up first, and it is.
+		// Nothing brings removable storage (a USB stick, or an SD card in an MX4SIO adapter) up here, even
+		// though this is where the rest of the I/O stack is assembled: the probe costs several module loads
+		// and a wait on hardware that may not be there, and only whoever is looking for files on it knows
+		// whether it is needed at all. It is therefore driven from ContentResolver, which is also where the
+		// layout on such a device is decided (see Backends::Ps2Storage). It stays reachable from here in
+		// load order - the adapter shares the SIO2 with the pads and memory cards, so SIO2MAN above has to
+		// be up first, and it is.
 #elif defined(DEATH_TARGET_PSP)
 		// Before anything else does any floating-point arithmetic at all
 		Thread::DisableFpuTraps(true);

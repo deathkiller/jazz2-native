@@ -532,7 +532,9 @@ unlike the software transpiler's silent declines). The **portable core**, valid 
   (`ALPHA` = plain source-alpha over, independent of the material — the warp's horizon tint),
   `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it;
   the two output scales are **rejected for every block the gu target reaches**, see below),
-  `p.luma_gain = <float>;` (parameterizes the GX-only `LUMA_RAMP` preset below).
+  `p.luma_gain = <float>;` (parameterizes the GX-only `LUMA_RAMP` preset below),
+  `p.texture_repeat = true|false;` (RDP-only: the pass samples with hardware wrap along S, so
+  texture-unit coordinates outside [0, 1] repeat — accepted only in a `fixed_function(rdp)` block).
 - `submit_quad(p);`, locals of the GLSL scalar/vector subset (`float`/`int`/`bool`, `vec2/3/4`),
   `if`/`else`, C-style `for` with an int counter, (compound) assignment, `++`/`--`.
 - Expressions: arithmetic, comparisons, swizzles (single components plus `.xy`/`.zw`/`.xyz`/`.yzw`

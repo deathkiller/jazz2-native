@@ -141,13 +141,21 @@ namespace Jazz2::Events
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
 				std::int32_t tileID = y * _layoutSize.X + x;
-				EventTile& tile = _eventLayout[tileID];
+				const bool hasSaved = (nextSaved < saved.size() && saved[nextSaved].TileIndex == (std::uint32_t)tileID);
+				EventTile* tilePtr = _eventLayout.Find(tileID);
+				if (tilePtr == nullptr) {
+					if (!hasSaved) {
+						continue;		// An empty cell was never active either
+					}
+					tilePtr = &_eventLayout.Edit(tileID);
+				}
+				EventTile& tile = *tilePtr;
 
 				bool wasEventActive = _eventActiveForRollback[tileID];
 				bool respawn = (wasEventActive && !tile.IsEventActive);
 
 				// Rollback tile
-				if (nextSaved < saved.size() && saved[nextSaved].TileIndex == (std::uint32_t)tileID) {
+				if (hasSaved) {
 					const EventTile& tilePrev = saved[nextSaved].Tile;
 					tile.Event = tilePrev.Event;
 					tile.EventFlags = tilePrev.EventFlags;
@@ -194,7 +202,7 @@ namespace Jazz2::Events
 		}
 
 		std::int32_t tileIndex = x + y * _layoutSize.X;
-		EventTile& previousEvent = _eventLayout[tileIndex];
+		EventTile& previousEvent = _eventLayout.Edit(tileIndex);
 
 		// The checkpoint doesn't hold a copy of the grid, so the value about to be lost is saved to it here
 		if (_hasRollbackCheckpoint) {
@@ -228,7 +236,7 @@ namespace Jazz2::Events
 			// TODO: Exclude also some modifiers here ?
 			auto& tile = _eventLayout[i];
 			if (tile.Event != EventType::Empty && tile.Event != EventType::Generator && tile.Event != EventType::AreaWeather) {
-				eventSpawner->PreloadEvent(tile.Event, tile.EventParams);
+				eventSpawner->PreloadEvent(tile.Event, const_cast<std::uint8_t*>(tile.EventParams));	// Read-only there
 			}
 		}
 
@@ -290,7 +298,11 @@ namespace Jazz2::Events
 		// same tiles in the same zone; only the order events activate in changes, and no event depends on it.
 		for (std::int32_t y = y1; y <= y2; y++) {
 			for (std::int32_t x = x1; x <= x2; x++) {
-				auto& tile = _eventLayout[x + y * _layoutSize.X];
+				EventTile* tilePtr = _eventLayout.Find(x + y * _layoutSize.X);
+				if (tilePtr == nullptr) {
+					continue;
+				}
+				EventTile& tile = *tilePtr;
 				if (!tile.IsEventActive && tile.Event != EventType::Empty) {
 					tile.IsEventActive = true;
 
@@ -315,7 +327,9 @@ namespace Jazz2::Events
 	void EventMap::Deactivate(std::int32_t x, std::int32_t y)
 	{
 		if (HasEventByPosition(x, y)) {
-			_eventLayout[x + y * _layoutSize.X].IsEventActive = false;
+			if (EventTile* tile = _eventLayout.Find(x + y * _layoutSize.X)) {
+				tile->IsEventActive = false;
+			}
 		}
 	}
 
@@ -350,7 +364,7 @@ namespace Jazz2::Events
 		}
 
 		if (x >= 0 && y >= 0 && y < _layoutSize.Y && x < _layoutSize.X) {
-			*eventParams = _eventLayout[x + y * _layoutSize.X].EventParams;
+			*eventParams = const_cast<std::uint8_t*>(_eventLayout[x + y * _layoutSize.X].EventParams);	// The callers only read them
 			return _eventLayout[x + y * _layoutSize.X].Event;
 		}
 		return EventType::Empty;
@@ -366,8 +380,8 @@ namespace Jazz2::Events
 	{
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
-				auto& event = _eventLayout[x + y * _layoutSize.X];
-				if (event.Event != EventType::Empty && !forEachCallback(event, x, y)) {
+				EventTile* event = _eventLayout.Find(x + y * _layoutSize.X);
+				if (event != nullptr && event->Event != EventType::Empty && !forEachCallback(*event, x, y)) {
 					return;
 				}
 			}
@@ -423,7 +437,11 @@ namespace Jazz2::Events
 
 	void EventMap::ReadEvents(Stream& s, const std::unique_ptr<Tiles::TileMap>& tileMap, GameDifficulty difficulty)
 	{
-		_eventLayout = std::make_unique<EventTile[]>(_layoutSize.X * _layoutSize.Y);
+		if (!_eventLayout.Allocate(std::size_t(_layoutSize.X) * std::size_t(_layoutSize.Y))) {
+			LOGE("Cannot allocate the event layout of {}x{} tiles", _layoutSize.X, _layoutSize.Y);
+			_loadFailed = true;
+			return;
+		}
 
 		std::uint8_t difficultyBit;
 		switch (difficulty) {
@@ -587,10 +605,16 @@ namespace Jazz2::Events
 		DEATH_ASSERT(layoutSize == realLayoutSize, "Layout size mismatch", );
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
-			EventTile& tile = _eventLayout[i];
-			tile.Event = (EventType)src.ReadVariableUint32();
-			tile.EventFlags = (Actors::ActorState)src.ReadVariableUint32();
-			src.Read(tile.EventParams, sizeof(tile.EventParams));
+			EventTile read = {};
+			read.Event = (EventType)src.ReadVariableUint32();
+			read.EventFlags = (Actors::ActorState)src.ReadVariableUint32();
+			src.Read(read.EventParams, sizeof(read.EventParams));
+			EventTile* tile = (read.Event != EventType::Empty ? &_eventLayout.Edit(i) : _eventLayout.Find(i));
+			if (tile != nullptr) {
+				tile->Event = read.Event;
+				tile->EventFlags = read.EventFlags;
+				std::memcpy(tile->EventParams, read.EventParams, sizeof(tile->EventParams));
+			}
 		}
 	}
 

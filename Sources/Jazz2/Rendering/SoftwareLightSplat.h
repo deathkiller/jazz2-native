@@ -35,7 +35,21 @@ namespace Jazz2::Rendering::SoftwareLighting
 	/** @brief Returns @f$ \sqrt{d2} @f$ for a squared distance, as cheaply as the platform allows */
 	inline float Distance(float d2)
 	{
-#if defined(DEATH_TARGET_DREAMCAST)
+#if defined(DEATH_TARGET_N64)
+		// `sqrt.s` is ~58 unpipelined cycles on the VR4300 and this runs once per lit texel; a table over
+		// the [0, 1] range the callers stay in (they clamp the result) is a convert and a load. 1024 steps
+		// put the error under 1/2048 of the radius, far below what the bilinear stretch of the map shows.
+		static float table[1026];
+		static bool tableReady = false;
+		if (!tableReady) {
+			for (std::int32_t i = 0; i < 1026; i++) {
+				table[i] = std::sqrt(float(i) / 1024.0f);
+			}
+			tableReady = true;
+		}
+		const std::int32_t index = std::min<std::int32_t>(std::max<std::int32_t>(std::int32_t(d2 * 1024.0f), 0), 1025);
+		return table[index];
+#elif defined(DEATH_TARGET_DREAMCAST)
 		// `fsrra` of zero is infinity and `0 * inf` is NaN; a squared distance this small is the light's own
 		// texel, where `d2 * r` then comes out as ~1e-6 and the strength as 1, exactly as it should
 		float r = std::max(d2, 1.0e-12f);

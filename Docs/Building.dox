@@ -415,6 +415,12 @@ The following parameters can be used to customize the build:
     -   Only offered for the `Software` and `OpenGL` backends --- the consoles present through a format their
         hardware fixes, and 5/6/5 swap chains are not reliably available on D3D11/Vulkan
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
+-   `NCINE_N64_SIZE_OPTIMIZATION` (default @cpp ON @ce, offered on **Nintendo 64** only) --- Compile the parts of the port that are not in the frame loop for size @m_span{m-text m-dim} (`-Os`) @m_endspan instead of speed
+    -   The console's 8 MB of RDRAM is shared by the code, the framebuffers and the whole heap, so the
+        binary's size is the game's memory: the cold sources --- level loading, the content
+        conversion, the menus --- give back RDRAM the levels then have. The frame loop itself keeps
+        `-O2`; building everything for size cost about a fifth of the frame rate when it was measured,
+        see @ref consoles-n64-limits
 -   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten**, **Nintendo 64**, **PlayStation 2**, **PlayStation 3**, the **classic Amiga** and **MorphOS**) --- Allow to use multiple threads for better performance
     -   Multiplayer requires threads, so it's compiled out where they are unavailable
     -   Each of those targets is off for its own reason, none of them a configuration choice --- see

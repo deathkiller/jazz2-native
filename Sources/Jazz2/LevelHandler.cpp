@@ -179,6 +179,9 @@ namespace Jazz2
 		AttachComponents(std::move(descriptor));
 		SpawnPlayers(levelInit);		
 
+		// Behind the loading screen, where a sheet read costs nothing visible (see the implementation)
+		resolver.PreloadDeferredAnimations();
+
 		OnInitialized();
 
 		return true;

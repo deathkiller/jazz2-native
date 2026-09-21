@@ -3,6 +3,7 @@ include(CMakeDependentOption)
 # nCine options
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
 option(NCINE_PROFILING "Enable runtime profiling" OFF)
+cmake_dependent_option(NCINE_N64_SIZE_OPTIMIZATION "Build the cold parts of the Nintendo 64 port for size (-Os) to leave more RDRAM to the game" ON "PLATFORM_N64" OFF)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 
 # Targets opt into interprocedural optimization (LTO/LTCG) through the INTERPROCEDURAL_OPTIMIZATION

@@ -48,7 +48,7 @@ Beyond ordinary GLSL it knows the language's own vocabulary and colours it disti
 - the entry points `void vertex()`, `void fragment()` and `void fixed_function([pvr, gx, pica, gu, gs, rdp, legacygl])`
 - the fixed-function DSL inside a `fixed_function` block: `pass`, `pipeline`, `submit_quad`,
   `submit_strip`, `submit_strip_shaded`, the pass fields (`color`, `offset_color`, `screen_offset`,
-  `blend`, `tev`, `luma_gain`), their `MATERIAL`/`ADD`/… and `MODULATE`/`LUMA_RAMP`/… values, and the
+  `blend`, `tev`, `luma_gain`, `texture_repeat`), their `MATERIAL`/`ADD`/… and `MODULATE`/`LUMA_RAMP`/… values, and the
   optional context facilities (`texel_size`, `quad_origin`, `has_uniform`, …)
 - the canvas built-ins `COLOR`, `UV`, `TEXTURE`, `PALETTE_OFFSET`, `VERTEX`
 - the compile-time macros `VERTEX_STAGE`, `FRAGMENT_STAGE`, `SOFTWARE_RENDERER`,

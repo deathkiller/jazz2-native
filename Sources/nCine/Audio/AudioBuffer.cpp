@@ -215,7 +215,15 @@ namespace nCine
 
 		// Buffer size calculated as samples * channels * bytes per samples
 		const std::int32_t bufferSize = std::int32_t(audioLoader.bufferSize());
-		std::unique_ptr<unsigned char[]> buffer = std::make_unique<unsigned char[]>(bufferSize);
+		// A sound is decoded in mid-level on the platforms that defer sounds, into one contiguous block
+		// of up to a few hundred KB, when the heap is at its most fragmented: on a console with exceptions
+		// disabled the throwing form would abort the process there (the level-complete jingle is the
+		// biggest and the last sound a level plays). A sound that does not fit simply stays silent.
+		std::unique_ptr<unsigned char[]> buffer(new (std::nothrow) unsigned char[bufferSize]);
+		if (buffer == nullptr) {
+			LOGE("Cannot decode audio buffer: out of memory for {} bytes of samples", bufferSize);
+			return false;
+		}
 
 		std::unique_ptr<IAudioReader> audioReader = audioLoader.createReader();
 		// The decoder can produce less data than the loader promised, upload only what was actually read

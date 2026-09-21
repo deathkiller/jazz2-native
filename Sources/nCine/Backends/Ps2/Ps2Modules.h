@@ -12,17 +12,18 @@ namespace nCine::Backends
 		@brief PS2SDK's IOP modules, carried inside the executable rather than read from storage
 
 		Everything the Emotion Engine cannot do itself is done by an IRX running on the I/O Processor, and the
-		three services this port needs from it - the SPU2, the memory card and an SD card in the MX4SIO
-		adapter - are not in ROM. They have to be loaded, and loading one is a chicken-and-egg problem: the
-		disc's own driver (`CDFS.IRX`) can be read off the disc because `SifLoadModule()` goes through the
-		IOP's loadfile service rather than the EE's file I/O, but a module that is the ONLY way to reach a
-		storage device obviously cannot be read from that device. The MX4SIO driver is exactly that case, and
-		when it boots from an SD card there is no disc either, so `audsrv` would be unreachable too.
+		services this port needs from it - the SPU2, and removable storage on either a controller port
+		(MX4SIO) or the USB port - are not in ROM. They have to be loaded, and loading one is a
+		chicken-and-egg problem: the disc's own driver (`CDFS.IRX`) can be read off the disc because
+		`SifLoadModule()` goes through the IOP's loadfile service rather than the EE's file I/O, but a module
+		that is the ONLY way to reach a storage device obviously cannot be read from that device. The MX4SIO
+		and USB drivers are exactly that case, and when the game boots from one of those there is no disc
+		either, so `audsrv` would be unreachable too.
 
 		So they are linked in as byte arrays (see `cmake/ncine_ps2_embed_irx.cmake`, which turns the `.irx`
 		files from `$PS2SDK/iop/irx` into a generated source at configure time) and handed to
-		`SifExecModuleBuffer()`. The four together are about 78 KB of a 3.5 MB executable, which also buys a
-		boot with no module seeks on the disc at all.
+		`SifExecModuleBuffer()`. All of them together are about 110 KB of a 3.5 MB executable, which also buys
+		a boot with no module seeks on the disc at all.
 
 		Loading order matters and is the loader's business, not this header's - see `Ps2Storage::Initialize()`
 		for the block-device stack and `Ps2AudioDevice::InitializeModules()` for the sound one.
@@ -118,6 +119,22 @@ namespace nCine::Backends
 		*/
 		extern const std::uint8_t Mx4sioBd[];
 		extern const std::uint32_t Mx4sioBdSize;
+
+		/** @brief `usbd.irx` - the OHCI host controller behind the console's two USB ports */
+		extern const std::uint8_t Usbd[];
+		extern const std::uint32_t UsbdSize;
+
+		/**
+			@brief `usbmass_bd.irx` - a USB mass-storage device, as a `bdm` block device
+
+			The other half of the pair above, and the reason both are carried: a USB stick is what most of
+			these consoles are actually loaded from, it mounts through the same `bdm` stack the MX4SIO card
+			does, and the game is as likely to be sitting on one as on a card. Enumerating the bus takes
+			the host controller a moment longer than clocking an SD card does, which is what the mount
+			window in `Ps2Storage::Initialize()` is sized for.
+		*/
+		extern const std::uint8_t UsbmassBd[];
+		extern const std::uint32_t UsbmassBdSize;
 	}
 }
 

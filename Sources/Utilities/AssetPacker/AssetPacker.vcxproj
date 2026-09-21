@@ -134,7 +134,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="DiscImage.cpp" />
     <ClCompile Include="FontPacker.cpp" />
+    <ClCompile Include="Iso9660.cpp" />
     <ClCompile Include="PngCodec.cpp" />
     <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
     <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp" />
@@ -182,7 +184,9 @@
     <ClCompile Include="..\..\Dependencies\jsoncpp\writer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DiscImage.h" />
     <ClInclude Include="FontPacker.h" />
+    <ClInclude Include="Iso9660.h" />
     <ClInclude Include="PngCodec.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />

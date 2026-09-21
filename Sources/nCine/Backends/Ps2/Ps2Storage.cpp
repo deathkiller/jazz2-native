@@ -4,6 +4,8 @@
 #include "Ps2Modules.h"
 #include "../../../Main.h"
 
+#include <cstring>
+
 #include <Containers/String.h>
 
 // PS2SDK refuses to expose the `fio*` calls to the newlib port without this, on the grounds that mixing
@@ -37,16 +39,19 @@ namespace nCine::Backends
 		constexpr std::int32_t MaxUnits = 4;
 
 		/**
-			@brief How long the driver is given to find a card, in milliseconds
+			@brief How long the drivers are given to find a device, in milliseconds
 
-			`bdm` detects devices from an event thread and `mx4sio_bd` has to clock the card through its
-			initialization sequence first, so nothing is mounted by the time `SifExecModuleBuffer()` returns -
-			probing immediately finds nothing on a perfectly good card. This is the only thing in the startup
-			sequence that waits on hardware that may not be there, so it is kept short: a card that is present
-			mounts in well under a second, and it is only ever reached by a caller that has nowhere else to
-			read from.
+			`bdm` detects devices from an event thread and the block drivers have to bring the hardware up
+			first - `mx4sio_bd` clocks the card through its initialization sequence, `usbmass_bd` waits for
+			the host controller to enumerate the bus - so nothing is mounted by the time
+			`SifExecModuleBuffer()` returns, and probing immediately finds nothing on a perfectly good device.
+			This is the only thing in the startup sequence that waits on hardware that may not be there, so
+			the full window is only ever spent when there is nothing at all to find: the first unit to answer
+			cuts it short (see @ref MountSettleMs). USB is what sets the length - a stick can take a couple of
+			seconds to enumerate where an SD card mounts in well under one - and it is only ever reached by a
+			caller that has nowhere else to read from.
 		*/
-		constexpr std::int32_t MountTimeoutMs = 2000;
+		constexpr std::int32_t MountTimeoutMs = 5000;
 		constexpr std::int32_t MountPollIntervalMs = 50;
 
 		/**
@@ -58,10 +63,33 @@ namespace nCine::Backends
 		*/
 		constexpr std::int32_t MountSettleMs = 250;
 
+		/**
+			@brief The earliest the probe may stop once `usbmass_bd` is among the drivers, in milliseconds
+
+			The shortcut above assumes every unit comes from the same device, which stops being true with
+			two block drivers loaded: an SD card mounts in a fraction of the time the host controller needs
+			to enumerate a bus, so a card that answers first would close the window on a USB stick that was
+			about to. Which matters precisely when the card is not the one carrying the game. So the
+			shortcut is floored here - long enough for a stick to appear, and still well inside the full
+			budget.
+		*/
+		constexpr std::int32_t UsbEnumerationMs = 2500;
+
 		/** @brief @cpp "mass0:/" @ce and friends, written by the probe and pointed into by @ref _devices */
 		char _deviceNames[MaxUnits][8];
 		StringView _devices[MaxUnits];
 		std::int32_t _deviceCount = 0;
+
+		/**
+			@brief The directory part of @cpp argv[0] @ce, kept as a copy
+
+			A copy rather than a view, because the argument vector is the loader's memory and nothing
+			promises it outlives the startup that reads it. The length is what an `ioman` path can be
+			(`MAXPATHLEN` is 256 there), so anything longer is not a path this console could have opened
+			anyway.
+		*/
+		char _bootDirectory[256];
+		std::size_t _bootDirectoryLength = 0;
 
 		/** @brief Records every unit that answers for its own root, and returns how many did */
 		std::int32_t CollectMountedDevices()
@@ -74,6 +102,20 @@ namespace nCine::Backends
 
 				if (Ps2Storage::DirectoryExists(StringView(name, 7))) {
 					_devices[_deviceCount++] = StringView(name, 7);
+				}
+			}
+
+			// A driver this code did not load may have registered the device without unit numbers at all:
+			// `usbhdfsd`, which every older wLaunchELF carries, answers for "mass:" and for nothing else.
+			// Only worth asking when the numbered form found none, because the drivers that do number their
+			// units answer for "mass:" as well (as unit 0) and would double every entry.
+			if (_deviceCount == 0) {
+				char* name = _deviceNames[0];
+				name[0] = 'm'; name[1] = 'a'; name[2] = 's'; name[3] = 's';
+				name[4] = ':'; name[5] = '/'; name[6] = '\0';
+
+				if (Ps2Storage::DirectoryExists(StringView(name, 6))) {
+					_devices[_deviceCount++] = StringView(name, 6);
 				}
 			}
 			return _deviceCount;
@@ -137,13 +179,38 @@ namespace nCine::Backends
 			return;
 		}
 
-		// `bdm` is the block-device manager every removable-storage driver registers with, the filesystem
-		// driver claims the partitions it hands over, and the MX4SIO driver is the block device itself - so
-		// they go up in that order, and a failure at any step just means there is nothing to mount.
+		// Whatever the loader left mounted is used as it is. A bare executable is started by something -
+		// wLaunchELF, Open PS2 Loader - which read it off exactly the kind of device this function goes on
+		// to look for, and which therefore already has a block driver resident and talking to that hardware.
+		// Loading a SECOND copy of one is not a harmless duplicate: `mx4sio_bd` bit-bangs the SIO2 registers
+		// itself, so two instances clock the same card against each other, and the boot stops there with the
+		// last thing the console said still on screen. Asking first costs one `fioDopen()` per unit and
+		// settles it: the device the game was read from is by definition already mounted.
+		if (CollectMountedDevices() > 0) {
+			LOGI("The loader left {} unit(s) mounted, the first is \"{}\"", _deviceCount, _devices[0]);
+			return;
+		}
+
+		// `bdm` is the block-device manager every removable-storage driver registers with and the filesystem
+		// driver claims the partitions it hands over, so those two go up first. Without them there is nothing
+		// for a block driver to register WITH, which is why they are the only failure that ends this.
 		if (!Ps2Modules::Load("bdm.irx"_s, Ps2Modules::Bdm, Ps2Modules::BdmSize) ||
-			!Ps2Modules::Load("bdmfs_fatfs.irx"_s, Ps2Modules::BdmfsFatfs, Ps2Modules::BdmfsFatfsSize) ||
-			!Ps2Modules::Load("mx4sio_bd.irx"_s, Ps2Modules::Mx4sioBd, Ps2Modules::Mx4sioBdSize)) {
-			LOGW("The MX4SIO block device is unavailable, no removable storage can be mounted");
+			!Ps2Modules::Load("bdmfs_fatfs.irx"_s, Ps2Modules::BdmfsFatfs, Ps2Modules::BdmfsFatfsSize)) {
+			LOGW("The block device manager is unavailable, no removable storage can be mounted");
+			return;
+		}
+
+		// Both kinds of removable storage are brought up, because the game is as likely to be on a USB stick
+		// as on a card in the adapter and nothing here can tell which without looking. They are independent:
+		// one driver failing to load leaves the other one's devices perfectly reachable, so neither is
+		// allowed to end this the way the two above do. (`usbmass_bd` is the block device, `usbd` is the host
+		// controller underneath it, so that pair goes up in that order.)
+		bool anyBlockDevice = Ps2Modules::Load("mx4sio_bd.irx"_s, Ps2Modules::Mx4sioBd, Ps2Modules::Mx4sioBdSize);
+		const bool usbLoaded = Ps2Modules::Load("usbd.irx"_s, Ps2Modules::Usbd, Ps2Modules::UsbdSize) &&
+			Ps2Modules::Load("usbmass_bd.irx"_s, Ps2Modules::UsbmassBd, Ps2Modules::UsbmassBdSize);
+		anyBlockDevice |= usbLoaded;
+		if (!anyBlockDevice) {
+			LOGW("No block device driver could be loaded, no removable storage can be mounted");
 			return;
 		}
 
@@ -155,11 +222,20 @@ namespace nCine::Backends
 		// the list at whatever that instant happened to show, and because this function runs at most once
 		// nothing ever looked again - a game living on the second partition was simply never found. What the
 		// first answer does buy is a shorter window: the driver is clearly alive by then, so the rest of the
-		// units only need long enough to be handed over, not the full hardware-detection budget.
+		// units only need long enough to be handed over, not the full hardware-detection budget - except
+		// that with the USB driver loaded the units may be coming from two devices of very different
+		// speeds, which is what @ref UsbEnumerationMs floors the shortened window at.
+		const std::int32_t earliestDeadline = (usbLoaded ? UsbEnumerationMs : 0);
 		std::int32_t deadline = MountTimeoutMs;
 		for (std::int32_t waited = 0; ; waited += MountPollIntervalMs) {
 			if (CollectMountedDevices() > 0 && deadline == MountTimeoutMs) {
-				deadline = (waited + MountSettleMs < MountTimeoutMs ? waited + MountSettleMs : MountTimeoutMs);
+				deadline = waited + MountSettleMs;
+				if (deadline < earliestDeadline) {
+					deadline = earliestDeadline;
+				}
+				if (deadline > MountTimeoutMs) {
+					deadline = MountTimeoutMs;
+				}
 			}
 			if (waited >= deadline) {
 				break;
@@ -170,10 +246,48 @@ namespace nCine::Backends
 		}
 
 		if (_deviceCount == 0) {
-			LOGI("No MX4SIO card was found");
+			LOGI("No removable storage was found on the USB port or in an MX4SIO adapter");
 		} else {
-			LOGI("MX4SIO mounted {} unit(s), the first is \"{}\"", _deviceCount, _devices[0]);
+			LOGI("Mounted {} unit(s) of removable storage, the first is \"{}\"", _deviceCount, _devices[0]);
 		}
+	}
+
+	void Ps2Storage::SetBootPath(const char* path)
+	{
+		_bootDirectoryLength = 0;
+		if (path == nullptr) {
+			return;
+		}
+
+		// The separator is kept, so the result is a directory that concatenates. Both are accepted because
+		// both are seen: a loader writes "mass:/APPS/Jazz2/jazz2.elf", but a path typed on the console's own
+		// keyboard can just as easily come back with backslashes.
+		std::size_t length = 0, directoryLength = 0;
+		while (path[length] != '\0') {
+			if (length >= sizeof(_bootDirectory)) {
+				// Longer than anything `ioman` could open, so it is not a path worth deriving anything from
+				return;
+			}
+			if (path[length] == '/' || path[length] == '\\') {
+				directoryLength = length + 1;
+			}
+			length++;
+		}
+		if (directoryLength == 0) {
+			// A bare file name says nothing about where it came from - there is no working directory on this
+			// console to resolve it against
+			return;
+		}
+
+		std::memcpy(_bootDirectory, path, directoryLength);
+		_bootDirectory[directoryLength] = '\0';
+		_bootDirectoryLength = directoryLength;
+		LOGI("Started from \"{}\"", StringView(path, length));
+	}
+
+	StringView Ps2Storage::GetBootDirectory()
+	{
+		return StringView(_bootDirectory, _bootDirectoryLength);
 	}
 
 	ArrayView<const StringView> Ps2Storage::GetMountedDevices()

@@ -361,8 +361,8 @@ namespace Jazz2::Resources
 
 		Deferral is opt-in because it trades a load that happens at a known time (a loading screen) for one that
 		happens at first draw, which is right for UI and wrong for an actor that must animate without hitching.
-		A deferred metadata cannot derive its @ref BoundingBox from its first sheet either, so one that needs a
-		bounding box has to declare it explicitly.
+		A deferred metadata still gets its @ref BoundingBox from its first sheet - read from the sheet's header
+		alone, without decoding it - unless it declares one explicitly.
 	*/
 	struct Metadata
 	{

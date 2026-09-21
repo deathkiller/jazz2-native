@@ -19,8 +19,12 @@ list(REMOVE_ITEM ASSET_PACKER_SHARED_SOURCES ${NCINE_SOURCE_DIR}/Shared/IO/WebRe
 
 set(SOURCES
 	Main.cpp
+	DiscImage.cpp
+	DiscImage.h
 	FontPacker.cpp
 	FontPacker.h
+	Iso9660.cpp
+	Iso9660.h
 	PngCodec.cpp
 	PngCodec.h
 	# The base layer and the original-data converters, both shared with the game; the engine itself is

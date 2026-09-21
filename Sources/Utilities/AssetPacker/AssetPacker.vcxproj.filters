@@ -72,7 +72,13 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DiscImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="FontPacker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Iso9660.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PngCodec.cpp">
@@ -194,7 +200,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DiscImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="FontPacker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Iso9660.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PngCodec.h">

@@ -106,13 +106,26 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, gu, gs, rdp) {
+void fixed_function(pvr, gu, gs) {
 	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
 	// with TexturedBackground.shader). One block for these consoles for the same reason it is one there:
 	// the PVR, the GE and the GS have no combiner stage to fold the horizon tint into (the PVR only
 	// modulates and adds, and the GE's GU_TFX_BLEND weighs by the texel), and the RDP stays with them
 	// to keep the shared body, so all leave the tint macro undefined and get the include's own second
 	// gradient pass over each band.
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(rdp) {
+	// The same rebuild, but each band goes out as ONE strip: the RDP wraps texture coordinates in
+	// hardware (a mask on the tile descriptor), so the band's unwrapped U span is sampled straight
+	// from the 256-texel row window instead of being cut into up to eight pieces at the texture's
+	// edges. That is ~130 strips a frame down to ~64, on a CPU where every strip costs more than the
+	// RDP's time to draw it. The horizon tint rides the band's own strip as a per-vertex colour through
+	// the TINT_MIX combiner, exactly like the GX block: one strip per band instead of a textured one
+	// and a gradient one, and no combiner change between them.
+#define WARP_TEXTURE_REPEAT
+#define WARP_TINT_IN_VERTEX_COLOR
 #include "Include/TexturedBackgroundWarp.inc"
 }
 

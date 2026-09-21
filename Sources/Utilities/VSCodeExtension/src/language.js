@@ -253,7 +253,8 @@ const FIXED_FUNCTION = {
 		{ name: 'screen_offset', doc: 'A screen-space offset applied to the quad (`vec2`).' },
 		{ name: 'blend', doc: 'Blend mode — one of `MATERIAL`, `ADD`, `OPAQUE`, `ALPHA`. Plain `=` assignment of a bare identifier only.\n\nEvery backend implements all four, so this field never constrains a block\'s target list.' },
 		{ name: 'tev', doc: 'Texture-combiner preset — one of `MODULATE`, `SILHOUETTE`, `MODULATE_X2`, `MODULATE_X4`, `TINT_MIX`, `LUMA_RAMP`. Plain `=` assignment of a bare identifier only.\n\n' + TEV_SUPPORT_TABLE },
-		{ name: 'luma_gain', doc: 'The only scalar pass field (`float`); it parameterizes the `LUMA_RAMP` preset — the texel\'s Rec.601 luminance is multiplied by it and saturated before it picks the ramp tone.\n\nOnly `LUMA_RAMP` reads it, so it is **GX-only** in effect; the GX folds it into the KONST-held luminance weights and the combiner output scale, so any value up to 4 costs nothing extra.' }
+		{ name: 'luma_gain', doc: 'The only scalar pass field (`float`); it parameterizes the `LUMA_RAMP` preset — the texel\'s Rec.601 luminance is multiplied by it and saturated before it picks the ramp tone.\n\nOnly `LUMA_RAMP` reads it, so it is **GX-only** in effect; the GX folds it into the KONST-held luminance weights and the combiner output scale, so any value up to 4 costs nothing extra.' },
+		{ name: 'texture_repeat', doc: 'A `bool` literal (`true`/`false`): the pass samples its texture with hardware wrap along S, so texture-unit coordinates outside [0, 1] repeat instead of the strip being cut into pieces at the texture\'s edges. RDP ONLY (a mask on the tile descriptor) — accepted only in a `fixed_function(rdp)` block; the warped background draws each band as one strip with it.' },
 	],
 	// The support notes below are the authoring constraint, not trivia: a block is validated against
 	// the intersection of what its targets can do, so a preset one of them lacks is a hard error for

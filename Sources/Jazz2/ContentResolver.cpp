@@ -19,7 +19,7 @@
 #include "../nCine/Graphics/RenderCommand.h"
 #include "../nCine/Base/Random.h"
 #if defined(WITH_PS2)
-// Brings an SD card in an MX4SIO adapter up, so InitializePaths() below can look for the content on it.
+// Brings removable storage up, so InitializePaths() below can look for the content on it.
 // Guarded on WITH_PS2, not DEATH_TARGET_PS2: the header's own contents are, and it is the narrower of
 // the two (a dedicated-server or libretro configure targets the PS2 without building its backend)
 #	include "../nCine/Backends/Ps2/Ps2Storage.h"
@@ -41,6 +41,7 @@
 #include <IO/Compression/DeflateStream.h>
 
 #include <jsoncpp/json.h>
+#include <new>
 
 using namespace Death::IO::Compression;
 using namespace Jazz2::Tiles;
@@ -75,6 +76,20 @@ namespace Jazz2
 		constexpr bool DeferSounds = false;
 #endif
 
+		/**
+			@brief Whether a level's caption tile is cut out of its tileset
+
+			The caption tile only feeds the RGB keyboard lighting on PC (HUD::UpdateRgbLights); the consoles
+			never read it, so they do not spend the decode and the 3 KB per level on it.
+		*/
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || \
+		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_AMIGA) || \
+		defined(DEATH_TARGET_MORPHOS) || defined(DEATH_TARGET_AMIGAOS4)
+		constexpr bool KeepCaptionTiles = false;
+#else
+		constexpr bool KeepCaptionTiles = true;
+#endif
+
 #if defined(DEATH_TARGET_N64)
 		/**
 			@brief Bytes of heap that must remain free for a deferred resource to be read in
@@ -102,7 +117,7 @@ namespace Jazz2
 			const std::int32_t step = stats.free / (64 * 1024);
 			if (step < lowWaterStep) {
 				lowWaterStep = step;
-				LOGW("Heap low-water mark: {} bytes free", stats.free);
+				LOGW("Heap low-water mark: {} bytes free ({} of them in holes)", stats.free, stats.fragmented);
 			}
 
 			if (stats.free >= MinFreeHeapToResolve) {
@@ -499,40 +514,63 @@ namespace Jazz2
 		}
 		_contentPath = "Content\\"_s;
 #elif defined(WITH_PS2)
-		// The game boots either from a disc or from an SD card in an MX4SIO adapter, which is how most of
-		// these consoles are loaded today. The disc is preferred and settles the question outright: probing
-		// for a card costs three IOP module loads and a wait on hardware that may not be there, so a disc
-		// build pays nothing at all for a path it is not taking - and never silently picks up a stale tree
-		// from a card somebody left in the adapter. To run from the card, run the executable from the card.
+		// The game boots either from a disc or from removable storage - a USB stick, or an SD card in an
+		// MX4SIO adapter - which is how most of these consoles are loaded today. The disc is preferred and
+		// settles the question outright: looking anywhere else costs IOP module loads and a wait on hardware
+		// that may not be there, so a disc build pays nothing at all for a path it is not taking - and never
+		// silently picks up a stale tree from a card somebody left in the adapter. To run from removable
+		// storage, run the executable from removable storage.
 		//
 		// Leaving the three members empty is what selects the "cdfs:/" literals in the accessors above.
 		if (!fs::DirectoryExists("cdfs:/Content"_s)) {
-			// A card is shared storage - the whole point of one of these adapters is that it holds
-			// everything the console runs, next to a loader's own "APPS", "DVD" and "CFG" - so the game
-			// lives under "Games/Jazz2/" rather than at the root, where "Content", "Cache" and "Source"
-			// would collide with whatever else is there. That is also the layout it already uses on the
-			// other machine where it is a guest on a shared card (the Switch, see GetContentPath()).
-			// The units are walked in order because a card partitioned more than once mounts as more than
-			// one, and the game may be on any of them.
 			nCine::Backends::Ps2Storage::Initialize();
-			for (StringView device : nCine::Backends::Ps2Storage::GetMountedDevices()) {
-				String root = device + "Games/Jazz2/"_s;
-				String contentPath = root + "Content/"_s;
-				// Through Ps2Storage, because fs::DirectoryExists() cannot see a directory on a FAT volume
-				// at all and would report every card as carrying nothing - see the note on that function
+
+			// A "Content" directory next to the executable wins, because that is where the person who
+			// copied it there will have put it. It is also the only layout that works wherever the
+			// executable happens to live: a loader reads it off a device of its own choosing into a
+			// directory of the user's choosing, and the fixed path below can only ever guess at both.
+			// (Through Ps2Storage, because fs::DirectoryExists() cannot see a directory on a FAT volume at
+			// all and would report every device as carrying nothing - see the note on that function. The
+			// boot directory is not necessarily one of those volumes, but its `fioDopen()` answers for a
+			// memory card as readily as for a mounted unit.)
+			StringView bootDirectory = nCine::Backends::Ps2Storage::GetBootDirectory();
+			if (!bootDirectory.empty()) {
+				String contentPath = bootDirectory + "Content/"_s;
 				if (nCine::Backends::Ps2Storage::DirectoryExists(contentPath)) {
 					_contentPath = std::move(contentPath);
-					_cachePath = root + "Cache/"_s;
-					_sourcePath = root + "Source/"_s;
+					_cachePath = bootDirectory + "Cache/"_s;
+					_sourcePath = bootDirectory + "Source/"_s;
 					// Unlike a disc, this is somewhere the game can write - the level cache has somewhere
 					// to live, and PreferencesCache saves here instead of on a memory card
-					_writablePath = std::move(root);
-					LOGI("Reading content from \"{}\" (MX4SIO), which is also writable", _writablePath);
-					break;
+					_writablePath = bootDirectory;
+					LOGI("Reading content from \"{}\" (next to the executable), which is also writable", _writablePath);
+				}
+			}
+
+			// Otherwise the fixed layout on each mounted unit. Such a device is shared storage - the whole
+			// point of one is that it holds everything the console runs, next to a loader's own "APPS",
+			// "DVD" and "CFG" - so the game lives under "Games/Jazz2/" rather than at the root, where
+			// "Content", "Cache" and "Source" would collide with whatever else is there. That is also the
+			// layout it already uses on the other machine where it is a guest on shared storage (the
+			// Switch, see GetContentPath()). The units are walked in order because a card partitioned more
+			// than once mounts as more than one, and the game may be on any of them.
+			if (_contentPath.empty()) {
+				for (StringView device : nCine::Backends::Ps2Storage::GetMountedDevices()) {
+					String root = device + "Games/Jazz2/"_s;
+					String contentPath = root + "Content/"_s;
+					if (nCine::Backends::Ps2Storage::DirectoryExists(contentPath)) {
+						_contentPath = std::move(contentPath);
+						_cachePath = root + "Cache/"_s;
+						_sourcePath = root + "Source/"_s;
+						_writablePath = std::move(root);
+						LOGI("Reading content from \"{}\" (removable storage), which is also writable", _writablePath);
+						break;
+					}
 				}
 			}
 			if (_contentPath.empty()) {
-				LOGW("No MX4SIO card carries \"Games/Jazz2/Content\", and the disc does not carry one either");
+				LOGW("No \"Content\" directory next to the executable, none under \"Games/Jazz2\" on any "
+					"removable storage, and no disc carrying one either");
 			}
 		}
 #endif
@@ -669,7 +707,7 @@ namespace Jazz2
 
 	void ContentResolver::EndLoading()
 	{
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 		std::int32_t metadataKept = 0, metadataReleased = 0;
 		std::int32_t animationsKept = 0, animationsReleased = 0;
 		std::int32_t soundsKept = 0, soundsReleased = 0;
@@ -681,12 +719,12 @@ namespace Jazz2
 			while (it != _cachedMetadata.end()) {
 				if ((it->second->Flags & MetadataFlags::Referenced) != MetadataFlags::Referenced) {
 					it = _cachedMetadata.erase(it);
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					metadataReleased++;
 #endif
 				} else {
 					++it;
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					metadataKept++;
 #endif
 				}
@@ -699,12 +737,12 @@ namespace Jazz2
 			while (it != _cachedGraphics.end()) {
 				if ((it->second->Flags & GenericGraphicResourceFlags::Referenced) != GenericGraphicResourceFlags::Referenced) {
 					it = _cachedGraphics.erase(it);
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					animationsReleased++;
 #endif
 				} else {
 					++it;
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					animationsKept++;
 #endif
 				}
@@ -718,12 +756,12 @@ namespace Jazz2
 			while (it != _cachedSounds.end()) {
 				if ((it->second->Flags & GenericSoundResourceFlags::Referenced) != GenericSoundResourceFlags::Referenced) {
 					it = _cachedSounds.erase(it);
-#	if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					soundsReleased++;
 #	endif
 				} else {
 					++it;
-#	if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG) || defined(DEATH_TARGET_N64)
 					soundsKept++;
 #	endif
 				}
@@ -734,6 +772,15 @@ namespace Jazz2
 #if defined(DEATH_DEBUG)
 		LOGW("Metadata: {}|{}, Animations: {}|{}, Sounds: {}|{}", metadataKept, metadataReleased,
 			animationsKept, animationsReleased, soundsKept, soundsReleased);
+#elif defined(DEATH_TARGET_N64)
+		// Every load boundary states what survived it and what the heap looks like afterwards: with 8 MB in
+		// total the resident set is the number that decides whether the next level fits, and a freeze with
+		// no diagnosis is this platform's worst failure mode
+		heap_stats_t stats;
+		sys_get_heap_stats(&stats);
+		LOGI("Load boundary: metadata {}|{}, animations {}|{}, sounds {}|{} (kept|released); heap {} bytes used, {} free, {} of them in holes",
+			metadataKept, metadataReleased, animationsKept, animationsReleased, soundsKept, soundsReleased,
+			stats.used, stats.free, stats.fragmented);
 #endif
 
 		_isLoading = false;
@@ -906,6 +953,23 @@ namespace Jazz2
 						deferredGraphics.KeepIndexed = keepIndexed;
 						deferredGraphics.HasAnimDuration = hasAnimDuration;
 						deferredGraphics.HasFrameCount = hasFrameCount;
+
+						// The same rule as the eager branch below - the first sheet's frame size - but taken from
+						// the sheet's header alone, without decoding it. Left at InvalidValue, the box became
+						// UpdateHitbox(INT_MAX, INT_MAX): every actor whose metadata was deferred as a whole (all
+						// of them on the Nintendo 64) had a hitbox a billion pixels wide, so bullets collided
+						// with whatever solid object existed anywhere in the level and a player two tiles from
+						// a bird cage was "lifting" it, frozen in place.
+						if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
+							auto cached = _cachedGraphics.find(Pair(String::nullTerminatedView(deferredGraphics.Path),
+								std::uint16_t(keepIndexed ? IndexedGraphicsCacheKey : paletteOffset)));
+							Vector2i frameDimensions;
+							if (cached != _cachedGraphics.end()) {
+								metadata->BoundingBox = cached->second->FrameDimensions - Vector2i(2, 2);
+							} else if (ReadAuraFrameDimensions(deferredGraphics.Path, frameDimensions)) {
+								metadata->BoundingBox = frameDimensions - Vector2i(2, 2);
+							}
+						}
 					} else {
 						graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset, keepIndexed);
 						if (graphics.Base == nullptr) {
@@ -1083,6 +1147,57 @@ namespace Jazz2
 		return true;
 	}
 
+	void ContentResolver::PreloadDeferredAnimations()
+	{
+#if defined(DEATH_TARGET_N64)
+		/*
+			A deferred sheet is read and decoded the first time an animation is used, in the middle of a
+			frame: 50-120 ms for a 256x256 or 256x512 sheet even with the in-memory decoder, a visible hitch.
+			The loading screen is where that time is free - but not for everything a metadata declares: the
+			player alone declares ~160 animations, and reading them all took a megabyte of a heap that has
+			about two to spare in a level, most of it for sheets the level never shows (the airboard, the
+			swimming set, ...). What is read here is the set the trace showed hitching in ordinary play, and
+			the largest sheets there are: the player's idle flavors, which trigger whenever the player just
+			stands still. Everything else stays deferred. The floor keeps a level that is already tight from
+			losing its working room to this.
+		*/
+		constexpr std::int32_t MinFreeHeapAfterPreload = 1800 * 1024;
+
+		std::int32_t preloaded = 0, skipped = 0;
+		for (auto& [key, metadata] : _cachedMetadata) {
+			if (!metadata->Path.hasPrefix("Interactive/Player"_s)) {
+				continue;
+			}
+			for (GraphicResource& animation : metadata->Animations) {
+				if (animation.Base != nullptr || animation.DeferredIndex == GraphicResource::NotDeferred) {
+					continue;
+				}
+				const DeferredGraphicResource& deferred = metadata->DeferredAnimations[animation.DeferredIndex];
+				// The idle flavors (the hitch), and the end-of-level animation: read at the very end of a
+				// level, when the heap is at its lowest and most fragmented, it is the one sheet whose
+				// absence is not a missing flourish but a player who vanishes without the exit animation
+				if (deferred.Path.find("idle_flavor"_s) == nullptr && deferred.Path.find("/eol."_s) == nullptr) {
+					continue;
+				}
+				heap_stats_t stats;
+				sys_get_heap_stats(&stats);
+				if (stats.free < MinFreeHeapAfterPreload) {
+					skipped++;
+					continue;
+				}
+				if (ResolveAnimation(*metadata, animation)) {
+					preloaded++;
+				}
+			}
+		}
+		if (preloaded > 0 || skipped > 0) {
+			heap_stats_t stats;
+			sys_get_heap_stats(&stats);
+			LOGI("Preloaded {} deferred animations ({} left deferred for room), {} bytes of heap free", preloaded, skipped, stats.free);
+		}
+#endif
+	}
+
 	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed)
 	{
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
@@ -1233,6 +1348,34 @@ namespace Jazz2
 		return nullptr;
 	}
 
+	bool ContentResolver::ReadAuraFrameDimensions(StringView path, Vector2i& frameDimensions)
+	{
+		if (fs::GetExtension(path) != "aura"_s) {
+			return false;
+		}
+
+		// The first 26 bytes of the header RequestGraphicsAura() parses: signatures, version, flags,
+		// channel count and the frame size (the rest - frame layout, spots, the image - is not needed)
+		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
+		if (!s->IsValid() || s->GetSize() < 26) {
+			return false;
+		}
+
+		std::uint64_t signature1 = s->ReadValueAsLE<std::uint64_t>();
+		std::uint32_t signature2 = s->ReadValueAsLE<std::uint16_t>();
+		std::uint8_t version = s->ReadValue<std::uint8_t>();
+		std::uint8_t flags = s->ReadValue<std::uint8_t>();
+		if (signature1 != 0xB8EF8498E2BFBBEF || signature2 != 0x208F || version != 2 || (flags & 0x80) != 0x80) {
+			return false;
+		}
+
+		s->ReadValue<std::uint8_t>();	// channelCount
+		std::uint32_t frameDimensionsX = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t frameDimensionsY = s->ReadValueAsLE<std::uint32_t>();
+		frameDimensions = Vector2i(std::int32_t(frameDimensionsX), std::int32_t(frameDimensionsY));
+		return true;
+	}
+
 	GenericGraphicResource* ContentResolver::RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed)
 	{
 		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
@@ -1240,6 +1383,11 @@ namespace Jazz2
 		auto fileSize = s->GetSize();
 		if (fileSize < 16 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
+			if (!s->IsValid()) {
+				// Said out loud on the consoles, whose content trees are prepared ahead of time: a sheet that
+				// is missing there shows as an animation that never appears, with nothing else to explain it
+				LOGW("Cannot load graphics \"{}\": File not found", path);
+			}
 			return nullptr;
 		}
 
@@ -1249,6 +1397,7 @@ namespace Jazz2
 		std::uint8_t flags = s->ReadValue<std::uint8_t>();
 
 		if (signature1 != 0xB8EF8498E2BFBBEF || signature2 != 0x208F || version != 2 || (flags & 0x80) != 0x80) {
+			LOGW("Cannot load graphics \"{}\": Invalid signature", path);
 			return nullptr;
 		}
 
@@ -1303,7 +1452,17 @@ namespace Jazz2
 		// one that sets GenericGraphicResourceFlags::Indexed below.
 		const bool willStayIndexed = (keepIndexed && (flags & 0x01) != 0x01);
 		const std::uint32_t sourceStride = (willStayIndexed ? channelCount : PixelSize);
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * sourceStride + 3);
+		// A sheet is read in mid-level on the platforms that defer animations, when the heap is at its most
+		// fragmented, and a sheet is one contiguous block of up to a few hundred KB: this is the allocation
+		// that failed on the Nintendo 64 with 900 KB free but none of it in one piece. The failure has a
+		// recoverable answer - the animation stays missing, and the deferred entry retries when there is
+		// room - so it is asked for without the abort the throwing form ends in on a console
+		std::unique_ptr<std::uint8_t[]> pixels(new (std::nothrow) std::uint8_t[width * height * sourceStride + 3]);
+		if (pixels == nullptr) {
+			LOGE("Cannot load graphics \"{}\": Out of memory for a {}x{} sheet ({} bytes)", path, width, height,
+				width * height * sourceStride + 3);
+			return nullptr;
+		}
 
 		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
 
@@ -1333,20 +1492,24 @@ namespace Jazz2
 			const std::uint32_t maskBytes = (width * height + 7) / 8;
 			graphics->Mask = std::make_unique<std::uint8_t[]>(maskBytes);
 			std::memset(graphics->Mask.get(), 0, maskBytes);
-			for (std::uint32_t i = 0; i < width * height; i++) {
-				// The decoded buffer is tightly packed to `channelCount` bytes/pixel: a 1-channel (index-only)
-				// sprite is opaque except index 0 (transparent), a 2-channel sprite has explicit alpha in green,
-				// anything wider keeps alpha in the 4th byte.
-				std::uint8_t alpha;
-				if (channelCount == 1) {
-					alpha = (pixels[i] != 0 ? 255 : 0);
-				} else if (channelCount == 2) {
-					alpha = pixels[(i * 2) + 1];
-				} else {
-					alpha = pixels[(i * channelCount) + 3];
+			// The decoded buffer is tightly packed to `channelCount` bytes/pixel: a 1-channel sprite is opaque
+			// except index 0 (transparent), a 2-channel sprite has explicit alpha in the 2nd byte, anything
+			// wider keeps alpha in the 4th byte. One loop per layout rather than a channel-count branch per
+			// pixel: this runs over a whole sheet in the middle of a frame when a deferred animation is used
+			std::uint8_t* DEATH_RESTRICT mask = graphics->Mask.get();
+			const std::uint32_t pixelCount = width * height;
+			if (channelCount == 1) {
+				for (std::uint32_t i = 0; i < pixelCount; i++) {
+					if (pixels[i] != 0) {
+						mask[i >> 3] |= std::uint8_t(1) << (i & 7);
+					}
 				}
-				if (alpha > MaskAlphaThreshold) {
-					graphics->Mask[i >> 3] |= std::uint8_t(1) << (i & 7);
+			} else {
+				const std::uint8_t* DEATH_RESTRICT alphaPtr = pixels.get() + (channelCount == 2 ? 1 : 3);
+				for (std::uint32_t i = 0; i < pixelCount; i++, alphaPtr += channelCount) {
+					if (*alphaPtr > MaskAlphaThreshold) {
+						mask[i >> 3] |= std::uint8_t(1) << (i & 7);
+					}
 				}
 			}
 		}
@@ -1429,6 +1592,22 @@ namespace Jazz2
 
 	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
 	{
+		// The image content runs to the end of the file, so it is read into memory in one go and decoded
+		// from there: the decoder works a byte at a time, and a byte through the stream is a virtual call
+		// (through a buffer, but a call all the same) where a byte from memory is a load. A sheet of a few
+		// hundred thousand pixels took hundreds of milliseconds through the stream on the Nintendo 64, in
+		// the middle of a frame when a deferred animation was first used. Falls back to the stream when
+		// the copy cannot be placed - a level in progress may not have the contiguous room.
+		const std::int64_t remaining = s->GetSize() - s->GetPosition();
+		if (remaining > 0 && remaining <= 2 * 1024 * 1024) {
+			std::unique_ptr<std::uint8_t[]> content(new (std::nothrow) std::uint8_t[std::size_t(remaining)]);
+			if (content != nullptr && s->Read(content.get(), remaining) == remaining) {
+				Compatibility::JJ2Anims::ImageContentDecoder decoder;
+				const std::uint8_t* src = content.get();
+				decoder.Decode(src, content.get() + remaining, data, width * height, channelCount);
+				return;
+			}
+		}
 		// The decoder lives next to the encoder that produced the file, so the two can't drift apart
 		Compatibility::JJ2Anims::ReadImageContent(*s, data, width, height, channelCount);
 	}
@@ -1669,20 +1848,92 @@ namespace Jazz2
 			}
 		}
 
-		// Load raw pixels. The data is laid out `channelCount` bytes per pixel (1 = index only, 4 = RGBA / index-in-red;
-		// an 8-bit tile keeps its palette index in the first byte either way). ReadImageFromFile always stores a full
-		// 4-byte RGBA per pixel and advances by `channelCount`, so the writes overlap for narrower strides and only the
-		// very last one runs past the pixel data - hence the few bytes of slack rather than sizing the whole buffer for
-		// 4 bytes/pixel, which for an 8-bit tileset meant allocating four times what it needs (2.6 MB instead of 660 KB
-		// on the larger ones, at a point where the level's own data is already resident).
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * channelCount + 3);
-		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
-
-		// Build the atlas with 1px padding around each tile (so sampling never bleeds across tiles). Indexed output
-		// is a single index channel (-> R8), baked output is RGBA.
 		const std::uint32_t srcTilesPerRow = width / TileSet::DefaultTileSize;
 		const std::uint32_t srcTilesPerColumn = height / TileSet::DefaultTileSize;
 		const std::uint32_t paddedTileSizeSrc = TileSet::DefaultTileSize + 2;
+
+		// The source pixels are laid out `channelCount` bytes per pixel (1 = index only, 4 = RGBA / index-in-red;
+		// an 8-bit tile keeps its palette index in the first byte either way).
+		//
+		// The sheet is never held whole. It is decoded one tile row (a "band" of 32 rows) at a time into a
+		// single band buffer, in step with the atlas build below: atlas slots are assigned in ascending tile
+		// order - both with and without the used-tile pruning - so the tiles of every chunk, and of every slot
+		// within it, come from non-decreasing source rows, and the band that holds the current tile is always
+		// either the one already decoded or one further down the sheet. The decoder keeps its state between
+		// bands (the format is a sequential run-length/index scheme), so nothing is decoded twice.
+		//
+		// The whole sheet was 660-900 KB for the retail tilesets even at one byte per pixel, the largest
+		// allocation a level load made and the one that failed on the Nintendo 64: after a level had been
+		// played and torn down the main menu had 2.2 MB free but no contiguous 900 KB left, and the third level
+		// loaded from the menu aborted in that read. A band of a 960 px wide sheet is 30 KB.
+		const std::uint32_t sheetBandRows = TileSet::DefaultTileSize;
+		const std::uint32_t sheetBandCount = (height + sheetBandRows - 1) / sheetBandRows;
+		std::unique_ptr<std::uint8_t[]> sheetBand = std::make_unique<std::uint8_t[]>(std::size_t(sheetBandRows) * width * channelCount);
+		Compatibility::JJ2Anims::ImageContentDecoder sheetDecoder;
+		std::int32_t sheetBandIndex = -1;
+		// The compressed sheet is read into memory in one go when it can be (see ReadImageFromFile for
+		// why); it is a fraction of the decoded size and goes away with this function
+		std::unique_ptr<std::uint8_t[]> sheetData;
+		const std::uint8_t* sheetSrc = nullptr;
+		const std::uint8_t* sheetEnd = nullptr;
+		{
+			const std::int64_t remaining = s->GetSize() - s->GetPosition();
+			if (remaining > 0 && remaining <= 2 * 1024 * 1024) {
+				sheetData.reset(new (std::nothrow) std::uint8_t[std::size_t(remaining)]);
+				if (sheetData != nullptr) {
+					if (s->Read(sheetData.get(), remaining) == remaining) {
+						sheetSrc = sheetData.get();
+						sheetEnd = sheetSrc + remaining;
+					} else {
+						sheetData = nullptr;
+					}
+				}
+			}
+		}
+		// The caption tile is cut out of its band when that band comes by (see below)
+		std::int32_t captionBand = -1;
+		auto extractCaptionTile = [&]() {
+			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
+			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
+			const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
+			captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+			const std::uint8_t* pixels = sheetBand.get();
+
+			for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+				for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+					std::uint32_t r = 0, g = 0, b = 0;
+					for (std::uint32_t row = 0; row < 3; row++) {
+						const std::uint32_t srcRow = (tileY % sheetBandRows) + y * 3 + row;
+						const std::uint32_t src = (srcRow * width + (tileX + x)) * channelCount;
+						if (captionIs32bit) {
+							r += pixels[src + 0]; g += pixels[src + 1]; b += pixels[src + 2];
+						} else {
+							const std::uint32_t color = _palettes[pixels[src]];
+							r += (color >> 0) & 0xFF; g += (color >> 8) & 0xFF; b += (color >> 16) & 0xFF;
+						}
+					}
+					captionTile[y * TileSet::DefaultTileSize + x] = Color((std::uint8_t)(r / 3), (std::uint8_t)(g / 3), (std::uint8_t)(b / 3));
+				}
+			}
+		};
+		// Decodes the sheet forward until `band` is the one in the buffer; a band already passed stays passed
+		auto decodeSheetUpTo = [&](std::int32_t band) {
+			while (sheetBandIndex < band && std::uint32_t(sheetBandIndex + 1) < sheetBandCount) {
+				sheetBandIndex++;
+				const std::uint32_t rows = std::min(sheetBandRows, height - std::uint32_t(sheetBandIndex) * sheetBandRows);
+				if (sheetData != nullptr) {
+					sheetDecoder.Decode(sheetSrc, sheetEnd, sheetBand.get(), std::int32_t(rows * width), channelCount);
+				} else {
+					sheetDecoder.Decode(*s, sheetBand.get(), std::int32_t(rows * width), channelCount);
+				}
+				if (sheetBandIndex == captionBand) {
+					extractCaptionTile();
+				}
+			}
+		};
+
+		// The atlas gets 1px padding around each tile (so sampling never bleeds across tiles). Indexed output
+		// is a single index channel (-> R8), baked output is RGBA.
 
 		// The atlas does not have to keep the source sheet's row width - a tile is found by its index, and
 		// TileSet reads the row width back from the texture. The consoles round every texture up to a power
@@ -1746,28 +1997,11 @@ namespace Jazz2
 
 		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
 		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
-		if (captionTileId > 0) {
+		if (KeepCaptionTiles && captionTileId > 0) {
 			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
 			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
 			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
-				const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
-				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-
-				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						std::uint32_t r = 0, g = 0, b = 0;
-						for (std::uint32_t row = 0; row < 3; row++) {
-							const std::uint32_t src = ((tileY + y * 3 + row) * width + (tileX + x)) * channelCount;
-							if (captionIs32bit) {
-								r += pixels[src + 0]; g += pixels[src + 1]; b += pixels[src + 2];
-							} else {
-								const std::uint32_t color = _palettes[pixels[src]];
-								r += (color >> 0) & 0xFF; g += (color >> 8) & 0xFF; b += (color >> 16) & 0xFF;
-							}
-						}
-						captionTile[y * TileSet::DefaultTileSize + x] = Color((std::uint8_t)(r / 3), (std::uint8_t)(g / 3), (std::uint8_t)(b / 3));
-					}
-				}
+				captionBand = std::int32_t(tileY / sheetBandRows);
 			}
 		}
 
@@ -1797,7 +2031,13 @@ namespace Jazz2
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
 		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || \
 		defined(DEATH_TARGET_3DS) || defined(WITH_RHI_LEGACYGL)
+#	if defined(DEATH_TARGET_N64)
+		// 256 KB at most per chunk of a 1024-wide CI8 atlas: a taller chunk is one block of half a
+		// megabyte, which a heap that has been through a few level loads no longer holds in one piece
+		constexpr std::int32_t PreferredChunkHeight = 256;
+#	else
 		constexpr std::int32_t PreferredChunkHeight = 512;
+#	endif
 #else
 		constexpr std::int32_t PreferredChunkHeight = 0;
 #endif
@@ -1852,9 +2092,18 @@ namespace Jazz2
 				std::uint8_t* dstTile = &chunk[(dstY * paddedWidth + dstX) * dstChannels];
 				bool opaque = true;
 
+				// A source tile row is exactly one decoded band (both are DefaultTileSize rows tall). Slots
+				// ascend with tile IDs, so this only ever moves the decoder forward (see the note at the top).
+				const std::int32_t srcBand = std::int32_t(srcY / sheetBandRows);
+				if DEATH_UNLIKELY(srcBand < sheetBandIndex) {
+					LOGE("Tileset \"{}\" slot {} samples tile {} above the decoded band, skipped", name, slot, tile);
+					continue;
+				}
+				decodeSheetUpTo(srcBand);
+				const std::uint8_t* pixels = sheetBand.get();
 				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						const std::uint32_t src = ((srcY + y) * width + (srcX + x)) * channelCount;
+						const std::uint32_t src = (y * width + (srcX + x)) * channelCount;
 						const std::uint32_t dst = ((y + 1) * paddedWidth + (x + 1)) * dstChannels;
 
 						if (is32bit) {
@@ -1912,6 +2161,11 @@ namespace Jazz2
 			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
 			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 			textures.push_back(Death::move(textureDiffuse));
+		}
+
+		// The caption tile can lie below the last tile the atlas took (an unused one, with pruning)
+		if (captionBand >= 0 && sheetBandIndex < captionBand) {
+			decodeSheetUpTo(captionBand);
 		}
 
 		return textures;
@@ -2120,11 +2374,20 @@ namespace Jazz2
 		for (std::uint32_t i = 0; i < layerCount; i++) {
 			descriptor.TileMap->ReadLayerConfiguration(uc);
 		}
+		if (descriptor.TileMap->HasLoadFailed()) {
+			// Out of memory for a layer: the level cannot be played, and the caller shows why
+			LOGE("Cannot load level \"{}\": Out of memory for its layers", path);
+			return false;
+		}
 
 		// Events
 		descriptor.EventMap = std::make_unique<Events::EventMap>(descriptor.TileMap->GetSize());
 		descriptor.EventMap->SetPitType(pitType);
 		descriptor.EventMap->ReadEvents(uc, descriptor.TileMap, difficulty);
+		if (descriptor.EventMap->HasLoadFailed()) {
+			LOGE("Cannot load level \"{}\": Out of memory for its events", path);
+			return false;
+		}
 
 		// Everything that can reference a tile has now been read, so the atlas can be cut down to what
 		// this level actually uses

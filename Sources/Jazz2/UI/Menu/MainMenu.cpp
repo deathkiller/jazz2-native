@@ -676,7 +676,9 @@ namespace Jazz2::UI::Menu
 		constexpr std::int32_t AdditionalIndexDemo = 451;
 		constexpr std::int32_t SplitRowDemo = 6;
 
-		std::unique_ptr<LayerTile[]> layout = std::make_unique<LayerTile[]>(Width * Height);
+		TileMapLayer& newLayer = _texturedBackgroundLayer;
+		auto& layout = newLayer.Layout;
+		layout.Allocate(std::size_t(Width * Height), false);
 
 		std::int32_t n = 0;
 		if (_preset == Preset::SharewareDemo) {
@@ -703,10 +705,8 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		TileMapLayer& newLayer = _texturedBackgroundLayer;
 		newLayer.Visible = true;
 		newLayer.LayoutSize = Vector2i(Width, Height);
-		newLayer.Layout = std::move(layout);
 	}
 
 	bool MainMenu::TryLoadBackgroundPreset(Preset preset)
@@ -742,7 +742,7 @@ namespace Jazz2::UI::Menu
 
 		TileMapLayer& layer = _texturedBackgroundLayer;
 		Vector2i layoutSize = layer.LayoutSize;
-		if (layoutSize.X <= 0 || layoutSize.Y <= 0 || layer.Layout == nullptr) {
+		if (layoutSize.X <= 0 || layoutSize.Y <= 0 || layer.Layout.empty()) {
 			return;
 		}
 
@@ -839,6 +839,123 @@ namespace Jazz2::UI::Menu
 
 	bool MainMenu::RenderLegacyBackground(RenderQueue& renderQueue)
 	{
+#if defined(WITH_RHI_RDP)
+		/*
+			The form this background takes on the Nintendo 64. The original below repeats each of its
+			three tiles 96 times across one rotated quad far bigger than the screen; the RDP addresses a
+			primitive's texels in 10.5 fixed point (+-1024 texels) through a 4 KB TMEM, so that quad can
+			neither be held in one primitive nor wrap the 128x128 tile (16 KB of CI8 against the 2 KB a
+			paletted texture may use), and it came out as a flat wash of edge colour.
+
+			Same motion, different geometry. The 16 and 32 tiles fit TMEM whole, so each is ONE quad,
+			rotated by the layer's angle and just big enough to cover the view (its diagonal), that
+			repeats the tile in hardware (the backend masks the coordinates of a repeating texture that
+			is resident whole); the layer's rotation about its own drifting pivot becomes a texture-space
+			offset on that quad. The 128 tile is drawn once per period, each period a quad rotated by the
+			layer's angle on the rotated lattice, through the backend's blitter (a rotated rectangle that
+			cannot be resident goes there) - twenty-odd quads for what the view shows.
+		*/
+		auto* res16 = _metadata->FindAnimation(Menu16);
+		auto* res32 = _metadata->FindAnimation(Menu32);
+		auto* res128 = _metadata->FindAnimation(Menu128);
+		if (res16 == nullptr || res32 == nullptr || res128 == nullptr) {
+			return false;
+		}
+
+		const float animTime = _canvasBackground->AnimTime;
+		const Vector2f viewSize = _canvasBackground->ViewSize.As<float>();
+		const Vector2f center = viewSize * 0.5f;
+
+		// One view-covering quad rotated by `angle` about the view's centre, whose texture space is the
+		// layer's: the layer is rotated by the same angle about `pivot`, with a tile corner there.
+		// Rotating about the pivot equals rotating about the centre plus a shift, and a shift of a
+		// periodic pattern is a texture offset: for the quad's local point q (from its centre),
+		// texel = (q + R^-1(centre - pivot)) / period.
+		auto drawRepeating = [this, viewSize, center](GenericGraphicResource* base, float scale, float angle, Vector2f pivot, std::uint16_t layer) {
+			base->TextureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
+			const Vector2f period = base->FrameDimensions.As<float>() * scale;
+			const float side = sqrtf(viewSize.X * viewSize.X + viewSize.Y * viewSize.Y) + 2.0f;
+			const float c = cosf(angle), sn = sinf(angle);
+			const Vector2f d = center - pivot;
+			// R^-1 d for R = RotateZ(angle) = [c -s; s c]
+			const Vector2f shift(d.X * c + d.Y * sn, -d.X * sn + d.Y * c);
+			// Whole periods of the offset are dropped, which keeps the coordinates within the +-1024
+			// texels a primitive may address
+			float offU = (shift.X - side * 0.5f) / period.X, offV = (shift.Y - side * 0.5f) / period.Y;
+			offU -= floorf(offU);
+			offV -= floorf(offV);
+			const Vector4f texCoords(side / period.X, offU, side / period.Y, offV);
+			const bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+			_canvasBackground->DrawTexture(*base->TextureDiffuse, center - Vector2f(side, side) * 0.5f, layer, Vector2f(side, side), texCoords,
+				Colorf::White, false, angle, indexed ? 0 : -1);
+		};
+
+		// 16
+		{
+			const float scale = 0.6f + 0.04f * sinf(animTime * 0.2f);
+			drawRepeating(res16->Base, scale, animTime * -0.2f, center, 100);
+		}
+
+		// 32
+		{
+			const float scale = 0.6f + 0.04f * sinf(animTime * 0.2f);
+			Vector2f pivot = center;
+			pivot.X += 96.0f * sinf(animTime * 0.37f);
+			pivot.Y += 96.0f * cosf(animTime * 0.31f);
+			drawRepeating(res32->Base, scale, animTime * 0.4f, pivot, 110);
+		}
+
+		// 128: one rotated quad per period on the rotated lattice; too big to be resident whole, so the
+		// backend blits each
+		{
+			GenericGraphicResource* base = res128->Base;
+			base->TextureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+			base->TextureDiffuse->SetWrap(SamplerWrapping::ClampToEdge);
+
+			const float scale = 0.6f + 0.2f * sinf(animTime * 0.4f);
+			const float angle = animTime * 0.3f;
+			const Vector2f period = base->FrameDimensions.As<float>() * scale;
+			Vector2f pivot = center;
+			pivot.X += 64.0f * sinf(animTime * 0.25f);
+			pivot.Y += 64.0f * cosf(animTime * 0.32f);
+			const float c = cosf(angle), sn = sinf(angle);
+			// The view's corners in lattice units (R^-1 about the pivot, over the period) bound the
+			// periods that can show
+			float minI = 1.0e30f, maxI = -1.0e30f, minJ = 1.0e30f, maxJ = -1.0e30f;
+			for (std::int32_t k = 0; k < 4; k++) {
+				const Vector2f d = Vector2f((k & 1) ? viewSize.X : 0.0f, (k & 2) ? viewSize.Y : 0.0f) - pivot;
+				const float i = (d.X * c + d.Y * sn) / period.X, j = (-d.X * sn + d.Y * c) / period.Y;
+				minI = std::min(minI, i); maxI = std::max(maxI, i);
+				minJ = std::min(minJ, j); maxJ = std::max(maxJ, j);
+			}
+			const bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+			const Vector4f texCoords(1.0f, 0.0f, 1.0f, 0.0f);
+			const float radius = period.X * 0.7072f;
+			for (std::int32_t j = std::int32_t(floorf(minJ)); j < std::int32_t(ceilf(maxJ)); j++) {
+				for (std::int32_t i = std::int32_t(floorf(minI)); i < std::int32_t(ceilf(maxI)); i++) {
+					// The period's centre on screen: pivot + R((i + 0.5, j + 0.5) * period)
+					const float lx = (float(i) + 0.5f) * period.X, ly = (float(j) + 0.5f) * period.Y;
+					const Vector2f quadCenter(pivot.X + lx * c - ly * sn, pivot.Y + lx * sn + ly * c);
+					if (quadCenter.X + radius < 0.0f || quadCenter.X - radius > viewSize.X ||
+						quadCenter.Y + radius < 0.0f || quadCenter.Y - radius > viewSize.Y) {
+						continue;
+					}
+					_canvasBackground->DrawTexture(*base->TextureDiffuse, quadCenter - period * 0.5f, 120, period, texCoords, Colorf::White,
+						false, angle, indexed ? 0 : -1);
+				}
+			}
+		}
+
+		float titleX = (float)(_contentBounds.X + _contentBounds.W / 2);
+		float titleY = _contentBounds.Y - 30;
+		DrawElement(MenuGlow, 0, titleX, titleY, 130, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.14f),
+			16.0f, 10.0f, true, true);
+
+		return true;
+#else
 		auto* res16 = _metadata->FindAnimation(Menu16);
 		auto* res32 = _metadata->FindAnimation(Menu32);
 		auto* res128 = _metadata->FindAnimation(Menu128);
@@ -964,6 +1081,7 @@ namespace Jazz2::UI::Menu
 			16.0f, 10.0f, true, true);
 
 		return true;
+#endif
 	}
 
 	void MainMenu::TexturedBackgroundPass::Initialize()

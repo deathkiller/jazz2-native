@@ -53,6 +53,9 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 	float spanY = quad_axis_y().y;
 
 	pass warp;				// Textured band pieces under the material state
+#ifdef WARP_TEXTURE_REPEAT
+	warp.texture_repeat = true;
+#endif
 #ifdef WARP_TINT_IN_VERTEX_COLOR
 	// One combiner stage lerps each texel toward the per-vertex tint by the per-vertex alpha, so the
 	// band piece IS the tinted band; nothing is drawn over it
@@ -125,6 +128,31 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 					float tint0 = clamp(d0 * d0 - 0.3, 0.0, 1.0);
 					float tint1 = clamp(d1 * d1 - 0.3, 0.0, 1.0);
 #endif
+#ifdef WARP_TEXTURE_REPEAT
+					// One strip across the whole band part; U runs unwrapped from the left edge to the right
+					// and the hardware wraps it (see the rdp block of the shader). Reduced by a whole number
+					// of texture widths first: the scroll offset grows without bound, and the RDP's texture
+					// coordinate is a 10.5 fixed-point number - past 1024 texels (four widths) it wrapped
+					// into garbage for the few seconds until the offset passed the next power of two.
+					float uBase = floor(shiftU);
+					strip_position(0, vec2(leftX + spanX, y0));
+					strip_position(1, vec2(leftX + spanX, y1));
+					strip_position(2, vec2(leftX, y0));
+					strip_position(3, vec2(leftX, y1));
+					strip_uv(0, vec2(uRight0 - uBase, v0));
+					strip_uv(1, vec2(uRight1 - uBase, v1));
+					strip_uv(2, vec2(uLeft0 - uBase, v0));
+					strip_uv(3, vec2(uLeft1 - uBase, v1));
+#ifdef WARP_TINT_IN_VERTEX_COLOR
+					strip_color(0, vec4(horizon.xyz, tint0));
+					strip_color(1, vec4(horizon.xyz, tint1));
+					strip_color(2, vec4(horizon.xyz, tint0));
+					strip_color(3, vec4(horizon.xyz, tint1));
+					submit_strip_shaded(warp, 4);
+#else
+					submit_strip(warp, 4);
+#endif
+#else
 					int firstPiece = int(floor(min(uLeft0, uLeft1)));
 					int lastPiece = int(ceil(max(uRight0, uRight1)));
 					int emitted = 0;
@@ -168,6 +196,8 @@ if (!has_uniform(uViewSize) || !has_uniform(uShift) || !has_uniform(uHorizonColo
 #endif
 						}
 					}
+
+#endif
 
 #ifndef WARP_TINT_IN_VERTEX_COLOR
 					// Horizon tint of the band: the shader's clamp(distance^1.5 - 0.3, ...) at each

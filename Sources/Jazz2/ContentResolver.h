@@ -64,7 +64,14 @@ namespace Jazz2
 		/** @brief Pixel size in bytes */
 		static constexpr std::uint32_t PixelSize = 4;
 		/** @brief Maximum number of palettes */
+#if defined(DEATH_TARGET_N64)
+		// Eight fixed rows plus the dynamic recolors (see FirstDynamicPaletteRow): one player and a handful of
+		// recolored enemies per level need a few, and every row costs 1 KB here and another 1 KB in the palette
+		// texture the TLUTs are converted from - 256 rows were half a megabyte of the console's 8 MB
+		static constexpr std::int32_t PaletteCount = 32;
+#else
 		static constexpr std::int32_t PaletteCount = 256;
+#endif
 		/** @brief Number of colors per palette */
 		static constexpr std::int32_t ColorsPerPalette = 256;
 		/**
@@ -243,6 +250,13 @@ namespace Jazz2
 		 * marked so that the attempt is not repeated on the next lookup.
 		 */
 		bool ResolveAnimation(Metadata& metadata, GraphicResource& animation);
+		/**
+			@brief Reads deferred animations in ahead of their first use while the heap has room for them
+
+			Called once a level has finished loading, from behind its loading screen. Only the platforms that
+			defer animations do anything here; see the implementation for what gets read and when it stops.
+		*/
+		void PreloadDeferredAnimations();
 
 		/**
 		 * @brief Builds a 256-color palette for a player from a packed 4-byte fur color
@@ -411,6 +425,8 @@ namespace Jazz2
 		static constexpr std::uint16_t IndexedGraphicsCacheKey = UINT16_MAX;
 
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
+		// Reads just the frame size out of a sheet's header, for a deferred metadata's bounding box
+		bool ReadAuraFrameDimensions(StringView path, Vector2i& frameDimensions);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 		// Copies a tile's edge pixels into its 1px atlas padding (so sampling never bleeds across tiles); `bytesPerPixel`
 		// is 1 for an indexed (R8) atlas or 4 for a baked RGBA atlas

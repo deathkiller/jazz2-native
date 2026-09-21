@@ -3744,7 +3744,7 @@ namespace Jazz2::Scripting
 			layer->SpeedModeX = (std::int32_t)src.Description.SpeedModelX;
 			layer->SpeedModeY = (std::int32_t)src.Description.SpeedModelY;
 			layer->hasTileMap = true;
-			layer->hasTiles = (src.Layout != nullptr);
+			layer->hasTiles = !src.Layout.empty();
 
 			_layerProxies.emplace(index, layer);
 			// The map keeps one reference; AddRef again below for the one we hand to the script

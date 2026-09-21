@@ -353,8 +353,8 @@ namespace nCine::RHI::GU
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, gu, gs, rdp)
-		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs, rdp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs, rdp)]
+		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, gu, gs)
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs)]
 		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

@@ -969,6 +969,17 @@ namespace Jazz2::Compatibility
 
 	void JJ2Anims::ReadImageContent(Stream& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
 	{
+		ImageContentDecoder decoder;
+		decoder.Decode(s, data, width * height, channelCount);
+	}
+
+	JJ2Anims::ImageContentDecoder::ImageContentDecoder()
+		: _index{}, _px{ 0, 0, 0, 255 }, _run(0)
+	{
+	}
+
+	void JJ2Anims::ImageContentDecoder::Decode(Stream& s, std::uint8_t* data, std::int32_t pixelCount, std::int32_t channelCount)
+	{
 		typedef union {
 			struct {
 				std::uint8_t r, g, b, a;
@@ -976,16 +987,14 @@ namespace Jazz2::Compatibility
 			std::uint32_t v;
 		} rgba_t;
 
-		rgba_t index[64] {};
+		// The state lives in the object between calls; the loop works on local copies
+		rgba_t index[64];
 		rgba_t px;
-		std::int32_t run = 0;
-		std::int32_t px_len = width * height * channelCount;
+		std::int32_t run = _run;
+		std::memcpy(index, _index, sizeof(index));
+		std::memcpy(&px, _px, sizeof(px));
 
-		px.rgba.r = 0;
-		px.rgba.g = 0;
-		px.rgba.b = 0;
-		px.rgba.a = 255;
-
+		const std::int32_t px_len = pixelCount * channelCount;
 		for (std::int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
 			if (run > 0) {
 				run--;
@@ -1025,5 +1034,97 @@ namespace Jazz2::Compatibility
 			// strict-alignment targets (MIPS) - and would also write past the last pixel of the buffer
 			std::memcpy(data + px_pos, &px, channelCount);
 		}
+
+		_run = run;
+		std::memcpy(_index, index, sizeof(index));
+		std::memcpy(_px, &px, sizeof(px));
+	}
+
+	namespace
+	{
+		typedef union {
+			struct {
+				std::uint8_t r, g, b, a;
+			} rgba;
+			std::uint32_t v;
+		} DecoderPixel;
+
+		/**
+			@brief The in-memory decode loop, specialized per channel count
+
+			The pixel store is the only thing that depends on the channel count, and with it a template
+			parameter it is a fixed one- to four-byte store instead of a `memcpy` call per pixel - which on
+			the consoles' in-order CPUs was the largest single cost of decoding a sheet. The decoder state
+			(index table, previous pixel, run) is maintained exactly as the generic loop does, whatever the
+			channel count, because the DIFF/LUMA/INDEX operations and the hash read every component.
+		*/
+		template<std::int32_t Channels>
+		void DecodeFromMemory(const std::uint8_t*& src, const std::uint8_t* end, DecoderPixel* index, DecoderPixel& px, std::int32_t& run,
+			std::uint8_t* DEATH_RESTRICT data, std::int32_t pixelCount)
+		{
+			const std::uint8_t* DEATH_RESTRICT s = src;
+			for (std::int32_t i = 0; i < pixelCount; i++, data += Channels) {
+				if (run > 0) {
+					run--;
+				} else {
+					const std::int32_t b1 = (s < end ? *s++ : 0);
+					if (b1 == QOI_OP_RGB) {
+						px.rgba.r = (s < end ? *s++ : 0);
+						if (Channels >= 2) { px.rgba.g = (s < end ? *s++ : 0); } else { px.rgba.g = 0; }
+						if (Channels >= 3) { px.rgba.b = (s < end ? *s++ : 0); } else { px.rgba.b = 0; }
+					} else if (b1 == QOI_OP_RGBA) {
+						px.rgba.r = (s < end ? *s++ : 0);
+						px.rgba.g = (s < end ? *s++ : 0);
+						px.rgba.b = (s < end ? *s++ : 0);
+						px.rgba.a = (s < end ? *s++ : 0);
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
+						px = index[b1];
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
+						px.rgba.r += ((b1 >> 4) & 0x03) - 2;
+						px.rgba.g += ((b1 >> 2) & 0x03) - 2;
+						px.rgba.b += (b1 & 0x03) - 2;
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
+						const std::int32_t b2 = (s < end ? *s++ : 0);
+						const std::int32_t vg = (b1 & 0x3f) - 32;
+						px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
+						px.rgba.g += vg;
+						px.rgba.b += vg - 8 + (b2 & 0x0f);
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
+						run = (b1 & 0x3f);
+					}
+					index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
+				}
+				if (Channels == 1) {
+					data[0] = px.rgba.r;
+				} else if (Channels == 2) {
+					data[0] = px.rgba.r; data[1] = px.rgba.g;
+				} else if (Channels == 3) {
+					data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b;
+				} else {
+					data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b; data[3] = px.rgba.a;
+				}
+			}
+			src = s;
+		}
+	}
+
+	void JJ2Anims::ImageContentDecoder::Decode(const std::uint8_t*& src, const std::uint8_t* end, std::uint8_t* data, std::int32_t pixelCount, std::int32_t channelCount)
+	{
+		DecoderPixel index[64];
+		DecoderPixel px;
+		std::int32_t run = _run;
+		std::memcpy(index, _index, sizeof(index));
+		std::memcpy(&px, _px, sizeof(px));
+
+		switch (channelCount) {
+			case 1: DecodeFromMemory<1>(src, end, index, px, run, data, pixelCount); break;
+			case 2: DecodeFromMemory<2>(src, end, index, px, run, data, pixelCount); break;
+			case 3: DecodeFromMemory<3>(src, end, index, px, run, data, pixelCount); break;
+			default: DecodeFromMemory<4>(src, end, index, px, run, data, pixelCount); break;
+		}
+
+		_run = run;
+		std::memcpy(_index, index, sizeof(index));
+		std::memcpy(_px, &px, sizeof(px));
 	}
 }

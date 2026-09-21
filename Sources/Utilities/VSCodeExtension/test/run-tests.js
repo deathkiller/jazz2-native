@@ -437,7 +437,7 @@ function messagesOf(findings) {
 	equal('fixed function target set', names(language.FIXED_FUNCTION_TARGETS).sort().join(','), 'gs,gu,gx,legacygl,pica,pvr,rdp');
 	equal('compile-time macro set', names(language.STAGE_MACROS).sort().join(','), 'FRAGMENT_STAGE,LOW_POWER_GPU,NO_DYNAMIC_BRANCHING,SOFTWARE_RENDERER,VERTEX_STAGE');
 	equal('pass field set', names(language.FIXED_FUNCTION.passFields).sort().join(','),
-		'blend,color,luma_gain,offset_color,screen_offset,tev');
+		'blend,color,luma_gain,offset_color,screen_offset,tev,texture_repeat');
 	equal('blend mode set', names(language.FIXED_FUNCTION.blendModes).sort().join(','), 'ADD,ALPHA,MATERIAL,OPAQUE');
 	equal('tev preset set', names(language.FIXED_FUNCTION.tevPresets).sort().join(','),
 		'LUMA_RAMP,MODULATE,MODULATE_X2,MODULATE_X4,SILHOUETTE,TINT_MIX');

@@ -477,6 +477,42 @@ streaming buffer sizes and what a 16-bit index can address
 @m_span{m-text m-dim} (sceGxm rejects a draw whose indices pass 63999, which is the lower of the two
 ceilings) @m_endspan --- a mesh larger than that is split on whole-quad boundaries.
 
+@subsection consoles-common-levelgrids What a level's grids cost
+
+A level is two dense grids over the same tile positions --- the **tile layers** the tile map draws
+and the **event grid** the spawner reads --- and together they are the largest thing a level load
+asks a console heap for. A large level is 768x64 tiles or more with up to eight layers behind it: at
+the 12 bytes of @ref Jazz2::Tiles::LayerTile "LayerTile" a tile that is over 2 MB of layers, and at
+the 24 bytes of an event tile another 1.2 MB of events --- on the Nintendo 64 that is over half of
+everything the game has. Two storage decisions bring that down, and both are invisible to the code that reads them.
+
+-   **The event grid is sparse.** Almost every cell of it is empty --- a level holds a few thousand
+    events over tens of thousands of cells --- so the grid is a @cpp uint16_t @ce slot per cell into a
+    dense array that holds a tile only where an event exists @m_span{m-text m-dim}
+    (@ref Jazz2::Events::EventMap "EventMap" `::EventLayout`) @m_endspan. That is two bytes a cell
+    instead of twenty-four, 96 KB instead of 1.2 MB for the grid above. Reading an empty cell returns a
+    shared empty tile, so every query reads as it did before; a **write** goes through
+    @cpp Edit() @ce, which gives the cell a tile of its own, and @cpp Find() @ce distinguishes the two
+    without creating one. A reference from @cpp Edit() @ce is valid only until the next one, because
+    the dense array may grow. This applies on every platform --- there is nothing to trade.
+-   **Layers that are only ever drawn store four bytes a tile** instead of twelve: a tile id, its
+    flips and its alpha are all a background layer needs, where the sprite layer additionally carries
+    the destructible, suspend and parameter fields the collision code writes into. The compact form is
+    decoded on read into a small ring of scratch tiles, so @cpp Layout[i] @ce still yields a
+    @ref Jazz2::Tiles::LayerTile "LayerTile" and a reference survives the next few lookups, which is
+    all any reader here needs; writing one goes through @cpp Set() @ce. Unlike the sparse events this
+    *is* a trade @m_span{m-text m-dim} (a reference into a compact layer does not stay valid
+    indefinitely) @m_endspan, so it is enabled only where memory is the binding constraint ---
+    `LayerLayout::CompactDrawOnlyLayers`, today the Nintendo 64, the PSP, the Dreamcast and the 3DS.
+    The desktop and the larger consoles keep plain arrays.
+
+Both grids are allocated in blocks of 4096 tiles rather than as one run, so a heap that several level
+loads have fragmented never has to find a contiguous megabyte, and both allocate without throwing:
+a level whose grids do not fit **fails to load** rather than aborting the process, which reaches the
+player as the main menu's @m_span{m-text m-dim} ("Cannot load specified level!") @m_endspan message.
+That matters most where there is no virtual memory to hide behind, which is every console on this
+page.
+
 - - -
 
 @section consoles-n64 Nintendo 64
@@ -525,9 +561,22 @@ cp libz.a "$N64_INST/mips64-elf/lib/" && cp zlib.h zconf.h "$N64_INST/mips64-elf
 Unlike the other consoles this one does not consume the shared tree unchanged --- its cinematics
 have to be re-encoded, both to halve their resolution for the 320x240 output and, more importantly,
 to convert them out of the original format into the game's own @m_span{m-text m-dim} (whose decoder
-is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. Build the shared
-tree first as described in @ref consoles-common-content, then make a copy of it
-(`cp -al` hard-links it, so the copy costs no disk space) and re-encode the cinematics in the copy:
+is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. That is one
+option on the ordinary `console` profile, so this console gets a tree of its own from a single
+conversion --- everything in @ref consoles-common-content applies to it, only the command differs:
+
+@code{.sh}
+./build/Utilities/AssetPacker/AssetPacker ./build/ConsoleContentN64 \
+    --source=<path to the original Jazz Jackrabbit 2> --content=./Content \
+    --target=console --video-downscale=2
+@endcode
+
+@m_class{m-noindent}
+
+The N64 build below then takes that tree as its `NCINE_CONTENT_DIR`. Where a shared tree has already
+been prepared, the same result is reached by copying it @m_span{m-text m-dim} (`cp -al` hard-links
+it, so the copy costs no disk space) @m_endspan and re-encoding only the cinematics in the copy,
+which is the faster way around when the conversion itself is the slow part:
 
 @code{.sh}
 for video in intro ending; do
@@ -539,9 +588,8 @@ done
 
 @m_class{m-noindent}
 
-The N64 build below then takes that copy as its `NCINE_CONTENT_DIR`. Re-encoding trades size for
-decode cost --- the files come out *larger* than the originals, which is why the ending cinematic is
-left out of the image by the packaging step.
+Re-encoding trades size for decode cost --- the files come out *larger* than the originals, which is
+why the ending cinematic is left out of the image by the packaging step.
 
 @subsection consoles-n64-build Building
 
@@ -581,10 +629,23 @@ EEPROM the preferences are saved to.
 
 -   **Everything is memory.** 8 MB of unified RDRAM is half the Dreamcast's main memory with no
     separate video or sound RAM to hide anything in --- the framebuffers, every texture, every
-    sound and the heap all share it. The port keeps the strictest budgets of any console: episode
-    backgrounds are not loaded, debris caps are half the other consoles', the outgoing level's
-    assets are released before the incoming level loads, and the lightmap is combined at quarter
-    resolution.
+    sound and the heap all share it, and about 5.8 MB of it is heap. The port keeps the strictest
+    budgets of any console: episode backgrounds are not loaded, debris caps are half the other
+    consoles', the outgoing level's assets are released before the incoming level loads, and the
+    lightmap is combined at a twelfth of the output resolution @m_span{m-text m-dim} (27x20 texels;
+    every other console's map is a quarter or a sixth) @m_endspan.
+-   **Fragmentation is the harder half of that.** After a few levels and returns to the menu the
+    heap has several megabytes free and no large contiguous run left in it, so what fails is not the
+    last allocation but the first *big* one --- which used to be a whole tile layer, a whole event
+    grid or a whole tileset atlas. The port asks for none of those as one block any more: the grids
+    come in 4096-tile blocks with the sparse and compact forms of
+    @ref consoles-common-levelgrids "the section above", the atlas is built and uploaded one chunk
+    of at most 256 KB at a time rather than materialized whole, a direct-colour texture is converted
+    straight into its RDP store instead of keeping a second full-size host copy, and every one of
+    them fails soft: a level that does not fit returns to the menu with a message instead of
+    aborting. Animations are all **deferred** here @m_span{m-text m-dim} (the metadata is parsed,
+    the sheets are read on first use) @m_endspan, with the few that would otherwise hitch in play
+    read behind the loading screen.
 -   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
     a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
     this console has sound effects and no soundtrack. The lighter **libxmp**
@@ -609,17 +670,50 @@ EEPROM the preferences are saved to.
     @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce, 2 KB) @m_endspan. An emulator or flashcart
     that ignores the header's save type leaves the game running with no way to save, which is
     warned about at startup, not an error.
+-   **The FPU's exception traps are masked at startup.** libdragon enables the overflow,
+    divide-by-zero and invalid-operation traps when it is built without `NDEBUG`, which is how its
+    prebuilt library ships @m_span{m-text m-dim} (and what the toolchain file checks for, because the
+    log channels need it) @m_endspan. The game's arithmetic assumes IEEE behaviour like everywhere
+    else --- a "nearest player" search starts from @cpp FLT_MAX @ce and squares the distance to it,
+    which is an infinity on every other platform and was a CPU exception here --- so the port clears
+    the enable bits in `FCR31` during initialization and keeps only the flush-to-zero bit the VR4300
+    needs for denormals.
 -   **TMEM is per-primitive, not per-texture.** Every textured primitive samples through a 4 KB
     window @m_span{m-text m-dim} (2 KB for paletted texels --- the palette occupies the upper half)
     @m_endspan that the backend uploads before the draw, so the cost of a frame tracks how many
     distinct texture windows it touches, not how many pixels it covers. The tile map renders one
-    32x32 tile per upload with consecutive same-tile runs coalesced.
+    32x32 tile per upload with consecutive same-tile runs coalesced, and a sprite whose frame is
+    larger than a window is drawn as bands of rows through the same machinery rather than through
+    libdragon's blitter.
+-   **Additive blending is alpha-over here.** The RDP's blender computes its additive form without a
+    clamp, so a sum past white wraps to black instead of saturating --- libdragon's own header calls
+    the mode broken, and it is. Every additive pass therefore maps to the alpha-weighted form, which
+    over a dark scene is very close to the intent @m_span{m-text m-dim} (at the low alphas the glows
+    actually use, the two differ by a few percent of an already dark destination) @m_endspan. Effects
+    that genuinely need summing accumulate their passes on the CPU and go out as one draw, so they
+    are unaffected; a bright shot over a bright wall is the case where the difference shows.
+-   **The classic main menu background is drawn differently.** The non-Reforged menu repeats each of
+    its three tiles 96 times across one rotated quad far larger than the screen, which this hardware
+    cannot express: texel coordinates are 10.5 fixed point @m_span{m-text m-dim} (+-1024 texels)
+    @m_endspan and the largest of the three tiles is 16 KB of paletted texels against a 2 KB budget.
+    The port draws the same motion with different geometry --- the two small tiles as one rotated
+    view-sized quad each, wrapped by the tile descriptor, and the large one once per period --- so it
+    animates as it should without matching the original pixel for pixel.
 -   **It runs, but not smoothly.** This is the one target whose CPU is far below what the game was
-    written for --- an order of magnitude under the next-slowest console here --- and the port has
-    not been performance-tuned for it: the frame rate is well below the others' and swings with what
-    is on screen, so treat this port as **experimental** rather than as a finished one. The numbers
-    above for the cinematics @m_span{m-text m-dim} (55 ms per frame for a decoder that is little more
-    than @cpp memcpy() @ce) @m_endspan are the honest scale of the machine.
+    written for --- an order of magnitude under the next-slowest console here --- and it shows: a
+    level frame measures between about 33 and 45 ms in ares depending on the level and what is on
+    screen @m_span{m-text m-dim} (roughly 22 to 30 frames per second, where an untuned build was
+    55 ms) @m_endspan, so treat this port as **experimental** rather than as a finished one. The
+    numbers above for the cinematics @m_span{m-text m-dim} (55 ms per frame for a decoder that is
+    little more than @cpp memcpy() @ce) @m_endspan are the honest scale of the machine. Where the
+    frame goes, measured rather than guessed: roughly a third in the RDP dispatch
+    @m_span{m-text m-dim} (of which the rdpq calls themselves are the smaller part --- most of it is
+    CPU work per primitive) @m_endspan, a sixth in the tile map, and the remainder spread over actor
+    updates, collisions, the HUD and the software lightmap. The two structural wins so far were
+    giving each tile layer a **cached mesh** of its visible window @m_span{m-text m-dim} (rebuilt
+    only when that window moves by a whole tile, which for a slow parallax layer is rare, with
+    animated tiles kept out of it and re-resolved every frame) @m_endspan and a compact two-vertex
+    form for those cached quads; both are N64-only and sit behind the ordinary tile-mesh path.
 -   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
     yet --- ares is the reference until then.
 
@@ -785,6 +879,31 @@ the result is cached. Installing it afterwards changes nothing until the cache e
 @m_span{m-text m-dim} (re-run CMake with `-U MKDCDISC_EXECUTABLE`, or delete the build directory)
 @m_endspan. A configuration without it prints `mkdcdisc not found, bootable CDI image will not be
 created` and then builds only the ELF.
+
+@subsection consoles-dreamcast-swap Changing the content of a finished image
+
+Because the content is authored into the image, changing it normally means building the image again
+--- with the KallistiOS toolchain and `mkdcdisc` at hand, which is the one step of this that cannot
+be done anywhere else. It does not have to be:
+
+@code{.sh}
+./build/Utilities/AssetPacker/AssetPacker swap-content ./build/dreamcast/jazz2.cdi \
+    --content=./build/DreamcastContent
+@endcode
+
+@m_class{m-noindent}
+
+`swap-content` opens a finished image, keeps its bootstrap and its executable exactly as they are
+@m_span{m-text m-dim} (`1ST_READ.BIN` is copied across still scrambled) @m_endspan and writes it back
+out around a different `Content`, which is what a `--target=dreamcast` conversion produced. It takes
+no toolchain, runs on any platform the packer does, and gives back an image the same size as the one
+it was handed whenever the new content fits in the space the disc already has --- which it usually
+does, since the image is mostly the empty run that pushes the files out to the edge of the disc. The
+directory named by `--content=` becomes `Content` on the disc whatever it is called here, so the
+staging step above has no counterpart. See @ref asset-packer-swap-content for what it does to the
+file system, and note that it takes the image apart rather than patching it, so nothing of the
+@ref consoles-dreamcast-content "staging directory is added to, never cleared" trap applies to it.
+The @ref consoles-ps2-swap "PlayStation 2 image" is handled by the same command.
 
 @subsection consoles-dreamcast-deploy Deploying and running
 
@@ -1802,19 +1921,25 @@ Regenerating the content tree means `rm -rf ./build/ps2/cd/` and then building a
 @cpp "Music" @ce belongs on the disc: this console plays the soundtrack through **libxmp**
 @m_span{m-text m-dim} (see @ref consoles-ps2-limits) @m_endspan.
 
-@subsection consoles-ps2-mx4sio Running from an MX4SIO SD adapter
+@subsection consoles-ps2-storage Running from a USB stick or an MX4SIO SD adapter
 
-An **MX4SIO** adapter puts an SD card on a controller port and is how most of these consoles are
-loaded today. The game supports it as a first-class alternative to the disc: it looks for a content
-tree on the card at startup and, finding one, reads everything from there --- and writes there too,
-which a disc cannot offer and an 8 MB memory card barely can @m_span{m-text m-dim} (the level cache
-alone is larger than one) @m_endspan.
+A **USB stick** in one of the front ports, and an **MX4SIO** adapter putting an SD card on a
+controller port, are how most of these consoles are loaded today. The game supports both as
+first-class alternatives to the disc: it looks for a content tree on them at startup and, finding
+one, reads everything from there --- and writes there too, which a disc cannot offer and an 8 MB
+memory card barely can @m_span{m-text m-dim} (the level cache alone is larger than one) @m_endspan.
 
-Nothing has to be built differently. The game lives under `Games/Jazz2/` on the card --- a card is
-shared storage, alongside a loader's own `APPS`, `DVD` and `CFG`, and a tree at its root would claim
-names that belong to whatever else is on it. It is the same layout the game uses on the one other
-machine where it is a guest on a shared card @m_span{m-text m-dim} (the Switch,
-@cpp "sdmc:/Games/Jazz2/" @ce) @m_endspan:
+Nothing has to be built differently, and there are two layouts, looked for in this order:
+
+-   **A `Content` directory next to the executable**, wherever that happens to be. This is what the
+    loader's own argument vector says @m_span{m-text m-dim} (@cpp argv[0] @ce, which is the only
+    thing that knows where the executable was read from --- see
+    @cpp nCine::Backends::Ps2Storage::SetBootPath() @ce) @m_endspan, so it works on any device the
+    loader can reach and in any directory the files were copied into.
+-   **`Games/Jazz2/` on a mounted unit.** A card or a stick is shared storage, alongside a loader's
+    own `APPS`, `DVD` and `CFG`, and a tree at its root would claim names that belong to whatever
+    else is on it. It is the same layout the game uses on the one other machine where it is a guest
+    on shared storage @m_span{m-text m-dim} (the Switch, @cpp "sdmc:/Games/Jazz2/" @ce) @m_endspan.
 
 @code{.shell-session}
 mass0:/Games/Jazz2/JAZZ2.ELF      # wherever the loader is pointed at; this is the tidy place for it
@@ -1825,12 +1950,22 @@ mass0:/Games/Jazz2/Jazz2.config   # likewise
 
 @m_class{m-noindent}
 
-Units `mass0:` to `mass3:` are probed in order, so a card partitioned more than once still works. The
-three IOP modules this needs --- `bdm`, `bdmfs_fatfs` and `mx4sio_bd`
-@m_span{m-text m-dim} (FAT12/16/32 and exFAT) @m_endspan --- are **linked into the executable**,
-because a driver that is the only way to reach a device obviously cannot be read from it
-@m_span{m-text m-dim} (see @cpp nCine::Backends::Ps2Modules @ce; `audsrv` is linked in as well, for
-the same reason) @m_endspan.
+Units `mass0:` to `mass3:` are probed in order, so a device partitioned more than once still works.
+The IOP modules this needs --- `bdm`, `bdmfs_fatfs`
+@m_span{m-text m-dim} (FAT12/16/32 and exFAT) @m_endspan and the block drivers `mx4sio_bd` and
+`usbd` + `usbmass_bd` --- are **linked into the executable**, because a driver that is the only way
+to reach a device obviously cannot be read from it @m_span{m-text m-dim} (see
+@cpp nCine::Backends::Ps2Modules @ce; `audsrv` is linked in as well, for the same reason) @m_endspan.
+
+@m_class{m-block m-info}
+
+@par What the loader already mounted is left alone
+Before any of those modules is loaded, the units themselves are probed. A bare executable was
+started by something --- wLaunchELF, Open PS2 Loader --- which read it off exactly the kind of device
+being looked for, and which therefore already has a block driver resident and talking to that
+hardware. Loading a second copy of one is not a harmless duplicate: `mx4sio_bd` bit-bangs the SIO2
+registers itself, so two instances clock the same card against each other. One `fioDopen()` per unit
+settles it, because the device the executable was read from is by definition already mounted.
 
 Loading a module out of EE memory needs a patch written into a running ROM service, on a console
 whose IOP this port deliberately never resets, and it is the one mechanism here with no track record
@@ -1845,10 +1980,11 @@ is all it does --- it does not know what the game is called or how its files are
 directory name and the `Content`/`Cache`/`Source` layout live in
 @cpp Jazz2::ContentResolver::InitializePaths() @ce.
 
-A build running from a card also writes a **log file** next to its content, `Jazz2.log`, which is the
-only practical way to read a trace from this console --- the alternative is the EE's SIO register and
-a serial cable. It is deliberately not written when the game runs from a disc: the writable storage
-there is a memory card, which is 8 MB shared with every game on the console and no place for a log.
+A build running from removable storage also writes a **log file** next to its content, `Jazz2.log`,
+which is the only practical way to read a trace from this console --- the alternative is the EE's SIO
+register and a serial cable. It is deliberately not written when the game runs from a disc: the
+writable storage there is a memory card, which is 8 MB shared with every game on the console and no
+place for a log.
 
 @m_class{m-block m-warning}
 
@@ -1856,8 +1992,10 @@ there is a memory card, which is 8 MB shared with every game on the console and 
 The probe runs only when the drive reported **no disc at all** --- not merely when the disc carries no
 content. Booting from a disc therefore costs nothing for a feature it is not using, never picks up a
 stale tree from a card left in the adapter, and never touches a driver that talks to the SIO2
-registers itself while `SIO2MAN`, `MCMAN` and the pads are already using them. To run from the card,
-run the ELF from the card with no disc in the drive.
+registers itself while `SIO2MAN`, `MCMAN` and the pads are already using them. To run from removable
+storage, run the ELF from removable storage with no disc in the drive --- which also means that a
+disc image launched through Open PS2 Loader reads its content from the image, not from the device
+the image is sitting on.
 @par
 Which makes the disc detection load-bearing, and it is trickier than it looks: `sceCdInit()` returns
 once commands can be *sent*, not once the drive has identified what it is holding, and `SCECdNODISC`
@@ -1892,6 +2030,39 @@ Without an ISO author on `PATH` at configure time the build prints
 `xorrisofs/mkisofs not found, bootable ISO image will not be created` and produces only the ELF. That
 is enough to bring the engine up in PCSX2 with `-elf`, but such a run has no disc and therefore no
 content at all --- the game reads everything from @cpp "cdfs:/" @ce here.
+
+@m_class{m-block m-warning}
+
+@par The image must carry a Joliet hierarchy
+Plain ISO 9660 spells names in upper case out of `A`--`Z`, `0`--`9` and `_`, so a name with a space
+or a dash in it is not the name that ends up on the disc: `xmas 1 feaw.j2t` becomes
+`XMAS_1_FEAW.J2T`, and the game asking for the first one finds nothing. 42 of the files the content
+tree carries are like that --- most of the christmas tilesets and a handful of music tracks. The
+real names survive in one of two extensions, and **which one matters**: `mkisofs` writes *Rock
+Ridge* by default, which ps2sdk's `cdfs.irx` ignores completely, while the Joliet hierarchy is the
+one it does read @m_span{m-text m-dim} (it looks for the supplementary descriptor and takes every
+second byte of the UCS-2 names, see `cdfs_iop.c`) @m_endspan. Hence the `-J` in the invocation
+above. Dropping it puts those 42 files out of the game's reach with nothing in the log to say
+so --- the level simply comes up without its tileset.
+
+@subsection consoles-ps2-swap Changing the content of a finished image
+
+As on the @ref consoles-dreamcast-swap "Dreamcast", the content is authored into the image, and
+replacing it does not need the image to be built again:
+
+@code{.sh}
+./build/Utilities/AssetPacker/AssetPacker swap-content ./build/ps2/jazz2.iso \
+    --content=./build/ConsoleContent
+@endcode
+
+@m_class{m-noindent}
+
+`swap-content` keeps `SYSTEM.CNF`, the executable it names and the `.IRX` modules beside it exactly
+as they are, and writes the file system again around a different `Content`. A PlayStation 2 disc is
+a plain ISO with no container around it, so there is less to preserve than on the Dreamcast and the
+image comes back sized to what is now on it. It always writes a Joliet hierarchy, so an image that
+went through it is readable by `cdfs.irx` whether or not the build that produced it passed `-J`.
+See @ref asset-packer-swap-content.
 
 @subsection consoles-ps2-deploy Deploying and running
 

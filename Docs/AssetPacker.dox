@@ -78,6 +78,10 @@ The command may be omitted, in which case `convert` is assumed:
     to the nearest palette indices
 -   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N]` --- Re-encodes one
     cinematic on its own, N defaults to 1, which keeps the original resolution
+-   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content`
+    directory of an already built console disc image --- a Dreamcast `.cdi` or a PlayStation 2
+    `.iso` --- keeping its bootstrap and its executable exactly as they are. The image is
+    rewritten in place when no target is given
 
 Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
 on failure.
@@ -346,6 +350,91 @@ The file is otherwise read leniently: comments, trailing commas and a byte order
 tolerated, so it can be annotated while it is worked on and saved by any editor. It is written
 as UTF-8 without one.
 
+@section asset-packer-swap-content Replacing the content of a disc image
+
+The two consoles that boot from a read-only disc --- the Dreamcast and the PlayStation 2 ---
+bake their content into the image at build time @m_span{m-text m-dim} (see
+@ref consoles-dreamcast-content and @ref consoles-ps2-content) @m_endspan, which is the only way
+either of them can be given anything: neither has writable storage the game could be handed a
+tree on. The price is that changing what is on the disc used to mean building the whole image
+again, with the console toolchain and an image authoring tool at hand. `swap-content` is the
+other half of that: it opens a finished image, keeps everything on it except `Content`, and
+writes it back out around a different one.
+
+@code{.sh}
+AssetPacker convert ./build/DreamcastContent --source=<original Jazz Jackrabbit 2> --content=./Content --target=dreamcast
+AssetPacker swap-content ./jazz2.cdi --content=./build/DreamcastContent
+
+AssetPacker convert ./build/Ps2Content --source=<original Jazz Jackrabbit 2> --content=./Content --target=ps2
+AssetPacker swap-content ./jazz2.iso --content=./build/Ps2Content
+@endcode
+
+@m_class{m-noindent}
+
+The directory named by `--content=` becomes `Content` on the disc whatever it is called here,
+so it is exactly what a `--target=dreamcast` conversion produces. With no target image given the
+source is rewritten in place @m_span{m-text m-dim} (through a `.tmp` beside it, which only takes
+its place once the whole image is written, so an interrupted run cannot leave half a disc
+behind) @m_endspan; naming one leaves the original alone.
+
+Nothing else on the disc is touched. On a Dreamcast disc that is `IP.BIN` --- the bootstrap, the
+licence screen, the serial number and the title --- carried over as the 32 KB it occupies, and
+`1ST_READ.BIN`, copied across still scrambled exactly as it was written; on a PlayStation 2 one
+it is `SYSTEM.CNF`, the executable it names and the `.IRX` modules beside them. The tool
+therefore needs neither the toolchain the image was built with nor the executable it was built
+from, and runs on any platform the packer itself does.
+
+@subsection asset-packer-swap-content-how What it actually does
+
+A disc cannot be patched in place: the files of a directory are laid out one after another at
+fixed addresses, so anything that changes a single size moves everything that follows. The file
+system is therefore generated again from scratch (@ref Jazz2::AssetPacker::Iso9660Builder), and
+only the container around it is carried over byte for byte from the image that was opened. For
+a DiscJuggler `.cdi` that container is the audio track of the first session, the pregap, the
+track layout and the descriptor the file ends with; a plain `.iso` has no container at all ---
+the file *is* the data track, one 2048-byte sector after another --- so there the generated
+volume is the whole of the output. Which of the two an image is, is read off the last eight
+bytes of the file, where a DiscJuggler image names its layout.
+
+The generated volume is the same shape as the one `mkdcdisc` writes, because that is what the
+console reads:
+
+-   **Two hierarchies.** The plain ISO 9660 one is what the bootstrap of the Dreamcast looks
+    `1ST_READ.BIN` up in, and it can spell names only in upper case out of a very small
+    alphabet --- it turns `christmas-x-core_jj2.it` into `CHRISTMAS_X_CORE_JJ2.IT`, which is not
+    a name the game asks for. A Joliet hierarchy beside it carries the names as they really
+    are, and that is the one KallistiOS uses whenever a disc has one @m_span{m-text m-dim}
+    (see `fs_iso9660.c`, which looks for the supplementary descriptor in sectors 17 to 19 and
+    ignores the plain hierarchy the moment it finds one) @m_endspan.
+-   **Files at the outer edge.** A CD passes the most data per rotation under the head at its
+    outer edge, so the file data is placed at the *end* of the volume and the space in front of
+    it is left empty. That is what makes the image of a 110 MB game 740 MB, and it is the
+    default `mkdcdisc` ships @m_span{m-text m-dim} (`-N` turns it off) @m_endspan, so a disc
+    that goes through this tool keeps it.
+-   **Mode 2 Form 1 sectors**, for a DiscJuggler image. It stores 2336 bytes of every sector, so
+    the error detection code and both Reed-Solomon parities are generated for each one --- a
+    disc whose parity is wrong is a disc a drive reports read errors on. A plain `.iso` stores
+    the 2048 bytes of user data and nothing else, and needs none of it.
+
+A `.cdi` is left exactly as long as it was whenever the new content fits, which is almost
+always: the image is mostly the empty space above, so the whole disc comes back the same size
+with only the data track rewritten. Content that does not fit grows the track, and the three
+length fields of the descriptor and the length of the disc are adjusted to match; a disc that
+outgrows an 80 minute CD is still written, with a warning, because what it is going to be
+burned onto is not something the tool can know. A plain `.iso` has no geometry to keep --- it
+is a file as long as what is on it --- so it is always sized to what it now holds.
+
+@m_class{m-block m-info}
+
+@par The PlayStation 2 disc gains a Joliet hierarchy it did not have
+The build authors that image with `mkisofs`, which writes the real names into *Rock Ridge*
+entries --- and ps2sdk's `cdfs.irx`, the driver the game reads the disc through, does not look
+at those. It reads a Joliet hierarchy when the disc has one and the plain names otherwise,
+which is why the build now passes `-J` as well @m_span{m-text m-dim} (before it did not, and the
+42 files the game names with a space or a dash --- `xmas 1 feaw.j2t`, `christmas-x-core_jj2.it`
+--- were on the disc as `XMAS_1_FEAW.J2T` and could not be opened) @m_endspan. An image that
+went through `swap-content` always comes back with one, so it is reachable either way.
+
 @section asset-packer-platforms Platform notes
 
 -   **Desktop** builds do not need the tool at all --- the game converts on first run.
@@ -360,14 +449,16 @@ as UTF-8 without one.
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
     why they are given a prepared tree as well. The Dreamcast additionally authors the tree into a
     read-only disc image at build time, which is a procedure of its own ---
-    see @ref consoles-dreamcast-content.
+    see @ref consoles-dreamcast-content; the content of a finished image can be replaced afterwards
+    without building it again, see @ref asset-packer-swap-content.
 -   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
     `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* halved to
     the 320×240 the console actually displays. A `console` tree still plays, it is just the slow way
     round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
     Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
-    @ref consoles-ps2-content) @m_endspan; it can equally be run from an SD card in an MX4SIO adapter,
-    which consumes the same tree @m_span{m-text m-dim} (see @ref consoles-ps2-mx4sio) @m_endspan.
+    @ref consoles-ps2-content, whose content can likewise be replaced afterwards with
+    @ref asset-packer-swap-content) @m_endspan; it can equally be run from an SD card in an MX4SIO adapter,
+    which consumes the same tree @m_span{m-text m-dim} (see @ref consoles-ps2-storage) @m_endspan.
 -   **PlayStation 3** consumes the generic `--target=console` tree --- it needs nothing the profile
     does not already do. It has a writable hard disk and could in principle convert, but is given a
     prepared tree for the same reason the PSP is: doing it on the console is slow.
@@ -408,6 +499,11 @@ as UTF-8 without one.
 -   **Recompressed cinematics are larger than the originals.** Only re-encode where the
     platform needs it (the tool's per-target defaults already do the right thing), everything
     else wants the original file.
+-   **`swap-content` reads the two kinds of image the game's own builds produce.** A plain `.iso`,
+    which is what the PlayStation 2 disc is, and a DiscJuggler `.cdi` whose data track stores 2048 or
+    2336 bytes per sector, which is what `mkdcdisc` writes. A `.cdi` that stores whole 2352-byte
+    sectors is refused rather than written back in a form that was never checked, and no other
+    container @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan is read at all.
 -   The game plays pre-downscaled cinematics as they are --- the player picks its runtime
     downscale from the actual frame width, so a file reduced by the tool is not halved a
     second time.

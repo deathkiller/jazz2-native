@@ -140,6 +140,97 @@ namespace Jazz2::Tiles
 	static_assert(sizeof(LayerTile) == 12, "LayerTile must stay packed, it is allocated per tile of every layer");
 
 	/**
+		@brief Tiles of a single @ref TileMapLayer, in blocks and in one of two forms
+
+		One allocation per block of @ref BlockTiles rather than one for the whole layer, so a large layer
+		never needs one contiguous run of a heap that levels and menus have fragmented.
+
+		The sprite layer keeps the full @ref LayerTile (12 bytes: the destructible, suspend and parameter
+		fields the collision code writes). Every other layer is only ever drawn --- all it needs is the
+		tile, its flips and its alpha --- and where @ref CompactDrawOnlyLayers says so it stores four bytes
+		a tile instead: the 1023x80 background of a Christmas level is 327 KB that way instead of 982 KB,
+		on a console with 5.8 MB of heap for everything.
+
+		A compact layer is still read as a @ref LayerTile --- @ref operator[]() decodes into one of a few
+		scratch tiles, so a returned reference stays valid for the next few lookups, which is longer than
+		any reader here holds one --- and it is written through @ref Set(), which is the only way to change
+		a compact tile.
+	*/
+	class LayerLayout {
+	public:
+		/** @brief Base-2 logarithm of @ref BlockTiles */
+		static constexpr std::size_t BlockShift = 12;
+		/**
+			@brief Whether the layers that are only drawn take the four-byte form
+
+			Enabled only where RAM is the binding constraint, because the compact form trades the lifetime
+			of a returned reference for the memory (see the class description); the platforms with memory
+			to spare keep the plain array semantics.
+		*/
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_3DS)
+		static constexpr bool CompactDrawOnlyLayers = true;
+#else
+		static constexpr bool CompactDrawOnlyLayers = false;
+#endif
+		/** @brief Tiles per allocated block */
+		static constexpr std::size_t BlockTiles = std::size_t(1) << BlockShift;
+
+		/** @brief Allocates @p count tiles, in the compact form if @p compact, returning `false` if the memory is not there */
+		bool Allocate(std::size_t count, bool compact);
+		/** @brief Returns the number of tiles */
+		std::size_t size() const { return _count; }
+		/** @brief Returns `true` if no tiles are allocated */
+		bool empty() const { return _count == 0; }
+		/** @brief Returns `true` if the tiles are stored in the four-byte form */
+		bool IsCompact() const { return _compact; }
+
+		/**
+			@brief Returns the tile at @p i
+
+			Like the array it replaces, a const layout still hands out mutable tiles --- but writing
+			through the returned reference reaches the layer only in the full form, so every writer goes
+			through @ref Set() instead.
+		*/
+		LayerTile& operator[](std::size_t i) const {
+			if (!_compact) {
+				return _full[i >> BlockShift][i & (BlockTiles - 1)];
+			}
+			LayerTile& tile = _scratch[_scratchNext++ & (ScratchCount - 1)];
+			Decode(_packed[i >> BlockShift][i & (BlockTiles - 1)], tile);
+			return tile;
+		}
+		/** @brief Replaces the tile at @p i, in either form */
+		void Set(std::size_t i, const LayerTile& tile) {
+			if (!_compact) {
+				_full[i >> BlockShift][i & (BlockTiles - 1)] = tile;
+			} else {
+				_packed[i >> BlockShift][i & (BlockTiles - 1)] = Encode(tile);
+			}
+		}
+
+	private:
+		static constexpr std::uint32_t ScratchCount = 8;
+
+		static std::uint32_t Encode(const LayerTile& tile) {
+			return std::uint32_t(tile.TileID) | (std::uint32_t(std::uint8_t(tile.Flags)) << 16) | (std::uint32_t(tile.Alpha) << 24);
+		}
+		static void Decode(std::uint32_t packed, LayerTile& tile) {
+			tile = LayerTile {};
+			tile.TileID = std::uint16_t(packed);
+			tile.Flags = (LayerTileFlags)std::uint8_t(packed >> 16);
+			tile.Alpha = std::uint8_t(packed >> 24);
+			tile.DestructAnimation = -1;
+		}
+
+		bool _compact = false;
+		SmallVector<std::unique_ptr<LayerTile[]>, 0> _full;
+		SmallVector<std::unique_ptr<std::uint32_t[]>, 0> _packed;
+		std::size_t _count = 0;
+		mutable LayerTile _scratch[ScratchCount] = {};
+		mutable std::uint32_t _scratchNext = 0;
+	};
+
+	/**
 		@brief Represents a single tile map layer
 		
 		Bundles a layer's grid of @ref LayerTile entries with its dimensions, its @ref LayerDescription and a
@@ -148,7 +239,7 @@ namespace Jazz2::Tiles
 	*/
 	struct TileMapLayer {
 		/** @brief Layer layout */
-		std::unique_ptr<LayerTile[]> Layout;
+		LayerLayout Layout;
 		/** @brief Layer layout size */
 		Vector2i LayoutSize;
 		/** @brief Layer description */
@@ -378,6 +469,8 @@ namespace Jazz2::Tiles
 		void AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping = nullptr);
 		/** @brief Reads layer configuration from a stream */
 		void ReadLayerConfiguration(Stream& s);
+		/** @brief Whether reading the layers ran out of memory (the level cannot be played) */
+		bool HasLoadFailed() const { return _loadFailed; }
 		/** @brief Reads description of animated tiles from a stream */
 		void ReadAnimatedTiles(Stream& s);
 		/** @brief Sets tile event flags */
@@ -590,6 +683,7 @@ namespace Jazz2::Tiles
 
 		ITileMapOwner* _owner;
 		std::int32_t _sprLayerIndex;
+		bool _loadFailed = false;
 		PitType _pitType;
 
 		SmallVector<TileSetPart, 2> _tileSets;
@@ -672,6 +766,9 @@ namespace Jazz2::Tiles
 			float Alpha;
 			std::uint16_t Slot;			//< Packed atlas slot the tile samples, the grouping key
 			std::uint16_t Chunk;		//< Atlas chunk (texture) that slot lives in
+			std::uint16_t Xo, Yo;		//< Cell of the layer's window the tile sits in (see LayerMeshCache)
+			std::int32_t LayoutIndex;	//< Index of the tile in the layer's layout
+			bool Animated;				//< An animated tile: never cached, resolved every frame
 		};
 
 		/// Ceiling on the tiles one layer's mesh is grouped over, set by the width of @ref _meshTileOrder. A
@@ -684,11 +781,73 @@ namespace Jazz2::Tiles
 		/// Indices into @ref _meshTileEntries in grouped order, and the counting-sort buckets that produce them
 		SmallVector<std::uint16_t, 0> _meshTileOrder;
 		SmallVector<std::uint16_t, 0> _meshTileBuckets;
+
+		void EmitTileRuns(RenderQueue& renderQueue, const Texture& texture, bool indexed, const Vector4f& color,
+			std::uint16_t depth, std::uint32_t firstEntry, std::uint32_t entryCount);
 #	endif
 #endif
 
 		std::int32_t _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
+
+#if defined(DEATH_TARGET_N64)
+		/**
+			@brief Screen cells the sprite layer covers with fully opaque tiles this frame
+
+			Rebuilt by DrawLayer() for the sprite layer, which OnDraw() draws first for that reason; the
+			layers behind it then skip every tile whose whole screen rectangle falls on covered cells (see
+			the note in DrawLayer). One bit per cell, a cell being one sprite-layer tile on screen.
+		*/
+		struct OpaqueCoverage {
+			static constexpr std::int32_t MaxCols = 32;
+			static constexpr std::int32_t MaxRows = 16;
+			std::int32_t OriginX, OriginY;		//< Screen position of cell (0, 0)
+			std::int32_t Cols, Rows;
+			std::uint16_t Depth;				//< Depth of the covering layer; only layers behind it are culled
+			bool Valid;
+			std::uint32_t RowBits[MaxRows];
+		};
+		OpaqueCoverage _opaqueCoverage = {};
+		/// Bumped whenever a rebuilt coverage grid differs from the previous one (keys the culled layers' caches)
+		std::uint32_t _coverageStamp = 0;
+
+		/**
+			@brief The static tiles of one layer's window, kept between frames
+
+			See the note in DrawLayer(): a layer's visible window changes only every 32 pixels of its own
+			scroll, so its tiles are walked and their quads written once per window into a VBO the layer
+			owns, and the frames in between re-issue those commands under a new translation. Animated tiles
+			are excluded (recorded as cells and re-resolved every frame through the streaming path), and a
+			copy of the window's tile IDs detects destroyed or triggered tiles.
+		*/
+		struct LayerMeshCache {
+			struct AnimatedCell {
+				std::uint16_t Xo, Yo;
+				std::int32_t LayoutIndex;
+			};
+			struct Chunk {
+				std::unique_ptr<RenderCommand> Command;
+				std::uint32_t VboFloats = 0;			//< Capacity of the command's own VBO (written through a mapping)
+				std::int32_t QuadCount = 0;
+			};
+			bool Valid = false;
+			bool Covering = false, Culled = false, PaletteOpaque = true;
+			std::int32_t TileAbsX = 0, TileAbsY = 0, Cols = 0, Rows = 0;
+			std::int32_t CullShiftX = 0, CullShiftY = 0;
+			std::uint32_t CoverageStamp = 0;
+			SmallVector<std::uint16_t, 0> WindowIds;
+			SmallVector<AnimatedCell, 0> Animated;
+			SmallVector<Chunk, 1> Chunks;
+			OpaqueCoverage Coverage = {};
+		};
+		SmallVector<LayerMeshCache, 0> _layerMeshCaches;
+
+		bool LayerMeshWindowUnchanged(const TileMapLayer& layer, const LayerMeshCache& cache, std::int32_t tileAbsX, std::int32_t tileAbsY,
+			std::int32_t tileXs, std::int32_t tileYs) const;
+		void BuildLayerMeshCache(LayerMeshCache& cache, TileSet& tileSet, std::int32_t x1i, std::int32_t y1i);
+		void AddCachedLayerMesh(RenderQueue& renderQueue, LayerMeshCache& cache, std::int32_t x1i, std::int32_t y1i, const Vector4f& color, std::uint16_t depth);
+		void PushAnimatedMeshEntries(const TileMapLayer& layer, const LayerMeshCache& cache, TileSet& tileSet, std::int32_t x1i, std::int32_t y1i);
+#endif
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);

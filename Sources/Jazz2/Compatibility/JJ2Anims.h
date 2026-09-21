@@ -52,6 +52,36 @@ namespace Jazz2::Compatibility
 		*/
 		static void ReadImageContent(Stream& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 
+		/**
+			@brief Incremental decoder for the image content written by @ref WriteImageContent
+
+			Keeps the decoder state between calls, so an image can be read a band of rows at a time into
+			separate buffers instead of one allocation the size of the whole sheet - which for the larger
+			tilesets is close to a megabyte, the single biggest block the game asks for, and the first one to
+			fail on a console heap that a previous level has already fragmented. The bands have to be decoded
+			in order and together cover exactly `width * height` pixels.
+		*/
+		class ImageContentDecoder
+		{
+		public:
+			ImageContentDecoder();
+
+			/** @brief Decodes the next @p pixelCount pixels of the image into @p data */
+			void Decode(Stream& s, std::uint8_t* data, std::int32_t pixelCount, std::int32_t channelCount);
+			/**
+				@brief Decodes the next @p pixelCount pixels from an in-memory copy of the content, advancing @p src
+
+				Reading past @p end yields zero bytes. A byte read from memory is a load; through a stream it is a
+				virtual call per byte, which on the consoles' in-order CPUs was most of the decode.
+			*/
+			void Decode(const std::uint8_t*& src, const std::uint8_t* end, std::uint8_t* data, std::int32_t pixelCount, std::int32_t channelCount);
+
+		private:
+			std::uint32_t _index[64];
+			std::uint8_t _px[4];
+			std::int32_t _run;
+		};
+
 		/** @brief Where one frame ends up in a tightly packed sheet */
 		struct PackedFrame
 		{

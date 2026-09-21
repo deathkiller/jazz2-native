@@ -81,6 +81,14 @@ namespace nCine::RHI
 		/** @brief Displacement of the whole quad in the quad's own coordinate space (the Outline ring taps) */
 		float ScreenOffset[2] = { 0.0f, 0.0f };
 		/**
+			@brief Whether the pass samples the texture with hardware wrap along S (texture-unit coordinates
+			outside [0, 1] repeat) instead of within the clamped window the strip's coordinates span
+
+			RDP ONLY (a mask on the tile descriptor): the TexturedBackground warp draws each band as ONE
+			strip with unwrapped coordinates instead of up to eight pieces cut at the texture's edges.
+		*/
+		bool TextureRepeat = false;
+		/**
 			@brief How much @ref TevPreset::LumaRamp amplifies the texel's luminance before saturating it
 
 			Only read by that preset (the GLSL it approximates saturates a scaled luma - FrozenMask's

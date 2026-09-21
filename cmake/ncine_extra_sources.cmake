@@ -289,6 +289,28 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.cpp
 		)
+
+		if(NCINE_N64_SIZE_OPTIMIZATION)
+			# Code that never runs per frame in a level is built for size on the N64: the whole program lives
+			# in the same 8 MB as the level data, and every 100 KB of code is 100 KB less heap. Measured: -Os
+			# over the whole tree saved 511 KB of .text but cost 20% of the level frame rate, so it is applied
+			# only to the menus, the JSON parser (metadata is read at load time), the event spawner and the
+			# application bootstrap - never to the renderer, the actors, the tile map or the importers' decoders
+			# that level loads spend their time in. Per-source options come after the target's -O2, so they win.
+			file(GLOB_RECURSE _n64ColdSources CONFIGURE_DEPENDS
+				"${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/*.cpp"
+				"${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/*.cpp")
+			list(APPEND _n64ColdSources
+				"${NCINE_SOURCE_DIR}/Main.cpp"
+				"${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp"
+				"${NCINE_SOURCE_DIR}/Jazz2/UI/Cinematics.cpp"
+				"${NCINE_SOURCE_DIR}/Jazz2/Input/ControlScheme.cpp"
+				"${NCINE_SOURCE_DIR}/nCine/Application.cpp"
+				"${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp"
+				"${NCINE_SOURCE_DIR}/nCine/MainApplication.cpp")
+			set_source_files_properties(${_n64ColdSources} TARGET_DIRECTORY ${NCINE_APP}
+				PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:-Os>")
+		endif()
 	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 		# libogc window/input backend (no SDL/GLFW on these consoles); GX is linked by the
 		# devkitPro toolchain's standard libraries (ogc), listed with the platform packaging below
@@ -369,7 +391,9 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			"Audsrv=audsrv.irx"
 			"Bdm=bdm.irx"
 			"BdmfsFatfs=bdmfs_fatfs.irx"
-			"Mx4sioBd=mx4sio_bd.irx")
+			"Mx4sioBd=mx4sio_bd.irx"
+			"Usbd=usbd.irx"
+			"UsbmassBd=usbmass_bd.irx")
 
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.h
@@ -1335,7 +1359,14 @@ else()
 			COMMENT "Staging SYSTEM.CNF, cdfs.irx and audsrv.irx onto the disc image"
 			VERBATIM)
 
-		# Prefer xorrisofs, fall back to the older mkisofs/genisoimage; all three take the same options here
+		# Prefer xorrisofs, fall back to the older mkisofs/genisoimage; all three take the same options here.
+		# "-J" is not decoration: plain ISO 9660 spells names in upper case out of A-Z, 0-9 and "_" only, so
+		# the tilesets and music the game names with a space or a dash - "xmas 1 feaw.j2t",
+		# "christmas-x-core_jj2.it", 42 files in all - land on the disc as "XMAS_1_FEAW.J2T" and the game
+		# then cannot open them. The real names are what a Joliet hierarchy carries, and that is the one
+		# ps2sdk's "cdfs.irx" reads whenever a disc has one (it recognizes the supplementary descriptor and
+		# takes every second byte of the UCS-2 names). Rock Ridge, which these tools write by default and
+		# which also carries the real names, that driver does not read at all.
 		find_program(PS2_MKISOFS_EXECUTABLE NAMES xorrisofs mkisofs genisoimage)
 		if(PS2_MKISOFS_EXECUTABLE)
 			# The content is staged as "cd/Content" first, so the directory on the disc is always named
@@ -1366,7 +1397,7 @@ else()
 				${_ps2MarkPrebakedCommand}
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/cd/${_ps2DiscName}.ELF"
 				${_ps2StripStagedElf}
-				COMMAND "${PS2_MKISOFS_EXECUTABLE}" -quiet -iso-level 2 -l -V "${_ps2DiscName}" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.iso" "${CMAKE_BINARY_DIR}/cd"
+				COMMAND "${PS2_MKISOFS_EXECUTABLE}" -quiet -iso-level 2 -l -J -V "${_ps2DiscName}" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.iso" "${CMAKE_BINARY_DIR}/cd"
 				COMMENT "Creating bootable ISO image with game content"
 				VERBATIM)
 		else()

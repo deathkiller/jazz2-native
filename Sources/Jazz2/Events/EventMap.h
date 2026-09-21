@@ -8,6 +8,7 @@
 #include "../../nCine/Base/BitArray.h"
 
 #include <IO/Stream.h>
+#include <algorithm>
 
 using namespace Death::IO;
 
@@ -52,6 +53,8 @@ namespace Jazz2::Events
 
 		/** @brief Sets owner of the event map */
 		void SetLevelHandler(ILevelHandler* levelHandler);
+		/** @brief Whether reading the events ran out of memory (the level cannot be played) */
+		bool HasLoadFailed() const { return _loadFailed; }
 		/** @brief Returns size of event map in tiles */
 		Vector2i GetSize() const;
 		/** @brief Returns pit type */
@@ -150,7 +153,54 @@ namespace Jazz2::Events
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
 		PitType _pitType;
-		std::unique_ptr<EventTile[]> _eventLayout;
+		/**
+			@brief The event layout: a 16-bit slot per tile, the tiles that hold an event in a dense array
+
+			Almost every cell of a level's event grid is empty, yet the array of 24-byte tiles it used to be
+			was the largest single block a level load made - 1.2 MB for the 768x64 Christmas levels, on a
+			console with 5.8 MB of heap for everything. A cell now costs two bytes plus 24 for each actual
+			event. Reads go through `operator[]` (an empty cell reads as a shared empty tile), writes through
+			`Edit()`, which gives the cell a tile of its own; `Find()` tells the two apart without creating
+			one. A reference from `Edit()` is valid only until the next one, because the dense array grows.
+		*/
+		class EventLayout {
+		public:
+			bool Allocate(std::size_t count) {
+				_tiles.clear();
+				_slots.reset(new (std::nothrow) std::uint16_t[count]);
+				_count = (_slots != nullptr ? count : 0);
+				if (_slots != nullptr) {
+					std::memset(_slots.get(), 0, count * sizeof(std::uint16_t));
+				}
+				return (_slots != nullptr);
+			}
+			std::size_t size() const { return _count; }
+			const EventTile& operator[](std::size_t i) const {
+				static const EventTile empty = {};
+				const std::uint16_t slot = _slots[i];
+				return (slot != 0 ? _tiles[slot - 1] : empty);
+			}
+			// Like the array it replaces: a const layout still hands out mutable tiles
+			EventTile* Find(std::size_t i) const {
+				const std::uint16_t slot = _slots[i];
+				return (slot != 0 ? &_tiles[slot - 1] : nullptr);
+			}
+			EventTile& Edit(std::size_t i) {
+				if (_slots[i] == 0) {
+					DEATH_ASSERT(_tiles.size() < UINT16_MAX, "Too many event tiles", _tiles.back());
+					_tiles.push_back(EventTile {});
+					_slots[i] = std::uint16_t(_tiles.size());
+				}
+				return _tiles[_slots[i] - 1];
+			}
+
+		private:
+			std::unique_ptr<std::uint16_t[]> _slots;
+			mutable SmallVector<EventTile, 0> _tiles;
+			std::size_t _count = 0;
+		};
+		EventLayout _eventLayout;
+		bool _loadFailed = false;
 		SmallVector<RollbackTile, 0> _eventLayoutForRollback;
 		BitArray _eventActiveForRollback;
 		/// Whether a checkpoint was ever taken. Not implied by the two members above having contents --- a

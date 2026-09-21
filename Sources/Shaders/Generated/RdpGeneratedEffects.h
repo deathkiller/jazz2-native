@@ -353,8 +353,8 @@ namespace nCine::RHI::RDP
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackground - from TexturedBackground.shader:fixed_function(pvr, gu, gs, rdp)
-		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs, rdp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(pvr, gu, gs, rdp)]
+		// TexturedBackground - from TexturedBackground.shader:fixed_function(rdp)
+		// Shared by: TexturedBackground, TexturedBackground (DITHER), TexturedBackgroundCircle [TexturedBackgroundCircle.shader:fixed_function(rdp)], TexturedBackgroundCircle (DITHER) [TexturedBackgroundCircle.shader:fixed_function(rdp)]
 		void TexturedBackground_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
@@ -373,8 +373,8 @@ namespace nCine::RHI::RDP
 				float topY = vec2(ctx.QuadOriginX(), ctx.QuadOriginY()).y;
 				float spanY = vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy()).y;
 				FixedFunctionPass warp;
-				FixedFunctionPass horizonPass;
-				horizonPass.Blend = FixedFunctionPass::BlendMode::Alpha;
+				warp.TextureRepeat = true;
+				warp.Tev = FixedFunctionPass::TevPreset::TintMix;
 				for (int topHalf = 0; topHalf < 2; topHalf++) {
 					float yShift = float(topHalf);
 					for (int band = 0; band < 16; band++) {
@@ -416,42 +416,22 @@ namespace nCine::RHI::RDP
 								float uRight0 = shiftU + halfSpan0;
 								float uLeft1 = shiftU - halfSpan1;
 								float uRight1 = shiftU + halfSpan1;
-								int firstPiece = int(floor(min(uLeft0, uLeft1)));
-								int lastPiece = int(ceil(max(uRight0, uRight1)));
-								int emitted = 0;
-								for (int piece = firstPiece; piece < lastPiece && emitted < 8; piece++) {
-									float span0 = uRight0 - uLeft0;
-									float span1 = uRight1 - uLeft1;
-									float topA = span0 > 0.0f ? (float(piece) - uLeft0) / span0 : 0.0f;
-									float topB = span0 > 0.0f ? (float(piece + 1) - uLeft0) / span0 : 0.0f;
-									float botA = span1 > 0.0f ? (float(piece) - uLeft1) / span1 : 0.0f;
-									float botB = span1 > 0.0f ? (float(piece + 1) - uLeft1) / span1 : 0.0f;
-									if (!(topB <= 0.0f && botB <= 0.0f || topA >= 1.0f && botA >= 1.0f)) {
-										emitted++;
-										StripPosition(ctx, 0, vec2(leftX + topB * spanX, y0));
-										StripPosition(ctx, 1, vec2(leftX + botB * spanX, y1));
-										StripPosition(ctx, 2, vec2(leftX + topA * spanX, y0));
-										StripPosition(ctx, 3, vec2(leftX + botA * spanX, y1));
-										StripUv(ctx, 0, vec2(uLeft0 + topB * (uRight0 - uLeft0) - float(piece), v0));
-										StripUv(ctx, 1, vec2(uLeft1 + botB * (uRight1 - uLeft1) - float(piece), v1));
-										StripUv(ctx, 2, vec2(uLeft0 + topA * (uRight0 - uLeft0) - float(piece), v0));
-										StripUv(ctx, 3, vec2(uLeft1 + botA * (uRight1 - uLeft1) - float(piece), v1));
-										ctx.SubmitStrip(warp, 4);
-									}
-								}
-								float alpha0 = clamp(d0 * d0 - 0.3f, 0.0f, 1.0f);
-								float alpha1 = clamp(d1 * d1 - 0.3f, 0.0f, 1.0f);
-								if (alpha0 > 0.0f || alpha1 > 0.0f) {
-									StripPosition(ctx, 0, vec2(leftX + spanX, y0));
-									StripPosition(ctx, 1, vec2(leftX + spanX, y1));
-									StripPosition(ctx, 2, vec2(leftX, y0));
-									StripPosition(ctx, 3, vec2(leftX, y1));
-									StripColor(ctx, 0, vec4(horizon.xyz(), alpha0));
-									StripColor(ctx, 1, vec4(horizon.xyz(), alpha1));
-									StripColor(ctx, 2, vec4(horizon.xyz(), alpha0));
-									StripColor(ctx, 3, vec4(horizon.xyz(), alpha1));
-									ctx.SubmitStripShaded(horizonPass, 4);
-								}
+								float tint0 = clamp(d0 * d0 - 0.3f, 0.0f, 1.0f);
+								float tint1 = clamp(d1 * d1 - 0.3f, 0.0f, 1.0f);
+								float uBase = floor(shiftU);
+								StripPosition(ctx, 0, vec2(leftX + spanX, y0));
+								StripPosition(ctx, 1, vec2(leftX + spanX, y1));
+								StripPosition(ctx, 2, vec2(leftX, y0));
+								StripPosition(ctx, 3, vec2(leftX, y1));
+								StripUv(ctx, 0, vec2(uRight0 - uBase, v0));
+								StripUv(ctx, 1, vec2(uRight1 - uBase, v1));
+								StripUv(ctx, 2, vec2(uLeft0 - uBase, v0));
+								StripUv(ctx, 3, vec2(uLeft1 - uBase, v1));
+								StripColor(ctx, 0, vec4(horizon.xyz(), tint0));
+								StripColor(ctx, 1, vec4(horizon.xyz(), tint1));
+								StripColor(ctx, 2, vec4(horizon.xyz(), tint0));
+								StripColor(ctx, 3, vec4(horizon.xyz(), tint1));
+								ctx.SubmitStripShaded(warp, 4);
 							}
 						}
 					}
