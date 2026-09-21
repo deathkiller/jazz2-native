@@ -540,6 +540,12 @@ The platform itself is selected with CMake's own variables --- `CMAKE_SYSTEM_NAM
         for a target where the gain has been measured and the results verified
     -   Ignored on the @ref consoles "consoles" and the Amiga targets, which always compile at `-O2`
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization
+    -   The cast walks class hierarchies annotated by hand instead of asking the compiler, so the game target
+        is compiled without RTTI (`-fno-rtti`, `/GR-`) --- tens of kilobytes of type tables that nothing reads,
+        which on a @ref consoles "console" comes straight out of the memory a level has
+    -   Turning it off gives up both: @ref Death::runtime_cast() falls back to @cpp dynamic_cast<T>() @ce,
+        which needs those tables, so they come back with it. It is a way to cross-check the annotations against
+        what the compiler thinks, not a shipping setting
 -   `NCINE_ADDRESS_SANITIZER` (default @cpp OFF @ce) --- Enable `AddressSanitizer` memory error detector
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
     -   Depends on target CPU and compiler support

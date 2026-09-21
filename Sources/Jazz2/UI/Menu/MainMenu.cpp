@@ -98,7 +98,7 @@ namespace Jazz2::UI::Menu
 
 		bool shouldSwitch = false;
 		while (!_sections.empty()) {
-			if (_sections.size() == 1 && dynamic_cast<BeginSection*>(_sections.back().get())) {
+			if (_sections.size() == 1 && runtime_cast<BeginSection>(_sections.back().get())) {
 				if (shouldSwitch) {
 					auto& lastSection = _sections.back();
 					lastSection->OnShow(this);
@@ -786,9 +786,9 @@ namespace Jazz2::UI::Menu
 
 						Vector2i texSize = tileTexture->GetSize();
 						float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-						float texBiasX = ((tileId % _tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+						float texBiasX = ((tileId % _tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.X);
 						float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-						float texBiasY = ((tileId / _tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+						float texBiasY = ((tileId / _tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.Y);
 
 						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
@@ -915,7 +915,12 @@ namespace Jazz2::UI::Menu
 			base->TextureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 			base->TextureDiffuse->SetWrap(SamplerWrapping::ClampToEdge);
 
-			const float scale = 0.6f + 0.2f * sinf(animTime * 0.4f);
+			// A narrower zoom than the original 0.6 +- 0.2, because here the layer's cost IS its period:
+			// the tile cannot be resident, so every quad of it is blitted in eight TMEM-sized chunks at
+			// roughly 450 us, and the smaller the tile the more quads the view holds. The original range
+			// swung the count between 12 and 41 - a menu frame between 36 and 51 ms, visibly uneven -
+			// where this one holds it at 14 to 17, i.e. a steady 40 ms.
+			const float scale = 0.75f + 0.05f * sinf(animTime * 0.4f);
 			const float angle = animTime * 0.3f;
 			const Vector2f period = base->FrameDimensions.As<float>() * scale;
 			Vector2f pivot = center;
@@ -1160,9 +1165,9 @@ namespace Jazz2::UI::Menu
 
 				Vector2i texSize = tileTexture->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = ((tileId % _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+				float texBiasX = ((tileId % _owner->_tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = ((tileId / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+				float texBiasY = ((tileId / _owner->_tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.Y);
 
 				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);

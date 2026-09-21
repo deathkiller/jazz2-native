@@ -21,6 +21,8 @@ namespace Jazz2::UI::Menu
 	*/
 	class MenuSection
 	{
+		DEATH_RUNTIME_OBJECT();
+
 	public:
 		MenuSection();
 		virtual ~MenuSection();

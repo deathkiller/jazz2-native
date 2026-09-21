@@ -503,7 +503,8 @@ everything the game has. Two storage decisions bring that down, and both are inv
     all any reader here needs; writing one goes through @cpp Set() @ce. Unlike the sparse events this
     *is* a trade @m_span{m-text m-dim} (a reference into a compact layer does not stay valid
     indefinitely) @m_endspan, so it is enabled only where memory is the binding constraint ---
-    `LayerLayout::CompactDrawOnlyLayers`, today the Nintendo 64, the PSP, the Dreamcast and the 3DS.
+    `LayerLayout::CompactDrawOnlyLayers`, today the Nintendo 64, the PSP, the Dreamcast, the 3DS and
+    the PlayStation 2.
     The desktop and the larger consoles keep plain arrays.
 
 Both grids are allocated in blocks of 4096 tiles rather than as one run, so a heap that several level
@@ -629,7 +630,7 @@ EEPROM the preferences are saved to.
 
 -   **Everything is memory.** 8 MB of unified RDRAM is half the Dreamcast's main memory with no
     separate video or sound RAM to hide anything in --- the framebuffers, every texture, every
-    sound and the heap all share it, and about 5.8 MB of it is heap. The port keeps the strictest
+    sound and the heap all share it, and about 6.3 MB of it is heap. The port keeps the strictest
     budgets of any console: episode backgrounds are not loaded, debris caps are half the other
     consoles', the outgoing level's assets are released before the incoming level loads, and the
     lightmap is combined at a twelfth of the output resolution @m_span{m-text m-dim} (27x20 texels;
@@ -646,6 +647,33 @@ EEPROM the preferences are saved to.
     aborting. Animations are all **deferred** here @m_span{m-text m-dim} (the metadata is parsed,
     the sheets are read on first use) @m_endspan, with the few that would otherwise hitch in play
     read behind the loading screen.
+-   **The binary is the other half of the budget.** 1.9 MB of the 8 MB is the executable itself, and
+    what is left after it is the heap, so code size and level size come out of the same place. Three
+    parts of the C++ runtime used to be linked in for nothing and were cut, which gave the heap
+    0.55 MB @m_span{m-text m-dim} (5.8 MB to 6.3 MB) @m_endspan. The bundled JSON library composed its
+    assertion messages and parsed its numbers through string streams, which instantiated the whole
+    @cpp <locale> @ce facet machinery --- 350 KB, most of it wide-character facets nothing here can
+    reach --- so it formats with @cpp fputs() @ce and parses with @cpp strtod() @ce instead. libstdc++'s
+    default @cpp std::terminate @ce handler names the exception being propagated, which links the C++
+    demangler into a build that has exceptions disabled and can only reach terminate through a
+    pure-virtual call, so the port defines that handler itself
+    @m_span{m-text m-dim} (@cpp "nCine/MainApplication.cpp" @ce) @m_endspan. And the compiler's own type
+    information is dead weight where every cast goes through @cpp runtime_cast<T>() @ce, which walks
+    hierarchies annotated by hand, so the game target is compiled without RTTI everywhere ---
+    on the desktop too, where it costs nothing to do so @m_span{m-text m-dim}
+    (`DEATH_USE_RUNTIME_CAST`, which brings the tables back when it is turned off; a dependency built
+    from sources keeps them either way) @m_endspan. The last two are shared with the
+    @ref consoles-dreamcast "Dreamcast" and the @ref consoles-ps2 "PlayStation 2", where they are worth
+    82 KB of the same kind.
+-   **What the heap gets back on top of that.** The display is double buffered rather than triple ---
+    a third buffer only pays when a frame takes about one refresh period, and one here takes three or
+    more, so it was 150 KB standing idle @m_span{m-text m-dim} (measured: it changed the frame time by
+    0.4%, inside the noise) @m_endspan. And the tileset atlas is stored without the one-pixel border of
+    duplicated edge pixels every other platform keeps @m_span{m-text m-dim}
+    (`TileSet::TilePadding`) @m_endspan, which is another 75 to 84 KB: the border exists so that a
+    sampler reaching outside a tile reads that tile's own edge, and here the tile layer is drawn 1:1
+    with point sampling, so no sample can land outside. Any platform that scales the layer or samples
+    it bilinearly still needs it.
 -   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
     a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
     this console has sound effects and no soundtrack. The lighter **libxmp**
@@ -678,6 +706,16 @@ EEPROM the preferences are saved to.
     which is an infinity on every other platform and was a CPU exception here --- so the port clears
     the enable bits in `FCR31` during initialization and keeps only the flush-to-zero bit the VR4300
     needs for denormals.
+-   **The video filters are already at their cheapest.** The console's video interface can run an
+    anti-aliasing pass and a de-dither pass while it scans the framebuffer out, and both cost RDRAM
+    bandwidth that the CPU and the RDP would otherwise have. Neither is enabled here: the display is
+    opened with `FILTERS_RESAMPLE`, which is bilinear resampling with AA and de-dither off, and the
+    RDP writes undithered pixels as well @m_span{m-text m-dim} (@cpp rdpq_set_mode_standard() @ce
+    selects `SOM_RGBDITHER_NONE`) @m_endspan. The de-dither filter could not be used at this
+    resolution in any case --- the hardware supports it only above 320 pixels of width --- and going
+    one step further to no resampling at all @m_span{m-text m-dim} (`VI_AA_MODE_NONE`) @m_endspan
+    hits a documented hardware bug on NTSC consoles at exactly this width, for a saving that is not
+    where the bandwidth goes.
 -   **TMEM is per-primitive, not per-texture.** Every textured primitive samples through a 4 KB
     window @m_span{m-text m-dim} (2 KB for paletted texels --- the palette occupies the upper half)
     @m_endspan that the backend uploads before the draw, so the cost of a frame tracks how many
@@ -698,11 +736,16 @@ EEPROM the preferences are saved to.
     @m_endspan and the largest of the three tiles is 16 KB of paletted texels against a 2 KB budget.
     The port draws the same motion with different geometry --- the two small tiles as one rotated
     view-sized quad each, wrapped by the tile descriptor, and the large one once per period --- so it
-    animates as it should without matching the original pixel for pixel.
+    animates as it should without matching the original pixel for pixel. The large tile is what the
+    menu costs: it cannot be resident, so each of its quads is blitted in eight TMEM-sized chunks of
+    two rotated triangles at roughly 450 us, and the smaller the tile is drawn the more quads the view
+    holds. Its zoom is therefore narrower here than the original's @m_span{m-text m-dim} (0.75 +- 0.05
+    against 0.6 +- 0.2) @m_endspan, which holds the count at 14 to 17 instead of swinging it between 12
+    and 41 --- a **steady 40 ms menu frame in place of one that swung between 36 and 51**.
 -   **It runs, but not smoothly.** This is the one target whose CPU is far below what the game was
     written for --- an order of magnitude under the next-slowest console here --- and it shows: a
-    level frame measures between about 33 and 45 ms in ares depending on the level and what is on
-    screen @m_span{m-text m-dim} (roughly 22 to 30 frames per second, where an untuned build was
+    level frame measures between about 28 and 45 ms in ares depending on the level and what is on
+    screen @m_span{m-text m-dim} (roughly 22 to 36 frames per second, where an untuned build was
     55 ms) @m_endspan, so treat this port as **experimental** rather than as a finished one. The
     numbers above for the cinematics @m_span{m-text m-dim} (55 ms per frame for a decoder that is
     little more than @cpp memcpy() @ce) @m_endspan are the honest scale of the machine. Where the
@@ -714,6 +757,20 @@ EEPROM the preferences are saved to.
     only when that window moves by a whole tile, which for a slow parallax layer is rare, with
     animated tiles kept out of it and re-resolved every frame) @m_endspan and a compact two-vertex
     form for those cached quads; both are N64-only and sit behind the ordinary tile-mesh path.
+-   **Sprites got the same treatment.** Nearly every sprite of a frame is drawn by one generated
+    effect --- a single modulate pass carrying the instance colour, shared by the sprite defaults,
+    their batched forms and both palette remaps --- and the general dispatch built a 600-byte effect
+    context, a pass descriptor, four corners and a merge slot per instance only to fold all of it
+    back into the two corners and the one primitive colour the RDP takes. That effect is recognized
+    once when the program is linked @m_span{m-text m-dim}
+    (@cpp RdpShaderProgram::DispatchFacts::PlainSprite @ce) @m_endspan, and an axis-aligned,
+    textured instance of it then goes straight from its instance block to a textured rectangle. The
+    shortcut is exact rather than an approximation: the pass carries no offset colour, no screen
+    offset and no blend of its own, and its colour is saturated before it is packed, so the
+    two-cycle doubling combiner the general path reaches for above 1.0 cannot come up. A rotated or
+    untextured instance keeps the general path. Measured on the same level scene, with the same 41
+    instances a frame: **33.5 ms to 27.9 ms** per frame @m_span{m-text m-dim} (30 to 36 frames per
+    second; the sprite loop itself 9.4 ms to 7.2 ms) @m_endspan.
 -   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
     yet --- ares is the reference until then.
 

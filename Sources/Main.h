@@ -131,6 +131,23 @@
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_N64)
 #	define NCINE_HAS_WRITABLE_CACHE
 #endif
+/**
+	@brief Whether the current platform can store a resumable mid-level session
+
+	The state file is written next to the configuration, and on the Nintendo 64 that is the cartridge
+	EEPROM: libdragon's `eepromfs` is a fixed table of files declared up front, and the two kilobytes it
+	has hold the configuration alone, so a second file cannot be created there at all. Everything else
+	writes it, including the platforms with no writable content cache --- the Dreamcast and the GameCube
+	put it on a memory card next to their settings.
+
+	Episode progress does not depend on this. That lives in the configuration itself
+	@m_span{m-text m-dim} (@relativeref{Jazz2,PreferencesCache::GetEpisodeContinue()}) @m_endspan and is
+	saved on every platform, so the N64 remembers which levels have been finished and where an episode
+	was left --- only continuing from the middle of a level is unavailable there.
+*/
+#if !defined(DEATH_TARGET_N64)
+#	define NCINE_HAS_RESUMABLE_STATE
+#endif
 
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)

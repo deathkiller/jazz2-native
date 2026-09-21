@@ -1614,6 +1614,12 @@ namespace Jazz2
 
 	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel)
 	{
+		if constexpr (TileSet::TilePadding == 0) {
+			// The atlas has no border to fill on this platform, see TileSet::TilePadding
+			static_cast<void>(pixelsOffset); static_cast<void>(widthWithPadding); static_cast<void>(bytesPerPixel);
+			return;
+		}
+
 		// Top
 		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 			std::uint32_t from = (1 * widthWithPadding + (x + 1)) * bytesPerPixel;
@@ -1850,7 +1856,7 @@ namespace Jazz2
 
 		const std::uint32_t srcTilesPerRow = width / TileSet::DefaultTileSize;
 		const std::uint32_t srcTilesPerColumn = height / TileSet::DefaultTileSize;
-		const std::uint32_t paddedTileSizeSrc = TileSet::DefaultTileSize + 2;
+		const std::uint32_t paddedTileSizeSrc = TileSet::PaddedTileSize;
 
 		// The source pixels are laid out `channelCount` bytes per pixel (1 = index only, 4 = RGBA / index-in-red;
 		// an 8-bit tile keeps its palette index in the first byte either way).
@@ -2010,7 +2016,7 @@ namespace Jazz2
 		// 1024-limit console splits e.g. a 2790-tile set into 4 chunks). Bands are aligned to whole padded
 		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
 		const std::int32_t maxTextureSize = theServiceLocator().GetRhiCapabilities().GetValue(RHI::IRhiCapabilities::IntValues::MaxTextureSize);
-		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
+		const std::uint32_t paddedTileSize = TileSet::PaddedTileSize;
 
 		// The fixed-function consoles round every texture up to a power of two, so chunking right at their
 		// 1024 limit makes each chunk ask video memory for a single megabyte-sized contiguous block. That is
@@ -2104,7 +2110,7 @@ namespace Jazz2
 				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 						const std::uint32_t src = (y * width + (srcX + x)) * channelCount;
-						const std::uint32_t dst = ((y + 1) * paddedWidth + (x + 1)) * dstChannels;
+						const std::uint32_t dst = ((y + TileSet::TilePadding) * paddedWidth + (x + TileSet::TilePadding)) * dstChannels;
 
 						if (is32bit) {
 							// True-color: copy RGBA straight through (only happens in baked tilesets, so dstChannels == 4)
@@ -2329,11 +2335,11 @@ namespace Jazz2
 				uc.Read(tileDiffuseRaw, sizeof(tileDiffuseRaw));
 
 				bool overrideIndexed = descriptor.TileMap->IsTileSetIndexed(tileId);
-					std::uint32_t tileDiffuse[(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2)];
+					std::uint32_t tileDiffuse[TileSet::PaddedTileSize * TileSet::PaddedTileSize];
 				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 						std::uint32_t from = y * TileSet::DefaultTileSize + x;
-						std::uint32_t to = (y + 1) * (TileSet::DefaultTileSize + 2) + (x + 1);
+						std::uint32_t to = (y + TileSet::TilePadding) * TileSet::PaddedTileSize + (x + TileSet::TilePadding);
 
 						// Store the palette index (with full alpha) for an indexed tileset; otherwise bake the color
 						std::uint32_t color = (overrideIndexed ? ((std::uint32_t)tileDiffuseRaw[from] | 0xFF000000u) : _palettes[tileDiffuseRaw[from]]);
@@ -2341,7 +2347,7 @@ namespace Jazz2
 					}
 				}
 
-				ExpandTileDiffuse((std::uint8_t*)tileDiffuse, TileSet::DefaultTileSize + 2, PixelSize);
+				ExpandTileDiffuse((std::uint8_t*)tileDiffuse, TileSet::PaddedTileSize, PixelSize);
 				descriptor.TileMap->OverrideTileDiffuse(tileId, tileDiffuse);
 			}
 		} else {

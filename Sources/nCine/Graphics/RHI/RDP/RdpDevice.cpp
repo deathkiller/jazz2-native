@@ -1555,6 +1555,18 @@ namespace nCine::RHI::RDP
 		return nullptr;
 	}
 
+	bool RdpDevice::IsPlainSpriteEffect(const FixedFunctionGeneratedEffect* effect)
+	{
+		if (effect == nullptr || effect->Fn == nullptr || effect->Intrinsic != FixedFunctionIntrinsic::None ||
+			effect->UsesOffsetColor || effect->Requirements != FixedFunctionRequirements::SamplesTexture) {
+			return false;
+		}
+		// The body is keyed by the program that DEFINES it, which the generator's sharing then hands to
+		// every program compiling to the same code (see the declaration)
+		const FixedFunctionGeneratedEffect* plain = FindGeneratedEffect("DefaultBatchedSpritesNoTexture", "");
+		return (plain != nullptr && effect->Fn == plain->Fn);
+	}
+
 	RdpDevice::BlendingState RdpDevice::_blending;
 	RdpDevice::DepthTestState RdpDevice::_depthTest;
 	RdpDevice::CullFaceState RdpDevice::_cullFace;
@@ -2897,6 +2909,22 @@ namespace nCine::RHI::RDP
 		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette in
 		// its reflection, which is what UsesPalette() reports
 		const bool isPaletteRemap = _currentProgram->UsesPalette();
+		/*
+			Nearly every draw of a frame is the plain sprite - one modulate pass carrying the instance
+			colour - and the generic path spends most of an instance on machinery it then folds away again:
+			a ~600-byte EffectContext, a pass descriptor, four corners, the merge slot and the general
+			pass-to-state mapping, all to arrive at the two corners and the one primitive colour the RDP
+			takes. Recognized at program load (see RdpShaderProgram::DispatchFacts), such an instance goes
+			straight from its block to a textured rectangle below.
+
+			The shortcut is EXACT, not an approximation of the generic path. The pass carries no offset
+			colour, no screen offset and no blend of its own, so the state it would compute is the
+			material's with PRIM replaced; its colour is saturated before being packed, so the two-cycle
+			doubling combiner the generic path reaches for above 1.0 is unreachable; and an axis-aligned
+			quad is exactly what SubmitQuadPrimitive() would have detected from the four corners anyway.
+			A rotated or untextured instance still needs the corner geometry and keeps the generic path.
+		*/
+		const bool leanSprite = facts.PlainSprite;
 
 		const FixedFunctionRequirements reqs = generated->Requirements;
 		const bool needsTexelStep = ((reqs & FixedFunctionRequirements::NeedsTexelStep) == FixedFunctionRequirements::NeedsTexelStep);
@@ -3020,6 +3048,40 @@ namespace nCine::RHI::RDP
 					lastPaletteUvScaleU = uvScaleU;
 					lastPaletteUvScaleV = uvScaleV;
 				}
+			}
+
+			// The lean plain-sprite path: an axis-aligned quad IS a textured rectangle, so its opposite
+			// corners and their texel coordinates come straight out of the transform, and the bounding box
+			// the scissor cull needs is those same two corners
+			if (leanSprite && state.Texture != nullptr && mvp.Xy == 0.0f && mvp.Yx == 0.0f) {
+				float x0 = mvp.Tx * rasterScaleX + rasterBiasX;
+				float x1 = x0 + mvp.Xx * rasterScaleX * spriteSize[0];
+				float u0 = texRect[1] * uvScaleU, u1 = (texRect[0] + texRect[1]) * uvScaleU;
+				// A mirrored sprite (a negative scale in the model matrix) trades the corners over, and its
+				// texture coordinates travel with them, which is what keeps the flip
+				if (x0 > x1) {
+					std::swap(x0, x1);
+					std::swap(u0, u1);
+				}
+				float y0 = mvp.Ty * rasterScaleY + rasterBiasY;
+				float y1 = y0 + mvp.Yy * rasterScaleY * spriteSize[1];
+				float v0 = texRect[3] * uvScaleV, v1 = (texRect[2] + texRect[3]) * uvScaleV;
+				if (y0 > y1) {
+					std::swap(y0, y1);
+					std::swap(v0, v1);
+				}
+				if (x1 <= float(appliedScissor[0]) || x0 >= float(appliedScissor[0] + appliedScissor[2]) ||
+					y1 <= float(appliedScissor[1]) || y0 >= float(appliedScissor[1] + appliedScissor[3])) {
+					continue;
+				}
+				state.Combiner = CombModulate;
+				state.EnvColor = 0;
+				state.PrimColor = PackColor(color);
+				if (TraceDrawStatistics) { stats.Instances++; }
+				const std::uint32_t leanStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
+				SubmitTexturedRect(state, x0, y0, x1, y1, u0, v0, u1, v1);
+				if (TraceDrawStatistics) { traceSpriteFnTicks += std::uint32_t(get_ticks()) - leanStart; }
+				continue;
 			}
 
 			// Synthesize the four sprite corners exactly like the software FetchVertex, with the constant

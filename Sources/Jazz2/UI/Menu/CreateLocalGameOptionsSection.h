@@ -18,6 +18,8 @@ namespace Jazz2::UI::Menu
 	*/
 	class CreateLocalGameOptionsSection : public WidgetSection
 	{
+		DEATH_RUNTIME_OBJECT(WidgetSection);
+
 	public:
 		/**
 		 * @brief Creates a new instance

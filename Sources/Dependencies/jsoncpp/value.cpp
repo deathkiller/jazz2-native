@@ -12,8 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstring>
-#include <iostream>
-#include <sstream>
+#include <cstdio>
 #include <utility>
 
 #ifdef JSONCPP_HAS_STRING_VIEW
@@ -209,12 +208,18 @@ namespace Json {
 		throw LogicError(msg);
 	}
 #else // !JSON_USE_EXCEPTION
+	// Reported with fputs() rather than through std::cerr. Referencing that stream instantiates the
+	// iostream static initializer, which the linker script keeps alive, which anchors the whole <locale>
+	// facet machinery - 350 KB of code - in every build that has exceptions off, for two lines that only
+	// ever run just before abort().
 	JSONCPP_NORETURN void throwRuntimeError(StringContainer const& msg) {
-		std::cerr << msg << std::endl;
+		std::fputs(msg.c_str(), stderr);
+		std::fputc('\n', stderr);
 		abort();
 	}
 	JSONCPP_NORETURN void throwLogicError(StringContainer const& msg) {
-		std::cerr << msg << std::endl;
+		std::fputs(msg.c_str(), stderr);
+		std::fputc('\n', stderr);
 		abort();
 	}
 #endif

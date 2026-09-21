@@ -12,6 +12,8 @@ namespace Jazz2::UI::Menu
 	*/
 	class BeginSection : public MenuSection
 	{
+		DEATH_RUNTIME_OBJECT(MenuSection);
+
 	public:
 		/** @brief Creates a new instance */
 		BeginSection();

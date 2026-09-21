@@ -87,6 +87,18 @@ namespace nCine::RHI::RDP
 		*/
 		static const FixedFunctionGeneratedEffect* FindGeneratedEffect(const char* program, const char* variant);
 
+		/**
+			@brief Whether the given effect entry is the plain sprite the lean dispatch path takes
+
+			The plain sprite - one modulate pass carrying the instance colour - is nearly every draw of a
+			frame, and @ref Dispatch() has a shortcut for it, so the test is answered once per program load
+			(see @ref RdpShaderProgram::DispatchFacts) rather than per draw. The generator emits
+			byte-identical `fixed_function` bodies ONCE and shares the function pointer among every program
+			that compiles to them, so one pointer comparison recognizes all of them - the sprite defaults,
+			their batched forms and both palette remaps - without matching any shader name.
+		*/
+		static bool IsPlainSpriteEffect(const FixedFunctionGeneratedEffect* effect);
+
 		RdpDevice() = delete;
 		~RdpDevice() = delete;
 

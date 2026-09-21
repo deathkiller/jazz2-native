@@ -130,6 +130,31 @@ extern "C" bool debug_init_emulog(void);
 
 static bool N64DebugInitUsbLog() { return debug_init_usblog(); }
 static bool N64DebugInitEmuLog() { return debug_init_emulog(); }
+
+#endif
+
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+namespace __gnu_cxx
+{
+	/**
+		@brief Replaces libstdc++'s default @ref std::terminate handler
+
+		The default one names the exception being propagated in its message, and to do that it runs the
+		C++ demangler, which is 20 to 55 KB of code depending on the target and one of the largest library
+		objects in the link. These builds have exceptions disabled, so nothing can be propagating: terminate
+		is reachable only through a pure-virtual call, a `noexcept` violation or an explicit call, none of
+		which has a type name to print. Defining the symbol here is what keeps the demangler out of the
+		image - the linker never has to pull libstdc++'s copy to resolve it.
+
+		Only on the consoles whose memory this actually buys something on, and where it has been measured;
+		everywhere else the default handler and its more informative message are kept.
+	*/
+	void __verbose_terminate_handler()
+	{
+		LOGF("std::terminate() was called, the process cannot continue");
+		::abort();
+	}
+}
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS)

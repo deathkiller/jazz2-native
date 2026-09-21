@@ -162,6 +162,9 @@ namespace nCine::RHI::RDP
 			// identity (runtime-compiled .shader files) simply has no console effect and is skipped.
 			_generatedEffect = (!_programName.empty()
 				? RdpDevice::FindGeneratedEffect(_programName.data(), _variantName.data()) : nullptr);
+			// Answered here rather than per draw, and after the effect is resolved - the reset above ran
+			// before it (and does not run at all for a program without reflection)
+			_dispatchFacts.PlainSprite = RdpDevice::IsPlainSpriteEffect(_generatedEffect);
 			_status = Status::LinkedWithIntrospection;
 		}
 		// The reflection is consumed by introspection (a copy of its layout is kept in _effectReflection)

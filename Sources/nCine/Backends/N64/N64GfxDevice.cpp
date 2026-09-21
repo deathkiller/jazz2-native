@@ -17,11 +17,14 @@ namespace nCine::Backends
 		console_close();
 
 		// 320x240 is what the RDP can fill at 2D workloads, and the resample filter lets the VI upscale
-		// cleanly to the TV. Three buffers, not two: with two, display_get() cannot return until the
-		// previous frame has been shown, which serializes the CPU against the RDP - the third is what
-		// lets the CPU build a frame while the RDP draws the last one (RdpDevice's syncpoint-tracked
-		// retirement keeps resource reuse safe at any buffer count). Costs 150 KB of RDRAM.
-		display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE);
+		// cleanly to the TV. TWO buffers, not three: a third only pays for itself when a frame takes about
+		// as long as one refresh period, so that the CPU can start the next one while the previous is still
+		// being scanned out. A frame here takes three or more, and the display has long finished with a
+		// buffer by the time another is asked for - measured on the same scene, the third buffer changed
+		// the frame time by 0.4% (inside the noise) and the wait inside display_get() by 24 us of a 55 ms
+		// frame, while costing 150 KB of the RDRAM a level is short of. RdpDevice's syncpoint-tracked
+		// retirement keeps resource reuse safe at any buffer count.
+		display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2, GAMMA_NONE, FILTERS_RESAMPLE);
 
 		RHI::Device::InitializeRdp();
 

@@ -97,7 +97,7 @@ if(WIN32)
 	endif()
 endif()
 
-ncine_apply_compiler_options(${NCINE_APP})
+ncine_apply_compiler_options(${NCINE_APP} DISABLE_RTTI)
 
 if(EMSCRIPTEN)
 	set(EMSCRIPTEN_LINKER_OPTIONS

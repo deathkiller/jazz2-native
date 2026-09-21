@@ -24,9 +24,9 @@ namespace Jazz2::UI::Menu
 
 		MpGameMode currentMode = MpGameMode::Battle;
 		MenuSection* underlying = root->GetUnderlyingSection();
-		if (auto* serverSection = dynamic_cast<CreateServerOptionsSection*>(underlying)) {
+		if (auto* serverSection = runtime_cast<CreateServerOptionsSection>(underlying)) {
 			currentMode = serverSection->GetGameMode();
-		} else if (auto* localSection = dynamic_cast<CreateLocalGameOptionsSection*>(underlying)) {
+		} else if (auto* localSection = runtime_cast<CreateLocalGameOptionsSection>(underlying)) {
 			currentMode = localSection->GetGameMode();
 		}
 
@@ -40,9 +40,9 @@ namespace Jazz2::UI::Menu
 			}
 			list->Add<ListItem>(name, [root, mode]() {
 				MenuSection* underlying = root->GetUnderlyingSection();
-				if (auto* serverSection = dynamic_cast<CreateServerOptionsSection*>(underlying)) {
+				if (auto* serverSection = runtime_cast<CreateServerOptionsSection>(underlying)) {
 					serverSection->SetGameMode(mode);
-				} else if (auto* localSection = dynamic_cast<CreateLocalGameOptionsSection*>(underlying)) {
+				} else if (auto* localSection = runtime_cast<CreateLocalGameOptionsSection>(underlying)) {
 					localSection->SetGameMode(mode);
 				}
 				root->LeaveSection();

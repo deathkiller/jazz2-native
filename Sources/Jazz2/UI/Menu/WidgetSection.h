@@ -17,6 +17,8 @@ namespace Jazz2::UI::Menu
 	*/
 	class WidgetSection : public MenuSection
 	{
+		DEATH_RUNTIME_OBJECT(MenuSection);
+
 	public:
 		WidgetSection();
 

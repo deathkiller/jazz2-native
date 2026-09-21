@@ -29,6 +29,26 @@ namespace Jazz2::Tiles
 	public:
 		/** @brief Size of a tile */
 		static constexpr std::int32_t DefaultTileSize = 32;
+		/**
+			@brief Border of duplicated edge pixels around every tile in the atlas
+
+			A tile is copied into the atlas with its edge row and column repeated around it, so that a
+			sampler reaching a texel outside the tile - which a bilinear tap does by definition, and a
+			point sampler does when a tile lands on a fractional screen position - reads the tile's own
+			edge instead of its neighbour's pixels. It costs (34*34)/(32*32), about 13% of every atlas.
+
+			The Nintendo 64 drops it: there the level is drawn at 1:1 into a 320x240 framebuffer with point
+			sampling and whole-pixel tile positions, so no sample can land outside the tile, and the atlas
+			of a large level is among the biggest allocations on a console that has 6 MB of heap for
+			everything. Any platform that scales the tile layer or samples it bilinearly needs the border.
+		*/
+#if defined(DEATH_TARGET_N64)
+		static constexpr std::int32_t TilePadding = 0;
+#else
+		static constexpr std::int32_t TilePadding = 1;
+#endif
+		/** @brief Size one tile occupies in the atlas, including @ref TilePadding on each side */
+		static constexpr std::int32_t PaddedTileSize = DefaultTileSize + 2 * TilePadding;
 		/** @brief Byte size of one tile's packed collision mask (1 bit per pixel, LSB-first, row-major - the cache file format) */
 		static constexpr std::int32_t MaskBytesPerTile = DefaultTileSize * DefaultTileSize / 8;
 
@@ -206,7 +226,7 @@ namespace Jazz2::Tiles
 		}
 
 		/** @brief Overrides the diffuse texture of the specified tile */
-		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(DefaultTileSize + 2) * (DefaultTileSize + 2), std::uint32_t> tileDiffuse);
+		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<PaddedTileSize * PaddedTileSize, std::uint32_t> tileDiffuse);
 		/** @brief Overrides the collision mask of the specified tile */
 		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask);
 

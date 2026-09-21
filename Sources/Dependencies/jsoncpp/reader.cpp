@@ -13,15 +13,13 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
-#include <iostream>
-#include <istream>
 #include <limits>
 #include <memory>
 #include <set>
-#include <sstream>
 #include <utility>
 
 #include <cstdio>
+#include <cstdlib>
 
 #if defined(_MSC_VER)
 #	if !defined(_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES)
@@ -862,16 +860,30 @@ namespace Json
 	}
 
 	bool OurReader::decodeDouble(Token& token, Value& decoded) {
-		double value = 0;
-		IStringStream is(StringContainer(token.start_, token.end_));
-		is.imbue(std::locale::classic());
-		if (!(is >> value)) {
-			if (value == std::numeric_limits<double>::max())
-				value = std::numeric_limits<double>::infinity();
-			else if (value == std::numeric_limits<double>::lowest())
-				value = -std::numeric_limits<double>::infinity();
-			else if (!std::isinf(value))
-				return addError("'" + StringContainer(token.start_, token.end_) + "' is not a number.", token);
+		// strtod() rather than extraction from a locale-imbued IStringStream: that was this library's only
+		// use of <locale>, and it linked 350 KB of facets to read one number. Nothing calls setlocale(),
+		// so the C locale's '.' is the separator JSON mandates anyway. The stream's behavior is kept - a
+		// prefix that parses is taken, a token that parses to nothing is an error, and an out-of-range
+		// value is the infinity strtod() returns directly.
+		const std::size_t length = static_cast<std::size_t>(token.end_ - token.start_);
+		char stackBuffer[64];
+		StringContainer heapBuffer;
+		const char* text;
+		if (length < sizeof(stackBuffer)) {
+			std::memcpy(stackBuffer, token.start_, length);
+			stackBuffer[length] = '\0';
+			text = stackBuffer;
+		} else {
+			// A number token this long is not a plausible double, but it is not this function's business
+			// to reject it - it is copied so it can be terminated, exactly like the short case
+			heapBuffer.assign(token.start_, token.end_);
+			text = heapBuffer.c_str();
+		}
+
+		char* end = nullptr;
+		const double value = std::strtod(text, &end);
+		if (end == text) {
+			return addError("'" + StringContainer(token.start_, token.end_) + "' is not a number.", token);
 		}
 		decoded = value;
 		return true;

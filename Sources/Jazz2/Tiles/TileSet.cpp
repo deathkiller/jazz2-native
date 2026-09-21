@@ -12,8 +12,8 @@ namespace Jazz2::Tiles
 		// (the last one may be shorter), so its size defines how many tiles each chunk covers.
 		if (!TextureDiffuse.empty() && TextureDiffuse[0] != nullptr) {
 			Vector2i texSize = TextureDiffuse[0]->GetSize();
-			TilesPerRow = (texSize.X / (DefaultTileSize + 2));
-			TilesPerTexture = TilesPerRow * (texSize.Y / (DefaultTileSize + 2));
+			TilesPerRow = (texSize.X / PaddedTileSize);
+			TilesPerTexture = TilesPerRow * (texSize.Y / PaddedTileSize);
 		} else {
 			TilesPerRow = 0;
 			TilesPerTexture = 0;
@@ -101,7 +101,7 @@ namespace Jazz2::Tiles
 		}
 	}
 
-	bool TileSet::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(DefaultTileSize + 2) * (DefaultTileSize + 2), std::uint32_t> tileDiffuse)
+	bool TileSet::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<PaddedTileSize * PaddedTileSize, std::uint32_t> tileDiffuse)
 	{
 		if (tileId >= TileCount) {
 			return false;
@@ -114,12 +114,12 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		std::int32_t x = (localTileId % TilesPerRow) * (DefaultTileSize + 2);
-		std::int32_t y = (localTileId / TilesPerRow) * (DefaultTileSize + 2);
+		std::int32_t x = (localTileId % TilesPerRow) * PaddedTileSize;
+		std::int32_t y = (localTileId / TilesPerRow) * PaddedTileSize;
 
 		// The incoming tile is RGBA (palette index in red, alpha in alpha). Repack it to match the atlas format,
 		// which may have been reduced to R8 (index only) or RG8 (index + alpha) to save VRAM (see CreateIndexedTexture)
-		constexpr std::int32_t Count = (DefaultTileSize + 2) * (DefaultTileSize + 2);
+		constexpr std::int32_t Count = PaddedTileSize * PaddedTileSize;
 		std::uint32_t channels = texture->GetChannelCount();
 
 		// A live tile edit also refreshes the "fully filled" flag, which matches BuildTilesetDiffuse's
@@ -130,7 +130,7 @@ namespace Jazz2::Tiles
 		bool filled = true;
 		for (std::int32_t py = 1; py <= DefaultTileSize && filled; py++) {
 			for (std::int32_t px = 1; px <= DefaultTileSize; px++) {
-				std::uint32_t c = tileDiffuse[py * (DefaultTileSize + 2) + px];
+				std::uint32_t c = tileDiffuse[py * PaddedTileSize + px];
 				const std::uint32_t alpha = (c >> 24) & 0xFF;
 				const bool opaquePx = (channels == 1
 					? (alpha != 0 && (c & 0xFF) != 0)
@@ -151,7 +151,7 @@ namespace Jazz2::Tiles
 				std::uint32_t c = tileDiffuse[i];
 				packed[i] = (((c >> 24) & 0xFF) == 0 ? 0 : (std::uint8_t)(c & 0xFF));
 			}
-			result = texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels(packed, x, y, PaddedTileSize, PaddedTileSize);
 		} else if (channels == 2) {
 			std::uint8_t packed[Count * 2];
 			for (std::int32_t i = 0; i < Count; i++) {
@@ -159,9 +159,9 @@ namespace Jazz2::Tiles
 				packed[(i * 2) + 0] = (std::uint8_t)(c & 0xFF);
 				packed[(i * 2) + 1] = (std::uint8_t)((c >> 24) & 0xFF);
 			}
-			result = texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels(packed, x, y, PaddedTileSize, PaddedTileSize);
 		} else {
-			result = texture->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			result = texture->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, PaddedTileSize, PaddedTileSize);
 		}
 		if (result) {
 			_isTileFilled.set(tileId, filled);

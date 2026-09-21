@@ -1001,14 +1001,22 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 bool GameEventHandler::HasResumableState() const
 {
+#if !defined(NCINE_HAS_RESUMABLE_STATE)
+	// Nowhere to have written one (see NCINE_HAS_RESUMABLE_STATE); saying so here is what keeps the menu
+	// from offering to continue, and what keeps the serializer out of the build
+	return false;
+#else
 	auto configDir = PreferencesCache::GetDirectory();
 	return fs::FileExists(fs::CombinePath(configDir, StateFileName));
+#endif
 }
 
 void GameEventHandler::ResumeSavedState()
 {
+#if defined(NCINE_HAS_RESUMABLE_STATE)
 	auto configDir = PreferencesCache::GetDirectory();
 	ResumeStateFromStream(fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read));
+#endif
 }
 
 void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
@@ -1078,6 +1086,10 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 
 bool GameEventHandler::SaveStateToStream(Stream& dest)
 {
+#if !defined(NCINE_HAS_RESUMABLE_STATE)
+	static_cast<void>(dest);
+	return false;
+#else
 	auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get());
 	if (levelHandler == nullptr || !levelHandler->IsLocalSession()) {
 		return false;
@@ -1102,6 +1114,7 @@ bool GameEventHandler::SaveStateToStream(Stream& dest)
 		serialized = levelHandler->SerializeResumableToStream(co);
 	}
 	return serialized;
+#endif
 }
 
 #if defined(WITH_LIBRETRO)
@@ -1131,7 +1144,9 @@ bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
 bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
-
+#if !defined(NCINE_HAS_RESUMABLE_STATE)
+	return false;
+#else
 	if (auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get())) {
 		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
@@ -1156,15 +1171,18 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	}
 
 	return false;
+#endif
 }
 
 void GameEventHandler::RemoveResumableStateIfAny()
 {
+#if defined(NCINE_HAS_RESUMABLE_STATE)
 	auto configDir = PreferencesCache::GetDirectory();
 	auto path = fs::CombinePath(configDir, StateFileName);
 	if (fs::FileExists(path)) {
 		fs::RemoveFile(path);
 	}
+#endif
 }
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -1506,7 +1524,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			InGameConsole::Clear();
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
-				if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
+				if (!runtime_cast<Menu::SimpleMessageSection>(mainMenu->GetCurrentSection())) {
 					mainMenu->Reset();
 				}
 			} else {
@@ -1831,7 +1849,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 					Menu::MainMenu* mainMenu;
 					if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
-						if (!dynamic_cast<Menu::SimpleMessageSection*>(mainMenu->GetCurrentSection())) {
+						if (!runtime_cast<Menu::SimpleMessageSection>(mainMenu->GetCurrentSection())) {
 							mainMenu->Reset();
 						}
 					} else {

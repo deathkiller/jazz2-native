@@ -167,7 +167,8 @@ namespace Jazz2::Tiles
 			of a returned reference for the memory (see the class description); the platforms with memory
 			to spare keep the plain array semantics.
 		*/
-#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_3DS)
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || \
+		defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2)
 		static constexpr bool CompactDrawOnlyLayers = true;
 #else
 		static constexpr bool CompactDrawOnlyLayers = false;
@@ -476,7 +477,7 @@ namespace Jazz2::Tiles
 		/** @brief Sets tile event flags */
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 		/** @brief Overrides the diffuse texture of the specified tile */
-		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse);
+		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<TileSet::PaddedTileSize * TileSet::PaddedTileSize, std::uint32_t> tileDiffuse);
 		/**
 		 * @brief Returns `true` if the tileset containing the given tile stores indexed (palette) diffuse
 		 *

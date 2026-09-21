@@ -227,6 +227,8 @@ namespace nCine::RHI::RDP
 			bool HasTexture = false;
 			/** @brief Whether the instance block declares `texRect` (the textured member layout) */
 			bool TexturedLayout = false;
+			/** @brief Whether the program's effect is the plain sprite of @ref RdpDevice::IsPlainSpriteEffect() */
+			bool PlainSprite = false;
 		};
 		inline const DispatchFacts& GetDispatchFacts() const {
 			return _dispatchFacts;

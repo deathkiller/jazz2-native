@@ -1480,9 +1480,9 @@ namespace Jazz2::Tiles
 					const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
 					const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
 					float texScaleX = TileSet::DefaultTileSize * lastTexInvW;
-					float texBiasX = (tileCol * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * lastTexInvW;
+					float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvW;
 					float texScaleY = TileSet::DefaultTileSize * lastTexInvH;
-					float texBiasY = (tileRow * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * lastTexInvH;
+					float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvH;
 
 					// ToDo: Flip normal map somehow
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -2170,9 +2170,9 @@ namespace Jazz2::Tiles
 			const std::int32_t tileRow = tileId / tileSet.TilesPerRow;
 			const std::int32_t tileCol = tileId - tileRow * tileSet.TilesPerRow;
 			float texScaleX = TileSet::DefaultTileSize * invW;
-			float texBiasX = (tileCol * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * invW;
+			float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * invW;
 			float texScaleY = TileSet::DefaultTileSize * invH;
-			float texBiasY = (tileRow * (TileSet::DefaultTileSize + 2.0f) + 1.0f) * invH;
+			float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * invH;
 			if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
 				texBiasX += texScaleX;
 				texScaleX *= -1;
@@ -2401,7 +2401,7 @@ namespace Jazz2::Tiles
 	}
 
 	/** @brief Overrides the diffuse texture of the specified tile */
-	bool TileMap::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse)
+	bool TileMap::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<TileSet::PaddedTileSize * TileSet::PaddedTileSize, std::uint32_t> tileDiffuse)
 	{
 		TileSet* tileSet = ResolveTileSet(tileId);
 		if (tileSet == nullptr) {
@@ -2550,9 +2550,9 @@ namespace Jazz2::Tiles
 
 		Vector2i texSize = tileTexture->GetSize();
 		float texScaleX = float(QuarterSize) / float(texSize.X);
-		float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+		float texBiasX = ((tileId % tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.X);
 		float texScaleY = float(QuarterSize) / float(texSize.Y);
-		float texBiasY = ((tileId / tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+		float texBiasY = ((tileId / tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.Y);
 
 		// TODO: Implement flip here
 		/*if (isFlippedX) {
@@ -3384,9 +3384,9 @@ namespace Jazz2::Tiles
 
 				Vector2i texSize = tileTexture->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+				float texBiasX = ((tileId % tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = ((tileId / tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+				float texBiasY = ((tileId / tileSet->TilesPerRow) * float(TileSet::PaddedTileSize) + TileSet::TilePadding) / float(texSize.Y);
 
 				// TODO: Flip normal map somehow
 				if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {

@@ -5,6 +5,7 @@
 #include "../Player.h"
 #include "../Solid/PushableBox.h"
 #include "../Weapons/TNT.h"
+#include "../Weapons/Thunderbolt.h"
 
 #include "../../../nCine/Base/Random.h"
 
