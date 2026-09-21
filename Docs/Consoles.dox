@@ -176,7 +176,7 @@ place the console looks for it:
 Console | Content directory the game reads | Cache / save data
 ------- | -------------------------------- | -----------------
 Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (inside the ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce --- read-only, so nothing is ever written; the preferences live on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
-Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written
+Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written; the preferences and the resumable state live on a memory card @m_span{m-text m-dim} (@cpp "/vmu/<port><unit>/Jazz2" @ce and @cpp "Jazz2.resume" @ce beside it) @m_endspan
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
 GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
 Nintendo 3DS | @cpp "sdmc:/3ds/Jazz2/Content/" @ce | @cpp "sdmc:/3ds/Jazz2/Cache/" @ce
@@ -1012,6 +1012,25 @@ crash also loses everything written since the last flush.
     banks) @m_endspan, the PVR has no hardware scissor @m_span{m-text m-dim} (clipping is
     geometric) @m_endspan, and there is no post-processing tier, so the rescale filters and the
     lightmap's shader path are unavailable --- the lightmap is combined on the CPU instead.
+-   **Saving needs writable storage that a disc is not.** Preferences and the resumable state go to
+    the first attached VMU @m_span{m-text m-dim} (@cpp "/vmu/a1/Jazz2" @ce and
+    @cpp "/vmu/a1/Jazz2.resume" @ce for the card in the first port's first slot) @m_endspan.
+    KallistiOS buffers such a file whole and commits it when the handle closes, so it is written
+    like any other file. With no card inserted there is nowhere to save, which is warned about at
+    startup rather than treated as an error. The level cache has no home here either way --- it is
+    read from the disc.
+-   **Both save files carry a VMS header**, which is what the console's file manager lists a save
+    by: a short and a long description and a 32x32 icon. A file without one is shown as unusable
+    data that can only be deleted, which is what these two were before
+    @m_span{m-text m-dim} (see @ref Jazz2::PreferencesCache::DescribeNextMemoryCardFile ---
+    KallistiOS attaches the header itself when the file is closed, so it is set before the file is
+    opened) @m_endspan. The header costs **two extra blocks per file** of the card's two hundred.
+    The icon is drawn in @cpp "Sources/Icons/Dreamcast/Icon.ico" @ce
+    @m_span{m-text m-dim} (32x32 at 4 bits per pixel, fifteen colours and transparency ---
+    an animated icon is not supported, because the VMU's frames would all have to share one
+    palette) @m_endspan and converted into the layout the header wants at configure time by
+    @cpp "cmake/ncine_dreamcast_icon.cmake" @ce, which slices it out of the file's own bytes and
+    needs no image tool on the host. Replacing that file is the whole of changing the icon.
 -   Online multiplayer is disabled, local splitscreen works.
 
 - - -

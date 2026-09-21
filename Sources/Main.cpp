@@ -1136,6 +1136,11 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
 			auto statePath = fs::CombinePath(configDir, StateFileName);
+#if defined(DEATH_TARGET_DREAMCAST)
+			// A memory card file is listed by the description inside it rather than by its name, and one
+			// without a description is listed as unusable data
+			PreferencesCache::DescribeNextMemoryCardFile("Jazz2 Saved Game"_s, "Jazz2 Resurrection - Saved Game"_s);
+#endif
 			auto s = fs::Open(statePath, FileAccess::Write);
 			if (*s) {
 				if (!SaveStateToStream(*s)) {

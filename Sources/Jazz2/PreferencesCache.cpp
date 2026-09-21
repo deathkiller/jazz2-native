@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
 #include <Containers/StringUtils.h>
@@ -25,9 +26,12 @@
 #	include "../nCine/Backends/Android/AndroidApplication.h"
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_DREAMCAST)
+#	include "DreamcastIcon.h"	// Generated from "Sources/Icons/Dreamcast/Icon.ico" at configure time
+
 #	include <dc/maple.h>
 #	include <dc/maple/vmu.h>
-
+#	include <dc/fs_vmu.h>
+#	include <dc/vmu_pkg.h>
 #elif defined(DEATH_TARGET_N64)
 #	include <cerrno>
 #	include <fcntl.h>
@@ -1065,7 +1069,7 @@ namespace
 			// characters. The first attached card wins, with none inserted there is nowhere to save and the
 			// path is left on the disc, where opening it for writing simply fails as before.
 			if (maple_device_t* memoryCard = maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
-				char vmuPath[] = "/vmu/a1/JAZZ2CFG";
+				char vmuPath[] = "/vmu/a1/Jazz2";
 				vmuPath[5] = char('a' + memoryCard->port);
 				vmuPath[6] = char('0' + memoryCard->unit);
 				_configPath = String(vmuPath, sizeof(vmuPath) - 1);
@@ -1671,6 +1675,46 @@ namespace
 #endif
 	}
 
+#if defined(DEATH_TARGET_DREAMCAST)
+	void PreferencesCache::DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription)
+	{
+		// Only a file on a memory card carries a header. With no card attached the path was left on the
+		// disc, where writing fails anyway, and a path named on the command line is not a save at all.
+		if (!StringView(_configPath).hasPrefix("/vmu/"_s)) {
+			return;
+		}
+
+		// Both descriptions are copied into the header with strlen() and land in fields SMALLER than
+		// `vmu_pkg_t` declares them - sixteen and thirty-two bytes - so anything longer would be written
+		// past the end of one and over the next. The application ID is copied with strcpy(), so its
+		// terminator has to fit within its sixteen bytes as well.
+		const auto copyField = [](char* dst, std::size_t capacity, StringView src) {
+			std::size_t length = (src.size() < capacity ? src.size() : capacity);
+			std::memcpy(dst, src.data(), length);
+			dst[length] = '\0';
+		};
+
+		vmu_pkg_t pkg = {};
+		copyField(pkg.desc_short, 16, shortDescription);
+		copyField(pkg.desc_long, 32, longDescription);
+		copyField(pkg.app_id, 15, "Jazz2"_s);
+		// A single frame, so there is no animation to time
+		pkg.icon_cnt = 1;
+		pkg.icon_anim_speed = 0;
+		// The optional 72x56 picture the file manager shows beside the description. Skipped: even its
+		// cheapest form costs four of the card's two hundred blocks - four times what the icon costs -
+		// for something nothing but the file manager ever displays.
+		pkg.eyecatch_type = VMUPKG_EC_NONE;
+		std::memcpy(pkg.icon_pal, DreamcastIconPalette, sizeof(pkg.icon_pal));
+		// Copied out before this returns, so pointing at the static image is enough
+		pkg.icon_data = const_cast<std::uint8_t*>(DreamcastIconData);
+
+		if (fs_vmu_set_default_header(&pkg) != 0) {
+			LOGW("Failed to describe the next file written to the memory card");
+		}
+	}
+#endif
+
 	void PreferencesCache::Save()
 	{
 		// `FirstRun` is true only if config file doesn't exist yet
@@ -1679,6 +1723,10 @@ namespace
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64)
 		// A memory card's (or the EEPROM's) mount point always exists and has no subdirectories to create
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
+#endif
+
+#if defined(DEATH_TARGET_DREAMCAST)
+		DescribeNextMemoryCardFile("Jazz2 Settings"_s, "Jazz2 Resurrection - Settings"_s);
 #endif
 
 		auto so = fs::Open(_configPath, FileAccess::Write);

@@ -361,6 +361,14 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcPlatform.cpp
 		)
+
+		# The icon a save is listed with in the console's file manager, converted from the .ico it is drawn
+		# in (see PreferencesCache::DescribeNextMemoryCardFile). The include path is set here rather than
+		# left to ncine_generated_sources.cmake, which only adds it if the directory already exists.
+		include("${CMAKE_SOURCE_DIR}/cmake/ncine_dreamcast_icon.cmake")
+		ncine_generate_dreamcast_icon(_dreamcastIconHeader)
+		list(APPEND HEADERS ${_dreamcastIconHeader})
+		target_include_directories(${NCINE_APP} PRIVATE "${CMAKE_BINARY_DIR}/Generated")
 	elseif(PLATFORM_PSP)
 		# PSPSDK window/input backend (no SDL/GLFW); the PSP libraries are linked with the packaging below
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PSP")

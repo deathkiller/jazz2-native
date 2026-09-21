@@ -477,6 +477,23 @@ namespace Jazz2
 		static void Initialize(AppConfiguration& config);
 		/** @brief Serializes current preferences to file */
 		static void Save();
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+		 * @brief Describes the next file written to a memory card to the console's file manager
+		 *
+		 * A file on a VMU is more than its contents: in front of them sits a header that names the save, describes it and
+		 * carries the 32×32 icon the file manager lists it with. A file without one is shown as unusable data that can
+		 * only be deleted, so both files this game saves - the settings and the resumable state - get one.
+		 *
+		 * KallistiOS attaches the header itself when the file handle closes, taking the one set here for any file that
+		 * doesn't already carry its own (which a file opened for writing never does), so this has to be called before the
+		 * file is opened and what it sets stays in force until the next call. @p shortDescription is what the file manager
+		 * lists the save as and is limited to 16 characters, @p longDescription is shown beside it and is limited to 32.
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_DREAMCAST "Dreamcast" platform.
+		 */
+		static void DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription);
+#endif
 		/** @brief Returns directory path of the preferences file */
 		static StringView GetDirectory();
 		/**
