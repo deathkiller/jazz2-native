@@ -77,8 +77,10 @@ namespace Jazz2::Actors::Environment
 			_angle = sinApprox(currentPhase - i * ChunkPhaseStep) * 1.2f + fPiOver2;
 
 			float distance = chunkDistances[i];
-			_chunkPos[i].X = _pos.X + cosApprox(_angle) * distance;
-			_chunkPos[i].Y = _pos.Y + sinApprox(_angle) * distance;
+			float sinAngle, cosAngle;
+			sincosApprox(_angle, sinAngle, cosAngle);
+			_chunkPos[i].X = _pos.X + cosAngle * distance;
+			_chunkPos[i].Y = _pos.Y + sinAngle * distance;
 		}
 
 		auto& lastChunk = _chunkPos[ChunkCount - 1];

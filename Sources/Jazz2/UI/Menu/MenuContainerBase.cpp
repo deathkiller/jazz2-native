@@ -243,8 +243,8 @@ namespace Jazz2::UI::Menu
 		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
+			adjustedPos.X = roundFast(adjustedPos.X);
+			adjustedPos.Y = roundFast(adjustedPos.Y);
 		}
 
 		Vector2i texSize = base->TextureDiffuse->GetSize();
@@ -276,8 +276,8 @@ namespace Jazz2::UI::Menu
 		GenericGraphicResource* base = res->Base;
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
+			adjustedPos.X = roundFast(adjustedPos.X);
+			adjustedPos.Y = roundFast(adjustedPos.Y);
 		}
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
@@ -288,8 +288,8 @@ namespace Jazz2::UI::Menu
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		adjustedPos.X = std::round(adjustedPos.X);
-		adjustedPos.Y = std::round(adjustedPos.Y);
+		adjustedPos.X = roundFast(adjustedPos.X);
+		adjustedPos.Y = roundFast(adjustedPos.Y);
 
 		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
 	}
@@ -299,8 +299,8 @@ namespace Jazz2::UI::Menu
 		Canvas* currentCanvas = GetActiveCanvas();
 		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
 		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
+			adjustedPos.X = roundFast(adjustedPos.X);
+			adjustedPos.Y = roundFast(adjustedPos.Y);
 		}
 
 		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);

@@ -322,22 +322,22 @@ namespace Jazz2::Rendering
 		if (overridePosX) {
 			_cameraPos.X = focusPos.X + _shakeOffset.X;
 		} else if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(focusPos.X + std::round(_cameraDistanceFactor.X), _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
+			_cameraPos.X = std::clamp(focusPos.X + roundFast(_cameraDistanceFactor.X), _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
 			if (!PreferencesCache::UnalignedViewport) {
-				_cameraPos.X = std::floor(_cameraPos.X);
+				_cameraPos.X = floorFast(_cameraPos.X);
 			}
 		} else {
-			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
+			_cameraPos.X = floorFast(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (overridePosY) {
 			_cameraPos.Y = focusPos.Y + _shakeOffset.Y;
 		} else if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraViewCenterY + std::round(_cameraDistanceFactor.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
+			_cameraPos.Y = std::clamp(_cameraViewCenterY + roundFast(_cameraDistanceFactor.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport) {
-				_cameraPos.Y = std::floor(_cameraPos.Y);
+				_cameraPos.Y = floorFast(_cameraPos.Y);
 			}
 		} else {
-			_cameraPos.Y = std::floor(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
+			_cameraPos.Y = floorFast(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
 		}
 
 		_camera->SetView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);

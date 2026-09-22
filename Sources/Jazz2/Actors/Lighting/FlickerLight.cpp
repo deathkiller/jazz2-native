@@ -28,7 +28,9 @@ namespace Jazz2::Actors::Lighting
 
 			LightPart& part = _parts.emplace_back();
 			part.Radius = radius;
-			part.Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			part.Pos = Vector2f(_pos.X + cosAngle * distance, _pos.Y + sinAngle * distance);
 			part.Phase = (float)i / LightPartCount;
 		}
 
@@ -47,7 +49,9 @@ namespace Jazz2::Actors::Lighting
 				float distance = Random().FastFloat(0.0f, _radiusFar * 0.6f);
 
 				part.Radius = radius;
-				part.Pos = Vector2f(_pos.X + cosf(angle) * distance, _pos.Y + sinf(angle) * distance);
+				float sinAngle, cosAngle;
+				sincosApprox(angle, sinAngle, cosAngle);
+				part.Pos = Vector2f(_pos.X + cosAngle * distance, _pos.Y + sinAngle * distance);
 				part.Phase = 0.0f;
 			}
 		}

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstdint>
 
+#include "../../../nCine/Base/Algorithms.h"
+
 namespace Jazz2::UI::Menu
 {
 	/**
@@ -43,7 +45,7 @@ namespace Jazz2::UI::Menu
 
 		/** @brief Sinusoidal ease-in-out */
 		inline float InOutSine(float t) {
-			return -(std::cos(3.1415927f * t) - 1.0f) * 0.5f;
+			return -(nCine::cosApprox(3.1415927f * t) - 1.0f) * 0.5f;
 		}
 
 		/** @brief Smoothstep (Hermite) ease-in-out */
@@ -60,7 +62,7 @@ namespace Jazz2::UI::Menu
 				return 1.0f;
 			}
 			constexpr float p = 0.3f;
-			return std::pow(2.0f, -10.0f * t) * std::sin((t - p * 0.25f) * (6.2831853f / p)) + 1.0f;
+			return std::pow(2.0f, -10.0f * t) * nCine::sinApprox((t - p * 0.25f) * (6.2831853f / p)) + 1.0f;
 		}
 
 		/** @brief Back ease-out (slight overshoot) */

@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include <joypad.h>
+#include <n64sys.h>
 
 namespace nCine
 {
@@ -211,9 +212,11 @@ namespace nCine::Backends
 
 	bool N64InputManager::joystickRumble(int joyId, float lowFrequency, float highFrequency, std::uint32_t durationMs)
 	{
-		// The Rumble Pak motor is on/off only and there is no firmware timer to hand a duration to, so
-		// any nonzero request switches it on and a zero request switches it off - the engine refreshes
-		// rumble every frame, which is what keeps the timing honest
+		// The Rumble Pak motor is on/off only, so any nonzero request runs it at full strength. The duration
+		// has to be enforced here: unlike a driver that takes one, nothing switches the motor off on its own,
+		// and the caller never asks it to - RumbleProcessor only calls this while an effect is still running
+		// and simply stops calling once the effect ends, which left the motor running forever. The deadline
+		// below is refreshed on every call and is checked from updateJoystickStates() once a frame.
 		if (joyId < 0 || joyId >= MaxJoysticks || !_pads[joyId].Connected) {
 			return false;
 		}
@@ -221,8 +224,17 @@ namespace nCine::Backends
 		if (!joypad_get_rumble_supported(port)) {
 			return false;
 		}
-		joypad_set_rumble_active(port, (lowFrequency > 0.0f || highFrequency > 0.0f));
-		static_cast<void>(durationMs);
+
+		PadInfo& pad = _pads[joyId];
+		const bool active = (lowFrequency > 0.0f || highFrequency > 0.0f);
+		if (active) {
+			// A request with no duration would never expire, so give it one frame at 60 Hz to be refreshed in
+			pad.RumbleUntilMs = get_ticks_ms() + (durationMs > 0 ? durationMs : 17);
+		}
+		if (pad.RumbleActive != active) {
+			pad.RumbleActive = active;
+			joypad_set_rumble_active(port, active);
+		}
 		return true;
 	}
 
@@ -249,6 +261,8 @@ namespace nCine::Backends
 				_inputEventHandler->OnJoyConnected(_joyConnectionEvent);
 			}
 		} else {
+			_pads[joyId].RumbleActive = false;
+			_pads[joyId].RumbleUntilMs = 0;
 			_pads[joyId].State.resetJoystickState(joyId);
 			if (_inputEventHandler != nullptr) {
 				_inputEventHandler->OnJoyDisconnected(_joyConnectionEvent);
@@ -269,6 +283,12 @@ namespace nCine::Backends
 			handleConnection(i, connected);
 			if (!connected) {
 				continue;
+			}
+
+			// Stop a Rumble Pak whose effect has run out - see joystickRumble() for why this is needed
+			if (_pads[i].RumbleActive && get_ticks_ms() >= _pads[i].RumbleUntilMs) {
+				_pads[i].RumbleActive = false;
+				joypad_set_rumble_active(port, false);
 			}
 
 			const joypad_inputs_t inputs = joypad_get_inputs(port);

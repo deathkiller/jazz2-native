@@ -37,7 +37,7 @@ namespace Jazz2::Actors::Environment
 			} else {
 				_timer -= timeMult;
 
-				_externalForce.X = lerpByTime(_externalForce.X, sinf((100.0f - _timer) / 6.0f) * 4.0f * _direction, 0.6f, timeMult);
+				_externalForce.X = lerpByTime(_externalForce.X, sinApprox((100.0f - _timer) / 6.0f) * 4.0f * _direction, 0.6f, timeMult);
 				_externalForce.Y = lerpByTime(_externalForce.Y, -0.00005f * _timer * _timer, 0.6f, timeMult);
 
 				SetFacingLeft(_speed.X < 0.0f);

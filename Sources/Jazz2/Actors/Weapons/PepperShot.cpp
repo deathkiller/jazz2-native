@@ -53,12 +53,14 @@ namespace Jazz2::Actors::Weapons
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
 		float baseSpeed = ((_upgrades & 0x1) != 0 ? Random().NextFloat(5.0f, 7.2f) : Random().NextFloat(3.0f, 7.0f));
+		float sinAngle, cosAngle;
+		sincosApprox(angleRel, sinAngle, cosAngle);
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
 		}
-		_speed.Y = sinf(angleRel) * baseSpeed;
+		_speed.Y = sinAngle * baseSpeed;
 
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
@@ -118,6 +120,6 @@ namespace Jazz2::Actors::Weapons
 	{
 		ShotBase::OnRicochet();
 
-		_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+		_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
 	}
 }

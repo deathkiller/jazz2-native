@@ -211,16 +211,18 @@ namespace Jazz2::UI::Menu
 		if (showCorners)
 #endif
 		{
-			// Version
-			Vector2f bottomRight = Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
-			bottomRight.X = ViewSize.X - 24.0f;
+			// Version. These two are the only text in the menu placed against the view itself rather than
+			// against the content bounds, which already follow the safe area, so they take it off here
+			Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)ViewSize.X, (float)ViewSize.Y), ViewSize);
+			Vector2f bottomRight = Vector2f(safeView.X + safeView.W, safeView.Y + safeView.H);
+			bottomRight.X -= 24.0f;
 			bottomRight.Y -= MenuLayout::Blend(4.0f, 10.0f, ViewSize);
 			_owner->DrawStringShadow("v" NCINE_VERSION, charOffset, bottomRight.X, bottomRight.Y, IMenuContainer::FontLayer,
 				Alignment::BottomRight, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 
 			// Copyright
 			Vector2f bottomLeft = bottomRight;
-			bottomLeft.X = 24.0f;
+			bottomLeft.X = safeView.X + 24.0f;
 			_owner->DrawStringShadow("© 2016-" NCINE_BUILD_YEAR "  Dan R."_s, charOffset, bottomLeft.X, bottomLeft.Y, IMenuContainer::FontLayer,
 				Alignment::BottomLeft, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 		}

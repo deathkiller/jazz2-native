@@ -51,12 +51,14 @@ namespace Jazz2::Actors::Weapons
 		float angleRel = angle * (isFacingLeft ? -1 : 1);
 
 		float baseSpeed = ((_upgrades & 0x1) != 0 ? 5.0f : 4.0f);
+		float sinAngle, cosAngle;
+		sincosApprox(angleRel, sinAngle, cosAngle);
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
 		}
-		_speed.Y = sinf(angleRel) * baseSpeed;
+		_speed.Y = sinAngle * baseSpeed;
 	}
 
 	void ElectroShot::OnUpdate(float timeMult)
@@ -115,8 +117,10 @@ namespace Jazz2::Actors::Weapons
 
 			float size = (8.0f + currentStep * 0.2f);
 			float dist = (2.0f + currentStep * 0.01f);
-			float dx = dist * cosf(angle);
-			float dy = dist * sinf(angle);
+			float dx, dy;
+			sincosApprox(angle, dy, dx);
+			dx *= dist;
+			dy *= dist;
 
 			Tiles::TileMap::DestructibleDebris debris = {};
 			debris.Pos = Vector2f(pos.X + dx, pos.Y + dy);
@@ -150,7 +154,8 @@ namespace Jazz2::Actors::Weapons
 		for (int i = 0; i < 2; i++) {
 			float sparkAngle = Random().FastFloat(0.0f, fRadAngle360);
 			float sparkSpeed = Random().FastFloat(0.6f, 2.4f);
-			Vector2f sparkDir = Vector2f(cosf(sparkAngle), sinf(sparkAngle));
+			Vector2f sparkDir;
+			sincosApprox(sparkAngle, sparkDir.Y, sparkDir.X);
 			float sparkDist = (3.0f + currentStep * 0.01f);
 			float sparkSize = Random().FastFloat(2.0f, 3.5f);
 

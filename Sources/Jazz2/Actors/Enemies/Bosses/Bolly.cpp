@@ -163,8 +163,10 @@ namespace Jazz2::Actors::Bosses
 				float angle = sinApprox(_chainPhase - i * 0.08f) * 1.2f + fPiOver2;
 
 				Vector2f piecePos = _pos;
-				piecePos.X += cosApprox(angle) * distance;
-				piecePos.Y += sinApprox(angle) * distance;
+				float sinAngle, cosAngle;
+				sincosApprox(angle, sinAngle, cosAngle);
+				piecePos.X += cosAngle * distance;
+				piecePos.Y += sinAngle * distance;
 				_chain[i]->MoveInstantly(piecePos, MoveType::Absolute | MoveType::Force);
 
 				distance += _chain[i]->Size;
@@ -212,7 +214,7 @@ namespace Jazz2::Actors::Bosses
 		if (found) {
 			bool facingLeft = (targetPos.X < _pos.X);
 			Vector2f diff = (targetPos - _pos).Normalized();
-			_turret->_renderer.setRotation(facingLeft ? atan2f(-diff.Y, -diff.X) : atan2f(diff.Y, diff.X));
+			_turret->_renderer.setRotation(facingLeft ? atan2Approx(-diff.Y, -diff.X) : atan2Approx(diff.Y, diff.X));
 			_turret->SetFacingLeft(facingLeft);
 		}
 
@@ -278,7 +280,7 @@ namespace Jazz2::Actors::Bosses
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X + (IsFacingLeft() ? 10 : -10), (std::int32_t)_pos.Y + 10, _renderer.layer() - 4)
 			));
-			rocket->_renderer.setRotation(atan2f(diff.Y, diff.X));
+			rocket->_renderer.setRotation(atan2Approx(diff.Y, diff.X));
 			_levelHandler->AddActor(rocket);
 		}
 	}
@@ -342,8 +344,10 @@ namespace Jazz2::Actors::Bosses
 	void Bolly::Rocket::OnUpdate(float timeMult)
 	{
 		float angle = _renderer.rotation();
-		_speed.X += cosf(angle) * 0.14f * timeMult;
-		_speed.Y += sinf(angle) * 0.14f * timeMult;
+		float sinAngle, cosAngle;
+		sincosApprox(angle, sinAngle, cosAngle);
+		_speed.X += cosAngle * 0.14f * timeMult;
+		_speed.Y += sinAngle * 0.14f * timeMult;
 
 		EnemyBase::OnUpdate(timeMult);
 

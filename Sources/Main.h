@@ -71,6 +71,19 @@
 #if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_N64) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_GAMEPAD_RUMBLE
 #endif
+/**
+	@brief Whether the current platform can deliver keyboard input
+
+	The consoles excluded below have no keyboard the engine can read: their input backends implement
+	@relativeref{nCine,IInputManager::keyboardState()} only to satisfy the interface and never produce a key
+	event, so a key binding on them can never fire. It would still be built into the mapping tables and listed
+	in the controls screen, which is why the defaults skip them entirely.
+*/
+#if (!defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_GAMECUBE) && \
+	!defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP) && \
+	!defined(DEATH_TARGET_PS2) && !defined(DEATH_TARGET_PS3)) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	define NCINE_HAS_KEYBOARD
+#endif
 /** @brief Whether the current platform has a native (hardware) back button */
 #if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_NATIVE_BACK_BUTTON

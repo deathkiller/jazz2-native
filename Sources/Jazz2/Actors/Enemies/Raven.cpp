@@ -81,7 +81,7 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		MoveInstantly(_lastPos + Vector2f(0.0f, sinf(_anglePhase) * 6.0f), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(_lastPos + Vector2f(0.0f, sinApprox(_anglePhase) * 6.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	bool Raven::OnPerish(ActorBase* collider)

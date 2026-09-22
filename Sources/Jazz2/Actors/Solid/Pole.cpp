@@ -174,8 +174,8 @@ namespace Jazz2::Actors::Solid
 		constexpr float Ratio4 = 0.3f;
 
 		float angle = _renderer.rotation() - fPiOver2;
-		float rx = cosf(angle);
-		float ry = sinf(angle);
+		float rx, ry;
+		sincosApprox(angle, ry, rx);
 		float radius = (float)_currentAnimation->Base->FrameDimensions.Y;
 		TileCollisionParams params = { TileDestructType::None, true };
 

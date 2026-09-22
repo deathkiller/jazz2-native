@@ -45,8 +45,8 @@ namespace Jazz2::Actors::Weapons
 
 		_gunspotPos = gunspotPos;
 
-		float ax = cosf(angle);
-		float ay = sinf(angle);
+		float ax, ay;
+		sincosApprox(angle, ay, ax);
 
 		constexpr float baseSpeed = 1.2f;
 		if (isFacingLeft) {

@@ -157,7 +157,7 @@ namespace Jazz2::UI::Menu
 #endif
 
 		_texturedBackgroundPos.X += timeMult * 1.2f;
-		_texturedBackgroundPos.Y += timeMult * -0.2f + timeMult * sinf(_texturedBackgroundPhase) * 0.6f;
+		_texturedBackgroundPos.Y += timeMult * -0.2f + timeMult * sinApprox(_texturedBackgroundPhase) * 0.6f;
 		_texturedBackgroundPhase += timeMult * 0.001f;
 
 		if (_transitionWhite > 0.0f) {
@@ -876,8 +876,9 @@ namespace Jazz2::UI::Menu
 			base->TextureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 			base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
 			const Vector2f period = base->FrameDimensions.As<float>() * scale;
-			const float side = sqrtf(viewSize.X * viewSize.X + viewSize.Y * viewSize.Y) + 2.0f;
-			const float c = cosf(angle), sn = sinf(angle);
+			const float side = sqrtApprox(viewSize.X * viewSize.X + viewSize.Y * viewSize.Y) + 2.0f;
+			float sn, c;
+			sincosApprox(angle, sn, c);
 			const Vector2f d = center - pivot;
 			// R^-1 d for R = RotateZ(angle) = [c -s; s c]
 			const Vector2f shift(d.X * c + d.Y * sn, -d.X * sn + d.Y * c);
@@ -894,16 +895,16 @@ namespace Jazz2::UI::Menu
 
 		// 16
 		{
-			const float scale = 0.6f + 0.04f * sinf(animTime * 0.2f);
+			const float scale = 0.6f + 0.04f * sinApprox(animTime * 0.2f);
 			drawRepeating(res16->Base, scale, animTime * -0.2f, center, 100);
 		}
 
 		// 32
 		{
-			const float scale = 0.6f + 0.04f * sinf(animTime * 0.2f);
+			const float scale = 0.6f + 0.04f * sinApprox(animTime * 0.2f);
 			Vector2f pivot = center;
-			pivot.X += 96.0f * sinf(animTime * 0.37f);
-			pivot.Y += 96.0f * cosf(animTime * 0.31f);
+			pivot.X += 96.0f * sinApprox(animTime * 0.37f);
+			pivot.Y += 96.0f * cosApprox(animTime * 0.31f);
 			drawRepeating(res32->Base, scale, animTime * 0.4f, pivot, 110);
 		}
 
@@ -920,13 +921,14 @@ namespace Jazz2::UI::Menu
 			// roughly 450 us, and the smaller the tile the more quads the view holds. The original range
 			// swung the count between 12 and 41 - a menu frame between 36 and 51 ms, visibly uneven -
 			// where this one holds it at 14 to 17, i.e. a steady 40 ms.
-			const float scale = 0.75f + 0.05f * sinf(animTime * 0.4f);
+			const float scale = 0.75f + 0.05f * sinApprox(animTime * 0.4f);
 			const float angle = animTime * 0.3f;
 			const Vector2f period = base->FrameDimensions.As<float>() * scale;
 			Vector2f pivot = center;
-			pivot.X += 64.0f * sinf(animTime * 0.25f);
-			pivot.Y += 64.0f * cosf(animTime * 0.32f);
-			const float c = cosf(angle), sn = sinf(angle);
+			pivot.X += 64.0f * sinApprox(animTime * 0.25f);
+			pivot.Y += 64.0f * cosApprox(animTime * 0.32f);
+			float sn, c;
+			sincosApprox(angle, sn, c);
 			// The view's corners in lattice units (R^-1 about the pivot, over the period) bound the
 			// periods that can show
 			float minI = 1.0e30f, maxI = -1.0e30f, minJ = 1.0e30f, maxJ = -1.0e30f;
@@ -979,7 +981,7 @@ namespace Jazz2::UI::Menu
 			base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 96.0f;
-			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
+			float scale = (0.6f + 0.04f * sinApprox(animTime * 0.2f)) * repeats;
 			Vector2f size = base->FrameDimensions.As<float>() * scale;
 
 			auto command = _canvasBackground->RentRenderCommand();
@@ -1012,12 +1014,12 @@ namespace Jazz2::UI::Menu
 			base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 56.0f;
-			float scale = (0.6f + 0.04f * sinf(animTime * 0.2f)) * repeats;
+			float scale = (0.6f + 0.04f * sinApprox(animTime * 0.2f)) * repeats;
 			Vector2f size = base->FrameDimensions.As<float>() * scale;
 
 			Vector2f centerBg = center;
-			centerBg.X += 96.0f * sinf(animTime * 0.37f);
-			centerBg.Y += 96.0f * cosf(animTime * 0.31f);
+			centerBg.X += 96.0f * sinApprox(animTime * 0.37f);
+			centerBg.Y += 96.0f * cosApprox(animTime * 0.31f);
 
 			auto command = _canvasBackground->RentRenderCommand();
 			command->SetType(RenderCommand::Type::TileMap);
@@ -1049,12 +1051,12 @@ namespace Jazz2::UI::Menu
 			base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
 
 			constexpr float repeats = 20.0f;
-			float scale = (0.6f + 0.2f * sinf(animTime * 0.4f)) * repeats;
+			float scale = (0.6f + 0.2f * sinApprox(animTime * 0.4f)) * repeats;
 			Vector2f size = base->FrameDimensions.As<float>() * scale;
 
 			Vector2f centerBg = center;
-			centerBg.X += 64.0f * sinf(animTime * 0.25f);
-			centerBg.Y += 64.0f * cosf(animTime * 0.32f);
+			centerBg.X += 64.0f * sinApprox(animTime * 0.25f);
+			centerBg.Y += 64.0f * cosApprox(animTime * 0.32f);
 
 			auto command = _canvasBackground->RentRenderCommand();
 			command->SetType(RenderCommand::Type::TileMap);

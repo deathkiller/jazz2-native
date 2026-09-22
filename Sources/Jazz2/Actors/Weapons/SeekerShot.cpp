@@ -59,12 +59,14 @@ namespace Jazz2::Actors::Weapons
 
 		// Upgraded rockets are slower
 		float baseSpeed = ((_upgrades & 0x1) != 0 ? 1.7f : 1.85f);
+		float sinAngle, cosAngle;
+		sincosApprox(angleRel, sinAngle, cosAngle);
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X * 0.06f) - cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X * 0.06f) - cosAngle * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X * 0.06f) + cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X * 0.06f) + cosAngle * baseSpeed;
 		}
-		_speed.Y = sinf(angleRel) * baseSpeed;
+		_speed.Y = sinAngle * baseSpeed;
 
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);
@@ -170,10 +172,10 @@ namespace Jazz2::Actors::Weapons
 
 		if (_speed.X < 0.0f) {
 			SetFacingLeft(true);
-			_renderer.setRotation(atan2f(-_speed.Y, -_speed.X));
+			_renderer.setRotation(atan2Approx(-_speed.Y, -_speed.X));
 		} else {
 			SetFacingLeft(false);
-			_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+			_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
 		}
 
 		_followRecomputeTime = _defaultRecomputeTime;

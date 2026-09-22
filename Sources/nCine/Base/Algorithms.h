@@ -263,55 +263,168 @@ namespace nCine
 	}
 #endif
 
+#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || \
+	defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
+	defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
 	/**
-	 * @brief Returns @f$ \sin(x) @f$ as cheaply as the platform can, within 0.0014 of full scale
-	 *
-	 * For values that only drive something's appearance - a flicker phase, a pulse, an orbit - where
-	 * the library function's exactness buys nothing. On a platform whose libm is fast this simply calls
-	 * it, because an approximation is not automatically cheaper: measured on x86-64 against wrapped
-	 * phases, the polynomial below is 1.37x SLOWER than glibc's `sinf()` (3.5 ns against 4.9 ns, same
-	 * with clang). It is only worth substituting where libm is genuinely bad, which on the consoles it
-	 * is - a `sinf()` on the PSP measures **13.5 us**, about 4,500 cycles, against 331 ns here.
+	 * @brief Defined where libm is a software newlib: @ref sinApprox() and friends approximate, @ref floorFast() and friends avoid the call
 	 *
 	 * Only the PSP and x86-64 have actually been measured; the other consoles are included because they
-	 * share the same newlib libm and have no hardware sine. Move a platform out of the list if it ever
-	 * measures otherwise.
+	 * share the same newlib libm and have no hardware sine (or, on the Dreamcast, have one that libm does
+	 * not use). Move a platform out of the list if it ever measures otherwise.
+	 */
+#	define NCINE_APPROX_TRIG
+#endif
+
+	namespace Implementation
+	{
+#if defined(NCINE_APPROX_TRIG) && !defined(DEATH_TARGET_DREAMCAST)
+		/**
+		 * @brief Folds an angle into @f$ [-\pi, \pi] @f$ with a single truncating cast, |x| <= 4096
+		 *
+		 * The nearest whole number of turns is found without a division, an `fmod()` or a `floor()` (MIPS
+		 * has no floor instruction, so that would be a real `jal floorf`), in one of two ways:
+		 *  - **MIPS (N64, PSP, PS2) and the 3DS**: `trunc(turns + 0.5 + 1024) - 1024`. The bias keeps the
+		 *    value positive over the whole guarded range (|turns| < 652), where truncation *is* rounding, so
+		 *    there is no branch and no fix-up for negatives, and `trunc.w.s` + `cvt.s.w` stay in the FPU.
+		 *    The cast truncates on every one of them, including the PS2's EE, whose FPU can do nothing else
+		 *    and rounds all arithmetic toward zero - which is exactly why the other way is NOT used there.
+		 *    The bias costs the fraction its low 11 bits, so the rounding decision can be off by 2^-14 of
+		 *    a turn and the result overshoot ±Pi by up to 4e-4; the polynomials below stay smooth there.
+		 *  - **PowerPC (Wii, GameCube, PS3) and the 68k Amiga**: `(turns + 1.5 * 2^23) - 1.5 * 2^23`, two
+		 *    adds that round to the nearest integer in the default round-to-nearest mode, exactly. A float
+		 *    to int conversion is what is expensive on these: PowerPC has no FPU-to-FPU conversion, so a
+		 *    cast is `fctiwz` + a store + a load + `xoris` + a double load + a subtract, and the 68060 has
+		 *    no `fintrz` in hardware at all, it traps to the 68060SP emulation. The trick relies on the
+		 *    compiler keeping the two adds, which `-ffast-math` (`-fassociative-math`) would fold away, so
+		 *    it is only used when `__FAST_MATH__` is not defined.
+		 *
+		 * Measured through either fold: 2.3e-4 at 4087 rad and 9e-6 within ±64 rad, both at the resolution
+		 * a float has for an angle that big, i.e. the input, not the fold, is the limit.
+		 */
+		inline float FoldHalfTurn(float x)
+		{
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+			constexpr float RoundingBias = 12582912.0f;	// 1.5 * 2^23, the ulp is exactly 1 for |turns| < 2^22
+			const float whole = (x * (0.5f / fPi) + RoundingBias) - RoundingBias;
+#	else
+			// The bias comes back off in float, after the cast: the integer is exact either way, and this keeps
+			// the value in the FPU instead of a move to a general register and back for one `addiu`
+			const float whole = (float)(std::int32_t)(x * (0.5f / fPi) + 1024.5f) - 1024.0f;
+#	endif
+			return x - fTwoPi * whole;
+		}
+
+		/**
+		 * @brief @f$ \sin(x) @f$ for @f$ x \in [-\pi, \pi] @f$ as an odd degree-9 minimax polynomial
+		 *
+		 * Max error 6.3e-6 over the fold, 1 multiply for x^2, then 4 multiply-adds and a multiply - a
+		 * `mul.s` + 4 `madd.s` + `mul.s` on the PS2 and `fmadds` on the Gekko/Broadway. No abs, no select,
+		 * no branch: the old parabola-plus-correction needed two of each for 1.1e-3, so this is both
+		 * cheaper and 170x more accurate. It is odd, so `SinFolded(-x) == -SinFolded(x)` bit for bit, negative
+		 * zero included. Through the fold that holds everywhere except within its 2^-14-turn rounding slop
+		 * around odd multiples of Pi, where `x` and `-x` may land on opposite ends of the fold and differ
+		 * by the approximation's own error there - a caller that needs an exact `-s` should negate `s` (or, on the
+		 * Dreamcast, see the SH4 note in @ref Matrix4x4::RotationZ()).
+		 */
+		inline float SinFolded(float x)
+		{
+			const float x2 = x * x;
+			return x * (0.999979377f + x2 * (-0.166624382f + x2 * (0.00830898527f + x2 * (-0.000192649939f + x2 * 2.14787201e-06f))));
+		}
+
+		/** @brief @f$ \cos(x) @f$ for @f$ x \in [-\pi, \pi] @f$ as an even degree-10 minimax polynomial, max error 1.3e-6 */
+		inline float CosFolded(float x)
+		{
+			const float x2 = x * x;
+			return 0.999999225f + x2 * (-0.499994278f + x2 * (0.0416598208f + x2 * (-0.00138589158f + x2 * (2.42043989e-05f + x2 * -2.19788717e-07f))));
+		}
+#endif
+
+#if defined(DEATH_TARGET_DREAMCAST)
+		/**
+		 * @brief Both @f$ \sin(x) @f$ and @f$ \cos(x) @f$ from the SH4's `fsca`, |x| <= 4096
+		 *
+		 * `fsca` reads FPUL as 16.16 fixed-point turns and writes the sine and cosine of the low 16 bits into
+		 * a register pair in 3 cycles, so the fold IS the `ftrc` - the whole-turn part simply falls out of
+		 * the low half. Accurate to about 2^-21, three orders of magnitude better than any polynomial that
+		 * runs in the same time, and it is what KallistiOS' own `fsincos()` does; this is inlined here so
+		 * the conversion constant and the range guard match the other targets. `ftrc` saturates rather
+		 * than wraps, which the 4096 rad guard (4.3e7 fixed, well inside int32) keeps out of reach.
+		 *
+		 * `fsca` needs an even-numbered `dr` pair as its destination, hence the pinned registers; fr10/fr11
+		 * are caller-saved on the SH ABI and are the pair KallistiOS pins for the same purpose. The `ftrc`
+		 * is inside the asm so the fixed-point angle goes FPU -> FPUL directly, without the `sts`/`lds`
+		 * round trip through a general register an `int` operand would cost.
+		 */
+		inline void SinCosFsca(float x, float& s, float& c)
+		{
+			// Both registers are read-write operands carrying the input in, which is the form KallistiOS'
+			// own fsin()/fsincos() use, and the multiply stays inside the asm. The earlier version took the
+			// angle in a register of GCC's choosing and declared fr10/fr11 write-only, which left the
+			// compiler free to keep an unrelated live value in the pair across the instruction: correct in
+			// isolation, but it miscompiled once the surrounding function got busy enough, and the symptom
+			// moved whenever anything nearby changed. Nothing here may be reordered or reallocated now.
+			register float fs __asm__("fr10") = x;
+			register float fc __asm__("fr11") = (65536.0f / fTwoPi);
+			__asm__("fmul fr11, fr10\n\t"
+					"ftrc fr10, fpul\n\t"
+					"fsca fpul, dr10"
+					: "+f"(fs), "+f"(fc)
+					:
+					: "fpul");
+			s = fs;
+			c = fc;
+		}
+#endif
+	}
+
+	/**
+	 * @brief Returns @f$ \sin(x) @f$ as cheaply as the platform can, within 1e-5 of full scale for |x| <= 64
 	 *
-	 * @param x Angle in radians, @f$ |x| \lesssim 4096 @f$ - see the note on the fold below
+	 * For values that drive something's appearance or motion - a flicker phase, a pulse, an orbit, a
+	 * sprite's rotation, a shot's launch direction - where the library function's last bits buy nothing.
+	 * On a platform whose libm is fast this simply calls it, because an approximation is not automatically
+	 * cheaper: measured on x86-64 against wrapped phases, a polynomial of this shape was SLOWER than glibc's
+	 * `sinf()` (4.9 ns against 3.5 ns, same with clang). It is only worth substituting where libm is
+	 * genuinely bad, which on the consoles it is - a `sinf()` on the PSP measures **13.5 us**, about 4,500
+	 * cycles, against a few dozen cycles here (see @ref NCINE_APPROX_TRIG for the list).
+	 *
+	 * What each console gets:
+	 *  - **Dreamcast**: the SH4's `fsca` instruction, sine and cosine together at about 2^-21.
+	 *  - **Everything else on the list**: a half-turn fold and an odd degree-9 minimax polynomial, 6.3e-6
+	 *    over the fold, 9e-6 within ±64 rad. The N64's libdragon ships `fm_sinf()` at a similar accuracy
+	 *    and cost; this polynomial is used there too so that every console runs (and is measured on) the
+	 *    same code. The PSP's VFPU has `vsin`/`vcos`/`vrot`, but a VFPU context exists only on threads
+	 *    created with `PSP_THREAD_ATTR_VFPU`, which the engine's pthread workers and the audio thread are
+	 *    not, and the few dozen cycles it would save per call are not worth a function that is unsafe
+	 *    off the main thread. The polynomial is already ~250x faster than that libm.
+	 *
+	 * Precision: at the 6e-6 here, a rotation matrix built from the result is off by less than a 0.001 %
+	 * scale, which no sprite in the game can resolve, and a shot's launch angle by 0.0004 degrees. The
+	 * only callers that should stay on libm are one-time table generation (already amortized), anything
+	 * that uses `sin()` of a huge argument as a hash (it needs the chaotic low bits), and the `sin`/`cos`
+	 * registered for level scripts, whose contract is the C library's.
+	 *
+	 * @param x Angle in radians, @f$ |x| \lesssim 4096 @f$ - past that a float no longer resolves the
+	 *   fraction of a turn that is left (an angle of 1e6 has a resolution of 0.06 rad), so larger values are
+	 *   handed to libm. Nothing here should pass one, but a phase accumulator that is never wrapped
+	 *   eventually would; it is one compare on a path that is already the slow one.
 	 */
 	inline float sinApprox(float x)
 	{
-#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || \
-		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PS2) || \
-		defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)
-		// The fold below subtracts a whole number of turns found with a truncating cast, and both halves
-		// of that fail on a large angle: past about 4096 radians a float no longer resolves the fraction
-		// of a turn that is left (the error reaches 0.016 by 1e6), and past ~1.3e10 the cast overflows and
-		// the result is nonsense rather than merely imprecise. Nothing here should pass an angle that big,
-		// but a phase accumulator that is never wrapped eventually would, so hand those to libm - it is
-		// one compare on a path that is already the slow one.
-		if (x < -4096.0f || x > 4096.0f) {
+#if defined(DEATH_TARGET_DREAMCAST)
+		if (std::fabs(x) > 4096.0f) {
 			return std::sin(x);
 		}
-
-		// Fold into [-Pi, Pi]. No division, no fmod(), and no std::floor() either - MIPS has no floor
-		// instruction, so that would be a real `jal floorf`, and it cost a quarter of this function's
-		// runtime until it became a truncating cast with a correction for negatives.
-		const float turns = x * (0.5f / fPi) + 0.5f;
-		std::int32_t whole = (std::int32_t)turns;
-		if (turns < (float)whole) {
-			whole--;
+		float s, c;
+		Implementation::SinCosFsca(x, s, c);
+		return s;
+#elif defined(NCINE_APPROX_TRIG)
+		if (std::fabs(x) > 4096.0f) {
+			return std::sin(x);
 		}
-		x -= 2.0f * fPi * (float)whole;
-
-		// One parabola through the half-period, then a correction of the same shape. Worst error measured
-		// at 0.0013 across the whole guarded range, and smooth, so an animation driven by it does not
-		// visibly step.
-		constexpr float B = 4.0f / fPi;
-		constexpr float C = -4.0f / (fPi * fPi);
-		const float y = B * x + C * x * (x < 0.0f ? -x : x);
-		constexpr float P = 0.225f;
-		return P * (y * (y < 0.0f ? -y : y) - y) + y;
+		return Implementation::SinFolded(Implementation::FoldHalfTurn(x));
 #else
 		return std::sin(x);
 #endif
@@ -320,7 +433,183 @@ namespace nCine
 	/** @brief Returns @f$ \cos(x) @f$ as cheaply as the platform can, see @ref sinApprox() */
 	inline float cosApprox(float x)
 	{
-		return sinApprox(x + fPiOver2);
+#if defined(DEATH_TARGET_DREAMCAST)
+		if (std::fabs(x) > 4096.0f) {
+			return std::cos(x);
+		}
+		float s, c;
+		Implementation::SinCosFsca(x, s, c);
+		return c;
+#elif defined(NCINE_APPROX_TRIG)
+		if (std::fabs(x) > 4096.0f) {
+			return std::cos(x);
+		}
+		return Implementation::CosFolded(Implementation::FoldHalfTurn(x));
+#else
+		return std::cos(x);
+#endif
+	}
+
+	/**
+	 * @brief Returns both @f$ \sin(x) @f$ and @f$ \cos(x) @f$ as cheaply as the platform can, see @ref sinApprox()
+	 *
+	 * Prefer this wherever both are needed of the same angle: the fold is done once and the two polynomials
+	 * share @f$ x^2 @f$, and on the Dreamcast `fsca` produces both in the same instruction anyway.
+	 * On a desktop libm this is the `sincosf()` pair the compiler already merges.
+	 *
+	 * Keep in mind the SH4 codegen note in @ref Matrix4x4::RotationZ(): where a caller needs `-s` as well,
+	 * take it from `sinApprox(-x)` on the Dreamcast rather than negating `s`.
+	 */
+	inline void sincosApprox(float x, float& s, float& c)
+	{
+#if defined(DEATH_TARGET_DREAMCAST)
+		if (std::fabs(x) > 4096.0f) {
+			s = std::sin(x);
+			c = std::cos(x);
+			return;
+		}
+		Implementation::SinCosFsca(x, s, c);
+#elif defined(NCINE_APPROX_TRIG)
+		if (std::fabs(x) > 4096.0f) {
+			s = std::sin(x);
+			c = std::cos(x);
+			return;
+		}
+		x = Implementation::FoldHalfTurn(x);
+		s = Implementation::SinFolded(x);
+		c = Implementation::CosFolded(x);
+#else
+		s = std::sin(x);
+		c = std::cos(x);
+#endif
+	}
+
+	/**
+	 * @brief Returns @f$ \operatorname{atan2}(y, x) @f$ as cheaply as the platform can, within 1.2e-5 rad
+	 *
+	 * For a sprite's facing angle or a debris rotation. Newlib's `atan2f()` on the consoles is two software
+	 * routines of about 300 instructions with divisions; this is one division, an octant reduction and an
+	 * odd degree-9 minimax polynomial on [0, 1] - about 20 instructions, mapping onto multiply-adds. On a
+	 * platform with a fast libm (see @ref NCINE_APPROX_TRIG) it calls `std::atan2()` instead.
+	 *
+	 * Same conventions as the library function: the result is in @f$ [-\pi, \pi] @f$, the sign of `y` picks
+	 * the half-plane, and (0, 0) yields 0. Infinities and NaN are not handled.
+	 *
+	 * **Not used on the Dreamcast**, where this is `std::atan2()`. The approximation is miscompiled there for
+	 * negative `y`: measured on hardware over a swept direction, every sample with `y >= 0` was exact and the
+	 * ones with `y < 0` were wrong, with the magnitude matching `std::fabs(y)` having been dropped, so the
+	 * min/max selection inverted and the ratio came out as `mx / mn` - `atan2Approx(-1.0f, -0.0006f)` returned
+	 * -1.9e27 instead of -1.5714. Restructuring it moved the failure rather than removing it (an earlier shape
+	 * lost the final sign instead), and the symptom shifted whenever unrelated code in the same function
+	 * changed, so the fault is in what the compiler emits rather than in the arithmetic, which is correct on
+	 * every other target and on the host. The library call costs more than the polynomial but this is a few
+	 * calls a frame, not a hot loop.
+	 */
+	inline float atan2Approx(float y, float x)
+	{
+#if defined(NCINE_APPROX_TRIG) && !defined(DEATH_TARGET_DREAMCAST)
+		const float ax = std::fabs(x), ay = std::fabs(y);
+		const float mx = (ax > ay ? ax : ay), mn = (ax > ay ? ay : ax);
+		if (mx == 0.0f) {
+			return 0.0f;
+		}
+		const float a = mn / mx;
+		const float a2 = a * a;
+		float r = a * (0.999866307f + a2 * (-0.330304652f + a2 * (0.180158854f + a2 * (-0.0851557255f + a2 * 0.0208448265f))));
+		if (ay > ax) {
+			r = fPiOver2 - r;
+		}
+		if (x < 0.0f) {
+			r = fPi - r;
+		}
+		// Everything above leaves `r` in [0, Pi], so the half-plane is just the sign of `y`. It is applied with
+		// copysign() rather than a conditional negate because that negate was being lost on the Dreamcast: the
+		// value came back with the correct magnitude and quadrant but a positive sign for y < 0, which ran the
+		// weapon wheel's angle backwards through its whole upper half. Measured on hardware, not guessed -
+		// atan2Approx(-0.0084, -1.0) returned +3.13318 where it owes -3.13319. copysign is a sign-bit operation
+		// with no branch for the compiler to drop, and it also gives -0.0 for y == -0.0, as atan2() does.
+		return std::copysign(r, y);
+#else
+		return std::atan2(y, x);
+#endif
+	}
+
+	/**
+	 * @brief Returns @f$ \lfloor x \rfloor @f$ without a libm call, for @f$ |x| < 2^{22} @f$
+	 *
+	 * `std::floor()`, `std::ceil()` and `std::round()` on a float are real calls into newlib on every console
+	 * in @ref NCINE_APPROX_TRIG - MIPS and SH-4 have no floor instruction and PowerPC's rounds only to an
+	 * integer register through memory - 36 to 68 instructions each, and the collision code and the HUD call
+	 * them per actor or per element every frame. These are exact for any value a pixel or tile coordinate can
+	 * take; the range limit comes from the float-to-int cast (MIPS, SH-4, ARM) or the 1.5 * 2^23 rounding
+	 * trick (PowerPC, 68k, see @ref Implementation::FoldHalfTurn()) they are built on. Elsewhere they are the
+	 * library functions, which the compiler turns into one instruction on any SSE4.1 or ARMv8 machine.
+	 */
+	inline float floorFast(float x)
+	{
+#if defined(NCINE_APPROX_TRIG)
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+		const float r = (x + 12582912.0f) - 12582912.0f;
+#	else
+		const float r = (float)(std::int32_t)x;
+#	endif
+		return (r > x ? r - 1.0f : r);
+#else
+		return std::floor(x);
+#endif
+	}
+
+	/** @brief Returns @f$ \lceil x \rceil @f$ without a libm call, for @f$ |x| < 2^{22} @f$, see @ref floorFast() */
+	inline float ceilFast(float x)
+	{
+#if defined(NCINE_APPROX_TRIG)
+#	if (defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PS3) || defined(DEATH_TARGET_AMIGAOS)) && !defined(__FAST_MATH__)
+		const float r = (x + 12582912.0f) - 12582912.0f;
+#	else
+		const float r = (float)(std::int32_t)x;
+#	endif
+		return (r < x ? r + 1.0f : r);
+#else
+		return std::ceil(x);
+#endif
+	}
+
+	/**
+	 * @brief Returns @f$ x @f$ rounded to the nearest integer without a libm call, for @f$ |x| < 2^{22} @f$, see @ref floorFast()
+	 *
+	 * Halfway cases go away from zero like `std::round()`, except within one ulp of the halfway point, where
+	 * adding the half can itself round; a position snapped to a pixel cannot tell the difference.
+	 */
+	inline float roundFast(float x)
+	{
+#if defined(NCINE_APPROX_TRIG)
+		return (x < 0.0f ? -floorFast(0.5f - x) : floorFast(x + 0.5f));
+#else
+		return std::round(x);
+#endif
+	}
+
+	/**
+	 * @brief Returns @f$ \sqrt{x} @f$ as cheaply as the platform can, and 0 for a non-positive argument
+	 *
+	 * On the Dreamcast this is the SH4's `fsrra` (reciprocal square root, accurate to the last bits, 1 cycle)
+	 * and a multiply, against about 23 cycles for `fsqrt`; `fsrra` of zero is infinity and 0 * inf is NaN,
+	 * hence the guard, which also turns a negative argument into 0 where `std::sqrt()` would return NaN.
+	 * Every other target has a hardware square root that libm or the compiler already uses, so this is
+	 * `std::sqrt()` there, with the same guard for the same answer on every platform.
+	 */
+	inline float sqrtApprox(float x)
+	{
+		if (x <= 0.0f) {
+			return 0.0f;
+		}
+#if defined(DEATH_TARGET_DREAMCAST)
+		float r = x;
+		__asm__("fsrra %0" : "+f"(r));
+		return x * r;
+#else
+		return std::sqrt(x);
+#endif
 	}
 
 	/** @brief Linearly interpolates between two values by the given ratio */

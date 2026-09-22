@@ -1,4 +1,5 @@
 #include "PvrDevice.h"
+#include "../../../Base/Algorithms.h"
 #include "PvrBuffer.h"
 #include "PvrShaderProgram.h"
 #include "PvrRenderTarget.h"
@@ -1524,7 +1525,7 @@ namespace nCine::RHI::PVR
 			const float dx = curX - prevX, dy = curY - prevY;
 			const float len2 = dx * dx + dy * dy;
 			if (len2 > 0.000001f) {
-				const float len = std::sqrt(len2);
+				const float len = sqrtApprox(len2);
 				// GL's line rasterization guarantees an unbroken one-pixel chain whatever the slope; a
 				// quad exactly one pixel wide covers too few pixel centres on diagonals and the line
 				// comes out dashed and dimmer. Widening by the slope's Manhattan factor (1 for axis

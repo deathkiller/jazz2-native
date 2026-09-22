@@ -25,7 +25,9 @@ namespace Jazz2::Actors::Multiplayer
 		// rotation, backwards when facing left
 		float rotation = _renderer.rotation();
 		float distance = (IsFacingLeft() ? -Weapons::Thunderbolt::BeamDistance : Weapons::Thunderbolt::BeamDistance);
-		return Vector2f(_pos.X + cosf(rotation) * distance, _pos.Y + sinf(rotation) * distance);
+		float sinRot, cosRot;
+		sincosApprox(rotation, sinRot, cosRot);
+		return Vector2f(_pos.X + cosRot * distance, _pos.Y + sinRot * distance);
 	}
 
 	void RemoteThunderbolt::OnUpdate(float timeMult)

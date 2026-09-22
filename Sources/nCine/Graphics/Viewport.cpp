@@ -1,4 +1,5 @@
 #include "Viewport.h"
+#include "../Base/Algorithms.h"
 #include "RenderQueue.h"
 #include "RenderResources.h"
 #include "../Application.h"
@@ -278,8 +279,8 @@ namespace nCine
 		}
 
 		if (viewValues.rotation > SceneNode::MinRotation || viewValues.rotation < -SceneNode::MinRotation) {
-			const float sinRot = sinf(-viewValues.rotation);
-			const float cosRot = cosf(-viewValues.rotation);
+			float sinRot, cosRot;
+			sincosApprox(-viewValues.rotation, sinRot, cosRot);
 			const float rotatedWidth = fabsf(_cullingRect.W * cosRot) + fabsf(_cullingRect.H * sinRot);
 			const float rotatedHeight = fabsf(_cullingRect.W * sinRot) + fabsf(_cullingRect.H * cosRot);
 

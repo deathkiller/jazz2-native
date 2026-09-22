@@ -217,7 +217,7 @@ namespace Jazz2::Actors::Enemies
 			Vector2f diff = (targetPos - _pos).Normalized();
 			Vector2f speed = (_speed + diff * 0.8f).Normalized();
 			_speed = speed * 5.0f;
-			_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+			_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
 		}
 	}
 }

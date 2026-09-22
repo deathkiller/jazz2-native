@@ -86,7 +86,7 @@ namespace Jazz2::Actors::Collectibles
 		if (_untouched) {
 			_phase += timeMult * 0.15f;
 
-			float waveOffset = 3.2f * cosf((_phase * 0.25f) * fPi) + 0.6f;
+			float waveOffset = 3.2f * cosApprox((_phase * 0.25f) * fPi) + 0.6f;
 			MoveInstantly(Vector2f(_pos.X, _startingY + waveOffset), MoveType::Absolute);
 		} else if (_timeLeft > 0.0f) {
 			_timeLeft -= timeMult;

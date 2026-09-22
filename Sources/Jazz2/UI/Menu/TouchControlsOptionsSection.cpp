@@ -163,7 +163,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Top, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Draw all button previews
-		float pulseAlpha = 0.5f + 0.5f * sinf(_pulseTime * fPiOver2);
+		float pulseAlpha = 0.5f + 0.5f * sinApprox(_pulseTime * fPiOver2);
 		for (std::int32_t i = 0; i < (std::int32_t)TouchButtonSlot::Count; i++) {
 			DrawButtonPreview(canvas, (TouchButtonSlot)i, viewSize, (i == _focusedSlot));
 		}
@@ -203,7 +203,7 @@ namespace Jazz2::UI::Menu
 
 		// Bounce scale
 		float bAnim = _bounceAnim[(std::int32_t)slot];
-		float bs = 1.0f + 0.25f * sinf(bAnim * fPi) * bAnim;
+		float bs = 1.0f + 0.25f * sinApprox(bAnim * fPi) * bAnim;
 		float hw = r.HalfW * bs;
 
 		// Map slot to the matching touch button animation in MenuResources

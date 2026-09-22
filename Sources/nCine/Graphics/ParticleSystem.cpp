@@ -1,4 +1,5 @@
 #include "ParticleSystem.h"
+#include "../Base/Algorithms.h"
 #include "../Base/Random.h"
 #include "../Primitives/Vector2.h"
 #include "Particle.h"
@@ -90,7 +91,7 @@ namespace nCine
 			float rotation = 0.0f;
 			if (init.emitterRotation) {
 				// Particles are rotated towards the emission vector
-				rotation = (atan2f(velocity.Y, velocity.X) - atan2f(1.0f, 0.0f)) * 180.0f / fPi;
+				rotation = (atan2Approx(velocity.Y, velocity.X) - atan2Approx(1.0f, 0.0f)) * 180.0f / fPi;
 				if (rotation < 0.0f) {
 					rotation += 360.0f;
 				}

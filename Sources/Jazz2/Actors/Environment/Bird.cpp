@@ -196,7 +196,7 @@ namespace Jazz2::Actors::Environment
 						_speed.X = attackSpeed.X * 6.0f;
 						_speed.Y = attackSpeed.Y * 6.0f;
 
-						float angle = atan2f(_speed.Y, _speed.X);
+						float angle = atan2Approx(_speed.Y, _speed.X);
 						if (IsFacingLeft()) {
 							angle += fPi;
 						}

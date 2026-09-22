@@ -1,4 +1,5 @@
 #include "RdpDevice.h"
+#include "../../../Base/Algorithms.h"
 #include "RdpBuffer.h"
 #include "RdpShaderProgram.h"
 #include "RdpRenderTarget.h"
@@ -886,7 +887,7 @@ namespace nCine::RHI::RDP
 			parms.cy = parms.height / 2;
 			parms.scale_x = eLen / texelsS;
 			parms.scale_y = fLen / texelsT;
-			parms.theta = atan2f(-ey, ex);
+			parms.theta = atan2Approx(-ey, ex);
 			parms.filtering = (state.Filter == FILTER_BILINEAR);
 			// The screen point the source's centre lands on: the quad's centre (the window may be a
 			// texel wider than the quad's texel span, the fraction of a texel that costs is invisible)
@@ -2599,15 +2600,26 @@ namespace nCine::RHI::RDP
 					continue;
 				}
 
-				// Integer texel box of the window (floor of the lower, ceil of the upper coordinate)
+				// Integer texel box of the window (floor of the lower, ceil of the upper coordinate).
+				//
+				// The upper edge is rounded up with a tolerance rather than exactly, because a tile's right
+				// edge lands on a whole texel only in exact arithmetic: the coordinate arrives as
+				// `texBias + texScale` in floats, and an ulp of overshoot past 32.0 used to widen the window
+				// to 33 texels. That extra column is the first column of the next tile in the atlas, and with
+				// no padding between tiles on this console (TileSet::TilePadding is 0 here) a sample at the
+				// tile's right edge could read it - one column of a neighbouring tile bleeding in, on some
+				// tiles and not others depending on which way their coordinates happened to round. The RDP
+				// addresses texels in 1/32 steps, so anything below that cannot name a further texel anyway
+				// and is rounding noise by definition.
+				constexpr float TexelEpsilon = 1.0f / 64.0f;
 				const float minU = std::min(u0, u1), maxU = std::max(u0, u1);
 				const float minV = std::min(v0, v1), maxV = std::max(v0, v1);
 				std::int32_t winS0 = std::int32_t(minU), winS1 = std::int32_t(maxU);
 				std::int32_t winT0 = std::int32_t(minV), winT1 = std::int32_t(maxV);
 				if (float(winS0) > minU) { winS0--; }
 				if (float(winT0) > minV) { winT0--; }
-				if (float(winS1) < maxU) { winS1++; }
-				if (float(winT1) < maxV) { winT1++; }
+				if (float(winS1) + TexelEpsilon < maxU) { winS1++; }
+				if (float(winT1) + TexelEpsilon < maxV) { winT1++; }
 				winS0 = std::max<std::int32_t>(winS0, 0); winT0 = std::max<std::int32_t>(winT0, 0);
 				winS1 = std::min<std::int32_t>(winS1, surfW); winT1 = std::min<std::int32_t>(winT1, surfH);
 				if (winS1 <= winS0 || winT1 <= winT0) {

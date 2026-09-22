@@ -1,4 +1,5 @@
 #include "SceneNode.h"
+#include "../Base/Algorithms.h"
 #include "../Application.h"
 #include "../../Main.h"
 #include "../tracy.h"
@@ -371,8 +372,7 @@ namespace nCine
 			// Translation(position) * RotateZ(rotation) * Scale(scale) * Translation(-anchor)
 			float c = 1.0f, s = 0.0f;
 			if (_rotation != 0.0f) {
-				c = cosf(_rotation);
-				s = sinf(_rotation);
+				sincosApprox(_rotation, s, c);
 			}
 			const float m00 = c * _scaleFactor.X;
 			const float m01 = s * _scaleFactor.X;

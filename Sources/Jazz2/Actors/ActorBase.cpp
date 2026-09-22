@@ -97,7 +97,7 @@ namespace Jazz2::Actors
 		// first update overwrites it (see ResetPathTracking())
 		ResetPathTracking();
 
-		_renderer.setPosition(std::round(_pos.X), std::round(_pos.Y));
+		_renderer.setPosition(roundFast(_pos.X), roundFast(_pos.Y));
 
 		OnUpdateHitbox();
 
@@ -1356,7 +1356,7 @@ namespace Jazz2::Actors
 			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
 			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
 
-			aabb1 = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+			aabb1 = AABBf(floorFast(minX), floorFast(minY), ceilFast(maxX), ceilFast(maxY));
 		}
 		{
 			Vector3f tl = Vector3f::Zero * transform2;
@@ -1369,7 +1369,7 @@ namespace Jazz2::Actors
 			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
 			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
 
-			aabb2 = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+			aabb2 = AABBf(floorFast(minX), floorFast(minY), ceilFast(maxX), ceilFast(maxY));
 		}
 
 		if (!aabb1.Overlaps(aabb2)) {
@@ -1403,8 +1403,8 @@ namespace Jazz2::Actors
 			Vector3f posIn2 = yPosIn2;
 
 			for (std::int32_t x1 = 0; x1 < width1; x1 += PerPixelCollisionStep) {
-				std::int32_t x2 = (std::int32_t)std::round(posIn2.X);
-				std::int32_t y2 = (std::int32_t)std::round(posIn2.Y);
+				std::int32_t x2 = (std::int32_t)roundFast(posIn2.X);
+				std::int32_t y2 = (std::int32_t)roundFast(posIn2.Y);
 
 				if (x2 >= 0 && x2 < width2 && y2 >= 0 && y2 < height2) {
 					if (IsMaskPixelSolid(p1, ((y1 + dy1) * stride1) + x1 + dx1) && IsMaskPixelSolid(p2, ((y2 + dy2) * stride2) + x2 + dx2)) {
@@ -1453,7 +1453,7 @@ namespace Jazz2::Actors
 			float maxX = std::max(std::max(tl.X, tr.X), std::max(bl.X, br.X));
 			float maxY = std::max(std::max(tl.Y, tr.Y), std::max(bl.Y, br.Y));
 
-			aabbSelf = AABBf(std::floor(minX), std::floor(minY), std::ceil(maxX), std::ceil(maxY));
+			aabbSelf = AABBf(floorFast(minX), floorFast(minY), ceilFast(maxX), ceilFast(maxY));
 		}
 
 		if (!aabb.Overlaps(aabbSelf)) {
@@ -1480,8 +1480,8 @@ namespace Jazz2::Actors
 			Vector3f posInAABB = yPosInAABB;
 
 			for (std::int32_t x1 = 0; x1 < width; x1 += PerPixelCollisionStep) {
-				std::int32_t x2 = (std::int32_t)std::round(posInAABB.X);
-				std::int32_t y2 = (std::int32_t)std::round(posInAABB.Y);
+				std::int32_t x2 = (std::int32_t)roundFast(posInAABB.X);
+				std::int32_t y2 = (std::int32_t)roundFast(posInAABB.Y);
 
 				if (IsMaskPixelSolid(p, ((y1 + dy) * stride) + x1 + dx) &&
 					x2 >= aabb.L && x2 < aabb.R && y2 >= aabb.T && y2 < aabb.B) {
@@ -1557,8 +1557,8 @@ namespace Jazz2::Actors
 	{
 		Vector2f pos = _pos;
 		if (!PreferencesCache::UnalignedViewport || (_state & ActorState::IsDirty) != ActorState::IsDirty) {
-			pos.X = std::floor(pos.X);
-			pos.Y = std::floor(pos.Y);
+			pos.X = floorFast(pos.X);
+			pos.Y = floorFast(pos.Y);
 		}
 
 		// LevelHandler::OnEndFrame() calls this again for every actor in the level, to catch the ones that were

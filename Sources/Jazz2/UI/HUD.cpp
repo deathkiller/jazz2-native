@@ -277,7 +277,7 @@ namespace Jazz2::UI
 
 		// Performance Metrics
 		if (PreferencesCache::ShowPerformanceMetrics) {
-			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+			i32tos((std::int32_t)roundFast(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
 #if defined(DEATH_TARGET_ANDROID)
 			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
 				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W / 2 + 40.0f, view.Y + 6.0f, FontLayer,
@@ -794,7 +794,7 @@ namespace Jazz2::UI
 		auto* res = _metadata->FindAnimation(currentWeaponAnim);
 		if (res != nullptr) {
 			if (res->Base->FrameDimensions.Y < 20) {
-				pos.Y -= std::round((20 - res->Base->FrameDimensions.Y) * 0.5f);
+				pos.Y -= roundFast((20 - res->Base->FrameDimensions.Y) * 0.5f);
 			}
 
 			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
@@ -1045,7 +1045,7 @@ namespace Jazz2::UI
 
 			Colorf color = (button.Action == PlayerAction::Run && player != nullptr && player->_isRunPressed ? Colorf(0.6f, 0.6f, 0.6f) : Colorf::White);
 
-			DrawTexture(*texture, Vector2f(std::round(x - button.Width * 0.5f), std::round(y - button.Height * 0.5f)),
+			DrawTexture(*texture, Vector2f(roundFast(x - button.Width * 0.5f), roundFast(y - button.Height * 0.5f)),
 				TouchButtonsLayer, Vector2f(button.Width, button.Height), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
 		}
 
@@ -1114,9 +1114,9 @@ namespace Jazz2::UI
 		float angleBase3 = sinApprox(AnimTime * 11.0f + 7.0f) * fDegToRad;
 
 		// Limit frame rate of carrot movement
-		angleBase1 = std::round(angleBase1 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
-		angleBase2 = std::round(angleBase2 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
-		angleBase3 = std::round(angleBase3 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
+		angleBase1 = roundFast(angleBase1 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
+		angleBase2 = roundFast(angleBase2 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
+		angleBase3 = roundFast(angleBase3 * 3.0f * fRadToDeg) / (3.0f * fRadToDeg);
 
 		if (health >= 1) {
 			float angle = angleBase1 * (health > 1 ? -6.0f : -14.0f) + 0.2f;
@@ -1343,8 +1343,8 @@ namespace Jazz2::UI
 		// The clip is a fraction of the logical cell, not of the frame's own area --- on a tightly packed sheet
 		// the frame is trimmed to its opaque pixels and offset inside the cell, so clipping its own width would
 		// cut somewhere else entirely (the boss health bar, calibrated in cell fractions, lost 8% at both ends)
-		float visibleW = std::floor(base->FrameDimensions.X * clipX) - frameOffset.X;
-		float visibleH = std::floor(base->FrameDimensions.Y * clipY) - frameOffset.Y;
+		float visibleW = floorFast(base->FrameDimensions.X * clipX) - frameOffset.X;
+		float visibleH = floorFast(base->FrameDimensions.Y * clipY) - frameOffset.Y;
 		if (visibleW <= 0.0f || visibleH <= 0.0f) {
 			// Nothing of this frame falls inside the clipped area
 			return;
@@ -1470,7 +1470,7 @@ namespace Jazz2::UI
 			requestedAngle = NAN;
 			requestedIndex = -1;
 		} else {
-			requestedAngle = atan2f(v, h);
+			requestedAngle = atan2Approx(v, h);
 			if (requestedAngle < 0) {
 				requestedAngle += fTwoPi;
 			}
@@ -1498,8 +1498,10 @@ namespace Jazz2::UI
 		float angle = -fPiOver2;
 		for (std::int32_t i = 0, j = 0; i < std::int32_t(arraySize(player->_inventory.WeaponAmmo)); i++) {
 			if (player->_inventory.WeaponAmmo[i] != 0) {
-				float x = cosf(angle) * distance;
-				float y = sinf(angle) * distance;
+				float x, y;
+				sincosApprox(angle, y, x);
+				x *= distance;
+				y *= distance;
 
 				Vector2f pos = Vector2f(center.X + x, center.Y + y);
 				AnimState weapon = GetCurrentWeapon(player, (WeaponType)i, pos);
@@ -1546,7 +1548,7 @@ namespace Jazz2::UI
 					}
 
 					std::int32_t charOffset = 0;
-					_smallFont->DrawString(this, ammoCount, charOffset, center.X + cosf(angle) * distance * 1.4f, center.Y + sinf(angle) * distance * 1.4f, FontLayer,
+					_smallFont->DrawString(this, ammoCount, charOffset, center.X + x * 1.4f, center.Y + y * 1.4f, FontLayer,
 						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
 
@@ -1555,10 +1557,18 @@ namespace Jazz2::UI
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.2f);
 
+#if defined(DEATH_TARGET_N64)
+				// The whole wheel is line strips, and the RDP draws each segment of one as its own coverage
+				// quad, so this ring of four offset copies costs four times what the wheel itself does - the
+				// most expensive thing on screen while it is open, on the console with the least to spare.
+				// One copy down and to the right still reads as a drop shadow at this size.
+				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+#else
 				DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+#endif
 
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP)
 				// The half-pixel copies thicken the shadow between the whole-pixel ones under GL's line
@@ -1677,7 +1687,7 @@ namespace Jazz2::UI
 		height *= 0.5f; y += height;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)roundFast(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
 		float angleStep = angleRange / (segmentNum - 1);
 		std::int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
@@ -1695,15 +1705,19 @@ namespace Jazz2::UI
 
 		{
 			std::int32_t j = 0;
-			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
-			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			vertices[j].X = x + cosAngle * (width * Mult - 0.5f);
+			vertices[j].Y = y + sinAngle * (height * Mult - 0.5f);
 			vertices[j].U = 0.0f;
 			vertices[j].V = 0.0f;
 		}
 
 		for (std::int32_t i = 1; i < vertexCount - 1; i++) {
-			vertices[i].X = x + cosf(angle) * (width - 0.5f);
-			vertices[i].Y = y + sinf(angle) * (height - 0.5f);
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			vertices[i].X = x + cosAngle * (width - 0.5f);
+			vertices[i].Y = y + sinAngle * (height - 0.5f);
 			vertices[i].U = 0.15f + (0.7f * (float)(i - 1) / (vertexCount - 3));
 			vertices[i].V = 0.0f;
 
@@ -1714,8 +1728,10 @@ namespace Jazz2::UI
 			angle -= angleStep;
 
 			std::int32_t j = vertexCount - 1;
-			vertices[j].X = x + cosf(angle) * (width * Mult - 0.5f);
-			vertices[j].Y = y + sinf(angle) * (height * Mult - 0.5f);
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			vertices[j].X = x + cosAngle * (width * Mult - 0.5f);
+			vertices[j].Y = y + sinAngle * (height * Mult - 0.5f);
 			vertices[j].U = 1.0f;
 			vertices[j].V = 0.0f;
 		}
@@ -1726,8 +1742,13 @@ namespace Jazz2::UI
 			command = state.RenderCommands[state.RenderCommandsCount].get();
 			state.RenderCommandsCount++;
 		} else {
+			// The counter has to advance here as well. Without it the pool grew one entry every other call
+			// and the call in between took the entry just created back out of it, so each pair of segments
+			// shared a single command: the second overwrote the first's vertex pointer before anything was
+			// drawn, and half of every wheel was silently lost.
 			command = state.RenderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::MeshSprite)).get();
 			command->GetMaterial().SetBlendingEnabled(true);
+			state.RenderCommandsCount++;
 		}
 
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::MeshSprite)) {
@@ -1780,8 +1801,8 @@ namespace Jazz2::UI
 			float ex = layout.EdgeOffset.X;
 			float ey = layout.EdgeOffset.Y;
 			Alignment align = toAlign(layout.Anchor);
-			float s = std::round(DpadSize * DefaultRef * scale);
-			float t = std::round(DpadThreshold * DefaultRef * scale);
+			float s = roundFast(DpadSize * DefaultRef * scale);
+			float t = roundFast(DpadThreshold * DefaultRef * scale);
 
 			_touchButtons[0] = MakeTouchButton(PlayerAction::None, TouchDpad, align, ex, ey, s, s);
 			_touchButtons[1] = MakeTouchButton(PlayerAction::Up, AnimState::Default, align, ex, ey + s * 2.0f / 3.0f, s, s / 3.0f + t);
@@ -1798,7 +1819,7 @@ namespace Jazz2::UI
 		const Slot actionSlots[] = { Slot::Fire, Slot::Jump, Slot::Run, Slot::ChangeWeapon };
 		for (std::int32_t i = 0; i < 4; i++) {
 			const auto& layout = PC::TouchButtons[(std::size_t)actionSlots[i]];
-			float sz = std::round(actionDefaultSizes[i] * DefaultRef * layout.Scale);
+			float sz = roundFast(actionDefaultSizes[i] * DefaultRef * layout.Scale);
 			_touchButtons[5 + i] = MakeTouchButton(
 				static_cast<PlayerAction>((std::int32_t)PlayerAction::Fire + i),
 				actionStates[i], toAlign(layout.Anchor),
@@ -1809,7 +1830,7 @@ namespace Jazz2::UI
 #if defined(DEATH_TARGET_ANDROID)
 		if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
 			const auto& layout = PC::TouchButtons[(std::size_t)Slot::Menu];
-			float sz = std::round(SmallButtonSize * DefaultRef * layout.Scale);
+			float sz = roundFast(SmallButtonSize * DefaultRef * layout.Scale);
 			_touchButtons[9] = MakeTouchButton(PlayerAction::Menu, TouchPause, Alignment::Top | Fixed,
 				layout.EdgeOffset.X, layout.EdgeOffset.Y, sz, sz);
 			_touchButtons[10] = {};
@@ -1818,13 +1839,13 @@ namespace Jazz2::UI
 		{
 			{
 				const auto& layout = PC::TouchButtons[(std::size_t)Slot::Menu];
-				float sz = std::round(SmallButtonSize * DefaultRef * layout.Scale);
+				float sz = roundFast(SmallButtonSize * DefaultRef * layout.Scale);
 				_touchButtons[9] = MakeTouchButton(PlayerAction::Menu, TouchPause, toAlign(layout.Anchor),
 					layout.EdgeOffset.X, layout.EdgeOffset.Y, sz, sz);
 			}
 			{
 				const auto& layout = PC::TouchButtons[(std::size_t)Slot::Console];
-				float sz = std::round(SmallButtonSize * DefaultRef * layout.Scale);
+				float sz = roundFast(SmallButtonSize * DefaultRef * layout.Scale);
 				_touchButtons[10] = MakeTouchButton(PlayerAction::Console, AnimState::Default, toAlign(layout.Anchor),
 					layout.EdgeOffset.X, layout.EdgeOffset.Y, sz, sz);
 			}
@@ -1835,10 +1856,10 @@ namespace Jazz2::UI
 	{
 		TouchButtonInfo info;
 		info.Action = action;
-		info.Left = std::round(edgeX);
-		info.Top = std::round(edgeY);
-		info.Width = std::round(w);
-		info.Height = std::round(h);
+		info.Left = roundFast(edgeX);
+		info.Top = roundFast(edgeY);
+		info.Width = roundFast(w);
+		info.Height = roundFast(h);
 		info.State = state;
 		info.CurrentPointerId = -1;
 		info.Align = align;
@@ -1849,10 +1870,10 @@ namespace Jazz2::UI
 	{
 		TouchButtonInfo info;
 		info.Action = action;
-		info.Left = std::round(x * DefaultRef);
-		info.Top = std::round(y * DefaultRef);
-		info.Width = std::round(w * DefaultRef);
-		info.Height = std::round(h * DefaultRef);
+		info.Left = roundFast(x * DefaultRef);
+		info.Top = roundFast(y * DefaultRef);
+		info.Width = roundFast(w * DefaultRef);
+		info.Height = roundFast(h * DefaultRef);
 		info.State = state;
 		info.CurrentPointerId = -1;
 		info.Align = align;
@@ -1900,7 +1921,7 @@ namespace Jazz2::UI
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(radius * 2.0f, radius * 2.0f).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
-			command->SetTransformation(Matrix4x4f::Translation(std::round(cx - radius), std::round(cy - radius), 0.0f));
+			command->SetTransformation(Matrix4x4f::Translation(roundFast(cx - radius), roundFast(cy - radius), 0.0f));
 			command->SetLayer(TouchButtonsLayer + 1);
 
 			DrawRenderCommand(command);
@@ -1987,8 +2008,9 @@ namespace Jazz2::UI
 		float ambientLightLower = std::clamp(ambientLight, 0.0f, 0.5f) * 2.0f;
 		float ambientLightUpper = (std::clamp(ambientLight, 0.5f, 0.8f) - 0.5f) * 2.0f;
 
-		float distance = sqrtf(powf((float)(Width - x), 2) + powf((float)(Height - y), 2));
-		float value = cosf(AnimationMult * distance / (0.1f * Spacing) + animProgress);
+		const float ddx = (float)(Width - x), ddy = (float)(Height - y);
+		float distance = sqrtApprox(ddx * ddx + ddy * ddy);
+		float value = cosApprox(AnimationMult * distance / (0.1f * Spacing) + animProgress);
 		float alpha = lerp(powf((value + 1) * 0.5f, 12.0f) * ambientLightLower, 0.8f, ambientLightUpper);
 		return Color(std::clamp<std::uint32_t>((std::uint32_t)(color.R * alpha), 0u, 255u), std::clamp<std::uint32_t>((std::uint32_t)(color.G * alpha), 0u, 255u), std::clamp<std::uint32_t>((std::uint32_t)(color.B * alpha), 0u, 255u));
 	}

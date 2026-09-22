@@ -1,5 +1,6 @@
 #include "../CommonConstants.h"
 #include "ParticleInitializer.h"
+#include "../Base/Algorithms.h"
 #include "../../Main.h"
 
 namespace nCine
@@ -107,8 +108,8 @@ namespace nCine
 
 	void ParticleInitializer::setVelocityAndAngle(float x, float y, float angle)
 	{
-		const float sinAngle = sinf(angle * 0.5f);
-		const float cosAngle = cosf(angle * 0.5f);
+		float sinAngle, cosAngle;
+		sincosApprox(angle * 0.5f, sinAngle, cosAngle);
 
 		rndVelocityX.X = x * cosAngle - y * sinAngle;
 		rndVelocityX.Y = x * cosAngle - y * -sinAngle;

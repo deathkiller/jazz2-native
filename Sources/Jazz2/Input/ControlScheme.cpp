@@ -22,7 +22,17 @@ namespace Jazz2::Input
 		// declares "lefttrigger:a4" / "righttrigger:a5" for axes nothing on the console drives (see
 		// JoyMappingDb.h). Binding them is what left both actions on their face button only. Named here so
 		// the first player below and the loop over the others stay one description of the same layout.
-#if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+#if defined(DEATH_TARGET_N64)
+		// The Nintendo 64 pad is the odd one out: it has A and B where a modern pad has four face buttons, no
+		// second trigger, and Z under the middle grip. The layout follows what the console's own games settled
+		// on - A jumps, B shoots, and Z is the held modifier, which is Run here. That leaves the two shoulders
+		// for the rest: L is a second Fire within reach of the same hand, and R opens the weapon wheel, which
+		// has nowhere else to go because the pad has no Y button (the backend publishes B as X, and reports
+		// nothing at all for B, Y and Back - see N64InputManager). Z arrives as the right trigger axis rather
+		// than a button, which is why Run takes an axis here while Fire takes a button.
+		constexpr ButtonName FireShoulder = ButtonName::LeftBumper;
+		constexpr AxisName RunShoulder = AxisName::RightTrigger;
+#elif defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
 		// The 3DS is the same shape again: L and R are the only shoulder buttons every model has (ZL/ZR exist on
 		// the New 3DS alone, and its backend reports them as the trigger axes), so the bumpers carry the actions
 		constexpr ButtonName FireShoulder = ButtonName::RightBumper;
@@ -34,34 +44,59 @@ namespace Jazz2::Input
 
 		// Set default mappings for 1st player
 		auto first = GetMappings(0);
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::Left));
+#endif
 		first[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(0, ButtonName::Left));
 		first[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(0, AxisName::LeftX, true));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::Right));
+#endif
 		first[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(0, ButtonName::Right));
 		first[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(0, AxisName::LeftX));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(Keys::Up));
+#endif
 		first[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(0, ButtonName::Up));
 		first[(std::int32_t)PlayerAction::Up].Targets.push_back(CreateTarget(0, AxisName::LeftY, true));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(Keys::Down));
+#endif
 		first[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(0, ButtonName::Down));
 		first[(std::int32_t)PlayerAction::Down].Targets.push_back(CreateTarget(0, AxisName::LeftY));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(Keys::Down));
+#endif
 		first[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(0, ButtonName::Down));
 		first[(std::int32_t)PlayerAction::Buttstomp].Targets.push_back(CreateTarget(0, AxisName::LeftY));
 
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(Keys::Space));
+#endif
 		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(0, ButtonName::X));
 		first[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(0, FireShoulder));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::V));
+#endif
 		first[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(0, ButtonName::A));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::C));
+#endif
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, ButtonName::B));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, RunShoulder));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::X));
+#endif
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(0, ButtonName::Y));
+#if defined(DEATH_TARGET_N64)
+		// Nothing on this pad reaches Y, so the wheel would otherwise be unopenable - see the note above
+		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(0, ButtonName::RightBumper));
+#endif
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(Keys::Escape));
+#endif
 		first[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(0, ButtonName::Start));
+#if defined(NCINE_HAS_KEYBOARD)
 		first[(std::int32_t)PlayerAction::Console].Targets.push_back(CreateTarget(Keys::Backquote));
 		first[(std::int32_t)PlayerAction::Console].Targets.push_back(CreateTarget(Keys::T));
 
@@ -75,9 +110,11 @@ namespace Jazz2::Input
 		first[(std::int32_t)PlayerAction::SwitchToPepper].Targets.push_back(CreateTarget(Keys::D8));
 		first[(std::int32_t)PlayerAction::SwitchToElectro].Targets.push_back(CreateTarget(Keys::D9));
 		first[(std::int32_t)PlayerAction::SwitchToThunderbolt].Targets.push_back(CreateTarget(Keys::D0));
+#endif
 
 		// Set default mappings for 2nd player
 		if (MaxSupportedPlayers >= 2) {
+#if defined(NCINE_HAS_KEYBOARD)
 			auto second = GetMappings(1);
 			second[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::A));
 			second[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::D));
@@ -89,8 +126,10 @@ namespace Jazz2::Input
 			second[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::F));
 			second[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::G));
 			second[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::Q));
+#endif
 
 			if (MaxSupportedPlayers >= 3) {
+#if defined(NCINE_HAS_KEYBOARD)
 				auto third = GetMappings(2);
 				third[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::NumPad4));
 				third[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::NumPad6));
@@ -102,8 +141,10 @@ namespace Jazz2::Input
 				third[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::NumPadPlus));
 				third[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::NumPadMinus));
 				third[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::NumPad7));
+#endif
 
 				if (MaxSupportedPlayers >= 4) {
+#if defined(NCINE_HAS_KEYBOARD)
 					auto fourth = GetMappings(3);
 					fourth[(std::int32_t)PlayerAction::Left].Targets.push_back(CreateTarget(Keys::H));
 					fourth[(std::int32_t)PlayerAction::Right].Targets.push_back(CreateTarget(Keys::K));
@@ -115,6 +156,7 @@ namespace Jazz2::Input
 					fourth[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(Keys::L));
 					fourth[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::Semicolon));
 					fourth[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::Y));
+#endif
 				}
 			}
 
@@ -137,6 +179,9 @@ namespace Jazz2::Input
 				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, ButtonName::B));
 				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, RunShoulder));
 				current[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(i, ButtonName::Y));
+#if defined(DEATH_TARGET_N64)
+				current[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(i, ButtonName::RightBumper));
+#endif
 				current[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(i, ButtonName::Start));
 			}
 		}

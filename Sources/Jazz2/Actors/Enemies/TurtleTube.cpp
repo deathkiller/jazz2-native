@@ -45,7 +45,7 @@ namespace Jazz2::Actors::Enemies
 		float adjustedWaterLevel = _levelHandler->GetWaterLevel() + WaterDifference;
 		if (_onWater) {
 			// Floating on the water
-			_speed.X = sinf(_phase);
+			_speed.X = sinApprox(_phase);
 
 			_phase += timeMult * 0.02f;
 

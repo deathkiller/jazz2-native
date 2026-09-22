@@ -4,6 +4,7 @@
 #include "SwScanlineOps.h"
 #include "SwShaderProgram.h"
 #include "SwRenderTarget.h"
+#include "../../../Base/Algorithms.h"
 #include "SwTexture.h"
 
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -585,7 +586,7 @@ namespace nCine::RHI::Software
 			if (isUnderwaterRow) {
 				// Horizontal wave displacement, constant per row
 				const float phase = wavePhaseBase + wavePhasePerRow * (float)y;
-				const std::int32_t shift = (std::int32_t)std::lround(waveAmplitudePx * std::sin(phase));
+				const std::int32_t shift = (std::int32_t)std::lround(waveAmplitudePx * sinApprox(phase));
 				ShiftRowHorizontal(px, vpW, shift);
 
 				// Water tint + surface glow folded into one constant blend: out = main * 0.6 * (1 - glow) +

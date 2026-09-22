@@ -745,7 +745,7 @@ namespace Jazz2::UI::Menu
 		if (Selected && _active) {
 			Vector2f textToCursorSize = root->MeasureString(displayText.prefix(_buffer.GetCursor()), 0.8f);
 			root->DrawSolid(centerX - textSize.X * 0.5f + textToCursorSize.X + 1.0f, y + 22.0f - 1.0f, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(1.0f, 12.0f),
-				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_buffer.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_buffer.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 		}
 	}
 

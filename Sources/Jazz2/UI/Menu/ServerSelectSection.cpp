@@ -430,7 +430,7 @@ namespace Jazz2::UI::Menu
 				Vector2f textToCursorSize = _root->MeasureString(ipText.prefix(_ipInput.GetCursor()), 0.9f);
 				_root->DrawSolid(centerX - textSize.X * 0.5f + textToCursorSize.X + 1.0f, midY + 6.0f - 1.0f,
 					IMenuContainer::FontLayer + 120, Alignment::Center, Vector2f(1.0f, 14.0f),
-					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 			}
 
 			// Bottom hints
@@ -500,7 +500,7 @@ namespace Jazz2::UI::Menu
 			if (!ipText2.empty()) {
 				Vector2f textToCursorSize = _root->MeasureString(ipText2.prefix(_ipInput.GetCursor()), 1.0f);
 				_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 			}
 		}
 #endif
@@ -521,7 +521,7 @@ namespace Jazz2::UI::Menu
 				if (!ipText2.empty()) {
 					Vector2f textToCursorSize = _root->MeasureString(ipText2.prefix(_ipInput.GetCursor()), 1.0f);
 					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 				}
 			}
 		}

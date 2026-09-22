@@ -290,8 +290,8 @@ namespace Jazz2::Actors::Solid
 			effectivePhase -= shift;
 		}
 
-		float multiX = cosApprox(effectivePhase);
-		float multiY = sinApprox(effectivePhase);
+		float multiX, multiY;
+		sincosApprox(effectivePhase, multiY, multiX);
 
 		return Vector2f(
 			std::round(_originPos.X + multiX * distance * 12.0f),

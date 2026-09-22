@@ -171,7 +171,7 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		Edges safe = GetSafeEdges(viewSize);
 		std::int32_t focusedEdge = GetFocusedEdge();
-		float pulseAlpha = 0.5f + 0.5f * sinf(_pulseTime * fPiOver2);
+		float pulseAlpha = 0.5f + 0.5f * sinApprox(_pulseTime * fPiOver2);
 
 		DrawCroppedRegion(safe, viewSize);
 

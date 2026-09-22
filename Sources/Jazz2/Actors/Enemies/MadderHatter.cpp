@@ -157,7 +157,7 @@ namespace Jazz2::Actors::Enemies
 
 		EnemyBase::OnUpdate(timeMult);
 
-		float angle = atan2f(_speed.Y, _speed.X);
+		float angle = atan2Approx(_speed.Y, _speed.X);
 		if (IsFacingLeft()) {
 			angle -= fRadAngle180;
 		}

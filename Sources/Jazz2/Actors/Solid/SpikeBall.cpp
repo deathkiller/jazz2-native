@@ -148,8 +148,8 @@ namespace Jazz2::Actors::Solid
 			effectivePhase -= shift;
 		}
 
-		float multiX = cosApprox(effectivePhase);
-		float multiY = sinApprox(effectivePhase);
+		float multiX, multiY;
+		sincosApprox(effectivePhase, multiY, multiX);
 
 		if (scale != nullptr) {
 			*scale = 1.0f + multiX * 0.4f * distance / _pieces.size();

@@ -56,6 +56,20 @@ namespace Death { namespace IO {
 		/** @brief Returns file path */
 		Containers::StringView GetPath() const;
 
+		/** @brief Returns the size of the I/O buffer, 0 for unbuffered access */
+		DEATH_ALWAYS_INLINE std::int32_t GetBufferSize() const {
+			return _bufferSize;
+		}
+
+		/**
+			@brief Changes the size of the I/O buffer, releasing the current buffer
+
+			Anything buffered is flushed first, so the position stays where the caller sees it. The new buffer
+			is allocated by the next read or write. Used by @ref FileStreamPool to let a reused stream take the
+			size its next user asked for; returns `false` only if pending writes could not be flushed.
+		*/
+		bool SetBufferSize(std::int32_t bufferSize);
+
 #if defined(DEATH_TARGET_WINDOWS)
 		/** @brief Returns native file handle */
 		DEATH_ALWAYS_INLINE void* GetHandle() const {

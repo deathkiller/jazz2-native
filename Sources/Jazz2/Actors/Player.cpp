@@ -1547,7 +1547,9 @@ namespace Jazz2::Actors
 			// travel along it, and a steep launch reads as something being thrown rather than scraped.
 			float speed = Random().FastFloat(1.44f, 2.88f) * (1.0f + charge);
 			float spread = Random().FastFloat(-0.6f, 0.2f);
-			Vector2f dir = Vector2f(back * cosf(spread), -std::abs(sinf(spread)) * 0.5f - Random().FastFloat(0.05f, 0.25f));
+			float sinSpread, cosSpread;
+			sincosApprox(spread, sinSpread, cosSpread);
+			Vector2f dir = Vector2f(back * cosSpread, -std::abs(sinSpread) * 0.5f - Random().FastFloat(0.05f, 0.25f));
 			float size = Random().FastFloat(1.5f, 3.0f);
 
 			Tiles::TileMap::DestructibleDebris spark = {};
@@ -2873,8 +2875,8 @@ namespace Jazz2::Actors
 				}
 
 				if (!PreferencesCache::UnalignedViewport) {
-					gunspotPosX = std::floor(gunspotPosX);
-					gunspotPosY = std::floor(gunspotPosY);
+					gunspotPosX = floorFast(gunspotPosX);
+					gunspotPosY = floorFast(gunspotPosY);
 				}
 
 				auto instanceBlock = command->GetInstanceBlock();
@@ -2938,8 +2940,8 @@ namespace Jazz2::Actors
 					float shieldPosY = _pos.Y - shieldSize * 0.5f;
 
 					if (!PreferencesCache::UnalignedViewport) {
-						shieldPosX = std::floor(shieldPosX);
-						shieldPosY = std::floor(shieldPosY);
+						shieldPosX = floorFast(shieldPosX);
+						shieldPosY = floorFast(shieldPosY);
 					}
 
 					{
@@ -3040,8 +3042,8 @@ namespace Jazz2::Actors
 					float shieldPosY = _pos.Y - frameRect.H * shieldScale * 0.5f;
 
 					if (!PreferencesCache::UnalignedViewport) {
-						shieldPosX = std::floor(shieldPosX);
-						shieldPosY = std::floor(shieldPosY);
+						shieldPosX = floorFast(shieldPosX);
+						shieldPosY = floorFast(shieldPosY);
 					}
 
 					auto instanceBlock = command->GetInstanceBlock();
@@ -3071,8 +3073,8 @@ namespace Jazz2::Actors
 					float shieldPosY = _pos.Y - shieldSize * 0.5f;
 
 					if (!PreferencesCache::UnalignedViewport) {
-						shieldPosX = std::floor(shieldPosX);
-						shieldPosY = std::floor(shieldPosY);
+						shieldPosX = floorFast(shieldPosX);
+						shieldPosY = floorFast(shieldPosY);
 					}
 
 					{
@@ -4697,14 +4699,14 @@ namespace Jazz2::Actors
 					float angle;
 					if (_speed.X == 0.0f) {
 						if (IsFacingLeft()) {
-							angle = atan2(-_speed.Y, -std::numeric_limits<float>::epsilon());
+							angle = atan2Approx(-_speed.Y, -std::numeric_limits<float>::epsilon());
 						} else {
-							angle = atan2(_speed.Y, std::numeric_limits<float>::epsilon());
+							angle = atan2Approx(_speed.Y, std::numeric_limits<float>::epsilon());
 						}
 					} else if (_speed.X < 0.0f) {
-						angle = atan2(-_speed.Y, -_speed.X);
+						angle = atan2Approx(-_speed.Y, -_speed.X);
 					} else {
-						angle = atan2(_speed.Y, _speed.X);
+						angle = atan2Approx(_speed.Y, _speed.X);
 					}
 
 					if (angle > fPi) {
@@ -5096,16 +5098,16 @@ namespace Jazz2::Actors
 				float tubeSnapY = TubeSnapY;
 				Vector2f pos = Vector2f(x, y);
 				if (_speed.X == 0.0f) {
-					pos.X = (std::floor(pos.X / 32) * 32) + 16;
+					pos.X = (floorFast(pos.X / 32) * 32) + 16;
 					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_speed.Y == 0.0f) {
-					pos.Y = (std::floor(pos.Y / 32) * 32) + tubeSnapY;
+					pos.Y = (floorFast(pos.Y / 32) * 32) + tubeSnapY;
 					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				} else if (_inTubeTime <= 0.0f) {
-					pos.X = (std::floor(pos.X / 32) * 32) + 16;
-					pos.Y = (std::floor(pos.Y / 32) * 32) + tubeSnapY;
+					pos.X = (floorFast(pos.X / 32) * 32) + 16;
+					pos.Y = (floorFast(pos.Y / 32) * 32) + tubeSnapY;
 					MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 					OnUpdateHitbox();
 				}
@@ -5748,8 +5750,10 @@ namespace Jazz2::Actors
 			angle = _renderer.rotation();
 
 			std::int32_t size = (_currentAnimation->Base->FrameDimensions.X / 2);
-			gunspotPos.X += (cosf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f);
-			gunspotPos.Y += (sinf(angle) * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			gunspotPos.X += (cosAngle * size) * (IsFacingLeft() ? -1.0f : 1.0f);
+			gunspotPos.Y += (sinAngle * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 		} else {
 			gunspotPos.X += (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X) * (IsFacingLeft() ? 1 : -1);
 			gunspotPos.Y -= (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
@@ -7075,7 +7079,7 @@ namespace Jazz2::Actors
 				// measures the shot's own fall, and this function is given a distance and a side and no
 				// geometry to build a radial model out of. A fit of what was measured is still the measured
 				// behaviour, and it replaces applying nothing at all.
-				_speed.Y = -(LegacyRFBlastLiftBase + LegacyRFBlastLiftSlope * std::sqrt(distanceSqr));
+				_speed.Y = -(LegacyRFBlastLiftBase + LegacyRFBlastLiftSlope * sqrtApprox(distanceSqr));
 				_internalForceY = 0.0f;
 				_jumpReleased = true;
 			}

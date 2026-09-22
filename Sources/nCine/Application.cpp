@@ -1556,6 +1556,9 @@ namespace nCine
 	void Application::Step()
 	{
 		_frameTimer->AddFrame();
+#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
+		const TimeStamp stepStart = TimeStamp::now();
+#endif
 
 #if defined(WITH_IMGUI)
 		if (_appCfg.withGraphics) {
@@ -1689,10 +1692,45 @@ namespace nCine
 #endif
 
 		if (_appCfg.withGraphics) {
+#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
+			const TimeStamp presentStart = TimeStamp::now();
+#endif
 			_gfxDevice->update();
+#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
+			_presentAccum += presentStart.secondsSince();
+#endif
 			FrameMark;
 			TracyGpuCollect;
 		}
+#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
+		{
+			// Per-phase frame profile for a build without the overlay: the phases above, the present (which on a
+			// console includes the wait for the display), and the whole step, averaged and logged every 5 seconds.
+			// Configure with -DNCINE_PROFILING=ON and read the log; this is how the N64 frame was taken apart.
+			for (std::int32_t i = 0; i < (std::int32_t)Timings::Count; i++) {
+				_timingsAccum[i] += _timings[i];
+			}
+			_stepAccum += stepStart.secondsSince();
+			_timingsFrames++;
+			if (_timingsLogStart.secondsSince() >= 5.0f) {
+				if (_timingsFrames > 0) {
+					const float toMs = 1000.0f / (float)_timingsFrames;
+					LOGI("Frame profile over {} frames: {:.2f} ms/frame - begin {:.2f}, update {:.2f}, post-update {:.2f}, visit {:.2f}, draw {:.2f}, end {:.2f}, present {:.2f}",
+						_timingsFrames, _stepAccum * toMs, _timingsAccum[(std::int32_t)Timings::BeginFrame] * toMs,
+						_timingsAccum[(std::int32_t)Timings::Update] * toMs, _timingsAccum[(std::int32_t)Timings::PostUpdate] * toMs,
+						_timingsAccum[(std::int32_t)Timings::Visit] * toMs, _timingsAccum[(std::int32_t)Timings::Draw] * toMs,
+						_timingsAccum[(std::int32_t)Timings::EndFrame] * toMs, _presentAccum * toMs);
+				}
+				for (std::int32_t i = 0; i < (std::int32_t)Timings::Count; i++) {
+					_timingsAccum[i] = 0.0f;
+				}
+				_presentAccum = 0.0f;
+				_stepAccum = 0.0f;
+				_timingsFrames = 0;
+				_timingsLogStart = TimeStamp::now();
+			}
+		}
+#endif
 
 		if (_appCfg.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");

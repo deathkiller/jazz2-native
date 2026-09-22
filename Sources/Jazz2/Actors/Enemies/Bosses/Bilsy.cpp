@@ -318,10 +318,10 @@ namespace Jazz2::Actors::Bosses
 
 			if (_speed.X < 0.0f) {
 				SetFacingLeft(true);
-				_renderer.setRotation(atan2f(-_speed.Y, -_speed.X));
+				_renderer.setRotation(atan2Approx(-_speed.Y, -_speed.X));
 			} else {
 				SetFacingLeft(false);
-				_renderer.setRotation(atan2f(_speed.Y, _speed.X));
+				_renderer.setRotation(atan2Approx(_speed.Y, _speed.X));
 			}
 		}
 	}

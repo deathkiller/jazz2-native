@@ -226,7 +226,7 @@ namespace Jazz2::UI::Menu
 
 						Vector2f textToCursorSize = _root->MeasureString(entry.PlayerName.prefix(_textCursor), 1.0f);
 						_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-							Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+							Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 					}
 				}
 			}
@@ -411,7 +411,7 @@ namespace Jazz2::UI::Menu
 		if (isSelected && _waitForInput) {
 			Vector2f textToCursorSize = root->MeasureString(entry.PlayerName.prefix(_textCursor), 0.8f);
 			root->DrawSolid(nameX + textToCursorSize.X + 1.0f, itemY - 1.0f, IMenuContainer::MainLayer - 80, Alignment::Center, Vector2f(1.0f, 12.0f),
-				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 		}
 	}
 

@@ -1699,6 +1699,23 @@ namespace Jazz2
 				playerZones.emplace_back(activationRange.L - 4, activationRange.T - 4, activationRange.R + 4, activationRange.B + 4);
 			}
 
+			// Deactivation asks where an actor started, never where it is, so one that has wandered from its
+			// origin could be destroyed in plain sight. The camera leads the player and stops at the level
+			// bounds, so the visible world is taken from it rather than inferred from the player. Headless is
+			// skipped because a viewport assigned there is never initialized and would have no render target.
+			SmallVector<AABBf, ControlScheme::MaxSupportedPlayers> visibleRects;
+			if (!ContentResolver::Get().IsHeadless()) {
+				for (auto& viewport : _assignedViewports) {
+					// `AABB` is the hitbox, which a sprite can overhang, so the rectangle is grown by a tile. That
+					// is still far inside the margin the activation box itself keeps beyond the edge of the view.
+					const Vector2i halfView = viewport->GetViewportSize() / 2;
+					const float slack = (float)TileSet::DefaultTileSize;
+					const Vector2f center = viewport->_cameraPos;
+					visibleRects.emplace_back(center.X - halfView.X - slack, center.Y - halfView.Y - slack,
+						center.X + halfView.X + slack, center.Y + halfView.Y + slack);
+				}
+			}
+
 			for (auto& actor : _actors) {
 				if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
 					Vector2i originTile = actor->_originTile;
@@ -1707,6 +1724,15 @@ namespace Jazz2
 						if (playerZones[i].Contains(originTile)) {
 							isInside = true;
 							break;
+						}
+					}
+
+					if (!isInside) {
+						for (const AABBf& visibleRect : visibleRects) {
+							if (visibleRect.Overlaps(actor->AABB)) {
+								isInside = true;
+								break;
+							}
 						}
 					}
 
@@ -1902,7 +1928,7 @@ namespace Jazz2
 					float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
 					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(0.0f, 0.0f);
-					debris.Angle = atan2f(speedY, speedX);
+					debris.Angle = atan2Approx(speedY, speedX);
 					debris.AngleSpeed = 0.0f;
 				} else {
 					float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
@@ -2072,14 +2098,14 @@ namespace Jazz2
 
 		// Clamp camera position to level bounds
 		if (viewport._viewBounds.W > halfView.X * 2) {
-			viewport._cameraPos.X = std::round(std::clamp(focusPos.X, viewport._viewBounds.X + halfView.X, viewport._viewBounds.X + viewport._viewBounds.W - halfView.X));
+			viewport._cameraPos.X = roundFast(std::clamp(focusPos.X, viewport._viewBounds.X + halfView.X, viewport._viewBounds.X + viewport._viewBounds.W - halfView.X));
 		} else {
-			viewport._cameraPos.X = std::round(viewport._viewBounds.X + viewport._viewBounds.W * 0.5f);
+			viewport._cameraPos.X = roundFast(viewport._viewBounds.X + viewport._viewBounds.W * 0.5f);
 		}
 		if (viewport._viewBounds.H > halfView.Y * 2) {
-			viewport._cameraPos.Y = std::round(std::clamp(focusPos.Y, viewport._viewBounds.Y + halfView.Y, viewport._viewBounds.Y + viewport._viewBounds.H - halfView.Y));
+			viewport._cameraPos.Y = roundFast(std::clamp(focusPos.Y, viewport._viewBounds.Y + halfView.Y, viewport._viewBounds.Y + viewport._viewBounds.H - halfView.Y));
 		} else {
-			viewport._cameraPos.Y = std::round(viewport._viewBounds.Y + viewport._viewBounds.H * 0.5f);
+			viewport._cameraPos.Y = roundFast(viewport._viewBounds.Y + viewport._viewBounds.H * 0.5f);
 		}
 
 		viewport._cameraLastPos = viewport._cameraPos;

@@ -391,7 +391,7 @@ namespace Jazz2::Actors::Bosses
 
 		_anglePhase += timeMult * 0.02f;
 
-		MoveInstantly(_lastPos + Vector2f(0.0f, sinf(_anglePhase) * 22.0f), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(_lastPos + Vector2f(0.0f, sinApprox(_anglePhase) * 22.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	void Devan::Shoot()

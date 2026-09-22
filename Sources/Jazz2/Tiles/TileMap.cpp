@@ -605,9 +605,9 @@ namespace Jazz2::Tiles
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
 		std::int32_t hx1 = std::max<std::int32_t>((std::int32_t)aabb.L, 0);
-		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
+		std::int32_t hx2 = std::min((std::int32_t)ceilFast(aabb.R), limitRightPx - 1);
 		std::int32_t hy1 = std::clamp<std::int32_t>((std::int32_t)aabb.T, 0, limitBottomPx - 2);
-		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
+		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)ceilFast(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
@@ -747,9 +747,9 @@ namespace Jazz2::Tiles
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
 		std::int32_t hx1 = std::max<std::int32_t>((std::int32_t)aabb.L, 0);
-		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
+		std::int32_t hx2 = std::min((std::int32_t)ceilFast(aabb.R), limitRightPx - 1);
 		std::int32_t hy1 = std::clamp<std::int32_t>((std::int32_t)aabb.T, 0, limitBottomPx - 2);
-		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
+		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)ceilFast(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
@@ -1196,10 +1196,10 @@ namespace Jazz2::Tiles
 
 			// Get the actual tile coords on the layer layout
 			if (xt > 0) {
-				tileAbsX = (std::int32_t)std::floor(xt / (float)TileSet::DefaultTileSize);
+				tileAbsX = (std::int32_t)floorFast(xt / (float)TileSet::DefaultTileSize);
 				tileX = tileAbsX % tileCount.X;
 			} else {
-				tileAbsX = (std::int32_t)std::ceil(xt / (float)TileSet::DefaultTileSize);
+				tileAbsX = (std::int32_t)ceilFast(xt / (float)TileSet::DefaultTileSize);
 				tileX = tileAbsX % tileCount.X;
 				while (tileX < 0) {
 					tileX += tileCount.X;
@@ -1207,10 +1207,10 @@ namespace Jazz2::Tiles
 			}
 
 			if (yt > 0) {
-				tileAbsY = (std::int32_t)std::floor(yt / (float)TileSet::DefaultTileSize);
+				tileAbsY = (std::int32_t)floorFast(yt / (float)TileSet::DefaultTileSize);
 				tileY = tileAbsY % tileCount.Y;
 			} else {
-				tileAbsY = (std::int32_t)std::ceil(yt / (float)TileSet::DefaultTileSize);
+				tileAbsY = (std::int32_t)ceilFast(yt / (float)TileSet::DefaultTileSize);
 				tileY = tileAbsY % tileCount.Y;
 				while (tileY < 0) {
 					tileY += tileCount.Y;
@@ -1805,9 +1805,13 @@ namespace Jazz2::Tiles
 		// Size, rotated around the centre of the drawn area and translated to Pos. The mesh stream is in world
 		// space, so the same Translation * RotationZ * Scaling * Translation is folded into the four corners here
 		// - which is the whole point, as it costs less than the three 4x4 multiplies the chain used to.
-		const float c = std::cos(debris.Angle);
-		const float s = std::sin(debris.Angle);
-		const float ns = std::sin(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+		float s, c;
+		sincosApprox(debris.Angle, s, c);
+#if defined(DEATH_TARGET_DREAMCAST)
+		const float ns = sinApprox(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+#else
+		const float ns = -s;
+#endif
 		const float xx = c * debris.Scale, xy = s * debris.Scale;
 		const float yx = ns * debris.Scale, yy = c * debris.Scale;
 		// Local extent of the quad before the rotation, centred on the drawn area (see GetFrameOffset())
@@ -2888,9 +2892,13 @@ namespace Jazz2::Tiles
 			// Translation * RotationZ * Scaling * Translation, composed directly. Chaining the four
 			// operations meant three 4x4 multiplies per particle - and a burst of debris is hundreds of
 			// them in one frame - where the result is just a scaled rotation plus an offset origin.
-			const float c = std::cos(debris.Angle);
-			const float s = std::sin(debris.Angle);
-			const float ns = std::sin(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+			float s, c;
+			sincosApprox(debris.Angle, s, c);
+#if defined(DEATH_TARGET_DREAMCAST)
+			const float ns = sinApprox(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+#else
+			const float ns = -s;
+#endif
 			const float xx = c * debris.Scale, xy = s * debris.Scale;
 			const float yx = ns * debris.Scale, yy = c * debris.Scale;
 			const float localX = debris.FrameOffset.X - debris.Size.X * 0.5f;

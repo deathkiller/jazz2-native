@@ -490,6 +490,26 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
+	bool FileStream::SetBufferSize(std::int32_t bufferSize)
+	{
+		if (bufferSize < 0) {
+			bufferSize = 0;
+		}
+		if (bufferSize == _bufferSize) {
+			return true;
+		}
+		if (_writePos > 0 && !FlushWriteBuffer()) {
+			return false;
+		}
+		FlushReadBuffer();
+		_bufferSize = bufferSize;
+		_buffer = nullptr;
+#if defined(DEATH_TARGET_DREAMCAST)
+		_bufferAligned = nullptr;
+#endif
+		return true;
+	}
+
 	void FileStream::InitializeBuffer()
 	{
 		if DEATH_UNLIKELY(_buffer == nullptr) {

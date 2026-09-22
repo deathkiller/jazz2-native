@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Environment
 		switch (_state) {
 			case State::Free: {
 				_phase += timeMult * 0.05f;
-				MoveInstantly(_originPos + Vector2f(0.0f, sinf(_phase) * 4.0f), MoveType::Absolute);
+				MoveInstantly(_originPos + Vector2f(0.0f, sinApprox(_phase) * 4.0f), MoveType::Absolute);
 				OnUpdateHitbox();
 				break;
 			}

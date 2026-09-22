@@ -77,6 +77,10 @@ namespace nCine::Backends
 		{
 			bool Connected = false;
 			N64JoystickState State;
+			// The Rumble Pak has no firmware timer, so the duration the engine asks for is kept here and
+			// enforced from the per-frame poll - see joystickRumble()
+			bool RumbleActive = false;
+			std::uint64_t RumbleUntilMs = 0;
 		};
 
 		static PadInfo _pads[MaxJoysticks];

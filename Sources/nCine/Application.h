@@ -284,6 +284,15 @@ namespace nCine
 #endif
 #if defined(NCINE_PROFILING)
 		float _timings[(std::int32_t)Timings::Count];
+#	if !defined(WITH_IMGUI)
+		// Without the ImGui overlay to show them (every console build), the per-phase timings are averaged and
+		// written to the log every few seconds - see the end of Step(), and NCINE_PROFILING in ncine_options.cmake
+		float _timingsAccum[(std::int32_t)Timings::Count] = {};
+		float _presentAccum = 0.0f;
+		float _stepAccum = 0.0f;
+		std::int32_t _timingsFrames = 0;
+		TimeStamp _timingsLogStart;
+#	endif
 #endif
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _waitableTimer;

@@ -68,12 +68,14 @@ namespace Jazz2::Actors::Weapons
 		if (!_levelHandler->IsReforged()) {
 			baseSpeed *= LegacyFlightSpeed / 6.0f;
 		}
+		float sinAngle, cosAngle;
+		sincosApprox(angleRel, sinAngle, cosAngle);
 		if (isFacingLeft) {
-			_speed.X = std::min(0.0f, speed.X) - cosf(angleRel) * baseSpeed;
+			_speed.X = std::min(0.0f, speed.X) - cosAngle * baseSpeed;
 		} else {
-			_speed.X = std::max(0.0f, speed.X) + cosf(angleRel) * baseSpeed;
+			_speed.X = std::max(0.0f, speed.X) + cosAngle * baseSpeed;
 		}
-		_speed.Y = sinf(angleRel) * baseSpeed;
+		_speed.Y = sinAngle * baseSpeed;
 
 		_renderer.setRotation(angle);
 		_renderer.setDrawEnabled(false);

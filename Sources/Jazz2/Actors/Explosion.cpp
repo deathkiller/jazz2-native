@@ -183,7 +183,9 @@ namespace Jazz2::Actors
 				float angle = i * fTwoPi / SegmentCount;
 
 				auto& light = lights.emplace_back();
-				light.Pos = _pos + Vector2f(cosApprox(angle) * distance, sinApprox(angle) * distance);
+				float sinAngle, cosAngle;
+				sincosApprox(angle, sinAngle, cosAngle);
+				light.Pos = _pos + Vector2f(cosAngle * distance, sinAngle * distance);
 				light.Intensity = _lightIntensity;
 				light.Brightness = _lightBrightness;
 				light.RadiusNear = _lightRadiusNear;

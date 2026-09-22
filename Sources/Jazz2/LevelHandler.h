@@ -101,8 +101,31 @@ namespace Jazz2
 		static constexpr std::int32_t DefaultWidth = Rendering::UpscaleRenderPass::DefaultViewWidth;
 		/** @brief Default height of viewport */
 		static constexpr std::int32_t DefaultHeight = Rendering::UpscaleRenderPass::DefaultViewHeight;
-		/** @brief Range of tile activation */
+		/**
+		 * @brief Range of tile activation, in tiles either side of a player
+		 *
+		 * Everything inside this square around a player is spawned from the event map, and everything whose
+		 * origin tile leaves it by a further 4 tiles is destroyed again. Nothing culls an actor's *update*,
+		 * only its drawing, so every actor in here - enemies, platforms, and the gems, ammo and crates that
+		 * are just as much actors - runs a full movement and tile-collision step every frame. The range is
+		 * therefore a direct lever on how much the level costs to simulate, quadratically: 26 is a 52x52
+		 * tile box, 18 is 36x36, or 48% of the area.
+		 *
+		 * The consoles below take the smaller value because their screens are small enough that it is still
+		 * entirely off-screen. What has to stay off-screen is the margin between the box and the edge of the
+		 * view, which at 32 pixels to the tile is 8 tiles (256 px) on the widest of them (the 640-wide
+		 * Dreamcast, GameCube and PlayStation 2, whose visible half-width is 10 tiles) and 13 tiles on the
+		 * Nintendo 64. Even the tightest of those is about half a second of travel at @ref Player::MaxDashingSpeed,
+		 * and lowering @ref PreferencesCache::RenderingResolutionPercent only ever shows *less* of the world,
+		 * so it cannot eat into the margin. The Wii is deliberately not in the list - it is the fastest
+		 * machine here and renders the same 640 columns - but it would be safe if it ever needs the room.
+		 */
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2) || \
+	defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_3DS)
+		static constexpr std::int32_t ActivateTileRange = 18;
+#else
 		static constexpr std::int32_t ActivateTileRange = 26;
+#endif
 
 		/** @} */
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAudioDevice.h"
+#include "../Base/Algorithms.h"
 #include "../Primitives/Vector3.h"
 
 #include <cmath>
@@ -82,7 +83,7 @@ namespace nCine::AudioMixer
 			delta -= Vector3f(listenerPosition.X * IAudioDevice::LengthToPhysical,
 				listenerPosition.Y * -IAudioDevice::LengthToPhysical, listenerPosition.Z * -IAudioDevice::LengthToPhysical);
 		}
-		const float distance = std::sqrt(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z);
+		const float distance = sqrtApprox(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z);
 
 		float attenuation = 1.0f;
 		if (distance > IAudioDevice::ReferenceDistance) {
@@ -92,7 +93,7 @@ namespace nCine::AudioMixer
 
 		const float pan = (distance > 0.0001f ? Clamp01(0.5f + 0.5f * (delta.X / distance)) : 0.5f);
 		const float gain = gain0 * attenuation;
-		leftGain = gain * std::sqrt(1.0f - pan);
-		rightGain = gain * std::sqrt(pan);
+		leftGain = gain * sqrtApprox(1.0f - pan);
+		rightGain = gain * sqrtApprox(pan);
 	}
 }

@@ -500,7 +500,20 @@ namespace nCine
 
 	inline void SceneNode::setRotation(float rotation)
 	{
-		_rotation = fmodf(rotation, fRadAngle360);
+		// Kept within one turn with the sign of the input, exactly what `fmodf(rotation, fRadAngle360)` gave,
+		// without the call: newlib's fmodf is a 170-instruction bit-by-bit division loop on every console,
+		// and this runs for every rotating shot and piece of debris every frame. Almost every value is
+		// already inside the turn, so the common path is the two compares.
+		if (rotation >= fRadAngle360 || rotation <= -fRadAngle360) {
+			rotation -= fRadAngle360 * (float)(std::int32_t)(rotation * (1.0f / fRadAngle360));
+			// The quotient above is rounded, so for a large input the result can land a hair outside the turn
+			if (rotation >= fRadAngle360) {
+				rotation -= fRadAngle360;
+			} else if (rotation <= -fRadAngle360) {
+				rotation += fRadAngle360;
+			}
+		}
+		_rotation = rotation;
 		_dirtyBits.set(DirtyBitPositions::TransformationBit);
 		_dirtyBits.set(DirtyBitPositions::AabbBit);
 	}

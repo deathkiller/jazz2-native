@@ -88,7 +88,7 @@ namespace Jazz2::Actors::Enemies
 			});
 		}
 
-		MoveInstantly(_lastPos + Vector2f(cosf(_anglePhase) * 10.0f, sinf(_anglePhase * 2.0f) * 10.0f), MoveType::Absolute | MoveType::Force);
+		MoveInstantly(_lastPos + Vector2f(cosApprox(_anglePhase) * 10.0f, sinApprox(_anglePhase * 2.0f) * 10.0f), MoveType::Absolute | MoveType::Force);
 	}
 
 	bool Rapier::OnPerish(ActorBase* collider)

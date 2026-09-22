@@ -249,7 +249,7 @@ namespace Death { namespace IO {
 	class CompressedBoundedStream : public Stream
 	{
 	public:
-		CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize);
+		CompressedBoundedStream(std::shared_ptr<FileStreamPool> pool, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize);
 
 		CompressedBoundedStream(const CompressedBoundedStream&) = delete;
 		CompressedBoundedStream& operator=(const CompressedBoundedStream&) = delete;
@@ -271,8 +271,8 @@ namespace Death { namespace IO {
 	};
 
 	template<class T>
-	CompressedBoundedStream<T>::CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize)
-		: _underlyingStream(path, offset, compressedSize, bufferSize), _uncompressedSize(uncompressedSize)
+	CompressedBoundedStream<T>::CompressedBoundedStream(std::shared_ptr<FileStreamPool> pool, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize)
+		: _underlyingStream(Death::move(pool), offset, compressedSize, bufferSize), _uncompressedSize(uncompressedSize)
 	{
 		_compressedStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
@@ -396,7 +396,7 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
 		s->Seek(std::int64_t(rootIndexOffset), SeekOrigin::Begin);
 
-		_path = path;
+		_streamPool = std::make_shared<FileStreamPool>(path);
 		_useHashIndex = (fileFlags & PakFileFlags::HashIndex) == PakFileFlags::HashIndex;
 
 		ConstructsItemsFromIndex(*s, nullptr,
@@ -411,12 +411,12 @@ namespace Death { namespace IO {
 
 	StringView PakFile::GetPath() const
 	{
-		return _path;
+		return (_streamPool != nullptr ? _streamPool->GetPath() : StringView{});
 	}
 
 	bool PakFile::IsValid() const
 	{
-		return !_path.empty();
+		return (_streamPool != nullptr);
 	}
 
 	bool PakFile::FileExists(StringView path)
@@ -453,11 +453,11 @@ namespace Death { namespace IO {
 		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
 		switch (compression) {
 			case PakPreferredCompression::None: {
-				return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
+				return std::make_unique<BoundedFileStream>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
 			}
 			case PakPreferredCompression::Deflate: {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File \"{}\" was compressed with an unsupported method (Deflate)", path);
@@ -467,7 +467,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Lz4: {
 #if defined(WITH_LZ4)
-				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File \"{}\" was compressed with an unsupported method (LZ4)", path);
@@ -477,7 +477,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Zstd: {
 #if defined(WITH_ZSTD)
-				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File \"{}\" was compressed with an unsupported method (Zstd)", path);
@@ -487,7 +487,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Lzma2Compressed: {
 #if defined(WITH_LZMA2)
-				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File \"{}\" was compressed with an unsupported method (LZMA2)", path);
@@ -513,11 +513,11 @@ namespace Death { namespace IO {
 		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
 		switch (compression) {
 			case PakPreferredCompression::None: {
-				return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
+				return std::make_unique<BoundedFileStream>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
 			}
 			case PakPreferredCompression::Deflate: {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #	else
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File 0x{:.16x} was compressed with an unsupported method (Deflate)", hashedPath);
@@ -527,7 +527,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Lz4: {
 #	if defined(WITH_LZ4)
-				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #	else
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZ4)", hashedPath);
@@ -537,7 +537,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Zstd: {
 #	if defined(WITH_ZSTD)
-				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #	else
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File 0x{:.16x} was compressed with an unsupported method (Zstd)", hashedPath);
@@ -547,7 +547,7 @@ namespace Death { namespace IO {
 			}
 			case PakPreferredCompression::Lzma2Compressed: {
 #	if defined(WITH_LZMA2)
-				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #	else
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZMA2)", hashedPath);

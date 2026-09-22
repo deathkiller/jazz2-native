@@ -8,6 +8,7 @@
 #include "../Containers/Array.h"
 #include "../Containers/String.h"
 #include "FileStream.h"
+#include "FileStreamPool.h"
 #include "FileSystem.h"
 
 #include <memory>
@@ -148,8 +149,8 @@ namespace Death { namespace IO {
 
 		static constexpr std::uint32_t CompressionFlagsShift = 8;
 
-		Containers::String _path;
 		Containers::String _mountPoint;
+		std::shared_ptr<FileStreamPool> _streamPool;
 		Containers::Array<Item> _rootItems;
 		bool _useHashIndex;
 

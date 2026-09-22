@@ -37,7 +37,9 @@ namespace Jazz2::Actors::Weapons
 		angle += Random().FastFloat(-0.16f, 0.16f);
 
 		float distance = (isFacingLeft ? -BeamDistance : BeamDistance);
-		_farPoint = Vector2f(gunspotPos.X + cosf(angle) * distance, gunspotPos.Y + sinf(angle) * distance);
+		float sinAngle, cosAngle;
+		sincosApprox(angle, sinAngle, cosAngle);
+		_farPoint = Vector2f(gunspotPos.X + cosAngle * distance, gunspotPos.Y + sinAngle * distance);
 
 		_owner = owner;
 		SetFacingLeft(isFacingLeft);
@@ -84,9 +86,9 @@ namespace Jazz2::Actors::Weapons
 
 				float anglePrev = _renderer.rotation();
 				if (IsFacingLeft()) {
-					angle = atan2f(_pos.Y - _farPoint.Y, _pos.X - _farPoint.X);
+					angle = atan2Approx(_pos.Y - _farPoint.Y, _pos.X - _farPoint.X);
 				} else {
-					angle = atan2f(_farPoint.Y - _pos.Y, _farPoint.X - _pos.X);
+					angle = atan2Approx(_farPoint.Y - _pos.Y, _farPoint.X - _pos.X);
 				}
 				angle = lerp(anglePrev, angle, 0.4f * timeMult);
 				if (std::abs(anglePrev - angle) > 0.06f) {
@@ -96,7 +98,9 @@ namespace Jazz2::Actors::Weapons
 				}
 
 				float distance = (IsFacingLeft() ? -BeamDistance : BeamDistance);
-				_farPoint = Vector2f(gunspotPos.X + cosf(angle) * distance, gunspotPos.Y + sinf(angle) * distance);
+				float sinAngle, cosAngle;
+				sincosApprox(angle, sinAngle, cosAngle);
+				_farPoint = Vector2f(gunspotPos.X + cosAngle * distance, gunspotPos.Y + sinAngle * distance);
 			}
 		}
 
@@ -180,7 +184,7 @@ namespace Jazz2::Actors::Weapons
 		spark.ScaleSpeed = -0.004f;
 		spark.Alpha = 1.0f;
 		spark.AlphaSpeed = Random().FastFloat(-0.018f, -0.010f);
-		spark.Angle = atan2f(sparkSpeed.Y, sparkSpeed.X);
+		spark.Angle = atan2Approx(sparkSpeed.Y, sparkSpeed.X);
 		spark.AngleSpeed = Random().FastFloat(-0.2f, 0.2f);
 
 		spark.Time = 70.0f;

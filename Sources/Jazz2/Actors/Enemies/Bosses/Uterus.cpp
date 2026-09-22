@@ -137,9 +137,11 @@ namespace Jazz2::Actors::Bosses
 			FollowNearestPlayer(timeMult);
 
 			_anglePhase += timeMult * 0.02f;
-			_renderer.setRotation(fPiOver2 + sinApprox(_anglePhase) * 0.2f);
+			float sinPhase, cosPhase;
+			sincosApprox(_anglePhase, sinPhase, cosPhase);
+			_renderer.setRotation(fPiOver2 + sinPhase * 0.2f);
 
-			Vector2f pos = _lastPos + Vector2f(cosApprox(_anglePhase) * 60.0f, sinApprox(_anglePhase) * 60.0f);
+			Vector2f pos = _lastPos + Vector2f(cosPhase * 60.0f, sinPhase * 60.0f);
 			MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 
 			if (_hasShield) {
@@ -148,7 +150,9 @@ namespace Jazz2::Actors::Bosses
 					if (_shields[i] != nullptr) {
 						if (_shields[i]->GetHealth() > 0) {
 							if (_shields[i]->FallTime <= 0.0f) {
-								_shields[i]->MoveInstantly(pos + Vector2f(cosApprox(_anglePhase + _shields[i]->Phase) * 50.0f, sinApprox(_anglePhase + _shields[i]->Phase) * 50.0f), MoveType::Absolute | MoveType::Force);
+								float sinShield, cosShield;
+								sincosApprox(_anglePhase + _shields[i]->Phase, sinShield, cosShield);
+								_shields[i]->MoveInstantly(pos + Vector2f(cosShield * 50.0f, sinShield * 50.0f), MoveType::Absolute | MoveType::Force);
 								_shields[i]->Recover(_anglePhase + _shields[i]->Phase);
 							}
 							shieldCount++;
