@@ -286,8 +286,10 @@ namespace Jazz2::Rendering
 			//   straight 1 px/tick ramp that stops dead on arrival - not an exponential ease that is still
 			//   creeping after 140 frames.
 			float targetLookAheadX = 0.0f;
+			float targetLookAheadY = 0.0f;
 			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
 				targetLookAheadX = player->GetCameraLookAhead();
+				targetLookAheadY = player->GetCameraVerticalOffset();
 			}
 			// The constants are per one of the original's 70 Hz ticks, so the elapsed frame is converted into
 			// ticks once and both the fraction and the clamp are applied in that unit
@@ -296,11 +298,17 @@ namespace Jazz2::Rendering
 			float maxStep = LegacyCameraMaxStep * ticks;
 			_cameraDistanceFactor.X += std::clamp(wanted - _cameraDistanceFactor.X, -maxStep, maxStep);
 
-			// No vertical lead and no deadzone. Measured, the original's camera holds the player's own Y to within
-			// one tick of its vertical movement - +7.75 px at the launch of a 132 px jump, back to zero by the apex
-			// - so there is nothing here to reproduce but the player's position. The deadzone above is what leaves
-			// this engine holding a stale 21 px offset into the next scenario, which is the opposite of fixed.
-			_cameraDistanceFactor.Y = 0.0f;
+			// No vertical deadzone, and no vertical lead except during a buttstomp. Measured, the original's
+			// camera otherwise holds the player's own Y to within one tick of its vertical movement - +7.75 px
+			// at the launch of a 132 px jump, back to zero by the apex - so there is nothing to reproduce but
+			// the player's position. The deadzone above is what leaves this engine holding a stale 21 px offset
+			// into the next scenario, which is the opposite of fixed.
+			//
+			// The stomp is the exception, and it uses the same approach at twice the step - see
+			// @ref Actors::Player::LegacyCameraButtstompDrop.
+			float wantedY = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LegacyCameraApproach, ticks);
+			float maxStepY = LegacyCameraMaxStep * 2.0f * ticks;
+			_cameraDistanceFactor.Y += std::clamp(wantedY - _cameraDistanceFactor.Y, -maxStepY, maxStepY);
 			_cameraViewCenterY = focusPos.Y;
 		}
 

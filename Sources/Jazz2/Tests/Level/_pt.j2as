@@ -17,7 +17,7 @@
 	model recoverable from the traces rather than just the few constants one manoeuvre happens to expose.
 
 	Output goes to _pt_trace.asdat next to the game (jjSTREAM::save() forces that extension). Columns:
-		scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy
+		scenario,tick,x,y,xs,ys,right,left,run,jump,down,up,fire,sm,gametick,ms,objx,objy,camx,camy
 	where x/y/xs/ys are sampled AFTER the tick's movement and the key columns are the input applied during
 	it. `ms` is a wall-clock offset, so the real tick rate is recoverable from any trace - the original runs
 	at a fixed 70 Hz while this engine's tick rate follows the frame rate.
@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 426;
+const int ScenarioCount = 437;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -148,12 +148,70 @@ float LastY = 0;
 int StillTicks = 0;
 int PrimeWaited = 0;
 
+// The tick the copter powerup was actually picked up in this scenario, or -1 while it has not been. The
+// cp_mod_* set hops until this is set and times everything after it from here, because the generator's
+// period is itself one of the things the two games disagree about: any fixed schedule catches the powerup
+// in one game and misses it in the other, and a miss measures a player falling past where it used to be.
+//
+// Detected by OnCopter(), which reads the object rather than the player, because nothing on the player says
+// so. jjPLAYER.helicopter is Jazz's copter *ears* and is NOT this: measured across a whole 1200-tick
+// scenario that spent 26 ticks hanging from a copter, it never left 0 - so the latch never fired, the hop
+// kept running and knocked the player straight back off it.
+int CopterAttachTick = -1;
+// The tick the last ride ended, or -1 once the player has been put back under the generator for the next
+// one. See CopterReturnDelay.
+int CopterEndTick = -1;
+// Where the level's copter generator sits, and how long after a ride ends the player is put back under it.
+// The delay is there so the trace still shows what the release itself does - the fall out of a copter is
+// not measured by anything else - before the player is moved.
+const int CopterSpawnTileX = 236;
+const int CopterSpawnTileY = 26;
+const int CopterReturnDelay = 30;
+// Held Jump for CopterHopHold out of every CopterHopPeriod, which is a full arc and a landing, so the
+// player is back at the powerup's height every cycle.
+const int CopterHopPeriod = 36;
+const int CopterHopHold = 8;
+// How long scenario 431 alone flies right before turning back, because it is the only one the wall two tiles
+// to the left is in the way of. The others test from the moment they are on, and they have to: the ride is
+// only about a hundred ticks long, so an approach phase that clears the wall for everything spends the whole
+// of it. Nothing else bounds the test - it runs for exactly as long as the copter lasts, which is itself one
+// of the things being compared. See 429, which rides it doing nothing and measures just that.
+const int CopterClearTicks = 30;
+// JJ2's event id for the copter a lizard carries - the one the level holds at (236,26), and the one these
+// scenarios are about. It is not the copter ears: this is a thing the player hangs from.
+const int CopterEventID = 226;
+// The state the object is in **while it is being ridden**, which is what says so. Measured: across a ride
+// that carried the player 524 px straight up, the copter sat in STATE::EXTRA for all 160 ticks of it and
+// went to STATE::DONE on the tick the ride ended, then STATE::KILL as it was removed.
+const int CopterStateRidden = STATE::EXTRA;
+// Proximity is kept as a second condition rather than used on its own. A ridden copter is placed **on** the
+// player - dx and dy both measured at exactly 0 for the whole ride - but so is one the player happens to be
+// standing on, and that one is not being ridden: reading position alone called a scenario attached for 408
+// ticks of standing perfectly still, and the hop that should have caught a real one never ran.
+const float CopterCarrySqr = 20.0f * 20.0f;
+
+// Whether the player is riding the level's copter. Read off the object because the player carries no flag
+// for it, and the obvious-looking one is wrong - see CopterAttachTick.
+bool OnCopter(jjPLAYER@ play) {
+	for (int i = 1; i < 512; i++) {
+		jjOBJ@ o = jjObjects[i];
+		if (o.eventID != CopterEventID || o.state != CopterStateRidden) {
+			continue;
+		}
+		float dx = o.xPos - play.xPos, dy = o.yPos - play.yPos;
+		if (dx * dx + dy * dy < CopterCarrySqr) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // Wall clock at the start of the run, so every row can carry a millisecond offset
 uint64 StartMs = 0;
 
 // The input that ApplyInput() put in for the current tick, remembered so onPlayer() can log it next to the
 // state it produced
-bool InRight = false, InLeft = false, InRun = false, InJump = false, InDown = false;
+bool InRight = false, InLeft = false, InRun = false, InJump = false, InDown = false, InUp = false, InFire = false;
 
 jjSTREAM@ Log = jjSTREAM();
 
@@ -174,7 +232,7 @@ void LogRow(jjPLAYER@ play, string name) {
 		formatFloat(play.xPos, "", 0, 3) + "," + formatFloat(play.yPos, "", 0, 3) + "," +
 		formatFloat(play.xSpeed, "", 0, 4) + "," + formatFloat(play.ySpeed, "", 0, 4) + "," +
 		(InRight ? "1" : "0") + "," + (InLeft ? "1" : "0") + "," +
-		(InRun ? "1" : "0") + "," + (InJump ? "1" : "0") + "," + (InDown ? "1" : "0") + "," + play.specialMove + "," +
+		(InRun ? "1" : "0") + "," + (InJump ? "1" : "0") + "," + (InDown ? "1" : "0") + "," + (InUp ? "1" : "0") + "," + (InFire ? "1" : "0") + "," + play.specialMove + "," +
 		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + "," + formatFloat(ObjX, "", 0, 1) + "," + formatFloat(ObjY, "", 0, 1) + "," +
 		// The camera, as an offset from the player rather than as an absolute position: that is the quantity
 		// the pan rule is about, and it does not depend on where in the level the scenario sits. These are RAW -
@@ -207,6 +265,18 @@ int ScenarioTicksFor(int s) {
 	// The pinball chamber left to itself, the same way sp_chain is
 	if (s == 294) {
 		return 1100;
+	}
+	// The copter set. Its generator cycles, and the player has to hop up to the thing's height to catch one -
+	// they land two and a half tiles below it - so most of this window is the approach, and how much of it
+	// is depends on where in the generator's cycle the scenario started. Over 400 ticks of hopping has been
+	// needed to get hold of one here.
+	//
+	// The length buys **repeats**, not a longer ride: the generator ignores whatever lifetime its event is
+	// given, so the only way to get a direction tested properly is to catch several copters in one scenario
+	// and read the trace as episodes. A catch-ride-lose cycle runs 250-400 ticks, so this is about five of
+	// them. Kept identical to GetScenarioTicks() in this engine's probe.
+	if (s >= 429 && s <= 436) {
+		return 2000;
 	}
 	if (s == 52 || s == 53 || s >= 82) {
 		return 800;
@@ -984,6 +1054,27 @@ string ScenarioName(int i) {
 		// vine; _hold keeps Down down, which should fall through both.
 		case 424: return "ob_vine_down";
 		case 425: return "ob_vine_down_hold";
+		// Spaz firing inside his own kick. sp_lori_side_fire measures hers and this game spends a round, which
+		// is why the engine allows it at all; his kick is 81 ticks against her 35 and is reported to refuse.
+		case 426: return "sp_spaz_side_fire";
+		// A jump taken as his kick ends, for whether the kick's end animation plays over the jump
+		case 427: return "sp_spaz_side_jump";
+		// A plain hop, read for the landing animation alone
+		case 428: return "an_land";
+		// The copter the level carries at (236,26). Its generator cycles, so each of these first has to
+		// establish that the player is actually on one - read the flight, not the position. There is a wall
+		// two tiles left, so they all fly right before testing anything else.
+		case 429: return "cp_mod_get";
+		case 430: return "cp_mod_right";
+		case 431: return "cp_mod_left";
+		case 432: return "cp_mod_up";
+		case 433: return "cp_mod_down";
+		case 434: return "cp_mod_diag";
+		case 435: return "cp_mod_run";
+		case 436: return "cp_mod_fire";
+		// NOTE: the rt_* run-in-place scenarios are deliberately NOT mirrored here. The wind-up reads the raw
+		// Run key, so scripted taps wind it up at no cadence at all - rt_hold leaves the player standing at
+		// x=4512 with xSpeed 0 for its whole 800 ticks. Measuring one needs FreeRun and a human.
 	}
 	return "?";
 }
@@ -997,7 +1088,13 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		(s >= 89 && s <= 94) || (s >= 97 && s <= 105) ||
 		// The cl_dj* ceiling and sp_dj_* window scenarios need the double jump, so they need Spaz
 		(s >= 153 && s <= 157) || s == 160 || s == 161 || (s >= 162 && s <= 165) || (s >= 223 && s <= 250) ||
-		s == 306 || s == 345 || s == 347 || s == 348 || s == 354 || s == 355 || s == 356 || s == 378 || s == 383 || s == 387 || s == 388 || s == 396 || s == 397 || s == 398 || s == 400 || s == 407 || s == 423) {
+		s == 306 || s == 345 || s == 347 || s == 348 || s == 354 || s == 355 || s == 356 || s == 378 || s == 383 || s == 387 || s == 388 || s == 396 || s == 397 || s == 398 || s == 400 || s == 407 || s == 423 || s == 426 || s == 427 ||
+		// The copter set is on Spaz for a different reason: **he has no copter ears of his own**. Whether the
+		// powerup was picked up can only be read here as play.helicopter, and on Jazz the hop that catches it
+		// sets exactly the same field - a second tap while falling is how his own ears engage - so the
+		// detector could not tell the powerup from the ability. Spaz answers that tap with a double jump and
+		// leaves the field alone. The engine's probe uses him for these too, so the comparison is like for like.
+		(s >= 429 && s <= 436)) {
 		wanted = CHAR::SPAZ;
 	} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 95 || s == 96 || s == 370 || s == 371 || s == 379 || s == 380 || s == 381 || s == 384) {
 		wanted = CHAR::LORI;
@@ -1079,6 +1176,10 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		// what gives fu_copter a real jump to start its copter from
 		play.xPos = 32 * 32 + 16;
 		play.yPos = 49 * 32;
+	} else if (s >= 429 && s <= 436) {
+		// On the copter generator at (236,26)
+		play.xPos = 236 * 32 + 16;
+		play.yPos = 26 * 32;
 	} else if (s == 424 || s == 425) {
 		// Two tiles under the lower of the closely stacked pair at (28,45)-(29,45)
 		play.xPos = 28 * 32 + 16;
@@ -2037,6 +2138,47 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		// The closely stacked vine pair - climb with Jump, release, then drop with Down
 		case 424: jump = (t >= 5 && t < 45); down = (t >= 100 && t < 104); break;
 		case 425: jump = (t >= 5 && t < 45); down = (t >= 100); break;
+		case 426: right = (t < 2); down = (t >= 20 && t < 44); jump = (t >= 40 && t < 44); fire = (t >= 60 && t < 70); break;
+		case 427: right = (t < 2); down = (t >= 20 && t < 44); jump = (t >= 40 && t < 44) || (t >= 112 && t < 117); break;
+		case 428: jump = (t >= 20 && t < 30); break;
+		// The copter set - see GetScenarioName() and CopterAttachTick. State-driven rather than scheduled:
+		// hop until the powerup is genuinely picked up, then time everything from that tick. Read the
+		// player's own copter state to tell a real one from a player falling past where it used to be.
+		case 429: case 430: case 431: case 432: case 433: case 434: case 435: case 436: {
+			if (CopterAttachTick < 0) {
+				// Not on one - hop, and wait for the generator to produce the next. This is also where a
+				// finished ride comes back to, so a scenario tests as many copters as its window holds.
+				// Press nothing else, so every scenario in the set approaches identically and they differ
+				// only in what they do once they are on one. **Jump stops the moment it is on**, because
+				// pressing it there lets go again - which is what the first version of this did, every
+				// time, for the whole of every scenario.
+				jump = ((t % CopterHopPeriod) < CopterHopHold);
+				break;
+			}
+			// Ticks into *this* ride, not into the scenario - see the re-arm in the main update
+			int u = t - CopterAttachTick;
+			// 429 holds nothing at all: how long the ride lasts, and where it drifts unattended, is the
+			// whole of what it asks
+			if (s == 429) {
+				break;
+			}
+			if (s == 431 && u < CopterClearTicks) {
+				// Only the leftward one has the wall in its way, and the ride is too short to spend an
+				// approach phase on it in the others
+				right = true;
+				break;
+			}
+			switch (s) {
+				case 430: right = true; break;
+				case 431: left = true; break;
+				case 432: up = true; break;
+				case 433: down = true; break;
+				case 434: right = true; up = true; break;
+				case 435: right = true; run = true; break;
+				case 436: right = true; fire = ((u % 60) < 25); break;
+			}
+			break;
+		}
 	}
 
 	play.keyDown = down;
@@ -2047,6 +2189,8 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 	play.keyJump = jump;
 	play.keyFire = fire;
 
+	InUp = up;
+	InFire = fire;
 	InRight = right;
 	InLeft = left;
 	InRun = run;
@@ -2056,7 +2200,7 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 
 void ClearInput(jjPLAYER@ play) {
 	play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = play.keyUp = false;
-	InRight = InLeft = InRun = InJump = InDown = false;
+	InRight = InLeft = InRun = InJump = InDown = InUp = InFire = false;
 }
 
 // Whether the player has stopped moving vertically for long enough to call it standing on the floor
@@ -2093,7 +2237,9 @@ void onPlayerInput(jjPLAYER@ play) {
 		// really pressed is what the game gets and what gets logged. This is how a mechanic the scripted input
 		// cannot reach - the run-in-place rev-up is the one that needed it - gets measured at all: play it by
 		// hand and read the trace afterwards. Every row is named `free` and the tick counter just runs.
-		InRight = play.keyRight;
+		InUp = play.keyUp;
+	InFire = play.keyFire;
+	InRight = play.keyRight;
 		InLeft = play.keyLeft;
 		InRun = play.keyRun;
 		InJump = play.keyJump;
@@ -2164,6 +2310,8 @@ void onPlayerInput(jjPLAYER@ play) {
 			Tick = 0;
 			SettleWaited = 0;
 			StillTicks = 0;
+			CopterAttachTick = -1;
+			CopterEndTick = -1;
 			State = StateSettle;
 			return;
 		}
@@ -2182,6 +2330,38 @@ void onPlayerInput(jjPLAYER@ play) {
 				State = StateRun;
 			}
 			return;
+		}
+	}
+
+	// Latched before the input for this tick is written, so the cp_mod_* set can time everything from the
+	// pickup rather than from a schedule. Kept out of ApplyInput() to match the engine's probe, where that
+	// function also runs purely to ask a scenario its name and a latch inside it would fire on the wrong tick.
+	// **Re-armed when a ride ends**, so one scenario runs as many catch-and-test cycles as its window holds
+	// rather than one. The generator ignores whatever lifetime the event is given, so a ride cannot be made
+	// long enough to test a direction properly in one go - the answer is more of them. Each cycle is
+	// independent: hop until a fresh copter is caught, test from that tick, and go back to hopping the
+	// moment it is lost, so a trace is read as several episodes rather than as one.
+	if (Scenario >= 429 && Scenario <= 436) {
+		if (!OnCopter(play)) {
+			if (CopterAttachTick >= 0) {
+				CopterEndTick = Tick;
+			}
+			CopterAttachTick = -1;
+		} else if (CopterAttachTick < 0) {
+			CopterAttachTick = Tick;
+			CopterEndTick = -1;
+		}
+
+		// A ride that has ended and been watched for long enough: put the player back under the generator so
+		// the next copter can be caught. Without this the directional scenarios got exactly **one** ride
+		// each - they fly away, come down somewhere else and can never reach the generator again - so the
+		// repeats that make this set work only ever happened for the ones that stay put.
+		if (CopterEndTick >= 0 && (Tick - CopterEndTick) >= CopterReturnDelay) {
+			CopterEndTick = -1;
+			play.xPos = CopterSpawnTileX * 32 + 16;
+			play.yPos = CopterSpawnTileY * 32;
+			play.xSpeed = 0;
+			play.ySpeed = 0;
 		}
 	}
 
@@ -2234,6 +2414,31 @@ void onPlayerInput(jjPLAYER@ play) {
 					ObjX = o.xPos;
 					ObjY = o.yPos;
 				}
+			}
+		}
+	} else if (Scenario >= 429 && Scenario <= 436) {
+		// The copter set needs two things no position column can give: whether the player is riding one, and
+		// what the thing itself is doing. So `objx` is the riding decision itself - 1 or 0, the counterpart
+		// of the engine's `mod` column, which the original has nothing equivalent to - and `objy` the
+		// nearest copter's own STATE, which is the evidence for that decision. A trace whose objx never
+		// leaves 0 hopped for its whole length and caught nothing, which is a different failure from
+		// catching it and then flying wrongly; the two were indistinguishable before this column existed.
+		//
+		// Must sit ahead of the open-ended weapon branch below, which would otherwise claim these and hand
+		// them the ammo columns instead.
+		ObjX = (OnCopter(play) ? 1 : 0);
+		ObjY = -1;
+		float bestDistance = -1;
+		for (int i = 1; i < 512; i++) {
+			jjOBJ@ o = jjObjects[i];
+			if (o.eventID != CopterEventID) {
+				continue;
+			}
+			float dx = o.xPos - play.xPos, dy = o.yPos - play.yPos;
+			float distance = dx * dx + dy * dy;
+			if (bestDistance < 0 || distance < bestDistance) {
+				bestDistance = distance;
+				ObjY = o.state;
 			}
 		}
 	} else if ((Scenario >= 133 && Scenario <= 143) || (Scenario >= 146 && !(Scenario >= 378 && Scenario <= 381))) {
@@ -2322,7 +2527,7 @@ void onLevelBegin() {
 		Log.write("# PARTIAL RUN - first=" + FirstScenario + " last=" + LastScenario +
 			" filter=\"" + ScenarioFilter + "\" - NOT a full sweep\n");
 	}
-	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame\n");
+	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,up,fire,sm,gametick,ms,objx,objy,camx,camy,anim,frame\n");
 }
 
 

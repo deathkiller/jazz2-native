@@ -90,6 +90,7 @@
 		},
 		"Sidekick": {
 			"Path": "Spaz/sidekick.aura",
+			"FrameRate": 24,
 			"States": [ 512 ]
 		},
 		"Buttstomp": {

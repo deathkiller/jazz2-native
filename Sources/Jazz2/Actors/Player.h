@@ -231,6 +231,14 @@ namespace Jazz2::Actors
 		 * not pan the view at all. See @ref Rendering::PlayerViewport::UpdateCamera().
 		 */
 		float GetCameraLookAhead() const;
+		/**
+		 * @brief Returns how far the non-Reforged camera should drop below the player, in pixels
+		 *
+		 * Zero except during a buttstomp, which is the one place the original leads vertically at all --- it
+		 * pans down through the wind-up so more of what is below comes into view, holds while the stomp runs,
+		 * and returns to centre when it ends. See @ref LegacyCameraButtstompDrop.
+		 */
+		float GetCameraVerticalOffset() const;
 
 		/** @brief Called when the level is about to change */
 		virtual bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType);
@@ -593,6 +601,69 @@ namespace Jazz2::Actors
 		 * only starts closing once @ref UpdateDashState() clamps the speed back to @ref LegacyWalkSpeed.
 		 */
 		static constexpr float LegacyCameraDashLead = 120.0f;
+		/**
+		 * @brief How far the non-Reforged camera drops during a buttstomp, so more is visible below (original 60 px)
+		 *
+		 * The one place the original's camera leads *vertically*, and the only thing that stopped this being
+		 * found earlier is that it is the sole exception to "there is no vertical lead to reproduce". Measured
+		 * on `sp_butt_right`: `camy` sits at −225.87 while standing, and from the tick the wind-up pose appears
+		 * it runs to −165.07 and stays there for the rest of the stomp --- 60.8 px, reached in about 30 ticks.
+		 *
+		 * The approach is the horizontal one's, at twice the step: a flat **2.00 px/tick** through the middle of
+		 * it and an ease-out that halves exactly (1.00, 0.50, 0.25, 0.13, 0.06), which is
+		 * @ref Jazz2::Rendering::PlayerViewport::LegacyCameraApproach against a doubled
+		 * @ref Jazz2::Rendering::PlayerViewport::LegacyCameraMaxStep. The original's first five ticks briefly
+		 * overshoot to 3.88 px/tick before settling back to 2, which this does not reproduce --- it is a fifth
+		 * of a second at the very start of a 30-tick pan.
+		 */
+		static constexpr float LegacyCameraButtstompDrop = 60.0f;
+		/**
+		 * @brief Ticks the non-Reforged landing pose spends on each of its frames
+		 *
+		 * **Deliberately slower than the original, chosen by eye after three passes.** The original's rate is
+		 * not in doubt: `an_land` shows its five frames at ticks 76, 78, 81, 84 and 87 and leaves at 91, and
+		 * a scan of every landing in the captured traces finds **254** complete ones, all five frames, all
+		 * **14 ticks** end to end --- so **2.75** a frame, a fifth of a second. This engine's own rate is
+		 * `128/256` of a second across the same five frames, so **7.0** a frame.
+		 *
+		 * Both were rejected on sight: 7.0 as "very slow and chopped", then 2.75 as "too fast", then 4.0 ---
+		 * already half again slower than the original --- as "still quite fast". The original's landing is
+		 * simply over before it registers at this engine's framerate, so matching it was abandoned as the
+		 * goal. Anything here above 2.75 is a preference and nothing above it should be read as measured.
+		 *
+		 * Per *frame*, not per landing, because the characters do not agree on how many there are: Jazz and
+		 * Spaz land in five frames and Lori in seven. A whole-pose duration would run Lori's at five-sevenths
+		 * the speed of theirs.
+		 */
+		static constexpr float LandAnimFrameTicks = 5.5f;
+		/**
+		 * @brief How much faster the sidekick's ending animation plays, in both modes
+		 *
+		 * **A deliberate departure from the measurement, asked for after seeing it.** The original holds its
+		 * end pose for 12 ticks on `sp_spaz_side_rel` where ours runs 10, so by the trace the length was
+		 * already right and this takes it *further* from the original --- it is here because the pose reads as
+		 * slow in play and ending it sooner was preferred to matching the number.
+		 *
+		 * Applied in code rather than in the shared `SidekickC` metadata entry (`FrameRate: 30`) so that the
+		 * rate stays visible next to the reason for it, and so the measured value it departs from is recorded
+		 * somewhere. What made the ending look wrong in the first place was separate and *is* measured: nothing
+		 * could interrupt it, so it played over a jump. That is fixed in Player::BeginStandardJump() rather
+		 * than by making the transition cancellable, which ends it after a single frame.
+		 */
+		static constexpr float SidekickEndSpeedUp = 2.0f;
+		/**
+		 * @brief Extra launch speed a jump out of a run-in-place gets, worth about a tile of height
+		 *
+		 * Reported from play: *"a run-in-place running jump jumps you 1 tile higher than a regular running
+		 * jump"*. This engine gave the same height, and near enough exactly so --- the carry runs at 17.31 and
+		 * the dash cap is 18.67, so the speed term of the launch differs by a tenth of a pixel a tick.
+		 *
+		 * **Fitted here, not measured against the original**, for the same reason as
+		 * @ref LegacyRevUpButtstompCostFraction: the wind-up cannot be driven from a script. `rt_jump` rises
+		 * 177.4 px without it, and the value is chosen to put that 32 px higher; the rise is checked against
+		 * that target rather than against a trace.
+		 */
+		static constexpr float LegacyRevUpJumpBoost = 3.70f;
 
 		/** @brief Non-Reforged jump launch speed from a standstill (original 10 px/tick) */
 		static constexpr float LegacyJumpSpeed = 10.0f * LegacyFrameRateScale;
@@ -727,6 +798,20 @@ namespace Jazz2::Actors
 		static constexpr float LegacyFlyFallAccel = 0.0625f * LegacyFrameRateScaleSqr;
 		/** @brief Terminal speed of the flight's unpowered descent (original 12 px/tick) */
 		static constexpr float LegacyFlyTerminalSpeed = 12.0f * LegacyFrameRateScale;
+		/**
+		 * @brief How long a ride on the level's lizard copter lasts outside Reforged (original 279 ticks)
+		 *
+		 * Measured on the `cp_mod_*` set, which catches six or seven separate copters per scenario: every
+		 * ride that begins on a freshly spawned one lasts **279 ticks**, in all eight scenarios and whatever
+		 * is held during it, so it is a plain timer and not something the flying affects. That is a hair
+		 * under four seconds at the original's 70.021 Hz. Reforged keeps its three, which is where this
+		 * engine had both.
+		 *
+		 * The rest of the ride --- the two accelerations, the descent under Down, the horizontal --- needed
+		 * no constants of its own: it is @ref LegacyFlyRiseAccel and the rest of the flying carrot's model,
+		 * which the lizard copter turned out to share exactly. See Player::HandleWaterAndModifierMovement().
+		 */
+		static constexpr float LegacyLizardCopterDuration = 279.0f / LegacyFrameRateScale;
 		/**
 		 * @brief How long the flight lasts, which is for as long as the player keeps it
 		 *
@@ -1364,6 +1449,16 @@ namespace Jazz2::Actors
 		 * out: nothing has measured what Down does to one.
 		 */
 		bool _springCarry;
+		/**
+		 * @brief Whether the carry @ref _keepRunningTime is counting down came out of a run-in-place launch
+		 *
+		 * The third source of that timer, and it behaves like neither of the other two. Reported from play:
+		 * the crouch is refused for the whole of a run-in-place run --- where a pole's carry allows it and a
+		 * spring's refuses it, so this cannot be folded into either flag --- and the facing is *not* taken
+		 * over by the direction of travel, so the player can turn round and shoot backwards while still being
+		 * carried forwards.
+		 */
+		bool _revUpCarry;
 		/** @brief Ticks the non-Reforged dash state still has left after Run was let go (see @ref LegacyDashGraceTicks) */
 		float _dashGraceLeft;
 		/** @brief Pixels of travel a non-Reforged sidekick still has; counting distance rather than time makes it exact whatever the frame rate (see @ref CheckEndOfSpecialMoves()) */
@@ -1594,6 +1689,19 @@ namespace Jazz2::Actors
 		// exactly - the launch never exceeds what a dash reaches)
 		static constexpr float RevUpMinLaunchSpeed = 8.1667f;
 		static constexpr float RevUpMaxLaunchSpeed = 18.6667f;
+		/**
+		 * @brief Share of a full run-in-place launch each buttstomp out of the run costs
+		 *
+		 * The stomp keeps the run's horizontal speed instead of killing it, and a quarter of the launch per
+		 * stomp is what makes the fourth one stop the player --- which is how it was reported: *"it usually
+		 * takes about 4 buttstomps from a full stop"*.
+		 *
+		 * **Derived from that count, not measured.** The original's wind-up reads the raw Run key and produces
+		 * nothing at any scripted cadence, so there is no paired trace of a stomp out of one to fit against ---
+		 * see the note on `rt_*` in `Tests/README.md`. If this is ever recorded by hand in FreeRun, the decay
+		 * is the thing to check first.
+		 */
+		static constexpr float LegacyRevUpButtstompCostFraction = 0.25f;
 		/**
 		 * @brief How long the launch speed is held before it drops to the walk cap (original ~320 ticks)
 		 *
@@ -1840,6 +1948,10 @@ namespace Jazz2::Actors
 		bool IsSlidingToHalt();
 		void UpdateHookIdleAnimation(float timeMult, AnimState newState);
 		void IssueHookIdleFlavor();
+		// Whether whatever transition is playing has to be taken off the screen for a shot to be seen. The
+		// four *ShootTo* returns are the point of it: each is issued **non-cancellable** when a shot ends, so
+		// firing again before one finishes leaves the *end* animation drawn over the new shot.
+		bool ShouldCancelTransitionOnFire() const;
 		void EnterStopPhase(std::int32_t phase);
 		void ParkStopPose();
 		void OnStopPoseFinished();

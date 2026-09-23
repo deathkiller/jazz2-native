@@ -68,18 +68,33 @@ $resolved = Resolve-TracePath $Path
 # How many run boundaries were passed; anything after the first is ignored (see below)
 $extraRuns = 0
 
+# The header is taken from **the capture itself**, because both probes log their own. It used to be
+# hardcoded here, one literal per side, and that is a trap rather than a shortcut: a column added to a probe
+# leaves this writing the old names over the new data, and every name after the insertion point then refers
+# to the wrong column. It happened - `up`, `fire` and `mod` went into the engine's row and `anim` moved from
+# index 22 to 25, so a whole sweep extracted with `anim` pointing at `camy`. Nothing failed. The comparison
+# read a column that changes every row, found no pose lasting four ticks, and reported 390 of 424 scenarios
+# as having a different animation structure - a number that looks like a finding.
+#
+# The literals below are only a fallback for a capture too old to carry one, and are the two sets as they
+# stood before `up`/`fire`/`mod` were added.
+$headerFallbackOriginal = 'scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame'
+$headerFallbackEngine = 'scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp'
+$header = $null
+
 if ([System.IO.Path]::GetExtension($resolved) -eq '.asdat') {
-	$header = 'scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame'
 	# Read as raw bytes and keep whatever looks like one of our rows - the jjSTREAM framing around them is
 	# binary and matches nothing, and the header the script writes into the stream fails the \d+ on tick
 	$text = Read-TraceText $resolved
+	$headerMatch = [regex]::Match($text, '(?m)^scenario,tick,[^\r\n]+')
+	if ($headerMatch.Success) { $header = $headerMatch.Value.Trim() }
 	foreach ($m in [regex]::Matches($text, '(?m)^[a-z][a-z0-9_]*,\d+,[^\r\n]+')) {
 		$rows.Add($m.Value)
 	}
+	if (-not $header) { $header = $headerFallbackOriginal }
 } else {
-	$header = 'scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp'
 	# One row per `[probe]` line. The column header and the "finished" marker the probe also logs are
-	# dropped, so the header below is the only one in the output.
+	# dropped from the rows, the header having been kept aside as the output's own.
 	#
 	# Only the FIRST run in the log is kept. A log can hold more than one: the game does not exit when the
 	# probe is done, and if it is left running, anything that reloads the level builds a fresh probe that
@@ -91,8 +106,9 @@ if ([System.IO.Path]::GetExtension($resolved) -eq '.asdat') {
 		if ($i -lt 0) { continue }
 		$row = $line.Substring($i + 8).Trim()
 		if ($row.StartsWith('scenario,')) {
-			# The header marks the start of a run, so a second one means the log continues past this run
-			if ($rows.Count -gt 0) { $extraRuns++ }
+			# The header marks the start of a run, so a second one means the log continues past this run.
+			# The first one is this capture's own column set - see the note above the fallbacks.
+			if ($rows.Count -gt 0) { $extraRuns++ } elseif (-not $header) { $header = $row }
 			continue
 		}
 		if ($row -eq 'finished') { $extraRuns++; continue }
@@ -104,6 +120,17 @@ if ([System.IO.Path]::GetExtension($resolved) -eq '.asdat') {
 		if ($row -notmatch '^[a-z][a-z0-9_]*,\d+,') { continue }
 		$rows.Add($row)
 	}
+	if (-not $header) { $header = $headerFallbackEngine }
+}
+
+# A capture whose rows do not have as many fields as its header names is the failure this whole arrangement
+# exists to stop, so say so rather than writing it out. Checked against the widest row, because a trailing
+# empty field can be lost in the log.
+$headerCount = ($header -split ',').Count
+$widest = 0
+foreach ($row in $rows) { $n = ($row -split ',').Count; if ($n -gt $widest) { $widest = $n } }
+if ($widest -ne $headerCount) {
+	throw "Header names $headerCount columns but the widest row has $widest. The capture and the header disagree, so every column after the first difference would be read under the wrong name."
 }
 
 if ($rows.Count -eq 0) {

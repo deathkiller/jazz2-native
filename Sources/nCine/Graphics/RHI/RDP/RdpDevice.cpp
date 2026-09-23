@@ -746,14 +746,11 @@ namespace nCine::RHI::RDP
 				// Tells the blitter to overlap its chunks by a texel, which is what keeps a bilinear tap
 				// at a chunk seam from sampling outside the chunk
 				parms.filtering = (state.Filter == FILTER_BILINEAR);
-				// The blitter loads its chunks over TMEM the previous primitive may still read, and relies
-				// on autosync between its own chunks - both classes are off for the session (see the TMEM
-				// note), so it gets them back for the duration and the explicit syncs up front
+				// The blitter loads its chunks over TMEM the previous primitive may still read; autosync
+				// covers its own chunks, and these two cover what came before it
 				rdpq_sync_load();
 				rdpq_sync_tile();
-				rdpq_config_enable(RDPQ_CFG_AUTOSYNCLOAD | RDPQ_CFG_AUTOSYNCTILE);
 				rdpq_tex_blit(state.Texture, x0, y0, &parms);
-				rdpq_config_disable(RDPQ_CFG_AUTOSYNCLOAD | RDPQ_CFG_AUTOSYNCTILE);
 
 				// The blitter left its own last chunk in the texel half of TMEM, and programmed TILE0
 				tmemWindow.Valid = false;
@@ -896,9 +893,7 @@ namespace nCine::RHI::RDP
 
 			rdpq_sync_load();
 			rdpq_sync_tile();
-			rdpq_config_enable(RDPQ_CFG_AUTOSYNCLOAD | RDPQ_CFG_AUTOSYNCTILE);
 			rdpq_tex_blit(state.Texture, centerX, centerY, &parms);
-			rdpq_config_disable(RDPQ_CFG_AUTOSYNCLOAD | RDPQ_CFG_AUTOSYNCTILE);
 
 			// Same aftermath as the axis-aligned blit above
 			tmemWindow.Valid = false;
@@ -1687,9 +1682,17 @@ namespace nCine::RHI::RDP
 		// command layer on top of it. No Z buffer is ever attached - the game draws 2D in painter's order,
 		// so there is nothing for a depth test to arbitrate, and its 150 KB of RDRAM stay available.
 		rdpq_init();
-		// SYNC_LOAD / SYNC_TILE are issued by hand around the double-buffered TMEM slots (see the TMEM
-		// note above UploadWindow); the pipe syncs stay automatic
-		rdpq_config_disable(RDPQ_CFG_AUTOSYNCLOAD | RDPQ_CFG_AUTOSYNCTILE);
+		// SYNC_LOAD / SYNC_TILE are left AUTOMATIC. They used to be hand-issued around the double-buffered
+		// TMEM slots, on the reasoning that alternating slots gives the RDP a primitive of slack before a
+		// slot is rewritten (see the TMEM note above UploadWindow). libdragon's own validator disagrees, and
+		// it is right: on one boot to the main menu it counted 277,386 "tile N might be busy, SYNC_TILE is
+		// missing" and 89,684 "writing to TMEM while busy, SYNC_LOAD missing". One primitive of slack is not
+		// a guarantee - the RDP can still be reading the slot being overwritten - and the result is the hang
+		// this console showed after the intro, with libdragon's handler reporting a triggered RDP hardware
+		// bug and DP_STATUS 0x170 (tmem, pipe and dma busy). A race only bites when the timing lines up,
+		// which is why it survived earlier builds. Measured A/B in a level, autosync on vs off: 27.57 vs
+		// 27.29 ms/frame, so the syncs cost ~0.28 ms (~1%), all of it in draw. If that ever needs winning
+		// back, the answer is fewer uploads, not fewer syncs.
 		for (std::int32_t i = 0; i < 2; i++) {
 			triFmtTex[i] = TRIFMT_TEX;
 			triFmtTex[i].tex_tile = rdpq_tile_t(i);
@@ -2600,26 +2603,22 @@ namespace nCine::RHI::RDP
 					continue;
 				}
 
-				// Integer texel box of the window (floor of the lower, ceil of the upper coordinate).
-				//
-				// The upper edge is rounded up with a tolerance rather than exactly, because a tile's right
-				// edge lands on a whole texel only in exact arithmetic: the coordinate arrives as
-				// `texBias + texScale` in floats, and an ulp of overshoot past 32.0 used to widen the window
-				// to 33 texels. That extra column is the first column of the next tile in the atlas, and with
-				// no padding between tiles on this console (TileSet::TilePadding is 0 here) a sample at the
-				// tile's right edge could read it - one column of a neighbouring tile bleeding in, on some
-				// tiles and not others depending on which way their coordinates happened to round. The RDP
-				// addresses texels in 1/32 steps, so anything below that cannot name a further texel anyway
-				// and is rounding noise by definition.
-				constexpr float TexelEpsilon = 1.0f / 64.0f;
+				// Integer texel box of the window: floor of the lower coordinate, ceil of the upper. The ceil is
+				// exact and must stay that way - the window has to cover every texel the rectangle below can
+				// sample, because that rectangle is drawn over the full u0..u1 range while TMEM holds only
+				// this box. Rounding the upper edge up only past a tolerance (tried, to stop a tile whose
+				// right edge overshoots 32.0 by an ulp from pulling in the neighbouring tile's first column)
+				// makes the window one texel short on almost every tile, and the RDP then samples outside what
+				// was loaded and wedges with TMEM, pipe and DMA busy - a hard hang on hardware, which the
+				// emulator did not show.
 				const float minU = std::min(u0, u1), maxU = std::max(u0, u1);
 				const float minV = std::min(v0, v1), maxV = std::max(v0, v1);
 				std::int32_t winS0 = std::int32_t(minU), winS1 = std::int32_t(maxU);
 				std::int32_t winT0 = std::int32_t(minV), winT1 = std::int32_t(maxV);
 				if (float(winS0) > minU) { winS0--; }
 				if (float(winT0) > minV) { winT0--; }
-				if (float(winS1) + TexelEpsilon < maxU) { winS1++; }
-				if (float(winT1) + TexelEpsilon < maxV) { winT1++; }
+				if (float(winS1) < maxU) { winS1++; }
+				if (float(winT1) < maxV) { winT1++; }
 				winS0 = std::max<std::int32_t>(winS0, 0); winT0 = std::max<std::int32_t>(winT0, 0);
 				winS1 = std::min<std::int32_t>(winS1, surfW); winT1 = std::min<std::int32_t>(winT1, surfH);
 				if (winS1 <= winS0 || winT1 <= winT0) {

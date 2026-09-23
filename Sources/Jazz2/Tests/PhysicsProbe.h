@@ -66,7 +66,7 @@ namespace Jazz2::Tests
 		// sweep of the test level stops after 394 of these. Anything added has to go *before* it - and that
 		// renumbering has to reach the case in ApplyInput(), the window in GetScenarioTicks() and the
 		// placement in SetupProps(), all three of which name `dm_chain` by index.
-		static constexpr std::int32_t ScenarioCount = 432;
+		static constexpr std::int32_t ScenarioCount = 447;
 		// Raise this to re-measure only the later scenarios while iterating, which turns a twenty-minute
 		// sweep into half a minute. LEAVE IT AT 0 WHEN COMMITTING: a raised value silently skips everything
 		// before it, which has been mistaken for scenarios that stopped working more than once.
@@ -152,6 +152,31 @@ namespace Jazz2::Tests
 		static constexpr std::int32_t EventScanMaxTileX = 400;
 		static constexpr std::int32_t EventScanMaxTileY = 120;
 
+		// The `cp_mod_*` set hops on the spot until it is genuinely on the copter and times everything from
+		// there, so these are offsets from the pickup rather than from the start of the scenario. A schedule
+		// cannot work here: the generator's period is one of the things the two games disagree about, so any
+		// fixed tick either catches it in one and misses it in the other, or measures a player falling past
+		// where the copter used to be. Held Jump for @ref CopterHopHold out of every @ref CopterHopPeriod,
+		// which is a full arc and a landing, so the player is back at the powerup's height every cycle.
+		static constexpr std::int32_t CopterHopPeriod = 36;
+		static constexpr std::int32_t CopterHopHold = 8;
+		// Where the level's copter generator sits, and how long after a ride ends the player is put back
+		// under it. Without the return the directional scenarios got exactly **one** ride each: they fly
+		// away, come down somewhere else and can never reach the generator again, so the repeats that make
+		// this set work only ever happened for the three that stay put. The delay is there so the trace
+		// still shows what the release itself does - the fall out of a copter is not measured by anything
+		// else - before the player is moved.
+		static constexpr std::int32_t CopterSpawnTileX = 236;
+		static constexpr std::int32_t CopterSpawnTileY = 26;
+		static constexpr std::int32_t CopterReturnDelay = 30;
+		// How long `cp_mod_left` alone flies right before turning back, because it is the only one the wall
+		// two tiles to the left is in the way of. The others test from the moment they are on, and they have
+		// to: the ride is only about ninety ticks long, so an approach phase that clears the wall for
+		// everything spends the whole of it and the trace is of a player falling afterwards. Nothing else
+		// bounds the test - it runs for exactly as long as each game's copter lasts, which is itself one of
+		// the things being compared. See `cp_mod_get`, which rides it doing nothing and measures just that.
+		static constexpr std::int32_t CopterClearTicks = 30;
+
 		LevelHandler* _levelHandler;
 		std::int32_t _state;
 		std::int32_t _scenario;
@@ -161,6 +186,15 @@ namespace Jazz2::Tests
 		float _lastY;
 		float _startFrames;
 		std::int32_t _still;
+		// The tick the copter was first got hold of in this scenario, or -1 while it has not been, and
+		// whether it is still being hung from right now. Both are set in OnUpdate() rather than in
+		// ApplyInput(), which also runs purely to ask a scenario its name and would otherwise latch against
+		// whatever tick that enquiry fell on.
+		std::int32_t _copterAttachTick;
+		bool _onCopter;
+		// The tick the last ride ended, or -1 once the player has been put back under the generator for the
+		// next one. See CopterReturnDelay.
+		std::int32_t _copterEndTick;
 		// What the current scenario put in the world, taken back out again before the next one starts. A pole
 		// chain writes several tile events, so it has to be a list rather than a single position.
 		std::shared_ptr<Actors::ActorBase> _spawned;

@@ -6,6 +6,7 @@
 #include "../Events/EventMap.h"
 #include "../Events/EventSpawner.h"
 // The probe puts these in front of the player
+#include "../Actors/Environment/Copter.h"
 #include "../Actors/Environment/Spring.h"
 #include "../Actors/Solid/PushableBox.h"
 #include "../Actors/Solid/PowerUpWeaponMonitor.h"
@@ -26,7 +27,7 @@ namespace Jazz2::Tests
 {
 	PhysicsProbe::PhysicsProbe(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _state(StatePrime), _scenario(FirstScenario), _tick(0.0f), _waited(0.0f),
-			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0),
+			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0), _copterAttachTick(-1), _onCopter(false), _copterEndTick(-1),
 			_pushable(0.0f, 0.0f), _turtle(0.0f, 0.0f)
 	{
 	}
@@ -109,8 +110,20 @@ namespace Jazz2::Tests
 		// `dm_chain`, 15 seconds. This tracks the scenario's INDEX, so it moves whenever anything is appended
 		// ahead of it - it was 334 until the slope, run-tap and vine families went in, at which point it was
 		// quietly giving `sl_up_jhold` a long window and `dm_chain` the 800-tick default instead.
-		if (s == 431) {
+		if (s == 446) {
 			return 1100.0f;
+		}
+		// The copter set. Its generator cycles, and the player has to hop up to the thing's height to catch
+		// one - they land two and a half tiles below it - so most of this window is the approach, and how
+		// much of it is depends on where in the generator's cycle the scenario started. The original has
+		// taken over 400 ticks to get hold of one. The ride itself is short by comparison.
+		//
+		// The length buys **repeats**, not a longer ride: the generator ignores whatever lifetime its event
+		// is given, so the only way to get a direction tested properly is to catch several copters in one
+		// scenario and read the trace as episodes. A catch-ride-lose cycle runs 250-400 ticks, so this is
+		// about five of them. Kept identical to ScenarioTicksFor() in the original game's probe.
+		if (s >= 438 && s <= 445) {
+			return 2000.0f;
 		}
 		// The pinball chamber left to itself, the same way `sp_chain` is
 		if (s == 299) {
@@ -1345,11 +1358,97 @@ namespace Jazz2::Tests
 			// through both - it is what tells a cooldown that is too long apart from a grab that is refused.
 			case 429: name = "ob_vine_down"_s; jump = (t >= 5 && t < 45); down = (t >= 100 && t < 104); break;
 			case 430: name = "ob_vine_down_hold"_s; jump = (t >= 5 && t < 45); down = (t >= 100); break;
+			// The run-in-place batch. All four wind up the same way - `rt_b16`'s fastest tapping, stopped at
+			// tick 100 so the launch lands there with most of the window still to run - and then differ only
+			// in what is done with the run that follows.
+			//
+			// `_air` jumps *during* the wind-up, which is the reported case that some obstacle levels are
+			// built on: the charge should survive the airtime and launch on landing rather than being thrown
+			// away the moment the player leaves the ground.
+			case 431: name = "rt_air"_s; run = (t >= 5 && t < 100 && ((t - 5) % 9) < 4); jump = (t >= 50 && t < 55); break;
+			// A jump out of the run, which is reported to clear a tile more than an ordinary running jump
+			case 432: name = "rt_jump"_s; run = (t >= 5 && t < 100 && ((t - 5) % 9) < 4); jump = (t >= 135 && t < 155); break;
+			// Buttstomps out of the run, which are reported to keep its speed - about four of them from a full
+			// stop. One jump-then-stomp cycle every 45 ticks, so each lands before the next begins.
+			case 433: name = "rt_butt"_s; run = (t >= 5 && t < 100 && ((t - 5) % 9) < 4);
+				jump = (t >= 135 && ((t - 135) % 45) < 5);
+				down = (t >= 135 && ((t - 135) % 45) >= 10 && ((t - 135) % 45) < 40); break;
+			// The direction *opposite* the launch held through the run. Three reported things at once: whether
+			// the facing follows the key or the travel, which pose is shown, and whether the camera leads
+			// backwards - `camx` is what answers the last one.
+			case 434: name = "rt_back"_s; run = (t >= 5 && t < 100 && ((t - 5) % 9) < 4); left = (t >= 135); break;
+			// Spaz firing inside his own kick. `sp_lori_side_fire` measures hers and the original spends a
+			// round, which is why this engine allows it at all; his kick is 81 ticks against her 35 and is
+			// reported to refuse. Fire goes in at 60, well inside the drive either way.
+			case 435: name = "sp_spaz_side_fire"_s; right = (t < 2); down = (t >= 20 && t < 44); jump = (t >= 40 && t < 44); fire = (t >= 60 && t < 70); break;
+			// A jump taken as the kick ends, which is reported to play the kick's *end* animation over the
+			// jump instead of the jump's own
+			case 436: name = "sp_spaz_side_jump"_s; right = (t < 2); down = (t >= 20 && t < 44); jump = (t >= 40 && t < 44) || (t >= 112 && t < 117); break;
+			// A plain hop, read for the landing animation alone - reported as slow and chopped here
+			case 437: name = "an_land"_s; jump = (t >= 20 && t < 30); break;
+			// The copter powerup the level now carries at (236,26), and this set is **state-driven**: it hops
+			// until the modifier genuinely reads as a copter and times everything after that from the tick it
+			// did. The first version scheduled it - hop until 300, test from 440 - and that cannot work,
+			// because the generator's period is itself one of the things the two games disagree about. Any
+			// fixed tick therefore catches the powerup in one game and misses it in the other, and what a
+			// missed one measures is a player falling past where it used to be, which reads as a copter that
+			// flies nothing like the original's rather than as no copter at all.
+			//
+			// Read `mod` to see which it was: a row with the copter modifier set is on the powerup, and
+			// `_copterAttachTick` is the first such tick. A scenario that never picks one up presses Jump for
+			// its whole length and holds nothing else, which is unmistakable in a trace.
+			case 438: case 439: case 440: case 441: case 442: case 443: case 444: case 445: {
+				switch (scenario) {
+					case 438: name = "cp_mod_get"_s; break;
+					case 439: name = "cp_mod_right"_s; break;
+					case 440: name = "cp_mod_left"_s; break;
+					case 441: name = "cp_mod_up"_s; break;
+					case 442: name = "cp_mod_down"_s; break;
+					case 443: name = "cp_mod_diag"_s; break;
+					case 444: name = "cp_mod_run"_s; break;
+					// Shooting, which is the reported one: the copter's shoot poses look wrong here. Fired in
+					// bursts so the return to the plain copter pose can be read between them as well as the shot.
+					default: name = "cp_mod_fire"_s; break;
+				}
+				if (_copterAttachTick < 0) {
+					// Not on one - hop, and wait for the generator to produce the next. This is also where a
+					// finished ride comes back to, so a scenario tests as many copters as its window holds.
+					// Nothing else is pressed, so every scenario in the set approaches identically and they
+					// differ only in what they do once they are on one. **Jump stops the moment it is on**,
+					// because pressing it there lets go again, which is what the first version of this did
+					// for the whole of every scenario.
+					jump = ((t % CopterHopPeriod) < CopterHopHold);
+					break;
+				}
+				// Ticks into *this* ride, not into the scenario - see the re-arm in OnUpdate()
+				std::int32_t u = t - _copterAttachTick;
+				// `cp_mod_get` holds nothing at all: how long the ride lasts, and where it drifts unattended,
+				// is the whole of what it asks.
+				if (scenario == 438) {
+					break;
+				}
+				if (scenario == 440 && u < CopterClearTicks) {
+					// Only the leftward one has the wall in its way, and the ride is too short to spend an
+					// approach phase on it in the others
+					right = true;
+					break;
+				}
+				switch (scenario) {
+					case 439: right = true; break;
+					case 440: left = true; break;
+					case 441: up = true; break;
+					case 442: down = true; break;
+					case 443: right = true; up = true; break;
+					case 444: right = true; run = true; break;
+					case 445: right = true; fire = ((u % 60) < 25); break;
+				}
+				break;
+			}
 			// Guarded on the level, and the guard is what keeps it out of a normal sweep: on `_pt` this falls
-			// through to `return false`, the probe reports finished after 430, and the committed trace is
-			// unaffected. To run it, load that level and raise `FirstScenario` to 431 - see `Tests/README.md`.
+			// through to `return false`, the probe reports finished after 445, and the committed trace is
+			// unaffected. To run it, load that level and raise `FirstScenario` to 446 - see `Tests/README.md`.
 			// It has to stay **last**: a sweep of the test level ends here, so anything after it never runs.
-			case 431:
+			case 446:
 				if (!_levelHandler->GetLevelName().contains("diam3"_s)) {
 					return false;
 				}
@@ -1498,6 +1597,25 @@ namespace Jazz2::Tests
 				}
 			}
 		} else
+		if (scenario >= 438 && scenario <= 445) {
+			// The copter set, in the same two columns the original's probe uses for it: the on-copter
+			// decision itself, and the nearest copter's own y as the evidence for it. `mod` says the same
+			// thing on this side, but the original has no such column - nothing on its player says whether
+			// one is being hung from at all - so this is the pair that can actually be compared.
+			Actors::Player::Modifier m = player->GetModifier();
+			objX = (m == Actors::Player::Modifier::Copter || m == Actors::Player::Modifier::LizardCopter ? 1.0f : 0.0f);
+			objY = -1.0f;
+			float bestDistance = std::numeric_limits<float>::max();
+			for (auto& actor : _levelHandler->_actors) {
+				if (auto* copter = runtime_cast<Actors::Environment::Copter>(actor.get())) {
+					float distance = (copter->GetPos() - player->_pos).SqrLength();
+					if (distance < bestDistance) {
+						bestDistance = distance;
+						objY = copter->GetPos().Y;
+					}
+				}
+			}
+		} else
 		if (((scenario >= 94 && scenario <= 97) || (scenario >= 103 && scenario <= 107) || (scenario >= 129 && scenario <= 139) || scenario >= 142) &&
 			!(scenario >= 383 && scenario <= 386)) {
 			// Whichever weapon the scenario selected, so a trace that shows no knockback can be told apart
@@ -1554,10 +1672,16 @@ namespace Jazz2::Tests
 		// stop. Without this column a vine trace cannot distinguish hanging from having just let go.
 		std::int32_t suspendType = (std::int32_t)player->_suspendType;
 
-		LOGI("[probe] {},{},{:.3f},{:.3f},{:.4f},{:.4f},{},{},{},{},{},{},{:.1f},{:.1f},{:.1f},{},{},{},{},{},{:.3f},{:.3f},{},{},{},{}",
+		// `up` and `fire` are logged as well as driven. Without them a free-run recording cannot say what was
+		// being *pressed*, which is exactly what a copter trace needs - it flies on the direction keys and its
+		// shooting poses are the thing under suspicion, and neither is recoverable from the position.
+		// The active modifier, because an airboard, a copter and a lizard copter all fly and none of them can
+		// be told apart from the position - and the pose each one is supposed to show is picked from exactly
+		// this. A copter trace reading `anim` = Jump|Fall says the pose is wrong; only this says why.
+		LOGI("[probe] {},{},{:.3f},{:.3f},{:.4f},{:.4f},{},{},{},{},{},{},{},{},{},{:.1f},{:.1f},{:.1f},{},{},{},{},{},{:.3f},{:.3f},{},{},{},{}",
 			name, t, player->_pos.X, player->_pos.Y, player->_speed.X, player->_speed.Y,
-			right ? 1 : 0, left ? 1 : 0, run ? 1 : 0, jump ? 1 : 0, down ? 1 : 0,
-			(std::int32_t)player->GetSpecialMove(), ms, objX, objY,
+			right ? 1 : 0, left ? 1 : 0, run ? 1 : 0, jump ? 1 : 0, down ? 1 : 0, up ? 1 : 0, fire ? 1 : 0,
+			(std::int32_t)player->GetSpecialMove(), (std::int32_t)player->GetModifier(), ms, objX, objY,
 			player->_controllable ? 1 : 0, player->_currentTransition != nullptr ? 1 : 0,
 			(player->_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch ? 1 : 0,
 			player->_jumpReleased ? 1 : 0, player->_isSpring ? 1 : 0,
@@ -1573,7 +1697,14 @@ namespace Jazz2::Tests
 		PlayerType wanted = PlayerType::Jazz;
 		if (s == 37 || s == 38 || s == 39 || s == 42 || s == 60 || s == 61 || s == 62 || s == 63 || s == 64 || s == 80 || s == 81 || (s >= 82 && s <= 87) ||
 			(s >= 149 && s <= 153) || s == 156 || s == 157 || (s >= 158 && s <= 161) || (s >= 219 && s <= 255) ||
-			s == 311 || s == 350 || s == 352 || s == 353 || s == 359 || s == 360 || s == 361 || s == 383 || s == 388 || s == 392 || s == 393 || s == 401 || s == 402 || s == 403 || s == 405 || s == 412 || s == 428) {
+			s == 311 || s == 350 || s == 352 || s == 353 || s == 359 || s == 360 || s == 361 || s == 383 || s == 388 || s == 392 || s == 393 || s == 401 || s == 402 || s == 403 || s == 405 || s == 412 || s == 428 || s == 435 || s == 436 ||
+			// The copter set is on Spaz for a different reason: **he has no copter ears of his own**. What is
+			// being measured is the copter the level carries - the one a lizard drops, which the player hangs
+			// from - and the hop that catches it is a string of jump presses made while falling, which is
+			// exactly how Jazz's own ears engage. On him the approach would therefore fly under its own power
+			// and the trace would be of that rather than of the copter. Spaz answers the same tap with a
+			// double jump and nothing else. Both probes use him, so the comparison is like for like.
+			(s >= 438 && s <= 445)) {
 			// The `cl_dj*` ceiling and `sp_dj_*` window scenarios need the double jump, so they need Spaz - and
 			// so do the three `an_*` ones about his sidekick and his double jump's pose
 			wanted = PlayerType::Spaz;
@@ -1637,6 +1768,10 @@ namespace Jazz2::Tests
 			// Two tiles under the lower of the two stacked vines at (22,44)-(23,44), the same approach every
 			// vine scenario that has ever grabbed uses - met from directly below rather than jumped into
 			player->MoveInstantly(Vector2f(22 * 32 + 16, 46 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
+		} else if (s >= 438 && s <= 445) {
+			// On the copter generator at (236,26). Placed at the reset like every other grounded start, so the
+			// settle runs first and the generator has a moment to produce one before the scenario begins.
+			player->MoveInstantly(Vector2f(236 * 32 + 16, 26 * 32), Actors::MoveType::Absolute | Actors::MoveType::Force);
 		} else if (s == 429 || s == 430) {
 			// Two tiles under the lower of the closely stacked pair at (28,45)-(29,45), so the climb starts
 			// the same way - the upper one is only two tiles above it rather than four
@@ -2108,7 +2243,7 @@ namespace Jazz2::Tests
 			// scenario's INDEX and has to move with it whenever anything is appended ahead - it was left at 366
 			// when the `ow_*` family went in, which teleported `ow_jump` into Diamondus 3's coordinates and
 			// dropped it out of the test level.
-			case 431:
+			case 446:
 				// Diamondus 3's own chain: the top of the one-tile shaft at tile (1,36), which drops onto the
 				// horizontal blue spring at (1,45)
 				player->MoveInstantly(Vector2f(1 * 32 + 16, 36 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);
@@ -2311,7 +2446,7 @@ namespace Jazz2::Tests
 						LOGI("[probe-info] PARTIAL RUN - first={} last={} filter=\"{}\" - NOT a full sweep",
 							FirstScenario, LastScenario, ScenarioFilter);
 					}
-					LOGI("[probe] scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp");
+					LOGI("[probe] scenario,tick,x,y,xs,ys,right,left,run,jump,down,up,fire,sm,mod,ms,objx,objy,ctrl,trans,crouch,jrel,spr,camx,camy,anim,frame,tranim,susp");
 					_startFrames = _levelHandler->_elapsedFrames;
 					// Recording mode goes straight to RUN and stays there: no reset, no settle, no scenario
 					// advance, so the player is never moved and the level is left exactly as it is
@@ -2381,6 +2516,9 @@ namespace Jazz2::Tests
 				_tick = 0.0f;
 				_waited = 0.0f;
 				_still = 0;
+				_copterAttachTick = -1;
+				_onCopter = false;
+				_copterEndTick = -1;
 				_state = StateSettle;
 				return;
 			}
@@ -2392,6 +2530,46 @@ namespace Jazz2::Tests
 				}
 				return;
 			}
+		}
+
+		// Latched here, before the input for this tick is written, because ApplyInput() also runs purely to ask
+		// a scenario its name - with `nameOut` - and a latch inside it would fire on whatever tick that
+		// enquiry happened to fall on. The `cp_mod_*` set reads this and times everything from it.
+		//
+		// **LizardCopter**, not Copter, is what the level's `COPTER` event gives: JJ2's 0xE2 is the copter a
+		// lizard carries, which the player *hangs* from, and not the copter ears. Matching only
+		// Modifier::Copter latched nothing, so the hop that catches it kept running and knocked the player
+		// straight back off - which is precisely the reported "you jump off immediately". Both are accepted
+		// because either counts as being on one for what these scenarios ask.
+		//
+		// **Re-armed when a ride ends**, so one scenario runs as many catch-and-test cycles as its window
+		// holds rather than one. The generator ignores whatever lifetime the event is given, so a ride
+		// cannot be made long enough to test a direction properly in one go - the answer is more of them.
+		// Each cycle is independent: hop until a fresh copter is caught, test from that tick, and go back
+		// to hopping the moment it is lost. `u` is therefore measured within a cycle, never from the
+		// scenario's start, and a trace is read as several episodes rather than as one.
+		Actors::Player::Modifier modifier = player->GetModifier();
+		_onCopter = (modifier == Actors::Player::Modifier::Copter || modifier == Actors::Player::Modifier::LizardCopter);
+		if (!_onCopter) {
+			if (_copterAttachTick >= 0) {
+				_copterEndTick = (std::int32_t)_tick;
+			}
+			_copterAttachTick = -1;
+		} else if (_copterAttachTick < 0) {
+			_copterAttachTick = (std::int32_t)_tick;
+			_copterEndTick = -1;
+		}
+
+		// A ride that has ended and been watched for long enough: put the player back under the generator so
+		// the next copter can be caught. Only the copter set does this, and only outside a ride.
+		if (_copterEndTick >= 0 && _scenario >= 438 && _scenario <= 445 &&
+			(std::int32_t)_tick - _copterEndTick >= CopterReturnDelay) {
+			_copterEndTick = -1;
+			player->MoveInstantly(Vector2f(CopterSpawnTileX * 32 + 16, CopterSpawnTileY * 32),
+				Actors::MoveType::Absolute | Actors::MoveType::Force);
+			player->_speed = Vector2f::Zero;
+			player->_externalForce = Vector2f::Zero;
+			player->_internalForceY = 0.0f;
 		}
 
 		if (!ApplyInput(player, _scenario, (std::int32_t)_tick)) {
