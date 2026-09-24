@@ -1560,6 +1560,10 @@ msgid ""
 "{} finished the race!\n"
 "{} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"{} a terminé la course !\n"
+"{} secondes restantes"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9916
 #, c++-format
@@ -1568,6 +1572,9 @@ msgid ""
 "\n"
 "{} finished {}."
 msgstr ""
+"\n"
+"\n"
+"{} a terminé {}."
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10180
 #, c++-format
@@ -1981,7 +1988,7 @@ msgstr "Démarrer la partie"
 #. TRANSLATORS: Menu item to select Wi-Fi or ad hoc connection (PSP only)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:44
 msgid "Connection"
-msgstr ""
+msgstr "Connexion"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:47
@@ -1993,12 +2000,12 @@ msgstr "Créer un serveur"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Ad hoc"
-msgstr ""
+msgstr "Ad hoc"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
 msgid "Wi-Fi"
-msgstr ""
+msgstr "Wi-Fi"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:418
 msgid ""
@@ -2131,22 +2138,22 @@ msgstr ""
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:52
 msgid "Reforged Gameplay"
-msgstr "Jouabilité moderne"
+msgstr "Jouabilité modernisée"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
 msgid "Reforged Camera"
-msgstr ""
+msgstr "Caméra modernisée"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
 msgid "Reforged HUD"
-msgstr "Informations à l'écran modernes"
+msgstr "Informations à l'écran modernisées"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:65
 msgid "Reforged Main Menu"
-msgstr "Menu principal moderne"
+msgstr "Menu principal modernisé"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:73
@@ -2256,12 +2263,12 @@ msgstr "Mode de rendu"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:53
 msgid "Screen Resolution"
-msgstr ""
+msgstr "Résolution d'écran"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:69
 msgid "Rendering Resolution"
-msgstr ""
+msgstr "Résolution de rendu"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:118
@@ -2291,11 +2298,11 @@ msgstr "Résolution de l'éclairage"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:227
 msgid "Particle Quality"
-msgstr ""
+msgstr "Qualité des particules"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:230
 msgid "Off"
-msgstr ""
+msgstr "Désactivé"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:231
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:250
@@ -2340,7 +2347,7 @@ msgstr "Préférer dézoomé"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:281
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:54
 msgid "Safe Area"
-msgstr ""
+msgstr "Zone de sécurité"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:283
@@ -2570,22 +2577,22 @@ msgstr "Monochrome"
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:58
 msgid "Left Margin"
-msgstr ""
+msgstr "Marge gauche"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:60
 msgid "Top Margin"
-msgstr ""
+msgstr "Marge haut"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:62
 msgid "Right Margin"
-msgstr ""
+msgstr "Marge droite"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:64
 msgid "Bottom Margin"
-msgstr ""
+msgstr "Marge bas"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:66
@@ -2596,7 +2603,7 @@ msgstr "Réinitialiser"
 #. TRANSLATORS: Value of a margin in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:92
 msgid "None"
-msgstr ""
+msgstr "Aucune"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:139
 msgid "Laps"
@@ -2630,7 +2637,7 @@ msgstr "Connexion au serveur"
 #. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:292
 msgid "Switching connection mode…"
-msgstr ""
+msgstr "Changement du mode de connexion..."
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:297
 msgid "No servers found, but still searchin'!"
@@ -2679,7 +2686,7 @@ msgstr "Musique"
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:83
 msgid "Sample Rate"
-msgstr ""
+msgstr "Fréquence d'échantillonnage"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:127
 msgid "Save"
@@ -2760,12 +2767,12 @@ msgstr "ID unique de joueur"
 #. TRANSLATORS: Spectator hint, "Fire" and "Run" are the names of the two actions
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:207
 msgid "Fire: next player, Run: free camera"
-msgstr ""
+msgstr "Bouton de tir : joueur suivant, courir : caméra libre"
 
 #. TRANSLATORS: Spectator hint, "Fire" is the name of the action
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:209
 msgid "Fire: follow a player"
-msgstr ""
+msgstr "Bouton de tir : suivre un joueur"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:224
 #, c++-format
@@ -2782,19 +2789,19 @@ msgstr[1] "En attente de {} joueurs en plus"
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:251
 #, c++-format
 msgid "Finish in {} s"
-msgstr ""
+msgstr "Fin dans {} s"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:525
 msgid "Time"
-msgstr ""
+msgstr "Temps"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:528
 msgid "Kills"
-msgstr ""
+msgstr "Éliminations"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:556
 msgid "Final standings"
-msgstr ""
+msgstr "Classement final"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
 msgid "Team"
