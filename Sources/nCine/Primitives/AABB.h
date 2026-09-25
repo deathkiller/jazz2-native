@@ -97,7 +97,7 @@ namespace nCine
 		/** @brief Axis-aligned bounding box in a two-dimensional space of floats */
 		using AABBf = AABB<float>;
 		/** @brief Axis-aligned bounding box in a two-dimensional space of 32-bit integers */
-		using AABBi = AABB<int>;
+		using AABBi = AABB<std::int32_t>;
 
 		template<class S>
 		inline Vector2<S> AABB<S>::GetCenter() const

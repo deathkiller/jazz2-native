@@ -123,7 +123,7 @@ namespace nCine
 		/** @brief Four-component vector of floats */
 		using Vector4f = Vector4<float>;
 		/** @brief Four-component vector of 32-bit integers */
-		using Vector4i = Vector4<int>;
+		using Vector4i = Vector4<std::int32_t>;
 
 		template<class T>
 		inline Vector4<T>& Vector4<T>::operator=(const Vector4<T>& other) noexcept

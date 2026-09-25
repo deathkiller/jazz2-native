@@ -106,7 +106,7 @@ namespace nCine
 		/** @brief Two-component vector of floats */
 		using Vector2f = Vector2<float>;
 		/** @brief Two-component vector of 32-bit integers */
-		using Vector2i = Vector2<int>;
+		using Vector2i = Vector2<std::int32_t>;
 
 		template<class T>
 		inline Vector2<T>& Vector2<T>::operator=(const Vector2<T>& other) noexcept

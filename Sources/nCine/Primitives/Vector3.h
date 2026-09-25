@@ -116,7 +116,7 @@ namespace nCine
 		/** @brief Three-component vector of floats */
 		using Vector3f = Vector3<float>;
 		/** @brief Three-component vector of 32-bit integers */
-		using Vector3i = Vector3<int>;
+		using Vector3i = Vector3<std::int32_t>;
 
 		template<class T>
 		inline Vector3<T>& Vector3<T>::operator=(const Vector3<T>& other) noexcept

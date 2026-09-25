@@ -131,7 +131,7 @@ namespace nCine
 		/** @brief Rectangle in a two-dimensional space of floats */
 		using Rectf = Rect<float>;
 		/** @brief Rectangle in a two-dimensional space of 32-bit integers */
-		using Recti = Rect<int>;
+		using Recti = Rect<std::int32_t>;
 
 		template<class T>
 		inline Rect<T> Rect<T>::FromCenterSize(T xx, T yy, T ww, T hh)
