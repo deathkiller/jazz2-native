@@ -10,9 +10,74 @@
 #include "GLShaderProgram.h"
 #include "GLTexture.h"
 #include "GLVertexArrayObject.h"
+#include "../../../ServiceLocator.h"
+#include "../../../Base/FrameStatistics.h"
+
+// GPU timer queries: GL_TIME_ELAPSED is core in OpenGL 3.3, and GL_EXT_disjoint_timer_query brings the same target to
+// OpenGL|ES 3.0, whose core query entry points then accept it. Left out on the ES 2.0 profile (it has no query objects
+// at all), on the web (WebGL names the extension differently and browsers coarsen the timer anyway) and under libretro,
+// where the frontend owns the context and may have a query of its own running.
+#if (defined(RHI_GL_PROFILE_CORE) || defined(RHI_GL_PROFILE_ES3)) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(WITH_LIBRETRO)
+#	define GL_DEVICE_HAS_TIMER_QUERIES
+#endif
 
 namespace nCine::RHI::GL
 {
+#if defined(GL_DEVICE_HAS_TIMER_QUERIES)
+	namespace
+	{
+		// GL_TIME_ELAPSED and GL_TIME_ELAPSED_EXT are the same value, spelled out because each profile's headers
+		// name it differently and not all of them name it at all; GL_GPU_DISJOINT_EXT exists only in the extension
+		constexpr GLenum TimeElapsedTarget = 0x88BF;
+#	if defined(RHI_GL_PROFILE_ES)
+		constexpr GLenum GpuDisjointQuery = 0x8FBB;
+#	endif
+
+		// The results come back a few frames late. With a ring of this length the oldest one is practically always
+		// ready by the time its query is needed again, and a driver that is slower than that loses a sample instead
+		// of stalling the frame.
+		constexpr std::uint32_t GpuTimerQueryCount = 4;
+		// Frames with the whole ring still unanswered after which the queries are created anew - they cannot come
+		// back at all if the context they were created in is gone
+		constexpr std::uint32_t GpuTimerMaxStalledFrames = 120;
+
+		enum class GpuTimerState : std::uint8_t
+		{
+			Unknown,
+			Unsupported,
+			Supported
+		};
+
+		GpuTimerState gpuTimerState = GpuTimerState::Unknown;
+		GLuint gpuTimerQueries[GpuTimerQueryCount] = {};
+		std::uint32_t gpuTimerFirstPending = 0;
+		std::uint32_t gpuTimerPendingCount = 0;
+		std::uint32_t gpuTimerDiscardCount = 0;
+		std::uint32_t gpuTimerStalledFrames = 0;
+		bool gpuTimerActive = false;
+
+		bool EnsureGpuTimer()
+		{
+			if (gpuTimerState == GpuTimerState::Unknown) {
+#	if defined(RHI_GL_PROFILE_ES)
+				const bool supported = theServiceLocator().GetRhiCapabilities().HasExtension(IRhiCapabilities::Extensions::ExtDisjointTimerQuery);
+#	else
+				constexpr bool supported = true;
+#	endif
+				if (supported) {
+					glGenQueries(GLsizei(GpuTimerQueryCount), gpuTimerQueries);
+				}
+				gpuTimerState = (supported ? GpuTimerState::Supported : GpuTimerState::Unsupported);
+				gpuTimerFirstPending = 0;
+				gpuTimerPendingCount = 0;
+				gpuTimerDiscardCount = 0;
+				gpuTimerStalledFrames = 0;
+			}
+			return (gpuTimerState == GpuTimerState::Supported);
+		}
+	}
+#endif
+
 	// The backend-neutral enums promise GL-compatible numeric values, so this backend can translate with a plain cast
 	static_assert(static_cast<GLenum>(PrimitiveType::Points) == GL_POINTS);
 	static_assert(static_cast<GLenum>(PrimitiveType::Lines) == GL_LINES);
@@ -309,5 +374,70 @@ namespace nCine::RHI::GL
 		GLScissorTest::Reapply();
 		GLClearColor::Reapply();
 		GLViewport::Reapply();
+	}
+
+	void GLDevice::BeginGpuTiming()
+	{
+#if defined(GL_DEVICE_HAS_TIMER_QUERIES)
+		if (!EnsureGpuTimer()) {
+			return;
+		}
+
+#	if defined(RHI_GL_PROFILE_ES)
+		// A disjoint event (the GPU changing its clock, being reset...) makes every result still in flight
+		// meaningless, and reading the flag also clears it
+		GLint disjoint = GL_FALSE;
+		glGetIntegerv(GpuDisjointQuery, &disjoint);
+		if (disjoint != GL_FALSE) {
+			gpuTimerDiscardCount = gpuTimerPendingCount;
+		}
+#	endif
+
+		// Whatever finished since the last frame, oldest first, without ever waiting for the rest
+		while (gpuTimerPendingCount > 0) {
+			const GLuint query = gpuTimerQueries[gpuTimerFirstPending];
+			GLuint available = GL_FALSE;
+			glGetQueryObjectuiv(query, GL_QUERY_RESULT_AVAILABLE, &available);
+			if (available == GL_FALSE) {
+				break;
+			}
+			// Nanoseconds, so 32 bits last for over four seconds of GPU time in a frame
+			GLuint elapsed = 0;
+			glGetQueryObjectuiv(query, GL_QUERY_RESULT, &elapsed);
+			gpuTimerFirstPending = (gpuTimerFirstPending + 1) % GpuTimerQueryCount;
+			gpuTimerPendingCount--;
+			if (gpuTimerDiscardCount > 0) {
+				gpuTimerDiscardCount--;
+			} else {
+				FrameStatistics::AddCounter("GPU", float(elapsed) * 1.0e-6f, FrameStatistics::Unit::Milliseconds);
+			}
+		}
+
+		if (gpuTimerPendingCount >= GpuTimerQueryCount) {
+			// The whole ring is still out, so this frame goes untimed rather than reusing a query in flight
+			if (++gpuTimerStalledFrames >= GpuTimerMaxStalledFrames) {
+				glDeleteQueries(GLsizei(GpuTimerQueryCount), gpuTimerQueries);
+				gpuTimerState = GpuTimerState::Unknown;
+			}
+			return;
+		}
+
+		gpuTimerStalledFrames = 0;
+		const std::uint32_t index = (gpuTimerFirstPending + gpuTimerPendingCount) % GpuTimerQueryCount;
+		glBeginQuery(TimeElapsedTarget, gpuTimerQueries[index]);
+		gpuTimerActive = true;
+#endif
+	}
+
+	void GLDevice::EndGpuTiming()
+	{
+#if defined(GL_DEVICE_HAS_TIMER_QUERIES)
+		if (!gpuTimerActive) {
+			return;
+		}
+		glEndQuery(TimeElapsedTarget);
+		gpuTimerActive = false;
+		gpuTimerPendingCount++;
+#endif
 	}
 }

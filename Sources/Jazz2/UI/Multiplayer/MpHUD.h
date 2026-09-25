@@ -30,6 +30,7 @@ namespace Jazz2::UI::Multiplayer
 		void OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player) override;
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 		void OnDrawSpectate(const Rectf& view, const Rectf& adjustedView, Actors::Player* player) override;
+		void OnAddPerformanceMetrics(PerformanceOverlay& overlay) override;
 
 		/** @brief Draws the position of the player in the current round (also serves as @ref IGameModeHUD::DrawPositionInRound) */
 		void DrawPositionInRound(const Rectf& view, Actors::Player* player) override;

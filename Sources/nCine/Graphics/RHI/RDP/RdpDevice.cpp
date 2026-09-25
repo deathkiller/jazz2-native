@@ -1,5 +1,6 @@
 #include "RdpDevice.h"
 #include "../../../Base/Algorithms.h"
+#include "../../../Base/FrameStatistics.h"
 #include "RdpBuffer.h"
 #include "RdpShaderProgram.h"
 #include "RdpRenderTarget.h"
@@ -1627,6 +1628,65 @@ namespace nCine::RHI::RDP
 		bool rdpAttached = false;
 		// The scissor rect last programmed, in raster pixels of the current target
 		std::int32_t appliedScissor[4] = { -1, -1, -1, -1 };
+
+		// The RDP's own performance counters - how many RCP cycles (62.5 MHz) it has been running, how many of
+		// them its pipeline was busy drawing, and how many it spent loading TMEM - and the status register they are
+		// cleared through: the four registers libultra's osDpGetCounters() reads. 24 bits each, so they span about
+		// 268 ms, which is more than a frame ever takes once a level runs. Uncached KSEG1 addresses.
+		volatile std::uint32_t* const DpcStatusRegister = reinterpret_cast<volatile std::uint32_t*>(0xA410000C);
+		volatile std::uint32_t* const DpcClockRegister = reinterpret_cast<volatile std::uint32_t*>(0xA4100010);
+		volatile std::uint32_t* const DpcPipeBusyRegister = reinterpret_cast<volatile std::uint32_t*>(0xA4100018);
+		volatile std::uint32_t* const DpcTmemBusyRegister = reinterpret_cast<volatile std::uint32_t*>(0xA410001C);
+		// Written to the status register: bits 6 to 9 clear the TMEM, pipe, command buffer and clock counters,
+		// and leaving every other bit zero leaves the rest of the RDP's state as it is
+		constexpr std::uint32_t DpcClearCounters = 0x03C0;
+		constexpr std::uint32_t DpcCounterMask = 0x00FFFFFF;
+		constexpr float RcpCyclesPerMillisecond = 62500.0f;
+		// Whether the counters have been cleared since the performance metrics were last switched on - until then
+		// they hold everything since boot, which is not one frame
+		bool dpcCountersArmed = false;
+
+		void ReportRdpCounters()
+		{
+			if (!FrameStatistics::IsEnabled()) {
+				dpcCountersArmed = false;
+				return;
+			}
+
+			// The RDP runs up to a frame behind the CPU, so a present does not split its work exactly between two
+			// frames - but each reading still covers one frame's worth of it, and the average over the snapshot
+			// interval comes out right
+			const std::uint32_t clock = *DpcClockRegister & DpcCounterMask;
+			const std::uint32_t pipeBusy = *DpcPipeBusyRegister & DpcCounterMask;
+			const std::uint32_t tmemBusy = *DpcTmemBusyRegister & DpcCounterMask;
+			*DpcStatusRegister = DpcClearCounters;
+
+			// An emulator that does not model the counters leaves the clock at zero, and reporting zeros from it
+			// would claim an idle RDP
+			if (dpcCountersArmed && clock != 0) {
+				FrameStatistics::AddCounter("RDP", float(pipeBusy) / RcpCyclesPerMillisecond, FrameStatistics::Unit::Milliseconds);
+				FrameStatistics::AddCounter("TMEM", float(tmemBusy) / RcpCyclesPerMillisecond, FrameStatistics::Unit::Milliseconds);
+			}
+			dpcCountersArmed = true;
+		}
+
+		// Blocks until the VI releases a buffer, which is also what paces the frame. The wait is where a frame the
+		// RDP has not finished yet shows up on the CPU side, so it is reported apart from the draw it happens in.
+		surface_t* AcquireScreenSurface()
+		{
+			const bool timed = (TraceDrawStatistics || FrameStatistics::IsEnabled());
+			const std::uint32_t waitStart = (timed ? std::uint32_t(get_ticks()) : 0);
+			surface_t* surface = display_get();
+			if (timed) {
+				const std::uint32_t waitTicks = std::uint32_t(get_ticks()) - waitStart;
+				if (TraceDrawStatistics) {
+					traceDisplayTicks += waitTicks;
+				}
+				FrameStatistics::AddCounter("VI wait", float(waitTicks) * (1000.0f / float(TICKS_PER_SECOND)),
+					FrameStatistics::Unit::Milliseconds);
+			}
+			return surface;
+		}
 	}
 
 	void RdpDevice::TraceStoreRebuild(std::uint32_t bytes, bool isBake)
@@ -1725,10 +1785,7 @@ namespace nCine::RHI::RDP
 			rdpq_attach(surface, nullptr);
 		} else {
 			if (screenSurface == nullptr) {
-				// Blocks until the VI releases a buffer, which is also what paces the frame
-				const std::uint32_t waitStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
-				screenSurface = display_get();
-				if (TraceDrawStatistics) { traceDisplayTicks += std::uint32_t(get_ticks()) - waitStart; }
+				screenSurface = AcquireScreenSurface();
 			}
 			rdpq_attach(screenSurface, nullptr);
 		}
@@ -1806,7 +1863,7 @@ namespace nCine::RHI::RDP
 			if (screenSurface == nullptr) {
 				// Nothing was drawn this frame; still flip a cleared buffer so the display keeps its pacing
 				// and a frame that produced no geometry does not show the previous one's contents
-				screenSurface = display_get();
+				screenSurface = AcquireScreenSurface();
 				rdpq_attach(screenSurface, nullptr);
 				rdpq_clear(color_from_packed32(PackRgba(QuantizeChannel(_clearColor.R),
 					QuantizeChannel(_clearColor.G), QuantizeChannel(_clearColor.B), 255)));
@@ -1842,6 +1899,7 @@ namespace nCine::RHI::RDP
 		// stores, TLUT slots, lightmap surfaces) carries a used-in-frame stamp, and its writer checks the
 		// frame's syncpoint below - waiting only when the stamped frame has genuinely not retired yet.
 		rdpq_detach_show();
+		ReportRdpCounters();
 		if (pendingFrameSyncpointCount == MaxPendingFrameSyncpoints) {
 			// The RDP has fallen several frames behind (never under the display pacing); retire the oldest
 			rspq_syncpoint_wait(pendingFrameSyncpoints[0].Syncpoint);

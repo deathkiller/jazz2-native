@@ -5,6 +5,7 @@
 #include "GxTexture.h"
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1012,7 +1013,13 @@ namespace nCine::RHI::GX
 		// until the copy has finished, so the following flip never displays a not-yet-copied buffer
 		GX_SetColorUpdate(GX_TRUE);
 		GX_CopyDisp(xfb, GX_TRUE);	// The copy also clears the EFB for the next frame (GX_SetCopyClear)
+		// The GP has drawn out of the FIFO as it filled, so the wait is only what it still had left of the frame
+		const bool timed = FrameStatistics::IsEnabled();
+		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
 		GX_DrawDone();
+		if (timed) {
+			FrameStatistics::AddCounter("GP wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		}
 		_frameCounter++;
 		// Nothing is assumed applied across the frame boundary - the first draw of the next frame
 		// reissues projection and render state from scratch

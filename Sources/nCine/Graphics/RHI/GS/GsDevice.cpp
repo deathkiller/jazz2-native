@@ -6,6 +6,7 @@
 #include "GsBuffer.h"
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include "../../../../Main.h"
 
@@ -983,7 +984,13 @@ namespace nCine::RHI::GS
 		q = draw_finish(q);
 		_packetCursor = q;
 		FlushPackets();
+		// The GS has drawn every packet as it was transferred, so the wait is only what it still had left
+		const bool timed = FrameStatistics::IsEnabled();
+		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
 		draw_wait_finish();
+		if (timed) {
+			FrameStatistics::AddCounter("GS wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		}
 
 		graph_wait_vsync();
 

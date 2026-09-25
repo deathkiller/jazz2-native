@@ -18,6 +18,7 @@
 
 #include <Asserts.h>
 
+#include "../../../Base/FrameStatistics.h"
 #include "../../../Base/HashFunctions.h"
 
 namespace nCine::RHI::D3D11
@@ -31,6 +32,61 @@ namespace nCine::RHI::D3D11
 				p->Release();
 				p = nullptr;
 			}
+		}
+
+		// GPU timing (see D3D11Device::BeginGpuTiming()): every timed frame brackets its work with two timestamp
+		// queries inside a disjoint query, whose frequency turns their difference into time. The results are read
+		// a few frames later, from a ring long enough that the oldest one is practically always ready by then.
+		constexpr std::uint32_t GpuTimerFrameCount = 4;
+
+		struct GpuTimerFrame
+		{
+			ID3D11Query* Disjoint = nullptr;
+			ID3D11Query* Start = nullptr;
+			ID3D11Query* End = nullptr;
+		};
+
+		GpuTimerFrame s_gpuTimerFrames[GpuTimerFrameCount];
+		std::uint32_t s_gpuTimerFirstPending = 0;
+		std::uint32_t s_gpuTimerPendingCount = 0;
+		bool s_gpuTimerActive = false;
+		bool s_gpuTimerFailed = false;
+
+		void ReleaseGpuTimer()
+		{
+			for (GpuTimerFrame& frame : s_gpuTimerFrames) {
+				SafeRelease(frame.Disjoint);
+				SafeRelease(frame.Start);
+				SafeRelease(frame.End);
+			}
+			s_gpuTimerFirstPending = 0;
+			s_gpuTimerPendingCount = 0;
+			s_gpuTimerActive = false;
+		}
+
+		bool EnsureGpuTimer(ID3D11Device* device)
+		{
+			if (s_gpuTimerFrames[0].Disjoint != nullptr) {
+				return true;
+			}
+			if (s_gpuTimerFailed || device == nullptr) {
+				return false;
+			}
+
+			D3D11_QUERY_DESC disjointDesc = {};
+			disjointDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+			D3D11_QUERY_DESC timestampDesc = {};
+			timestampDesc.Query = D3D11_QUERY_TIMESTAMP;
+			for (GpuTimerFrame& frame : s_gpuTimerFrames) {
+				if (FAILED(device->CreateQuery(&disjointDesc, &frame.Disjoint)) || FAILED(device->CreateQuery(&timestampDesc, &frame.Start)) ||
+					FAILED(device->CreateQuery(&timestampDesc, &frame.End))) {
+					LOGW("Cannot create the queries to time the GPU, its time will not be shown");
+					ReleaseGpuTimer();
+					s_gpuTimerFailed = true;
+					return false;
+				}
+			}
+			return true;
 		}
 
 		// Flip-blit shader used at present: a fullscreen triangle (SV_VertexID) that samples the intermediate present
@@ -1313,6 +1369,56 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
+	void D3D11Device::BeginGpuTiming()
+	{
+		if (_context == nullptr || !EnsureGpuTimer(_device)) {
+			return;
+		}
+
+		// Whatever finished since the last frame, oldest first, without flushing or waiting for the rest
+		while (s_gpuTimerPendingCount > 0) {
+			GpuTimerFrame& frame = s_gpuTimerFrames[s_gpuTimerFirstPending];
+			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjoint;
+			if (_context->GetData(frame.Disjoint, &disjoint, sizeof(disjoint), D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK) {
+				break;
+			}
+			// The disjoint query ends after both timestamps, so they are practically always done by now too
+			UINT64 start = 0, end = 0;
+			const bool hasTimestamps = (_context->GetData(frame.Start, &start, sizeof(start), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
+				_context->GetData(frame.End, &end, sizeof(end), D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK);
+			s_gpuTimerFirstPending = (s_gpuTimerFirstPending + 1) % GpuTimerFrameCount;
+			s_gpuTimerPendingCount--;
+			// A disjoint interval - the GPU changed its clock, or was reset - leaves the difference meaningless
+			if (hasTimestamps && !disjoint.Disjoint && disjoint.Frequency > 0 && end >= start) {
+				FrameStatistics::AddCounter("GPU", float(double(end - start) * 1000.0 / double(disjoint.Frequency)),
+					FrameStatistics::Unit::Milliseconds);
+			}
+		}
+
+		if (s_gpuTimerPendingCount >= GpuTimerFrameCount) {
+			// The whole ring is still out, so this frame goes untimed rather than reusing a query in flight
+			return;
+		}
+
+		GpuTimerFrame& frame = s_gpuTimerFrames[(s_gpuTimerFirstPending + s_gpuTimerPendingCount) % GpuTimerFrameCount];
+		_context->Begin(frame.Disjoint);
+		_context->End(frame.Start);
+		s_gpuTimerActive = true;
+	}
+
+	void D3D11Device::EndGpuTiming()
+	{
+		if (!s_gpuTimerActive) {
+			return;
+		}
+
+		GpuTimerFrame& frame = s_gpuTimerFrames[(s_gpuTimerFirstPending + s_gpuTimerPendingCount) % GpuTimerFrameCount];
+		_context->End(frame.End);
+		_context->End(frame.Disjoint);
+		s_gpuTimerActive = false;
+		s_gpuTimerPendingCount++;
+	}
+
 	namespace
 	{
 		// Opaque payload behind the void* handle the *Secondary* functions hand out (ImGui keeps it in
@@ -1513,6 +1619,9 @@ namespace nCine::RHI::D3D11
 		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();
+		// A device created later gets its own queries, and another chance if these could not be created
+		ReleaseGpuTimer();
+		s_gpuTimerFailed = false;
 		SafeRelease(_presentSampler);
 		SafeRelease(_presentPs);
 		SafeRelease(_presentVs);

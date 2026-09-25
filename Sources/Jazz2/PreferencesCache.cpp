@@ -6,6 +6,7 @@
 
 #include "../nCine/Application.h"
 #include "../nCine/I18n.h"
+#include "../nCine/Base/FrameStatistics.h"
 #include "../nCine/Base/FrameTimer.h"
 #include "../nCine/Base/Random.h"
 #include "../nCine/Graphics/RHI/RhiFwd.h"	// RHI_LOW_POWER_GPU (a header macro, not a build define)
@@ -67,7 +68,7 @@ namespace Jazz2
 #if defined(WITH_PHYSICS_PROBE)
 	bool PreferencesCache::PhysicsProbe = false;
 #endif
-	bool PreferencesCache::ShowPerformanceMetrics = false;
+	PerformanceMetricsLevel PreferencesCache::PerformanceMetrics = PerformanceMetricsLevel::Off;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
 	bool PreferencesCache::ShowMinimap = true;
@@ -1305,7 +1306,12 @@ namespace
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 					EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
 #endif
-					ShowPerformanceMetrics = ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics);
+					if ((boolOptions & BoolOptions::ShowPerformanceMetrics) == BoolOptions::ShowPerformanceMetrics) {
+						PerformanceMetrics = ((boolOptions & BoolOptions::ShowDetailedPerformanceMetrics) == BoolOptions::ShowDetailedPerformanceMetrics
+							? PerformanceMetricsLevel::Detailed : PerformanceMetricsLevel::Basic);
+					} else {
+						PerformanceMetrics = PerformanceMetricsLevel::Off;
+					}
 					KeepAspectRatioInCinematics = ((boolOptions & BoolOptions::KeepAspectRatioInCinematics) == BoolOptions::KeepAspectRatioInCinematics);
 					ShowPlayerTrails = ((boolOptions & BoolOptions::ShowPlayerTrails) == BoolOptions::ShowPlayerTrails);
 					LowWaterQuality = ((boolOptions & BoolOptions::LowWaterQuality) == BoolOptions::LowWaterQuality);
@@ -1742,7 +1748,8 @@ namespace
 
 		BoolOptions boolOptions = BoolOptions::None;
 		if (EnableFullscreen) boolOptions |= BoolOptions::EnableFullscreen;
-		if (ShowPerformanceMetrics) boolOptions |= BoolOptions::ShowPerformanceMetrics;
+		if (PerformanceMetrics != PerformanceMetricsLevel::Off) boolOptions |= BoolOptions::ShowPerformanceMetrics;
+		if (PerformanceMetrics == PerformanceMetricsLevel::Detailed) boolOptions |= BoolOptions::ShowDetailedPerformanceMetrics;
 		if (KeepAspectRatioInCinematics) boolOptions |= BoolOptions::KeepAspectRatioInCinematics;
 		if (ShowPlayerTrails) boolOptions |= BoolOptions::ShowPlayerTrails;
 		if (LowWaterQuality) boolOptions |= BoolOptions::LowWaterQuality;
@@ -1888,6 +1895,13 @@ namespace
 		}
 		gfxDevice.setDrawableSize(panel.X * RenderingResolutionPercent / 100, panel.Y * RenderingResolutionPercent / 100);
 #endif
+	}
+
+	void PreferencesCache::ApplyPerformanceMetrics()
+	{
+		// The frame rate of the basic level comes from the frame timer, which runs anyway; everything else the
+		// detailed level shows costs a few timer reads per frame, so it is collected only while it is on screen
+		FrameStatistics::SetEnabled(PerformanceMetrics == PerformanceMetricsLevel::Detailed);
 	}
 
 	StringView PreferencesCache::GetDirectory()

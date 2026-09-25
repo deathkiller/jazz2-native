@@ -169,6 +169,10 @@ namespace nCine::RHI::GU
 		}
 		/** @brief Closes the frame's display list and flips the display buffers (called by the Psp window backend once per frame) */
 		static void PresentFrame();
+		/** @brief No-op (the GE has no timer to query; how long the CPU waits for it is reported by @ref PresentFrame()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/** @brief The dimension a single GE texture cannot exceed (9-bit u/v addressing - a hardware limit) */
 		static constexpr std::int32_t HardwareTextureDimension = 512;

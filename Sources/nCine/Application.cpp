@@ -53,6 +53,7 @@ extern "C"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
 #include "Graphics/RHI/Rhi.h"
+#include "Base/FrameStatistics.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
@@ -471,21 +472,31 @@ namespace
 			return;
 		}
 
+		const bool hasArchive = fs::Exists(archivePath);
+
 		{
 			auto previousLog = fs::Open(targetPath, FileAccess::Read | FileAccess::Sequential);
 			if (!previousLog->IsValid() || previousLog->GetSize() <= 0) {
 				return;
 			}
 
-			// Compressed on its own first, because how much of the archive has to go depends on how large
-			// this turns out to be - and because a session that dies in the middle of it then loses the
-			// staging file and nothing else
-			auto staging = fs::Open(stagingPath, FileAccess::Write);
-			if (!staging->IsValid() || !WriteLogArchivePart(*staging, *previousLog, fs::GetFileName(targetPath))) {
-				staging->Dispose();
-				fs::RemoveFile(stagingPath);
+			// Next to an archive it is compressed on its own first, because how much of the archive has to
+			// go depends on how large this turns out to be - and because a session that dies in the middle
+			// of it then loses the staging file and nothing else. Without one there is nothing to fit it next
+			// to and nothing to lose, so it goes straight into place: a member cut short there never had its
+			// size filled in, so the next launch doesn't recognize it and replaces it whole, and the log it
+			// was made from is still there to be archived again.
+			StringView partPath = (hasArchive ? stagingPath : archivePath);
+			auto part = fs::Open(partPath, FileAccess::Write);
+			if (!part->IsValid() || !WriteLogArchivePart(*part, *previousLog, fs::GetFileName(targetPath))) {
+				part->Dispose();
+				fs::RemoveFile(partPath);
 				return;
 			}
+		}
+
+		if (!hasArchive) {
+			return;
 		}
 
 		const std::int64_t newPartSize = fs::GetFileSize(stagingPath);
@@ -580,8 +591,8 @@ namespace
 		if (archived) {
 			fs::RemoveFile(stagingPath);
 		} else if (!updateAttempted) {
-			// There was nothing worth keeping - no archive yet, one that holds nothing this recognizes, or
-			// a new member so large that none of the old ones fit beside it - and the new member is a valid
+			// There was nothing worth keeping - an archive that holds nothing this recognizes, or a new
+			// member so large that none of the old ones fit beside it - and the new member is a valid
 			// archive on its own, so it simply becomes the archive
 			archive->Dispose();
 			fs::RemoveFile(archivePath);
@@ -1556,6 +1567,35 @@ namespace nCine
 	void Application::Step()
 	{
 		_frameTimer->AddFrame();
+
+		// The previous frame is complete only now that the timer knows how long it took from start to start,
+		// and its phases are still in `_timings`
+		if (_frameMeasured) {
+			const float phaseTimes[] = {
+				_timings[(std::int32_t)Timings::BeginFrame], _timings[(std::int32_t)Timings::Update],
+				_timings[(std::int32_t)Timings::PostUpdate], _timings[(std::int32_t)Timings::Visit],
+				_timings[(std::int32_t)Timings::Draw], _timings[(std::int32_t)Timings::Audio],
+				_timings[(std::int32_t)Timings::EndFrame], _timings[(std::int32_t)Timings::Present],
+				_timings[(std::int32_t)Timings::Wait]
+			};
+			static_assert(arraySize(phaseTimes) == (std::size_t)FrameStatistics::Phase::Count, "Phase count mismatch");
+			FrameStatistics::EndFrame(phaseTimes, _frameTimer->GetLastFrameDuration());
+		}
+
+		// The phases are timed only while something reads the result - the in-game performance metrics through
+		// FrameStatistics, and the overlay or the log of a profiling build
+		_frameMeasured = FrameStatistics::IsEnabled();
+#if defined(NCINE_PROFILING)
+		const bool measure = true;
+#else
+		const bool measure = _frameMeasured;
+#endif
+		if (measure) {
+			// A phase that does not run in this frame must not report what it took the last time it did
+			for (std::int32_t i = (std::int32_t)Timings::BeginFrame; i < (std::int32_t)Timings::Count; i++) {
+				_timings[i] = 0.0f;
+			}
+		}
 #if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
 		const TimeStamp stepStart = TimeStamp::now();
 #endif
@@ -1578,13 +1618,13 @@ namespace nCine
 
 		{
 			ZoneScopedNC("OnBeginFrame", 0x81A861);
-#if defined(NCINE_PROFILING)
-			_profileStartTime = TimeStamp::now();
-#endif
+			if (measure) {
+				_profileStartTime = TimeStamp::now();
+			}
 			_appEventHandler->OnBeginFrame();
-#if defined(NCINE_PROFILING)
-			_timings[(std::int32_t)Timings::BeginFrame] = _profileStartTime.secondsSince();
-#endif
+			if (measure) {
+				_timings[(std::int32_t)Timings::BeginFrame] = _profileStartTime.secondsSince();
+			}
 		}
 
 #if defined(WITH_IMGUI)
@@ -1597,36 +1637,36 @@ namespace nCine
 			ZoneScopedNC("SceneGraph", 0x81A861);
 			{
 				ZoneScopedNC("Update", 0x81A861);
-#if defined(NCINE_PROFILING)
-				_profileStartTime = TimeStamp::now();
-#endif
+				if (measure) {
+					_profileStartTime = TimeStamp::now();
+				}
 				_screenViewport->Update();
-#if defined(NCINE_PROFILING)
-				_timings[(std::int32_t)Timings::Update] = _profileStartTime.secondsSince();
-#endif
+				if (measure) {
+					_timings[(std::int32_t)Timings::Update] = _profileStartTime.secondsSince();
+				}
 			}
 
 			{
 				ZoneScopedNC("OnPostUpdate", 0x81A861);
-#if defined(NCINE_PROFILING)
-				_profileStartTime = TimeStamp::now();
-#endif
+				if (measure) {
+					_profileStartTime = TimeStamp::now();
+				}
 				_appEventHandler->OnPostUpdate();
-#if defined(NCINE_PROFILING)
-				_timings[(std::int32_t)Timings::PostUpdate] = _profileStartTime.secondsSince();
-#endif
+				if (measure) {
+					_timings[(std::int32_t)Timings::PostUpdate] = _profileStartTime.secondsSince();
+				}
 			}
 
 			if (_appCfg.withGraphics) {
 				{
 					ZoneScopedNC("Visit", 0x81A861);
-#if defined(NCINE_PROFILING)
-					_profileStartTime = TimeStamp::now();
-#endif
+					if (measure) {
+						_profileStartTime = TimeStamp::now();
+					}
 					_screenViewport->Visit();
-#if defined(NCINE_PROFILING)
-					_timings[(std::int32_t)Timings::Visit] = _profileStartTime.secondsSince();
-#endif
+					if (measure) {
+						_timings[(std::int32_t)Timings::Visit] = _profileStartTime.secondsSince();
+					}
 				}
 
 #if defined(WITH_IMGUI)
@@ -1645,14 +1685,14 @@ namespace nCine
 
 				{
 					ZoneScopedNC("Draw", 0x81A861);
-#if defined(NCINE_PROFILING)
-					_profileStartTime = TimeStamp::now();
-#endif
+					if (measure) {
+						_profileStartTime = TimeStamp::now();
+					}
 					_screenViewport->SortAndCommitQueue();
 					_screenViewport->Draw();
-#if defined(NCINE_PROFILING)
-					_timings[(std::int32_t)Timings::Draw] = _profileStartTime.secondsSince();
-#endif
+					if (measure) {
+						_timings[(std::int32_t)Timings::Draw] = _profileStartTime.secondsSince();
+					}
 				}
 			}
 		} else {
@@ -1671,18 +1711,24 @@ namespace nCine
 		}
 
 		{
+			if (measure) {
+				_profileStartTime = TimeStamp::now();
+			}
 			theServiceLocator().GetAudioDevice().updatePlayers();
+			if (measure) {
+				_timings[(std::int32_t)Timings::Audio] = _profileStartTime.secondsSince();
+			}
 		}
 
 		{
 			ZoneScopedNC("OnFrameEnd", 0x81A861);
-#if defined(NCINE_PROFILING)
-			_profileStartTime = TimeStamp::now();
-#endif
+			if (measure) {
+				_profileStartTime = TimeStamp::now();
+			}
 			_appEventHandler->OnEndFrame();
-#if defined(NCINE_PROFILING)
-			_timings[(std::int32_t)Timings::EndFrame] = _profileStartTime.secondsSince();
-#endif
+			if (measure) {
+				_timings[(std::int32_t)Timings::EndFrame] = _profileStartTime.secondsSince();
+			}
 		}
 
 #if defined(WITH_IMGUI)
@@ -1692,13 +1738,13 @@ namespace nCine
 #endif
 
 		if (_appCfg.withGraphics) {
-#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
-			const TimeStamp presentStart = TimeStamp::now();
-#endif
+			if (measure) {
+				_profileStartTime = TimeStamp::now();
+			}
 			_gfxDevice->update();
-#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
-			_presentAccum += presentStart.secondsSince();
-#endif
+			if (measure) {
+				_timings[(std::int32_t)Timings::Present] = _profileStartTime.secondsSince();
+			}
 			FrameMark;
 			TracyGpuCollect;
 		}
@@ -1715,16 +1761,16 @@ namespace nCine
 			if (_timingsLogStart.secondsSince() >= 5.0f) {
 				if (_timingsFrames > 0) {
 					const float toMs = 1000.0f / (float)_timingsFrames;
-					LOGI("Frame profile over {} frames: {:.2f} ms/frame - begin {:.2f}, update {:.2f}, post-update {:.2f}, visit {:.2f}, draw {:.2f}, end {:.2f}, present {:.2f}",
+					LOGI("Frame profile over {} frames: {:.2f} ms/frame - begin {:.2f}, update {:.2f}, post-update {:.2f}, visit {:.2f}, draw {:.2f}, audio {:.2f}, end {:.2f}, present {:.2f}",
 						_timingsFrames, _stepAccum * toMs, _timingsAccum[(std::int32_t)Timings::BeginFrame] * toMs,
 						_timingsAccum[(std::int32_t)Timings::Update] * toMs, _timingsAccum[(std::int32_t)Timings::PostUpdate] * toMs,
 						_timingsAccum[(std::int32_t)Timings::Visit] * toMs, _timingsAccum[(std::int32_t)Timings::Draw] * toMs,
-						_timingsAccum[(std::int32_t)Timings::EndFrame] * toMs, _presentAccum * toMs);
+						_timingsAccum[(std::int32_t)Timings::Audio] * toMs, _timingsAccum[(std::int32_t)Timings::EndFrame] * toMs,
+						_timingsAccum[(std::int32_t)Timings::Present] * toMs);
 				}
 				for (std::int32_t i = 0; i < (std::int32_t)Timings::Count; i++) {
 					_timingsAccum[i] = 0.0f;
 				}
-				_presentAccum = 0.0f;
 				_stepAccum = 0.0f;
 				_timingsFrames = 0;
 				_timingsLogStart = TimeStamp::now();
@@ -1734,6 +1780,9 @@ namespace nCine
 
 		if (_appCfg.frameLimit > 0) {
 			FrameMarkStart("Frame limiting");
+			if (measure) {
+				_profileStartTime = TimeStamp::now();
+			}
 			const std::int64_t frameTimeDuration = clock().frequency() / _appCfg.frameLimit;
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -1788,6 +1837,9 @@ namespace nCine
 
 			while ((std::int64_t)_frameTimer->GetFrameDurationAsTicks() < frameTimeDuration) {
 				Thread::Sleep(0);
+			}
+			if (measure) {
+				_timings[(std::int32_t)Timings::Wait] = _profileStartTime.secondsSince();
 			}
 			FrameMarkEnd("Frame limiting");
 		}

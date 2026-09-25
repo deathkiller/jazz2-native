@@ -5,6 +5,7 @@
 #include "GuTexture.h"
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1019,9 +1020,16 @@ namespace nCine::RHI::GU
 			LOGW("A frame filled {} B of the {} B display list with {} draw calls; it needs to be larger",
 				listBytes, DisplayListBytes, frameDrawCalls);
 		}
-		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below
+		// Waits for the GE to finish the list, which is also what makes the frame arena reusable below. The GE
+		// has run the list while it was being built, so the wait is only what it still had left at this point.
+		const bool timed = FrameStatistics::IsEnabled();
+		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
 		sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
 		_listOpen = false;
+		if (timed) {
+			FrameStatistics::AddCounter("GE wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("Display list", float(listBytes) * 100.0f / float(DisplayListBytes), FrameStatistics::Unit::Percent);
+		}
 
 		// The firmware's on-screen keyboard (see MainApplication::ShowScreenKeyboard) draws itself over the
 		// finished frame, and the SDK wants that between the list's completion and the flip - this is the

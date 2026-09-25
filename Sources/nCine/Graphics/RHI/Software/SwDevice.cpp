@@ -5,6 +5,7 @@
 #include "SwShaderProgram.h"
 #include "SwRenderTarget.h"
 #include "../../../Base/Algorithms.h"
+#include "../../../Base/FrameStatistics.h"
 #include "SwTexture.h"
 
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -403,7 +404,17 @@ namespace nCine::RHI::Software
 
 	void SwDevice::FlushSoftwareRenderer()
 	{
+		if (!FrameStatistics::IsEnabled()) {
+			SwRaster::Flush();
+			return;
+		}
+
+		// The draws the tile renderer deferred are rasterized here, on every worker at once, which is the nearest
+		// this backend has to a GPU time; a frame can flush more than once (before a render target is sampled),
+		// and the flushes of one frame add up
+		const TimeStamp start = TimeStamp::now();
 		SwRaster::Flush();
+		FrameStatistics::AddCounter("Raster", start.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
 	}
 
 	void SwDevice::EndFrame()

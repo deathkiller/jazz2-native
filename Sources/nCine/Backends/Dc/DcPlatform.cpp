@@ -35,6 +35,16 @@ namespace nCine::Backends
 			heapWindow / 1024, arena / 1024, (heapWindow > arena ? heapWindow - arena : 0) / 1024,
 			std::uint32_t(pvr_mem_available()) / 1024, snd_mem_available() / 1024);
 	}
+
+	void DcPlatform::GetHeapUsage(std::size_t& used, std::size_t& total)
+	{
+		// The same window as above, so the performance metrics and the log agree on what "full" means
+		const struct ::mallinfo info = ::mallinfo();
+		const std::uintptr_t heapBase = reinterpret_cast<std::uintptr_t>(end);
+		const std::uintptr_t heapTop = std::uintptr_t(_arch_mem_top) - THD_KERNEL_STACK_SIZE;
+		used = std::size_t(info.uordblks);
+		total = std::size_t(heapTop > heapBase ? heapTop - heapBase : 0);
+	}
 }
 
 #endif

@@ -85,6 +85,7 @@ namespace nCine::RHI::GL
 
 		const char* ExtensionNames[] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_buffer_storage", "GL_ARB_get_program_binary",
+			"GL_EXT_disjoint_timer_query",
 #if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 			"GL_OES_get_program_binary",
 #endif
@@ -134,6 +135,9 @@ namespace nCine::RHI::GL
 		LOGI("GL_ARB_get_program_binary: {}", _extensions[(std::int32_t)Extensions::ArbGetProgramBinary]);
 #	if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		LOGI("GL_OES_get_program_binary: {}", _extensions[(std::int32_t)Extensions::OesGetProgramBinary]);
+#	endif
+#	if defined(RHI_GL_PROFILE_ES)
+		LOGI("GL_EXT_disjoint_timer_query: {}", _extensions[(std::int32_t)Extensions::ExtDisjointTimerQuery]);
 #	endif
 		LOGI("GL_EXT_texture_compression_s3tc: {}", _extensions[(std::int32_t)Extensions::ExtTextureCompressionS3tc]);
 #	if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)

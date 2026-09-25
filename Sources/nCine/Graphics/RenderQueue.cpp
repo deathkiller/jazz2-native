@@ -5,6 +5,7 @@
 #include "RHI/Rhi.h"
 #include "../Application.h"
 #include "../Base/Algorithms.h"
+#include "../Base/FrameStatistics.h"
 #include "../tracy_opengl.h"
 
 namespace nCine
@@ -123,6 +124,14 @@ namespace nCine
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
 		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &_opaqueBatchedQueue : &_opaqueQueue;
 		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &_transparentBatchedQueue : &_transparentQueue;
+
+		// Every command left after batching is one draw call, while the unbatched queues still hold what was
+		// submitted - the two together say how well the batching does. Tested here rather than left to the call,
+		// so a frame that collects nothing does not pay for a call per render queue.
+		if (FrameStatistics::IsEnabled()) {
+			FrameStatistics::AddDrawCalls(std::uint32_t(opaques->size() + transparents->size()),
+				std::uint32_t(_opaqueQueue.size() + _transparentQueue.size()));
+		}
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;

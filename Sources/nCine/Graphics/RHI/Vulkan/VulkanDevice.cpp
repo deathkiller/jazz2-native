@@ -4,6 +4,7 @@
 #include "VulkanTexture.h"
 #include "VulkanBufferObject.h"
 #include "VulkanCommon.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include <cstdint>
 #include <cstring>
@@ -145,6 +146,12 @@ namespace nCine::RHI::Vulkan
 	PFN_vkCmdClearAttachments vkCmdClearAttachments = nullptr;
 	PFN_vkCmdBlitImage vkCmdBlitImage = nullptr;
 
+	PFN_vkCreateQueryPool vkCreateQueryPool = nullptr;
+	PFN_vkDestroyQueryPool vkDestroyQueryPool = nullptr;
+	PFN_vkCmdResetQueryPool vkCmdResetQueryPool = nullptr;
+	PFN_vkCmdWriteTimestamp vkCmdWriteTimestamp = nullptr;
+	PFN_vkGetQueryPoolResults vkGetQueryPoolResults = nullptr;
+
 	namespace
 	{
 		// -- Owned Vulkan objects --
@@ -203,9 +210,18 @@ namespace nCine::RHI::Vulkan
 			VkDeviceSize UboCursor = 0;							// relative to this frame's uniform-ring region base
 			std::vector<VkBuffer> PendingStagingBuffers;		// texture-upload staging, freed once this slot's fence re-signals
 			std::vector<VkDeviceMemory> PendingStagingMemory;
+			bool TimestampsRecorded = false;					// both GPU timestamps of this slot are in its command buffer
+			bool TimestampsSubmitted = false;					// ...and it was submitted, so they can be read when the slot is re-entered
 		};
 		FrameData s_frames[MaxFramesInFlight];
 		std::uint32_t s_currentFrame = 0;
+
+		// GPU timing (see VulkanDevice::BeginGpuTiming()): two timestamp queries per in-flight frame slot, or no pool
+		// at all when the graphics queue family cannot write timestamps
+		VkQueryPool s_timestampPool = VK_NULL_HANDLE;
+		float s_timestampPeriod = 0.0f;					// nanoseconds per timestamp tick
+		std::uint64_t s_timestampMask = 0;				// the bits a timestamp actually carries (timestampValidBits)
+		bool s_timestampStarted = false;
 		VkCommandBuffer s_commandBuffer = VK_NULL_HANDLE;	// == s_frames[s_currentFrame].CommandBuffer while recording (set in BeginFrame)
 
 		// One render-finished semaphore per swap-chain image (signalled by submit, waited by present) plus a fence
@@ -1063,6 +1079,31 @@ namespace nCine::RHI::Vulkan
 
 	namespace
 	{
+		void CreateTimestampPool()
+		{
+			// Timestamps are optional per queue family, and a period of zero would turn every reading into nothing
+			std::uint32_t familyCount = 0;
+			vkGetPhysicalDeviceQueueFamilyProperties(s_physicalDevice, &familyCount, nullptr);
+			std::vector<VkQueueFamilyProperties> families(familyCount);
+			if (familyCount > 0) {
+				vkGetPhysicalDeviceQueueFamilyProperties(s_physicalDevice, &familyCount, families.data());
+			}
+			const std::uint32_t validBits = (s_graphicsFamily < familyCount ? families[s_graphicsFamily].timestampValidBits : 0);
+			if (validBits == 0 || s_timestampPeriod <= 0.0f) {
+				LOGI("Vulkan graphics queue cannot write timestamps, the GPU time will not be measured");
+				return;
+			}
+			s_timestampMask = (validBits >= 64 ? ~std::uint64_t(0) : ((std::uint64_t(1) << validBits) - 1));
+
+			VkQueryPoolCreateInfo qpci = {};
+			qpci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+			qpci.queryType = VK_QUERY_TYPE_TIMESTAMP;
+			qpci.queryCount = 2 * MaxFramesInFlight;
+			if (!CheckVk(vkCreateQueryPool(s_device, &qpci, nullptr, &s_timestampPool), "vkCreateQueryPool")) {
+				s_timestampPool = VK_NULL_HANDLE;
+			}
+		}
+
 		void BeginFrame()
 		{
 			if (s_frameActive || !s_ready || s_device == VK_NULL_HANDLE) {
@@ -1100,6 +1141,8 @@ namespace nCine::RHI::Vulkan
 			bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 			vkBeginCommandBuffer(s_commandBuffer, &bi);
+			// Timestamps recorded into a frame that was then abandoned instead of submitted never ran
+			fr.TimestampsRecorded = false;
 			s_frameActive = true;
 			s_renderPassOpen = false;
 			s_activeRenderPassTarget = nullptr;
@@ -2465,6 +2508,7 @@ namespace nCine::RHI::Vulkan
 			}
 			s_maxImageDim2D = props.limits.maxImageDimension2D;
 			s_maxUniformRange = props.limits.maxUniformBufferRange;
+			s_timestampPeriod = props.limits.timestampPeriod;
 			VkPhysicalDeviceFeatures feats;
 			vkGetPhysicalDeviceFeatures(s_physicalDevice, &feats);
 			s_depthClamp = (feats.depthClamp == VK_TRUE);
@@ -2525,6 +2569,8 @@ namespace nCine::RHI::Vulkan
 
 		vkGetDeviceQueue(s_device, s_graphicsFamily, 0, &s_graphicsQueue);
 		vkGetDeviceQueue(s_device, s_presentFamily, 0, &s_presentQueue);
+
+		CreateTimestampPool();
 
 		// Command pool + one primary command buffer (re-recorded each frame)
 		VkCommandPoolCreateInfo pci = {};
@@ -2755,6 +2801,52 @@ namespace nCine::RHI::Vulkan
 		s_pendingSecondaryPresents.push_back(PendingSecondaryPresent{ sc, source });
 	}
 
+	void VulkanDevice::BeginGpuTiming()
+	{
+		if (s_timestampPool == VK_NULL_HANDLE) {
+			return;
+		}
+		// The timestamps go into the frame's command buffer, so the frame is begun here if nothing has yet
+		BeginFrame();
+		if (!s_frameActive) {
+			return;
+		}
+
+		FrameData& fr = s_frames[s_currentFrame];
+		const std::uint32_t firstQuery = s_currentFrame * 2;
+		if (fr.TimestampsSubmitted) {
+			fr.TimestampsSubmitted = false;
+			// BeginFrame() has waited for this slot's fence, so the results are complete and no wait flag is needed
+			std::uint64_t timestamps[2] = {};
+			if (vkGetQueryPoolResults(s_device, s_timestampPool, firstQuery, 2, sizeof(timestamps), timestamps,
+					sizeof(std::uint64_t), VK_QUERY_RESULT_64_BIT) == VK_SUCCESS) {
+				const std::uint64_t elapsed = (timestamps[1] - timestamps[0]) & s_timestampMask;
+				FrameStatistics::AddCounter("GPU", float(double(elapsed) * double(s_timestampPeriod) * 1.0e-6),
+					FrameStatistics::Unit::Milliseconds);
+			}
+		}
+
+		// A query pool can only be reset outside a render pass
+		EndRenderPassIfOpen();
+		vkCmdResetQueryPool(s_commandBuffer, s_timestampPool, firstQuery, 2);
+		vkCmdWriteTimestamp(s_commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_timestampPool, firstQuery);
+		s_timestampStarted = true;
+	}
+
+	void VulkanDevice::EndGpuTiming()
+	{
+		if (!s_timestampStarted) {
+			return;
+		}
+		s_timestampStarted = false;
+		if (!s_frameActive) {
+			return;
+		}
+
+		vkCmdWriteTimestamp(s_commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_timestampPool, s_currentFrame * 2 + 1);
+		s_frames[s_currentFrame].TimestampsRecorded = true;
+	}
+
 	void VulkanDevice::PresentFrame()
 	{
 		// The queue of undocked ImGui windows is refilled every frame, so it must not survive this one - not even
@@ -2962,6 +3054,9 @@ namespace nCine::RHI::Vulkan
 			return;
 		}
 		fr.FenceInFlight = true;
+		// Readable once this slot's fence has been waited for, which the next BeginFrame() of the slot does
+		fr.TimestampsSubmitted = fr.TimestampsRecorded;
+		fr.TimestampsRecorded = false;
 
 		VkPresentInfoKHR present = {};
 		present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -3060,6 +3155,15 @@ namespace nCine::RHI::Vulkan
 				}
 				s_pipelineCache = VK_NULL_HANDLE;
 			}
+			if (s_timestampPool != VK_NULL_HANDLE) {
+				vkDestroyQueryPool(s_device, s_timestampPool, nullptr);
+				s_timestampPool = VK_NULL_HANDLE;
+			}
+			for (FrameData& fr : s_frames) {
+				fr.TimestampsRecorded = false;
+				fr.TimestampsSubmitted = false;
+			}
+			s_timestampStarted = false;
 			vkDestroyDevice(s_device, nullptr);
 			s_device = VK_NULL_HANDLE;
 		}
@@ -3207,6 +3311,11 @@ namespace nCine::RHI::Vulkan
 		VK_LOAD_DEVICE(vkCmdCopyBufferToImage);
 		VK_LOAD_DEVICE(vkCmdClearAttachments);
 		VK_LOAD_DEVICE(vkCmdBlitImage);
+		VK_LOAD_DEVICE(vkCreateQueryPool);
+		VK_LOAD_DEVICE(vkDestroyQueryPool);
+		VK_LOAD_DEVICE(vkCmdResetQueryPool);
+		VK_LOAD_DEVICE(vkCmdWriteTimestamp);
+		VK_LOAD_DEVICE(vkGetQueryPoolResults);
 #undef VK_LOAD_DEVICE
 	}
 }

@@ -122,6 +122,13 @@ namespace nCine::RHI::Vulkan
 	extern PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
 	extern PFN_vkCmdClearAttachments vkCmdClearAttachments;
 	extern PFN_vkCmdBlitImage vkCmdBlitImage;
+
+	// -- GPU timestamps --
+	extern PFN_vkCreateQueryPool vkCreateQueryPool;
+	extern PFN_vkDestroyQueryPool vkDestroyQueryPool;
+	extern PFN_vkCmdResetQueryPool vkCmdResetQueryPool;
+	extern PFN_vkCmdWriteTimestamp vkCmdWriteTimestamp;
+	extern PFN_vkGetQueryPoolResults vkGetQueryPoolResults;
 #endif
 
 	// -- Shared device context accessors (defined in VulkanDevice.cpp) --

@@ -22,6 +22,7 @@
 #include "GxmShaderCache.h"
 
 #include "../../../Application.h"
+#include "../../../Base/FrameStatistics.h"
 #include "../../../Base/HashFunctions.h"
 
 #include <IO/FileSystem.h>
@@ -2033,8 +2034,13 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		//
 		// The cost is real - CPU and GPU no longer overlap. Removing it means giving every per-frame buffer as
 		// many copies as there are frames in flight and cycling them with the display queue, which is a
-		// pipeline-wide change rather than a backend one.
+		// pipeline-wide change rather than a backend one. The wait is reported, since it is exactly that cost.
+		const bool timed = FrameStatistics::IsEnabled();
+		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
 		sceGxmFinish(_context);
+		if (timed) {
+			FrameStatistics::AddCounter("GPU wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		}
 
 		// Everything recorded this frame has been consumed, so anything a growing buffer displaced can go
 		ReleaseRetiredBlocks();

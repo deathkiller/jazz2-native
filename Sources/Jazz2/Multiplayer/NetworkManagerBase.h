@@ -113,6 +113,17 @@ namespace Jazz2::Multiplayer
 		friend class ServerDiscovery;
 
 	public:
+		/** @brief Quality of the connection to the server */
+		struct ConnectionStatistics
+		{
+			/** @brief Mean round trip time in milliseconds */
+			std::uint32_t RoundTripTimeMs;
+			/** @brief Mean deviation of the round trip time in milliseconds, or negative if the transport does not measure it */
+			std::int32_t RoundTripTimeVarianceMs;
+			/** @brief Mean loss of reliable packets in percent, or negative if the transport does not measure it */
+			float PacketLoss;
+		};
+
 		/** @{ @name Constants */
 
 		/** @brief Maximum connected peer count */
@@ -143,6 +154,13 @@ namespace Jazz2::Multiplayer
 		std::uint32_t GetRoundTripTimeMs() const;
 		/** @brief Returns mean round trip time to the server for specified peer, in milliseconds */
 		std::uint32_t GetRoundTripTimeMs(const Peer& peer) const;
+		/**
+		 * @brief Returns the quality of the connection to the server
+		 *
+		 * Returns `false` unless connected to a server as a client. ENet measures all of it; the WebSocket transport
+		 * runs over TCP, which neither loses packets nor has the jitter measured, so only the round trip time is there.
+		 */
+		bool GetConnectionStatistics(ConnectionStatistics& stats) const;
 		/** @brief Returns all IPv4 and IPv6 addresses along with ports of the server */
 		Array<String> GetServerEndpoints() const;
 		/** @brief Returns port of the server */

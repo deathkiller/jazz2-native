@@ -6,6 +6,7 @@
 #include "RsxShaderProgram.h"
 #include "RsxBufferObject.h"
 #include "../../Material.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/RsxGeneratedShaders.h"
@@ -951,8 +952,15 @@ namespace nCine::RHI::RSX
 		// Queue the flip and let the next frame's commands follow it; gcmSetWaitFlip() is what keeps the GPU
 		// from drawing over a buffer the scan-out has not finished with
 		if (!_firstFlip) {
+			// The previous flip happens only once the RSX has finished that frame and the vertical blank has come,
+			// so this is where a GPU-bound frame shows up on the CPU side
+			const bool timed = FrameStatistics::IsEnabled();
+			const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
 			while (gcmGetFlipStatus() != 0) {
 				::usleep(200);
+			}
+			if (timed) {
+				FrameStatistics::AddCounter("Flip wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
 			}
 		}
 		gcmResetFlipStatus();

@@ -413,7 +413,7 @@ namespace Jazz2::UI::Menu
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr float StepSize = 0.03f;
 		static constexpr std::int32_t BlockCount = 33;
-		static constexpr float FullHeight = 70.0f;
+		static constexpr float FullHeight = 64.0f;
 		static constexpr float CompactHeight = 50.0f;
 
 		float _pressedCooldown;

@@ -45,7 +45,7 @@ namespace Jazz2::UI::Menu
 		auto list = std::make_unique<ScrollView>();
 		// The last row shows its value under the label, which reaches the row's bottom edge; a little more room
 		// after it than the default keeps the value off the frame when the list is scrolled to its end
-		list->ContentPadding = 24.0f;
+		list->ContentPadding = 12.0f;
 
 		// TRANSLATORS: Menu item in Options > Sounds section
 		list->Add<Slider>(_("Master Volume"),
@@ -131,6 +131,6 @@ namespace Jazz2::UI::Menu
 		sampleRateItem->MarginTop = 8.0f;
 #endif
 
-		SetContent(std::move(list));
+		SetContent(Death::move(list));
 	}
 }

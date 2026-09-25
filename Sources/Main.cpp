@@ -1902,6 +1902,7 @@ void GameEventHandler::OnBeginInitialize()
 #endif
 	// Likewise before the first handler lays its viewport out (a no-op everywhere but on PS Vita)
 	PreferencesCache::ApplyRenderingResolution();
+	PreferencesCache::ApplyPerformanceMetrics();
 
 	auto& resolver = ContentResolver::Get();
 

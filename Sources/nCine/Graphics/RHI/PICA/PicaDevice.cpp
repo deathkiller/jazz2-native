@@ -5,6 +5,7 @@
 #include "PicaTexture.h"
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -1129,6 +1130,27 @@ namespace nCine::RHI::PICA
 				lightingTicks = 0;
 				lightingFrames = 0;
 			}
+		}
+
+		if (FrameStatistics::IsEnabled()) {
+			// citro3d times the GPU of the previous frame itself, from the interrupts it signals. The command buffer
+			// fill has to be read before the frame ends, which is what starts the next one from the beginning.
+			FrameStatistics::AddCounter("GPU", C3D_GetDrawingTime(), FrameStatistics::Unit::Milliseconds);
+			FrameStatistics::AddCounter("Command buffer", C3D_GetCmdBufUsage() * 100.0f, FrameStatistics::Unit::Percent);
+			// Every texture and vertex buffer comes out of the linear heap (see PicaTexture), and the render targets
+			// out of the video memory. Both allocators walk their free lists to answer, so they are asked a few times
+			// a second, but reported every frame so that every snapshot has them.
+			static float linearUsed = 0.0f;
+			static float vramFree = 0.0f;
+			static std::uint32_t framesUntilMemoryQuery = 0;
+			if (framesUntilMemoryQuery == 0) {
+				linearUsed = float(envGetLinearHeapSize() - linearSpaceFree());
+				vramFree = float(vramSpaceFree());
+				framesUntilMemoryQuery = 15;
+			}
+			framesUntilMemoryQuery--;
+			FrameStatistics::AddCounter("Linear", linearUsed, FrameStatistics::Unit::Bytes, float(envGetLinearHeapSize()));
+			FrameStatistics::AddCounter("VRAM free", vramFree, FrameStatistics::Unit::Bytes);
 		}
 
 		// Closes the command list and queues the display transfer of the screen target behind it. The flag

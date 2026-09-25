@@ -238,6 +238,10 @@ namespace nCine::RHI::GXM
 		}
 		/** @brief Flips the intermediate screen surface into the next display buffer and queues it for scan-out */
 		static void PresentFrame();
+		/** @brief No-op (sceGxm has no timer queries; how long the CPU waits for the GPU is reported by @ref PresentFrame()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		// The Vita has no multi-window support at all, so the ImGui multi-viewport hooks are inert here
 		/** @brief Not supported on this platform (returns `nullptr`) */

@@ -158,6 +158,10 @@ namespace nCine::RHI::GS
 		}
 		/** @brief Flushes the frame's remaining GIF packets and flips the display buffer */
 		static void PresentFrame();
+		/** @brief No-op (the GS has no timer to query; how long the CPU waits for it is reported by @ref PresentFrame()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/** @brief Returns the maximum supported texture dimension (drives the tileset chunking) */
 		static inline std::int32_t GetMaxTextureDimension() {

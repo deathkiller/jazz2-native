@@ -1084,7 +1084,7 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		ShowDebugWindow();
 
-		if (PreferencesCache::ShowPerformanceMetrics) {
+		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
 			ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 
 			/*if (_isServer) {

@@ -12,6 +12,7 @@
 #include "MetalRenderTarget.h"
 #include "MetalTexture.h"
 #include "MetalBufferObject.h"
+#include "../../../Base/FrameStatistics.h"
 
 #include <cstdint>
 #include <cstring>
@@ -480,6 +481,16 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		{
 			if (s_inFlight != nullptr) {
 				s_inFlight->waitUntilCompleted();
+				// A completed command buffer knows when the GPU started and finished executing it, and here that is
+				// the whole frame - there is one command buffer per frame, so no timer queries are needed
+				if (FrameStatistics::IsEnabled() && s_inFlight->status() == MTL::CommandBufferStatusCompleted) {
+					if (__builtin_available(macOS 10.15, iOS 10.3, tvOS 10.3, *)) {
+						const double gpuTime = s_inFlight->GPUEndTime() - s_inFlight->GPUStartTime();
+						if (gpuTime > 0.0) {
+							FrameStatistics::AddCounter("GPU", float(gpuTime * 1000.0), FrameStatistics::Unit::Milliseconds);
+						}
+					}
+				}
 				s_inFlight->release();
 				s_inFlight = nullptr;
 			}

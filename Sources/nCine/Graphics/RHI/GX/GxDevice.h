@@ -157,6 +157,10 @@ namespace nCine::RHI::GX
 		}
 		/** @brief No-op (the window backend calls PresentToXfb() itself) */
 		static inline void PresentFrame() {}
+		/** @brief No-op (how long the CPU waits for the GP to finish is reported by @ref PresentToXfb()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/** @brief Returns the maximum supported texture dimension (drives the tileset chunking) */
 		static inline std::int32_t GetMaxTextureDimension() {

@@ -109,7 +109,12 @@ namespace nCine
 		};
 #endif
 
-		/** @brief Timings for profiling */
+		/**
+		 * @brief Timings for profiling
+		 *
+		 * Everything from @ref BeginFrame on is measured again every frame, but only while something reads the
+		 * result - always in a build with `NCINE_PROFILING`, otherwise only while @ref FrameStatistics collects.
+		 */
 		enum class Timings
 		{
 			PreInit,
@@ -123,6 +128,9 @@ namespace nCine
 			Draw,
 			ImGui,
 			EndFrame,
+			Audio,
+			Present,
+			Wait,
 
 			Count
 		};
@@ -282,17 +290,18 @@ namespace nCine
 		GuiSettings _guiSettings;
 		IDebugOverlay::DisplaySettings _debugOverlayNullSettings;
 #endif
-#if defined(NCINE_PROFILING)
-		float _timings[(std::int32_t)Timings::Count];
-#	if !defined(WITH_IMGUI)
+		// Also what the in-game performance metrics are built from (see FrameStatistics), so it exists in every build
+		float _timings[(std::int32_t)Timings::Count] = {};
+		// Whether the phases of the frame in progress are being measured for FrameStatistics - the frame is only
+		// complete once the next one starts, which is where it gets handed over
+		bool _frameMeasured = false;
+#if defined(NCINE_PROFILING) && !defined(WITH_IMGUI)
 		// Without the ImGui overlay to show them (every console build), the per-phase timings are averaged and
 		// written to the log every few seconds - see the end of Step(), and NCINE_PROFILING in ncine_options.cmake
 		float _timingsAccum[(std::int32_t)Timings::Count] = {};
-		float _presentAccum = 0.0f;
 		float _stepAccum = 0.0f;
 		std::int32_t _timingsFrames = 0;
 		TimeStamp _timingsLogStart;
-#	endif
 #endif
 #if defined(DEATH_TARGET_WINDOWS)
 		HANDLE _waitableTimer;

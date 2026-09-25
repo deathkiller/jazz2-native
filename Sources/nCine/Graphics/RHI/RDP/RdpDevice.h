@@ -192,6 +192,10 @@ namespace nCine::RHI::RDP
 		}
 		/** @brief Closes the frame's RDP work and schedules the display flip (called by the N64 window backend once per frame) */
 		static void PresentFrame();
+		/** @brief No-op (the RDP counts its own busy cycles, which @ref PresentFrame() reads and reports) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/**
 			@brief Returns the maximum supported texture dimension (drives the tileset chunking)

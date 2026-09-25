@@ -149,6 +149,10 @@ namespace nCine::RHI::Software
 		}
 		/** @brief No-op (the window backend blits @ref GetScreenFramebuffer() itself) */
 		static inline void PresentFrame() {}
+		/** @brief No-op (there is no GPU; the rasterizer's own time is reported as it flushes, see @ref FlushSoftwareRenderer()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		// -- Software backend extensions (called by the resource types and read by the effects) --
 

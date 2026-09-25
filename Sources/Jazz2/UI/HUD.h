@@ -2,6 +2,7 @@
 
 #include "Canvas.h"
 #include "Font.h"
+#include "PerformanceOverlay.h"
 #include "../LevelHandler.h"
 #include "../Actors/Player.h"
 #include "../Input/ControlScheme.h"
@@ -128,6 +129,8 @@ namespace Jazz2::UI
 		static constexpr std::uint16_t FontShadowLayer = 120;
 		/** @brief Touch buttons layer */
 		static constexpr std::uint16_t TouchButtonsLayer = 400;
+		/** @brief Detailed performance metrics layer */
+		static constexpr std::uint16_t PerformanceMetricsLayer = 450;
 
 		/** @} */
 		
@@ -171,6 +174,13 @@ namespace Jazz2::UI
 		virtual void OnDrawCoins(const Rectf& view, std::int32_t& charOffset);
 		/** @brief Called when a notification about gems of the player needs to be drawn */
 		virtual void OnDrawGems(const Rectf& view, std::int32_t& charOffset);
+		/**
+		 * @brief Called when the detailed performance metrics are rebuilt, to add the rows only the level knows
+		 *
+		 * Runs after the rows every screen has were added, and only when there are new numbers to show - twice
+		 * a second - rather than every frame (see @ref PerformanceOverlay).
+		 */
+		virtual void OnAddPerformanceMetrics(PerformanceOverlay& overlay);
 		/** @brief Called when touch buttons need to be drawn */
 		void OnDrawTouchButtons(Actors::Player* player);
 		/** @brief Returns `true` and the on-screen bounds of the touch pause button if it's currently visible */
@@ -246,6 +256,8 @@ namespace Jazz2::UI
 
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;
+
+		PerformanceOverlay _performanceOverlay;
 
 		// Floating analog joystick state
 		bool _joystickActive;

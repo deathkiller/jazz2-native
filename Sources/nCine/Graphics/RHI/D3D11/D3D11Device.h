@@ -171,6 +171,17 @@ namespace nCine::RHI::D3D11
 		static void PresentFrame();
 
 		/**
+		 * @brief Starts timing the GPU work of the frame
+		 *
+		 * Paired with @ref EndGpuTiming() around everything the frame renders: two timestamp queries inside a
+		 * disjoint query, read back a few frames later and reported to @ref FrameStatistics, so neither call
+		 * ever flushes or waits for the GPU.
+		 */
+		static void BeginGpuTiming();
+		/** @brief Stops timing the GPU work of the frame, see @ref BeginGpuTiming() */
+		static void EndGpuTiming();
+
+		/**
 			@brief Creates an additional swap chain for a secondary window
 
 			Used by the ImGui multi-viewport support to render into the platform windows it spawns when a panel

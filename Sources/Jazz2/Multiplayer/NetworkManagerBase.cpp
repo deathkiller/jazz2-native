@@ -639,6 +639,37 @@ namespace Jazz2::Multiplayer
 #endif
 	}
 
+	bool NetworkManagerBase::GetConnectionStatistics(ConnectionStatistics& stats) const
+	{
+		stats.RoundTripTimeVarianceMs = -1;
+		stats.PacketLoss = -1.0f;
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		stats.RoundTripTimeMs = _emWsRtt;
+		return (_emWsRtt > 0);
+#elif !defined(WITH_ONLINE_MULTIPLAYER)
+		stats.RoundTripTimeMs = 0;
+		return false;
+#else
+		// The same guard as GetRoundTripTimeMs(), the network thread can erase the peer in the meantime
+		std::unique_lock<Spinlock> lock(_lock);
+		if (_state != NetworkState::Connected || _connectedPeers.empty()) {
+			stats.RoundTripTimeMs = 0;
+			return false;
+		}
+#	if defined(WITH_WEBSOCKET)
+		if DEATH_UNLIKELY(_connectedPeers[0].IsWebSocket()) {
+			stats.RoundTripTimeMs = _wsRtt.load(std::memory_order_relaxed);
+			return true;
+		}
+#	endif
+		const ENetPeer* peer = _connectedPeers[0]._enet;
+		stats.RoundTripTimeMs = peer->roundTripTime;
+		stats.RoundTripTimeVarianceMs = std::int32_t(peer->roundTripTimeVariance);
+		stats.PacketLoss = float(peer->packetLoss) * 100.0f / float(ENET_PEER_PACKET_LOSS_SCALE);
+		return true;
+#endif
+	}
+
 	Array<String> NetworkManagerBase::GetServerEndpoints() const
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_ONLINE_MULTIPLAYER)

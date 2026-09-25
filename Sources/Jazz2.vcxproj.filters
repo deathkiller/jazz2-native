@@ -663,6 +663,9 @@
     <ClInclude Include="nCine\Base\TimeStamp.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Base\FrameStatistics.h">
+      <Filter>Header Files\nCine\Base</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Base\FrameTimer.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
@@ -1509,6 +1512,9 @@
     <ClInclude Include="Jazz2\UI\LoadingHandler.h">
       <Filter>Header Files\Jazz2\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\PerformanceOverlay.h">
+      <Filter>Header Files\Jazz2\UI</Filter>
+    </ClInclude>
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\SequenceHelpers.h">
       <Filter>Header Files\Shared\Containers</Filter>
     </ClInclude>
@@ -1836,6 +1842,9 @@
     <ClInclude Include="Dependencies\enet\enet.h">
       <Filter>Header Files\Dependencies\enet</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Tests\PhysicsProbe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -1963,6 +1972,9 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\DrawableNode.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Base\FrameStatistics.cpp">
+      <Filter>Source Files\nCine\Base</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Base\FrameTimer.cpp">
       <Filter>Source Files\nCine\Base</Filter>
@@ -2711,6 +2723,9 @@
     <ClCompile Include="Jazz2\UI\LoadingHandler.cpp">
       <Filter>Source Files\Jazz2\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\UI\PerformanceOverlay.cpp">
+      <Filter>Source Files\Jazz2\UI</Filter>
+    </ClCompile>
     <ClCompile Include="$(ExtensionLibraryPath)\Containers\StringUtils.cpp">
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
@@ -2974,6 +2989,9 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Tests\PhysicsProbe.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

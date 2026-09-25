@@ -64,6 +64,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Clock.cpp
+	${NCINE_SOURCE_DIR}/nCine/Base/FrameStatistics.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/FrameTimer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/HashFunctions.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Object.cpp
@@ -465,6 +466,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/HUD.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/InGameConsole.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/LoadingHandler.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/PerformanceOverlay.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/AboutSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/BeginSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ControlsOptionsSection.cpp

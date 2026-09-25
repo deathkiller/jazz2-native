@@ -157,6 +157,18 @@ namespace nCine::RHI::Vulkan
 		static void PresentFrame();
 
 		/**
+		 * @brief Starts timing the GPU work of the frame
+		 *
+		 * Paired with @ref EndGpuTiming() around everything the frame renders: two timestamps written into the
+		 * frame's command buffer, read back when its slot is recorded again and reported to @ref FrameStatistics.
+		 * The fence of that slot has been waited for by then, so reading them never waits for the GPU. Does
+		 * nothing on a queue family that has no timestamps.
+		 */
+		static void BeginGpuTiming();
+		/** @brief Stops timing the GPU work of the frame, see @ref BeginGpuTiming() */
+		static void EndGpuTiming();
+
+		/**
 			@brief Creates an additional surface and swap chain for a secondary window
 
 			Used by the ImGui multi-viewport support for the windows it spawns when a panel is dragged out of the

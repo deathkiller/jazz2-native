@@ -122,8 +122,9 @@ namespace Jazz2::UI::Multiplayer
 				safeView.Y + safeView.H * 0.5f, FontLayer + 20, Alignment::Center, textColor, textScale, 0.0f, 0.0f, 0.0f);
 		}
 
-		if (PreferencesCache::ShowPerformanceMetrics) {
-			// Sits immediately left of the frame rate counter the base HUD draws, so it follows the same edge
+		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Basic) {
+			// Sits immediately left of the frame rate counter the base HUD draws, so it follows the same edge; the
+			// detailed metrics have a row for it instead, see OnAddPerformanceMetrics()
 			float debugX = safeView.X + safeView.W - 44.0f;
 			float debugY = safeView.Y + 1.0f;
 			std::int32_t debugCharOffset = 0;
@@ -147,6 +148,32 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		return true;
+	}
+
+	void MpHUD::OnAddPerformanceMetrics(PerformanceOverlay& overlay)
+	{
+		HUD::OnAddPerformanceMetrics(overlay);
+
+		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
+		char value[32];
+		if (mpLevelHandler->_isServer) {
+#if defined(DEATH_DEBUG)
+			overlay.AddRow("Update"_s, { value, formatInto(value, "{} B", mpLevelHandler->_debugAverageUpdatePacketSize) });
+#endif
+			return;
+		}
+
+		NetworkManagerBase::ConnectionStatistics stats;
+		if (!mpLevelHandler->_networkManager->GetConnectionStatistics(stats)) {
+			return;
+		}
+		overlay.AddRow("Ping"_s, { value, formatInto(value, "{} ms", stats.RoundTripTimeMs) });
+		if (stats.RoundTripTimeVarianceMs >= 0) {
+			overlay.AddRow("Jitter"_s, { value, formatInto(value, "{} ms", stats.RoundTripTimeVarianceMs) });
+		}
+		if (stats.PacketLoss >= 0.0f) {
+			overlay.AddRow("Loss"_s, { value, formatInto(value, "{:.1f}%", stats.PacketLoss) });
+		}
 	}
 
 	void MpHUD::ShowCountdown(std::int32_t secsLeft)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WidgetSection.h"
+#include "../PerformanceOverlay.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -16,6 +17,8 @@ namespace Jazz2::UI::Menu
 		~GraphicsOptionsSection() override;
 
 		void OnShow(IMenuContainer* root) override;
+		void OnHide() override;
+		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 
 	private:
@@ -24,5 +27,7 @@ namespace Jazz2::UI::Menu
 		String _resolutionValue;
 		String _renderingResolutionValue;
 		String _lightingResolutionValue;
+		// The detailed performance metrics, so the effect of the options can be watched while they are changed
+		PerformanceOverlay _performanceOverlay;
 	};
 }

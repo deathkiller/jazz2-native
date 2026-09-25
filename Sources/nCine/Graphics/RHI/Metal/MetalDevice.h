@@ -166,6 +166,10 @@ namespace nCine::RHI::Metal
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
 		/** @brief Acquires a drawable, draws the rendered screen texture into it, presents it and commits the frame (the buffer-swap equivalent) */
 		static void PresentFrame();
+		/** @brief No-op (a command buffer records its own GPU times, which @ref PresentFrame() reports once it completes) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/**
 			@brief Creates an additional Metal view and layer for a secondary window

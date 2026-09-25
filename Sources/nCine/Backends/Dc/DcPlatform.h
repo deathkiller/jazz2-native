@@ -2,6 +2,8 @@
 
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include <cstddef>
+
 namespace nCine::Backends
 {
 	/**
@@ -21,6 +23,8 @@ namespace nCine::Backends
 
 		/** @brief Writes the state of main, video and sound memory to the log */
 		static void LogMemoryStatus(const char* reason);
+		/** @brief Returns how much of main memory the heap has handed out and the whole window it can grow into, in bytes */
+		static void GetHeapUsage(std::size_t& used, std::size_t& total);
 	};
 }
 

@@ -178,5 +178,17 @@ namespace nCine::RHI::GL
 		}
 		/** @brief No-op (the window backend performs the buffer swap) */
 		static inline void PresentFrame() {}
+
+		/**
+		 * @brief Starts timing the GPU work of the frame
+		 *
+		 * Paired with @ref EndGpuTiming() around everything the frame renders. The measurement is a timer query
+		 * the driver answers a few frames later, and it is reported to @ref FrameStatistics once it is there,
+		 * so neither call ever waits for the GPU. OpenGL 3.3 has the query in the core profile, OpenGL|ES only
+		 * through `GL_EXT_disjoint_timer_query`; without it, on the ES 2.0 profile and on the web, both do nothing.
+		 */
+		static void BeginGpuTiming();
+		/** @brief Stops timing the GPU work of the frame, see @ref BeginGpuTiming() */
+		static void EndGpuTiming();
 	};
 }

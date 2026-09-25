@@ -1,5 +1,6 @@
 #include "PvrDevice.h"
 #include "../../../Base/Algorithms.h"
+#include "../../../Base/FrameStatistics.h"
 #include "PvrBuffer.h"
 #include "PvrShaderProgram.h"
 #include "PvrRenderTarget.h"
@@ -587,6 +588,57 @@ namespace nCine::RHI::PVR
 		_pvrInitialized = true;
 	}
 
+	namespace
+	{
+		// The PVR renders one scene while the next is being submitted, and pvr_wait_ready() is where the CPU catches up
+		// with it. That happens once per scene, the render-to-texture passes included, so a frame that switches targets
+		// pays it more than once - the waits of a frame add up in the statistics.
+		void WaitForPvr()
+		{
+			if (!FrameStatistics::IsEnabled()) {
+				pvr_wait_ready();
+				return;
+			}
+			const TimeStamp start = TimeStamp::now();
+			pvr_wait_ready();
+			FrameStatistics::AddCounter("PVR wait", start.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		}
+
+		void ReportPvrStatistics()
+		{
+			if (!FrameStatistics::IsEnabled()) {
+				return;
+			}
+
+			pvr_stats_t stats;
+			if (pvr_get_stats(&stats) != 0) {
+				return;
+			}
+			// What KallistiOS measured for the last scene the PVR finished rendering - the screen of the previous
+			// frame. Its time unit has changed between versions (milliseconds, later nanoseconds), but the frame rate
+			// it reports is derived from the frame time in that same unit, so their ratio gives milliseconds either way.
+			if (stats.frame_last_time > 0 && stats.frame_rate > 0.0f) {
+				const float renderTime = float(stats.rnd_last_time) / float(stats.frame_last_time) * (1000.0f / stats.frame_rate);
+				FrameStatistics::AddCounter("PVR", renderTime, FrameStatistics::Unit::Milliseconds);
+			}
+			// A full vertex buffer is what makes the tile accelerator drop the rest of a scene
+			if (stats.vtx_buffer_used_max > 0) {
+				FrameStatistics::AddCounter("Vertex buffer", float(stats.vtx_buffer_used) * 100.0f / float(stats.vtx_buffer_used_max),
+					FrameStatistics::Unit::Percent);
+			}
+			// The query walks the allocator of the whole video memory, so it is refreshed only a few times a second,
+			// but reported every frame so that every snapshot has it
+			static float vramFree = 0.0f;
+			static std::uint32_t framesUntilVramQuery = 0;
+			if (framesUntilVramQuery == 0) {
+				vramFree = float(pvr_mem_available());
+				framesUntilVramQuery = 15;
+			}
+			framesUntilVramQuery--;
+			FrameStatistics::AddCounter("VRAM free", vramFree, FrameStatistics::Unit::Bytes);
+		}
+	}
+
 	void PvrDevice::EnsureScene()
 	{
 		const SceneTarget wanted = (_currentRenderTarget != nullptr ? SceneTarget::RenderTexture : SceneTarget::Screen);
@@ -595,7 +647,7 @@ namespace nCine::RHI::PVR
 		}
 		FinishScene();
 
-		pvr_wait_ready();
+		WaitForPvr();
 		if (wanted == SceneTarget::RenderTexture) {
 			PvrTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			if (texture == nullptr || texture->GetVramPointer() == nullptr) {
@@ -643,13 +695,14 @@ namespace nCine::RHI::PVR
 		}
 		if (_sceneTarget == SceneTarget::None) {
 			// Nothing was drawn this frame; run an empty scene to keep the display pacing
-			pvr_wait_ready();
+			WaitForPvr();
 			pvr_scene_begin();
 			pvr_list_begin(PVR_LIST_TR_POLY);
 			InvalidateSubmittedHeader();
 			_sceneTarget = SceneTarget::Screen;
 		}
 		FinishScene();
+		ReportPvrStatistics();
 	}
 
 	void PvrDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)

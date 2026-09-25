@@ -227,6 +227,10 @@ namespace nCine::RHI::RSX
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
 		/** @brief Flips the intermediate screen surface into the next display buffer and queues it for scan-out */
 		static void PresentFrame();
+		/** @brief No-op (how long the CPU waits for the previous flip is reported by @ref PresentFrame()) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		// The console has no multi-window support, so the ImGui multi-viewport hooks are inert here
 		/** @brief Not supported on this platform (returns `nullptr`) */

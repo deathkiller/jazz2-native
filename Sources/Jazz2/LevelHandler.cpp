@@ -801,7 +801,7 @@ namespace Jazz2
 			}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-			if (PreferencesCache::ShowPerformanceMetrics && !_assignedViewports.empty()) {
+			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && !_assignedViewports.empty()) {
 				ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 				const auto& mainViewport = *_assignedViewports[0];
 

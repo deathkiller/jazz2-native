@@ -697,6 +697,11 @@ namespace Jazz2::UI
 		std::uint32_t sampleCount = s->ReadValueAsLE<std::uint16_t>();
 		for (std::uint32_t i = 0; i < sampleCount; i++) {
 			std::uint8_t stringSize = s->ReadValue<std::uint8_t>();
+			if (stringSize == 0) {
+				_sfxSamples.emplace_back(); // Sample not found
+				continue;
+			}
+
 			String samplePath = String(NoInit, stringSize);
 			s->Read(samplePath.data(), stringSize);
 

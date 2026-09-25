@@ -2,6 +2,7 @@
 #include "RescaleModeSection.h"
 #include "SafeAreaOptionsSection.h"
 #include "../Font.h"
+#include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
@@ -295,38 +296,85 @@ namespace Jazz2::UI::Menu
 				PreferencesCache::UnalignedViewport = !PreferencesCache::UnalignedViewport;
 				_isDirty = true;
 			});
+		// Basic is the frame rate counter (and the round trip time online); Detailed adds where the time of a frame
+		// goes, the GPU and what the hardware reports, and the memory (see PerformanceOverlay)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Performance Metrics"),
-			[]() -> StringView { return (PreferencesCache::ShowPerformanceMetrics ? _("Enabled") : _("Disabled")); },
-			[this](std::int32_t) {
-				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
+			[]() -> StringView {
+				switch (PreferencesCache::PerformanceMetrics) {
+					default: return _("Off");
+					// TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, only the frame rate is shown
+					case PerformanceMetricsLevel::Basic: return _("Basic");
+					// TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, the frame rate and the time each part of a frame takes
+					case PerformanceMetricsLevel::Detailed: return _("Detailed");
+				}
+			},
+			[this](std::int32_t direction) {
+				// 3 contiguous values (Off/Basic/Detailed); Left/Right step backward/forward with wraparound
+				PreferencesCache::PerformanceMetrics = (PerformanceMetricsLevel)(((std::int32_t)PreferencesCache::PerformanceMetrics + direction + 3) % 3);
+				PreferencesCache::ApplyPerformanceMetrics();
 				_isDirty = true;
 			});
 
 		SetContent(std::move(list));
 	}
 
+	void GraphicsOptionsSection::OnHide()
+	{
+		// The table is not shown while another section covers this one, so it does not keep its texture meanwhile;
+		// it is built again the first frame this section is back
+		_performanceOverlay.Release();
+
+		WidgetSection::OnHide();
+	}
+
+	void GraphicsOptionsSection::OnUpdate(float timeMult)
+	{
+		// Before the widgets, as activating one of them can leave the section, which destroys it. The table is
+		// rebuilt here rather than while drawing because it is rendered into a texture of its own, in a pass that
+		// has to be scheduled before the scene is visited.
+		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+			if (_performanceOverlay.Update()) {
+				Vector2i viewSize = _root->GetViewSize();
+				Rectf view = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+				_performanceOverlay.Build(ContentResolver::Get().GetFont(FontType::Small), view.H * 0.6f);
+			}
+		} else {
+			_performanceOverlay.Release();
+		}
+
+		WidgetSection::OnUpdate(timeMult);
+	}
+
 	void GraphicsOptionsSection::OnDraw(Canvas* canvas)
 	{
 		WidgetSection::OnDraw(canvas);
 
-		// Performance Metrics (FPS counter overlay drawn outside the framed content area). It sits in the top
-		// corner, which is exactly where a display that crops its edges would swallow it, so it is placed
-		// against the safe area rather than against the view - as its counterpart in the HUD is.
-		if (PreferencesCache::ShowPerformanceMetrics) {
+		// Performance Metrics (FPS counter overlay drawn outside the framed content area), shown here too so the
+		// effect of the options above can be watched while they are changed. It sits in the top corner, which is
+		// exactly where a display that crops its edges would swallow it, so it is placed against the safe area
+		// rather than against the view - as its counterpart in the HUD is.
+		if (PreferencesCache::PerformanceMetrics != PerformanceMetricsLevel::Off) {
 			Vector2i viewSize = canvas->ViewSize;
 			Rectf view = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+			float metricsRight = view.X + view.W - 4.0f;
+			float metricsTop = view.Y + 1.0f;
+#if defined(DEATH_TARGET_ANDROID)
+			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
+				metricsRight = view.X + view.W / 2 + 40.0f;
+				metricsTop = view.Y + 6.0f;
+			}
+#endif
 			std::int32_t charOffset = 0;
 			char stringBuffer[32];
 			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
-#if defined(DEATH_TARGET_ANDROID)
-			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-				_root->DrawStringShadow(stringBuffer, charOffset, view.X + view.W / 2 + 40.0f, view.Y + 6.0f, IMenuContainer::FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-			} else
-#endif
-				_root->DrawStringShadow(stringBuffer, charOffset, view.X + view.W - 4.0f, view.Y + 1.0f, IMenuContainer::FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+			_root->DrawStringShadow(stringBuffer, charOffset, metricsRight, metricsTop, IMenuContainer::FontLayer,
+				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+				// Above the menu's own text, the table covers only the corner it sits in
+				_performanceOverlay.Draw(canvas, metricsRight, metricsTop + 16.0f, IMenuContainer::FontLayer + 10);
+			}
 		}
 	}
 }

@@ -60,6 +60,20 @@ namespace Jazz2
 	};
 
 	/**
+		@brief How much the performance metrics overlay shows
+
+		@ref Basic is the frame rate alone (with the round trip time in online multiplayer), which is all the option
+		ever used to show. @ref Detailed adds where the time of a frame goes - the phases of the frame on the CPU, the
+		GPU time or whatever the graphics hardware can tell instead, the draw calls and the memory - averaged over half
+		a second, see @ref nCine::FrameStatistics.
+	*/
+	enum class PerformanceMetricsLevel : std::uint8_t {
+		Off,						/**< Hidden */
+		Basic,						/**< Frame rate only */
+		Detailed					/**< Frame rate and a breakdown of the frame */
+	};
+
+	/**
 		@brief When the custom player character color is applied
 		
 		Determines the scope in which the user's custom fur recolor takes effect: only for remote
@@ -320,8 +334,13 @@ namespace Jazz2
 		 */
 		static bool PhysicsProbe;
 #endif
-		/** @brief Whether performance metrics (FPS counter) are visible */
-		static bool ShowPerformanceMetrics;
+		/**
+		 * @brief How much of the performance metrics is visible
+		 *
+		 * Apply a change with @ref ApplyPerformanceMetrics(), which is what starts or stops collecting the
+		 * statistics the detailed level shows.
+		 */
+		static PerformanceMetricsLevel PerformanceMetrics;
 		/** @brief Whether cinematics should keep original aspect ratio */
 		static bool KeepAspectRatioInCinematics;
 		/** @brief Whether player trails are visible */
@@ -504,6 +523,8 @@ namespace Jazz2
 		 * sizes that surface, and the logical view then follows the drawable size as on any other display.
 		 */
 		static void ApplyRenderingResolution();
+		/** @brief Collects the frame statistics exactly while @ref PerformanceMetrics is at the level that shows them */
+		static void ApplyPerformanceMetrics();
 
 		/** @brief Returns device ID of the device currently running this application */
 		static String GetDeviceID();
@@ -576,7 +597,9 @@ namespace Jazz2
 			EnableTouchVibration = 0x80000000,
 
 			ShowMinimap = 0x100000000,
-			EnableReforgedCamera = 0x200000000
+			EnableReforgedCamera = 0x200000000,
+			// Together with ShowPerformanceMetrics, which on its own is the frame rate counter older versions know
+			ShowDetailedPerformanceMetrics = 0x400000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);

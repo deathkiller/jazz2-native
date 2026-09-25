@@ -151,6 +151,10 @@ namespace nCine::RHI::LegacyGL
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
 		/** @brief Flushes what the frame batched; the window backend swaps the buffers itself */
 		static void PresentFrame();
+		/** @brief No-op (fixed-function OpenGL has no timer queries) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/**
 			@brief Ceiling on the texture dimension this backend will report, whatever the driver says

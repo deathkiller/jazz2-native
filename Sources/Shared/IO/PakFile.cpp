@@ -64,7 +64,7 @@ namespace Death { namespace IO {
 		return xxHash3(normalizedFileName.data(), i);
 	}
 
-	static std::int64_t FindRelocatedFooter(std::unique_ptr<Death::IO::Stream>& s)
+	static std::int64_t FindRelocatedFooter(Death::IO::Stream* s)
 	{
 		s->Seek(0, SeekOrigin::Begin);
 
@@ -366,7 +366,7 @@ namespace Death { namespace IO {
 
 	PakFile::PakFile(StringView path)
 	{
-		std::unique_ptr<Stream> s = std::make_unique<FileStream>(path, FileAccess::Read);
+		std::unique_ptr<FileStream> s = std::make_unique<FileStream>(path, FileAccess::Read);
 		DEATH_ASSERT(s->GetSize() > FooterSize + 8, "Invalid .pak file", );
 
 		// Header size is 18 bytes
@@ -378,7 +378,7 @@ namespace Death { namespace IO {
 		
 		// If signature doesn't match, try to find .pak embedded in PE/ELF executable
 		if DEATH_UNLIKELY(std::memcmp(signature, Signature, sizeof(Signature)) != 0) {
-			footerPosition = FindRelocatedFooter(s);
+			footerPosition = FindRelocatedFooter(s.get());
 			DEATH_ASSERT(footerPosition >= 0, "Invalid .pak file", );
 		}
 
@@ -402,6 +402,9 @@ namespace Death { namespace IO {
 		ConstructsItemsFromIndex(*s, nullptr,
 			(fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex,
 			useRelativeOffsets, 0);
+
+		// Park the stream in the pool, so the first resource opened afterwards doesn't reopen the archive
+		_streamPool->Release(Death::move(s));
 	}
 
 	StringView PakFile::GetMountPoint() const

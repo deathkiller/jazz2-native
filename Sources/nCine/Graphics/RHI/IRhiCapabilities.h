@@ -85,6 +85,7 @@ namespace nCine::RHI
 			ArbTextureStorage,
 			ArbBufferStorage,
 			ArbGetProgramBinary,
+			ExtDisjointTimerQuery,
 #if defined(RHI_GL_PROFILE_ES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 			OesGetProgramBinary,
 #endif

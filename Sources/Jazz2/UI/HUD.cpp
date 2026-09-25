@@ -165,6 +165,19 @@ namespace Jazz2::UI
 			UpdateWeaponWheel(timeMult);
 			UpdateRgbLights(timeMult, _levelHandler->_assignedViewports[0].get());
 		}
+
+		// Rebuilt only when there are new numbers, and here rather than while drawing: the table is rendered into
+		// a texture of its own, in a pass that has to be scheduled before the scene is visited
+		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+			if (_performanceOverlay.Update()) {
+				OnAddPerformanceMetrics(_performanceOverlay);
+				Vector2i viewSize = _levelHandler->GetViewSize();
+				Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
+				_performanceOverlay.Build(_smallFont, safeView.H * 0.6f);
+			}
+		} else {
+			_performanceOverlay.Release();
+		}
 	}
 
 	bool HUD::OnDraw(RenderQueue& renderQueue)
@@ -258,7 +271,7 @@ namespace Jazz2::UI
 		OnDrawLevelText(charOffset);
 
 #if defined(DEATH_DEBUG)
-		/*if (PreferencesCache::ShowPerformanceMetrics && !_levelHandler->_assignedViewports.empty()) {
+		/*if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && !_levelHandler->_assignedViewports.empty()) {
 			auto& viewport = _levelHandler->_assignedViewports[0];
 			for (const auto& actor : _levelHandler->_actors) {
 				DrawSolid(actor->GetPos() - actor->AABB.GetExtents() - viewport->_cameraPos + viewport->GetBounds().GetSize() * 0.5f, 10,
@@ -276,16 +289,23 @@ namespace Jazz2::UI
 		}
 
 		// Performance Metrics
-		if (PreferencesCache::ShowPerformanceMetrics) {
-			i32tos((std::int32_t)roundFast(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+		if (PreferencesCache::PerformanceMetrics != PerformanceMetricsLevel::Off) {
+			float metricsRight = view.X + view.W - 4.0f;
+			float metricsTop = view.Y + 1.0f;
 #if defined(DEATH_TARGET_ANDROID)
 			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W / 2 + 40.0f, view.Y + 6.0f, FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
-			} else
+				metricsRight = view.X + view.W / 2 + 40.0f;
+				metricsTop = view.Y + 6.0f;
+			}
 #endif
-			_smallFont->DrawString(this, stringBuffer, charOffset, view.X + view.W - 4.0f, view.Y + 1.0f, FontLayer,
+			i32tos((std::int32_t)roundFast(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+			_smallFont->DrawString(this, stringBuffer, charOffset, metricsRight, metricsTop, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+
+			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+				// Right under the frame rate counter and against the same edge, above everything but the transition
+				_performanceOverlay.Draw(this, metricsRight, metricsTop + 16.0f, PerformanceMetricsLayer);
+			}
 		}
 
 		if (_transitionState >= TransitionState::WaitingForFadeIn && _transitionState <= TransitionState::FadeOut) {
@@ -985,6 +1005,13 @@ namespace Jazz2::UI
 		if (_gemsTime > TotalTime) {
 			_gemsTime = -1.0f;
 		}
+	}
+
+	void HUD::OnAddPerformanceMetrics(PerformanceOverlay& overlay)
+	{
+		// Every actor updates, collides and draws every frame, so the count is what Logic and Visit mostly scale with
+		char value[16];
+		overlay.AddRow("Actors"_s, { value, formatInto(value, "{}", _levelHandler->_actors.size()) });
 	}
 
 	void HUD::OnDrawTouchButtons(Actors::Player* player)

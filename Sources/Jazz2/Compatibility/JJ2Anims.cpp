@@ -496,8 +496,8 @@ namespace Jazz2::Compatibility
 					}
 				}
 				if (bestColumns == 0) {
-					LOGW("No frame configuration of {}:{} fits into a {}x{} texture ({} frames of {}x{})",
-						anim.Set, anim.Anim, MaxTextureSize, MaxTextureSize, anim.FrameCount, sizeX, sizeY);
+					LOGW("No frame configuration of {}:{} \"{}/{}\" fits into a {}x{} texture ({} frames of {}x{})",
+						anim.Set, anim.Anim, entry->Category, entry->Name, MaxTextureSize, MaxTextureSize, anim.FrameCount, sizeX, sizeY);
 					bestColumns = (fallbackColumns > 0 ? fallbackColumns : maxColumns);
 					bestRows = (fallbackRows > 0 ? fallbackRows : 255);
 				}
@@ -512,24 +512,24 @@ namespace Jazz2::Compatibility
 			// TODO: Hardcoded name
 			bool applyToasterPowerUpFix = (entry->Category == "Object"_s && entry->Name == "powerup_upgrade_toaster"_s);
 			if (applyToasterPowerUpFix) {
-				LOGI("Applying \"Toaster PowerUp\" palette fix to {}:{}", anim.Set, anim.Anim);
+				LOGI("Applying \"Toaster PowerUp\" palette fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry->Category, entry->Name);
 			}
 
 			bool applyVineFix = (entry->Category == "Object"_s && entry->Name == "vine"_s);
 			if (applyVineFix) {
-				LOGI("Applying \"Vine\" palette fix to {}:{}", anim.Set, anim.Anim);
+				LOGI("Applying \"Vine\" palette fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry->Category, entry->Name);
 			}
 
 			bool applyFlyCarrotFix = (entry->Category == "Pickup"_s && entry->Name == "carrot_fly"_s);
 			if (applyFlyCarrotFix) {
 				// This image has 4 wrong pixels that should be transparent
-				LOGI("Applying \"Fly Carrot\" image fix to {}:{}", anim.Set, anim.Anim);
+				LOGI("Applying \"Fly Carrot\" image fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry->Category, entry->Name);
 			}
 
 			bool playerFlareFix = ((entry->Category == "Jazz"_s || entry->Category == "Spaz"_s) && (entry->Name == "shoot_ver"_s || entry->Name == "vine_shoot_up"_s));
 			if (playerFlareFix) {
 				// This image has already applied weapon flare, remove it
-				LOGI("Applying \"Player Flare\" image fix to {}:{}", anim.Set, anim.Anim);
+				LOGI("Applying \"Player Flare\" image fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry->Category, entry->Name);
 			}
 
 			String filename;
@@ -629,7 +629,7 @@ namespace Jazz2::Compatibility
 
 			bool applyLoriLiftFix = (entry->Category == "Lori"_s && (entry->Name == "lift"_s || entry->Name == "lift_start"_s || entry->Name == "lift_end"_s));
 			if (applyLoriLiftFix) {
-				LOGI("Applying \"Lori\" hotspot fix to {}:{}", anim.Set, anim.Anim);
+				LOGI("Applying \"Lori\" hotspot fix to {}:{} \"{}/{}\"", anim.Set, anim.Anim, entry->Category, entry->Name);
 				anim.NormalizedHotspotX = 20;
 				anim.NormalizedHotspotY = 4;
 			}

@@ -164,6 +164,10 @@ namespace nCine::RHI::PICA
 		}
 		/** @brief Closes the frame's command list and queues the display transfer to the top screen (called by the Ctr window backend once per frame) */
 		static void PresentFrame();
+		/** @brief No-op (citro3d times the GPU itself, which @ref PresentFrame() reports) */
+		static inline void BeginGpuTiming() {}
+		/** @brief No-op */
+		static inline void EndGpuTiming() {}
 
 		/** @brief The dimension a single PICA200 texture cannot exceed (a hardware limit) */
 		static constexpr std::int32_t HardwareTextureDimension = 1024;

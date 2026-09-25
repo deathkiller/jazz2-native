@@ -4,6 +4,7 @@
 #include "RenderResources.h"
 #include "RenderStatistics.h"
 #include "../Application.h"
+#include "../Base/FrameStatistics.h"
 #include "DisplayMode.h"
 #include "RHI/Rhi.h"
 #include "Camera.h"
@@ -84,8 +85,19 @@ namespace nCine
 
 	void ScreenViewport::Draw()
 	{
+		// Everything the frame renders happens in between, the off-screen passes of the chain included, so this
+		// is where its GPU time is taken; a backend that cannot time the GPU leaves the pair empty
+		const bool timeGpu = FrameStatistics::IsEnabled();
+		if (timeGpu) {
+			RHI::Device::BeginGpuTiming();
+		}
+
 		// Recursive calls into the chain
 		Viewport::Draw(0);
+
+		if (timeGpu) {
+			RHI::Device::EndGpuTiming();
+		}
 
 		for (std::size_t i = 0; i < _chain.size(); i++) {
 			if (_chain[i]) {

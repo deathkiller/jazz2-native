@@ -148,6 +148,7 @@ namespace Jazz2::Compatibility
 		for (std::int32_t i = 0; i < sampleCount; i++) {
 			auto sample = animMapping.GetByOrdinal(indexToSample[i]);
 			if (sample == nullptr) {
+				LOGW("Sample requested by \"{}\" with ordinal {} not found", targetPath, indexToSample[i]);
 				so.WriteValue<std::uint8_t>(0);
 			} else {
 				String samplePath = sample->Category + '/' + sample->Name + ".wav"_s;
