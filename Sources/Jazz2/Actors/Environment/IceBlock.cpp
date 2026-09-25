@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Environment
 				}
 				if (tileMap->IsTileEmpty(_originTile.X, _originTile.Y + 1)) {
 					for (int i = 0; i < 5; i++) {
-						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (int)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
+						Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X - 16 + Random().Fast(0, 32), (std::int32_t)_pos.Y + 24, _renderer.layer() + 10), Explosion::Type::IceShrapnel);
 					}
 				}
 			}

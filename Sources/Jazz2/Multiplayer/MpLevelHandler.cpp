@@ -2764,7 +2764,7 @@ namespace Jazz2::Multiplayer
 				} else if (variableName == "treasure"_s) {
 					value = value.trimmed();
 					auto intValue = stou32(value.data(), value.size());
-					if (intValue < 0 || intValue > INT32_MAX) {
+					if (intValue > INT32_MAX) {
 						SendMessage(peer, UI::MessageLevel::Confirm, "Value out of range"_s);
 						return true;
 					}
@@ -3719,7 +3719,7 @@ namespace Jazz2::Multiplayer
 										float force = Random().Next(10.0f, 20.0f);
 										Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
 										std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
-										auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<int>());
+										auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
 										if (actor != nullptr) {
 											actor->AddExternalForce(dir * force, force);
 											AddActor(actor);
@@ -7087,7 +7087,7 @@ namespace Jazz2::Multiplayer
 						float force = Random().NextFloat(10.0f, 20.0f);
 						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
 						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
-						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<int>());
+						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
 						if (actor != nullptr) {
 							actor->AddExternalForce(dir * force, force);
 							AddActor(actor);

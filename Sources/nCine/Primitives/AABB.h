@@ -128,7 +128,7 @@ namespace nCine
 		}
 
 		template<>
-		inline bool AABB<int>::Contains(int px, int py) const
+		inline bool AABB<std::int32_t>::Contains(std::int32_t px, std::int32_t py) const
 		{
 			return (px >= L && px <= R && py >= T && py <= B);
 		}

@@ -94,7 +94,7 @@ namespace nCine::RHI::GL
 				return false;
 			}
 			
-			const GLint fileLength = static_cast<int>(fileHandle->GetSize());
+			const GLint fileLength = static_cast<GLint>(fileHandle->GetSize());
 			fileSource = String{NoInit, static_cast<std::size_t>(fileLength)};
 			fileHandle->Read(fileSource.data(), fileLength);
 			

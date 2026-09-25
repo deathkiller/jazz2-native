@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Weapons
 	Task<bool> TNT::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_timeLeft = 200.0f;
-		_preexplosionTime = (int)_timeLeft / 16;
+		_preexplosionTime = (std::int32_t)_timeLeft / 16;
 
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation, false);
 

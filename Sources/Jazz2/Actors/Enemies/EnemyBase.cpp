@@ -137,7 +137,7 @@ namespace Jazz2::Actors::Enemies
 			if (drop < item.Chance) {
 				if (item.Event != EventType::Empty) {
 					uint8_t eventParams[16] { };
-					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Event, eventParams, ActorState::None, Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer()));
+					std::shared_ptr<ActorBase> actor = _levelHandler->EventSpawner()->SpawnEvent(item.Event, eventParams, ActorState::None, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()));
 					if (actor != nullptr) {
 						_levelHandler->AddActor(actor);
 					}

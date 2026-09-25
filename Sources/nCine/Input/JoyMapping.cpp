@@ -464,7 +464,7 @@ namespace nCine
 		}
 
 		const auto& mapping = _assignedMappings[event.joyId];
-		const bool mappingIsValid = (mapping.isValid && event.axisId >= 0 && event.axisId < static_cast<int>(MappingDescription::MaxNumAxes));
+		const bool mappingIsValid = (mapping.isValid && event.axisId >= 0 && event.axisId < MappingDescription::MaxNumAxes);
 		if (mappingIsValid) {
 			const auto& axis = mapping.desc.axes[event.axisId];
 
@@ -483,7 +483,7 @@ namespace nCine
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Axis move mapped as axis {} (value: {}, normalized: {}, min: {}, max: {})", axis.name, _mappedAxisEvent.value, value, axis.min, axis.max);
 #endif
-				_mappedJoyStates[event.joyId]._axesValues[static_cast<int>(axis.name)] = _mappedAxisEvent.value;
+				_mappedJoyStates[event.joyId]._axesValues[static_cast<std::int32_t>(axis.name)] = _mappedAxisEvent.value;
 				_inputEventHandler->OnJoyMappedAxisMoved(_mappedAxisEvent);
 			}
 

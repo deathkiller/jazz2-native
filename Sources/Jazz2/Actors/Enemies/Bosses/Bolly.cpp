@@ -61,7 +61,7 @@ namespace Jazz2::Actors::Bosses
 		uint8_t turretParams[1] = { 2 };
 		_turret->OnActivated({
 			.LevelHandler = _levelHandler,
-			.Pos = Vector3i((int)_pos.X, (int)_pos.Y, _renderer.layer() + 6),
+			.Pos = Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 6),
 			.Params = turretParams
 		});
 		_levelHandler->AddActor(_turret);*/

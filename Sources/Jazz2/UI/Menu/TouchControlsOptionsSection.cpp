@@ -333,7 +333,7 @@ namespace Jazz2::UI::Menu
 	Vector2f TouchControlsOptionsSection::GetCornerHandlePos(TouchButtonSlot slot, Vector2i viewSize)
 	{
 		ButtonRect r = GetButtonRect(slot, viewSize);
-		switch (PreferencesCache::TouchButtons[(int)slot].Anchor) {
+		switch (PreferencesCache::TouchButtons[(std::int32_t)slot].Anchor) {
 			case TouchButtonAnchor::BottomLeft:  return Vector2f(r.CenterX + r.HalfW, r.CenterY - r.HalfH);
 			case TouchButtonAnchor::BottomRight: return Vector2f(r.CenterX - r.HalfW, r.CenterY - r.HalfH);
 			case TouchButtonAnchor::TopLeft:     return Vector2f(r.CenterX + r.HalfW, r.CenterY + r.HalfH);
