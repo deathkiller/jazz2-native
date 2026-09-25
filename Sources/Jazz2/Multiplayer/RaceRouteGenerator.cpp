@@ -811,8 +811,8 @@ namespace Jazz2::Multiplayer
 		for (const auto& m : startMarkers) {
 			includeBounds(m);
 		}
-		boundsMin.X = std::max(0, boundsMin.X - 2);
-		boundsMin.Y = std::max(0, boundsMin.Y - 2);
+		boundsMin.X = std::max<std::int32_t>(0, boundsMin.X - 2);
+		boundsMin.Y = std::max<std::int32_t>(0, boundsMin.Y - 2);
 		boundsMax.X = std::min<std::int32_t>(W - 1, boundsMax.X + 2);
 		boundsMax.Y = std::min<std::int32_t>(H - 1, boundsMax.Y + 2);
 		outBoundsMin = boundsMin;
