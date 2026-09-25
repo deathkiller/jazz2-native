@@ -157,7 +157,7 @@ namespace Jazz2::UI
 		// As many rows in a block as fit the height, then as many blocks as the rows need, and the rows spread
 		// evenly over them so the last block is not left with a stub
 		const float lineHeight = float(font->GetSizeInPixels()) * TextScale * LineSpacing;
-		const std::int32_t rowsThatFit = std::clamp(std::int32_t(maxHeight / lineHeight), 4, MaxRowsPerBlock);
+		const std::int32_t rowsThatFit = std::clamp<std::int32_t>(maxHeight / lineHeight, 4, MaxRowsPerBlock);
 		const std::int32_t blockCount = std::min((_rowCount + rowsThatFit - 1) / rowsThatFit, MaxBlocks);
 
 		// A column is as wide as the widest text it held over the last window of builds and the one before it, so
