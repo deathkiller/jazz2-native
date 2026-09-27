@@ -173,10 +173,10 @@ namespace nCine::RHI::LegacyGL
 			`ContentResolver` cuts tileset atlases into chunks to fit, and it is also the size one texture
 			page is built at, so content sized against this number is never paged.
 
-			Prebaked content that is larger anyway (the small font atlas is 128x529) is NOT rejected -
-			@ref LegacyGlTexture splits such an image into pages internally and the draw path picks the
-			page a primitive samples - so `Texture::Initialize()` only warns about it on this backend
-			instead of asserting.
+			Prebaked content that is larger anyway (Devan's fire-breathing animation is 119x1004) is NOT
+			rejected - @ref LegacyGlTexture splits such an image into pages internally and the draw path
+			picks the page a primitive samples - so `Texture::Initialize()` only warns about it on this
+			backend instead of asserting.
 		*/
 		static std::int32_t GetMaxTextureDimension();
 

@@ -191,7 +191,9 @@ namespace Jazz2
 		void OnKeyPressed(const KeyboardEvent& event) override;
 		void OnKeyReleased(const KeyboardEvent& event) override;
 		void OnTextInput(const TextInputEvent& event) override;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		void OnTouchEvent(const TouchEvent& event) override;
+#endif
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
@@ -354,6 +356,15 @@ namespace Jazz2
 		std::shared_ptr<UI::Menu::InGameMenu> _pauseMenu;
 		std::shared_ptr<Actors::Bosses::BossBase> _activeBoss;
 
+		// Actors (and the water and weather that go with them) at the last checkpoint, restored when a player dies,
+		// taken at the end of the frame the checkpoint was activated in, when all actors are updated
+		LevelStateSnapshot _checkpointSnapshot;
+		bool _checkpointSnapshotPending = false;
+		// State of the previous level to return to once this (special) level is completed
+		std::shared_ptr<const LevelStateSnapshot> _returnLevelState;
+		// State of this level taken right before it was left to a special level
+		std::shared_ptr<const LevelStateSnapshot> _leftLevelState;
+
 		BitArray _pressedKeys;
 		std::uint32_t _overrideActions;
 		Vector2f _overrideMovement;
@@ -389,6 +400,22 @@ namespace Jazz2
 		virtual void ProcessQueuedNextLevel();
 		/** @brief Prepares @ref LevelInitialization for transition to the next level */
 		virtual void PrepareNextLevelInitialization(LevelInitialization& levelInit);
+		/**
+		 * @brief Returns `true` if actors can be stored in level state snapshots
+		 *
+		 * Snapshots make it possible to roll back all actors to the last checkpoint, to resume them from a saved
+		 * state and to return from a special level to the exact state the previous level was left in.
+		 */
+		virtual bool CanUseLevelStateSnapshots() const;
+		/** @brief Returns full name of the level that follows after the level is exited with the specified exit type */
+		String ResolveNextLevelName(ExitType exitType, StringView nextLevel) const;
+		/**
+		 * @brief Returns `true` if the specified level is a special level
+		 *
+		 * A special level specifies itself as its next level, it has no successor of its own and returns back to
+		 * the level it was entered from once completed (e.g., "Gargoyle's Lair" from "Medieval Kineval").
+		 */
+		static bool IsReturnLevel(StringView levelName);
 
 		/** @brief Returns player viewport bounds */
 		Recti GetPlayerViewportBounds(std::int32_t w, std::int32_t h, std::int32_t index);
@@ -443,6 +470,14 @@ namespace Jazz2
 
 	private:
 		bool TryInvokeCheat(StringView line);
+
+		// Level state snapshots, see CanUseLevelStateSnapshots()
+		void CreateCheckpointSnapshot();
+		void RestoreCheckpointSnapshot();
+		void SerializeActorsToStream(Stream& dest);
+		void InitializeActorsFromStream(Stream& src);
+		void SerializeLevelState(Stream& dest);
+		bool InitializeFromLevelState(const LevelStateSnapshot& state, const LevelInitialization& levelInit);
 
 		void CheatKill(ArrayView<Actors::Player* const> targets);
 		void CheatGod(ArrayView<Actors::Player* const> targets);

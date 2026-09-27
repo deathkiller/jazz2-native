@@ -361,6 +361,14 @@ namespace nCine
 		RHI::Debug::ScopedGroup scoped({ debugString, length });*/
 #endif
 
+#if defined(RHI_RENDER_TARGETS_BOTTOM_UP)
+		if (_type == Type::Screen) {
+			// The rectangles of a pass onto the screen are converted against the height of the default framebuffer,
+			// which this viewport spans - kept up to date here rather than from every backend's resize path
+			RHI::Device::SetScreenHeight(_height);
+		}
+#endif
+
 		RenderResources::SetCurrentViewport(this);
 		{
 			ZoneScopedNC("OnDrawViewport", 0x81A861);
@@ -371,6 +379,8 @@ namespace nCine
 		if (_type == Type::WithTexture) {
 			_fbo->BindDraw();
 			_fbo->SetDrawBuffers(_numColorAttachments);
+			// Also covers the viewports without a texture that draw next, they render into this one's
+			RenderResources::_renderTargetBound = true;
 		}
 
 		if (_type == Type::Screen || _type == Type::WithTexture) {
@@ -450,9 +460,16 @@ namespace nCine
 #if defined(WITH_QT5)
 			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(theApplication().gfxDevice());
 			gfxDevice.bindDefaultDrawFramebufferObject();
+#	if defined(RHI_RENDER_TARGETS_BOTTOM_UP)
+			// What UnbindDraw() would have told the device
+			RHI::Device::SetRenderTargetBound(false);
+#	endif
 #else
 			RHI::RenderTarget::UnbindDraw();
 #endif
+			// Every viewport that renders into a texture is drawn before the one it feeds binds its own, so the
+			// screen is what is bound now
+			RenderResources::_renderTargetBound = false;
 		}
 	}
 

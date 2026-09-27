@@ -77,9 +77,11 @@ namespace Jazz2::UI::Menu
 		}
 #endif
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_owner->_touchButtonsTimer > 0.0f) {
 			_owner->_touchButtonsTimer -= timeMult;
 		}
+#endif
 
 		_owner->UpdateActiveSection(timeMult);
 	}
@@ -100,6 +102,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void InGameMenu::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (!_sections.empty()) {
@@ -109,6 +112,7 @@ namespace Jazz2::UI::Menu
 			lastSection->OnTouchEvent(event, _canvasBackground->ViewSize);
 		}
 	}
+#endif
 
 	void InGameMenu::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
@@ -176,23 +180,29 @@ namespace Jazz2::UI::Menu
 
 		DrawViewportSeparators();
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			float arrowScale = MenuLayout::Blend(0.7f, 1.0f, ViewSize);
 			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - titleOffset, ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
+#endif
 
 		// Title
-		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		if constexpr (Font::ShadowsEnabled) {
+			_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		}
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
 		// The shadow follows the same horizontal placement as the text itself (it did not, and drifted off
 		// the text as soon as the logo was scaled down for a compact view)
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
+			_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
+			_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		}
 
 		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
@@ -358,11 +368,13 @@ namespace Jazz2::UI::Menu
 			_pressedActions = 0xffff | (0xffff << 16);
 		}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if ((type & ChangedPreferencesType::TouchButtons) == ChangedPreferencesType::TouchButtons) {
 			if (_root->_hud != nullptr) {
 				_root->_hud->RefreshTouchButtons();
 			}
 		}
+#endif
 	}
 
 	void InGameMenu::RecreateSections()

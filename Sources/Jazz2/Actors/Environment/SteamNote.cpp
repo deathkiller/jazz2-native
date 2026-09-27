@@ -69,4 +69,18 @@ namespace Jazz2::Actors::Environment
 		_renderer.setDrawEnabled(false);
 		_cooldown = 80.0f;
 	}
+
+	void SteamNote::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_cooldown);
+	}
+
+	void SteamNote::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_cooldown = src.ReadValueAsLE<float>();
+	}
 }

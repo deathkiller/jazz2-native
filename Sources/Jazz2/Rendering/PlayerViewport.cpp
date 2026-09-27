@@ -13,7 +13,7 @@ namespace Jazz2::Rendering
 #if defined(RHI_CAP_POSTPROCESSING)
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
 #endif
-			_cameraViewCenterY(0.0f), _shakeDuration(0.0f)
+			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -65,7 +65,8 @@ namespace Jazz2::Rendering
 #endif
 		}
 
-		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
+		// Y down like the screen - every pass, a render target's included, is top-down (see RhiFwd.h)
+		_camera->SetOrthoProjection(0.0f, (float)w, 0.0f, (float)h);
 
 #if defined(RHI_CAP_POSTPROCESSING)
 		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
@@ -242,18 +243,40 @@ namespace Jazz2::Rendering
 
 		if (PreferencesCache::EnableReforgedCamera) {
 			Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
-			float maxLookAheadX = halfView.X * MaxLookAheadFraction;
+			const bool movingX = (focusVelocity.X > CameraStickSpeed);
+			const float speedLookAheadX = (movingX ? (focusVelocity.X - CameraStickSpeed) * LookAheadFactorX : 0.0f);
 			float maxLookAheadY = halfView.Y * MaxLookAheadFraction;
-			float targetLookAheadX = (focusVelocity.X > CameraStickSpeed
-				? (focusSpeed.X < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.X - CameraStickSpeed) * LookAheadFactorX, maxLookAheadX) : 0.0f);
+			float targetLookAheadX;
+			if (IsSmallView()) {
+				// A small view always leads: by a resting amount in the direction the player faces, and by the usual
+				// speed lead on top of that while moving. Moving points it at once; a player standing still has to
+				// keep facing the other way for a moment before it follows, so turning round to shoot does not swing
+				// the view (see SmallViewIdleLeadFraction)
+				if (movingX) {
+					_lookAheadDirectionX = (focusSpeed.X < 0.0f ? -1.0f : 1.0f);
+					_lookAheadTurnTime = 0.0f;
+				} else if ((_targetActor->IsFacingLeft() ? -1.0f : 1.0f) != _lookAheadDirectionX) {
+					_lookAheadTurnTime += timeMult;
+					if (_lookAheadTurnTime >= SmallViewTurnDelay) {
+						_lookAheadDirectionX = -_lookAheadDirectionX;
+						_lookAheadTurnTime = 0.0f;
+					}
+				} else {
+					_lookAheadTurnTime = 0.0f;
+				}
+				targetLookAheadX = _lookAheadDirectionX * std::min(halfView.X * SmallViewIdleLeadFraction + speedLookAheadX,
+					halfView.X * SmallViewMaxLookAheadFraction);
+			} else {
+				targetLookAheadX = (movingX ? (focusSpeed.X < 0.0f ? -1.0f : 1.0f) * std::min(speedLookAheadX, halfView.X * MaxLookAheadFraction) : 0.0f);
+			}
 			float targetLookAheadY = (focusVelocity.Y > CameraStickSpeed
 				? (focusSpeed.Y < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.Y - CameraStickSpeed) * LookAheadFactorY, maxLookAheadY) : 0.0f);
-			// Ease the look-ahead toward its target, but once the player has stopped (target zero) and the remaining lead
-			// is small, freeze it instead of crawling all the way to zero: the camera is pixel-snapped, so easing through
-			// the last few pixels shows up as visible 1px jumps. Holding a small constant lead avoids that; easing resumes
-			// the moment the player moves again (target != 0).
+			// Ease the look-ahead toward its target, but once the player has stopped and the lead is within a few pixels
+			// of where it rests (zero, or the resting lead of a small view), freeze it instead of crawling the rest of
+			// the way: the camera is pixel-snapped, so easing through the last few pixels shows up as visible 1px jumps.
+			// Holding the small difference avoids that; easing resumes the moment the player moves again.
 			static constexpr float LookAheadFreezeThreshold = 4.0f;
-			if (targetLookAheadX != 0.0f || std::abs(_cameraDistanceFactor.X) >= LookAheadFreezeThreshold) {
+			if (movingX || std::abs(targetLookAheadX - _cameraDistanceFactor.X) >= LookAheadFreezeThreshold) {
 				_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LookAheadSmoothing, timeMult);
 			}
 			if (targetLookAheadY != 0.0f || std::abs(_cameraDistanceFactor.Y) >= LookAheadFreezeThreshold) {
@@ -374,13 +397,29 @@ namespace Jazz2::Rendering
 	void PlayerViewport::WarpCameraToTarget(bool fast)
 	{
 		// The camera base is locked to the player, so warping just means placing it on the player and resetting the
-		// movement-tracking reference. A non-fast (hard) warp also clears the look-ahead so it starts centered.
+		// movement-tracking reference. A non-fast (hard) warp also resets the look-ahead, so it starts where it rests.
 		Vector2f focusPos = _targetActor->GetPos();
 		_cameraPos = focusPos;
 		_cameraLastPos = focusPos;
 		_cameraViewCenterY = focusPos.Y;
 		if (!fast) {
-			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
+			ResetLookAhead();
 		}
+	}
+
+	void PlayerViewport::ResetLookAhead()
+	{
+		// Centred, except in a small view of the reforged camera, which rests on a lead in the direction the player
+		// faces - set straight away, so a level start or a respawn does not open with the view drifting by itself
+		_lookAheadDirectionX = (_targetActor->IsFacingLeft() ? -1.0f : 1.0f);
+		_lookAheadTurnTime = 0.0f;
+		const bool leads = (PreferencesCache::EnableReforgedCamera && IsSmallView());
+		_cameraDistanceFactor = Vector2f(leads ? _lookAheadDirectionX * (GetViewportSize().X / 2) * SmallViewIdleLeadFraction : 0.0f, 0.0f);
+	}
+
+	bool PlayerViewport::IsSmallView() const
+	{
+		// Only the width: it is what the horizontal lead has to fit in, and the one that shrinks in a narrow view
+		return (GetViewportSize().X <= LevelHandler::DefaultWidth / 2);
 	}
 }

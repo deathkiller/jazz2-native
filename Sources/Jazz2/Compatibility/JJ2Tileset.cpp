@@ -209,11 +209,14 @@ namespace Jazz2::Compatibility
 	{
 		std::int32_t tileCount = _tileCount;
 
-		// Rearrange the tiles from the original '10 tiles per row' into the row count whose texture wastes
-		// the least memory once rounded up to power-of-two dimensions, which is what hardware that cannot
-		// sample non-power-of-two textures has to pad it to (the runtime derives the row count back from the
-		// texture width, so this is free to change). Bounded by the smallest texture size among the
-		// supported platforms, so one converted tileset serves all of them.
+		// Rearrange the tiles from the original '10 tiles per row' into the row count whose sheet wastes the
+		// least space once rounded up to power-of-two dimensions, within 1024x1024 where the tiles fit into it.
+		// No texture is decided by this, though: the sheet is never uploaded as it is. The runtime copies every
+		// tile into an atlas of its own with a pixel of padding around each (ContentResolver::BuildTilesetDiffuse)
+		// - on the consoles 15 tiles (510 px) per row and chunks of at most 512 rows, so each chunk is one page
+		// even on the PSP and no tile ever lies across a page line; elsewhere with this row count, split into
+		// textures the device can hold. It derives the row count back from the width, so this is free to change,
+		// and a tileset with more tiles than 1024x1024 holds is just as fine.
 		constexpr std::int32_t MaxTextureSize = 1024;
 		std::int32_t TilesPerRow = std::max<std::int32_t>(1, MaxTextureSize / BlockSize);
 		{
@@ -241,12 +244,6 @@ namespace Jazz2::Compatibility
 
 		std::int32_t width = TilesPerRow * BlockSize;
 		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
-		if (height > MaxTextureSize) {
-			// More tiles than a MaxTextureSize² texture can hold at all - platforms limited to that size
-			// cannot sample the result, so at least make the oversize visible at conversion time
-			LOGW("Tileset \"{}\" has {} tiles, its {}x{} texture exceeds the smallest supported size of {}x{}",
-				_name, tileCount, width, height, MaxTextureSize, MaxTextureSize);
-		}
 
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );

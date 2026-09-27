@@ -1,0 +1,163 @@
+name: 'PortMaster'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+          Platform: aarch64
+          Runner: 'ubuntu-22.04-arm'
+
+        - BuildType: Release
+          Platform: x86_64
+          Runner: 'ubuntu-22.04'
+
+    runs-on: ${{ matrix.Runner }}
+    # Old glibc (2.31) is required by many firmwares, it's also what PortMaster porters use
+    container: 'ubuntu:20.04'
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: 'Create Build Environment'
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y
+        # `git` must be installed before checkout to get the version, the libraries are provided by the firmware
+        apt-get install -y --no-install-recommends ca-certificates git cmake make g++ pkg-config curl libgles2-mesa-dev libegl1-mesa-dev libopenal-dev libvorbis-dev libcurl4-openssl-dev libssl-dev libdw-dev zlib1g-dev
+
+    - name: 'Build SDL2'
+      run: |
+        # SDL2 from Ubuntu 20.04 is too old, 2.26.2 is used by PortMaster (only for linking, the firmware provides it)
+        curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-2.26.2.tar.gz | tar -xz -C /tmp/
+        cmake -S /tmp/SDL2-2.26.2/ -B /tmp/SDL2-build/ -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D SDL_STATIC=OFF -D SDL_TEST=OFF -D SDL_X11=OFF -D SDL_WAYLAND=OFF
+        make -j $(nproc) -C /tmp/SDL2-build/ install
+
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        # OpenGL|ES 3.0 is supported by all devices, libopenmpt is compiled in and libstdc++ is linked statically
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D DEATH_DEBUG_SYMBOLS=ON -D NCINE_PREFERRED_BACKEND=SDL2 -D NCINE_PREFERRED_RHI=OpenGL -D NCINE_RHI_GL_PROFILE=ES3 -D NCINE_WITH_GLEW=OFF -D NCINE_COMPILE_OPENMPT=ON -D NCINE_BUILD_ASSET_PACKER=OFF -D NCINE_BUILD_SHADER_COMPILER=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D "CMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc"
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Bundle Libraries'
+      run: |
+        mkdir -p ./_package/libs.${{ matrix.Platform }}/ ./_package/licenses/ ./_symbols/
+        cp -f ./_build/jazz2 ./_package/jazz2.${{ matrix.Platform }}
+        # Debug symbols are uploaded separately, both architectures share one directory
+        cp -f ./_build/jazz2.pdb ./_symbols/jazz2.pdb
+
+        # Each dependency must be either provided by the firmware or bundled, anything else fails the build
+        provided='^(ld-linux-.*|libc|libm|libdl|libpthread|librt|libz|libstdc\+\+|libgcc_s|libGLESv2|libEGL|libSDL2-2\.0|libopenal|libvorbisfile|libcurl)\.so'
+        # Firmwares ship either OpenSSL 1.1 or 3, so it has to be bundled
+        bundled='^(libssl|libcrypto)\.so'
+        for lib in $(readelf -d ./_build/jazz2 | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
+          if [[ "$lib" =~ $provided ]]; then
+            echo "Provided by firmware: $lib"
+          elif [[ "$lib" =~ $bundled ]]; then
+            echo "Bundled: $lib"
+            cp -f -L "$(ldd ./_build/jazz2 | awk -v lib="$lib" '$1 == lib { print $3 }')" ./_package/libs.${{ matrix.Platform }}/
+          else
+            echo "::error::Unexpected dependency \"$lib\", it has to be either bundled or confirmed to be provided by all firmwares"
+            exit 1
+          fi
+        done
+        # libssl requires libcrypto of the same version
+        for lib in ./_package/libs.${{ matrix.Platform }}/libssl.so.*; do
+          if [ -f "$lib" ]; then
+            cp -f -L "$(ldd "$lib" | awk '$1 ~ /^libcrypto\.so/ { print $3 }')" ./_package/libs.${{ matrix.Platform }}/
+          fi
+        done
+        ls -l ./_package/libs.${{ matrix.Platform }}/
+
+        cp -f ./_build/_deps/libopenmptgit-src/LICENSE ./_package/licenses/LICENSE.OpenMPT.txt
+        if ls ./_package/libs.${{ matrix.Platform }}/libssl.so.* >/dev/null 2>&1; then
+          cp -f /usr/share/doc/libssl1.1/copyright ./_package/licenses/LICENSE.OpenSSL.txt
+        fi
+
+    - name: 'Upload Binaries'
+      uses: actions/upload-artifact@v7
+      with:
+        name: PortMaster_${{ matrix.Platform }}
+        path: ./_package/
+
+    - name: 'Upload Debug Symbols'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_PortMaster_${{ matrix.Platform }}_Symbols
+        path: ./_symbols/
+
+  Package:
+    needs: Build
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+
+    - name: 'Create Port Directory'
+      run: |
+        # Same layout as "ports/jazz2/" in PortMaster-New repository (only "screenshot.jpg" is missing)
+        mkdir -p ./_port/jazz2/Source/ ./_port/jazz2/licenses/
+        cp -f ./Sources/PortMaster/* ./_port/
+        rm -f ./Content/Translations/*.po
+        cp -f -r ./Content/ ./_port/jazz2/Content/
+        cp -f ./LICENSE ./_port/jazz2/licenses/LICENSE.jazz2-native.txt
+        # Original game files are to be copied here by the user
+        touch ./_port/jazz2/Source/.gitkeep
+
+    - name: 'Download Binaries'
+      uses: actions/download-artifact@v8
+      with:
+        pattern: PortMaster_*
+        path: ./_port/jazz2/
+        merge-multiple: true
+
+    - name: 'Set Minimum glibc Version'
+      run: |
+        # Highest glibc version required by any of the shipped binaries
+        minGlibc=$(for f in ./_port/jazz2/jazz2.* ./_port/jazz2/libs.*/*; do readelf -V "$f"; done | grep -o 'GLIBC_[0-9][0-9.]*' | sed 's/GLIBC_//' | sort -u -V | tail -n 1)
+        echo "Minimum glibc version: $minGlibc"
+        python3 - "$minGlibc" <<'EOF'
+        import json, sys
+        path = "./_port/port.json"
+        with open(path, encoding="utf-8") as f:
+            port = json.load(f)
+        port["attr"]["min_glibc"] = sys.argv[1]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(port, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        EOF
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_PortMaster
+        path: ./_port/
+        # Required for "Source/.gitkeep"
+        include-hidden-files: true

@@ -19,7 +19,7 @@ namespace Jazz2::Rendering
 		if (notInitialized) {
 			_camera = std::make_unique<Camera>();
 		}
-		_camera->SetOrthoProjection(0.0f, (float)width, (float)height, 0.0f);
+		_camera->SetOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
 		_camera->SetView(0.0f, 0.0f, 0.0f, 1.0f);
 
 		if (notInitialized) {

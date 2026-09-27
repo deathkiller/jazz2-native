@@ -103,6 +103,22 @@ namespace Jazz2::Actors::Enemies
 		_speed.Y = 0.0f;
 	}
 
+	void Witch::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValue<std::uint8_t>(_playerHit ? 1 : 0);
+	}
+
+	void Witch::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attackTime = src.ReadValueAsLE<float>();
+		_playerHit = (src.ReadValue<std::uint8_t>() != 0);
+	}
+
 	void Witch::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

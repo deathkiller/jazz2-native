@@ -294,9 +294,10 @@ namespace nCine::RHI::Software
 			@param buffer		Base of the tightly packed `width * height * 4` RGBA8 destination
 			@param width		Destination width in pixels
 			@param height		Destination height in pixels
-			@param isFboTarget	`true` for a render-target texture (rows stored bottom-up), `false` for the screen
+			@param isRenderTarget	`true` for a render-target texture, `false` for the screen (the only surface that can
+									be RGB565); both are stored top-down
 		*/
-		void SetTargetBuffer(std::uint8_t* buffer, std::int32_t width, std::int32_t height, bool isFboTarget = false);
+		void SetTargetBuffer(std::uint8_t* buffer, std::int32_t width, std::int32_t height, bool isRenderTarget = false);
 
 		/**
 			@brief Submits a draw call for deferred tile-based rendering

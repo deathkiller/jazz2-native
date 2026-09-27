@@ -66,6 +66,28 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Monkey::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_stuck) flags |= 0x01;
+		if (_currentTransition != nullptr) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Monkey::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_stuck = ((flags & 0x01) != 0);
+		if (_isWalking && (flags & 0x02) != 0) {
+			// Throwing was interrupted, continue walking as the last transition callback would
+			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+		}
+	}
+
 	void Monkey::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

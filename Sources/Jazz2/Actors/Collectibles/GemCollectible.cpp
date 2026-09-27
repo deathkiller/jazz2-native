@@ -72,6 +72,20 @@ namespace Jazz2::Actors::Collectibles
 		UpdateHitbox(20, 20);
 	}
 
+	void GemCollectible::OnSerializeState(Stream& dest)
+	{
+		CollectibleBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_ignoreTime);
+	}
+
+	void GemCollectible::OnDeserializeState(Stream& src)
+	{
+		CollectibleBase::OnDeserializeState(src);
+
+		_ignoreTime = src.ReadValueAsLE<float>();
+	}
+
 	void GemCollectible::OnCollect(Player* player)
 	{
 		if (_ignoreTime > 0.0f) {

@@ -1,5 +1,6 @@
 ﻿#include "Turtle.h"
 #include "../../ILevelHandler.h"
+#include "../../Events/EventSpawner.h"
 #include "../../Tiles/TileMap.h"
 #include "TurtleShell.h"
 #include "../Explosion.h"
@@ -129,6 +130,51 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Turtle::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_isAttacking) flags |= 0x01;
+		if (_isTurning) flags |= 0x02;
+		if (_isWithdrawn) flags |= 0x04;
+		if (_isDodging) flags |= 0x08;
+		if (_currentTransition != nullptr) flags |= 0x10;
+		dest.WriteValue<std::uint8_t>(flags);
+		dest.WriteValueAsLE<float>(_dodgeCooldown);
+	}
+
+	void Turtle::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_isAttacking = ((flags & 0x01) != 0);
+		_isTurning = ((flags & 0x02) != 0);
+		_isWithdrawn = ((flags & 0x04) != 0);
+		_isDodging = ((flags & 0x08) != 0);
+		bool inTransition = ((flags & 0x10) != 0);
+		_dodgeCooldown = src.ReadValueAsLE<float>();
+
+		// Transition callbacks cannot be restored, so finish the interrupted action as they would
+		if (_isAttacking) {
+			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+			_isAttacking = false;
+		} else if (_isTurning) {
+			if (!_isWithdrawn) {
+				SetFacingLeft(!IsFacingLeft());
+			}
+			_canHurtPlayer = true;
+			_isWithdrawn = false;
+			_isTurning = false;
+			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+		} else if (!_isDodging && inTransition) {
+			// Coming out of the shell after dodging
+			_canHurtPlayer = true;
+			_speed.X = (IsFacingLeft() ? -1 : 1) * DefaultSpeed;
+		}
+	}
+
 	void Turtle::OnUpdateHitbox()
 	{
 		UpdateHitbox(24, 24);
@@ -166,16 +212,19 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
-			uint8_t shellParams[9];
+			std::uint8_t shellParams[Events::EventSpawner::SpawnParamsSize] = {};
 			EventParamsWriter writer(shellParams);
 			writer.SetFloat(0, _speed.X * 1.1f);
 			writer.SetFloat(4, shellSpeedY);
 			writer.SetUint8(8, _theme);
-			shell->OnActivated(ActorActivationDetails(
+			ActorActivationDetails details(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
 				shellParams
-			));
+			);
+			// The shell is a regular event object, so it can be spawned again from a level state snapshot
+			details.Type = EventType::TurtleShell;
+			shell->OnActivated(details);
 			_levelHandler->AddActor(shell);
 
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2), Explosion::Type::SmokeGray);

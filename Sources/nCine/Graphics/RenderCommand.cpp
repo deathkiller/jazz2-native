@@ -8,8 +8,8 @@
 namespace nCine
 {
 	RenderCommand::RenderCommand(Type type)
-		: _materialSortKey(0), _modelMatrixUniform(nullptr), _instanceBlock(nullptr), _instanceUniforms{}, _cachedShaderChangeCounter(std::uint32_t(-1)),
-			_layer(0), _numInstances(0), _batchSize(0), _transformationCommitted(false), _modelMatrixUniformInBlock(false),
+		: _materialSortKey(0), _modelMatrixUniform(nullptr), _instanceBlock(nullptr), _instancesBlock(nullptr), _instanceUniforms{}, _idSortKey(0), _cachedShaderChangeCounter(std::uint32_t(-1)),
+			_layer(0), _visitOrder(0), _numInstances(0), _batchSize(0), _transformationCommitted(false), _modelMatrixUniformInBlock(false),
 			_modelMatrix(Matrix4x4f::Identity)
 #if defined(NCINE_PROFILING)
 			, _type(type)
@@ -79,6 +79,7 @@ namespace nCine
 		}
 
 		_instanceBlock = _material.UniformBlock(Material::InstanceBlockName);
+		_instancesBlock = (_instanceBlock == nullptr ? _material.UniformBlock(Material::InstancesBlockName) : nullptr);
 		_modelMatrixUniform = (_instanceBlock != nullptr
 			? _instanceBlock->GetUniform(Material::ModelMatrixUniformName)
 			: _material.Uniform(Material::ModelMatrixUniformName));
@@ -99,6 +100,15 @@ namespace nCine
 		}
 		RefreshCachedUniforms();
 		return _instanceBlock;
+	}
+
+	RHI::UniformBlockCache* RenderCommand::GetInstancesBlock()
+	{
+		if (_material._shaderProgram == nullptr) {
+			return nullptr;
+		}
+		RefreshCachedUniforms();
+		return _instancesBlock;
 	}
 
 	const RenderCommand::InstanceUniforms* RenderCommand::GetInstanceUniforms()

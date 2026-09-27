@@ -113,6 +113,27 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Bat::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
+		dest.WriteValueAsLE<float>(_noiseCooldown);
+	}
+
+	void Bat::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attacking = (src.ReadValue<std::uint8_t>() != 0);
+		_noiseCooldown = src.ReadValueAsLE<float>();
+
+		// Waking up was interrupted, its transition callback would start the attack
+		if (!_attacking && _currentAnimation != nullptr && _currentAnimation->State != AnimState::Idle) {
+			_attacking = true;
+		}
+	}
+
 	void Bat::OnUpdateHitbox()
 	{
 		UpdateHitbox(24, 24);

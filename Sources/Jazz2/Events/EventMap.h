@@ -66,8 +66,13 @@ namespace Jazz2::Events
 		Vector2f GetSpawnPosition(PlayerType type);
 		/** @brief Creates a checkpoint for eventual rollback */
 		void CreateCheckpointForRollback();
-		/** @brief Rolls back to the last checkpoint */
-		void RollbackToCheckpoint();
+		/**
+		 * @brief Rolls back to the last checkpoint
+		 *
+		 * @param respawnActors		Spawn again all objects that were active at the checkpoint but aren't anymore,
+		 *							pass `false` if the objects are restored from a snapshot instead
+		 */
+		void RollbackToCheckpoint(bool respawnActors = true);
 
 		/** @brief Stores tile event description */
 		void StoreTileEvent(std::int32_t x, std::int32_t y, EventType eventType, Actors::ActorState eventFlags = Actors::ActorState::None, std::uint8_t* tileParams = nullptr);
@@ -82,6 +87,10 @@ namespace Jazz2::Events
 		void Deactivate(std::int32_t x, std::int32_t y);
 		/** @brief Resets generator on specified tile position */
 		void ResetGenerator(std::int32_t tx, std::int32_t ty);
+		/** @brief Marks event on specified tile position as active, i.e., its object already exists */
+		void Activate(std::int32_t x, std::int32_t y);
+		/** @brief Links an object restored from a snapshot to the generator on specified tile position */
+		void AttachGeneratorActor(std::int32_t tx, std::int32_t ty, std::shared_ptr<Actors::ActorBase> actor);
 
 		/** @brief Returns event description of specified tile position */
 		const EventTile& GetEventTile(std::int32_t x, std::int32_t y) const;
@@ -113,6 +122,14 @@ namespace Jazz2::Events
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes event map state to a stream */
 		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
+		/** @brief Initializes active state of all events from a stream */
+		void InitializeActiveStateFromStream(Stream& src);
+		/** @brief Serializes active state of all events (the current one or at the last checkpoint) to a stream */
+		void SerializeActiveStateToStream(Stream& dest, bool fromCheckpoint = false);
+		/** @brief Restores complete live state of the event map (including the last checkpoint) from a snapshot */
+		bool InitializeSnapshotFromStream(Stream& src);
+		/** @brief Serializes complete live state of the event map (including the last checkpoint) to a snapshot */
+		void SerializeSnapshotToStream(Stream& dest);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -211,5 +228,8 @@ namespace Jazz2::Events
 		SmallVector<WarpTarget, 0> _warpTargets;
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const EventTile& tile);
+
+		static void WriteEventTile(Stream& dest, const EventTile& tile);
+		static void ReadEventTile(Stream& src, EventTile& tile);
 	};
 }

@@ -83,6 +83,7 @@ extern "C" {
 #		include "Audio/Backends/Ps2/Ps2AudioDevice.h"
 #	endif
 #elif defined(DEATH_TARGET_PSP)
+#	include "Backends/Psp/PspPower.h"
 #	include <pspkernel.h>
 #	include <pspdebug.h>
 #	include <psppower.h>
@@ -257,12 +258,14 @@ namespace nCine
 	// The callback can only be registered from a thread that then sleeps waiting for callbacks, so it needs
 	// a thread of its own - this is the standard PSPSDK arrangement (sceKernelSleepThreadCB is what makes
 	// the firmware deliver them). Without it the HOME button does nothing and the console can only be
-	// switched off, which is why every PSP title sets this up before anything else.
+	// switched off, which is why every PSP title sets this up before anything else. The power callback
+	// goes on the same thread, for the same reason (see PspPower).
 	static int PspCallbackThread(SceSize args, void* argp)
 	{
 		static_cast<void>(args); static_cast<void>(argp);
 		int callbackId = sceKernelCreateCallback("nCineExitCallback", PspExitCallback, nullptr);
 		sceKernelRegisterExitCallback(callbackId);
+		Backends::PspPower::RegisterCallback();
 		sceKernelSleepThreadCB();
 		return 0;
 	}
@@ -725,6 +728,9 @@ namespace nCine
 		emscripten_set_main_loop(MainApplication::EmscriptenStep, 0, 1);
 		emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
 #else
+#	if defined(DEATH_TARGET_PSP)
+		std::uint32_t pspSeenResumes = Backends::PspPower::GetResumeCount();
+#	endif
 		while (!app._shouldQuit) {
 			app.ProcessStep();
 #	if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
@@ -747,6 +753,14 @@ namespace nCine
 #	elif defined(DEATH_TARGET_PSP)
 			if (pspShutdownRequested) {
 				app.Quit();
+			}
+			// The sleep itself is handled where it matters - the audio thread reserves its channel again - so
+			// this only puts the wake in the log, which is the one record there is of whether a later problem
+			// followed a sleep
+			const std::uint32_t pspResumes = Backends::PspPower::GetResumeCount();
+			if (pspResumes != pspSeenResumes) {
+				pspSeenResumes = pspResumes;
+				LOGI("The console woke up from sleep");
 			}
 #		if defined(WITH_CURL)
 			// Drops the access point association once nothing has needed it for a while - it is deliberately

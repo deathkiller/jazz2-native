@@ -53,6 +53,10 @@ namespace Jazz2::Multiplayer
 		Uuid UniqueServerID;
 		/** @brief Server protocol version, see @ref NCINE_PROTOCOL_VERSION */
 		String Version;
+		/** @brief Oldest client protocol version the server accepts, see @ref NCINE_PROTOCOL_VERSION_MIN, `0` if not announced */
+		std::uint64_t MinSupportedVersion = 0;
+		/** @brief Newest client protocol version the server accepts, see @ref NCINE_PROTOCOL_VERSION_MAX, `0` if not announced */
+		std::uint64_t MaxSupportedVersion = 0;
 		/** @brief Server name */
 		String Name;
 		/** @brief Multiplayer game mode */

@@ -1,7 +1,9 @@
 ﻿#include "Canvas.h"
 #include "../ContentResolver.h"
 
+#include "../../nCine/Graphics/Camera.h"
 #include "../../nCine/Graphics/RenderQueue.h"
+#include "../../nCine/Graphics/RenderResources.h"
 #include "../../nCine/Base/Random.h"
 
 namespace Jazz2::UI
@@ -25,6 +27,16 @@ namespace Jazz2::UI
 
 		_renderCommandsCount = 0;
 		_currentRenderQueue = &renderQueue;
+
+		// The glyph batches start over too, each record remembering how many glyphs it took (see GlyphBatch)
+		for (GlyphBatch& glyphBatch : _glyphBatches) {
+			glyphBatch.LastCount = glyphBatch.Count;
+			glyphBatch.Count = 0;
+			glyphBatch.Active = false;
+			glyphBatch.StandIn = nullptr;
+			glyphBatch.Batch = RenderBatcher::DirectBatch();
+			glyphBatch.BatchCommandsUsed = 0;
+		}
 
 		return false;
 	}
@@ -71,15 +83,13 @@ namespace Jazz2::UI
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetInstanceBlock();
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
-		if (indexed) {
-			auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
-			if (palOffsetUniform != nullptr) {
-				palOffsetUniform->SetFloatValue((float)paletteOffset);
-			}
+		// Resolved once per shader change instead of looked up in the block by name on every draw
+		auto* instanceUniforms = command->GetInstanceUniforms();
+		instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
+		instanceUniforms->Color->SetFloatVector(finalColor.Data());
+		if (indexed && instanceUniforms->PaletteOffset != nullptr) {
+			instanceUniforms->PaletteOffset->SetFloatValue((float)paletteOffset);
 		}
 
 		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
@@ -132,13 +142,13 @@ namespace Jazz2::UI
 
 		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
-		auto instanceBlock = command->GetInstanceBlock();
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
-		auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
-		if (palOffsetUniform != nullptr) {
-			palOffsetUniform->SetFloatValue(paletteOffset);
+		// Resolved once per shader change instead of looked up in the block by name on every draw
+		auto* instanceUniforms = command->GetInstanceUniforms();
+		instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
+		instanceUniforms->Color->SetFloatVector(finalColor.Data());
+		if (instanceUniforms->PaletteOffset != nullptr) {
+			instanceUniforms->PaletteOffset->SetFloatValue(paletteOffset);
 		}
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
@@ -170,15 +180,118 @@ namespace Jazz2::UI
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetInstanceBlock();
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
+		// Resolved once per shader change instead of looked up in the block by name on every draw
+		auto* instanceUniforms = command->GetInstanceUniforms();
+		instanceUniforms->SpriteSize->SetFloatVector(size.Data());
+		instanceUniforms->Color->SetFloatVector(finalColor.Data());
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->SetLayer(z);
 		command->GetMaterial().SetTexture(0, nullptr);
 
 		_currentRenderQueue->AddCommand(command);
+	}
+
+	RenderCommand* Canvas::RentGlyphCommand(const Texture& fontTexture, Shader* colorizeShader)
+	{
+		RenderCommand* command = RentRenderCommand();
+		command->SetType(RenderCommand::Type::Text);
+		const bool shaderChanged = (colorizeShader != nullptr
+			? command->GetMaterial().SetShader(colorizeShader)
+			: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+		if (shaderChanged) {
+			command->GetMaterial().ReserveUniformsDataMemory();
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+
+			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
+			}
+		}
+
+		// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
+		// when drawn into an RGBA render target, harmless for opaque/RGB targets
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		command->GetMaterial().SetTexture(fontTexture);
+		return command;
+	}
+
+	std::int32_t Canvas::GetGlyphBatch(const Texture& fontTexture, Shader* colorizeShader, std::uint16_t layer)
+	{
+		const bool colorized = (colorizeShader != nullptr);
+		std::int32_t index = -1, unusedIndex = -1;
+		for (std::int32_t i = 0; i < std::int32_t(_glyphBatches.size()); i++) {
+			const GlyphBatch& glyphBatch = _glyphBatches[i];
+			if (glyphBatch.FontTexture == &fontTexture && glyphBatch.Colorized == colorized && glyphBatch.Layer == layer) {
+				index = i;
+				break;
+			}
+			// A record used neither in this frame nor in the previous one can take the new key
+			if (unusedIndex < 0 && !glyphBatch.Active && glyphBatch.LastCount == 0) {
+				unusedIndex = i;
+			}
+		}
+		if (index < 0) {
+			if (unusedIndex >= 0) {
+				index = unusedIndex;
+			} else {
+				index = std::int32_t(_glyphBatches.size());
+				_glyphBatches.emplace_back();
+			}
+			GlyphBatch& glyphBatch = _glyphBatches[index];
+			glyphBatch = GlyphBatch();
+			glyphBatch.FontTexture = &fontTexture;
+			glyphBatch.Colorized = colorized;
+			glyphBatch.Layer = layer;
+		}
+
+		GlyphBatch& glyphBatch = _glyphBatches[index];
+		if (!glyphBatch.Active) {
+			// The first glyph of the record in this frame: the stand-in, and everything its glyphs share
+			glyphBatch.Active = true;
+			glyphBatch.Direct = false;
+			glyphBatch.StandIn = RentGlyphCommand(fontTexture, colorizeShader);
+			glyphBatch.StandIn->SetLayer(layer);
+
+			// Glyphs are written straight into the instances, member by member, at the offsets the stand-in's own
+			// instance block has them - the batched shader's instances are laid out exactly like that block
+			const RenderCommand::InstanceUniforms* instanceUniforms = glyphBatch.StandIn->GetInstanceUniforms();
+			RHI::UniformBlockCache* instanceBlock = glyphBatch.StandIn->GetInstanceBlock();
+			RHI::UniformCache* modelMatrix = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::ModelMatrixUniformName) : nullptr);
+			if (instanceUniforms != nullptr && modelMatrix != nullptr && instanceUniforms->Color != nullptr &&
+				instanceUniforms->TexRect != nullptr && instanceUniforms->SpriteSize != nullptr) {
+				const std::uint8_t* base = instanceBlock->GetDataPointer();
+				glyphBatch.ModelMatrixOffset = std::uint32_t(modelMatrix->GetDataPointer() - base);
+				glyphBatch.ColorOffset = std::uint32_t(instanceUniforms->Color->GetDataPointer() - base);
+				glyphBatch.TexRectOffset = std::uint32_t(instanceUniforms->TexRect->GetDataPointer() - base);
+				glyphBatch.SpriteSizeOffset = std::uint32_t(instanceUniforms->SpriteSize->GetDataPointer() - base);
+				glyphBatch.PaletteOffsetOffset = (instanceUniforms->PaletteOffset != nullptr
+					? std::int32_t(instanceUniforms->PaletteOffset->GetDataPointer() - base) : -1);
+				// What RenderCommand::CommitNodeTransformation() puts in the z translation of a command on this layer
+				const Camera::ProjectionValues& projection = RenderResources::GetCurrentCamera()->GetProjectionValues();
+				glyphBatch.Depth = RenderCommand::CalculateDepth(layer, projection.nearClip, projection.farClip);
+				glyphBatch.Direct = true;
+			}
+		}
+		return index;
+	}
+
+	RenderCommand* Canvas::NextGlyphBatchCommand(GlyphBatch& glyphBatch)
+	{
+		if (glyphBatch.BatchCommandsUsed >= glyphBatch.BatchCommands.size()) {
+			glyphBatch.BatchCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Text));
+		}
+		return glyphBatch.BatchCommands[glyphBatch.BatchCommandsUsed++].get();
+	}
+
+	void Canvas::FinishGlyphBatches()
+	{
+		RenderBatcher& batcher = RenderResources::GetRenderBatcher();
+		for (GlyphBatch& glyphBatch : _glyphBatches) {
+			if (glyphBatch.Active) {
+				batcher.EndDirectBatch(glyphBatch.Batch);
+			}
+		}
 	}
 
 	Vector2f Canvas::ApplyAlignment(Alignment align, Vector2f vec, Vector2f size)

@@ -99,6 +99,28 @@ namespace Jazz2::Actors::Collectibles
 		_illuminateLights.OnUpdate(timeMult);
 	}
 
+	void CollectibleBase::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_untouched ? 1 : 0);
+		dest.WriteVariableInt32(_scoreValue);
+		dest.WriteValueAsLE<float>(_timeLeft);
+		dest.WriteValueAsLE<float>(_phase);
+		dest.WriteValueAsLE<float>(_startingY);
+	}
+
+	void CollectibleBase::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_untouched = (src.ReadValue<std::uint8_t>() != 0);
+		_scoreValue = src.ReadVariableInt32();
+		_timeLeft = src.ReadValueAsLE<float>();
+		_phase = src.ReadValueAsLE<float>();
+		_startingY = src.ReadValueAsLE<float>();
+	}
+
 	void CollectibleBase::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
 		_illuminateLights.OnEmitLights(lights, _pos);

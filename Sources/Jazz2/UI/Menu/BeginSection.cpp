@@ -347,7 +347,7 @@ namespace Jazz2::UI::Menu
 
 	void BeginSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
+		if (!_shouldStart && event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;

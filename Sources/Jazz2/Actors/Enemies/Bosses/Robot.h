@@ -28,6 +28,8 @@ namespace Jazz2::Actors::Bosses
 		void Deactivate();
 
 	protected:
+		// Activated and controlled by DevanRemote, which is never restored, so it has to come back dormant too
+		bool IsSerializable() const override { return false; }
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnHealthChanged(ActorBase* collider) override;

@@ -120,14 +120,18 @@ namespace Jazz2::UI
 
 			// Current line
 			std::int32_t charOffset = 0, charOffsetShadow = 0;
-			_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
-				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, ">"_s, charOffsetShadow, currentLinePos.X - 16.0f + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
+					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			}
 			_smallFont->DrawString(this, ">"_s, charOffset, currentLinePos.X - 16.0f, currentLinePos.Y, FontLayer + 100,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
 			StringView currentLine = _currentLine;
-			_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
-				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, currentLine, charOffsetShadow, currentLinePos.X + 1.0f, currentLinePos.Y + 2.0f, FontShadowLayer + 100,
+					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f, 0.0f, 0.0f, 0.0f);
+			}
 			_smallFont->DrawString(this, currentLine, charOffset, currentLinePos.X, currentLinePos.Y, FontLayer + 100,
 				Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 
@@ -175,8 +179,10 @@ namespace Jazz2::UI
 
 			if (line.Level == MessageLevel::Echo) {
 				std::int32_t charOffset = 0, charOffsetShadow = 0;
-				_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
-							Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, "›"_s, charOffsetShadow, historyLinePos.X - 13.0f, historyLinePos.Y + 2.0f, FontShadowLayer + 100,
+								Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * sqrtf(alpha)), 0.8f, 0.0f, 0.0f, 0.0f);
+				}
 				_smallFont->DrawString(this, "›"_s, charOffset, historyLinePos.X - 13.0f, historyLinePos.Y, FontLayer + 100,
 					Alignment::Left, color, 0.8f, 0.0f, 0.0f, 0.0f);
 			}
@@ -184,9 +190,9 @@ namespace Jazz2::UI
 			line.Message.Draw(this, Rectf(historyLinePos.X, historyLinePos.Y, width, 400.0f), FontLayer + 100, charOffset);
 		}
 
-		// On-screen keyboard support for touch devices: a tappable hint in the top-left corner toggles the software
-		// keyboard, and while it is shown the current input is mirrored near the top of the screen so it is not hidden
-		// behind the keyboard (mirrors how text input is handled in the main menu)
+		// On-screen keyboard support: while it is shown the current input is mirrored near the top of the screen so it
+		// is not hidden behind the keyboard (mirrors how text input is handled in the main menu), and on touch devices
+		// a tappable hint in the top-left corner toggles it
 		if (_isVisible && theApplication().CanShowScreenKeyboard()) {
 			bool keyboardCoversInput = _keyboardVisible;
 #if defined(DEATH_TARGET_ANDROID)
@@ -204,14 +210,18 @@ namespace Jazz2::UI
 				float topLineY = safeView.Y + (ViewSize.Y >= 300 ? 34.0f : 22.0f);
 
 				std::int32_t charOffset = 0, charOffsetShadow = 0;
-				_smallFont->DrawString(this, ">"_s, charOffsetShadow, 120.0f - 16.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
-					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, ">"_s, charOffsetShadow, 120.0f - 16.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
+						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				}
 				_smallFont->DrawString(this, ">"_s, charOffset, 120.0f - 16.0f, topLineY, KeyboardLayer + 12,
 					Alignment::Left, color, 1.0f, 0.0f, 0.0f, 0.0f);
 
 				StringView currentLine = _currentLine;
-				_smallFont->DrawString(this, currentLine, charOffsetShadow, 120.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
-					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, currentLine, charOffsetShadow, 120.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
+						Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				}
 				_smallFont->DrawString(this, currentLine, charOffset, 120.0f, topLineY, KeyboardLayer + 12,
 					Alignment::Left, color, 1.0f, 0.0f, 0.0f, 0.0f);
 
@@ -220,6 +230,7 @@ namespace Jazz2::UI
 					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinApprox(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 			}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 			// TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
 			StringView keyboardLabel = _("Keyboard");
 			Vector2f labelSize = _smallFont->MeasureString(keyboardLabel, 0.8f);
@@ -228,6 +239,7 @@ namespace Jazz2::UI
 			std::int32_t hintCharOffset = 0;
 			_smallFont->DrawString(this, keyboardLabel, hintCharOffset, 16.0f, 20.0f, KeyboardLayer + 22,
 				Alignment::Left, _keyboardVisible ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f);
+#endif
 		}
 
 		return true;
@@ -377,6 +389,7 @@ namespace Jazz2::UI
 		}
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void InGameConsole::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		if (!_isVisible || !theApplication().CanShowScreenKeyboard()) {
@@ -395,6 +408,7 @@ namespace Jazz2::UI
 			}
 		}
 	}
+#endif
 
 	void InGameConsole::Clear()
 	{

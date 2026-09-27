@@ -220,8 +220,10 @@ namespace Jazz2::UI::Multiplayer
 					: Colorf(0.62f, 0.44f, 0.34f, 0.5f));
 
 				float nameX = view.X + 10.0f + _smallFont->MeasureString(_("Spectating"), 0.8f, 0.9f).X + 8.0f;
-				_smallFont->DrawString(this, followedName, charOffsetShadow, nameX, view.Y + 6.0f + 2.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, followedName, charOffsetShadow, nameX, view.Y + 6.0f + 2.0f, FontShadowLayer,
+						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
 				_smallFont->DrawString(this, followedName, charOffset, nameX, view.Y + 6.0f, FontLayer,
 					Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
@@ -234,8 +236,10 @@ namespace Jazz2::UI::Multiplayer
 					? _("Fire: next player, Run: free camera")
 					// TRANSLATORS: Spectator hint, "Fire" is the name of the action
 					: _("Fire: follow a player"));
-				_smallFont->DrawString(this, hintText, charOffsetShadow, view.X + 10.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, hintText, charOffsetShadow, view.X + 10.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
+						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
 				_smallFont->DrawString(this, hintText, charOffset, view.X + 10.0f, view.Y + 20.0f, FontLayer,
 					Alignment::TopLeft, Colorf(0.34f, 0.34f, 0.34f, 0.5f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
@@ -249,14 +253,18 @@ namespace Jazz2::UI::Multiplayer
 
 			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in {}", StringView { stringBuffer, length });
-			_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, gameStartsInText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, gameStartsInText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::WaitingForMinPlayers) {
 			auto waitingText = _fn("Waiting for {} more player", "Waiting for {} more players", mpLevelHandler->_waitingForPlayerCount, mpLevelHandler->_waitingForPlayerCount);
-			_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, waitingText, charOffsetShadow, view.X + 17.0f, view.Y + 20.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, waitingText, charOffset, view.X + 17.0f, view.Y + 20.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::Running && mpLevelHandler->_overtimeStarted) {
@@ -278,8 +286,10 @@ namespace Jazz2::UI::Multiplayer
 			auto overtimeText = _f("Finish in {} s", secsLeft);
 			// The last few seconds are marked in the same red the multiplayer error messages use
 			Colorf overtimeColor = (secsLeft <= 10 ? Colorf(0.6f, 0.41f, 0.40f, 0.5f) : Font::DefaultColor);
-			_smallFont->DrawString(this, overtimeText, charOffsetShadow, overtimeX, overtimeY + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * hudScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, overtimeText, charOffsetShadow, overtimeX, overtimeY + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * hudScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, overtimeText, charOffset, overtimeX, overtimeY, FontLayer,
 				Alignment::TopLeft, overtimeColor, 0.9f * hudScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
@@ -315,8 +325,10 @@ namespace Jazz2::UI::Multiplayer
 				for (std::uint8_t team = 0; team < teamCount; team++) {
 					float x = startX + team * spacing;
 					std::size_t length = formatInto(teamBuffer, "{}", mpLevelHandler->_teamScores[team]);
-					_mediumFont->DrawString(this, { teamBuffer, length }, charOffsetShadow, x, view.Y + 5.0f + 2.0f, FontShadowLayer,
-						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * _hudScale, 0.0f, 0.0f, 0.0f, 0.0f);
+					if constexpr (Font::ShadowsEnabled) {
+						_mediumFont->DrawString(this, { teamBuffer, length }, charOffsetShadow, x, view.Y + 5.0f + 2.0f, FontShadowLayer,
+							Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * _hudScale, 0.0f, 0.0f, 0.0f, 0.0f);
+					}
 					_mediumFont->DrawString(this, { teamBuffer, length }, charOffset, x, view.Y + 5.0f, FontLayer,
 						Alignment::Top, GetTeamColor(team), 0.9f * _hudScale, 0.0f, 0.0f, 0.0f, 0.0f);
 				}
@@ -353,8 +365,10 @@ namespace Jazz2::UI::Multiplayer
 		Font* selectedFont = (font == GameModeFontType::Medium ? _mediumFont : _smallFont);
 		scale *= _hudScale;
 		std::int32_t charOffsetShadow = 0, charOffset = 0;
-		selectedFont->DrawString(this, text, charOffsetShadow, x, y + shadowOffsetY, FontShadowLayer, alignment,
-			Colorf(0.0f, 0.0f, 0.0f, 0.32f), scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
+		if constexpr (Font::ShadowsEnabled) {
+			selectedFont->DrawString(this, text, charOffsetShadow, x, y + shadowOffsetY, FontShadowLayer, alignment,
+				Colorf(0.0f, 0.0f, 0.0f, 0.32f), scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
+		}
 		selectedFont->DrawString(this, text, charOffset, x, y, FontLayer, alignment, color,
 			scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
 	}
@@ -475,13 +489,17 @@ namespace Jazz2::UI::Multiplayer
 			const auto& item = positions[i];
 			if (item.PositionInRound > 0) {
 				std::size_t length = formatInto(stringBuffer, "{}.", item.PositionInRound);
-				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
-					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+						Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
 				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
 					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			} else {
-				_smallFont->DrawString(this, "-."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
-					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, "-."_s, charOffsetShadow, view.X + 30.0f, view.Y + offset + 1.0f, FontShadowLayer,
+						Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
 				_smallFont->DrawString(this, "-."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
 					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
@@ -495,8 +513,10 @@ namespace Jazz2::UI::Multiplayer
 			} else {
 				nameColor = (isHighlighted ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor);
 			}
-			_smallFont->DrawString(this, item.PlayerName, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, item.PlayerName, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, item.PlayerName, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
 				Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
@@ -517,8 +537,10 @@ namespace Jazz2::UI::Multiplayer
 					length += formatInto({ &stringBuffer[length], sizeof(stringBuffer) - length }, "{}", std::abs(pointsDiff));
 				}
 				
-				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset + 1.0f, FontShadowLayer,
+						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				}
 				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + std::max(130.0f, playerNameSize.X + 48.0f), view.Y + offset, FontLayer,
 					Alignment::TopLeft, pointsDiff > 0 ? Colorf(0.45f, 0.27f, 0.22f, 0.5f) : Colorf(0.2f, 0.45f, 0.2f, 0.5f),
 					0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -581,8 +603,10 @@ namespace Jazz2::UI::Multiplayer
 		constexpr Colorf SecondaryColor = Colorf(0.42f, 0.42f, 0.42f, 0.5f);
 
 		auto title = _("Final standings");
-		_mediumFont->DrawString(this, title, charOffsetShadow, boxX + boxWidth * 0.5f, boxY + 2.0f, FontShadowLayer,
-			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		if constexpr (Font::ShadowsEnabled) {
+			_mediumFont->DrawString(this, title, charOffsetShadow, boxX + boxWidth * 0.5f, boxY + 2.0f, FontShadowLayer,
+				Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		}
 		_mediumFont->DrawString(this, title, charOffset, boxX + boxWidth * 0.5f, boxY, FontLayer + 20,
 			Alignment::Top, titleColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -596,8 +620,10 @@ namespace Jazz2::UI::Multiplayer
 		float y = boxY + TitleHeight + LabelHeight;
 		for (const auto& result : results) {
 			std::size_t length = formatInto(stringBuffer, "{}.", result.Position);
-			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, rankX, y + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, rankX, y + 1.0f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, rankX, y, FontLayer + 20,
 				Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
@@ -610,8 +636,10 @@ namespace Jazz2::UI::Multiplayer
 			} else {
 				nameColor = (result.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : rowColor);
 			}
-			_smallFont->DrawString(this, result.Name, charOffsetShadow, nameX, y + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, result.Name, charOffsetShadow, nameX, y + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, result.Name, charOffset, nameX, y, FontLayer + 20,
 				Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
@@ -634,8 +662,10 @@ namespace Jazz2::UI::Multiplayer
 
 			// A player that didn't finish the race shows laps instead of a time, dimmed like the other secondary info
 			Colorf scoreColor = (result.Finished || !isRace ? rowColor : SecondaryColor);
-			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, scoreX, y + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, scoreX, y + 1.0f, FontShadowLayer,
+					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}
 			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, scoreX, y, FontLayer + 20,
 				Alignment::TopRight, scoreColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
@@ -684,6 +714,7 @@ namespace Jazz2::UI::Multiplayer
 		float boxX = view.X + view.W - boxW - Margin;
 		const float boxY = view.Y + Margin;
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		// When the on-screen touch pause button is visible and would overlap the minimap's default top-right
 		// position, tuck the minimap to the left of it; otherwise leave it where it is
 		Rectf pauseRect;
@@ -694,6 +725,7 @@ namespace Jazz2::UI::Multiplayer
 				boxX = std::max(view.X + Margin, pauseRect.X - boxW - Margin);
 			}
 		}
+#endif
 
 		const float innerW = boxW - 2.0f * Pad, innerH = boxH - 2.0f * Pad;
 		const float scale = std::min(innerW / spanX, innerH / spanY);

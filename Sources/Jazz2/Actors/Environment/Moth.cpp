@@ -54,6 +54,22 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
+	void Moth::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_timer);
+		dest.WriteVariableInt32(_direction);
+	}
+
+	void Moth::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_timer = src.ReadValueAsLE<float>();
+		_direction = src.ReadVariableInt32();
+	}
+
 	bool Moth::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* player = runtime_cast<Player>(other)) {

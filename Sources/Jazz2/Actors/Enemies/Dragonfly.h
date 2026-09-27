@@ -30,6 +30,8 @@ namespace Jazz2::Actors::Enemies
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		static constexpr std::int32_t StateIdle = 0;

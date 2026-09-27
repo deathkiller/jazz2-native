@@ -623,7 +623,7 @@ namespace nCine::RHI::Software
 			std::int32_t yMin = std::max(tileY, static_cast<std::int32_t>(prep.fyMin));
 			std::int32_t yMax = std::min(tileY + tileH - 1, static_cast<std::int32_t>(prep.fyMax - 0.5f));
 
-			// Also apply scissor (scissorRect.Y is already stored top-down by SubmitCommand)
+			// Also apply scissor (scissorRect is top-down, like the tile rows)
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
 				xMin = std::max<std::int32_t>(xMin, ctx.scissorRect.X);
 				xMax = std::min<std::int32_t>(xMax, ctx.scissorRect.X + ctx.scissorRect.W - 1);

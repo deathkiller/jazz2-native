@@ -51,8 +51,10 @@ namespace Jazz2::UI
 		void OnKeyPressed(const KeyboardEvent& event);
 		/** @brief Called when text is entered */
 		void OnTextInput(const TextInputEvent& event);
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Called when a touch event occurs, used to toggle the on-screen keyboard on touch devices */
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize);
+#endif
 
 		/** @brief Clears the console and its history */
 		static void Clear();

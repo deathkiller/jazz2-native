@@ -61,6 +61,20 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void TurtleTough::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_stuck ? 1 : 0);
+	}
+
+	void TurtleTough::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_stuck = (src.ReadValue<std::uint8_t>() != 0);
+	}
+
 	void TurtleTough::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 40);

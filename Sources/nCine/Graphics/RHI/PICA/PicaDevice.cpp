@@ -976,10 +976,12 @@ namespace nCine::RHI::PICA
 			const float paddedW = float(page != nullptr ? page->PaddedWidth : texture->GetWidth());
 			const float paddedH = float(page != nullptr ? page->PaddedHeight : texture->GetHeight());
 			C3D_FrameDrawOn(target);
-			// A render target is not rotated, so the plain orthographic matrix over the padded store: raster
-			// pixel (x, y) lands on texel (x, y), which is what the sampling passes expect
+			// A render target is not rotated, so the plain orthographic matrix over the padded store. The GPU
+			// puts clip-space y = -1 in the row a texture coordinate of 0 samples - the OpenGL arrangement - so
+			// raster row 0 goes to y = -1: then raster pixel (x, y) lands on texel (x, y) and the target is
+			// top-down like every other (see RhiFwd.h), with its padding rows below the image rather than above
 			C3D_Mtx projection;
-			Mtx_Ortho(&projection, 0.0f, paddedW, paddedH, 0.0f, 1.0f, -1.0f, true);
+			Mtx_Ortho(&projection, 0.0f, paddedW, 0.0f, paddedH, 1.0f, -1.0f, true);
 			C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, projectionUniform, &projection);
 		} else {
 			C3D_FrameDrawOn(screenTarget);
@@ -995,27 +997,19 @@ namespace nCine::RHI::PICA
 	{
 		std::int32_t x = 0, y = 0, w = ScreenWidth, h = ScreenHeight;
 		std::int32_t targetW = ScreenWidth, targetH = ScreenHeight;
-		std::int32_t storeH = ScreenHeight;
 		if (_currentRenderTarget != nullptr) {
 			const PicaTexture* texture = _currentRenderTarget->GetColorTexture(0);
 			targetW = (texture != nullptr ? texture->GetWidth() : ScreenWidth);
 			targetH = (texture != nullptr ? texture->GetHeight() : ScreenHeight);
-			storeH = targetH;
-			if (texture != nullptr) {
-				const PicaTexture::Page* page = const_cast<PicaTexture*>(texture)->AcquirePage(0, 0);
-				if (page != nullptr) {
-					storeH = page->PaddedHeight;
-				}
-			}
 			w = targetW;
 			h = targetH;
 		}
 		if (_scissor.Enabled) {
 			float scaleX, scaleY;
 			GetTargetScale(scaleX, scaleY);
-			// The engine hands scissor rectangles in top-down logical coordinates, and both kinds of pass map
-			// them straight onto raster rows (see Dispatch for why a render-to-texture pass needs no flip here,
-			// unlike on the GE or GX). A target renders 1:1, so its logical height IS its raster height.
+			// The engine hands scissor rectangles in top-down logical coordinates (see RhiFwd.h), which both
+			// kinds of pass map straight onto raster rows. A target renders 1:1, so its logical height IS its
+			// raster height.
 			const std::int32_t rasterY = _scissor.Rect.Y;
 			x = std::int32_t(float(_scissor.Rect.X) * scaleX);
 			y = std::int32_t(float(rasterY) * scaleY);
@@ -1041,9 +1035,10 @@ namespace nCine::RHI::PICA
 			C3D_SetScissor(GPU_SCISSOR_NORMAL, std::uint32_t(ScreenHeight - (y + fh)), std::uint32_t(ScreenWidth - (x + fw)),
 				std::uint32_t(ScreenHeight - y), std::uint32_t(ScreenWidth - x));
 		} else {
-			// An unrotated store: raster x is its x, raster y runs against its y (row 0 is clip y = -1)
-			C3D_SetScissor(GPU_SCISSOR_NORMAL, std::uint32_t(x), std::uint32_t(storeH - (y + fh)),
-				std::uint32_t(x + fw), std::uint32_t(storeH - y));
+			// An unrotated store whose row 0 is clip y = -1, which is where the projection puts raster row 0
+			// (see ApplyDrawTarget), so raster coordinates are its own
+			C3D_SetScissor(GPU_SCISSOR_NORMAL, std::uint32_t(x), std::uint32_t(y),
+				std::uint32_t(x + fw), std::uint32_t(y + fh));
 		}
 		appliedScissor[0] = x;
 		appliedScissor[1] = y;
@@ -1812,17 +1807,14 @@ namespace nCine::RHI::PICA
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
-		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
-		// transform once instead of being reapplied per vertex. Both kinds of pass mirror NDC (+1 = raster row
-		// 0, the top): the screen because the panel is scanned top-down, and a render target because the GPU
-		// writes AND samples a surface bottom-up - the row rendered at the top lands last in memory, which is
-		// exactly where v = 0 reads (see PicaTexture::BuildPage) - so the store needs no second flip, unlike
-		// the top-down stores of the GE and GX.
+		// transform once instead of being reapplied per vertex. Every pass is top-down (see RhiFwd.h), NDC's
+		// y = +1 is raster row 0 of the screen and of a render target alike (see ApplyDrawTarget for how each
+		// projection places that row), which is just the negative sign of the Y scale.
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY;
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -1998,11 +1990,10 @@ namespace nCine::RHI::PICA
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
-		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY;
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -2225,16 +2216,14 @@ namespace nCine::RHI::PICA
 		const float texelWidth = (needsTexelStep && hasTexture && texture->GetWidth() > 0 ? 1.0f / float(texture->GetWidth()) : 0.0f);
 		const float texelHeight = (needsTexelStep && hasTexture && texture->GetHeight() > 0 ? 1.0f / float(texture->GetHeight()) : 0.0f);
 
-		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
-		// present time; here the raster IS top-down (the orthographic matrix maps raster y down), so screen
-		// passes mirror NDC (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store,
-		// which is what the sampling passes already expect - which is just the sign of the raster Y scale below.
-		const bool screenPass = (_currentRenderTarget == nullptr);
+		// Every pass is top-down (see RhiFwd.h): NDC's y = +1 is raster row 0 of the screen and of a render
+		// target alike (see ApplyDrawTarget for how each projection places that row) - which is just the
+		// negative sign of the raster Y scale below.
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY;
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY;
 
 		for (std::int32_t k = 0; k < numInstances; k++) {

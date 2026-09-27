@@ -6,6 +6,7 @@
 #include "RenderBatcher.h"
 #include "Camera.h"
 #include "RHI/IRhiCapabilities.h"
+#include "RHI/RhiFwd.h"	// RHI_RENDER_TARGETS_BOTTOM_UP (a header macro, not a build define)
 #include "../Application.h"
 #include "../ServiceLocator.h"
 #include "../../Main.h"
@@ -59,6 +60,7 @@ namespace nCine
 	Camera* RenderResources::_currentCamera = nullptr;
 	std::unique_ptr<Camera> RenderResources::_defaultCamera;
 	Viewport* RenderResources::_currentViewport = nullptr;
+	bool RenderResources::_renderTargetBound = false;
 
 	std::uint32_t RenderResources::GetMaxQuadsForIndices()
 	{
@@ -210,6 +212,24 @@ namespace nCine
 		// The buffer is shared among every shader program. There is no need to call `setFloatVector()` as `setDirty()` is enough.
 		std::memcpy(_cameraUniformsBuffer, _currentCamera->GetProjection().Data(), 64);
 		std::memcpy(_cameraUniformsBuffer + 64, _currentCamera->GetView().Data(), 64);
+
+#if defined(RHI_RENDER_TARGETS_BOTTOM_UP)
+		// Every pass is top-down (see RhiFwd.h), but this backend stores a render target the other way up, with the
+		// row at clip-space y = -1 first. Flipping clip-space Y of a pass that renders into one - the projection's
+		// second row, negated - lands the top of the pass on the first row instead, where a texture coordinate of
+		// 0 samples it. A pass onto the screen needs nothing, the displayed image is top-down already.
+		const bool flipY = _renderTargetBound;
+		if (flipY) {
+			float* projection = reinterpret_cast<float*>(_cameraUniformsBuffer);
+			projection[1] = -projection[1];
+			projection[5] = -projection[5];
+			projection[9] = -projection[9];
+			projection[13] = -projection[13];
+		}
+#else
+		constexpr bool flipY = false;
+#endif
+
 		for (auto i = _cameraUniformDataMap.begin(); i != _cameraUniformDataMap.end(); ++i) {
 			CameraUniformData& cameraUniformData = i->second;
 
@@ -217,7 +237,8 @@ namespace nCine
 				i->second.shaderUniforms.SetDirty(true);
 				cameraUniformData.camera = _currentCamera;
 			} else {
-				if (cameraUniformData.updateFrameProjectionMatrix < _currentCamera->UpdateFrameProjectionMatrix()) {
+				if (cameraUniformData.updateFrameProjectionMatrix < _currentCamera->UpdateFrameProjectionMatrix() ||
+					cameraUniformData.projectionFlippedY != flipY) {
 					i->second.shaderUniforms.GetUniform(Material::ProjectionMatrixUniformName)->SetDirty(true);
 				}
 				if (cameraUniformData.updateFrameViewMatrix < _currentCamera->UpdateFrameViewMatrix()) {
@@ -227,6 +248,7 @@ namespace nCine
 
 			cameraUniformData.updateFrameProjectionMatrix = _currentCamera->UpdateFrameProjectionMatrix();
 			cameraUniformData.updateFrameViewMatrix = _currentCamera->UpdateFrameViewMatrix();
+			cameraUniformData.projectionFlippedY = flipY;
 		}
 	}
 

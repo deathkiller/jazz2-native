@@ -41,6 +41,8 @@ namespace Jazz2::Actors::Solid
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 		void OnPacketReceived(MemoryStream& packet) override;
 
 	private:

@@ -264,6 +264,7 @@ namespace Jazz2::UI::Menu
 				PreferencesCache::ShowPlayerTrails = !PreferencesCache::ShowPlayerTrails;
 				_isDirty = true;
 			});
+#if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Preferred Splitscreen"),
 			[]() -> StringView { return (PreferencesCache::PreferVerticalSplitscreen ? _("Vertical") : _("Horizontal")); },
@@ -280,6 +281,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ListItem>(_("Safe Area"), [root]() { root->SwitchToSection<SafeAreaOptionsSection>(); });
 		// TRANSLATORS: Menu item in Options > Graphics section

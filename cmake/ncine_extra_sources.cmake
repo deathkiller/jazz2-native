@@ -376,12 +376,14 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspPower.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspLibcCompat.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspPower.cpp
 		)
 	elseif(PLATFORM_PS2)
 		# PS2SDK window/input backend. PS2SDK does package an SDL2, and the configure would otherwise pick it,

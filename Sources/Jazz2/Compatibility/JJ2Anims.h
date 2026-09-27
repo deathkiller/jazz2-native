@@ -29,8 +29,26 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static constexpr std::uint16_t CacheVersion = 37;
+		static constexpr std::uint16_t CacheVersion = 38;
 #endif
+
+		/**
+			@brief Largest sheet @ref PackRectangles() lays out, per axis
+
+			The smallest texture limit among the supported platforms decides it, so a sheet that fits here
+			needs no per-platform variant of the converted assets.
+		*/
+		static constexpr std::int32_t MaxSheetSize = 1024;
+
+		/**
+			@brief Size of the pages a sheet may be split into, per axis - nothing is placed across one
+
+			The PSP's GE cannot address more than 512 texels per axis, so its backend splits a larger texture
+			into pages of this size and draws every primitive from the page its texture rectangle starts in
+			(the legacy GL backend does the same on a device limited to 512). A frame lying across a page line
+			would be cut off at it, so @ref PackRectangles() never places one there.
+		*/
+		static constexpr std::int32_t SheetPageSize = 512;
 
 		/**
 		 * @brief Converts the specified animation file and writes the result to a `.pak` file
@@ -98,6 +116,31 @@ namespace Jazz2::Compatibility
 			std::int32_t Height = 0;
 		};
 
+		/**
+			@brief Lays rectangles out in as small a sheet as possible
+
+			Takes @ref PackedFrame::W and @ref PackedFrame::H of every rectangle and fills in @ref PackedFrame::X
+			and @ref PackedFrame::Y, keeping @p spacing pixels between any two rectangles. The sheet is chosen
+			for the least memory once its dimensions are rounded up to powers of two, which is what the
+			hardware that cannot sample anything else pays for it; among layouts that round up the same, one
+			that fits into a single @ref SheetPageSize page wins, and then the smallest exact area, which is
+			what every other platform pays. The sheet is reported at its exact size rather than rounded up,
+			the backends that need a power of two pad the texture themselves.
+
+			No rectangle is placed across a multiple of @ref SheetPageSize on either axis (see there), unless
+			there is no other way to fit them into @ref MaxSheetSize x @ref MaxSheetSize - a rectangle larger
+			than a page, or so many that the gaps the page lines leave cannot be afforded; @ref LiesAcrossPageLine()
+			tells when that happened. Returns `false` when the rectangles do not fit into
+			@ref MaxSheetSize x @ref MaxSheetSize at all.
+		*/
+		static bool PackRectangles(SmallVectorImpl<PackedFrame>& rects, std::int32_t spacing, std::int32_t& sheetWidth, std::int32_t& sheetHeight);
+
+		/** @brief Returns `true` if a rectangle lies across a multiple of @ref SheetPageSize, where a split texture is cut */
+		static constexpr bool LiesAcrossPageLine(const PackedFrame& rect) {
+			return (rect.W > 0 && rect.X / SheetPageSize != (rect.X + rect.W - 1) / SheetPageSize) ||
+				(rect.H > 0 && rect.Y / SheetPageSize != (rect.Y + rect.H - 1) / SheetPageSize);
+		}
+
 	private:
 		static constexpr int32_t AddBorder = 2;
 
@@ -146,8 +189,9 @@ namespace Jazz2::Compatibility
 			@brief Packs the frames of one animation so each keeps only the space it needs
 
 			A frame's own extent is usually much smaller than the largest frame of its animation, and a grid of
-			equal cells pays for that difference in every single frame. Returns `false` when the frames cannot
-			be packed within the texture size limit, in which case the regular grid is used instead.
+			equal cells pays for that difference in every single frame. The layout is @ref PackRectangles()'s.
+			Returns `false` when the frames cannot be packed within the texture size limit, in which case the
+			regular grid is used instead.
 		*/
 		static bool PackFramesTightly(const AnimSection& anim, std::int32_t border,
 			SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight);

@@ -1,4 +1,4 @@
-#include "ActorBase.h"
+﻿#include "ActorBase.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../PreferencesCache.h"
@@ -42,7 +42,7 @@ namespace Jazz2::Actors
 
 	ActorBase::ActorBase()
 		: _state(ActorState::None), _levelHandler(nullptr), _internalForceY(0.0f), _elasticity(0.0f), _friction(1.5f),
-			_unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1), _spawnFrames(0.0f), _metadata(nullptr),
+			_unstuckCooldown(0.0f), _frozenTimeLeft(0.0f), _maxHealth(1), _health(1), _spawnFrames(0.0f), _spawnPos(0, 0, 0), _spawnEventType(EventType::Empty), _spawnEventParams{}, _metadata(nullptr),
 			_renderer(this), _currentAnimation(nullptr), _currentTransition(nullptr), _currentTransitionCancellable(false),
 			_collisionProxyID(Collisions::NullNode)
 	{
@@ -85,6 +85,14 @@ namespace Jazz2::Actors
 		_pos = _frameStartPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
 		_originTile = Vector2i((std::int32_t)details.Pos.X / 32, (std::int32_t)details.Pos.Y / 32);
 		_spawnFrames = _levelHandler->GetElapsedFrames();
+		_spawnPos = details.Pos;
+
+		// Remember what the object was spawned from, so it can be spawned again from a level state snapshot.
+		// Parameters are always provided in full size by EventSpawner, which is the only one that sets the type.
+		_spawnEventType = details.Type;
+		if (details.Type != EventType::Empty && details.Params != nullptr) {
+			std::memcpy(_spawnEventParams, details.Params, sizeof(_spawnEventParams));
+		}
 
 		std::uint16_t layer = (std::uint16_t)details.Pos.Z;
 		_renderer.setLayer(layer);
@@ -115,6 +123,113 @@ namespace Jazz2::Actors
 	bool ActorBase::OnTileDeactivated()
 	{
 		return true;
+	}
+
+	namespace
+	{
+		// Instance flags that are part of the live state, the rest is either given by spawning (instantiation
+		// flags), managed internally, or cannot be changed during the object lifetime (ForceDisableCollisions)
+		constexpr ActorState SerializableStateMask = ActorState::IsInvulnerable | ActorState::CanJump | ActorState::CanBeFrozen |
+			ActorState::IsFacingLeft | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors |
+			ActorState::CollideWithSolidObjects | ActorState::ApplyGravitation | ActorState::IsSolidObject |
+			ActorState::SkipPerPixelCollisions | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjectsBelow |
+			ActorState::ExcludeSimilar;
+	}
+
+	bool ActorBase::IsSerializable() const
+	{
+		static_assert(SpawnParamsSize == Events::EventSpawner::SpawnParamsSize, "Size of spawn parameters mismatch");
+
+		return (_spawnEventType != EventType::Empty);
+	}
+
+	void ActorBase::OnSerializeState(Stream& dest)
+	{
+		dest.WriteValueAsLE<float>(_pos.X);
+		dest.WriteValueAsLE<float>(_pos.Y);
+		dest.WriteValueAsLE<float>(_speed.X);
+		dest.WriteValueAsLE<float>(_speed.Y);
+		dest.WriteValueAsLE<float>(_externalForce.X);
+		dest.WriteValueAsLE<float>(_externalForce.Y);
+		dest.WriteValueAsLE<float>(_internalForceY);
+		dest.WriteValueAsLE<float>(_elasticity);
+		dest.WriteValueAsLE<float>(_friction);
+		dest.WriteValueAsLE<float>(_frozenTimeLeft);
+		dest.WriteVariableInt32(_health);
+		dest.WriteVariableInt32(_maxHealth);
+		dest.WriteVariableUint32((std::uint32_t)(_state & SerializableStateMask));
+
+		// Only the looping animation is stored, a running transition cannot be restored without its callback
+		dest.WriteVariableUint32(_currentAnimation != nullptr ? (std::uint32_t)_currentAnimation->State : UINT32_MAX);
+		dest.WriteValueAsLE<float>(_currentTransition == nullptr ? _renderer.AnimTime : 0.0f);
+
+		std::uint8_t rendererFlags = 0;
+		if (_renderer.isDrawEnabled()) rendererFlags |= 0x01;
+		if (_renderer.AnimPaused) rendererFlags |= 0x02;
+		dest.WriteValue<std::uint8_t>(rendererFlags);
+		dest.WriteValueAsLE<std::uint16_t>(_renderer.layer());
+		dest.WriteValueAsLE<float>(_renderer.rotation());
+		dest.WriteValueAsLE<float>(_renderer.scale().X);
+		dest.WriteValueAsLE<float>(_renderer.scale().Y);
+		dest.WriteValueAsLE<float>(_renderer.alpha());
+	}
+
+	void ActorBase::OnDeserializeState(Stream& src)
+	{
+		_pos.X = src.ReadValueAsLE<float>();
+		_pos.Y = src.ReadValueAsLE<float>();
+		_speed.X = src.ReadValueAsLE<float>();
+		_speed.Y = src.ReadValueAsLE<float>();
+		_externalForce.X = src.ReadValueAsLE<float>();
+		_externalForce.Y = src.ReadValueAsLE<float>();
+		_internalForceY = src.ReadValueAsLE<float>();
+		_elasticity = src.ReadValueAsLE<float>();
+		_friction = src.ReadValueAsLE<float>();
+		_frozenTimeLeft = src.ReadValueAsLE<float>();
+		_health = src.ReadVariableInt32();
+		_maxHealth = src.ReadVariableInt32();
+		ActorState state = (ActorState)src.ReadVariableUint32();
+		_state = (_state & ~SerializableStateMask) | (state & SerializableStateMask);
+
+		std::uint32_t animState = src.ReadVariableUint32();
+		float animTime = src.ReadValueAsLE<float>();
+		std::uint8_t rendererFlags = src.ReadValue<std::uint8_t>();
+		std::uint16_t layer = src.ReadValueAsLE<std::uint16_t>();
+		float rotation = src.ReadValueAsLE<float>();
+		float scaleX = src.ReadValueAsLE<float>();
+		float scaleY = src.ReadValueAsLE<float>();
+		float alpha = src.ReadValueAsLE<float>();
+
+		// A transition started by the activation would finish with a callback that doesn't belong to the restored state
+		ForceCancelTransition();
+		if (animState != UINT32_MAX) {
+			if (_currentAnimation == nullptr || (std::uint32_t)_currentAnimation->State != animState) {
+				_currentAnimation = nullptr;
+				SetAnimation((AnimState)animState);
+			}
+			if (_currentAnimation != nullptr && _renderer.AnimDuration >= 0.0f) {
+				_renderer.AnimTime = std::clamp(animTime, 0.0f, _renderer.AnimDuration);
+			}
+		}
+
+		_renderer.setDrawEnabled((rendererFlags & 0x01) != 0);
+		_renderer.AnimPaused = ((rendererFlags & 0x02) != 0 || _frozenTimeLeft > 0.0f);
+		_renderer.setLayer(layer);
+		_renderer.setRotation(rotation);
+		_renderer.setScale(scaleX, scaleY);
+		_renderer.setAlphaF(alpha);
+		_renderer.setFlippedX(IsFacingLeft());
+		if (_currentAnimation != nullptr) {
+			_renderer.UpdateAnchor();
+		}
+
+		ResetPathTracking();
+		_renderer.setPosition(roundFast(_pos.X), roundFast(_pos.Y));
+		OnUpdateHitbox();
+
+		if ((_state & ActorState::ForceDisableCollisions) != ActorState::ForceDisableCollisions) {
+			_state |= ActorState::IsDirty;
+		}
 	}
 
 	void ActorBase::OnAttach(ActorBase* parent)

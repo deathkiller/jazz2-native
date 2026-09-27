@@ -27,6 +27,8 @@ set(SOURCES
 	Iso9660.h
 	PngCodec.cpp
 	PngCodec.h
+	SpriteRepacker.cpp
+	SpriteRepacker.h
 	# The base layer and the original-data converters, both shared with the game; the engine itself is
 	# deliberately not linked, so the tool has no renderer and no window backend
 	${ASSET_PACKER_SHARED_SOURCES}

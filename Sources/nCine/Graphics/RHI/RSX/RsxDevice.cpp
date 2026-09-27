@@ -243,7 +243,7 @@ namespace nCine::RHI::RSX
 		gcmSetFlipMode(_vsync ? GCM_FLIP_VSYNC : GCM_FLIP_HSYNC);
 
 		// Display buffers the scan-out cycles between, and the intermediate screen surface the frame is
-		// actually drawn into (bottom-up, see the class documentation)
+		// actually drawn into (top-down, see the class documentation)
 		for (std::uint32_t i = 0; i < DisplayBufferCount; i++) {
 			_displayBuffers[i] = RsxVram::AllocSurface(std::uint32_t(_displayWidth), std::uint32_t(_displayHeight), 4, _displayPitch);
 			if (!_displayBuffers[i].IsValid()) {
@@ -438,7 +438,7 @@ namespace nCine::RHI::RSX
 		_cullFace = CullFaceState{};
 
 		// The engine is a 2D renderer: nothing is culled (which one of a sprite's two triangles faces the
-		// camera follows from the winding the bottom-up viewport transform gives it, not from anything the
+		// camera follows from the winding the flipped viewport transform gives it, not from anything the
 		// pipeline controls), and the alpha test is unused because blending covers every case.
 		rsxSetCullFaceEnable(_context, GCM_FALSE);
 		rsxSetAlphaTestEnable(_context, GCM_FALSE);
@@ -453,7 +453,9 @@ namespace nCine::RHI::RSX
 		rsxSetBlendFunc(_context, GCM_ONE, GCM_ZERO, GCM_ONE, GCM_ZERO);
 		rsxSetColorMask(_context, GCM_COLOR_MASK_R | GCM_COLOR_MASK_G | GCM_COLOR_MASK_B | GCM_COLOR_MASK_A);
 		rsxSetShadeModel(_context, GCM_SHADE_MODEL_SMOOTH);
-		rsxSetFrontFace(_context, GCM_FRONTFACE_CCW);
+		// Counter-clockwise in clip space, the OpenGL default, is clockwise on the surface once the flipped
+		// viewport (see ApplyViewportAndScissor()) has mirrored it
+		rsxSetFrontFace(_context, GCM_FRONTFACE_CW);
 	}
 
 	void RsxDevice::SetBlendingEnabled(bool enabled)
@@ -659,7 +661,7 @@ namespace nCine::RHI::RSX
 			surface.depthOffset = _depthBuffer.Offset;
 			surface.depthPitch = _depthPitch;
 		} else {
-			// No render target: the intermediate screen surface, which PresentFrame() flips out
+			// No render target: the intermediate screen surface, which PresentFrame() copies out
 			std::memset(&surface, 0, sizeof(surface));
 			surface.colorFormat = GCM_SURFACE_A8R8G8B8;
 			surface.colorTarget = GCM_SURFACE_TARGET_0;
@@ -707,19 +709,18 @@ namespace nCine::RHI::RSX
 		}
 
 		const std::int32_t x = _viewport.X;
+		const std::int32_t y = _viewport.Y;
 		const std::int32_t width = _viewport.W;
 		const std::int32_t height = _viewport.H;
-		// The engine's viewport origin is bottom-left (OpenGL); the RSX's is top-left, so the Y is flipped
-		// against the target. Every surface here is stored bottom-up (see the class documentation), which is
-		// what makes this the only place the two conventions have to be reconciled.
-		const std::int32_t y = targetHeight - (_viewport.Y + height);
 
 		// The scale/offset pair is the viewport transform proper: clip space maps onto the half-width and
-		// half-height of the rectangle, centred on it. The Z half maps [-1, 1] onto [0, 1], the depth range
-		// the hardware stores, which is what the engine's projection matrices assume.
+		// half-height of the rectangle, centred on it, and the negative Y scale puts clip +Y on its top row -
+		// the engine's rectangle counts from the top-left corner like the RSX's, and every surface is stored
+		// top-down (see the class documentation). The Z half maps [-1, 1] onto [0, 1], the depth range the
+		// hardware stores, which is what the engine's projection matrices assume.
 		const float scale[4] = {
 			float(width) * 0.5f,
-			float(height) * 0.5f,
+			float(height) * -0.5f,
 			0.5f,
 			0.0f
 		};
@@ -734,16 +735,11 @@ namespace nCine::RHI::RSX
 
 		if (_scissor.Enabled) {
 			// Clamped into the target before anything is narrowed to 16 bits. A clip rectangle is allowed to
-			// hang off the edge of what it clips - the menu's does - and the flipped Y of one that starts
-			// above the target is NEGATIVE, which as an unsigned 16-bit field becomes ~65000 and puts the
-			// scissor somewhere the target does not reach, so the whole draw is clipped away. The hardware's
-			// fields are 12 bits wide as well, so nothing may exceed 4095 either.
-			// NOT flipped against the target. The vertical flip is already in the viewport transform above -
-			// a positive Y scale with the RSX's top-left origin is exactly what stores the surface bottom-up -
-			// so for a full-target viewport the engine's bottom-left Y maps to the same window Y:
-			//   window_y = (2Y/H - 1) * (H/2) + H/2 = Y
-			// Flipping here as well put the scissor on the opposite half of the target, which clipped away
-			// whatever the rectangle was meant to keep.
+			// hang off the edge of what it clips - the menu's does - and the Y of one that starts above the
+			// target is NEGATIVE, which as an unsigned 16-bit field becomes ~65000 and puts the scissor
+			// somewhere the target does not reach, so the whole draw is clipped away. The hardware's fields are
+			// 12 bits wide as well, so nothing may exceed 4095 either. The rectangle counts its rows from the
+			// top like the viewport above, so it needs no other conversion.
 			std::int32_t sx = _scissor.Rect.X;
 			std::int32_t sy = _scissor.Rect.Y;
 			std::int32_t sw = _scissor.Rect.W;
@@ -873,9 +869,9 @@ namespace nCine::RHI::RSX
 			return;
 		}
 
-		// The frame was drawn bottom-up into the screen surface; the flip into the display buffer is where
-		// the OpenGL convention becomes the scan-out's, and where the logical resolution is scaled to the
-		// panel. Rendering it as a quad rather than blitting is what buys the scale for free.
+		// The frame was drawn into the screen surface, top-down like the display buffer it is copied into here,
+		// which is also where the logical resolution is scaled to the panel. Rendering it as a quad rather than
+		// blitting is what buys the scale for free.
 		gcmSurface surface;
 		std::memset(&surface, 0, sizeof(surface));
 		surface.colorFormat = GCM_SURFACE_A8R8G8B8;
@@ -900,7 +896,7 @@ namespace nCine::RHI::RSX
 		surface.y = 0;
 		rsxSetSurface(_context, &surface);
 
-		const float scale[4] = { float(_displayWidth) * 0.5f, float(_displayHeight) * 0.5f, 0.5f, 0.0f };
+		const float scale[4] = { float(_displayWidth) * 0.5f, float(_displayHeight) * -0.5f, 0.5f, 0.0f };
 		const float offset[4] = { float(_displayWidth) * 0.5f, float(_displayHeight) * 0.5f, 0.5f, 0.0f };
 		rsxSetViewport(_context, 0, 0, std::uint16_t(_displayWidth), std::uint16_t(_displayHeight), 0.0f, 1.0f, scale, offset);
 		rsxSetScissor(_context, 0, 0, 4095, 4095);
@@ -930,7 +926,7 @@ namespace nCine::RHI::RSX
 			rsxTextureWrapMode(_context, 0, GCM_TEXTURE_CLAMP_TO_EDGE, GCM_TEXTURE_CLAMP_TO_EDGE,
 				GCM_TEXTURE_CLAMP_TO_EDGE, 0, GCM_TEXTURE_ZFUNC_LESS, 0);
 
-			// Four vertices of (x, y, u, v), the V already flipped in the data so the shader stays trivial.
+			// Four vertices of (x, y, u, v), V = 0 at the top as everywhere, so the shader stays trivial.
 			// The registers are looked up through GetAttrib() rather than the GetAttribIndex() that
 			// rsx_program.h also declares: librsx declares that one but implements no such symbol, so
 			// calling it does not link (the same is true of rsxFragmentProgramGetConstIndex).
@@ -1021,9 +1017,8 @@ namespace nCine::RHI::RSX
 			}
 		}
 
-		// The present quad: (x, y, u, v) per vertex in the TRIANGLE_STRIP order, in clip space. The V is
-		// flipped here rather than in the shader, which is what keeps the present shader a plain textured
-		// quad and puts the one convention correction in a place a reader can see.
+		// The present quad: (x, y, u, v) per vertex in the TRIANGLE_STRIP order, in clip space. Clip +Y is the
+		// top row under the flipped viewport, so it samples V = 0, the top row of the screen surface.
 		static const float presentQuad[] = {
 			-1.0f, -1.0f, 0.0f, 1.0f,
 			-1.0f,  1.0f, 0.0f, 0.0f,

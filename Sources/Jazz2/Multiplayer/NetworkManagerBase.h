@@ -172,7 +172,13 @@ namespace Jazz2::Multiplayer
 		void SendTo(Function<bool(const Peer&)>&& predicate, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
 		/** @brief Sends a packet to all connected peers or the remote server peer */
 		void SendTo(AllPeersT, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
-		/** @brief Kicks a given peer from the server */
+		/**
+		 * @brief Kicks a given peer from the server
+		 *
+		 * The disconnect of the peer is then reported with this reason, even though the transport doesn't carry it
+		 * back (an ENet peer the server disconnects comes back with no reason at all). The first kick counts, a
+		 * repeated one before the peer is gone doesn't change it.
+		 */
 		void Kick(const Peer& peer, Reason reason);
 
 		/** @brief Converts the specified IPv4 endpoint to the string representation */
@@ -242,9 +248,16 @@ namespace Jazz2::Multiplayer
 		static constexpr std::int32_t MaxAddressesPerHost = 4;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+		/** @brief Peer kicked by the server, waiting for its disconnect to be reported */
+		struct KickedPeer {
+			Peer Target;
+			Reason KickReason;
+		};
+
 		_ENetHost* _host;
 		Thread _thread;
 		SmallVector<Peer, 1> _connectedPeers;
+		SmallVector<KickedPeer, 0> _kickedPeers;	/**< Guarded by `_lock` */
 #	if defined(WITH_ONLINE_MULTIPLAYER)
 		SmallVector<ENetAddress, 0> _desiredEndpoints;
 #	endif
@@ -320,6 +333,11 @@ namespace Jazz2::Multiplayer
 		String _adhocGroup;
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+		/** @brief Returns the reason a disconnected peer was kicked for and forgets it, or `reason` if it wasn't kicked */
+		Reason TakeKickReason(const Peer& peer, Reason reason);
+		/** @brief Forgets a kick of a peer whose handle is being reused by a new connection */
+		void ForgetKickReason(const Peer& peer);
+
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);
 #	if defined(WITH_WEBSOCKET)

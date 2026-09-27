@@ -27,6 +27,8 @@ namespace Jazz2::Actors::Enemies
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		static constexpr std::int32_t StateIdle = 0;

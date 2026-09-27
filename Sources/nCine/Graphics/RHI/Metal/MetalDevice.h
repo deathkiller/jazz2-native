@@ -30,12 +30,10 @@ namespace nCine::RHI::Metal
 		@ref PresentFrame() acquires a drawable, draws the rendered screen texture into it and commits (the
 		buffer-swap equivalent).
 
-		The scene is rendered GL-style: the offline MSL negates clip-space Y in every vertex shader so a
-		render target's memory keeps the GL row order (row 0 = the GL bottom row), which is what lets
-		CPU-uploaded and rendered textures agree exactly as on the OpenGL and Vulkan backends; the one
-		scan-out correction is the present pass, whose fullscreen triangle maps the drawable's top row onto the
-		screen texture's last row. GL viewports and scissors therefore map to Metal's with no translation, and
-		the front-face winding is set to clockwise so GL's counter-clockwise front faces survive the flip.
+		The scene is rendered top-down, which is both the RHI's convention (see RhiFwd.h) and Metal's own:
+		clip-space y = +1 is the top row of every target and the first one in memory, so rendered and
+		CPU-uploaded textures agree with no conversion, viewports and scissors map to Metal's as they are, and
+		the present pass copies the screen texture into the drawable row for row.
 	*/
 	class MetalDevice
 	{

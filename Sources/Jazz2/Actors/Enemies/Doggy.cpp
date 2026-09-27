@@ -101,6 +101,22 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Doggy::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValue<std::uint8_t>(_stuck ? 1 : 0);
+	}
+
+	void Doggy::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attackTime = src.ReadValueAsLE<float>();
+		_stuck = (src.ReadValue<std::uint8_t>() != 0);
+	}
+
 	void Doggy::OnUpdateHitbox()
 	{
 		UpdateHitbox(50, 30);

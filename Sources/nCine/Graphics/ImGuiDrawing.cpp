@@ -491,8 +491,8 @@ namespace nCine
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y)
 					continue;
 
-				// Apply scissor/clipping rectangle (Y is inverted)
-				currCmd.SetScissor(static_cast<std::int32_t>(clipMin.x), static_cast<std::int32_t>(static_cast<float>(fbHeight) - clipMax.y),
+				// Apply scissor/clipping rectangle (top-left origin, like ImGui's own - see RhiFwd.h)
+				currCmd.SetScissor(static_cast<std::int32_t>(clipMin.x), static_cast<std::int32_t>(clipMin.y),
 								   static_cast<std::int32_t>(clipMax.x - clipMin.x), static_cast<std::int32_t>(clipMax.y - clipMin.y));
 
 				if (cmdIdx > 0) {
@@ -612,8 +612,8 @@ namespace nCine
 					continue;
 				}
 
-				// Apply scissor/clipping rectangle (Y is inverted)
-				RHI::Device::SetScissor(Recti(std::int32_t(clipMin.x), std::int32_t(float(fbHeight) - clipMax.y),
+				// Apply scissor/clipping rectangle (top-left origin, like ImGui's own - see RhiFwd.h)
+				RHI::Device::SetScissor(Recti(std::int32_t(clipMin.x), std::int32_t(clipMin.y),
 					std::int32_t(clipMax.x - clipMin.x), std::int32_t(clipMax.y - clipMin.y)));
 
 				// Bind texture, Draw
@@ -878,7 +878,7 @@ namespace nCine
 	}
 #elif defined(IMGUI_HAS_VIEWPORT) && (defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL)) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 	// The Vulkan and Metal multi-viewport path keeps everything it can inside the ordinary RHI: a platform window's contents
-	// are rendered into an off-screen render target like any other pass (so the usual bottom-up rows, scissor
+	// are rendered into an off-screen render target like any other pass (so the usual top-down rows, scissor
 	// mapping and pipeline caches apply), and only the presentation is backend business - the device blits that
 	// texture into the window's own swap chain and joins it into the frame's single submit and present.
 	namespace

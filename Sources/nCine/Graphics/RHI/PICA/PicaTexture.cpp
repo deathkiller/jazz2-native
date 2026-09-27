@@ -620,6 +620,7 @@ namespace nCine::RHI::PICA
 		if (level != 0) {
 			return;		// Level 0 only
 		}
+		const bool wasRenderTarget = _isRenderTarget;
 		Allocate(format, width, height);
 		if (data != nullptr && _pixels.empty() && _hostCopyReleased) {
 			LOGW("A {}x{} texture is being uploaded after its host copy was released, so the upload is lost",
@@ -633,6 +634,13 @@ namespace nCine::RHI::PICA
 			PicaDevice::NotifyPaletteTextureChanged(this, 0, _height);
 		} else {
 			InvalidateGpuStore();
+		}
+		if (wasRenderTarget) {
+			// Allocate() dropped the surface with the old size, so a new one is attached for the new size. A render
+			// target is resized through here: TexStorage2D() is only called where storage is immutable, never on
+			// this backend, so the same step there did not cover it and a resized target had no surface at all
+			_isRenderTarget = false;
+			SetRenderTarget(true);
 		}
 	}
 

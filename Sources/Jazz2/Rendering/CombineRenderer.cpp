@@ -222,10 +222,8 @@ namespace Jazz2::Rendering
 		}
 
 		// Viewport rectangle inside the screen buffer, in the same coordinate space the scene was rasterized
-		// into. The screen buffer is stored the way SwRaster wrote it (non-FBO path: storeY == py, i.e. top-down
-		// in rasterizer space); the final vertical flip happens at present, so no flip is applied - light rows and
-		// scene rows already share the same convention. The width/height are left unclamped here; the device
-		// clamps them against the actual screen buffer when it applies the combine.
+		// into: rows counted from the top, like every store (see RhiFwd.h). The width/height are left unclamped
+		// here; the device clamps them against the actual screen buffer when it applies the combine.
 		const std::int32_t vpX = std::max<std::int32_t>(0, (std::int32_t)_bounds.X);
 		const std::int32_t vpY = std::max<std::int32_t>(0, (std::int32_t)_bounds.Y);
 		const std::int32_t vpW = (std::int32_t)_bounds.W;

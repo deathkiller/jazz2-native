@@ -28,6 +28,8 @@ namespace Jazz2::Actors::Environment
 		void OnUpdateHitbox() override;
 		bool OnHandleCollision(ActorBase* other) override;
 		void OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		std::uint8_t _id;

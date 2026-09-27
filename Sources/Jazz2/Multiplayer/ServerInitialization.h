@@ -145,7 +145,7 @@ namespace Jazz2::Multiplayer
 			-   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
 		-   @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		-   @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
-		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **300**, i.e. 5 minutes)
+		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **300**, i.e. 5 minutes); a player kicked, banned, or kicked for inactivity or cheating always starts over
 		-   @cpp "AllowCheats" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether cheats can be used on the server (default is **false**)
 			-   Admins can use cheats in any game mode, other players only in Cooperation
 			-   Cheats are applied only to the player that invoked them

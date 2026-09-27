@@ -96,6 +96,11 @@ namespace Jazz2::UI::Menu
 					_discovery->Stop();
 					_discovery = nullptr;
 				}
+				{
+					// Whatever the old discovery found and the list didn't take yet belongs to the old mode
+					std::unique_lock<Death::Threading::Spinlock> lock(_pendingServersLock);
+					_pendingServers.clear();
+				}
 				bool adhoc = !Jazz2::Multiplayer::NetworkManagerBase::IsAdhocMode();
 				if (!Jazz2::Multiplayer::NetworkManagerBase::SetAdhocMode(adhoc)) {
 					LOGW("Cannot switch to {} mode", adhoc ? "ad hoc"_s : "Wi-Fi"_s);
@@ -111,6 +116,8 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 #endif
+
+		ProcessPendingServers();
 
 		if (_touchSpeed > 0.0f) {
 			if (_touchStart == Vector2f::Zero && _availableHeight < _height) {
@@ -734,24 +741,65 @@ namespace Jazz2::UI::Menu
 
 	void ServerSelectSection::OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc)
 	{
-		std::uint64_t serverVersion = parseVersion(desc.Version);
-		// Full comparison, patch included, matching the server's own check in GameEventHandler::OnPacketReceived()
-		desc.IsCompatible = (serverVersion == CurrentVersion);
+		// Called on the discovery thread, while the main thread may be drawing or navigating the list, so the
+		// server only waits here to be merged into it by ProcessPendingServers()
+		std::unique_lock<Death::Threading::Spinlock> lock(_pendingServersLock);
+		_pendingServers.push_back(std::move(desc));
+	}
 
+	bool ServerSelectSection::IsServerCompatible(const Jazz2::Multiplayer::ServerDescription& desc)
+	{
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		// On Emscripten (WS-only client), mark servers without WebSocket support as unavailable
 		if (desc.WsPort == 0) {
-			desc.IsCompatible = false;
+			return false;
 		}
 #endif
 
-		for (auto& item : _items) {
+		if (desc.MinSupportedVersion != 0 || desc.MaxSupportedVersion != 0) {
+			// The same check the server does in GameEventHandler::OnPacketReceived()
+			return (CurrentVersion >= desc.MinSupportedVersion && CurrentVersion <= desc.MaxSupportedVersion);
+		}
+		if (!desc.Version.empty()) {
+			// A server older than the announced range (or a public list that doesn't relay it) - the only version
+			// it's known to talk to is its own. Compared in full, as the released 3.8.0 accepted any 3.8.x client
+			// but spoke only its own wire.
+			return (parseVersion(desc.Version) == CurrentVersion);
+		}
+		// Nothing is known (an ad hoc group), so the discovery's verdict stands and the server decides on connect
+		return desc.IsCompatible;
+	}
+
+	void ServerSelectSection::ProcessPendingServers()
+	{
+		SmallVector<Jazz2::Multiplayer::ServerDescription, 0> servers;
+		{
+			std::unique_lock<Death::Threading::Spinlock> lock(_pendingServersLock);
+			if (_pendingServers.empty()) {
+				return;
+			}
+			servers = std::move(_pendingServers);
+			_pendingServers.clear();
+		}
+
+		for (auto& desc : servers) {
+			AddOrUpdateServer(std::move(desc));
+		}
+	}
+
+	void ServerSelectSection::AddOrUpdateServer(Jazz2::Multiplayer::ServerDescription&& desc)
+	{
+		desc.IsCompatible = IsServerCompatible(desc);
+
+		for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
+			auto& item = _items[i];
 			bool sameEndpoint = (item.Desc.EndpointString == desc.EndpointString);
 			if (!sameEndpoint && !HasSameUniqueServerID(item.Desc, desc)) {
 				continue;
 			}
 
 			std::uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
+			bool wasCompatible = item.Desc.IsCompatible;
 			// One server answers local discovery once per address family it can be reached on, and each answer
 			// carries the endpoint of that family alone - so they are collected into the endpoint list the
 			// client already knows how to walk through in order, instead of becoming two entries
@@ -762,10 +810,51 @@ namespace Jazz2::UI::Menu
 			item.Desc = std::move(desc);
 			item.Desc.EndpointString = std::move(endpoints);
 			item.Desc.Flags |= prevFlags;
+
+			if (item.Desc.IsCompatible != wasCompatible) {
+				MoveItemToGroup(i);
+			}
 			return;
 		}
 
-		_items.push_back(std::move(desc));
+		std::int32_t index = InsertItem(ItemData(std::move(desc)));
+		// The selected server stays selected while the list grows around it, except at the very top - there the
+		// cursor stays at the top, so a compatible server that comes later still gets it before the player moves
+		if (_selectedIndex > 0 && index <= _selectedIndex) {
+			_selectedIndex++;
+		}
+	}
+
+	std::int32_t ServerSelectSection::InsertItem(ItemData&& item)
+	{
+		// Compatible servers first, each group in the order the servers were found in
+		std::int32_t count = (std::int32_t)_items.size();
+		std::int32_t index = count;
+		if (item.Desc.IsCompatible) {
+			index = 0;
+			while (index < count && _items[index].Desc.IsCompatible) {
+				index++;
+			}
+		}
+		_items.insert(_items.begin() + index, std::move(item));
+		return index;
+	}
+
+	void ServerSelectSection::MoveItemToGroup(std::int32_t index)
+	{
+		bool wasSelected = (index == _selectedIndex);
+		ItemData item = std::move(_items[index]);
+		_items.erase(_items.begin() + index);
+		if (index < _selectedIndex) {
+			_selectedIndex--;
+		}
+
+		std::int32_t newIndex = InsertItem(std::move(item));
+		if (wasSelected) {
+			_selectedIndex = newIndex;
+		} else if (newIndex <= _selectedIndex) {
+			_selectedIndex++;
+		}
 	}
 
 	bool ServerSelectSection::HasSameUniqueServerID(const Jazz2::Multiplayer::ServerDescription& a, const Jazz2::Multiplayer::ServerDescription& b)
@@ -902,7 +991,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	ServerSelectSection::ItemData::ItemData(Jazz2::Multiplayer::ServerDescription&& desc)
-		: Desc(std::move(desc))
+		: Desc(std::move(desc)), Y(0.0f)
 	{
 	}
 

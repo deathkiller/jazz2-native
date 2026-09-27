@@ -5,7 +5,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/Texture.h"
 #include "../../nCine/Graphics/Viewport.h"
-#include "../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING (a header macro, not a build define)
+#include "../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_TRANSPARENT_RENDER_TARGETS (a header macro, not a build define)
 
 #include <algorithm>
 #include <cmath>
@@ -34,22 +34,21 @@ namespace Jazz2::UI
 
 		// Tuned for the colorizing shader the font is drawn with, where (0.5, 0.5, 0.5) is the font's own grey
 		constexpr Colorf LabelColor = Colorf(0.44f, 0.44f, 0.44f, 0.5f);
-		constexpr float BackdropAlpha = 0.4f;
 
-#if defined(RHI_CAP_POSTPROCESSING)
-		// With an alpha channel, the backdrop stays see-through. The text is drawn over it with the separate alpha
-		// blend every canvas uses, which leaves the texture premultiplied, and a black backdrop cleared with its
-		// alpha is premultiplied already - so a premultiplied composite comes out exactly as drawing it all onto
-		// the screen directly did.
+		// The table has no background of its own, only the text, so the texture is cleared to nothing and keeps
+		// its alpha - the scene shows through everywhere else. The text is drawn with the separate alpha blend every
+		// canvas uses, which leaves the texture premultiplied, so a premultiplied composite comes out exactly as
+		// drawing the text onto the screen directly did.
 		constexpr Texture::Format TargetFormat = Texture::Format::RGBA8;
-		constexpr Colorf TargetClearColor = Colorf(0.0f, 0.0f, 0.0f, BackdropAlpha);
+		constexpr Colorf TargetClearColor = Colorf(0.0f, 0.0f, 0.0f, 0.0f);
+
+#if defined(RHI_CAP_TRANSPARENT_RENDER_TARGETS)
+		constexpr bool UseTexture = true;
 #else
-		// The direct tier renders into the portable opaque format - several of its backends have no alpha in a
-		// render target at all (the PowerVR renders into RGB565, the RDP keeps one bit of it, the GE shares it
-		// with the stencil) - so the backdrop is opaque in the texture and the whole table is faded as it is drawn
-		constexpr Texture::Format TargetFormat = Texture::ColorTargetFormat;
-		constexpr Colorf TargetClearColor = Colorf(0.0f, 0.0f, 0.0f, 1.0f);
-		constexpr float OpaqueTableAlpha = 0.75f;
+		// A render target without an alpha channel - the PowerVR and the GE render into RGB565 - would bring an
+		// opaque background back, so the rows are drawn onto the canvas directly instead. That costs a render
+		// command per character every frame rather than a single quad.
+		constexpr bool UseTexture = false;
 #endif
 
 		// Taken as arrays, because an array converts to a string view through strlen()
@@ -96,7 +95,7 @@ namespace Jazz2::UI
 	PerformanceOverlay::PerformanceOverlay()
 		: _rowCount(0), _snapshotSequence(0), _snapshotSeen(false), _font(nullptr), _lineHeight(0.0f), _blockCount(0),
 			_rowsPerBlock(0), _labelWidths{}, _valueWidths{}, _buildsInWindow(0), _tableSize(Vector2i::Zero),
-			_contentSize(Vector2i::Zero), _renderPending(false), _useTexture(true)
+			_contentSize(Vector2i::Zero), _renderPending(false), _useTexture(UseTexture)
 	{
 	}
 
@@ -220,8 +219,7 @@ namespace Jazz2::UI
 		const Vector2f pos = Vector2f(std::round(right - size.X), std::round(top));
 
 		if (_view == nullptr) {
-			canvas->DrawSolid(pos, z, size, Colorf(0.0f, 0.0f, 0.0f, BackdropAlpha));
-			DrawRows(canvas, pos, z + 4);
+			DrawRows(canvas, pos, z);
 			return;
 		}
 
@@ -229,7 +227,6 @@ namespace Jazz2::UI
 		const Vector2i targetSize = _target->GetSize();
 		const Vector4f texCoords = Vector4f(size.X / float(targetSize.X), 0.0f, size.Y / float(targetSize.Y), 0.0f);
 
-#if defined(RHI_CAP_POSTPROCESSING)
 		// Canvas::DrawTexture() has no premultiplied blend, so this is that function with one. It applies the
 		// canvas' own draw transform (a menu section transition) the same way, except that a premultiplied
 		// texture fades by all four of its channels rather than by its alpha alone.
@@ -263,9 +260,6 @@ namespace Jazz2::UI
 		material.SetTexture(0, *_target);
 
 		canvas->DrawRenderCommand(command);
-#else
-		canvas->DrawTexture(*_target, pos, z, size, texCoords, Colorf(1.0f, 1.0f, 1.0f, OpaqueTableAlpha));
-#endif
 	}
 
 	void PerformanceOverlay::Release()
@@ -380,9 +374,9 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		// Flipped like every other render target of the game (see UpscaleRenderPass), so the texture is sampled the
-		// same way as any other and the table does not come out upside down
-		_camera.SetOrthoProjection(0.0f, float(targetSize.X), float(targetSize.Y), 0.0f);
+		// Y down like the screen: a render target is stored top-down (see RhiFwd.h), so the texture is sampled the
+		// same way as any other and the table comes out upright
+		_camera.SetOrthoProjection(0.0f, float(targetSize.X), 0.0f, float(targetSize.Y));
 		_camera.SetView(0.0f, 0.0f, 0.0f, 1.0f);
 		_canvas->ViewSize = targetSize;
 

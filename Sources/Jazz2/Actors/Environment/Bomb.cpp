@@ -55,6 +55,20 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
+	void Bomb::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_timeLeft);
+	}
+
+	void Bomb::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_timeLeft = src.ReadValueAsLE<float>();
+	}
+
 	void Bomb::OnUpdateHitbox()
 	{
 		UpdateHitbox(6, 6);

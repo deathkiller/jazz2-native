@@ -1179,8 +1179,8 @@ namespace nCine::RHI::GX
 			return;
 		}
 
-		// The engine hands scissor rectangles in bottom-up (OpenGL) window coordinates of the logical
-		// space; GX scissors in top-down EFB pixels, so flip and scale
+		// The engine hands scissor rectangles in top-down logical coordinates (see RhiFwd.h), and GX scissors
+		// in top-down EFB pixels, so they only need scaling
 		std::int32_t targetW = _logicalWidth, targetH = _logicalHeight;
 		float scaleX = 1.0f, scaleY = 1.0f;
 		if (_currentRenderTarget == nullptr && _rmode != nullptr && targetW > 0 && targetH > 0) {
@@ -1188,11 +1188,7 @@ namespace nCine::RHI::GX
 			scaleY = float(_rmode->efbHeight) / float(targetH);
 		}
 		if (_scissor.Enabled && targetH > 0) {
-			// Screen passes mirror NDC (see Dispatch), so the engine's bottom-up scissor maps to raster
-			// rows directly; render-to-texture passes keep the unmirrored top-down store and flip it
-			const std::int32_t rasterY = (_currentRenderTarget == nullptr
-				? _scissor.Rect.Y : targetH - _scissor.Rect.Y - _scissor.Rect.H);
-			GX_SetScissor(std::uint32_t(float(_scissor.Rect.X) * scaleX), std::uint32_t(float(rasterY) * scaleY),
+			GX_SetScissor(std::uint32_t(float(_scissor.Rect.X) * scaleX), std::uint32_t(float(_scissor.Rect.Y) * scaleY),
 				std::uint32_t(float(_scissor.Rect.W) * scaleX), std::uint32_t(float(_scissor.Rect.H) * scaleY));
 		} else if (_rmode != nullptr) {
 			GX_SetScissor(0, 0, _rmode->fbWidth, _rmode->efbHeight);
@@ -1570,8 +1566,8 @@ namespace nCine::RHI::GX
 
 				SetVertexModeTextured(true);
 				GX_SetBlendMode(GX_BM_BLEND, GX_BL_DSTCLR, GX_BL_ZERO, GX_LO_CLEAR);	// out = dst * src
-				// The lightmap's row 0 corresponds to the bottom of the displayed viewport (the software
-				// buffer is bottom-up and flipped at present), so V runs 1 -> 0 top -> bottom
+				// The lightmap's row 0 corresponds to the bottom of the displayed viewport (the convention the
+				// CPU lightmap is built in), so V runs 1 -> 0 top -> bottom
 				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 					GX_Position3f32(vpX, vpY, 0.0f);				GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(0.0f, 1.0f);
 					GX_Position3f32(vpX + vpW, vpY, 0.0f);			GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(1.0f, 1.0f);
@@ -1714,17 +1710,16 @@ namespace nCine::RHI::GX
 		SetTevMode(TevMode::Modulate);
 		GX_LoadTexObj(texObj, GX_TEXMAP0);
 
-		const bool screenPass = (_currentRenderTarget == nullptr);
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
 		// transform once instead of being reapplied per vertex - every vertex then costs one multiply-add
-		// per axis (matching the sprite path's corner synthesis). A screen pass mirrors NDC, which is
-		// just the sign of the Y scale.
+		// per axis (matching the sprite path's corner synthesis). The raster is top-down like NDC's y = +1,
+		// which is just the negative sign of the Y scale.
 		const float rasterScaleX = 0.5f * float(viewport.W);
 		const float rasterBiasX = rasterScaleX + float(viewport.X);
-		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H);
 		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -1891,14 +1886,13 @@ namespace nCine::RHI::GX
 		// Width is in sixths of a pixel, so 6 matches the 1-wide GL lines this stands in for
 		GX_SetLineWidth(6, GX_TO_ZERO);
 
-		const bool screenPass = (_currentRenderTarget == nullptr);
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
 		const float rasterScaleX = 0.5f * float(viewport.W);
 		const float rasterBiasX = rasterScaleX + float(viewport.X);
-		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H);
 		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -2060,21 +2054,17 @@ namespace nCine::RHI::GX
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
 
-		// The viewport rect maps NDC to logical pixels exactly like the software FetchVertex
-		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
-		// present time; the EFB is scanned out top-down directly, so screen passes mirror NDC here instead
-		// (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is what the
-		// sampling passes already expect.
-		const bool screenPass = (_currentRenderTarget == nullptr);
-
+		// The viewport rect maps NDC to logical pixels exactly like the software FetchVertex. Every pass is
+		// top-down (see RhiFwd.h): NDC's y = +1 is raster row 0 of the EFB, which is scanned out top-down, and
+		// of a render target, which is copied out of it and sampled from its first row.
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0)
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner;
-		// the screen-pass NDC mirror is just the sign of the Y scale
+		// the top-down raster is just the negative sign of the Y scale
 		const float rasterScaleX = 0.5f * float(viewport.W);
 		const float rasterBiasX = rasterScaleX + float(viewport.X);
-		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H);
 		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
 
 		std::int32_t lastTlutSlot = -2;

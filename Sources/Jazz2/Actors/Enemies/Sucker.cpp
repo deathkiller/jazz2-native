@@ -102,6 +102,36 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Sucker::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteVariableInt32(_cycle);
+		dest.WriteValueAsLE<float>(_cycleTimer);
+
+		std::uint8_t flags = 0;
+		if (_stuck) flags |= 0x01;
+		if (_currentTransition != nullptr) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Sucker::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_cycle = src.ReadVariableInt32();
+		_cycleTimer = src.ReadValueAsLE<float>();
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_stuck = ((flags & 0x01) != 0);
+		if ((flags & 0x02) != 0) {
+			// Deflating was interrupted, finish it as its transition callback would
+			_speed.X = 0;
+			SetAnimation(AnimState::Walk);
+			SetState(ActorState::ApplyGravitation, true);
+		}
+	}
+
 	bool Sucker::OnPerish(ActorBase* collider)
 	{
 		CreateParticleDebrisOnPerish(collider);

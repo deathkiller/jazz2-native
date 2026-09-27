@@ -331,12 +331,12 @@ namespace nCine::Backends
 			}
 		}
 
-		// The rasterizer's rows are bottom-up (OpenGL convention): screen row y reads source row
-		// (copyHeight-1-y). The FB16 buffer holds native-endian RGB565, which on this big-endian CPU is
-		// the RTG PIXFMT_RGB16 layout - the overwhelmingly common one, a straight row copy. The other
-		// 2-byte layouts some cards scan out are converted in place per pixel.
+		// The rasterizer's rows are top-down like the screen's (see RhiFwd.h). The FB16 buffer holds
+		// native-endian RGB565, which on this big-endian CPU is the RTG PIXFMT_RGB16 layout - the
+		// overwhelmingly common one, a straight row copy. The other 2-byte layouts some cards scan out are
+		// converted in place per pixel.
 		for (std::int32_t y = 0; y < copyHeight; y++) {
-			const std::uint16_t* source = reinterpret_cast<const std::uint16_t*>(fb.pixels + std::size_t(copyHeight - 1 - y) * fb.strideBytes);
+			const std::uint16_t* source = reinterpret_cast<const std::uint16_t*>(fb.pixels + std::size_t(y) * fb.strideBytes);
 			std::uint16_t* dest = reinterpret_cast<std::uint16_t*>(screenBase + std::size_t(y + offsetY) * bytesPerRow) + offsetX;
 			switch (pixelFormat) {
 				default:

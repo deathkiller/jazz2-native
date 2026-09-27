@@ -262,6 +262,20 @@ The classic toolchain needs a specific branch and a few one-time additions to it
 PowerPC ones come as container images, and the m68k port picks a performance preset by measuring the
 machine at startup. All of it is documented on @ref amiga "Building for Amiga systems".
 
+@subsection building-portmaster Building for PortMaster handhelds
+
+Linux handhelds with a custom firmware supported by [PortMaster](https://portmaster.games/)
+@m_span{m-text m-dim} (e.g. Anbernic RG34XX/RG35XX family, R36S, TrimUI Smart Pro) @m_endspan run
+the regular Linux build with the SDL2 backend and the OpenGL|ES 3.0 profile. What makes it a separate
+build is the environment: these firmwares ship old system libraries, so it has to be built against
+an old glibc @m_span{m-text m-dim} (Ubuntu 20.04, glibc 2.31) @m_endspan, with libopenmpt compiled
+in, libstdc++ linked statically and OpenSSL bundled next to the executable, while SDL2 and
+OpenGL|ES are always taken from the firmware. The `.github/workflows/portmaster.yml` workflow builds
+both `aarch64` and `x86_64` and assembles the port in the layout of the
+[PortMaster-New](https://github.com/PortsMaster/PortMaster-New) repository, using the launcher script
+and metadata from @cpp "Sources/PortMaster" @ce. The original game files are expected in
+@cpp "ports/jazz2/Source" @ce.
+
 @subsection building-docker Running the dedicated server as a container
 
 The dedicated server is published as a multi-architecture @m_span{m-text m-dim} (`amd64` and `arm64`)
@@ -366,7 +380,7 @@ The following parameters can be used to customize the build:
     -   Possible values:
         - `OpenGL` --- Uses the OpenGL family (which profile is chosen with `NCINE_RHI_GL_PROFILE`)
         - `D3D11` --- Uses Direct3D 11 (**Windows** with the **MSVC** toolchain only)
-        - `Vulkan` --- Uses Vulkan (on **macOS** through MoltenVK: the backend enables the portability extensions the loader needs, but the Vulkan SDK's loader and MoltenVK have to be installed or shipped next to the executable)
+        - `Vulkan` --- Uses Vulkan, on a device with `VK_KHR_maintenance1` or Vulkan 1.1 @m_span{m-text m-dim} (for the negative-height viewport every pass is drawn through; every current desktop driver and MoltenVK have one) @m_endspan --- on **macOS** through MoltenVK: the backend enables the portability extensions the loader needs, but the Vulkan SDK's loader and MoltenVK have to be installed or shipped next to the executable
         - `Metal` --- Uses Metal (**macOS** and **iOS**; the offline MSL sources are compiled on the device at load time, no Xcode is needed to build for macOS)
         - `GXM` --- Uses **sceGxm** directly (**PlayStation Vita** only), see @ref consoles-vita
         - `RSX` --- Uses **libgcm** directly (**PlayStation 3** only), see @ref consoles-ps3

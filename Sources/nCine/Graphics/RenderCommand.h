@@ -145,6 +145,8 @@ namespace nCine
 
 		/** @brief Returns the material's "InstanceBlock" uniform block cache, resolved once per shader change */
 		RHI::UniformBlockCache* GetInstanceBlock();
+		/** @brief Returns the material's "InstancesBlock" uniform block cache of a batched shader, resolved once per shader change */
+		RHI::UniformBlockCache* GetInstancesBlock();
 
 		/**
 			@brief The instance block members a sprite-like material rewrites for every quad it draws
@@ -195,6 +197,8 @@ namespace nCine
 		// as the cached shader change counter matches the material's one.
 		RHI::UniformCache* _modelMatrixUniform;
 		RHI::UniformBlockCache* _instanceBlock;
+		// The "InstancesBlock" of a batched shader instead, which a batch looks up every time it is collected
+		RHI::UniformBlockCache* _instancesBlock;
 		InstanceUniforms _instanceUniforms;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t _idSortKey;

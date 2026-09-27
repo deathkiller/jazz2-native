@@ -69,12 +69,14 @@ namespace nCine
 		struct CameraUniformData
 		{
 			CameraUniformData()
-				: camera(nullptr), updateFrameProjectionMatrix(0), updateFrameViewMatrix(0) {}
+				: camera(nullptr), updateFrameProjectionMatrix(0), updateFrameViewMatrix(0), projectionFlippedY(false) {}
 
 			RHI::ShaderUniforms shaderUniforms;
 			Camera* camera;
 			std::uint32_t updateFrameProjectionMatrix;
 			std::uint32_t updateFrameViewMatrix;
+			/** @brief Whether the projection was last uploaded with its Y flipped (see UpdateCameraUniforms()) */
+			bool projectionFlippedY;
 		};
 
 		static inline BinaryShaderCache& GetBinaryShaderCache() {
@@ -178,6 +180,9 @@ namespace nCine
 		static Camera* _currentCamera;
 		static std::unique_ptr<Camera> _defaultCamera;
 		static Viewport* _currentViewport;
+		// A render target is bound for drawing - by the viewport that renders into it, and still while the viewports
+		// without a texture of their own that it draws draw into it too
+		static bool _renderTargetBound;
 
 		static std::uint32_t GetMaxQuadsForIndices();
 

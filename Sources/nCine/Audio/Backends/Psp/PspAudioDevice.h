@@ -36,6 +36,14 @@ namespace nCine
 		where the mixer's time goes, then runs half or a quarter as often, for content that is 11-22 kHz
 		samples to begin with; the interpolation is one multiply-add per output sample, whatever the number of
 		sources. @ref nativeFrequency() reports the mixing rate, so the module decoder renders at it too.
+
+		The mixer thread outranking the game's is also why it must never loop without waiting: a failed output
+		call returns at once, and retried straight away it would not let the main thread run at all. That is
+		the state a sleep of the console left it in - the channel reserved before the sleep does not play
+		after it - and the game froze. So the thread stays out of `sceAudio` from the moment the console starts
+		going to sleep until it has woken up (see `Backends::PspPower`), reserves its channel again after
+		every wake, and meets any failed output with a short wait and, if it persists, a fresh channel; the
+		main thread puts both in the log (see @ref updatePlayers()).
 	*/
 	class PspAudioDevice : public AudioDeviceBase
 	{
@@ -94,6 +102,12 @@ namespace nCine
 		*/
 		static constexpr std::int32_t BlockFrames = 1024;
 		static constexpr std::int32_t InitialBufferCapacity = 64;
+		/** @brief How long the mixer thread waits after a failed output call, or while the console sleeps */
+		static constexpr std::uint32_t RetryDelayUs = 10000;
+		/** @brief Consecutive failed output calls after which the channel is reserved again */
+		static constexpr std::int32_t FailuresBeforeNewChannel = 10;
+		/** @brief Frames between two reports of failed output calls in the log */
+		static constexpr std::int32_t FramesBetweenFailureReports = 60;
 
 		struct Buffer
 		{
@@ -126,7 +140,12 @@ namespace nCine
 		bool _valid;
 		std::atomic<bool> _suspended;
 		std::atomic<bool> _threadShouldQuit;
+		/** @brief Hardware channel, only touched by the mixer thread while it runs; negative while none is reserved */
 		std::int32_t _channel;
+		/** @brief Failed output calls and channel reservations since the main thread last reported them */
+		std::atomic<std::int32_t> _outputFailures;
+		std::atomic<std::int32_t> _lastOutputError;
+		std::atomic<std::int32_t> _channelReservations;
 		std::int32_t _thread;
 		/** @brief Kernel semaphore (count 1) guarding the sources, the buffers and the mix */
 		std::int32_t _lock;
@@ -141,12 +160,17 @@ namespace nCine
 		Buffer* _buffers;
 		std::int32_t _bufferCount;
 		std::int32_t _bufferCapacity;
+		/** @brief Failed output calls not in the log yet, and frames since the last report - main thread only */
+		std::int32_t _unreportedFailures = 0;
+		std::int32_t _framesSinceFailureReport = FramesBetweenFailureReports;
 		Source _sources[MaxSources];
 
 		PspAudioDevice(const PspAudioDevice&) = delete;
 		PspAudioDevice& operator=(const PspAudioDevice&) = delete;
 
 		static int OutputThread(unsigned int args, void* argp);
+		/** @brief Releases the channel, if any, and reserves a new one - on the mixer thread only */
+		bool ReserveChannel();
 
 		Source* GetSource(std::uint32_t sourceId);
 		Buffer* GetActiveBuffer(Source& source);

@@ -948,13 +948,13 @@ namespace nCine::Backends
 			SDL_UpdateTexture(_softwareTexture, nullptr, fb.pixels, fb.strideBytes);
 		}
 		SDL_RenderClear(_softwareRenderer);
-		// The SwRaster engine renders the screen color buffer bottom-up (OpenGL framebuffer convention), so
-		// present it flipped vertically into the top-left-origin window
+		// The screen color buffer is top-down like every store (see RhiFwd.h), exactly as the window scans out,
+		// so it is presented as it is
 #	if defined(WITH_SDL3)
-		// SDL3: SDL_RenderCopyEx -> SDL_RenderTextureRotated (float rects; null = whole texture / whole target)
-		SDL_RenderTextureRotated(_softwareRenderer, _softwareTexture, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
+		// SDL3: SDL_RenderCopy -> SDL_RenderTexture (float rects; null = whole texture / whole target)
+		SDL_RenderTexture(_softwareRenderer, _softwareTexture, nullptr, nullptr);
 #	else
-		SDL_RenderCopyEx(_softwareRenderer, _softwareTexture, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
+		SDL_RenderCopy(_softwareRenderer, _softwareTexture, nullptr, nullptr);
 #	endif
 		SDL_RenderPresent(_softwareRenderer);
 	}

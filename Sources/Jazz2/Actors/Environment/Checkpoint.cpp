@@ -65,6 +65,25 @@ namespace Jazz2::Actors::Environment
 		UpdateHitbox(20, 20);
 	}
 
+	void Checkpoint::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_activated ? 1 : 0);
+	}
+
+	void Checkpoint::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		// The event tile remembers the activation, but the actor is resurrected with its original parameters
+		bool activated = (src.ReadValue<std::uint8_t>() != 0);
+		if (activated && !_activated) {
+			_activated = true;
+			SetAnimation((AnimState)1);
+		}
+	}
+
 	bool Checkpoint::OnHandleCollision(ActorBase* other)
 	{
 		if (_activated) {

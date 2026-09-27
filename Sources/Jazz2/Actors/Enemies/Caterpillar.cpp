@@ -87,6 +87,30 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Caterpillar::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteVariableInt32(_state);
+		dest.WriteVariableInt32(_smokesLeft);
+		dest.WriteValueAsLE<float>(_attackTime);
+	}
+
+	void Caterpillar::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_state = src.ReadVariableInt32();
+		_smokesLeft = src.ReadVariableInt32();
+		_attackTime = src.ReadValueAsLE<float>();
+
+		// Disoriented state is left only from its transition callback
+		if (_state == StateDisoriented) {
+			_state = StateIdle;
+			SetAnimation(AnimState::Idle);
+		}
+	}
+
 	bool Caterpillar::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {

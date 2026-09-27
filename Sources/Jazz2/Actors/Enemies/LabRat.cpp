@@ -55,6 +55,43 @@ namespace Jazz2::Actors::Enemies
 		_turnCooldown -= timeMult;
 	}
 
+	void LabRat::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_isAttacking) flags |= 0x01;
+		if (_canAttack) flags |= 0x02;
+		if (_idling) flags |= 0x04;
+		if (_canIdle) flags |= 0x08;
+		dest.WriteValue<std::uint8_t>(flags);
+		dest.WriteValueAsLE<float>(_stateTime);
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValueAsLE<float>(_turnCooldown);
+	}
+
+	void LabRat::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_isAttacking = ((flags & 0x01) != 0);
+		_canAttack = ((flags & 0x02) != 0);
+		_idling = ((flags & 0x04) != 0);
+		_canIdle = ((flags & 0x08) != 0);
+		_stateTime = src.ReadValueAsLE<float>();
+		_attackTime = src.ReadValueAsLE<float>();
+		_turnCooldown = src.ReadValueAsLE<float>();
+
+		if (_isAttacking) {
+			// The attack transition was interrupted, finish it as its callback would
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+			_isAttacking = false;
+			_canAttack = false;
+			_attackTime = 180.0f;
+		}
+	}
+
 	void LabRat::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

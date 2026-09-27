@@ -799,11 +799,8 @@ namespace ShaderCompiler
 					mrt += indent + "return _fsOut;\n"_s;
 					return mrt;
 				}
-				// GL clip space to Metal clip space (see Msl.h): the single Y negation every draw goes through
-				String out;
-				out += indent + "_out.gl_Position.y = -_out.gl_Position.y;\n"_s;
-				out += indent + "return _out;\n"_s;
-				return out;
+				// Clip space needs no conversion: Metal puts y = +1 at the top, as the RHI does (see Msl.h)
+				return indent + "return _out;\n"_s;
 			}
 
 			/** Emits the body statements of @p fn (used by both passes) */

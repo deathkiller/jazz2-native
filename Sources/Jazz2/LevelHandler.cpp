@@ -38,6 +38,8 @@
 
 #include <Containers/StaticArray.h>
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringUtils.h>
+#include <IO/MemoryStream.h>
 #include <Utf8.h>
 
 using namespace nCine;
@@ -52,6 +54,59 @@ namespace Jazz2
 	}
 
 	using namespace Jazz2::Resources;
+
+	namespace
+	{
+		// Version of the level state snapshot format, snapshots are also stored in resumable states
+		constexpr std::uint16_t LevelStateVersion = 1;
+
+		void WriteSnapshotString(Stream& dest, StringView value)
+		{
+			dest.WriteVariableUint32((std::uint32_t)value.size());
+			dest.Write(value.data(), (std::int64_t)value.size());
+		}
+
+		String ReadSnapshotString(Stream& src)
+		{
+			std::uint32_t size = src.ReadVariableUint32();
+			String value(NoInit, size);
+			src.Read(value.data(), size);
+			return value;
+		}
+
+		void WriteSnapshotData(Stream& dest, const LevelStateSnapshot* data)
+		{
+			std::uint32_t size = (data != nullptr ? (std::uint32_t)data->size() : 0);
+			dest.WriteVariableUint32(size);
+			if (size > 0) {
+				dest.Write(data->data(), size);
+			}
+		}
+
+		void ReadSnapshotData(Stream& src, LevelStateSnapshot& data)
+		{
+			std::uint32_t size = src.ReadVariableUint32();
+			data.resize_for_overwrite(size);
+			if (size > 0) {
+				src.Read(data.data(), size);
+			}
+		}
+
+		void AssignSnapshotData(LevelStateSnapshot& data, const MemoryStream& stream)
+		{
+			const std::uint8_t* buffer = stream.GetBuffer();
+			data.assign(buffer, buffer + stream.GetSize());
+		}
+
+		String ReadLevelStateName(const LevelStateSnapshot& state)
+		{
+			MemoryStream src(state.data(), (std::int64_t)state.size());
+			if (src.ReadValueAsLE<std::uint16_t>() != LevelStateVersion) {
+				return {};
+			}
+			return ReadSnapshotString(src);
+		}
+	}
 
 #if defined(WITH_AUDIO)
 	class AudioBufferPlayerForSplitscreen : public AudioBufferPlayer
@@ -133,8 +188,13 @@ namespace Jazz2
 		for (auto& viewport : _assignedViewports) {
 			viewport->_combineRenderer->setParent(nullptr);
 		}
-		_hud->setParent(nullptr);
-		_console->setParent(nullptr);
+		// Not created if the level failed to load
+		if (_hud != nullptr) {
+			_hud->setParent(nullptr);
+		}
+		if (_console != nullptr) {
+			_console->setParent(nullptr);
+		}
 
 		TracyPlot("Actors", 0LL);
 	}
@@ -142,6 +202,11 @@ namespace Jazz2
 	bool LevelHandler::Initialize(const LevelInitialization& levelInit)
 	{
 		ZoneScopedC(0x4876AF);
+
+		if (levelInit.RestoreLevelState != nullptr) {
+			// Returning from a special level, the level is restored exactly as it was left
+			return InitializeFromLevelState(*levelInit.RestoreLevelState, levelInit);
+		}
 
 		_levelName = levelInit.LevelName;
 		_difficulty = levelInit.Difficulty;
@@ -178,6 +243,9 @@ namespace Jazz2
 
 		AttachComponents(std::move(descriptor));
 		SpawnPlayers(levelInit);		
+
+		// The level was entered from another one, which the player returns to once this special level is completed
+		_returnLevelState = levelInit.ReturnLevelState;
 
 		// Behind the loading screen, where a sheet read costs nothing visible (see the implementation)
 		resolver.PreloadDeferredAnimations();
@@ -270,6 +338,25 @@ namespace Jazz2
 
 		// Set it at the end, so ambient light transition is skipped
 		_elapsedFrames = _checkpointFrames;
+
+		if (version >= 5) {
+			// Actors as they were at the checkpoint, their events are marked active, so they are not spawned twice
+			ReadSnapshotData(src, _checkpointSnapshot);
+			if (!_checkpointSnapshot.empty()) {
+				_eventMap->InitializeActiveStateFromStream(src);
+				if (CanUseLevelStateSnapshots()) {
+					RestoreCheckpointSnapshot();
+				} else {
+					_checkpointSnapshot.clear();
+				}
+			}
+
+			LevelStateSnapshot returnLevelState;
+			ReadSnapshotData(src, returnLevelState);
+			if (!returnLevelState.empty()) {
+				_returnLevelState = std::make_shared<LevelStateSnapshot>(std::move(returnLevelState));
+			}
+		}
 
 		return true;
 	}
@@ -634,9 +721,9 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 		// The level music is started only after the first frames have loaded what they load (see the level
 		// loading above); it keeps playing under the pause menu, so a pause in the meantime changes nothing
-		if (_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
+		if DEATH_UNLIKELY(_musicStartDelay > 0 && --_musicStartDelay == 0 && _music != nullptr) {
 			_music->play();
-		} else if (_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
+		} else if DEATH_UNLIKELY(_musicStartDelay == 0 && _music != nullptr && _music->isStopped()) {
 			// A looping stream that reports itself stopped was stopped by something other than the game:
 			// the only in-game paths either replace it or clear the pointer, and a pause does not stop it.
 			// The audio device releases every player when it decides the output has gone away (see
@@ -648,17 +735,17 @@ namespace Jazz2
 		}
 #endif
 
-		if (_pauseMenu == nullptr) {
+		if DEATH_LIKELY(_pauseMenu == nullptr) {
 			UpdatePressedActions();
 
 			bool isGamepad;
-			if (PlayerActionHit(nullptr, PlayerAction::Menu)) {
+			if DEATH_UNLIKELY(PlayerActionHit(nullptr, PlayerAction::Menu)) {
 				if (_console->IsVisible()) {
 					HideConsole();
 				} else if (_nextLevelType == ExitType::None) {
 					PauseGame();
 				}
-			} else if (PlayerActionHit(nullptr, PlayerAction::Console, true, isGamepad)) {
+			} else if DEATH_UNLIKELY(PlayerActionHit(nullptr, PlayerAction::Console, true, isGamepad)) {
 				if (_console->IsVisible()) {
 					if (isGamepad) {
 						HideConsole();
@@ -670,16 +757,17 @@ namespace Jazz2
 
 			// The open console suppresses every gameplay action (see PlayerActionHit()), so its on-screen keyboard
 			// toggle has to read the raw input state instead. It's the same button the menu uses for its text fields,
-			// so a player without a hardware keyboard can type commands and chat messages here as well.
-			if (_console->IsVisible() && theApplication().CanShowScreenKeyboard()) {
-				constexpr std::uint64_t ChangeWeaponBit = (1ull << (std::int32_t)PlayerAction::ChangeWeapon);
+			// so a player without a hardware keyboard can type commands and chat messages here as well. Only the gamepad
+			// bit is tested, because the key bound to the same action is also typed into the input line.
+			if DEATH_UNLIKELY(_console->IsVisible() && theApplication().CanShowScreenKeyboard()) {
+				constexpr std::uint64_t ChangeWeaponGamepadBit = (1ull << (32 + (std::int32_t)PlayerAction::ChangeWeapon));
 				const auto& rawInput = _playerInputs[0];
-				if ((rawInput.PressedActions & ChangeWeaponBit) != 0 && (rawInput.PressedActionsLast & ChangeWeaponBit) == 0) {
+				if ((rawInput.PressedActions & ChangeWeaponGamepadBit) != 0 && (rawInput.PressedActionsLast & ChangeWeaponGamepadBit) == 0) {
 					_console->ToggleScreenKeyboard();
 				}
 			}
 #if defined(DEATH_DEBUG)
-			if (IsCheatingAllowed(nullptr) && PlayerActionPressed(nullptr, PlayerAction::ChangeWeapon) && PlayerActionHit(0, PlayerAction::Jump)) {
+			if DEATH_UNLIKELY(IsCheatingAllowed(nullptr) && PlayerActionPressed(nullptr, PlayerAction::ChangeWeapon) && PlayerActionHit(0, PlayerAction::Jump)) {
 				_cheatsUsed = true;
 				BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 			}
@@ -705,7 +793,7 @@ namespace Jazz2
 		}
 #endif
 
-		if (!IsPausable() || _pauseMenu == nullptr) {
+		if DEATH_LIKELY(!IsPausable() || _pauseMenu == nullptr) {
 			if (_nextLevelType != ExitType::None) {
 				_nextLevelTime -= timeMult;
 				ProcessQueuedNextLevel();
@@ -746,9 +834,13 @@ namespace Jazz2
 		float timeMult = theApplication().GetTimeMult();
 		auto& resolver = ContentResolver::Get();
 
+		if DEATH_UNLIKELY(_checkpointSnapshotPending) {
+			CreateCheckpointSnapshot();
+		}
+
 		_tileMap->OnEndFrame();
 
-		if (!IsPausable() || _pauseMenu == nullptr) {
+		if DEATH_LIKELY(!IsPausable() || _pauseMenu == nullptr) {
 			// Every actor applies its position to its renderer when it updates itself, but an actor can still be
 			// moved afterwards by another actor that updates later - a platform carrying it, most visibly - and
 			// would then be drawn a whole frame behind. This runs after all the updates and before the scene is
@@ -801,7 +893,7 @@ namespace Jazz2
 			}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && !_assignedViewports.empty()) {
+			if DEATH_UNLIKELY(PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && !_assignedViewports.empty()) {
 				ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 				const auto& mainViewport = *_assignedViewports[0];
 
@@ -942,7 +1034,7 @@ namespace Jazz2
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
 			viewport.Register();
 
-			if (_pauseMenu != nullptr) {
+			if DEATH_UNLIKELY(_pauseMenu != nullptr) {
 				viewport.UpdateCamera(0.0f);	// Force update camera if game is paused
 			}
 		}
@@ -951,7 +1043,7 @@ namespace Jazz2
 			_tileMap->OnInitializeViewport();
 		}
 
-		if (_pauseMenu != nullptr) {
+		if DEATH_UNLIKELY(_pauseMenu != nullptr) {
 			_pauseMenu->OnInitializeViewport(_viewSize.X, _viewSize.Y);
 		}
 	}
@@ -971,9 +1063,9 @@ namespace Jazz2
 	{
 		_pressedKeys.set((std::size_t)event.sym);
 
-		if (_pauseMenu != nullptr) {
+		if DEATH_UNLIKELY(_pauseMenu != nullptr) {
 			_pauseMenu->OnKeyPressed(event);
-		} else if (_console->IsVisible()) {
+		} else if DEATH_UNLIKELY(_console->IsVisible()) {
 			_console->OnKeyPressed(event);
 		}
 	}
@@ -982,7 +1074,7 @@ namespace Jazz2
 	{
 		_pressedKeys.reset((std::size_t)event.sym);
 
-		if (_pauseMenu != nullptr) {
+		if DEATH_UNLIKELY(_pauseMenu != nullptr) {
 			_pauseMenu->OnKeyReleased(event);
 		}
 	}
@@ -994,17 +1086,19 @@ namespace Jazz2
 		}
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void LevelHandler::OnTouchEvent(const  TouchEvent& event)
 	{
-		if (_pauseMenu != nullptr) {
+		if DEATH_UNLIKELY(_pauseMenu != nullptr) {
 			_pauseMenu->OnTouchEvent(event);
 		} else {
-			if (_console->IsVisible()) {
+			if DEATH_UNLIKELY(_console->IsVisible()) {
 				_console->OnTouchEvent(event, _viewSize);
 			}
 			_hud->OnTouchEvent(event, _overrideActions, _overrideMovement);
 		}
 	}
+#endif
 
 	void LevelHandler::AddActor(std::shared_ptr<Actors::ActorBase> actor)
 	{
@@ -1272,6 +1366,20 @@ namespace Jazz2
 			return;
 		}
 
+		// A special level returns back to the level it was entered from once it's completed, so the current state
+		// has to be remembered now, before the players start leaving
+		if (CanUseLevelStateSnapshots()) {
+			String targetLevel = ResolveNextLevelName(exitType, nextLevel);
+			if (!targetLevel.empty() && !StringUtils::equalsIgnoreCase(targetLevel, _levelName) && IsReturnLevel(targetLevel)) {
+				MemoryStream dest(64 * 1024);
+				SerializeLevelState(dest);
+				auto state = std::make_shared<LevelStateSnapshot>();
+				AssignSnapshotData(*state, dest);
+				_leftLevelState = std::move(state);
+				LOGI("Level \"{}\" is a special level, the current state was saved ({} bytes)", targetLevel, _leftLevelState->size());
+			}
+		}
+
 		_nextLevelName = nextLevel;
 		_nextLevelType = exitType;
 		
@@ -1404,6 +1512,8 @@ namespace Jazz2
 		if (IsLocalSession()) {
 			_eventMap->CreateCheckpointForRollback();
 			_tileMap->CreateCheckpointForRollback();
+			// The checkpoint is activated in the middle of the frame, actors are stored once they're all updated
+			_checkpointSnapshotPending = true;
 		}
 	}
 
@@ -1414,7 +1524,29 @@ namespace Jazz2
 
 		WarpCameraToTarget(player);
 
-		if (IsLocalSession()) {
+		if (IsLocalSession() && CanUseLevelStateSnapshots() && (_checkpointSnapshotPending || !_checkpointSnapshot.empty())) {
+			if (_checkpointSnapshotPending) {
+				CreateCheckpointSnapshot();
+			}
+
+			// All actors are destroyed and resurrected exactly as they were at the checkpoint
+			for (auto& actor : _actors) {
+				if (runtime_cast<Actors::Player>(actor) == nullptr && !actor->GetState(Actors::ActorState::PreserveOnRollback)) {
+					actor->_state |= Actors::ActorState::IsDestroyed;
+				}
+			}
+
+			if (_activeBoss != nullptr && _activeBoss->GetState(Actors::ActorState::IsDestroyed)) {
+				_activeBoss->OnDeactivatedBoss();
+				_activeBoss = nullptr;
+			}
+
+			_eventMap->RollbackToCheckpoint(false);
+			_tileMap->RollbackToCheckpoint();
+			// Some objects derive their phase from the elapsed time when they're spawned
+			_elapsedFrames = _checkpointFrames;
+			RestoreCheckpointSnapshot();
+		} else if (IsLocalSession()) {
 			for (auto& actor : _actors) {
 				// Despawn all actors that were created after the last checkpoint
 				if (actor->_spawnFrames > _checkpointFrames && !actor->GetState(Actors::ActorState::PreserveOnRollback)) {
@@ -1646,6 +1778,367 @@ namespace Jazz2
 			_players[i]->SerializeResumableToStream(dest);
 		}
 
+		// Actors as they were at the checkpoint, with the active state of events that goes with them (since v5)
+		if (_checkpointSnapshotPending) {
+			CreateCheckpointSnapshot();
+		}
+		WriteSnapshotData(dest, &_checkpointSnapshot);
+		if (!_checkpointSnapshot.empty()) {
+			_eventMap->SerializeActiveStateToStream(dest, true);
+		}
+
+		// Also the level to return to, if it's a special level
+		WriteSnapshotData(dest, _returnLevelState.get());
+
+		return true;
+	}
+
+	bool LevelHandler::CanUseLevelStateSnapshots() const
+	{
+		return IsLocalSession();
+	}
+
+	String LevelHandler::ResolveNextLevelName(ExitType exitType, StringView nextLevel) const
+	{
+		StringView realNextLevel;
+		if (!nextLevel.empty()) {
+			realNextLevel = nextLevel;
+		} else {
+			realNextLevel = ((exitType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+		}
+
+		if (realNextLevel.empty()) {
+			return {};
+		}
+		if (realNextLevel.contains('/')) {
+			return realNextLevel;
+		}
+		return _levelName.partition('/')[0] + '/' + realNextLevel;
+	}
+
+	bool LevelHandler::IsReturnLevel(StringView levelName)
+	{
+		String nextLevel;
+		if (!ContentResolver::Get().TryGetNextLevelName(levelName, nextLevel) || nextLevel.empty()) {
+			return false;
+		}
+
+		// Next level without an episode refers to the same episode
+		if (!nextLevel.contains('/')) {
+			nextLevel = levelName.partition('/')[0] + '/' + nextLevel;
+		}
+		return StringUtils::equalsIgnoreCase(nextLevel, levelName);
+	}
+
+	void LevelHandler::CreateCheckpointSnapshot()
+	{
+		_checkpointSnapshotPending = false;
+
+		if (!CanUseLevelStateSnapshots()) {
+			return;
+		}
+
+		MemoryStream dest(16 * 1024);
+		dest.WriteValueAsLE<float>(_waterLevel);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
+		dest.WriteValue<std::uint8_t>(_weatherIntensity);
+		SerializeActorsToStream(dest);
+		AssignSnapshotData(_checkpointSnapshot, dest);
+	}
+
+	void LevelHandler::RestoreCheckpointSnapshot()
+	{
+		MemoryStream src(_checkpointSnapshot.data(), (std::int64_t)_checkpointSnapshot.size());
+		_waterLevel = src.ReadValueAsLE<float>();
+		_weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
+		_weatherIntensity = src.ReadValue<std::uint8_t>();
+		InitializeActorsFromStream(src);
+	}
+
+	void LevelHandler::SerializeActorsToStream(Stream& dest)
+	{
+		constexpr Actors::ActorState InstantiationFlags = Actors::ActorState::IsCreatedFromEventMap |
+			Actors::ActorState::IsFromGenerator | Actors::ActorState::Illuminated;
+
+		SmallVector<Actors::ActorBase*, 0> serializable;
+		SmallVector<Actors::ActorBase*, 0> respawnable;
+		for (auto& actor : _actors) {
+			// Players are handled separately, dying objects (with a death transition running) are already dead
+			if (actor->GetState(Actors::ActorState::IsDestroyed) || actor->GetState(Actors::ActorState::PreserveOnRollback) ||
+				actor->GetHealth() <= 0 || runtime_cast<Actors::Player>(actor) != nullptr) {
+				continue;
+			}
+
+			if (actor->GetState(Actors::ActorState::Initialized) && actor->IsSerializable() && _eventSpawner.CanSpawn(actor->_spawnEventType)) {
+				serializable.push_back(actor.get());
+			} else if ((actor->_state & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
+				// Objects that cannot be stored are spawned again from their events, the others are transient
+				respawnable.push_back(actor.get());
+			}
+		}
+
+		dest.WriteVariableUint32((std::uint32_t)serializable.size());
+		for (Actors::ActorBase* actor : serializable) {
+			dest.WriteValueAsLE<std::uint16_t>((std::uint16_t)actor->_spawnEventType);
+			dest.Write(actor->_spawnEventParams, sizeof(actor->_spawnEventParams));
+			dest.WriteVariableInt32(actor->_spawnPos.X);
+			dest.WriteVariableInt32(actor->_spawnPos.Y);
+			dest.WriteVariableInt32(actor->_spawnPos.Z);
+			dest.WriteVariableUint32((std::uint32_t)(actor->_state & InstantiationFlags));
+			dest.WriteValueAsLE<float>(actor->_spawnFrames);
+
+			// Each object is stored with its size, so a single object that doesn't read back exactly what it wrote
+			// cannot break all the objects that follow
+			MemoryStream actorState(256);
+			actor->OnSerializeState(actorState);
+			dest.WriteVariableUint32((std::uint32_t)actorState.GetSize());
+			dest.Write(actorState.GetBuffer(), actorState.GetSize());
+		}
+
+		dest.WriteVariableUint32((std::uint32_t)respawnable.size());
+		for (Actors::ActorBase* actor : respawnable) {
+			dest.WriteVariableInt32(actor->_originTile.X);
+			dest.WriteVariableInt32(actor->_originTile.Y);
+			dest.WriteValue<std::uint8_t>(actor->GetState(Actors::ActorState::IsFromGenerator) ? 1 : 0);
+		}
+	}
+
+	void LevelHandler::InitializeActorsFromStream(Stream& src)
+	{
+		SmallVector<std::uint8_t, 0> actorState;
+
+		std::uint32_t actorCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < actorCount; i++) {
+			EventType eventType = (EventType)src.ReadValueAsLE<std::uint16_t>();
+			std::uint8_t eventParams[Events::EventSpawner::SpawnParamsSize];
+			src.Read(eventParams, sizeof(eventParams));
+			Vector3i spawnPos;
+			spawnPos.X = src.ReadVariableInt32();
+			spawnPos.Y = src.ReadVariableInt32();
+			spawnPos.Z = src.ReadVariableInt32();
+			Actors::ActorState flags = (Actors::ActorState)src.ReadVariableUint32();
+			float spawnFrames = src.ReadValueAsLE<float>();
+			std::uint32_t actorStateSize = src.ReadVariableUint32();
+			actorState.resize_for_overwrite(actorStateSize);
+			src.Read(actorState.data(), actorStateSize);
+
+			// The object is spawned again exactly as the first time, and only then its live state is applied
+			std::shared_ptr<Actors::ActorBase> actor = _eventSpawner.SpawnEvent(eventType, eventParams, flags, spawnPos);
+			if (actor == nullptr) {
+				if ((flags & (Actors::ActorState::IsCreatedFromEventMap | Actors::ActorState::IsFromGenerator)) != Actors::ActorState::None) {
+					Vector2i originTile = Vector2i(spawnPos.X / Tiles::TileSet::DefaultTileSize, spawnPos.Y / Tiles::TileSet::DefaultTileSize);
+					if ((flags & Actors::ActorState::IsFromGenerator) == Actors::ActorState::IsFromGenerator) {
+						_eventMap->ResetGenerator(originTile.X, originTile.Y);
+					}
+					_eventMap->Deactivate(originTile.X, originTile.Y);
+				}
+				continue;
+			}
+
+			actor->_spawnFrames = spawnFrames;
+
+			MemoryStream actorStateStream(actorState.data(), (std::int64_t)actorStateSize);
+			actor->OnDeserializeState(actorStateStream);
+			if (actorStateStream.GetPosition() != (std::int64_t)actorStateSize) {
+				LOGW("Object of event type {} read {} bytes of its state instead of {}", (std::uint32_t)eventType,
+					actorStateStream.GetPosition(), actorStateSize);
+			}
+
+			AddActor(actor);
+
+			// The events are marked as active, so the objects are not spawned for the second time
+			Vector2i originTile = actor->_originTile;
+			if (actor->GetState(Actors::ActorState::IsFromGenerator)) {
+				_eventMap->AttachGeneratorActor(originTile.X, originTile.Y, actor);
+			} else if (actor->GetState(Actors::ActorState::IsCreatedFromEventMap)) {
+				_eventMap->Activate(originTile.X, originTile.Y);
+			}
+		}
+
+		std::uint32_t respawnCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < respawnCount; i++) {
+			std::int32_t x = src.ReadVariableInt32();
+			std::int32_t y = src.ReadVariableInt32();
+			bool fromGenerator = (src.ReadValue<std::uint8_t>() != 0);
+			if (fromGenerator) {
+				_eventMap->ResetGenerator(x, y);
+			}
+			_eventMap->Deactivate(x, y);
+		}
+	}
+
+	void LevelHandler::SerializeLevelState(Stream& dest)
+	{
+		if (_checkpointSnapshotPending) {
+			CreateCheckpointSnapshot();
+		}
+
+		dest.WriteValueAsLE<std::uint16_t>(LevelStateVersion);
+		WriteSnapshotString(dest, _levelName);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_difficulty);
+		std::uint8_t flags = 0;
+		if (_isReforged) flags |= 0x01;
+		if (_cheatsUsed) flags |= 0x02;
+		if (_checkpointCreated) flags |= 0x04;
+		dest.WriteValue<std::uint8_t>(flags);
+		dest.WriteValueAsLE<float>(_elapsedFrames);
+		dest.WriteValueAsLE<float>(_checkpointFrames);
+		dest.WriteValueAsLE<float>(_waterLevel);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
+		dest.WriteValue<std::uint8_t>(_weatherIntensity);
+		WriteSnapshotString(dest, _musicDefaultPath);
+		WriteSnapshotString(dest, _musicCurrentPath);
+		dest.WriteVariableInt32(_levelBounds.X);
+		dest.WriteVariableInt32(_levelBounds.W);
+
+		_tileMap->SerializeSnapshotToStream(dest);
+		_eventMap->SerializeSnapshotToStream(dest);
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_players.size());
+		for (Actors::Player* player : _players) {
+			dest.WriteValue<std::uint8_t>(player->GetPlayerIndex());
+			dest.WriteValue<std::uint8_t>((std::uint8_t)player->GetPlayerType());
+			MemoryStream playerState(512);
+			static_cast<Actors::ActorBase*>(player)->OnSerializeState(playerState);
+			dest.WriteVariableUint32((std::uint32_t)playerState.GetSize());
+			dest.Write(playerState.GetBuffer(), playerState.GetSize());
+		}
+
+		SerializeActorsToStream(dest);
+
+		WriteSnapshotData(dest, &_checkpointSnapshot);
+		// A special level can lead to another special level, then both of them have to be returned from
+		WriteSnapshotData(dest, _returnLevelState.get());
+	}
+
+	bool LevelHandler::InitializeFromLevelState(const LevelStateSnapshot& state, const LevelInitialization& levelInit)
+	{
+		ZoneScopedC(0x4876AF);
+
+		MemoryStream src(state.data(), (std::int64_t)state.size());
+		std::uint16_t version = src.ReadValueAsLE<std::uint16_t>();
+		if (version != LevelStateVersion) {
+			LOGE("Level state has unsupported version {}", version);
+			return false;
+		}
+
+		_levelName = ReadSnapshotString(src);
+		_difficulty = (GameDifficulty)src.ReadValue<std::uint8_t>();
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		// Cheats could have been used also in the special level
+		_isReforged = levelInit.IsReforged;
+		_cheatsUsed = (levelInit.CheatsUsed || (flags & 0x02) != 0);
+		_checkpointCreated = ((flags & 0x04) != 0);
+		float elapsedFrames = src.ReadValueAsLE<float>();
+		_checkpointFrames = src.ReadValueAsLE<float>();
+		float waterLevel = src.ReadValueAsLE<float>();
+		WeatherType weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
+		std::uint8_t weatherIntensity = src.ReadValue<std::uint8_t>();
+		String musicDefaultPath = ReadSnapshotString(src);
+		String musicCurrentPath = ReadSnapshotString(src);
+		std::int32_t levelBoundsLeft = src.ReadVariableInt32();
+		std::int32_t levelBoundsWidth = src.ReadVariableInt32();
+
+		// The time spent in the special level counts too
+		std::uint64_t elapsedMilliseconds = (std::uint64_t)(elapsedFrames * FrameTimer::SecondsPerFrame * 1000.0f);
+		_elapsedMillisecondsBegin = (levelInit.ElapsedMilliseconds > elapsedMilliseconds ? levelInit.ElapsedMilliseconds - elapsedMilliseconds : 0);
+
+		auto& resolver = ContentResolver::Get();
+		// Scoped, because it returns early when the level cannot be loaded - see LoadingScope
+		ContentResolver::LoadingScope loadingScope(resolver);
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		_noiseTexture = resolver.GetNoiseTexture();
+#endif
+
+		_rootNode = std::make_unique<SceneNode>();
+		_rootNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+
+		_console = std::make_unique<UI::InGameConsole>(this);
+
+		auto p = _levelName.partition('/');
+
+		LevelDescriptor descriptor;
+		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor) &&
+			(p[0] == "unknown"_s || !resolver.TryLoadLevel(String("unknown/"_s + p[2]), _difficulty, descriptor))) {
+			LOGE("Cannot load level \"{}\"", _levelName);
+			return false;
+		}
+
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" restored", descriptor.DisplayName));
+
+		// The music that was playing when the level was left is started instead of the default one
+		descriptor.MusicPath = musicCurrentPath;
+		AttachComponents(std::move(descriptor));
+		_musicDefaultPath = std::move(musicDefaultPath);
+		_waterLevel = waterLevel;
+		_weatherType = weatherType;
+		_weatherIntensity = weatherIntensity;
+
+		if (!_tileMap->InitializeSnapshotFromStream(src) || !_eventMap->InitializeSnapshotFromStream(src)) {
+			LOGE("Cannot restore level \"{}\"", _levelName);
+			return false;
+		}
+
+		SmallVector<std::uint8_t, 0> playerState;
+		std::uint32_t playerCount = src.ReadValue<std::uint8_t>();
+		_players.reserve(playerCount);
+		for (std::uint32_t i = 0; i < playerCount; i++) {
+			std::uint8_t playerIndex = src.ReadValue<std::uint8_t>();
+			PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
+			std::uint32_t playerStateSize = src.ReadVariableUint32();
+			playerState.resize_for_overwrite(playerStateSize);
+			src.Read(playerState.data(), playerStateSize);
+
+			std::shared_ptr<Actors::Player> player = CreateResumablePlayer((std::int32_t)i);
+			Actors::Player* ptr = player.get();
+
+			std::uint8_t playerParams[2] = { (std::uint8_t)playerType, playerIndex };
+			player->OnActivated(Actors::ActorActivationDetails(this, Vector3i(0, 0, PlayerZ - playerIndex), playerParams));
+
+			// The viewport has to be assigned before the state is applied, see Initialize(Stream&, std::uint16_t)
+			AssignViewport(ptr);
+			MemoryStream playerStateStream(playerState.data(), (std::int64_t)playerStateSize);
+			static_cast<Actors::ActorBase*>(ptr)->OnDeserializeState(playerStateStream);
+
+			_players.push_back(ptr);
+			AddActor(player);
+
+			// Apply the progress made in the special level, the player appears on the spot the level was left from
+			if (i < (std::uint32_t)LevelInitialization::MaxPlayerCount && levelInit.PlayerCarryOvers[i].Type != PlayerType::None) {
+				ExitType exitType = ExitType::Warp | (levelInit.LastExitType & ExitType::FastTransition);
+				ptr->ReceiveReturnCarryOver(exitType, levelInit.PlayerCarryOvers[i]);
+			}
+		}
+
+		_hud = CreateHUD();
+		_hud->BeginFadeIn((levelInit.LastExitType & ExitType::FastTransition) == ExitType::FastTransition);
+
+		// Set it after the players are restored, so ambient light transition is skipped, but before the objects,
+		// because some of them derive their phase from the elapsed time when they're spawned
+		_elapsedFrames = elapsedFrames;
+
+		InitializeActorsFromStream(src);
+
+		ReadSnapshotData(src, _checkpointSnapshot);
+
+		LevelStateSnapshot returnLevelState;
+		ReadSnapshotData(src, returnLevelState);
+		if (!returnLevelState.empty()) {
+			_returnLevelState = std::make_shared<LevelStateSnapshot>(std::move(returnLevelState));
+		}
+
+		if (!_players.empty() && (levelBoundsLeft != _levelBounds.X || levelBoundsWidth != _levelBounds.W)) {
+			LimitCameraView(_players[0], _players[0]->GetPos(), levelBoundsLeft, levelBoundsWidth);
+		}
+		for (Actors::Player* player : _players) {
+			WarpCameraToTarget(player, true);
+		}
+
+		resolver.PreloadDeferredAnimations();
+
+		OnInitialized();
+
 		return true;
 	}
 
@@ -1757,6 +2250,7 @@ namespace Jazz2
 				_checkpointCreated = true;
 				_eventMap->CreateCheckpointForRollback();
 				_tileMap->CreateCheckpointForRollback();
+				CreateCheckpointSnapshot();
 #if defined(WITH_ANGELSCRIPT)
 				if (_scripts != nullptr) {
 					_scripts->OnLevelBegin();
@@ -1785,21 +2279,17 @@ namespace Jazz2
 
 	void LevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
 	{
-		StringView realNextLevel;
-		if (!_nextLevelName.empty()) {
-			realNextLevel = _nextLevelName;
+		String nextLevel = ResolveNextLevelName(_nextLevelType, _nextLevelName);
+		if (_returnLevelState != nullptr && StringUtils::equalsIgnoreCase(nextLevel, _levelName)) {
+			// The special level is completed, so return back to the level it was entered from
+			levelInit.LevelName = ReadLevelStateName(*_returnLevelState);
+			levelInit.RestoreLevelState = _returnLevelState;
 		} else {
-			realNextLevel = ((_nextLevelType & ExitType::TypeMask) == ExitType::Bonus ? _defaultSecretLevel : _defaultNextLevel);
+			levelInit.LevelName = std::move(nextLevel);
+			levelInit.ReturnLevelState = _leftLevelState;
 		}
 
 		auto p = _levelName.partition('/');
-		if (!realNextLevel.empty()) {
-			if (realNextLevel.contains('/')) {
-				levelInit.LevelName = realNextLevel;
-			} else {
-				levelInit.LevelName = p[0] + '/' + realNextLevel;
-			}
-		}
 
 		levelInit.Difficulty = _difficulty;
 		levelInit.IsReforged = _isReforged;
@@ -2110,6 +2600,8 @@ namespace Jazz2
 
 		viewport._cameraLastPos = viewport._cameraPos;
 		viewport._camera->SetView(viewport._cameraPos, 0.0f, 1.0f);
+		// The look-ahead of a small view starts where it rests rather than drifting into place (see ResetLookAhead())
+		viewport.ResetLookAhead();
 	}
 
 	Vector2f LevelHandler::GetCameraPos(Actors::Player* player) const

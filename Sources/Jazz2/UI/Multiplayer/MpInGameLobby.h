@@ -24,8 +24,10 @@ namespace Jazz2::UI::Multiplayer
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Called when a touch event is triggered */
 		void OnTouchEvent(const nCine::TouchEvent& event);
+#endif
 
 		/** @brief Returns `true` if the lobby screen is visible */
 		bool IsVisible() const;

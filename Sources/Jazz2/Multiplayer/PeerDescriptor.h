@@ -77,6 +77,8 @@ namespace Jazz2::Multiplayer
 		Uuid UniquePlayerID;
 		/** @brief Whether the peer is already successfully authenticated */
 		bool IsAuthenticated;
+		/** @brief Time when the peer connected, a peer that doesn't authenticate in time is kicked */
+		TimeStamp ConnectedSince;
 		/** @brief Whether the peer has admin privileges */
 		bool IsAdmin;
 		/** @brief Whether ledge climbing is enabled by client */

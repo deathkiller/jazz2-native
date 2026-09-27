@@ -988,6 +988,21 @@ namespace Jazz2::Multiplayer
 		return uuidStr;
 	}
 
+	bool NetworkManager::IsKickedOff(Reason reason)
+	{
+		// Only the kicks of a player the server or an admin removed from the game - a join the server turned down
+		// (not ready yet, missing assets, ...) is not the player's doing, so a retained progression survives it
+		switch (reason) {
+			case Reason::Kicked:
+			case Reason::Banned:
+			case Reason::CheatingDetected:
+			case Reason::Idle:
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	ConnectionResult NetworkManager::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 	{
 		bool isListening = (GetState() == NetworkState::Listening);
@@ -1006,6 +1021,7 @@ namespace Jazz2::Multiplayer
 			std::unique_lock<Spinlock> l(_lock);
 			auto [peerDesc, inserted] = _peerDesc.emplace(peer, std::make_shared<PeerDescriptor>());
 			peerDesc->second->RemotePeer = peer;
+			peerDesc->second->ConnectedSince = TimeStamp::now();
 		}
 
 		return result;
@@ -1055,8 +1071,14 @@ namespace Jazz2::Multiplayer
 				// is set by the level handler only when the peer had an active player, so spectators aren't kept.
 				// A window of zero (or less) disables reconnect resume entirely.
 				if (peerDesc->HasCarryOver && reconnectWindowSecs > 0) {
-					peerDesc->DisconnectedSince = TimeStamp::now();
-					_disconnectedPeers[UuidToString(peerDesc->UniquePlayerID)] = Death::move(peerDesc);
+					if (IsKickedOff(reason)) {
+						// Removed from the game for what the player did, so a reconnect starts over instead of
+						// resuming where the kick left off
+						LOGI("Progression of \"{}\" [{}] discarded: {}", peerDesc->PlayerName, peer, ReasonToString(reason));
+					} else {
+						peerDesc->DisconnectedSince = TimeStamp::now();
+						_disconnectedPeers[UuidToString(peerDesc->UniquePlayerID)] = Death::move(peerDesc);
+					}
 				}
 			}
 			l.unlock();

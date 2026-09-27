@@ -1044,7 +1044,7 @@ silently drop both. A separate aggregate header keeps a Cg run from touching any
 The result is a table of byte arrays with a lookup by (program, variant) shaped like the one
 `CgGeneratedShaders.h` has, so the two console backends resolve a program the same way. It also
 carries the built-in **present** shader, which has no `.shader` file behind it: the RSX backend needs
-one to flip its intermediate screen surface into the display buffer and no other backend does, so it
+one to copy its intermediate screen surface into the display buffer and no other backend does, so it
 is written as Cg directly in @cpp "Sources/Shaders/Rsx/" @ce.
 
 A stage the profiles reject is reported and left out of the table, the backend then fails that one

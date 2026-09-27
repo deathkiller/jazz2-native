@@ -106,10 +106,22 @@ namespace nCine::RHI::GL
 
 		/** @brief Returns the current viewport rectangle */
 		static Recti GetViewport();
-		/** @brief Sets the viewport rectangle */
+		/**
+		 * @brief Sets the viewport rectangle
+		 *
+		 * Rectangles are pixels of the target counted from its top-left corner, like on every backend (see
+		 * RhiFwd.h). OpenGL counts from the bottom-left one, so the rectangle is converted while the screen is the
+		 * draw target; a render target needs no conversion, because a pass into one renders with clip-space Y
+		 * flipped (`RHI_RENDER_TARGETS_BOTTOM_UP`), which makes its window space top-down too. The same holds for
+		 * the scissor rectangle.
+		 */
 		static void SetViewport(const Recti& rect);
 		/** @brief Initializes the cached viewport rectangle right after context creation */
 		static void InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
+		/** @brief Tells the device whether a render target or the screen is bound for drawing (see @ref SetViewport()) */
+		static void SetRenderTargetBound(bool bound);
+		/** @brief Tells the device the height of the default framebuffer, which the rectangles of a pass onto the screen are converted against (see @ref SetViewport()) */
+		static void SetScreenHeight(std::int32_t height);
 
 		/** @brief Returns the current clear color */
 		static Colorf GetClearColor();

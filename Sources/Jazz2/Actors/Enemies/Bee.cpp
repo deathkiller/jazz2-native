@@ -95,6 +95,52 @@ namespace Jazz2::Actors::Enemies
 		MoveInstantly(_lastPos + Vector2f(cosPhase * 16.0f, sinPhase * -16.0f), MoveType::Absolute | MoveType::Force);
 	}
 
+	void Bee::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_lastPos.X);
+		dest.WriteValueAsLE<float>(_lastPos.Y);
+		dest.WriteValueAsLE<float>(_targetPos.X);
+		dest.WriteValueAsLE<float>(_targetPos.Y);
+		dest.WriteValueAsLE<float>(_lastSpeed.X);
+		dest.WriteValueAsLE<float>(_lastSpeed.Y);
+		dest.WriteValueAsLE<float>(_anglePhase);
+		dest.WriteValueAsLE<float>(_attackTime);
+
+		std::uint8_t flags = 0;
+		if (_attacking) flags |= 0x01;
+		if (_returning) flags |= 0x02;
+		if (_noise != nullptr) flags |= 0x04;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Bee::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_lastPos.X = src.ReadValueAsLE<float>();
+		_lastPos.Y = src.ReadValueAsLE<float>();
+		_targetPos.X = src.ReadValueAsLE<float>();
+		_targetPos.Y = src.ReadValueAsLE<float>();
+		_lastSpeed.X = src.ReadValueAsLE<float>();
+		_lastSpeed.Y = src.ReadValueAsLE<float>();
+		_anglePhase = src.ReadValueAsLE<float>();
+		_attackTime = src.ReadValueAsLE<float>();
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_attacking = ((flags & 0x01) != 0);
+		_returning = ((flags & 0x02) != 0);
+
+		// The looping buzz lasts until the next attack starts
+		if ((flags & 0x04) != 0 && _noise == nullptr) {
+			_noise = PlaySfx("Noise"_s, 0.5f, 2.0f);
+			if (_noise != nullptr) {
+				_noise->setLooping(true);
+			}
+		}
+	}
+
 	bool Bee::OnPerish(ActorBase* collider)
 	{
 		if (_noise != nullptr) {

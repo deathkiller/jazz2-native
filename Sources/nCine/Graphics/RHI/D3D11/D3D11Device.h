@@ -186,8 +186,7 @@ namespace nCine::RHI::D3D11
 
 			Used by the ImGui multi-viewport support to render into the platform windows it spawns when a panel
 			is dragged out of the main window. Unlike the main swap chain, a secondary one is rendered into and
-			presented directly - there is no intermediate present texture, and hence no flip-blit - so
-			@ref BeginSecondaryFrame() also suppresses the projection Y flip for its draws.
+			presented directly, with no intermediate present texture.
 
 			@param windowHandle  Native `HWND` of the secondary window, passed as a `void*`
 			@param width         Back-buffer width in pixels
@@ -253,24 +252,16 @@ namespace nCine::RHI::D3D11
 		// Largest 2D texture dimension of the obtained feature level (set by CreateSwapchain)
 		static std::int32_t _maxTextureDimension;
 
-		// The engine renders in the OpenGL convention. The D3D backend replays that faithfully: every draw's
-		// clip-space Y is flipped (projection matrix, see BindConstantBuffers) so all targets - the back-buffer and
-		// every off-screen render target - are stored bottom-up exactly like GL, keeping the scene composite and the
-		// direct-drawn HUD/menu consistent regardless of how many off-screen round-trips a path makes. "Screen"
-		// (no render target) is drawn into this intermediate texture and PresentFrame() flip-blits it into the DXGI
-		// back-buffer (the single GL bottom-up -> D3D top-down scan-out correction, the software backend's
-		// SDL_FLIP_VERTICAL equivalent). A negative-height viewport, the usual remedy, is ignored by the runtime here.
+		// "Screen" (no render target) is drawn into this intermediate texture, and PresentFrame() blits it into the
+		// DXGI back-buffer. Both are top-down, like every target (see RhiFwd.h), so the blit is a straight copy.
 		static ID3D11Texture2D* _presentTexture;
 		static ID3D11RenderTargetView* _presentRtv;
 		static ID3D11ShaderResourceView* _presentSrv;
 
 		// Set while BeginSecondaryFrame() redirects drawing into a secondary swap chain (an ImGui platform
-		// window): its back-buffer view stands in for the screen target, and because it is presented directly -
-		// without the intermediate texture and its flip-blit - that surface is the one place the backend renders
-		// TOP-DOWN. Both exceptions the orientation implies are keyed on these: no projection Y flip
-		// (BindConstantBuffers) and a flipped scissor rectangle (ApplyRenderState, hence the height).
+		// window): its back-buffer view stands in for the screen target, and it is presented directly, without
+		// the intermediate texture and its blit
 		static ID3D11RenderTargetView* _secondaryTargetRtv;
-		static std::int32_t _secondaryTargetHeight;
 		static ID3D11VertexShader* _presentVs;
 		static ID3D11PixelShader* _presentPs;
 		static ID3D11SamplerState* _presentSampler;
@@ -342,7 +333,7 @@ namespace nCine::RHI::D3D11
 
 		/** @brief (Re)creates @ref _backbufferRtv from the current swap-chain back-buffer and binds it */
 		static bool CreateBackbufferRtv();
-		/** @brief (Re)creates the intermediate present texture (RTV+SRV) and the flip-blit shaders/sampler at @p width x @p height */
+		/** @brief (Re)creates the intermediate present texture (RTV+SRV) and the blit shaders/sampler at @p width x @p height */
 		static bool CreatePresentResources(std::int32_t width, std::int32_t height);
 		/** @brief Releases the intermediate present texture and its views (keeps the blit shaders/sampler) */
 		static void ReleasePresentResources();

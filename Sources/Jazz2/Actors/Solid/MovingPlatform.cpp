@@ -175,6 +175,29 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
+	void MovingPlatform::OnSerializeState(Stream& dest)
+	{
+		SolidObjectBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_phase);
+	}
+
+	void MovingPlatform::OnDeserializeState(Stream& src)
+	{
+		SolidObjectBase::OnDeserializeState(src);
+
+		_phase = src.ReadValueAsLE<float>();
+
+		// The platform is solid only while it carries a player, who attaches again on the next update
+		SetState(ActorState::IsSolidObject, false);
+
+		// The chain is positioned only by OnUpdate(), which skips it while the platform is frozen
+		_lastPos = _pos;
+		for (std::int32_t i = 0; i < (std::int32_t)_pieces.size(); i++) {
+			_pieces[i].Pos = GetPhasePosition(i);
+		}
+	}
+
 	bool MovingPlatform::OnHandleCollision(ActorBase* other)
 	{
 		if (_type == PlatformType::SpikeBall && _health > 0) {

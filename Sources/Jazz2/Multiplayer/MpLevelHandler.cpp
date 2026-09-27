@@ -441,6 +441,18 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			// Update last pressed keys only if it wasn't done this frame yet (because of PlayerKeyPress packet)
 			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->RemotePeer && !peerDesc->IsAuthenticated) {
+					// Anything that connects and never authenticates (a stuck client, a port scanner) would otherwise
+					// hold a slot for as long as it keeps the connection open
+					if (peerDesc->ConnectedSince.secondsSince() >= AuthTimeoutSecs) {
+						LOGI("Peer kicked ({}) [{}]: Not authenticated within {} seconds", _networkManager->AddressToString(peer), peer, AuthTimeoutSecs);
+						// Re-armed, so a peer that doesn't react to the kick is not kicked again on every frame
+						peerDesc->ConnectedSince = TimeStamp::now();
+						_networkManager->Kick(peer, Reason::AuthFailed);
+					}
+					continue;
+				}
+
 				if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 					if (remotePlayerOnServer->UpdatedFrame != frameCount) {
 						remotePlayerOnServer->UpdatedFrame = frameCount;
@@ -1219,6 +1231,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void MpLevelHandler::OnTouchEvent(const TouchEvent& event)
 	{
 		LevelHandler::OnTouchEvent(event);
@@ -1227,6 +1240,7 @@ namespace Jazz2::Multiplayer
 			_inGameLobby->OnTouchEvent(event);
 		}
 	}
+#endif
 
 	void MpLevelHandler::AddActor(std::shared_ptr<Actors::ActorBase> actor)
 	{
@@ -3649,22 +3663,27 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+				bool wasAuthenticated = peerDesc->IsAuthenticated;
 				peerDesc->IsAuthenticated = false;
 				peerDesc->LevelState = PeerLevelState::Unknown;
 
-				InvokeAsync([this, peerDesc]() mutable {
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", peerDesc->PlayerName));
-				});
+				// A peer that never authenticated (e.g. kicked for an incompatible version or a wrong password) was
+				// never announced as connected and has no name yet, so its leaving is not announced either
+				if (wasAuthenticated) {
+					InvokeAsync([this, peerDesc]() mutable {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", peerDesc->PlayerName));
+					});
 
-				MemoryStream packet(10 + peerDesc->PlayerName.size());
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Disconnected);
-				packet.WriteVariableUint64(peer.GetId());
-				packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-				packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+					MemoryStream packet(10 + peerDesc->PlayerName.size());
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Disconnected);
+					packet.WriteVariableUint64(peer.GetId());
+					packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+					packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
 
-				_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
-					return (peer != otherPeer);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
+					_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
+						return (peer != otherPeer);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
+				}
 
 				if (MpPlayer* player = peerDesc->Player) {
 					std::int32_t playerIndex = player->_playerIndex;

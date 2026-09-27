@@ -154,6 +154,15 @@ is what a path present in both resolves to, exactly as when the two are kept apa
 profile is untouched by this: its `Source.pak` holds only what was converted, and the game reads its
 `Content` from where it is installed.
 
+A hand-made sprite sheet from `Content/Animations` that is a grid of more than one frame and wider or
+taller than 512 pixels is **re-laid out** on its way into the package
+@m_span{m-text m-dim} (@ref Jazz2::AssetPacker::SpriteRepacker) @m_endspan: every frame is trimmed to
+the pixels it covers and packed the way the converted sheets are, keeping its place within its cell. A
+grid of that size puts frames across the 512-pixel page line of the PSP, which draws them cut off;
+the water shield @m_span{m-text m-dim} (528×69) @m_endspan and Lori's end-of-level animation
+@m_span{m-text m-dim} (657×464) @m_endspan are the ones this applies to today. Smaller grids are copied
+as they are, because some of them are sampled as a whole texture rather than frame by frame.
+
 They also leave the `.po` files of a `Translations` directory behind. Those are the sources the `.mo`
 the game reads are compiled from and nothing loads one at run time --- both the language list and the
 About section's translator credits require the `.mo` extension --- while being about twice the size of
@@ -255,14 +264,17 @@ What `pack-font` does:
     palette color or is index 0 and draws nothing, there is no per-pixel coverage. Pixels
     that say otherwise (transparent in one channel but not the other, or partially covered)
     are resolved to one of the two, with a warning listing how many were touched.
--   **Packing** --- Shelf packing, tallest glyph first, with a margin of
-    @cpp FontFormat::GlyphMargin @ce (one pixel) on each side, so neighbours are two pixels
-    apart --- enough that a bilinear sample taken at the very edge of one glyph cannot reach
-    the next. The atlas width is a power of two chosen to minimize the *padded* area (which
-    is what the console backends that need power-of-two textures pay), while the height is
-    left at whatever the shelves come to (which is what everyone else pays). The atlas may
-    not exceed 1024×1024, a glyph may not exceed 255 pixels in either direction and a bearing
-    may not exceed 127 --- exceeding any of these is an error.
+-   **Packing** --- The same layout the converted sprite sheets get
+    @m_span{m-text m-dim} (@ref Jazz2::Compatibility::JJ2Anims::PackRectangles()) @m_endspan, with a
+    margin of @cpp FontFormat::GlyphMargin @ce (one pixel) on each side of every glyph, so neighbours
+    are two pixels apart --- enough that a bilinear sample taken at the very edge of one glyph cannot
+    reach the next. Every atlas width is tried and the one chosen minimizes the *padded* area first
+    (which is what the console backends that need power-of-two textures pay), then keeps the atlas
+    within one 512×512 page if it can, then minimizes the exact area (which is what everyone else
+    pays), and the atlas is stored at its exact size. No glyph is placed across a multiple of 512 on
+    either axis, because the PSP splits a larger texture into pages of that size and draws every
+    primitive from one of them. The atlas may not exceed 1024×1024, a glyph may not exceed 255 pixels
+    in either direction and a bearing may not exceed 127 --- exceeding any of these is an error.
 -   **Encoding** --- Everything except the few identifying bytes (signature, file type,
     version, flags, compressed size) is one deflate block: the atlas size, line height, base
     spacing and character counts, then a 9-byte glyph record per character

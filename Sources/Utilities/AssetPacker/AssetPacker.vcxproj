@@ -138,6 +138,7 @@
     <ClCompile Include="FontPacker.cpp" />
     <ClCompile Include="Iso9660.cpp" />
     <ClCompile Include="PngCodec.cpp" />
+    <ClCompile Include="SpriteRepacker.cpp" />
     <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
     <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp" />
     <ClCompile Include="..\..\Jazz2\Compatibility\AssetConverter.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="FontPacker.h" />
     <ClInclude Include="Iso9660.h" />
     <ClInclude Include="PngCodec.h" />
+    <ClInclude Include="SpriteRepacker.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />
     <ClInclude Include="..\..\Jazz2\EventType.h" />

@@ -97,6 +97,10 @@ using namespace Jazz2::Multiplayer;
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
 /** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION */
 #define NCINE_PROTOCOL_VERSION_s DEATH_PASTE(NCINE_PROTOCOL_VERSION, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION_MIN */
+#define NCINE_PROTOCOL_VERSION_MIN_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MIN, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION_MAX */
+#define NCINE_PROTOCOL_VERSION_MAX_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MAX, _s)
 
 using namespace Death::IO::Compression;
 using namespace nCine;
@@ -127,7 +131,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::uint16_t StateVersion = 4;
+	static constexpr std::uint16_t StateVersion = 5;
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
@@ -221,6 +225,9 @@ private:
 #	if defined(WITH_THREADS)
 	std::mutex _networkLevelHandlerLock;
 #	endif
+	// Set by the network thread once the client has found the server incompatible (see `ServerPacketType::AuthResponse`),
+	// the rest of what the server sends is then ignored until the connection is torn down; reset for each new connection
+	std::atomic<bool> _serverRejected{false};
 #endif
 
 	void OnBeginInitialize();
@@ -1352,6 +1359,8 @@ void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaul
 	LOGI("Preparing connection to \"{}\"...", endpoint);
 
 	_networkManager = std::make_unique<NetworkManager>();
+	// Only after the previous connection (and its network thread) is gone
+	_serverRejected = false;
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -1564,6 +1573,9 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 {
 	bool isServer = (_networkManager->GetState() == NetworkState::Listening);
+	if (!isServer && _serverRejected) {
+		return;
+	}
 	if (isServer) {
 		switch ((ClientPacketType)packetType) {
 			case ClientPacketType::Ping: {
@@ -1576,14 +1588,16 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(gameID, 4);
 				std::uint64_t protocolVersion = packet.ReadVariableUint64();
 
-				constexpr std::uint64_t currentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
+				constexpr std::uint64_t minVersion = parseVersion(NCINE_PROTOCOL_VERSION_MIN_s);
+				constexpr std::uint64_t maxVersion = parseVersion(NCINE_PROTOCOL_VERSION_MAX_s);
 
 				// Compared in full, patch included. `NCINE_PROTOCOL_VERSION` is a hand-maintained literal that
 				// moves only when the wire format does (it is never derived from the build or from Git), so any
-				// difference at all is a genuine incompatibility. Masking the patch out meant a wire change
-				// could only be announced by moving the *minor*, which tied protocol versioning to release
-				// numbering and left no way to express "the protocol changed in a patch release".
-				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || protocolVersion != currentVersion) {
+				// version outside the range the server was built to talk to is a genuine incompatibility.
+				// Masking the patch out meant a wire change could only be announced by moving the *minor*, which
+				// tied protocol versioning to release numbering and left no way to express "the protocol changed
+				// in a patch release".
+				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || protocolVersion < minVersion || protocolVersion > maxVersion) {
 					LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
@@ -1681,10 +1695,13 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					LOGI("Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
 						peerDesc->IsAdmin ? " [Admin]" : "", peer);
 
-					MemoryStream packet(17);
-					packet.WriteValue<std::uint8_t>(0);	// Flags
+					MemoryStream packet(37);
+					packet.WriteValue<std::uint8_t>(0x01);	// Flags (0x01 = accepted protocol version range follows)
 					packet.Write(PreferencesCache::UniqueServerID, PreferencesCache::UniqueServerID.size() - sizeof(std::uint16_t));
 					packet.WriteValue<std::uint16_t>(_networkManager->GetServerPort());	// Server port is part of Unique Server ID
+					// Appended, so older clients that read only the fields above are not affected
+					packet.WriteVariableUint64(minVersion);
+					packet.WriteVariableUint64(maxVersion);
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::AuthResponse, packet);
 				} else {
 					DEATH_ASSERT_UNREACHABLE();
@@ -1699,6 +1716,25 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 				auto& uuid = _networkManager->GetServerConfiguration().UniqueServerID;
 				packet.Read(uuid.data(), uuid.size());
+
+				// A server that doesn't announce the range it accepts predates it, and such a server checked the
+				// version by a looser rule of its own: the released 3.8.0 ignored the patch, so it let in any 3.8.x
+				// client while speaking the 3.8.0 wire. It's the server that decides, but only the client can
+				// refuse a server that let it in by mistake.
+				constexpr std::uint64_t currentVersion = parseVersion(NCINE_PROTOCOL_VERSION_s);
+				bool isCompatible = false;
+				if (flags & 0x01) {
+					std::uint64_t minVersion = packet.ReadVariableUint64();
+					std::uint64_t maxVersion = packet.ReadVariableUint64();
+					isCompatible = (currentVersion >= minVersion && currentVersion <= maxVersion);
+				}
+				if (!isCompatible) {
+					LOGI("Server does not accept protocol version {}, disconnecting", NCINE_PROTOCOL_VERSION_s);
+					// Everything the server sends after this is for a session that won't happen, and the level load
+					// it's about to request would otherwise race with the teardown below
+					_serverRejected = true;
+					OnPeerDisconnected(peer, Reason::IncompatibleVersion);
+				}
 				return;
 			}
 			case ServerPacketType::ValidateAssets: {

@@ -125,7 +125,7 @@ namespace Jazz2::Events
 		_hasRollbackCheckpoint = true;
 	}
 
-	void EventMap::RollbackToCheckpoint()
+	void EventMap::RollbackToCheckpoint(bool respawnActors)
 	{
 		if (!_hasRollbackCheckpoint) {
 			return;
@@ -164,7 +164,7 @@ namespace Jazz2::Events
 				}
 				tile.IsEventActive = wasEventActive;
 
-				if (respawn && tile.Event != EventType::Empty) {
+				if (respawnActors && respawn && tile.Event != EventType::Empty) {
 					tile.IsEventActive = true;
 
 					if (tile.Event == EventType::AreaWeather) {
@@ -192,6 +192,10 @@ namespace Jazz2::Events
 		// TODO: Save also cooldown of all generators to be able to restore them
 		for (auto& generator : _generators) {
 			generator.TimeLeft = 0.0f;
+			if (!respawnActors) {
+				// All objects are destroyed and the restored ones are linked again by AttachGeneratorActor()
+				generator.SpawnedActor = nullptr;
+			}
 		}
 	}
 
@@ -345,6 +349,35 @@ namespace Jazz2::Events
 
 		_generators[generatorIdx].TimeLeft = 0.0f;
 		_generators[generatorIdx].SpawnedActor = nullptr;
+	}
+
+	void EventMap::Activate(std::int32_t x, std::int32_t y)
+	{
+		if (HasEventByPosition(x, y)) {
+			if (EventTile* tile = _eventLayout.Find(x + y * _layoutSize.X)) {
+				tile->IsEventActive = true;
+			}
+		}
+	}
+
+	void EventMap::AttachGeneratorActor(std::int32_t tx, std::int32_t ty, std::shared_ptr<Actors::ActorBase> actor)
+	{
+		if (tx < 0 || ty < 0 || tx >= _layoutSize.X || ty >= _layoutSize.Y) {
+			return;
+		}
+
+		EventTile* tile = _eventLayout.Find(tx + ty * _layoutSize.X);
+		if (tile == nullptr || tile->Event != EventType::Generator) {
+			return;
+		}
+
+		std::uint32_t generatorIdx = Actors::EventParamsReader(tile->EventParams).GetUint32(0);
+		if (generatorIdx >= _generators.size()) {
+			return;
+		}
+
+		tile->IsEventActive = true;
+		_generators[generatorIdx].SpawnedActor = std::move(actor);
 	}
 
 	const EventMap::EventTile& EventMap::GetEventTile(std::int32_t x, std::int32_t y) const
@@ -639,5 +672,155 @@ namespace Jazz2::Events
 			dest.WriteVariableUint32((std::uint32_t)tile->EventFlags);
 			dest.Write(tile->EventParams, sizeof(tile->EventParams)); // TODO: Optimize this
 		}
+	}
+
+	void EventMap::InitializeActiveStateFromStream(Stream& src)
+	{
+		std::int32_t layoutSize = src.ReadVariableInt32();
+		std::int32_t realLayoutSize = _layoutSize.X * _layoutSize.Y;
+		DEATH_ASSERT(layoutSize == realLayoutSize, "Layout size mismatch", );
+
+		std::uint8_t bits = 0;
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if ((i & 7) == 0) {
+				bits = src.ReadValue<std::uint8_t>();
+			}
+			if (EventTile* tile = _eventLayout.Find(i)) {
+				tile->IsEventActive = ((bits & (1 << (i & 7))) != 0);
+			}
+		}
+	}
+
+	void EventMap::SerializeActiveStateToStream(Stream& dest, bool fromCheckpoint)
+	{
+		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
+		bool useCheckpoint = (fromCheckpoint && _hasRollbackCheckpoint);
+		dest.WriteVariableInt32(layoutSize);
+
+		std::uint8_t bits = 0;
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (useCheckpoint ? _eventActiveForRollback[i] : _eventLayout[i].IsEventActive) {
+				bits |= (1 << (i & 7));
+			}
+			if ((i & 7) == 7 || i == layoutSize - 1) {
+				dest.WriteValue<std::uint8_t>(bits);
+				bits = 0;
+			}
+		}
+	}
+
+	bool EventMap::InitializeSnapshotFromStream(Stream& src)
+	{
+		std::int32_t layoutSize = src.ReadVariableInt32();
+		std::int32_t realLayoutSize = _layoutSize.X * _layoutSize.Y;
+		if (layoutSize != realLayoutSize) {
+			LOGE("Layout size mismatch ({} != {})", layoutSize, realLayoutSize);
+			return false;
+		}
+
+		// Only cells that hold a tile of their own are stored, the level is loaded from the same file, so it
+		// cannot have any cell the snapshot doesn't know about
+		std::uint32_t tileCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < tileCount; i++) {
+			std::uint32_t tileIndex = src.ReadVariableUint32();
+			EventTile tile;
+			ReadEventTile(src, tile);
+			if (tileIndex < (std::uint32_t)realLayoutSize) {
+				_eventLayout.Edit(tileIndex) = tile;
+			}
+		}
+
+		std::uint32_t generatorCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < generatorCount; i++) {
+			float timeLeft = src.ReadValueAsLE<float>();
+			if (i < _generators.size()) {
+				_generators[i].TimeLeft = timeLeft;
+				_generators[i].SpawnedActor = nullptr;
+			}
+		}
+
+		_hasRollbackCheckpoint = (src.ReadValue<std::uint8_t>() != 0);
+		_eventLayoutForRollback.clear();
+		if (_hasRollbackCheckpoint) {
+			_eventActiveForRollback.resize(ValueInit, realLayoutSize);
+			std::uint8_t bits = 0;
+			for (std::int32_t i = 0; i < realLayoutSize; i++) {
+				if ((i & 7) == 0) {
+					bits = src.ReadValue<std::uint8_t>();
+				}
+				_eventActiveForRollback.set(i, (bits & (1 << (i & 7))) != 0);
+			}
+
+			std::uint32_t rollbackCount = src.ReadVariableUint32();
+			_eventLayoutForRollback.reserve(rollbackCount);
+			for (std::uint32_t i = 0; i < rollbackCount; i++) {
+				RollbackTile& entry = _eventLayoutForRollback.emplace_back();
+				entry.TileIndex = src.ReadVariableUint32();
+				ReadEventTile(src, entry.Tile);
+			}
+		}
+
+		return true;
+	}
+
+	void EventMap::SerializeSnapshotToStream(Stream& dest)
+	{
+		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
+		dest.WriteVariableInt32(layoutSize);
+
+		std::uint32_t tileCount = 0;
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (_eventLayout.Find(i) != nullptr) {
+				tileCount++;
+			}
+		}
+		dest.WriteVariableUint32(tileCount);
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (const EventTile* tile = _eventLayout.Find(i)) {
+				dest.WriteVariableUint32((std::uint32_t)i);
+				WriteEventTile(dest, *tile);
+			}
+		}
+
+		dest.WriteVariableUint32((std::uint32_t)_generators.size());
+		for (const auto& generator : _generators) {
+			dest.WriteValueAsLE<float>(generator.TimeLeft);
+		}
+
+		dest.WriteValue<std::uint8_t>(_hasRollbackCheckpoint ? 1 : 0);
+		if (_hasRollbackCheckpoint) {
+			std::uint8_t bits = 0;
+			for (std::int32_t i = 0; i < layoutSize; i++) {
+				if (_eventActiveForRollback[i]) {
+					bits |= (1 << (i & 7));
+				}
+				if ((i & 7) == 7 || i == layoutSize - 1) {
+					dest.WriteValue<std::uint8_t>(bits);
+					bits = 0;
+				}
+			}
+
+			dest.WriteVariableUint32((std::uint32_t)_eventLayoutForRollback.size());
+			for (const auto& entry : _eventLayoutForRollback) {
+				dest.WriteVariableUint32(entry.TileIndex);
+				WriteEventTile(dest, entry.Tile);
+			}
+		}
+	}
+
+	void EventMap::WriteEventTile(Stream& dest, const EventTile& tile)
+	{
+		dest.WriteVariableUint32((std::uint32_t)tile.Event);
+		dest.WriteVariableUint32((std::uint32_t)tile.EventFlags);
+		dest.WriteValue<std::uint8_t>(tile.IsEventActive ? 1 : 0);
+		dest.Write(tile.EventParams, sizeof(tile.EventParams));
+	}
+
+	void EventMap::ReadEventTile(Stream& src, EventTile& tile)
+	{
+		tile.Event = (EventType)src.ReadVariableUint32();
+		tile.EventFlags = (Actors::ActorState)src.ReadVariableUint32();
+		tile.IsEventActive = (src.ReadValue<std::uint8_t>() != 0);
+		src.Read(tile.EventParams, sizeof(tile.EventParams));
 	}
 }

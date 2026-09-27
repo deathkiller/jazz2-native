@@ -5,7 +5,10 @@
 #include "PlayerType.h"
 #include "WeaponType.h"
 
+#include <memory>
+
 #include <Containers/ArrayView.h>
+#include <Containers/SmallVector.h>
 #include <Containers/StaticArray.h>
 #include <Containers/String.h>
 
@@ -47,6 +50,15 @@ namespace Jazz2
 	};
 
 	/**
+		@brief Serialized live state of a level
+
+		Complete state of a level --- tile map, event map, players and all actors --- taken when the player leaves
+		the level to a special level (see @ref LevelInitialization::ReturnLevelState), so the level can be restored
+		later exactly as it was left.
+	*/
+	using LevelStateSnapshot = SmallVector<std::uint8_t, 0>;
+
+	/**
 		@brief Level initialization parameters
 		
 		Describes which level to start and under what conditions --- target level name, difficulty, session/reforged
@@ -86,6 +98,11 @@ namespace Jazz2
 
 		/** @brief Player carry over descriptions */
 		StaticArray<MaxPlayerCount, PlayerCarryOver> PlayerCarryOvers;
+
+		/** @brief State of the previous level to return to once the target (special) level is completed */
+		std::shared_ptr<const LevelStateSnapshot> ReturnLevelState;
+		/** @brief State the target level should be restored from instead of starting it from scratch */
+		std::shared_ptr<const LevelStateSnapshot> RestoreLevelState;
 
 		/** @brief Creates a new instance */
 		LevelInitialization();

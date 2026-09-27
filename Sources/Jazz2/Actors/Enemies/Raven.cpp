@@ -84,6 +84,36 @@ namespace Jazz2::Actors::Enemies
 		MoveInstantly(_lastPos + Vector2f(0.0f, sinApprox(_anglePhase) * 6.0f), MoveType::Absolute | MoveType::Force);
 	}
 
+	void Raven::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_lastPos.X);
+		dest.WriteValueAsLE<float>(_lastPos.Y);
+		dest.WriteValueAsLE<float>(_targetPos.X);
+		dest.WriteValueAsLE<float>(_targetPos.Y);
+		dest.WriteValueAsLE<float>(_lastSpeed.X);
+		dest.WriteValueAsLE<float>(_lastSpeed.Y);
+		dest.WriteValueAsLE<float>(_anglePhase);
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
+	}
+
+	void Raven::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_lastPos.X = src.ReadValueAsLE<float>();
+		_lastPos.Y = src.ReadValueAsLE<float>();
+		_targetPos.X = src.ReadValueAsLE<float>();
+		_targetPos.Y = src.ReadValueAsLE<float>();
+		_lastSpeed.X = src.ReadValueAsLE<float>();
+		_lastSpeed.Y = src.ReadValueAsLE<float>();
+		_anglePhase = src.ReadValueAsLE<float>();
+		_attackTime = src.ReadValueAsLE<float>();
+		_attacking = (src.ReadValue<std::uint8_t>() != 0);
+	}
+
 	bool Raven::OnPerish(ActorBase* collider)
 	{
 		CreateParticleDebrisOnPerish(collider);

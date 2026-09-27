@@ -225,6 +225,12 @@ namespace Jazz2::Events
 		}, T::Preload };
 	}
 
+	bool EventSpawner::CanSpawn(EventType type) const
+	{
+		auto it = _spawnableEvents.find(type);
+		return (it != _spawnableEvents.end() && it->second.CreateFunction != nullptr);
+	}
+
 	void EventSpawner::PreloadEvent(EventType type, std::uint8_t* spawnParams)
 	{
 		auto it = _spawnableEvents.find(type);

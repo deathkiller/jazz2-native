@@ -109,6 +109,26 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Lizard::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_stuck) flags |= 0x01;
+		if (_isFalling) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Lizard::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		// A lizard that fell from a copter is spawned falling again, it may have landed since
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_stuck = ((flags & 0x01) != 0);
+		_isFalling = ((flags & 0x02) != 0);
+	}
+
 	void Lizard::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

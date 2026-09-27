@@ -23,6 +23,32 @@
 
 namespace nCine::RHI::GL
 {
+	namespace
+	{
+		// The viewport and scissor rectangles as the engine hands them - counted from the top-left corner of the
+		// target - which the caches in GLViewport and GLScissorTest hold converted to OpenGL's window space
+		Recti engineViewportRect;
+		Recti engineScissorRect;
+		// Height of the default framebuffer, whose window space is the one that needs converting
+		std::int32_t screenHeight = 0;
+		bool renderTargetBound = false;
+
+		Recti ToWindowRect(const Recti& rect)
+		{
+			// A render target is drawn with clip-space Y flipped, so its window space runs top-down already
+			return (renderTargetBound ? rect : Recti(rect.X, screenHeight - rect.Y - rect.H, rect.W, rect.H));
+		}
+
+		// Converts the rectangles again after the window space they convert to has changed; the caches skip
+		// whatever comes out the same
+		void ReapplyRects()
+		{
+			GLViewport::SetRect(ToWindowRect(engineViewportRect));
+			const GLScissorTest::State scissorState = GLScissorTest::GetState();
+			GLScissorTest::SetState({ scissorState.enabled, ToWindowRect(engineScissorRect) });
+		}
+	}
+
 #if defined(GL_DEVICE_HAS_TIMER_QUERIES)
 	namespace
 	{
@@ -202,17 +228,19 @@ namespace nCine::RHI::GL
 	GLDevice::ScissorState GLDevice::GetScissorState()
 	{
 		const GLScissorTest::State state = GLScissorTest::GetState();
-		return { state.enabled, state.rect };
+		return { state.enabled, engineScissorRect };
 	}
 
 	void GLDevice::SetScissorState(const ScissorState& state)
 	{
-		GLScissorTest::SetState({ state.Enabled, state.Rect });
+		engineScissorRect = state.Rect;
+		GLScissorTest::SetState({ state.Enabled, ToWindowRect(state.Rect) });
 	}
 
 	void GLDevice::SetScissor(const Recti& rect)
 	{
-		GLScissorTest::Enable(rect);
+		engineScissorRect = rect;
+		GLScissorTest::Enable(ToWindowRect(rect));
 	}
 
 	void GLDevice::SetScissorTestEnabled(bool enabled)
@@ -226,17 +254,41 @@ namespace nCine::RHI::GL
 
 	Recti GLDevice::GetViewport()
 	{
-		return GLViewport::GetRect();
+		return engineViewportRect;
 	}
 
 	void GLDevice::SetViewport(const Recti& rect)
 	{
-		GLViewport::SetRect(rect);
+		engineViewportRect = rect;
+		GLViewport::SetRect(ToWindowRect(rect));
 	}
 
 	void GLDevice::InitViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
+		// The rectangle covers the whole default framebuffer, so it is the same in either window space
+		screenHeight = y + height;
+		engineViewportRect = Recti(x, y, width, height);
 		GLViewport::InitRect(x, y, width, height);
+	}
+
+	void GLDevice::SetRenderTargetBound(bool bound)
+	{
+		if (renderTargetBound == bound) {
+			return;
+		}
+		renderTargetBound = bound;
+		ReapplyRects();
+	}
+
+	void GLDevice::SetScreenHeight(std::int32_t height)
+	{
+		if (screenHeight == height) {
+			return;
+		}
+		screenHeight = height;
+		if (!renderTargetBound) {
+			ReapplyRects();
+		}
 	}
 
 	Colorf GLDevice::GetClearColor()

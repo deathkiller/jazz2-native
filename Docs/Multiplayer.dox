@@ -233,8 +233,8 @@ Choose **Play Multiplayer** → **Join Server** in the main menu. The list is fi
 --- servers discovered on the local network and the public online list --- and shows the name, the player
 count, the version and the address of each of them, marked with @cpp "ws" @ce for a server offering the
 WebSocket transport, @cpp "R" @ce for reforged gameplay and @cpp "^" @ce for one found on the local
-network. A version the client cannot join is highlighted. A server can also be entered by address, which
-is the only way to reach a private server.
+network. Servers the client can join are listed first and a version it cannot join is highlighted. A
+server can also be entered by address, which is the only way to reach a private server.
 
 @m_class{m-noindent}
 
@@ -261,9 +261,12 @@ browser or a shortcut would use:
 @m_class{m-noindent}
 
 The second argument is the endpoint and the optional third one is the server password. On joining, the
-client and the server first check that their protocol versions match @m_span{m-text m-dim} (the patch part
-is ignored, so only compatible releases are refused) @m_endspan, then the player is authenticated against
+server first checks that the protocol version of the client is within the range it accepts
+@m_span{m-text m-dim} (by default only its own version, patch included, see @ref NCINE_PROTOCOL_VERSION_MIN
+and @ref NCINE_PROTOCOL_VERSION_MAX) @m_endspan and announces that range back, so the client can also leave
+a server too old to announce one, then the player is authenticated against
 the whitelist, the ban lists and the password, and finally the client is asked for the assets of the level.
+A connection that doesn't authenticate within 20 seconds is dropped.
 Anything it is missing --- levels, tilesets, music --- is downloaded from the server if the server allows
 it with @cpp "AllowAssetStreaming" @ce; otherwise the player has to install the missing files manually.
 Once in, an in-game lobby offers the character selection and the welcome message of the server.
@@ -271,7 +274,9 @@ Once in, an in-game lobby offers the character selection and the welcome message
 @m_class{m-noindent}
 
 If the connection drops, reconnecting within @cpp "ReconnectWindowSecs" @ce restores the progression of the
-player --- weapons, lives, score, gems and championship points --- instead of starting over.
+player --- weapons, lives, score, gems and championship points --- instead of starting over. A player
+removed by the server --- kicked by an admin, banned, or kicked for inactivity or cheating --- always
+starts over.
 
 @section multiplayer-commands Server commands
 

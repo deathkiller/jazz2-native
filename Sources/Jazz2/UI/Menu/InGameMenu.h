@@ -45,8 +45,10 @@ namespace Jazz2::UI::Menu
 		void OnKeyPressed(const nCine::KeyboardEvent& event);
 		/** @brief Called when a key is released */
 		void OnKeyReleased(const nCine::KeyboardEvent& event);
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Called when a touch event is triggered */
 		void OnTouchEvent(const nCine::TouchEvent& event);
+#endif
 		/** @brief Called when the viewport needs to be initialized (e.g., when the resolution is changed) */
 		void OnInitializeViewport(std::int32_t width, std::int32_t height);
 

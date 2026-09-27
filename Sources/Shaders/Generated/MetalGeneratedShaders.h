@@ -47,7 +47,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vPixelCoords = aPosition * _bInstanceBlock.texRect.xy + 0.5;
 	_out.vTexSizeInv = 1.0 / _bInstanceBlock.texRect.xy;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -154,7 +153,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = _bInstancesBlock.instances[gl_VertexID / 6].texRect;
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPos = aPosition * float2(2.0) - float2(1.0);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -261,7 +259,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = _bInstancesBlock.instances[gl_VertexID / 6].texRect;
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPos = aPosition * float2(2.0) - float2(1.0);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -359,7 +356,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -439,7 +435,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -512,7 +507,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -583,7 +577,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -680,7 +673,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -849,7 +841,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vViewSizeInv = float2(1.0) / _bInstanceBlock.spriteSize;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -973,7 +964,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[_vin.aMeshIndex].modelMatrix * position;
 	_out.vTexCoords = float2(_vin.aTexCoords.x * _bInstancesBlock.instances[_vin.aMeshIndex].texRect.x + _bInstancesBlock.instances[_vin.aMeshIndex].texRect.y, _vin.aTexCoords.y * _bInstancesBlock.instances[_vin.aMeshIndex].texRect.z + _bInstancesBlock.instances[_vin.aMeshIndex].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[_vin.aMeshIndex].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1045,7 +1035,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	float4 position = float4(_vin.aPosition.x * _bInstancesBlock.instances[_vin.aMeshIndex].spriteSize.x, _vin.aPosition.y * _bInstancesBlock.instances[_vin.aMeshIndex].spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[_vin.aMeshIndex].modelMatrix * position;
 	_out.vColor = _bInstancesBlock.instances[_vin.aMeshIndex].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1112,7 +1101,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.x, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1171,7 +1159,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.gl_Position = _globals.uGuiProjection * float4(_vin.aPosition, _globals.uDepth, 1.0);
 	_out.vTexCoords = _vin.aTexCoords;
 	_out.vColor = _vin.aColor;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1239,7 +1226,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(_vin.aTexCoords.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, _vin.aTexCoords.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1303,7 +1289,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	float4 position = float4(_vin.aPosition.x * _bInstanceBlock.spriteSize.x, _vin.aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1367,7 +1352,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1436,7 +1420,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1498,7 +1481,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1561,7 +1543,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1638,7 +1619,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1732,7 +1712,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1837,7 +1816,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -1938,7 +1916,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2041,7 +2018,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
 	_out.vTexCoords = float4(0.0, 0.0, _vin.aTexCoords.x, 0.0);
 	_out.vColor = _vin.aColor;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2122,7 +2098,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2217,7 +2192,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstancesBlock.instances[gl_VertexID / 6].modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2311,7 +2285,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2428,7 +2401,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2542,7 +2514,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2619,7 +2590,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2693,7 +2663,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2766,7 +2735,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2850,7 +2818,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -2930,7 +2897,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -3026,7 +2992,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords5 = texCoord.xxxy + float4(-dx, 0, dx, 2.0 * dy);
 	_out.vTexCoords6 = texCoord.xyyy + float4(-2.0 * dx, -dy, 0, dy);
 	_out.vTexCoords7 = texCoord.xyyy + float4(2.0 * dx, -dy, 0, dy);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -3312,7 +3277,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.size = _bInstanceBlock.texRect.xy + 0.0001;
 	_out.v_px = aPosition.xy * _out.size;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -3598,7 +3562,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = aPosition;
 	_out.vTexSize = _bInstanceBlock.texRect.xy;
 	_out.vViewSize = _bInstanceBlock.spriteSize;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -3835,7 +3798,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vPixelCoords = aPosition * _bInstanceBlock.spriteSize.xy;
 	_out.vTexCoords = aPosition;
 	_out.vOutputSize = _bInstanceBlock.spriteSize.xy;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -3928,7 +3890,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = aPosition;
 	_out.vTexSize = _bInstanceBlock.texRect.xy;
 	_out.vViewSize = _bInstanceBlock.spriteSize;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4187,7 +4148,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords3.zw = aPosition + dy;
 	_out.vTexCoords4.xy = aPosition + dg2;
 	_out.vTexCoords4.zw = aPosition - dx;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4288,7 +4248,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vPixelCoords = aPosition * _bInstanceBlock.texRect.xy;
 	_out.vTexCoords = aPosition;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4415,7 +4374,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.xyp_21_22_23 = _out.tc.xxxy + float4(-x, 0.0, x, 2.0 * y);
 	_out.xyp_5_10_15 = _out.tc.xyyy + float4(-2.0 * x, -y, 0.0, y);
 	_out.xyp_9_14_9 = _out.tc.xyyy + float4(2.0 * x, -y, 0.0, y);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4612,7 +4570,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = _bInstanceBlock.texRect;
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPos = aPosition * float2(2.0) - float2(1.0);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4712,7 +4669,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = _bInstanceBlock.texRect;
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPos = aPosition * float2(2.0) - float2(1.0);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4812,7 +4768,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -4939,7 +4894,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5072,7 +5026,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5199,7 +5152,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5334,7 +5286,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
 	_out.vTexCoords = _vin.aTexCoords;
 	_out.vColor = _vin.aColor * _bInstanceBlock.color;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5405,7 +5356,6 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 	_out.vTexCoords = _vin.aTexCoords;
 	_out.vColor = _vin.aColor * _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5487,7 +5437,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5554,7 +5503,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5633,7 +5581,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5707,7 +5654,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5778,7 +5724,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	float4 position = float4(aPosition.x * _bInstanceBlock.spriteSize.x, aPosition.y * _bInstanceBlock.spriteSize.y, 0.0, 1.0);
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * position;
 	_out.vPos = aPosition - float2(0.5, 0.5);
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5856,7 +5801,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vCorrection = _bInstanceBlock.spriteSize / float2(max(_bInstanceBlock.spriteSize.x, _bInstanceBlock.spriteSize.y));
 	_out.vProgressTime = _bInstanceBlock.color.w;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -5945,7 +5889,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -6018,7 +5961,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstanceBlock.texRect.x + _bInstanceBlock.texRect.y, aPosition.y * _bInstanceBlock.texRect.z + _bInstanceBlock.texRect.w);
 	_out.vColor = _bInstanceBlock.color;
 	_out.vPaletteOffset = _bInstanceBlock.palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -6102,7 +6044,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";
@@ -6182,7 +6123,6 @@ vertex VsOut VSMain(uint _vid [[vertex_id]], constant _Globals& _globals [[buffe
 	_out.vTexCoords = float2(aPosition.x * _bInstancesBlock.instances[gl_VertexID / 6].texRect.x + _bInstancesBlock.instances[gl_VertexID / 6].texRect.y, aPosition.y * _bInstancesBlock.instances[gl_VertexID / 6].texRect.z + _bInstancesBlock.instances[gl_VertexID / 6].texRect.w);
 	_out.vColor = _bInstancesBlock.instances[gl_VertexID / 6].color;
 	_out.vPaletteOffset = _bInstancesBlock.instances[gl_VertexID / 6].palOffset;
-	_out.gl_Position.y = -_out.gl_Position.y;
 	return _out;
 }
 )__SHDR__";

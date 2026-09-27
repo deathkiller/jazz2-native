@@ -50,12 +50,10 @@
 	  every call site forwards them - the arrangement SPIRV-Cross produces for the same problem. A GLSL global
 	  variable that is not `const` (the trimming pass demotes dead varyings into one) becomes a local of the
 	  entry point, passed the same way.
-	- Coordinate system: the engine renders GL-style, and the Metal backend keeps the GL memory layout of
-	  every render target (row 0 = the GL bottom row) so CPU-uploaded textures and rendered textures agree
-	  exactly as on the OpenGL and Vulkan backends. Metal's clip space maps +Y to row 0, the opposite of
-	  that convention, so the vertex epilogue negates `gl_Position.y` for every draw (the backend flips the
-	  front-face winding to match and flip-blits once at present). With that flip `gl_FragCoord` is exactly
-	  the fragment `[[position]]`, and GL viewports/scissors map with no translation.
+	- Coordinate system: the engine renders top-down on every backend (see RhiFwd.h) - clip-space y = +1 is
+	  the top row of the target - which is Metal's own convention, so `gl_Position` is returned as it is.
+	  `gl_FragCoord` becomes the fragment `[[position]]`, counted from the top-left corner like the RHI's
+	  viewport and scissor rectangles.
 	- Built-ins: mix/fract/step/smoothstep/clamp/... keep their names; inversesqrt->rsqrt, dFdx/dFdy->
 	  dfdx/dfdy, atan(y,x)->atan2(y,x), mod(a,b)->(a - b*floor(a/b)), radians/degrees are expanded, the
 	  relational lessThan()/equal()/... become operators (MSL vector comparisons yield boolN), a vector

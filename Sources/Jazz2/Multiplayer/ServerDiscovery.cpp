@@ -57,6 +57,10 @@ using namespace nCine;
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION */
 #define NCINE_PROTOCOL_VERSION_s DEATH_PASTE(NCINE_PROTOCOL_VERSION, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION_MIN */
+#define NCINE_PROTOCOL_VERSION_MIN_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MIN, _s)
+/** @brief @ref Death::Containers::StringView from @ref NCINE_PROTOCOL_VERSION_MAX */
+#define NCINE_PROTOCOL_VERSION_MAX_s DEATH_PASTE(NCINE_PROTOCOL_VERSION_MAX, _s)
 
 namespace Jazz2::Multiplayer
 {
@@ -250,14 +254,20 @@ namespace Jazz2::Multiplayer
 						serverItem["c"].get(currentPlayers);
 						serverItem["m"].get(maxPlayers);
 
-						std::string_view version;
+						std::string_view version, minVersion, maxVersion;
 						serverItem["v"].get(version);
+						serverItem["vmin"].get(minVersion);
+						serverItem["vmax"].get(maxVersion);
 
 						std::int64_t serverFlags = 0;
 						serverItem["h"].get(serverFlags);
 
 						ServerDescription discoveredServer {};
 						discoveredServer.Version = version;
+						if (!minVersion.empty() && !maxVersion.empty()) {
+							discoveredServer.MinSupportedVersion = parseVersion(StringView(minVersion));
+							discoveredServer.MaxSupportedVersion = parseVersion(StringView(maxVersion));
+						}
 						discoveredServer.Name = serverName;
 						discoveredServer.EndpointString = serverEndpoints;
 						discoveredServer.Flags = (std::uint32_t)serverFlags;
@@ -630,14 +640,20 @@ namespace Jazz2::Multiplayer
 						serverItem["c"].get(currentPlayers);
 						serverItem["m"].get(maxPlayers);
 
-						std::string_view version;
+						std::string_view version, minVersion, maxVersion;
 						serverItem["v"].get(version);
+						serverItem["vmin"].get(minVersion);
+						serverItem["vmax"].get(maxVersion);
 
 						std::int64_t serverFlags = 0;
 						serverItem["h"].get(serverFlags);
 
 						ServerDescription discoveredServer{};
 						discoveredServer.Version = version;
+						if (!minVersion.empty() && !maxVersion.empty()) {
+							discoveredServer.MinSupportedVersion = parseVersion(StringView(minVersion));
+							discoveredServer.MaxSupportedVersion = parseVersion(StringView(maxVersion));
+						}
 						discoveredServer.Name = serverName;
 						discoveredServer.EndpointString = serverEndpoints;
 						discoveredServer.Name = serverName;
@@ -723,15 +739,23 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-#	if defined(WITH_WEBSOCKET)
+		// The WebSocket block is read (and skipped) even without the transport, as the version range comes after it.
+		// Both are optional, an older server may have sent neither.
 		if (packet.GetSize() - packet.GetPosition() >= 2) {
-			discoveredServer.WsPort = packet.ReadValue<std::uint16_t>();
-			if (discoveredServer.WsPort != 0 && packet.GetSize() - packet.GetPosition() >= 1) {
-				std::uint8_t wsFlags = packet.ReadValue<std::uint8_t>();
-				discoveredServer.WsSecure = (wsFlags & 0x01) != 0;
+			std::uint16_t wsPort = packet.ReadValue<std::uint16_t>();
+			std::uint8_t wsFlags = 0;
+			if (wsPort != 0 && packet.GetSize() - packet.GetPosition() >= 1) {
+				wsFlags = packet.ReadValue<std::uint8_t>();
+			}
+#	if defined(WITH_WEBSOCKET)
+			discoveredServer.WsPort = wsPort;
+			discoveredServer.WsSecure = (wsFlags & 0x01) != 0;
+#	endif
+			if (packet.GetSize() - packet.GetPosition() >= 2) {
+				discoveredServer.MinSupportedVersion = packet.ReadVariableUint64();
+				discoveredServer.MaxSupportedVersion = packet.ReadVariableUint64();
 			}
 		}
-#	endif
 
 		LOGD("Found local server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 		return true;
@@ -825,7 +849,16 @@ namespace Jazz2::Multiplayer
 				}
 				packet.WriteValue<std::uint8_t>(wsFlags);
 			}
+#	else
+			// No WebSocket port, written anyway so the version range below is always found at the same place
+			packet.WriteValue<std::uint16_t>(0);
 #	endif
+
+			// Appended, so older clients that stop reading earlier are not affected
+			constexpr std::uint64_t minVersion = parseVersion(NCINE_PROTOCOL_VERSION_MIN_s);
+			constexpr std::uint64_t maxVersion = parseVersion(NCINE_PROTOCOL_VERSION_MAX_s);
+			packet.WriteVariableUint64(minVersion);
+			packet.WriteVariableUint64(maxVersion);
 
 			// Answered to the same group or broadcast address the request came in on, so every client on that
 			// side of the network hears it, not only the one that asked
@@ -933,9 +966,10 @@ namespace Jazz2::Multiplayer
 		}
 
 		length += formatInto({ input + length, sizeof(input) - length },
-			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"h\":{},\"f\":\"{}\"",
-			NCINE_PROTOCOL_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
-			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, flags, levelDisplayName);
+			"\",\"v\":\"{}\",\"vmin\":\"{}\",\"vmax\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"h\":{},\"f\":\"{}\"",
+			NCINE_PROTOCOL_VERSION, NCINE_PROTOCOL_VERSION_MIN, NCINE_PROTOCOL_VERSION_MAX, PreferencesCache::GetDeviceID(),
+			server->GetPeerCount(), serverConfig.MaxPlayerCount, serverConfig.StartUnixTimestamp, serverLoad,
+			serverConfig.GameMode, flags, levelDisplayName);
 
 #	if defined(WITH_WEBSOCKET)
 		if (serverConfig.WsPort != 0) {

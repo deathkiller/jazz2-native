@@ -27,6 +27,8 @@ namespace Jazz2::Actors::Environment
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		void OnAnimationFinished() override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		float _cooldown;

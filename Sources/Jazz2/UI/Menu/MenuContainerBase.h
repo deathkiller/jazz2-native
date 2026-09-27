@@ -47,9 +47,11 @@ namespace Jazz2::UI::Menu
 			return _contentBounds;
 		}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		bool IsTouchInputActive() const override {
 			return (_touchButtonsTimer > 0.0f);
 		}
+#endif
 
 		// Resolves a menu element, loading its graphics the first time it's drawn (the menu metadata is deferred)
 		GraphicResource* FindElement(AnimState state);
@@ -90,7 +92,9 @@ namespace Jazz2::UI::Menu
 		Font* _mediumFont;
 		std::uint32_t _pressedActions;
 		NavigationFlags _lastNavigationFlags;
+#	if defined(NCINE_HAS_TOUCH_CONTROLS)
 		float _touchButtonsTimer;
+#	endif
 		/**
 		 * @brief Whether every section is to lay itself out again at the next update (see @ref RelayoutSections())
 		 *

@@ -268,7 +268,7 @@ namespace nCine::RHI::RDP
 		DrawState appliedState;
 		bool appliedStateValid = false;
 		bool appliedBlendOn = false;
-		bool appliedCutout = false;
+		bool appliedAlphaCompare = false;
 		// Whether the base render mode (set_mode_standard + the 2D defaults) has to be re-issued before
 		// the incremental mode setters can be trusted again (after attach, clear, present)
 		bool modeBaseDirty = true;
@@ -313,9 +313,17 @@ namespace nCine::RHI::RDP
 				rdpq_mode_blender(blendOn ? state.Blender : 0);
 				appliedBlendOn = blendOn;
 			}
-			if (!appliedStateValid || appliedCutout != cutout) {
-				rdpq_mode_alphacompare(cutout ? 1 : 0);
-				appliedCutout = cutout;
+			// A blended draw rejects its fully transparent texels as well, although blending alone would leave the
+			// colour under them unchanged: the pixel would still be WRITTEN, and every write stores the pixel's
+			// coverage - which in an RGBA16 surface is its alpha bit. The video output ignores it (the display
+			// resamples without anti-aliasing), but a render target drawn with its alpha afterwards came out with
+			// every glyph cell of the performance overlay solid, its transparent texels turned into the clear
+			// colour, whenever the text went out on anything but the cutout path (colorized text doubles on the
+			// two-cycle combiner). The threshold rejects only an alpha of exactly zero, so soft edges still blend.
+			const bool alphaCompare = (cutout || blendOn);
+			if (!appliedStateValid || appliedAlphaCompare != alphaCompare) {
+				rdpq_mode_alphacompare(alphaCompare ? 1 : 0);
+				appliedAlphaCompare = alphaCompare;
 			}
 			if (!appliedStateValid || appliedState.Filter != state.Filter) {
 				rdpq_mode_filter(rdpq_filter_t(state.Filter));
@@ -439,6 +447,26 @@ namespace nCine::RHI::RDP
 		inline std::int32_t TmemPitch(tex_format_t fmt, std::int32_t widthTexels)
 		{
 			return (std::int32_t(TEX_FORMAT_PIX2BYTES(fmt, widthTexels)) + 7) & ~7;
+		}
+
+		/**
+			@brief Rounds a coordinate to the RDP's fixed-point grid of @p steps positions per unit
+
+			rdpq converts a rectangle's coordinates by TRUNCATION - screen positions to 10.2, texel coordinates to
+			10.5 - and derives the per-pixel texel steps from the truncated corners. A whole texel coordinate that
+			float arithmetic left a hair short therefore loses a full step: a sprite frame's bottom edge computed
+			as (height + top) / sheetHeight * sheetHeight came out 114.99999 instead of 115, which made DtDy
+			1023/1024 instead of 1.0, and every row after the first sampled the texel row above its own - the
+			frame drew a pixel lower, its top row doubled and its bottom row gone. A sheet whose height is a power
+			of two keeps those quotients exact, which is all that hid it before the sheets were stored at their
+			exact size. Rounded to the grid first, whole values are exact and a genuinely fractional one moves by
+			at most half a step, below anything the hardware resolves.
+		*/
+		inline float SnapToFixedPoint(float value, float steps)
+		{
+			// std::round is an out-of-line libm call on this target, and the coordinates are far inside int32
+			const float scaled = value * steps;
+			return float(std::int32_t(scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f)) / steps;
 		}
 
 		// log2 of a power-of-two texture extent (the tile descriptor's wrap mask), 0 for any other size
@@ -672,6 +700,16 @@ namespace nCine::RHI::RDP
 		void SubmitTexturedRect(const DrawState& state, float x0, float y0, float x1, float y1,
 			float s0, float t0, float s1, float t1)
 		{
+			// On the hardware's own grid before anything is derived from them (see SnapToFixedPoint), so the
+			// window below and the rectangle rdpq encodes are computed from the very same values
+			x0 = SnapToFixedPoint(x0, 4.0f);
+			y0 = SnapToFixedPoint(y0, 4.0f);
+			x1 = SnapToFixedPoint(x1, 4.0f);
+			y1 = SnapToFixedPoint(y1, 4.0f);
+			s0 = SnapToFixedPoint(s0, 32.0f);
+			t0 = SnapToFixedPoint(t0, 32.0f);
+			s1 = SnapToFixedPoint(s1, 32.0f);
+			t1 = SnapToFixedPoint(t1, 32.0f);
 			if (x1 - x0 < 0.01f || y1 - y0 < 0.01f) {
 				return;
 			}
@@ -1811,13 +1849,10 @@ namespace nCine::RHI::RDP
 		if (_scissor.Enabled) {
 			float scaleX, scaleY;
 			GetTargetScale(scaleX, scaleY);
-			// The engine hands scissor rectangles in top-down logical coordinates. A screen pass maps them
-			// straight onto raster rows (it mirrors NDC, see Dispatch); a render-to-texture pass keeps the
-			// unmirrored top-down store, so its rect is flipped - the same split the GX/GU devices make.
-			const std::int32_t rasterY = (_currentRenderTarget == nullptr
-				? _scissor.Rect.Y : targetH - _scissor.Rect.Y - _scissor.Rect.H);
+			// The engine hands scissor rectangles in top-down logical coordinates (see RhiFwd.h), which map
+			// straight onto raster rows of the screen and of a target alike, as both are stored top-down
 			x = std::int32_t(float(_scissor.Rect.X) * scaleX);
-			y = std::int32_t(float(rasterY) * scaleY);
+			y = std::int32_t(float(_scissor.Rect.Y) * scaleY);
 			w = std::int32_t(float(_scissor.Rect.W) * scaleX);
 			h = std::int32_t(float(_scissor.Rect.H) * scaleY);
 			if (x < 0) { w += x; x = 0; }
@@ -2293,7 +2328,7 @@ namespace nCine::RHI::RDP
 			lm.Used = true;
 			if (lm.Data != nullptr) {
 				// Rows are flipped at build time - the lightmap's row 0 corresponds to the bottom of the
-				// displayed viewport (the software buffer convention) - so the rectangle samples T ascending
+				// displayed viewport (the convention the CPU lightmap is built in) - so the rectangle samples T ascending
 				for (std::int32_t y = 0; y < light.LmH; y++) {
 					const float* DEATH_RESTRICT src = light.Lightmap + std::size_t(light.LmH - 1 - y) * light.LmW * 2;
 					std::uint16_t* DEATH_RESTRICT dst = reinterpret_cast<std::uint16_t*>(lm.Data + std::size_t(y) * stride);
@@ -2450,15 +2485,12 @@ namespace nCine::RHI::RDP
 		float scaleX, scaleY;
 		GetTargetScale(scaleX, scaleY);
 
-		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
-		// present time; the RDP scans out its buffer top-down directly, so screen passes mirror NDC here
-		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which
-		// is what the sampling passes already expect - which is just the sign of the raster Y scale.
-		const bool screenPass = (_currentRenderTarget == nullptr);
-
+		// Every pass is top-down (see RhiFwd.h): NDC's y = +1 is raster row 0 of the screen and of a render
+		// target alike, as the RDP scans out its buffer top-down and a target is sampled from its first row -
+		// which is just the negative sign of the raster Y scale.
 		rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		rasterBiasX = rasterScaleX + float(viewport.X) * scaleX;
-		rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY;
 		if (maxScale != nullptr) {
 			*maxScale = std::max(scaleX, scaleY);

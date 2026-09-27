@@ -133,6 +133,22 @@ namespace Jazz2::Actors::Environment
 		UpdateHitbox(50, 50);
 	}
 
+	void RollingRock::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_triggered ? 1 : 0);
+		dest.WriteValueAsLE<float>(_delayLeft);
+	}
+
+	void RollingRock::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_triggered = (src.ReadValue<std::uint8_t>() != 0);
+		_delayLeft = src.ReadValueAsLE<float>();
+	}
+
 	bool RollingRock::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* rollingRock = runtime_cast<RollingRock>(other)) {

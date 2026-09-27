@@ -477,7 +477,7 @@ namespace nCine::RHI::Software
 
 		/** @brief Whether the scissor test is enabled for this draw */
 		bool scissorEnabled = false;
-		/** @brief Scissor rectangle in bottom-up (OpenGL) window coordinates */
+		/** @brief Scissor rectangle in pixels of the destination, counted from its top-left corner (see RhiFwd.h) */
 		Recti scissorRect = Recti(0, 0, 0, 0);
 
 		/** @brief Interleaved general vertices `[x, y, u, v]` in clip space, or null to synthesize the sprite quad from @ref ff */
@@ -513,14 +513,14 @@ namespace nCine::RHI::Software
 			@param pixels			Base of a tightly packed `width * height * 4` RGBA8 buffer (owned by the caller)
 			@param width			Surface width in pixels
 			@param height			Surface height in pixels
-			@param isFboTarget		`true` when the surface is a render-target texture (rows are written bottom-up
-									to match the OpenGL framebuffer convention); `false` for the top-down screen buffer
+			@param isRenderTarget	`true` when the surface is a render-target texture, `false` for the screen buffer
+									(which alone can be RGB565, see `RHI_USE_FB16`); both are stored top-down
 		*/
-		static void SetColorBuffer(std::uint8_t* pixels, std::int32_t width, std::int32_t height, bool isFboTarget);
+		static void SetColorBuffer(std::uint8_t* pixels, std::int32_t width, std::int32_t height, bool isRenderTarget);
 
 		/** @brief Sets the viewport used to map clip space to destination pixels */
 		static void SetViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
-		/** @brief Sets the scissor test in bottom-up (OpenGL) window coordinates */
+		/** @brief Sets the scissor test, in pixels of the destination counted from its top-left corner */
 		static void SetScissor(bool enabled, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 		/** @brief Sets the blend state applied by every draw path */
 		static void SetBlending(bool enabled, SwBlendFactor src, SwBlendFactor dst);

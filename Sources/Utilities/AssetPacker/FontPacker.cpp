@@ -36,9 +36,6 @@ namespace Jazz2::AssetPacker
 {
 	namespace
 	{
-		/** @brief Largest atlas the packer is willing to produce, matching the sprite sheets */
-		constexpr std::int32_t MaxAtlasSize = 1024;
-
 		/** @brief One character of a font, as it is being converted */
 		struct Glyph
 		{
@@ -63,15 +60,6 @@ namespace Jazz2::AssetPacker
 			std::uint8_t AsciiCount = 0;
 			SmallVector<Glyph, 0> Glyphs;
 		};
-
-		std::int32_t NextPowerOfTwo(std::int32_t value)
-		{
-			std::int32_t result = 1;
-			while (result < value) {
-				result <<= 1;
-			}
-			return result;
-		}
 
 		/**
 			@brief Reads the character list that accompanies a grid image
@@ -583,10 +571,11 @@ namespace Jazz2::AssetPacker
 		/**
 			@brief Lays the measured glyphs out in an atlas of their own
 
-			Tallest first, filling one shelf at a time, which keeps the glyphs in a row close in height and so
-			wastes little above the shorter ones. Every glyph keeps @ref FontFormat::GlyphMargin of empty space
-			on each side, putting two pixels between neighbours - enough that a bilinear sample taken at the very
-			edge of one glyph cannot reach the next.
+			The layout is the sprite sheets' (see @ref Compatibility::JJ2Anims::PackRectangles()), so the atlas
+			gets the same treatment: the least memory once rounded up to powers of two, stored at its exact
+			size, and never a glyph across the page line of a backend that has to split it. Every glyph keeps
+			@ref FontFormat::GlyphMargin of empty space on each side, putting two pixels between neighbours -
+			enough that a bilinear sample taken at the very edge of one glyph cannot reach the next.
 
 			Returns the position each glyph ended up at, in `positions`.
 		*/
@@ -595,89 +584,44 @@ namespace Jazz2::AssetPacker
 		{
 			constexpr std::int32_t Margin = FontFormat::GlyphMargin;
 
-			SmallVector<std::int32_t, 0> order;
-			std::int32_t widest = 0;
+			// Each glyph is packed together with its margins, so no further spacing is needed between them
+			SmallVector<Compatibility::JJ2Anims::PackedFrame, 0> items;
+			SmallVector<std::int32_t, 0> itemGlyphs;
 			for (std::int32_t i = 0; i < std::int32_t(font.Glyphs.size()); i++) {
 				const Glyph& glyph = font.Glyphs[i];
 				if (glyph.Width <= 0 || glyph.Height <= 0) {
 					continue;
 				}
-				order.push_back(i);
-				widest = std::max(widest, glyph.Width);
+				Compatibility::JJ2Anims::PackedFrame& item = items.emplace_back();
+				item.X = item.Y = 0;
+				item.W = glyph.Width + 2 * Margin;
+				item.H = glyph.Height + 2 * Margin;
+				item.OffsetX = item.OffsetY = 0;
+				itemGlyphs.push_back(i);
 			}
 
-			if (order.empty()) {
+			if (items.empty()) {
 				LOGE("The font has no glyphs with any pixels in them");
 				return false;
 			}
 
-			std::sort(order.begin(), order.end(), [&font](std::int32_t a, std::int32_t b) {
-				if (font.Glyphs[a].Height != font.Glyphs[b].Height) {
-					return font.Glyphs[a].Height > font.Glyphs[b].Height;
-				}
-				return font.Glyphs[a].Width > font.Glyphs[b].Width;
-			});
-
-			// Try every atlas width that could hold the widest glyph and keep whichever wastes least. The width
-			// is a power of two but the height is whatever the shelves come to: the backends that need a power
-			// of two pad the texture themselves, so what they pay is the padded area - which is what decides
-			// between the candidates - while everyone else pays only for the rows that exist.
-			std::int32_t bestWidth = 0, bestHeight = 0;
-			std::int64_t bestPaddedArea = INT64_MAX, bestArea = INT64_MAX;
-			for (std::int32_t width = NextPowerOfTwo(widest + 2 * Margin); width <= MaxAtlasSize; width <<= 1) {
-				std::int32_t x = 0, rowY = 0, rowHeight = 0;
-				for (std::int32_t i : order) {
-					const std::int32_t itemWidth = font.Glyphs[i].Width + 2 * Margin;
-					const std::int32_t itemHeight = font.Glyphs[i].Height + 2 * Margin;
-					if (x > 0 && x + itemWidth > width) {
-						rowY += rowHeight;
-						x = 0;
-						rowHeight = 0;
-					}
-					x += itemWidth;
-					rowHeight = std::max(rowHeight, itemHeight);
-				}
-
-				const std::int32_t height = rowY + rowHeight;
-				if (NextPowerOfTwo(height) > MaxAtlasSize) {
-					continue;
-				}
-				const std::int64_t paddedArea = std::int64_t(width) * NextPowerOfTwo(height);
-				const std::int64_t area = std::int64_t(width) * height;
-				if (paddedArea < bestPaddedArea || (paddedArea == bestPaddedArea && area < bestArea)) {
-					bestPaddedArea = paddedArea;
-					bestArea = area;
-					bestWidth = width;
-					bestHeight = height;
-				}
-			}
-
-			if (bestWidth == 0) {
-				LOGE("The font does not fit into a {}x{} atlas", MaxAtlasSize, MaxAtlasSize);
+			if (!Compatibility::JJ2Anims::PackRectangles(items, 0, atlasWidth, atlasHeight)) {
+				LOGE("The font does not fit into a {}x{} atlas", Compatibility::JJ2Anims::MaxSheetSize,
+					Compatibility::JJ2Anims::MaxSheetSize);
 				return false;
+			}
+			if (std::any_of(items.begin(), items.end(), Compatibility::JJ2Anims::LiesAcrossPageLine)) {
+				LOGW("Some glyphs lie across a {}-pixel page line of the {}x{} atlas, a platform that splits the texture into pages draws them cut off",
+					Compatibility::JJ2Anims::SheetPageSize, atlasWidth, atlasHeight);
 			}
 
 			positions.clear();
 			positions.resize_for_overwrite(font.Glyphs.size() * 2);
 			std::memset(positions.data(), 0, positions.size() * sizeof(std::int32_t));
-
-			std::int32_t x = 0, rowY = 0, rowHeight = 0;
-			for (std::int32_t i : order) {
-				const std::int32_t itemWidth = font.Glyphs[i].Width + 2 * Margin;
-				const std::int32_t itemHeight = font.Glyphs[i].Height + 2 * Margin;
-				if (x > 0 && x + itemWidth > bestWidth) {
-					rowY += rowHeight;
-					x = 0;
-					rowHeight = 0;
-				}
-				positions[i * 2 + 0] = x + Margin;
-				positions[i * 2 + 1] = rowY + Margin;
-				x += itemWidth;
-				rowHeight = std::max(rowHeight, itemHeight);
+			for (std::int32_t i = 0; i < std::int32_t(items.size()); i++) {
+				positions[itemGlyphs[i] * 2 + 0] = items[i].X + Margin;
+				positions[itemGlyphs[i] * 2 + 1] = items[i].Y + Margin;
 			}
-
-			atlasWidth = bestWidth;
-			atlasHeight = bestHeight;
 			return true;
 		}
 	}

@@ -3,7 +3,9 @@
 #include "../ContentResolver.h"
 #include "../Compatibility/JJ2Anims.h"
 
+#include "../../nCine/Graphics/RenderBatcher.h"
 #include "../../nCine/Graphics/RenderQueue.h"
+#include "../../nCine/Graphics/RenderResources.h"
 #include "../../nCine/Base/Random.h"
 
 #include <IO/Compression/DeflateStream.h>
@@ -452,6 +454,22 @@ namespace Jazz2::UI
 			alpha = std::min(color.A * 2.0f, 1.0f);
 		}
 
+		/*
+			A glyph used to be a render command of its own: rented and filled here, then sorted and copied into a
+			batch with the others by RenderBatcher, each of those steps on a command that was cold by then - on a
+			console with a few kilobytes of data cache, that was most of what a glyph cost. The glyphs of a string
+			share their material, so they are written straight into batched commands instead (see
+			RenderBatcher::BeginDirectBatch()), through the records of the canvas, one for each font, shader and
+			layer (see Canvas::GlyphBatch). Nothing is drawn differently: a batch takes the layer its glyphs had,
+			so the odd glyphs still lie under the even ones where they overlap, and every string drawn into the
+			canvas on the same layer with the same material shares the batch, as their commands did.
+
+			The records of this string by shader (plain, colorized - a formatting tag can switch between the two)
+			and by the parity of the glyph layer, looked up on the first glyph of each.
+		*/
+		RenderBatcher& batcher = RenderResources::GetRenderBatcher();
+		std::int32_t glyphRecords[2][2] = { { -1, -1 }, { -1, -1 } };
+
 		idx = 0;
 		line = 0;
 		do {
@@ -631,39 +649,75 @@ namespace Jazz2::UI
 								glyph.Y * invTexHeight
 							);
 
-							auto command = canvas->RentRenderCommand();
-							command->SetType(RenderCommand::Type::Text);
-							bool shaderChanged = (colorizeShader
-								? command->GetMaterial().SetShader(colorizeShader)
-								: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
-							if (shaderChanged) {
-								command->GetMaterial().ReserveUniformsDataMemory();
-								command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
-								// Required to reset render command properly
-								//command->SetTransformation(command->transformation());
+							const std::uint16_t glyphLayer = std::uint16_t(z - (charOffset & 1));
+							std::int32_t& recordIndex = glyphRecords[colorizeShader != nullptr ? 1 : 0][charOffset & 1];
+							if (recordIndex < 0) {
+								recordIndex = canvas->GetGlyphBatch(*_texture.get(), colorizeShader, glyphLayer);
+							}
+							Canvas::GlyphBatch& record = canvas->_glyphBatches[recordIndex];
 
-								auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-								if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-									textureUniform->SetIntValue(0); // GL_TEXTURE0
+							bool batched = false;
+							if (record.Direct) {
+								RenderBatcher::DirectBatch& batch = record.Batch;
+								if (batch.Count == batch.Capacity) {
+									// Full, or not begun yet in this frame. It asks for room for the rest of what the
+									// record took in the previous frame, or for all the glyphs of this parity that can
+									// still come in this string - at most half of the bytes left - if that is more.
+									batcher.EndDirectBatch(batch);
+									const std::uint32_t leftInString = std::uint32_t(textLength - std::size_t(idx)) / 2 + 1;
+									const std::uint32_t leftFromLastFrame = (record.LastCount > record.Count ? record.LastCount - record.Count : 0);
+									if (batcher.BeginDirectBatch(*record.StandIn, std::max(leftInString, leftFromLastFrame), batch, canvas->NextGlyphBatchCommand(record))) {
+										canvas->_currentRenderQueue->AddCommand(batch.Command);
+									} else {
+										record.Direct = false;
+									}
+								}
+								if (record.Direct) {
+									// Exactly what the glyph's own command would have carried once committed: a translation
+									// with the depth of the layer (see RenderCommand::CommitNodeTransformation()). Stored
+									// element by element - building a matrix and copying it and the other members in cost
+									// about as much as everything else a glyph does.
+									// Every member is float-aligned: the offsets and the sizes the batch memory is carved
+									// from are multiples of four bytes
+									std::uint8_t* instance = batch.Instances + batch.Count * batch.Stride;
+									float* modelMatrix = static_cast<float*>(static_cast<void*>(instance + record.ModelMatrixOffset));
+									modelMatrix[0] = 1.0f; modelMatrix[1] = 0.0f; modelMatrix[2] = 0.0f; modelMatrix[3] = 0.0f;
+									modelMatrix[4] = 0.0f; modelMatrix[5] = 1.0f; modelMatrix[6] = 0.0f; modelMatrix[7] = 0.0f;
+									modelMatrix[8] = 0.0f; modelMatrix[9] = 0.0f; modelMatrix[10] = 1.0f; modelMatrix[11] = 0.0f;
+									modelMatrix[12] = pos.X; modelMatrix[13] = pos.Y; modelMatrix[14] = record.Depth; modelMatrix[15] = 1.0f;
+									float* instanceColor = static_cast<float*>(static_cast<void*>(instance + record.ColorOffset));
+									instanceColor[0] = glyphColor.R; instanceColor[1] = glyphColor.G;
+									instanceColor[2] = glyphColor.B; instanceColor[3] = glyphColor.A;
+									float* texRect = static_cast<float*>(static_cast<void*>(instance + record.TexRectOffset));
+									texRect[0] = texCoords.X; texRect[1] = texCoords.Y; texRect[2] = texCoords.Z; texRect[3] = texCoords.W;
+									float* spriteSize = static_cast<float*>(static_cast<void*>(instance + record.SpriteSizeOffset));
+									spriteSize[0] = glyph.Width * glyphScale;
+									spriteSize[1] = glyph.Height * glyphScale;
+									if (record.PaletteOffsetOffset >= 0) {
+										*static_cast<float*>(static_cast<void*>(instance + record.PaletteOffsetOffset)) = 0.0f;
+									}
+									batch.Count++;
+									record.Count++;
+									batched = true;
 								}
 							}
 
-							// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
-							// when drawn into an RGBA render target, harmless for opaque/RGB targets
-							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+							if (!batched) {
+								// The shader cannot be batched this way, so the glyph gets a command of its own
+								RenderCommand* command = canvas->RentGlyphCommand(*_texture.get(), colorizeShader);
 
-							// The command resolves these once per shader change, so no glyph pays a by-name
-							// block lookup - the text path's dominant cost on the consoles
-							auto* instanceUniforms = command->GetInstanceUniforms();
-							instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
-							instanceUniforms->SpriteSize->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
-							instanceUniforms->Color->SetFloatVector(glyphColor.Data());
+								// The command resolves these once per shader change, so no glyph pays a by-name
+								// block lookup - the text path's dominant cost on the consoles
+								auto* instanceUniforms = command->GetInstanceUniforms();
+								instanceUniforms->TexRect->SetFloatVector(texCoords.Data());
+								instanceUniforms->SpriteSize->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
+								instanceUniforms->Color->SetFloatVector(glyphColor.Data());
 
-							command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
-							command->SetLayer(z - (charOffset & 1));
-							command->GetMaterial().SetTexture(*_texture.get());
+								command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+								command->SetLayer(glyphLayer);
 
-							canvas->_currentRenderQueue->AddCommand(command);
+								canvas->_currentRenderQueue->AddCommand(command);
+							}
 						}
 					}
 
@@ -675,6 +729,8 @@ namespace Jazz2::UI
 			idx = std::int32_t(cursor.second());
 		} while (idx < textLength);
 		charOffset++;
+
+		canvas->FinishGlyphBatches();
 	}
 
 	String Font::StripFormatting(StringView text)

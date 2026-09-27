@@ -65,6 +65,26 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnUpdate(timeMult);
 	}
 
+	void Fencer::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_stateTime);
+		dest.WriteValue<std::uint8_t>(_currentTransition != nullptr ? 1 : 0);
+	}
+
+	void Fencer::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_stateTime = src.ReadValueAsLE<float>();
+		bool isAttacking = (src.ReadValue<std::uint8_t>() != 0);
+		if (isAttacking) {
+			// The attack jump is stopped in its transition callback
+			_speed.X = 0.0f;
+		}
+	}
+
 	bool Fencer::OnPerish(ActorBase* collider)
 	{
 		CreateParticleDebrisOnPerish(collider);

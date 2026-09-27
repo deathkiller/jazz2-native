@@ -1159,8 +1159,8 @@ namespace nCine::RHI::PVR
 				pvr_poly_hdr_t hdr;
 				pvr_poly_compile(&hdr, &cxt);
 
-				// The lightmap's row 0 corresponds to the bottom of the displayed viewport (the software
-				// buffer convention), so V runs (used/texH) -> 0 top -> bottom
+				// The lightmap's row 0 corresponds to the bottom of the displayed viewport (the convention the
+				// CPU lightmap is built in), so V runs (used/texH) -> 0 top -> bottom
 				const float uMax = float(light.LmW) / float(texW);
 				const float vMax = float(light.LmH) / float(texH);
 				const float px[4] = { vpX + vpW, vpX + vpW, vpX, vpX };
@@ -1337,10 +1337,10 @@ namespace nCine::RHI::PVR
 		// Projects one mesh vertex into raster space, matching the sprite path's corner synthesis
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
 		// transform once instead of being reapplied per vertex - every vertex then costs one multiply-add
-		// per axis. A screen pass mirrors NDC, which is just the sign of the Y scale (see below).
+		// per axis. The raster is top-down like NDC's y = +1, which is just the sign of the Y scale (see below).
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -1554,7 +1554,7 @@ namespace nCine::RHI::PVR
 		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -1807,23 +1807,21 @@ namespace nCine::RHI::PVR
 		const float texelWidth = (needsTexelStep && hasTexture && texture->GetWidth() > 0 ? 1.0f / float(texture->GetWidth()) : 0.0f);
 		const float texelHeight = (needsTexelStep && hasTexture && texture->GetHeight() > 0 ? 1.0f / float(texture->GetHeight()) : 0.0f);
 
-		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
-		// present time; the PVR scans out its buffer top-down directly, so screen passes mirror NDC here
-		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is
-		// what the sampling passes already expect - which is just the sign of the raster Y scale below.
+		// Every pass is top-down (see RhiFwd.h): NDC's y = +1 is raster row 0 of the screen and of a render
+		// target alike, as the PVR scans out its buffer top-down and a target is sampled from its first row -
+		// which is just the negative sign of the raster Y scale below.
 		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 
 		// The PVR rasterizer has no scissor for the general case, so scissored quads are clipped
-		// geometrically. The rect maps to raster coordinates the same way the vertices do (screen passes
-		// mirror NDC, so the engine rect's Y addresses raster rows directly - see the GX device); only
-		// screen passes are clipped, which covers every scissor user on this tier (menu clipping,
-		// splitscreen viewports)
+		// geometrically. The rect maps to raster coordinates the same way the vertices do (both are top-down,
+		// so the engine rect's Y addresses raster rows directly); only screen passes are clipped, which covers
+		// every scissor user on this tier (menu clipping, splitscreen viewports)
 		const bool clipActive = (_scissor.Enabled && screenPass);
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {

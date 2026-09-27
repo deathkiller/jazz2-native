@@ -28,6 +28,8 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdateHitbox() override;
 		void OnHealthChanged(ActorBase* collider) override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		static constexpr float DefaultSpeed = 0.7f;

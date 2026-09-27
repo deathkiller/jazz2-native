@@ -41,6 +41,8 @@ namespace Jazz2::Events
 
 		/** @brief Registers a delegate to create an object from an event */
 		void RegisterSpawnable(EventType type, CreateDelegate create, PreloadDelegate preload = nullptr);
+		/** @brief Returns `true` if an object can be spawned for a given event */
+		bool CanSpawn(EventType type) const;
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT

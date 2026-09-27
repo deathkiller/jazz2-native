@@ -145,6 +145,17 @@ namespace Jazz2::Actors::Multiplayer
 		return true;
 	}
 
+	bool PlayerOnServer::MorphToInstantly(PlayerType type)
+	{
+		if (!MpPlayer::MorphToInstantly(type)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerMorphTo(this, type);
+
+		return true;
+	}
+
 	bool PlayerOnServer::SetShield(ShieldType shieldType, float timeLeft)
 	{
 		if (!MpPlayer::SetShield(shieldType, timeLeft)) {

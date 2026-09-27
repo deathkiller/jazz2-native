@@ -84,6 +84,9 @@
     <ClCompile Include="PngCodec.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SpriteRepacker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Jazz2\Compatibility\AnimSetMapping.cpp">
       <Filter>Source Files\Jazz2\Compatibility</Filter>
     </ClCompile>
@@ -210,6 +213,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PngCodec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteRepacker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Main.h">

@@ -94,6 +94,29 @@ namespace Jazz2::Actors::Solid
 		AABBInner.B -= 8.0f;
 	}
 
+	void SpikeBall::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_phase);
+	}
+
+	void SpikeBall::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_phase = src.ReadValueAsLE<float>();
+
+		float scale = 1.0f;
+		GetPhasePosition((std::int32_t)_pieces.size(), &scale);
+		for (std::int32_t i = 0; i < (std::int32_t)_pieces.size(); i++) {
+			_pieces[i].Pos = GetPhasePosition(i, &_pieces[i].Scale);
+		}
+		if (_shade) {
+			_renderer.setColor(scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White);
+		}
+	}
+
 	bool SpikeBall::OnDraw(RenderQueue& renderQueue)
 	{
 		if (!_pieces.empty()) {

@@ -1,9 +1,9 @@
 // Built-in present shader of the RSX backend (vertex stage).
 //
-// Draws the intermediate screen surface as a full-screen quad into the display buffer. This is where the
-// engine's OpenGL bottom-up convention becomes the scan-out's top-down one - but the flip lives in the
-// quad's vertex data (see RsxDevice::CreateBuiltinResources), not here, so this stage stays a plain
-// pass-through and the one convention correction is in a single readable place.
+// Draws the intermediate screen surface as a full-screen quad into the display buffer. Both are top-down,
+// like every surface the RHI renders (see RhiFwd.h), and the quad's vertex data (see
+// RsxDevice::CreateBuiltinResources) maps the surface's top row onto the display's, so this stage is a
+// plain pass-through.
 //
 // Not generated from a .shader file: it has no GLSL counterpart because no other backend needs it.
 void main

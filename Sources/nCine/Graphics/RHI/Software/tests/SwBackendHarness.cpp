@@ -388,9 +388,8 @@ bool RunSpriteTest(const char* baseDir)
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 
-	// The render-target store is bottom-up (OpenGL framebuffer convention - see SwRaster::SetColorBuffer's
-	// isFboTarget), so every assertion flips its logical top-down y into a store row
-	auto fy = [&](std::int32_t y) { return Height - 1 - y; };
+	// The render-target store is top-down like every store (see RhiFwd.h), so a logical y is a store row
+	auto fy = [&](std::int32_t y) { return y; };
 
 	std::printf("Software RHI backend harness (%dx%d)\n", Width, Height);
 	std::printf("Sprite 1 - checker quadrants (opaque, white modulation):\n");
@@ -718,10 +717,11 @@ static void RefCombineLighting(std::uint8_t* pixels, std::int32_t fbWidth, std::
 	vpH = std::min(vpH, fbHeight - vpY);
 	if (vpW <= 0 || vpH <= 0) return;
 	auto clampf = [](float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); };
+	// y counts the viewport's rows from the bottom, the lightmap's order, while the buffer is top-down
 	for (std::int32_t y = 0; y < vpH; y++) {
 		const std::int32_t lmY = std::min(y / scale, lmH - 1);
 		const float* texelBase = lightmap + (std::size_t)lmY * lmW * 2;
-		std::uint8_t* px = pixels + (std::size_t)(vpY + y) * fbStride + (std::size_t)vpX * 4;
+		std::uint8_t* px = pixels + (std::size_t)(vpY + vpH - 1 - y) * fbStride + (std::size_t)vpX * 4;
 		for (std::int32_t x = 0; x < vpW; x++, px += 4) {
 			const std::int32_t lmX = std::min(x / scale, lmW - 1);
 			const float r = clampf(texelBase[lmX * 2], 0.0f, 1.0f);

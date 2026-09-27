@@ -73,6 +73,7 @@ namespace Jazz2::UI
 		static constexpr AnimState WeaponWheel = (AnimState)80;
 		static constexpr AnimState WeaponWheelInner = (AnimState)81;
 		static constexpr AnimState WeaponWheelDim = (AnimState)82;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		static constexpr AnimState TouchDpad = (AnimState)100;
 		static constexpr AnimState TouchFire = (AnimState)101;
 		static constexpr AnimState TouchJump = (AnimState)102;
@@ -80,23 +81,28 @@ namespace Jazz2::UI
 		static constexpr AnimState TouchChange = (AnimState)104;
 		static constexpr AnimState TouchPause = (AnimState)105;
 		static constexpr AnimState TouchClose = (AnimState)106;
+#endif
 	}
 
 	using namespace Jazz2::UI::Resources;
 
 	HUD::HUD(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _metadata(nullptr), _metadataIndexed(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
-			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _rgbLightsAnim(0.0f),
-			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(1.0f),
-			_joystickActive(false), _joystickOrigin(0.0f, 0.0f), _joystickCurrent(0.0f, 0.0f),
+			_activeBossTime(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _rgbLightsAnim(0.0f),
+			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(1.0f)
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+			, _touchButtonsTimer(0.0f), _joystickActive(false), _joystickOrigin(0.0f, 0.0f), _joystickCurrent(0.0f, 0.0f),
 			_joystickPointerId(-1), _joystickMaxRadius(60.0f)
+#endif
 	{
 		auto& resolver = ContentResolver::Get();
 
 		_metadata = resolver.RequestMetadata("UI/HUD"_s);
 		_smallFont = resolver.GetFont(FontType::Small);
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		RefreshTouchButtons();
+#endif
 	}
 
 	HUD::~HUD()
@@ -115,9 +121,11 @@ namespace Jazz2::UI
 		if (_levelTextTime >= 0.0f) {
 			_levelTextTime += timeMult;
 		}
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_touchButtonsTimer > 0.0f) {
 			_touchButtonsTimer -= timeMult;
 		}
+#endif
 
 		switch (_transitionState) {
 			case TransitionState::FadeIn:
@@ -167,9 +175,10 @@ namespace Jazz2::UI
 		}
 
 		// Rebuilt only when there are new numbers, and here rather than while drawing: the table is rendered into
-		// a texture of its own, in a pass that has to be scheduled before the scene is visited
-		if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
-			if (_performanceOverlay.Update()) {
+		// a texture of its own, in a pass that has to be scheduled before the scene is visited. Not while it is
+		// hidden (see IsPerformanceOverlayHidden()) - the first update after that picks up the newest numbers.
+		if DEATH_UNLIKELY(PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+			if DEATH_LIKELY(!IsPerformanceOverlayHidden() && _performanceOverlay.Update()) {
 				OnAddPerformanceMetrics(_performanceOverlay);
 				Vector2i viewSize = _levelHandler->GetViewSize();
 				Rectf safeView = PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)viewSize.X, (float)viewSize.Y), viewSize);
@@ -200,6 +209,7 @@ namespace Jazz2::UI
 			adjustedView.H = roundf(adjustedView.H * 0.95f);
 		} else
 #endif
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_touchButtonsTimer > 0.0f) {
 			const auto& dpadLayout = PreferencesCache::TouchButtons[(std::size_t)TouchButtonSlot::Dpad];
 			float leftMargin = dpadLayout.EdgeOffset.X + DpadSize * DefaultRef * dpadLayout.Scale + 8.0f;
@@ -213,6 +223,7 @@ namespace Jazz2::UI
 			adjustedView.X = leftMargin;
 			adjustedView.W = adjustedView.W - adjustedView.X - rightMargin;
 		}
+#endif
 
 		// The safe area comes off last, so what it reserves is measured from whatever is already there rather
 		// than from the physical screen edge: on a device showing touch controls the HUD keeps its margin from
@@ -225,8 +236,6 @@ namespace Jazz2::UI
 		std::int32_t charOffset = 0;
 		char stringBuffer[32];
 
-		auto players = _levelHandler->GetPlayers();
-		
 		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
 			auto& viewport = _levelHandler->_assignedViewports[i];
 			if (auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
@@ -282,14 +291,17 @@ namespace Jazz2::UI
 		}*/
 #endif
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		// Touch Controls
 		if (_touchButtonsTimer > 0.0f) {
+			auto players = _levelHandler->GetPlayers();
 			auto* controlledPlayer = (!players.empty() ? players[0] : nullptr);
 			OnDrawTouchButtons(controlledPlayer);
 		}
+#endif
 
 		// Performance Metrics
-		if (PreferencesCache::PerformanceMetrics != PerformanceMetricsLevel::Off) {
+		if DEATH_UNLIKELY(PreferencesCache::PerformanceMetrics != PerformanceMetricsLevel::Off) {
 			float metricsRight = view.X + view.W - 4.0f;
 			float metricsTop = view.Y + 1.0f;
 #if defined(DEATH_TARGET_ANDROID)
@@ -302,7 +314,7 @@ namespace Jazz2::UI
 			_smallFont->DrawString(this, stringBuffer, charOffset, metricsRight, metricsTop, FontLayer,
 				Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 
-			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed) {
+			if (PreferencesCache::PerformanceMetrics == PerformanceMetricsLevel::Detailed && !IsPerformanceOverlayHidden()) {
 				// Right under the frame rate counter and against the same edge, above everything but the transition
 				_performanceOverlay.Draw(this, metricsRight, metricsTop + 16.0f, PerformanceMetricsLayer);
 			}
@@ -331,6 +343,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void HUD::OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions, Vector2f& overrideMovement)
 	{
 		_touchButtonsTimer = 1200.0f;
@@ -369,11 +382,11 @@ namespace Jazz2::UI
 							if (button.Action == PlayerAction::Down) {
 								overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 							}
-#if defined(NCINE_HAS_VIBRATIONS)
+#	if defined(NCINE_HAS_VIBRATIONS)
 							if (PreferencesCache::EnableTouchVibration) {
 								theApplication().Vibrate(12);
 							}
-#endif
+#	endif
 						}
 					}
 				}
@@ -495,6 +508,7 @@ namespace Jazz2::UI
 			}
 		}
 	}
+#endif
 
 	void HUD::ShowLevelText(StringView text)
 	{
@@ -579,8 +593,10 @@ namespace Jazz2::UI
 
 		if DEATH_UNLIKELY(player->_playerType == PlayerType::Spectate) {
 			auto spectateText = _("Spectating");
-			_smallFont->DrawString(this, spectateText, charOffsetShadow, view.X + 10.0f, view.Y + 6.0f + 2.0f, FontShadowLayer,
-							Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.7f, 0.7f, 0.7f, 0.3f, 0.9f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, spectateText, charOffsetShadow, view.X + 10.0f, view.Y + 6.0f + 2.0f, FontShadowLayer,
+								Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.7f, 0.7f, 0.7f, 0.3f, 0.9f);
+			}
 			_smallFont->DrawString(this, spectateText, charOffset, view.X + 10.0f, view.Y + 6.0f, FontLayer,
 							Alignment::TopLeft, Colorf(0.45f, 0.45f, 0.45f), 0.8f, 0.7f, 0.7f, 0.7f, 0.3f, 0.9f);
 		}
@@ -615,7 +631,9 @@ namespace Jazz2::UI
 		constexpr bool shouldDrawLives = true;
 #endif
 		if (shouldDrawLives) {
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			}
 
 			// Recolor the character icon to match the player when it's being recolored; fall back to the plain icon
 			std::int32_t paletteOffset = player->GetPaletteOffset();
@@ -647,13 +665,17 @@ namespace Jazz2::UI
 						stringBuffer[0] = 'x';
 						i32tos(lives, stringBuffer + 1);
 
-						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						if constexpr (Font::ShadowsEnabled) {
+							_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+								Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						}
 						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
 							Alignment::BottomLeft, Font::DefaultColor);
 					} else {
-						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						if constexpr (Font::ShadowsEnabled) {
+							_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+								Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						}
 						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
 							Alignment::BottomLeft, Font::DefaultColor);
 					}
@@ -669,11 +691,15 @@ namespace Jazz2::UI
 			if (player->_activeShield != ShieldType::None) {
 				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
 
-				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				if constexpr (Font::ShadowsEnabled) {
+					DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				}
 				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
 
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				}
 				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 16.0f, bottom - 8.0f, FontLayer,
 					Alignment::BottomLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
 
@@ -683,18 +709,24 @@ namespace Jazz2::UI
 			if (player->_sugarRushLeft > 0.0f) {
 				i32tos((std::int32_t)ceilf(player->_sugarRushLeft * FrameTimer::SecondsPerFrame), stringBuffer);
 
-				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				if constexpr (Font::ShadowsEnabled) {
+					DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f + 1.6f, ShadowLayer, Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.6f, 0.6f);
+				}
 				DrawElement(PickupStopwatch, -1, timerX, bottom - 8.0f, MainLayer, Alignment::BottomLeft, Colorf::White, 0.6f, 0.6f);
 
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
-					Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 16.0f, bottom - 8.0f + 1.0f, FontShadowLayer,
+						Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
+				}
 				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 16.0f, bottom - 8.0f, FontLayer,
 					Alignment::BottomLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
 			}
 		} else {
 			if (shouldDrawHealth) {
 				for (std::int32_t i = 0; i < health; i++) {
-					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f + 1.6f, ShadowLayer, Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+					if constexpr (Font::ShadowsEnabled) {
+						DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f + 1.6f, ShadowLayer, Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+					}
 					DrawElement(Heart, -1, view.X + view.W - 4.0f - (i * 16.0f), view.Y + 4.0f, MainLayer, Alignment::TopRight, Colorf::White);
 				}
 			}
@@ -704,13 +736,17 @@ namespace Jazz2::UI
 					if (lives < UINT8_MAX) {
 						stringBuffer[0] = 'x';
 						i32tos(lives, stringBuffer + 1);
-						_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						if constexpr (Font::ShadowsEnabled) {
+							_smallFont->DrawString(this, stringBuffer, charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+								Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						}
 						_smallFont->DrawString(this, stringBuffer, charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
 							Alignment::BottomLeft, Font::DefaultColor);
 					} else {
-						_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
-							Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						if constexpr (Font::ShadowsEnabled) {
+							_smallFont->DrawString(this, "x\u221E", charOffsetShadow, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f + 1.0f, FontShadowLayer,
+								Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+						}
 						_smallFont->DrawString(this, "x\u221E", charOffset, adjustedView.X + 36.0f - 4.0f, bottom - 1.0f, FontLayer,
 							Alignment::BottomLeft, Font::DefaultColor);
 					}
@@ -720,12 +756,16 @@ namespace Jazz2::UI
 			// Timed power-ups share the strip right of the center of the screen, each one shifting the next to the right
 			float timerX = view.X + view.W * 0.5f - 30.0f;
 			if (player->_activeShield != ShieldType::None) {
-				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				if constexpr (Font::ShadowsEnabled) {
+					DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				}
 				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
 				i32tos((std::int32_t)ceilf(player->_activeShieldTime * FrameTimer::SecondsPerFrame), stringBuffer);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
-					FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
+						FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				}
 				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 24.0f, view.Y + 6.0f,
 					FontLayer, Alignment::TopLeft, Font::DefaultColor);
 
@@ -733,12 +773,16 @@ namespace Jazz2::UI
 			}
 
 			if (player->_sugarRushLeft > 0.0f) {
-				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				if constexpr (Font::ShadowsEnabled) {
+					DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				}
 				DrawElement(PickupStopwatch, -1, timerX, view.Y + 1.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
 				i32tos((std::int32_t)ceilf(player->_sugarRushLeft * FrameTimer::SecondsPerFrame), stringBuffer);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
-					FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				if constexpr (Font::ShadowsEnabled) {
+					_smallFont->DrawString(this, stringBuffer, charOffsetShadow, timerX + 24.0f, view.Y + 6.0f + 1.0f,
+						FontShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f));
+				}
 				_smallFont->DrawString(this, stringBuffer, charOffset, timerX + 24.0f, view.Y + 6.0f,
 					FontLayer, Alignment::TopLeft, Font::DefaultColor);
 			}
@@ -758,18 +802,24 @@ namespace Jazz2::UI
 		std::int32_t charOffsetShadow = 0;
 
 		if (PreferencesCache::EnableReforgedHUD) {
-			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			}
 			DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
 
 			std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
-			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			}
 			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		} else {
 			std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
-			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
-				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			if constexpr (Font::ShadowsEnabled) {
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
+					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+			}
 			_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
 				Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
 		}
@@ -805,9 +855,11 @@ namespace Jazz2::UI
 		}
 
 		std::int32_t charOffset = 0;
-		std::int32_t charOffsetShadow = 0;
-		_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
-			Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = 0;
+			_smallFont->DrawString(this, ammoCount, charOffsetShadow, right - 40.0f, bottom - 2.0f + 1.0f, FontShadowLayer,
+				Alignment::BottomLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+		}
 		_smallFont->DrawString(this, ammoCount, charOffset, right - 40.0f, bottom - 2.0f, FontLayer,
 			Alignment::BottomLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
 
@@ -817,7 +869,9 @@ namespace Jazz2::UI
 				pos.Y -= roundFast((20 - res->Base->FrameDimensions.Y) * 0.5f);
 			}
 
-			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
+			}
 
 			// The Blaster icon is tinted with the player's colors (like the character icon), so recolor it to match
 			// when the player is being recolored; every other weapon has fixed colors and uses the plain (baked) icon.
@@ -866,8 +920,10 @@ namespace Jazz2::UI
 
 		float perc = 0.08f + 0.84f * std::min(std::max((float)bossHealth / (float)bossMaxHealth, 0.0f), 1.0f);
 
-		DrawElement(BossHealthBar, 0, centerX, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
-		DrawElement(BossHealthBar, 0, centerX, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+		if constexpr (Font::ShadowsEnabled) {
+			DrawElement(BossHealthBar, 0, centerX, y + 2.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.1f * alpha));
+			DrawElement(BossHealthBar, 0, centerX, y + 1.0f, ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha));
+		}
 
 		DrawElement(BossHealthBar, 0, centerX, y, MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha));
 		DrawElementClipped(BossHealthBar, 1, centerX, y, MainLayer + 2, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), perc, 1.0f);
@@ -900,9 +956,11 @@ namespace Jazz2::UI
 		float x = safeView.X + safeView.W * 0.5f + offset;
 		float y = safeView.Y + safeView.H * 0.04f;
 
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, _levelText, charOffsetShadow, x, y + 2.5f, 50,
-			Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(this, _levelText, charOffsetShadow, x, y + 2.5f, 50,
+				Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.3f), textScale, 0.72f, 0.8f, 0.8f);
+		}
 		_smallFont->DrawString(this, _levelText, charOffset, x, y, 60,
 			Alignment::Top, Font::DefaultColor, textScale, 0.72f, 0.8f, 0.8f);
 
@@ -937,17 +995,21 @@ namespace Jazz2::UI
 		}
 
 		float alpha2 = alpha * alpha;
-		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer,
-			Alignment::Right, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha), 0.8f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer,
+				Alignment::Right, Colorf(0.0f, 0.0f, 0.0f, 0.2f * alpha), 0.8f, 0.8f);
+		}
 		DrawElement(PickupCoin, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer,
 			Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
 		std::size_t length = formatInto(stringBuffer, "x{}", _coins);
 
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+		}
 
 		Colorf fontColor = Font::DefaultColor;
 		fontColor.SetAlpha(alpha2);
@@ -985,17 +1047,21 @@ namespace Jazz2::UI
 
 		AnimState animState = (AnimState)((std::uint32_t)PickupGemRed + _gemsLastType);
 		float alpha2 = alpha * alpha;
-		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
-			Colorf(0.0f, 0.0f, 0.0f, 0.4f * alpha2), 0.8f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, ShadowLayer, Alignment::Right,
+				Colorf(0.0f, 0.0f, 0.0f, 0.4f * alpha2), 0.8f, 0.8f);
+		}
 		DrawElement(animState, -1, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + offset, MainLayer, Alignment::Right,
 			Colorf(1.0f, 1.0f, 1.0f, 0.8f * alpha2), 0.8f, 0.8f);
 
 		char stringBuffer[32];
 		std::size_t length = formatInto(stringBuffer, "x{}", _gems);
 
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + view.W * 0.5f, view.Y + view.H * 0.92f + 2.5f + offset, FontShadowLayer,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f * alpha), 1.0f, 0.0f, 0.0f, 0.0f);
+		}
 
 		Colorf fontColor = Font::DefaultColor;
 		fontColor.SetAlpha(alpha2);
@@ -1007,6 +1073,12 @@ namespace Jazz2::UI
 		}
 	}
 
+	bool HUD::IsPerformanceOverlayHidden() const
+	{
+		// The table is drawn above everything but the transition, so it would cover the in-game menu and the console
+		return (_levelHandler->_pauseMenu != nullptr || (_levelHandler->_console != nullptr && _levelHandler->_console->IsVisible()));
+	}
+
 	void HUD::OnAddPerformanceMetrics(PerformanceOverlay& overlay)
 	{
 		// Every actor updates, collides and draws every frame, so the count is what Logic and Visit mostly scale with
@@ -1014,6 +1086,7 @@ namespace Jazz2::UI
 		overlay.AddRow("Actors"_s, { value, formatInto(value, "{}", _levelHandler->_actors.size()) });
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void HUD::OnDrawTouchButtons(Actors::Player* player)
 	{
 		bool isConsoleVisible = _levelHandler->_console->IsVisible();
@@ -1039,11 +1112,11 @@ namespace Jazz2::UI
 					texture = anim->Base->TextureDiffuse.get();
 				}
 			} else {
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
+#	if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 				if (button.Action == PlayerAction::Menu && PreferencesCache::UseNativeBackButton) {
 					continue;
 				}
-#endif
+#	endif
 				if (button.State != AnimState::Default) {
 					if (auto* anim = _metadata->FindAnimation(button.State)) {
 						texture = anim->Base->TextureDiffuse.get();
@@ -1085,12 +1158,14 @@ namespace Jazz2::UI
 				thumbPos.X, thumbPos.Y);
 		}
 	}
+#endif
 
 	Rectf HUD::GetSafeView() const
 	{
 		return PreferencesCache::ApplySafeArea(Rectf(0.0f, 0.0f, (float)ViewSize.X, (float)ViewSize.Y), ViewSize);
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	bool HUD::GetTouchPauseButtonRect(Rectf& bounds) const
 	{
 		if (_touchButtonsTimer <= 0.0f) {
@@ -1102,12 +1177,12 @@ namespace Jazz2::UI
 		if (button.Action != PlayerAction::Menu || button.State == AnimState::Default) {
 			return false;
 		}
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
+#	if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 		if (PreferencesCache::UseNativeBackButton) {
 			// Handled by the platform's native back button, so nothing is drawn here
 			return false;
 		}
-#endif
+#	endif
 
 		// Resolve the on-screen center from the alignment, exactly as OnDrawTouchButtons() does
 		float x;
@@ -1128,6 +1203,7 @@ namespace Jazz2::UI
 		bounds = Rectf(x - button.Width * 0.5f, y - button.Height * 0.5f, button.Width, button.Height);
 		return true;
 	}
+#endif
 
 	void HUD::DrawHealthCarrots(float x, float y, std::int32_t health)
 	{
@@ -1147,8 +1223,10 @@ namespace Jazz2::UI
 
 		if (health >= 1) {
 			float angle = angleBase1 * (health > 1 ? -6.0f : -14.0f) + 0.2f;
-			DrawElement(PickupCarrot, 1, x + 1.0f - 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-			DrawElement(PickupCarrot, 1, x + 1.0f + 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupCarrot, 1, x + 1.0f - 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				DrawElement(PickupCarrot, 1, x + 1.0f + 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			}
 			DrawElement(PickupCarrot, 1, x + 1.0f, y + 2.0f, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 			lastCarrotIdx++;
 			lastCarrotOffset = 7.0f;
@@ -1156,16 +1234,20 @@ namespace Jazz2::UI
 		if (health >= 3) {
 			float angle = angleBase3 * 10.0f;
 			lastCarrotOffset -= 1.0f;
-			DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-			DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			}
 			DrawElement(PickupCarrot, 2, x + lastCarrotOffset, y, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 			lastCarrotIdx++;
 			lastCarrotOffset += 6.0f;
 		}
 		if (health >= 2) {
 			float angle = angleBase2 * -6.0f + 0.2f;
-			DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-			DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			}
 			DrawElement(PickupCarrot, 2, x + lastCarrotOffset, y, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 			lastCarrotIdx++;
 			lastCarrotOffset = 17.0f;
@@ -1177,8 +1259,10 @@ namespace Jazz2::UI
 					angle = -angle;
 				}
 
-				DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-				DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				if constexpr (Font::ShadowsEnabled) {
+					DrawElement(PickupCarrot, 2, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+					DrawElement(PickupCarrot, 2, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				}
 				DrawElement(PickupCarrot, 2, x + lastCarrotOffset, y, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 				lastCarrotIdx++;
 				lastCarrotOffset += 5.0f;
@@ -1187,8 +1271,10 @@ namespace Jazz2::UI
 		if (health >= 5) {
 			float angle = angleBase1 * 10.0f;
 			lastCarrotOffset -= 1.0f;
-			DrawElement(PickupCarrot, 3, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-			DrawElement(PickupCarrot, 3, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupCarrot, 3, x + lastCarrotOffset - 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				DrawElement(PickupCarrot, 3, x + lastCarrotOffset + 1.0f, y + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			}
 			DrawElement(PickupCarrot, 3, x + lastCarrotOffset, y, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 			lastCarrotIdx++;
 			lastCarrotOffset += 5.0f;
@@ -1196,8 +1282,10 @@ namespace Jazz2::UI
 		if (health >= 4) {
 			float angle = angleBase2 * -6.0f - 0.4f;
 			lastCarrotOffset -= 2.0f;
-			DrawElement(PickupCarrot, 5, x + lastCarrotOffset - 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
-			DrawElement(PickupCarrot, 5, x + lastCarrotOffset + 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			if constexpr (Font::ShadowsEnabled) {
+				DrawElement(PickupCarrot, 5, x + lastCarrotOffset - 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+				DrawElement(PickupCarrot, 5, x + lastCarrotOffset + 1.0f, y + 2.0f + 1.0f, FontLayer + lastCarrotIdx * 2, Alignment::Left, CarrotShadowColor, scale, scale, false, angle);
+			}
 			DrawElement(PickupCarrot, 5, x + lastCarrotOffset, y + 2.0f, FontLayer + lastCarrotIdx * 2 + 1, Alignment::Left, Colorf::White, scale, scale, false, angle);
 			lastCarrotIdx++;
 		}
@@ -1584,18 +1672,18 @@ namespace Jazz2::UI
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.2f);
 
-#if defined(DEATH_TARGET_N64)
-				// The whole wheel is line strips, and the RDP draws each segment of one as its own coverage
-				// quad, so this ring of four offset copies costs four times what the wheel itself does - the
-				// most expensive thing on screen while it is open, on the console with the least to spare.
-				// One copy down and to the right still reads as a drop shadow at this size.
-				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-#else
-				DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-#endif
+				if constexpr (Font::ShadowsEnabled) {
+					DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+					DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				} else {
+					// The whole wheel is line strips, and the RDP draws each segment of one as its own coverage
+					// quad, so this ring of four offset copies costs four times what the wheel itself does - the
+					// most expensive thing on screen while it is open, on the console with the least to spare.
+					// One copy down and to the right still reads as a drop shadow at this size.
+					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+				}
 
 #if !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_N64) && !defined(DEATH_TARGET_3DS) && !defined(DEATH_TARGET_PSP)
 				// The half-pixel copies thicken the shadow between the whole-pixel ones under GL's line
@@ -1805,6 +1893,7 @@ namespace Jazz2::UI
 		DrawRenderCommand(command);
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void HUD::RefreshTouchButtons()
 	{
 		using PC = PreferencesCache;
@@ -1854,7 +1943,7 @@ namespace Jazz2::UI
 		}
 
 		// Menu and Console (buttons 9-10)
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
 			const auto& layout = PC::TouchButtons[(std::size_t)Slot::Menu];
 			float sz = roundFast(SmallButtonSize * DefaultRef * layout.Scale);
@@ -1862,7 +1951,7 @@ namespace Jazz2::UI
 				layout.EdgeOffset.X, layout.EdgeOffset.Y, sz, sz);
 			_touchButtons[10] = {};
 		} else
-#endif
+#	endif
 		{
 			{
 				const auto& layout = PC::TouchButtons[(std::size_t)Slot::Menu];
@@ -1962,6 +2051,7 @@ namespace Jazz2::UI
 		float thumbRadius = outerRadius * 0.28f;
 		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.32f));
 	}
+#endif
 
 	void HUD::UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport)
 	{

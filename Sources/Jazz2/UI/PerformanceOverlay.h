@@ -37,7 +37,9 @@ namespace Jazz2::UI
 		not reallocate it. A column is as wide as the widest text it held over the last few seconds rather than as
 		its text is now: sized to the current text, the whole table would jump sideways every time a value gains
 		or loses a digit, while a column that never narrowed would stay as wide as the frame time of the hitch
-		that loaded the level. Where the off-screen pass cannot be set up, the table is drawn directly instead.
+		that loaded the level. The table has no background of its own, only the text over the scene, so where a render
+		target has no alpha channel to leave the rest of the texture see-through, it is drawn directly instead - and
+		so it is wherever the off-screen pass cannot be set up.
 	*/
 	class PerformanceOverlay
 	{

@@ -282,7 +282,7 @@ namespace ShaderCompiler
 		// Metal (MSL) stage sources: the MslEmitter lowering of VsSource/FsSource - VSMain/FSMain entry points,
 		// the loose uniforms gathered into a "_Globals" struct at [[buffer(0)]], std140 blocks as
 		// `constant Block&` arguments at [[buffer(1..N)]] in reflection order, samplers as texture2d + sampler
-		// pairs at [[texture(j)]]/[[sampler(j)]], and the GL->Metal clip-space Y flip in the vertex epilogue.
+		// pairs at [[texture(j)]]/[[sampler(j)]].
 		// Consumed by the Metal backend, which compiles the text through MTLDevice::newLibrary() at load
 		// time (there is no MSL compiler outside Xcode, so the artifact is source, like the PS Vita's Cg);
 		// other backends ignore them. Null when the MSL lowering was not available (a construct outside the

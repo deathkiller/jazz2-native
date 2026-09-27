@@ -1125,6 +1125,23 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 #if defined(WITH_ONLINE_MULTIPLAYER)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (peer && _state == NetworkState::Listening) {
+			// Remembered until the peer is gone, because the disconnect doesn't bring the reason back
+			// (see TakeKickReason()) - the first kick counts, as that's the one the peer is told about
+			std::unique_lock lock(_lock);
+			bool alreadyKicked = false;
+			for (const KickedPeer& kicked : _kickedPeers) {
+				if (kicked.Target == peer) {
+					alreadyKicked = true;
+					break;
+				}
+			}
+			if (!alreadyKicked) {
+				_kickedPeers.push_back({ peer, reason });
+			}
+		}
+#	endif
 #	if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
 			// Close under the lock while the peer is confirmed present, so the socket can't be
@@ -1144,6 +1161,37 @@ namespace Jazz2::Multiplayer
 #	endif
 #endif
 	}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+	Reason NetworkManagerBase::TakeKickReason(const Peer& peer, Reason reason)
+	{
+		// ENet reports a disconnect the server started with no reason at all (the data of the event is the one
+		// the remote side sent, and a peer acknowledging a disconnect sends none), and the WebSocket close code
+		// is whatever the client answered with, so the reason the server kicked the peer for is kept aside
+		std::unique_lock lock(_lock);
+		for (std::size_t i = 0; i < _kickedPeers.size(); i++) {
+			if (_kickedPeers[i].Target == peer) {
+				reason = _kickedPeers[i].KickReason;
+				_kickedPeers.eraseUnordered(i);
+				break;
+			}
+		}
+		return reason;
+	}
+
+	void NetworkManagerBase::ForgetKickReason(const Peer& peer)
+	{
+		// A peer kicked before it was fully connected is reset by ENet without any disconnect event, and its
+		// handle is then reused by the next connection, which mustn't inherit the kick
+		std::unique_lock lock(_lock);
+		for (std::size_t i = 0; i < _kickedPeers.size(); i++) {
+			if (_kickedPeers[i].Target == peer) {
+				_kickedPeers.eraseUnordered(i);
+				break;
+			}
+		}
+	}
+#endif
 
 
 	String NetworkManagerBase::AddressToString(const struct in_addr& address, std::uint16_t port)
@@ -1669,6 +1717,8 @@ namespace Jazz2::Multiplayer
 			switch (ev.type) {
 				case WsQueuedEvent::Type::Open: {
 					Peer wsPeer = Peer::FromWebSocket(ev.peer);
+					// The socket may live at the address of one that was kicked before
+					ForgetKickReason(wsPeer);
 					ConnectionResult result = OnPeerConnected(wsPeer, ev.clientData);
 					if (result.IsSuccessful()) {
 						std::unique_lock lock(_lock);
@@ -1685,7 +1735,8 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 				case WsQueuedEvent::Type::Close: {
-					OnPeerDisconnected(Peer::FromWebSocket(ev.peer), WsCloseCodeToReason(ev.closeCode, true));
+					Peer wsPeer = Peer::FromWebSocket(ev.peer);
+					OnPeerDisconnected(wsPeer, TakeKickReason(wsPeer, WsCloseCodeToReason(ev.closeCode, true)));
 					break;
 				}
 				case WsQueuedEvent::Type::Message: {
@@ -2046,7 +2097,7 @@ namespace Jazz2::Multiplayer
 						if DEATH_LIKELY(!p.IsWebSocket())
 #		endif
 						{
-							_this->OnPeerDisconnected(p, Reason::ConnectionLost);
+							_this->OnPeerDisconnected(p, _this->TakeKickReason(p, Reason::ConnectionLost));
 						}
 					}
 					ENetAddress addr = host->address;
@@ -2071,6 +2122,7 @@ namespace Jazz2::Multiplayer
 
 			switch (ev.type) {
 				case ENET_EVENT_TYPE_CONNECT: {
+					_this->ForgetKickReason(ev.peer);
 					ConnectionResult result = _this->OnPeerConnected(ev.peer, ev.data);
 					if DEATH_LIKELY(result.IsSuccessful()) {
 						std::unique_lock lock(_this->_lock);
@@ -2105,10 +2157,10 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 				case ENET_EVENT_TYPE_DISCONNECT:
-					_this->OnPeerDisconnected(ev.peer, Reason(ev.data));
+					_this->OnPeerDisconnected(ev.peer, _this->TakeKickReason(ev.peer, Reason(ev.data)));
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-					_this->OnPeerDisconnected(ev.peer, Reason::ConnectionLost);
+					_this->OnPeerDisconnected(ev.peer, _this->TakeKickReason(ev.peer, Reason::ConnectionLost));
 					break;
 			}
 
@@ -2129,6 +2181,7 @@ namespace Jazz2::Multiplayer
 				}
 			}
 			_this->_connectedPeers.clear();
+			_this->_kickedPeers.clear();
 
 			enet_host_destroy(_this->_host);
 			_this->_host = nullptr;

@@ -1,5 +1,6 @@
 ﻿#include "SuckerFloat.h"
 #include "../../ILevelHandler.h"
+#include "../../Events/EventSpawner.h"
 #include "../../Tiles/TileMap.h"
 #include "Sucker.h"
 #include "../Player.h"
@@ -55,6 +56,20 @@ namespace Jazz2::Actors::Enemies
 		EnemyBase::OnUpdate(timeMult);
 	}
 
+	void SuckerFloat::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_phase);
+	}
+
+	void SuckerFloat::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_phase = src.ReadValueAsLE<float>();
+	}
+
 	bool SuckerFloat::OnPerish(ActorBase* collider)
 	{
 		bool shouldDestroy = (_frozenTimeLeft > 0.0f);
@@ -87,12 +102,15 @@ namespace Jazz2::Actors::Enemies
 			}
 
 			std::shared_ptr<Sucker> sucker = std::make_shared<Sucker>();
-			std::uint8_t suckerParams[1] = { (std::uint8_t)dir };
-			sucker->OnActivated(ActorActivationDetails(
+			std::uint8_t suckerParams[Events::EventSpawner::SpawnParamsSize] = { (std::uint8_t)dir };
+			ActorActivationDetails details(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
 				suckerParams
-			));
+			);
+			// The sucker is a regular event object, so it can be spawned again from a level state snapshot
+			details.Type = EventType::EnemySucker;
+			sucker->OnActivated(details);
 			_levelHandler->AddActor(sucker);
 		}
 

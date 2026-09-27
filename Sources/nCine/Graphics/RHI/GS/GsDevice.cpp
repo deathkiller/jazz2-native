@@ -11,6 +11,7 @@
 #include "../../../../Main.h"
 
 #include <cstring>
+#include <utility>
 
 extern "C" {
 #include <graph.h>
@@ -685,14 +686,29 @@ namespace nCine::RHI::GS
 				return;
 			}
 
+			// A SPRITE goes out top-left corner first, whichever way the pass's camera runs. The corners arrive in
+			// the sprite's own (ax, ay) order, which under a Y-up camera - the textured background's pass - puts
+			// the bottom one first, and the GS rasterizes such a sprite a row off: the first row of the target
+			// was never drawn, and the warp that samples it showed a dark line wherever its bands wrap.
+			float x0 = px[2], y0 = py[0], x1 = px[0], y1 = py[1];
+			float u0 = pu[2], v0 = pv[0], u1 = pu[0], v1 = pv[1];
+			if (x0 > x1) {
+				std::swap(x0, x1);
+				std::swap(u0, u1);
+			}
+			if (y0 > y1) {
+				std::swap(y0, y1);
+				std::swap(v0, v1);
+			}
+
 			if (state.Page == GsVram::InvalidPage) {
 				qword_t* q = Reserve(8);
 				rect_t rect;
-				rect.v0.x = px[2] + offsetX;
-				rect.v0.y = py[0] + offsetY;
+				rect.v0.x = x0 + offsetX;
+				rect.v0.y = y0 + offsetY;
 				rect.v0.z = 0;
-				rect.v1.x = px[0] + offsetX;
-				rect.v1.y = py[1] + offsetY;
+				rect.v1.x = x1 + offsetX;
+				rect.v1.y = y1 + offsetY;
 				rect.v1.z = 0;
 				rect.color = color;
 				q = draw_rect_filled(q, 0, &rect);
@@ -711,17 +727,17 @@ namespace nCine::RHI::GS
 			ApplyTexture(state);
 			qword_t* q = Reserve(8);
 			texrect_t rect;
-			rect.v0.x = px[2] + offsetX;
-			rect.v0.y = py[0] + offsetY;
+			rect.v0.x = x0 + offsetX;
+			rect.v0.y = y0 + offsetY;
 			rect.v0.z = 0;
-			rect.v1.x = px[0] + offsetX;
-			rect.v1.y = py[1] + offsetY;
+			rect.v1.x = x1 + offsetX;
+			rect.v1.y = y1 + offsetY;
 			rect.v1.z = 0;
 			// UVs arrive normalized; the GS addresses texels, so they scale by the sampled extent
-			rect.t0.u = pu[2] * float(state.SampledWidth);
-			rect.t0.v = pv[0] * float(state.SampledHeight);
-			rect.t1.u = pu[0] * float(state.SampledWidth);
-			rect.t1.v = pv[1] * float(state.SampledHeight);
+			rect.t0.u = u0 * float(state.SampledWidth);
+			rect.t0.v = v0 * float(state.SampledHeight);
+			rect.t1.u = u1 * float(state.SampledWidth);
+			rect.t1.v = v1 * float(state.SampledHeight);
 			rect.color = color;
 			q = draw_rect_textured(q, 0, &rect);
 			_packetCursor = q;
@@ -1091,10 +1107,8 @@ namespace nCine::RHI::GS
 			}
 		}
 
-		// A render-target pass renders bottom-up (see the Y mirror in Dispatch), so a scissor rectangle
-		// given in top-down logical coordinates does not describe the rows it would clip. Those passes
-		// therefore pass the whole target - which is what they effectively did before this existed, minus
-		// the stale rectangle left behind by the previous screen pass.
+		// A render-target pass is never scissored on this tier, so it passes the whole target - which also
+		// keeps it from inheriting the stale rectangle left behind by the previous screen pass.
 		if (!_scissor.Enabled || _currentRenderTarget != nullptr) {
 			ApplyScissorArea(0, extentW - 1, 0, extentH - 1);
 			return;
@@ -1287,8 +1301,8 @@ namespace nCine::RHI::GS
 				// Nothing to render into. FRAME is deliberately left where it was and the pass is dropped
 				// instead: returning while _currentRenderTarget is set used to leave the colour buffer
 				// pointing at the DISPLAY, so a target that failed to allocate did not lose its pass - it
-				// drew the pass over the screen, bottom-up and unscissored, because everything downstream
-				// reads _currentRenderTarget to decide the Y direction and the scissor extent
+				// drew the pass over the screen, unscissored, because everything downstream reads
+				// _currentRenderTarget to decide the scissor extent
 				_renderTargetSurfaceMissing = true;
 				return;
 			}
@@ -1717,7 +1731,7 @@ namespace nCine::RHI::GS
 			ResolveBlendEquation(nCine::BlendingFactor::Zero, nCine::BlendingFactor::OneMinusSrcAlpha, equation);
 			ApplyBlendEquation(equation);
 
-			// The lightmap's row 0 is the BOTTOM of the displayed viewport (the software buffer convention),
+			// The lightmap's row 0 is the BOTTOM of the displayed viewport (the convention it is built in),
 			// so V runs used -> 0 from top to bottom. Corner indexing is the sprite path's (ax, ay) weights.
 			const float uMax = float(light.LmW) / float(texW);
 			const float vMax = float(light.LmH) / float(texH);
@@ -2121,12 +2135,12 @@ namespace nCine::RHI::GS
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
 
-		// Constant NDC-to-raster mapping, folded in once rather than reapplied per corner. The GS scans out
-		// its buffer top-down, so screen passes mirror NDC exactly as the PVR backend does.
-		const bool screenPass = (_currentRenderTarget == nullptr);
+		// Constant NDC-to-raster mapping, folded in once rather than reapplied per corner. Every pass is
+		// top-down (see RhiFwd.h): NDC's y = +1 is raster row 0 of the screen, which the GS scans out top-down,
+		// and of a render target, which is sampled from its first row.
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 
 		// The GS has a HARDWARE scissor, so unlike the PowerVR there is no geometric quad clipping here.
@@ -2438,14 +2452,13 @@ namespace nCine::RHI::GS
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
-		const bool screenPass = (_currentRenderTarget == nullptr);
 
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
-		// transform once instead of being reapplied per vertex. A screen pass mirrors NDC, which is just the
-		// sign of the Y scale.
+		// transform once instead of being reapplied per vertex. The raster is top-down like NDC's y = +1,
+		// which is just the negative sign of the Y scale.
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
@@ -2644,10 +2657,9 @@ namespace nCine::RHI::GS
 			? _viewport : Recti(0, 0, _logicalWidth, _logicalHeight);
 		float scaleX, scaleY, offsetX, offsetY;
 		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
-		const bool screenPass = (_currentRenderTarget == nullptr);
 		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
 		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
-		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterScaleY = -0.5f * float(viewport.H) * scaleY;
 		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 		const Transform2D raster = {
 			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,

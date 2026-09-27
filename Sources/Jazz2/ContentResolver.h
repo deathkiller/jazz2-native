@@ -359,6 +359,8 @@ namespace Jazz2
 		bool LevelExists(StringView levelName);
 		/** @brief Loads specified level into a level descriptor */
 		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
+		/** @brief Reads only the name of the next level from a given level file, without loading the level */
+		bool TryGetNextLevelName(StringView path, String& nextLevel);
 		/** @brief Loads default (sprite) palette */
 		void ApplyDefaultPalette();
 		/**

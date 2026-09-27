@@ -89,17 +89,16 @@ namespace nCine::RHI::D3D11
 			return true;
 		}
 
-		// Flip-blit shader used at present: a fullscreen triangle (SV_VertexID) that samples the intermediate present
-		// texture with a vertically flipped V. Every draw is rendered GL-bottom-up (clip-space Y flipped in the
-		// projection, see BindConstantBuffers) into the present texture; this final flip turns that bottom-up
-		// composite into the upright top-down image the DXGI back-buffer scans out.
+		// Blit shader used at present: a fullscreen triangle (SV_VertexID) that copies the intermediate present
+		// texture into the DXGI back-buffer. Both are top-down, as every target is (see RhiFwd.h), so V follows
+		// the rows unchanged.
 		const char* kPresentVs =
 			"struct VOut { float4 pos : SV_Position; float2 uv : TEXCOORD0; };\n"
 			"VOut VSMain(uint id : SV_VertexID) {\n"
 			"  VOut o;\n"
 			"  float2 t = float2((id << 1) & 2, id & 2);\n"
 			"  o.pos = float4(t.x * 2.0 - 1.0, 1.0 - t.y * 2.0, 0.0, 1.0);\n"
-			"  o.uv = float2(t.x, 1.0 - t.y);\n"	// flip V
+			"  o.uv = t;\n"
 			"  return o;\n"
 			"}\n";
 		const char* kPresentPs =
@@ -109,10 +108,9 @@ namespace nCine::RHI::D3D11
 			"  return tex.Sample(smp, uv);\n"
 			"}\n";
 
-		// Builds a normal (top-down) D3D11 viewport for a target. The GL<->D3D vertical orientation is handled
-		// entirely by flipping clip-space Y in the projection matrix (see BindConstantBuffers) plus the single
-		// flip-blit at present - a negative-height viewport, the usual GL-on-D3D trick, is silently ignored by the
-		// D3D11 runtime here (its sign has no effect), so the viewport is always kept positive.
+		// Builds the D3D11 viewport for a target. Direct3D renders top-down natively, which is the RHI's own
+		// convention (see RhiFwd.h) - clip-space y = +1 at the top, rectangles counted from the top-left corner -
+		// so the rectangle is taken as it is.
 		D3D11_VIEWPORT MakeViewport(const Recti& rect)
 		{
 			D3D11_VIEWPORT vp;
@@ -221,7 +219,6 @@ namespace nCine::RHI::D3D11
 	ID3D11PixelShader* D3D11Device::_presentPs = nullptr;
 	ID3D11SamplerState* D3D11Device::_presentSampler = nullptr;
 	ID3D11RenderTargetView* D3D11Device::_secondaryTargetRtv = nullptr;
-	std::int32_t D3D11Device::_secondaryTargetHeight = 0;
 
 	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::_cbufferPool;
 	SmallVector<std::uint8_t, 0> D3D11Device::_cbufferStaging;
@@ -368,9 +365,6 @@ namespace nCine::RHI::D3D11
 
 		BindCurrentRenderTarget();
 
-		// The viewport is always positive/top-down; the GL<->D3D vertical flip is applied uniformly in the vertex
-		// transform (projection matrix Y negated in BindConstantBuffers), which flips every draw to every target
-		// consistently - so back-buffer geometry and off-screen render targets stay in agreement with no present-flip.
 		if (!_lastViewportValid || _lastViewport != _viewport) {
 			D3D11_VIEWPORT vp = MakeViewport(_viewport);
 			_context->RSSetViewports(1, &vp);
@@ -438,7 +432,7 @@ namespace nCine::RHI::D3D11
 
 	ID3D11RenderTargetView* D3D11Device::ScreenRtv()
 	{
-		// "Screen" is the intermediate present texture (flip-blitted into the back-buffer at present time), or the
+		// "Screen" is the intermediate present texture (copied into the back-buffer at present time), or the
 		// back-buffer itself if that texture is missing - unless drawing is currently redirected into a secondary
 		// swap chain, whose back-buffer then stands in for the screen target
 		if (_secondaryTargetRtv != nullptr) {
@@ -452,11 +446,10 @@ namespace nCine::RHI::D3D11
 		static_assert(MaxRenderTargets == D3D11RenderTarget::MaxColorAttachments,
 			"The device's RTV shadow must span every color attachment a render target can hold");
 
-		// "Screen" (no render target bound) is directed into the intermediate present texture; PresentFrame()
-		// flip-blits it into the real back-buffer (the single GL bottom-up -> D3D top-down scan-out correction).
-		// Falls back to the back-buffer if the present texture is absent. An off-screen render target binds
-		// every color attachment it has enabled for drawing (the contiguous attached run, bounded by
-		// SetDrawBuffers - the glDrawBuffers equivalent).
+		// "Screen" (no render target bound) is directed into the intermediate present texture, which PresentFrame()
+		// copies into the real back-buffer; the back-buffer itself is drawn into if that texture is absent. An
+		// off-screen render target binds every color attachment it has enabled for drawing (the contiguous
+		// attached run, bounded by SetDrawBuffers - the glDrawBuffers equivalent).
 		ID3D11RenderTargetView* rtvs[MaxRenderTargets] = {};
 		std::uint32_t numRtvs;
 		if (_currentRenderTarget != nullptr) {
@@ -544,7 +537,7 @@ namespace nCine::RHI::D3D11
 				const std::uint8_t* srcBytes = nullptr;
 				if (slot.IsGlobals) {
 					// Loose uniforms are scattered across the program's resolved-value pointers, so gather them
-					// (plus the projection Y-flip) into the reusable staging buffer first.
+					// into the reusable staging buffer first.
 					if (_cbufferStaging.size() < uploadSize) {
 						_cbufferStaging.resize(uploadSize);
 					}
@@ -554,22 +547,6 @@ namespace nCine::RHI::D3D11
 						const std::uint8_t* src = prog->ResolveUniform(gv.Name.c_str());
 						if (src != nullptr && gv.Offset + gv.Size <= uploadSize) {
 							std::memcpy(dst + gv.Offset, src, gv.Size);
-							// Orientation fix: the engine renders in the OpenGL convention, which is upside down on
-							// D3D's top-down back-buffer and render targets (a negative-height viewport, the usual
-							// remedy, is ignored by the D3D11 runtime here). Instead flip clip-space Y for every draw
-							// by negating the projection matrix's second row (indices 1,5,9,13 of the column-major
-							// mat4). Applied uniformly to every shader (all use uProjectionMatrix; ImGui uses
-							// uGuiProjection), this renders every target bottom-up exactly like GL, keeping the scene
-							// composite and direct-drawn HUD consistent; PresentFrame() flip-blits once for D3D scan-out.
-							// The exception is a secondary swap chain (an ImGui platform window): it is presented
-							// directly, with no flip-blit to undo the flip, so it is drawn top-down as D3D expects.
-							if (_secondaryTargetHeight == 0 && gv.Size >= 64 && (gv.Name == "uProjectionMatrix" || gv.Name == "uGuiProjection")) {
-								float* m = reinterpret_cast<float*>(dst + gv.Offset);
-								m[1] = -m[1];
-								m[5] = -m[5];
-								m[9] = -m[9];
-								m[13] = -m[13];
-							}
 						}
 					}
 					srcBytes = dst;
@@ -783,29 +760,18 @@ namespace nCine::RHI::D3D11
 			}
 		}
 
-		// Scissor rectangle. The engine specifies it in GL window space (bottom-left origin), and every draw is
-		// rasterized bottom-up because clip-space Y is flipped in the projection (see BindConstantBuffers), so
-		// virtually every surface drawn into stores its rows bottom-up: off-screen render targets and equally the
-		// intermediate present texture the "screen" path is redirected to. A GL Y therefore maps straight to a
-		// D3D row index (top = glY) - the correction is PresentFrame()'s flip-blit. The real back-buffer is
-		// top-down but is never scissored into (that blit runs with the default rasterizer state, which has
-		// scissoring disabled); a secondary swap chain, drawn top-down because it skips the flip-blit, is not.
+		// Scissor rectangle. The engine counts it from the top-left corner of the target (see RhiFwd.h), like
+		// D3D11 itself, so it maps straight onto the target's rows.
 		if (_scissor.Enabled) {
 			const Recti& r = _scissor.Rect;
-			// The one top-down surface is a secondary swap chain's back-buffer (see _secondaryTargetHeight), whose
-			// rows therefore need the standard flip against the target height
-			std::int32_t top = r.Y;
-			if (_secondaryTargetHeight > 0) {
-				top = _secondaryTargetHeight - (r.Y + r.H);
-			}
 			D3D11_RECT sr;
 			// A rectangle may reach outside the target (an ImGui window dragged past the left/top edge gives
 			// negative coordinates); D3D11 rejects negative scissor bounds outright, which would leave the
 			// previous rectangle in effect, so clamp instead - oversized bounds the rasterizer handles itself
 			sr.left = (r.X > 0 ? r.X : 0);
-			sr.top = (top > 0 ? top : 0);
+			sr.top = (r.Y > 0 ? r.Y : 0);
 			sr.right = (r.X + r.W > sr.left ? r.X + r.W : sr.left);
-			sr.bottom = (top + r.H > sr.top ? top + r.H : sr.top);
+			sr.bottom = (r.Y + r.H > sr.top ? r.Y + r.H : sr.top);
 			if (!_lastScissorValid || _lastScissorRect.L != sr.left || _lastScissorRect.T != sr.top ||
 				_lastScissorRect.R != sr.right || _lastScissorRect.B != sr.bottom) {
 				_context->RSSetScissorRects(1, &sr);
@@ -1292,7 +1258,7 @@ namespace nCine::RHI::D3D11
 		_device->CreateRenderTargetView(_presentTexture, nullptr, &_presentRtv);
 		_device->CreateShaderResourceView(_presentTexture, nullptr, &_presentSrv);
 
-		// Compile the flip-blit shaders and sampler once (kept across resizes)
+		// Compile the present blit shaders and sampler once (kept across resizes)
 		if (_presentVs == nullptr || _presentPs == nullptr) {
 			ID3DBlob* vsBlob = nullptr;
 			ID3DBlob* psBlob = nullptr;
@@ -1301,7 +1267,7 @@ namespace nCine::RHI::D3D11
 				_device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &_presentVs);
 				_device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &_presentPs);
 			} else {
-				LOGE("Failed to compile the Direct3D 11 present flip-blit shaders");
+				LOGE("Failed to compile the Direct3D 11 present blit shaders");
 			}
 			SafeRelease(vsBlob);
 			SafeRelease(psBlob);
@@ -1328,10 +1294,7 @@ namespace nCine::RHI::D3D11
 
 	void D3D11Device::PresentFrame()
 	{
-		// Every draw was rendered GL-bottom-up (clip-space Y flipped in the projection) into the present texture;
-		// flip-blit it vertically into the real back-buffer, then present. This is the single GL->D3D scan-out
-		// correction (the software backend's SDL_FLIP_VERTICAL equivalent), applied only at the final output so it
-		// is uniform across every path regardless of how many off-screen round-trips it made.
+		// Every draw onto the screen went into the present texture; blit it into the real back-buffer, then present
 		if (_context != nullptr && _backbufferRtv != nullptr && _presentSrv != nullptr &&
 			_presentVs != nullptr && _presentPs != nullptr) {
 			_context->OMSetRenderTargets(1, &_backbufferRtv, nullptr);
@@ -1560,7 +1523,6 @@ namespace nCine::RHI::D3D11
 		// left bound by the scene must be cleared first, and the shadow state dropped so the next draw rebinds
 		_currentRenderTarget = nullptr;
 		_secondaryTargetRtv = sc->Rtv;
-		_secondaryTargetHeight = sc->Height;
 		InvalidateCachedState();
 
 		if (clear) {
@@ -1575,7 +1537,6 @@ namespace nCine::RHI::D3D11
 			return;
 		}
 		_secondaryTargetRtv = nullptr;
-		_secondaryTargetHeight = 0;
 		// The next draw must not keep writing into the window that is no longer bound
 		InvalidateCachedState();
 	}
@@ -1615,7 +1576,6 @@ namespace nCine::RHI::D3D11
 		// Secondary swap chains are owned by whoever created them (ImGui destroys its platform windows on
 		// shutdown); just make sure a redirection cannot outlive the device
 		_secondaryTargetRtv = nullptr;
-		_secondaryTargetHeight = 0;
 		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();

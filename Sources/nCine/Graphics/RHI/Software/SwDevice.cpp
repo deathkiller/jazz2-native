@@ -245,8 +245,7 @@ namespace nCine::RHI::Software
 		if (!ResolveFramebuffer(fb)) {
 			return;
 		}
-		// A render target's color texture is stored bottom-up, the screen back-buffer top-down; Clear fills
-		// the whole store either way, so the flag only has to match SetColorBuffer's row convention
+		// Clear fills the whole store; the flag only tells a render texture from the (possibly RGB565) screen
 		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, _currentRenderTarget != nullptr);
 		SwRaster::Clear(_clearColor.R, _clearColor.G, _clearColor.B, _clearColor.A);
 	}
@@ -543,9 +542,10 @@ namespace nCine::RHI::Software
 		// High-quality extras (noise displacement, chromatic aberration, light rays, wavy surface shape) are
 		// dropped - both quality settings share this effect on the software backend.
 		//
-		// Rows inside the viewport run bottom-up visually (row = camY - worldY + vpH/2, the same convention the
-		// lightmap uses; the present blit flips the buffer), so the underwater part (worldY > waterY) is the row
-		// range [0, waterRowLimit) and the waterline sits at row waterRowLimit, counted from the buffer's top.
+		// Rows are counted bottom-up inside the viewport here (row = camY - worldY + vpH/2, the convention the
+		// lightmap uses), so the underwater part (worldY > waterY) is the row range [0, waterRowLimit) and the
+		// waterline sits at row waterRowLimit. The buffer itself is top-down like every store (see RhiFwd.h), so
+		// row y lives vpH - 1 - y rows below the viewport's top edge.
 		const float invVpH = 1.0f / (float)vpH;
 		float waterRowLimit = 0.0f;
 		std::int32_t belowEndExcl = 0;
@@ -582,15 +582,16 @@ namespace nCine::RHI::Software
 		// texel leaves the scene pixel as-is. The row cores are the CPU-dispatched SIMD kernels (the lighting one
 		// bit-identical to the scalar loop it replaced, see SwScanlineOps.h).
 		for (std::int32_t y = 0; y < vpH; y++) {
+			const std::size_t fbRow = (std::size_t)(vpY + vpH - 1 - y);
 			std::uint8_t* px;
 #if defined(RHI_USE_FB16)
 			// The screen framebuffer is RGB565 in this mode; stage each touched row as RGBA8 so the row
 			// kernels below (wave shift, water tint, lighting combine) stay unchanged, then store it back
-			std::uint8_t* fbRow16 = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 2;
+			std::uint8_t* fbRow16 = fb.pixels + fbRow * fb.strideBytes + (std::size_t)vpX * 2;
 			SwLoadFbSpan565(g_fb16RowStage, fbRow16, vpW);
 			px = g_fb16RowStage;
 #else
-			px = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 4;
+			px = fb.pixels + fbRow * fb.strideBytes + (std::size_t)vpX * 4;
 #endif
 
 			const bool isUnderwaterRow = (hasWater && y < belowEndExcl);
@@ -881,10 +882,9 @@ namespace nCine::RHI::Software
 			return;
 		}
 
-		// A render target's color texture is stored bottom-up (OpenGL framebuffer convention); the screen
-		// back-buffer is top-down. The engine derives every store's orientation - and the matching sample
-		// alignment - from this one flag, so the effects never need a manual Y-flip.
-		const bool isFboTarget = (_currentRenderTarget != nullptr);
+		// Every store is top-down, a render texture's and the screen's alike (see RhiFwd.h); the flag only tells
+		// the two apart for the screen's RGB565 mode
+		const bool isRenderTarget = (_currentRenderTarget != nullptr);
 
 		const Recti viewport = (_viewport.W > 0 && _viewport.H > 0) ? _viewport : Recti(0, 0, fb.width, fb.height);
 
@@ -929,9 +929,10 @@ namespace nCine::RHI::Software
 		const float* pv = CachedProjView(projMat, viewMat);
 
 		// Persistent rasterizer state for every quad this draw issues
-		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, isFboTarget);
+		SwRaster::SetColorBuffer(fb.pixels, fb.width, fb.height, isRenderTarget);
 		SwRaster::SetViewport(viewport.X, viewport.Y, viewport.W, viewport.H);
-		// nCine hands scissor rectangles in bottom-up (OpenGL) window coordinates; the engine flips them
+		// The engine hands viewport and scissor rectangles counted from the target's top-left corner, which is
+		// how the raster rows run too
 		SwRaster::SetScissor(_scissor.Enabled, _scissor.Rect.X, _scissor.Rect.Y, _scissor.Rect.W, _scissor.Rect.H);
 
 		SwBlendFactor bsrc = SwBlendFactor::One, bdst = SwBlendFactor::Zero;

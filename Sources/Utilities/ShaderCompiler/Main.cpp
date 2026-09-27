@@ -2092,7 +2092,7 @@ namespace
 	/**
 		Compiles the built-in Cg shaders that have no `.shader` file behind them.
 
-		The RSX backend needs a present shader to flip its intermediate screen surface into the display
+		The RSX backend needs a present shader to copy its intermediate screen surface into the display
 		buffer, and no other backend does, so it has no GLSL counterpart to be lowered from - it is written
 		as Cg directly, next to the shaders it is generated alongside.
 	*/

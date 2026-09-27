@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Enemies
 		bool OnPerish(ActorBase* collider) override;
 		bool OnHandleCollision(ActorBase* other) override;
 		void OnHitFloor(float timeMult) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		float _lastAngle;

@@ -23,6 +23,9 @@
 	It is compared in full, patch included, so a bump of any component is enough to separate two builds and the
 	number is free to move independently of the release it ships in. Only ever set here: it is deliberately not
 	derived from the build or from Git, so two builds of the same wire format always agree on it.
+
+	A server accepts the clients from @ref NCINE_PROTOCOL_VERSION_MIN to @ref NCINE_PROTOCOL_VERSION_MAX, which
+	is only this version unless set otherwise.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
 // Bumped past the released 3.8.0: `ServerPacketType::UpdateAllActors` gained a variable-length light block
@@ -31,10 +34,34 @@
 // flag is set on the very first update - an unbumped 3.8.0 client reads the light bytes as the next entry's
 // actor id and every remote actor after the first one in the packet gets a garbage id, flags and position.
 //
-// A patch bump is enough because the comparison is exact (see GameEventHandler::OnPacketReceived()); this
-// number tracks the wire format, not the release it happens to ship in, so it does not have to wait for the
-// next minor.
+// A patch bump is enough because the accepted range is exactly this version by default (see
+// NCINE_PROTOCOL_VERSION_MIN); this number tracks the wire format, not the release it happens to ship in, so
+// it does not have to wait for the next minor.
 #	define NCINE_PROTOCOL_VERSION "3.8.1"
+#endif
+/**
+	@brief Oldest client multiplayer protocol version the server accepts
+
+	Together with @ref NCINE_PROTOCOL_VERSION_MAX it bounds the protocol versions of the clients a server lets
+	in, which is checked when a client authenticates. The server announces the range in local discovery, in the
+	public server list and in its answer to the authentication, so the server list can tell which servers the
+	local client fits, and the client can leave a server whose answer carries no range (a server older than the
+	range, which let it in by a looser check of its own).
+
+	Lower it only when the server still talks to the older clients correctly, i.e. the wire changed since then
+	only in ways they don't notice, or the server handles those clients differently. Both bounds are inclusive.
+*/
+#if !defined(NCINE_PROTOCOL_VERSION_MIN)
+#	define NCINE_PROTOCOL_VERSION_MIN NCINE_PROTOCOL_VERSION
+#endif
+/**
+	@brief Newest client multiplayer protocol version the server accepts
+
+	See @ref NCINE_PROTOCOL_VERSION_MIN. Raise it above @ref NCINE_PROTOCOL_VERSION only for a newer protocol
+	version already known to stay compatible with this one.
+*/
+#if !defined(NCINE_PROTOCOL_VERSION_MAX)
+#	define NCINE_PROTOCOL_VERSION_MAX NCINE_PROTOCOL_VERSION
 #endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
@@ -106,9 +133,11 @@
 	mentioned - which is how the consoles ended up offering to configure touch controls.
 
 	Where it is not defined, no touch event ever reaches the game (the input backends drop them at the
-	source), so the on-screen controls can never appear and the section that configures them is gone from
-	the options. The PS Vita does have a front touchscreen and a rear touchpad, but both sit exactly where
-	the console is held, so they only ever fire by accident - it is played with the sticks and buttons.
+	source), so the on-screen controls can never appear - and the code that only serves them is compiled
+	out: the HUD's touch buttons and joystick, the touch dispatch and back arrow of the menus, the touch
+	handling of the in-game console and the multiplayer lobby, and the section that configures the controls.
+	The PS Vita does have a front touchscreen and a rear touchpad, but both sit exactly where the console is
+	held, so they only ever fire by accident - it is played with the sticks and buttons.
 */
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_EMSCRIPTEN) || \
 		defined(DEATH_TARGET_SWITCH) || \

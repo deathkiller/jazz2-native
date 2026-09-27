@@ -231,6 +231,7 @@ namespace Jazz2::UI::Multiplayer
 		return true;
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void MpInGameLobby::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (event.type != TouchEventType::Down) {
@@ -305,6 +306,7 @@ namespace Jazz2::UI::Multiplayer
 			}
 		}
 	}
+#endif
 
 	bool MpInGameLobby::IsVisible() const
 	{
@@ -412,9 +414,11 @@ namespace Jazz2::UI::Multiplayer
 	void MpInGameLobby::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(this, text, charOffsetShadow, x, y + 2.8f * scale, z - 10,
-			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(this, text, charOffsetShadow, x, y + 2.8f * scale, z - 10,
+				align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		}
 		_smallFont->DrawString(this, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}

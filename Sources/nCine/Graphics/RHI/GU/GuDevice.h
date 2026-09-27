@@ -182,8 +182,9 @@ namespace nCine::RHI::GU
 
 			The GE's true limit, reported honestly: it makes `ContentResolver` cut tileset atlases into
 			chunks that each fit one GE texture, which is what the number is for. Prebaked content that is
-			larger anyway (the small font atlas is 128x529) is NOT rejected - @ref GuTexture splits such an
-			image into 512x512 pages internally and the draw path picks the page a primitive samples - so
+			larger anyway (Devan's fire-breathing animation is 119x1004) is NOT rejected - @ref GuTexture
+			splits such an image into 512x512 pages internally and the draw path picks the page a primitive
+			samples, which the converted sheets are laid out for (see `JJ2Anims::SheetPageSize`) - so
 			`Texture::Initialize()` only warns about it on this backend instead of asserting.
 		*/
 		static inline std::int32_t GetMaxTextureDimension() {

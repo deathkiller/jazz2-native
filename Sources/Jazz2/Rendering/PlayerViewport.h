@@ -50,6 +50,10 @@ namespace Jazz2::Rendering
 		// Vertical follow anchor for the deadzone (see UpdateCamera): the camera holds this Y while the player makes
 		// only small vertical movements, so bumps on uneven ground don't jolt the view.
 		float _cameraViewCenterY;
+		// Direction (-1 or 1) the lead of a small view points in, and how long a standing player has been facing
+		// the other way (see UpdateCamera)
+		float _lookAheadDirectionX;
+		float _lookAheadTurnTime;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
@@ -92,6 +96,8 @@ namespace Jazz2::Rendering
 		void OverrideCamera(float x, float y, bool topLeft = false);
 		/** @brief Instantly moves the camera to the target actor */
 		void WarpCameraToTarget(bool fast);
+		/** @brief Places the look-ahead where it rests for the target actor as it stands now, instead of easing into it */
+		void ResetLookAhead();
 
 	private:
 		// Below this focus speed there is no look-ahead - the camera stays exactly on the player, so slow nudging or
@@ -106,6 +112,19 @@ namespace Jazz2::Rendering
 		static constexpr float MaxLookAheadFraction = 0.4f;
 		// Per-frame rate at which the look-ahead eases toward its target (cumulative + smooth - it never snaps in/out).
 		static constexpr float LookAheadSmoothing = 0.04f;
+		// A view at most half the default width (LevelHandler::DefaultWidth - the Nintendo 64's 320x240, a player's
+		// quarter of a splitscreen) shows so little of what is ahead that a lead proportional to the speed leaves the
+		// player standing centred with nothing to see and running into what the view has not shown yet. So a small
+		// view always leads, in the direction the player faces, and further while moving (see IsSmallView()).
+		//
+		// The lead held while standing, as a fraction of the half-view - 40 px of a 320 px view.
+		static constexpr float SmallViewIdleLeadFraction = 0.25f;
+		// Cap of the whole lead in a small view, the resting lead plus the usual speed lead, in place of
+		// MaxLookAheadFraction - 96 px of a 320 px view, which still leaves the player 64 px from the edge behind it.
+		static constexpr float SmallViewMaxLookAheadFraction = 0.6f;
+		// How long (in frames at 60 FPS) a standing player has to face the other way before the lead follows, so
+		// turning round to shoot does not swing the view back and forth. Moving turns it at once.
+		static constexpr float SmallViewTurnDelay = 30.0f;
 		// Vertical deadzone: the camera holds its Y while the player stays within +-this many pixels of it, so small
 		// bumps (steps, slopes, landing jitter) don't move the view; it snaps to follow once the player leaves the band.
 		static constexpr float VerticalDeadzone = 24.0f;
@@ -128,5 +147,8 @@ namespace Jazz2::Rendering
 		// does not. This clamp is also active from the very first tick of a walk *and* of a dash, which is how
 		// the target is known to be a distance rather than something proportional to the speed.
 		static constexpr float LegacyCameraMaxStep = 1.0f;
+
+		/** @brief Returns `true` if the view is at most half the default width, which makes the camera lead further */
+		bool IsSmallView() const;
 	};
 }

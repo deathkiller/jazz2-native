@@ -28,7 +28,8 @@ namespace Jazz2::Actors::Environment
 
 	Task<bool> Bird::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		SetState(ActorState::SkipPerPixelCollisions, true);
+		// The bird belongs to its player, so it stays when the level is rolled back to a checkpoint
+		SetState(ActorState::SkipPerPixelCollisions | ActorState::PreserveOnRollback, true);
 		SetState(ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
 
 		_type = details.Params[0];

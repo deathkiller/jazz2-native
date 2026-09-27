@@ -165,11 +165,11 @@ namespace nCine::Backends
 			}
 		}
 
-		// The engine framebuffer is R,G,B,A bytes with the bottom scanline first (OpenGL convention);
-		// libretro XRGB8888 wants packed 0x00RRGGBB rows top-down, so swizzle and flip vertically
+		// The engine framebuffer is R,G,B,A bytes with the top scanline first (see RhiFwd.h); libretro XRGB8888
+		// wants packed 0x00RRGGBB rows top-down as well, so only the swizzle is needed
 		_converted.resize((std::size_t)fb.width * fb.height);
 		for (std::int32_t y = 0; y < fb.height; y++) {
-			const std::uint8_t* src = fb.pixels + (std::size_t)(fb.height - 1 - y) * fb.strideBytes;
+			const std::uint8_t* src = fb.pixels + (std::size_t)y * fb.strideBytes;
 			std::uint32_t* dst = _converted.data() + (std::size_t)y * fb.width;
 			for (std::int32_t x = 0; x < fb.width; x++) {
 				dst[x] = ((std::uint32_t)src[0] << 16) | ((std::uint32_t)src[1] << 8) | src[2];

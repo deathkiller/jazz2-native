@@ -172,9 +172,11 @@ namespace Jazz2::UI::Menu
 				_logoTransition = 1.0f;
 			}
 		}
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_touchButtonsTimer > 0.0f) {
 			_touchButtonsTimer -= timeMult;
 		}
+#endif
 
 		UpdateActiveSection(timeMult);
 	}
@@ -236,6 +238,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 	void MainMenu::OnTouchEvent(const nCine::TouchEvent& event)
 	{
 		if (!_sections.empty()) {
@@ -245,6 +248,7 @@ namespace Jazz2::UI::Menu
 			lastSection->OnTouchEvent(event, _canvasBackground->ViewSize);
 		}
 	}
+#endif
 
 	bool MainMenu::MenuBackgroundCanvas::OnDraw(RenderQueue& renderQueue)
 	{
@@ -278,21 +282,27 @@ namespace Jazz2::UI::Menu
 		float logoTranslateY = (1.0f - _owner->_logoTransition) * 120.0f;
 		float logoTextTranslate = (1.0f - _owner->_logoTransition) * 60.0f;
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		if (_owner->_touchButtonsTimer > 0.0f && _owner->_sections.size() >= 2) {
 			float arrowScale = MenuLayout::Blend(0.7f, 1.0f, ViewSize);
 			_owner->DrawElement(MenuLineArrow, -1, static_cast<float>(center.X), titleY - titleOffset, ShadowLayer, Alignment::Center, Colorf::White, arrowScale, arrowScale);
 		}
+#endif
 
 		// Title
-		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		if constexpr (Font::ShadowsEnabled) {
+			_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
+		}
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
-		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
-		_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
-		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
-			Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffsetShadow, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
+			_owner->_mediumFont->DrawString(this, "2"_s, charOffsetShadow, center.X - 19.0f * logoTranslateX + logoTextTranslate, titleY - 8.0f + logoTranslateY + 2.0f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
+			_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffsetShadow, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY + 2.5f, FontShadowLayer + 200,
+				Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
+		}
 
 		_owner->_mediumFont->DrawString(this, "Jazz"_s, charOffset, center.X - 63.0f * logoTranslateX + logoTextTranslate, titleY + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.75f * logoTextScale, 1.65f, 3.0f, 3.0f, 0.0f, 0.92f);
@@ -468,9 +478,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		Canvas* currentCanvas = GetActiveCanvas();
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
-			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
+				align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		}
 		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}
@@ -1101,7 +1113,9 @@ namespace Jazz2::UI::Menu
 			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
-			_camera->SetOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
+			// Y up, as in TileMap::TexturedBackgroundPass - the textured background shaders read the texture with V
+			// running up the layer
+			_camera->SetOrthoProjection(0, static_cast<float>(width), static_cast<float>(height), 0);
 			_camera->SetView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);

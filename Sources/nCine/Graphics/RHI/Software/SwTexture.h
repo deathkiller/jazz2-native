@@ -93,7 +93,7 @@ namespace nCine::RHI::Software
 		inline nCine::SamplerFilter GetMagFilter() const {
 			return _magFilter;
 		}
-		/** @brief Returns `true` if the texture is bound as a color render target (its store is treated as bottom-up by the fast blit) */
+		/** @brief Returns `true` if the texture is bound as a color render target (stored top-down like any other) */
 		inline bool IsRenderTarget() const {
 			return _isRenderTarget;
 		}

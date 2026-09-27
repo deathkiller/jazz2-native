@@ -16,7 +16,10 @@ namespace Jazz2::UI::Menu
 {
 	MenuContainerBase::MenuContainerBase()
 		: _contentBounds(), _activeCanvas(ActiveCanvas::Background), _metadata(nullptr), _smallFont(nullptr),
-			_mediumFont(nullptr), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll), _touchButtonsTimer(0.0f)
+			_mediumFont(nullptr), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll)
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+			, _touchButtonsTimer(0.0f)
+#endif
 	{
 	}
 
@@ -315,9 +318,11 @@ namespace Jazz2::UI::Menu
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		Canvas* currentCanvas = GetActiveCanvas();
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
-			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
+			_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
+				align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
+		}
 		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}

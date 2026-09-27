@@ -19,10 +19,6 @@ namespace Jazz2::Compatibility
 {
 	namespace
 	{
-		// Largest sprite sheet any supported platform can sample. The smallest limit among them decides it,
-		// so a sheet that fits here needs no per-platform variant of the converted assets.
-		constexpr std::int32_t MaxTextureSize = 1024;
-
 		std::int32_t NextPowerOfTwo(std::int32_t value)
 		{
 			std::int32_t result = 1;
@@ -31,17 +27,223 @@ namespace Jazz2::Compatibility
 			}
 			return result;
 		}
+
+		// A sheet is split into at most this many pages along each axis
+		constexpr std::int32_t MaxPagesPerAxis = (JJ2Anims::MaxSheetSize + JJ2Anims::SheetPageSize - 1) / JJ2Anims::SheetPageSize;
+
+		/** @brief One row of the shelf packer, no taller than the rectangle that opened it */
+		struct Shelf
+		{
+			std::int32_t Y, Height;
+			/** @brief Where the next rectangle goes in each page column the shelf crosses */
+			std::int32_t Cursor[MaxPagesPerAxis];
+		};
+
+		/**
+			@brief Tries to lay the rectangles out in a sheet of the given width, see JJ2Anims::PackRectangles()
+
+			First fit: every rectangle, tallest first, goes into the first shelf that still has room for it,
+			and only when none has is a new shelf opened below the others - which, unlike filling one shelf
+			after another, puts the small rectangles at the end into the gaps the large ones left.
+
+			A rectangle never lies across a multiple of `pageSize`. Along the width, each shelf keeps a separate
+			cursor for every page column, so a rectangle that would run across the line starts the next column
+			instead. Along the height, a new shelf opens in the first band of pages that still has room for all
+			of it - so the small shelves at the end fill up the bottom of the bands the large ones left - but
+			that is only done when `banded` is set: without it everything has to fit into a single page's
+			height, which is tried first. Every column and band except the last also keeps `spacing` free
+			before its page line, because a backend that samples the sheet whole draws the rectangles on both
+			sides of it as the neighbours they are. A `pageSize` of at least `maxSize` disables all of that.
+
+			`usedWidth` and `usedHeight` receive the extent of what was placed, also when not everything was.
+		*/
+		bool TryPackIntoWidth(SmallVectorImpl<JJ2Anims::PackedFrame>& rects, const SmallVectorImpl<std::int32_t>& order,
+			std::int32_t width, std::int32_t spacing, std::int32_t pageSize, std::int32_t maxSize, bool banded,
+			SmallVectorImpl<Shelf>& shelves, std::int32_t& usedWidth, std::int32_t& usedHeight)
+		{
+			usedWidth = 0;
+			usedHeight = 0;
+
+			const std::int32_t columnCount = (width + pageSize - 1) / pageSize;
+			const std::int32_t bandCount = (banded ? (maxSize + pageSize - 1) / pageSize : 1);
+			if (columnCount > MaxPagesPerAxis || bandCount > MaxPagesPerAxis) {
+				return false;
+			}
+
+			std::int32_t columnEnd[MaxPagesPerAxis];
+			for (std::int32_t c = 0; c < columnCount; c++) {
+				columnEnd[c] = (c < columnCount - 1 ? (c + 1) * pageSize - spacing : width);
+			}
+			std::int32_t bandEnd[MaxPagesPerAxis], bandFill[MaxPagesPerAxis];
+			for (std::int32_t b = 0; b < bandCount; b++) {
+				bandEnd[b] = (b < bandCount - 1 ? (b + 1) * pageSize - spacing : std::min((b + 1) * pageSize, maxSize));
+				bandFill[b] = b * pageSize;
+			}
+
+			shelves.clear();
+			for (std::int32_t i : order) {
+				JJ2Anims::PackedFrame& rect = rects[i];
+				bool placed = false;
+				for (Shelf& shelf : shelves) {
+					if (rect.H > shelf.Height) {
+						continue;
+					}
+					for (std::int32_t c = 0; c < columnCount; c++) {
+						if (shelf.Cursor[c] + rect.W <= columnEnd[c]) {
+							rect.X = shelf.Cursor[c];
+							rect.Y = shelf.Y;
+							shelf.Cursor[c] += rect.W + spacing;
+							placed = true;
+							break;
+						}
+					}
+					if (placed) {
+						break;
+					}
+				}
+
+				if (!placed) {
+					std::int32_t band = 0;
+					while (band < bandCount && bandFill[band] + rect.H > bandEnd[band]) {
+						band++;
+					}
+					if (band >= bandCount) {
+						return false;
+					}
+
+					Shelf& shelf = shelves.emplace_back();
+					shelf.Y = bandFill[band];
+					shelf.Height = rect.H;
+					bandFill[band] += rect.H + spacing;
+					for (std::int32_t c = 0; c < columnCount; c++) {
+						shelf.Cursor[c] = c * pageSize;
+					}
+					for (std::int32_t c = 0; c < columnCount && !placed; c++) {
+						if (shelf.Cursor[c] + rect.W <= columnEnd[c]) {
+							rect.X = shelf.Cursor[c];
+							rect.Y = shelf.Y;
+							shelf.Cursor[c] += rect.W + spacing;
+							placed = true;
+						}
+					}
+					if (!placed) {
+						return false;		// Wider than any column
+					}
+				}
+
+				usedWidth = std::max(usedWidth, rect.X + rect.W);
+				usedHeight = std::max(usedHeight, rect.Y + rect.H);
+			}
+			return true;
+		}
+	}
+
+	bool JJ2Anims::PackRectangles(SmallVectorImpl<PackedFrame>& rects, std::int32_t spacing, std::int32_t& sheetWidth, std::int32_t& sheetHeight)
+	{
+		const std::int32_t count = std::int32_t(rects.size());
+		if (count <= 0) {
+			return false;
+		}
+
+		std::int32_t widest = 1;
+		for (const PackedFrame& rect : rects) {
+			widest = std::max(widest, rect.W);
+		}
+
+		// Tallest first, so each shelf is filled by rectangles of similar height. The index decides between
+		// equal sizes, which keeps the layout the same whatever std::sort does with them.
+		SmallVector<std::int32_t, 0> order(count);
+		for (std::int32_t i = 0; i < count; i++) {
+			order[i] = i;
+		}
+		std::sort(order.begin(), order.end(), [&rects](std::int32_t a, std::int32_t b) {
+			if (rects[a].H != rects[b].H) {
+				return rects[a].H > rects[b].H;
+			}
+			if (rects[a].W != rects[b].W) {
+				return rects[a].W > rects[b].W;
+			}
+			return a < b;
+		});
+
+		// Try the sheet widths that could hold the widest rectangle and keep the best result - by the padded
+		// area first, then whether the sheet fits into one page, then the exact area, then the more square one.
+		// A layout depends on the width only through which rectangles fit where, so one that ends up narrower
+		// than the width it was tried at comes out the same at every width down to its own - the widths are
+		// tried from the widest down, and all of those are skipped.
+		SmallVector<Shelf, 0> shelves;
+		SmallVector<std::int32_t, 0> bestPositions(count * 2);
+		std::int32_t bestWidth = 0, bestHeight = 0;
+		std::int64_t bestPaddedArea = INT64_MAX, bestArea = INT64_MAX;
+		bool bestExceedsPage = true;
+		std::int32_t bestSkew = INT32_MAX;
+		// Nothing across a page line if at all possible - the second pass, which ignores the pages, is only
+		// reached when the rectangles cannot be laid out around them within the size limit at all
+		for (std::int32_t pageSize : { SheetPageSize, MaxSheetSize }) {
+			std::int32_t width = MaxSheetSize;
+			while (width >= widest) {
+				std::int32_t usedWidth, usedHeight;
+				bool fits = TryPackIntoWidth(rects, order, width, spacing, pageSize, MaxSheetSize, false, shelves, usedWidth, usedHeight);
+				std::int32_t reachedWidth = usedWidth;
+				if (!fits && pageSize < MaxSheetSize) {
+					// Taller than one page, so more than one band of pages it is
+					fits = TryPackIntoWidth(rects, order, width, spacing, pageSize, MaxSheetSize, true, shelves, usedWidth, usedHeight);
+					reachedWidth = std::max(reachedWidth, usedWidth);
+				}
+
+				if (fits) {
+					const std::int64_t paddedArea = std::int64_t(NextPowerOfTwo(usedWidth)) * NextPowerOfTwo(usedHeight);
+					const bool exceedsPage = (usedWidth > SheetPageSize || usedHeight > SheetPageSize);
+					const std::int64_t area = std::int64_t(usedWidth) * usedHeight;
+					const std::int32_t skew = std::abs(usedWidth - usedHeight);
+					// The widths only get narrower from here, and the narrower one wins a complete tie
+					if (paddedArea != bestPaddedArea ? paddedArea < bestPaddedArea
+						: exceedsPage != bestExceedsPage ? !exceedsPage
+						: area != bestArea ? area < bestArea
+						: skew <= bestSkew) {
+						bestPaddedArea = paddedArea;
+						bestExceedsPage = exceedsPage;
+						bestArea = area;
+						bestSkew = skew;
+						bestWidth = usedWidth;
+						bestHeight = usedHeight;
+						for (std::int32_t i = 0; i < count; i++) {
+							bestPositions[i * 2] = rects[i].X;
+							bestPositions[i * 2 + 1] = rects[i].Y;
+						}
+					}
+				}
+
+				// The same holds whether the attempt fitted or not - every decision up to where it ended would be
+				// made the same way - but only as long as the width keeps its number of page columns
+				const std::int32_t narrowestWithSameColumns = ((width - 1) / pageSize) * pageSize + 1;
+				width = std::max(reachedWidth, narrowestWithSameColumns) - 1;
+			}
+			if (bestWidth > 0) {
+				break;
+			}
+		}
+		if (bestWidth <= 0) {
+			return false;
+		}
+
+		for (std::int32_t i = 0; i < count; i++) {
+			rects[i].X = bestPositions[i * 2];
+			rects[i].Y = bestPositions[i * 2 + 1];
+		}
+		// Never empty, even when every rectangle is
+		sheetWidth = std::max<std::int32_t>(bestWidth, 1);
+		sheetHeight = std::max<std::int32_t>(bestHeight, 1);
+		return true;
 	}
 
 	/**
 		@brief Packs the frames of one animation so each keeps only the space it needs
 
 		A frame's own extent is usually much smaller than the largest frame of its animation, and a grid
-		of equal cells pays for the difference in every single frame. The frames are placed in rows
-		ordered by height (shelf packing), which for sprite sheets - many similar heights, few outliers -
-		comes within a few percent of the theoretical minimum while staying simple enough to reason about.
-		The sheet is sized to the power-of-two dimensions that waste the least memory, since hardware that
-		cannot sample non-power-of-two textures pads it to exactly that.
+		of equal cells pays for the difference in every single frame. The frames are laid out by
+		@ref PackRectangles(), which for sprite sheets - many similar heights, few outliers - comes within
+		a few percent of the theoretical minimum while staying simple enough to reason about.
 	*/
 	bool JJ2Anims::PackFramesTightly(const AnimSection& anim, std::int32_t border,
 		SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight)
@@ -53,7 +255,6 @@ namespace Jazz2::Compatibility
 
 		packed.clear();
 		packed.reserve(frameCount);
-		std::int32_t widest = 0;
 		for (std::int32_t i = 0; i < frameCount; i++) {
 			const AnimFrameSection& frame = anim.Frames[i];
 			PackedFrame& p = packed.emplace_back();
@@ -68,72 +269,10 @@ namespace Jazz2::Compatibility
 			// (see GenericGraphicResource::GetFrameAnchor / GetFrameOffset).
 			p.OffsetX = anim.NormalizedHotspotX + frame.HotspotX + border;
 			p.OffsetY = anim.NormalizedHotspotY + frame.HotspotY + border;
-			widest = std::max(widest, p.W);
 		}
 
-		// Tallest first, so each row is filled by frames of similar height
-		SmallVector<std::int32_t, 0> order(frameCount);
-		for (std::int32_t i = 0; i < frameCount; i++) {
-			order[i] = i;
-		}
-		std::sort(order.begin(), order.end(), [&packed](std::int32_t a, std::int32_t b) {
-			if (packed[a].H != packed[b].H) {
-				return packed[a].H > packed[b].H;
-			}
-			return packed[a].W > packed[b].W;
-		});
-
-		// Try every sheet width that could hold the widest frame and keep the best result
-		std::int32_t bestWidth = 0, bestHeight = 0;
-		std::int64_t bestArea = INT64_MAX;
-		for (std::int32_t width = NextPowerOfTwo(widest); width <= MaxTextureSize; width <<= 1) {
-			std::int32_t x = 0, rowY = 0, rowHeight = 0;
-			for (std::int32_t i = 0; i < frameCount; i++) {
-				const PackedFrame& p = packed[order[i]];
-				if (x > 0 && x + p.W > width) {
-					rowY += rowHeight + border;
-					x = 0;
-					rowHeight = 0;
-				}
-				x += p.W + border;
-				rowHeight = std::max(rowHeight, p.H);
-			}
-			const std::int32_t height = NextPowerOfTwo(rowY + rowHeight);
-			if (height > MaxTextureSize) {
-				continue;
-			}
-
-			// Several widths usually pad to the same area; among those prefer the squarest sheet, which keeps
-			// the sheet away from the maximum texture size and samples better than a long narrow strip
-			const std::int64_t cost = std::int64_t(width) * height * 4096 + std::abs(width - height);
-			if (cost < bestArea) {
-				bestArea = cost;
-				bestWidth = width;
-				bestHeight = height;
-			}
-		}
-		if (bestWidth <= 0) {
-			return false;		// Does not fit, fall back to the regular grid
-		}
-
-		// Lay the frames out for real at the chosen size
-		std::int32_t x = 0, rowY = 0, rowHeight = 0;
-		for (std::int32_t i = 0; i < frameCount; i++) {
-			PackedFrame& p = packed[order[i]];
-			if (x > 0 && x + p.W > bestWidth) {
-				rowY += rowHeight + border;
-				x = 0;
-				rowHeight = 0;
-			}
-			p.X = x;
-			p.Y = rowY;
-			x += p.W + border;
-			rowHeight = std::max(rowHeight, p.H);
-		}
-
-		sheetWidth = bestWidth;
-		sheetHeight = bestHeight;
-		return true;
+		// Does not fit when it fails, the caller falls back to the regular grid
+		return PackRectangles(packed, border, sheetWidth, sheetHeight);
 	}
 
 	JJ2Version JJ2Anims::Convert(StringView path, PakWriter& pakWriter, bool isPlus, ConversionProgress progress)
@@ -451,8 +590,10 @@ namespace Jazz2::Compatibility
 
 			std::int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
 			std::int32_t sizeY = (anim.AdjustedSizeY + AddBorder * 2);
+			// Only reported if the grid is really used, most animations are packed tightly instead (see below)
+			bool gridFits = true;
 			// Determine the frame configuration to use. Each asset should fit into a texture of
-			// MaxTextureSize², the smallest limit among the supported platforms.
+			// MaxSheetSize², the smallest limit among the supported platforms.
 			if (anim.FrameCount > 1) {
 				// Pick the grid whose texture wastes the least memory once it is rounded up to power-of-two
 				// dimensions. Graphics hardware that cannot sample non-power-of-two textures has to pad them,
@@ -476,7 +617,7 @@ namespace Jazz2::Compatibility
 					const std::int32_t width = columns * sizeX;
 					const std::int32_t height = rows * sizeY;
 					const std::int64_t paddedArea = std::int64_t(NextPowerOfTwo(width)) * NextPowerOfTwo(height);
-					if (width > MaxTextureSize || height > MaxTextureSize) {
+					if (width > MaxSheetSize || height > MaxSheetSize) {
 						if (paddedArea < fallbackCost) {
 							fallbackCost = paddedArea;
 							fallbackColumns = columns;
@@ -496,8 +637,7 @@ namespace Jazz2::Compatibility
 					}
 				}
 				if (bestColumns == 0) {
-					LOGW("No frame configuration of {}:{} \"{}/{}\" fits into a {}x{} texture ({} frames of {}x{})",
-						anim.Set, anim.Anim, entry->Category, entry->Name, MaxTextureSize, MaxTextureSize, anim.FrameCount, sizeX, sizeY);
+					gridFits = false;
 					bestColumns = (fallbackColumns > 0 ? fallbackColumns : maxColumns);
 					bestRows = (fallbackRows > 0 ? fallbackRows : 255);
 				}
@@ -544,9 +684,17 @@ namespace Jazz2::Compatibility
 			SmallVector<PackedFrame, 0> packedFrames;
 			std::int32_t sheetWidth = 0, sheetHeight = 0;
 			const bool tightlyPacked = PackFramesTightly(anim, AddBorder, packedFrames, sheetWidth, sheetHeight);
+			if (tightlyPacked && std::any_of(packedFrames.begin(), packedFrames.end(), LiesAcrossPageLine)) {
+				LOGW("Frames of {}:{} \"{}/{}\" lie across a {}-pixel page line of its {}x{} sheet, a platform that splits the texture into pages draws them cut off",
+					anim.Set, anim.Anim, entry->Category, entry->Name, SheetPageSize, sheetWidth, sheetHeight);
+			}
 			if (!tightlyPacked) {
 				sheetWidth = sizeX * anim.FrameConfigurationX;
 				sheetHeight = sizeY * anim.FrameConfigurationY;
+				if (!gridFits) {
+					LOGW("No frame configuration of {}:{} \"{}/{}\" fits into a {}x{} texture ({} frames of {}x{})",
+						anim.Set, anim.Anim, entry->Category, entry->Name, MaxSheetSize, MaxSheetSize, anim.FrameCount, sizeX, sizeY);
+				}
 			}
 
 			std::int32_t stride = sheetWidth;

@@ -117,6 +117,28 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
+	void Pole::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_fall);
+		dest.WriteValueAsLE<float>(_angleVel);
+		dest.WriteValueAsLE<float>(_angleVelLast);
+		dest.WriteValueAsLE<float>(_fallTime);
+		dest.WriteVariableInt32(_bouncesLeft);
+	}
+
+	void Pole::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_fall = (FallDirection)src.ReadValue<std::uint8_t>();
+		_angleVel = src.ReadValueAsLE<float>();
+		_angleVelLast = src.ReadValueAsLE<float>();
+		_fallTime = src.ReadValueAsLE<float>();
+		_bouncesLeft = src.ReadVariableInt32();
+	}
+
 	void Pole::OnPacketReceived(MemoryStream& packet)
 	{
 		FallDirection fall = (FallDirection)packet.ReadValue<std::uint8_t>();

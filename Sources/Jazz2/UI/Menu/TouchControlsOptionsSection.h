@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "../../../Main.h"
+
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+
 #include "MenuSection.h"
 #include "../../PreferencesCache.h"
 
@@ -103,3 +107,5 @@ namespace Jazz2::UI::Menu
 		void DrawButtonPreview(Canvas* canvas, Jazz2::TouchButtonSlot slot, Vector2i viewSize, bool isFocused) const;
 		void DrawOutlineRect(float cx, float cy, float hw, float hh, std::uint16_t z, float thickness, Colorf color);		void DrawToggle(float left, float top, float w, float h, bool on);	};
 }
+
+#endif

@@ -190,6 +190,28 @@ namespace Jazz2::Actors::Enemies
 		return !IsInvulnerable() && CanCollideWithShots;
 	}
 
+	void EnemyBase::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (CanCollideWithShots) flags |= 0x01;
+		if (_canHurtPlayer) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+		// Score is cleared once it's awarded, so the same enemy cannot be scored twice
+		dest.WriteVariableUint32(_scoreValue);
+	}
+
+	void EnemyBase::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		CanCollideWithShots = ((flags & 0x01) != 0);
+		_canHurtPlayer = ((flags & 0x02) != 0);
+		_scoreValue = src.ReadVariableUint32();
+	}
+
 	void EnemyBase::OnHealthChanged(ActorBase* collider)
 	{
 		StartBlinking();

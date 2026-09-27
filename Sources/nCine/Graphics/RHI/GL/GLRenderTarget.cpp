@@ -1,4 +1,5 @@
 #include "GLRenderTarget.h"
+#include "GLDevice.h"
 
 #include <Containers/StringView.h>
 
@@ -71,11 +72,13 @@ namespace nCine::RHI::GL
 	void GLRenderTarget::BindDraw()
 	{
 		_fbo.Bind(GL_DRAW_FRAMEBUFFER);
+		GLDevice::SetRenderTargetBound(true);
 	}
 
 	void GLRenderTarget::UnbindDraw()
 	{
 		GLFramebuffer::Unbind(GL_DRAW_FRAMEBUFFER);
+		GLDevice::SetRenderTargetBound(false);
 	}
 
 	bool GLRenderTarget::SetDrawBuffers(std::uint32_t numColorAttachments)

@@ -6,6 +6,7 @@
 
 #include "DiscImage.h"
 #include "FontPacker.h"
+#include "SpriteRepacker.h"
 
 #include "../../Main.h"
 #include "../../Jazz2/ContentFileTypes.h"
@@ -462,7 +463,9 @@ namespace
 		@brief Adds a directory tree to a package under the specified path
 
 		A file the package already carries is left out --- the conversion runs first, so what the original data
-		provides is what a path present in both resolves to, exactly as it does when the two are separate.
+		provides is what a path present in both resolves to, exactly as it does when the two are separate. A
+		hand-made sprite sheet that a platform would have to split into pages is re-laid out on the way in (see
+		@ref AssetPacker::SpriteRepacker).
 	*/
 	bool AddDirectoryToPak(PakWriter& pakWriter, StringView sourcePath, StringView targetPath)
 	{
@@ -479,6 +482,18 @@ namespace
 			}
 
 			auto s = fs::Open(item, FileAccess::Read);
+			if (s->IsValid() && fs::GetExtension(item) == "aura"_s) {
+				MemoryStream repacked(16384);
+				if (AssetPacker::SpriteRepacker::TryRepack(*s, repacked, item)) {
+					repacked.Seek(0, SeekOrigin::Begin);
+					if (!pakWriter.AddFile(repacked, targetItem, PakPreferredCompression::Deflate)) {
+						LOGW("Cannot add \"{}\" to the package", item);
+						success = false;
+					}
+					continue;
+				}
+				s->Seek(0, SeekOrigin::Begin);
+			}
 			if (!s->IsValid() || !pakWriter.AddFile(*s, targetItem, PakPreferredCompression::Deflate)) {
 				LOGW("Cannot add \"{}\" to the package", item);
 				success = false;

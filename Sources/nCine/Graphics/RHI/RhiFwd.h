@@ -34,9 +34,32 @@
 // @ref RenderBatcher collects nothing and every command is submitted on its own. Correct, just more draws.
 // It is a build-time fact everywhere (a shader profile either expresses the indexing or it does not), which
 // is why it lives here rather than among the runtime @ref IRhiCapabilities values.
+//
+// `RHI_CAP_TRANSPARENT_RENDER_TARGETS` means a render target keeps an alpha channel - a single bit of it is
+// enough - that the draws into it write and a later draw sampling the target blends by, so whatever a pass
+// leaves undrawn stays see-through where its texture is drawn over the scene. Every backend of the shader tier
+// has it (the HUD overlay layer is such a target); of the direct tier only those whose target surfaces carry
+// alpha do, as several render into RGB565 and have none. Without it, a pass meant to be composited over the
+// scene is drawn onto it directly instead.
+//
+// Every backend renders TOP-DOWN, the convention of Direct3D, Metal and the consoles: clip-space y = +1 is the
+// top edge of the viewport for a pass onto the screen and for a pass into a render target alike, the first row
+// of a render target is its top one - so a texture coordinate v = 0 samples the top of what was rendered,
+// exactly as it samples the first row of an uploaded image - and viewport and scissor rectangles are pixels of
+// the target counted from its top-left corner. Cameras are therefore Y-down wherever they render, and a pass
+// that renders into a texture uses the same projection as one that renders onto the screen.
+//
+// `RHI_RENDER_TARGETS_BOTTOM_UP` means the backend stores a render target the OpenGL way, with the row at
+// clip-space y = -1 first. The engine then flips clip-space Y of every pass that renders into one (see
+// RenderResources::UpdateCameraUniforms()), which lands the top of the pass on the first row after all; a pass
+// onto the screen needs no flip, since what is displayed is top-down already. OpenGL is the only family that
+// defines it - its window-space origin is the bottom-left corner - and it also converts the viewport and
+// scissor rectangles of a pass onto the screen (see GLDevice::SetViewport()).
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
+#define RHI_RENDER_TARGETS_BOTTOM_UP
 #if !defined(RHI_GL_PROFILE_ES2)
 // ES2 has no uniform buffer objects to put the instance array in, and the batched programs' ESSL 100 form is
 // not even valid there (a "uint aMeshIndex" integer attribute), so that profile does not batch
@@ -121,9 +144,11 @@ namespace nCine::RHI
 // defined; but its "shaders" are slow CPU-transpiled effects that must NOT drive full-screen post-processing,
 // so `RHI_CAP_SHADERS` is deliberately left undefined. The pipeline then skips the bloom chain, uses the cheap
 // no-shader lighting path and renders the scene directly to the screen buffer instead of through the shader
-// combine/rescale passes.
+// combine/rescale passes. Its render targets are 4-byte RGBA stores, so `RHI_CAP_TRANSPARENT_RENDER_TARGETS` is
+// defined.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_BATCHING
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 
 namespace nCine::RHI::Software
 {
@@ -769,10 +794,15 @@ namespace nCine::RHI
 // textures out of ordinary RDRAM, which the CPU addresses directly (only a cache writeback separates the
 // two), so this holds on the Nintendo 64 as well - the cinematics' indexed frames decode straight into
 // their CI8 store.
+//
+// `RHI_CAP_TRANSPARENT_RENDER_TARGETS` holds because a render target is an RGBA16 surface with one alpha bit,
+// which is all a see-through background needs. The bit is really the pixel's coverage, stored by every write
+// whatever the blending, so the device rejects fully transparent texels rather than blending them away.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
 #define RHI_CAP_BATCHING
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 
 namespace nCine::RHI::RDP
 {
@@ -854,6 +884,7 @@ namespace nCine::RHI
 // OpenGL|ES 2.0 translation layer that sits between the engine and sceGxm.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
 
@@ -961,6 +992,7 @@ namespace nCine::RHI
 // being copied through a staging buffer, exactly as on the PowerVR and the GE.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_STREAMING_TEXTURES
 
 namespace nCine::RHI::RSX
@@ -1040,6 +1072,7 @@ namespace nCine::RHI
 // runs the whole bloom / lighting / combine / rescale chain exactly as it does on OpenGL.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
 
@@ -1124,6 +1157,7 @@ namespace nCine::RHI
 // compiles and `RHI_CAP_HEAVY_RESCALE_SHADERS` holds as well.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
 
@@ -1208,6 +1242,7 @@ namespace nCine::RHI
 // filter compiles and `RHI_CAP_HEAVY_RESCALE_SHADERS` holds as well.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_TRANSPARENT_RENDER_TARGETS
 #define RHI_CAP_HEAVY_RESCALE_SHADERS
 #define RHI_CAP_BATCHING
 

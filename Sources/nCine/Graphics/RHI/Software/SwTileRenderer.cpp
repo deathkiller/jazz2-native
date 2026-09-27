@@ -88,9 +88,9 @@ namespace nCine::RHI::Software
 				SmallVector<SwPaletteLut, 0> paletteLuts;
 				SmallVector<PaletteLutKey, 0> paletteLutKeys;
 
-				// Current render target buffer
+				// Current render target buffer (stored top-down, whether a render texture or the screen)
 				std::uint8_t* targetBuffer = nullptr;
-				bool isFboTarget = false;
+				bool isRenderTarget = false;
 #if defined(RHI_USE_FB16)
 				// Whether targetBuffer is the RGB565 screen framebuffer (tiles are rasterized in RGBA8
 				// scratch either way; only the tile <-> framebuffer copies convert)
@@ -317,13 +317,12 @@ namespace nCine::RHI::Software
 			inline void CopyTileToFramebuffer(const std::uint8_t* tile, std::uint8_t* fb,
 			                                  std::int32_t tileX, std::int32_t tileY,
 			                                  std::int32_t tileW, std::int32_t tileH,
-			                                  std::int32_t fbWidth, std::int32_t fbHeight,
-			                                  bool flipY)
+			                                  std::int32_t fbWidth, std::int32_t fbHeight)
 			{
 				const std::int32_t rowBytes = tileW * 4;
 				for (std::int32_t row = 0; row < tileH; row++) {
 					const std::uint8_t* src = tile + row * TileSize * 4;
-					const std::int32_t dstY = flipY ? (fbHeight - 1 - (tileY + row)) : (tileY + row);
+					const std::int32_t dstY = tileY + row;
 					if DEATH_UNLIKELY(dstY < 0 || dstY >= fbHeight) {
 						continue;
 					}
@@ -345,13 +344,12 @@ namespace nCine::RHI::Software
 			inline void CopyFramebufferToTile(std::uint8_t* tile, const std::uint8_t* fb,
 			                                  std::int32_t tileX, std::int32_t tileY,
 			                                  std::int32_t tileW, std::int32_t tileH,
-			                                  std::int32_t fbWidth, std::int32_t fbHeight,
-			                                  bool flipY)
+			                                  std::int32_t fbWidth, std::int32_t fbHeight)
 			{
 				const std::int32_t rowBytes = tileW * 4;
 				for (std::int32_t row = 0; row < tileH; row++) {
 					std::uint8_t* dst = tile + row * TileSize * 4;
-					const std::int32_t srcY = flipY ? (fbHeight - 1 - (tileY + row)) : (tileY + row);
+					const std::int32_t srcY = tileY + row;
 					if DEATH_UNLIKELY(srcY < 0 || srcY >= fbHeight) {
 						std::memset(dst, 0, rowBytes);
 						continue;
@@ -416,7 +414,7 @@ namespace nCine::RHI::Software
 					// Initialize the tile with current framebuffer contents (needed for correct blending)
 					CopyFramebufferToTile(tileBuf, g_tile.targetBuffer,
 					                      tileX, tileY, tileW, tileH,
-					                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
+					                      g_tile.fbWidth, g_tile.fbHeight);
 				}
 
 				// Render the visible suffix of the commands binned to this tile
@@ -431,7 +429,7 @@ namespace nCine::RHI::Software
 				// Copy the tile back to the framebuffer
 				CopyTileToFramebuffer(tileBuf, g_tile.targetBuffer,
 				                      tileX, tileY, tileW, tileH,
-				                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
+				                      g_tile.fbWidth, g_tile.fbHeight);
 			}
 
 #if defined(WITH_THREADS)
@@ -572,7 +570,7 @@ namespace nCine::RHI::Software
 			g_tile.viewportH = height;
 		}
 
-		void SetTargetBuffer(std::uint8_t* buffer, std::int32_t width, std::int32_t height, bool isFboTarget)
+		void SetTargetBuffer(std::uint8_t* buffer, std::int32_t width, std::int32_t height, bool isRenderTarget)
 		{
 			if DEATH_UNLIKELY(!g_tile.initialized) {
 				return;
@@ -581,7 +579,7 @@ namespace nCine::RHI::Software
 			// The device sets the same target before every draw; do nothing (and never flush) when nothing
 			// changed so consecutive draws to the same surface keep batching into one flush.
 			if (buffer == g_tile.targetBuffer && width == g_tile.fbWidth &&
-			    height == g_tile.fbHeight && isFboTarget == g_tile.isFboTarget) {
+			    height == g_tile.fbHeight && isRenderTarget == g_tile.isRenderTarget) {
 				return;
 			}
 
@@ -597,15 +595,16 @@ namespace nCine::RHI::Software
 				g_tile.fbWidth = 0;
 				g_tile.fbHeight = 0;
 				g_tile.totalTiles = 0;
-				g_tile.isFboTarget = false;
+				g_tile.isRenderTarget = false;
 				return;
 			}
 
 			g_tile.targetBuffer = buffer;
-			g_tile.isFboTarget = isFboTarget;
+			g_tile.isRenderTarget = isRenderTarget;
 #if defined(RHI_USE_FB16)
-			// On the software backend a non-FBO target IS the screen framebuffer - the only 16-bit surface
-			g_tile.is16Bit = !isFboTarget;
+			// On the software backend a target that is not a render texture IS the screen framebuffer - the only
+			// 16-bit surface
+			g_tile.is16Bit = !isRenderTarget;
 #endif
 			g_tile.fbWidth = width;
 			g_tile.fbHeight = height;
@@ -692,11 +691,8 @@ namespace nCine::RHI::Software
 				const float* src = static_cast<const float*>(ctx.vertexData);
 				cmd.vertexStorage.assign(src, src + floatCount);
 			}
-			// scissorRect.Y is stored in top-down screen space so the tile rasterizer can use it directly as a
-			// pixel-row clip. ctx.scissorRect.Y is bottom-up (the RHI scissor convention), so flip it here.
-			if DEATH_UNLIKELY(ctx.scissorEnabled) {
-				cmd.ctx.scissorRect.Y = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
-			}
+			// scissorRect is top-down, like the tile rows (see RhiFwd.h), so the tile rasterizer uses it directly
+			// as a pixel-row clip
 
 			// Compute the screen-space AABB from the draw command
 			std::int32_t screenMinX, screenMinY, screenMaxX, screenMaxY;
@@ -748,11 +744,10 @@ namespace nCine::RHI::Software
 				accurateBounds = false;
 			}
 
-			// Scissor clip — Y always flipped for tile culling because tile rows are indexed top-down in
-			// screen space but the framebuffer stores rows bottom-up.
+			// Scissor clip - the rectangle is top-down, like the tile rows and the framebuffer rows
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
-				std::int32_t scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
-				std::int32_t scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
+				std::int32_t scY0 = ctx.scissorRect.Y;
+				std::int32_t scY1 = ctx.scissorRect.Y + ctx.scissorRect.H - 1;
 				screenMinX = std::max<std::int32_t>(screenMinX, ctx.scissorRect.X);
 				screenMinY = std::max(screenMinY, scY0);
 				screenMaxX = std::min<std::int32_t>(screenMaxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
@@ -797,7 +792,7 @@ namespace nCine::RHI::Software
 					std::int32_t coverMinY = static_cast<std::int32_t>(cmd.prep.fyMin);
 					std::int32_t coverMaxY = static_cast<std::int32_t>(cmd.prep.fyMax - 0.5f);
 					if DEATH_UNLIKELY(ctx.scissorEnabled) {
-						// cmd.ctx.scissorRect.Y was flipped to top-down above, matching tile coordinates
+						// cmd.ctx.scissorRect is top-down, matching tile coordinates
 						coverMinX = std::max<std::int32_t>(coverMinX, cmd.ctx.scissorRect.X);
 						coverMaxX = std::min<std::int32_t>(coverMaxX, cmd.ctx.scissorRect.X + cmd.ctx.scissorRect.W - 1);
 						coverMinY = std::max<std::int32_t>(coverMinY, cmd.ctx.scissorRect.Y);

@@ -936,10 +936,9 @@ emitters use; what makes MSL different from either:
   against its reflected `std140` offset, pads where MSL would place it earlier, spells a `vec3` as
   `packed_float3` where a later member sits in its tail, and **declines** a block it cannot make agree (a
   `mat2`, a `bool`, an array of scalars or `vec2`), so a layout mismatch can never reach the GPU silently.
-- The engine renders GL-style and the Metal backend keeps the GL row order of every render target, so the
-  vertex epilogue negates `gl_Position.y` for every draw (the backend flips the front-face winding to match
-  and presents through a fullscreen triangle that maps the drawable's top row onto the last row). With
-  that flip `gl_FragCoord` is exactly the fragment `[[position]]`.
+- The engine renders top-down on every backend (clip-space y = +1 is the top row of the target, see
+  `RhiFwd.h`), which is Metal's own convention, so `gl_Position` is returned unchanged and `gl_FragCoord`
+  is the fragment `[[position]]`, counted from the top-left corner.
 - Varyings carry `[[user(locnN)]]` in declaration order so the two stages link by index, integer and
   `flat` varyings get `[[flat]]` (Metal requires it), a single fragment output returns
   `float4 [[color(0)]]` and multiple outputs render to `[[color(0..N)]]` in declaration order — the same

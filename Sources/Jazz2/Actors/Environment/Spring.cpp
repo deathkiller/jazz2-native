@@ -173,6 +173,26 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
+	void Spring::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_state);
+		dest.WriteValueAsLE<float>(_cooldown);
+	}
+
+	void Spring::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		State state = (State)src.ReadValue<std::uint8_t>();
+		if (_state == State::Frozen && state != State::Frozen) {
+			// The spring was melted already, the renderer is switched back in OnUpdate() like the first time
+			_state = State::Heated;
+		}
+		_cooldown = src.ReadValueAsLE<float>();
+	}
+
 	void Spring::OnUpdateHitbox()
 	{
 		switch (_orientation) {

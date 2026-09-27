@@ -76,9 +76,11 @@ namespace Jazz2::UI::Multiplayer
 			textScale = 0.8f;
 		}
 
-		std::int32_t charOffsetShadow = 0;
-		_smallFont->DrawString(this, text, charOffsetShadow, x, y + 1.0f, FontShadowLayer, Alignment::Center,
-			Colorf(0.0f, 0.0f, 0.0f, 0.36f), textScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = 0;
+			_smallFont->DrawString(this, text, charOffsetShadow, x, y + 1.0f, FontShadowLayer, Alignment::Center,
+				Colorf(0.0f, 0.0f, 0.0f, 0.36f), textScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+		}
 
 		std::int32_t charOffset = 0;
 		_smallFont->DrawString(this, text, charOffset, x, y, FontLayer, Alignment::Center,

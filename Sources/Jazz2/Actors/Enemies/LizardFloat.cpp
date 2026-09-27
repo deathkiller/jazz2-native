@@ -1,6 +1,7 @@
 ﻿#include "LizardFloat.h"
 #include "Lizard.h"
 #include "../../ILevelHandler.h"
+#include "../../Events/EventSpawner.h"
 #include "../../Tiles/TileMap.h"
 #include "../Explosion.h"
 #include "../Environment/Bomb.h"
@@ -155,6 +156,27 @@ namespace Jazz2::Actors::Enemies
 		_moveTime -= timeMult;
 	}
 
+	void LizardFloat::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValueAsLE<float>(_moveTime);
+	}
+
+	void LizardFloat::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attackTime = src.ReadValueAsLE<float>();
+		_moveTime = src.ReadValueAsLE<float>();
+
+		// The copter was created again at the spawn position
+		if (_copter != nullptr) {
+			_copter->MoveInstantly(Vector2f(_pos.X, _pos.Y + 4.0f), MoveType::Absolute | MoveType::Force);
+		}
+	}
+
 	bool LizardFloat::OnPerish(ActorBase* collider)
 	{
 		if (_copter != nullptr) {
@@ -182,15 +204,18 @@ namespace Jazz2::Actors::Enemies
 			TryGenerateRandomDrop();
 		} else {
 			std::shared_ptr<Lizard> lizard = std::make_shared<Lizard>();
-			std::uint8_t lizardParams[3];
+			std::uint8_t lizardParams[Events::EventSpawner::SpawnParamsSize] = {};
 			lizardParams[0] = _theme;
 			lizardParams[1] = 1;
 			lizardParams[2] = (IsFacingLeft() ? 1 : 0);
-			lizard->OnActivated(ActorActivationDetails(
+			ActorActivationDetails details(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),
 				lizardParams
-			));
+			);
+			// The lizard is a regular event object, so it can be spawned again from a level state snapshot
+			details.Type = EventType::EnemyLizard;
+			lizard->OnActivated(details);
 			_levelHandler->AddActor(lizard);
 
 			Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() + 2), Explosion::Type::SmokeGray);

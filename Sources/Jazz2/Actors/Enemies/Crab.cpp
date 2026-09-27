@@ -83,6 +83,25 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Crab::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_canJumpPrev) flags |= 0x01;
+		if (_stuck) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Crab::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_canJumpPrev = ((flags & 0x01) != 0);
+		_stuck = ((flags & 0x02) != 0);
+	}
+
 	void Crab::OnUpdateHitbox()
 	{
 		UpdateHitbox(26, 20);

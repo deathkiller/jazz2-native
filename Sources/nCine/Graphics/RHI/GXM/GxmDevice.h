@@ -52,15 +52,12 @@ namespace nCine::RHI::GXM
 		`gl_VertexID`, so the device also owns the two small static streams that feed them (see
 		@ref GetQuadCornerStream()).
 
-		<b>The display scans out top-down.</b> The engine renders in the OpenGL convention, and this backend
-		replays it faithfully: every viewport is programmed with a positive Y scale, so clip -Y lands on row
-		0 and every surface - the screen and each off-screen render target - is stored bottom-up exactly like
-		OpenGL. That is what keeps a texture's V axis and its viewport's Y axis pointing the same way, so an
-		off-screen round trip does not flip the image (the property that makes the scene composite and the
-		directly drawn HUD agree). The scan-out then needs the one correction that convention implies:
-		"screen" (no render target bound) is an intermediate surface, and @ref PresentFrame() flips it into
-		the display buffer with a built-in shader - the same single OpenGL-to-native flip the Direct3D 11
-		backend does with its present blit, which also scales the logical resolution up to the panel for free.
+		<b>Everything is top-down,</b> like the display's scan-out and the RHI's convention (see RhiFwd.h):
+		every viewport is programmed with a negative Y scale, so clip +Y lands on its top row, and every
+		surface - the screen and each off-screen render target - stores its top row first, the way a
+		texture's V axis runs. "Screen" (no render target bound) is an intermediate surface that
+		@ref PresentFrame() copies into the display buffer with a built-in shader, which also scales the
+		logical resolution up to the panel for free.
 	*/
 	class GxmDevice
 	{
@@ -236,7 +233,7 @@ namespace nCine::RHI::GXM
 		static std::int32_t GetScreenHeight() {
 			return _screenHeight;
 		}
-		/** @brief Flips the intermediate screen surface into the next display buffer and queues it for scan-out */
+		/** @brief Copies the intermediate screen surface into the next display buffer and queues it for scan-out */
 		static void PresentFrame();
 		/** @brief No-op (sceGxm has no timer queries; how long the CPU waits for the GPU is reported by @ref PresentFrame()) */
 		static inline void BeginGpuTiming() {}
@@ -296,8 +293,8 @@ namespace nCine::RHI::GXM
 			@brief Default width the frame is rendered at, before the present blit stretches it to the panel
 
 			The whole frame - the scene, the upscale pass and the UI on top of it - is rendered into the
-			intermediate screen surface, and @ref PresentFrame() has to resample that surface into the display
-			buffer anyway (the OpenGL-to-native flip). Making the surface smaller than the panel therefore costs
+			intermediate screen surface, and @ref PresentFrame() has to copy that surface into the display
+			buffer anyway. Making the surface smaller than the panel therefore costs
 			nothing extra and takes fragments off every full-screen pass, which is what the SGX543 runs out of
 			first. The gfx device reports this as the drawable resolution, so the logical view the application
 			lays out follows it and the scene is rendered at this size too, rather than at 720x405 stretched
@@ -399,10 +396,10 @@ namespace nCine::RHI::GXM
 		static std::uint32_t _backBufferIndex;
 		static std::uint32_t _frontBufferIndex;
 
-		// The intermediate surface every draw that is not aimed at a render target lands in, kept bottom-up
-		// like OpenGL and flipped into the display buffer at present time (see the class documentation). It is
-		// usually smaller than the panel (see ScreenWidth), so it needs a render target describing its own
-		// tiling; its size is the one CreateScreenSurface() was last given
+		// The intermediate surface every draw that is not aimed at a render target lands in, copied into the
+		// display buffer at present time (see the class documentation). It is usually smaller than the panel
+		// (see ScreenWidth), so it needs a render target describing its own tiling; its size is the one
+		// CreateScreenSurface() was last given
 		static SceGxmRenderTarget* _screenRenderTarget;
 		static GxmMemory::Block _screenBuffer;
 		static SceGxmColorSurface _screenSurface;
@@ -476,7 +473,7 @@ namespace nCine::RHI::GXM
 		static std::uint32_t _clearQuadIndex;
 		static GxmMemory::Block _clearVertices;
 
-		// Present: the screen surface sampled with a flipped V into the display buffer
+		// Present: the screen surface stretched over the display buffer
 		static SceGxmShaderPatcherId _presentVertexId;
 		static SceGxmShaderPatcherId _presentFragmentId;
 		static SceGxmVertexProgram* _presentVertexProgram;
@@ -533,7 +530,7 @@ namespace nCine::RHI::GXM
 			while OpenGL - whose semantics this backend reproduces - has no per-face depth state at all. The
 			engine leaves face culling off, so both facings rasterize, and which one a quad lands on is not
 			something the pipeline controls: it follows from the winding the geometry happens to have after the
-			bottom-up viewport transform, and the two sprite layouts (a 4-vertex strip, six vertices per
+			flipped viewport transform, and the two sprite layouts (a 4-vertex strip, six vertices per
 			batched sprite) do not even agree on it.
 
 			Programming only the front face therefore leaves half the geometry on sceGxm's defaults -

@@ -429,6 +429,11 @@ namespace Jazz2::Actors
 			return (_state & flag) == flag;
 		}
 
+		/** @brief Returns event type the object was spawned from, or @ref EventType::Empty if it wasn't created from an event */
+		EventType GetSpawnEventType() const noexcept {
+			return _spawnEventType;
+		}
+
 	protected:
 		/** @brief Actor renderer */
 		class ActorRenderer : public BaseSprite
@@ -547,6 +552,8 @@ namespace Jazz2::Actors
 		static constexpr std::int32_t PerPixelCollisionStep = 3;
 		/** @brief Maximum number of animation candidates */
 		static constexpr std::int32_t AnimationCandidatesCount = 5;
+		/** @brief Size of event parameters the object was spawned with, the same as @ref Events::EventSpawner::SpawnParamsSize */
+		static constexpr std::int32_t SpawnParamsSize = 16;
 
 		/** @} */
 
@@ -592,6 +599,12 @@ namespace Jazz2::Actors
 
 		Vector2i _originTile;
 		float _spawnFrames;
+		/** @brief Position (and layer) the object was activated at, used to recreate the object from a state snapshot */
+		Vector3i _spawnPos;
+		/** @brief Event type the object was spawned from (see @ref ActorActivationDetails::Type), or @ref EventType::Empty */
+		EventType _spawnEventType;
+		/** @brief Event parameters the object was spawned with, valid only if @ref _spawnEventType is set */
+		std::uint8_t _spawnEventParams[SpawnParamsSize];
 		Metadata* _metadata;
 		ActorRenderer _renderer;
 		GraphicResource* _currentAnimation;
@@ -609,6 +622,33 @@ namespace Jazz2::Actors
 		virtual Task<bool> OnActivatedAsync(const ActorActivationDetails& details);
 		/** @brief Called when corresponding tile should be deactivated */
 		virtual bool OnTileDeactivated();
+
+		/**
+		 * @brief Returns `true` if the live state of the object can be stored in a level state snapshot
+		 *
+		 * A snapshot stores the event type and parameters the object was spawned with together with its live
+		 * state, so the object can be spawned again and resurrected exactly as it was. That works only for objects
+		 * spawned from an event (see @ref ActorActivationDetails::Type) which is registered in @ref Events::EventSpawner.
+		 * Objects that are not worth restoring (e.g., short-lived effects) can opt out by overriding it.
+		 */
+		virtual bool IsSerializable() const;
+		/**
+		 * @brief Serializes the live state of the object to a level state snapshot
+		 *
+		 * Called only if @ref IsSerializable() returns `true`. Anything that is initialized from the event parameters
+		 * in @ref OnActivatedAsync() doesn't need to be stored, because the object is spawned again with the same
+		 * parameters before @ref OnDeserializeState() is called. Derived classes must call the base implementation
+		 * first and read the data back in the same order.
+		 */
+		virtual void OnSerializeState(Stream& dest);
+		/**
+		 * @brief Restores the live state of the object from a level state snapshot
+		 *
+		 * Called right after the object was spawned again (i.e., after @ref OnActivatedAsync()) and before it's
+		 * added to the level. Running transitions are not restored, because their callbacks cannot be serialized,
+		 * so derived classes have to put the object into a state that doesn't wait for such a callback.
+		 */
+		virtual void OnDeserializeState(Stream& src);
 
 		/** @brief Called when the object is attached to an another object */
 		virtual void OnAttach(ActorBase* parent);

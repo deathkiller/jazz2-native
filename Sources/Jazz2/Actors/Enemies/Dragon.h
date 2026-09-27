@@ -25,6 +25,8 @@ namespace Jazz2::Actors::Enemies
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		static constexpr float DefaultSpeed = 0.7f;

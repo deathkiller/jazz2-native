@@ -771,6 +771,25 @@ EEPROM the preferences are saved to.
     untextured instance keeps the general path. Measured on the same level scene, with the same 41
     instances a frame: **33.5 ms to 27.9 ms** per frame @m_span{m-text m-dim} (30 to 36 frames per
     second; the sprite loop itself 9.4 ms to 7.2 ms) @m_endspan.
+-   **Text is drawn without shadows.** Everywhere else each string goes out twice --- a faint black
+    copy offset under it, then the text itself --- and on this console every glyph is a textured
+    rectangle with its own TMEM upload, so the shadows were close to half of what any text cost.
+    @cpp Font::ShadowsEnabled @ce is off here and every shadow draw is guarded by it, so none of that
+    work is done at all @m_span{m-text m-dim} (only the text shadows --- the handful of sprite shadows
+    under the HUD icons and the logo carrot stay) @m_endspan: **118 ms to 74 ms** a frame on the
+    first-run screen, the most text-heavy one, and 38 to 28 ms on the main menu. A level's HUD has
+    little text and gains about a millisecond.
+-   **Glyphs go straight into batches.** A glyph used to be a render command of its own, filled in the
+    visit, then sorted and copied into a batch by @cpp RenderBatcher @ce --- three passes over a few
+    hundred commands that were cold in the 8 KB data cache every time, about 80 us a glyph before the
+    RDP saw it. @cpp Font::DrawString() @ce now writes each glyph's instance straight into a batched
+    command through the canvas's per-font, per-shader, per-layer records
+    (@cpp RenderBatcher::BeginDirectBatch() @ce), which leaves about 30 us a glyph: **65 ms to 51 ms**
+    a frame on the first-run screen. Before that, a render command had also been leaving its visit order
+    uninitialized, and a canvas never sets one, so same-layer commands of the same material sorted
+    apart and hardly batched at all --- fixing that alone took the same screen from 74 to 65 ms. The main
+    menu and a level are paced by the RDP and the display at about 25 ms, so there the CPU time saved
+    shows up as time spent waiting for a framebuffer rather than as a shorter frame.
 -   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
     yet --- ares is the reference until then.
 
@@ -1417,10 +1436,13 @@ game writes. Two renderer notes for the emulator:
 -   **The GPU samples textures bottom-up.** Texture coordinate `v = 0` reads the *last* row in
     memory and `v = 1` the first --- the convention `tex3ds` encodes for, and the reason Citra's
     rasterizer flips `t` --- so the texture stores write the source's first row last
-    @m_span{m-text m-dim} (@cpp PicaTexture::BuildPage() @ce) @m_endspan, and a render target needs
-    no flip of its own: the row rendered at the top lands last in memory, exactly where `v = 0` reads.
-    Every other fixed-function console here stores top-down, which is why the `PICA` device's
-    NDC-to-raster mapping has no render-target mirror where the GE and GX devices have one.
+    @m_span{m-text m-dim} (@cpp PicaTexture::BuildPage() @ce) @m_endspan. A render target needs no
+    flip of its own either: the rasterizer writes clip-space y = -1 into the row `v = 0` samples, as
+    OpenGL does, so the render-target projection @m_span{m-text m-dim}
+    (@cpp PicaDevice::ApplyDrawTarget() @ce) @m_endspan sends a pass's first raster row there. The
+    target is then top-down in texture coordinates like on every other backend @m_span{m-text m-dim}
+    (see @ref nCine::RHI) @m_endspan, and the padding of a target whose size is not a power of two
+    lies below the image instead of shifting it.
 -   **No palette textures.** The PICA200 has no colour lookup, so the engine's R8 and RG8 stores
     @m_span{m-text m-dim} (the palette-indexed sprites) @m_endspan are baked into RGBA4 on the CPU per
     palette row, two baked rows per texture being kept @m_span{m-text m-dim}

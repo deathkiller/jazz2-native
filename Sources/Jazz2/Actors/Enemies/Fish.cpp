@@ -123,6 +123,33 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Fish::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteVariableInt32(_state);
+		dest.WriteValueAsLE<float>(_idleTime);
+		dest.WriteValueAsLE<float>(_attackCooldown);
+		dest.WriteValueAsLE<float>(_direction.X);
+		dest.WriteValueAsLE<float>(_direction.Y);
+	}
+
+	void Fish::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_state = src.ReadVariableInt32();
+		_idleTime = src.ReadValueAsLE<float>();
+		_attackCooldown = src.ReadValueAsLE<float>();
+		_direction.X = src.ReadValueAsLE<float>();
+		_direction.Y = src.ReadValueAsLE<float>();
+
+		// Attacking lasts only until the end of the attack transition
+		if (_state == StateAttacking) {
+			_state = StateBraking;
+		}
+	}
+
 	void Fish::OnHitWall(float timeMult)
 	{
 		EnemyBase::OnHitWall(timeMult);

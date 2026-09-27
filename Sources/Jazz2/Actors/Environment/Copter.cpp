@@ -70,6 +70,24 @@ namespace Jazz2::Actors::Environment
 #endif
 	}
 
+	void Copter::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_state);
+		dest.WriteValueAsLE<float>(_phase);
+	}
+
+	void Copter::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		// A copter taken by a player is destroyed right away, so there is no rider to restore. The noise
+		// of an unmounted copter is only fading out, so it's not started again.
+		_state = (State)src.ReadValue<std::uint8_t>();
+		_phase = src.ReadValueAsLE<float>();
+	}
+
 	void Copter::OnDetach(ActorBase* parent)
 	{
 		DecreaseHealth(INT32_MAX);

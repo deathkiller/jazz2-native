@@ -105,6 +105,31 @@ namespace Jazz2::Actors::Enemies
 		_turnCooldown -= timeMult;
 	}
 
+	void Demon::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_attackTime);
+		dest.WriteValueAsLE<float>(_turnCooldown);
+
+		std::uint8_t flags = 0;
+		if (_attacking) flags |= 0x01;
+		if (_stuck) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void Demon::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attackTime = src.ReadValueAsLE<float>();
+		_turnCooldown = src.ReadValueAsLE<float>();
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_attacking = ((flags & 0x01) != 0);
+		_stuck = ((flags & 0x02) != 0);
+	}
+
 	void Demon::OnUpdateHitbox()
 	{
 		UpdateHitbox(28, 26);

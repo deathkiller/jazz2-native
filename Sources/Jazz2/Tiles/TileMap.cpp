@@ -3086,6 +3086,18 @@ namespace Jazz2::Tiles
 			layout[saved.TileIndex] = saved.Tile;
 		}
 
+		// Tiles that started collapsing only after the checkpoint are whole again and must not continue
+		const Vector2i& layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		auto it = _activeCollapsingTiles.begin();
+		while (it != _activeCollapsingTiles.end()) {
+			const auto& tile = layout[it->X + it->Y * layoutSize.X];
+			if ((tile.Flags & LayerTileFlags::Collapsing) != LayerTileFlags::Collapsing) {
+				it = _activeCollapsingTiles.eraseUnordered(it);
+				continue;
+			}
+			++it;
+		}
+
 		std::memcpy(_triggerState.data(), _triggerStateForRollback.data(), _triggerState.sizeInBytes());
 	}
 
@@ -3167,6 +3179,142 @@ namespace Jazz2::Tiles
 
 			dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
 		}
+	}
+
+	bool TileMap::InitializeSnapshotFromStream(Stream& src)
+	{
+		std::int32_t layoutSize = src.ReadVariableInt32();
+		std::int32_t realLayoutSize = (_sprLayerIndex != -1 ? _layers[_sprLayerIndex].LayoutSize.X * _layers[_sprLayerIndex].LayoutSize.Y : -1);
+		if (layoutSize != realLayoutSize) {
+			LOGE("Layout size mismatch ({} != {})", layoutSize, realLayoutSize);
+			return false;
+		}
+		if (layoutSize == -1) {
+			return true;
+		}
+
+		auto& layout = _layers[_sprLayerIndex].Layout;
+		std::uint32_t tileCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < tileCount; i++) {
+			std::uint32_t tileIndex = src.ReadVariableUint32();
+			LayerTile tile;
+			ReadLayerTile(src, tile);
+			if (tileIndex < (std::uint32_t)layoutSize) {
+				layout[tileIndex] = tile;
+			}
+		}
+
+		std::uint32_t triggerSize = src.ReadVariableUint32();
+		DEATH_ASSERT(triggerSize == _triggerState.sizeInBytes(), "Trigger count mismatch", false);
+		src.Read(_triggerState.data(), triggerSize);
+
+		_activeCollapsingTiles.clear();
+		std::uint32_t collapsingCount = src.ReadVariableUint32();
+		for (std::uint32_t i = 0; i < collapsingCount; i++) {
+			std::int32_t x = src.ReadVariableInt32();
+			std::int32_t y = src.ReadVariableInt32();
+			_activeCollapsingTiles.emplace_back(x, y);
+		}
+		_collapsingTimer = src.ReadValueAsLE<float>();
+
+		_hasRollbackCheckpoint = (src.ReadValue<std::uint8_t>() != 0);
+		_sprLayerForRollback.clear();
+		if (_hasRollbackCheckpoint) {
+			std::uint32_t rollbackCount = src.ReadVariableUint32();
+			_sprLayerForRollback.reserve(rollbackCount);
+			for (std::uint32_t i = 0; i < rollbackCount; i++) {
+				RollbackTile& entry = _sprLayerForRollback.emplace_back();
+				entry.TileIndex = src.ReadVariableUint32();
+				ReadLayerTile(src, entry.Tile);
+			}
+			src.Read(_triggerStateForRollback.data(), triggerSize);
+		}
+
+		return true;
+	}
+
+	void TileMap::SerializeSnapshotToStream(Stream& dest)
+	{
+		if (_sprLayerIndex == -1) {
+			dest.WriteVariableInt32(-1);
+			return;
+		}
+
+		auto& spriteLayer = _layers[_sprLayerIndex];
+		std::int32_t layoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
+		const auto& layout = spriteLayer.Layout;
+		dest.WriteVariableInt32(layoutSize);
+
+		// The level is loaded again from the same file before the snapshot is applied, so only the tiles that
+		// can change are stored - destructible ones (DestructAnimation stays set even after they're destroyed)
+		// and those a script overwrote since the checkpoint (they're in the rollback list)
+		auto isMutable = [&](std::int32_t i) {
+			const auto& tile = layout[i];
+			if (tile.DestructAnimation >= 0 || tile.DestructType != TileDestructType::None) {
+				return true;
+			}
+			auto it = std::lower_bound(_sprLayerForRollback.begin(), _sprLayerForRollback.end(), (std::uint32_t)i,
+				[](const RollbackTile& entry, std::uint32_t index) { return entry.TileIndex < index; });
+			return (it != _sprLayerForRollback.end() && it->TileIndex == (std::uint32_t)i);
+		};
+
+		std::uint32_t tileCount = 0;
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (isMutable(i)) {
+				tileCount++;
+			}
+		}
+		dest.WriteVariableUint32(tileCount);
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (isMutable(i)) {
+				dest.WriteVariableUint32((std::uint32_t)i);
+				WriteLayerTile(dest, layout[i]);
+			}
+		}
+
+		dest.WriteVariableUint32((std::uint32_t)_triggerState.sizeInBytes());
+		dest.Write(_triggerState.data(), (std::int64_t)_triggerState.sizeInBytes());
+
+		dest.WriteVariableUint32((std::uint32_t)_activeCollapsingTiles.size());
+		for (const auto& tilePos : _activeCollapsingTiles) {
+			dest.WriteVariableInt32(tilePos.X);
+			dest.WriteVariableInt32(tilePos.Y);
+		}
+		dest.WriteValueAsLE<float>(_collapsingTimer);
+
+		dest.WriteValue<std::uint8_t>(_hasRollbackCheckpoint ? 1 : 0);
+		if (_hasRollbackCheckpoint) {
+			dest.WriteVariableUint32((std::uint32_t)_sprLayerForRollback.size());
+			for (const auto& entry : _sprLayerForRollback) {
+				dest.WriteVariableUint32(entry.TileIndex);
+				WriteLayerTile(dest, entry.Tile);
+			}
+			dest.Write(_triggerStateForRollback.data(), (std::int64_t)_triggerStateForRollback.sizeInBytes());
+		}
+	}
+
+	void TileMap::WriteLayerTile(Stream& dest, const LayerTile& tile)
+	{
+		dest.WriteValueAsLE<std::uint16_t>(tile.TileID);
+		dest.WriteValueAsLE<std::uint16_t>(tile.TileParams);
+		dest.WriteValueAsLE<std::int16_t>(tile.DestructAnimation);
+		dest.WriteValueAsLE<std::int16_t>(tile.DestructFrameIndex);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)tile.Flags);
+		dest.WriteValue<std::uint8_t>(tile.Alpha);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)tile.HasSuspendType);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)tile.DestructType);
+	}
+
+	void TileMap::ReadLayerTile(Stream& src, LayerTile& tile)
+	{
+		tile.TileID = src.ReadValueAsLE<std::uint16_t>();
+		tile.TileParams = src.ReadValueAsLE<std::uint16_t>();
+		tile.DestructAnimation = src.ReadValueAsLE<std::int16_t>();
+		tile.DestructFrameIndex = src.ReadValueAsLE<std::int16_t>();
+		tile.Flags = (LayerTileFlags)src.ReadValue<std::uint8_t>();
+		tile.Alpha = src.ReadValue<std::uint8_t>();
+		tile.HasSuspendType = (SuspendType)src.ReadValue<std::uint8_t>();
+		tile.DestructType = (TileDestructType)src.ReadValue<std::uint8_t>();
 	}
 
 	void TileMap::RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y)
@@ -3330,7 +3478,10 @@ namespace Jazz2::Tiles
 			std::int32_t height = layoutSize.Y * TileSet::DefaultTileSize;
 
 			_camera = std::make_unique<Camera>();
-			_camera->SetOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
+			// Y up, unlike every other pass: the textured background shaders read this texture with V running up
+			// the layer - they were written when a render target came out that way - so the layer is rendered
+			// upside down into it, on every backend alike (see RhiFwd.h)
+			_camera->SetOrthoProjection(0.0f, (float)width, (float)height, 0.0f);
 			_camera->SetView(0, 0, 0, 1);
 			_target = std::make_unique<Texture>(nullptr, Texture::ColorTargetFormat, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);

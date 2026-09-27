@@ -98,7 +98,7 @@ namespace Jazz2::Rendering
 		// Size the backend screen framebuffer to the logical resolution; the presentation layer follows this size
 		RHI::Device::ResizeScreenFramebuffer(width, height);
 
-		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
+		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
 		_camera.SetView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
@@ -166,7 +166,8 @@ namespace Jazz2::Rendering
 			_antialiasing._target = nullptr;
 		}
 
-		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
+		// Y down like the screen - a render target is top-down as well (see RhiFwd.h)
+		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
 		_camera.SetView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
@@ -195,7 +196,7 @@ namespace Jazz2::Rendering
 		}
 
 		if (_antialiasing._target != nullptr) {
-			_antialiasing._camera.SetOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
+			_antialiasing._camera.SetOrthoProjection(0.0f, _targetSize.X, 0.0f, _targetSize.Y);
 			_antialiasing._camera.SetView(0, 0, 0, 1);
 
 			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);

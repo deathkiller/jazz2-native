@@ -95,6 +95,31 @@ namespace Jazz2::Actors::Collectibles
 		);
 	}
 
+	void GemRing::OnSerializeState(Stream& dest)
+	{
+		CollectibleBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_phase);
+		dest.WriteValue<std::uint8_t>(_collected ? 1 : 0);
+		dest.WriteValueAsLE<float>(_collectedPhase);
+	}
+
+	void GemRing::OnDeserializeState(Stream& src)
+	{
+		CollectibleBase::OnDeserializeState(src);
+
+		_phase = src.ReadValueAsLE<float>();
+		_collected = (src.ReadValue<std::uint8_t>() != 0);
+		_collectedPhase = src.ReadValueAsLE<float>();
+
+		if (_collected) {
+			// Pieces grow by the same rate as the collected phase advances
+			for (auto& piece : _pieces) {
+				piece.Scale = 0.8f + _collectedPhase * 0.02f;
+			}
+		}
+	}
+
 	bool GemRing::OnDraw(RenderQueue& renderQueue)
 	{
 		if (!_pieces.empty()) {

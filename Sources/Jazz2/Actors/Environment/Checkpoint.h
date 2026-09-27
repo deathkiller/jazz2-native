@@ -27,6 +27,8 @@ namespace Jazz2::Actors::Environment
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdateHitbox() override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 	private:
 		std::uint8_t _theme;

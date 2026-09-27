@@ -153,28 +153,30 @@ namespace Jazz2::UI
 			}
 		}*/
 
-		std::int32_t charOffsetShadow = charOffset;
+		if constexpr (Font::ShadowsEnabled) {
+			std::int32_t charOffsetShadow = charOffset;
 
-		auto it = _parts.begin();
-		while (it != _parts.end()) {
-			if (it->Location.Y + it->Height > bounds.H) {
-				break;
+			auto it = _parts.begin();
+			while (it != _parts.end()) {
+				if (it->Location.Y + it->Height > bounds.H) {
+					break;
+				}
+
+				Vector2f p = it->Location;
+				p.X += bounds.X;
+				p.Y += bounds.Y;
+
+				// A view, not a copy: DrawString takes one, and the part's text is already in _text, so
+				// building a String here heap-allocated and copied every part of every frame for nothing
+				StringView textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
+				_font->DrawString(canvas, textPart, charOffsetShadow, p.X, p.Y + 2.8f * _defaultScale, depth - 80, Alignment::Left,
+					Colorf(0.0f, 0.0f, 0.0f, 0.29f), it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
+
+				++it;
 			}
-
-			Vector2f p = it->Location;
-			p.X += bounds.X;
-			p.Y += bounds.Y;
-
-			// A view, not a copy: DrawString takes one, and the part's text is already in _text, so
-			// building a String here heap-allocated and copied every part of every frame for nothing
-			StringView textPart = (it->Begin == Ellipsis ? "..."_s : StringView(_text.data() + it->Begin, it->Length));
-			_font->DrawString(canvas, textPart, charOffsetShadow, p.X, p.Y + 2.8f * _defaultScale, depth - 80, Alignment::Left,
-				Colorf(0.0f, 0.0f, 0.0f, 0.29f), it->Scale, it->AllowVariance ? angleOffset : 0.0f, varianceX, varianceY, speed, it->CharSpacing);
-
-			++it;
 		}
 
-		it = _parts.begin();
+		auto it = _parts.begin();
 		while (it != _parts.end()) {
 			if (it->Location.Y + it->Height > bounds.H) {
 				break;

@@ -41,7 +41,7 @@ namespace Jazz2::UI
 #endif
 
 	public:
-#ifndef DOXYGEN_GENERATING_OUTPUT
+#if defined(NCINE_HAS_TOUCH_CONTROLS) && !defined(DOXYGEN_GENERATING_OUTPUT)
 		static constexpr float DpadLeft = 0.02f;
 		static constexpr float DpadBottom = 0.1f;
 		static constexpr float DpadThreshold = 0.09f;
@@ -56,8 +56,10 @@ namespace Jazz2::UI
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Called when a touch event occurs, allowing the HUD to override actions and movement */
 		void OnTouchEvent(const TouchEvent& event, std::uint32_t& overrideActions, Vector2f& overrideMovement);
+#endif
 
 		/** @brief Shows a text notification */
 		void ShowLevelText(StringView text);
@@ -74,12 +76,15 @@ namespace Jazz2::UI
 		/** @brief Returns `true` if weapon wheel is visible */
 		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Rebuilds internal touch button data from current @ref PreferencesCache::TouchButtons configuration */
 		void RefreshTouchButtons();
+#endif
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
+#	if defined(NCINE_HAS_TOUCH_CONTROLS)
 		struct TouchButtonInfo {
 			PlayerAction Action;
 
@@ -92,6 +97,7 @@ namespace Jazz2::UI
 			std::int32_t CurrentPointerId;
 			Alignment Align;
 		};
+#	endif
 
 		struct Vertex {
 			float X, Y;
@@ -127,8 +133,10 @@ namespace Jazz2::UI
 		static constexpr std::uint16_t FontLayer = 200;
 		/** @brief Shadow for font layer */
 		static constexpr std::uint16_t FontShadowLayer = 120;
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Touch buttons layer */
 		static constexpr std::uint16_t TouchButtonsLayer = 400;
+#endif
 		/** @brief Detailed performance metrics layer */
 		static constexpr std::uint16_t PerformanceMetricsLayer = 450;
 
@@ -181,10 +189,12 @@ namespace Jazz2::UI
 		 * a second - rather than every frame (see @ref PerformanceOverlay).
 		 */
 		virtual void OnAddPerformanceMetrics(PerformanceOverlay& overlay);
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Called when touch buttons need to be drawn */
 		void OnDrawTouchButtons(Actors::Player* player);
 		/** @brief Returns `true` and the on-screen bounds of the touch pause button if it's currently visible */
 		bool GetTouchPauseButtonRect(Rectf& bounds) const;
+#endif
 		/**
 		 * @brief Returns the whole view narrowed by the configured safe area
 		 *
@@ -226,12 +236,14 @@ namespace Jazz2::UI
 		static constexpr std::uint32_t VertexBytes = sizeof(Vertex);
 		static constexpr std::uint32_t VertexFloats = VertexBytes / sizeof(float);
 
+		static constexpr float WeaponWheelAnimDuration = 20.0f;
+		static constexpr std::int32_t WeaponWheelMaxVertices = 768;
+
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		static constexpr Alignment Fixed = (Alignment)0x40;
 		static constexpr Alignment AllowRollover = (Alignment)0x80;
 
 		static constexpr std::int32_t TouchButtonsCount = 11;
-		static constexpr float WeaponWheelAnimDuration = 20.0f;
-		static constexpr std::int32_t WeaponWheelMaxVertices = 768;
 		/**
 			@brief Reference width the touch layout is measured in, in pixels
 
@@ -244,6 +256,7 @@ namespace Jazz2::UI
 			at odds on the same machine.
 		*/
 		static constexpr float DefaultRef = 360.0f;
+#endif
 
 		float _rgbAmbientLight;
 		float _rgbHealthLast;
@@ -254,10 +267,11 @@ namespace Jazz2::UI
 		TransitionState _transitionState;
 		float _transitionTime;
 
+		PerformanceOverlay _performanceOverlay;
+
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		TouchButtonInfo _touchButtons[TouchButtonsCount];
 		float _touchButtonsTimer;
-
-		PerformanceOverlay _performanceOverlay;
 
 		// Floating analog joystick state
 		bool _joystickActive;
@@ -265,6 +279,7 @@ namespace Jazz2::UI
 		Vector2f _joystickCurrent;
 		std::int32_t _joystickPointerId;
 		float _joystickMaxRadius;
+#endif
 
 		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
 		void DrawWeaponWheel(const Rectf& view, Actors::Player* player);
@@ -273,13 +288,18 @@ namespace Jazz2::UI
 		static std::int32_t GetWeaponCount(Actors::Player* player);
 		void DrawWeaponWheelSegment(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		TouchButtonInfo MakeTouchButton(PlayerAction action, AnimState state, Alignment align, float edgeX, float edgeY, float w, float h);
 		TouchButtonInfo CreateTouchButton(PlayerAction action, AnimState state, Alignment align, float x, float y, float w, float h);
 		bool IsOnButton(const TouchButtonInfo& button, float x, float y);
 		void DrawJoystick(float centerX, float centerY, float outerRadius, float innerRadius, float thumbX, float thumbY);
+#endif
 
 		void UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport);
 		static Color ApplyRgbGradientAlpha(Color color, std::int32_t x, std::int32_t y, float animProgress, float ambientLight);
 		static AuraLight KeyToAuraLight(Keys key);
+
+		/** @brief Returns `true` while the in-game menu or the console is open, which the detailed performance metrics give way to */
+		bool IsPerformanceOverlayHidden() const;
 	};
 }

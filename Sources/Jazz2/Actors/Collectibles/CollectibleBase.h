@@ -72,6 +72,8 @@ namespace Jazz2::Actors::Collectibles
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 		// Every observer reproduces the swarm from the remoted ActorState::Illuminated instead
 		void OnEmitRemotedLights(SmallVectorImpl<LightEmitter>& lights) override { }

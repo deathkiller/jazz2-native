@@ -60,6 +60,8 @@ namespace Jazz2
 		ElapsedMilliseconds = copy.ElapsedMilliseconds;
 
 		std::memcpy(PlayerCarryOvers, copy.PlayerCarryOvers, sizeof(PlayerCarryOvers));
+		ReturnLevelState = copy.ReturnLevelState;
+		RestoreLevelState = copy.RestoreLevelState;
 	}
 
 	LevelInitialization::LevelInitialization(LevelInitialization&& move) noexcept
@@ -75,6 +77,8 @@ namespace Jazz2
 		ElapsedMilliseconds = move.ElapsedMilliseconds;
 
 		std::memcpy(PlayerCarryOvers, move.PlayerCarryOvers, sizeof(PlayerCarryOvers));
+		ReturnLevelState = std::move(move.ReturnLevelState);
+		RestoreLevelState = std::move(move.RestoreLevelState);
 	}
 
 	std::int32_t LevelInitialization::GetPlayerCount(const PlayerCarryOver** firstPlayer) const

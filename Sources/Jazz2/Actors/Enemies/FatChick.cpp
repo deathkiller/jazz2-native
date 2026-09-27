@@ -82,6 +82,31 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void FatChick::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		std::uint8_t flags = 0;
+		if (_isAttacking) flags |= 0x01;
+		if (_stuck) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void FatChick::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_isAttacking = ((flags & 0x01) != 0);
+		_stuck = ((flags & 0x02) != 0);
+
+		if (_isAttacking) {
+			// The attack transition was interrupted, finish it as its callback would
+			_speed.X = (IsFacingLeft() ? -1.0f : 1.0f) * DefaultSpeed;
+			_isAttacking = false;
+		}
+	}
+
 	void FatChick::OnUpdateHitbox()
 	{
 		UpdateHitbox(20, 24);

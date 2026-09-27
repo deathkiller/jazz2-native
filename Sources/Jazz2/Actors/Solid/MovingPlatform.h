@@ -29,6 +29,8 @@ namespace Jazz2::Actors::Solid
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 		bool OnPerish(ActorBase* collider) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 

@@ -1,4 +1,7 @@
 #include "TouchControlsOptionsSection.h"
+
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
+
 #include "MenuResources.h"
 #include "../HUD.h"
 #include "../../PreferencesCache.h"
@@ -613,3 +616,5 @@ namespace Jazz2::UI::Menu
 		}
 	}
 }
+
+#endif

@@ -85,9 +85,8 @@ float4 main(float4 vColor : TEXCOORD0) : COLOR
 }
 )";
 
-		// Built-in present shader: the intermediate screen surface stretched over the display buffer. The V
-		// flip that turns the engine's OpenGL-convention (bottom-up) surface into the top-down one the display
-		// controller scans out is baked into the quad's texture coordinates
+		// Built-in present shader: the intermediate screen surface stretched over the display buffer. Both are
+		// top-down, so it is a straight copy
 		constexpr const char* PresentVertexSource = R"(
 void main(
 	float2 aPosition,
@@ -133,11 +132,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		*/
 		constexpr std::uint32_t ClearQuadRingSize = 32;
 		/**
-			@brief The same quad with the texture coordinates that flip it vertically
+			@brief The same quad with texture coordinates
 
-			Clip -Y lands on row 0 of the target (the positive-Y-scale viewport this backend programs
-			everywhere), and row 0 is the top of the scanned-out image - so the top of the display has to
-			sample the *last* row of the bottom-up screen surface, which is V = 1.
+			Clip +Y lands on row 0 of the display buffer (the flipped viewport this backend programs
+			everywhere), the top of the scanned-out image, and samples V = 0, the top row of the screen surface.
 		*/
 		constexpr float PresentQuad[] = {
 			-1.0f, -1.0f,  0.0f, 1.0f,
@@ -756,14 +754,15 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		// The rectangle arrives in the surface rows the viewport resolves to, so it goes back through that
 		// same mapping to get the clip-space quad that covers exactly those rows: a row is
-		// viewport.Y + (viewport.H / 2) * (ndc + 1), and the band spans [yMin, yMax + 1) of them.
+		// viewport.Y + (viewport.H / 2) * (1 - ndc) - the viewport is flipped, clip +Y on its top row - and the
+		// band spans [yMin, yMax + 1) of them.
 		auto toNdc = [](std::int32_t coordinate, std::int32_t origin, std::int32_t size) {
 			return (size > 0 ? (2.0f * float(coordinate - origin) / float(size)) - 1.0f : -1.0f);
 		};
 		const float x0 = toNdc(xMin, _viewport.X, _viewport.W);
 		const float x1 = toNdc(xMax + 1, _viewport.X, _viewport.W);
-		const float y0 = toNdc(yMin, _viewport.Y, _viewport.H);
-		const float y1 = toNdc(yMax + 1, _viewport.Y, _viewport.H);
+		const float y0 = -toNdc(yMin, _viewport.Y, _viewport.H);
+		const float y1 = -toNdc(yMax + 1, _viewport.Y, _viewport.H);
 
 		ClearVertex* quad = static_cast<ClearVertex*>(_clearVertices.Base)
 			+ (_clearQuadIndex % ClearQuadRingSize) * 4u;
@@ -805,14 +804,13 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		const std::int32_t targetWidth = _sceneWidth;
 		const std::int32_t targetHeight = _sceneHeight;
 
-		// Every surface is stored bottom-up like OpenGL (see the class documentation), so a positive Y scale
-		// is what maps clip -Y onto row 0 - and the viewport's Y, being an OpenGL one measured from the
-		// bottom, is then already a row index
+		// Every surface is stored top-down (see the class documentation), so a negative Y scale is what maps
+		// clip +Y onto the top row of the viewport - whose Y, measured from the top, is already a row index
 		const float halfWidth = float(_viewport.W) * 0.5f;
 		const float halfHeight = float(_viewport.H) * 0.5f;
 		sceGxmSetViewport(_context,
 			float(_viewport.X) + halfWidth, halfWidth,
-			float(_viewport.Y) + halfHeight, halfHeight,
+			float(_viewport.Y) + halfHeight, -halfHeight,
 			0.5f, 0.5f);
 
 		if (_scissor.Enabled) {
@@ -829,10 +827,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_OUTSIDE, 0, 0, 0, 0);
 				SetScissorStencil(0, 0, -1, -1);
 			} else {
-				// A region clip is in the same surface rows the viewport above resolves to, and that viewport
-				// maps OpenGL's window space onto them one to one (positive Y scale, so clip -Y lands on row 0
-				// and the viewport's own Y is already a row index). The rectangle the engine hands down is a
-				// `glScissor()` one measured against the same target, so its rows go straight through -
+				// A region clip is in the same surface rows the viewport above resolves to, counted from the top
+				// like the rectangle the engine hands down (see RhiFwd.h), so its rows go straight through -
 				// mirroring it here would clip the frame against the reflection of the intended rectangle.
 				//
 				// This alone is NOT the scissor test, though: sceGxm's region clip works on the tile grid (the
@@ -948,7 +944,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// glClear covers the whole surface (modulated by the scissor test) rather than the viewport, so the
 		// quad is drawn through a full-target viewport and the tracked one is restored afterwards
 		sceGxmSetViewport(_context, float(targetWidth) * 0.5f, float(targetWidth) * 0.5f,
-			float(targetHeight) * 0.5f, float(targetHeight) * 0.5f, 0.5f, 0.5f);
+			float(targetHeight) * 0.5f, float(targetHeight) * -0.5f, 0.5f, 0.5f);
 
 		sceGxmSetVertexProgram(_context, _clearVertexProgram);
 		sceGxmSetFragmentProgram(_context, _clearFragmentProgram);
@@ -1047,9 +1043,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		SetDepthStateBothFaces(_depthTest.TestEnabled ? SCE_GXM_DEPTH_FUNC_LESS_EQUAL : SCE_GXM_DEPTH_FUNC_ALWAYS,
 			depthWrites ? SCE_GXM_DEPTH_WRITE_ENABLED : SCE_GXM_DEPTH_WRITE_DISABLED);
 		if (_cullFace.Enabled) {
-			// The engine winds its front faces counter-clockwise in the OpenGL convention, which this backend
-			// preserves by storing every surface bottom-up - so the winding reaches the GPU unchanged
-			sceGxmSetCullMode(_context, _cullFace.Mode == CullFaceMode::Front ? SCE_GXM_CULL_CCW : SCE_GXM_CULL_CW);
+			// The engine winds its front faces counter-clockwise in clip space, the OpenGL convention, and the
+			// flipped viewport (see ApplyViewportAndScissor()) turns that clockwise on the surface
+			sceGxmSetCullMode(_context, _cullFace.Mode == CullFaceMode::Front ? SCE_GXM_CULL_CW : SCE_GXM_CULL_CCW);
 		} else {
 			sceGxmSetCullMode(_context, SCE_GXM_CULL_NONE);
 		}
@@ -1574,10 +1570,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			}
 		}
 
-		// The intermediate surface every screen-targeted draw lands in, kept bottom-up like OpenGL and
-		// flipped into a display buffer at present time - and stretched to the panel on the way, because it is
-		// (usually) rendered smaller than the panel (see ScreenWidth). Its sync object outlives the surface
-		// itself, which ResizeScreenSurface() can recreate at another size later.
+		// The intermediate surface every screen-targeted draw lands in, copied into a display buffer at present
+		// time - and stretched to the panel on the way, because it is (usually) rendered smaller than the panel
+		// (see ScreenWidth). Its sync object outlives the surface itself, which ResizeScreenSurface() can
+		// recreate at another size later.
 		result = sceGxmSyncObjectCreate(&_screenSyncObject);
 		if (result < 0) {
 			LOGE("sceGxmSyncObjectCreate(screen) failed with 0x{:.8x}", std::uint32_t(result));
@@ -1963,7 +1959,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return;
 		}
 
-		// Close whatever the frame was still drawing into, then flip the screen surface into the buffer the
+		// Close whatever the frame was still drawing into, then copy the screen surface into the buffer the
 		// display controller will pick up next
 		_currentRenderTarget = nullptr;
 		FinishScene();
@@ -1973,7 +1969,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				_displaySyncObjects[_backBufferIndex], &_displaySurfaces[_backBufferIndex], &_depthSurface);
 			if (result >= 0) {
 				sceGxmSetViewport(_context, float(DisplayWidth) * 0.5f, float(DisplayWidth) * 0.5f,
-					float(DisplayHeight) * 0.5f, float(DisplayHeight) * 0.5f, 0.5f, 0.5f);
+					float(DisplayHeight) * 0.5f, float(DisplayHeight) * -0.5f, 0.5f, 0.5f);
 				sceGxmSetRegionClip(_context, SCE_GXM_REGION_CLIP_NONE, 0, 0, 0, 0);
 				sceGxmSetVertexProgram(_context, _presentVertexProgram);
 				sceGxmSetFragmentProgram(_context, _presentFragmentProgram);

@@ -52,6 +52,26 @@ namespace Jazz2::Actors::Environment
 		async_return true;
 	}
 
+	void BirdCage::OnSerializeState(Stream& dest)
+	{
+		SolidObjectBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_activated ? 1 : 0);
+	}
+
+	void BirdCage::OnDeserializeState(Stream& src)
+	{
+		SolidObjectBase::OnDeserializeState(src);
+
+		// The event tile remembers the opened cage, but the actor is resurrected with its original parameters
+		bool activated = (src.ReadValue<std::uint8_t>() != 0);
+		if (activated && !_activated) {
+			_activated = true;
+			SetState(ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, false);
+			SetAnimation(AnimState::Activated);
+		}
+	}
+
 	bool BirdCage::OnHandleCollision(ActorBase* other)
 	{
 		if (!_activated) {

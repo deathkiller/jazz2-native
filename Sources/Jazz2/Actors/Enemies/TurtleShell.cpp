@@ -104,6 +104,20 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void TurtleShell::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_lastAngle);
+	}
+
+	void TurtleShell::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_lastAngle = src.ReadValueAsLE<float>();
+	}
+
 	void TurtleShell::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 16);

@@ -44,6 +44,21 @@ namespace Jazz2::UI
 		static constexpr Colorf RandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.5f);
 		/** @brief Random (rainbow) font color with 60% transparency */
 		static constexpr Colorf TransparentRandomColor = Colorf(444.0f, 444.0f, 444.0f, 0.36f);
+		/**
+			@brief Whether text is drawn with a shadow under it
+
+			A shadowed string goes out twice - a faint black copy offset below it first, then the text
+			itself - so the shadow costs as much as the text does. The Nintendo 64 leaves it out: every glyph
+			there is a render command of its own and a textured rectangle with its own TMEM upload, and the
+			shadows were close to half of a text-heavy menu frame (measured in ares: 118 to 74 ms on the
+			first-run screen, 38 to 28 ms on the main menu). Every shadow draw is guarded by this, so where
+			it is off none of that work is done at all.
+		*/
+#if defined(DEATH_TARGET_N64)
+		static constexpr bool ShadowsEnabled = false;
+#else
+		static constexpr bool ShadowsEnabled = true;
+#endif
 
 		/** @} */
 

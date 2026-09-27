@@ -22,8 +22,8 @@ namespace nCine::RHI::GU
 	{
 		if (index < MaxColorAttachments) {
 			_colorTextures[index] = &texture;
-			// Tag the texture so the rasterizer treats its store as bottom-up (GL framebuffer convention)
-			// both when drawing into it and when later sampling it as a source
+			// Tag the texture as a render target, which gives it the surface the device renders into; it is stored
+			// top-down like every other texture (see RhiFwd.h), so it is sampled the same way too
 			texture.SetRenderTarget(true);
 		}
 	}

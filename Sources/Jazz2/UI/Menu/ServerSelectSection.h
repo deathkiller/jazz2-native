@@ -6,13 +6,15 @@
 #include "TextInputBuffer.h"
 #include "../../Multiplayer/ServerDiscovery.h"
 
+#include <Threading/Spinlock.h>
+
 namespace Jazz2::UI::Menu
 {
 	/**
 		@brief Server selection menu section
 		
 		Browses the discovered public and LAN servers and lets the player join one or connect directly by entering an
-		address.
+		address. Servers the local client is compatible with are listed first.
 	*/
 	class ServerSelectSection : public MenuSection, public Jazz2::Multiplayer::IServerObserver
 	{
@@ -74,6 +76,10 @@ namespace Jazz2::UI::Menu
 		float _touchSpeed;
 		std::int32_t _pressedCount;
 		float _noiseCooldown;
+		// Servers reported by the discovery thread, waiting for the main thread to merge them into `_items` (see
+		// OnServerFound()); declared before `_discovery`, so they outlive its thread
+		SmallVector<Jazz2::Multiplayer::ServerDescription, 0> _pendingServers;
+		Death::Threading::Spinlock _pendingServersLock;
 		// Owned indirectly, so it can be restarted when the transport mode changes (see ToggleAdhocMode())
 		std::unique_ptr<Jazz2::Multiplayer::ServerDiscovery> _discovery;
 		std::int8_t _touchDirection;
@@ -101,6 +107,15 @@ namespace Jazz2::UI::Menu
 		static bool HasSameUniqueServerID(const Jazz2::Multiplayer::ServerDescription& a, const Jazz2::Multiplayer::ServerDescription& b);
 		// Adds an endpoint to an entry's list, keeping the order they were found in and skipping one already there
 		static String AppendEndpoint(StringView existing, StringView added);
+		// Decides whether the local client can play on a server, from the protocol versions it announced
+		static bool IsServerCompatible(const Jazz2::Multiplayer::ServerDescription& desc);
+
+		void ProcessPendingServers();
+		void AddOrUpdateServer(Jazz2::Multiplayer::ServerDescription&& desc);
+		// Inserts an entry at the end of its group (compatible servers first, then the rest) and returns its index
+		std::int32_t InsertItem(ItemData&& item);
+		// Moves an entry whose compatibility changed to its new group, keeping the selection on the same server
+		void MoveItemToGroup(std::int32_t index);
 
 		void ExecuteSelected();
 		void OnAfterTransition();

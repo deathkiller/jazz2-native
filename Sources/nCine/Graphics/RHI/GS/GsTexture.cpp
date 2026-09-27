@@ -497,6 +497,7 @@ namespace nCine::RHI::GS
 			return;		// Mip levels above 0 are accepted but not stored
 		}
 
+		const bool wasRenderTarget = _isRenderTarget;
 		Allocate(format, width, height);
 		if (data != nullptr && RawPixelsSize() > 0) {
 			std::memcpy(_pixels.data(), data, std::size_t(RawPixelsSize()));
@@ -510,6 +511,13 @@ namespace nCine::RHI::GS
 			GsDevice::NotifyPaletteTextureChanged(this, 0, _height);
 		} else if (data != nullptr && RawPixelsSize() > 0) {
 			RefreshStore();
+		}
+		if (wasRenderTarget) {
+			// Allocate() dropped the surface with the old size, so a new one is attached for the new size. A render
+			// target is resized through here: TexStorage2D() is only called where storage is immutable, never on
+			// this backend, so the same step there did not cover it and a resized target had no surface at all
+			_isRenderTarget = false;
+			SetRenderTarget(true);
 		}
 	}
 
@@ -545,7 +553,13 @@ namespace nCine::RHI::GS
 	void GsTexture::TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height)
 	{
 		static_cast<void>(levels);
+		const bool wasRenderTarget = _isRenderTarget;
 		Allocate(format, width, height);
+		if (wasRenderTarget) {
+			// Allocate() dropped the surface with the old size; re-attach one for the new one
+			_isRenderTarget = false;
+			SetRenderTarget(true);
+		}
 	}
 
 	void GsTexture::CompressedTexImage2D(std::int32_t level, PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t imageSize, const void* data)

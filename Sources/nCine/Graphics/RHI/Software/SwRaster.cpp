@@ -54,8 +54,8 @@ namespace nCine::RHI::Software
 			std::uint8_t* colorBuffer = nullptr;
 			std::int32_t  bufferWidth = 0;
 			std::int32_t  bufferHeight = 0;
-			// When true the buffer is a render-target texture and rows are written bottom-up (GL convention)
-			bool          isFboTarget = false;
+			// When true the buffer is a render-target texture rather than the screen; both are stored top-down
+			bool          isRenderTarget = false;
 #if defined(RHI_USE_FB16)
 			// When true the buffer is the RGB565 screen framebuffer (only the screen is ever 16-bit; render
 			// targets stay RGBA8). Touched rows are staged through g_fbRowStage as RGBA8, see SwRaster.h.
@@ -1513,11 +1513,13 @@ namespace nCine::RHI::Software
 			float ndcTop = m[5] * ctx.ff.spriteSize[1] + m[13];
 			float ndcBottom = m[13];
 			if (std::fabs(ndcLeft - (-1.0f)) > 0.01f || std::fabs(ndcRight - 1.0f) > 0.01f) return false;
-			// Allow both normal (bottom=-1, top=+1) and Y-flipped (bottom=+1, top=-1) quads
-			if (std::fabs(ndcBottom - (-1.0f)) < 0.01f && std::fabs(ndcTop - 1.0f) < 0.01f) {
-				// Normal orientation
-			} else if (std::fabs(ndcBottom - 1.0f) < 0.01f && std::fabs(ndcTop - (-1.0f)) < 0.01f) {
-				// Y-flipped quad (common for top-down game coordinate projections)
+			// Either orientation of the quad: the sprite's y = 0 edge (texture row 0) at the top of clip space -
+			// which is what a Y-down camera gives - or at its bottom (a Y-up camera)
+			bool quadRowZeroAtBottom;
+			if (std::fabs(ndcBottom - 1.0f) < 0.01f && std::fabs(ndcTop - (-1.0f)) < 0.01f) {
+				quadRowZeroAtBottom = false;
+			} else if (std::fabs(ndcBottom - (-1.0f)) < 0.01f && std::fabs(ndcTop - 1.0f) < 0.01f) {
+				quadRowZeroAtBottom = true;
 			} else {
 				return false;
 			}
@@ -1533,13 +1535,10 @@ namespace nCine::RHI::Software
 			// tile queue and writes the buffer directly) lands after everything submitted before it.
 			SwTileRenderer::Flush();
 
-			// Y-flip needed when source and destination have different row orders:
-			// - FBO textures/buffers are stored bottom-up (row 0 = bottom)
-			// - Regular textures and screen buffer are stored top-down (row 0 = top)
-			// The quad's Y orientation in NDC is irrelevant — it's just the coordinate system,
-			// not an intentional "flip the image" instruction.
-			const bool sourceIsFbo = tex->IsRenderTarget();
-			const bool flipY = (sourceIsFbo != g_state.isFboTarget);
+			// Every store is top-down (see RhiFwd.h), the source and the destination alike, and clip-space y = +1
+			// is the destination's first row - so the copy is flipped exactly when the quad puts the source's
+			// first row at the bottom of clip space instead
+			const bool flipY = quadRowZeroAtBottom;
 
 #if defined(RHI_USE_FB16)
 			if (g_state.is16Bit) {
@@ -1584,7 +1583,7 @@ namespace nCine::RHI::Software
 				if (!flipY) {
 					std::memcpy(dstBuffer, srcPixels, static_cast<std::size_t>(srcW) * srcH * 4);
 				} else {
-					// FBO target: flip Y during copy
+					// Upside-down quad: flip Y during copy
 					const std::int32_t rowBytes = srcW * 4;
 					for (std::int32_t y = 0; y < srcH; y++) {
 						const std::uint8_t* srcRow = srcPixels + y * rowBytes;
@@ -1716,12 +1715,12 @@ namespace nCine::RHI::Software
 			std::int32_t yMin = std::max(std::int32_t(0), static_cast<std::int32_t>(fyMin));
 			std::int32_t yMax = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(fyMax - 0.5f));
 
-			// Scissor pre-clip (Y always flipped — scissor is in bottom-up window coordinates)
+			// Scissor pre-clip (the rectangle is top-down, like the raster rows)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
 				xMin = std::max(xMin, g_state.scissorX);
 				xMax = std::min(xMax, g_state.scissorX + g_state.scissorW - 1);
-				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				const std::int32_t pyMin = g_state.scissorY;
+				const std::int32_t pyMax = g_state.scissorY + g_state.scissorH - 1;
 				yMin = std::max(yMin, pyMin);
 				yMax = std::min(yMax, pyMax);
 			}
@@ -1775,8 +1774,8 @@ namespace nCine::RHI::Software
 			const bool useScanBuf = ((useFastBlend || !useBlend) && scanWidth <= MaxScanBuf && texPixels != nullptr);
 
 			for (std::int32_t py = yMin; py <= yMax; py++, tyFix += dtyFix) {
-				// Y is flipped when the destination is a render-target texture (stored bottom-up)
-				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				// Every destination is stored top-down, so the raster row is the store row
+				const std::int32_t storeY = py;
 				std::uint8_t* dstRow;
 #if defined(RHI_USE_FB16)
 				std::uint8_t* fbRow16 = nullptr;
@@ -1987,10 +1986,10 @@ namespace nCine::RHI::Software
 			std::int32_t minY = std::max(std::int32_t(0), static_cast<std::int32_t>(std::min({v0.y, v1.y, v2.y})));
 			std::int32_t maxY = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(std::max({v0.y, v1.y, v2.y})));
 
-			// Pre-clip to scissor (Y always flipped — scissor is in bottom-up window coordinates)
+			// Pre-clip to scissor (the rectangle is top-down, like the raster rows)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
-				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				const std::int32_t pyMin = g_state.scissorY;
+				const std::int32_t pyMax = g_state.scissorY + g_state.scissorH - 1;
 				minX = std::max(minX, g_state.scissorX);
 				maxX = std::min(maxX, g_state.scissorX + g_state.scissorW - 1);
 				minY = std::max(minY, pyMin);
@@ -2051,8 +2050,8 @@ namespace nCine::RHI::Software
 
 			for (std::int32_t py = minY; py <= maxY; py++) {
 				float w0 = w0_row, w1 = w1_row, w2 = w2_row;
-				// Y is flipped when the destination is a render-target texture (stored bottom-up)
-				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				// Every destination is stored top-down, so the raster row is the store row
+				const std::int32_t storeY = py;
 				std::uint8_t* dstRow;
 #if defined(RHI_USE_FB16)
 				std::uint8_t* fbRow16 = nullptr;
@@ -2210,10 +2209,10 @@ namespace nCine::RHI::Software
 			std::int32_t xMinClamp = std::max<std::int32_t>(0, static_cast<std::int32_t>(fxMin));
 			std::int32_t xMaxClamp = std::min(g_state.bufferWidth - 1, static_cast<std::int32_t>(fxMax));
 
-			// Scissor clamp (Y always flipped — scissor is in bottom-up window coordinates)
+			// Scissor clamp (the rectangle is top-down, like the raster rows)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
-				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				const std::int32_t pyMin = g_state.scissorY;
+				const std::int32_t pyMax = g_state.scissorY + g_state.scissorH - 1;
 				xMinClamp = std::max(xMinClamp, g_state.scissorX);
 				xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
 				yMin = std::max(yMin, pyMin);
@@ -2290,7 +2289,7 @@ namespace nCine::RHI::Software
 
 			for (std::int32_t py = yMin; py <= yMax; py++) {
 				const float pyCtr = py + 0.5f;
-				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				const std::int32_t storeY = py;
 
 				// Initial edge function values at (xMinClamp+0.5, pyCtr)
 				float px0 = xMinClamp + 0.5f;
@@ -2543,14 +2542,14 @@ namespace nCine::RHI::Software
 				return;
 			}
 
-			// Inclusive pixel clip rectangle (scissor Y flipped - it is in bottom-up window coordinates)
+			// Inclusive pixel clip rectangle (the scissor is top-down, like the raster rows)
 			std::int32_t clipMinX = 0, clipMaxX = g_state.bufferWidth - 1;
 			std::int32_t clipMinY = 0, clipMaxY = g_state.bufferHeight - 1;
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
 				clipMinX = std::max(clipMinX, g_state.scissorX);
 				clipMaxX = std::min(clipMaxX, g_state.scissorX + g_state.scissorW - 1);
-				clipMinY = std::max(clipMinY, g_state.bufferHeight - g_state.scissorY - g_state.scissorH);
-				clipMaxY = std::min(clipMaxY, g_state.bufferHeight - 1 - g_state.scissorY);
+				clipMinY = std::max(clipMinY, g_state.scissorY);
+				clipMaxY = std::min(clipMaxY, g_state.scissorY + g_state.scissorH - 1);
 			}
 			if DEATH_UNLIKELY(clipMinX > clipMaxX || clipMinY > clipMaxY) {
 				return;
@@ -2639,8 +2638,8 @@ namespace nCine::RHI::Software
 					sA = (sA * tA) >> 8;
 				}
 
-				// Y is flipped when the destination is a render-target texture (stored bottom-up)
-				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				// Every destination is stored top-down, so the raster row is the store row
+				const std::int32_t storeY = py;
 				std::uint8_t* dstPx;
 #if defined(RHI_USE_FB16)
 				std::uint8_t fbPxStage[4];
@@ -2764,23 +2763,23 @@ namespace nCine::RHI::Software
 	// =========================================================================
 	// Public API
 	// =========================================================================
-	void SwRaster::SetColorBuffer(std::uint8_t* pixels, std::int32_t width, std::int32_t height, bool isFboTarget)
+	void SwRaster::SetColorBuffer(std::uint8_t* pixels, std::int32_t width, std::int32_t height, bool isRenderTarget)
 	{
 		g_state.colorBuffer = pixels;
 		g_state.bufferWidth = width;
 		g_state.bufferHeight = height;
-		g_state.isFboTarget = isFboTarget;
+		g_state.isRenderTarget = isRenderTarget;
 #if defined(RHI_USE_FB16)
-		// On the software backend a non-FBO target is the screen framebuffer, which is the only 16-bit
-		// surface in this mode (render-target textures stay RGBA8)
-		g_state.is16Bit = !isFboTarget;
+		// On the software backend a target that is not a render texture is the screen framebuffer, which is
+		// the only 16-bit surface in this mode (render-target textures stay RGBA8)
+		g_state.is16Bit = !isRenderTarget;
 #endif
 
 		// Keep the tile renderer pointed at the same surface. Initialize() is idempotent (spins up the worker
 		// pool once); SetTargetBuffer() early-returns when the target is unchanged (the device calls this
 		// before every draw), and flushes the previous target's queue when it actually changes.
 		SwTileRenderer::Initialize();
-		SwTileRenderer::SetTargetBuffer(pixels, width, height, isFboTarget);
+		SwTileRenderer::SetTargetBuffer(pixels, width, height, isRenderTarget);
 	}
 
 	void SwRaster::SetViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)

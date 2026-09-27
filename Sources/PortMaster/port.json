@@ -1,0 +1,40 @@
+{
+  "version": 4,
+  "name": "jazz2.zip",
+  "items": [
+    "Jazz2 Resurrection.sh",
+    "jazz2"
+  ],
+  "items_opt": [],
+  "attr": {
+    "title": "Jazz² Resurrection",
+    "porter": [
+      "deathkiller"
+    ],
+    "desc": "Jazz² Resurrection is an open-source reimplementation of Jazz Jackrabbit 2 with enhanced graphics, local split-screen and online multiplayer, and support for custom levels and episodes. Requires original game files, Shareware Demo is enough to try it out.",
+    "desc_md": null,
+    "inst": "Copy the contents of the original Jazz Jackrabbit 2 directory to \"ports/jazz2/Source/\". Game cache is created on the first launch.",
+    "inst_md": "Copy the contents of the original *Jazz Jackrabbit 2* directory to `ports/jazz2/Source/`. Game cache is created on the first launch, which can take a while.\n\nSupported releases are Shareware Demo, v1.20/1.23, Holiday Hare '98, The Secret Files and The Christmas Chronicles. To combine more of them, copy them over each other in this order, replacing existing files.",
+    "genres": [
+      "platformer"
+    ],
+    "image": null,
+    "rtr": false,
+    "exp": false,
+    "runtime": [],
+    "store": [
+      {
+        "name": "GOG",
+        "gameurl": "https://www.gog.com/en/game/jazz_jackrabbit_2_collection",
+        "developerurl": "https://www.gog.com/en/games?developers=epic-games"
+      }
+    ],
+    "availability": "paid",
+    "reqs": [],
+    "arch": [
+      "aarch64",
+      "x86_64"
+    ],
+    "min_glibc": ""
+  }
+}

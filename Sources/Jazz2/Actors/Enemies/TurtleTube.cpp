@@ -77,6 +77,22 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void TurtleTube::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_onWater ? 1 : 0);
+		dest.WriteValueAsLE<float>(_phase);
+	}
+
+	void TurtleTube::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_onWater = (src.ReadValue<std::uint8_t>() != 0);
+		_phase = src.ReadValueAsLE<float>();
+	}
+
 	bool TurtleTube::OnPerish(ActorBase* collider)
 	{
 		CreateParticleDebrisOnPerish(collider);

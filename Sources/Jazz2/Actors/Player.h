@@ -246,6 +246,14 @@ namespace Jazz2::Actors
 		virtual void ReceiveLevelCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		/** @brief Returns current carry over information */
 		virtual PlayerCarryOver PrepareLevelCarryOver();
+		/**
+		 * @brief Called when the player returns to a restored level to receive carry over information
+		 *
+		 * The player was already restored from the level state snapshot, so only the progress made in the (special)
+		 * level it's returning from is applied. It also ignores the level exit the player is standing on, until
+		 * the player steps off it.
+		 */
+		void ReceiveReturnCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		/** @brief Initializes player state from a stream */
 		void InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version);
 		/** @brief Serializes player state to a stream */
@@ -331,6 +339,13 @@ namespace Jazz2::Actors
 		bool AddFastFire(std::int32_t count);
 		/** @brief Morphs to a given player type */
 		virtual bool MorphTo(PlayerType type);
+		/**
+		 * @brief Changes the player type immediately, without any transition or effect
+		 *
+		 * Used where the player isn't supposed to be seen morphing, e.g., when the type is restored after
+		 * respawning at a checkpoint. Returns `false` if the player already has the specified type.
+		 */
+		virtual bool MorphToInstantly(PlayerType type);
 		/** @brief Reverts morpth to the original player type */
 		void MorphRevert();
 		/** @brief Sets duration of dizziness */
@@ -1304,6 +1319,8 @@ namespace Jazz2::Actors
 
 		ExitType _lastExitType;
 		PlayerType _playerType, _playerTypeOriginal;
+		// Player type at the last checkpoint, restored when the player respawns there
+		PlayerType _checkpointPlayerType;
 		SpecialMoveType _currentSpecialMove;
 		LevelExitingState _levelExiting;
 		Modifier _activeModifier;
@@ -1514,12 +1531,17 @@ namespace Jazz2::Actors
 		 */
 		bool _crouchHeldBefore;
 		bool _weaponAllowed;
+		// Set when the player is restored standing on the exit the level was left through, the exit is ignored
+		// until the player steps off it, otherwise it would be taken again immediately
+		bool _levelExitSuppressed = false;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		bool OnTileDeactivated() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 		void OnUpdateHitbox() override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;

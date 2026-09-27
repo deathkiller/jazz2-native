@@ -57,6 +57,20 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Skeleton::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_stuck ? 1 : 0);
+	}
+
+	void Skeleton::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_stuck = (src.ReadValue<std::uint8_t>() != 0);
+	}
+
 	void Skeleton::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

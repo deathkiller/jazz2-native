@@ -170,6 +170,8 @@ namespace nCine::RHI::Vulkan
 		std::uint32_t s_maxImageDim2D = 16384;
 		std::uint32_t s_maxUniformRange = 64 * 1024;
 		bool s_depthClamp = false;
+		// The API version the instance was created with, VK_API_VERSION_1_1 wherever the loader knows it
+		std::uint32_t s_instanceApiVersion = VK_API_VERSION_1_0;
 
 		VkSwapchainKHR s_swapchain = VK_NULL_HANDLE;
 		VkFormat s_swapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -231,10 +233,9 @@ namespace nCine::RHI::Vulkan
 		std::vector<VkFence> s_imagesInFlight;
 
 		// The "screen" (default framebuffer): every no-render-target draw goes here, then PresentFrame() blits
-		// it (vertically flipped) into the acquired swap-chain image. The whole scene is rendered GL-bottom-up
-		// (positive-height viewport, no projection flip), so off-screen render targets round-trip exactly like
-		// GL; the single flip at present is the only GL->Vulkan scan-out correction (mirrors the software
-		// backend's SDL_FLIP_VERTICAL and the D3D11 flip-blit).
+		// it into the acquired swap-chain image. Every pass, the screen's and a render target's alike, is drawn
+		// through a negative-height viewport (see ApplyViewportScissor()) that puts NDC y = +1 on the top row, as
+		// the RHI expects (see RhiFwd.h), so the screen is already the right way up when it is blitted.
 		VkImage s_screenImage = VK_NULL_HANDLE;
 		VkDeviceMemory s_screenMemory = VK_NULL_HANDLE;
 		VkImageView s_screenView = VK_NULL_HANDLE;
@@ -903,7 +904,7 @@ namespace nCine::RHI::Vulkan
 			rs.cullMode = cull.Enabled
 				? (cull.Mode == CullFaceMode::Front ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_BACK_BIT)
 				: VK_CULL_MODE_NONE;
-			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;		// GL default winding
+			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;		// GL default winding (see ApplyViewportScissor())
 			rs.lineWidth = 1.0f;
 			// The engine's GL ortho produces clip.z in [-1,1]; enabling depth clamp disables near/far clipping
 			// so nothing is culled by Vulkan's [0,1] depth range (depth testing is off anyway - a 2D renderer).
@@ -1425,11 +1426,14 @@ namespace nCine::RHI::Vulkan
 		{
 			const Recti vpRect = VulkanDevice::GetViewport();
 			const VulkanDevice::ScissorState scState = VulkanDevice::GetScissorState();
+			// Negative height (VK_KHR_maintenance1, core in Vulkan 1.1) puts NDC y = +1 on the top row of the
+			// rectangle, which is what the RHI's top-down convention asks of every pass (see RhiFwd.h) - no
+			// projection flip and no flip at present. A triangle counter-clockwise in NDC stays front-facing, as in GL.
 			VkViewport vp = {};
 			vp.x = float(vpRect.X);
-			vp.y = float(vpRect.Y);
+			vp.y = float(vpRect.Y + vpRect.H);
 			vp.width = float(vpRect.W);
-			vp.height = float(vpRect.H);
+			vp.height = -float(vpRect.H);
 			vp.minDepth = 0.0f;
 			vp.maxDepth = 1.0f;
 			if (!s_lastViewportValid || std::memcmp(&s_lastViewport, &vp, sizeof(vp)) != 0) {
@@ -1438,8 +1442,8 @@ namespace nCine::RHI::Vulkan
 				s_lastViewportValid = true;
 			}
 
-			// The framebuffer stores rows exactly like GL (bottom-up), so the GL scissor (bottom-left origin)
-			// maps to Vulkan framebuffer scissor with no flip; clamp it to the current render area.
+			// The RHI's scissor has a top-left origin, like Vulkan's framebuffer coordinates, so it maps with no
+			// flip; clamp it to the current render area.
 			const VkExtent2D extent = (s_activeRenderPassTarget == nullptr) ? s_screenExtent
 				: VkExtent2D{ std::uint32_t(s_activeRenderPassTarget->GetColorTexture(0) ? s_activeRenderPassTarget->GetColorTexture(0)->GetWidth() : 0),
 							  std::uint32_t(s_activeRenderPassTarget->GetColorTexture(0) ? s_activeRenderPassTarget->GetColorTexture(0)->GetHeight() : 0) };
@@ -1700,13 +1704,22 @@ namespace nCine::RHI::Vulkan
 					vkEnumerateDeviceExtensionProperties(dev, nullptr, &extCount, exts.data());
 				}
 				bool hasSwapchain = false;
+				bool hasMaintenance1 = false;
 				for (const VkExtensionProperties& e : exts) {
 					if (std::strcmp(e.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
 						hasSwapchain = true;
-						break;
+					} else if (std::strcmp(e.extensionName, "VK_KHR_maintenance1") == 0) {
+						hasMaintenance1 = true;
 					}
 				}
 				if (!hasSwapchain) {
+					continue;
+				}
+				// Every pass is drawn through a negative-height viewport (see ApplyViewportScissor()), which takes
+				// VK_KHR_maintenance1 or Vulkan 1.1, where it is core - every desktop driver and MoltenVK has one
+				VkPhysicalDeviceProperties props;
+				vkGetPhysicalDeviceProperties(dev, &props);
+				if (!hasMaintenance1 && (s_instanceApiVersion < VK_API_VERSION_1_1 || props.apiVersion < VK_API_VERSION_1_1)) {
 					continue;
 				}
 
@@ -1743,8 +1756,6 @@ namespace nCine::RHI::Vulkan
 					continue;
 				}
 
-				VkPhysicalDeviceProperties props;
-				vkGetPhysicalDeviceProperties(dev, &props);
 				const bool isDiscrete = (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
 				if (best == VK_NULL_HANDLE || (isDiscrete && !bestIsDiscrete)) {
 					best = dev;
@@ -2096,7 +2107,7 @@ namespace nCine::RHI::Vulkan
 
 		// -- Secondary swap chains (the windows ImGui spawns when a panel is dragged out of the main one) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
-		// path into an off-screen render target, so every usual convention (bottom-up rows, scissor mapping,
+		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
 		// pipeline/render-pass caches) applies unchanged. QueueSecondaryPresent() then hands that target's texture
 		// over for the frame, and PresentFrame() blits each one into its window's acquired image and joins it into
 		// the single submit + present the frame already does. While nothing is undocked the pending list stays
@@ -2449,7 +2460,14 @@ namespace nCine::RHI::Vulkan
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "nCine";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		// Vulkan 1.1 wherever the loader knows it, so that a 1.1 device has the negative-height viewport even if it
+		// no longer lists VK_KHR_maintenance1 (see PickPhysicalDevice()); a 1.0 loader rejects anything above 1.0
+		std::uint32_t loaderApiVersion = VK_API_VERSION_1_0;
+		if (auto enumerateInstanceVersion = reinterpret_cast<PFN_vkEnumerateInstanceVersion>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceVersion"))) {
+			enumerateInstanceVersion(&loaderApiVersion);
+		}
+		s_instanceApiVersion = (loaderApiVersion >= VK_API_VERSION_1_1 ? VK_API_VERSION_1_1 : VK_API_VERSION_1_0);
+		appInfo.apiVersion = s_instanceApiVersion;
 
 		VkInstanceCreateInfo ici = {};
 		ici.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -2494,7 +2512,7 @@ namespace nCine::RHI::Vulkan
 
 		s_physicalDevice = PickPhysicalDevice(s_graphicsFamily, s_presentFamily);
 		if (s_physicalDevice == VK_NULL_HANDLE) {
-			LOGE("No suitable Vulkan physical device (needs graphics+present queue and VK_KHR_swapchain)");
+			LOGE("No suitable Vulkan physical device (needs graphics+present queue, VK_KHR_swapchain and VK_KHR_maintenance1 or Vulkan 1.1)");
 			DestroySwapchain();
 			return false;
 		}
@@ -2536,9 +2554,10 @@ namespace nCine::RHI::Vulkan
 		// application to enable it when it is present - a validation error, and on some loaders a failed
 		// vkCreateDevice, otherwise. Its feature struct is left at the defaults: nothing this backend draws
 		// relies on a feature the subset withholds (the triangle fans and line loops the engine issues are
-		// emulated by MoltenVK itself through its own index rewriting).
+		// emulated by MoltenVK itself through its own index rewriting). VK_KHR_maintenance1 is enabled wherever it
+		// is listed, for the negative-height viewport - on a Vulkan 1.1 device that is core and enabling it is a no-op.
 		std::uint32_t deviceExtCount = 1;
-		const char* deviceExts[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, nullptr };
+		const char* deviceExts[3] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, nullptr, nullptr };
 		{
 			std::uint32_t extCount = 0;
 			vkEnumerateDeviceExtensionProperties(s_physicalDevice, nullptr, &extCount, nullptr);
@@ -2550,7 +2569,8 @@ namespace nCine::RHI::Vulkan
 				if (std::strcmp(e.extensionName, "VK_KHR_portability_subset") == 0) {
 					deviceExts[deviceExtCount++] = "VK_KHR_portability_subset";
 					LOGI("Vulkan portability device (MoltenVK): VK_KHR_portability_subset enabled");
-					break;
+				} else if (std::strcmp(e.extensionName, "VK_KHR_maintenance1") == 0) {
+					deviceExts[deviceExtCount++] = "VK_KHR_maintenance1";
 				}
 			}
 		}
@@ -2926,15 +2946,14 @@ namespace nCine::RHI::Vulkan
 		ImageBarrier(s_commandBuffer, swapImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
 
-		// Vertically-flipped blit: the scene is stored GL-bottom-up, so map screen row 0 (game bottom) to the
-		// swap-chain's bottom row and screen top to row 0 - the single GL->Vulkan scan-out correction.
+		// The screen is stored top-down, like the swap-chain image, so this is a straight copy
 		VkImageBlit blit = {};
 		blit.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 		blit.srcOffsets[0] = { 0, 0, 0 };
 		blit.srcOffsets[1] = { std::int32_t(s_screenExtent.width), std::int32_t(s_screenExtent.height), 1 };
 		blit.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-		blit.dstOffsets[0] = { 0, std::int32_t(s_swapchainExtent.height), 0 };
-		blit.dstOffsets[1] = { std::int32_t(s_swapchainExtent.width), 0, 1 };
+		blit.dstOffsets[0] = { 0, 0, 0 };
+		blit.dstOffsets[1] = { std::int32_t(s_swapchainExtent.width), std::int32_t(s_swapchainExtent.height), 1 };
 		vkCmdBlitImage(s_commandBuffer, s_screenImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			swapImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_NEAREST);
 
@@ -2966,7 +2985,7 @@ namespace nCine::RHI::Vulkan
 		s_presentChains.push_back(nullptr);
 
 		// Undocked ImGui windows: each one's contents were rendered into an off-screen target earlier this frame
-		// (through the ordinary RHI path), so all that is left is the same flipped blit the main window gets. The
+		// (through the ordinary RHI path), so all that is left is the same blit the main window gets. The
 		// loop does not run at all while nothing is undocked.
 		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
 			SecondarySwapchain& sc = *pending.Chain;
@@ -3005,14 +3024,14 @@ namespace nCine::RHI::Vulkan
 			ImageBarrier(s_commandBuffer, secImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
 
-			// Vertically flipped, exactly like the main present: the texture holds a GL-bottom-up image
+			// A straight copy, exactly like the main present: the render target holds a top-down image
 			VkImageBlit secBlit = {};
 			secBlit.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 			secBlit.srcOffsets[0] = { 0, 0, 0 };
 			secBlit.srcOffsets[1] = { pending.Source->GetWidth(), pending.Source->GetHeight(), 1 };
 			secBlit.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-			secBlit.dstOffsets[0] = { 0, std::int32_t(sc.Extent.height), 0 };
-			secBlit.dstOffsets[1] = { std::int32_t(sc.Extent.width), 0, 1 };
+			secBlit.dstOffsets[0] = { 0, 0, 0 };
+			secBlit.dstOffsets[1] = { std::int32_t(sc.Extent.width), std::int32_t(sc.Extent.height), 1 };
 			vkCmdBlitImage(s_commandBuffer, sourceImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				secImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &secBlit, VK_FILTER_NEAREST);
 

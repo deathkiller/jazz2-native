@@ -620,6 +620,10 @@ namespace Jazz2::Tiles
 		void InitializeFromStream(Stream& src);
 		/** @brief Serializes tile map state to a stream */
 		void SerializeResumableToStream(Stream& dest, bool fromCheckpoint = false);
+		/** @brief Restores complete live state of the sprite layer (including the last checkpoint) from a snapshot */
+		bool InitializeSnapshotFromStream(Stream& src);
+		/** @brief Serializes complete live state of the sprite layer (including the last checkpoint) to a snapshot */
+		void SerializeSnapshotToStream(Stream& dest);
 
 		/**
 			@brief Repacks the tileset's atlas around the tiles this level actually references
@@ -870,6 +874,9 @@ namespace Jazz2::Tiles
 #endif
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);
+
+		static void WriteLayerTile(Stream& dest, const LayerTile& tile);
+		static void ReadLayerTile(Stream& src, LayerTile& tile);
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);

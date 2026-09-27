@@ -36,6 +36,23 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
+	void AirboardGenerator::OnSerializeState(Stream& dest)
+	{
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_active ? 1 : 0);
+		dest.WriteValueAsLE<float>(_timeLeft);
+	}
+
+	void AirboardGenerator::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		_active = (src.ReadValue<std::uint8_t>() != 0);
+		_timeLeft = src.ReadValueAsLE<float>();
+		_renderer.setDrawEnabled(_active);
+	}
+
 	bool AirboardGenerator::OnHandleCollision(ActorBase* other)
 	{
 		if (auto* player = runtime_cast<Player>(other)) {

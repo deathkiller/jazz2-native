@@ -118,6 +118,24 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void Dragon::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>(_attacking ? 1 : 0);
+		dest.WriteValueAsLE<float>(_stateTime);
+		dest.WriteValueAsLE<float>(_attackTime);
+	}
+
+	void Dragon::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attacking = (src.ReadValue<std::uint8_t>() != 0);
+		_stateTime = src.ReadValueAsLE<float>();
+		_attackTime = src.ReadValueAsLE<float>();
+	}
+
 	bool Dragon::OnPerish(ActorBase* collider)
 	{
 		CreateParticleDebrisOnPerish(collider);

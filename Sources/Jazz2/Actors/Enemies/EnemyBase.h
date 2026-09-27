@@ -46,6 +46,8 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		void OnHealthChanged(ActorBase* collider) override;
 		bool OnPerish(ActorBase* collider) override;
+		void OnSerializeState(Stream& dest) override;
+		void OnDeserializeState(Stream& src) override;
 
 		/** @brief Awards the enemy's score value to the collider (or its owner) */
 		void AddScoreToCollider(ActorBase* collider);

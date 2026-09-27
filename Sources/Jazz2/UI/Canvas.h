@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Alignment.h"
+#include "../../nCine/Graphics/RenderBatcher.h"
 #include "../../nCine/Graphics/RenderCommand.h"
 #include "../../nCine/Graphics/SceneNode.h"
 
@@ -73,8 +74,59 @@ namespace Jazz2::UI
 		static constexpr float AnimTimeMultiplier = 0.014f;
 
 	private:
+		/**
+			@brief Glyphs of one font, shader and layer, written straight into batched commands
+
+			See @ref Font::DrawString(). Every string drawn into the canvas with the same font, shader and layer goes
+			through the same record, so they share their batches just like the commands of their glyphs used to be
+			batched together. A record outlives the frame so that a batch can reserve the room its record needed in
+			the previous one: a menu draws the same text frame after frame, so it fits a single batch per record
+			without the batch reserving more than it uses.
+		*/
+		struct GlyphBatch
+		{
+			/** @brief Texture of the font */
+			const Texture* FontTexture = nullptr;
+			/** @brief Whether the glyphs are drawn with the colorization shader */
+			bool Colorized = false;
+			/** @brief Layer of the glyphs */
+			std::uint16_t Layer = 0;
+			/** @brief Whether the record is in use in this frame */
+			bool Active = false;
+			/** @brief Whether the glyphs are batched, otherwise each one is drawn by a command of its own */
+			bool Direct = true;
+			/** @brief Glyphs drawn through the record in this frame */
+			std::uint32_t Count = 0;
+			/** @brief Glyphs drawn through the record in the previous frame */
+			std::uint32_t LastCount = 0;
+			/** @brief Pooled command that carries the material of the batches, it is never queued itself */
+			RenderCommand* StandIn = nullptr;
+			/** @brief Batch the glyphs are written into */
+			RenderBatcher::DirectBatch Batch;
+			/** @brief Commands that draw the batches, kept from frame to frame with their material set up */
+			SmallVector<std::unique_ptr<RenderCommand>, 0> BatchCommands;
+			/** @brief Number of the batch commands in use in this frame */
+			std::uint32_t BatchCommandsUsed = 0;
+			/** @brief Depth of the layer, the z translation of every glyph */
+			float Depth = 0.0f;
+			/** @brief Offsets of the instance block members in an instance */
+			std::uint32_t ModelMatrixOffset = 0, ColorOffset = 0, TexRectOffset = 0, SpriteSizeOffset = 0;
+			/** @brief Offset of the palette offset member, or -1 if the shader has none */
+			std::int32_t PaletteOffsetOffset = -1;
+		};
+
 		std::int32_t _renderCommandsCount;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		RenderQueue* _currentRenderQueue;
+		SmallVector<GlyphBatch, 0> _glyphBatches;
+
+		/** @brief Rents a render command and gives it the material of a glyph of @p fontTexture */
+		RenderCommand* RentGlyphCommand(const Texture& fontTexture, Shader* colorizeShader);
+		/** @brief Returns the index of the glyph batch record for glyphs of @p fontTexture on @p layer, preparing it for this frame */
+		std::int32_t GetGlyphBatch(const Texture& fontTexture, Shader* colorizeShader, std::uint16_t layer);
+		/** @brief Returns the next command of @p glyphBatch to draw a batch with, creating it if needed */
+		RenderCommand* NextGlyphBatchCommand(GlyphBatch& glyphBatch);
+		/** @brief Finishes the batches of the records in use for the glyphs written so far */
+		void FinishGlyphBatches();
 	};
 }

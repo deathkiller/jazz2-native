@@ -59,7 +59,7 @@ namespace Jazz2::Actors
 	Player::Player()
 		:
 		_playerIndex(0),
-		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz),
+		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz), _checkpointPlayerType(PlayerType::Jazz),
 		_isActivelyPushing(false),
 		_wasActivelyPushing(false),
 		_pushContactThisFrame(false),
@@ -243,6 +243,7 @@ namespace Jazz2::Actors
 	{
 		_playerTypeOriginal = (PlayerType)details.Params[0];
 		_playerType = _playerTypeOriginal;
+		_checkpointPlayerType = _playerTypeOriginal;
 		_playerIndex = details.Params[1];
 
 		// Load the anim set as indexed ONLY when this player is actually being recolored, so it can be recolored at
@@ -861,12 +862,17 @@ namespace Jazz2::Actors
 						auto* res = _metadata->FindAnimation(Shield);
 						if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->GetSize();
-							Vector2i size = res->Base->FrameDimensions;
+							// The sheet does not have to be a grid with the first frame in its corner, so the
+							// frame is found the same way every other sprite draw finds it
+							Recti frameRect = res->Base->GetFrameRect(res->FrameOffset);
+							Vector2i frameOffset = res->Base->GetFrameOffset(res->FrameOffset);
 
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
 							debris.Depth = _renderer.layer() - 2;
-							debris.Size = Vector2f((float)size.X, (float)size.Y);
+							debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+							debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
+								frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
 							debris.Speed = Vector2f::Zero;
 							debris.Acceleration = Vector2f::Zero;
 
@@ -877,10 +883,10 @@ namespace Jazz2::Actors
 
 							debris.Time = 160.0f;
 
-							debris.TexScaleX = (size.X / float(texSize.X));
-							debris.TexBiasX = 0.0f;
-							debris.TexScaleY = (size.Y / float(texSize.Y));
-							debris.TexBiasY = 0.0f;
+							debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+							debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+							debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+							debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 							debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 							// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
@@ -1051,15 +1057,17 @@ namespace Jazz2::Actors
 						auto* res = _metadata->FindAnimation(SugarRush);
 						if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 							Vector2i texSize = res->Base->TextureDiffuse->GetSize();
-							Vector2i size = res->Base->FrameDimensions;
-							Vector2i frameConf = res->Base->FrameConfiguration;
 							std::int32_t frame = res->FrameOffset + Random().Next(0, res->FrameCount);
+							Recti frameRect = res->Base->GetFrameRect(frame);
+							Vector2i frameOffset = res->Base->GetFrameOffset(frame);
 							float speedX = Random().FastFloat(-4.0f, 4.0f);
 
 							Tiles::TileMap::DestructibleDebris debris = { };
 							debris.Pos = _pos;
 							debris.Depth = _renderer.layer() - 2;
-							debris.Size = Vector2f((float)size.X, (float)size.Y);
+							debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+							debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
+								frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
 							debris.Speed = Vector2f(speedX, Random().FastFloat(-4.0f, -2.2f));
 							debris.Acceleration = Vector2f(0.0f, 0.2f);
 
@@ -1072,10 +1080,10 @@ namespace Jazz2::Actors
 
 							debris.Time = 160.0f;
 
-							debris.TexScaleX = (size.X / float(texSize.X));
-							debris.TexBiasX = ((float)(frame % frameConf.X) / frameConf.X);
-							debris.TexScaleY = (size.Y / float(texSize.Y));
-							debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
+							debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+							debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+							debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+							debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 							debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 							// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
@@ -3151,15 +3159,18 @@ namespace Jazz2::Actors
 					Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 					std::int32_t curAnimFrame = res->FrameOffset + ((std::int32_t)(frames * 0.24f) % res->FrameCount);
 					Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+					Vector2i frameOffset = res->Base->GetFrameOffset(curAnimFrame);
 					float texScaleX = (float(frameRect.W) / float(texSize.X));
 					float texBiasX = (float(frameRect.X) / float(texSize.X));
 					float texScaleY = (float(frameRect.H) / float(texSize.Y));
 					float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					// The quad is sized by the frame's own area - the texture rectangle above covers exactly
-					// that, and stretching a trimmed frame over the whole cell would visibly distort it
-					float shieldPosX = _pos.X - frameRect.W * shieldScale * 0.5f;
-					float shieldPosY = _pos.Y - frameRect.H * shieldScale * 0.5f;
+					// that, and stretching a trimmed frame over the whole cell would visibly distort it. It is
+					// the cell that is centred on the player, with the frame at its place inside, because
+					// trimmed frames differ in size and centring each on its own would make the shield wobble.
+					float shieldPosX = _pos.X + (frameOffset.X - res->Base->FrameDimensions.X * 0.5f) * shieldScale;
+					float shieldPosY = _pos.Y + (frameOffset.Y - res->Base->FrameDimensions.Y * 0.5f) * shieldScale;
 
 					if (!PreferencesCache::UnalignedViewport) {
 						shieldPosX = floorFast(shieldPosX);
@@ -5076,6 +5087,14 @@ namespace Jazz2::Actors
 			HandleAreaEventAt(_pos.X, _pos.Y, timeMult, AreaEventPass::States, areaWeaponAllowed, areaWaterBlock);
 		}
 
+		// Cleared only after this frame's samples, so a path leaving the exit cannot take it on the way out
+		if (_levelExitSuppressed) {
+			std::uint8_t* exitParams;
+			if (events->GetEventByPosition(_pos.X, _pos.Y, &exitParams) != EventType::AreaEndOfLevel) {
+				_levelExitSuppressed = false;
+			}
+		}
+
 		// TODO: Implement Slide modifier with JJ2+ parameter
 
 		// Check floating from each corner of an extended hitbox
@@ -5359,7 +5378,7 @@ namespace Jazz2::Actors
 				return true;
 			}
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
-				if (_levelExiting == LevelExitingState::None) {
+				if (_levelExiting == LevelExitingState::None && !_levelExitSuppressed) {
 					// TODO: Implement Fast parameter
 					// memcpy'd through EventParamsReader rather than cast, because EventTile puts these
 					// parameters at an odd offset - see ModifierLimitCameraView above. This exact line killed
@@ -5605,6 +5624,12 @@ namespace Jazz2::Actors
 					playerParams
 				));
 				_levelHandler->AddActor(corpse);
+
+				// Revert also the player type, a morph monitor could have changed it since the checkpoint was taken
+				// (a frog was already reverted in OnPerish()). The corpse above keeps the type the player died as.
+				if (_playerType != _checkpointPlayerType && _playerType != PlayerType::Spectate && _checkpointPlayerType != PlayerType::Spectate) {
+					MorphToInstantly(_checkpointPlayerType);
+				}
 
 				SetAnimation(AnimState::Idle);
 
@@ -6250,6 +6275,118 @@ namespace Jazz2::Actors
 		return carryOver;
 	}
 
+	void Player::ReceiveReturnCarryOver(ExitType exitType, const PlayerCarryOver& carryOver)
+	{
+		ReceiveLevelCarryOver(exitType, carryOver);
+
+		// Gems collected in this level before it was left were already added to the total that was carried
+		// over to the special level, so they would be counted twice
+		for (std::size_t i = 0; i < arraySize(_gemsTotal); i++) {
+			_gemsTotal[i] = std::max<std::int32_t>(carryOver.Gems[i] - _inventory.Gems[i], 0);
+		}
+
+		if (carryOver.Type != PlayerType::None && carryOver.Type != _playerType) {
+			MorphToInstantly(carryOver.Type);
+		}
+
+		_levelExitSuppressed = true;
+	}
+
+	namespace
+	{
+		void WriteInventoryState(Stream& dest, const Player::InventoryState& inventory)
+		{
+			dest.WriteVariableInt32(inventory.Coins);
+			dest.WriteVariableInt32(inventory.FoodEaten);
+			for (std::int32_t gems : inventory.Gems) {
+				dest.WriteVariableInt32(gems);
+			}
+			dest.WriteVariableInt32((std::int32_t)WeaponType::Count);
+			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+				dest.WriteValueAsLE<std::uint16_t>(inventory.WeaponAmmo[i]);
+				dest.WriteValue<std::uint8_t>(inventory.WeaponUpgrades[i]);
+			}
+		}
+
+		void ReadInventoryState(Stream& src, Player::InventoryState& inventory)
+		{
+			inventory.Coins = src.ReadVariableInt32();
+			inventory.FoodEaten = src.ReadVariableInt32();
+			for (std::int32_t& gems : inventory.Gems) {
+				gems = src.ReadVariableInt32();
+			}
+			std::int32_t weaponCount = src.ReadVariableInt32();
+			for (std::int32_t i = 0; i < weaponCount; i++) {
+				std::uint16_t ammo = src.ReadValueAsLE<std::uint16_t>();
+				std::uint8_t upgrades = src.ReadValue<std::uint8_t>();
+				if (i < (std::int32_t)WeaponType::Count) {
+					inventory.WeaponAmmo[i] = ammo;
+					inventory.WeaponUpgrades[i] = upgrades;
+				}
+			}
+		}
+	}
+
+	void Player::OnSerializeState(Stream& dest)
+	{
+		// Only the persistent state is stored, the player is restored when returning from another level, and
+		// temporary effects (shield, sugar rush, airboard, dizziness, companion bird) end with the level anyway
+		ActorBase::OnSerializeState(dest);
+
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_checkpointPlayerType);
+		dest.WriteVariableInt32(_lives);
+		dest.WriteVariableInt32(_score);
+		WriteInventoryState(dest, _inventory);
+		WriteInventoryState(dest, _inventoryCheckpoint);
+		for (std::int32_t gems : _gemsTotal) {
+			dest.WriteVariableInt32(gems);
+		}
+		dest.WriteValueAsLE<float>(_checkpointPos.X);
+		dest.WriteValueAsLE<float>(_checkpointPos.Y);
+		dest.WriteValueAsLE<float>(_checkpointLight);
+		dest.WriteValueAsLE<float>(_currentAmbientLight);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_currentWeapon);
+	}
+
+	void Player::OnDeserializeState(Stream& src)
+	{
+		ActorBase::OnDeserializeState(src);
+
+		// Invulnerability is not restored, the flag would stay set forever without the time that clears it
+		SetState(ActorState::IsInvulnerable, false);
+
+		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
+		_playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
+		_checkpointPlayerType = (PlayerType)src.ReadValue<std::uint8_t>();
+		MorphToInstantly(playerType);
+
+		_lives = src.ReadVariableInt32();
+		_score = src.ReadVariableInt32();
+		ReadInventoryState(src, _inventory);
+		ReadInventoryState(src, _inventoryCheckpoint);
+		for (std::int32_t& gems : _gemsTotal) {
+			gems = src.ReadVariableInt32();
+		}
+		_checkpointPos.X = src.ReadValueAsLE<float>();
+		_checkpointPos.Y = src.ReadValueAsLE<float>();
+		_checkpointLight = src.ReadValueAsLE<float>();
+		float ambientLight = src.ReadValueAsLE<float>();
+		_levelHandler->SetAmbientLight(this, ambientLight);
+
+		WeaponType currentWeapon = (WeaponType)src.ReadValue<std::uint8_t>();
+		if ((std::int32_t)currentWeapon >= (std::int32_t)WeaponType::Count || _inventory.WeaponAmmo[(std::int32_t)currentWeapon] == 0) {
+			currentWeapon = WeaponType::Blaster;
+		}
+		_currentWeapon = currentWeapon;
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_inventory.WeaponAmmo)); i++) {
+			if (_inventory.WeaponAmmo[i] != 0) {
+				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
+			}
+		}
+	}
+
 	void Player::InitializeFromStream(ILevelHandler* levelHandler, Stream& src, std::uint16_t version)
 	{
 		std::uint8_t playerIndex = src.ReadVariableInt32();
@@ -6309,7 +6446,8 @@ namespace Jazz2::Actors
 	void Player::SerializeResumableToStream(Stream& dest)
 	{
 		dest.WriteVariableInt32(_playerIndex);
-		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
+		// The player is resumed at the checkpoint, so also with the type it had there
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_checkpointPlayerType);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
 		dest.WriteValueAsLE<float>(_checkpointPos.X);
 		dest.WriteValueAsLE<float>(_checkpointPos.Y);
@@ -7282,6 +7420,29 @@ namespace Jazz2::Actors
 		return true;
 	}
 
+	bool Player::MorphToInstantly(PlayerType type)
+	{
+		if (_playerType == type) {
+			return false;
+		}
+
+		_playerType = type;
+
+		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
+		bool useIndexed = (GetEffectiveFurColor() != 0);
+		RequestMetadata(GetCharacterTraits(type).Metadata, useIndexed);
+
+		// Refresh animation state, special moves of the previous type cannot continue
+		AnimState prevState = (_currentAnimation != nullptr ? _currentAnimation->State : AnimState::Idle);
+		_currentSpecialMove = SpecialMoveType::None;
+		_currentAnimation = nullptr;
+		if (!SetAnimation(prevState)) {
+			SetAnimation(AnimState::Idle);
+		}
+
+		return true;
+	}
+
 	void Player::MorphRevert()
 	{
 		MorphTo(_playerTypeOriginal);
@@ -7414,6 +7575,8 @@ namespace Jazz2::Actors
 	{
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
+		// Frog is only a temporary form, dying as a frog reverts it too (see OnPerish())
+		_checkpointPlayerType = (_playerType == PlayerType::Frog ? _playerTypeOriginal : _playerType);
 		
 		_inventoryCheckpoint = _inventory;
 	}

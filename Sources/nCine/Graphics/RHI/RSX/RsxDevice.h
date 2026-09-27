@@ -43,15 +43,12 @@ namespace nCine::RHI::RSX
 		@ref GetDisplayWidth() and @ref GetDisplayHeight() are only known after the session is up. The
 		logical (game) resolution remains a render-target size driven separately by the render pipeline.
 
-		<b>The display scans out top-down.</b> The engine renders in the OpenGL convention, and this backend
-		replays it faithfully: every viewport is programmed so clip -Y lands on row 0 and every surface - the
-		screen and each off-screen render target - is stored bottom-up exactly like OpenGL. That is what
-		keeps a texture's V axis and its viewport's Y axis pointing the same way, so an off-screen round trip
-		does not flip the image (the property that makes the scene composite and the directly drawn HUD
-		agree). The scan-out then needs the one correction that convention implies: "screen" (no render
-		target bound) is an intermediate surface, and @ref PresentFrame() flips it into the display buffer
-		with a built-in shader - the same single OpenGL-to-native flip the sceGxm and Direct3D 11 backends
-		do, which also scales the logical resolution up to the panel for free.
+		<b>Everything is top-down,</b> like the display's scan-out and the RHI's convention (see RhiFwd.h):
+		every viewport is programmed with a negative Y scale, so clip +Y lands on its top row, and every
+		surface - the screen and each off-screen render target - stores its top row first, the way a
+		texture's V axis runs. "Screen" (no render target bound) is an intermediate surface that
+		@ref PresentFrame() copies into the display buffer with a built-in shader, which also scales the
+		logical resolution up to the panel for free.
 	*/
 	class RsxDevice
 	{
@@ -225,7 +222,7 @@ namespace nCine::RHI::RSX
 		static void DestroySwapchain();
 		/** @brief No-op: the display mode is negotiated once (the logical resolution is a render-target size) */
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
-		/** @brief Flips the intermediate screen surface into the next display buffer and queues it for scan-out */
+		/** @brief Copies the intermediate screen surface into the next display buffer and queues it for scan-out */
 		static void PresentFrame();
 		/** @brief No-op (how long the CPU waits for the previous flip is reported by @ref PresentFrame()) */
 		static inline void BeginGpuTiming() {}
@@ -344,8 +341,8 @@ namespace nCine::RHI::RSX
 		static std::uint32_t _displayPitch;
 		static std::uint32_t _backBufferIndex;
 
-		// The intermediate surface every draw that is not aimed at a render target lands in, kept bottom-up
-		// like OpenGL and flipped into the display buffer at present time (see the class documentation)
+		// The intermediate surface every draw that is not aimed at a render target lands in, copied into the
+		// display buffer at present time (see the class documentation)
 		static RsxVram::Block _screenBuffer;
 		static std::uint32_t _screenPitch;
 		static gcmTexture _screenTexture;
@@ -384,7 +381,7 @@ namespace nCine::RHI::RSX
 
 		// -- Built-in shaders --
 
-		// Present: the screen surface sampled with a flipped V into the display buffer
+		// Present: the screen surface stretched over the display buffer
 		static const rsxVertexProgram* _presentVertexProgram;
 		static const rsxFragmentProgram* _presentFragmentProgram;
 		static const void* _presentVertexUcode;

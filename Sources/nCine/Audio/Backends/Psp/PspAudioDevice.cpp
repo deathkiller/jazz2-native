@@ -4,6 +4,7 @@
 
 #include "../../AudioMixerCommon.h"
 #include "../../IAudioPlayer.h"
+#include "../../../Backends/Psp/PspPower.h"
 #include "../../../../Main.h"
 
 #include <cmath>
@@ -33,7 +34,8 @@ namespace nCine
 	}
 
 	PspAudioDevice::PspAudioDevice()
-		: _valid(false), _suspended(false), _threadShouldQuit(false), _channel(-1), _thread(-1), _lock(-1), _blocks(nullptr),
+		: _valid(false), _suspended(false), _threadShouldQuit(false), _channel(-1), _outputFailures(0), _lastOutputError(0),
+			_channelReservations(0), _thread(-1), _lock(-1), _blocks(nullptr),
 			_mixBuffer(nullptr), _mixFrequency(DefaultMixingFrequency), _lastMixedLeft(0), _lastMixedRight(0), _buffers(nullptr),
 			_bufferCount(0), _bufferCapacity(0)
 	{
@@ -132,21 +134,86 @@ namespace nCine
 		PspAudioDevice* device = *static_cast<PspAudioDevice**>(argp);
 		const std::size_t blockSamples = std::size_t(BlockFrames) * ChannelCount;
 
+		std::uint32_t seenResumes = Backends::PspPower::GetResumeCount();
 		std::int32_t current = 0;
+		std::int32_t failures = 0;
+		// A block that was mixed but not taken by the hardware yet is output again rather than mixed anew, so
+		// the sound picks up where it stopped instead of skipping what the failed calls did not play
+		bool blockPending = false;
 		while (!device->_threadShouldQuit.load(std::memory_order_relaxed)) {
-			std::int16_t* block = device->_blocks + std::size_t(current) * blockSamples;
-			if (device->_suspended.load(std::memory_order_relaxed)) {
-				std::memset(block, 0, blockSamples * sizeof(std::int16_t));
-			} else {
-				SemaphoreLock lock(device->_lock);
-				device->MixInto(block, BlockFrames);
+			// Nothing is handed to the hardware from the moment the console starts going to sleep until it has
+			// fully woken up (the firmware freezes this thread somewhere in between)
+			if (Backends::PspPower::IsSuspended()) {
+				sceKernelDelayThread(RetryDelayUs);
+				continue;
 			}
+			// The channel reserved before a sleep does not play after it
+			const std::uint32_t resumes = Backends::PspPower::GetResumeCount();
+			if (resumes != seenResumes) {
+				seenResumes = resumes;
+				device->ReserveChannel();
+				failures = 0;
+			}
+
+			std::int16_t* block = device->_blocks + std::size_t(current) * blockSamples;
+			if (!blockPending) {
+				if (device->_suspended.load(std::memory_order_relaxed)) {
+					std::memset(block, 0, blockSamples * sizeof(std::int16_t));
+				} else {
+					SemaphoreLock lock(device->_lock);
+					device->MixInto(block, BlockFrames);
+				}
+				blockPending = true;
+			}
+
 			// Returns once the hardware has queued the block behind the one it is playing, which paces this
 			// loop at the sample rate and leaves one block of time to mix the next
-			sceAudioOutputPannedBlocking(device->_channel, PSP_AUDIO_VOLUME_MAX, PSP_AUDIO_VOLUME_MAX, block);
+			const std::int32_t result = (device->_channel >= 0
+				? sceAudioOutputPannedBlocking(device->_channel, PSP_AUDIO_VOLUME_MAX, PSP_AUDIO_VOLUME_MAX, block)
+				: -1);
+			if (result < 0) {
+				// A failed call returns at once, without the wait for the hardware that paces this loop, and this
+				// thread outranks the game's - retrying straight away would never let the main thread run again
+				if (device->_channel >= 0) {
+					device->_lastOutputError.store(result, std::memory_order_relaxed);
+					device->_outputFailures.fetch_add(1, std::memory_order_relaxed);
+				}
+				if (++failures >= FailuresBeforeNewChannel) {
+					failures = 0;
+					device->ReserveChannel();
+				}
+				sceKernelDelayThread(RetryDelayUs);
+				continue;
+			}
+			failures = 0;
+			blockPending = false;
 			current ^= 1;
 		}
 		return 0;
+	}
+
+	bool PspAudioDevice::ReserveChannel()
+	{
+		if (_channel >= 0) {
+			// A channel still playing its last block refuses to be released, which it stops doing within a block.
+			// Anything else - a channel the firmware already took back in the sleep - means there is nothing to
+			// release, so a new channel is reserved either way; only a busy one could be left behind that way.
+			constexpr SceUInt BlockDurationUs = SceUInt(BlockFrames * 1000000LL / OutputFrequency) + 1000;
+			for (std::int32_t i = 0; i < 4 && sceAudioChRelease(_channel) < 0; i++) {
+				sceKernelDelayThread(BlockDurationUs);
+			}
+			_channel = -1;
+		}
+
+		const std::int32_t channel = sceAudioChReserve(PSP_AUDIO_NEXT_CHANNEL, BlockFrames, PSP_AUDIO_FORMAT_STEREO);
+		if (channel < 0) {
+			_lastOutputError.store(channel, std::memory_order_relaxed);
+			_outputFailures.fetch_add(1, std::memory_order_relaxed);
+			return false;
+		}
+		_channel = channel;
+		_channelReservations.fetch_add(1, std::memory_order_relaxed);
+		return true;
 	}
 
 	const char* PspAudioDevice::name() const
@@ -185,6 +252,22 @@ namespace nCine
 	{
 		// Only the players advance here; the mixing itself happens on the output thread
 		AudioDeviceBase::updatePlayers();
+
+		// What the output thread ran into is logged from here, because its own stack is too small for the trace.
+		// Failures come one per 10 ms for as long as they last, and every line written to this console's memory
+		// stick costs the frame milliseconds, so they are summed up and reported about once a second.
+		if (const std::int32_t reservations = _channelReservations.exchange(0, std::memory_order_relaxed)) {
+			LOGI("Audio channel reserved again{}", reservations > 1 ? " (several times)" : "");
+		}
+		_unreportedFailures += _outputFailures.exchange(0, std::memory_order_relaxed);
+		if (_framesSinceFailureReport < FramesBetweenFailureReports) {
+			_framesSinceFailureReport++;
+		} else if (_unreportedFailures > 0) {
+			LOGW("Audio output failed {} time{} (last error 0x{:.8x})", _unreportedFailures, _unreportedFailures == 1 ? "" : "s",
+				std::uint32_t(_lastOutputError.load(std::memory_order_relaxed)));
+			_unreportedFailures = 0;
+			_framesSinceFailureReport = 0;
+		}
 	}
 
 	void PspAudioDevice::suspendDevice()

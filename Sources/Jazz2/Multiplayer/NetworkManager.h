@@ -147,6 +147,10 @@ namespace Jazz2::Multiplayer
 
 		String OnOverrideContentPath(StringView path);
 
+		// Whether a disconnect for this reason removed the player from the game, which drops the progression
+		// retained for a reconnect
+		static bool IsKickedOff(Reason reason);
+
 		static void FillServerConfigurationFromFile(StringView path, ServerConfiguration& serverConfig, HashMap<String, bool>& includedFiles, std::int32_t level);
 		static void AddServerAddressOverride(ServerConfiguration& serverConfig, StringView value);
 		static void VerifyServerConfiguration(ServerConfiguration& serverConfig);

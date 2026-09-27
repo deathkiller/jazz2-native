@@ -2194,6 +2194,47 @@ namespace Jazz2
 				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })));
 	}
 
+	bool ContentResolver::TryGetNextLevelName(StringView path, String& nextLevel)
+	{
+		// Try "Content" directory first, then "Cache" directory, the same way as TryLoadLevel()
+		auto pathNormalized = fs::ToNativeSeparators(path);
+		String fullPath;
+		if (_pathHandler) {
+			fullPath = _pathHandler(String(pathNormalized + ".j2l"_s));
+		}
+		if (fullPath.empty()) {
+			fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			if (!fs::IsReadableFile(fullPath)) {
+				fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+			}
+		}
+
+		auto s = fs::Open(fullPath, FileAccess::Read);
+		if (!s->IsValid()) {
+			return false;
+		}
+
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::Level) {
+			return false;
+		}
+
+		/*LevelFlags flags =*/ s->ReadValueAsLE<std::uint16_t>();
+		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
+		DeflateStream uc(*s, compressedSize);
+
+		// Display name comes first
+		char displayName[UINT8_MAX];
+		std::uint8_t stringSize = uc.ReadValue<std::uint8_t>();
+		uc.Read(displayName, stringSize);
+
+		stringSize = uc.ReadValue<std::uint8_t>();
+		nextLevel = String(NoInit, stringSize);
+		uc.Read(nextLevel.data(), stringSize);
+		return true;
+	}
+
 	bool ContentResolver::TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor)
 	{
 		// Try "Content" directory first, then "Cache" directory

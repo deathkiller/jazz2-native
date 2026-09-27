@@ -143,7 +143,9 @@ namespace Jazz2::Multiplayer
 		void OnInitializeViewport(std::int32_t width, std::int32_t height) override;
 		bool OnConsoleCommand(StringView line) override;
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		void OnTouchEvent(const TouchEvent& event) override;
+#endif
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
@@ -325,6 +327,10 @@ namespace Jazz2::Multiplayer
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
 		std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
+		// Multiplayer sessions keep their own rollback, actors of remote peers cannot be resurrected locally
+		bool CanUseLevelStateSnapshots() const override {
+			return false;
+		}
 		bool IsCheatingAllowed(Actors::Player* player) override;
 		/** @brief Returns `true` if the specified player has admin privileges, `nullptr` refers to the local console */
 		bool IsPlayerAdmin(Actors::Player* player) const;
@@ -503,6 +509,8 @@ namespace Jazz2::Multiplayer
 		static constexpr float RecalcPositionInRoundInterval = FrameTimer::FramesPerSecond / 4.0f;
 		static constexpr float TeamSwitchCooldownFrames = 5.0f * FrameTimer::FramesPerSecond;
 		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
+		// A connected peer that doesn't authenticate in this time is kicked - a genuine client does it right away
+		static constexpr std::int32_t AuthTimeoutSecs = 20;
 
 		NetworkManager* _networkManager;
 		std::unique_ptr<GameModes::IGameMode> _gameMode;

@@ -102,6 +102,34 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
+	void MadderHatter::OnSerializeState(Stream& dest)
+	{
+		EnemyBase::OnSerializeState(dest);
+
+		dest.WriteValueAsLE<float>(_attackTime);
+
+		std::uint8_t flags = 0;
+		if (_stuck) flags |= 0x01;
+		if (_currentTransition != nullptr) flags |= 0x02;
+		dest.WriteValue<std::uint8_t>(flags);
+	}
+
+	void MadderHatter::OnDeserializeState(Stream& src)
+	{
+		EnemyBase::OnDeserializeState(src);
+
+		_attackTime = src.ReadValueAsLE<float>();
+
+		std::uint8_t flags = src.ReadValue<std::uint8_t>();
+		_stuck = ((flags & 0x01) != 0);
+		if ((flags & 0x02) != 0) {
+			// The attack was interrupted, continue walking as the last transition callback would
+			SetAnimation(AnimState::Walk);
+			_attackTime = Random().NextFloat(120.0f, 160.0f);
+			_speed.X = (IsFacingLeft() ? -DefaultSpeed : DefaultSpeed);
+		}
+	}
+
 	void MadderHatter::OnUpdateHitbox()
 	{
 		UpdateHitbox(30, 30);

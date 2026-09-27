@@ -63,8 +63,6 @@ namespace Jazz2::Actors::Environment
 			auto* res = _metadata->FindAnimation(AnimState::Default); // AmbientBubbles
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = res->Base->TextureDiffuse->GetSize();
-				Vector2i size = res->Base->FrameDimensions;
-				Vector2i frameConf = res->Base->FrameConfiguration;
 
 				for (int i = 0; i < count; i++) {
 					float scale = Random().NextFloat(0.3f, 1.0f);
@@ -72,11 +70,17 @@ namespace Jazz2::Actors::Environment
 					float speedY = Random().NextFloat(-3.0f, -2.0f) * scale;
 					float accel = Random().NextFloat(-0.008f, -0.001f) * scale;
 					int frame = res->FrameOffset + Random().Next(0, res->FrameCount);
+					// The converted bubble sheet is tightly packed, not a grid - its frames are wherever the
+					// table in the sheet says, each trimmed to its own area
+					Recti frameRect = res->Base->GetFrameRect(frame);
+					Vector2i frameOffset = res->Base->GetFrameOffset(frame);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = _pos;
 					debris.Depth = _renderer.layer();
-					debris.Size = Vector2f((float)size.X, (float)size.Y);
+					debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+					debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
+						frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
 					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(0.0f, accel);
 
@@ -86,10 +90,10 @@ namespace Jazz2::Actors::Environment
 
 					debris.Time = 110.0f;
 
-					debris.TexScaleX = (size.X / float(texSize.X));
-					debris.TexBiasX = ((float)(frame % frameConf.X) / frameConf.X);
-					debris.TexScaleY = (size.Y / float(texSize.Y));
-					debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
+					debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+					debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+					debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+					debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 					// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)

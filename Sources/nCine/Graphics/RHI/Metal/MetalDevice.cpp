@@ -70,9 +70,8 @@ namespace nCine::RHI::Metal
 		bool s_ready = false;
 
 		// The "screen" (default framebuffer): every no-render-target draw goes here, then PresentFrame() draws it
-		// into the acquired drawable. The whole scene is rendered GL-bottom-up (the offline MSL negates clip-space
-		// Y), so off-screen render targets round-trip exactly like GL; the present pass is the only scan-out
-		// correction (mirrors the Vulkan backend's flipped blit and the D3D11 flip-blit).
+		// into the acquired drawable. It is top-down like every target (see MetalDevice.h), so the present pass is
+		// a straight copy.
 		MTL::Texture* s_screenTexture = nullptr;
 		std::int32_t s_screenWidth = 0;
 		std::int32_t s_screenHeight = 0;
@@ -187,7 +186,7 @@ namespace nCine::RHI::Metal
 
 		// -- Secondary windows (the windows ImGui spawns when a panel is dragged out of the main one) --
 		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
-		// path into an off-screen render target, so every usual convention (bottom-up rows, scissor mapping,
+		// path into an off-screen render target, so every usual convention (top-down rows, scissor mapping,
 		// pipeline cache) applies unchanged. QueueSecondaryPresent() hands that target's texture over for the
 		// frame, and PresentFrame() draws each one into its window's drawable with the same present pass.
 		struct SecondarySwapchain
@@ -339,9 +338,8 @@ namespace nCine::RHI::Metal
 		}
 
 		// -- Present pass shader (MSL, compiled once at device creation) --
-		// A fullscreen triangle whose texture coordinate is the vertex's [0,1] corner: the drawable's TOP row
-		// (clip y = +1) therefore samples v = 1, the screen texture's LAST row - which is the GL top row, since the
-		// scene was rendered GL-bottom-up. That is the whole GL -> Metal scan-out correction (see MetalDevice.h).
+		// A fullscreen triangle that copies the screen texture into the drawable row for row: the drawable's top
+		// row (clip y = +1) samples v = 0, the texture's first row, as both are top-down (see MetalDevice.h).
 		const char PresentShaderSource[] = R"MSL(
 #include <metal_stdlib>
 using namespace metal;
@@ -356,7 +354,7 @@ vertex PresentOut present_vs(uint vid [[vertex_id]])
 {
 	float2 t = float2(float((vid << 1) & 2u), float(vid & 2u));
 	PresentOut o;
-	o.position = float4(t * 2.0 - 1.0, 0.0, 1.0);
+	o.position = float4(t.x * 2.0 - 1.0, 1.0 - t.y * 2.0, 0.0, 1.0);
 	o.uv = t;
 	return o;
 }
@@ -644,8 +642,8 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 			s_encoderHeight = height;
 			ResetEncoderShadowState();
 
-			// GL's counter-clockwise front faces come out clockwise after the clip-space Y flip the MSL applies
-			encoder->setFrontFacingWinding(MTL::WindingClockwise);
+			// GL's default: a triangle counter-clockwise in clip space is front-facing
+			encoder->setFrontFacingWinding(MTL::WindingCounterClockwise);
 			// The engine's GL ortho produces clip.z in [-1,1]; clamping instead of clipping keeps everything in
 			// Metal's [0,1] range (depth testing is off anyway - a 2D renderer)
 			encoder->setDepthClipMode(MTL::DepthClipModeClamp);
@@ -775,8 +773,7 @@ fragment float4 present_fs(PresentOut in [[stage_in]], texture2d<float> tex [[te
 		{
 			const Recti vpRect = MetalDevice::GetViewport();
 			const MetalDevice::ScissorState scState = MetalDevice::GetScissorState();
-			// GL viewport/scissor coordinates count rows from memory row 0, and so do Metal's for a texture whose
-			// memory keeps the GL row order (see MetalDevice.h) - no flip on either
+			// The RHI's viewport and scissor rectangles count rows from the top, like Metal's (see MetalDevice.h)
 			MTL::Viewport vp = {};
 			vp.originX = double(vpRect.X);
 			vp.originY = double(vpRect.Y);

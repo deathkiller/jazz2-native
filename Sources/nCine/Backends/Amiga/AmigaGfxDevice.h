@@ -30,9 +30,8 @@ namespace nCine::Backends
 		consoles. Every window operation is a stub - the game owns the whole screen.
 
 		The present is a row-by-row copy of the RHI's RGB565 buffer (native-endian, which on the 68k is
-		the big-endian layout RTG calls RGB16) into the back screen buffer's locked bitmap, vertically
-		flipped because the rasterizer keeps the OpenGL bottom-up convention, then a
-		`ChangeScreenBuffer()` flip. A logical buffer smaller than the screen is centered with borders
+		the big-endian layout RTG calls RGB16) into the back screen buffer's locked bitmap - both top-down,
+		so row for row - then a `ChangeScreenBuffer()` flip. A logical buffer smaller than the screen is centered with borders
 		rather than scaled - no Amiga in this port's range can afford a software stretch per frame.
 	*/
 	class AmigaGfxDevice : public IGfxDevice

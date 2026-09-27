@@ -135,6 +135,15 @@ See also @ref third-party for the licenses of the libraries used.
 	family is the default). The render pipeline refers only to the backend-neutral aliases declared
 	here (e.g. @cpp nCine::RHI::Device @ce, @cpp nCine::RHI::Texture @ce), so each backend only has to
 	provide the same set of names with the same surface.
+
+	Every backend renders **top-down**: clip-space y = +1 is the top edge of the viewport for a pass onto
+	the screen and for a pass into a render target alike, the first row of a render target is its top
+	one --- so a texture coordinate of `v = 0` samples the top of what was rendered, exactly as it samples
+	the first row of an uploaded image --- and viewport and scissor rectangles are pixels counted from the
+	top-left corner of the target. Cameras are therefore Y-down wherever they render. OpenGL, whose window
+	space starts at the bottom-left corner, is the one family that translates: the engine flips clip-space Y
+	of every pass into a render target, and the device converts the rectangles of a pass onto the screen
+	@m_span{m-text m-dim} (`RHI_RENDER_TARGETS_BOTTOM_UP` in `RhiFwd.h`) @m_endspan.
 */
 /** @file nCine/Graphics/RHI/Rhi.h
 	@brief Definitions of the classes aliased in @ref nCine::RHI for the selected backend

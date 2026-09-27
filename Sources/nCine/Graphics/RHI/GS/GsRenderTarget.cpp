@@ -23,8 +23,8 @@ namespace nCine::RHI::GS
 		if (index < MaxColorAttachments) {
 			_colorTextures[index] = &texture;
 			// Becoming a render target allocates the texture's surface out of the reserve and marks it
-			// non-evictable; it also tags the store as bottom-up (the GL framebuffer convention) both for
-			// drawing into it and for later sampling it as a source
+			// non-evictable. It is stored top-down like every other texture (see RhiFwd.h), so it is sampled
+			// the same way too
 			texture.SetRenderTarget(true);
 		}
 	}

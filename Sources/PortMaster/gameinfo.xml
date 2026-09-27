@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gameList>
+  <game>
+    <path>./Jazz2 Resurrection.sh</path>
+    <name>Jazz² Resurrection</name>
+    <desc>Jazz² Resurrection is a reimplementation of the game Jazz Jackrabbit 2 released in 1998. It supports various versions of the game (Shareware Demo, Holiday Hare '98, The Secret Files and The Christmas Chronicles), with improved graphics, local split-screen and online multiplayer, and support for custom levels. The original game files are required.</desc>
+    <releasedate>20260926T000000</releasedate>
+    <developer>Dan R.</developer>
+    <publisher>Dan R.</publisher>
+    <genre>Platform / Shooter Scrolling-Platform</genre>
+    <players>4</players>
+  </game>
+</gameList>
