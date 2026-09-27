@@ -371,7 +371,7 @@ namespace Jazz2::Multiplayer
 				break;
 			}
 		}
-		auto cellAt = [&cells, CW, CH, W, bottomIsFloor](std::int32_t cx, std::int32_t cy) -> std::uint32_t {
+		auto cellAt = [&](std::int32_t cx, std::int32_t cy) -> std::uint32_t {
 			if (cx < 0 || cx >= CW) {
 				return (CellSolid | CellFloor);	// The level's sides are walls
 			}
@@ -1216,7 +1216,7 @@ namespace Jazz2::Multiplayer
 					flightHere = isFlightPickup(c.X, ey);
 				}
 				if (flightHere) {
-					auto flights = getFlights(pickupFlights, c, [&](auto&& emit, auto&& emitAt) {
+					auto flights = getFlights(pickupFlights, c, [&](auto&& emit, auto&&) {
 						std::unique_ptr<std::uint8_t[]> flown = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 						std::queue<Vector2i> open;
 						flown[ci] = 1;
