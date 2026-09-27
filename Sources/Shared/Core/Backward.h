@@ -4392,7 +4392,7 @@ namespace Death { namespace Backward {
 			colorize.SetColor(Implementation::Color::Yellow);
 			os << " directory.\n";
 			colorize.SetColor(Implementation::Color::Reset);
-#	else
+#	elif defined(BACKWARD_TARGET_LINUX)
 			if (failed) {
 				os << "\n";
 			}

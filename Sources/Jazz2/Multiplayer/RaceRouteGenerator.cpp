@@ -478,7 +478,7 @@ namespace Jazz2::Multiplayer
 		// Water: under the surface the player swims freely in every direction. "Set Water Level" events move the
 		// surface while playing, so the highest surface the level ever gets counts - a route may need the water
 		// the level raises to get somewhere.
-		const std::int32_t waterTileY = (highestWater < (float)(H * TS) ? std::max(0, (std::int32_t)(highestWater / TS)) : INT32_MAX);
+		const std::int32_t waterTileY = (highestWater < (float)(H * TS) ? std::max<std::int32_t>(0, (std::int32_t)(highestWater / TS)) : INT32_MAX);
 		auto inWater = [waterTileY](std::int32_t ty) -> bool {
 			return (ty >= waterTileY);
 		};
@@ -508,7 +508,7 @@ namespace Jazz2::Multiplayer
 		// by a player standing on that floor, although its body is in the tile below
 		constexpr std::int32_t HitboxHeight = 30;
 		auto topEventRow = [&](std::int32_t tx, std::int32_t ty) -> std::int32_t {
-			return std::max(0, std::min(ty, floorDiv(feetAt(tx, ty) - HitboxHeight, TS)));
+			return std::max<std::int32_t>(0, std::min(ty, floorDiv(feetAt(tx, ty) - HitboxHeight, TS)));
 		};
 		// Snaps a tile to the nearest occupiable tile within a small radius (or {-1,-1} if none found)
 		auto findSeed = [&occupiable](Vector2i t) -> Vector2i {
