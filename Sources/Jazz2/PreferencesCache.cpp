@@ -76,9 +76,9 @@ namespace Jazz2
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = true;
-	// Each of the next two is forced off rather than merely defaulted off wherever its condition holds,
-	// because it is measurably unaffordable there and has no menu item left to turn it back on (see
-	// GraphicsOptionsSection). Load() puts them back to these.
+	// Forced off rather than merely defaulted off wherever its condition holds, because it is measurably
+	// unaffordable there and has no menu item left to turn it back on (see GraphicsOptionsSection). Load()
+	// puts it back to this.
 #if defined(RHI_LOW_POWER_GPU)
 	// Dithering is a dependent second texture sample over the whole background, which the shader compiles
 	// out on a low-power build anyway - leaving the value on would only pick the Dither variant of the
@@ -87,17 +87,11 @@ namespace Jazz2
 #else
 	bool PreferencesCache::BackgroundDithering = true;
 #endif
-#if defined(DEATH_TARGET_VITA)
-	// The blur chain is five more full-view off-screen passes, each of them a scene the backend has to wait
-	// out before the next one can sample it. Unlike the dithering this is a per-console call rather than a
-	// consequence of how the shaders were built, so it stays keyed on the platform.
-	bool PreferencesCache::BlurEffects = false;
-#else
 	bool PreferencesCache::BlurEffects = true;
-#endif
 #if defined(DEATH_TARGET_VITA)
 	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
-	// it costs the SGX a quarter of that work for a difference the light falloff largely hides
+	// it costs the SGX a quarter of that work for a difference the light falloff largely hides. Below full
+	// resolution the blur chain also runs one pass fewer (see PlayerViewport::Initialize()).
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 50;
 	// Half the panel in both axes (480x272): 45% fewer fragments for every full-screen pass, and the present
 	// blit becomes a clean 2x point doubling instead of a fractional resample (see GxmDevice::ScreenWidth)
@@ -1419,15 +1413,12 @@ namespace
 						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
 
-					// Outside every version arm above, because these are read there under different ones and
-					// what matters is that no config can end up with them on: neither is offered where it is
-					// forced off (see GraphicsOptionsSection and the static initializers), so there would be
-					// no menu item left to turn a value the file switched on back off again
+					// Outside every version arm above, because what matters is that no config can end up with it
+					// on: it is not offered where it is forced off (see GraphicsOptionsSection and the static
+					// initializers), so there would be no menu item left to turn a value the file switched on
+					// back off again
 #if defined(RHI_LOW_POWER_GPU)
 					BackgroundDithering = false;
-#endif
-#if defined(DEATH_TARGET_VITA)
-					BlurEffects = false;
 #endif
 
 					// Touch button per-slot configuration (v14+)

@@ -21,6 +21,10 @@ namespace Jazz2::Multiplayer
 		Describes a single round in a server's rotation: the level to play and its game mode along with the
 		per-round rules (health, time limits, win conditions and similar). Unspecified fields inherit their
 		values from the root @ref ServerConfiguration.
+
+		In @ref MpGameMode::Cooperation, an entry with a story level that has a next level set covers the rest of
+		its episode: reaching the exit continues with the next level automatically, still with this entry's
+		settings, and the next entry is applied only once the episode ends. See @ref ServerConfiguration for details.
 	*/
 	struct PlaylistEntry
 	{
@@ -73,8 +77,19 @@ namespace Jazz2::Multiplayer
 		 * pinning them. Set, the configured value wins outright in every mode.
 		 */
 		bool PlayerStackingSet;
-		/** @brief Whether the race minimap is available to clients (Race only) */
+		/**
+		 * @brief Whether the minimap is available to players
+		 *
+		 * Only meaningful together with @ref AllowMinimapSet - left unconfigured, the game mode decides.
+		 */
 		bool AllowMinimap;
+		/**
+		 * @brief Whether @ref AllowMinimap was given explicitly
+		 *
+		 * Unset, the minimap is allowed for @ref MpGameMode::Race, @ref MpGameMode::TeamRace and
+		 * @ref MpGameMode::Cooperation and for nothing else. Set, the configured value wins outright in every mode.
+		 */
+		bool AllowMinimapSet;
 		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
 		bool ColorizePlayersByTeam;
 	};
@@ -186,7 +201,11 @@ namespace Jazz2::Multiplayer
 		-   @cpp "MaxTeamSizeDiff" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Allowed player-count difference between the largest and smallest team before rebalancing (default is **1**)
 		-   @cpp "AllowTeamSelection" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players may pick/change their own team (default is **true**)
 		-   @cpp "FriendlyFire" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players on the same team can damage each other (default is **false**)
-		-   @cpp "AllowMinimap" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the race minimap is available to clients (Race only) (default is **true**)
+		-   @cpp "AllowMinimap" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the minimap is available to players
+			-   In race modes it shows the track, in other modes the way from the start to the level exit (or the boss) --- a level whose exit can't be reached has no minimap there
+			-   Omit it and the game mode decides: the minimap is on for @cpp "Race" @ce, @cpp "TeamRace" @ce and @cpp "Cooperation" @ce and off everywhere else
+			-   Give it explicitly and that value wins in every mode
+			-   Players can still hide the minimap for themselves, but they can never show it if the server doesn't allow it
 		-   @cpp "ColorizePlayersByTeam" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are recolored to their team color in team modes, forcing the first 2 character color sections (default is **true**)
 		-   @cpp "Elimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled
 			-   If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
@@ -218,6 +237,11 @@ namespace Jazz2::Multiplayer
 			-   @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
 			-   @cpp "ReforgedGameplay" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether reforged gameplay is enabled for this round
 			-   @cpp "AllowLedgeClimb" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are allowed to climb ledges in this round (default is the value of @cpp "ReforgedGameplay" @ce)
+			-   @cpp "TeamCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of teams in this round (2-4)
+			-   @cpp "AutoBalanceTeams" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether teams are automatically rebalanced in this round
+			-   @cpp "AllowTeamSelection" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players may pick/change their own team in this round
+			-   @cpp "FriendlyFire" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players on the same team can damage each other in this round
+			-   @cpp "ColorizePlayersByTeam" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are recolored to their team color in this round
 			-   @cpp "Elimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled for this round
 			-   @cpp "InitialPlayerHealth" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Initial health of players for this round
 			-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum game duration for this round
@@ -227,8 +251,16 @@ namespace Jazz2::Multiplayer
 			-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
 			-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win this round (Treasure Hunt)
 			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time the remaining players get to finish this round after the first one does, in seconds (Race)
+			-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other in this round (default is decided by the game mode)
+			-   @cpp "AllowMinimap" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the minimap is available to players in this round (default is decided by the game mode)
 		-   @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
-		
+
+		In Cooperation, reaching the exit of a story level doesn't end the playlist entry: if the level has a next
+		level set, the server continues with it automatically, taking the players' progression along and keeping
+		the entry's settings. The next playlist entry is applied only when the whole episode is at the end, i.e.
+		when the next level is @cpp ":end" @ce or @cpp ":credits" @ce. An admin can still jump to the next entry
+		sooner with `/next` or `/playlist`, or the players with `/vote skip`.
+
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.
 		If a property is missing in the root configuration, the default value is used. `{PlayerName}` and
 		`{ServerName}` variables can be used in @cpp "ServerName" @ce and @cpp "WelcomeMessage" @ce properties.
@@ -324,8 +356,19 @@ namespace Jazz2::Multiplayer
 		bool FriendlyFire;
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
-		/** @brief Whether the race minimap is available to clients (Race only) */
+		/**
+		 * @brief Whether the minimap is available to players
+		 *
+		 * Only meaningful together with @ref AllowMinimapSet - left unconfigured, the game mode decides.
+		 */
 		bool AllowMinimap;
+		/**
+		 * @brief Whether @ref AllowMinimap was given explicitly
+		 *
+		 * Unset, the minimap is allowed for @ref MpGameMode::Race, @ref MpGameMode::TeamRace and
+		 * @ref MpGameMode::Cooperation and for nothing else. Set, the configured value wins outright in every mode.
+		 */
+		bool AllowMinimapSet;
 		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
 		bool ColorizePlayersByTeam;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */

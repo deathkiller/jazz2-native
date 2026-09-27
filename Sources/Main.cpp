@@ -1390,17 +1390,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		}
 
 		// Override properties
-		serverInit.Configuration.ReforgedGameplay = playlistEntry.ReforgedGameplay;
-		serverInit.Configuration.AllowLedgeClimb = playlistEntry.AllowLedgeClimb;
-		serverInit.Configuration.Elimination = playlistEntry.Elimination;
-		serverInit.Configuration.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
-		serverInit.Configuration.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
-		serverInit.Configuration.PreGameSecs = playlistEntry.PreGameSecs;
-		serverInit.Configuration.TotalKills = playlistEntry.TotalKills;
-		serverInit.Configuration.TotalLaps = playlistEntry.TotalLaps;
-		serverInit.Configuration.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
-		serverInit.Configuration.AllowMinimap = playlistEntry.AllowMinimap;
-		serverInit.Configuration.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
+		NetworkManager::ApplyPlaylistEntry(serverInit.Configuration, playlistEntry);
 		serverInit.Configuration.GameMode = playlistEntry.GameMode;
 	}
 

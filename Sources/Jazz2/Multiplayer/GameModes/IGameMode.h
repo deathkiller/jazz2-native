@@ -150,8 +150,6 @@ namespace Jazz2::Multiplayer::GameModes
 			UI::Alignment alignment, const Colorf& color, float scaleX, float scaleY) = 0;
 		/** @brief Draws the shared leaderboard ("position in round") for the player's split-screen view */
 		virtual void DrawPositionInRound(const Rectf& view, Actors::Player* player) = 0;
-		/** @brief Draws the race-track minimap for the player's split-screen view */
-		virtual void DrawMinimap(const Rectf& view, Actors::Player* player) = 0;
 	};
 
 	/**

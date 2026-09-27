@@ -38,6 +38,18 @@ namespace Jazz2::Actors::Multiplayer
 				_lastAttacker = nullptr;
 			}
 		}
+
+		// Food is collected server-side, so the owning client would never learn that its player entered sugar rush -
+		// it wouldn't turn white, play the music, spawn the star trail or predict breaking objects - and the other
+		// peers, which see only the white renderer in the actor updates, wouldn't spawn the star trail either. Push
+		// the state on every transition, including the end (which can come early, e.g. when a boss is activated), so
+		// the renderer also reliably switches back to normal. Here rather than in RemotePlayerOnServer, so a sugar
+		// rush of the host's own player (LocalPlayerOnServer) is shown to the other peers too.
+		bool sugarRush = (_sugarRushLeft > 0.0f);
+		if (sugarRush != _sugarRushLastSent) {
+			_sugarRushLastSent = sugarRush;
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetSugarRush(this, sugarRush ? _sugarRushLeft : 0.0f);
+		}
 	}
 
 	bool PlayerOnServer::OnHandleCollision(ActorBase* other)
@@ -152,6 +164,31 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerMorphTo(this, type);
+
+		return true;
+	}
+
+	bool PlayerOnServer::Respawn(Vector2f pos)
+	{
+		if (!MpPlayer::Respawn(pos)) {
+			return false;
+		}
+
+		// A respawn is a teleport, so the peers must not interpolate the player's position across it
+		_justWarped = true;
+		return true;
+	}
+
+	bool PlayerOnServer::SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor)
+	{
+		if (!MpPlayer::SetModifier(modifier, decor)) {
+			return false;
+		}
+
+		// The owning client simulates the modifier itself, and every other peer has to attach the decoration (the
+		// lizard copter) to its view of this player. Handled here rather than in RemotePlayerOnServer, so a ride of
+		// the host's own player (LocalPlayerOnServer) is shown to the other peers too.
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetModifier(this, modifier, decor);
 
 		return true;
 	}

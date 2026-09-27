@@ -1051,47 +1051,7 @@ namespace Jazz2::Actors
 				_sugarRushStarsTime -= timeMult;
 				if (_sugarRushStarsTime <= 0.0f) {
 					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
-
-					auto* tilemap = _levelHandler->TileMap();
-					if (tilemap != nullptr) {
-						auto* res = _metadata->FindAnimation(SugarRush);
-						if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
-							Vector2i texSize = res->Base->TextureDiffuse->GetSize();
-							std::int32_t frame = res->FrameOffset + Random().Next(0, res->FrameCount);
-							Recti frameRect = res->Base->GetFrameRect(frame);
-							Vector2i frameOffset = res->Base->GetFrameOffset(frame);
-							float speedX = Random().FastFloat(-4.0f, 4.0f);
-
-							Tiles::TileMap::DestructibleDebris debris = { };
-							debris.Pos = _pos;
-							debris.Depth = _renderer.layer() - 2;
-							debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
-							debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
-								frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
-							debris.Speed = Vector2f(speedX, Random().FastFloat(-4.0f, -2.2f));
-							debris.Acceleration = Vector2f(0.0f, 0.2f);
-
-							debris.Scale = Random().FastFloat(0.1f, 0.5f);
-							debris.ScaleSpeed = -0.002f;
-							debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-							debris.AngleSpeed = speedX * 0.04f;
-							debris.Alpha = 1.0f;
-							debris.AlphaSpeed = -0.018f;
-
-							debris.Time = 160.0f;
-
-							debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
-							debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
-							debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
-							debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
-
-							debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-							// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
-							debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
-
-							tilemap->CreateDebris(debris);
-						}
-					}
+					SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.layer());
 				}
 			} else {
 				_renderer.Initialize(ActorRendererType::Default);
@@ -3042,6 +3002,54 @@ namespace Jazz2::Actors
 		DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata, _levelHandler->GetElapsedFrames(), _pos, _renderer.layer(), _shieldRenderCommands);
 
 		return ActorBase::OnDraw(renderQueue);
+	}
+
+	void Player::SpawnSugarRushStar(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos, std::uint16_t baseLayer)
+	{
+		auto* tilemap = levelHandler->TileMap();
+		if (tilemap == nullptr || metadata == nullptr) {
+			return;
+		}
+
+		auto* res = metadata->FindAnimation(SugarRush);
+		if (res == nullptr || res->Base->TextureDiffuse == nullptr) {
+			return;
+		}
+
+		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
+		std::int32_t frame = res->FrameOffset + Random().Next(0, res->FrameCount);
+		Recti frameRect = res->Base->GetFrameRect(frame);
+		Vector2i frameOffset = res->Base->GetFrameOffset(frame);
+		float speedX = Random().FastFloat(-4.0f, 4.0f);
+
+		Tiles::TileMap::DestructibleDebris debris = { };
+		debris.Pos = pos;
+		debris.Depth = baseLayer - 2;
+		debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+		debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
+			frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
+		debris.Speed = Vector2f(speedX, Random().FastFloat(-4.0f, -2.2f));
+		debris.Acceleration = Vector2f(0.0f, 0.2f);
+
+		debris.Scale = Random().FastFloat(0.1f, 0.5f);
+		debris.ScaleSpeed = -0.002f;
+		debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+		debris.AngleSpeed = speedX * 0.04f;
+		debris.Alpha = 1.0f;
+		debris.AlphaSpeed = -0.018f;
+
+		debris.Time = 160.0f;
+
+		debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+		debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+		debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+		debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
+
+		debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+		// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
+		debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
+
+		tilemap->CreateDebris(debris);
 	}
 
 	void Player::DrawShield(RenderQueue& renderQueue, ShieldType shieldType, float shieldTime, Metadata* metadata,
@@ -6037,6 +6045,14 @@ namespace Jazz2::Actors
 
 	bool Player::OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType)
 	{
+		// A spectator has nothing to leave the level with, and it could never finish either of the transitions below -
+		// it's not simulated at all (see OnUpdate()), so it never lands and the waiting timeout never runs out. The
+		// level change waits for every player, so it stalled for good behind a spectator that had any health.
+		if DEATH_UNLIKELY(_playerType == PlayerType::Spectate) {
+			_levelExiting = LevelExitingState::Ready;
+			return true;
+		}
+
 		// Deactivate any shield
 		if (_activeShieldTime > 70.0f) {
 			_activeShieldTime = 70.0f;
@@ -6901,8 +6917,11 @@ namespace Jazz2::Actors
 				_internalForceY = 0.0f;
 
 				_activeModifier = Modifier::LizardCopter;
+				// A multiplayer client can be told about a ride whose copter it doesn't know (yet), and flies without it
 				_activeModifierDecor = decor;
-				_activeModifierDecor->OnDetach(this);
+				if (_activeModifierDecor != nullptr) {
+					_activeModifierDecor->OnDetach(this);
+				}
 
 
 				SetCopterFlight(_levelHandler->IsReforged()
@@ -7342,6 +7361,13 @@ namespace Jazz2::Actors
 
 		PlayerType playerTypePrevious = _playerType;
 
+		// The stopping chain issues its next pose from the transition's callback and reads the current animation
+		// there. The animation is cleared below so it's re-resolved from the new metadata, and SetAnimation()
+		// then cancels the pose, which ran that callback against a null animation (server crash on a revert-morph
+		// area reached while skidding). The poses belong to the previous character anyway, and the chain starts
+		// again on its own if the player is still sliding.
+		ApplyStopAnimation(false);
+
 		_playerType = type;
 
 		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
@@ -7425,6 +7451,9 @@ namespace Jazz2::Actors
 		if (_playerType == type) {
 			return false;
 		}
+
+		// Same as in MorphTo(), the stopping chain's callback must not see the cleared animation
+		ApplyStopAnimation(false);
 
 		_playerType = type;
 

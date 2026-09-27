@@ -2637,8 +2637,9 @@ namespace nCine::RHI::RDP
 		/*
 			The fast path for what a tile layer actually is. On the indexed form every quad is the four
 			corners TileMap::AppendTileQuad wrote - (x, y), (xr, y), (xr, yr), (x, yr) - so a tile is fully
-			described by corners 0 and 2, two vertices instead of six; the quads are axis-aligned by
-			construction, so as long as the raster transform is a scale+translation (no rotation or skew)
+			described by corners 0 and 2, two vertices instead of six; a tile quad is axis-aligned by
+			construction (a particle's need not be, see the test in the loop), so as long as the raster
+			transform is a scale+translation (no rotation or skew)
 			the screen rectangle is two multiply-adds per axis; a point-sampled tile's texel window is the
 			integer texel box its corners name (no bilinear guard), which fits a TMEM slot by definition
 			(the atlas keeps 32x32 tiles); and the whole mesh draws with one RDP state, re-applied only
@@ -2651,8 +2652,9 @@ namespace nCine::RHI::RDP
 			produce (10.2 screen coordinates, 10.5 texel coordinates, dsdx/dtdy in 5.10), including its
 			corrections for an edge past the top-left of the screen - the RDP fields are unsigned.
 		*/
-		// The compact form TileMap::BuildLayerMeshCache writes: no indices, two vertices per quad (corners 0
-		// and 2 back to back), in a VBO the layer keeps between frames
+		// The compact form TileMap::BuildLayerMeshCache and TileMap::EmitTileRuns write: no indices, two
+		// vertices per quad (corners 0 and 2 back to back), in a VBO the layer keeps between frames or in
+		// the streaming one
 		const bool compactTiles = (indices == nullptr && primitive == PrimitiveType::Triangles);
 		const bool leanTiles = ((indices != nullptr || compactTiles) && raster.Xy == 0.0f && raster.Yx == 0.0f &&
 			state.Filter == FILTER_POINT && state.Texture != nullptr);
@@ -2666,6 +2668,8 @@ namespace nCine::RHI::RDP
 			for (std::int32_t quad = 0; quad < quadCount; quad++) {
 				const float* c0;
 				const float* c2;
+				const float* c1 = nullptr;
+				const float* c3 = nullptr;
 				if (compactTiles) {
 					c0 = vertices + std::size_t(quad) * 2 * FloatsPerVertex;
 					c2 = c0 + FloatsPerVertex;
@@ -2673,6 +2677,20 @@ namespace nCine::RHI::RDP
 					const std::int32_t element = quad * 6;
 					c0 = vertices + std::size_t(indices[element]) * FloatsPerVertex;
 					c2 = vertices + std::size_t(indices[element + 2]) * FloatsPerVertex;
+					// The particles come in this form too, with their spin folded into the four corners (see
+					// TileMap::AppendDebrisQuad). Rebuilt from two OPPOSITE corners, a turned quad collapses onto
+					// its bounding box, which stays upright while its width and height pump as the diagonal
+					// sweeps round - a spinning particle looked squashed and stretched instead of rotating.
+					// Eight compares on the source corners tell a rectangle from a turned quad (the raster
+					// transform has no rotation here, so a source rectangle stays one), and a turned quad goes
+					// out through the general quad submission, as a triangle pair.
+					const float* q1 = vertices + std::size_t(indices[element + 1]) * FloatsPerVertex;
+					const float* q3 = vertices + std::size_t(indices[element + 5]) * FloatsPerVertex;
+					if (q1[1] != c0[1] || q1[0] != c2[0] || q3[0] != c0[0] || q3[1] != c2[1] ||
+						q1[3] != c0[3] || q1[2] != c2[2] || q3[2] != c0[2] || q3[3] != c2[3]) {
+						c1 = q1;
+						c3 = q3;
+					}
 				}
 
 				if (c0[4] != lastColor[0] || c0[5] != lastColor[1] || c0[6] != lastColor[2] || c0[7] != lastColor[3]) {
@@ -2681,6 +2699,17 @@ namespace nCine::RHI::RDP
 						QuantizeChannel(c0[5] * layerColor[1]), QuantizeChannel(c0[6] * layerColor[2]),
 						QuantizeChannel(c0[7] * layerColor[3]));
 					ApplyDrawState(state);
+				}
+
+				if (c1 != nullptr) {
+					// Corners 1, 2, 0 and 3 are the sprite corner order SubmitQuadPrimitive takes
+					float px[4], py[4], pu[4], pvv[4];
+					project(c1, px[0], py[0], pu[0], pvv[0]);
+					project(c2, px[1], py[1], pu[1], pvv[1]);
+					project(c0, px[2], py[2], pu[2], pvv[2]);
+					project(c3, px[3], py[3], pu[3], pvv[3]);
+					SubmitQuadPrimitive(state, px, py, pu, pvv);
+					continue;
 				}
 
 				float px0 = raster.Xx * c0[0] + raster.Tx, py0 = raster.Yy * c0[1] + raster.Ty;
@@ -2743,33 +2772,19 @@ namespace nCine::RHI::RDP
 		}
 
 		while (triangle < triangleCount) {
-			// Tiles reach here as the six vertices of two triangles, of which the third and fourth repeat
-			// the first and third. Recognizing that pattern lets a tile go out as one TEXTURE_RECTANGLE;
-			// runs of the same tile then reuse the resident TMEM window (see UploadWindow), so a
-			// homogeneous layer costs almost only its rectangles. Anything that doesn't match is emitted
-			// as plain triangles.
+			// Quads reach here as the six element slots of two triangles, of which the fourth and fifth
+			// repeat the first and third - on the indexed form through the repeated indices of the shared
+			// quad pattern, so the test lands on the very same vertices either way. Recognizing that pattern
+			// lets a quad go out as one primitive: SubmitQuadPrimitive draws a rectangle as a
+			// TEXTURE_RECTANGLE (runs of the same tile then reuse the resident TMEM window, see
+			// UploadWindow) and a turned quad - a spinning particle, see TileMap::AppendDebrisQuad - as a
+			// triangle pair. Anything that doesn't match is emitted as plain triangles.
 			const std::int32_t element = triangle * 3;
 			const float* group = vertexAt(element);
-			// On the indexed form the producer writes only corners 0 and 2 of each quad (see
-			// TileMap::EmitTileRuns), so the quad is a fact of the layout, not something to detect
-			float derived[4][FloatsPerVertex];
-			bool isQuad;
-			if (indices != nullptr && triangle + 2 <= triangleCount) {
-				const float* c0 = group;
-				const float* c2 = vertexAt(element + 2);
-				for (std::int32_t i = 0; i < 4; i++) {
-					std::memcpy(derived[i], c0, sizeof(derived[i]));
-				}
-				derived[1][0] = c2[0]; derived[1][2] = c2[2];		// (xr, y) at (u1, v0)
-				derived[2][0] = c2[0]; derived[2][1] = c2[1]; derived[2][2] = c2[2]; derived[2][3] = c2[3];
-				derived[3][1] = c2[1]; derived[3][3] = c2[3];		// (x, yr) at (u0, v1)
-				isQuad = true;
-			} else {
-				isQuad = (triangle + 2 <= triangleCount &&
-					vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
-					vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
-					vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
-			}
+			const bool isQuad = (triangle + 2 <= triangleCount &&
+				vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
 
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
 				lastColor[0] = group[4]; lastColor[1] = group[5]; lastColor[2] = group[6]; lastColor[3] = group[7];
@@ -2780,12 +2795,11 @@ namespace nCine::RHI::RDP
 
 			float px[4], py[4], pu[4], pvv[4];
 			if (isQuad) {
-				// Corner order of the sprite strip (v0, v1, v2, v3): vertices 1, 2, 0 and 5 of the tile's six
+				// Corner order of the sprite strip (v0, v1, v2, v3): slots 1, 2, 0 and 5 of the quad's six,
+				// which on the indexed form are corners 1, 2, 0 and 3
 				static const std::int32_t QuadOrder[4] = { 1, 2, 0, 5 };
-				// ... which on the indexed form are corners 1, 2, 0 and 3 of the quad
-				static const std::int32_t DerivedOrder[4] = { 1, 2, 0, 3 };
 				for (std::int32_t i = 0; i < 4; i++) {
-					project(indices != nullptr ? derived[DerivedOrder[i]] : vertexAt(element + QuadOrder[i]), px[i], py[i], pu[i], pvv[i]);
+					project(vertexAt(element + QuadOrder[i]), px[i], py[i], pu[i], pvv[i]);
 				}
 				SubmitQuadPrimitive(state, px, py, pu, pvv);
 				triangle += 2;

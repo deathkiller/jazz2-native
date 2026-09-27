@@ -31,6 +31,8 @@ namespace Jazz2::Actors::Multiplayer
 		bool AddLives(std::int32_t count) override;
 		bool MorphTo(PlayerType type) override;
 		bool MorphToInstantly(PlayerType type) override;
+		bool Respawn(Vector2f pos) override;
+		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
 		bool SetShield(ShieldType shieldType, float timeLeft) override;
 		bool IncreaseShieldTime(float timeLeft) override;
 		void DecreaseShieldTime(float time) override;
@@ -50,6 +52,8 @@ namespace Jazz2::Actors::Multiplayer
 		bool _bumpInitialized;
 		/** @brief Encoded light block last broadcast for this player, so an unchanged one isn't resent */
 		SmallVector<std::uint8_t, 0> _lastRemotedLights;
+		/** @brief Whether sugar rush was active when it was last sent to the peers, to only resync on change */
+		bool _sugarRushLastSent = false;
 
 		void OnUpdate(float timeMult) override;
 

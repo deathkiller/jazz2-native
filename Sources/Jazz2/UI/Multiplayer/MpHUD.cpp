@@ -338,6 +338,9 @@ namespace Jazz2::UI::Multiplayer
 		// Each game mode draws its own score HUD via IGameMode::OnDrawHUD (dispatched here); when no game mode is
 		// active (MpGameMode::Unknown) there is nothing to draw.
 		mpLevelHandler->DrawActiveGameModeHUD(*this, player, view);
+
+		// The minimap is not up to the game mode, the server decides whether it's allowed (see DrawMinimap())
+		DrawMinimap(view, player);
 	}
 
 	void MpHUD::OnDrawSpectate(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
@@ -521,12 +524,16 @@ namespace Jazz2::UI::Multiplayer
 				Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			// Nothing to compare against while a spectator flies the camera around on its own
+			std::int64_t pointsDiff = 0;
 			if (!item.IsReference && localPoints != UINT32_MAX) {
-				std::int64_t pointsDiff = (std::int64_t)item.PointsInRound - (std::int64_t)localPoints;
+				pointsDiff = (std::int64_t)item.PointsInRound - (std::int64_t)localPoints;
 				if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
 					pointsDiff = -pointsDiff / 16;
 				}
-
+			}
+			// A zero difference says nothing, and it's what every pair of racers who already finished shows - their
+			// points are just the finishing order, so the difference never reaches a whole step of the distance
+			if (pointsDiff != 0) {
 				Vector2f playerNameSize = _smallFont->MeasureString(item.PlayerName, 0.8f, 0.9f);
 
 				std::size_t length = 0;
@@ -683,7 +690,7 @@ namespace Jazz2::UI::Multiplayer
 		}
 		// On the server the checkpoints always exist (used for ranking), so honor AllowMinimap here too; clients
 		// only receive them when the server allows the minimap, so their check above already covers it
-		if (mpLevelHandler->_isServer && !mpLevelHandler->_networkManager->GetServerConfiguration().AllowMinimap) {
+		if (mpLevelHandler->_isServer && !mpLevelHandler->IsMinimapAllowed()) {
 			return;
 		}
 
@@ -691,8 +698,8 @@ namespace Jazz2::UI::Multiplayer
 		constexpr float Margin = 8.0f, Pad = 5.0f;
 
 		// The track extent (in world pixels) is the area players can reach, computed server-side and synced
-		const Vector2f mn(mpLevelHandler->_raceBoundsMin.X * TS, mpLevelHandler->_raceBoundsMin.Y * TS);
-		const Vector2f mx((mpLevelHandler->_raceBoundsMax.X + 1) * TS, (mpLevelHandler->_raceBoundsMax.Y + 1) * TS);
+		const Vector2f mn(mpLevelHandler->_minimapBoundsMin.X * TS, mpLevelHandler->_minimapBoundsMin.Y * TS);
+		const Vector2f mx((mpLevelHandler->_minimapBoundsMax.X + 1) * TS, (mpLevelHandler->_minimapBoundsMax.Y + 1) * TS);
 		const float spanX = std::max(1.0f, mx.X - mn.X), spanY = std::max(1.0f, mx.Y - mn.Y);
 
 		// The box matches the track's aspect ratio (so it isn't squished/cropped) and grows for bigger levels,
@@ -711,8 +718,17 @@ namespace Jazz2::UI::Multiplayer
 		boxW = std::max(boxW, minBoxW);
 		boxH = std::max(boxH, minBoxH);
 
+		// While spectating the highlight follows the camera - it marks whoever is being watched, and the free camera
+		// gets a marker of its own instead of a player dot, so it doesn't read as another player on the track
+		bool isSpectating = (player->GetPlayerType() == PlayerType::Spectate);
+
 		float boxX = view.X + view.W - boxW - Margin;
-		const float boxY = view.Y + Margin;
+		float boxY = view.Y + Margin;
+		// The legacy HUD draws the health hearts in the same corner (see HUD::OnDrawHealth()), so the minimap goes
+		// underneath them instead. Race modes have unlimited health, which draws no hearts.
+		if (!PreferencesCache::EnableReforgedHUD && !isSpectating && player->GetHealth() < 32) {
+			boxY += 16.0f;
+		}
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 		// When the on-screen touch pause button is visible and would overlap the minimap's default top-right
@@ -810,9 +826,6 @@ namespace Jazz2::UI::Multiplayer
 			DrawSolid(Vector2f(p.X - s * 0.5f, p.Y - s * 0.5f), MainLayer + 12, Vector2f(s, s), color);
 		};
 
-		// While spectating the highlight follows the camera - it marks whoever is being watched, and the free camera
-		// gets a marker of its own instead of a player dot, so it doesn't read as another player on the track
-		bool isSpectating = (player->GetPlayerType() == PlayerType::Spectate);
 		std::uint32_t followedActorId = (isSpectating ? mpLevelHandler->GetSpectateFollowActorId() : MpLevelHandler::SpectateFreeCamera);
 
 		auto drawCameraMarker = [&](Vector2f worldPos) {
@@ -956,7 +969,7 @@ namespace Jazz2::UI::Multiplayer
 				texels[x * 4 + 2] = 255;
 				texels[x * 4 + 3] = (std::uint8_t)(a * 255.0f);
 			}
-			_minimapLineTexture = std::make_unique<Texture>("RaceMinimapLine", Texture::Format::RGBA8, LineTexWidth, 1);
+			_minimapLineTexture = std::make_unique<Texture>("MinimapLine", Texture::Format::RGBA8, LineTexWidth, 1);
 			_minimapLineTexture->LoadFromTexels(texels, 0, 0, LineTexWidth, 1);
 			_minimapLineTexture->SetMinFiltering(SamplerFilter::Linear);
 			_minimapLineTexture->SetMagFiltering(SamplerFilter::Linear);
@@ -1096,7 +1109,7 @@ namespace Jazz2::UI::Multiplayer
 		SmallVector<std::uint8_t, 0> texels((std::size_t)pixelCount * 4);
 		const bool resize = (_minimapTrackTextureSize.X != boxWidth || _minimapTrackTextureSize.Y != boxHeight);
 		std::unique_ptr<Texture>* textures[2] = { &_minimapTrackTexture, &_minimapTrackShadowTexture };
-		const char* names[2] = { "RaceMinimapTrack", "RaceMinimapTrackShadow" };
+		const char* names[2] = { "MinimapTrack", "MinimapTrackShadow" };
 		for (std::int32_t m = 0; m < 2; m++) {
 			for (std::int32_t i = 0; i < pixelCount; i++) {
 				texels[i * 4 + 0] = 255;

@@ -32,11 +32,11 @@ namespace Jazz2::UI::Multiplayer
 namespace Jazz2::Multiplayer
 {
 	/**
-		@brief Checkpoint on a race track
+		@brief Checkpoint on the track through a level
 
-		Waypoint of the ordered polyline that describes the race route, used by the minimap and by
-		progress-based position ranking. Either authored in the level (JJ2+ Text waypoints) or auto-generated
-		from level geometry.
+		Waypoint of the ordered polyline that describes the route through the level, used by the minimap in
+		every game mode and in race modes also by progress-based position ranking. Either authored in the level
+		(JJ2+ Text waypoints) or auto-generated from level geometry.
 	*/
 	struct RaceCheckpoint {
 		/** @brief Tile coordinates (multiply by @ref Tiles::TileSet::DefaultTileSize for world pixels) */
@@ -351,7 +351,7 @@ namespace Jazz2::Multiplayer
 		bool HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY);
 		/** @brief Called when a player is going to warp */
 		void HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags);
-		/** @brief Called when a player changed modifier */
+		/** @brief Called when a player changed modifier, to sync it to the owning client and its decoration to the other peers */
 		void HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor);
 		/** @brief Called when fly-cheat behavior is enabled or disabled on a player, to sync it to the owning client */
 		void HandlePlayerSetFlyCheat(Actors::Player* player, bool active);
@@ -371,6 +371,12 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerBumped(Actors::Player* player);
 		/** @brief Returns `true` if players can stand on top of each other (per-level @ref ServerConfiguration::PlayerStacking) */
 		bool IsPlayerStackingEnabled() const;
+		/**
+		 * @brief Returns `true` if the minimap is available to players (per-level @ref ServerConfiguration::AllowMinimap)
+		 *
+		 * Meaningful only on the server, a client learns the outcome from whether the track is synchronized to it.
+		 */
+		bool IsMinimapAllowed() const;
 		/** @brief Returns `true` if players are allowed to climb ledges (per-level @ref ServerConfiguration::AllowLedgeClimb) */
 		bool IsLedgeClimbAllowed() const;
 		/** @brief Returns the player actor the given player is standing/landing on (one-way platform check), or `nullptr` */
@@ -387,7 +393,7 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn);
 		/** @brief Called when a player sets a shield */
 		void HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft);
-		/** @brief Called when sugar rush starts or ends on a player, to sync it to the owning client */
+		/** @brief Called when sugar rush starts or ends on a player, to sync it to the owning client and the other peers */
 		void HandlePlayerSetSugarRush(Actors::Player* player, float timeLeft);
 		/**
 		 * @brief Sends an ambient light intensity to the client owning @p player
@@ -538,10 +544,10 @@ namespace Jazz2::Multiplayer
 		std::int32_t _activeBossMaxHealth;			// Server: last broadcasted boss max health; Client: max health synced from the server (0 = no active boss)
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<Vector2i, 0> _raceCheckpoints;					// Unordered, used for race position ranking
-		SmallVector<RaceCheckpoint, 0> _orderedRaceCheckpoints;		// Ordered polyline for the minimap (server-built, synced to clients)
+		SmallVector<RaceCheckpoint, 0> _orderedRaceCheckpoints;		// Ordered polyline for the minimap, and for the race ranking (server-built, synced to clients)
 		SmallVector<Vector2i, 0> _raceStartMarkers;					// Warp "Set Lap" tiles shown as start/finish on the minimap (synced to clients)
-		Vector2i _raceBoundsMin;									// Minimap extent in tiles (covers the whole area players can reach; synced to clients)
-		Vector2i _raceBoundsMax;
+		Vector2i _minimapBoundsMin;									// Minimap extent in tiles (covers the whole area players can reach; synced to clients)
+		Vector2i _minimapBoundsMax;
 		bool _raceCheckpointsOrdered;								// Whether _orderedRaceCheckpoints come from authored waypoints (trusted for progress-based ranking)
 		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
@@ -589,6 +595,15 @@ namespace Jazz2::Multiplayer
 		bool TryGetSpectatablePlayerPos(std::uint32_t actorId, Vector2f& pos) const;
 		/** @brief Broadcasts the spectate state of the specified player to every synchronized peer but its owner */
 		void BroadcastPlayerSpectateState(const Actors::Multiplayer::MpPlayer* player);
+		/** @brief Returns `true` if a player can be spawned right now (spawning enabled, no boss fight, joining allowed) */
+		bool CanSpawnPlayers() const;
+		/**
+		 * @brief Returns `true` if the player can leave spectate mode right now
+		 *
+		 * A spectate mode forced by the server lasts only as long as its reason - a race the player already finished,
+		 * or a moment nobody can join in. If the player can't leave it, @p peer is told why.
+		 */
+		bool CanLeaveSpectateMode(const Peer& peer, const PeerDescriptor& peerDesc);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
 		std::uint8_t GetTeamCount() const override;
@@ -612,10 +627,10 @@ namespace Jazz2::Multiplayer
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
 		Vector2f GetSpawnPoint(PlayerType playerType, std::uint8_t team = 0);
-		void BuildRaceCheckpoints();
+		void BuildTrackCheckpoints();
 		void ConsolidateRaceCheckpoints();
 		void ConsolidateOrderedRaceCheckpoints();
-		void GenerateRaceCheckpointsFromGeometry();
+		void GenerateTrackCheckpointsFromGeometry();
 		void WarpAllPlayersToStart();
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);
@@ -711,7 +726,7 @@ namespace Jazz2::Multiplayer
 		bool HandleServerPacketChangeRemoteActorMetadata(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketMarkRemoteActorAsPlayer(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketUpdatePositionsInRound(const Peer& peer, ArrayView<const std::uint8_t> data);
-		bool HandleServerPacketSyncRaceCheckpoints(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncMinimapTrack(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTeamScores(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncRoundResults(const Peer& peer, ArrayView<const std::uint8_t> data);

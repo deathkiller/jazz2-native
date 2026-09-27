@@ -103,11 +103,32 @@ namespace Jazz2::Rendering
 			// The blur targets are sized to the displayed (logical) viewport size rather than the (possibly
 			// supersampled) texture size, so the blur strength - and the in-game bloom - stay consistent in splitscreen
 			// zoom-out. Otherwise the larger per-player texture makes the blur cover a smaller fraction of the view
-			_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
-			_blurPass1.Initialize(_downsamplePass.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
+			//
+			// The half-size level is what a lighting buffer at 50% already is, and below full lighting resolution the
+			// chain is shortened, because every pass is a whole off-screen scene - and on the PS Vita a scene the
+			// backend waits out before the next one may sample it, so the pass count costs more than their pixels:
+			//  - Below 100% the first blur pass reads the view directly instead of a downsampled copy of it, its
+			//    bilinear taps averaging the texels they land between. That covers one halving, and one is all that
+			//    is needed - except in zoom-out, where the view texture is twice the size and has to be halved twice.
+			//  - At 25% and below, where the lighting buffer is no finer than the quarter-size level itself, that
+			//    level is dropped as well and the half-size one stands in for it (see CombineRenderer::OnDraw()).
+			const bool downsampleFirst = (useHalfRes || PreferencesCache::LightingResolutionPercent >= 100);
+			const bool quarterLevel = (PreferencesCache::LightingResolutionPercent > 25);
+			if (downsampleFirst) {
+				_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
+			} else {
+				_downsamplePass.Dispose();
+			}
+			_blurPass1.Initialize(downsampleFirst ? _downsamplePass.GetTarget() : _viewTexture.get(),
+				bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
 			_blurPass2.Initialize(_blurPass1.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(0.0f, 1.0f));
-			_blurPass3.Initialize(_blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
-			_blurPass4.Initialize(_blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
+			if (quarterLevel) {
+				_blurPass3.Initialize(_blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
+				_blurPass4.Initialize(_blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
+			} else {
+				_blurPass3.Dispose();
+				_blurPass4.Dispose();
+			}
 		} else {
 			_downsamplePass.Dispose();
 			_blurPass1.Dispose();
@@ -133,6 +154,7 @@ namespace Jazz2::Rendering
 	{
 #if defined(RHI_CAP_POSTPROCESSING)
 		if (PreferencesCache::BlurEffects) {
+			// A pass the chain was shortened by (see Initialize()) is disposed and registers nothing
 			_blurPass4.Register();
 			_blurPass3.Register();
 			_blurPass2.Register();

@@ -4378,10 +4378,13 @@ namespace Death { namespace Backward {
 #	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
 			if (failed) {
 				colorize.SetColor(Implementation::Color::BrightYellow);
-				os << "Make sure corresponding .pdb files are accessible to show full stack trace. ";
+				os << "Make sure corresponding .pdb files are accessible to show full stack trace.";
 			}
 #	endif
 #	if defined(BACKWARD_TARGET_WINDOWS)
+			if (failed) {
+				os << " ";
+			}
 			colorize.SetColor(Implementation::Color::Yellow);
 			os << "Memory dump file has been saved to ";
 			colorize.SetColor(Implementation::Color::BrightGreen);
@@ -4389,6 +4392,10 @@ namespace Death { namespace Backward {
 			colorize.SetColor(Implementation::Color::Yellow);
 			os << " directory.\n";
 			colorize.SetColor(Implementation::Color::Reset);
+#	else
+			if (failed) {
+				os << "\n";
+			}
 #	endif
 		}
 

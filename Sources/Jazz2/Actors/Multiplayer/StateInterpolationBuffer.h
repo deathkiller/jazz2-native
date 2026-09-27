@@ -21,6 +21,19 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		/** @brief How far in the past the received state is displayed, in milliseconds */
 		static constexpr std::int64_t ServerDelay = 64;
+		/**
+		 * @brief Longest jump between two received positions that is still interpolated, in pixels
+		 *
+		 * Nothing covers this much ground between two updates - even the fastest legitimate movement needs several
+		 * of them - so a longer jump is a teleport (a warp or a respawn somewhere the sender didn't flag as such),
+		 * and interpolating across it would slide the actor through the level instead.
+		 */
+		static constexpr float MaxInterpolatedDistance = 512.0f;
+
+		/** @brief Returns `true` if the jump from the most recently pushed position to @p pos is too long to interpolate */
+		bool IsTeleport(Vector2f pos) const {
+			return ((pos - GetLatest()).SqrLength() > MaxInterpolatedDistance * MaxInterpolatedDistance);
+		}
 
 		/** @brief Returns the current timestamp of the interpolation clock, in milliseconds */
 		static std::int64_t Now() {

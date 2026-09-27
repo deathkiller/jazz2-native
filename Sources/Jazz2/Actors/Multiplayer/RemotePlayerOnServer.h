@@ -63,7 +63,6 @@ namespace Jazz2::Actors::Multiplayer
 		PlayerCarryOver PrepareLevelCarryOver() override;
 
 		void WarpToPosition(Vector2f pos, WarpFlags flags) override;
-		bool SetModifier(Modifier modifier, const std::shared_ptr<ActorBase>& decor) override;
 		void EnableFlyCheat(bool active) override;
 		bool Freeze(float timeLeft) override;
 		void SetInvulnerability(float timeLeft, InvulnerableType type) override;
@@ -93,8 +92,6 @@ namespace Jazz2::Actors::Multiplayer
 		Vector2f _displayPos;
 		/** @brief Last "being stood on" state sent to the owning client, to only resync on change */
 		bool _beingStoodOnLastSent = false;
-		/** @brief Whether sugar rush was active when it was last sent to the owning client, to only resync on change */
-		bool _sugarRushLastSent = false;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

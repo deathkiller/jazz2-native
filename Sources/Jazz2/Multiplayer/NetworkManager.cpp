@@ -298,7 +298,6 @@ namespace Jazz2::Multiplayer
 
 		ServerConfiguration serverConfig{};
 		serverConfig.AllowAssetStreaming = true;
-		serverConfig.AllowMinimap = true;
 		serverConfig.ColorizePlayersByTeam = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
@@ -323,6 +322,8 @@ namespace Jazz2::Multiplayer
 		// Left unset on purpose: the game mode decides until a configuration says otherwise
 		serverConfig.PlayerStacking = true;
 		serverConfig.PlayerStackingSet = false;
+		serverConfig.AllowMinimap = true;
+		serverConfig.AllowMinimapSet = false;
 		serverConfig.EnableFreeCamera = true;
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
@@ -342,6 +343,32 @@ namespace Jazz2::Multiplayer
 		VerifyServerConfiguration(serverConfig);
 
 		return serverConfig;
+	}
+
+	void NetworkManager::ApplyPlaylistEntry(ServerConfiguration& serverConfig, const PlaylistEntry& playlistEntry)
+	{
+		// Both the initial level and every playlist advance go through here, so an entry can't lose a property
+		// on one of the paths only. Keep it in sync with PlaylistEntry and with the inheritance when it's parsed.
+		serverConfig.ReforgedGameplay = playlistEntry.ReforgedGameplay;
+		serverConfig.AllowLedgeClimb = playlistEntry.AllowLedgeClimb;
+		serverConfig.TeamCount = playlistEntry.TeamCount;
+		serverConfig.AutoBalanceTeams = playlistEntry.AutoBalanceTeams;
+		serverConfig.AllowTeamSelection = playlistEntry.AllowTeamSelection;
+		serverConfig.FriendlyFire = playlistEntry.FriendlyFire;
+		serverConfig.Elimination = playlistEntry.Elimination;
+		serverConfig.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
+		serverConfig.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
+		serverConfig.PreGameSecs = playlistEntry.PreGameSecs;
+		serverConfig.SpawnInvulnerableSecs = playlistEntry.SpawnInvulnerableSecs;
+		serverConfig.TotalKills = playlistEntry.TotalKills;
+		serverConfig.TotalLaps = playlistEntry.TotalLaps;
+		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
+		serverConfig.OvertimeSecs = playlistEntry.OvertimeSecs;
+		serverConfig.PlayerStacking = playlistEntry.PlayerStacking;
+		serverConfig.PlayerStackingSet = playlistEntry.PlayerStackingSet;
+		serverConfig.AllowMinimap = playlistEntry.AllowMinimap;
+		serverConfig.AllowMinimapSet = playlistEntry.AllowMinimapSet;
+		serverConfig.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
 	}
 
 	String NetworkManager::OnOverrideContentPath(StringView path)
@@ -581,6 +608,7 @@ namespace Jazz2::Multiplayer
 				bool allowMinimap;
 				if (doc["AllowMinimap"].get(allowMinimap) == Json::SUCCESS) {
 					serverConfig.AllowMinimap = allowMinimap;
+					serverConfig.AllowMinimapSet = true;
 				}
 
 				bool colorizePlayersByTeam;
@@ -710,6 +738,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
 						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
 						playlistEntry.PreGameSecs = serverConfig.PreGameSecs;
+						playlistEntry.SpawnInvulnerableSecs = serverConfig.SpawnInvulnerableSecs;
 						playlistEntry.TotalKills = serverConfig.TotalKills;
 						playlistEntry.TotalLaps = serverConfig.TotalLaps;
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
@@ -717,6 +746,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.PlayerStacking = serverConfig.PlayerStacking;
 						playlistEntry.PlayerStackingSet = serverConfig.PlayerStackingSet;
 						playlistEntry.AllowMinimap = serverConfig.AllowMinimap;
+						playlistEntry.AllowMinimapSet = serverConfig.AllowMinimapSet;
 						playlistEntry.ColorizePlayersByTeam = serverConfig.ColorizePlayersByTeam;
 
 						std::string_view levelName;
@@ -775,6 +805,7 @@ namespace Jazz2::Multiplayer
 						bool entryAllowMinimap;
 						if (entry["AllowMinimap"].get(entryAllowMinimap) == Json::SUCCESS) {
 							playlistEntry.AllowMinimap = entryAllowMinimap;
+							playlistEntry.AllowMinimapSet = true;
 						}
 
 						bool entryColorizePlayersByTeam;

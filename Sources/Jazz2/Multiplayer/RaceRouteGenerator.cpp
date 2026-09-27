@@ -5,7 +5,11 @@
 #include "../Tiles/TileMap.h"
 #include "../Events/EventMap.h"
 
+#include <algorithm>
+#include <cmath>
+#include <functional>
 #include <queue>
+#include <vector>
 
 #include "../../nCine/Base/HashMap.h"
 
@@ -28,16 +32,17 @@ namespace Jazz2::Multiplayer
 		};
 	}
 
-	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap,
+	void GenerateRaceRouteFromGeometry(Tiles::TileMap* tileMap, Events::EventMap* eventMap, TrackRouteType routeType, float waterLevel,
 		const SmallVector<MultiplayerSpawnPoint, 0>& spawnPoints, const SmallVector<Vector2i, 0>& startMarkers,
 		SmallVector<RaceCheckpoint, 0>& orderedCheckpoints, Vector2i& outBoundsMin, Vector2i& outBoundsMax,
 		bool& outCheckpointsOrdered)
 	{
-		// Heuristic auto-placement for original race levels that don't carry JJ2+ waypoint Text events.
-		// We trace the actual walkable route the player would take: from a spawn point, out to the farthest
-		// reachable point (the far side of the loop), and back to the "Set Lap" warp via the opposite arm of
-		// the track. Checkpoints are then sampled evenly along that route, so the minimap reflects the real
-		// level geometry and starts at the spawn / ends at the Set Lap warp.
+		// Heuristic auto-placement for original levels that don't carry JJ2+ waypoint Text events.
+		// We trace the actual walkable route the player would take. On a race track, that is from a spawn point,
+		// out to the farthest reachable point (the far side of the loop), and back to the "Set Lap" warp via the
+		// opposite arm of the track. Through a story level, it's simply from the spawn to the level exit.
+		// Checkpoints are then sampled evenly along that route, so the minimap reflects the real level geometry
+		// and starts at the spawn / ends at the finish.
 		Vector2i gridSize = tileMap->GetSize();
 		const std::int32_t W = gridSize.X, H = gridSize.Y;
 		if (W <= 0 || H <= 0) {
@@ -59,12 +64,19 @@ namespace Jazz2::Multiplayer
 				}
 			}
 			spawnPos = (clustered > 0 ? sum / (float)clustered : base);
-			LOGI("Auto-placing race checkpoints: aggregated {} of {} spawn point(s)", clustered, (std::int32_t)spawnPoints.size());
+			LOGI("Auto-placing minimap track: aggregated {} of {} spawn point(s)", clustered, (std::int32_t)spawnPoints.size());
 		} else {
+			// Some levels start only one of the characters
 			spawnPos = eventMap->GetSpawnPosition(PlayerType::Jazz);
+			if (spawnPos.X < 0.0f || spawnPos.Y < 0.0f) {
+				spawnPos = eventMap->GetSpawnPosition(PlayerType::Spaz);
+			}
+			if (spawnPos.X < 0.0f || spawnPos.Y < 0.0f) {
+				spawnPos = eventMap->GetSpawnPosition(PlayerType::Lori);
+			}
 		}
 		if (spawnPos.X < 0.0f || spawnPos.Y < 0.0f) {
-			LOGW("Cannot auto-place race checkpoints: no valid spawn position");
+			LOGW("Cannot auto-place minimap track: no valid spawn position");
 			return;
 		}
 
@@ -94,13 +106,23 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<std::uint8_t[]> liftMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 		std::unique_ptr<std::uint8_t[]> surfaceMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 		std::unique_ptr<std::uint8_t[]> tubeMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+		std::unique_ptr<std::int8_t[]> tubeSpeedX = std::make_unique<std::int8_t[]>((std::size_t)totalTiles);
+		std::unique_ptr<std::int8_t[]> tubeSpeedY = std::make_unique<std::int8_t[]>((std::size_t)totalTiles);
+		// Flight: 1 = a pickup that makes the player fly (airboard, copter, fly carrot), 2 = a Fly Off area ending it
+		std::unique_ptr<std::uint8_t[]> flightMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+		// Horizontal poles, which fling the player sideways
+		std::unique_ptr<std::uint8_t[]> hPoleMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 		// Warps that teleport the player to another section (so the route can continue from the destination). The
 		// "Set Lap" warp (EventParams[2] != 0) is the lap finish and is handled separately, so it's excluded here.
 		// Warp targets live in a separate EventMap list (not the event layout), so they're resolved via GetWarpTarget().
 		SmallVector<Pair<Vector2i, std::uint32_t>, 0> warpOrigins;
-		// Level-exit events (end-of-level area / sign): the finish when there's no "Set Lap" warp, mirroring how
-		// Race mode itself falls back to level exits for lap completion
+		// Level-exit events (end-of-level area / sign): the finish of a route to the exit, and of a lap when there's
+		// no "Set Lap" warp, mirroring how Race mode itself falls back to level exits for lap completion
 		SmallVector<Vector2i, 0> exitMarkers;
+		// Bosses: a boss level has no exit event, beating the boss ends it, so the boss is its finish instead
+		SmallVector<Vector2i, 0> bossMarkers;
+		// The highest the water surface gets, see inWater() below
+		float highestWater = waterLevel;
 		eventMap->ForEachEvent([&](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
 			if (x < 0 || y < 0 || x >= W || y >= H) {
 				return true;
@@ -157,10 +179,17 @@ namespace Jazz2::Multiplayer
 					// often arranged in an offset zigzag - mark as a strong launcher with a long jump-off reach
 					liftMap[x + y * W] = 2;
 					break;
-				case EventType::ModifierTube:
-					// Tubes transport the player through (often narrow/diagonal) passages regardless of geometry
-					tubeMap[x + y * W] = 1;
+				case EventType::ModifierTube: {
+					// Tubes transport the player through (often narrow/diagonal) passages regardless of geometry, in
+					// the direction of their speed (XSpeed, YSpeed), kept as 1 + (sx + 1) + 3 * (sy + 1)
+					std::int32_t sx = (std::int8_t)e.EventParams[0], sy = (std::int8_t)e.EventParams[1];
+					tubeSpeedX[x + y * W] = (std::int8_t)sx;
+					tubeSpeedY[x + y * W] = (std::int8_t)sy;
+					sx = (sx > 0) - (sx < 0);
+					sy = (sy > 0) - (sy < 0);
+					tubeMap[x + y * W] = (std::uint8_t)(1 + (sx + 1) + 3 * (sy + 1));
 					break;
+				}
 				case EventType::WarpOrigin:
 					if (e.EventParams[2] == 0) {
 						warpOrigins.push_back(pair(Vector2i(x, y), (std::uint32_t)e.EventParams[0]));
@@ -172,6 +201,39 @@ namespace Jazz2::Multiplayer
 					if (e.EventParams[0] != (std::uint8_t)ExitType::Special) {
 						exitMarkers.push_back(Vector2i(x, y));
 					}
+					break;
+				case EventType::AirboardGenerator:
+				case EventType::Copter:
+				case EventType::CarrotFly:
+					flightMap[x + y * W] = 1;
+					break;
+				case EventType::ModifierHPole:
+					hPoleMap[x + y * W] = 1;
+					break;
+				case EventType::PowerUpMorph:
+					// A monitor that turns the player into a bird, which flies - levels are built around it the same
+					// way as around a copter, although the engine doesn't morph into a bird yet
+					if (e.EventParams[0] == 2) {
+						flightMap[x + y * W] = 1;
+					}
+					break;
+				case EventType::AreaFlyOff:
+					flightMap[x + y * W] = 2;
+					break;
+				case EventType::ModifierSetWater:
+					highestWater = std::min(highestWater, (float)(e.EventParams[0] | (e.EventParams[1] << 8)));
+					break;
+				case EventType::BossTweedle:
+				case EventType::BossBilsy:
+				case EventType::BossDevan:
+				case EventType::BossQueen:
+				case EventType::BossRobot:
+				case EventType::BossUterus:
+				case EventType::BossTurtleTough:
+				case EventType::BossBubba:
+				case EventType::BossDevanRemote:
+				case EventType::BossBolly:
+					bossMarkers.push_back(Vector2i(x, y));
 					break;
 				case EventType::Bridge: {
 					// A bridge is a walkable surface extending to the right of the event tile (one extra tile past
@@ -231,19 +293,222 @@ namespace Jazz2::Multiplayer
 		auto isTube = [&tubeMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
 			return (tx >= 0 && ty >= 0 && tx < W && ty < H && tubeMap[tx + ty * W] != 0);
 		};
-
-		// A tile the player can occupy - a single free tile is enough (the player can crawl through 1-tile gaps);
-		// tube tiles count too, even if their terrain is solid, since the tube transports the player through them.
-		// Lift tiles (vine/pole/hook/float-up) are occupiable even when their tile graphic has a solid mask - the
-		// player grabs and climbs them, so they must not read as a ceiling that blocks the upward boost.
-		auto occupiable = [&isFree, &isTube, &isLift, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && (isFree(tx, ty) || isTube(tx, ty) || isLift(tx, ty)));
+		auto isHPole = [&hPoleMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
+			return (tx >= 0 && ty >= 0 && tx < W && ty < H && hPoleMap[tx + ty * W] != 0);
 		};
-		// The player stands here if there's a solid tile/level floor, a one-way platform or a bridge/platform below,
-		// or a spring at its feet/below (springs are actors on otherwise-empty tiles, but the player rests on them)
-		auto hasGround = [&isFree, &isOneWay, &onSurface, &springAt, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (ty + 1 >= H) || !isFree(tx, ty + 1) || isOneWay(tx, ty + 1) || onSurface(tx, ty) || onSurface(tx, ty + 1)
+		auto isFlightPickup = [&flightMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
+			return (tx >= 0 && ty >= 0 && tx < W && ty < H && flightMap[tx + ty * W] == 1);
+		};
+
+		// Collision at sub-tile precision. A whole tile only reads "free" or "solid", which walls off every slope,
+		// half tile and the diagonal corridors built of them, so the player's movement is checked against 8x8 px
+		// cells sampled from the tile masks instead. Destructible and trigger-controlled tiles stay passable (see
+		// isFree() above), and vines and hooks read empty, as they do in the player's own collisions.
+		constexpr std::int32_t TS = (std::int32_t)Tiles::TileSet::DefaultTileSize;
+		constexpr std::int32_t CellSize = 8;
+		constexpr std::int32_t CellsPerTile = TS / CellSize;
+		constexpr std::uint32_t CellSolid = 0x01;	// Blocks the player from every side
+		constexpr std::uint32_t CellFloor = 0x02;	// Holds up a player coming from above (solid or one-way)
+		const std::int32_t CW = W * CellsPerTile, CH = H * CellsPerTile;
+		// The 4x4 cells of a tile are packed into one word, 2 bits each, row by row
+		std::unique_ptr<std::uint32_t[]> cells = std::make_unique<std::uint32_t[]>((std::size_t)totalTiles);
+		for (std::int32_t ty = 0; ty < H; ty++) {
+			for (std::int32_t tx = 0; tx < W; tx++) {
+				if (tileMap->IsTileTrigger(tx, ty)) {
+					// A trigger switches the tile between solid and empty - which way depends on the level: a wall
+					// that opens, a platform that appears (a staircase of them, often). Either state has to be usable,
+					// so the tile holds the player up on its top without blocking the way, like a one-way platform
+					// (and a player standing on one can still drop through, once it opens - see getJumps())
+					cells[tx + ty * W] = 0xAAu;
+					continue;
+				}
+				if (tileMap->IsTileDestructible(tx, ty) || tileMap->IsTileEmpty(tx, ty)) {
+					continue;
+				}
+				std::uint32_t& tileCells = cells[tx + ty * W];
+				bool oneWay = tileMap->IsTileOneWay(tx, ty);
+				if (!tileMap->IsTilePartiallySolid(tx, ty)) {
+					// A filled mask - unless it belongs to a vine or a hook, which one sample tells
+					if (!tileMap->IsTilePointEmpty(tx * TS + TS / 2, ty * TS + TS / 2, true)) {
+						tileCells = (oneWay ? 0xAAAAAAAAu : 0xFFFFFFFFu);
+					}
+					continue;
+				}
+				// Sampled every 2 px: any sample makes a cell a floor, so a thin platform still holds the player up,
+				// but it takes a quarter of them to make it a wall, so a slope doesn't narrow the corridor it forms
+				for (std::int32_t cy = 0; cy < CellsPerTile; cy++) {
+					for (std::int32_t cx = 0; cx < CellsPerTile; cx++) {
+						std::int32_t solidSamples = 0;
+						for (std::int32_t py = 1; py < CellSize; py += 2) {
+							for (std::int32_t px = 1; px < CellSize; px += 2) {
+								if (!tileMap->IsTilePointEmpty(tx * TS + cx * CellSize + px, ty * TS + cy * CellSize + py, true)) {
+									solidSamples++;
+								}
+							}
+						}
+						std::uint32_t flags = 0;
+						if (solidSamples > 0) {
+							flags |= CellFloor;
+						}
+						if (!oneWay && solidSamples >= (CellSize / 2) * (CellSize / 2) / 4) {
+							flags |= CellSolid;
+						}
+						tileCells |= flags << ((cy * CellsPerTile + cx) * 2);
+					}
+				}
+			}
+		}
+
+		auto floorDiv = [](std::int32_t value, std::int32_t divisor) -> std::int32_t {
+			return (value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor));
+		};
+		// Below the level is a floor only in a level whose pit is one to stand on, otherwise falling out kills
+		// the player. TileMap tells which through a tile under the level, if one of the bottom tiles is empty.
+		bool bottomIsFloor = true;
+		for (std::int32_t tx = 0; tx < W; tx++) {
+			if (tileMap->IsTileEmpty(tx, H - 1)) {
+				bottomIsFloor = !tileMap->IsTileEmpty(tx, H);
+				break;
+			}
+		}
+		auto cellAt = [&cells, CW, CH, W, bottomIsFloor](std::int32_t cx, std::int32_t cy) -> std::uint32_t {
+			if (cx < 0 || cx >= CW) {
+				return (CellSolid | CellFloor);	// The level's sides are walls
+			}
+			if (cy >= CH) {
+				return (bottomIsFloor ? (CellSolid | CellFloor) : 0);
+			}
+			if (cy < 0) {
+				cy = 0;
+			}
+			std::uint32_t tileCells = cells[(cx / CellsPerTile) + (cy / CellsPerTile) * W];
+			return (tileCells >> (((cy % CellsPerTile) * CellsPerTile + (cx % CellsPerTile)) * 2)) & 0x03;
+		};
+
+		// The player's box, slightly smaller than the real one (22x30 px, see Player::OnUpdateHitbox()), so the
+		// tracer rather finds a way that is a bit too tight than misses one. Positions are its feet, in pixels.
+		constexpr std::int32_t BoxHalfWidth = 8, BoxHeight = 24;
+		auto boxLeftCell = [&](std::int32_t x) { return floorDiv(x - BoxHalfWidth, CellSize); };
+		auto boxRightCell = [&](std::int32_t x) { return floorDiv(x + BoxHalfWidth - 1, CellSize); };
+		auto boxTopCell = [&](std::int32_t feetY) { return floorDiv(feetY - BoxHeight, CellSize); };
+		auto boxBottomCell = [&](std::int32_t feetY) { return floorDiv(feetY - 1, CellSize); };
+		auto cellsBlocked = [&](std::int32_t cx0, std::int32_t cx1, std::int32_t cy0, std::int32_t cy1) -> bool {
+			for (std::int32_t cy = cy0; cy <= cy1; cy++) {
+				for (std::int32_t cx = cx0; cx <= cx1; cx++) {
+					if ((cellAt(cx, cy) & CellSolid) != 0) {
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+		auto boxBlocked = [&](std::int32_t x, std::int32_t feetY) -> bool {
+			return cellsBlocked(boxLeftCell(x), boxRightCell(x), boxTopCell(feetY), boxBottomCell(feetY));
+		};
+		// Whether something holds up the box with its feet at the given height (a cell boundary)
+		auto boxSupported = [&](std::int32_t x, std::int32_t feetY) -> bool {
+			std::int32_t cy = floorDiv(feetY, CellSize);
+			for (std::int32_t cx = boxLeftCell(x), cx1 = boxRightCell(x); cx <= cx1; cx++) {
+				if ((cellAt(cx, cy) & CellFloor) != 0) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		// Where the player is in each tile (horizontally centered): its highest position where the box fits and
+		// something holds it up, else its lowest position where the box fits at all (in the air there), else -1.
+		// A position belongs to the tile its body is centered in, not the one its feet are in, which is where the
+		// level's events are placed - a spring on a floor a few pixels below a tile boundary is still in the tile
+		// the player standing on that floor is in.
+		constexpr std::int32_t FirstFeetOffset = BoxHeight / 2 + CellSize / 2;	// Relative to the tile's top
+		std::unique_ptr<std::int32_t[]> feetMap = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+		std::unique_ptr<std::uint8_t[]> standMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+		for (std::int32_t ty = 0; ty < H; ty++) {
+			for (std::int32_t tx = 0; tx < W; tx++) {
+				std::int32_t x = tx * TS + TS / 2;
+				std::int32_t feet = -1;
+				bool stands = false;
+				for (std::int32_t r = 0; r < CellsPerTile; r++) {
+					std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
+					if (!boxBlocked(x, f) && boxSupported(x, f)) {
+						feet = f;
+						stands = true;
+						break;
+					}
+				}
+				if (!stands) {
+					for (std::int32_t r = CellsPerTile - 1; r >= 0; r--) {
+						std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
+						if (!boxBlocked(x, f)) {
+							feet = f;
+							break;
+						}
+					}
+				}
+				feetMap[tx + ty * W] = feet;
+				standMap[tx + ty * W] = (stands ? 1 : 0);
+			}
+		}
+
+		// Springs are actors, which fall onto the floor under their event, so they belong to the tile a player
+		// standing on that floor is in, which can be the one below if the floor is a few pixels past a boundary
+		for (std::int32_t ty = H - 1; ty >= 0; ty--) {
+			for (std::int32_t tx = 0; tx < W; tx++) {
+				std::int32_t i = tx + ty * W;
+				if (springMap[i] == 0 || standMap[i] != 0) {
+					continue;
+				}
+				for (std::int32_t f = ty * TS + FirstFeetOffset; f < (ty + 3) * TS; f += CellSize) {
+					if (boxSupported(tx * TS + TS / 2, f)) {
+						std::int32_t rty = floorDiv(f - BoxHeight / 2, TS);
+						std::int32_t ri = tx + rty * W;
+						if (rty > ty && rty < H && springMap[ri] == 0) {
+							springMap[ri] = springMap[i];
+							springBoost[ri] = springBoost[i];
+							springMap[i] = 0;
+							springBoost[i] = 0;
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		// Water: under the surface the player swims freely in every direction. "Set Water Level" events move the
+		// surface while playing, so the highest surface the level ever gets counts - a route may need the water
+		// the level raises to get somewhere.
+		const std::int32_t waterTileY = (highestWater < (float)(H * TS) ? std::max(0, (std::int32_t)(highestWater / TS)) : INT32_MAX);
+		auto inWater = [waterTileY](std::int32_t ty) -> bool {
+			return (ty >= waterTileY);
+		};
+
+		// A tile the player can occupy: the box fits in it somewhere. Tube tiles count too, even if their terrain is
+		// solid, since the tube transports the player through them, and so do lift tiles (vine/pole/hook/float-up),
+		// which the player grabs and climbs, so they must not read as a ceiling that blocks the upward boost.
+		auto occupiable = [&](std::int32_t tx, std::int32_t ty) -> bool {
+			return (tx >= 0 && ty >= 0 && tx < W && ty < H && (feetMap[tx + ty * W] >= 0 || isTube(tx, ty) || isLift(tx, ty)));
+		};
+		// The player stands here if the ground holds up the box, or there's a bridge/platform or a spring (springs
+		// are actors on otherwise-empty tiles, but the player rests on them)
+		auto hasGround = [&](std::int32_t tx, std::int32_t ty) -> bool {
+			return (tx >= 0 && ty >= 0 && tx < W && ty < H && standMap[tx + ty * W] != 0) || onSurface(tx, ty) || onSurface(tx, ty + 1)
 				|| springAt(tx, ty) != 0 || springAt(tx, ty + 1) != 0;
+		};
+		auto feetAt = [&](std::int32_t tx, std::int32_t ty) -> std::int32_t {
+			std::int32_t feet = feetMap[tx + ty * W];
+			return (feet >= 0 ? feet : (ty + 1) * TS);
+		};
+		// The tile the player's body is in, for a position of its feet
+		auto tileOfFeet = [&](float feetY) -> std::int32_t {
+			return floorDiv((std::int32_t)feetY - BoxHeight / 2, TS);
+		};
+		// The topmost tile the player's real hitbox reaches into at a tile, where it still touches the events -
+		// a warp or an exit placed right above a floor that is a bit lower than the tile boundary is touched
+		// by a player standing on that floor, although its body is in the tile below
+		constexpr std::int32_t HitboxHeight = 30;
+		auto topEventRow = [&](std::int32_t tx, std::int32_t ty) -> std::int32_t {
+			return std::max(0, std::min(ty, floorDiv(feetAt(tx, ty) - HitboxHeight, TS)));
 		};
 		// Snaps a tile to the nearest occupiable tile within a small radius (or {-1,-1} if none found)
 		auto findSeed = [&occupiable](Vector2i t) -> Vector2i {
@@ -262,52 +527,60 @@ namespace Jazz2::Multiplayer
 			return Vector2i(-1, -1);
 		};
 
-		Vector2i spawnTile = findSeed(Vector2i((std::int32_t)(spawnPos.X / Tiles::TileSet::DefaultTileSize), (std::int32_t)(spawnPos.Y / Tiles::TileSet::DefaultTileSize)));
+		Vector2i spawnTile = findSeed(Vector2i((std::int32_t)(spawnPos.X / TS), (std::int32_t)(spawnPos.Y / TS)));
 		if (spawnTile.X < 0) {
-			LOGW("Cannot auto-place race checkpoints: spawn area is not walkable");
+			LOGW("Cannot auto-place minimap track: spawn area is not walkable");
 			return;
 		}
 
-		// Resolve each warp origin to a standable destination tile (matched by warp ID), so the BFS can teleport.
+		// Resolve each warp origin to a standable destination tile (matched by warp ID), so the search can teleport.
 		// GetWarpTarget() returns the destination in world (pixel) coordinates, or (-1,-1) if the ID is unknown.
-		constexpr std::int32_t WarpTS = (std::int32_t)Tiles::TileSet::DefaultTileSize;
 		HashMap<Vector2i, Vector2i, TileCoordHash> warpJump;
 		for (const auto& origin : warpOrigins) {
 			Vector2f targetWorld = eventMap->GetWarpTarget(origin.second());
 			if (targetWorld.X >= 0.0f && targetWorld.Y >= 0.0f) {
-				Vector2i dest = findSeed(Vector2i((std::int32_t)(targetWorld.X / WarpTS), (std::int32_t)(targetWorld.Y / WarpTS)));
+				Vector2i dest = findSeed(Vector2i((std::int32_t)(targetWorld.X / TS), (std::int32_t)(targetWorld.Y / TS)));
 				if (dest.X >= 0) {
 					warpJump[origin.first()] = dest;
 				}
 			}
 		}
 
-		// Jump / boost envelope (in tiles)
-		constexpr std::int32_t JumpHeight = 7;		// How high the player can jump straight up
-		constexpr std::int32_t JumpReachX = 10;		// Horizontal reach of a (running) jump - clears fairly wide gaps
-		constexpr std::int32_t JumpDropY = 6;		// How far below the player can land when jumping across a gap
+		// Boost envelope (in tiles) of springs, vines and poles, on top of the jumps and spring launches that are
+		// simulated, see JumpProfiles below
+		constexpr std::int32_t JumpHeight = 7;		// How high the player gets off a vine/hook in a normal jump
+		constexpr std::int32_t JumpReachX = 10;		// Horizontal reach of a jump off a vine/hook/pole
+		constexpr std::int32_t JumpDropY = 6;		// How far below the player can land when jumping off one
 		constexpr std::int32_t BoostHeight = 64;	// Max tiles a spring/float-up can carry the player up a clear column
 		constexpr std::int32_t BoostReachX = 3;		// Sideways reach when stepping off a vertical boost
 		constexpr std::int32_t HSpringReachX = 16;	// Horizontal reach of a running jump off a spring (clears wide pits)
 		constexpr std::int32_t PoleReachY = 8;		// How far a spinning pole carries the player to the next pole (kept modest so it doesn't vault whole sections)
+		constexpr std::int32_t MaxWalkStep = 40;	// Height difference (px) walking handles between neighboring tiles - a 45-degree slope, and some
 
 		// Finds a clear arc for a jump from (sx,sy) to (sx+dx,sy+dy) - rise in the start column, travel across at
 		// the apex, then descend to the landing - without passing through solid tiles, trying higher apexes up to
-		// maxUp to clear taller obstacles. Returns the apex row, or INT32_MAX if no clear arc exists.
-		auto jumpApex = [&isFree, &isOneWay](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> std::int32_t {
+		// maxUp to clear taller obstacles. Returns the apex row, or INT32_MAX if no clear arc exists. Used for the
+		// boosts, and to draw jumps as arcs on the minimap.
+		// Vine/hook/pole tiles often have a solid mask, but the player grabs them instead of bumping into them (see
+		// occupiable() above), so they don't block an arc either - otherwise a hook right above the ground would read
+		// as a ceiling and the player could never jump up to it
+		auto arcFree = [&isFree, &isLift](std::int32_t tx, std::int32_t ty) -> bool {
+			return isFree(tx, ty) || isLift(tx, ty);
+		};
+		auto jumpApex = [&arcFree, &isOneWay](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> std::int32_t {
 			std::int32_t ex = sx + dx, ey = sy + dy;
 			std::int32_t x0 = (sx < ex ? sx : ex), x1 = (sx < ex ? ex : sx);
 			std::int32_t apexStart = (sy < ey ? sy : ey);
 			for (std::int32_t apexY = apexStart; apexY >= sy - maxUp; apexY--) {
 				bool ok = true;
 				for (std::int32_t yy = sy - 1; yy >= apexY; yy--) {
-					if (!isFree(sx, yy)) { ok = false; break; }
+					if (!arcFree(sx, yy)) { ok = false; break; }
 				}
 				if (!ok) {
 					break; // ceiling above the start: a higher apex is impossible too
 				}
 				for (std::int32_t xx = x0; xx <= x1; xx++) {
-					if (!isFree(xx, apexY)) { ok = false; break; }
+					if (!arcFree(xx, apexY)) { ok = false; break; }
 				}
 				if (!ok) {
 					continue; // wall at this height; try a higher apex
@@ -315,7 +588,7 @@ namespace Jazz2::Multiplayer
 				// Descending toward the landing: a one-way platform is solid from above, so the arc can't drop
 				// down through it (the rise phase above may still pass up through one-way platforms)
 				for (std::int32_t yy = apexY + 1; yy <= ey; yy++) {
-					if (!isFree(ex, yy) || isOneWay(ex, yy)) { ok = false; break; }
+					if (!arcFree(ex, yy) || isOneWay(ex, yy)) { ok = false; break; }
 				}
 				if (ok) {
 					return apexY;
@@ -327,89 +600,662 @@ namespace Jazz2::Multiplayer
 			return jumpApex(sx, sy, dx, dy, maxUp) != INT32_MAX;
 		};
 
-		// Gravity-aware breadth-first search recording predecessors, so a route can be reconstructed.
+		// Plain jumps are simulated with the physics of the original game (px per tick, see Player::LegacyJumpSpeed
+		// and its neighbors) against the cells: launched upwards at 10 px/tick plus a quarter of the horizontal
+		// speed, a light gravity while the key is held on the way up and a heavier one once it's let go, a floaty
+		// fall, and never more than 8 px/tick applied on either axis. A ceiling ends the rise and a wall ends the
+		// horizontal motion, as they do for the player. Each profile is one way to jump - how fast to run, when to
+		// let go of the key, how to steer in the air and which of the characters' own moves to use - and runs in
+		// both directions. A cooperation player can pick any character, so a level's way through is only ever one
+		// that all of them manage, whichever move each needs for it: Spaz and Lori jump a second time at the apex,
+		// Jazz glides down on his ears.
+		enum class JumpMove : std::uint8_t {
+			None,
+			DoubleJump,					// A second launch at 8 px/tick at the apex (see Player::LegacyDoubleJumpSpeed)
+			Glide						// Falling at most 1 px/tick (see Player::LegacyCopterDescentSpeed)
+		};
+		struct JumpProfile {
+			float SpeedX;				// Applied horizontal speed, px/tick
+			float LaunchSpeedX;			// Horizontal speed the launch gets its boost from (a dash has 16 before the cap)
+			std::int32_t ReleaseTick;	// When the jump key is let go, 0 = held all the way up
+			std::int32_t SteerTick;		// When the horizontal speed changes to SteerSpeedX, 0 = never
+			float SteerSpeedX;
+			JumpMove Move;
+		};
+		static constexpr JumpProfile JumpProfiles[] = {
+			{ 0.0f, 0.0f, 0, 0, 0.0f, JumpMove::None },			// Straight up
+			{ 2.0f, 2.0f, 0, 0, 0.0f, JumpMove::None },
+			{ 4.0f, 4.0f, 0, 0, 0.0f, JumpMove::None },
+			{ 6.0f, 6.0f, 0, 0, 0.0f, JumpMove::None },
+			{ 8.0f, 8.0f, 0, 0, 0.0f, JumpMove::None },			// Running
+			{ 8.0f, 16.0f, 0, 0, 0.0f, JumpMove::None },		// Dashing
+			{ 0.0f, 0.0f, 0, 14, 5.0f, JumpMove::None },		// Straight up, then over onto a ledge above
+			{ 6.0f, 6.0f, 0, 10, 0.0f, JumpMove::None },		// Forward, then dropping down onto what's below
+			{ 8.0f, 16.0f, 0, 22, -5.0f, JumpMove::None },		// Dashing, then back onto a ledge behind (typically after hitting a wall)
+			{ 8.0f, 8.0f, 0, 18, -5.0f, JumpMove::None },
+			{ 0.0f, 0.0f, 6, 0, 0.0f, JumpMove::None },			// Short hops, under low ceilings
+			{ 4.0f, 4.0f, 6, 0, 0.0f, JumpMove::None },
+			{ 8.0f, 8.0f, 6, 0, 0.0f, JumpMove::None },
+			{ 0.0f, 0.0f, 0, 0, 0.0f, JumpMove::DoubleJump },	// The characters' own moves
+			{ 4.0f, 4.0f, 0, 0, 0.0f, JumpMove::DoubleJump },
+			{ 8.0f, 16.0f, 0, 0, 0.0f, JumpMove::DoubleJump },
+			{ 0.0f, 0.0f, 0, 40, 5.0f, JumpMove::DoubleJump },
+			{ 8.0f, 16.0f, 0, 40, -5.0f, JumpMove::DoubleJump },
+			{ 4.0f, 4.0f, 0, 0, 0.0f, JumpMove::Glide },
+			{ 8.0f, 16.0f, 0, 0, 0.0f, JumpMove::Glide }
+		};
+		constexpr float DoubleJumpSpeed = 8.0f, GlideDescentSpeed = 1.0f, PoleLaunchBonus = 15.625f;
+		constexpr float HPoleLaunchBonus = 8.0f, HPoleMaxLaunch = 20.0f;
+		constexpr float JumpBaseSpeed = 10.0f, JumpSpeedScale = 0.25f, SpeedCap = 8.0f;
+		constexpr float RiseGravityHeld = 0.375f, RiseGravityReleased = 0.875f, RiseGravityReleasedNearApex = 0.625f, FallGravity = 0.125f;
+		constexpr std::int32_t MaxJumpTicks = 120;	// A longer flight goes on as a plain fall
+		constexpr std::int32_t TubeControlTicks = 16;	// How long a tube keeps the controls, see Player::TubeControlTime
+
+		auto stepCost = [](std::int32_t dx, std::int32_t dy) -> std::int32_t {
+			// Tenths of a tile travelled, so a jump costs what walking the same distance does
+			return std::max<std::int32_t>(10, (std::int32_t)(10.0f * sqrtf((float)(dx * dx + dy * dy)) + 0.5f));
+		};
+
+		// A flight the player steers freely: the vertical motion is the one of trace(), but every horizontal position
+		// the player could steer to is followed at once - a set of box positions 8 px apart, which spreads by one
+		// position a tick (the applied-movement cap) as far as the walls let it. Positions that hit a ceiling drop
+		// out, and those over a floor on the way down land there. Used for the long flights (springs, poles), which
+		// leave time to steer into a gap that none of the few fixed ways to steer in trace() would find.
+		auto steeredFlight = [&](float x, float feetY, float vy, float riseGravity, auto&& emit, auto&& emitAt) {
+			// Box at position k is centered at k * CellSize, so it covers cells k - 1 and k
+			auto blockedAt = [&](std::int32_t k, std::int32_t feet) -> bool {
+				return cellsBlocked(k - 1, k, boxTopCell(feet), boxBottomCell(feet));
+			};
+			std::int32_t lo = (std::int32_t)x / CellSize, hi = lo;
+			SmallVector<std::uint8_t, 0> alive, next;
+			alive.push_back(1);
+			SmallVector<std::int32_t, 0> emitted;
+			auto emitOnce = [&](std::int32_t tx, std::int32_t ty) {
+				std::int32_t ti = tx + ty * W;
+				for (std::int32_t e : emitted) {
+					if (e == ti) {
+						return;
+					}
+				}
+				emitted.push_back(ti);
+				emit(tx, ty);
+			};
+			auto landAt = [&](std::int32_t k, float feet) {
+				std::int32_t tx = floorDiv(k * CellSize, TS), ty = tileOfFeet(feet);
+				if (tx >= 0 && ty >= 0 && tx < W && ty < H) {
+					std::int32_t ti = tx + ty * W;
+					for (std::int32_t e : emitted) {
+						if (e == ti) {
+							return;
+						}
+					}
+					emitted.push_back(ti);
+					emitAt((float)(k * CellSize), feet);
+				}
+			};
+
+			for (std::int32_t t = 1; t <= MaxJumpTicks; t++) {
+				// Spreading sideways, at most one position a tick, never into a wall
+				std::int32_t feet = (std::int32_t)feetY;
+				next.clear();
+				next.resize_for_overwrite(hi - lo + 3);
+				bool any = false;
+				for (std::int32_t k = lo - 1; k <= hi + 1; k++) {
+					auto aliveAt = [&](std::int32_t kk) { return (kk >= lo && kk <= hi && alive[kk - lo] != 0); };
+					bool reach = aliveAt(k) || aliveAt(k - 1) || aliveAt(k + 1);
+					next[k - lo + 1] = (reach && (aliveAt(k) || !blockedAt(k, feet)) ? 1 : 0);
+					any |= (next[k - lo + 1] != 0);
+				}
+				lo--;
+				hi++;
+				std::swap(alive, next);
+				if (!any) {
+					return;
+				}
+
+				float stepY = std::clamp(vy, -SpeedCap, SpeedCap);
+				if (stepY < 0.0f) {
+					std::int32_t newFeet = (std::int32_t)(feetY + stepY);
+					for (std::int32_t k = lo; k <= hi; k++) {
+						if (alive[k - lo] != 0 && cellsBlocked(k - 1, k, boxTopCell(newFeet), boxTopCell(feet) - 1)) {
+							alive[k - lo] = 0;	// Bumped its head, falling back is what the other flights are for
+						}
+					}
+					feetY += stepY;
+				} else if (stepY > 0.0f) {
+					std::int32_t fromCell = floorDiv(feet + CellSize - 1, CellSize);
+					std::int32_t toCell = floorDiv((std::int32_t)(feetY + stepY), CellSize);
+					for (std::int32_t k = lo; k <= hi; k++) {
+						if (alive[k - lo] == 0) {
+							continue;
+						}
+						for (std::int32_t cy = fromCell; cy <= toCell; cy++) {
+							if (boxSupported(k * CellSize, cy * CellSize) && !blockedAt(k, cy * CellSize)) {
+								landAt(k, (float)(cy * CellSize));
+								alive[k - lo] = 0;
+								break;
+							}
+						}
+					}
+					feetY += stepY;
+					if (feetY > (float)(H * TS)) {
+						return;
+					}
+				}
+				vy = (vy < 0.0f ? vy + riseGravity : std::min(vy + FallGravity, SpeedCap));
+
+				// What the hitbox touches on the way can be grabbed, and water ends the flight
+				std::int32_t top = floorDiv((std::int32_t)feetY - HitboxHeight, TS), bottom = floorDiv((std::int32_t)feetY - 1, TS);
+				std::int32_t bodyRow = tileOfFeet(feetY);
+				for (std::int32_t k = lo; k <= hi; k++) {
+					if (alive[k - lo] == 0) {
+						continue;
+					}
+					std::int32_t tx = floorDiv(k * CellSize, TS);
+					if (onSurface(tx, bodyRow) && vy > 0.0f) {
+						landAt(k, feetY);
+						alive[k - lo] = 0;
+						continue;
+					}
+					if (bodyRow >= 0 && inWater(bodyRow)) {
+						emitOnce(tx, bodyRow);
+						alive[k - lo] = 0;
+						continue;
+					}
+					for (std::int32_t ty = top; ty <= bottom; ty++) {
+						if (isLift(tx, ty) || isHPole(tx, ty) || isTube(tx, ty) || isFlightPickup(tx, ty)) {
+							emitOnce(tx, ty);
+						}
+					}
+				}
+
+				// Keeping the window around the positions still flying
+				while (lo < hi && alive[0] == 0) {
+					alive.erase(alive.begin());
+					lo++;
+				}
+				while (hi > lo && alive[hi - lo] == 0) {
+					alive.pop_back();
+					hi--;
+				}
+			}
+			// Still in the air, it goes on as a fall from there
+			for (std::int32_t k = lo; k <= hi; k += CellsPerTile) {
+				if (alive[k - lo] != 0) {
+					landAt(k, feetY);
+				}
+			}
+		};
+
+		// Flies the player from a position at a velocity until it lands, grabs something or runs out of time, and
+		// reports where it got: emitAt() with the position it landed at, emit() with a tile it grabbed onto.
+		// The jump key is held on the way up until releaseTick (0 = all the way up), at steerTick the horizontal
+		// speed changes to steerVx (0 = never), and `move` is a character's own move used on the way.
+		// Pole relaunches already followed by a steered flight in the flights being simulated (tile, speed)
+		SmallVector<Pair<std::int32_t, std::int32_t>, 0> steeredPoles;
+		// Whether everything that holds up the box at the given height is a trigger tile's top
+		auto onlyTriggerFloor = [&](std::int32_t x, std::int32_t feetY) -> bool {
+			std::int32_t cy = floorDiv(feetY, CellSize);
+			for (std::int32_t cx = boxLeftCell(x), cx1 = boxRightCell(x); cx <= cx1; cx++) {
+				if ((cellAt(cx, cy) & CellFloor) != 0 && !tileMap->IsTileTrigger(floorDiv(cx, CellsPerTile), floorDiv(cy, CellsPerTile))) {
+					return false;
+				}
+			}
+			return true;
+		};
+		auto trace = [&](float x, float feetY, float vx, float vy, std::int32_t releaseTick, std::int32_t steerTick, float steerVx,
+			JumpMove move, bool offSpring, auto&& emit, auto&& emitAt, bool throughTriggers = false) {
+			bool onPole = false, poleLaunched = false, onHPole = false;
+			// A horizontal pole's launch is travelled in full, above the applied-movement cap, while it carries
+			float capX = SpeedCap;
+			std::int32_t hPoleCarryLeft = 0;
+			// A pole takes the horizontal speed away while it spins the player, who steers the same way again after
+			const float steerAfterPole = (steerTick > 0 ? steerVx : vx);
+			std::int32_t poleSteerTick = 0;
+			for (std::int32_t t = 1; t <= MaxJumpTicks; t++) {
+				if (steerTick > 0 && t == steerTick) {
+					vx = steerVx;
+				}
+				if (poleSteerTick > 0 && t == poleSteerTick) {
+					vx = steerAfterPole;
+				}
+				if (hPoleCarryLeft > 0 && --hPoleCarryLeft == 0) {
+					capX = SpeedCap;
+				}
+				// The box was clear where it was, so only the cells it moves into need to be checked
+				if (vx != 0.0f) {
+					float nx = x + std::clamp(vx, -capX, capX);
+					std::int32_t cy0 = boxTopCell((std::int32_t)feetY), cy1 = boxBottomCell((std::int32_t)feetY);
+					bool blocked = (vx > 0.0f
+						? cellsBlocked(boxRightCell((std::int32_t)x) + 1, boxRightCell((std::int32_t)nx), cy0, cy1)
+						: cellsBlocked(boxLeftCell((std::int32_t)nx), boxLeftCell((std::int32_t)x) - 1, cy0, cy1));
+					if (blocked) {
+						vx = 0.0f;
+					} else {
+						x = nx;
+					}
+				}
+				float stepY = std::clamp(vy, -SpeedCap, SpeedCap);
+				if (stepY < 0.0f) {
+					if (cellsBlocked(boxLeftCell((std::int32_t)x), boxRightCell((std::int32_t)x), boxTopCell((std::int32_t)(feetY + stepY)), boxTopCell((std::int32_t)feetY) - 1)) {
+						vy = 0.0f;
+					} else {
+						feetY += stepY;
+					}
+				} else if (stepY > 0.0f) {
+					// Land on the first floor the feet cross on the way down
+					std::int32_t fromCell = floorDiv((std::int32_t)feetY + CellSize - 1, CellSize);
+					std::int32_t toCell = floorDiv((std::int32_t)(feetY + stepY), CellSize);
+					for (std::int32_t cy = fromCell; cy <= toCell; cy++) {
+						if (boxSupported((std::int32_t)x, cy * CellSize) && !boxBlocked((std::int32_t)x, cy * CellSize) &&
+							!(throughTriggers && onlyTriggerFloor((std::int32_t)x, cy * CellSize))) {
+							emitAt(x, (float)(cy * CellSize));
+							return;
+						}
+					}
+					feetY += stepY;
+					if (onSurface(floorDiv((std::int32_t)x, TS), tileOfFeet(feetY))) {
+						// A bridge or a moving platform, which the cells don't know about
+						emitAt(x, feetY);
+						return;
+					}
+					if (feetY > (float)(H * TS)) {
+						return;
+					}
+				}
+				if (vy < 0.0f) {
+					if (poleLaunched) {
+						vy += (offSpring ? RiseGravityHeld : RiseGravityReleased);
+					} else {
+						vy += (releaseTick == 0 || t < releaseTick ? RiseGravityHeld
+							: (-vy > 1.0f ? RiseGravityReleased : RiseGravityReleasedNearApex));
+					}
+				} else if (move == JumpMove::DoubleJump) {
+					vy = -DoubleJumpSpeed;
+					move = JumpMove::None;
+				} else {
+					vy = std::min(vy + FallGravity, (move == JumpMove::Glide ? GlideDescentSpeed : SpeedCap));
+				}
+				// Grabbing a vine or a hook or getting sucked into a tube, as soon as the real hitbox touches one (the
+				// hands reach a hook well above where the body is), or diving into water. A vertical pole doesn't
+				// hold the player, it spins them and throws them on the way they were going, at the speed they came
+				// with plus 15.625 px/tick (see Player::LegacyPoleLaunchBonus) - poles in a row and a spring into a
+				// pole compound.
+				std::int32_t ctx = floorDiv((std::int32_t)x, TS), cty = tileOfFeet(feetY);
+				bool touchesPole = false, touchesHPole = false;
+				for (std::int32_t ty = floorDiv((std::int32_t)feetY - HitboxHeight, TS); ty <= floorDiv((std::int32_t)feetY - 1, TS); ty++) {
+					if (isHPole(ctx, ty)) {
+						// The way the player was going (or facing), at the speed it came with plus 8 px/tick, at most 20
+						// (see Player::LegacyHPoleLaunchBonus), carried for 60 ticks
+						if (!onHPole && vx != 0.0f) {
+							emit(ctx, ty);
+							vx = (vx < 0.0f ? -1.0f : 1.0f) * std::min(std::abs(vx) + HPoleLaunchBonus, HPoleMaxLaunch);
+							vy = 0.0f;
+							feetY = (float)(ty * TS + TS / 2 + BoxHeight / 2);
+							capX = HPoleMaxLaunch;
+							hPoleCarryLeft = 60;
+						}
+						touchesHPole = true;
+					} else if (isPole(ctx, ty)) {
+						if (!onPole && vy != 0.0f) {
+							emit(ctx, ty);
+							vy = (vy < 0.0f ? -1.0f : 1.0f) * (PoleLaunchBonus + std::abs(vy));
+							vx = 0.0f;
+							x = (float)(ctx * TS + TS / 2);
+							poleLaunched = true;
+							poleSteerTick = t + 10;
+							// Out of a pole the player has all the time to steer anywhere, see steeredFlight()
+							Pair<std::int32_t, std::int32_t> key = pair(ctx + ty * W, (std::int32_t)vy);
+							bool steered = false;
+							for (const auto& p : steeredPoles) {
+								steered |= (p.first() == key.first() && p.second() == key.second());
+							}
+							if (!steered) {
+								steeredPoles.push_back(key);
+								steeredFlight(x, feetY, vy, (offSpring ? RiseGravityHeld : RiseGravityReleased), emit, emitAt);
+							}
+						}
+						touchesPole = true;
+					} else if (isLift(ctx, ty) || isTube(ctx, ty) || isFlightPickup(ctx, ty)) {
+						emit(ctx, ty);
+						return;
+					}
+				}
+				onPole = touchesPole;
+				onHPole = touchesHPole;
+				if (cty >= 0 && inWater(cty)) {
+					emit(ctx, cty);
+					return;
+				}
+			}
+			// Still in the air, it goes on as a fall from there
+			emitAt(x, feetY);
+		};
+
+		// Where the flights (jumps, tube exits) from a tile lead, as tile index + cost, simulated once when the tile
+		// is first expanded and kept for the later searches, which differ only in which tiles they may enter
+		// Jumps are cached for every tile in arrays, tube exits (a tube's last tile only) in a map
+		struct FlightCache {
+			std::unique_ptr<std::int32_t[]> Start;		// First entry of each tile, -1 until simulated
+			std::unique_ptr<std::uint16_t[]> Count;
+			HashMap<std::int32_t, Pair<std::int32_t, std::int32_t>> Sparse;
+			SmallVector<Pair<std::int32_t, std::int32_t>, 0> Entries;
+		};
+		FlightCache jumpFlights;
+		jumpFlights.Start = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+		jumpFlights.Count = std::make_unique<std::uint16_t[]>((std::size_t)totalTiles);
+		for (std::int32_t i = 0; i < totalTiles; i++) {
+			jumpFlights.Start[i] = -1;
+		}
+		FlightCache tubeFlights;
+		FlightCache pickupFlights;
+		FlightCache hPoleFlights;
+		auto getFlights = [&](FlightCache& cache, Vector2i c, auto&& simulate) -> ArrayView<const Pair<std::int32_t, std::int32_t>> {
+			std::int32_t ci = c.X + c.Y * W;
+			if (cache.Start == nullptr) {
+				auto it = cache.Sparse.find(ci);
+				if (it != cache.Sparse.end()) {
+					return { cache.Entries.data() + it->second.first(), (std::size_t)it->second.second() };
+				}
+			}
+			if (cache.Start == nullptr || cache.Start[ci] < 0) {
+				std::int32_t first = (std::int32_t)cache.Entries.size();
+				steeredPoles.clear();
+				auto emit = [&](std::int32_t tx, std::int32_t ty) {
+					if (!occupiable(tx, ty)) {
+						return;
+					}
+					std::int32_t ti = tx + ty * W;
+					if (ti == ci) {
+						return;
+					}
+					// A flood of a flight adds every tile once already, and the lists are short otherwise
+					if ((std::int32_t)cache.Entries.size() - first < 64) {
+						for (std::int32_t k = first; k < (std::int32_t)cache.Entries.size(); k++) {
+							if (cache.Entries[k].first() == ti) {
+								return;
+							}
+						}
+					}
+					cache.Entries.push_back(pair(ti, stepCost(tx - c.X, ty - c.Y)));
+				};
+				// The landing tile is where the body is, or the neighbor on the side the player is at, when the box
+				// centered in that tile wouldn't fit
+				auto emitAt = [&](float x, float feetY) {
+					std::int32_t tx = floorDiv((std::int32_t)x, TS), ty = tileOfFeet(feetY);
+					if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
+						return;
+					}
+					if (!occupiable(tx, ty)) {
+						tx += ((std::int32_t)x - tx * TS < TS / 2 ? -1 : 1);
+					}
+					emit(tx, ty);
+				};
+				simulate(emit, emitAt);
+				std::int32_t count = (std::int32_t)cache.Entries.size() - first;
+				if (cache.Start == nullptr) {
+					cache.Sparse.emplace(ci, pair(first, count));
+					return { cache.Entries.data() + first, (std::size_t)count };
+				}
+				cache.Start[ci] = first;
+				cache.Count[ci] = (std::uint16_t)std::min<std::int32_t>(count, UINT16_MAX);
+			}
+			return { cache.Entries.data() + cache.Start[ci], (std::size_t)cache.Count[ci] };
+		};
+		auto getJumps = [&](Vector2i c) {
+			return getFlights(jumpFlights, c, [&](auto&& emit, auto&& emitAt) {
+				const float startX = (float)(c.X * TS + TS / 2), startFeet = (float)feetAt(c.X, c.Y);
+				for (const auto& p : JumpProfiles) {
+					for (float dir = -1.0f; dir <= 1.0f; dir += 2.0f) {
+						if (dir > 0.0f && p.SpeedX == 0.0f && p.SteerSpeedX == 0.0f) {
+							continue;	// A straight jump is the same in both directions
+						}
+						trace(startX, startFeet, p.SpeedX * dir, -(JumpBaseSpeed + p.LaunchSpeedX * JumpSpeedScale),
+							p.ReleaseTick, p.SteerTick, p.SteerSpeedX * dir, p.Move, false, emit, emitAt);
+					}
+				}
+
+				// Stepping off a ledge part of the way across the tile - a gap that is offset from the tile grid (between
+				// the solid halves of two tiles) is never under the middle of a tile, which is where the other moves
+				// start from, but the player walks over it and drops in all the same. So does a player standing on a
+				// trigger floor, which may be the way on once the trigger opens it (and so may the ones below it).
+				for (std::int32_t offset : { 0, -8, 8, -16, 16 }) {
+					std::int32_t x = (std::int32_t)startX + offset, feet = (std::int32_t)startFeet;
+					bool clear = true;
+					for (std::int32_t sx = (std::int32_t)startX; clear && sx != x; sx += (offset > 0 ? CellSize : -CellSize)) {
+						clear = !boxBlocked(sx + (offset > 0 ? CellSize : -CellSize), feet);
+					}
+					if (!clear) {
+						continue;
+					}
+					bool supported = boxSupported(x, feet);
+					if (supported && !((feet % CellSize) == 0 && onlyTriggerFloor(x, feet))) {
+						continue;
+					}
+					if (supported) {
+						feet += CellSize;	// Through the trigger floor
+						if (boxBlocked(x, feet)) {
+							continue;
+						}
+					} else if (offset == 0) {
+						continue;	// In the air already, falling is handled by the search
+					}
+					trace((float)x, (float)feet, 0.0f, 0.0f, 0, 0, 0.0f, JumpMove::None, false, emit, emitAt, true);
+					if (offset != 0) {
+						trace((float)x, (float)feet, (offset > 0 ? 2.0f : -2.0f), 0.0f, 0, 0, 0.0f, JumpMove::None, false, emit, emitAt, true);
+					}
+				}
+
+				// A spring sets the speed outright, 16, 24 or 32 px/tick by its color (see Spring::OnActivatedAsync()),
+				// upwards, or sideways - which way is only resolved when the level runs, so both are tried. The player
+				// steers as with a jump.
+				std::int32_t springY = (springAt(c.X, c.Y) != 0 ? c.Y : (springAt(c.X, c.Y + 1) != 0 ? c.Y + 1 : -1));
+				if (springY >= 0) {
+					std::int32_t boost = springBoostAt(c.X, springY);
+					float strength = (boost <= 10 ? 16.0f : (boost >= 20 ? 32.0f : 24.0f));
+					for (float dir = -1.0f; dir <= 1.0f; dir += 2.0f) {
+						if (springAt(c.X, springY) == 1) {
+							for (float speedX : { 0.0f, 2.0f, 4.0f, 6.0f, 8.0f }) {
+								if (dir > 0.0f && speedX == 0.0f) {
+									continue;
+								}
+								trace(startX, startFeet, speedX * dir, -strength, 0, 0, 0.0f, JumpMove::None, true, emit, emitAt);
+							}
+							trace(startX, startFeet, 0.0f, -strength, 0, 20, 5.0f * dir, JumpMove::None, true, emit, emitAt);
+							if (dir < 0.0f) {
+								steeredFlight(startX, startFeet, -strength, RiseGravityHeld, emit, emitAt);
+							}
+						} else {
+							trace(startX, startFeet, strength * dir, 0.0f, 0, 0, 0.0f, JumpMove::None, true, emit, emitAt);
+							trace(startX, startFeet, strength * dir, -JumpBaseSpeed, 0, 0, 0.0f, JumpMove::None, true, emit, emitAt);
+						}
+					}
+				}
+			});
+		};
+
+		// Search over the tiles recording predecessors, so a route can be reconstructed. Dijkstra, weighted by the
+		// distance travelled, so a long jump costs what walking as far does and the route is the shortest one.
 		// 'blocked' optionally forbids tiles (used to force the second pass around the other arm of the loop).
 		// 'useWarps' toggles warp teleport edges: enabled for reachability, disabled when tracing a route so it
 		// follows the geometry (e.g., climbs poles) rather than teleporting past it.
-		auto runBfs = [&](Vector2i start, const std::uint8_t* blocked, std::int32_t* parent, std::int32_t* dist, Vector2i& farTile, std::int32_t& visitedCount, bool useWarps) {
-			std::queue<Vector2i> q;
+		auto runSearch = [&](Vector2i start, const std::uint8_t* blocked, std::int32_t* parent, std::int32_t* dist, Vector2i& farTile, std::int32_t& visitedCount, bool useWarps) {
+			using QueueItem = std::pair<std::int32_t, std::int32_t>;	// Distance, tile index
+			std::priority_queue<QueueItem, std::vector<QueueItem>, std::greater<QueueItem>> q;
 			std::int32_t startIdx = start.X + start.Y * W;
 			dist[startIdx] = 0;
 			farTile = start;
 			std::int32_t farDist = 0;
 			visitedCount = 0;
-			q.push(start);
+			q.push(QueueItem(0, startIdx));
 
-			auto tryAdd = [&](std::int32_t tx, std::int32_t ty, std::int32_t fromDist, std::int32_t fromIdx) {
-				if (!occupiable(tx, ty)) {
+			auto relax = [&](std::int32_t ni, std::int32_t cost, std::int32_t fromDist, std::int32_t fromIdx) {
+				if (blocked != nullptr && blocked[ni] != 0) {
 					return;
 				}
-				std::int32_t ni = tx + ty * W;
-				if (dist[ni] >= 0 || (blocked != nullptr && blocked[ni] != 0)) {
+				std::int32_t nd = fromDist + cost;
+				if (dist[ni] >= 0 && dist[ni] <= nd) {
 					return;
 				}
-				dist[ni] = fromDist + 1;
+				dist[ni] = nd;
 				parent[ni] = fromIdx;
-				q.push(Vector2i(tx, ty));
+				q.push(QueueItem(nd, ni));
 			};
-
-			// Adds a tile without the occupiable check (the caller verified it can be entered, e.g., a slope tile
-			// reached diagonally through its empty corner)
-			auto tryAddRaw = [&](std::int32_t tx, std::int32_t ty, std::int32_t fromDist, std::int32_t fromIdx) {
-				if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
-					return;
+			auto tryAdd = [&](std::int32_t tx, std::int32_t ty, std::int32_t cost, std::int32_t fromDist, std::int32_t fromIdx) {
+				if (occupiable(tx, ty)) {
+					relax(tx + ty * W, cost, fromDist, fromIdx);
 				}
-				std::int32_t ni = tx + ty * W;
-				if (dist[ni] >= 0 || (blocked != nullptr && blocked[ni] != 0)) {
-					return;
+			};
+			// Adds a tile without the occupiable check (the caller verified it can be entered, e.g., a warp target)
+			auto tryAddRaw = [&](std::int32_t tx, std::int32_t ty, std::int32_t cost, std::int32_t fromDist, std::int32_t fromIdx) {
+				if (tx >= 0 && ty >= 0 && tx < W && ty < H) {
+					relax(tx + ty * W, cost, fromDist, fromIdx);
 				}
-				dist[ni] = fromDist + 1;
-				parent[ni] = fromIdx;
-				q.push(Vector2i(tx, ty));
 			};
 
 			while (!q.empty()) {
-				Vector2i c = q.front(); q.pop();
+				QueueItem item = q.top();
+				q.pop();
+				std::int32_t ci = item.second;
+				std::int32_t cd = item.first;
+				if (cd != dist[ci]) {
+					continue;	// A shorter way to this tile has been found since
+				}
 				visitedCount++;
-				std::int32_t ci = c.X + c.Y * W;
-				std::int32_t cd = dist[ci];
+				Vector2i c(ci % W, ci / W);
 
-				// A node sitting inside a partially-solid tile (a slope or a thin solid band, reached via the diagonal
-				// step) rests on that tile's solid part - treat it as grounded so the tracer doesn't fall straight
-				// through it (fixes the player dropping through a middle-solid tile after a tube ends). Destructible
-				// tiles are excluded: the player breaks through them (e.g., buttstomps down), so they must not read as
-				// standable ground - !isFree(c) is true only for genuine solid terrain (slopes/bands), not breakables.
-				bool grounded = hasGround(c.X, c.Y) || (tileMap->IsTilePartiallySolid(c.X, c.Y) && !isFree(c.X, c.Y));
+				bool grounded = hasGround(c.X, c.Y);
 				bool lift = isLift(c.X, c.Y);
 				bool tube = isTube(c.X, c.Y);
+				bool water = inWater(c.Y);
 				// A spinning pole flings the player in the direction of entry momentum (see Player::NextPoleStage):
 				// up if they rose into it, down if they descended into it (or entered from the side, where gravity
-				// dominates). Approximate the entry direction from how the BFS arrived, so a pole on a downward
+				// dominates). Approximate the entry direction from how the search arrived, so a pole on a downward
 				// section doesn't launch the route up and over it.
 				bool poleHere = isPole(c.X, c.Y);
 				bool poleUp = poleHere && (parent[ci] >= 0 && (parent[ci] / W) > c.Y);
 				bool poleDown = poleHere && !poleUp;
 
 				// Only consider real footing (not transient air tiles above a spring/jump) as the farthest point
-				if (cd > farDist && (grounded || lift || tube)) {
+				if (cd > farDist && (grounded || lift || tube || water)) {
 					farDist = cd;
 					farTile = c;
 				}
 
 				if (tube) {
-					// Inside a tube the player is transported freely through the connected passage (any direction,
-					// ignoring gravity and tight geometry)
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
-					tryAdd(c.X, c.Y - 1, cd, ci);
-					tryAdd(c.X, c.Y + 1, cd, ci);
+					// Inside a tube the player is transported through the connected passage, ignoring gravity and
+					// tight geometry. At its end the player flies on in its direction - through whatever the tube
+					// graphics' masks are, many tubes turn the player's collisions off (Become No-clip) - until
+					// there's room for it.
+					std::int32_t code = tubeMap[ci] - 1;
+					std::int32_t sx = (code % 3) - 1, sy = (code / 3) - 1;
+					tryAdd(c.X - 1, c.Y, 10, cd, ci);
+					tryAdd(c.X + 1, c.Y, 10, cd, ci);
+					tryAdd(c.X, c.Y - 1, 10, cd, ci);
+					tryAdd(c.X, c.Y + 1, 10, cd, ci);
+					if ((sx != 0 || sy != 0) && !isTube(c.X + sx, c.Y + sy)) {
+						auto exits = getFlights(tubeFlights, c, [&](auto&& emit, auto&& emitAt) {
+							for (std::int32_t k = 1; k <= 12; k++) {
+								std::int32_t nx = c.X + sx * k, ny = c.Y + sy * k;
+								if (nx < 0 || ny < 0 || nx >= W || ny >= H) {
+									break;
+								}
+								if (feetMap[nx + ny * W] >= 0) {
+									// Out of the tube at its speed, and steering once the tube lets go of the controls
+									emit(nx, ny);
+									const float x = (float)(nx * TS + TS / 2), feet = (float)feetMap[nx + ny * W];
+									const float vx = (float)tubeSpeedX[ci], vy = (float)tubeSpeedY[ci];
+									for (float steer : { 0.0f, -6.0f, 6.0f }) {
+										trace(x, feet, vx, vy, 0, (steer != 0.0f ? TubeControlTicks : 0), steer, JumpMove::None, false, emit, emitAt);
+									}
+									break;
+								}
+							}
+						});
+						for (const auto& exit : exits) {
+							relax(exit.first(), exit.second(), cd, ci);
+						}
+					}
+				}
+				if (water) {
+					// Under water the player swims
+					tryAdd(c.X - 1, c.Y, 10, cd, ci);
+					tryAdd(c.X + 1, c.Y, 10, cd, ci);
+					tryAdd(c.X, c.Y - 1, 10, cd, ci);
+					tryAdd(c.X, c.Y + 1, 10, cd, ci);
+					tryAdd(c.X - 1, c.Y - 1, 14, cd, ci);
+					tryAdd(c.X + 1, c.Y - 1, 14, cd, ci);
+					tryAdd(c.X - 1, c.Y + 1, 14, cd, ci);
+					tryAdd(c.X + 1, c.Y + 1, 14, cd, ci);
+				}
+
+				// Dropping or walking onto a horizontal pole, which flings the player either way it faces - flights
+				// through one are handled by trace()
+				std::int32_t hPoleY = -1;
+				for (std::int32_t ey = topEventRow(c.X, c.Y); ey <= c.Y && hPoleY < 0; ey++) {
+					if (isHPole(c.X, ey)) {
+						hPoleY = ey;
+					}
+				}
+				if (hPoleY >= 0) {
+					auto flights = getFlights(hPoleFlights, c, [&](auto&& emit, auto&& emitAt) {
+						const float x = (float)(c.X * TS + TS / 2), feet = (float)(hPoleY * TS + TS / 2 + BoxHeight / 2);
+						for (float speedX : { -8.0f, -0.01f, 0.01f, 8.0f }) {
+							trace(x, feet, speedX, 0.0f, 0, 0, 0.0f, JumpMove::None, false, emit, emitAt);
+						}
+					});
+					for (const auto& flight : flights) {
+						relax(flight.first(), flight.second(), cd, ci);
+					}
+				}
+
+				// With an airboard or a copter the player flies freely - anywhere in the open space around, until a Fly
+				// Off area takes it away (a Reforged copter runs out after 10 seconds, but that's far enough anyway)
+				bool flightHere = false;
+				for (std::int32_t ey = topEventRow(c.X, c.Y); ey <= c.Y && !flightHere; ey++) {
+					flightHere = isFlightPickup(c.X, ey);
+				}
+				if (flightHere) {
+					auto flights = getFlights(pickupFlights, c, [&](auto&& emit, auto&& emitAt) {
+						std::unique_ptr<std::uint8_t[]> flown = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+						std::queue<Vector2i> open;
+						flown[ci] = 1;
+						open.push(c);
+						while (!open.empty()) {
+							Vector2i f = open.front();
+							open.pop();
+							if (flightMap[f.X + f.Y * W] == 2) {
+								continue;	// The flight ends here, it goes on on foot
+							}
+							for (std::int32_t dy = -1; dy <= 1; dy++) {
+								for (std::int32_t dx = -1; dx <= 1; dx++) {
+									std::int32_t nx = f.X + dx, ny = f.Y + dy;
+									if ((dx == 0 && dy == 0) || !occupiable(nx, ny) || flown[nx + ny * W] != 0) {
+										continue;
+									}
+									// Diagonally only past two open corners
+									if (dx != 0 && dy != 0 && (!occupiable(f.X + dx, f.Y) || !occupiable(f.X, f.Y + dy))) {
+										continue;
+									}
+									flown[nx + ny * W] = 1;
+									open.push(Vector2i(nx, ny));
+									emit(nx, ny);
+								}
+							}
+						}
+					});
+					for (const auto& flight : flights) {
+						relax(flight.first(), flight.second(), cd, ci);
+					}
 				}
 
 				// A warp teleports the player to its destination; continue tracing the route from there
 				if (useWarps) {
-					auto warp = warpJump.find(c);
-					if (warp != warpJump.end()) {
-						tryAddRaw(warp->second.X, warp->second.Y, cd, ci);
+					for (std::int32_t ey = topEventRow(c.X, c.Y); ey <= c.Y; ey++) {
+						auto warp = warpJump.find(Vector2i(c.X, ey));
+						if (warp != warpJump.end()) {
+							tryAddRaw(warp->second.X, warp->second.Y, 10, cd, ci);
+						}
 					}
 				}
 
@@ -435,7 +1281,7 @@ namespace Jazz2::Multiplayer
 						if (!occupiable(c.X, ty)) {
 							break; // ceiling
 						}
-						tryAdd(c.X, ty, cd, ci);
+						tryAdd(c.X, ty, 10 * k, cd, ci);
 						for (std::int32_t dir = -1; dir <= 1; dir += 2) {
 							for (std::int32_t s = 1; s <= BoostReachX; s++) {
 								std::int32_t sx = c.X + dir * s;
@@ -443,23 +1289,28 @@ namespace Jazz2::Multiplayer
 									break; // wall blocks stepping further sideways at this height
 								}
 								if (hasGround(sx, ty) || isLift(sx, ty)) {
-									tryAdd(sx, ty, cd, ci);
+									tryAdd(sx, ty, 10 * k + 10 * s, cd, ci);
 								}
 							}
 						}
 					}
 				}
 
-				if (poleDown && !isOneWay(c.X, c.Y + 1)) {
+				if (poleDown) {
 					// Flung downward: descend the pole's column (then keeps falling below it via the airborne logic);
 					// never drop down through a one-way platform (solid from above)
-					tryAdd(c.X, c.Y + 1, cd, ci);
+					if (!isOneWay(c.X, c.Y + 1)) {
+						tryAdd(c.X, c.Y + 1, 10, cd, ci);
+					}
 				}
 
 				if (lift) {
-					// On a vine/pole the player can also move sideways
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
+					// On a vine/pole the player can also move sideways, and let go of a vine or a hook to drop down
+					tryAdd(c.X - 1, c.Y, 10, cd, ci);
+					tryAdd(c.X + 1, c.Y, 10, cd, ci);
+					if (!poleHere) {
+						tryAdd(c.X, c.Y + 1, 10, cd, ci);
+					}
 				}
 
 				// A jump-off arc: from a spring (long arc, height by type), or off a vine/pole (a normal jump - the
@@ -497,91 +1348,64 @@ namespace Jazz2::Multiplayer
 						for (std::int32_t dy = -sMaxUp; dy <= JumpDropY; dy++) {
 							std::int32_t tx = c.X + dx, ty = c.Y + dy;
 							if ((hasGround(tx, ty) || isLift(tx, ty)) && occupiable(tx, ty) && jumpClear(c.X, c.Y, dx, dy, sMaxUp)) {
-								tryAdd(tx, ty, cd, ci);
+								tryAdd(tx, ty, stepCost(dx, dy), cd, ci);
 							}
 						}
 					}
 				}
 
-				if (!grounded && !lift && !tube) {
-					// Airborne: fall, drifting horizontally as it descends - but never INTO a one-way platform (those
-					// are solid from above; the player may only pass UP through them), and never upward
-					if (!isOneWay(c.X, c.Y + 1)) {
-						tryAdd(c.X, c.Y + 1, cd, ci);
-					}
-					if (!isOneWay(c.X - 1, c.Y + 1)) {
-						tryAdd(c.X - 1, c.Y + 1, cd, ci);
-					}
-					if (!isOneWay(c.X + 1, c.Y + 1)) {
-						tryAdd(c.X + 1, c.Y + 1, cd, ci);
-					}
-					if (isFree(c.X - 1, c.Y + 1) && !isOneWay(c.X - 2, c.Y + 1)) {
-						tryAdd(c.X - 2, c.Y + 1, cd, ci);
-					}
-					if (isFree(c.X + 1, c.Y + 1) && !isOneWay(c.X + 2, c.Y + 1)) {
-						tryAdd(c.X + 2, c.Y + 1, cd, ci);
-					}
-				} else if (grounded) {
-					// On a bridge/platform surface the player is held up over empty space and must WALK across it -
-					// they can't descend off it (down a slope at its end, or by jumping/falling through it). Once on
-					// solid ground past the bridge, descending is allowed again.
-					bool onBridgeSurface = onSurface(c.X, c.Y) || onSurface(c.X, c.Y + 1);
-
-					// Walk to either side (stepping off a ledge then falls via gravity)
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
-
-					// Step one tile diagonally to follow a slope or squeeze through a tight 1-tile diagonal corridor.
-					// Only when the straight-sideways tile is blocked (otherwise walk/jump/fall already handle it -
-					// and this stops the tracer from dropping diagonally off an open ledge or bridge). 45-degree
-					// slope tiles read as "solid" on the grid, so a partially-solid tile is enterable - but ONLY when
-					// it's a genuine triangular slope: the corner facing the player is clear AND the diagonally
-					// opposite corner is solid. A thin diagonal line or a middle-solid band has both corners clear,
-					// so this check refuses to step into (and through) it.
+				const std::int32_t feet = feetAt(c.X, c.Y);
+				if (!grounded && !lift && !tube && !water) {
+					// Airborne: falling, drifting sideways as it falls (the side it drifts to has to be open at the
+					// current height), or landing next to where it is
+					tryAdd(c.X, c.Y + 1, 10, cd, ci);
 					for (std::int32_t dir = -1; dir <= 1; dir += 2) {
-						if (occupiable(c.X + dir, c.Y)) {
+						std::int32_t edgeX = c.X * TS + TS / 2 + dir * (TS / 2);
+						if (boxBlocked(edgeX, feet)) {
 							continue;
 						}
-						std::int32_t cornerX = (dir < 0 ? 1 : -1); // destination corner facing the player
-						std::int32_t ux = c.X + dir, uy = c.Y - 1;
-						bool upSlope = !occupiable(ux, uy) && tileMap->IsTileCornerEmpty(ux, uy, cornerX, 1)
-							&& !tileMap->IsTileCornerEmpty(ux, uy, -cornerX, -1);
-						if ((occupiable(ux, uy) && (hasGround(ux, uy) || isLift(ux, uy))) || upSlope) {
-							tryAddRaw(ux, uy, cd, ci);
+						if (hasGround(c.X + dir, c.Y)) {
+							tryAdd(c.X + dir, c.Y, 10, cd, ci);
 						}
-						// Descend diagonally ONLY into a genuine slope tile. Dropping into an open tile past a solid
-						// side would clip the solid corner - that's what made the tracer fall off the end of a bridge
-						// past its solid anchor instead of stepping up onto it (the diagonal-up branch above handles
-						// that). A normal walk + gravity covers stepping down onto a lower ledge with an open side.
-						std::int32_t dxt = c.X + dir, dyt = c.Y + 1;
-						bool downSlope = !occupiable(dxt, dyt) && tileMap->IsTileCornerEmpty(dxt, dyt, cornerX, -1)
-							&& !tileMap->IsTileCornerEmpty(dxt, dyt, -cornerX, 1);
-						if (downSlope && !isOneWay(dxt, dyt) && !onBridgeSurface) {
-							tryAddRaw(dxt, dyt, cd, ci);
+						tryAdd(c.X + dir, c.Y + 1, 14, cd, ci);
+						if (occupiable(c.X + dir, c.Y + 1) && !boxBlocked(edgeX + dir * TS, feet + TS)) {
+							tryAdd(c.X + 2 * dir, c.Y + 1, 22, cd, ci);
+						}
+					}
+				}
+
+				if (grounded || (water && c.Y == waterTileY)) {
+					// Walking to either side, up or down a slope - the standing heights of the two tiles may differ
+					// by a slope's worth, and the box has to fit where they meet, at the higher of the two. Walking
+					// off a ledge goes on as a fall from the tile next to it.
+					for (std::int32_t dir = -1; dir <= 1; dir += 2) {
+						std::int32_t nx = c.X + dir;
+						if (nx < 0 || nx >= W) {
+							continue;
+						}
+						std::int32_t edgeX = c.X * TS + TS / 2 + dir * (TS / 2);
+						bool walked = false;
+						for (std::int32_t k : { 0, -1, 1 }) {
+							std::int32_t ny = c.Y + k;
+							if (ny < 0 || ny >= H || feetMap[nx + ny * W] < 0 || !hasGround(nx, ny)) {
+								continue;
+							}
+							std::int32_t toFeet = feetMap[nx + ny * W];
+							if (std::abs(toFeet - feet) > MaxWalkStep || boxBlocked(edgeX, std::min(toFeet, feet))) {
+								continue;
+							}
+							tryAdd(nx, ny, (k == 0 ? 10 : 14), cd, ci);
+							walked = true;
+							break;
+						}
+						if (!walked && !boxBlocked(edgeX, feet)) {
+							tryAdd(nx, c.Y, 10, cd, ci);
 						}
 					}
 
-					// Jump onto reachable ledges, surfaces or movement aids within the envelope, only when the arc
-					// is clear of solids. When standing on a bridge/platform surface (which holds the player up over
-					// empty space), DON'T allow a downward jump: jumpClear sees the empty space below the surface as
-					// "clear" and would otherwise let the tracer drop straight down THROUGH the bridge it's crossing.
-					// The player must walk across; once on solid ground past it they can descend normally.
-					std::int32_t maxDrop = (onBridgeSurface ? 0 : JumpDropY);
-					for (std::int32_t dx = -JumpReachX; dx <= JumpReachX; dx++) {
-						std::int32_t adx = (dx < 0 ? -dx : dx);
-						std::int32_t up = JumpHeight - adx;
-						if (up < 0) {
-							up = 0;
-						}
-						for (std::int32_t dy = -up; dy <= maxDrop; dy++) {
-							if (dx == 0 && dy == 0) {
-								continue;
-							}
-							std::int32_t tx = c.X + dx, ty = c.Y + dy;
-							if ((hasGround(tx, ty) || isLift(tx, ty)) && occupiable(tx, ty) && jumpClear(c.X, c.Y, dx, dy, JumpHeight)) {
-								tryAdd(tx, ty, cd, ci);
-							}
-						}
+					// Jumping, simulated (see JumpProfiles)
+					for (const auto& jump : getJumps(c)) {
+						relax(jump.first(), jump.second(), cd, ci);
 					}
 				}
 			}
@@ -609,30 +1433,58 @@ namespace Jazz2::Multiplayer
 
 		Vector2i farTile;
 		std::int32_t regionSize = 0;
-		runBfs(spawnTile, nullptr, parent.get(), dist.get(), farTile, regionSize, true);
+		runSearch(spawnTile, nullptr, parent.get(), dist.get(), farTile, regionSize, true);
 
 		if (regionSize < 32) {
-			LOGW("Cannot auto-place race checkpoints: walkable region is too small ({} tiles)", regionSize);
+			LOGW("Cannot auto-place minimap track: walkable region is too small ({} tiles)", regionSize);
 			return;
 		}
-		if (regionSize > (totalTiles * 3) / 5) {
-			LOGW("Cannot auto-place race checkpoints: level looks like an open arena, not a track");
+		// A lap needs a loop to trace, which an arena doesn't have. A route to the level exit is meaningful in an
+		// open level too, it only has to reach the exit (checked below).
+		if (routeType == TrackRouteType::Lap && regionSize > (totalTiles * 3) / 5) {
+			LOGW("Cannot auto-place minimap track: level looks like an open arena, not a track");
 			return;
 		}
 
 		const std::int32_t spawnIdx = spawnTile.X + spawnTile.Y * W;
 		std::int32_t farIdx = farTile.X + farTile.Y * W;
 
-		// The finish is the "Set Lap" warp, or - if the level has none - a level-exit event (end-of-level area or
-		// EOL sign), mirroring how Race mode itself falls back to level exits for lap completion. A full lap goes
-		// spawn -> (out to the far side) -> finish; routing via the far tile forces the trace around the whole loop
-		// even when the start line sits right next to the finish (so there's no short path to block). Among the
-		// candidates, take the one reachable from spawn and farthest along the track, so the route spans the level.
+		// The finish of a lap is the "Set Lap" warp, or - if the level has none - a level-exit event (end-of-level
+		// area or EOL sign), mirroring how Race mode itself falls back to level exits for lap completion. A full lap
+		// goes spawn -> (out to the far side) -> finish; routing via the far tile forces the trace around the whole
+		// loop even when the start line sits right next to the finish (so there's no short path to block). A route
+		// to the level exit considers the exits, and the boss if no exit can be reached. Among the candidates, take
+		// the one reachable from spawn and farthest along the track, so the route spans the level.
+		// A marker counts as reached from the tiles below it down to the floor - bosses and signs are actors, which
+		// fall onto the floor under their event, and an area is touched by a player standing a little under it
+		// (see topEventRow()) - in its column, or in the one next to it for a marker that is part of a wider area
 		auto pickFarthestReachable = [&](const SmallVector<Vector2i, 0>& markers) -> Vector2i {
 			Vector2i best(-1, -1);
 			std::int32_t bestDist = -1;
 			for (const auto& m : markers) {
-				Vector2i t = findSeed(m);
+				Vector2i t(-1, -1);
+				for (std::int32_t dx : { 0, -1, 1 }) {
+					std::int32_t nx = m.X + dx;
+					for (std::int32_t ny = m.Y; ny <= m.Y + 4 && nx >= 0 && nx < W && ny >= 0 && ny < H; ny++) {
+						std::int32_t ni = nx + ny * W;
+						if (!occupiable(nx, ny)) {
+							break;
+						}
+						if (dist[ni] >= 0) {
+							t = Vector2i(nx, ny);
+							break;
+						}
+						if (standMap[ni] != 0) {
+							break;
+						}
+					}
+					if (t.X >= 0) {
+						break;
+					}
+				}
+				if (t.X < 0) {
+					t = findSeed(m);
+				}
 				if (t.X >= 0) {
 					std::int32_t d = dist[t.X + t.Y * W];
 					if (d > bestDist) { bestDist = d; best = t; }
@@ -640,20 +1492,28 @@ namespace Jazz2::Multiplayer
 			}
 			return best;
 		};
-		Vector2i finishTile = pickFarthestReachable(startMarkers);
+		Vector2i finishTile = (routeType == TrackRouteType::Lap ? pickFarthestReachable(startMarkers) : Vector2i(-1, -1));
 		const char* finishSource = "warp";
 		if (finishTile.X < 0) {
 			finishTile = pickFarthestReachable(exitMarkers);
-			finishSource = (finishTile.X >= 0 ? "exit" : "far");
+			finishSource = "exit";
 		}
+		if (routeType == TrackRouteType::LevelExit && (finishTile.X < 0 || dist[finishTile.X + finishTile.Y * W] < 0)) {
+			finishTile = pickFarthestReachable(bossMarkers);
+			finishSource = "boss";
+		}
+		if (finishTile.X < 0) {
+			finishSource = "far";
+		}
+		bool finishReachable = (finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0);
 		Vector2i target = farTile;
-		if (finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0) {
+		if (finishReachable) {
 			target = finishTile;
 			// If the finish itself lies far from the spawn (a point-to-point race, not a loop back to the start),
 			// make it the turnaround too, so the route runs straight to it instead of overshooting to the farthest
-			// tile and doubling back past the finish.
+			// tile and doubling back past the finish. A route to the level exit always runs straight to it.
 			std::int32_t finDist = dist[finishTile.X + finishTile.Y * W];
-			if (dist[farIdx] > 0 && finDist * 2 >= dist[farIdx]) {
+			if (routeType == TrackRouteType::LevelExit || (dist[farIdx] > 0 && finDist * 2 >= dist[farIdx])) {
 				farTile = finishTile;
 				farIdx = finishTile.X + finishTile.Y * W;
 			}
@@ -669,18 +1529,27 @@ namespace Jazz2::Multiplayer
 			if (liftMap[i] == 2) { poleCount++; if (dist[i] >= 0) { poleReached++; } }
 			if (surfaceMap[i] != 0) { surfaceCount++; }
 		}
-		LOGI("Race geometry: {} vertical springs ({} reached) + {} horizontal, {} lift ({} reached, of which {} poles {} reached), {} surface, {} warp(s), {} exit(s); finish [{}, {}] via {} reachable={} (dist {})",
+		LOGI("Minimap track geometry: {} vertical springs ({} reached) + {} horizontal, {} lift ({} reached, of which {} poles {} reached), {} surface, {} warp(s), {} exit(s), {} boss(es); finish [{}, {}] via {} reachable={} (dist {})",
 			springUp, springUpReached, springSide, liftCount, liftReached, poleCount, poleReached, surfaceCount, (std::int32_t)warpJump.size(), (std::int32_t)exitMarkers.size(),
+			(std::int32_t)bossMarkers.size(),
 			finishTile.X, finishTile.Y, finishSource,
 			(finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0) ? 1 : 0,
 			(finishTile.X >= 0 ? dist[finishTile.X + finishTile.Y * W] : -1));
-		// Each resolved warp and whether the BFS actually reached its origin (so it could teleport) - helps diagnose
+		// Each resolved warp and whether the search actually reached its origin (so it could teleport) - helps diagnose
 		// warps the tracer stops at instead of following
 		for (const auto& wj : warpJump) {
 			std::int32_t oi = wj.first.X + wj.first.Y * W;
-			LOGI("Race warp: origin [{}, {}] (reached={}) -> dest [{}, {}] (reached={})",
+			LOGI("Minimap track warp: origin [{}, {}] (reached={}) -> dest [{}, {}] (reached={})",
 				wj.first.X, wj.first.Y, (dist[oi] >= 0) ? 1 : 0,
 				wj.second.X, wj.second.Y, (dist[wj.second.X + wj.second.Y * W] >= 0) ? 1 : 0);
+		}
+
+		if (routeType == TrackRouteType::LevelExit && !finishReachable && (!exitMarkers.empty() || !bossMarkers.empty())) {
+			// Without the exit there's nothing to lead the players to - the farthest tile could be any dead end.
+			// A level that has no exit or boss at all (a bonus stage ends by its timer) is shown out to its far
+			// end instead, like a lap.
+			LOGW("Cannot auto-place minimap track: no reachable level exit (spawn [{}, {}], region {} tiles)", spawnTile.X, spawnTile.Y, regionSize);
+			return;
 		}
 
 		// First arm: spawn -> far. Prefer a warp-free route so the line follows the geometry (e.g., climbs the poles
@@ -691,41 +1560,44 @@ namespace Jazz2::Multiplayer
 		for (std::int32_t i = 0; i < totalTiles; i++) { parentNW[i] = -1; distNW[i] = -1; }
 		Vector2i farNW;
 		std::int32_t regionNW = 0;
-		runBfs(spawnTile, nullptr, parentNW.get(), distNW.get(), farNW, regionNW, false);
+		runSearch(spawnTile, nullptr, parentNW.get(), distNW.get(), farNW, regionNW, false);
 		bool routeNoWarp = (distNW[farIdx] >= 0);
 
 		SmallVector<Vector2i, 0> pathOut;
 		reconstruct(routeNoWarp ? parentNW.get() : parent.get(), spawnIdx, farIdx, pathOut);
 
 		// Second arm: far -> finish, taking the opposite side by blocking the first arm. If blocking disconnects
-		// the finish (e.g., wide corridors), retry without blocking so the route still reaches the end.
-		std::unique_ptr<std::uint8_t[]> blocked = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 1; i + 1 < (std::int32_t)pathOut.size(); i++) {
-			blocked[pathOut[i].X + pathOut[i].Y * W] = 1;
-		}
-
-		std::unique_ptr<std::int32_t[]> parent2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::int32_t[]> dist2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-
-		Vector2i far2;
-		std::int32_t visited2 = 0;
-		runBfs(farTile, blocked.get(), parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
-
-		if (dist2[targetIdx] < 0) {
-			// Blocking the first arm cut off the finish; retry unblocked so we still reach it
-			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-			runBfs(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
-		}
-		if (dist2[targetIdx] < 0 && routeNoWarp) {
-			// Still unreachable without warps - allow warps for the return arm so the route completes
-			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-			runBfs(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, true);
-		}
-
+		// the finish (e.g., wide corridors), retry without blocking so the route still reaches the end. When the
+		// first arm already ends at the finish, there's no second arm to trace (and big levels save a whole search).
 		SmallVector<Vector2i, 0> pathBack;
-		if (dist2[targetIdx] >= 0) {
-			reconstruct(parent2.get(), farIdx, targetIdx, pathBack);
+		if (farIdx != targetIdx) {
+			std::unique_ptr<std::uint8_t[]> blocked = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+			for (std::int32_t i = 1; i + 1 < (std::int32_t)pathOut.size(); i++) {
+				blocked[pathOut[i].X + pathOut[i].Y * W] = 1;
+			}
+
+			std::unique_ptr<std::int32_t[]> parent2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+			std::unique_ptr<std::int32_t[]> dist2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+
+			Vector2i far2;
+			std::int32_t visited2 = 0;
+			runSearch(farTile, blocked.get(), parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
+
+			if (dist2[targetIdx] < 0) {
+				// Blocking the first arm cut off the finish; retry unblocked so we still reach it
+				for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+				runSearch(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
+			}
+			if (dist2[targetIdx] < 0 && routeNoWarp) {
+				// Still unreachable without warps - allow warps for the return arm so the route completes
+				for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+				runSearch(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, true);
+			}
+
+			if (dist2[targetIdx] >= 0) {
+				reconstruct(parent2.get(), farIdx, targetIdx, pathBack);
+			}
 		}
 
 		// Assemble the route spawn -> far -> finish. But if the far tile overshoots just past the finish (e.g., a
@@ -760,7 +1632,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		if (route.size() < 2) {
-			LOGW("Cannot auto-place race checkpoints: could not trace a route through the level");
+			LOGW("Cannot auto-place minimap track: could not trace a route through the level");
 			return;
 		}
 
@@ -838,8 +1710,8 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		LOGI("Auto-placing race checkpoints: spawn [{}, {}], far [{}, {}], target [{}, {}], region {} tiles, warpFreeRoute={}, route {}, arc {}, corners {}, bounds [{}, {}]-[{}, {}]",
-			spawnTile.X, spawnTile.Y, farTile.X, farTile.Y, target.X, target.Y, regionSize, routeNoWarp ? 1 : 0,
+		LOGI("Auto-placing minimap track ({}): spawn [{}, {}], far [{}, {}], target [{}, {}], region {} tiles, warpFreeRoute={}, route {}, arc {}, corners {}, bounds [{}, {}]-[{}, {}]",
+			routeType == TrackRouteType::Lap ? "lap" : "to exit", spawnTile.X, spawnTile.Y, farTile.X, farTile.Y, target.X, target.Y, regionSize, routeNoWarp ? 1 : 0,
 			(std::int32_t)route.size(), (std::int32_t)routeArc.size(), (std::int32_t)corners.size(),
 			boundsMin.X, boundsMin.Y, boundsMax.X, boundsMax.Y);
 
@@ -859,13 +1731,13 @@ namespace Jazz2::Multiplayer
 
 		if (orderedCheckpoints.size() < 2) {
 			orderedCheckpoints.clear();
-			LOGW("Cannot auto-place race checkpoints: could not derive a track from level geometry");
+			LOGW("Cannot auto-place minimap track: could not derive a track from level geometry");
 			return;
 		}
 
 		// The route is directional (spawn -> finish), so it can be trusted for progress-based ranking
 		outCheckpointsOrdered = true;
-		LOGI("Auto-placed {} race checkpoints (finish tile [{}, {}])",
+		LOGI("Auto-placed {} minimap track checkpoints (finish tile [{}, {}])",
 			(std::int32_t)orderedCheckpoints.size(), finishTile.X, finishTile.Y);
 	}
 }

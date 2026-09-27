@@ -1918,12 +1918,14 @@ namespace Jazz2::Tiles
 			read and write-allocate), and a frame's ~370 tiles at 128 bytes per quad made that copy the
 			single largest part of the commit phase. Here the quad is written once, where it will be read.
 
-			Only corners 0 and 2 of each quad are written. The consumer of this mesh on this platform is
-			the RDP dispatch, which reconstructs an axis-aligned quad from those two (see DispatchTileMesh);
-			the other two corners are never read, and not writing them halves the lines this touches.
+			Only corners 0 and 2 of each quad are written, back to back and without indices - the compact
+			form the layer cache uses too (see BuildLayerMeshCache). The consumer of this mesh on this
+			platform is the RDP dispatch, which reconstructs an axis-aligned quad from those two (see
+			DispatchTileMesh). It must not be the indexed form: that one carries four real corners, which
+			the particles in the same kind of mesh need (their spin is folded into the corners, see
+			AppendDebrisQuad), so the dispatch reads all four of them there.
 		*/
 		const std::uint32_t maxQuadsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
-		const std::uint16_t* quadIndices = RenderResources::GetQuadIndices();
 
 		for (std::uint32_t firstQuad = 0; firstQuad < entryCount; firstQuad += maxQuadsPerChunk) {
 			const std::uint32_t count = std::min(maxQuadsPerChunk, entryCount - firstQuad);
@@ -1958,7 +1960,7 @@ namespace Jazz2::Tiles
 			auto& geometry = command->GetGeometry();
 			geometry.SetElementsPerVertex(FloatsPerVertex);
 			geometry.SetHostVertexPointer(nullptr);
-			float* v = geometry.AcquireVertexPointer(count * FloatsPerQuad, FloatsPerVertex);
+			float* v = geometry.AcquireVertexPointer(count * 2 * FloatsPerVertex, FloatsPerVertex);
 			if (v == nullptr) {
 				geometry.ReleaseVertexPointer();
 				_meshCommandCount--;
@@ -1967,20 +1969,21 @@ namespace Jazz2::Tiles
 			}
 			for (std::uint32_t k = 0; k < count; k++) {
 				const MeshTileEntry& e = _meshTileEntries[_meshTileOrder[firstEntry + firstQuad + k]];
-				float* q = v + std::size_t(k) * FloatsPerQuad;
+				float* q = v + std::size_t(k) * 2 * FloatsPerVertex;
 				// Corner 0: (x, y) at (u0, v0)
 				q[0] = e.X; q[1] = e.Y; q[2] = e.TexBiasX; q[3] = e.TexBiasY;
 				q[4] = 1.0f; q[5] = 1.0f; q[6] = 1.0f; q[7] = e.Alpha;
 				// Corner 2: (x + size, y + size) at (u1, v1)
-				float* q2 = q + 2 * FloatsPerVertex;
+				float* q2 = q + FloatsPerVertex;
 				q2[0] = e.X + (float)TileSet::DefaultTileSize; q2[1] = e.Y + (float)TileSet::DefaultTileSize;
 				q2[2] = e.TexScaleX + e.TexBiasX; q2[3] = e.TexScaleY + e.TexBiasY;
 				q2[4] = 1.0f; q2[5] = 1.0f; q2[6] = 1.0f; q2[7] = e.Alpha;
 			}
 			geometry.ReleaseVertexPointer();
-			geometry.SetIndexCount(count * RenderResources::IndicesPerQuad);
-			geometry.SetHostIndexPointer(quadIndices);
-			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * VerticesPerQuad);
+			// The command pool is shared with EmitMesh(), which leaves its indices set up
+			geometry.SetIndexCount(0);
+			geometry.SetHostIndexPointer(nullptr);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * 2);
 
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);

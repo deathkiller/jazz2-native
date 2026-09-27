@@ -35,8 +35,8 @@ namespace Jazz2::UI::Multiplayer
 		/** @brief Draws the position of the player in the current round (also serves as @ref IGameModeHUD::DrawPositionInRound) */
 		void DrawPositionInRound(const Rectf& view, Actors::Player* player) override;
 
-		/** @brief Draws the race-track minimap in the top-right corner (also serves as @ref IGameModeHUD::DrawMinimap) */
-		void DrawMinimap(const Rectf& view, Actors::Player* player) override;
+		/** @brief Draws the minimap in the top-right corner, in any game mode with a track, if the server allows it */
+		void DrawMinimap(const Rectf& view, Actors::Player* player);
 
 		/** @brief Draws the final standings of the round in the middle of the screen while the round is ending */
 		void DrawRoundResults();

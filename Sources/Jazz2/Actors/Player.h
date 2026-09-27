@@ -391,6 +391,19 @@ namespace Jazz2::Actors
 		 */
 		static void DrawShield(RenderQueue& renderQueue, ShieldType shieldType, float shieldTime, Metadata* metadata,
 			float elapsedFrames, Vector2f pos, std::uint16_t baseLayer, std::unique_ptr<RenderCommand> (&shieldRenderCommands)[2]);
+		/**
+		 * @brief Spawns a single star of the sugar rush trail at a position
+		 *
+		 * Shared by the locally-controlled @ref Player and by remote players (rendered as
+		 * @ref Actors::Multiplayer::RemoteActor on clients), which run none of the player's logic - the stars are
+		 * local debris, so every peer has to spawn its own.
+		 *
+		 * @param levelHandler  Level handler whose tile map owns the debris
+		 * @param metadata      Metadata holding the star animation (the player's metadata)
+		 * @param pos           World position the star is spawned at
+		 * @param baseLayer     Base render layer; the star is drawn just behind it
+		 */
+		static void SpawnSugarRushStar(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos, std::uint16_t baseLayer);
 		/** @brief Spawns bird companion */
 		bool SpawnBird(std::uint8_t type, Vector2f pos);
 		/** @brief Disables controls for specified time */

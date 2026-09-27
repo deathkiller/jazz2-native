@@ -9,10 +9,11 @@ namespace Jazz2::Multiplayer::GameModes
 	/**
 		@brief Race game mode
 
-		Players race to complete a number of laps. This mode owns its HUD (lap counter, lap timer, track minimap and
-		standings) through @ref OnDrawHUD. Its round logic --- lap counting, overtime and the win condition --- is
-		still handled by the host for now, so @ref OwnsRoundLogic returns `false` and the gameplay hooks below are
-		not yet invoked (they keep the interface satisfied until the logic is ported in a later phase).
+		Players race to complete a number of laps. This mode owns its HUD (lap counter, lap timer and standings)
+		through @ref OnDrawHUD, the minimap is drawn by the HUD itself in every mode. Its round logic --- lap
+		counting, overtime and the win condition --- is still handled by the host for now, so @ref OwnsRoundLogic
+		returns `false` and the gameplay hooks below are not yet invoked (they keep the interface satisfied until
+		the logic is ported in a later phase).
 	*/
 	class RaceMode : public IGameMode
 	{

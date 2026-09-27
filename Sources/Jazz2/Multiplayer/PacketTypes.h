@@ -91,7 +91,7 @@ namespace Jazz2::Multiplayer
 		ChangeRemoteActorMetadata,		/**< Changes metadata of a remote actor */
 		MarkRemoteActorAsPlayer,		/**< Marks a remote actor as another player */
 		UpdatePositionsInRound,			/**< Updates player positions in the current round */
-		SyncRaceCheckpoints,			/**< Sends the ordered race checkpoint polyline and start markers for the minimap */
+		SyncMinimapTrack,				/**< Sends the ordered track checkpoint polyline and start markers for the minimap */
 		SyncTeamScores,					/**< Sends the per-team aggregate scores for the HUD */
 		SyncScoreboard,					/**< Sends per-player scoreboard rows (name, kills, deaths, points, ping) */
 		SyncRoundResults,				/**< Sends the final round standings shown while the round is ending */

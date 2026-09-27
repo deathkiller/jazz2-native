@@ -169,7 +169,7 @@ namespace Jazz2
 		PowerUpMorph,						/**< Morph power-up monitor */
 		PowerUpShield,						/**< Shield power-up monitor */
 
-		RaceCheckpoint,						/**< Ordered race-track waypoint (passive minimap/positioning marker, JJ2+ Text event with TextID >= 100) */
+		RaceCheckpoint,						/**< Ordered track waypoint (passive minimap/race positioning marker, JJ2+ Text event with TextID >= 100) */
 
 		// End of enumeration
 		Count,								/**< Number of well-known events */

@@ -410,14 +410,41 @@ namespace nCine::RHI::GXM
 			return;
 		}
 
-		// A render target's texels live only in its GPU copy, and the GPU has to be done writing them first
 		const std::uint8_t* source = _pixels.data();
+		std::size_t sourceStride = std::size_t(_strideBytes);
+		// A render target's texels live only in its GPU copy, and that copy is TILED like the colour surface the GPU
+		// renders into (see EnsureGpuTexture()): the memory holds 32x32 blocks one after another, so a row of the
+		// image is not a row of the memory, and reading it row by row returned the blocks scrambled. The transfer
+		// engine converts a tiled surface to a linear one itself, into a staging block the rows are then copied out
+		// of - how the texels are ordered inside a block stays the hardware's business instead of being re-derived
+		// here. Readback is a screenshot-rate operation, so the allocation and the synchronous waits are acceptable.
+		GxmMemory::Block staging;
 		if (_isRenderTarget && _gpuBlock.IsValid()) {
+			// The GPU has to be done writing the texels first
 			GxmDevice::FinishScene();
 			if (SceGxmContext* context = GxmDevice::GetContext()) {
 				sceGxmFinish(context);
 			}
-			source = static_cast<const std::uint8_t*>(_gpuBlock.Base);
+			staging = GxmMemory::Alloc("nCine:Readback", _gpuStride * std::uint32_t(_height), SCE_GXM_MEMORY_ATTRIB_RW);
+			if (!staging.IsValid()) {
+				LOGE("Failed to allocate a staging block to read back a {}x{} render target", _width, _height);
+				return;
+			}
+			// The tiled side has to be described exactly as its colour surface is; the linear side keeps the same
+			// pitch, which is already padded to a whole number of blocks
+			const std::int32_t result = sceGxmTransferCopy(std::uint32_t(_width), std::uint32_t(_height), 0, 0,
+				SCE_GXM_TRANSFER_COLORKEY_NONE, SCE_GXM_TRANSFER_FORMAT_U8U8U8U8_ABGR, SCE_GXM_TRANSFER_TILED,
+				_gpuBlock.Base, 0, 0, std::int32_t(_gpuStride), SCE_GXM_TRANSFER_FORMAT_U8U8U8U8_ABGR,
+				SCE_GXM_TRANSFER_LINEAR, staging.Base, 0, 0, std::int32_t(_gpuStride), nullptr, 0, nullptr);
+			if (result < 0) {
+				LOGE("sceGxmTransferCopy({}x{}) to read back a render target failed with 0x{:.8x}",
+					_width, _height, std::uint32_t(result));
+				GxmMemory::Free(staging);
+				return;
+			}
+			sceGxmTransferFinish();
+			source = static_cast<const std::uint8_t*>(staging.Base);
+			sourceStride = std::size_t(_gpuStride);
 		}
 		if (source == nullptr) {
 			return;
@@ -425,31 +452,32 @@ namespace nCine::RHI::GXM
 
 		const std::int32_t dstBpp = BytesPerPixel(format);
 		const std::int32_t srcBpp = BytesPerPixel(_format);
-		// A render target's rows may be padded to the stride its colour surface needed
-		const std::size_t sourceStride = (source == _pixels.data()
-			? std::size_t(_strideBytes) : std::size_t(_gpuStride));
 		std::uint8_t* dst = static_cast<std::uint8_t*>(pixels);
 		if (dstBpp == srcBpp) {
 			const std::size_t rowBytes = std::size_t(_width) * std::size_t(srcBpp);
 			for (std::int32_t y = 0; y < _height; y++) {
 				std::memcpy(dst + std::size_t(y) * rowBytes, source + std::size_t(y) * sourceStride, rowBytes);
 			}
-			return;
-		}
-		// Narrowing readback (an RGBA8 store read back as RGB8): drop the trailing channels per texel
-		const std::int32_t shared = (srcBpp < dstBpp ? srcBpp : dstBpp);
-		for (std::int32_t y = 0; y < _height; y++) {
-			const std::uint8_t* in = source + std::size_t(y) * sourceStride;
-			std::uint8_t* out = dst + std::size_t(y) * std::size_t(_width) * std::size_t(dstBpp);
-			for (std::int32_t x = 0; x < _width; x++, in += srcBpp, out += dstBpp) {
-				std::int32_t c = 0;
-				for (; c < shared; c++) {
-					out[c] = in[c];
-				}
-				for (; c < dstBpp; c++) {
-					out[c] = 255;
+		} else {
+			// Narrowing readback (an RGBA8 store read back as RGB8): drop the trailing channels per texel
+			const std::int32_t shared = (srcBpp < dstBpp ? srcBpp : dstBpp);
+			for (std::int32_t y = 0; y < _height; y++) {
+				const std::uint8_t* in = source + std::size_t(y) * sourceStride;
+				std::uint8_t* out = dst + std::size_t(y) * std::size_t(_width) * std::size_t(dstBpp);
+				for (std::int32_t x = 0; x < _width; x++, in += srcBpp, out += dstBpp) {
+					std::int32_t c = 0;
+					for (; c < shared; c++) {
+						out[c] = in[c];
+					}
+					for (; c < dstBpp; c++) {
+						out[c] = 255;
+					}
 				}
 			}
+		}
+
+		if (staging.IsValid()) {
+			GxmMemory::Free(staging);
 		}
 	}
 

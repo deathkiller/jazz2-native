@@ -156,6 +156,12 @@ on every wrap.
 
 @m_class{m-noindent}
 
+A Cooperation entry with a story level is played to the end of its episode: when the level has a next level
+set, reaching the exit continues with it automatically, still with the same entry's settings, and the next
+entry is applied only once the whole episode is at the end.
+
+@m_class{m-noindent}
+
 The playlist is also the only way for a dedicated server to know which level to load at all
 @m_span{m-text m-dim} (see @ref multiplayer-hosting-dedicated) @m_endspan. A server hosted from the menu
 uses it only when the level selection is left at the playlist, otherwise @cpp "PlaylistIndex" @ce is

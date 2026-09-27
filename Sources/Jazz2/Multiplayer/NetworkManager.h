@@ -121,6 +121,13 @@ namespace Jazz2::Multiplayer
 		 * contains a @cpp "$include" @ce directive, it recursively loads the referenced files.
 		 */
 		static ServerConfiguration LoadServerConfigurationFromFile(StringView path);
+		/**
+		 * @brief Overrides the per-round rules of the configuration with the values of a playlist entry
+		 *
+		 * Every per-round property of @ref PlaylistEntry is copied except @ref PlaylistEntry::LevelName and
+		 * @ref PlaylistEntry::GameMode, which the caller applies together with the level change.
+		 */
+		static void ApplyPlaylistEntry(ServerConfiguration& serverConfig, const PlaylistEntry& playlistEntry);
 
 		/** @brief Converts @ref MpGameMode to the string representation */
 		static StringView GameModeToString(MpGameMode mode);

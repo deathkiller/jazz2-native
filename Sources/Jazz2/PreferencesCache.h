@@ -345,7 +345,7 @@ namespace Jazz2
 		static bool KeepAspectRatioInCinematics;
 		/** @brief Whether player trails are visible */
 		static bool ShowPlayerTrails;
-		/** @brief Whether the race minimap is shown in multiplayer (if provided by the server) */
+		/** @brief Whether the minimap is shown in multiplayer (if provided by the server) */
 		static bool ShowMinimap;
 		/** @brief Whether low quality water effects are enabled */
 		static bool LowWaterQuality;

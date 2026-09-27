@@ -54,6 +54,15 @@ namespace Jazz2::Actors::Multiplayer
 		void SyncLightsWithServer(ArrayView<const LightEmitter> lights);
 		/** @brief Sets the active shield shown around this remote player (synced from the server) */
 		void SetShield(ShieldType shieldType, float timeLeft);
+		/**
+		 * @brief Attaches a decoration that follows this remote player, or detaches it with `nullptr`
+		 *
+		 * Used for the lizard copter a player hangs on. It's a separate actor that the server destroys as soon as it
+		 * is mounted (see @ref Player::SetModifier()), so the reference kept here is what keeps it alive and drawn.
+		 */
+		void SetModifierDecor(std::shared_ptr<ActorBase> decor);
+		/** @brief Starts (or ends with zero) the sugar rush of this remote player, whose star trail is replayed locally */
+		void SetSugarRush(float timeLeft);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -75,6 +84,12 @@ namespace Jazz2::Actors::Multiplayer
 		ShieldType _activeShield;
 		float _activeShieldTime;
 		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
+		// Decoration attached to this player (the lizard copter it hangs on), moved along with it (synced from the server)
+		std::shared_ptr<ActorBase> _modifierDecor;
+		// Remaining sugar rush of this player (synced from the server, decays locally like the shield). The white
+		// renderer arrives with the actor updates, but the star trail is local debris the owner spawns for itself.
+		float _sugarRushLeft;
+		float _sugarRushStarsTime;
 		// Lights the object emits on the server (see ActorBase::OnEmitRemotedLights()). A remote actor runs none
 		// of the object's logic, so it can only replay what it was told. Positions are relative to the actor, so
 		// they keep following the interpolated sprite between updates.

@@ -7,6 +7,7 @@
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
+#include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -36,7 +37,7 @@ namespace Jazz2::Actors::Multiplayer
 	RemoteActor::RemoteActor()
 		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _alwaysInterpolate(false), _furColor(0),
 			_paletteOffset(-1), _blendingPreset(DrawableNode::BlendingPreset::Alpha),
-			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
+			_activeShield(ShieldType::None), _activeShieldTime(0.0f), _sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f)
 	{
 	}
 
@@ -111,6 +112,13 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
+		if (_modifierDecor != nullptr) {
+			// Glued to the interpolated position, and the renderer is refreshed right away, because the decoration
+			// may already have updated itself earlier in this frame
+			_modifierDecor->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
+			_modifierDecor->UpdateRendererPosition();
+		}
+
 		_illuminateLights.OnUpdate(timeMult);
 
 		// Shield time decays locally (the server sends only state changes, not per-frame expiry), so the decoration
@@ -120,6 +128,18 @@ namespace Jazz2::Actors::Multiplayer
 			if (_activeShieldTime <= 0.0f) {
 				_activeShield = ShieldType::None;
 				_activeShieldTime = 0.0f;
+			}
+		}
+
+		// Same timing as Player::OnUpdateTimers(), an early end is sent by the server
+		if (_sugarRushLeft > 0.0f) {
+			_sugarRushLeft -= timeMult;
+			if (_sugarRushLeft > 0.0f) {
+				_sugarRushStarsTime -= timeMult;
+				if (_sugarRushStarsTime <= 0.0f) {
+					_sugarRushStarsTime = Random().FastFloat(2.0f, 8.0f);
+					Player::SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.layer());
+				}
 			}
 		}
 
@@ -222,8 +242,9 @@ namespace Jazz2::Actors::Multiplayer
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)
 	{
 		// A permanently hidden sprite must not collapse the buffer when the actor's visuals are replayed by
-		// a subclass, otherwise its position would freeze between received packets
-		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), _alwaysInterpolate || _renderer.isDrawEnabled());
+		// a subclass, otherwise its position would freeze between received packets. A teleport always does.
+		bool interpolate = ((_alwaysInterpolate || _renderer.isDrawEnabled()) && !_stateBuffer.IsTeleport(pos));
+		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), interpolate);
 	}
 
 	void RemoteActor::SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType)
@@ -263,6 +284,33 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		_activeShield = shieldType;
 		_activeShieldTime = (shieldType != ShieldType::None ? timeLeft : 0.0f);
+	}
+
+	void RemoteActor::SetSugarRush(float timeLeft)
+	{
+		_sugarRushLeft = std::max(timeLeft, 0.0f);
+	}
+
+	void RemoteActor::SetModifierDecor(std::shared_ptr<ActorBase> decor)
+	{
+		if (_modifierDecor == decor) {
+			return;
+		}
+
+		// A remote decoration interpolates its own position unless it's attached, which would fight the gluing below
+		if (auto* prevDecor = runtime_cast<RemoteActor>(_modifierDecor.get())) {
+			prevDecor->OnDetach(this);
+		}
+
+		_modifierDecor = std::move(decor);
+
+		if (auto* newDecor = runtime_cast<RemoteActor>(_modifierDecor.get())) {
+			newDecor->OnAttach(this);
+		}
+		if (_modifierDecor != nullptr) {
+			_modifierDecor->MoveInstantly(_pos, MoveType::Absolute | MoveType::Force);
+			_modifierDecor->UpdateRendererPosition();
+		}
 	}
 }
 

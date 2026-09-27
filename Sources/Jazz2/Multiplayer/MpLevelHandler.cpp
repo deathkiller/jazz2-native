@@ -209,6 +209,23 @@ namespace Jazz2::Multiplayer
 		// Online sessions are never flagged as local; local splitscreen multiplayer is the only local session here
 		DEATH_DEBUG_ASSERT(!levelInit.IsLocalSession || IsLocalSession());
 
+		if (_isServer) {
+			// The descriptors outlive the level, but a new level is a new round. A spectate mode the server forced in the
+			// previous one (a finished race, a join in the middle of it) is over - it used to be carried over, so a racer
+			// who finished stayed a spectator for good, and when that was everybody, the pre-game ended with no players
+			// and waited for them forever. A spectate mode the player chose is kept. It's cleared before the base spawns
+			// the local players below; the remote ones join later.
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
+					peerDesc->IsSpectating = SpectateMode::None;
+				}
+				// Reset again when the round starts, but until then it would still rank the player as a finisher
+				peerDesc->RaceFinishOrder = 0;
+				// Measured in the previous level's time, which starts over now
+				peerDesc->LapsElapsedFrames = 0.0f;
+			}
+		}
+
 		_suppressRemoting = true;
 		bool initialized = LevelHandler::Initialize(levelInit);
 		_suppressRemoting = false;
@@ -684,7 +701,9 @@ namespace Jazz2::Multiplayer
 						for (auto* player : _players) {
 							auto* mpPlayer = static_cast<MpPlayer*>(player);
 							auto peerDesc = mpPlayer->GetPeerDescriptor();
-							mpPlayer->GetPeerDescriptor()->LapStarted = TimeStamp::now();
+							peerDesc->LapStarted = TimeStamp::now();
+							// The first lap is measured from the start as well, not from when the player spawned
+							peerDesc->LapsElapsedFrames = _elapsedFrames;
 
 							// The player is invulnerable for a short time after starting a round
 							player->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
@@ -1516,9 +1535,18 @@ namespace Jazz2::Multiplayer
 
 			// Same as the single-player AreaActivateBoss handling: let sugar rush run out almost immediately instead of
 			// carrying it into the boss fight. The event is processed server-side only, so the other players never see
-			// it themselves; RemotePlayerOnServer::OnUpdate then pushes the end to the owning client.
+			// it themselves; PlayerOnServer::OnUpdate then pushes the end to the peers.
 			if (player->_sugarRushLeft > 1.0f) {
 				player->_sugarRushLeft = 1.0f;
+			}
+
+			// Dead players and spectators are left alone. Warping a player whose death animation is still playing
+			// replaced it with the warp and ran its callback early, and with the boss now active that callback delays
+			// the respawn - disabling gravity and all collisions. The warp-out then gave the player gravity and control
+			// back but not the collisions, so they fell straight through the tile map. The respawn is resolved normally
+			// instead: while the boss fight goes on, the player waits for it.
+			if (player->_health <= 0 || player->_playerType == PlayerType::Spectate) {
+				continue;
 			}
 
 			if ((player->_pos - pos).Length() >= MinDistance) {
@@ -1602,6 +1630,10 @@ namespace Jazz2::Multiplayer
 
 			if (canRespawn) {
 				LimitCameraView(mpPlayer, mpPlayer->_pos, 0, 0);
+
+				// The caller moves the player to the checkpoint right away, straight from where it died and while it's
+				// still visible, so the peers have to be told it's a teleport - they would slide it across the level
+				mpPlayer->_justWarped = true;
 
 				if (shouldRollback) {
 					LOGI("Rolling back to checkpoint");
@@ -1716,8 +1748,11 @@ namespace Jazz2::Multiplayer
 			mpPlayer->_justWarped = true;
 
 			if ((flags & WarpFlags::IncrementLaps) == WarpFlags::IncrementLaps && _levelState == LevelState::Running) {
-				// Don't allow laps to be quickly incremented twice in a row
-				if ((_elapsedFrames - peerDesc->LapsElapsedFrames) > 2.0f * FrameTimer::FramesPerSecond) {
+				// Don't allow laps to be quickly incremented twice in a row. A last lap *later* than now can only be a
+				// timestamp left over from an earlier level (the time starts over with every level, the descriptor
+				// doesn't), which refused every lap of that player until the clock caught up with it.
+				float sinceLastLap = (_elapsedFrames - peerDesc->LapsElapsedFrames);
+				if (sinceLastLap < 0.0f || sinceLastLap > 2.0f * FrameTimer::FramesPerSecond) {
 					peerDesc->Laps++;
 					auto now = TimeStamp::now();
 					float lapSecs = (now - peerDesc->LapStarted).seconds();
@@ -2375,42 +2410,45 @@ namespace Jazz2::Multiplayer
 		ApplyGameModeToAllPlayers(serverConfig.GameMode);
 		SynchronizeGameMode();
 
-		// The level didn't change, but switching to a race mode requires (re)computing the track and re-syncing it
-		// to all clients (the per-peer sync only happens on level load)
-		if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
-			BuildRaceCheckpoints();
+		// The level didn't change, but the new mode may need the track (the race ranking, or the minimap) and a
+		// different one - a lap in race modes, the way to the exit otherwise - so it's recomputed and re-synced to
+		// all clients (the per-peer sync only happens on level load)
+		bool isRace = (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace);
+		if (isRace || IsMinimapAllowed()) {
+			BuildTrackCheckpoints();
+		}
 
-			// Send the geometry only if the minimap is allowed; otherwise send an empty set to clear any minimap
-			// the clients may have had (the ranking still uses the checkpoints server-side)
-			if (!_isLocalSession) {
-				bool allowMinimap = serverConfig.AllowMinimap;
-				MemoryStream packet(24 + _orderedRaceCheckpoints.size() * 9 + _raceStartMarkers.size() * 8);
-				packet.WriteVariableInt32(_raceBoundsMin.X);
-				packet.WriteVariableInt32(_raceBoundsMin.Y);
-				packet.WriteVariableInt32(_raceBoundsMax.X);
-				packet.WriteVariableInt32(_raceBoundsMax.Y);
-				packet.WriteVariableUint32(allowMinimap ? (std::uint32_t)_orderedRaceCheckpoints.size() : 0);
-				if (allowMinimap) {
-					for (const auto& cp : _orderedRaceCheckpoints) {
-						packet.WriteVariableInt32(cp.Tile.X);
-						packet.WriteVariableInt32(cp.Tile.Y);
-						packet.WriteVariableUint32(cp.Order);
-						packet.WriteValue<std::uint8_t>(cp.Group);
-					}
+		// Re-synced on every switch, because whether the minimap is allowed depends on the game mode too. Send the
+		// geometry only if the minimap is allowed; otherwise send an empty set to clear any minimap the clients may
+		// have had (the ranking still uses the checkpoints server-side)
+		if (!_isLocalSession) {
+			bool allowMinimap = IsMinimapAllowed();
+			MemoryStream packet(24 + _orderedRaceCheckpoints.size() * 9 + _raceStartMarkers.size() * 8);
+			packet.WriteVariableInt32(_minimapBoundsMin.X);
+			packet.WriteVariableInt32(_minimapBoundsMin.Y);
+			packet.WriteVariableInt32(_minimapBoundsMax.X);
+			packet.WriteVariableInt32(_minimapBoundsMax.Y);
+			packet.WriteVariableUint32(allowMinimap ? (std::uint32_t)_orderedRaceCheckpoints.size() : 0);
+			if (allowMinimap) {
+				for (const auto& cp : _orderedRaceCheckpoints) {
+					packet.WriteVariableInt32(cp.Tile.X);
+					packet.WriteVariableInt32(cp.Tile.Y);
+					packet.WriteVariableUint32(cp.Order);
+					packet.WriteValue<std::uint8_t>(cp.Group);
 				}
-				packet.WriteVariableUint32(allowMinimap ? (std::uint32_t)_raceStartMarkers.size() : 0);
-				if (allowMinimap) {
-					for (const auto& m : _raceStartMarkers) {
-						packet.WriteVariableInt32(m.X);
-						packet.WriteVariableInt32(m.Y);
-					}
-				}
-
-				_networkManager->SendTo([this](const Peer& peer) {
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
-				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncRaceCheckpoints, packet);
 			}
+			packet.WriteVariableUint32(allowMinimap ? (std::uint32_t)_raceStartMarkers.size() : 0);
+			if (allowMinimap) {
+				for (const auto& m : _raceStartMarkers) {
+					packet.WriteVariableInt32(m.X);
+					packet.WriteVariableInt32(m.Y);
+				}
+			}
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncMinimapTrack, packet);
 		}
 
 		// When switching AWAY from Capture The Flag, destroy any existing flags (BuildCtfBases() self-guards and
@@ -3298,13 +3336,22 @@ namespace Jazz2::Multiplayer
 				? serverConfig.InitialPlayerHealth
 				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
+			// This used to be assigned to the previous (destroyed) actor, so the new one kept the default and could
+			// always move - a spectator revived when a round starts (typically everyone who finished the previous
+			// race) could run off during the countdown while the others were held, and the join cooldown never applied
 			if (_levelState == LevelState::Running && serverConfig.JoinCooldownSecs > 0) {
 				peerDesc->JoinCooldownFrames = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
-				player->_controllableExternal = false;
+				ptr->_controllableExternal = false;
 			} else {
 				peerDesc->JoinCooldownFrames = 0.0f;
-				player->_controllableExternal = _controllableExternal;
+				ptr->_controllableExternal = _controllableExternal;
 			}
+
+			// Spawned at the start again, so the lap clock and the progress along the track start over too - a lap
+			// timestamp kept from before (possibly from an earlier level) refused the next lap as "twice in a row"
+			peerDesc->LapsElapsedFrames = _elapsedFrames;
+			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->RaceProgress = 0.0f;
 		}
 
 		peerDesc->Player = ptr;
@@ -3400,6 +3447,13 @@ namespace Jazz2::Multiplayer
 			// The player is invulnerable for a short time after spawning
 			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
 		}
+
+		if DEATH_UNLIKELY(_levelState == LevelState::WaitingForMinPlayers) {
+			// Spectators don't count towards the minimum, so this changes how many players are still missing. Only a
+			// joining or leaving peer updated it before, so a spectator who joined the game didn't start the round.
+			_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - GetNonSpectatePlayerCount();
+			SendLevelStateToAllPlayers();
+		}
 	}
 
 	void MpLevelHandler::RequestSpectateMode(bool enable)
@@ -3411,6 +3465,11 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 				if (!peerDesc->RemotePeer && peerDesc->Player) {
+					// The same rules as for a remote player (see HandleClientPacketPlayerSpectateRequest())
+					bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+					if (enable == isSpectating || (!enable && !CanLeaveSpectateMode(playerPeer, *peerDesc))) {
+						continue;
+					}
 					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 				}
 			}
@@ -3636,6 +3695,31 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+	}
+
+	bool MpLevelHandler::CanSpawnPlayers() const
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		return (_enableSpawning && _activeBoss == nullptr &&
+			(_levelState != LevelState::Running || serverConfig.AllowJoinDuringRound));
+	}
+
+	bool MpLevelHandler::CanLeaveSpectateMode(const Peer& peer, const PeerDescriptor& peerDesc)
+	{
+		if ((peerDesc.IsSpectating & SpectateMode::Mask) != SpectateMode::Forced) {
+			return true;
+		}
+
+		// Refused requests used to be dropped silently, so the "Join Game" option simply did nothing
+		if (peerDesc.RaceFinishOrder != 0) {
+			SendMessage(peer, UI::MessageLevel::Warning, _("You have already finished the race, you can play again in the next round"));
+			return false;
+		}
+		if (!CanSpawnPlayers()) {
+			SendMessage(peer, UI::MessageLevel::Warning, _("You cannot join the game right now"));
+			return false;
+		}
+		return true;
 	}
 
 	void MpLevelHandler::ShowCharacterSelectLobby()
@@ -3889,7 +3973,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::ChangeRemoteActorMetadata: return HandleServerPacketChangeRemoteActorMetadata(peer, data);
 				case ServerPacketType::MarkRemoteActorAsPlayer: return HandleServerPacketMarkRemoteActorAsPlayer(peer, data);
 				case ServerPacketType::UpdatePositionsInRound: return HandleServerPacketUpdatePositionsInRound(peer, data);
-				case ServerPacketType::SyncRaceCheckpoints: return HandleServerPacketSyncRaceCheckpoints(peer, data);
+				case ServerPacketType::SyncMinimapTrack: return HandleServerPacketSyncMinimapTrack(peer, data);
 				case ServerPacketType::SyncTeamScores: return HandleServerPacketSyncTeamScores(peer, data);
 				case ServerPacketType::SyncScoreboard: return HandleServerPacketSyncScoreboard(peer, data);
 				case ServerPacketType::SyncRoundResults: return HandleServerPacketSyncRoundResults(peer, data);
@@ -4321,9 +4405,16 @@ namespace Jazz2::Multiplayer
 
 			// Anti-cheat: reject client-reported movement that is physically impossible (speedhack /
 			// teleport). Bounds are intentionally generous so latency, springs, sugar rush and similar
-			// legitimate bursts never trip them; only gross violations are corrected.
-			constexpr float MaxPlausibleSpeed = 32.0f;	// Per axis; normal clamp is 16, boosted states stay well under
+			// legitimate bursts never trip them; only gross violations are corrected - a correction snaps the
+			// client back, so a bound below what the physics really produces rubber-bands honest players.
+			// Per axis, and it depends on the physics: Reforged clamps the speed to 16 and boosted states stay well
+			// under 32. Outside Reforged, both axes are clamped to the original's own limit (37.33, which a blue
+			// spring reaches on either axis), a pole assigns its launch bonus on top of what the player arrived with
+			// for the one tick before that clamp, and Lori's sidekick (49.29) is exempt from it but stays under both.
+			constexpr float MaxPlausibleSpeedReforged = 32.0f;
+			constexpr float MaxPlausibleSpeedLegacy = Actors::Player::LegacyVerticalSpeedLimit + Actors::Player::LegacyPoleLaunchBonus + 1.0f;
 			constexpr float MaxPlausibleStep = 600.0f;	// Base accepted position change for a single update (px)
+			const float maxPlausibleSpeed = (IsReforged() ? MaxPlausibleSpeedReforged : MaxPlausibleSpeedLegacy);
 
 			// Scale the accepted step by the time actually elapsed since the last accepted update, so a
 			// network stall or packet-loss burst (which arrives as one large jump) isn't mistaken for a
@@ -4332,17 +4423,17 @@ namespace Jazz2::Multiplayer
 			if (deltaMs > 2000) {
 				deltaMs = 2000;
 			}
-			float maxStep = MaxPlausibleStep + MaxPlausibleSpeed * FrameTimer::FramesPerSecond * (deltaMs / 1000.0f);
+			float maxStep = MaxPlausibleStep + maxPlausibleSpeed * FrameTimer::FramesPerSecond * (deltaMs / 1000.0f);
 
 			peerDesc->LastUpdated = now;
 
 			float acceptedX = posX, acceptedY = posY;
 			float acceptedSpeedX = speedX, acceptedSpeedY = speedY;
 			bool corrected = false;
-			if (std::abs(acceptedSpeedX) > MaxPlausibleSpeed || std::abs(acceptedSpeedY) > MaxPlausibleSpeed) {
+			if (std::abs(acceptedSpeedX) > maxPlausibleSpeed || std::abs(acceptedSpeedY) > maxPlausibleSpeed) {
 				LOGW("Clamped implausible speed from player {} \"{}\" ({:.1f}, {:.1f})", playerIndex, peerDesc->PlayerName, acceptedSpeedX, acceptedSpeedY);
-				acceptedSpeedX = std::clamp(acceptedSpeedX, -MaxPlausibleSpeed, MaxPlausibleSpeed);
-				acceptedSpeedY = std::clamp(acceptedSpeedY, -MaxPlausibleSpeed, MaxPlausibleSpeed);
+				acceptedSpeedX = std::clamp(acceptedSpeedX, -maxPlausibleSpeed, maxPlausibleSpeed);
+				acceptedSpeedY = std::clamp(acceptedSpeedY, -maxPlausibleSpeed, maxPlausibleSpeed);
 				corrected = true;
 			}
 
@@ -4474,8 +4565,17 @@ namespace Jazz2::Multiplayer
 			}
 
 			auto& serverConfig = _networkManager->GetServerConfiguration();
-			if (!serverConfig.EnableSpectate || ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced && enable == 0)) {
-				// Spectate mode is disabled or forced, deny the request
+			if (!serverConfig.EnableSpectate) {
+				// Spectate mode is disabled, deny the request
+				return;
+			}
+			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+			if ((enable != 0) == isSpectating) {
+				// Nothing to change - and asking to spectate again would turn a forced spectate mode into one the
+				// player can leave, while leaving it without spectating would respawn the player at a spawn point
+				return;
+			}
+			if (enable == 0 && !CanLeaveSpectateMode(peer, *peerDesc)) {
 				return;
 			}
 
@@ -4510,8 +4610,8 @@ namespace Jazz2::Multiplayer
 			}
 
 			auto& serverConfig = _networkManager->GetServerConfiguration();
-			if DEATH_UNLIKELY((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
-				// Forced spectators (e.g., winner, eliminated) can't rejoin by changing character
+			if DEATH_UNLIKELY(!CanLeaveSpectateMode(peer, *peerDesc)) {
+				// Forced spectators (e.g., a racer who already finished) can't rejoin by changing character
 				LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Forced to spectate", peer);
 				return;
 			}
@@ -5630,7 +5730,7 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
-	bool MpLevelHandler::HandleServerPacketSyncRaceCheckpoints(const Peer& peer, ArrayView<const std::uint8_t> data)
+	bool MpLevelHandler::HandleServerPacketSyncMinimapTrack(const Peer& peer, ArrayView<const std::uint8_t> data)
 	{
 		MemoryStream packet(data);
 		Vector2i boundsMin, boundsMax;
@@ -5641,7 +5741,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t count = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(count > 8192) {
 			// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
-			LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
+			LOGW("[MP] ServerPacketType::SyncMinimapTrack - Malformed packet");
 			return true;
 		}
 		SmallVector<RaceCheckpoint, 0> checkpoints;
@@ -5655,7 +5755,7 @@ namespace Jazz2::Multiplayer
 		}
 		std::uint32_t markerCount = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(markerCount > 1024) {
-			LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
+			LOGW("[MP] ServerPacketType::SyncMinimapTrack - Malformed packet");
 			return true;
 		}
 		SmallVector<Vector2i, 0> markers;
@@ -5667,8 +5767,8 @@ namespace Jazz2::Multiplayer
 		}
 		// Applied on the main thread, because the minimap iterates these lists there
 		InvokeAsync([this, boundsMin, boundsMax, checkpoints = std::move(checkpoints), markers = std::move(markers)]() mutable {
-			_raceBoundsMin = boundsMin;
-			_raceBoundsMax = boundsMax;
+			_minimapBoundsMin = boundsMin;
+			_minimapBoundsMax = boundsMax;
 			_orderedRaceCheckpoints = std::move(checkpoints);
 			_raceStartMarkers = std::move(markers);
 		});
@@ -5897,6 +5997,74 @@ namespace Jazz2::Multiplayer
 			return true;
 		}
 
+		if (propertyType == PlayerPropertyType::SugarRush) {
+			std::int32_t timeLeft = packet.ReadVariableInt32();
+
+			LOGD("[MP] ServerPacketType::PlayerSetProperty::SugarRush - playerIndex: {}, timeLeft: {}", playerIndex, timeLeft);
+
+			InvokeAsync([this, playerIndex, timeLeft]() {
+				if (playerIndex == _lastSpawnedActorId) {
+					// Food is collected server-side, so this is the only way the client learns its own player entered
+					// sugar rush - applying it locally turns the player white, plays the music, spawns the star trail
+					// and makes the local prediction agree with the server. A zero time ends it, which can happen
+					// before the local timer would have run out (e.g. when the server activates a boss).
+					if (!_players.empty()) {
+						if (timeLeft > 0) {
+							_players[0]->ActivateSugarRush((float)timeLeft);
+						} else {
+							_players[0]->DeactivateSugarRush();
+						}
+					}
+				} else {
+					// Another player turns white through the actor updates, but its star trail is spawned here
+					std::unique_lock lock(_lock);
+					auto it = _remoteActors.find(playerIndex);
+					if (it != _remoteActors.end()) {
+						if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+							remoteActor->SetSugarRush((float)timeLeft);
+						}
+					}
+				}
+			});
+			return true;
+		}
+
+		// The local player simulates the modifier, the other players only show its decoration - the lizard copter is
+		// a separate remote actor, which the server destroys as soon as it's mounted, so it's kept alive by the rider
+		if (propertyType == PlayerPropertyType::Modifier) {
+			Actors::Player::Modifier modifier = (Actors::Player::Modifier)packet.ReadValue<std::uint8_t>();
+			std::uint32_t decorActorId = packet.ReadVariableUint32();
+
+			LOGD("[MP] ServerPacketType::PlayerSetProperty::Modifier - playerIndex: {}, modifier: {}, decor: {}", playerIndex, modifier, decorActorId);
+
+			InvokeAsync([this, playerIndex, modifier, decorActorId]() {
+				std::unique_lock lock(_lock);
+				std::shared_ptr<Actors::ActorBase> decor;
+				if (modifier == Actors::Player::Modifier::LizardCopter) {
+					auto it = _remoteActors.find(decorActorId);
+					if (it != _remoteActors.end()) {
+						decor = it->second;
+					}
+				}
+
+				if (playerIndex == _lastSpawnedActorId) {
+					// Player::SetModifier() only detaches the decoration, which lets a remote actor keep interpolating
+					// its own (no longer updated) position against the rider's
+					if (!_players.empty() && _players[0]->SetModifier(modifier, decor) && decor != nullptr) {
+						decor->OnAttach(_players[0]);
+					}
+				} else {
+					auto it = _remoteActors.find(playerIndex);
+					if (it != _remoteActors.end()) {
+						if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+							remoteActor->SetModifierDecor(std::move(decor));
+						}
+					}
+				}
+			});
+			return true;
+		}
+
 		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
 			LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 			return true;
@@ -5918,26 +6086,6 @@ namespace Jazz2::Multiplayer
 						}
 						if ((flags & 0x01) != 0) {
 							LevelHandler::SetAmbientLight(_players[0], value);
-						}
-					}
-				});
-				break;
-			}
-			case PlayerPropertyType::SugarRush: {
-				std::int32_t timeLeft = packet.ReadVariableInt32();
-
-				LOGD("[MP] ServerPacketType::PlayerSetProperty::SugarRush - timeLeft: {}", timeLeft);
-
-				// Food is collected server-side, so this is the only way the client learns its own player entered
-				// sugar rush - applying it locally turns the player white, plays the music, spawns the star trail and
-				// makes the local prediction agree with the server. A zero time ends it, which can happen before the
-				// local timer would have run out (e.g. when the server activates a boss).
-				InvokeAsync([this, timeLeft]() {
-					if (!_players.empty()) {
-						if (timeLeft > 0) {
-							_players[0]->ActivateSugarRush((float)timeLeft);
-						} else {
-							_players[0]->DeactivateSugarRush();
 						}
 					}
 				});
@@ -5985,18 +6133,6 @@ namespace Jazz2::Multiplayer
 				InvokeAsync([this, timeLeft, type]() {
 					if (!_players.empty()) {
 						_players[0]->SetInvulnerability(float(timeLeft), type);
-					}
-				});
-				break;
-			}
-			case PlayerPropertyType::Modifier: {
-				Actors::Player::Modifier modifier = (Actors::Player::Modifier)packet.ReadValue<std::uint8_t>();
-				std::uint32_t decorActorId = packet.ReadVariableUint32();
-				InvokeAsync([this, modifier, decorActorId]() {
-					std::unique_lock lock(_lock);
-					if (!_players.empty()) {
-						auto it = _remoteActors.find(decorActorId);
-						_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
 					}
 				});
 				break;
@@ -6546,14 +6682,14 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::AttachComponents(std::move(descriptor));
 
-		// Reset race minimap geometry for both server and client (the client repopulates it from a server packet,
+		// Reset minimap geometry for both server and client (the client repopulates it from a server packet,
 		// or leaves it empty so no minimap is shown when the new level has no track)
 		_orderedRaceCheckpoints.clear();
 		_raceStartMarkers.clear();
 		_raceCheckpoints.clear();
 		_raceCheckpointsOrdered = false;
-		_raceBoundsMin = Vector2i(0, 0);
-		_raceBoundsMax = Vector2i(0, 0);
+		_minimapBoundsMin = Vector2i(0, 0);
+		_minimapBoundsMax = Vector2i(0, 0);
 
 		if (_isServer) {
 			// Cache all possible multiplayer spawn points (if it's not coop level)
@@ -6587,8 +6723,10 @@ namespace Jazz2::Multiplayer
 
 			const auto& serverConfig = _networkManager->GetServerConfiguration();
 
-			if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
-				BuildRaceCheckpoints();
+			// The race ranking needs the track even with the minimap disabled, other modes only for the minimap
+			bool isRace = (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace);
+			if (isRace || IsMinimapAllowed()) {
+				BuildTrackCheckpoints();
 			}
 			// Capture The Flag bases/flags are (re)built at round start in ResetAllPlayerStats(), not here: at level
 			// load no client is connected yet, so spawning now would only reach late joiners via the per-peer sync
@@ -6660,7 +6798,8 @@ namespace Jazz2::Multiplayer
 				continue;
 			}
 
-			Vector2f spawnPosition = GetSpawnPoint(levelInit.PlayerCarryOvers[i].Type);
+			PlayerType playerType = levelInit.PlayerCarryOvers[i].Type;
+			Vector2f spawnPosition = GetSpawnPoint(playerType);
 
 			// Each local player gets its own peer descriptor so teams, scores, kills and laps are tracked separately.
 			// In online sessions there is only the single host player (index 0 == LocalPeer); local splitscreen
@@ -6669,19 +6808,31 @@ namespace Jazz2::Multiplayer
 			// Local players carry over through levelInit (ReceiveLevelCarryOver below), so make sure a leftover
 			// descriptor snapshot can't be applied on top of it by MpPlayer::OnActivatedAsync
 			peerDesc->HasCarryOver = false;
+			// A player who chose to spectate keeps spectating in the next level, the same as a remote player does (see
+			// SynchronizePeers()) - a spectate mode forced in the previous level was already cleared in Initialize()
+			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
 			std::shared_ptr<Actors::Multiplayer::LocalPlayerOnServer> player = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
-			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
+			std::uint8_t playerParams[2] = { (std::uint8_t)(isSpectating ? PlayerType::Spectate : playerType), (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
 				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
 				playerParams
 			));
-			player->_controllableExternal = _controllableExternal;
-			player->_health = (serverConfig.InitialPlayerHealth > 0
-				? serverConfig.InitialPlayerHealth
-				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+			if (isSpectating) {
+				// A spectator keeps its zero health (see Player::OnActivatedAsync())
+				player->_controllableExternal = true;
+			} else {
+				player->_controllableExternal = _controllableExternal;
+				player->_health = (serverConfig.InitialPlayerHealth > 0
+					? serverConfig.InitialPlayerHealth
+					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+			}
 
-			peerDesc->PreferredPlayerType = levelInit.PlayerCarryOvers[i].Type;
+			// The character the player plays as, which a spectator's actor is not - it used to be overwritten by one
+			// carried over from a spectator, so leaving the spectate mode later spawned another spectator actor
+			if (playerType != PlayerType::Spectate) {
+				peerDesc->PreferredPlayerType = playerType;
+			}
 			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->LapStarted = TimeStamp::now();
@@ -6696,8 +6847,10 @@ namespace Jazz2::Multiplayer
 
 			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
 
-			// The player is invulnerable for a short time after spawning
-			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+			if (!isSpectating) {
+				// The player is invulnerable for a short time after spawning
+				ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+			}
 		}
 
 		ApplyGameModeToAllPlayers(serverConfig.GameMode);
@@ -6725,6 +6878,35 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
 	{
 		LevelHandler::PrepareNextLevelInitialization(levelInit);
+
+		if (_isServer) {
+			// The base fills the carry-overs in the order of the player list, but SpawnPlayers() hands them out to the
+			// local players by index, and a player that was respawned (spectate mode, a change of character, a finished
+			// race) moved to the end of that list. The host's own carry-over then landed in a slot of a remote player,
+			// whose carry-over is always empty, and came back in the next level as a separate local player - or didn't
+			// come back at all past the fourth player. They're placed by the index of each local player instead.
+			for (auto& carryOver : levelInit.PlayerCarryOvers) {
+				carryOver = {};
+			}
+			for (auto* player : _players) {
+				auto* mpPlayer = static_cast<MpPlayer*>(player);
+				auto peerDesc = mpPlayer->GetPeerDescriptor();
+				std::int32_t index = mpPlayer->_playerIndex;
+				if (peerDesc == nullptr || peerDesc->RemotePeer || index < 0 || index >= std::int32_t(arraySize(levelInit.PlayerCarryOvers))) {
+					continue;
+				}
+
+				PlayerCarryOver carryOver = mpPlayer->PrepareLevelCarryOver();
+				if (carryOver.Type == PlayerType::Spectate) {
+					// A spectator's actor is not a character, the one chosen before spectating carries over instead,
+					// and SpawnPlayers() makes a spectator of it again if the player still spectates
+					PlayerType preferredType = peerDesc->PreferredPlayerType;
+					carryOver.Type = (preferredType == PlayerType::Jazz || preferredType == PlayerType::Spaz || preferredType == PlayerType::Lori
+						? preferredType : PlayerType::Jazz);
+				}
+				levelInit.PlayerCarryOvers[index] = carryOver;
+			}
+		}
 
 		// Online co-op: capture each remote player's state into its (persistent) peer descriptor so weapons,
 		// lives, score and gems carry over to the next level - the host already carries over via levelInit.
@@ -6935,30 +7117,38 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor)
 	{
-		// TODO: Only called by RemotePlayerOnServer
-		if DEATH_LIKELY(_isServer) {
+		if DEATH_LIKELY(_isServer && !_isLocalSession) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			if (peerDesc->RemotePeer) {
-				std::uint32_t actorId;
-				{
-					std::unique_lock lock(_lock);
-					auto it = _remotingActors.find(decor.get());
-					if (it != _remotingActors.end()) {
-						actorId = it->second.ActorID;
-					} else {
-						actorId = UINT32_MAX;
-					}
+			std::uint32_t actorId;
+			{
+				std::unique_lock lock(_lock);
+				auto it = _remotingActors.find(decor.get());
+				if (it != _remotingActors.end()) {
+					actorId = it->second.ActorID;
+				} else {
+					actorId = UINT32_MAX;
 				}
-
-				MemoryStream packet(10);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Modifier);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)modifier);
-				packet.WriteVariableUint32(actorId);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
+
+			MemoryStream packet(10);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Modifier);
+			packet.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)modifier);
+			packet.WriteVariableUint32(actorId);
+
+			// Not only to the owning client, which simulates the modifier - the lizard copter is a separate actor that
+			// is destroyed right after it's mounted (see Player::SetModifier()), so every other peer has to attach its
+			// copy to the rider before the destruction arrives, otherwise the copter vanishes for them. It's sent in
+			// the same frame and on the same channel, so it always arrives first.
+			_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
+				if (peer == self) {
+					return true;
+				}
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 		}
 	}
 
@@ -7244,6 +7434,18 @@ namespace Jazz2::Multiplayer
 		return (serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
+	bool MpLevelHandler::IsMinimapAllowed() const
+	{
+		// An explicit setting wins outright, in whatever mode. Left unset, the game mode decides, see
+		// ServerConfiguration::AllowMinimapSet. Only the server asks, a client shows whatever track was synced to it.
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.AllowMinimapSet) {
+			return serverConfig.AllowMinimap;
+		}
+		return (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace ||
+				serverConfig.GameMode == MpGameMode::Cooperation);
+	}
+
 	bool MpLevelHandler::IsLedgeClimbAllowed() const
 	{
 		return _networkManager->GetServerConfiguration().AllowLedgeClimb;
@@ -7506,18 +7708,25 @@ namespace Jazz2::Multiplayer
 		if DEATH_LIKELY(_isServer && !_isLocalSession) {
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			if (peerDesc == nullptr || !peerDesc->RemotePeer) {
+			if (peerDesc == nullptr) {
 				return;
 			}
 
-			// Only the owning client needs this: it drives the local player's own white-mask renderer, star trail,
-			// music and prediction. Other peers already see the white renderer, because the renderer type of every
-			// player is part of the periodic actor update (see OnEndFrame).
+			// The owning client drives its own white-mask renderer, star trail, music and prediction from this. Other
+			// peers already see the white renderer, because the renderer type of every player is part of the periodic
+			// actor update (see OnEndFrame), but the star trail is local debris they have to spawn themselves.
 			MemoryStream packet(10);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::SugarRush);
 			packet.WriteVariableUint32(mpPlayer->_playerIndex);
 			packet.WriteVariableInt32((std::int32_t)timeLeft);
-			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+
+			_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
+				if (peer == self) {
+					return true;
+				}
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 		}
 	}
 
@@ -7655,14 +7864,14 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 				}
 
-				// Synchronize race checkpoints for the minimap (only present in Race/TeamRace, and only if the
-				// server allows the minimap - the ranking uses them server-side regardless)
-				if (_networkManager->GetServerConfiguration().AllowMinimap && !_orderedRaceCheckpoints.empty()) {
+				// Synchronize the track for the minimap (only if the server allows the minimap - in race modes the
+				// ranking uses the checkpoints server-side regardless)
+				if (IsMinimapAllowed() && !_orderedRaceCheckpoints.empty()) {
 					MemoryStream packet(24 + _orderedRaceCheckpoints.size() * 9 + _raceStartMarkers.size() * 8);
-					packet.WriteVariableInt32(_raceBoundsMin.X);
-					packet.WriteVariableInt32(_raceBoundsMin.Y);
-					packet.WriteVariableInt32(_raceBoundsMax.X);
-					packet.WriteVariableInt32(_raceBoundsMax.Y);
+					packet.WriteVariableInt32(_minimapBoundsMin.X);
+					packet.WriteVariableInt32(_minimapBoundsMin.Y);
+					packet.WriteVariableInt32(_minimapBoundsMax.X);
+					packet.WriteVariableInt32(_minimapBoundsMax.Y);
 					packet.WriteVariableUint32((std::uint32_t)_orderedRaceCheckpoints.size());
 					for (const auto& cp : _orderedRaceCheckpoints) {
 						packet.WriteVariableInt32(cp.Tile.X);
@@ -7676,7 +7885,7 @@ namespace Jazz2::Multiplayer
 						packet.WriteVariableInt32(m.Y);
 					}
 
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncRaceCheckpoints, packet);
+					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SyncMinimapTrack, packet);
 				}
 
 				// Synchronize actors
@@ -7722,6 +7931,16 @@ namespace Jazz2::Multiplayer
 						packet3.WriteVariableInt32((std::int32_t)mpOtherPlayer->_activeShieldTime);
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
 					}
+
+					// The same for a sugar rush in progress - the white renderer comes with the actor updates, but the
+					// star trail is only started by this
+					if (mpOtherPlayer->_sugarRushLeft > 0.0f) {
+						MemoryStream packet4(10);
+						packet4.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::SugarRush);
+						packet4.WriteVariableUint32(mpOtherPlayer->_playerIndex);
+						packet4.WriteVariableInt32((std::int32_t)mpOtherPlayer->_sugarRushLeft);
+						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
+					}
 				}
 
 				// TODO: Does this need to be locked?
@@ -7751,14 +7970,11 @@ namespace Jazz2::Multiplayer
 				}
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerReady) {
 				auto& serverConfig = _networkManager->GetServerConfiguration();
-				bool canSpawn = (_enableSpawning && _activeBoss == nullptr);
-				
-				// Check if joining mid-round is allowed
-				if (_levelState == LevelState::Running && !serverConfig.AllowJoinDuringRound) {
-					canSpawn = false;
-				}
+				bool canSpawn = CanSpawnPlayers();
+
 				// A reconnecting player who left while spectating resumes as a spectator (the descriptor keeps
-				// the mode, see the reclaim in GameEventHandler), through the same spectator spawn below
+				// the mode, see the reclaim in GameEventHandler), through the same spectator spawn below. So does a
+				// player who chose to spectate in the previous level; a mode forced there is cleared in Initialize().
 				const bool resumeAsSpectator = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
 				if (resumeAsSpectator) {
 					canSpawn = false;
@@ -7940,10 +8156,10 @@ namespace Jazz2::Multiplayer
 						Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
 						playerParams
 					));
+					// The health is left at the spectator's zero (see Player::OnActivatedAsync()), the same as a spectator
+					// made by SetPlayerSpectateMode(). With any health it counted as a living player - enemies aimed at it,
+					// and a co-op boss fight never rolled back once all the players had died, somebody was still "alive".
 					player->_controllableExternal = true;
-					player->_health = (serverConfig.InitialPlayerHealth > 0
-						? serverConfig.InitialPlayerHealth
-						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 					// Set spectate mode - forced by the round, unless the player asked for it before (a reconnecting
 					// spectator), whose request is kept so they can leave it the same way
@@ -9059,6 +9275,9 @@ namespace Jazz2::Multiplayer
 			peerDesc->Deaths = 0;
 			peerDesc->Kills = 0;
 			peerDesc->Laps = 0;
+			// The time of the last completed lap, which a finisher of the previous round still holds - often from an
+			// earlier level, whose time was far ahead of this one's
+			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->TreasureCollected = 0;
 			peerDesc->DeathElapsedFrames = FLT_MAX;
 			peerDesc->RaceFinishOrder = 0;
@@ -9079,9 +9298,12 @@ namespace Jazz2::Multiplayer
 				peerDesc->Player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 				peerDesc->Player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 				peerDesc->Player->_currentWeapon = WeaponType::Blaster;
-				peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
-					? serverConfig.InitialPlayerHealth
-					: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+				// A spectator keeps its zero health, with any it would count as a living player
+				if (peerDesc->Player->_playerType != PlayerType::Spectate) {
+					peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
+						? serverConfig.InitialPlayerHealth
+						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+				}
 
 				if (peerDesc->RemotePeer) {
 					// TODO: Send it also to peers without assigned player
@@ -9147,22 +9369,29 @@ namespace Jazz2::Multiplayer
 	}
 
 
-	void MpLevelHandler::BuildRaceCheckpoints()
+	void MpLevelHandler::BuildTrackCheckpoints()
 	{
-		// (Re)builds the race checkpoint geometry from the current level. Called on the server at level load (if in a
-		// race mode) and whenever the game mode is switched to a race mode at runtime. Safe to call repeatedly.
+		// (Re)builds the track geometry from the current level - the minimap in any mode, and in race modes also the
+		// race checkpoints of the position ranking. Called on the server at level load and whenever the game mode is
+		// switched at runtime, if the mode needs it (see SetGameMode()). Safe to call repeatedly.
 		_raceCheckpoints.clear();
 		_orderedRaceCheckpoints.clear();
 		_raceStartMarkers.clear();
 		_raceCheckpointsOrdered = false;
-		_raceBoundsMin = Vector2i(0, 0);
-		_raceBoundsMax = Vector2i(0, 0);
+		_minimapBoundsMin = Vector2i(0, 0);
+		_minimapBoundsMax = Vector2i(0, 0);
 
-		_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+		// Outside race modes a "Set Lap" warp is not the start/finish line of anything, so it's not marked
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		bool isRace = (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace);
+
+		_eventMap->ForEachEvent([this, isRace](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
 			if (e.Event == EventType::WarpOrigin) {
 				if (e.EventParams[2] != 0) {
 					_raceCheckpoints.emplace_back(Vector2i(x, y));
-					_raceStartMarkers.emplace_back(Vector2i(x, y));
+					if (isRace) {
+						_raceStartMarkers.emplace_back(Vector2i(x, y));
+					}
 				}
 			} else if (e.Event == EventType::AreaEndOfLevel) {
 				_raceCheckpoints.emplace_back(Vector2i(x, y));
@@ -9177,14 +9406,14 @@ namespace Jazz2::Multiplayer
 
 		// The ordered checkpoints are always built: they drive both the minimap AND the race position ranking
 		// (how far each player is along the track). Whether the minimap is actually shown/synced is controlled
-		// separately by ServerConfiguration::AllowMinimap at the display/sync sites.
+		// separately by IsMinimapAllowed() at the display/sync sites.
 		if (!_orderedRaceCheckpoints.empty()) {
 			// Merge waypoints that share the same (Order, Group) to their unweighted center (JJ2+ rule),
 			// then order the polyline by (Group, Order) so the minimap can connect subsequent numbers.
 			ConsolidateOrderedRaceCheckpoints();
 		} else {
 			// Original levels have no waypoints placed; trace the walkable track and place them automatically
-			GenerateRaceCheckpointsFromGeometry();
+			GenerateTrackCheckpointsFromGeometry();
 		}
 	}
 
@@ -9286,17 +9515,21 @@ namespace Jazz2::Multiplayer
 		for (const auto& m : _raceStartMarkers) {
 			includeBounds(m);
 		}
-		_raceBoundsMin = boundsMin;
-		_raceBoundsMax = boundsMax;
+		_minimapBoundsMin = boundsMin;
+		_minimapBoundsMax = boundsMax;
 
-		LOGI("Race minimap: {} authored waypoints, bounds [{}, {}]-[{}, {}]",
+		LOGI("Minimap track: {} authored waypoints, bounds [{}, {}]-[{}, {}]",
 			(std::int32_t)_orderedRaceCheckpoints.size(), boundsMin.X, boundsMin.Y, boundsMax.X, boundsMax.Y);
 	}
 
-	void MpLevelHandler::GenerateRaceCheckpointsFromGeometry()
+	void MpLevelHandler::GenerateTrackCheckpointsFromGeometry()
 	{
-		GenerateRaceRouteFromGeometry(_tileMap.get(), _eventMap.get(), _multiplayerSpawnPoints, _raceStartMarkers,
-			_orderedRaceCheckpoints, _raceBoundsMin, _raceBoundsMax, _raceCheckpointsOrdered);
+		// A race goes around the track, every other mode shows the way from the start to the level exit
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		bool isRace = (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace);
+		GenerateRaceRouteFromGeometry(_tileMap.get(), _eventMap.get(), isRace ? TrackRouteType::Lap : TrackRouteType::LevelExit,
+			GetWaterLevel(), _multiplayerSpawnPoints, _raceStartMarkers, _orderedRaceCheckpoints, _minimapBoundsMin, _minimapBoundsMax,
+			_raceCheckpointsOrdered);
 	}
 
 	void MpLevelHandler::WarpAllPlayersToStart()
@@ -10389,23 +10622,7 @@ namespace Jazz2::Multiplayer
 		auto& playlistEntry = serverConfig.Playlist[serverConfig.PlaylistIndex];
 
 		// Override properties
-		serverConfig.ReforgedGameplay = playlistEntry.ReforgedGameplay;
-		serverConfig.AllowLedgeClimb = playlistEntry.AllowLedgeClimb;
-		serverConfig.TeamCount = playlistEntry.TeamCount;
-		serverConfig.AutoBalanceTeams = playlistEntry.AutoBalanceTeams;
-		serverConfig.AllowTeamSelection = playlistEntry.AllowTeamSelection;
-		serverConfig.FriendlyFire = playlistEntry.FriendlyFire;
-		serverConfig.Elimination = playlistEntry.Elimination;
-		serverConfig.InitialPlayerHealth = playlistEntry.InitialPlayerHealth;
-		serverConfig.MaxGameTimeSecs = playlistEntry.MaxGameTimeSecs;
-		serverConfig.PreGameSecs = playlistEntry.PreGameSecs;
-		serverConfig.TotalKills = playlistEntry.TotalKills;
-		serverConfig.TotalLaps = playlistEntry.TotalLaps;
-		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
-		serverConfig.PlayerStacking = playlistEntry.PlayerStacking;
-		serverConfig.PlayerStackingSet = playlistEntry.PlayerStackingSet;
-		serverConfig.AllowMinimap = playlistEntry.AllowMinimap;
-		serverConfig.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
+		NetworkManager::ApplyPlaylistEntry(serverConfig, playlistEntry);
 
 		_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
@@ -10525,6 +10742,10 @@ namespace Jazz2::Multiplayer
 			if (changingCharacter) {
 				for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 					if (!peerDesc->RemotePeer && peerDesc->Player) {
+						// A racer who already finished can't rejoin the race, the same as a remote player
+						if (!CanLeaveSpectateMode(playerPeer, *peerDesc)) {
+							break;
+						}
 						peerDesc->PreferredPlayerType = playerType;
 						if (team != NoPreferredTeam) {
 							ChangePlayerTeam(peerDesc->Player, team, false);

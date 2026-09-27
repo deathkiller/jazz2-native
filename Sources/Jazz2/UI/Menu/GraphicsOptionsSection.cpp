@@ -170,10 +170,9 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
-		// Blur effects are not supported by the direct rendering tier, and are forced off on PS Vita (see
-		// PreferencesCache): the chain is five more off-screen passes over the whole view, and every one of
-		// them is a scene of its own that the backend has to wait out before the next can sample it
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Blur effects are not supported by the direct rendering tier. Their chain of off-screen passes is shorter
+		// at a lower lighting resolution (see PlayerViewport::Initialize()), which is what the PS Vita defaults to.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
 			[]() -> StringView { return (PreferencesCache::BlurEffects ? _("Enabled") : _("Disabled")); },

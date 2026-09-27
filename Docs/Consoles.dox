@@ -756,7 +756,9 @@ EEPROM the preferences are saved to.
     giving each tile layer a **cached mesh** of its visible window @m_span{m-text m-dim} (rebuilt
     only when that window moves by a whole tile, which for a slow parallax layer is rare, with
     animated tiles kept out of it and re-resolved every frame) @m_endspan and a compact two-vertex
-    form for those cached quads; both are N64-only and sit behind the ordinary tile-mesh path.
+    form for tile quads, cached and streamed alike; both are N64-only and sit behind the ordinary
+    tile-mesh path. The debris shares that mesh shader but keeps the indexed four-corner form, because a
+    spinning particle's quad is not a rectangle and cannot be rebuilt from two of its corners.
 -   **Sprites got the same treatment.** Nearly every sprite of a frame is drawn by one generated
     effect --- a single modulate pass carrying the instance colour, shared by the sprite defaults,
     their batched forms and both palette remaps --- and the general dispatch built a 600-byte effect
@@ -1762,7 +1764,7 @@ anything else can fail, so the console always has a way out even if initializati
     measured as a 200-300 ms ping where every other platform sees 20. It sleeps between polls and in
     every wait, so the game loses nothing to it. The console's own WLAN power saving is the other half of
     the latency and is a system setting, not something the game can turn off.
--   **The race minimap's track is rasterized once here, not drawn as a mesh.** The HUD draws it as a
+-   **The minimap's track is rasterized once here, not drawn as a mesh.** The HUD draws it as a
     textured triangle strip through a mesh-sprite program that the fixed-function tier does not have, so
     only the markers appeared. Drawing the up to a thousand segments as individual sprites instead cost
     this console two thirds of its frame rate, so on that tier
@@ -2676,6 +2678,15 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     compact (272-row) and full (400-row) layouts by view height @m_span{m-text m-dim}
     (`Jazz2::UI::Menu::MenuLayout`) @m_endspan, so the sizes in between look right, and a change lays
     every open section out again in place rather than rebuilding the menu.
+-   **Blur effects run over a shorter chain.** The blur that darkness mixes in is five off-screen passes at
+    full lighting resolution --- a downsample to half size, two blur passes there and two more at a
+    quarter --- and on this backend every pass is a scene the CPU waits out before the next one may
+    sample it @m_span{m-text m-dim} (see @cpp nCine::RHI::GXM::GxmDevice::FinishScene() @ce) @m_endspan,
+    so the number of passes costs more than their pixels. Below 100% the first blur pass reads the view
+    directly instead of a downsampled copy, which leaves four passes at the 50% this console defaults to;
+    at 25% and below the quarter-size level is dropped as well and the half-size one stands in for it,
+    which leaves two @m_span{m-text m-dim} (@ref Jazz2::Rendering::PlayerViewport::Initialize(), on every
+    platform) @m_endspan.
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.

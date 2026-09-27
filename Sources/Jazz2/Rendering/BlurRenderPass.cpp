@@ -54,7 +54,10 @@ namespace Jazz2::Rendering
 	void BlurRenderPass::Register()
 	{
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
-		Viewport::GetChain().push_back(_view.get());
+		// A disposed pass has no view, and a null entry would end the chain there (see Viewport::Draw())
+		if (_view != nullptr) {
+			Viewport::GetChain().push_back(_view.get());
+		}
 #endif
 	}
 

@@ -32,7 +32,6 @@ namespace Jazz2::Multiplayer::GameModes
 		hud.DrawHudText(GameModeFontType::Medium, { stringBuffer, length }, view.X + 14.0f + 80.0f, view.Y + 10.0f, 1.4f,
 			UI::Alignment::TopLeft, UI::Font::DefaultColor, 0.7f, 1.0f);
 
-		hud.DrawMinimap(view, player);
 		hud.DrawPositionInRound(view, player);
 	}
 
