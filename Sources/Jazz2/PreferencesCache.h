@@ -112,7 +112,8 @@ namespace Jazz2
 		PlayStation,				/**< PlayStation */
 		PlayStationLegacy,			/**< PlayStation (Legacy) */
 		Steam,						/**< Steam */
-		Switch						/**< Switch */
+		Switch,						/**< Switch */
+		Nintendo64					/**< Nintendo 64 */
 	};
 
 	/**

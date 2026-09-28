@@ -289,7 +289,7 @@ namespace Jazz2::UI
 #endif
 
 		AnimState GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset);
-		void DrawWeaponWheel(const Rectf& view, Actors::Player* player);
+		void DrawWeaponWheel(const Rectf& view, Actors::Player* player, Vector2f centerOffset);
 		void UpdateWeaponWheel(float timeMult);
 		bool PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount);
 		static std::int32_t GetWeaponCount(Actors::Player* player);

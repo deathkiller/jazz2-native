@@ -18,9 +18,15 @@ namespace Jazz2::UI::Menu
 	// Row height matching the original section (ItemHeight = 40)
 	static constexpr float RowHeight = 40 * 5 / 8;	// 25
 
+	// Scale of an action name, from its width at the default scale of 0.8 - long names are drawn smaller
+	static float GetNameScale(float width)
+	{
+		return (width > 120.0f ? (width > 150.0f ? 0.68f : 0.72f) : 0.8f);
+	}
+
 	RemapControlsSection::RemapControlsSection(std::int32_t playerIndex)
-		: _selectedColumn(0), _playerIndex(playerIndex), _timeout(0.0f), _hintAnimation(0.0f), _animation(0.0f),
-			_isDirty(false), _waitForInput(false), _waitForInputPrev(false), _list(nullptr)
+		: _layout{}, _widestName(0.0f), _selectedColumn(0), _playerIndex(playerIndex), _timeout(0.0f), _hintAnimation(0.0f),
+			_animation(0.0f), _isDirty(false), _waitForInput(false), _waitForInputPrev(false), _list(nullptr)
 	{
 	}
 
@@ -73,6 +79,9 @@ namespace Jazz2::UI::Menu
 		for (const auto& def : defs) {
 			std::int32_t row = (std::int32_t)_actions.size();
 			_actions.push_back(def.Type);
+
+			float nameWidth = root->MeasureString(def.Name, 0.8f).X;
+			_widestName = std::max(_widestName, nameWidth * GetNameScale(nameWidth) / 0.8f);
 
 			PlayerAction type = def.Type;
 			String name = def.Name;
@@ -267,13 +276,20 @@ namespace Jazz2::UI::Menu
 			hintY -= 9.0f;
 		}
 
+		// A long translation of a hint doesn't fit on a narrow view (the Nintendo 64 has 320 pixels), so it's kept inside
+		// the content bounds, and drawn smaller if it can't fit at all
+		constexpr float HintMargin = 6.0f;
+		float hintLeft = contentBounds.X + HintMargin;
+		float hintRight = contentBounds.X + contentBounds.W - HintMargin;
+
 		if (_waitForInput) {
 			Colorf textColor = Font::DefaultColor;
 			textColor.SetAlpha(_hintAnimation);
 			// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset,
-				centerX, hintY - 18.0f * Easing::OutCubic(_hintAnimation), IMenuContainer::FontLayer,
-				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+			StringView text = _("Press any key or button to assign");
+			float textScale = std::min(0.7f, 0.7f * (hintRight - hintLeft) / _root->MeasureString(text, 0.7f, 0.9f).X);
+			_root->DrawStringShadow(text, charOffset, centerX, hintY - 18.0f * Easing::OutCubic(_hintAnimation), IMenuContainer::FontLayer,
+				Alignment::Center, textColor, textScale, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
 			std::int32_t row = GetSelectedRow();
 			if (row >= 0) {
@@ -281,18 +297,35 @@ namespace Jazz2::UI::Menu
 				if ((_selectedColumn < mapping.Targets.size() || _selectedColumn == MaxTargetCount - 1) && !(_actions[row] == PlayerAction::Menu && _selectedColumn == 0)) {
 					char stringBuffer[64];
 					std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
-
-					_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, hintY - 18.0f, IMenuContainer::FontLayer,
-						Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
-
-					_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY - 18.0f + 2.0f,
-						IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
-					_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY - 18.0f,
-						IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
-
 					// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-					_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, hintY - 18.0f, IMenuContainer::FontLayer,
-						Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+					StringView removeText = _("to remove assignment");
+
+					// The button's label sits between the two parts, 15 and 8 pixels away from them
+					float textScale = 0.7f;
+					float leftWidth = _root->MeasureString({ stringBuffer, length }, textScale, 0.9f).X;
+					float rightWidth = _root->MeasureString(removeText, textScale, 0.9f).X;
+					float fit = (hintRight - hintLeft) / (leftWidth + 23.0f + rightWidth);
+					if (fit < 1.0f) {
+						textScale *= fit;
+						leftWidth *= fit;
+						rightWidth *= fit;
+					}
+					float labelX = std::min(std::max(centerX, hintLeft + 15.0f + leftWidth), hintRight - 8.0f - rightWidth);
+
+					_root->DrawStringShadow({ stringBuffer, length }, charOffset, labelX - 15.0f, hintY - 18.0f, IMenuContainer::FontLayer,
+						Alignment::Right, Font::DefaultColor, textScale, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+					// A pad without the button has no label for it (AnimState::Default would draw the menu logo)
+					AnimState buttonName = GetResourceForButtonName(ControlScheme::ChangeWeaponMenuButton);
+					if (buttonName != AnimState::Default) {
+						_root->DrawElement(buttonName, 0, labelX - 2.0f, hintY - 18.0f + 2.0f,
+							IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+						_root->DrawElement(buttonName, 0, labelX - 2.0f, hintY - 18.0f,
+							IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+					}
+
+					_root->DrawStringShadow(removeText, charOffset, labelX + 8.0f, hintY - 18.0f, IMenuContainer::FontLayer,
+						Alignment::Left, Font::DefaultColor, textScale, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
 			}
 		}
@@ -379,6 +412,44 @@ namespace Jazz2::UI::Menu
 		_selectedColumn = std::min({ _selectedColumn, (std::int32_t)mapping.Targets.size(), MaxTargetCount - 1 });
 	}
 
+	const RemapControlsSection::RowLayout& RemapControlsSection::GetRowLayout(float viewWidth)
+	{
+		if (_layout.ViewWidth == viewWidth) {
+			return _layout;
+		}
+
+		constexpr float Margin = 10.0f;
+		constexpr float Gap = 6.0f;
+		constexpr float MinColumnWidth = 28.0f;
+
+		// Spread over the view in proportion, as long as the longest name ends before the first column does
+		float centerX = viewWidth * 0.5f;
+		float nameX = centerX * 0.3f;
+		float columnWidth = centerX * 0.2f;
+		float firstColumnX = centerX * 0.81f;
+
+		// A narrow view doesn't have the room (the Nintendo 64 has 320 pixels), so the names move towards the edge
+		// first, and if that's not enough, the columns get narrower and move right, but never past the other edge
+		float columnsStart = firstColumnX - columnWidth * 0.5f;
+		if (nameX + _widestName + Gap > columnsStart) {
+			nameX = std::max(Margin, columnsStart - Gap - _widestName);
+			float namesEnd = nameX + _widestName + Gap;
+			if (namesEnd > columnsStart) {
+				float columnsEnd = viewWidth - Margin;
+				columnWidth = std::min(columnWidth, std::max((columnsEnd - namesEnd) / MaxTargetCount, MinColumnWidth));
+				firstColumnX = columnsEnd - (MaxTargetCount - 0.5f) * columnWidth;
+			}
+		}
+
+		_layout.ViewWidth = viewWidth;
+		_layout.NameX = nameX;
+		// Whatever still doesn't fit in front of the first column is drawn smaller
+		_layout.NameWidth = firstColumnX - columnWidth * 0.5f - Gap - nameX;
+		_layout.FirstColumnX = firstColumnX;
+		_layout.ColumnWidth = columnWidth;
+		return _layout;
+	}
+
 	void RemapControlsSection::StartCapture()
 	{
 		_animation = 0.0f;
@@ -394,6 +465,7 @@ namespace Jazz2::UI::Menu
 		float centerX = canvas->ViewSize.X * 0.5f;
 		float itemY = bounds.Y + bounds.H * 0.5f;
 		char stringBuffer[16];
+		const RowLayout& layout = GetRowLayout((float)canvas->ViewSize.X);
 
 		const auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)type];
 
@@ -403,60 +475,74 @@ namespace Jazz2::UI::Menu
 		}
 
 		Vector2f displayNameSize = root->MeasureString(name, 0.8f);
-		root->DrawStringShadow(name, charOffset, centerX * 0.3f, itemY, IMenuContainer::MainLayer - 100, Alignment::Left,
+		float nameScale = GetNameScale(displayNameSize.X);
+		if (displayNameSize.X * nameScale / 0.8f > layout.NameWidth) {
+			nameScale = std::max(0.8f * layout.NameWidth / displayNameSize.X, 0.5f);
+		}
+		root->DrawStringShadow(name, charOffset, layout.NameX, itemY, IMenuContainer::MainLayer - 100, Alignment::Left,
 			isSelected && _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : (isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor),
-			displayNameSize.X > 120.0f ? (displayNameSize.X > 150.0f ? 0.68f : 0.72f) : 0.8f);
+			nameScale);
 
 		std::int32_t targetCount = (std::int32_t)mapping.Targets.size();
 		for (std::int32_t j = 0; j < targetCount; j++) {
 			StringView value;
+			float columnX = layout.FirstColumnX + j * layout.ColumnWidth;
 
 			std::uint32_t data = mapping.Targets[j].Data;
 			if (data & ControlScheme::GamepadMask) {
 				std::uint32_t joyIdx = (data & ControlScheme::GamepadIndexMask) >> 16;
 
 				if (isSelected && _selectedColumn == j) {
-					value = "<    >";
+					// Narrower on narrow columns, where the brackets would run into the neighbouring bindings
+					value = (layout.ColumnWidth < 36.0f ? "<  >"_s : "<    >"_s);
 				}
 
 				if (data & ControlScheme::GamepadAnalogMask) {
+					AxisName axis = (AxisName)(data & ControlScheme::ButtonMask);
+					bool isNegative = (data & ControlScheme::GamepadNegativeMask) != 0;
 					StringView axisName;
-					AnimState axisAnim = GetResourceForAxisName((AxisName)(data & ControlScheme::ButtonMask), axisName);
+					// A label of the direction itself (the C buttons of the Nintendo 64) needs no sign next to it
+					AnimState axisAnim = GetResourceForAxisDirection(axis, isNegative);
+					bool showDirection = (axisAnim == AnimState::Default);
+					if (showDirection) {
+						axisAnim = GetResourceForAxisName(axis, axisName);
+					}
 					if (axisAnim != AnimState::Default) {
-						root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, itemY + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
-						root->DrawElement(axisAnim, 0, centerX * (0.81f + j * 0.2f) + 2.0f, itemY, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
+						root->DrawElement(axisAnim, 0, columnX + 2.0f, itemY + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
+						root->DrawElement(axisAnim, 0, columnX + 2.0f, itemY, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 						for (std::int32_t i = 0; i < joyIdx + 1; i++) {
 							stringBuffer[i] = '1';
 						}
 						stringBuffer[joyIdx + 1] = '\0';
 
-						root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) + 4.0f, itemY - 5.0f, IMenuContainer::FontLayer,
+						root->DrawStringShadow(stringBuffer, charOffset, columnX + 4.0f, itemY - 5.0f, IMenuContainer::FontLayer,
 							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
 
-						bool isNegative = (data & ControlScheme::GamepadNegativeMask) != 0;
-						stringBuffer[0] = (isNegative ? '-' : '+');
-						stringBuffer[1] = ' ';
-						if (!axisName.empty()) {
-							std::memcpy(stringBuffer + 2, axisName.data(), axisName.size());
-						}
-						stringBuffer[axisName.size() + 2] = '\0';
+						if (showDirection) {
+							stringBuffer[0] = (isNegative ? '-' : '+');
+							stringBuffer[1] = ' ';
+							if (!axisName.empty()) {
+								std::memcpy(stringBuffer + 2, axisName.data(), axisName.size());
+							}
+							stringBuffer[axisName.size() + 2] = '\0';
 
-						root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) - 10.0f, itemY + 6.0f, IMenuContainer::FontLayer,
-							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.9f);
+							root->DrawStringShadow(stringBuffer, charOffset, columnX - 10.0f, itemY + 6.0f, IMenuContainer::FontLayer,
+								Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.9f);
+						}
 					}
 				} else {
 					AnimState buttonName = GetResourceForButtonName((ButtonName)(data & ControlScheme::ButtonMask));
 					if (buttonName != AnimState::Default) {
-						root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, itemY + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
-						root->DrawElement(buttonName, 0, centerX * (0.81f + j * 0.2f) + 2.0f, itemY, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
+						root->DrawElement(buttonName, 0, columnX + 2.0f, itemY + 2.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f));
+						root->DrawElement(buttonName, 0, columnX + 2.0f, itemY, IMenuContainer::MainLayer, Alignment::Center, Colorf::White);
 
 						for (std::int32_t i = 0; i < joyIdx + 1; i++) {
 							stringBuffer[i] = '1';
 						}
 						stringBuffer[joyIdx + 1] = '\0';
 
-						root->DrawStringShadow(stringBuffer, charOffset, centerX * (0.81f + j * 0.2f) + 4.0f, itemY - 5.0f, IMenuContainer::FontLayer,
+						root->DrawStringShadow(stringBuffer, charOffset, columnX + 4.0f, itemY - 5.0f, IMenuContainer::FontLayer,
 							Alignment::Left, Font::DefaultColor, 0.75f, 0.0f, 0.0f, 0.0f, 0.4f, 0.6f);
 					}
 				}
@@ -476,10 +562,10 @@ namespace Jazz2::UI::Menu
 						color = (type == PlayerAction::Menu && _selectedColumn == 0 ? Font::TransparentRandomColor : Font::RandomColor);
 					}
 
-					root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), itemY, IMenuContainer::MainLayer - 10,
+					root->DrawStringShadow(value, charOffset, columnX, itemY, IMenuContainer::MainLayer - 10,
 						Alignment::Center, color, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
-					root->DrawStringShadow(value, charOffset, centerX * (0.81f + j * 0.2f), itemY, IMenuContainer::MainLayer - 20,
+					root->DrawStringShadow(value, charOffset, columnX, itemY, IMenuContainer::MainLayer - 20,
 						Alignment::Center, Font::DefaultColor, 0.8f);
 				}
 			}
@@ -487,10 +573,10 @@ namespace Jazz2::UI::Menu
 
 		if (isSelected && _selectedColumn == targetCount) {
 			float size = 0.5f + Easing::OutElastic(_animation) * 0.5f;
-			root->DrawStringShadow("+"_s, charOffset, centerX * (0.81f + targetCount * 0.2f) + 2.0f, itemY, IMenuContainer::MainLayer - 10,
+			root->DrawStringShadow("+"_s, charOffset, (layout.FirstColumnX + targetCount * layout.ColumnWidth) + 2.0f, itemY, IMenuContainer::MainLayer - 10,
 				Alignment::Center, _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Colorf(0.44f, 0.62f, 0.34f, 0.5f), size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {
-			root->DrawStringShadow("+"_s, charOffset, centerX * (0.81f + targetCount * 0.2f) + 2.0f, itemY, IMenuContainer::MainLayer - 20,
+			root->DrawStringShadow("+"_s, charOffset, (layout.FirstColumnX + targetCount * layout.ColumnWidth) + 2.0f, itemY, IMenuContainer::MainLayer - 20,
 				Alignment::Center, Colorf(0.42f, 0.42f, 0.42f, 0.42f), 0.8f);
 		}
 	}
@@ -503,9 +589,9 @@ namespace Jazz2::UI::Menu
 		auto& mapping = ControlScheme::GetMappings(_playerIndex)[(std::int32_t)_actions[newIndex]];
 
 		Vector2i viewSize = _root->GetViewSize();
-		float centerX = viewSize.X / 2;
-		float firstColumnX = centerX * (0.81f - 0.1f);
-		float columnWidth = centerX * 0.2f;
+		const RowLayout& layout = GetRowLayout((float)viewSize.X);
+		float firstColumnX = layout.FirstColumnX - layout.ColumnWidth * 0.5f;
+		float columnWidth = layout.ColumnWidth;
 
 		float x = touchPos.X - firstColumnX;
 		if (x >= 0.0f && x < columnWidth * MaxTargetCount) {

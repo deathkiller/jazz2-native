@@ -490,8 +490,8 @@ namespace nCine::Backends
 			_pads[i].IsGameController = isPad;
 			AmigaJoystickState& pad = _pads[i].State;
 
-			// The CD32 pad's red button is the primary action (A), blue the secondary (X), matching how
-			// the N64 backend places the pad's B on the XInput X - A stays jump/confirm, X shoot
+			// The CD32 pad's red button is the primary action (A), blue the secondary (X) - A stays jump/confirm,
+			// X shoot
 			pad.simulateButtonEvent(ButtonA, (state & JPF_BUTTON_RED) != 0);
 			pad.simulateButtonEvent(ButtonX, (state & JPF_BUTTON_BLUE) != 0);
 			if (isPad) {

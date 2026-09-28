@@ -274,9 +274,19 @@ namespace Jazz2::AssetPacker
 			candidates.push_back(fs::CombinePath(hint, "bin"_s));
 			candidates.push_back(hint);
 		}
+#if defined(DEATH_TARGET_WINDOWS)
+		char* inst; std::size_t instLength;
+		if (_dupenv_s(&inst, &instLength, "N64_INST") == 0 && inst != nullptr) {
+			if (inst[0] != '\0') {
+				candidates.push_back(fs::CombinePath(StringView(inst), "bin"_s));
+			}
+			std::free(inst);
+		}
+#else
 		if (const char* inst = std::getenv("N64_INST")) {
 			candidates.push_back(fs::CombinePath(StringView(inst), "bin"_s));
 		}
+#endif
 
 		for (const String& dir : candidates) {
 			String audioConv = FindExecutable(dir, "audioconv64"_s);

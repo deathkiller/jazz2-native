@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../PlayerAction.h"
+#include "../../Main.h"
 #include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Input/InputEvents.h"
 #include "../../nCine/Primitives/Vector2.h"
@@ -61,7 +62,12 @@ namespace Jazz2::Input
 	struct ControlSchemeMapping
 	{
 		/** @brief List of mapping targets */
+#if defined(NCINE_HAS_KEYBOARD)
 		SmallVector<MappingTarget, 3> Targets;
+#else
+		// Without a keyboard, none of the default mappings has more than two targets (see ControlScheme::Reset())
+		SmallVector<MappingTarget, 2> Targets;
+#endif
 	};
 
 	/**
@@ -96,12 +102,25 @@ namespace Jazz2::Input
 		/** @{ @name Constants */
 
 		/** @brief Maximum number of supported local players */
+#if defined(WITH_MULTIPLAYER)
 		static constexpr std::int32_t MaxSupportedPlayers = 4;
+#else
+		// Local multiplayer (splitscreen) comes with WITH_MULTIPLAYER, so without it the mappings of the other players
+		// would only take memory and room in the save
+		static constexpr std::int32_t MaxSupportedPlayers = 1;
+#endif
 		/** @brief Maximum number of supported connected gamepads */
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::int32_t MaxConnectedGamepads = 4;
 #else
 		static constexpr std::int32_t MaxConnectedGamepads = 6;
+#endif
+		/** @brief Gamepad button that works as @ref PlayerAction::ChangeWeapon in menus, e.g. to remove an assignment */
+#if defined(DEATH_TARGET_N64)
+		// The Nintendo 64 pad has no Y, and R is what changes weapons on it (see Reset())
+		static constexpr ButtonName ChangeWeaponMenuButton = ButtonName::RightBumper;
+#else
+		static constexpr ButtonName ChangeWeaponMenuButton = ButtonName::Y;
 #endif
 
 		/** @} */

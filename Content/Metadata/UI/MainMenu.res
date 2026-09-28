@@ -472,6 +472,67 @@
 		"TouchClose": {
 			"Path": "UI/touch_close.aura",
 			"States": [ 136 ]
+		},
+
+		"GamepadN64A": {
+			"Path": "UI/gamepad/n64_a.aura",
+			"States": [ 140 ]
+		},
+		"GamepadN64B": {
+			"Path": "UI/gamepad/n64_b.aura",
+			"States": [ 141 ]
+		},
+		"GamepadN64DPadLeft": {
+			"Path": "UI/gamepad/n64_left.aura",
+			"States": [ 142 ]
+		},
+		"GamepadN64DPadRight": {
+			"Path": "UI/gamepad/n64_right.aura",
+			"States": [ 143 ]
+		},
+		"GamepadN64DPadUp": {
+			"Path": "UI/gamepad/n64_up.aura",
+			"States": [ 144 ]
+		},
+		"GamepadN64DPadDown": {
+			"Path": "UI/gamepad/n64_down.aura",
+			"States": [ 145 ]
+		},
+		"GamepadN64Start": {
+			"Path": "UI/gamepad/n64_start.aura",
+			"States": [ 146 ]
+		},
+		"GamepadN64LeftShoulder": {
+			"Path": "UI/gamepad/n64_l.aura",
+			"States": [ 147 ]
+		},
+		"GamepadN64RightShoulder": {
+			"Path": "UI/gamepad/n64_r.aura",
+			"States": [ 148 ]
+		},
+		"GamepadN64ZTrigger": {
+			"Path": "UI/gamepad/n64_z.aura",
+			"States": [ 149 ]
+		},
+		"GamepadN64ControlStick": {
+			"Path": "UI/gamepad/n64_stick.aura",
+			"States": [ 150 ]
+		},
+		"GamepadN64CUp": {
+			"Path": "UI/gamepad/n64_c_up.aura",
+			"States": [ 151 ]
+		},
+		"GamepadN64CDown": {
+			"Path": "UI/gamepad/n64_c_down.aura",
+			"States": [ 152 ]
+		},
+		"GamepadN64CLeft": {
+			"Path": "UI/gamepad/n64_c_left.aura",
+			"States": [ 153 ]
+		},
+		"GamepadN64CRight": {
+			"Path": "UI/gamepad/n64_c_right.aura",
+			"States": [ 154 ]
 		}
 	},
 

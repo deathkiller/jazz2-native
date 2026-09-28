@@ -295,6 +295,9 @@ namespace nCine::Backends
 			N64JoystickState& state = _pads[i].State;
 
 			state.simulateButtonEvent(ButtonA, inputs.btn.a != 0);
+			// B is published as B on both pads, so the menus take it as Back like the B of every other pad; in the
+			// game the Nintendo 64 defaults bind it to Fire instead (see ControlScheme::Reset())
+			state.simulateButtonEvent(ButtonB, inputs.btn.b != 0);
 			state.simulateButtonEvent(ButtonStart, inputs.btn.start != 0);
 			state.simulateButtonEvent(ButtonLShoulder, inputs.btn.l != 0);
 			state.simulateButtonEvent(ButtonRShoulder, inputs.btn.r != 0);
@@ -311,7 +314,6 @@ namespace nCine::Backends
 			state.simulateHatEvent(hat);
 
 			if (style == JOYPAD_STYLE_GCN) {
-				state.simulateButtonEvent(ButtonB, inputs.btn.b != 0);
 				state.simulateButtonEvent(ButtonX, inputs.btn.x != 0);
 				state.simulateButtonEvent(ButtonY, inputs.btn.y != 0);
 				// The GameCube pad has no Back button, so Z stands in for it (like the Ogc backend)
@@ -324,10 +326,7 @@ namespace nCine::Backends
 				state.simulateAxisEvent(4, NormalizeTrigger(inputs.analog_l));
 				state.simulateAxisEvent(5, NormalizeTrigger(inputs.analog_r));
 			} else {
-				// B is the pad's secondary action and sits where X does on an XInput layout, keeping
-				// A as jump/confirm and B as shoot/back the way the built-in mapping expects them
-				state.simulateButtonEvent(ButtonX, inputs.btn.b != 0);
-				state.simulateButtonEvent(ButtonB, false);
+				state.simulateButtonEvent(ButtonX, false);
 				state.simulateButtonEvent(ButtonY, false);
 				state.simulateButtonEvent(ButtonBack, false);
 

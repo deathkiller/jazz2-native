@@ -367,6 +367,7 @@ namespace nCine::RHI::RDP
 			std::uint32_t Version = 0;
 			std::int32_t S0 = 0, T0 = 0, S1 = 0, T1 = 0;
 			std::uint8_t MaskS = 0, MaskT = 0;
+			std::int32_t Stride = 0;		// Row stride it was loaded with - the warp loads every other row through a doubled one
 			std::int32_t Bytes = 0;			// TMEM footprint (whether the upper half was touched)
 			bool Valid = false;
 		};
@@ -597,6 +598,7 @@ namespace nCine::RHI::RDP
 			}
 			if (tmemWindow.Valid && tmemWindow.Buffer == state.Texture->buffer && tmemWindow.Version == state.TextureVersion &&
 				tmemWindow.S0 == s0 && tmemWindow.T0 == t0 && tmemWindow.S1 == s1 && tmemWindow.T1 == t1 &&
+				tmemWindow.Stride == state.Texture->stride &&
 				tmemWindow.MaskS == state.RepeatMaskS && tmemWindow.MaskT == state.RepeatMaskT) {
 				if (TraceDrawStatistics) { stats.WindowHits++; traceUploadTicks += std::uint32_t(get_ticks()) - uploadStart; }
 				return;
@@ -679,6 +681,7 @@ namespace nCine::RHI::RDP
 			tmemWindow.T0 = t0;
 			tmemWindow.S1 = s1;
 			tmemWindow.T1 = t1;
+			tmemWindow.Stride = state.Texture->stride;
 			tmemWindow.MaskS = state.RepeatMaskS;
 			tmemWindow.MaskT = state.RepeatMaskT;
 			tmemWindow.Bytes = bytes;
@@ -1169,15 +1172,238 @@ namespace nCine::RHI::RDP
 
 
 		/**
+			@brief Draws a textured strip that is a screen rectangle sampled row by row as texture rectangles, one per row
+
+			The textured-background warp's bands are exactly that: a rectangle on screen whose texture coordinates
+			form a trapezoid, the vertical coordinate constant along each row and the horizontal span changing from
+			row to row. As a triangle pair each band needs its whole span of rows resident at once, and the busy
+			bands next to the horizon span up to ~27 rows of a 256-wide RGBA16 source against the 8 that TMEM holds
+			- measured, only ~5 of a frame's 34 bands fitted; the rest were clamped (the rows past the budget
+			stretched the last loaded one into the stripes visible above and below the horizon) and ~11 of them even
+			loaded more than TMEM holds, because the fit was judged on the strip's own span while a wrapping window
+			loads whole rows. Cutting the bands up so each fits would take ~80 of them a frame against 34.
+
+			A row of the band is one texture rectangle with its own start and step, which is the exact mapping
+			(a triangle pair only approximates it, bending along the diagonal), and it samples one texel row -
+			two with bilinear taps - so a TMEM window serves every consecutive row whose texels it holds, and a new
+			one is loaded only where the rows run past it. A rectangle is also both the cheapest primitive for this
+			CPU to set up and a small command for the RSP (16 bytes against ~176 for a shaded textured triangle).
+			The per-vertex tint rides PRIM, set per row with the TintMix combiner instead of SHADE, and a band whose
+			tint is complete is the tint colour alone: one flat rectangle, no texels at all.
+
+			Returns false for any other strip, which keeps the triangle path.
+		*/
+		bool SubmitRowBandStrip(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
+			const float* colors, float dx, float dy)
+		{
+			// Two vertical edges (0-1 and 2-3), two horizontal ones (0-2 and 1-3), the vertical texel coordinate and
+			// the colour constant along each row, and a wrapping texture, whose windows are whole rows
+			if (state.Texture == nullptr || state.RepeatMaskS == 0 || state.RepeatMaskT != 0 ||
+				px[0] != px[1] || px[2] != px[3] || py[0] != py[2] || py[1] != py[3] || pv[0] != pv[2] || pv[1] != pv[3]) {
+				return false;
+			}
+			if (colors != nullptr) {
+				if (state.Combiner != CombShadeTintMix || std::memcmp(colors, colors + 8, 4 * sizeof(float)) != 0 ||
+					std::memcmp(colors + 4, colors + 12, 4 * sizeof(float)) != 0) {
+					return false;
+				}
+			}
+			const tex_format_t fmt = surface_get_format(state.Texture);
+			const std::int32_t bpp = TEX_FORMAT_BITDEPTH(fmt);
+			const bool bilinear = (state.Filter == FILTER_BILINEAR);
+			const std::int32_t surfW = state.Texture->width, surfH = state.Texture->height;
+			const std::int32_t maxRows = TmemBudget(fmt) / TmemPitch(fmt, surfW);
+			const std::int32_t rowTexels = (bilinear ? 2 : 1);
+			if ((bpp != 8 && bpp != 16) || maxRows < rowTexels) {
+				return false;
+			}
+
+			const float yA = py[0] + dy, yB = py[1] + dy;
+			float xL = px[0] + dx, xR = px[2] + dx;
+			std::int32_t left = 0, right = 2;	// The vertex pair on each vertical edge (the top one of each)
+			if (xL > xR) {
+				std::swap(xL, xR);
+				std::swap(left, right);
+			}
+			if (xR <= xL || yB == yA) {
+				return true;	// Covers no pixel, as its triangles would not either. A sliver still gets the row whose
+								// centre it holds below - the rest of the band leaves that row to it.
+			}
+			// Everything along the band is linear in the row, so the loop steps it from the first row's centre in
+			// fixed point, 16 fraction bits below the command's own encodings (10.5 texel coordinates, 5.10 steps,
+			// 8-bit colour channels) - float-to-int conversions are what a row would otherwise cost on this CPU.
+			// Everything has to stay inside those encodings, which a strip of the warp always does.
+			const float invWidth = 1.0f / (xR - xL);
+			const float dsdxA = (pu[right] - pu[left]) * invWidth, dsdxB = (pu[right + 1] - pu[left + 1]) * invWidth;
+			for (std::int32_t i = 0; i < 4; i++) {
+				if (std::abs(pu[i]) > 1000.0f || std::abs(pv[i]) > 1000.0f) {
+					return false;
+				}
+			}
+			if (std::abs(dsdxA) > 15.0f || std::abs(dsdxB) > 15.0f) {
+				return false;
+			}
+
+			if (TraceDrawStatistics) { stats.Strips++; }
+			// A row belongs to the band that holds its centre, so neighbouring bands neither overlap nor leave a gap
+			const auto ceilToInt = [](float v) { std::int32_t i = std::int32_t(v); return (float(i) < v ? i + 1 : i); };
+			const std::int32_t rowFirst = std::max<std::int32_t>(ceilToInt(std::min(yA, yB) - 0.5f), 0);
+			const std::int32_t rowEnd = std::min<std::int32_t>(ceilToInt(std::max(yA, yB) - 0.5f), 1023);
+			const std::int32_t qxLeft = RoundToInt(xL * 4.0f);
+			const std::int32_t qx0 = std::max<std::int32_t>(qxLeft, 0), qx1 = std::min<std::int32_t>(RoundToInt(xR * 4.0f), 1024 * 4 - 1);
+			if (rowFirst >= rowEnd || qx0 >= qx1) {
+				return true;
+			}
+
+			const float invHeight = 1.0f / (yB - yA);
+			const float f0 = (float(rowFirst) + 0.5f - yA) * invHeight;
+			const auto toFixed = [](float v) { return std::int32_t(v >= 0.0f ? v * 65536.0f + 0.5f : v * 65536.0f - 0.5f); };
+			const auto firstAndStep = [&](float a, float b, float scale, std::int32_t& value, std::int32_t& step) {
+				value = toFixed((a + f0 * (b - a)) * scale);
+				step = toFixed((b - a) * invHeight * scale);
+			};
+			// Where a row moves on by two texel rows or more - the bands next to the horizon, squeezed that much and
+			// mostly under its tint - the band samples every other row of the source, loaded through a view of it
+			// with twice the stride and half the height. A window then reaches twice as far down, which takes the
+			// frame's loads back to what the old clamped bands cost, and a tap blends two rows that the pixel spans
+			// anyway instead of two neighbours of which the next row skips past both.
+			surface_t everyOtherRow;
+			const surface_t* source = state.Texture;
+			std::int32_t rowStep = 1;
+			if (std::abs((pv[1] - pv[0]) * invHeight) >= 2.0f && (surfH & 1) == 0) {
+				everyOtherRow = *state.Texture;
+				everyOtherRow.stride *= 2;
+				everyOtherRow.height /= 2;
+				source = &everyOtherRow;
+				rowStep = 2;
+			}
+			const std::int32_t sourceH = surfH / rowStep;
+			std::int32_t tFix, tStep, sFix, sStep, dsdxFix, dsdxStep;
+			firstAndStep(pv[0], pv[1], 32.0f / float(rowStep), tFix, tStep);
+			firstAndStep(pu[left], pu[left + 1], 32.0f, sFix, sStep);
+			firstAndStep(dsdxA, dsdxB, 1024.0f, dsdxFix, dsdxStep);
+			const auto fromFixed = [](std::int32_t v) { return (v + 0x8000) >> 16; };
+
+			DrawState rowState = state;
+			rowState.Texture = source;
+			std::int32_t colorFix[4], colorStep[4];
+			// The row's colour. The tint weight is kept at its full 8 bits although the target has only 5 per channel:
+			// rounded to the target's depth, every pixel of a row crossed a 5-bit step on the same row, and the tint
+			// came out as a staircase of two-row bands - with the full weight the steps fall on different rows per pixel
+			const auto tintColor = [&]() {
+				std::uint32_t packed = 0;
+				for (std::int32_t i = 0; i < 4; i++) {
+					packed = (packed << 8) | std::uint32_t(std::clamp<std::int32_t>(fromFixed(colorFix[i]), 0, 255));
+				}
+				return packed;
+			};
+			if (colors != nullptr) {
+				// A tint that covers the whole band leaves nothing of the texture: the band is its colour
+				if (QuantizeChannel(colors[3]) == 255 && QuantizeChannel(colors[7]) == 255 &&
+					std::memcmp(colors, colors + 4, 3 * sizeof(float)) == 0) {
+					rowState.Texture = nullptr;
+					rowState.Tlut = nullptr;
+					rowState.Combiner = CombFlat;
+					rowState.PrimColor = PackRgba(QuantizeChannel(colors[0]), QuantizeChannel(colors[1]), QuantizeChannel(colors[2]), 255);
+					ApplyDrawState(rowState);
+					__rdpq_fill_rectangle_fx(qx0, rowFirst * 4, qx1, rowEnd * 4);
+					if (TraceDrawStatistics) { stats.Rects++; }
+					return true;
+				}
+				for (std::int32_t i = 0; i < 4; i++) {
+					firstAndStep(std::clamp(colors[i], 0.0f, 1.0f), std::clamp(colors[4 + i], 0.0f, 1.0f), 255.0f, colorFix[i], colorStep[i]);
+				}
+				rowState.Combiner = CombTintMix;
+				rowState.PrimColor = tintColor();
+			}
+			ApplyDrawState(rowState);
+
+			// The texel rows a row samples: its own, and the one below for the bilinear taps. Clamped into the
+			// surface; a tap past the last row is clamped by the tile descriptor, as in every other path.
+			const std::int32_t maxQt = sourceH * 32 - 1;
+			const auto rowTexelsAt = [&](std::int32_t tValue, std::int32_t& n0, std::int32_t& n1) {
+				const std::int32_t qt = std::clamp<std::int32_t>(fromFixed(tValue), 0, maxQt);
+				n0 = qt >> 5;
+				n1 = std::min<std::int32_t>(n0 + rowTexels, sourceH);
+				return qt;
+			};
+			// The bands arrive one after another and each continues the texel rows of the one before, so the window
+			// the previous band left resident usually serves this one's first rows as well
+			std::int32_t win0 = 0, win1 = 0;
+			if (tmemWindow.Valid && tmemWindow.Buffer == state.Texture->buffer && tmemWindow.Version == state.TextureVersion &&
+				tmemWindow.S0 == 0 && tmemWindow.S1 == surfW && tmemWindow.Stride == source->stride &&
+				tmemWindow.MaskS == state.RepeatMaskS && tmemWindow.MaskT == 0) {
+				win0 = tmemWindow.T0;
+				win1 = tmemWindow.T1;
+			}
+			for (std::int32_t row = rowFirst; row < rowEnd; row++) {
+				std::int32_t n0, n1;
+				const std::int32_t qt = rowTexelsAt(tFix, n0, n1);
+				if (n0 < win0 || n1 > win1) {
+					// The next window starts at this row's texels and reaches as far along the band as TMEM allows,
+					// and then on into the rows the next band continues with, which saves that band its first load
+					win0 = n0;
+					win1 = n1;
+					std::int32_t tAhead = tFix;
+					for (std::int32_t ahead = row + 1; ahead < rowEnd; ahead++) {
+						tAhead += tStep;
+						std::int32_t a0, a1;
+						rowTexelsAt(tAhead, a0, a1);
+						const std::int32_t lo = std::min(win0, a0), hi = std::max(win1, a1);
+						if (hi - lo > maxRows) {
+							break;
+						}
+						win0 = lo;
+						win1 = hi;
+					}
+					if (tStep >= 0) {
+						win1 = std::min<std::int32_t>(win0 + maxRows, sourceH);
+					} else {
+						win0 = std::max<std::int32_t>(win1 - maxRows, 0);
+					}
+					UploadWindow(rowState, 0, win0, surfW, win1);
+				}
+				if (colors != nullptr) {
+					const std::uint32_t prim = tintColor();
+					for (std::int32_t i = 0; i < 4; i++) {
+						colorFix[i] += colorStep[i];
+					}
+					if (prim != appliedState.PrimColor) {
+						rdpq_set_prim_color(color_from_packed32(prim));
+						appliedState.PrimColor = prim;
+						if (TraceDrawStatistics) { stats.PrimChanges++; }
+					}
+				}
+				const std::int32_t qdsdx = fromFixed(dsdxFix);
+				std::int32_t qs = fromFixed(sFix);
+				if (qx0 != qxLeft) {
+					// The left edge was clipped to the screen: start the texels as far along as the edge moved
+					qs += ((qx0 - qxLeft) * qdsdx) >> 7;
+				}
+				__rdpq_texture_rectangle_raw_fx(CurrentTile(), std::uint16_t(qx0), std::uint16_t(row * 4), std::uint16_t(qx1),
+					std::uint16_t(row * 4 + 4), std::uint16_t(qs), std::uint16_t(qt), std::int16_t(qdsdx), 0);
+				if (TraceDrawStatistics) { stats.Rects++; }
+				tFix += tStep;
+				sFix += sStep;
+				dsdxFix += dsdxStep;
+			}
+			return true;
+		}
+
+		/**
 			@brief Submits a triangle strip (arbitrary synthesized geometry), flat or gouraud
 
 			@p colors, when given, are per-vertex floats (r,g,b,a in 0..1, the range rdpq_triangle's shade
 			coefficients take); the strip is then drawn gouraud - textured only when @p textured also holds
-			(the TintMix strips), untextured otherwise (a gradient has no texture to modulate).
+			(the TintMix strips), untextured otherwise (a gradient has no texture to modulate). A textured
+			strip shaped like the warp's bands goes out row by row instead (see SubmitRowBandStrip).
 		*/
 		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
 			std::int32_t count, const float* colors, float dx, float dy)
 		{
+			if (count == 4 && SubmitRowBandStrip(state, px, py, pu, pv, colors, dx, dy)) {
+				return;
+			}
 			const bool textured = (state.Texture != nullptr);
 			// One window for the whole strip is the fast path (the band pieces the effects build usually
 			// sample small spans, and then the strip costs a single upload). A strip whose combined span
@@ -1214,6 +1440,11 @@ namespace nCine::RHI::RDP
 				if (float(winS1) < maxS) { winS1++; }
 				if (float(winT1) < maxT) { winT1++; }
 				ClampWindow(state.Texture, winS0, winT0, winS1, winT1, state.Filter == FILTER_BILINEAR);
+				if (state.RepeatMaskS != 0) {
+					// A wrapping window is loaded as whole rows (see UploadWindow), so that is what has to fit
+					winS0 = 0;
+					winS1 = state.Texture->width;
+				}
 				if (!WindowFits(state.Texture, winS0, winT0, winS1, winT1)) {
 					// One window for the whole strip, clamped to what TMEM holds when the strip samples
 					// more. Drawing it exactly was implemented and MEASURED: per-triangle windows, with a
@@ -1222,7 +1453,8 @@ namespace nCine::RHI::RDP
 					// to 87 ms - to recover the last rows of the textured-background warp's widest bands,
 					// which is a seam a texel or two deep. Not worth it at this frame rate. What did remove
 					// most of the clamping was computing the TMEM pitch exactly as libdragon does (see
-					// TmemPitch) instead of padding it: the band that used to warn here now fits.
+					// TmemPitch) instead of padding it: the band that used to warn here now fits. The warp's bands,
+					// which were the strips that got here, go out row by row now (see SubmitRowBandStrip).
 					const tex_format_t fmt = surface_get_format(state.Texture);
 					const std::int32_t rows = std::max<std::int32_t>(TmemBudget(fmt) / TmemPitch(fmt, winS1 - winS0), 1);
 					if (winT1 - winT0 > rows) {

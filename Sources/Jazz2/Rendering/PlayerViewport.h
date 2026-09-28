@@ -57,6 +57,10 @@ namespace Jazz2::Rendering
 		// How far the reforged camera has moved off its look-ahead onto the target itself, from 0 to 1, while the weapon
 		// wheel is held open (see UpdateCamera)
 		float _centerOnTargetProgress;
+		// Where the view settles once it's fully on the target, relative to where it is now (zero once it's there, and
+		// with the original's camera, which never moves onto it). HUD::DrawWeaponWheel() draws the wheel there, so it
+		// opens around the player and rides the view to the middle instead of the player sliding in under it.
+		Vector2f _centerOnTargetOffset;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
@@ -129,9 +133,9 @@ namespace Jazz2::Rendering
 		// turning round to shoot does not swing the view back and forth. Moving turns it at once.
 		static constexpr float SmallViewTurnDelay = 30.0f;
 		// How long (in frames at 60 FPS) the view takes to move off the look-ahead onto the player while the weapon
-		// wheel is held open, because the wheel is drawn around the middle of the view, and how long it takes to go
-		// back once the wheel is released. Both are eased in and out.
-		static constexpr float CenterOnTargetDuration = 12.0f;
+		// wheel is held open, so the wheel ends up in the middle of the view, and how long it takes to go back once
+		// the wheel is released. Both are eased in and out; the wheel moves along (see _centerOnTargetOffset).
+		static constexpr float CenterOnTargetDuration = 16.0f;
 		static constexpr float CenterOnTargetReturnDuration = 30.0f;
 		// Vertical deadzone: the camera holds its Y while the player stays within +-this many pixels of it, so small
 		// bumps (steps, slopes, landing jitter) don't move the view; it snaps to follow once the player leaves the band.

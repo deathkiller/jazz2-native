@@ -12,6 +12,18 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
+	namespace
+	{
+		// Every button can be tested here, so leaving takes a pair of them, Start and this one. The pads of these consoles
+		// have no Back (the Dreamcast's is the C button, which only a few controllers have), so B takes its place - the
+		// button that goes back everywhere else in the menus
+#if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE)
+		constexpr ButtonName ExitButton = ButtonName::B;
+#else
+		constexpr ButtonName ExitButton = ButtonName::Back;
+#endif
+	}
+
 	InputDiagnosticsSection::InputDiagnosticsSection()
 		: _itemCount(0), _selectedIndex(0), _animation(0.0f)
 	{
@@ -37,7 +49,7 @@ namespace Jazz2::UI::Menu
 		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && jc < std::int32_t(arraySize(joyStates)); i++) {
 			if (input.isJoyMapped(i)) {
 				joyStates[jc] = &input.joyMappedState(i);
-				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ButtonName::Back)) {
+				if (joyStates[jc]->isButtonPressed(ButtonName::Start) && joyStates[jc]->isButtonPressed(ExitButton)) {
 					shouldExit = true;
 				}
 
@@ -228,18 +240,25 @@ namespace Jazz2::UI::Menu
 			hintY -= 9.0f;
 		}
 
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, hintY + 3.0f,
-			IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, hintY + 1.0f,
-			IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		// A pad without the button has no label for it (AnimState::Default would draw the menu logo)
+		AnimState exitName = GetResourceForButtonName(ExitButton);
+		if (exitName != AnimState::Default) {
+			_root->DrawElement(exitName, 0, center.X - 37.0f, hintY + 3.0f,
+				IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
+			_root->DrawElement(exitName, 0, center.X - 37.0f, hintY + 1.0f,
+				IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		}
 		
 		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, hintY, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 0.0f, 0.46f, 0.88f);
 
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, hintY + 3.0f,
-			IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, hintY + 1.0f,
-			IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		AnimState startName = GetResourceForButtonName(ButtonName::Start);
+		if (startName != AnimState::Default) {
+			_root->DrawElement(startName, 0, center.X - 11.0f, hintY + 3.0f,
+				IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
+			_root->DrawElement(startName, 0, center.X - 11.0f, hintY + 1.0f,
+				IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
+		}
 		
 		_root->DrawStringShadow("to exit"_s, charOffset, center.X, hintY + 1.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.0f, 0.0f, 0.46f, 0.8f);

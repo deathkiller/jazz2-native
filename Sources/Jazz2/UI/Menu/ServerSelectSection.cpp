@@ -453,8 +453,12 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX + 4.0f, hintY, IMenuContainer::FontLayer + 110,
 				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX + 18.0f, hintY + 2.0f, IMenuContainer::MainLayer + 110, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX + 18.0f, hintY, IMenuContainer::MainLayer + 120, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+			// A pad without the button has no label for it (AnimState::Default would draw the menu logo)
+			AnimState buttonName = GetResourceForButtonName(ControlScheme::ChangeWeaponMenuButton);
+			if (buttonName != AnimState::Default) {
+				_root->DrawElement(buttonName, 0, centerX + 18.0f, hintY + 2.0f, IMenuContainer::MainLayer + 110, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+				_root->DrawElement(buttonName, 0, centerX + 18.0f, hintY, IMenuContainer::MainLayer + 120, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+			}
 
 			// TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
 			_root->DrawStringShadow(_("to show keyboard"), charOffset, centerX + 32.0f, hintY, IMenuContainer::FontLayer + 110,
@@ -480,10 +484,13 @@ namespace Jazz2::UI::Menu
 			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, hintY, IMenuContainer::FontLayer,
 				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY + 2.0f,
-				IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY,
-				IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+			AnimState buttonName = GetResourceForButtonName(ControlScheme::ChangeWeaponMenuButton);
+			if (buttonName != AnimState::Default) {
+				_root->DrawElement(buttonName, 0, centerX - 2.0f, hintY + 2.0f,
+					IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+				_root->DrawElement(buttonName, 0, centerX - 2.0f, hintY,
+					IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+			}
 
 			// TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
 			_root->DrawStringShadow(_("to connect to IP address"), charOffset, centerX + 8.0f, hintY, IMenuContainer::FontLayer,

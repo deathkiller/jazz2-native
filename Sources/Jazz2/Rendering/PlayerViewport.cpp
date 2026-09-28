@@ -324,10 +324,10 @@ namespace Jazz2::Rendering
 				_cameraViewCenterY = lerpByTime(_cameraViewCenterY, focusPos.Y, VerticalRecenter, timeMult);
 			}
 
-			// The weapon wheel is drawn around the middle of the view (see HUD::DrawWeaponWheel()), which is not where
-			// the player is while the view leads, so the view moves onto the player while the wheel is held open, and
-			// back once it's released. Both the look-ahead and the anchor keep being tracked underneath, so it goes
-			// back to where they are by then, not to where they were when the wheel was opened.
+			// The weapon wheel ends up in the middle of the view (see HUD::DrawWeaponWheel()), which is not where the
+			// player is while the view leads, so the view moves onto the player while the wheel is held open, and back
+			// once it's released. Both the look-ahead and the anchor keep being tracked underneath, so it goes back to
+			// where they are by then, not to where they were when the wheel was opened.
 			bool wheelOpen = false;
 			if (auto* player = runtime_cast<Actors::Player>(_targetActor)) {
 				wheelOpen = (_levelHandler->_hud != nullptr && _levelHandler->_hud->IsWeaponWheelOpen(player->GetPlayerIndex()));
@@ -393,27 +393,35 @@ namespace Jazz2::Rendering
 		// The camera base is the player's position plus the look-ahead rounded to a whole pixel: a constant integer
 		// offset between the floored player sprite and the floored camera is what keeps the player pixel-crisp (it does
 		// clean 1px steps as the lead grows/shrinks, never sub-pixel shimmer). Then clamp to the level bounds.
+		// The offset to where the view settles once it's on the player is taken the same way, without the shake (the HUD
+		// doesn't shake) and aligned like the view, so the weapon wheel moves in the same whole-pixel steps as the level
 		Vector2f lookAhead = _cameraDistanceFactor * (1.0f - centerOnTarget);
 		float viewCenterY = lerp(_cameraViewCenterY, focusPos.Y, centerOnTarget);
+		const auto alignView = [](float pos) { return (PreferencesCache::UnalignedViewport ? pos : floorFast(pos)); };
+		_centerOnTargetOffset = Vector2f::Zero;
 		if (overridePosX) {
 			_cameraPos.X = focusPos.X + _shakeOffset.X;
 		} else if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(focusPos.X + roundFast(lookAhead.X), _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
-			if (!PreferencesCache::UnalignedViewport) {
-				_cameraPos.X = floorFast(_cameraPos.X);
-			}
+			const float minX = _viewBounds.X + halfView.X, maxX = _viewBounds.X + _viewBounds.W - halfView.X;
+			const float cameraX = std::clamp(focusPos.X + roundFast(lookAhead.X), minX, maxX);
+			_cameraPos.X = alignView(cameraX + _shakeOffset.X);
+			_centerOnTargetOffset.X = alignView(std::clamp(focusPos.X, minX, maxX)) - alignView(cameraX);
 		} else {
 			_cameraPos.X = floorFast(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (overridePosY) {
 			_cameraPos.Y = focusPos.Y + _shakeOffset.Y;
 		} else if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(viewCenterY + roundFast(lookAhead.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
-			if (!PreferencesCache::UnalignedViewport) {
-				_cameraPos.Y = floorFast(_cameraPos.Y);
-			}
+			const float minY = _viewBounds.Y + halfView.Y - 1.0f, maxY = _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f;
+			const float cameraY = std::clamp(viewCenterY + roundFast(lookAhead.Y), minY, maxY);
+			_cameraPos.Y = alignView(cameraY + _shakeOffset.Y);
+			_centerOnTargetOffset.Y = alignView(std::clamp(focusPos.Y, minY, maxY)) - alignView(cameraY);
 		} else {
 			_cameraPos.Y = floorFast(_viewBounds.Y + _viewBounds.H * 0.5f + _shakeOffset.Y);
+		}
+		if (!PreferencesCache::EnableReforgedCamera) {
+			// The original's camera doesn't move onto the player for the wheel, so the wheel stays in the middle
+			_centerOnTargetOffset = Vector2f::Zero;
 		}
 
 		_camera->SetView(_cameraPos - halfView.As<float>(), 0.0f, 1.0f);

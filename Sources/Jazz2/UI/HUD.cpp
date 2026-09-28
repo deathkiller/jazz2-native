@@ -268,7 +268,7 @@ namespace Jazz2::UI
 					OnDrawScore(scopedView, player);
 					OnDrawWeaponAmmo(adjustedScopedView, player);
 
-					DrawWeaponWheel(scopedView, player);
+					DrawWeaponWheel(scopedView, player, viewport->_centerOnTargetOffset);
 				}
 			}
 		}
@@ -1546,7 +1546,7 @@ namespace Jazz2::UI
 		}
 	}
 
-	void HUD::DrawWeaponWheel(const Rectf& view, Actors::Player* player)
+	void HUD::DrawWeaponWheel(const Rectf& view, Actors::Player* player, Vector2f centerOffset)
 	{
 		auto& state = _weaponWheel[player->_playerIndex];
 		if (state.Anim <= 0.0f) {
@@ -1570,7 +1570,16 @@ namespace Jazz2::UI
 			player->_weaponWheelState = Actors::Player::WeaponWheelState::Opening;
 		}
 
-		Vector2f center = view.Center();
+		float scale = std::min(std::min(view.W, view.H) * 0.0034f, 1.0f);
+
+		// Drawn where the view settles once it's on the player (see PlayerViewport::_centerOnTargetOffset), so the wheel
+		// opens around the player and rides the view to the middle - but never so far off that the whole wheel at its
+		// full size (the ammo counts are the outermost part) wouldn't fit into the view
+		const float reach = scale * (20.0f + 70.0f) * 1.4f + 8.0f;
+		const float maxOffsetX = std::max(view.W * 0.5f - reach, 0.0f);
+		const float maxOffsetY = std::max(view.H * 0.5f - reach, 0.0f);
+		Vector2f center = view.Center() + Vector2f(roundf(std::clamp(centerOffset.X, -maxOffsetX, maxOffsetX)),
+			roundf(std::clamp(centerOffset.Y, -maxOffsetY, maxOffsetY)));
 		float angleStep = fTwoPi / state.WeaponCount;
 
 		float h = input.RequiredMovement.X;
@@ -1605,7 +1614,6 @@ namespace Jazz2::UI
 			requestedIndex = (std::int32_t)(state.WeaponCount * adjustedAngle / fTwoPi);
 		}
 
-		float scale = std::min(std::min(view.W, view.H) * 0.0034f, 1.0f);
 		float alpha = state.Anim / WeaponWheelAnimDuration;
 		float easing = Menu::Easing::OutCubic(alpha);
 		float distance = scale * (20.0f  + (70.0f * easing));

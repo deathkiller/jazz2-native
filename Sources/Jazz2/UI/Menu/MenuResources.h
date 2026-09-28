@@ -244,11 +244,54 @@ namespace Jazz2::UI::Menu::Resources
 	/** @brief Touch controls Close button icon */
 	static constexpr AnimState TouchClose = (AnimState)136;
 
+	/** @brief Nintendo 64 gamepad A button icon */
+	static constexpr AnimState GamepadN64A = (AnimState)140;
+	/** @brief Nintendo 64 gamepad B button icon */
+	static constexpr AnimState GamepadN64B = (AnimState)141;
+	/** @brief Nintendo 64 gamepad left D-pad button icon */
+	static constexpr AnimState GamepadN64DPadLeft = (AnimState)142;
+	/** @brief Nintendo 64 gamepad right D-pad button icon */
+	static constexpr AnimState GamepadN64DPadRight = (AnimState)143;
+	/** @brief Nintendo 64 gamepad up D-pad button icon */
+	static constexpr AnimState GamepadN64DPadUp = (AnimState)144;
+	/** @brief Nintendo 64 gamepad down D-pad button icon */
+	static constexpr AnimState GamepadN64DPadDown = (AnimState)145;
+	/** @brief Nintendo 64 gamepad Start button icon */
+	static constexpr AnimState GamepadN64Start = (AnimState)146;
+	/** @brief Nintendo 64 gamepad L button icon */
+	static constexpr AnimState GamepadN64LeftShoulder = (AnimState)147;
+	/** @brief Nintendo 64 gamepad R button icon */
+	static constexpr AnimState GamepadN64RightShoulder = (AnimState)148;
+	/** @brief Nintendo 64 gamepad Z trigger icon */
+	static constexpr AnimState GamepadN64ZTrigger = (AnimState)149;
+	/** @brief Nintendo 64 gamepad Control Stick icon */
+	static constexpr AnimState GamepadN64ControlStick = (AnimState)150;
+	/** @brief Nintendo 64 gamepad C-Up button icon */
+	static constexpr AnimState GamepadN64CUp = (AnimState)151;
+	/** @brief Nintendo 64 gamepad C-Down button icon */
+	static constexpr AnimState GamepadN64CDown = (AnimState)152;
+	/** @brief Nintendo 64 gamepad C-Left button icon */
+	static constexpr AnimState GamepadN64CLeft = (AnimState)153;
+	/** @brief Nintendo 64 gamepad C-Right button icon */
+	static constexpr AnimState GamepadN64CRight = (AnimState)154;
+
 	/** @} */
 
 	/** @brief Returns animation resource for the specified gamepad axis */
 	inline AnimState GetResourceForAxisName(AxisName axis, Containers::StringView& axisName)
 	{
+		if (PreferencesCache::GamepadButtonLabels == GamepadType::Nintendo64) {
+			// The pad has one stick and one trigger, Z, which the backend publishes as the right one (see N64InputManager).
+			// Its C buttons arrive as the right stick, but each of them is one direction of it, see GetResourceForAxisDirection().
+			// The axes it doesn't have reuse Xbox labels below.
+			switch (axis) {
+				case AxisName::LeftX: axisName = "X"_s; return GamepadN64ControlStick; break;
+				case AxisName::LeftY: axisName = "Y"_s; return GamepadN64ControlStick; break;
+				case AxisName::RightTrigger: return GamepadN64ZTrigger; break;
+				default: break;
+			}
+		}
+
 		switch (axis) {
 			case AxisName::LeftX: axisName = "X"_s; return GamepadXboxLeftStick; break;
 			case AxisName::LeftY: axisName = "Y"_s; return GamepadXboxLeftStick; break;
@@ -284,6 +327,24 @@ namespace Jazz2::UI::Menu::Resources
 
 			default: return AnimState::Default; break;
 		}
+	}
+
+	/**
+	 * @brief Returns animation resource for one direction of the specified gamepad axis
+	 *
+	 * Returns @ref AnimState::Default unless the current labels show that direction as a button of its own, which is
+	 * then drawn instead of @ref GetResourceForAxisName() and needs no sign next to it.
+	 */
+	inline AnimState GetResourceForAxisDirection(AxisName axis, bool isNegative)
+	{
+		if (PreferencesCache::GamepadButtonLabels == GamepadType::Nintendo64) {
+			switch (axis) {
+				case AxisName::RightX: return (isNegative ? GamepadN64CLeft : GamepadN64CRight); break;
+				case AxisName::RightY: return (isNegative ? GamepadN64CUp : GamepadN64CDown); break;
+				default: break;
+			}
+		}
+		return AnimState::Default;
 	}
 
 	/** @brief Returns animation resource for the specified gamepad button */
@@ -398,6 +459,28 @@ namespace Jazz2::UI::Menu::Resources
 					case ButtonName::Right: return GamepadPslDPadRight; break;
 					case ButtonName::Misc1: return GamepadPslMisc1; break;
 					case ButtonName::Touchpad: return GamepadPslTouchpad; break;
+					default: return AnimState::Default; break;
+				}
+			}
+			case GamepadType::Nintendo64: {
+				switch (button) {
+					case ButtonName::A: return GamepadN64A; break;
+					case ButtonName::B: return GamepadN64B; break;
+					case ButtonName::X: return GamepadXboxX; break;							// Not valid for N64 - reuse Xbox label
+					case ButtonName::Y: return GamepadXboxY; break;							// Not valid for N64 - reuse Xbox label
+					case ButtonName::Back: return GamepadXboxBack; break;					// Not valid for N64 - reuse Xbox label
+					case ButtonName::Guide: return GamepadXboxGuide; break;					// Not valid for N64 - reuse Xbox label
+					case ButtonName::Start: return GamepadN64Start; break;
+					case ButtonName::LeftStick: return GamepadXboxLeftStick; break;			// Not valid for N64 - reuse Xbox label
+					case ButtonName::RightStick: return GamepadXboxRightStick; break;		// Not valid for N64 - reuse Xbox label
+					case ButtonName::LeftBumper: return GamepadN64LeftShoulder; break;
+					case ButtonName::RightBumper: return GamepadN64RightShoulder; break;
+					case ButtonName::Up: return GamepadN64DPadUp; break;
+					case ButtonName::Down: return GamepadN64DPadDown; break;
+					case ButtonName::Left: return GamepadN64DPadLeft; break;
+					case ButtonName::Right: return GamepadN64DPadRight; break;
+					case ButtonName::Misc1: return GamepadXboxMisc1; break;					// Not valid for N64 - reuse Xbox label
+					case ButtonName::Touchpad: return GamepadPsTouchpad; break;				// Not valid for N64 - reuse PlayStation label
 					default: return AnimState::Default; break;
 				}
 			}

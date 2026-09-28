@@ -153,8 +153,10 @@ namespace Jazz2
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
 #endif
 	bool PreferencesCache::ToggleRunAction = false;
-#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
-		defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS)
+#if defined(DEATH_TARGET_N64)
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Nintendo64;
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
+		defined(DEATH_TARGET_3DS)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_PS3)
@@ -1581,8 +1583,11 @@ namespace
 #if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
 			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_3DS)
-			// Use Switch button labels (on the N64 they are the closest fit, see the static initializer)
+#elif defined(DEATH_TARGET_N64)
+			// Use Nintendo 64 button labels
+			GamepadButtonLabels = GamepadType::Nintendo64;
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_3DS)
+			// Use Switch button labels
 			GamepadButtonLabels = GamepadType::Switch;
 #elif defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || \
 			defined(DEATH_TARGET_PS3)

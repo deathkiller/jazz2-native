@@ -35,6 +35,18 @@ namespace Jazz2::UI::Menu
 		void OnBackPressed() override;
 
 	private:
+		/** @brief Horizontal layout of the action rows, see @ref GetRowLayout() */
+		struct RowLayout
+		{
+			float ViewWidth;
+			float NameX;
+			float NameWidth;
+			float FirstColumnX;
+			float ColumnWidth;
+		};
+
+		RowLayout _layout;
+		float _widestName;
 		std::int32_t _selectedColumn;
 		std::int32_t _playerIndex;
 		float _timeout;
@@ -53,6 +65,8 @@ namespace Jazz2::UI::Menu
 		void StartCapture();
 		/** @brief Clamps the selected column to the targets available for the given row */
 		void ClampColumn(std::int32_t row);
+		/** @brief Returns the horizontal layout of the action rows for the given view width */
+		const RowLayout& GetRowLayout(float viewWidth);
 		/** @brief Draws a single action row */
 		void DrawRow(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, PlayerAction type, StringView name);
 		/** @brief Handles a tap on the given row at the given pixel position */
