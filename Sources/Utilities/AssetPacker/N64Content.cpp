@@ -19,7 +19,7 @@
 #include <IO/MemoryStream.h>
 
 #if defined(ASSETPACKER_WITH_OPENMPT)
-#	include <libopenmpt/libopenmpt.hpp>
+#	include <libopenmpt.h>
 #	include <string>
 #	include <vector>
 #endif
@@ -181,32 +181,41 @@ namespace Jazz2::AssetPacker
 			}
 			std::vector<char> data(std::size_t(s->GetSize()));
 			s->Read(data.data(), std::int64_t(data.size()));
-			try {
-				openmpt::module mod(data);
-				mod.set_repeat_count(0);
-				if (loopStartFrame != nullptr) {
-					const std::int32_t restartOrder = mod.get_restart_order(0);
-					const std::int32_t restartRow = mod.get_restart_row(0);
-					const double seconds = (restartOrder > 0 || restartRow > 0 ? mod.set_position_order_row(restartOrder, restartRow) : 0.0);
-					*loopStartFrame = std::int64_t(std::llround(std::max(0.0, seconds) * RenderRate));
-					mod.set_position_seconds(0.0);
-				}
-				float buffer[2 * 4096];
-				while (true) {
-					const std::size_t count = mod.read_interleaved_stereo(RenderRate, 4096, buffer);
-					if (count == 0) {
-						break;
-					}
-					stereo.append(buffer, buffer + count * 2);
-					// Anything longer than ten minutes is a module that never ends by itself
-					if (stereo.size() > std::size_t(RenderRate) * 2 * 600) {
-						break;
-					}
-				}
-			} catch (const std::exception& e) {
-				LOGW("libopenmpt cannot render \"{}\": {}", path, e.what());
+			const char* errorMessage = nullptr;
+			openmpt_module* mod = openmpt_module_create_from_memory2(data.data(), data.size(), nullptr, nullptr, nullptr, nullptr, nullptr, &errorMessage, nullptr);
+			if (mod == nullptr) {
+				LOGW("libopenmpt cannot render \"{}\": {}", path, errorMessage != nullptr ? errorMessage : "unknown error");
+				openmpt_free_string(errorMessage);
 				return false;
 			}
+			openmpt_free_string(errorMessage);
+
+			openmpt_module_set_repeat_count(mod, 0);
+			if (loopStartFrame != nullptr) {
+#	if OPENMPT_API_VERSION_AT_LEAST(0, 8, 0)
+				const std::int32_t restartOrder = openmpt_module_get_restart_order(mod, 0);
+				const std::int32_t restartRow = openmpt_module_get_restart_row(mod, 0);
+				const double seconds = (restartOrder > 0 || restartRow > 0 ? openmpt_module_set_position_order_row(mod, restartOrder, restartRow) : 0.0);
+				*loopStartFrame = std::int64_t(std::llround(std::max(0.0, seconds) * RenderRate));
+				openmpt_module_set_position_seconds(mod, 0.0);
+#	else
+				// Older versions (e.g. 0.6 in Ubuntu 22.04) cannot tell the restart position, so the song loops from the start
+				*loopStartFrame = 0;
+#	endif
+			}
+			float buffer[2 * 4096];
+			while (true) {
+				const std::size_t count = openmpt_module_read_interleaved_float_stereo(mod, RenderRate, 4096, buffer);
+				if (count == 0) {
+					break;
+				}
+				stereo.append(buffer, buffer + count * 2);
+				// Anything longer than ten minutes is a module that never ends by itself
+				if (stereo.size() > std::size_t(RenderRate) * 2 * 600) {
+					break;
+				}
+			}
+			openmpt_module_destroy(mod);
 			return !stereo.empty();
 		}
 #endif

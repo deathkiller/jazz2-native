@@ -131,7 +131,7 @@ namespace Jazz2::Rendering
 		// How long (in frames at 60 FPS) the view takes to move off the look-ahead onto the player while the weapon
 		// wheel is held open, because the wheel is drawn around the middle of the view, and how long it takes to go
 		// back once the wheel is released. Both are eased in and out.
-		static constexpr float CenterOnTargetDuration = 20.0f;
+		static constexpr float CenterOnTargetDuration = 12.0f;
 		static constexpr float CenterOnTargetReturnDuration = 30.0f;
 		// Vertical deadzone: the camera holds its Y while the player stays within +-this many pixels of it, so small
 		// bumps (steps, slopes, landing jitter) don't move the view; it snaps to follow once the player leaves the band.

@@ -2326,8 +2326,8 @@ namespace Jazz2::Tiles
 		// Each tile is stored as 3 bytes (flags, then the tile index as a little-endian word). They are read
 		// a block at a time: two stream reads per tile - virtual calls into the decompressing stream - were
 		// the largest single cost of loading a level on the Nintendo 64, about a second for castle1's layers
-		constexpr std::int32_t TileRecordSize = 3;
-		constexpr std::int32_t TilesPerBlock = 512;
+		static constexpr std::int32_t TileRecordSize = 3;
+		static constexpr std::int32_t TilesPerBlock = 512;
 		std::uint8_t block[TilesPerBlock * TileRecordSize];
 		const std::int32_t tileCount = width * height;
 		const auto readBlock = [&s, &block](std::int32_t count) {

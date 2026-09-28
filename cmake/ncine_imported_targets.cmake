@@ -17,7 +17,7 @@ if(NCINE_DOWNLOAD_DEPENDENCIES AND (NOT CMAKE_CROSSCOMPILING OR WINDOWS_STORE OR
 				set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/raw/2.0.1-macos/jazz2-libraries-macos.tar.gz")
 			endif()
 		else()
-			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.3.1.tar.gz")
+			set(NCINE_LIBS_URL "https://github.com/deathkiller/jazz2-libraries/archive/3.8.1.tar.gz")
 		endif()
 		message(STATUS "Downloading dependencies from \"${NCINE_LIBS_URL}\"...")
 

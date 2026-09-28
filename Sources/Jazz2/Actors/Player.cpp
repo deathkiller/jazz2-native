@@ -2900,7 +2900,9 @@ namespace Jazz2::Actors
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
 	{
-		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
+		// A pose without a gunspot has no muzzle to put the flare on, see GetGunspotOffset()
+		Vector2i gunspotOffset;
+		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && GetGunspotOffset(gunspotOffset)) {
 			auto* res = _metadata->FindAnimation(WeaponFlare);
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				// When the player is recolored its anims (incl. the flare) are indexed, so the flare must go through
@@ -2946,16 +2948,14 @@ namespace Jazz2::Actors
 
 				bool facingLeft = IsFacingLeft();
 				bool lookUp = (_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup;
-				std::int32_t gunspotOffsetX = (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X);
-				std::int32_t gunspotOffsetY = (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
 
 				float gunspotPosX, gunspotPosY;
 				if (lookUp) {
-					gunspotPosX = _pos.X + (gunspotOffsetX) * (facingLeft ? 1 : -1);
-					gunspotPosY = _pos.Y - (gunspotOffsetY - 3) - res->Base->FrameDimensions.Y;
+					gunspotPosX = _pos.X + gunspotOffset.X * (facingLeft ? 1 : -1);
+					gunspotPosY = _pos.Y - (gunspotOffset.Y - 3) - res->Base->FrameDimensions.Y;
 				} else {
-					gunspotPosX = _pos.X + (gunspotOffsetX - 7) * (facingLeft ? 1 : -1);
-					gunspotPosY = _pos.Y - gunspotOffsetY;
+					gunspotPosX = _pos.X + (gunspotOffset.X - 7) * (facingLeft ? 1 : -1);
+					gunspotPosY = _pos.Y - gunspotOffset.Y;
 					if (facingLeft) {
 						texBiasX += texScaleX;
 						texScaleX *= -1.0f;
@@ -6015,6 +6015,21 @@ namespace Jazz2::Actors
 		_currentWeapon = weaponType;
 	}
 
+	bool Player::GetGunspotOffset(Vector2i& offset) const
+	{
+		// Not every pose a shot can start from has a gunspot or a shooting variant to switch to - the rev-up wind-up
+		// has neither - so its sheet keeps InvalidValue and the difference came out at about 2^31. That put the shot
+		// two billion pixels away, and on the Nintendo 64 the float-to-int conversion of it raised the unimplemented-
+		// operation exception, which cannot be masked. Such a shot leaves from the hotspot instead.
+		const auto* base = _currentAnimation->Base;
+		if (base->Gunspot == Vector2i(ContentResolver::InvalidValue, ContentResolver::InvalidValue)) {
+			offset = Vector2i();
+			return false;
+		}
+		offset = base->Hotspot - base->Gunspot;
+		return true;
+	}
+
 	void Player::GetFirePointAndAngle(Vector3i& initialPos, Vector2f& gunspotPos, float& angle)
 	{
 		if (ShouldCancelTransitionOnFire()) {
@@ -6026,6 +6041,9 @@ namespace Jazz2::Actors
 		initialPos = Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
 
+		Vector2i gunspotOffset;
+		GetGunspotOffset(gunspotOffset);
+
 		if (_inWater) {
 			angle = _renderer.rotation();
 
@@ -6033,10 +6051,10 @@ namespace Jazz2::Actors
 			float sinAngle, cosAngle;
 			sincosApprox(angle, sinAngle, cosAngle);
 			gunspotPos.X += (cosAngle * size) * (IsFacingLeft() ? -1.0f : 1.0f);
-			gunspotPos.Y += (sinAngle * size) * (IsFacingLeft() ? -1.0f : 1.0f) - (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+			gunspotPos.Y += (sinAngle * size) * (IsFacingLeft() ? -1.0f : 1.0f) - gunspotOffset.Y;
 		} else {
-			gunspotPos.X += (_currentAnimation->Base->Hotspot.X - _currentAnimation->Base->Gunspot.X) * (IsFacingLeft() ? 1 : -1);
-			gunspotPos.Y -= (_currentAnimation->Base->Hotspot.Y - _currentAnimation->Base->Gunspot.Y);
+			gunspotPos.X += gunspotOffset.X * (IsFacingLeft() ? 1 : -1);
+			gunspotPos.Y -= gunspotOffset.Y;
 
 			if ((_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup) {
 				initialPos.X = (std::int32_t)gunspotPos.X;

@@ -2036,6 +2036,8 @@ namespace Jazz2::Actors
 		// Abandons a wind-up without launching, and puts the animation speed back. Jumping and crouching both
 		// do this: the launch is what letting go of Run is for.
 		void CancelRevUp();
+		// Gunspot of the current animation relative to its hotspot, false (and zero) if its sheet has none
+		bool GetGunspotOffset(Vector2i& offset) const;
 
 	public:
 		/** @brief Clears all run-in-place rev-up state, so it cannot survive a teleport or a probe reset */
