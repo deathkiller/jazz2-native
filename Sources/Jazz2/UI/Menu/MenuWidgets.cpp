@@ -686,16 +686,25 @@ namespace Jazz2::UI::Menu
 
 	bool Slider::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
 	{
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				// Only the central bar region reacts; tapping its left/right half nudges the value down/up
-				if (std::abs(x - 0.5f) < 0.22f) {
-					Apply(root, x < 0.5f ? -StepSize : StepSize);
-					return true;
-				}
-			}
+		// A tap nudges the value only once the row is selected, so the first tap just selects it (matching the
+		// keyboard flow). Returning false lets the container select an unselected row. The containers deliver
+		// the tap differently: StackLayout hands the selected row the Down, ScrollView hands the tapped row the
+		// Up (and only for a tap that didn't scroll). Neither forwards the other, so reacting to both adjusts
+		// exactly once per tap in either
+		if (!Selected || (event.type != TouchEventType::Down && event.type != TouchEventType::Up)) {
+			return false;
+		}
+		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (pointerIndex == -1) {
+			return false;
+		}
+		float x = event.pointers[pointerIndex].x * viewSize.X;
+		// The bar is centred in the row, not necessarily on the screen (e.g., with asymmetric safe-area insets)
+		float centerX = Bounds.X + Bounds.W * 0.5f;
+		// Only the central bar region reacts; tapping its left/right half nudges the value down/up
+		if (std::abs(x - centerX) < viewSize.X * 0.22f) {
+			Apply(root, x < centerX ? -StepSize : StepSize);
+			return true;
 		}
 		return false;
 	}
