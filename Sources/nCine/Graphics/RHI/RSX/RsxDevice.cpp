@@ -156,7 +156,7 @@ namespace nCine::RHI::RSX
 
 	RsxVram::Block RsxDevice::_quadCornerStream;
 	RsxVram::Block RsxDevice::_batchedCornerStream;
-	// -- Session lifecycle ------------------------------------------------------------------------
+	// ── Session Lifecycle ────────────────────────────────────────────────────────────────────────
 
 	bool RsxDevice::ConfigureVideo()
 	{
@@ -422,7 +422,7 @@ namespace nCine::RHI::RSX
 		}
 	}
 
-	// -- State ------------------------------------------------------------------------------------
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void RsxDevice::SetupInitialState()
 	{
@@ -629,7 +629,7 @@ namespace nCine::RHI::RSX
 		}
 	}
 
-	// -- Target and viewport ----------------------------------------------------------------------
+	// ── Target and Viewport ──────────────────────────────────────────────────────────────────────
 
 	void RsxDevice::GetCurrentTargetSize(std::int32_t& width, std::int32_t& height)
 	{
@@ -776,7 +776,7 @@ namespace nCine::RHI::RSX
 		}
 	}
 
-	// -- Resource binding -------------------------------------------------------------------------
+	// ── Resource Binding ─────────────────────────────────────────────────────────────────────────
 
 	void RsxDevice::BindProgram(RsxShaderProgram* program)
 	{
@@ -835,7 +835,7 @@ namespace nCine::RHI::RSX
 		}
 	}
 
-	// -- Fences -----------------------------------------------------------------------------------
+	// ── Fences ───────────────────────────────────────────────────────────────────────────────────
 
 	FenceHandle RsxDevice::InsertFence()
 	{
@@ -861,7 +861,7 @@ namespace nCine::RHI::RSX
 		return true;
 	}
 
-	// -- Present ----------------------------------------------------------------------------------
+	// ── Present ──────────────────────────────────────────────────────────────────────────────────
 
 	void RsxDevice::PresentFrame()
 	{
@@ -977,7 +977,7 @@ namespace nCine::RHI::RSX
 		_surfaceDirty = true;
 	}
 
-	// -- Built-in resources -----------------------------------------------------------------------
+	// ── Built-in Resources ───────────────────────────────────────────────────────────────────────
 
 	bool RsxDevice::CreateBuiltinResources()
 	{
@@ -1082,7 +1082,7 @@ namespace nCine::RHI::RSX
 		return _batchedCornerStream.Offset;
 	}
 
-	// -- Draw -------------------------------------------------------------------------------------
+	// ── Draw ─────────────────────────────────────────────────────────────────────────────────────
 
 	void RsxDevice::UploadUniforms()
 	{

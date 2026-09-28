@@ -129,7 +129,7 @@ namespace ShaderCompiler
 				op == "&&" || op == "||" || op == "^^");
 		}
 
-		// --- Emitter ---------------------------------------------------------------------------------
+		// ── Emitter ──────────────────────────────────────────────────────────────────────────────
 
 		class Emitter
 		{
@@ -318,7 +318,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Static IO globals + copy-in / copy-out --------------------------------------------
+			// ── Static IO Globals + Copy-in / Copy-Out ───────────────────────────────────────────
 
 			String EmitStaticGlobals()
 			{
@@ -585,7 +585,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Type inference (drives the matrix-multiply rewrite) -------------------------------
+			// ── Type Inference (drives the matrix-multiply rewrite) ──────────────────────────────
 
 			TyRef InferIdent(StringView name)
 			{
@@ -723,7 +723,7 @@ namespace ShaderCompiler
 				return (Comps(a.T) >= Comps(b.T) ? a : b);
 			}
 
-			// --- Expression emission ---------------------------------------------------------------
+			// ── Expression Emission ──────────────────────────────────────────────────────────────
 
 			std::int32_t EmitPrec(const Expr* e) const
 			{

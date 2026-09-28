@@ -161,7 +161,7 @@ namespace nCine::RHI::Software::sw
 	inline vec2::vec2(const vec4& v) : x(v.x), y(v.y) {}
 	inline vec3::vec3(const vec4& v) : x(v.x), y(v.y), z(v.z) {}
 
-	// --- Arithmetic operators (component-wise, with scalar broadcast on either side) ---------------
+	// ── Arithmetic Operators (component-wise, with scalar broadcast on either side) ──────────────
 
 #define SW_DEFINE_VEC2_OP(OP) \
 	inline vec2 operator OP(const vec2& a, const vec2& b) { return vec2(a.x OP b.x, a.y OP b.y); } \
@@ -188,7 +188,7 @@ namespace nCine::RHI::Software::sw
 	inline vec3 operator-(const vec3& v) { return vec3(-v.x, -v.y, -v.z); }
 	inline vec4 operator-(const vec4& v) { return vec4(-v.x, -v.y, -v.z, -v.w); }
 
-	// --- Minimal integer / boolean vectors (types only; the corpus does not compute with them) -----
+	// ── Minimal Integer / Boolean Vectors (types only; the corpus does not compute with them) ────
 
 	struct ivec2 { union { struct { std::int32_t x, y; }; struct { std::int32_t r, g; }; };
 		ivec2() : x(0), y(0) {} explicit ivec2(std::int32_t v) : x(v), y(v) {} ivec2(std::int32_t x_, std::int32_t y_) : x(x_), y(y_) {} };
@@ -204,7 +204,7 @@ namespace nCine::RHI::Software::sw
 	struct bvec4 { union { struct { bool x, y, z, w; }; struct { bool r, g, b, a; }; };
 		bvec4() : x(false), y(false), z(false), w(false) {} explicit bvec4(bool v) : x(v), y(v), z(v), w(v) {} bvec4(bool x_, bool y_, bool z_, bool w_) : x(x_), y(y_), z(z_), w(w_) {} };
 
-	// --- Built-in functions -------------------------------------------------------------------------
+	// ── Built-in Functions ───────────────────────────────────────────────────────────────────────
 	//
 	// Scalar overloads first, then component-wise vector overloads. GLSL semantics are matched exactly
 	// (e.g. mod(x, y) = x - y * floor(x / y), and the geometric functions operate on the whole vector).
@@ -308,7 +308,7 @@ namespace nCine::RHI::Software::sw
 	inline vec3 reflect(const vec3& i, const vec3& n) { return i - n * (2.0f * dot(n, i)); }
 	inline vec4 reflect(const vec4& i, const vec4& n) { return i - n * (2.0f * dot(n, i)); }
 
-	// --- Screen-space derivatives (approximated) ----------------------------------------------------
+	// ── Screen-Space Derivatives (approximated) ──────────────────────────────────────────────────
 	//
 	// The per-pixel CPU path shades one pixel at a time with no 2x2 quad, so true screen-space
 	// derivatives are unavailable. Shaders use them only to widen an anti-aliasing edge (the aastep/fwidth
@@ -330,7 +330,7 @@ namespace nCine::RHI::Software::sw
 	inline vec3 fwidth(const vec3&) { return vec3(0.04f); }
 	inline vec4 fwidth(const vec4&) { return vec4(0.04f); }
 
-	// --- Sampler shim -------------------------------------------------------------------------------
+	// ── Sampler Shim ─────────────────────────────────────────────────────────────────────────────
 
 	namespace detail
 	{

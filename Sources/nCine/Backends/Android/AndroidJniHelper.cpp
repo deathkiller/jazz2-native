@@ -97,7 +97,7 @@ namespace nCine::Backends
 
 	String AndroidJniWrap_Secure::_androidId;
 
-	// ------------------- AndroidJniHelper -------------------
+	// ── AndroidJniHelper ─────────────────────────────────────────────────────────────────────────
 
 	bool AndroidJniHelper::CheckAndClearExceptions()
 	{
@@ -222,7 +222,7 @@ namespace nCine::Backends
 		return result;
 	}
 
-	// ------------------- AndroidJniClass -------------------
+	// ── AndroidJniClass ──────────────────────────────────────────────────────────────────────────
 
 	AndroidJniClass::AndroidJniClass(jobject javaObject)
 		: _javaObject(nullptr)
@@ -315,7 +315,7 @@ namespace nCine::Backends
 		return fid;
 	}
 
-	// ------------------- AndroidJniClass_Version -------------------
+	// ── AndroidJniClass_Version ──────────────────────────────────────────────────────────────────
 
 	int AndroidJniClass_Version::sdkInt()
 	{
@@ -357,7 +357,7 @@ namespace nCine::Backends
 		return String(buffer, (std::size_t)length);
 	}
 
-	// ------------------- AndroidJniClass_MotionRange -------------------
+	// ── AndroidJniClass_MotionRange ──────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_MotionRange::init()
 	{
@@ -383,7 +383,7 @@ namespace nCine::Backends
 		return float(rangeValue);
 	}
 
-	// ------------------- AndroidJniClass_VibrationEffect -------------------
+	// ── AndroidJniClass_VibrationEffect ──────────────────────────────────────────────────────────
 
 	void AndroidJniClass_VibrationEffect::init()
 	{
@@ -397,7 +397,7 @@ namespace nCine::Backends
 		return AndroidJniClass_VibrationEffect(vibrationEffect);
 	}
 
-	// ------------------- AndroidJniClass_Vibrator -------------------
+	// ── AndroidJniClass_Vibrator ─────────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_Vibrator::init()
 	{
@@ -416,7 +416,7 @@ namespace nCine::Backends
 		AndroidJniHelper::jniEnv->CallVoidMethod(_javaObject, _midVibrate, vibe.javaObject());
 	}
 
-	// ------------------- AndroidJniClass_VibratorManager -------------------
+	// ── AndroidJniClass_VibratorManager ──────────────────────────────────────────────────────────
 
 	void AndroidJniClass_VibratorManager::init()
 	{
@@ -458,7 +458,7 @@ namespace nCine::Backends
 		return AndroidJniClass_Vibrator(vibratorObject);
 	}
 
-	// ------------------- AndroidJniClass_InputDevice -------------------
+	// ── AndroidJniClass_InputDevice ──────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_InputDevice::init()
 	{
@@ -601,7 +601,7 @@ namespace nCine::Backends
 		return AndroidJniClass_VibratorManager(vibratorManagerObject);
 	}
 
-	// ------------------- AndroidJniClass_KeyCharacterMap -------------------
+	// ── AndroidJniClass_KeyCharacterMap ──────────────────────────────────────────────────────────
 
 	void AndroidJniClass_KeyCharacterMap::init()
 	{
@@ -615,7 +615,7 @@ namespace nCine::Backends
 		return (hasKey == JNI_TRUE);
 	}
 
-	// ------------------- AndroidJniClass_KeyEvent -------------------
+	// ── AndroidJniClass_KeyEvent ─────────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_KeyEvent::init()
 	{
@@ -672,7 +672,7 @@ namespace nCine::Backends
 		return AndroidJniHelper::jniEnv->CallBooleanMethod(_javaObject, _midIsPrintingKey);
 	}
 
-	// ------------------- AndroidJniClass_DisplayMode -------------------
+	// ── AndroidJniClass_DisplayMode ──────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_DisplayMode::init()
 	{
@@ -712,7 +712,7 @@ namespace nCine::Backends
 		return float(refreshRate);
 	}
 
-	// ------------------- AndroidJniClass_Display -------------------
+	// ── AndroidJniClass_Display ──────────────────────────────────────────────────────────────────
 
 	void AndroidJniClass_Display::init()
 	{
@@ -767,7 +767,7 @@ namespace nCine::Backends
 		return length;
 	}
 
-	// ------------------- AndroidJniWrap_Activity -------------------
+	// ── AndroidJniWrap_Activity ──────────────────────────────────────────────────────────────────
 
 	void AndroidJniWrap_Activity::init(struct android_app* state)
 	{
@@ -1057,7 +1057,7 @@ namespace nCine::Backends
 		AndroidJniHelper::CheckAndClearExceptions();
 	}
 
-	// ------------------- AndroidJniWrap_InputMethodManager -------------------
+	// ── AndroidJniWrap_InputMethodManager ────────────────────────────────────────────────────────
 
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)
 	{
@@ -1118,7 +1118,7 @@ namespace nCine::Backends
 		return (result == JNI_TRUE);
 	}
 
-	// ------------------- AndroidJniWrap_DisplayManager -------------------
+	// ── AndroidJniWrap_DisplayManager ────────────────────────────────────────────────────────────
 
 	void AndroidJniWrap_DisplayManager::init(struct android_app* state)
 	{
@@ -1174,7 +1174,7 @@ namespace nCine::Backends
 		return length;
 	}
 	
-	// --------------------- AndroidJniWrap_Secure ---------------------
+	// ── AndroidJniWrap_Secure ────────────────────────────────────────────────────────────────────
 
 	void AndroidJniWrap_Secure::init(struct android_app* state)
 	{

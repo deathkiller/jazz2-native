@@ -185,7 +185,7 @@ namespace ShaderCompiler
 			return false;
 		}
 
-		// --- #if expression evaluation ------------------------------------------------------------
+		// ── #if Expression Evaluation ────────────────────────────────────────────────────────────
 
 		enum class ExprTokenType : std::uint8_t
 		{
@@ -545,7 +545,7 @@ namespace ShaderCompiler
 		};
 	}
 
-	// --- ShaderParser -------------------------------------------------------------------------------
+	// ── ShaderParser ─────────────────────────────────────────────────────────────────────────────
 
 	void ShaderParser::SplitLines(StringView content, SmallVectorImpl<SourceLine>& lines)
 	{
@@ -624,7 +624,7 @@ namespace ShaderCompiler
 		}
 	}
 
-	// --- Syntax front-end (directive keywords + vertex()/fragment() lowering) ------------------------
+	// ── Syntax Front-End (directive keywords + vertex()/fragment() lowering) ─────────────────────
 
 	namespace
 	{
@@ -1663,7 +1663,7 @@ R"GLSL(void main()
 			return true;
 		}
 
-		// --- Unused-function elimination ------------------------------------------------------------
+		// ── Unused-Function Elimination ──────────────────────────────────────────────────────────
 
 		/** @brief Extent of one global-scope function definition inside a stage line stream (inclusive line/column positions) */
 		struct FunctionDef
@@ -1945,7 +1945,7 @@ R"GLSL(void main()
 			}
 		}
 
-		// --- Unused-varying trimming ----------------------------------------------------------------
+		// ── Unused-Varying Trimming ──────────────────────────────────────────────────────────────
 
 		/** @brief One global-scope "in"/"out" interface declaration found in an assembled stage stream */
 		struct InterfaceDecl
@@ -2113,7 +2113,7 @@ R"GLSL(void main()
 			return false;
 		}
 
-		// --- Dead-store removal for trimmed varyings ------------------------------------------------
+		// ── Dead-Store Removal for Trimmed Varyings ──────────────────────────────────────────────
 
 		/** Returns true when a comment-stripped line is a preprocessor directive */
 		bool IsPreprocessorLine(StringView text)
@@ -2606,7 +2606,7 @@ R"GLSL(void main()
 			}
 		}
 
-		// --- Unused-uniform/block elimination ---------------------------------------------------------
+		// ── Unused-Uniform/Block Elimination ─────────────────────────────────────────────────────
 
 		/** @brief Kind of a removable global-scope declaration recognized by TrimUnusedUniforms */
 		enum class GlobalDeclKind : std::uint8_t
@@ -3133,7 +3133,7 @@ R"GLSL(void main()
 			}
 		}
 
-		// --- Constant folding -------------------------------------------------------------------------
+		// ── Constant Folding ─────────────────────────────────────────────────────────────────────
 
 		/**
 			Applies literal constant folding (see ConstFold.h) to every function-definition extent
@@ -3224,7 +3224,7 @@ R"GLSL(void main()
 			return "in "_s + declaration + ";"_s;
 		}
 
-		// --- Compile-time conditionals (stage macros and backend macros) --------------------------------
+		// ── Compile-Time Conditionals (stage macros and backend macros) ──────────────────────────
 
 		/**
 			@brief One macro a conditional resolver owns, together with the value it has in the pass being run
@@ -3914,7 +3914,7 @@ R"GLSL(void main()
 			lines = std::move(output);
 		}
 
-		// --- Lowering the conditionals that survive into an emitted source ------------------------------
+		// ── Lowering the Conditionals That Survive into an Emitted Source ────────────────────────
 
 		/**
 			Collects the macros an assembled stage stream defines with a NON-EMPTY body, i.e. the ones whose
@@ -4603,7 +4603,7 @@ R"GLSL(void main()
 		return true;
 	}
 
-	// --- Preprocessor -------------------------------------------------------------------------------
+	// ── Preprocessor ─────────────────────────────────────────────────────────────────────────────
 
 	void Preprocessor::Define(StringView name, StringView body)
 	{

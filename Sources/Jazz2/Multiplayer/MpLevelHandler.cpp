@@ -180,7 +180,7 @@ namespace Jazz2::Multiplayer
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _spectateFollowActorId(SpectateFreeCamera), _waitingForPlayerCount(0),
-			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
+			_lastUpdated(0), _seqNumWarped(0), _lastSentPressedActions(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _raceFinishedCount(0), _roundStartedFrames(0.0f),
 			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0), _raceCheckpointsOrdered(false), _ctfCaptures{}, _teamKills{}, _scoreboardSyncTime(0.0f),
@@ -437,11 +437,16 @@ namespace Jazz2::Multiplayer
 			}
 			_pendingSfx.clear();
 		} else {
+			// Compared against the last sent state, not PressedActionsLast - the pause menu stops UpdatePressedActions(),
+			// which freezes both at the Menu press edge, so that comparison stays true and would send every frame
 			auto& input = _playerInputs[0];
-			if (input.PressedActions != input.PressedActionsLast) {
+			std::uint64_t pressedActions = (_console->IsVisible() ? 0 : input.PressedActions);
+			if (pressedActions != _lastSentPressedActions) {
+				_lastSentPressedActions = pressedActions;
+
 				MemoryStream packet(12);
 				packet.WriteVariableUint32(_lastSpawnedActorId);
-				packet.WriteVariableUint64(_console->IsVisible() ? 0 : input.PressedActions);
+				packet.WriteVariableUint64(pressedActions);
 				_networkManager->SendTo(AllPeers, NetworkChannel::UnreliableUpdates, (std::uint8_t)ClientPacketType::PlayerKeyPress, packet);
 			}
 		}

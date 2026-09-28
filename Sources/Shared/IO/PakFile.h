@@ -159,8 +159,10 @@ namespace Death { namespace IO {
 		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition);
 		Item* FindItem(Containers::StringView path);
 		Item* FindItemByHash(std::uint64_t hashedPath);
+		std::unique_ptr<Stream> OpenItem(const Item& item, std::int32_t bufferSize);
 
 		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);
+		static const char* GetCompressionName(ItemFlags itemFlags);
 	};
 
 	/**
@@ -187,7 +189,7 @@ namespace Death { namespace IO {
 			@brief Returns `true` if the container already contains a file at the specified path
 
 			For merging two sets of files into one container, where the one added first is the one that should
-			be kept --- @ref AddFile() cannot report that, a hashed index stores no paths to compare against.
+			be kept --- @ref AddFile() refuses such a file too, but it also reports it as a failure.
 		*/
 		bool FileExists(Containers::StringView path) const;
 		/** @brief Writes file index and finalizes the `.pak` containers */
@@ -203,12 +205,12 @@ namespace Death { namespace IO {
 		std::unique_ptr<FileStream> _outputStream;
 		Containers::Array<PakFile::Item> _rootItems;
 		bool _finalized;
-		bool _alreadyExisted;
+		bool _removeIfEmpty;
 		bool _useHashIndex;
 		bool _useCompressedIndex;
 		bool _useRelativeOffsets;
 
-		PakFile::Item* FindOrCreateParentItem(Containers::StringView& path);
+		Containers::Array<PakFile::Item>* FindOrCreateParentDirectory(Containers::StringView& path);
 		void WriteItemDescription(Stream& s, PakFile::Item& item, std::int64_t indexStartPosition);
 	};
 

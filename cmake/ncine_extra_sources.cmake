@@ -284,10 +284,12 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.h
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64FullMotionVideo.h
 		)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64FullMotionVideo.cpp
 		)
 
 		if(NCINE_N64_SIZE_OPTIMIZATION)
@@ -515,17 +517,28 @@ if(NOT DEDICATED_SERVER)
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioMixerCommon.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
 		)
 
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioDeviceBase.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
-			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
 		)
+
+		if(PLATFORM_N64)
+			# The console plays every sound in libdragon's own formats and decodes none itself, so it has no
+			# use for the loaders (see NCINE_HAS_NATIVE_AUDIO in Main.h)
+			list(REMOVE_ITEM SOURCES "${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp")
+		else()
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
+			)
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
+				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
+			)
+		endif()
 
 		# Exactly one audio backend is compiled into a binary, mirroring the rendering backends. Each
 		# one lives in "nCine/Audio/Backends/<backend>/" and implements IAudioDevice.
@@ -1285,38 +1298,24 @@ else()
 		# Package a bootable .z64 ROM, reproducing libdragon's n64.mk "%.z64" rule: the symbol table for
 		# on-console backtraces, the stripped+compressed ELF, and a DragonFS image with the game content
 		# ("rom:/Content/", where the N64 branch of ContentResolver::GetContentPath() looks for it) are
-		# concatenated by n64tool behind a table of contents. ed64romconfig then marks the save type in
-		# the ROM header (the advanced homebrew header), which is how flashcarts and emulators know to
-		# provide the EEPROM the preferences are stored on.
+		# concatenated by n64tool behind a table of contents.
 		#
-		# The content is staged as "dfs/Content" first, so the directory in the image is always named
-		# "Content" regardless of the source directory name (mirrors the Dreamcast arm above); a staged
-		# "Source.pak" is renamed to "Prebaked.pak" the way the PS2 arm does, because the console has no
-		# writable cache to convert into.
-		set(_n64MarkPrebakedCommand "")
-		if(EXISTS "${NCINE_CONTENT_DIR}/Source.pak")
-			set(_n64MarkPrebakedCommand COMMAND ${CMAKE_COMMAND} -E rename
-				"${CMAKE_BINARY_DIR}/dfs/Content/Source.pak" "${CMAKE_BINARY_DIR}/dfs/Content/Prebaked.pak")
-		else()
-			message(STATUS "No \"Source.pak\" in \"${NCINE_CONTENT_DIR}\", the ROM image will not be marked as prebaked")
-		endif()
-
-		# A cartridge ROM is capped at the 64 MB the flashcarts provide and a full content tree does not
-		# fit, so the packaging drops what the console cannot use or cannot afford: "Music" is undecodable
-		# dead weight here (NCINE_WITH_OPENMPT is off) and the 7 MB "ending" cinematic does not fit next to
-		# the tilesets, while the intro does and is what the game opens with.
-		# TODO: re-encode the cinematics at a lower bitrate in AssetPacker and put the ending back.
+		# The content is staged as "dfs/Content" first, so the directory in the image is always named "Content"
+		# regardless of the source directory name (mirrors the Dreamcast arm above). The staging leaves out what
+		# the console cannot play - see cmake/n64_stage_content.cmake. A tree prepared with
+		# `AssetPacker convert --target=n64` has nothing to leave out: its music, sound effects and cinematics are
+		# already in libdragon's formats, which is also what lets the whole soundtrack and both cinematics fit
+		# under the 64 MB cartridge ceiling.
+		#
+		# ed64romconfig marks the ROM header (the advanced homebrew header) with what flashcarts and emulators
+		# should provide: the EEPROM the preferences are stored on, and a Rumble Pak in the first controller -
+		# rumble is implemented (N64InputManager), and emulators only attach one when the header asks for it.
+		# The real-time clock is deliberately NOT declared: an EverDrive cannot provide EEPROM and an RTC at the
+		# same time, and nothing needs one - the random seed comes from libdragon's entropy source, and
+		# rtc_init() still uses a clock where the hardware has one anyway.
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
-			# The staging directory is rebuilt from scratch: copy_directory keeps destination files that are
-			# no longer in the source, so a stale file from a previous build (e.g., a "Source.pak" already
-			# renamed to "Prebaked.pak" below) would otherwise be packed into every later ROM
-			COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/dfs/Content"
-			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/dfs/Content"
-			# Two commands rather than one "-E rm": that form needs CMake 3.17, and the project's minimum
-			# is 3.15 (remove_directory/remove both ignore paths that do not exist)
-			COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_BINARY_DIR}/dfs/Content/Music"
-			COMMAND ${CMAKE_COMMAND} -E remove -f "${CMAKE_BINARY_DIR}/dfs/Content/Cinematics/ending.j2v"
-			${_n64MarkPrebakedCommand}
+			COMMAND ${CMAKE_COMMAND} "-DSOURCE=${NCINE_CONTENT_DIR}" "-DDESTINATION=${CMAKE_BINARY_DIR}/dfs/Content"
+				-P "${CMAKE_SOURCE_DIR}/cmake/n64_stage_content.cmake"
 			COMMAND "${N64_MKDFS}" "${CMAKE_BINARY_DIR}/${NCINE_APP}.dfs" "${CMAKE_BINARY_DIR}/dfs"
 			COMMAND "${N64_SYM}" --all "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.sym"
 			COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${NCINE_APP}>" "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
@@ -1326,7 +1325,7 @@ else()
 				--align 256 "${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.stripped"
 				"${CMAKE_BINARY_DIR}/${NCINE_APP}.elf.sym"
 				--align 16 "${CMAKE_BINARY_DIR}/${NCINE_APP}.dfs"
-			COMMAND "${N64_ED64ROMCONFIG}" --savetype eeprom16k --regionfree "${CMAKE_BINARY_DIR}/${NCINE_APP}.z64"
+			COMMAND "${N64_ED64ROMCONFIG}" --savetype eeprom16k --regionfree --controller1 n64,pak=rumble "${CMAKE_BINARY_DIR}/${NCINE_APP}.z64"
 			COMMAND ${CMAKE_COMMAND} "-DN64_ROM=${CMAKE_BINARY_DIR}/${NCINE_APP}.z64" -P "${CMAKE_SOURCE_DIR}/cmake/n64_check_rom_size.cmake"
 			COMMENT "Creating bootable Z64 ROM image with game content"
 			VERBATIM)

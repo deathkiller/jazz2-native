@@ -1,31 +1,14 @@
 #include "AudioStream.h"
-#include "IAudioLoader.h"
-#include "IAudioReader.h"
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
+#	include "IAudioLoader.h"
+#	include "IAudioReader.h"
+#endif
 #include "../ServiceLocator.h"
 
 #include <Containers/String.h>
 
 namespace nCine
 {
-	// Private constructor called only by AudioStreamPlayer
-	AudioStream::AudioStream()
-		: _nextAvailableBufferIndex(0), _currentBufferId(0), _asyncDecodeAvailable(true), _bytesPerSample(0), _numChannels(0), _isLooping(false),
-			_frequency(0), _numSamples(0), _duration(0.0f), _format(IAudioDevice::BufferFormat::Mono16), _buffersIds(NumBuffers)
-	{
-#if defined(WITH_AUDIO)
-		IAudioDevice& device = theServiceLocator().GetAudioDevice();
-		for (std::int32_t i = 0; i < NumBuffers; i++) {
-			_buffersIds[i] = device.createBuffer(IAudioDevice::BufferUsage::Streaming);
-			if DEATH_UNLIKELY(_buffersIds[i] == 0) {
-				LOGW("Cannot create streaming audio buffer");
-			}
-		}
-		_decodeRequest = std::make_shared<StreamDecodeRequest>();
-		_decodeRequest->buffer = std::make_unique<char[]>(BufferSize);
-		_decodeRequest->bufferSize = BufferSize;
-#endif
-	}
-
 	// Private constructor called only by AudioStreamPlayer
 	AudioStream::AudioStream(StringView filename)
 		: AudioStream()
@@ -38,9 +21,106 @@ namespace nCine
 #endif
 	}
 
+	AudioStream::AudioStream(AudioStream&&) = default;
+	AudioStream& AudioStream::operator=(AudioStream&&) = default;
+
+#if defined(NCINE_HAS_NATIVE_AUDIO)
+	// Private constructor called only by AudioStreamPlayer
+	AudioStream::AudioStream()
+		: _bytesPerSample(0), _numChannels(0), _frequency(0), _numSamples(0), _duration(0.0f), _isLooping(false)
+	{
+	}
+
+	// The handle closes the stream by itself
+	AudioStream::~AudioStream() = default;
+
+	AudioStream::NativeStreamHandle::~NativeStreamHandle()
+	{
+#	if defined(WITH_AUDIO)
+		if (Id != 0) {
+			theServiceLocator().GetAudioDevice().closeNativeStream(Id);
+		}
+#	endif
+	}
+
+	bool AudioStream::enqueue(std::uint32_t source, bool looping)
+	{
+#	if defined(WITH_AUDIO)
+		if (_nativeStream.Id == 0) {
+			return false;
+		}
+
+		// Nothing to decode: the device plays the stream itself once it is bound to the source, and all that is
+		// left to do here is to keep the looping flag in step and report whether it still plays
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+		device.setSourceLooping(source, looping);
+		if (!_nativeStream.Started) {
+			_nativeStream.Started = true;
+			device.setSourceNativeStream(source, _nativeStream.Id);
+			device.playSource(source);
+		}
+		return device.isSourcePlaying(source);
+#	else
+		return false;
+#	endif
+	}
+
+	void AudioStream::stop(std::uint32_t source)
+	{
+#	if defined(WITH_AUDIO)
+		// The device rewinds a native stream when its source is stopped; the next play() binds it again,
+		// possibly to another source
+		theServiceLocator().GetAudioDevice().stopSource(source);
+		_nativeStream.Started = false;
+#	endif
+	}
+
+	void AudioStream::setLooping(bool value)
+	{
+		// The device takes the flag from every enqueue()
+		_isLooping = value;
+	}
+
+	bool AudioStream::loadFromFile(StringView filename)
+	{
+#	if defined(WITH_AUDIO)
+		// Replacing the handle closes the previous stream, also when this file cannot be played
+		IAudioDevice::NativeAudioInfo info;
+		_nativeStream = NativeStreamHandle(theServiceLocator().GetAudioDevice().openNativeStream(filename, info));
+		if (_nativeStream.Id != 0) {
+			_bytesPerSample = info.BytesPerSample;
+			_numChannels = info.NumChannels;
+			_frequency = info.Frequency;
+			_numSamples = info.NumSamples;
+			_duration = (_numSamples < 0 || _frequency <= 0 ? -1.0f : float(_numSamples) / _frequency);
+			return true;
+		}
+#	endif
+		return false;
+	}
+#else
+	// Private constructor called only by AudioStreamPlayer
+	AudioStream::AudioStream()
+		: _nextAvailableBufferIndex(0), _currentBufferId(0), _asyncDecodeAvailable(true), _bytesPerSample(0), _numChannels(0), _isLooping(false),
+			_frequency(0), _numSamples(0), _duration(0.0f), _format(IAudioDevice::BufferFormat::Mono16), _buffersIds(NumBuffers)
+	{
+#	if defined(WITH_AUDIO)
+		IAudioDevice& device = theServiceLocator().GetAudioDevice();
+		for (std::int32_t i = 0; i < NumBuffers; i++) {
+			_buffersIds[i] = device.createBuffer(IAudioDevice::BufferUsage::Streaming);
+			if DEATH_UNLIKELY(_buffersIds[i] == 0) {
+				LOGW("Cannot create streaming audio buffer");
+			}
+		}
+		_decodeRequest = std::make_shared<StreamDecodeRequest>();
+		_decodeRequest->buffer = std::make_unique<char[]>(BufferSize);
+		_decodeRequest->bufferSize = BufferSize;
+#	endif
+	}
+
 	AudioStream::~AudioStream()
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		// Don't delete buffers if this is a moved out object
 		if (_buffersIds.size() == NumBuffers) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
@@ -48,26 +128,23 @@ namespace nCine
 				device.deleteBuffer(_buffersIds[i]);
 			}
 		}
-#endif
+#	endif
 	}
-
-	AudioStream::AudioStream(AudioStream&&) = default;
-	AudioStream& AudioStream::operator=(AudioStream&&) = default;
 
 	std::int32_t AudioStream::numStreamSamples() const
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		if (_numChannels * _bytesPerSample > 0) {
 			return BufferSize / (_numChannels * _bytesPerSample);
 		}
-#endif
+#	endif
 		return 0UL;
 	}
 
 	// Returns false once the stream has been entirely decoded and played
 	std::int32_t AudioStream::unqueueProcessedBuffers(IAudioDevice& device, std::uint32_t source)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		// The backend's count (AL_BUFFERS_PROCESSED) and this object's own count of what it queued
 		// (_nextAvailableBufferIndex) are supposed to agree, but nothing enforces it: an upload the backend
 		// rejected still counted as queued, and a buffer name that has gone stale queues nothing at all.
@@ -111,14 +188,14 @@ namespace nCine
 			}
 		}
 		return count;
-#else
+#	else
 		return 0;
-#endif
+#	endif
 	}
 
 	bool AudioStream::enqueue(std::uint32_t source, bool looping)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		if (_audioReader == nullptr) {
 			return false;
 		}
@@ -225,14 +302,14 @@ namespace nCine
 		}
 
 		return shouldKeepPlaying;
-#else
+#	else
 		return false;
-#endif
+#	endif
 	}
 
 	void AudioStream::stop(std::uint32_t source)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 
 		// The reader can't be rewound while the decoding thread is using it,
@@ -252,37 +329,37 @@ namespace nCine
 			_audioReader->rewind();
 		}
 		_currentBufferId = 0;
-#endif
+#	endif
 	}
 
 	void AudioStream::setLooping(bool value)
 	{
 		_isLooping = value;
 
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		if (_audioReader != nullptr) {
 			// The reader can't be modified while the decoding thread is using it
 			theServiceLocator().GetAudioDevice().drainStreamDecode(_decodeRequest);
 			_audioReader->setLooping(value);
 		}
-#endif
+#	endif
 	}
 
 	bool AudioStream::loadFromFile(StringView filename)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (audioLoader->hasLoaded()) {
 			createReader(*audioLoader);
 			return true;
 		}	
-#endif
+#	endif
 		return false;
 	}
 
 	void AudioStream::createReader(IAudioLoader& audioLoader)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		// The old reader can't be replaced while the decoding thread is still using it
 		if (_decodeRequest == nullptr) {
 			// The object was moved out, recreate the decode request
@@ -315,6 +392,7 @@ namespace nCine
 		_audioReader = audioLoader.createReader();
 		_decodeRequest->reader = _audioReader;
 		_audioReader->setLooping(_isLooping);
-#endif
+#	endif
 	}
+#endif
 }

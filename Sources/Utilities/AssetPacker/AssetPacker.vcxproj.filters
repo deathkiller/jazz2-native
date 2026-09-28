@@ -72,6 +72,9 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CartridgeImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="DiscImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -79,6 +82,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Iso9660.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ModuleConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="N64Content.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PngCodec.cpp">
@@ -203,6 +212,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CartridgeImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="DiscImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -210,6 +222,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Iso9660.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ModuleConverter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="N64Content.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PngCodec.h">

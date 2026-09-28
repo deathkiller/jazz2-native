@@ -254,7 +254,7 @@ namespace nCine::RHI::PVR
 	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed
 	// entry pointer - and names EffectContext in a member type; the console toolchain's GCC
 	// ICEs when such an external struct member references an internal-linkage type.
-	// ---------------------------------------------------------- fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this
 	// EffectContext - the structural contract documented in FixedFunctionPass.h. The per-effect
@@ -557,7 +557,7 @@ namespace nCine::RHI::PVR
 	std::int32_t PvrDevice::_lightmapW = 0;
 	std::int32_t PvrDevice::_lightmapH = 0;
 
-	// ------------------------------------------------------------------ session
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::InitializePvr()
 	{
@@ -727,7 +727,7 @@ namespace nCine::RHI::PVR
 		}
 	}
 
-	// ------------------------------------------------------------------ state
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void PvrDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
@@ -818,7 +818,7 @@ namespace nCine::RHI::PVR
 		SubmitQuad(hdr, px, py, uv, uv, argb);
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -881,7 +881,7 @@ namespace nCine::RHI::PVR
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ extensions
+	// ── Extensions ───────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::BindProgram(PvrShaderProgram* program) { _currentProgram = program; }
 	PvrShaderProgram* PvrDevice::CurrentProgram() { return _currentProgram; }
@@ -942,7 +942,7 @@ namespace nCine::RHI::PVR
 		}
 	}
 
-	// ------------------------------------------------------------------ palette banks
+	// ── Palette Banks ────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::RegisterPaletteTexture(PvrTexture* texture)
 	{
@@ -1021,7 +1021,7 @@ namespace nCine::RHI::PVR
 		return bank;
 	}
 
-	// ------------------------------------------------------------------ lighting hook
+	// ── Lighting Hook ────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -1172,7 +1172,7 @@ namespace nCine::RHI::PVR
 		}
 	}
 
-	// ------------------------------------------------------------------ draw dispatch
+	// ── Draw Dispatch ────────────────────────────────────────────────────────────────────────────
 
 	void PvrDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)

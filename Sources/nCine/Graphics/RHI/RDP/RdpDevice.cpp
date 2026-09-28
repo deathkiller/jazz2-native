@@ -1,4 +1,5 @@
 #include "RdpDevice.h"
+#include "RdpTileRecord.h"
 #include "../../../Base/Algorithms.h"
 #include "../../../Base/FrameStatistics.h"
 #include "RdpBuffer.h"
@@ -17,7 +18,10 @@
 #include <malloc.h>
 
 #include <display.h>
+#include <graphics.h>
+#include <interrupt.h>
 #include <n64sys.h>
+#include <rdp.h>
 #include <rspq.h>
 #include <rdpq.h>
 #include <rdpq_attach.h>
@@ -28,6 +32,7 @@
 #include <rdpq_tri.h>
 #include <surface.h>
 #include <unistd.h>
+#include <vi.h>
 
 namespace nCine::RHI::RDP
 {
@@ -109,7 +114,7 @@ namespace nCine::RHI::RDP
 			return PackRgba(QuantizeChannel(rgba[0]), QuantizeChannel(rgba[1]), QuantizeChannel(rgba[2]), QuantizeChannel(rgba[3]));
 		}
 
-		// ---------------------------------------------------------------- combiner / blender presets
+		// ── Combiner / Blender Presets ───────────────────────────────────────────────────────────
 		//
 		// The color combiner computes (A-B)*C+D per cycle; the pass colour travels in the PRIM register
 		// rather than per-vertex shade because TEXTURE_RECTANGLE - the fast path nearly everything takes -
@@ -216,7 +221,7 @@ namespace nCine::RHI::RDP
 
 	namespace
 	{
-		// ---------------------------------------------------------------- draw statistics
+		// ── Draw Statistics ──────────────────────────────────────────────────────────────────────
 		//
 		// Per-frame counters and section timers, logged twice a second when the switch is on - the only
 		// practical way to see what actually reaches the RDP, since every submission goes out through the
@@ -241,7 +246,7 @@ namespace nCine::RHI::RDP
 		struct FrameStats
 		{
 			std::uint32_t Dispatches, Instances, Rects, Triangles;
-			std::uint32_t WindowUploads, WindowBytes, WindowHits, Blits, Strips;
+			std::uint32_t WindowUploads, WindowBytes, WindowHits, Blits, Banded, Strips;
 			std::uint32_t TlutUploads, TlutConversions, TlutEvictWaits;
 			std::uint32_t ModeChanges, PrimChanges, StoreRefreshes, BakeRebuilds, StoreWritebackBytes;
 		};
@@ -272,6 +277,9 @@ namespace nCine::RHI::RDP
 		// Whether the base render mode (set_mode_standard + the 2D defaults) has to be re-issued before
 		// the incremental mode setters can be trusted again (after attach, clear, present)
 		bool modeBaseDirty = true;
+		// Whether the RDP is attached to a render target rather than the screen, which is where the coverage
+		// written by every pixel is read back (see ApplyDrawState)
+		bool drawingToTarget = false;
 
 		void InvalidateAppliedState()
 		{
@@ -320,7 +328,11 @@ namespace nCine::RHI::RDP
 			// every glyph cell of the performance overlay solid, its transparent texels turned into the clear
 			// colour, whenever the text went out on anything but the cutout path (colorized text doubles on the
 			// two-cycle combiner). The threshold rejects only an alpha of exactly zero, so soft edges still blend.
-			const bool alphaCompare = (cutout || blendOn);
+			// A two-cycle draw keeps it only where that coverage is read back, in a render target: the hardware
+			// evaluates alpha compare a pixel off in two-cycle mode (libdragon's validator reports it on every
+			// such draw), and on the screen that would shift an edge of every colorized glyph for nothing.
+			const bool twoCycle = ((state.Combiner & RDPQ_COMBINER_2PASS) != 0);
+			const bool alphaCompare = (cutout || (blendOn && (!twoCycle || drawingToTarget)));
 			if (!appliedStateValid || appliedAlphaCompare != alphaCompare) {
 				rdpq_mode_alphacompare(alphaCompare ? 1 : 0);
 				appliedAlphaCompare = alphaCompare;
@@ -342,7 +354,7 @@ namespace nCine::RHI::RDP
 			appliedStateValid = true;
 		}
 
-		// ---------------------------------------------------------------- TMEM window management
+		// ── TMEM Window Management ───────────────────────────────────────────────────────────────
 		//
 		// The RDP samples only out of TMEM: 4 KB, of which CI8 texels may use only the lower 2 KB (the
 		// upper half holds the TLUT). Every textured primitive is preceded by an upload of the texel
@@ -630,8 +642,11 @@ namespace nCine::RHI::RDP
 					cfg.MaskT = state.RepeatMaskT;
 					cfg.Configured = true;
 				}
+				// LOAD_TILE also records the loaded extents in the tile descriptor it loads through - the SL/TL
+				// SH/TH a SET_TILE_SIZE would write - and the slot's tile is the very one the primitives draw
+				// with, so the load alone leaves the descriptor as they need it. The SET_TILE_SIZE that used to
+				// follow wrote the same values again, one more command (and autosync check) per upload.
 				rdpq_load_tile(rdpq_tile_t(slot), std::uint16_t(s0), std::uint16_t(t0), std::uint16_t(s1), std::uint16_t(t1));
-				rdpq_set_tile_size(rdpq_tile_t(slot), std::uint16_t(s0), std::uint16_t(t0), std::uint16_t(s1), std::uint16_t(t1));
 				tmemCurrentSlot = slot;
 				// A wide window clobbered the other slot too; whichever half the primitives drawn with it
 				// read, the next load over it has to wait for them
@@ -647,7 +662,10 @@ namespace nCine::RHI::RDP
 				tex_loader_set_tmem_addr(&tmemLoader, 0);
 				tex_loader_load(&tmemLoader, s0, t0, s1, t1);
 				tmemCurrentSlot = 0;
+				// The loader programs TILE0 for the draw and, for a 4 bpp or a whole-row (LOAD_BLOCK) upload, the tile
+				// after it (TILE1, the other slot) as the one it loads through
 				tmemSlots[0].Configured = false;
+				tmemSlots[1].Configured = false;
 				tmemImageBuffer = nullptr;
 				tmemNeedsSync = true;
 			}
@@ -674,7 +692,7 @@ namespace nCine::RHI::RDP
 			if (TraceDrawStatistics) { traceUploadTicks += std::uint32_t(get_ticks()) - uploadStart; }
 		}
 
-		// ---------------------------------------------------------------- primitive submission
+		// ── Primitive Submission ─────────────────────────────────────────────────────────────────
 
 		bool warnedOversizedTriangle = false;
 
@@ -744,6 +762,7 @@ namespace nCine::RHI::RDP
 				if (state.Filter == FILTER_POINT && (bandBpp == 8 || bandBpp == 16) && bandPitch <= TmemBudget(bandFmt) &&
 					winT1 > winT0 && std::abs(t1 - t0) > 0.01f) {
 					ApplyDrawState(state);
+					if (TraceDrawStatistics) { stats.Banded++; }
 					const std::int32_t rowsPerBand = TmemBudget(bandFmt) / bandPitch;
 					const float dyPerTexel = (y1 - y0) / (t1 - t0);		// negative for a vertically mirrored sprite
 					const float dtPerPixel = 1.0f / dyPerTexel;
@@ -791,11 +810,15 @@ namespace nCine::RHI::RDP
 				rdpq_sync_tile();
 				rdpq_tex_blit(state.Texture, x0, y0, &parms);
 
-				// The blitter left its own last chunk in the texel half of TMEM, and programmed TILE0
+				// The blitter left its own last chunk in the texel half of TMEM, and programmed TILE0 - and TILE1 as
+				// well, the tile its loader loads whole-row chunks through (LOAD_BLOCK). Slot 1 kept its cached
+				// descriptor before: the next upload there skipped its SET_TILE whenever it matched what the slot
+				// held before the blit, and loaded and drew through the blitter's RGBA16 load tile of pitch 0.
 				tmemWindow.Valid = false;
 				tmemLoaderSurface = nullptr;
 				tmemImageBuffer = nullptr;
 				tmemSlots[0].Configured = false;
+				tmemSlots[1].Configured = false;
 				tmemCurrentSlot = 0;
 				tmemNeedsSync = true;
 				// A direct-color blit chunks through all 4 KB of TMEM and overwrote any resident TLUT in
@@ -823,6 +846,158 @@ namespace nCine::RHI::RDP
 			const std::uint32_t rectStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
 			rdpq_texture_rectangle_scaled(CurrentTile(), x0, y0, x1, y1, s0, t0, s1, t1);
 			if (TraceDrawStatistics) { stats.Rects++; traceRectTicks += std::uint32_t(get_ticks()) - rectStart; }
+		}
+
+		/** @brief Rounds to the nearest integer, halves away from zero - `std::lround` is an out-of-line libm call here */
+		inline std::int32_t RoundToInt(float value)
+		{
+			return std::int32_t(value >= 0.0f ? value + 0.5f : value - 0.5f);
+		}
+
+		/**
+			@brief Draws an upright sprite rectangle, the most common primitive of a frame
+
+			The same rectangle SubmitTexturedRect() produces, computed in integers from the start: the corners are
+			rounded onto the RDP's grid (10.2 screen, 10.5 texel coordinates) once, and the texel window, the
+			steps and the command all come from those integers. The general function snaps each corner in float
+			first - eight float divisions - then derives the window in float and has
+			rdpq_texture_rectangle_scaled() convert everything again, which cost ~45 us a sprite on this CPU. A
+			sprite whose window does not fit TMEM at once (drawn in bands or by the blitter) still goes through
+			SubmitTexturedRect().
+
+			A point-sampled mirrored sprite (the texel coordinates reversed) starts one 1/32-texel step inside
+			its far edge, for the reason DispatchTileRecords() gives: from the edge itself its first column
+			sampled the edge texel, clamped back onto the last one, which then showed twice while the first
+			never did. A filtered one keeps the edge, as before: the RDP's bilinear taps take the texel at the
+			sample position and the next one, so one step inside would still be nearly all edge texel.
+		*/
+		void SubmitSpriteRect(const DrawState& state, float x0, float y0, float x1, float y1,
+			float s0, float t0, float s1, float t1)
+		{
+			const bool bilinear = (state.Filter == FILTER_BILINEAR);
+			std::int32_t qx0 = RoundToInt(x0 * 4.0f), qy0 = RoundToInt(y0 * 4.0f);
+			std::int32_t qx1 = RoundToInt(x1 * 4.0f), qy1 = RoundToInt(y1 * 4.0f);
+			std::int32_t qs0 = RoundToInt(s0 * 32.0f), qt0 = RoundToInt(t0 * 32.0f);
+			const std::int32_t qs1 = RoundToInt(s1 * 32.0f), qt1 = RoundToInt(t1 * 32.0f);
+			if (qx1 <= qx0 || qy1 <= qy0) {
+				return;
+			}
+			// Texel coordinates of a sprite are never negative, so the shifts are floor and ceil
+			std::int32_t winS0 = std::min(qs0, qs1) >> 5, winS1 = (std::max(qs0, qs1) + 31) >> 5;
+			std::int32_t winT0 = std::min(qt0, qt1) >> 5, winT1 = (std::max(qt0, qt1) + 31) >> 5;
+			ClampWindow(state.Texture, winS0, winT0, winS1, winT1, bilinear);
+			if (winS1 <= winS0 || winT1 <= winT0 || std::min(qs0, qs1) < 0 || std::min(qt0, qt1) < 0 ||
+				!WindowFits(state.Texture, winS0, winT0, winS1, winT1)) {
+				SubmitTexturedRect(state, x0, y0, x1, y1, s0, t0, s1, t1);
+				return;
+			}
+
+			ApplyDrawState(state);
+			UploadWindow(state, winS0, winT0, winS1, winT1);
+
+			std::int32_t dsdx = ((qs1 - qs0) << 7) / (qx1 - qx0), dtdy = ((qt1 - qt0) << 7) / (qy1 - qy0);
+			if (dsdx < 0 && !bilinear) { qs0--; }
+			if (dtdy < 0 && !bilinear) { qt0--; }
+			if (qx0 < 0) { qs0 -= (qx0 * dsdx) >> 7; qx0 = 0; if (qx0 >= qx1) { return; } }
+			if (qy0 < 0) { qt0 -= (qy0 * dtdy) >> 7; qy0 = 0; if (qy0 >= qy1) { return; } }
+			if (qx1 > 1024 * 4 - 1) { qx1 = 1024 * 4 - 1; if (qx0 >= qx1) { return; } }
+			if (qy1 > 1024 * 4 - 1) { qy1 = 1024 * 4 - 1; if (qy0 >= qy1) { return; } }
+			const std::uint32_t rectStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
+			__rdpq_texture_rectangle_raw_fx(CurrentTile(), std::uint16_t(qx0), std::uint16_t(qy0), std::uint16_t(qx1), std::uint16_t(qy1),
+				std::uint16_t(qs0), std::uint16_t(qt0), std::int16_t(dsdx), std::int16_t(dtdy));
+			if (TraceDrawStatistics) { stats.Rects++; traceRectTicks += std::uint32_t(get_ticks()) - rectStart; }
+		}
+
+		/**
+			@brief Draws a tile layer given as packed records (see TileRecord), one textured rectangle per tile
+
+			The per-tile work is what is left of drawing a tile once everything about it is an integer: where it
+			goes (its position through the view's scale and translation, the only float arithmetic), whether its
+			32x32 texel window is resident (UploadWindow() keeps the last one, and the tiles arrive grouped by
+			the atlas slot they sample), and the rectangle itself in rdpq_texture_rectangle_scaled's encoding
+			(10.2 screen coordinates, 10.5 texel coordinates, 5.10 steps). The window is exactly the tile's
+			texels - it has to cover everything the rectangle can sample, and a window one texel short made the
+			RDP sample outside what was loaded and wedge with TMEM, pipe and DMA busy, a hard hang on hardware.
+			Every tile of a layer maps the same texel span onto the same pixel span, so the steps are only
+			divided out again when that span changes (~40 cycles a division on this CPU).
+
+			A mirrored tile runs its texels backwards from its far edge, which is one step past the window's
+			last texel: started exactly there, the first column would sample the edge itself (clamped back onto
+			the last texel, which then showed twice while the first never did), so it starts one 1/32-texel step
+			inside.
+
+			The layer tint rides the PRIM colour, with the tile's own alpha folded into it - re-applied only
+			when the alpha changes, which within a layer is nearly never.
+		*/
+		void DispatchTileRecords(DrawState& state, const float* records, std::int32_t count, const Transform2D& raster,
+			const float* layerColor)
+		{
+			constexpr std::int32_t Size = TileRecord::Size;
+			constexpr std::int32_t TexelSpan = Size << 5;		// One tile in 10.5 texel coordinates
+			const std::int32_t surfW = state.Texture->width, surfH = state.Texture->height;
+			const float spanX = raster.Xx * float(Size), spanY = raster.Yy * float(Size);
+			const std::uint8_t tintR = QuantizeChannel(layerColor[0]), tintG = QuantizeChannel(layerColor[1]),
+				tintB = QuantizeChannel(layerColor[2]);
+			std::int32_t lastAlpha = -1;
+			std::int32_t lastSpanX = 0, lastSpanY = 0, lastDsdx = 0, lastDtdy = 0;
+
+			for (std::int32_t i = 0; i < count; i++) {
+				TileRecord tile;
+				std::memcpy(&tile, records + std::size_t(i) * (sizeof(TileRecord) / sizeof(float)), sizeof(tile));
+
+				if (tile.Alpha != lastAlpha) {
+					lastAlpha = tile.Alpha;
+					state.PrimColor = PackRgba(tintR, tintG, tintB, QuantizeChannel(layerColor[3] * (float(tile.Alpha) * (1.0f / 255.0f))));
+					ApplyDrawState(state);
+				}
+
+				float px0 = raster.Xx * tile.X + raster.Tx, py0 = raster.Yy * tile.Y + raster.Ty;
+				float px1 = px0 + spanX, py1 = py0 + spanY;
+				bool flipX = ((tile.Flags & TileRecord::FlipX) != 0);
+				bool flipY = ((tile.Flags & TileRecord::FlipY) != 0);
+				// A mirrored view turns the rectangle over, and its texels with it
+				if (px0 > px1) { std::swap(px0, px1); flipX = !flipX; }
+				if (py0 > py1) { std::swap(py0, py1); flipY = !flipY; }
+
+				const std::int32_t winS0 = tile.TexX, winT0 = tile.TexY;
+				const std::int32_t winS1 = winS0 + Size, winT1 = winT0 + Size;
+				if (winS1 > surfW || winT1 > surfH) {
+					continue;
+				}
+				if (!WindowFits(state.Texture, winS0, winT0, winS1, winT1)) {
+					// A texel format too wide for TMEM to hold a whole tile; the general path bands it
+					SubmitTexturedRect(state, px0, py0, px1, py1, float(flipX ? winS1 : winS0), float(flipY ? winT1 : winT0),
+						float(flipX ? winS0 : winS1), float(flipY ? winT0 : winT1));
+					continue;
+				}
+				UploadWindow(state, winS0, winT0, winS1, winT1);
+
+				std::int32_t x0 = std::int32_t(px0 * 4.0f), y0 = std::int32_t(py0 * 4.0f);
+				std::int32_t x1 = std::int32_t(px1 * 4.0f), y1 = std::int32_t(py1 * 4.0f);
+				if (x1 == x0 || y1 == y0) {
+					continue;
+				}
+				if (x1 - x0 != lastSpanX) {
+					lastSpanX = x1 - x0;
+					lastDsdx = (TexelSpan << 7) / lastSpanX;
+				}
+				if (y1 - y0 != lastSpanY) {
+					lastSpanY = y1 - y0;
+					lastDtdy = (TexelSpan << 7) / lastSpanY;
+				}
+				std::int32_t s0 = winS0 << 5, t0 = winT0 << 5;
+				std::int32_t dsdx = lastDsdx, dtdy = lastDtdy;
+				if (flipX) { s0 = (winS1 << 5) - 1; dsdx = -dsdx; }
+				if (flipY) { t0 = (winT1 << 5) - 1; dtdy = -dtdy; }
+				if (x0 < 0) { s0 -= (x0 * dsdx) >> 7; x0 = 0; if (x0 >= x1) { continue; } }
+				if (y0 < 0) { t0 -= (y0 * dtdy) >> 7; y0 = 0; if (y0 >= y1) { continue; } }
+				if (x1 > 1024 * 4 - 1) { x1 = 1024 * 4 - 1; if (x0 >= x1) { continue; } }
+				if (y1 > 1024 * 4 - 1) { y1 = 1024 * 4 - 1; if (y0 >= y1) { continue; } }
+				const std::uint32_t rectStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
+				__rdpq_texture_rectangle_raw_fx(CurrentTile(), std::uint16_t(x0), std::uint16_t(y0), std::uint16_t(x1), std::uint16_t(y1),
+					std::uint16_t(s0), std::uint16_t(t0), std::int16_t(dsdx), std::int16_t(dtdy));
+				if (TraceDrawStatistics) { stats.Rects++; traceRectTicks += std::uint32_t(get_ticks()) - rectStart; }
+			}
 		}
 
 		/** @brief One textured triangle; a window bigger than TMEM is clamped (nothing on this tier draws one) */
@@ -939,6 +1114,7 @@ namespace nCine::RHI::RDP
 			tmemLoaderSurface = nullptr;
 			tmemImageBuffer = nullptr;
 			tmemSlots[0].Configured = false;
+			tmemSlots[1].Configured = false;
 			tmemCurrentSlot = 0;
 			tmemNeedsSync = true;
 			if (state.Tlut == nullptr) {
@@ -1114,7 +1290,7 @@ namespace nCine::RHI::RDP
 			}
 		}
 
-		// ---------------------------------------------------------------- per-frame TLUT cache
+		// ── Per-Frame TLUT Cache ─────────────────────────────────────────────────────────────────
 		//
 		// The RDP resolves CI8 texels through a 256-entry RGBA5551 TLUT in the upper half of TMEM; the
 		// engine's palettes are RGBA8 rows of the shared palette texture, so each row a frame samples is
@@ -1208,7 +1384,7 @@ namespace nCine::RHI::RDP
 	// this translation unit), for the same reason as on the PVR and the GE: the effect-table struct below
 	// is at namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed entry
 	// pointer - and names EffectContext in a member type.
-	// ---------------------------------------------------------- fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this EffectContext -
 	// the structural contract documented in FixedFunctionPass.h, implemented here against the rdpq
@@ -1768,7 +1944,194 @@ namespace nCine::RHI::RDP
 		RetireFrameSyncpoints(pendingFrameSyncpointCount);
 	}
 
-	// ------------------------------------------------------------------ session
+	// ── Hang Report ──────────────────────────────────────────────────────────────────────────────
+
+	namespace
+	{
+		/*
+			A command the RDP chokes on does not fault: the chip stops, its status still busy, and everything
+			waiting for it waits for good. libdragon notices when one of its wait loops times out (200 ms) and
+			shows the RSP's state, but the RDP commands it stopped on go only to the debug log - a flashcart
+			without USB has nowhere to send it, and the emulators do not reproduce these hangs at all. So the VI
+			interrupt watches the RDP itself: once it has not moved on by a single command for HangTimeoutMs while
+			busy - many times what any one primitive of this game takes, even full-screen - the frame on the TV
+			is replaced by the RDP's registers, the state commands it was last sent and the command words around
+			the point it stopped at, and the console halts there. A photo of that screen is the whole report.
+		*/
+		constexpr std::uint32_t HangTimeoutMs = 100;
+		std::uint32_t hangLastCurrent = 0;
+		std::uint64_t hangSince = 0;
+
+		/** @brief Writes @p value as @p digits lowercase hex digits, returns the end */
+		char* WriteHex(char* out, std::uint64_t value, std::int32_t digits)
+		{
+			static const char Hex[] = "0123456789abcdef";
+			for (std::int32_t i = digits - 1; i >= 0; i--) {
+				out[i] = Hex[value & 15];
+				value >>= 4;
+			}
+			return out + digits;
+		}
+
+		/** @brief Writes a NUL-terminated @p text, returns the end */
+		char* WriteText(char* out, const char* text)
+		{
+			while (*text != '\0') {
+				*out++ = *text++;
+			}
+			return out;
+		}
+
+		/** @brief Size in 64-bit words of the RDP command that starts with @p word */
+		std::uint32_t RdpCommandWords(std::uint64_t word)
+		{
+			const std::uint32_t op = std::uint32_t(word >> 56) & 0x3F;
+			if (op >= 0x08 && op <= 0x0F) {
+				// Triangles: the edge coefficients, then shade, texture and depth coefficients as the opcode says
+				return 4 + ((op & 0x04) != 0 ? 8 : 0) + ((op & 0x02) != 0 ? 8 : 0) + ((op & 0x01) != 0 ? 2 : 0);
+			}
+			// Textured rectangles carry their texture coordinates in a second word
+			return (op == 0x24 || op == 0x25 ? 2 : 1);
+		}
+
+		[[noreturn]] void ReportRdpHang(std::uint32_t status, std::uint32_t current)
+		{
+			// Nobody feeds the audio interface any more; stopped, it cannot keep repeating its last buffer
+			*reinterpret_cast<volatile std::uint32_t*>(0xA4500008) = 0;
+			// The logger is not safe to call from an interrupt; a raw write still reaches the log channels
+			static const char Message[] = "RDP hang detected, the report is on the screen\n";
+			::write(STDERR_FILENO, Message, sizeof(Message) - 1);
+
+			const std::uint32_t start = *DP_START, end = *DP_END;
+			const std::uint32_t spStatus = *SP_STATUS;
+			const bool fromDmem = ((status & DP_STATUS_DMEM_DMA) != 0);
+			const std::uint32_t base = (fromDmem ? 0xA4000000u : 0xA0000000u);
+			const std::uint32_t mask = (fromDmem ? 0xFF8u : 0xFFFFF8u);
+			auto wordAt = [base, mask](std::uint32_t address) {
+				return *reinterpret_cast<volatile std::uint64_t*>(std::uintptr_t(base | (address & mask)));
+			};
+
+			// The segment is walked from where the RDP was pointed at it up to where it stopped: the state commands
+			// are kept at their last occurrence, and the dump begins on a command boundary. The command it hangs on is
+			// at or a little before DP_CURRENT, which is how far the RDP has FETCHED.
+			enum { OtherModes, Combine, TexImage, ColorImage, Scissor, Tlut, Tile0, Tile1, Tile2, Size0, Size1, Size2, StateCount };
+			std::uint64_t state[StateCount] = {};
+			bool seen[StateCount] = {};
+			constexpr std::uint32_t WordsBefore = 28, DumpRows = 18;
+			std::uint32_t dumpStart = (current - WordsBefore * 8) & ~7u;
+			std::uint32_t commands = 0;
+			if (start <= current && current - start <= 0x40000) {
+				bool dumpAligned = false;
+				for (std::uint32_t address = start; address < current; commands++) {
+					const std::uint64_t word = wordAt(address);
+					const std::uint32_t tile = std::uint32_t(word >> 24) & 7;
+					std::int32_t slot = -1;
+					switch (std::uint32_t(word >> 56) & 0x3F) {
+						case 0x2F: slot = OtherModes; break;
+						case 0x3C: slot = Combine; break;
+						case 0x3D: slot = TexImage; break;
+						case 0x3F: slot = ColorImage; break;
+						case 0x2D: slot = Scissor; break;
+						case 0x30: slot = Tlut; break;
+						case 0x35: slot = (tile <= 2 ? std::int32_t(Tile0 + tile) : -1); break;
+						case 0x32: case 0x33: case 0x34: slot = (tile <= 2 ? std::int32_t(Size0 + tile) : -1); break;
+					}
+					if (slot >= 0) {
+						state[slot] = word;
+						seen[slot] = true;
+					}
+					if (!dumpAligned && address + WordsBefore * 8 >= current) {
+						dumpStart = address;
+						dumpAligned = true;
+					}
+					address += RdpCommandWords(word) * 8;
+				}
+			}
+
+			const std::uint32_t origin = *VI_ORIGIN & 0xFFFFFF;
+			const std::int32_t width = std::int32_t(*VI_WIDTH & 0xFFF);
+			const bool wide = ((*VI_CTRL & 3) == 3);
+			if (origin != 0 && width > 0) {
+				// Drawn straight into the frame the VI is scanning out, through the uncached segment
+				surface_t screen = surface_make(reinterpret_cast<void*>(std::uintptr_t(0xA0000000u | origin)),
+					wide ? FMT_RGBA32 : FMT_RGBA16, std::uint16_t(width), ScreenHeight, std::uint16_t(width * (wide ? 4 : 2)));
+				const std::uint32_t black = graphics_make_color(0, 0, 0, 255);
+				graphics_fill_screen(&screen, black);
+
+				// 8x8 characters, kept clear of the edges a CRT overscans
+				constexpr std::int32_t MarginX = 16, MarginY = 16;
+				std::int32_t row = 0;
+				char line[48];
+				auto print = [&](char* lineEnd, std::uint32_t color) {
+					*lineEnd = '\0';
+					graphics_set_color(color, black);
+					graphics_draw_text(&screen, MarginX, MarginY + row * 8, line);
+					row++;
+				};
+				const std::uint32_t yellow = graphics_make_color(255, 224, 64, 255);
+				const std::uint32_t white = graphics_make_color(255, 255, 255, 255);
+				const std::uint32_t grey = graphics_make_color(160, 160, 160, 255);
+
+				char* p = WriteText(line, "RDP HANG f=");
+				p = WriteHex(p, RdpDevice::GetSceneCounter(), 6);
+				p = WriteText(p, " st="); p = WriteHex(p, status, 4);
+				p = WriteText(p, " sp="); p = WriteHex(p, spStatus, 4);
+				print(p, yellow);
+
+				p = WriteText(line, "b="); p = WriteHex(p, start, 6);
+				p = WriteText(p, " c="); p = WriteHex(p, current, 6);
+				p = WriteText(p, " e="); p = WriteHex(p, end, 6);
+				p = WriteText(p, " n="); p = WriteHex(p, commands, 4);
+				print(p, yellow);
+
+				for (std::int32_t i = 0; i < StateCount; i += 2) {
+					p = line;
+					for (std::int32_t j = i; j < i + 2; j++) {
+						if (j > i) {
+							*p++ = ' ';
+						}
+						p = (seen[j] ? WriteHex(p, state[j], 16) : WriteText(p, "----------------"));
+					}
+					print(p, grey);
+				}
+
+				p = WriteText(line, "d="); p = WriteHex(p, dumpStart, 6);
+				print(p, yellow);
+				for (std::uint32_t i = 0; i < DumpRows - 1; i++) {
+					p = line;
+					for (std::uint32_t j = 0; j < 2; j++) {
+						const std::uint32_t address = dumpStart + (i * 2 + j) * 8;
+						*p++ = (address == (current & ~7u) ? '>' : ' ');
+						p = WriteHex(p, wordAt(address), 16);
+					}
+					print(p, white);
+				}
+			}
+
+			// Interrupts stay disabled from here on - nothing may run over the report
+			while (true) {
+			}
+		}
+
+		/** @brief VI interrupt handler: reports the RDP once it has been stuck on one command for HangTimeoutMs */
+		void RdpHangWatchdog()
+		{
+			const std::uint32_t status = *DP_STATUS;
+			const std::uint32_t current = *DP_CURRENT;
+			const std::uint64_t now = get_ticks();
+			// FREEZE is only ever set by libdragon's own crash handler, which reports by itself
+			if ((status & DP_STATUS_BUSY) == 0 || (status & DP_STATUS_FREEZE) != 0 || current != hangLastCurrent || hangSince == 0) {
+				hangLastCurrent = current;
+				hangSince = now;
+				return;
+			}
+			if (now - hangSince >= TICKS_FROM_MS(HangTimeoutMs)) {
+				ReportRdpHang(status, current);
+			}
+		}
+	}
+
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::InitializeRdp()
 	{
@@ -1797,6 +2160,18 @@ namespace nCine::RHI::RDP
 			triFmtShadeTex[i] = TRIFMT_SHADE_TEX;
 			triFmtShadeTex[i].tex_tile = rdpq_tile_t(i);
 		}
+		// A two-cycle draw samples through the tile AFTER its own as well - the texture unit fetches TEX1 from the
+		// next tile in the second cycle, whether the combiner reads it or not - so the colorized text drawn from the
+		// second TMEM slot (TILE1) reads through TILE2 too. Nothing ever programs that tile, and rdpq_init() resets the
+		// modes and the images but no tile descriptor: on a console it keeps whatever the RDP powered up with, while
+		// every emulator starts it zeroed. So the tiles the dispatch does not own (0 and 1 are the slots, 7 is
+		// libdragon's) get a harmless descriptor once: RGBA16 at the bottom of TMEM, one texel, clamped.
+		for (std::int32_t tile = 2; tile < 7; tile++) {
+			rdpq_set_tile(rdpq_tile_t(tile), FMT_RGBA16, 0, 8, nullptr);
+			rdpq_set_tile_size(rdpq_tile_t(tile), 0, 0, 1, 1);
+		}
+		// See ReportRdpHang()
+		register_VI_handler(&RdpHangWatchdog);
 
 		_rdpInitialized = true;
 		LOGI("RDP session initialized: {}x{} RGBA16, {} TLUT slots, {} B TMEM windows",
@@ -1828,6 +2203,7 @@ namespace nCine::RHI::RDP
 			rdpq_attach(screenSurface, nullptr);
 		}
 		attachedTarget = _currentRenderTarget;
+		drawingToTarget = (attachedTarget != nullptr);
 		rdpAttached = true;
 		// Attaching re-runs the auto-scissor and nothing else about the pipeline state is worth trusting
 		InvalidateAppliedState();
@@ -1960,12 +2336,12 @@ namespace nCine::RHI::RDP
 					std::uint32_t(TICKS_TO_US(traceSpriteSetupTicks) / frames), std::uint32_t(TICKS_TO_US(traceSpriteLoopTicks) / frames), std::uint32_t(TICKS_TO_US(traceSpriteFnTicks) / frames));
 				traceRectTicks = 0; traceStateTicks = 0; traceTileMeshTicks = 0;
 				traceSpriteSetupTicks = 0; traceSpriteLoopTicks = 0; traceSpriteFnTicks = 0;
-				LOGI("Frame {} ({} us/frame; {} us dispatch, {} us tmem, {} us displaywait): {} draws/{} inst, {} rects ({} blits) + {} tris in {} strips, TMEM {} up/{} hit/{} KB, TLUT {} up/{} conv/{} wait, {} comb/{} prim, {} refresh/{} bake/{} KB wb",
+				LOGI("Frame {} ({} us/frame; {} us dispatch, {} us tmem, {} us displaywait): {} draws/{} inst, {} rects ({} blits, {} banded) + {} tris in {} strips, TMEM {} up/{} hit/{} KB, TLUT {} up/{} conv/{} wait, {} comb/{} prim, {} refresh/{} bake/{} KB wb",
 					_sceneCounter, avgUs,
 					std::uint32_t(TICKS_TO_US(traceDispatchTicks) / (traceFrameCount > 0 ? traceFrameCount : 1)),
 					std::uint32_t(TICKS_TO_US(traceUploadTicks) / (traceFrameCount > 0 ? traceFrameCount : 1)),
 					std::uint32_t(TICKS_TO_US(traceDisplayTicks) / (traceFrameCount > 0 ? traceFrameCount : 1)),
-					stats.Dispatches, stats.Instances, stats.Rects, stats.Blits, stats.Triangles, stats.Strips,
+					stats.Dispatches, stats.Instances, stats.Rects, stats.Blits, stats.Banded, stats.Triangles, stats.Strips,
 					stats.WindowUploads, stats.WindowHits, stats.WindowBytes / 1024, stats.TlutUploads,
 					stats.TlutConversions, stats.TlutEvictWaits, stats.ModeChanges, stats.PrimChanges,
 					stats.StoreRefreshes, stats.BakeRebuilds, stats.StoreWritebackBytes / 1024);
@@ -1980,6 +2356,7 @@ namespace nCine::RHI::RDP
 
 		rdpAttached = false;
 		attachedTarget = nullptr;
+		drawingToTarget = false;
 		screenSurface = nullptr;
 		InvalidateAppliedState();
 		InvalidateTmemWindow();
@@ -1995,7 +2372,7 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	// ------------------------------------------------------------------ state
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void RdpDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
@@ -2060,7 +2437,7 @@ namespace nCine::RHI::RDP
 		// No depth or stencil buffer is ever attached on this backend
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -2123,7 +2500,7 @@ namespace nCine::RHI::RDP
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ extensions
+	// ── Extensions ───────────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::BindProgram(RdpShaderProgram* program) { _currentProgram = program; }
 	RdpShaderProgram* RdpDevice::CurrentProgram() { return _currentProgram; }
@@ -2185,10 +2562,11 @@ namespace nCine::RHI::RDP
 			rdpq_detach();
 			rdpAttached = false;
 			attachedTarget = nullptr;
+			drawingToTarget = false;
 		}
 	}
 
-	// ------------------------------------------------------------------ palette TLUTs
+	// ── Palette TLUTs ────────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::RegisterPaletteTexture(RdpTexture* texture)
 	{
@@ -2211,7 +2589,7 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	// ------------------------------------------------------------------ lighting hook
+	// ── Lighting Hook ────────────────────────────────────────────────────────────────────────────
 
 	void RdpDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -2371,7 +2749,7 @@ namespace nCine::RHI::RDP
 		}
 	}
 
-	// ------------------------------------------------------------------ draw dispatch
+	// ── Draw Dispatch ────────────────────────────────────────────────────────────────────────────
 
 	namespace
 	{
@@ -2500,15 +2878,17 @@ namespace nCine::RHI::RDP
 	void RdpDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)
 	{
-		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
-		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
-		// hard contract of this shader family exactly like the std140 instance block is of the sprite one.
+		// A tile-layer mesh is a triangle list of 8-float vertices (position.xy, texcoords.uv, color.rgba) - the
+		// layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares, a hard contract of this shader family
+		// exactly like the std140 instance block is of the sprite one - or, drawn as points, one packed record per
+		// tile, which is what the tile map's grouped emission and its layer cache write for this backend (see
+		// TileRecord). A chunk with a single tile in view is a single record: nothing below may take a count that
+		// small for a degenerate mesh (a guard that did lost that one tile, the same few wall tiles missing in the
+		// same places of a level).
 		constexpr std::int32_t FloatsPerVertex = 8;
-		// The compact form (see below) carries TWO vertices per quad, so a chunk with a single tile in
-		// view arrives as two vertices: the "degenerate triangle" guard has to let that through. It did
-		// not, and every atlas chunk that had exactly one tile on screen lost it - the same few wall tiles
-		// missing in the same places of a level, whichever way the layer was emitted.
-		if (primitive != PrimitiveType::Triangles || numVertices < 2 || (indices != nullptr && numVertices < 3)) {
+		constexpr std::int32_t FloatsPerRecord = std::int32_t(sizeof(TileRecord) / sizeof(float));
+		const bool packedTiles = (primitive == PrimitiveType::Points);
+		if (packedTiles ? (numVertices < 1 || indices != nullptr) : (primitive != PrimitiveType::Triangles || numVertices < 3)) {
 			return;
 		}
 		const std::uint32_t tileMeshStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
@@ -2542,9 +2922,10 @@ namespace nCine::RHI::RDP
 			}
 			vertexExtent = std::size_t(maxIndex) + 1;
 		}
+		const std::size_t floatsPerElement = std::size_t(packedTiles ? FloatsPerRecord : FloatsPerVertex);
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
-			std::size_t(firstVertex) * FloatsPerVertex;
-		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
+			std::size_t(firstVertex) * floatsPerElement;
+		if ((firstFloat + vertexExtent * floatsPerElement) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
@@ -2627,6 +3008,15 @@ namespace nCine::RHI::RDP
 			outV = v[3] * uvScaleV;
 		};
 
+		if (packedTiles) {
+			// Only ever produced for an upright, point-sampled layer (see TileRecord)
+			if (raster.Xy != 0.0f || raster.Yx != 0.0f || state.Filter != FILTER_POINT || state.Texture == nullptr) {
+				return;
+			}
+			DispatchTileRecords(state, vertices, numVertices, raster, layerColor);
+			return;
+		}
+
 		const std::int32_t triangleCount = numVertices / 3;
 		std::int32_t triangle = 0;
 		// Virtually every tile of a layer carries the same colour (white at the layer's alpha), so the
@@ -2635,45 +3025,38 @@ namespace nCine::RHI::RDP
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 
 		/*
-			The fast path for what a tile layer actually is. On the indexed form every quad is the four
-			corners TileMap::AppendTileQuad wrote - (x, y), (xr, y), (xr, yr), (x, yr) - so a tile is fully
-			described by corners 0 and 2, two vertices instead of six; a tile quad is axis-aligned by
-			construction (a particle's need not be, see the test in the loop), so as long as the raster
-			transform is a scale+translation (no rotation or skew)
-			the screen rectangle is two multiply-adds per axis; a point-sampled tile's texel window is the
-			integer texel box its corners name (no bilinear guard), which fits a TMEM slot by definition
-			(the atlas keeps 32x32 tiles); and the whole mesh draws with one RDP state, re-applied only
+			The fast path for the indexed quads of a tile-layer mesh - the layer's particles (the debris of a
+			destroyed tile) and any tile quad a producer writes that way; the layer's own tiles arrive as packed
+			records instead (see DispatchTileRecords). Every quad is the four corners AppendTileQuad or
+			AppendDebrisQuad wrote - (x, y), (xr, y), (xr, yr), (x, yr) - so an upright one is fully described by
+			corners 0 and 2, and a turned one is told apart by the test in the loop and drawn as a triangle pair.
+			As long as the raster transform is a scale+translation (no rotation or skew) the screen rectangle
+			is two multiply-adds per axis; a point-sampled quad's texel window is the integer texel box its
+			corners name (no bilinear guard); and the whole mesh draws with one RDP state, re-applied only
 			when the primitive colour changes. Everything the general path below does per quad on top of
 			that - the six index/vertex fetches, the quad detection, the four libm floor/ceil calls, the
-			window-fit arithmetic and the ten-way state compare - was ~29 us per tile of the frame's
-			~370 tiles on this CPU, three quarters of the tile dispatch.
+			window-fit arithmetic and the ten-way state compare - was ~29 us per quad on this CPU.
 
 			The rectangle goes out with the same fixed-point encoding rdpq_texture_rectangle_scaled would
 			produce (10.2 screen coordinates, 10.5 texel coordinates, dsdx/dtdy in 5.10), including its
 			corrections for an edge past the top-left of the screen - the RDP fields are unsigned.
 		*/
-		// The compact form TileMap::BuildLayerMeshCache and TileMap::EmitTileRuns write: no indices, two
-		// vertices per quad (corners 0 and 2 back to back), in a VBO the layer keeps between frames or in
-		// the streaming one
-		const bool compactTiles = (indices == nullptr && primitive == PrimitiveType::Triangles);
-		const bool leanTiles = ((indices != nullptr || compactTiles) && raster.Xy == 0.0f && raster.Yx == 0.0f &&
+		// The indexed form - the particles of the layer (see TileMap::AppendDebrisQuad); a layer's own tiles come
+		// as packed records (see above)
+		const bool leanTiles = (indices != nullptr && raster.Xy == 0.0f && raster.Yx == 0.0f &&
 			state.Filter == FILTER_POINT && state.Texture != nullptr);
-		if (compactTiles && !leanTiles) {
-			return;
-		}
 		if (leanTiles) {
 			ApplyDrawState(state);
-			const std::int32_t quadCount = (compactTiles ? numVertices / 2 : triangleCount / 2);
+			const std::int32_t quadCount = triangleCount / 2;
 			const std::int32_t surfW = state.Texture->width, surfH = state.Texture->height;
+			// The last spans the texel steps were divided out for (see the rectangle below)
+			std::int32_t lastSpanS = 0, lastSpanX = 0, lastSpanT = 0, lastSpanY = 0, lastDsdx = 0, lastDtdy = 0;
 			for (std::int32_t quad = 0; quad < quadCount; quad++) {
 				const float* c0;
 				const float* c2;
 				const float* c1 = nullptr;
 				const float* c3 = nullptr;
-				if (compactTiles) {
-					c0 = vertices + std::size_t(quad) * 2 * FloatsPerVertex;
-					c2 = c0 + FloatsPerVertex;
-				} else {
+				{
 					const std::int32_t element = quad * 6;
 					c0 = vertices + std::size_t(indices[element]) * FloatsPerVertex;
 					c2 = vertices + std::size_t(indices[element + 2]) * FloatsPerVertex;
@@ -2722,22 +3105,21 @@ namespace nCine::RHI::RDP
 					continue;
 				}
 
-				// Integer texel box of the window: floor of the lower coordinate, ceil of the upper. The ceil is
-				// exact and must stay that way - the window has to cover every texel the rectangle below can
-				// sample, because that rectangle is drawn over the full u0..u1 range while TMEM holds only
-				// this box. Rounding the upper edge up only past a tolerance (tried, to stop a tile whose
-				// right edge overshoots 32.0 by an ulp from pulling in the neighbouring tile's first column)
-				// makes the window one texel short on almost every tile, and the RDP then samples outside what
-				// was loaded and wedges with TMEM, pipe and DMA busy - a hard hang on hardware, which the
-				// emulator did not show.
-				const float minU = std::min(u0, u1), maxU = std::max(u0, u1);
-				const float minV = std::min(v0, v1), maxV = std::max(v0, v1);
-				std::int32_t winS0 = std::int32_t(minU), winS1 = std::int32_t(maxU);
-				std::int32_t winT0 = std::int32_t(minV), winT1 = std::int32_t(maxV);
-				if (float(winS0) > minU) { winS0--; }
-				if (float(winT0) > minV) { winT0--; }
-				if (float(winS1) < maxU) { winS1++; }
-				if (float(winT1) < maxV) { winT1++; }
+				// The texel coordinates go out on the rectangle's own 10.5 grid, rounded to its nearest step,
+				// and the window is the integer texel box of those SAME integers: floor of the lower edge,
+				// ceil of the upper. That keeps the invariant the window exists for - it covers every texel
+				// the rectangle can sample; a window one texel short made the RDP sample outside what was
+				// loaded and wedge with TMEM, pipe and DMA busy, a hard hang on hardware - while no longer
+				// deriving it from the unrounded floats. Those carry the atlas' normalized coordinates scaled
+				// back up, and with an atlas that is not a power of two wide a tile edge lands on 32.000002
+				// as often as on 32: its ceil pulled in a 33rd column, the window outgrew its 1 KB TMEM slot,
+				// and the upload took the synchronized path through the whole texel half instead of the
+				// double-buffered one. That was 187 of castle1's ~390 tiles a frame.
+				// (Texture coordinates of a tile are never negative, so adding a half rounds to nearest.)
+				std::int32_t s0 = std::int32_t(u0 * 32.0f + 0.5f), t0 = std::int32_t(v0 * 32.0f + 0.5f);
+				const std::int32_t s1 = std::int32_t(u1 * 32.0f + 0.5f), t1 = std::int32_t(v1 * 32.0f + 0.5f);
+				std::int32_t winS0 = std::min(s0, s1) >> 5, winS1 = (std::max(s0, s1) + 31) >> 5;
+				std::int32_t winT0 = std::min(t0, t1) >> 5, winT1 = (std::max(t0, t1) + 31) >> 5;
 				winS0 = std::max<std::int32_t>(winS0, 0); winT0 = std::max<std::int32_t>(winT0, 0);
 				winS1 = std::min<std::int32_t>(winS1, surfW); winT1 = std::min<std::int32_t>(winT1, surfH);
 				if (winS1 <= winS0 || winT1 <= winT0) {
@@ -2750,15 +3132,31 @@ namespace nCine::RHI::RDP
 				}
 				UploadWindow(state, winS0, winT0, winS1, winT1);
 
-				// rdpq_texture_rectangle_scaled's encoding, without its two divisions in the common case
+				// rdpq_texture_rectangle_scaled's encoding (10.2 screen coordinates, 5.10 texel steps). Every
+				// tile of a layer maps the same number of texels onto the same number of pixels, so the two
+				// divisions of the steps are only done when the spans change - ~40 cycles each on this CPU
 				std::int32_t x0 = std::int32_t(px0 * 4.0f), y0 = std::int32_t(py0 * 4.0f);
 				std::int32_t x1 = std::int32_t(px1 * 4.0f), y1 = std::int32_t(py1 * 4.0f);
-				std::int32_t s0 = std::int32_t(u0 * 32.0f), t0 = std::int32_t(v0 * 32.0f);
-				const std::int32_t s1 = std::int32_t(u1 * 32.0f), t1 = std::int32_t(v1 * 32.0f);
 				if (x1 == x0 || y1 == y0) {
 					continue;
 				}
-				std::int32_t dsdx = ((s1 - s0) << 7) / (x1 - x0), dtdy = ((t1 - t0) << 7) / (y1 - y0);
+				const std::int32_t spanS = s1 - s0, spanX = x1 - x0, spanT = t1 - t0, spanY = y1 - y0;
+				if (spanS != lastSpanS || spanX != lastSpanX) {
+					lastSpanS = spanS; lastSpanX = spanX;
+					lastDsdx = (spanS << 7) / spanX;
+				}
+				if (spanT != lastSpanT || spanY != lastSpanY) {
+					lastSpanT = spanT; lastSpanY = spanY;
+					lastDtdy = (spanT << 7) / spanY;
+				}
+				const std::int32_t dsdx = lastDsdx, dtdy = lastDtdy;
+				// A mirrored tile runs its texels backwards from its far edge, and that edge is one step past
+				// the window's last texel: started exactly there, the first column samples the edge itself -
+				// clamped back onto the last texel, which then shows twice while the first one never does (or,
+				// when the float edge overshot, the neighbouring tile's column). Starting one 1/32-texel step
+				// inside puts every column on its own texel; the steps above stay the exact ones.
+				if (dsdx < 0) { s0--; }
+				if (dtdy < 0) { t0--; }
 				if (x0 < 0) { s0 -= (x0 * dsdx) >> 7; x0 = 0; if (x0 >= x1) { continue; } }
 				if (y0 < 0) { t0 -= (y0 * dtdy) >> 7; y0 = 0; if (y0 >= y1) { continue; } }
 				if (x1 > 1024 * 4 - 1) { x1 = 1024 * 4 - 1; if (x0 >= x1) { continue; } }
@@ -3194,7 +3592,7 @@ namespace nCine::RHI::RDP
 				state.PrimColor = PackColor(color);
 				if (TraceDrawStatistics) { stats.Instances++; }
 				const std::uint32_t leanStart = (TraceDrawStatistics ? std::uint32_t(get_ticks()) : 0);
-				SubmitTexturedRect(state, x0, y0, x1, y1, u0, v0, u1, v1);
+				SubmitSpriteRect(state, x0, y0, x1, y1, u0, v0, u1, v1);
 				if (TraceDrawStatistics) { traceSpriteFnTicks += std::uint32_t(get_ticks()) - leanStart; }
 				continue;
 			}

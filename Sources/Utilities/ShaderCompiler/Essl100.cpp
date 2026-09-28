@@ -691,13 +691,13 @@ namespace ShaderCompiler
 		SmallVector<String, 0> lines = SplitLines(modernSource);
 		bool fragmentOutSeen = false;
 
-		// --- 1. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ---------------
+		// ── 1. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ─────────────
 		lines = UnwrapGlEs(lines);
 
-		// --- 2. std140 uniform blocks -> plain uniforms / a uniform array (ES2 has no UBOs) ----------
+		// ── 2. std140 Uniform Blocks -> Plain Uniforms / a Uniform Array (ES2 has no UBOs) ───────
 		RewriteStd140Blocks(lines);
 
-		// --- 3. gl_VertexID quad synthesis -> reads of the ES2 corner / instance-index attributes ----
+		// ── 3. gl_VertexID Quad Synthesis -> Reads of the ES2 Corner / Instance-Index Attributes ────
 		bool usedCorner = false;
 		bool usedInstance = false;
 		{
@@ -718,7 +718,7 @@ namespace ShaderCompiler
 			lines.insert(lines.begin(), decls.begin(), decls.end());
 		}
 
-		// --- 3. Interface rewrite + fragment COLOR/main lowering ------------------------------------
+		// ── 3. Interface Rewrite + Fragment COLOR/main Lowering ──────────────────────────────────
 		SmallVector<String, 0> stripped = StripComments(lines);
 		SmallVector<String, 0> result;
 		result.reserve(lines.size() + 4);
@@ -793,13 +793,14 @@ namespace ShaderCompiler
 			braceDepth += CountBraces(code);
 		}
 
-		// --- 4. texture() -> texture2D() (and textureLod -> texture2DLod), comment-aware ------------
+		// ── 4. texture() -> texture2D() (and textureLod -> texture2DLod), Comment-Aware ──────────
 		RewriteTextureCalls(result);
 
 		out = JoinLines(result);
 
-		// --- 5. Derivatives (dFdx/dFdy/fwidth) are core in GLSL ES 3.00 but need an explicitly enabled
-		//        extension under ESSL 100 — prepend the pragma when the stage uses any of them ----------
+		// ── 5. Derivatives Extension ─────────────────────────────────────────────────────────────
+		// dFdx/dFdy/fwidth are core in GLSL ES 3.00 but need an explicitly enabled extension under ESSL 100,
+		// prepend the pragma when the stage uses any of them
 		{
 			SmallVector<String, 0> check = StripComments(SplitLines(out));
 			if (FindIdentifierLine(check, "dFdx") >= 0 || FindIdentifierLine(check, "dFdy") >= 0 || FindIdentifierLine(check, "fwidth") >= 0) {

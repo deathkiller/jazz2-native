@@ -169,12 +169,8 @@ namespace Jazz2::Compatibility
 		}
 	}
 
-	bool J2vRecompressor::Recompress(StringView sourcePath, StringView targetPath, std::int32_t downscale)
+	bool J2vRecompressor::DecodeFrames(StringView sourcePath, Function<bool(const J2vVideoInfo&, std::int32_t, const std::uint8_t*, const std::uint8_t*, bool)>&& onFrame, J2vVideoInfo* info)
 	{
-		if (downscale < 1) {
-			downscale = 1;
-		}
-
 		auto input = fs::Open(sourcePath, FileAccess::Read);
 		if (!input->IsValid() || input->GetSize() < HeaderSize) {
 			LOGE("Cannot open \"{}\"", sourcePath);
@@ -188,23 +184,30 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::int32_t width = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
-		std::int32_t height = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
-		std::uint16_t bitsPerPixel = input->ReadValueAsLE<std::uint16_t>();
-		std::uint16_t frameDelay = input->ReadValueAsLE<std::uint16_t>();
-		std::int32_t frameCount = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
+		J2vVideoInfo video;
+		video.Width = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
+		video.Height = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
+		input->ReadValueAsLE<std::uint16_t>();	// Bits per pixel
+		video.FrameDelay = input->ReadValueAsLE<std::uint16_t>();
+		video.FrameCount = std::int32_t(input->ReadValueAsLE<std::uint32_t>());
 		std::uint8_t reserved[20];
 		input->Read(reserved, sizeof(reserved));
+		video.FileSize = input->GetSize();
 
-		if (width <= 0 || height <= 0 || frameCount <= 0) {
+		const std::int32_t width = video.Width;
+		const std::int32_t height = video.Height;
+		if (width <= 0 || height <= 0 || video.FrameCount <= 0) {
 			LOGE("\"{}\" has unexpected dimensions", sourcePath);
 			return false;
+		}
+		if (info != nullptr) {
+			*info = video;
 		}
 
 		// Index the interleaved chunks, then inflate each stream as a whole
 		Array<Pair<std::int64_t, std::int32_t>> chunks[StreamCount];
 		std::int64_t offset = input->GetPosition();
-		const std::int64_t fileSize = input->GetSize();
+		const std::int64_t fileSize = video.FileSize;
 		while (offset + 4 <= fileSize) {
 			for (std::int32_t i = 0; i < StreamCount && offset + 4 <= fileSize; i++) {
 				input->Seek(offset, SeekOrigin::Begin);
@@ -226,22 +229,12 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		const std::int32_t targetWidth = width / downscale;
-		const std::int32_t targetHeight = height / downscale;
-
 		auto frame = std::make_unique<std::uint8_t[]>(std::size_t(width) * height);
 		auto previousFrame = std::make_unique<std::uint8_t[]>(std::size_t(width) * height);
-		auto scaled = std::make_unique<std::uint8_t[]>(std::size_t(targetWidth) * targetHeight);
-		auto previousScaled = std::make_unique<std::uint8_t[]>(std::size_t(targetWidth) * targetHeight);
 		std::memset(previousFrame.get(), 0, std::size_t(width) * height);
-		std::memset(previousScaled.get(), 0, std::size_t(targetWidth) * targetHeight);
-
-		Array<std::uint32_t> frameSizes;
-		Array<std::uint8_t> frameData;
 		std::uint8_t palette[256 * 4] = {};
-		std::int32_t framesWritten = 0;
 
-		for (std::int32_t f = 0; f < frameCount; f++) {
+		for (std::int32_t f = 0; f < video.FrameCount; f++) {
 			// Decode one frame exactly the way the player does
 			bool paletteChanged = (streams[0].ReadByte() == 0x01);
 			if (paletteChanged) {
@@ -286,9 +279,41 @@ namespace Jazz2::Compatibility
 
 			std::memcpy(previousFrame.get(), frame.get(), std::size_t(width) * height);
 
+			if (!onFrame(video, f, frame.get(), palette, paletteChanged || f == 0)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool J2vRecompressor::Recompress(StringView sourcePath, StringView targetPath, std::int32_t downscale)
+	{
+		if (downscale < 1) {
+			downscale = 1;
+		}
+
+		std::int32_t width = 0, height = 0, targetWidth = 0, targetHeight = 0;
+		std::unique_ptr<std::uint8_t[]> scaled, previousScaled;
+		Array<std::uint32_t> frameSizes;
+		Array<std::uint8_t> frameData;
+		std::int32_t framesWritten = 0;
+
+		J2vVideoInfo video;
+		const bool decoded = DecodeFrames(sourcePath, [&](const J2vVideoInfo& info, std::int32_t f, const std::uint8_t* frame,
+			const std::uint8_t* palette, bool paletteChanged) {
+			if (f == 0) {
+				width = info.Width;
+				height = info.Height;
+				targetWidth = width / downscale;
+				targetHeight = height / downscale;
+				scaled = std::make_unique<std::uint8_t[]>(std::size_t(targetWidth) * targetHeight);
+				previousScaled = std::make_unique<std::uint8_t[]>(std::size_t(targetWidth) * targetHeight);
+				std::memset(previousScaled.get(), 0, std::size_t(targetWidth) * targetHeight);
+			}
+
 			// Downscale by picking every n-th pixel of every n-th row, matching what the player did at runtime
 			if (downscale == 1) {
-				std::memcpy(scaled.get(), frame.get(), std::size_t(targetWidth) * targetHeight);
+				std::memcpy(scaled.get(), frame, std::size_t(targetWidth) * targetHeight);
 			} else {
 				for (std::int32_t y = 0; y < targetHeight; y++) {
 					const std::uint8_t* src = &frame[std::size_t(y) * downscale * width];
@@ -303,9 +328,9 @@ namespace Jazz2::Compatibility
 			// player leaves the previous frame's pixels in place), repeated bytes become runs, and anything
 			// else is stored literally. Decoding is memcpy/memset only - see VideoFormat.
 			Array<std::uint8_t> payload;
-			arrayAppend(payload, std::uint8_t(paletteChanged || f == 0 ? VideoFormat::FrameFlagPalette : 0x00));
-			if (paletteChanged || f == 0) {
-				arrayAppend(payload, arrayView(palette, sizeof(palette)));
+			arrayAppend(payload, std::uint8_t(paletteChanged ? VideoFormat::FrameFlagPalette : 0x00));
+			if (paletteChanged) {
+				arrayAppend(payload, arrayView(palette, 256 * 4));
 			}
 
 			const std::int32_t framePixels = targetWidth * targetHeight;
@@ -371,7 +396,13 @@ namespace Jazz2::Compatibility
 
 			std::memcpy(previousScaled.get(), scaled.get(), std::size_t(targetWidth) * targetHeight);
 			framesWritten++;
+			return true;
+		}, &video);
+		if (!decoded) {
+			return false;
 		}
+		const std::uint16_t frameDelay = video.FrameDelay;
+		const std::int64_t fileSize = video.FileSize;
 
 		auto output_ = fs::Open(targetPath, FileAccess::Write);
 		if (!output_->IsValid()) {

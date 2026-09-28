@@ -13,6 +13,11 @@
 #include <IO/FileStream.h>
 #include <IO/MemoryStream.h>
 
+#if defined(WITH_LZ4)
+#	include <lz4.h>
+#	include <lz4hc.h>
+#endif
+
 using namespace Death::IO;
 
 namespace Jazz2::Compatibility
@@ -823,7 +828,10 @@ namespace Jazz2::Compatibility
 			}
 			WriteImageToStream(so, outData, sizeX, sizeY, outChannels, anim, entry, packedSheet);
 			so.Seek(0, SeekOrigin::Begin);
-			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
+			// LZ4 content is stored as it is: compressing it again would only put an inflate in front of the
+			// decoder it was chosen for
+			bool success = pakWriter.AddFile(so, filename, PreferredImageCompression == ImageCompression::Lz4
+				? PakPreferredCompression::None : PakPreferredCompression::Deflate);
 			DEATH_ASSERT(success, "Failed to add file to .pak container", );
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
@@ -940,6 +948,11 @@ namespace Jazz2::Compatibility
 				flags |= 0x04;
 			}
 		}
+#if defined(WITH_LZ4)
+		if (PreferredImageCompression == ImageCompression::Lz4) {
+			flags |= ImageContentLz4Flag;
+		}
+#endif
 
 		targetStream.WriteValueAsLE<std::uint64_t>(0xB8EF8498E2BFBBEF);
 		targetStream.WriteValueAsLE<std::uint16_t>(0x208F);
@@ -1001,6 +1014,13 @@ namespace Jazz2::Compatibility
 			}
 		}
 
+#if defined(WITH_LZ4)
+		if (PreferredImageCompression == ImageCompression::Lz4) {
+			// A sheet is read whole, so it is a single block
+			WriteImageContentLz4(targetStream, data, width, height, channelCount, height);
+			return;
+		}
+#endif
 		WriteImageContent(targetStream, data, width, height, channelCount);
 	}
 
@@ -1205,17 +1225,91 @@ namespace Jazz2::Compatibility
 			the consoles' in-order CPUs was the largest single cost of decoding a sheet. The decoder state
 			(index table, previous pixel, run) is maintained exactly as the generic loop does, whatever the
 			channel count, because the DIFF/LUMA/INDEX operations and the hash read every component.
+
+			Two things the generic loop does per pixel are hoisted out, which took a third off decoding a
+			tileset on the Nintendo 64 (where it is most of what loading a level costs):
+			- An INDEX operation does not store its pixel back into the table. The encoder emits one only
+			  when the table already holds that pixel at its own hash, so the store (and the hash computed
+			  for it) always rewrote the same entry. Tilesets are more than 40% INDEX pixels.
+			- The end of the input is checked once per operation rather than once per byte while at least
+			  one whole operation (5 bytes at most) is left; past that point every read is checked as before.
+			A run fills its pixels in a loop of its own.
 		*/
 		template<std::int32_t Channels>
-		void DecodeFromMemory(const std::uint8_t*& src, const std::uint8_t* end, DecoderPixel* index, DecoderPixel& px, std::int32_t& run,
+		DEATH_ALWAYS_INLINE void StoreDecodedPixel(std::uint8_t* DEATH_RESTRICT data, DecoderPixel px)
+		{
+			if (Channels == 1) {
+				data[0] = px.rgba.r;
+			} else if (Channels == 2) {
+				data[0] = px.rgba.r; data[1] = px.rgba.g;
+			} else if (Channels == 3) {
+				data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b;
+			} else {
+				data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b; data[3] = px.rgba.a;
+			}
+		}
+
+		template<std::int32_t Channels>
+		void DecodeFromMemory(const std::uint8_t*& src, const std::uint8_t* end, DecoderPixel* index, DecoderPixel& pxRef, std::int32_t& runRef,
 			std::uint8_t* DEATH_RESTRICT data, std::int32_t pixelCount)
 		{
+			// The largest operation (RGBA) is 5 bytes; with that much left no single read can pass the end
+			constexpr std::ptrdiff_t MaxOpSize = 5;
+
 			const std::uint8_t* DEATH_RESTRICT s = src;
-			for (std::int32_t i = 0; i < pixelCount; i++, data += Channels) {
+			DecoderPixel px = pxRef;
+			std::int32_t run = runRef;
+			std::uint8_t* const dataEnd = data + std::ptrdiff_t(pixelCount) * Channels;
+
+			while (data < dataEnd) {
 				if (run > 0) {
-					run--;
+					// The pixel is repeated; the run may continue past the end of this call (a band boundary)
+					std::int32_t count = std::int32_t((dataEnd - data) / Channels);
+					if (count > run) {
+						count = run;
+					}
+					run -= count;
+					for (std::int32_t i = 0; i < count; i++, data += Channels) {
+						StoreDecodedPixel<Channels>(data, px);
+					}
+					continue;
+				}
+
+				std::int32_t b1;
+				if DEATH_LIKELY(end - s >= MaxOpSize) {
+					b1 = *s++;
+					if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
+						px = index[b1];
+						StoreDecodedPixel<Channels>(data, px);
+						data += Channels;
+						continue;
+					} else if (b1 == QOI_OP_RGB) {
+						px.rgba.r = *s++;
+						if (Channels >= 2) { px.rgba.g = *s++; } else { px.rgba.g = 0; }
+						if (Channels >= 3) { px.rgba.b = *s++; } else { px.rgba.b = 0; }
+					} else if (b1 == QOI_OP_RGBA) {
+						px.rgba.r = s[0];
+						px.rgba.g = s[1];
+						px.rgba.b = s[2];
+						px.rgba.a = s[3];
+						s += 4;
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
+						px.rgba.r += ((b1 >> 4) & 0x03) - 2;
+						px.rgba.g += ((b1 >> 2) & 0x03) - 2;
+						px.rgba.b += (b1 & 0x03) - 2;
+					} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
+						const std::int32_t b2 = *s++;
+						const std::int32_t vg = (b1 & 0x3f) - 32;
+						px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
+						px.rgba.g += vg;
+						px.rgba.b += vg - 8 + (b2 & 0x0f);
+					} else {
+						// QOI_OP_RUN - this pixel is the first of the run, the rest are filled above
+						run = (b1 & 0x3f);
+					}
 				} else {
-					const std::int32_t b1 = (s < end ? *s++ : 0);
+					// The tail of the input (or a truncated one), where every read is checked
+					b1 = (s < end ? *s++ : 0);
 					if (b1 == QOI_OP_RGB) {
 						px.rgba.r = (s < end ? *s++ : 0);
 						if (Channels >= 2) { px.rgba.g = (s < end ? *s++ : 0); } else { px.rgba.g = 0; }
@@ -1240,19 +1334,16 @@ namespace Jazz2::Compatibility
 					} else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
 						run = (b1 & 0x3f);
 					}
-					index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
 				}
-				if (Channels == 1) {
-					data[0] = px.rgba.r;
-				} else if (Channels == 2) {
-					data[0] = px.rgba.r; data[1] = px.rgba.g;
-				} else if (Channels == 3) {
-					data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b;
-				} else {
-					data[0] = px.rgba.r; data[1] = px.rgba.g; data[2] = px.rgba.b; data[3] = px.rgba.a;
-				}
+
+				index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
+				StoreDecodedPixel<Channels>(data, px);
+				data += Channels;
 			}
+
 			src = s;
+			pxRef = px;
+			runRef = run;
 		}
 	}
 
@@ -1275,4 +1366,58 @@ namespace Jazz2::Compatibility
 		std::memcpy(_index, index, sizeof(index));
 		std::memcpy(_px, &px, sizeof(px));
 	}
+
+	JJ2Anims::ImageCompression JJ2Anims::PreferredImageCompression = JJ2Anims::ImageCompression::Default;
+
+#if defined(WITH_LZ4)
+	void JJ2Anims::WriteImageContentLz4(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height,
+		std::int32_t channelCount, std::int32_t bandRows)
+	{
+		const std::int32_t rowBytes = width * channelCount;
+		const std::int32_t maxBandBytes = rowBytes * std::min(bandRows, height);
+		const std::int32_t capacity = LZ4_compressBound(maxBandBytes);
+		std::unique_ptr<char[]> compressed = std::make_unique<char[]>(std::size_t(capacity));
+		for (std::int32_t y = 0; y < height; y += bandRows) {
+			const std::int32_t bandBytes = std::min(bandRows, height - y) * rowBytes;
+			const std::int32_t size = LZ4_compress_HC(reinterpret_cast<const char*>(data + std::size_t(y) * rowBytes),
+				compressed.get(), bandBytes, capacity, LZ4HC_CLEVEL_MAX);
+			so.WriteValueAsLE<std::uint32_t>(std::uint32_t(size > 0 ? size : 0));
+			if (size > 0) {
+				so.Write(compressed.get(), size);
+			}
+		}
+	}
+
+	bool JJ2Anims::DecodeImageContentLz4(const std::uint8_t*& src, const std::uint8_t* end, std::uint8_t* data, std::int32_t byteCount)
+	{
+		if (end - src < 4) {
+			return false;
+		}
+		const std::uint32_t size = std::uint32_t(src[0]) | (std::uint32_t(src[1]) << 8) |
+			(std::uint32_t(src[2]) << 16) | (std::uint32_t(src[3]) << 24);
+		src += 4;
+		if (size > std::uint32_t(end - src)) {
+			src = end;
+			return false;
+		}
+		const std::int32_t decoded = LZ4_decompress_safe(reinterpret_cast<const char*>(src), reinterpret_cast<char*>(data),
+			std::int32_t(size), byteCount);
+		src += size;
+		return (decoded == byteCount);
+	}
+
+	bool JJ2Anims::ReadImageContentLz4(Stream& s, std::uint8_t* data, std::int32_t byteCount)
+	{
+		const std::uint32_t size = s.ReadValueAsLE<std::uint32_t>();
+		if (size == 0 || size > std::uint32_t(LZ4_compressBound(byteCount))) {
+			return false;
+		}
+		std::unique_ptr<std::uint8_t[]> compressed(new (std::nothrow) std::uint8_t[size]);
+		if (compressed == nullptr || s.Read(compressed.get(), size) != std::int64_t(size)) {
+			return false;
+		}
+		return (LZ4_decompress_safe(reinterpret_cast<const char*>(compressed.get()), reinterpret_cast<char*>(data),
+			std::int32_t(size), byteCount) == byteCount);
+	}
+#endif
 }

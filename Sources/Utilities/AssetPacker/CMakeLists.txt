@@ -19,12 +19,18 @@ list(REMOVE_ITEM ASSET_PACKER_SHARED_SOURCES ${NCINE_SOURCE_DIR}/Shared/IO/WebRe
 
 set(SOURCES
 	Main.cpp
+	CartridgeImage.cpp
+	CartridgeImage.h
 	DiscImage.cpp
 	DiscImage.h
 	FontPacker.cpp
 	FontPacker.h
 	Iso9660.cpp
 	Iso9660.h
+	ModuleConverter.cpp
+	ModuleConverter.h
+	N64Content.cpp
+	N64Content.h
 	PngCodec.cpp
 	PngCodec.h
 	SpriteRepacker.cpp
@@ -79,4 +85,22 @@ if(TARGET ZLIB::ZLIB)
 endif()
 if(TARGET Threads::Threads)
 	target_link_libraries(AssetPacker PRIVATE Threads::Threads)
+endif()
+
+# LZ4 writes the sprite sheets and tilesets of the trees for the consoles that read them that way (see
+# ProfileUsesLz4Images() in Main.cpp), built from source like the game's where the game itself has none
+if(NOT TARGET Lz4 AND NCINE_DOWNLOAD_DEPENDENCIES)
+	find_package(Lz4)
+endif()
+if(TARGET Lz4)
+	target_link_libraries(AssetPacker PRIVATE Lz4)
+	target_compile_definitions(AssetPacker PRIVATE "WITH_LZ4")
+endif()
+
+# libopenmpt renders what cannot be translated for the Nintendo 64 - the tracker formats other than the game's own
+# and XM - into recordings, and the music under the cinematics into their soundtracks (see N64Content.cpp). The
+# tool works without it; those tracks are then left out of a Nintendo 64 tree.
+if(TARGET libopenmpt::libopenmpt)
+	target_link_libraries(AssetPacker PRIVATE libopenmpt::libopenmpt)
+	target_compile_definitions(AssetPacker PRIVATE "ASSETPACKER_WITH_OPENMPT")
 endif()

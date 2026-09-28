@@ -4,8 +4,11 @@
 // the second, in-game way of doing it. This tool exists so the data can be prepared ahead of time - for the
 // platforms that cannot convert anything themselves, and for build pipelines.
 
+#include "CartridgeImage.h"
 #include "DiscImage.h"
 #include "FontPacker.h"
+#include "ModuleConverter.h"
+#include "N64Content.h"
 #include "SpriteRepacker.h"
 
 #include "../../Main.h"
@@ -100,7 +103,15 @@ namespace
 			else decodes the original perfectly well and is better off with the smaller file. Downscaling also
 			requires it, since the frames have to be re-encoded either way.
 		*/
-		Recompress
+		Recompress,
+		/**
+			@brief Encoded as full-motion video with the sound mixed in, for the Nintendo 64
+
+			libdragon's decoder plays MPEG-1 with the RSP's help, which is the only way that console shows the
+			cinematics at their own speed - and the video file is far smaller than the engine's container, which
+			is what lets the ending fit on the cartridge at all. See @ref AssetPacker::N64Content.
+		*/
+		FullMotionVideo
 	};
 
 	/** @brief What the tool was asked to do */
@@ -117,6 +128,8 @@ namespace
 		ToIndices,
 		/** @brief Re-encode one cinematic into the container the game plays, optionally downscaling it */
 		RecompressVideo,
+		/** @brief Translate one of the game's Galaxy Music System modules into a FastTracker II module */
+		ConvertMusic,
 		/** @brief Replace the game content of an already built Dreamcast disc image */
 		SwapDiscContent
 	};
@@ -142,6 +155,12 @@ namespace
 		bool SharewareOnly = false;
 		/** @brief Skip the levels that belong to no episode */
 		bool SkipNonEpisodeLevels = false;
+		/** @brief Whether the tree is for the Nintendo 64, which gets its audio and cinematics in libdragon's formats */
+		bool N64 = false;
+		/** @brief Where libdragon's converters are, named by `--n64-tools=` (otherwise `N64_INST`) */
+		String N64Tools;
+		/** @brief Whether the sprite sheets and tilesets are written in LZ4, see @ref Compatibility::JJ2Anims::ImageCompression */
+		bool Lz4Images = false;
 	};
 
 	/**
@@ -177,6 +196,8 @@ namespace
 			command = Command::ToIndices;
 		} else if (value == "recompress-video"_s) {
 			command = Command::RecompressVideo;
+		} else if (value == "convert-music"_s) {
+			command = Command::ConvertMusic;
 		} else if (value == "swap-content"_s) {
 			command = Command::SwapDiscContent;
 		} else {
@@ -211,13 +232,28 @@ namespace
 		return 0;
 	}
 
-	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale)
+	/**
+		@brief Whether a target profile gets its sprite sheets and tilesets in LZ4
+
+		The consoles that cannot convert on the device at all - their builds have no converter, and their tree
+		is authored into the medium they boot from - so nothing but a tree made by this tool ever reaches
+		them, and their builds carry an LZ4 decoder for it (`NCINE_WITH_LZ4`). The rest keep the game's own
+		format, which every platform reads.
+	*/
+	bool ProfileUsesLz4Images(StringView value)
+	{
+		return (value == "n64"_s || value == "dreamcast"_s || value == "ps2"_s || value == "gamecube"_s);
+	}
+
+	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale, bool& isN64, bool& lz4Images)
 	{
 		defaultVideoDownscale = DefaultVideoDownscaleForProfile(value);
+		isN64 = (value == "n64"_s);
+		lz4Images = ProfileUsesLz4Images(value);
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
 		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s ||
-				value == "psp"_s || value == "ps2"_s) {
+				value == "psp"_s || value == "ps2"_s || value == "n64"_s) {
 			// The consoles all consume the same staged tree, so they share one profile - only the cinematics
 			// are decided per platform, so that is tracked separately
 			profile = TargetProfile::Console;
@@ -245,8 +281,12 @@ namespace
 		LOGI("                         which is the repository's \"Content\". Overrides one found beside the");
 		LOGI("                         originals, and is what makes a console or web tree self-contained when");
 		LOGI("                         the two halves are not kept together");
-		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | ps2 |");
-		LOGI("                         emscripten");
+		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | ps2 | n64 |");
+		LOGI("                         emscripten. dreamcast, ps2, gamecube and n64 get their sprite sheets and");
+		LOGI("                         tilesets in LZ4, which only their builds decode");
+		LOGI("    --n64-tools=<dir>    libdragon toolchain (or its \"bin\") for --target=n64, if N64_INST is not set.");
+		LOGI("                         That profile stores the sound effects, the music and the cinematics in");
+		LOGI("                         libdragon's formats, so it needs audioconv64, and videoconv64 with ffmpeg");
 		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 keeps them at their original size.");
 		LOGI("                         Cinematics are re-encoded for dreamcast and ps2 (or any N > 1) and");
 		LOGI("                         otherwise copied unchanged; desktop gets none, as the game reads the");
@@ -271,13 +311,15 @@ namespace
 		LOGI("    Resolves the colors of an edited image back to the nearest palette indices");
 		LOGI("  recompress-video <source .j2v> <target .j2v> [--video-downscale=N]");
 		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution");
+		LOGI("  convert-music <source .j2b> <target .xm>");
+		LOGI("    Translates one of the game's Galaxy Music System modules into a FastTracker II module");
 		LOGI("  swap-content <source image> [<target image>] --content=<dir>");
-		LOGI("    Replaces the \"Content\" directory of an already built console disc image with <dir>, keeping");
-		LOGI("    its bootstrap and its executable exactly as they are - so the disc can be given new game data");
-		LOGI("    without the console toolchain the image was built with. Reads a Dreamcast \".cdi\" and a");
-		LOGI("    PlayStation 2 \".iso\"; <dir> is a directory prepared by \"convert --target=dreamcast\" or");
-		LOGI("    \"--target=ps2\". The image is rewritten in place if no target is given, and a \".cdi\" grows");
-		LOGI("    only if the new content does not fit in the space the disc already has");
+		LOGI("    Replaces the \"Content\" directory of an already built console disc or ROM image with <dir>,");
+		LOGI("    keeping its bootstrap and its executable exactly as they are - so the image can be given new game");
+		LOGI("    data without the console toolchain it was built with. Reads a Dreamcast \".cdi\", a PlayStation 2");
+		LOGI("    \".iso\" and a Nintendo 64 \".z64\"; <dir> is a directory prepared by \"convert --target=dreamcast\",");
+		LOGI("    \"--target=ps2\" or \"--target=n64\". The image is rewritten in place if no target is given, and");
+		LOGI("    a \".cdi\" grows only if the new content does not fit in the space the disc already has");
 	}
 
 	bool ParseOptions(ArrayView<const StringView> args, Options& options)
@@ -293,7 +335,7 @@ namespace
 		for (std::size_t i = firstArgument; i < args.size(); i++) {
 			StringView arg = args[i];
 			if (arg.hasPrefix("--target="_s)) {
-				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, profileVideoDownscale)) {
+				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, profileVideoDownscale, options.N64, options.Lz4Images)) {
 					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
 					return false;
 				}
@@ -316,6 +358,8 @@ namespace
 				options.AllVideos = true;
 			} else if (arg == "--skip-non-episode-levels"_s) {
 				options.SkipNonEpisodeLevels = true;
+			} else if (arg.hasPrefix("--n64-tools="_s)) {
+				options.N64Tools = arg.exceptPrefix("--n64-tools="_s);
 			} else if (arg == "--help"_s || arg == "-h"_s) {
 				return false;
 			} else if (options.SourcePath.empty()) {
@@ -349,7 +393,14 @@ namespace
 
 		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
 		// was asked for; every other target needs them in the output tree
-		if (options.VideoDownscale > 1 || profileVideoDownscale > 0) {
+		if (options.N64) {
+			// Where a cinematic cannot be encoded as video, it falls back to the engine's container at the size the
+			// console displays (see the conversion below)
+			options.Videos = VideoHandling::FullMotionVideo;
+			if (!videoDownscaleSet) {
+				options.VideoDownscale = 2;
+			}
+		} else if (options.VideoDownscale > 1 || profileVideoDownscale > 0) {
 			options.Videos = VideoHandling::Recompress;
 		} else if (options.Profile != TargetProfile::Desktop) {
 			options.Videos = VideoHandling::Copy;
@@ -483,10 +534,19 @@ namespace
 
 			auto s = fs::Open(item, FileAccess::Read);
 			if (s->IsValid() && fs::GetExtension(item) == "aura"_s) {
+				// A sheet in LZ4 is stored as it is, compressing it again would only put an inflate in front of
+				// the decoder it was chosen for (see JJ2Anims::ImageCompression)
+				const bool lz4 = (Compatibility::JJ2Anims::PreferredImageCompression == Compatibility::JJ2Anims::ImageCompression::Lz4);
+				const PakPreferredCompression sheetCompression = (lz4 ? PakPreferredCompression::None : PakPreferredCompression::Deflate);
 				MemoryStream repacked(16384);
-				if (AssetPacker::SpriteRepacker::TryRepack(*s, repacked, item)) {
+				bool rewritten = AssetPacker::SpriteRepacker::TryRepack(*s, repacked, item);
+				if (!rewritten && lz4) {
+					s->Seek(0, SeekOrigin::Begin);
+					rewritten = AssetPacker::SpriteRepacker::TryConvertToLz4(*s, repacked, item);
+				}
+				if (rewritten) {
 					repacked.Seek(0, SeekOrigin::Begin);
-					if (!pakWriter.AddFile(repacked, targetItem, PakPreferredCompression::Deflate)) {
+					if (!pakWriter.AddFile(repacked, targetItem, sheetCompression)) {
 						LOGW("Cannot add \"{}\" to the package", item);
 						success = false;
 					}
@@ -554,7 +614,15 @@ namespace
 					}
 					break;
 				case Command::SwapDiscContent:
-					success = AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride);
+					success = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath)
+						? AssetPacker::CartridgeImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride)
+						: AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride));
+					break;
+				case Command::ConvertMusic:
+					success = AssetPacker::ModuleConverter::ConvertJ2bToXm(options.SourcePath, options.TargetPath);
+					if (success) {
+						LOGI("\"{}\" converted to \"{}\", {} bytes", options.SourcePath, options.TargetPath, fs::GetFileSize(options.TargetPath));
+					}
 					break;
 				default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
 			}
@@ -634,9 +702,38 @@ namespace
 			? Compatibility::AssetConverter::SourcePackage
 			: Compatibility::AssetConverter::PrebakedPackage);
 
-		PakWriter pakWriter(fs::CombinePath(outputPath, packageName), true);
+		if (options.Lz4Images) {
+#if defined(WITH_LZ4)
+			Compatibility::JJ2Anims::PreferredImageCompression = Compatibility::JJ2Anims::ImageCompression::Lz4;
+			LOGI("Sprite sheets and tilesets are written in LZ4");
+#else
+			LOGW("This build of the tool has no LZ4, so the sprite sheets and tilesets are written in the game's own format");
+#endif
+		}
+
+		// The Nintendo 64 keeps its sound effects out of the package (see AssetPacker::N64Content), and a package
+		// with a hash index cannot be listed afterwards - so for that console everything is written into a
+		// temporary one with a name index first and split into the real one at the end
+		AssetPacker::N64Content::Tools n64Tools;
+		String n64TempPath, n64TempPak;
+		if (options.N64) {
+			if (!AssetPacker::N64Content::FindTools(options.N64Tools, n64Tools)) {
+				LOGE("The n64 profile needs libdragon's audioconv64 - pass \"--n64-tools=<dir>\" or set N64_INST");
+				return 1;
+			}
+			if (!n64Tools.CanEncodeVideo) {
+				LOGW("videoconv64, ffmpeg or ffprobe is missing, so the cinematics will not be encoded as video");
+			}
+			n64TempPath = fs::CombinePath(outputPath, ".n64-temp"_s);
+			fs::RemoveDirectoryRecursive(n64TempPath);
+			fs::CreateDirectories(n64TempPath);
+			n64TempPak = fs::CombinePath(n64TempPath, "Content.pak"_s);
+		}
+		const String pakPath = (options.N64 ? n64TempPak : String(fs::CombinePath(outputPath, packageName)));
+
+		PakWriter pakWriter(pakPath, !options.N64);
 		if (!pakWriter.IsValid()) {
-			LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, packageName));
+			LOGE("Cannot open \"{}\" for writing", pakPath);
 			return 1;
 		}
 
@@ -660,6 +757,15 @@ namespace
 		}
 
 		pakWriter.Finalize();
+
+		if (options.N64) {
+			PakWriter finalPak(fs::CombinePath(outputPath, packageName), true);
+			if (!finalPak.IsValid() || !AssetPacker::N64Content::SplitPackage(n64TempPak, finalPak, outputPath, n64TempPath, n64Tools)) {
+				LOGE("Cannot prepare the sound effects for the Nintendo 64");
+				return 1;
+			}
+			finalPak.Finalize();
+		}
 
 		SmallVector<String, 0> skippedLevels;
 		Compatibility::AssetConverter::ConversionOptions conversionOptions;
@@ -690,7 +796,9 @@ namespace
 			String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
 			fs::CreateDirectories(cinematicsPath);
 
-			if (options.Videos == VideoHandling::Recompress) {
+			if (options.Videos == VideoHandling::FullMotionVideo) {
+				LOGI("Encoding cinematics as full-motion video...");
+			} else if (options.Videos == VideoHandling::Recompress) {
 				LOGI("Recompressing cinematics...");
 			} else {
 				LOGI("Copying cinematics...");
@@ -704,7 +812,17 @@ namespace
 
 				// The player looks the files up in lower case
 				String targetVideoPath = fs::CombinePath(cinematicsPath, StringUtils::lowercase(name + ".j2v"_s));
-				if (options.Videos == VideoHandling::Recompress) {
+				if (options.Videos == VideoHandling::FullMotionVideo) {
+					if (AssetPacker::N64Content::ConvertCinematic(name, layout.OriginalsPath, outputPath, n64TempPak,
+							fs::CombinePath(outputPath, "Music"_s), n64TempPath, n64Tools)) {
+						continue;
+					}
+					// The engine's own container is the fallback, at the size the console shows it
+					LOGW("Deploying \"{}\" in the engine's own format instead", name);
+					if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
+						LOGW("Cannot recompress \"{}\", skipping it", videoPath);
+					}
+				} else if (options.Videos == VideoHandling::Recompress) {
 					if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
 						LOGW("Cannot recompress \"{}\", skipping it", videoPath);
 					}
@@ -712,6 +830,12 @@ namespace
 					LOGW("Cannot copy \"{}\", skipping it", videoPath);
 				}
 			}
+		}
+
+		if (options.N64) {
+			// After the cinematics, which mix the original music into their soundtracks
+			AssetPacker::N64Content::ConvertMusic(fs::CombinePath(outputPath, "Music"_s), n64TempPath, n64Tools);
+			fs::RemoveDirectoryRecursive(n64TempPath);
 		}
 
 		if (options.Profile == TargetProfile::Desktop) {

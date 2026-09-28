@@ -352,9 +352,12 @@ namespace Jazz2
 		 * @param applyPalette      Apply the tile set's palette to the live sprite palette
 		 * @param paletteRemapping  Optional 256-entry table remapping each tile's palette indices
 		 * @param usedTiles         Optional per-tile bits selecting which tiles go into the diffuse atlas
+		 * @param withDiffuse       If `false`, only the collision masks are loaded and the tile set has no
+		 *                          textures --- for a caller that requests it again once it knows which tiles to
+		 *                          pack (see @ref Tiles::TileMap::PruneTilesetAtlas())
 		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr,
-			const BitArray* usedTiles = nullptr);
+			const BitArray* usedTiles = nullptr, bool withDiffuse = true);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);
 		/** @brief Loads specified level into a level descriptor */
@@ -390,12 +393,23 @@ namespace Jazz2
 		/**
 			@brief Loads the samples of @p sound if they are not loaded yet
 
-			Sounds are described by the metadata but, where the platform cannot hold all of them, their samples
-			are only read when something first plays them and are given up again at the next load boundary.
+			Sounds are described by the metadata but, on the platforms that defer them, their samples are only
+			read when something first plays them and are given up again at the next load boundary.
 			Returns whether the sound has any sample to play; one whose samples cannot be read is marked so the
 			read is not retried on every play.
 		*/
 		bool ResolveSound(Resources::SoundResource& sound);
+#if defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Returns the console's own copy of a sound sample (relative to `Animations`), or an empty string
+
+			The content prepared for the Nintendo 64 keeps every sound effect as a `.wav64` file next to the pak
+			instead of inside it, and the audio device streams it from the cartridge while it plays, so a sound
+			costs no RAM at all (see @ref nCine::N64AudioDevice). It is the only form the console plays: nothing
+			is decoded there, so a sample without its `.wav64` stays silent.
+		*/
+		String GetNativeSoundPath(StringView assetPath) const;
+#endif
 
 		/** @brief Returns currently loaded set of palettes */
 		StaticArrayView<PaletteCount * ColorsPerPalette, const std::uint32_t> GetPalettes() const {
@@ -430,9 +444,11 @@ namespace Jazz2
 		// Reads just the frame size out of a sheet's header, for a deferred metadata's bounding box
 		bool ReadAuraFrameDimensions(StringView path, Vector2i& frameDimensions);
 		// `contentEndsStream` states that the image is the last thing in the stream, which lets it be read into
-		// memory in one go; pass `false` when anything follows it, so the position is left right after the image
-		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
-			std::int32_t channelCount, bool contentEndsStream = true);
+		// memory in one go; pass `false` when anything follows it, so the position is left right after the image.
+		// `lz4` says the content is one LZ4 block (see JJ2Anims::ImageContentLz4Flag); returns `false` if it could
+		// not be decoded, in which case `data` holds nothing usable
+		static bool ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
+			std::int32_t channelCount, bool contentEndsStream = true, bool lz4 = false);
 		// Copies a tile's edge pixels into its 1px atlas padding (so sampling never bleeds across tiles); `bytesPerPixel`
 		// is 1 for an indexed (R8) atlas or 4 for a baked RGBA atlas
 		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel);
@@ -449,7 +465,7 @@ namespace Jazz2
 		// Returns one texture normally, or several consecutive row-band chunks when the atlas exceeds the
 		// device's texture-size limit (console targets); see TileSet::ResolveTextureDiffuse
 		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
-			const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
+			bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile);

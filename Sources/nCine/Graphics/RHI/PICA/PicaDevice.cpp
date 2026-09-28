@@ -537,7 +537,7 @@ namespace nCine::RHI::PICA
 	// this translation unit), for the same reason as on the PVR: the effect-table struct below is at
 	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed entry
 	// pointer - and names EffectContext in a member type.
-	// ---------------------------------------------------------- fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this EffectContext -
 	// the structural contract documented in FixedFunctionPass.h, implemented here against the GPU's
@@ -811,7 +811,7 @@ namespace nCine::RHI::PICA
 		}
 	}
 
-	// ------------------------------------------------------------------ session
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	bool PicaDevice::InitializePica()
 	{
@@ -1171,7 +1171,7 @@ namespace nCine::RHI::PICA
 		}
 	}
 
-	// ------------------------------------------------------------------ state
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void PicaDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
@@ -1281,7 +1281,7 @@ namespace nCine::RHI::PICA
 		C3D_RenderTargetClear(target, C3D_CLEAR_COLOR, 0, 0);
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -1344,7 +1344,7 @@ namespace nCine::RHI::PICA
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ extensions
+	// ── Extensions ───────────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::BindProgram(PicaShaderProgram* program) { _currentProgram = program; }
 	PicaShaderProgram* PicaDevice::CurrentProgram() { return _currentProgram; }
@@ -1416,7 +1416,7 @@ namespace nCine::RHI::PICA
 		appliedTarget = nullptr;
 	}
 
-	// ------------------------------------------------------------------ palette
+	// ── Palette ──────────────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::RegisterPaletteTexture(PicaTexture* texture)
 	{
@@ -1505,7 +1505,7 @@ namespace nCine::RHI::PICA
 		}
 	}
 
-	// ------------------------------------------------------------------ lighting hook
+	// ── Lighting Hook ────────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -1689,7 +1689,7 @@ namespace nCine::RHI::PICA
 		}
 	}
 
-	// ------------------------------------------------------------------ draw dispatch
+	// ── Draw Dispatch ────────────────────────────────────────────────────────────────────────────
 
 	void PicaDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)

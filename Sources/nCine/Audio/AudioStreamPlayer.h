@@ -54,6 +54,7 @@ namespace nCine
 			return _audioStream.bufferSize();
 		}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns the number of samples held by a single streaming buffer */
 		inline std::int32_t numStreamSamples() const {
 			return _audioStream.numStreamSamples();
@@ -62,6 +63,7 @@ namespace nCine
 		inline std::int32_t streamBufferSize() const {
 			return _audioStream.streamBufferSize();
 		}
+#endif
 
 		void play() override;
 		void pause() override;

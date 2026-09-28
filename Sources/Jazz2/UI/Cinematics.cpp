@@ -18,6 +18,8 @@
 
 #if defined(DEATH_TARGET_DREAMCAST)
 #	include <dc/sq.h>
+#elif defined(DEATH_TARGET_N64)
+#	include "../../nCine/Backends/N64/N64FullMotionVideo.h"
 #endif
 
 using namespace Death::Memory;
@@ -109,6 +111,21 @@ namespace Jazz2::UI
 
 	void Cinematics::OnBeginFrame()
 	{
+#if defined(DEATH_TARGET_N64)
+		if (!_fullMotionVideoPath.empty()) {
+			// Blocks for the length of the video. This is the one point of a frame where the renderer holds
+			// neither the display nor any RDP state: the previous frame has been presented and this one has not
+			// drawn anything yet.
+			String videoPath = std::move(_fullMotionVideoPath);
+			const bool completed = Backends::N64FullMotionVideo::Play(videoPath, PreferencesCache::MasterVolume);
+			_framesLeft = 0;
+			if (_callback && _callback(_root, completed)) {
+				_callback = nullptr;
+			}
+			return;
+		}
+#endif
+
 		// The frame timer clamps GetTimeMult() to keep gameplay stable on slow frames, but the video has
 		// to track real time - the music plays in real time, and on platforms that can't render 60 FPS
 		// the clamp would stretch the video far beyond its runtime
@@ -218,12 +235,23 @@ namespace Jazz2::UI
 
 		auto& resolver = ContentResolver::Get();
 
+#if defined(DEATH_TARGET_N64)
+		// The content prepared for this console carries the cinematics as full-motion video, decoded with the RSP's
+		// help, with the music and the sound effects already mixed into its audio track - so neither the original
+		// video, nor its music, nor its effects are loaded here at all
+		_fullMotionVideoPath = Backends::N64FullMotionVideo::FindVideo(path);
+		if (!_fullMotionVideoPath.empty()) {
+			_framesLeft = 1;
+			return;
+		}
+#endif
+
 		if (!LoadCinematicsFromFile(path)) {
 			_framesLeft = 0;
 			return;
 		}
 
-#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP))
+#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP) || defined(WITH_N64AUDIO))
 		_music = resolver.GetMusic(String(path + ".j2b"_s));
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
@@ -706,6 +734,15 @@ namespace Jazz2::UI
 			s->Read(samplePath.data(), stringSize);
 
 			String samplePathNormalized = fs::ToNativeSeparators(samplePath);
+#	if defined(NCINE_HAS_NATIVE_AUDIO)
+			// The console only plays its own copy of the sample, which streams from the cartridge
+			String nativePath = resolver.GetNativeSoundPath(samplePathNormalized);
+			if (!nativePath.empty()) {
+				_sfxSamples.emplace_back(nativePath);
+			} else {
+				_sfxSamples.emplace_back(); // Sample not found
+			}
+#	else
 			String fullPath = fs::CombinePath("Animations"_s, samplePathNormalized);
 			auto sample = resolver.OpenContentFile(fullPath);
 			if (sample->IsValid()) {
@@ -713,6 +750,7 @@ namespace Jazz2::UI
 			} else {
 				_sfxSamples.emplace_back(); // Sample not found
 			}
+#	endif
 		}
 
 		std::uint32_t itemCount = s->ReadValueAsLE<std::uint16_t>();
@@ -1258,8 +1296,15 @@ namespace Jazz2::UI
 	{
 	}
 
+#	if !defined(NCINE_HAS_NATIVE_AUDIO)
 	Cinematics::SfxItem::SfxItem(std::unique_ptr<Stream> stream, StringView path)
 		: Buffer(std::make_unique<AudioBuffer>(std::move(stream), path))
+	{
+	}
+#	endif
+
+	Cinematics::SfxItem::SfxItem(StringView path)
+		: Buffer(std::make_unique<AudioBuffer>(path))
 	{
 	}
 #endif

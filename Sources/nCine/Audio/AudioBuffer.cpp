@@ -1,5 +1,7 @@
 #include "AudioBuffer.h"
-#include "IAudioLoader.h"
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
+#	include "IAudioLoader.h"
+#endif
 #if defined(WITH_AUDIO)
 #	include "AudioBufferPlayer.h"
 #	include "../ServiceLocator.h"
@@ -10,7 +12,7 @@
 
 namespace nCine
 {
-#if defined(WITH_AUDIO)
+#if defined(WITH_AUDIO) && !defined(NCINE_HAS_NATIVE_AUDIO)
 	namespace
 	{
 		AudioBuffer::Format bufferFormat(std::int32_t bytesPerSample, std::int32_t numChannels)
@@ -62,16 +64,18 @@ namespace nCine
 #endif
 	}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 	AudioBuffer::AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 		: AudioBuffer()
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		const bool hasLoaded = loadFromStream(std::move(fileHandle), filename);
 		if (!hasLoaded) {
 			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
-#endif
+#	endif
 	}
+#endif
 
 	AudioBuffer::~AudioBuffer()
 	{
@@ -121,9 +125,10 @@ namespace nCine
 		return *this;
 	}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 	void AudioBuffer::init(Format format, std::int32_t frequency)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		switch (format) {
 			case Format::Mono8:
 				_bytesPerSample = 1;
@@ -145,8 +150,9 @@ namespace nCine
 		_frequency = frequency;
 
 		loadFromSamples(nullptr, 0);
-#endif
+#	endif
 	}
+#endif
 
 	/*bool AudioBuffer::loadFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
@@ -162,28 +168,42 @@ namespace nCine
 	bool AudioBuffer::loadFromFile(StringView filename)
 	{
 #if defined(WITH_AUDIO)
+#	if defined(NCINE_HAS_NATIVE_AUDIO)
+		// The device plays the file by itself (streaming it from storage), no decoded copy is kept at all
+		IAudioDevice::NativeAudioInfo info;
+		if (theServiceLocator().GetAudioDevice().loadNativeBuffer(_bufferId, filename, info)) {
+			_bytesPerSample = info.BytesPerSample;
+			_numChannels = info.NumChannels;
+			_frequency = info.Frequency;
+			_numSamples = info.NumSamples;
+			_duration = (_frequency > 0 && _numSamples > 0 ? float(_numSamples) / _frequency : 0.0f);
+			return true;
+		}
+#	else
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromFile(filename);
 		if (audioLoader->hasLoaded()) {
 			return load(*audioLoader);
 		}
+#	endif
 #endif
 		return false;
 	}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 	bool AudioBuffer::loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		std::unique_ptr<IAudioLoader> audioLoader = IAudioLoader::createFromStream(std::move(fileHandle), filename);
 		if (audioLoader->hasLoaded()) {
 			return load(*audioLoader);
 		}
-#endif
+#	endif
 		return false;
 	}
 
 	bool AudioBuffer::loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		if (_bytesPerSample != 0 && _numChannels != 0 && _frequency != 0) {
 			if (bufferSize % (_bytesPerSample * _numChannels) != 0) {
 				LOGW("Buffer size is incompatible with format");
@@ -197,13 +217,13 @@ namespace nCine
 
 			return uploaded;
 		}
-#endif
+#	endif
 		return false;
 	}
 
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
 	{
-#if defined(WITH_AUDIO)
+#	if defined(WITH_AUDIO)
 		DEATH_ASSERT(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
 		    ("Unsupported number of bytes per sample: {}", audioLoader.bytesPerSample()), false);
 		DEATH_ASSERT(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
@@ -230,8 +250,9 @@ namespace nCine
 		const std::int32_t bytesRead = audioReader->read(buffer.get(), bufferSize);
 
 		return loadFromSamples(buffer.get(), bytesRead);
-#else
+#	else
 		return false;
-#endif
+#	endif
 	}
+#endif
 }

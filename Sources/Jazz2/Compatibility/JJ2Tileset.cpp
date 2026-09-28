@@ -248,7 +248,14 @@ namespace Jazz2::Compatibility
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
-		constexpr std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
+		std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
+#if defined(WITH_LZ4)
+		// The image content goes in LZ4 blocks of one band of tiles each, see JJ2Anims::WriteImageContentLz4()
+		const bool lz4 = (JJ2Anims::PreferredImageCompression == JJ2Anims::ImageCompression::Lz4);
+		if (lz4) {
+			flags |= JJ2Anims::ImageContentLz4Flag;
+		}
+#endif
 
 		so->WriteValueAsLE<std::uint64_t>(0xB8EF8498E2BFBBEF);
 		so->WriteValueAsLE<std::uint16_t>(0x208F);
@@ -365,6 +372,13 @@ namespace Jazz2::Compatibility
 			}
 		}
 
+#if defined(WITH_LZ4)
+		if (lz4) {
+			static_assert(JJ2Anims::TilesetLz4BandRows == BlockSize, "A band has to be one row of tiles");
+			JJ2Anims::WriteImageContentLz4(*so, pixels.get(), width, height, channelCount, JJ2Anims::TilesetLz4BandRows);
+			return;
+		}
+#endif
 		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, channelCount);
 	}
 }

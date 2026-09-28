@@ -207,6 +207,7 @@ namespace Jazz2
 
 		void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) override;
 		void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) override;
+		bool CanTakeLevelExit(ExitType exitType, StringView nextLevel) const override;
 
 		void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) override;
 
@@ -364,6 +365,8 @@ namespace Jazz2
 		std::shared_ptr<const LevelStateSnapshot> _returnLevelState;
 		// State of this level taken right before it was left to a special level
 		std::shared_ptr<const LevelStateSnapshot> _leftLevelState;
+		// Special levels that were completed from this level, they cannot be entered from it again (see CanTakeLevelExit())
+		SmallVector<String, 0> _completedSpecialLevels;
 
 		BitArray _pressedKeys;
 		std::uint32_t _overrideActions;
@@ -476,7 +479,7 @@ namespace Jazz2
 		void RestoreCheckpointSnapshot();
 		void SerializeActorsToStream(Stream& dest);
 		void InitializeActorsFromStream(Stream& src);
-		void SerializeLevelState(Stream& dest);
+		void SerializeLevelState(Stream& dest, StringView specialLevel);
 		bool InitializeFromLevelState(const LevelStateSnapshot& state, const LevelInitialization& levelInit);
 
 		void CheatKill(ArrayView<Actors::Player* const> targets);

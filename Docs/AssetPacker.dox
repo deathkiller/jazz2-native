@@ -55,7 +55,9 @@ The command may be omitted, in which case `convert` is assumed:
         together @m_span{m-text m-dim} (which outside a game installation they usually are
         not) @m_endspan
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
-        `gamecube` | `psp` | `ps2` | `emscripten` (or `web`)
+        `gamecube` | `psp` | `ps2` | `n64` | `emscripten` (or `web`)
+    -   `--n64-tools=<dir>` --- Where libdragon's host tools are (the toolchain prefix or its `bin`),
+        for `--target=n64`; defaults to `$N64_INST`. See @ref asset-packer-n64
     -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 keeps them at their
         original size. Cinematics are re-encoded for `dreamcast` and `ps2` (or any N > 1) and
         otherwise copied unchanged, `desktop` gets none, as the game reads the originals.
@@ -78,9 +80,11 @@ The command may be omitted, in which case `convert` is assumed:
     to the nearest palette indices
 -   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N]` --- Re-encodes one
     cinematic on its own, N defaults to 1, which keeps the original resolution
+-   `convert-music <source .j2b> <target .xm>` --- Translates one of the game's Galaxy Music System
+    modules into a FastTracker II module, the first half of what `--target=n64` does to the music
 -   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content`
-    directory of an already built console disc image --- a Dreamcast `.cdi` or a PlayStation 2
-    `.iso` --- keeping its bootstrap and its executable exactly as they are. The image is
+    directory of an already built console image --- a Dreamcast `.cdi`, a PlayStation 2 `.iso` or a
+    Nintendo 64 `.z64` --- keeping its bootstrap and its executable exactly as they are. The image is
     rewritten in place when no target is given
 
 Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
@@ -362,6 +366,70 @@ The file is otherwise read leniently: comments, trailing commas and a byte order
 tolerated, so it can be annotated while it is worked on and saved by any editor. It is written
 as UTF-8 without one.
 
+@section asset-packer-n64 Preparing content for the Nintendo 64
+
+The Nintendo 64 has a profile that goes further than the others: `--target=n64` converts the sound,
+the music and the cinematics into libdragon's own formats, which is what lets the console play music
+at all and fit everything on a 64 MB cartridge. It runs libdragon's host tools, so it needs them ---
+`audioconv64` always, and `videoconv64` with **ffmpeg** and **ffprobe** on the `PATH` for the
+cinematics:
+
+@code{.sh}
+AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit 2> --content=./Content \
+    --target=n64 --n64-tools=<libdragon toolchain prefix>
+@endcode
+
+@m_class{m-noindent}
+
+What differs from a `console` tree:
+
+-   **Sound effects** are taken out of the package and written beside it, one `.wav64` for each
+    @m_span{m-text m-dim} (`Animations/<path>.wav64`) @m_endspan, which the console streams from the
+    cartridge while they play instead of holding them decoded in its 8 MB. They are VADPCM, which the
+    mixer decodes on the RSP, without the Huffman stage the CPU would have to undo. Not raw PCM, which
+    looks cheaper but is not: libdragon's mixer fetches at most about 120 samples of a raw stream at a
+    time, so while a single raw effect played every mixing round of the frame was cut that short, and
+    every playing channel - the sixteen of a module included - pays for every round. Music and effects
+    together cost 6.4 ms a frame that way, against 3.1 ms now. The originals are not kept: the console
+    decodes no audio at all, so a sound without its `.wav64` stays silent.
+-   **Music**: the game's modules are Galaxy Music System `.j2b` files no console decoder reads. They are
+    translated into FastTracker II modules (the same translation `convert-music` does, with every
+    effect, sample tuning and channel panning carried over) and those into libdragon's `.xm64`, which
+    the console plays with its RSP mixer and its instruments streamed from the cartridge. A track in any
+    other format is pre-rendered through libopenmpt into a compressed `.wav64` recording that loops
+    where the module does --- which needs a packer built with libopenmpt.
+-   **Cinematics** become MPEG-1 video (`<name>.m1v`, 320×240 at 24 fps) with a `.wav64` soundtrack
+    beside it, which libdragon's player decodes with the RSP's help. The soundtrack mixes the
+    cinematic's music and its sound effects into one recording. Without `videoconv64` or ffmpeg the
+    cinematics are re-encoded the `console` way instead, at half size.
+
+The sprite sheets and tilesets are written in LZ4, like those of the other consoles that need a
+prepared tree (see @ref asset-packer-lz4). The result is about 38 MB for the full game, both
+cinematics and the whole soundtrack included.
+
+@section asset-packer-lz4 LZ4 sprite sheets and tilesets
+
+The consoles that cannot convert the game data on the device at all --- the Nintendo 64, the Dreamcast,
+the PlayStation 2 and the GameCube --- only ever get a tree this tool made, so their trees can carry
+the images in a form made for them: `--target=n64`, `dreamcast`, `ps2` and `gamecube` write the image
+content of every sprite sheet and tileset as LZ4 blocks of the raw pixels (compressed at the highest
+ratio, which costs the converter time and not the console), where every other target keeps the game's
+own format. Their builds decode it (`NCINE_WITH_LZ4`, on by default for exactly these four).
+
+-   A **tileset** gets one block per band of 32 rows, one row of tiles, which is the unit the game
+    builds its atlas in - it never holds the whole sheet decoded. Measured on the Nintendo 64, castle1's
+    tileset decodes in 179 ms from LZ4 against 290 ms from the game's format, and its compressed pixels
+    are read in 29 ms instead of 70; the tilesets of the whole game take 8.2 MB instead of 14.5.
+-   A **sprite sheet** is one block, and its entry in the package is stored rather than compressed again
+    (a second pass would only put an inflate in front of the decoder). The package grows a little for
+    it --- 2.9 MB against 2.2 for the Nintendo 64 --- while every sheet reads without an inflate.
+-   The hand-made sheets of the game's own `Content` are converted on the way in, so a tree is decoded one
+    way throughout. The fonts and the episode images keep the game's format; they are few and small.
+
+Both headers mark it with a flag (`JJ2Anims::ImageContentLz4Flag`), so a build that has no LZ4 reports
+such a file instead of drawing garbage from it --- rebuild the tree for a target, or the target with
+`NCINE_WITH_LZ4`, when the two do not match.
+
 @section asset-packer-swap-content Replacing the content of a disc image
 
 The two consoles that boot from a read-only disc --- the Dreamcast and the PlayStation 2 ---
@@ -379,6 +447,9 @@ AssetPacker swap-content ./jazz2.cdi --content=./build/DreamcastContent
 
 AssetPacker convert ./build/Ps2Content --source=<original Jazz Jackrabbit 2> --content=./Content --target=ps2
 AssetPacker swap-content ./jazz2.iso --content=./build/Ps2Content
+
+AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit 2> --content=./Content --target=n64
+AssetPacker swap-content ./jazz2.z64 --content=./build/ConsoleContentN64
 @endcode
 
 @m_class{m-noindent}
@@ -395,6 +466,16 @@ licence screen, the serial number and the title --- carried over as the 32 KB it
 it is `SYSTEM.CNF`, the executable it names and the `.IRX` modules beside them. The tool
 therefore needs neither the toolchain the image was built with nor the executable it was built
 from, and runs on any platform the packer itself does.
+
+A Nintendo 64 cartridge is not a disc, but the same applies: the game content is the DragonFS image
+at the end of the ROM, found at boot through the table of contents libdragon's `n64tool` writes after
+the bootcode. It is built again from the directory the way `mkdfs` builds it --- byte for byte, so a
+ROM given back the tree it was built from comes out identical except for the table's cookie --- and
+staged the way the build stages it @m_span{m-text m-dim} (`cmake/n64_stage_content.cmake`: the
+original music formats and a cinematic that has a video are left out, and a `Source.pak` becomes
+`Prebaked.pak`) @m_endspan. The header, with the save type and accessories marked in it, the bootcode,
+the executable and its symbol table are kept as they are, and the ROM is refused if it would outgrow
+the 64 MB the cartridge address space maps.
 
 @subsection asset-packer-swap-content-how What it actually does
 
@@ -457,7 +538,8 @@ went through `swap-content` always comes back with one, so it is reachable eithe
     only decides the cinematics --- the Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat,
     the others get the smaller originals copied. Where each console expects that tree, and how it gets
     there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
-    GameCube have no conversion compiled in at all and *require* the prepared tree, the PSP and the
+    GameCube have no conversion compiled in at all and *require* the prepared tree --- which is why
+    `dreamcast` and `gamecube` also write their images in LZ4 (see @ref asset-packer-lz4) --- the PSP and the
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
     why they are given a prepared tree as well. The Dreamcast additionally authors the tree into a
     read-only disc image at build time, which is a procedure of its own ---
@@ -465,12 +547,17 @@ went through `swap-content` always comes back with one, so it is reachable eithe
     without building it again, see @ref asset-packer-swap-content.
 -   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
     `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* halved to
-    the 320×240 the console actually displays. A `console` tree still plays, it is just the slow way
-    round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
+    the 320×240 the console actually displays, and its images in LZ4 (see @ref asset-packer-lz4). A
+    `console` tree still plays, it is just the slow way round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
     Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
     @ref consoles-ps2-content, whose content can likewise be replaced afterwards with
     @ref asset-packer-swap-content) @m_endspan; it can equally be run from an SD card in an MX4SIO adapter,
     which consumes the same tree @m_span{m-text m-dim} (see @ref consoles-ps2-storage) @m_endspan.
+-   **Nintendo 64** has a profile of its own, `--target=n64`, which needs libdragon's host tools and
+    converts the sound, the music and the cinematics into the console's formats --- see
+    @ref asset-packer-n64. A `console` tree still boots, without music. The tree is authored into the
+    ROM at build time @m_span{m-text m-dim} (see @ref consoles-n64-content) @m_endspan, and the content
+    of a finished ROM can be replaced afterwards with @ref asset-packer-swap-content.
 -   **PlayStation 3** consumes the generic `--target=console` tree --- it needs nothing the profile
     does not already do. It has a writable hard disk and could in principle convert, but is given a
     prepared tree for the same reason the PSP is: doing it on the console is slow.
@@ -511,11 +598,25 @@ went through `swap-content` always comes back with one, so it is reachable eithe
 -   **Recompressed cinematics are larger than the originals.** Only re-encode where the
     platform needs it (the tool's per-target defaults already do the right thing), everything
     else wants the original file.
--   **`swap-content` reads the two kinds of image the game's own builds produce.** A plain `.iso`,
-    which is what the PlayStation 2 disc is, and a DiscJuggler `.cdi` whose data track stores 2048 or
-    2336 bytes per sector, which is what `mkdcdisc` writes. A `.cdi` that stores whole 2352-byte
-    sectors is refused rather than written back in a form that was never checked, and no other
-    container @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan is read at all.
+-   **`swap-content` reads the kinds of image the game's own builds produce.** A plain `.iso`,
+    which is what the PlayStation 2 disc is, a DiscJuggler `.cdi` whose data track stores 2048 or
+    2336 bytes per sector, which is what `mkdcdisc` writes, and a `.z64` ROM that ends with its
+    DragonFS image, which is how the Nintendo 64 build lays it out. A `.cdi` that stores whole
+    2352-byte sectors is refused rather than written back in a form that was never checked, a
+    byte-swapped `.v64` or `.n64` ROM has to be converted to `.z64` first, and no other container
+    @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan is read at all.
+-   **`--target=n64` runs one `audioconv64` per module on purpose.** In one run over several XM files
+    the tool writes every module after the first with the first one's internal offsets, which the
+    console then hangs or crashes on when it opens them. The packer works around it; converting
+    modules by hand with libdragon's tool, do the same.
+-   **Identical samples keep only the first instrument's seek points in an `.xm64`.** audioconv64
+    stores a sample once however many instruments carry it, with the points a compressed sample can
+    be started from (one per `9xx` offset it is played with) collected for the first of them only. An
+    instrument that shares the data and is played from an offset the first never uses makes the
+    console assert ("invalid VADPCM seeking point") on that note. The translated modules carry copies
+    of instruments at other pannings, so the packer makes the copies that need it differ inaudibly
+    @m_span{m-text m-dim} (`ModuleConverter.cpp`, about 1 MB of cartridge for the whole soundtrack)
+    @m_endspan.
 -   The game plays pre-downscaled cinematics as they are --- the player picks its runtime
     downscale from the actual frame width, so a file reduced by the tool is not halved a
     second time.

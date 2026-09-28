@@ -587,6 +587,13 @@ namespace Jazz2::UI
 		return (_weaponWheel[playerIndex].Anim > 0.0f);
 	}
 
+	bool HUD::IsWeaponWheelOpen(std::int32_t playerIndex) const
+	{
+		// A press released before the wheel is half-way in only switches to the next weapon, see PrepareWeaponWheel()
+		const auto& state = _weaponWheel[playerIndex];
+		return (state.Shown && state.Anim >= WeaponWheelAnimDuration * 0.5f);
+	}
+
 	void HUD::OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
 	{
 		std::int32_t charOffset = 0, charOffsetShadow = 0;

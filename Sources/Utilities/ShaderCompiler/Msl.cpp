@@ -168,7 +168,7 @@ namespace ShaderCompiler
 			}
 		}
 
-		// --- Emitter ---------------------------------------------------------------------------------
+		// ── Emitter ──────────────────────────────────────────────────────────────────────────────
 
 		/**
 			What a function reaches for beyond its own parameters and locals - the entry-point arguments and
@@ -408,7 +408,7 @@ namespace ShaderCompiler
 				return 512;		// safe default when the stride is not reflected
 			}
 
-			// --- Binding scheme (mirrors what the Metal backend reconstructs from the same reflection) --
+			// ── Binding Scheme (mirrors what the Metal backend reconstructs from the same reflection) ────
 
 			std::int32_t UboBase() const { return (_reflection.Uniforms.empty() ? 0 : 1); }
 
@@ -443,7 +443,7 @@ namespace ShaderCompiler
 			static String BlockVar(StringView blockName) { return "_b"_s + blockName; }
 			static String SamplerVar(StringView name) { return String{name} + "_smplr"_s; }
 
-			// --- std140-faithful aggregates -------------------------------------------------------------
+			// ── std140-Faithful Aggregates ───────────────────────────────────────────────────────
 
 			/** Natural MSL alignment/size of a member type; false when MSL has no layout-compatible spelling */
 			bool NaturalLayoutOf(const TyRef& t, bool packedVec3, std::uint32_t& align, std::uint32_t& size, String& why)
@@ -642,7 +642,7 @@ namespace ShaderCompiler
 				return EmitAggregate("_Globals"_s, members, RoundUp(offset, 16));
 			}
 
-			// --- I/O structs -------------------------------------------------------------------------------
+			// ── I/O Structs ──────────────────────────────────────────────────────────────────────
 
 			// Integer and `flat` varyings must not be interpolated; Metal rejects an interpolated integer
 			static bool IsFlat(const VaryingDecl& v)
@@ -696,7 +696,7 @@ namespace ShaderCompiler
 				return out;
 			}
 
-			// --- Trailing parameters / arguments carrying the needs -------------------------------------
+			// ── Trailing Parameters / Arguments Carrying the Needs ───────────────────────────────
 
 			/** Parameter declarations for @p n; @p entry decorates them with their binding attributes */
 			String ExtraParams(const FnNeeds& n, bool entry, bool& first)
@@ -783,7 +783,7 @@ namespace ShaderCompiler
 				return out;
 			}
 
-			// --- Entry point ------------------------------------------------------------------------------
+			// ── Entry Point ──────────────────────────────────────────────────────────────────────
 
 			String ReturnEpilogue(const String& indent)
 			{
@@ -892,7 +892,7 @@ namespace ShaderCompiler
 				return out;
 			}
 
-			// --- Statements -------------------------------------------------------------------------------
+			// ── Statements ───────────────────────────────────────────────────────────────────────
 
 			void EmitBlockInner(const Stmt* block, const String& indent, String& out)
 			{
@@ -980,7 +980,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Type inference (drives the constructor / comparison / select rewrites) -----------------
+			// ── Type Inference (drives the constructor / comparison / select rewrites) ───────────
 
 			TyRef InferIdent(StringView name)
 			{
@@ -1118,7 +1118,7 @@ namespace ShaderCompiler
 				return (Comps(a.T) >= Comps(b.T) ? a : b);
 			}
 
-			// --- Expression emission ---------------------------------------------------------------
+			// ── Expression Emission ──────────────────────────────────────────────────────────────
 
 			std::int32_t EmitPrec(const Expr* e) const
 			{
@@ -1381,7 +1381,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Needs bookkeeping ---------------------------------------------------------------------
+			// ── Needs Bookkeeping ────────────────────────────────────────────────────────────────
 
 			void NoteBlock(StringView block) { if (_cur != nullptr) _cur->Blocks.insert(String{block}); }
 			void NoteSampler(StringView name) { if (_cur != nullptr) _cur->Samplers.insert(String{name}); }

@@ -250,8 +250,8 @@ namespace Jazz2::Actors
 		 * @brief Called when the player returns to a restored level to receive carry over information
 		 *
 		 * The player was already restored from the level state snapshot, so only the progress made in the (special)
-		 * level it's returning from is applied. It also ignores the level exit the player is standing on, until
-		 * the player steps off it.
+		 * level it's returning from is applied. The speed the player had when it left is dropped, and the level exit
+		 * the player is standing on is ignored until the player steps off it.
 		 */
 		void ReceiveReturnCarryOver(ExitType exitType, const PlayerCarryOver& carryOver);
 		/** @brief Initializes player state from a stream */

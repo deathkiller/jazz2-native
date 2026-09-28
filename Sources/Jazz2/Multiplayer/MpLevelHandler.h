@@ -555,6 +555,7 @@ namespace Jazz2::Multiplayer
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
 		std::uint32_t _lastUpdated; // Server/Client: last update from the server
 		std::uint64_t _seqNumWarped; // Client: set to _seqNum from HandlePlayerWarped() when warped
+		std::uint64_t _lastSentPressedActions; // Client: input state last sent in PlayerKeyPress
 		Threading::Spinlock _lock;
 		bool _suppressRemoting; // Server: if true, actor will not be automatically remoted to other players
 		bool _ignorePackets;

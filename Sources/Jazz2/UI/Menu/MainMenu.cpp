@@ -496,7 +496,8 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::PlayMenuMusic()
 	{
-#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP))
+		// The N64 plays music without a module decoder: its content carries the tracks converted for its audio device
+#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP) || defined(WITH_N64AUDIO))
 		auto& resolver = ContentResolver::Get();
 
 		if (PreferencesCache::EnableReforgedMainMenu) {
@@ -505,7 +506,7 @@ namespace Jazz2::UI::Menu
 			_music = nullptr;
 		}
 
-;		if (_music == nullptr) {
+		if (_music == nullptr) {
 			_music = resolver.GetMusic("menu.j2b"_s);
 		}
 

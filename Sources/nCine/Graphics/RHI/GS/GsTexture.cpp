@@ -149,7 +149,7 @@ namespace nCine::RHI::GS
 		Unlink();
 	}
 
-	// ---- Most-recently-used list ------------------------------------------------------------------
+	// ── Most-Recently-Used List ──────────────────────────────────────────────────────────────────
 
 	void GsTexture::Unlink()
 	{
@@ -263,7 +263,7 @@ namespace nCine::RHI::GS
 		return GsVram::InvalidPage;
 	}
 
-	// ---- Storage layout --------------------------------------------------------------------------
+	// ── Storage Layout ───────────────────────────────────────────────────────────────────────────
 
 	void GsTexture::ResolveStorage(GsPsm& psm, std::int32_t& bufferPitch, std::uint32_t& pageCount) const
 	{
@@ -451,7 +451,7 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	// ---- Allocation and uploads -----------------------------------------------------------------
+	// ── Allocation and Uploads ───────────────────────────────────────────────────────────────────
 
 	std::int32_t GsTexture::BytesPerPixel(PixelFormat format)
 	{
@@ -594,7 +594,7 @@ namespace nCine::RHI::GS
 		std::memcpy(pixels, _pixels.data(), std::size_t(RawPixelsSize()));
 	}
 
-	// ---- Render target ---------------------------------------------------------------------------
+	// ── Render Target ────────────────────────────────────────────────────────────────────────────
 
 	void GsTexture::SetRenderTarget(bool isRenderTarget)
 	{
@@ -641,7 +641,7 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	// ---- Per-palette-row bake (RG8) --------------------------------------------------------------
+	// ── Per-Palette-Row Bake (RG8) ───────────────────────────────────────────────────────────────
 
 	std::uint32_t GsTexture::EnsureBakedColor(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex,
 		std::uint32_t paletteGeneration, const void* palette)
@@ -740,7 +740,7 @@ namespace nCine::RHI::GS
 		return target->Page;
 	}
 
-	// ---- Sampler state and binding ---------------------------------------------------------------
+	// ── Sampler State and Binding ────────────────────────────────────────────────────────────────
 
 	void* GsTexture::MapStreamingTexels(std::int32_t& strideBytes)
 	{

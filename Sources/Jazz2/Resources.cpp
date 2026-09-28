@@ -18,8 +18,15 @@ namespace Jazz2::Resources
 		return State < p.State;
 	}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 	GenericSoundResource::GenericSoundResource(std::unique_ptr<Stream> stream, StringView filename) noexcept
 		: Buffer(std::move(stream), filename), Flags(GenericSoundResourceFlags::None)
+	{
+	}
+#endif
+
+	GenericSoundResource::GenericSoundResource(StringView path) noexcept
+		: Buffer(path), Flags(GenericSoundResourceFlags::None)
 	{
 	}
 

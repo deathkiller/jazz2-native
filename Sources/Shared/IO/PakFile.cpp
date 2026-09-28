@@ -39,7 +39,8 @@ namespace Death { namespace IO {
 	static std::uint64_t FileNameToHash(StringView fileName)
 	{
 		SmallVector<char, 512> normalizedFileName(DefaultInit, fileName.size());
-		bool lastWasSlash = false;
+		// Starting as if a slash preceded the path, so leading slashes are skipped too (PakFile::FindItem() trims them)
+		bool lastWasSlash = true;
 		std::size_t i = 0;
 
 		for (char c : fileName) {
@@ -394,6 +395,11 @@ namespace Death { namespace IO {
 		}
 
 		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
+#if !defined(WITH_ZLIB) && !defined(WITH_MINIZ)
+		// Otherwise the file would be opened with no items in it
+		DEATH_ASSERT((fileFlags & PakFileFlags::DeflateCompressedIndex) != PakFileFlags::DeflateCompressedIndex,
+			".pak file index was compressed with an unsupported method (Deflate)", );
+#endif
 		s->Seek(std::int64_t(rootIndexOffset), SeekOrigin::Begin);
 
 		_streamPool = std::make_shared<FileStreamPool>(path);
@@ -453,55 +459,13 @@ namespace Death { namespace IO {
 			return nullptr;
 		}
 
-		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
-		switch (compression) {
-			case PakPreferredCompression::None: {
-				return std::make_unique<BoundedFileStream>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
-			}
-			case PakPreferredCompression::Deflate: {
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#else
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File \"{}\" was compressed with an unsupported method (Deflate)", path);
-#	endif
-				return nullptr;
-#endif
-			}
-			case PakPreferredCompression::Lz4: {
-#if defined(WITH_LZ4)
-				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#else
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File \"{}\" was compressed with an unsupported method (LZ4)", path);
-#	endif
-				return nullptr;
-#endif
-			}
-			case PakPreferredCompression::Zstd: {
-#if defined(WITH_ZSTD)
-				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#else
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File \"{}\" was compressed with an unsupported method (Zstd)", path);
-#	endif
-				return nullptr;
-#endif
-			}
-			case PakPreferredCompression::Lzma2Compressed: {
-#if defined(WITH_LZMA2)
-				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#else
-#	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File \"{}\" was compressed with an unsupported method (LZMA2)", path);
-#	endif
-				return nullptr;
-#endif
-			}
-			default: {
-				DEATH_ASSERT_UNREACHABLE(("File \"{}\" was compressed with an unknown method", path), nullptr);
-			}
+		std::unique_ptr<Stream> stream = OpenItem(*foundItem, bufferSize);
+#if defined(DEATH_TRACE_VERBOSE_IO)
+		if DEATH_UNLIKELY(stream == nullptr) {
+			LOGE("File \"{}\" was compressed with an unsupported method ({})", path, GetCompressionName(foundItem->Flags));
 		}
+#endif
+		return stream;
 	}
 
 	std::unique_ptr<Stream> PakFile::OpenFile(std::uint64_t hashedPath, std::int32_t bufferSize)
@@ -513,54 +477,58 @@ namespace Death { namespace IO {
 			return nullptr;
 		}
 
-		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
+		std::unique_ptr<Stream> stream = OpenItem(*foundItem, bufferSize);
+#if defined(DEATH_TRACE_VERBOSE_IO)
+		if DEATH_UNLIKELY(stream == nullptr) {
+			LOGE("File 0x{:.16x} was compressed with an unsupported method ({})", hashedPath, GetCompressionName(foundItem->Flags));
+		}
+#endif
+		return stream;
+	}
+
+	std::unique_ptr<Stream> PakFile::OpenItem(const Item& item, std::int32_t bufferSize)
+	{
+		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(item.Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
 		switch (compression) {
 			case PakPreferredCompression::None: {
-				return std::make_unique<BoundedFileStream>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
+				return std::make_unique<BoundedFileStream>(_streamPool, item.Offset, item.UncompressedSize, bufferSize);
 			}
-			case PakPreferredCompression::Deflate: {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#	else
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File 0x{:.16x} was compressed with an unsupported method (Deflate)", hashedPath);
-#		endif
-				return nullptr;
-#	endif
+			case PakPreferredCompression::Deflate: {
+				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_streamPool, item.Offset, item.UncompressedSize, item.Size, bufferSize);
 			}
+#endif
+#if defined(WITH_LZ4)
 			case PakPreferredCompression::Lz4: {
-#	if defined(WITH_LZ4)
-				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#	else
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZ4)", hashedPath);
-#		endif
-				return nullptr;
-#	endif
+				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_streamPool, item.Offset, item.UncompressedSize, item.Size, bufferSize);
 			}
+#endif
+#if defined(WITH_ZSTD)
 			case PakPreferredCompression::Zstd: {
-#	if defined(WITH_ZSTD)
-				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#	else
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File 0x{:.16x} was compressed with an unsupported method (Zstd)", hashedPath);
-#		endif
-				return nullptr;
-#	endif
+				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_streamPool, item.Offset, item.UncompressedSize, item.Size, bufferSize);
 			}
+#endif
+#if defined(WITH_LZMA2)
 			case PakPreferredCompression::Lzma2Compressed: {
-#	if defined(WITH_LZMA2)
-				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_streamPool, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
-#	else
-#		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZMA2)", hashedPath);
-#		endif
-				return nullptr;
-#	endif
+				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_streamPool, item.Offset, item.UncompressedSize, item.Size, bufferSize);
 			}
+#endif
 			default: {
-				DEATH_ASSERT_UNREACHABLE(("File 0x{:.16x} was compressed with an unknown method", hashedPath), nullptr);
+				// The method is not supported by this build, or the item flags are corrupted
+				return nullptr;
 			}
+		}
+	}
+
+	const char* PakFile::GetCompressionName(ItemFlags itemFlags)
+	{
+		switch (PakPreferredCompression(std::uint32_t(itemFlags & ItemFlags::CompressionFlags) >> CompressionFlagsShift)) {
+			case PakPreferredCompression::None: return "None";
+			case PakPreferredCompression::Deflate: return "Deflate";
+			case PakPreferredCompression::Lz4: return "LZ4";
+			case PakPreferredCompression::Zstd: return "Zstd";
+			case PakPreferredCompression::Lzma2Compressed: return "LZMA2";
+			default: return "Unknown";
 		}
 	}
 
@@ -664,18 +632,23 @@ namespace Death { namespace IO {
 		}
 
 		Array<Item>* items = &_rootItems;
+		Item* foundItem = nullptr;
 		while (true) {
 			auto separator = path.findAnyOr("/\\", path.end());
 			auto name = path.prefix(separator.begin());
 
 			if (name.empty()) {
+				if (separator.empty()) {
+					// Nothing left after the last separator, so the path points to the directory found last
+					return foundItem;
+				}
 				// Skip all consecutive slashes
 				path = path.suffix(separator.end());
 				continue;
 			}
 
 			// Items are always sorted by PakWriter
-			Item* foundItem = std::lower_bound(items->begin(), items->end(), name, [](const PakFile::Item& a, StringView b) {
+			foundItem = std::lower_bound(items->begin(), items->end(), name, [](const PakFile::Item& a, StringView b) {
 				return a.Name < b;
 			});
 
@@ -683,9 +656,15 @@ namespace Death { namespace IO {
 				return nullptr;
 			}
 
-			if (separator == path.end()) {
+			// The separator is compared by its size, `path.end()` would be compared as a null-terminated string
+			if (separator.empty()) {
 				// If there is no separator left
 				return foundItem;
+			}
+
+			if DEATH_UNLIKELY((foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory) {
+				// Only a directory can be followed by a separator
+				return nullptr;
 			}
 
 			path = path.suffix(separator.end());
@@ -734,19 +713,19 @@ namespace Death { namespace IO {
 		{
 			_options = options;
 			_index = 0;
+			_path[0] = '\0';
 
 			if (pakFile._useHashIndex) {
 				// Cannot enumerate directories when using hash index
-				_path[0] = '\0';
 				return false;
 			}
 
-			if (path.empty()) {
+			if (path.trimmedPrefix("/\\").empty()) {
+				// Path that consists only of separators is the root too
 				_childItems = pakFile._rootItems;
 			} else {
 				Item* parentItem = pakFile.FindItem(path);
 				if (parentItem == nullptr) {
-					_path[0] = '\0';
 					return false;
 				}
 
@@ -756,6 +735,12 @@ namespace Death { namespace IO {
 			if (!_childItems.empty()) {
 				std::size_t pathLength = path.size();
 				if (pathLength > 0) {
+					if DEATH_UNLIKELY(pathLength + 2 > sizeof(_path)) {
+						// Path is too long, the separator and the terminating null character wouldn't fit
+						_childItems = {};
+						return false;
+					}
+
 					std::memcpy(_path, path.data(), pathLength);
 					if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {
 #if defined(DEATH_TARGET_WINDOWS)
@@ -775,14 +760,12 @@ namespace Death { namespace IO {
 						_fileNamePart = _path + pathLength + 1;
 					}
 				} else {
-					_path[0] = '\0';
 					_fileNamePart = _path;
 				}
 
 				Increment();
 				return true;
 			} else {
-				_path[0] = '\0';
 				return false;
 			}
 		}
@@ -796,24 +779,24 @@ namespace Death { namespace IO {
 				}
 
 				Item& item = _childItems[_index];
+				_index++;
+
 				if (((_options & FileSystem::EnumerationOptions::SkipDirectories) == FileSystem::EnumerationOptions::SkipDirectories && (item.Flags & ItemFlags::Directory) == ItemFlags::Directory) ||
 					((_options & FileSystem::EnumerationOptions::SkipFiles) == FileSystem::EnumerationOptions::SkipFiles && (item.Flags & ItemFlags::Directory) != ItemFlags::Directory)) {
 					// Skip this file
-					_index++;
 					continue;
 				}
-			
-				break;
-			}
 
-			auto& fileName = _childItems[_index].Name;
-#if defined(DEATH_TARGET_WINDOWS)
-			strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), fileName.data(), fileName.size());
-#else
-			strncpy(_fileNamePart, fileName.data(), std::min(sizeof(_path) - (_fileNamePart - _path), fileName.size()) - 1);
-			_path[sizeof(_path) - 1] = '\0';
-#endif
-			_index++;
+				std::size_t charsLeft = sizeof(_path) - std::size_t(_fileNamePart - _path) - 1;
+				if DEATH_UNLIKELY(item.Name.empty() || item.Name.size() > charsLeft) {
+					// Empty name cannot be looked up, and a truncated one would point to another file, so skip both
+					continue;
+				}
+
+				std::memcpy(_fileNamePart, item.Name.data(), item.Name.size());
+				_fileNamePart[item.Name.size()] = '\0';
+				return;
+			}
 		}
 
 	private:
@@ -900,7 +883,8 @@ namespace Death { namespace IO {
 		: _finalized(false), _useHashIndex(useHashIndex), _useCompressedIndex(useCompressedIndex),
 			_useRelativeOffsets(useRelativeOffsets)
 	{
-		_alreadyExisted = FileSystem::FileExists(path);
+		// Only an existing file that is appended to stays untouched, otherwise the file is truncated or created here
+		_removeIfEmpty = (!append || !FileSystem::FileExists(path));
 		if (append) {
 			_outputStream = std::make_unique<FileStream>(path, FileAccess::ReadWrite);
 
@@ -936,23 +920,31 @@ namespace Death { namespace IO {
 
 	bool PakWriter::AddFile(Stream& stream, StringView path, PakPreferredCompression preferredCompression)
 	{
-		DEATH_ASSERT(_outputStream->IsValid(), "Invalid output stream specified", false);
+		DEATH_ASSERT(IsValid(), "Invalid output stream specified", false);
 		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\',
 			("\"{}\" is not valid file path", String::nullTerminatedView(path).data()), false);
 
 		Array<PakFile::Item>* items = &_rootItems;
-		if (!_useHashIndex) {
-			PakFile::Item* parentItem = FindOrCreateParentItem(path);
-			if (parentItem != nullptr) {
-				items = &parentItem->ChildItems;
-			}
-		}
-
-		for (PakFile::Item& item : *items) {
-			if (item.Name == path) {
-				// File already exists in the .pak file
+		StringView fileName = path;
+		if (_useHashIndex) {
+			// Only hashes are stored, so they have to be compared instead of names
+			if (FileExists(path)) {
 				LOGW("File \"{}\" already exists in the .pak file", path);
 				return false;
+			}
+		} else {
+			items = FindOrCreateParentDirectory(fileName);
+			if (items == nullptr) {
+				LOGW("File \"{}\" cannot be added to the .pak file, because one of its parent directories is a file", path);
+				return false;
+			}
+
+			for (PakFile::Item& item : *items) {
+				if (item.Name == fileName) {
+					// File already exists in the .pak file
+					LOGW("File \"{}\" already exists in the .pak file", path);
+					return false;
+				}
 			}
 		}
 
@@ -1018,7 +1010,7 @@ namespace Death { namespace IO {
 #endif
 			std::memcpy(newItem->Name.data(), &hash, HashIndexLength);
 		} else {
-			newItem->Name = path;
+			newItem->Name = fileName;
 		}
 		newItem->Flags = flags;
 		newItem->Offset = offset;
@@ -1051,11 +1043,17 @@ namespace Death { namespace IO {
 		StringView remaining = path.trimmedPrefix("/\\"_s);
 		while (true) {
 			auto separator = remaining.findAny("/\\"_s);
-			if (separator == nullptr) {
+			if (separator.empty()) {
 				break;
 			}
 
 			auto name = remaining.prefix(separator.begin());
+			remaining = remaining.suffix(separator.end());
+			if (name.empty()) {
+				// Skip all consecutive slashes
+				continue;
+			}
+
 			const PakFile::Item* foundItem = nullptr;
 			for (const PakFile::Item& item : *items) {
 				if (item.Name == name) {
@@ -1068,7 +1066,6 @@ namespace Death { namespace IO {
 				return false;
 			}
 
-			remaining = remaining.suffix(separator.end());
 			items = &foundItem->ChildItems;
 		}
 
@@ -1116,10 +1113,12 @@ namespace Death { namespace IO {
 		}
 
 		if DEATH_UNLIKELY(!hasFiles) {
-			// No files added - close the stream and try to delete the file
+			// No files added - close the stream and try to delete the file, but only if it was actually opened,
+			// otherwise an existing file that couldn't be opened for writing would be deleted
 			String path = _outputStream->GetPath();
+			bool shouldRemove = (_removeIfEmpty && _outputStream->IsValid());
 			_outputStream = nullptr;
-			if (!_alreadyExisted) {
+			if (shouldRemove) {
 				FileSystem::RemoveFile(path);
 			}
 			return;
@@ -1235,19 +1234,23 @@ namespace Death { namespace IO {
 		_mountPoint = Death::move(value);
 	}
 	
-	PakFile::Item* PakWriter::FindOrCreateParentItem(StringView& path)
+	Array<PakFile::Item>* PakWriter::FindOrCreateParentDirectory(StringView& path)
 	{
 		path = path.trimmedPrefix("/\\"_s);
 
 		Array<PakFile::Item>* items = &_rootItems;
-		PakFile::Item* parentItem = nullptr;
 		while (true) {
 			auto separator = path.findAny("/\\"_s);
-			if (separator == nullptr) {
-				return parentItem;
+			if (separator.empty()) {
+				return items;
 			}
 
 			auto name = path.prefix(separator.begin());
+			path = path.suffix(separator.end());
+			if (name.empty()) {
+				// Skip all consecutive slashes, PakFile::FindItem() skips them too
+				continue;
+			}
 
 			PakFile::Item* foundItem = nullptr;
 			for (PakFile::Item& item : *items) {
@@ -1261,10 +1264,11 @@ namespace Death { namespace IO {
 				foundItem = &arrayAppend(*items, PakFile::Item());
 				foundItem->Name = name;
 				foundItem->Flags = PakFile::ItemFlags::Directory;
+			} else if ((foundItem->Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory) {
+				// The name is already taken by a file
+				return nullptr;
 			}
 
-			path = path.suffix(separator.end());
-			parentItem = foundItem;
 			items = &foundItem->ChildItems;
 		}
 	}

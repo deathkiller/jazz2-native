@@ -100,6 +100,58 @@ namespace Jazz2::Compatibility
 			std::int32_t _run;
 		};
 
+		/**
+			@brief Compression of the image content of the sprite sheets and tilesets a conversion writes
+
+			Every platform reads the game's own format (@ref WriteImageContent). A tree prepared for one of
+			the consoles that cannot convert on the device - and so has to carry its content ready-made anyway -
+			can carry LZ4 instead (@ref WriteImageContentLz4), which decodes faster (a tileset 1.6 times as fast
+			on the Nintendo 64, measured) and takes less than half the space. Only the asset packer changes this, for those
+			targets; a build without LZ4 support refuses such a file rather than misreading it.
+		*/
+		enum class ImageCompression {
+			Default,		/**< The game's own format, see @ref WriteImageContent */
+			Lz4				/**< LZ4 blocks of the raw pixels, see @ref WriteImageContentLz4 */
+		};
+
+		/** @brief Image compression that sprite sheets and tilesets are converted with, see @ref ImageCompression */
+		static ImageCompression PreferredImageCompression;
+
+		/**
+			@brief Header flag of a sprite sheet (`.aura`) or a tileset (`.j2t`) whose image content is LZ4
+
+			The flags byte follows the version in both headers, and this bit is free in both.
+		*/
+		static constexpr std::uint8_t ImageContentLz4Flag = 0x08;
+
+		/** @brief Rows of a tileset that go into one LZ4 block, one band of tiles - see @ref WriteImageContentLz4 */
+		static constexpr std::int32_t TilesetLz4BandRows = 32;
+
+#if defined(WITH_LZ4) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Writes image content as LZ4 blocks of @p bandRows rows each
+
+			Every block is the raw pixels of its rows (`channelCount` bytes each), compressed at the highest
+			ratio - the cost is paid once, by the converter, and decoding does not get slower for it - and
+			preceded by its compressed size (32-bit little-endian). The blocks are independent, so a reader
+			can decode them one at a time straight into a buffer of one band, which is how a tileset is read
+			(see @ref TilesetLz4BandRows); a sprite sheet is one block.
+		*/
+		static void WriteImageContentLz4(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height,
+			std::int32_t channelCount, std::int32_t bandRows);
+
+		/**
+			@brief Decodes the next LZ4 block of image content from memory, advancing @p src past it
+
+			@p byteCount is the exact size of the block's pixels. Returns `false` if the block is damaged or
+			does not have exactly that many bytes; @p data is then left undefined.
+		*/
+		static bool DecodeImageContentLz4(const std::uint8_t*& src, const std::uint8_t* end, std::uint8_t* data, std::int32_t byteCount);
+
+		/** @brief Reads and decodes the next LZ4 block of image content from a stream, see @ref DecodeImageContentLz4 */
+		static bool ReadImageContentLz4(Stream& s, std::uint8_t* data, std::int32_t byteCount);
+#endif
+
 		/** @brief Where one frame ends up in a tightly packed sheet */
 		struct PackedFrame
 		{

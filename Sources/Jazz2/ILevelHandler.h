@@ -172,6 +172,13 @@ namespace Jazz2
 		virtual void BroadcastTriggeredEvent(Actors::ActorBase* initiator, EventType eventType, std::uint8_t* eventParams) = 0;
 		/** @brief Starts transition to change current level */
 		virtual void BeginLevelChange(Actors::ActorBase* initiator, ExitType exitType, StringView nextLevel = {}) = 0;
+		/**
+		 * @brief Returns `true` if a level exit of the specified type leading to the specified level can be taken
+		 *
+		 * A special level returns back to the level it was entered from once it's completed, and it cannot be
+		 * entered from there again (see @ref LevelInitialization::ReturnLevelState).
+		 */
+		virtual bool CanTakeLevelExit(ExitType exitType, StringView nextLevel) const = 0;
 
 		/** @brief Sends a packet to the other side of a non-local session */
 		virtual void SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data) = 0;

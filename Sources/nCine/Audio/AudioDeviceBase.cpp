@@ -9,7 +9,7 @@ namespace nCine
 #if defined(DEATH_TRACE)
 			, _suppressedSourceWarnings(0)
 #endif
-#if defined(WITH_THREADS)
+#if defined(WITH_THREADS) && !defined(NCINE_HAS_NATIVE_AUDIO)
 			, _decodeThreadCreated(false), _decodeThreadShouldQuit(false)
 #endif
 	{
@@ -17,9 +17,11 @@ namespace nCine
 
 	AudioDeviceBase::~AudioDeviceBase()
 	{
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 		// The backend destructor is expected to have done this already, it runs first and the
 		// decoding thread must not outlive the readers it touches
 		shutdownDecodeThread();
+#endif
 	}
 
 	void AudioDeviceBase::setSourcePool(ArrayView<const std::uint32_t> sourceIds)
@@ -295,9 +297,10 @@ namespace nCine
 		_stalledSince = TimeStamp{};
 	}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 	bool AudioDeviceBase::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
-#if defined(WITH_THREADS)
+#	if defined(WITH_THREADS)
 		_decodeMutex.Lock();
 		if (!_decodeThreadCreated) {
 			// The decoding thread is created lazily on the first streamed sound
@@ -308,14 +311,14 @@ namespace nCine
 		_decodeMutex.Unlock();
 		_decodeQueueCond.Signal();
 		return true;
-#else
+#	else
 		return false;
-#endif
+#	endif
 	}
 
 	void AudioDeviceBase::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
 	{
-#if defined(WITH_THREADS)
+#	if defined(WITH_THREADS)
 		// A null request would compare equal to the idle active request and wait forever
 		if (request == nullptr) {
 			return;
@@ -336,12 +339,12 @@ namespace nCine
 			_decodeDoneCond.Wait(_decodeMutex);
 		}
 		_decodeMutex.Unlock();
-#endif
+#	endif
 	}
 
 	void AudioDeviceBase::shutdownDecodeThread()
 	{
-#if defined(WITH_THREADS)
+#	if defined(WITH_THREADS)
 		_decodeMutex.Lock();
 		if (_decodeThreadShouldQuit) {
 			_decodeMutex.Unlock();
@@ -359,10 +362,10 @@ namespace nCine
 			_decodeThread.Join();
 			_decodeThreadCreated = false;
 		}
-#endif
+#	endif
 	}
 
-#if defined(WITH_THREADS)
+#	if defined(WITH_THREADS)
 	void AudioDeviceBase::decodeThreadFunc(void* arg)
 	{
 		Thread::SetCurrentName("Audio decoding");
@@ -390,6 +393,7 @@ namespace nCine
 		}
 		device->_decodeMutex.Unlock();
 	}
+#	endif
 #endif
 
 	const Vector3f& AudioDeviceBase::getListenerPosition() const

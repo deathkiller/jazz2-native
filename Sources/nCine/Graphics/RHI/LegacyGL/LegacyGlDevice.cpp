@@ -583,7 +583,7 @@ namespace nCine::RHI::LegacyGL
 	// this translation unit), for the same reason as on the PVR: the effect-table struct below is at
 	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed entry
 	// pointer - and names EffectContext in a member type.
-	// ---------------------------------------------------------- fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this EffectContext -
 	// the structural contract documented in FixedFunctionPass.h, implemented here against GL's
@@ -886,7 +886,7 @@ namespace nCine::RHI::LegacyGL
 		}
 	}
 
-	// ------------------------------------------------------------------ session
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	void LegacyGlDevice::InitializeGl()
 	{
@@ -1270,7 +1270,7 @@ namespace nCine::RHI::LegacyGL
 		}
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void LegacyGlDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -1333,7 +1333,7 @@ namespace nCine::RHI::LegacyGL
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ extensions
+	// ── Extensions ───────────────────────────────────────────────────────────────────────────────
 
 	void LegacyGlDevice::BindProgram(LegacyGlShaderProgram* program) { _currentProgram = program; }
 	LegacyGlShaderProgram* LegacyGlDevice::CurrentProgram() { return _currentProgram; }
@@ -1407,7 +1407,7 @@ namespace nCine::RHI::LegacyGL
 		}
 	}
 
-	// ------------------------------------------------------------------ palettes
+	// ── Palettes ─────────────────────────────────────────────────────────────────────────────────
 
 	std::int32_t LegacyGlDevice::GetMaxTextureDimension()
 	{
@@ -1522,7 +1522,7 @@ namespace nCine::RHI::LegacyGL
 		}
 	}
 
-	// ------------------------------------------------------------------ lighting hook
+	// ── Lighting Hook ────────────────────────────────────────────────────────────────────────────
 
 	void LegacyGlDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -1662,7 +1662,7 @@ namespace nCine::RHI::LegacyGL
 		}
 	}
 
-	// ------------------------------------------------------------------ draw dispatch
+	// ── Draw Dispatch ────────────────────────────────────────────────────────────────────────────
 
 	void LegacyGlDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)

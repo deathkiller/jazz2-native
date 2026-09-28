@@ -52,8 +52,10 @@ namespace Death { namespace IO {
 				break;
 			}
 
-			result |= (std::uint32_t)(byte & 0x7f) << shift;
-			shift += 7;
+			if DEATH_LIKELY(shift < 32) {
+				result |= (std::uint32_t)(byte & 0x7f) << shift;
+				shift += 7;
+			}
 			if ((byte & 0x80) == 0) {
 				break;
 			}
@@ -71,8 +73,10 @@ namespace Death { namespace IO {
 				break;
 			}
 
-			result |= (std::uint64_t)(byte & 0x7f) << shift;
-			shift += 7;
+			if DEATH_LIKELY(shift < 64) {
+				result |= (std::uint64_t)(byte & 0x7f) << shift;
+				shift += 7;
+			}
 			if ((byte & 0x80) == 0) {
 				break;
 			}
@@ -82,13 +86,13 @@ namespace Death { namespace IO {
 
 	std::int64_t Stream::WriteVariableInt32(std::int32_t value)
 	{
-		std::uint32_t n = (std::uint32_t)(value << 1) ^ (std::uint32_t)(value >> 31);
+		std::uint32_t n = ((std::uint32_t)value << 1) ^ (std::uint32_t)(value >> 31);
 		return WriteVariableUint32(n);
 	}
 
 	std::int64_t Stream::WriteVariableInt64(std::int64_t value)
 	{
-		std::uint64_t n = (std::uint64_t)(value << 1) ^ (std::uint64_t)(value >> 63);
+		std::uint64_t n = ((std::uint64_t)value << 1) ^ (std::uint64_t)(value >> 63);
 		return WriteVariableUint64(n);
 	}
 

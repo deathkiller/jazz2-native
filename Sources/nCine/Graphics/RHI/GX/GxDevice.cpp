@@ -421,7 +421,7 @@ namespace nCine::RHI::GX
 	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed
 	// entry pointer - and names EffectContext in a member type; the console toolchain's GCC
 	// ICEs when such an external struct member references an internal-linkage type.
-	// ---------------------------------------------------------- fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this
 	// EffectContext - the structural contract documented in FixedFunctionPass.h. The per-effect
@@ -928,7 +928,7 @@ namespace nCine::RHI::GX
 	std::uint8_t* GxDevice::_lightmapLinear = nullptr;
 	std::size_t GxDevice::_lightmapLinearSize = 0;
 
-	// ------------------------------------------------------------------ session
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::InitializeGx(GXRModeObj* rmode)
 	{
@@ -1036,7 +1036,7 @@ namespace nCine::RHI::GX
 		}
 	}
 
-	// ------------------------------------------------------------------ state
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void GxDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
@@ -1110,7 +1110,7 @@ namespace nCine::RHI::GX
 		GX_End();
 	}
 
-	// ------------------------------------------------------------------ per-draw state application
+	// ── Per-Draw State Application ───────────────────────────────────────────────────────────────
 
 	void GxDevice::ApplyProjection()
 	{
@@ -1223,7 +1223,7 @@ namespace nCine::RHI::GX
 		InvalidateAppliedState();
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -1286,7 +1286,7 @@ namespace nCine::RHI::GX
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ extensions
+	// ── Extensions ───────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::BindProgram(GxShaderProgram* program) { _currentProgram = program; }
 	GxShaderProgram* GxDevice::CurrentProgram() { return _currentProgram; }
@@ -1349,7 +1349,7 @@ namespace nCine::RHI::GX
 		}
 	}
 
-	// ------------------------------------------------------------------ palette TLUTs
+	// ── Palette TLUTs ────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::RegisterPaletteTexture(GxTexture* texture)
 	{
@@ -1430,7 +1430,7 @@ namespace nCine::RHI::GX
 		return slot;
 	}
 
-	// ------------------------------------------------------------------ lighting hook
+	// ── Lighting Hook ────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -1578,7 +1578,7 @@ namespace nCine::RHI::GX
 		}
 	}
 
-	// ------------------------------------------------------------------ draw dispatch
+	// ── Draw Dispatch ────────────────────────────────────────────────────────────────────────────
 
 	void GxDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)

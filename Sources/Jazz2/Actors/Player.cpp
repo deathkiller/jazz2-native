@@ -5388,6 +5388,20 @@ namespace Jazz2::Actors
 			case EventType::AreaEndOfLevel: { // ExitType, Fast (No score count, only black screen), TextID, TextOffset, Coins
 				if (_levelExiting == LevelExitingState::None && !_levelExitSuppressed) {
 					// TODO: Implement Fast parameter
+					ExitType exitType = (ExitType)p[0];
+					if (p[1] != 0) {
+						exitType |= ExitType::FastTransition;
+					}
+					StringView nextLevel;
+					if (p[2] != 0) {
+						nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
+					}
+					// An exit to a special level the player already returned from does nothing at all, it's checked
+					// before the coins, so they are neither taken nor asked for
+					if (!_levelHandler->CanTakeLevelExit(exitType, nextLevel)) {
+						break;
+					}
+
 					// memcpy'd through EventParamsReader rather than cast, because EventTile puts these
 					// parameters at an odd offset - see ModifierLimitCameraView above. This exact line killed
 					// the PSP build every time the player reached a level exit: the unaligned `lhu` raised an
@@ -5397,15 +5411,6 @@ namespace Jazz2::Actors
 					std::uint16_t coinsRequired = EventParamsReader(p).GetUint16(4);
 					if (coinsRequired <= _inventory.Coins) {
 						_inventory.Coins -= coinsRequired;
-
-						ExitType exitType = (ExitType)p[0];
-						if (p[1] != 0) {
-							exitType |= ExitType::FastTransition;
-						}
-						StringView nextLevel;
-						if (p[2] != 0) {
-							nextLevel = _levelHandler->GetLevelText(p[2], p[3], '|');
-						}
 						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
 						return true;
 					} else if (_bonusWarpTimer <= 0.0f) {
@@ -6304,6 +6309,13 @@ namespace Jazz2::Actors
 		if (carryOver.Type != PlayerType::None && carryOver.Type != _playerType) {
 			MorphToInstantly(carryOver.Type);
 		}
+
+		// The player was stored the moment it touched the exit, so it would come out of the warp still carrying
+		// the speed it ran into the exit with. It's stopped the same way as by a warp within the level instead
+		// (see WarpToPosition()), the rest of the movement state is not stored, so it starts from scratch anyway.
+		_speed = Vector2f::Zero;
+		_externalForce = Vector2f::Zero;
+		_internalForceY = 0.0f;
 
 		_levelExitSuppressed = true;
 	}

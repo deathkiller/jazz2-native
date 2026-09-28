@@ -64,11 +64,13 @@ namespace Jazz2
 		/**
 			@brief Whether a metadata's sound samples are read on demand rather than when it is parsed
 
-			The samples a level declares come to roughly a megabyte, which on a console with 8 MB of RDRAM in
-			total is more than the level has left after its tileset, layers and sprites. Reading them when
-			something first plays them - and giving them up again at every load boundary - bounds the resident
-			set to the sounds a level actually uses. The cost is a cartridge read on the first play of each
-			sound, which is why platforms with the memory to hold everything keep loading it up front.
+			A level declares far more sounds than it plays. On the Nintendo 64 each of them is a `.wav64` file the
+			audio device opens on the cartridge - a directory lookup and a few small reads - and holds open for as
+			long as it is kept, at a few hundred bytes of heap each (the samples themselves stay on the cartridge,
+			see `NCINE_HAS_NATIVE_AUDIO`). Opening a sound when something first plays it - and closing it again
+			at every load boundary - keeps both the level load and the heap to the sounds a level actually uses.
+			The cost is a cartridge read in the frame that first plays each sound, which is why the platforms that
+			decode their samples into memory keep doing that up front.
 		*/
 #if defined(DEATH_TARGET_N64)
 		constexpr bool DeferSounds = true;
@@ -94,11 +96,12 @@ namespace Jazz2
 		/**
 			@brief Bytes of heap that must remain free for a deferred resource to be read in
 
-			Resolving an animation or a sound is a fresh allocation of tens of kilobytes made while the game
-			is running, and this platform builds without exceptions: an allocation that cannot be satisfied
-			does not throw, it aborts the process. So the ceiling is enforced before the allocation rather
-			than discovered by it - below this floor the resource is simply not loaded, which costs a sprite
-			that does not appear or an effect that stays silent. That is recoverable; a halt is not.
+			Resolving an animation is a fresh allocation of tens of kilobytes made while the game is running,
+			and this platform builds without exceptions: an allocation that cannot be satisfied does not
+			throw, it aborts the process. So the ceiling is enforced before the allocation rather than
+			discovered by it - below this floor the resource is simply not loaded, which costs a sprite that
+			does not appear. That is recoverable; a halt is not. Sounds need no such floor here, the device
+			streams them from the cartridge and nothing of them is held decoded.
 		*/
 		constexpr std::int32_t MinFreeHeapToResolve = 192 * 1024;
 
@@ -1043,9 +1046,9 @@ namespace Jazz2
 							}
 						}
 						// A level describes far more sounds than it plays - one player's metadata alone lists
-						// over thirty - and every sample is resident for as long as the metadata is. Where the
-						// samples cannot all fit, only the paths are kept here and the samples are read the
-						// first time something plays them (see ResolveSound()).
+						// over thirty - and every sample is resident for as long as the metadata is. Where sounds
+						// are deferred (see DeferSounds), only the paths are kept here and the samples are read
+						// the first time something plays them (see ResolveSound()).
 						if (!DeferSounds) {
 							ResolveSound(sound);
 						}
@@ -1069,7 +1072,6 @@ namespace Jazz2
 			return false;
 		}
 
-		bool anyRefused = false;
 		for (const String& assetPath : sound.Paths) {
 			auto it = _cachedSounds.find(assetPath);
 			if (it != _cachedSounds.end()) {
@@ -1079,15 +1081,18 @@ namespace Jazz2
 				it->second->Flags |= GenericSoundResourceFlags::Referenced;
 				sound.Buffers.push_back(it->second.get());
 			} else {
-#	if defined(DEATH_TARGET_N64)
-				// Only an actual read allocates, so the headroom floor guards exactly this branch
-				if (!HasHeadroomToResolve("sound", assetPath)) {
-					anyRefused = true;
+#	if defined(NCINE_HAS_NATIVE_AUDIO)
+				// The console plays only its own copy, which streams from the cartridge while it plays and holds
+				// nothing decoded (the prepared tree does not carry the originals at all)
+				String nativePath = GetNativeSoundPath(assetPath);
+				if (nativePath.empty()) {
 					continue;
 				}
-#	endif
+				auto resource = std::make_unique<GenericSoundResource>(nativePath);
+#	else
 				auto s = OpenContentFile(fs::CombinePath("Animations"_s, assetPath));
 				auto resource = std::make_unique<GenericSoundResource>(std::move(s), assetPath);
+#	endif
 				if (resource->Buffer.numSamples() <= 0) {
 					// The file was missing or could not be decoded (AudioBuffer already logged it).
 					// Keeping the dead resource cached would hold it for the rest of the level and
@@ -1102,11 +1107,8 @@ namespace Jazz2
 		}
 
 		if (sound.Buffers.empty()) {
-			if (!anyRefused) {
-				// Nothing readable behind any of the paths, so don't come back on every play; a refusal
-				// for lack of memory is NOT marked - it is retried once there is room again
-				sound.Unavailable = true;
-			}
+			// Nothing readable behind any of the paths, so don't come back on every play
+			sound.Unavailable = true;
 			return false;
 		}
 		return true;
@@ -1464,7 +1466,11 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
+		if (!ReadImageFromFile(s, pixels.get(), width, height, channelCount, true,
+				(flags & Compatibility::JJ2Anims::ImageContentLz4Flag) == Compatibility::JJ2Anims::ImageContentLz4Flag)) {
+			LOGE("Cannot load graphics \"{}\": The image content cannot be decoded", path);
+			return nullptr;
+		}
 
 		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -1590,9 +1596,20 @@ namespace Jazz2
 		return _cachedGraphics.emplace(Pair(String(path), cacheKeyOffset), std::move(graphics)).first->second.get();
 	}
 
-	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
-		std::int32_t channelCount, bool contentEndsStream)
+	bool ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height,
+		std::int32_t channelCount, bool contentEndsStream, bool lz4)
 	{
+		if (lz4) {
+			// One LZ4 block of the raw pixels, see JJ2Anims::WriteImageContentLz4() - its size comes first, so
+			// it is read exactly, whatever follows it
+#if defined(WITH_LZ4)
+			return Compatibility::JJ2Anims::ReadImageContentLz4(*s, data, width * height * channelCount);
+#else
+			LOGE("The image content is LZ4, which this build does not support");
+			return false;
+#endif
+		}
+
 		// When the image content runs to the end of the file, it is read into memory in one go and decoded
 		// from there: the decoder works a byte at a time, and a byte through the stream is a virtual call
 		// (through a buffer, but a call all the same) where a byte from memory is a load. A sheet of a few
@@ -1613,12 +1630,13 @@ namespace Jazz2
 					Compatibility::JJ2Anims::ImageContentDecoder decoder;
 					const std::uint8_t* src = content.get();
 					decoder.Decode(src, content.get() + remaining, data, width * height, channelCount);
-					return;
+					return true;
 				}
 			}
 		}
 		// The decoder lives next to the encoder that produced the file, so the two can't drift apart
 		Compatibility::JJ2Anims::ReadImageContent(*s, data, width, height, channelCount);
+		return true;
 	}
 
 	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel)
@@ -1732,7 +1750,7 @@ namespace Jazz2
 	}
 
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping,
-		const BitArray* usedTiles)
+		const BitArray* usedTiles, bool withDiffuse)
 	{
 		// Try "Content" directory first, then "Cache" directory
 		String fullPath;
@@ -1754,7 +1772,7 @@ namespace Jazz2
 		std::uint64_t signature1 = s->ReadValueAsLE<std::uint64_t>();
 		std::uint16_t signature2 = s->ReadValueAsLE<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
-		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
+		const std::uint8_t flags = s->ReadValue<std::uint8_t>();
 		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2,
 			("Tile set \"{}\" has invalid signature", fullPath), nullptr);
 
@@ -1772,7 +1790,7 @@ namespace Jazz2
 
 		// Mark individual tiles as 32-bit or 8-bit
 		std::unique_ptr<uint8_t[]> is32bitTile;
-		if (!_isHeadless) {
+		if (!_isHeadless && withDiffuse) {
 			is32bitTile = std::make_unique<std::uint8_t[]>((tileCount + 7) / 8);
 			uc.Read(is32bitTile.get(), (tileCount + 7) / 8);
 		} else {
@@ -1793,8 +1811,9 @@ namespace Jazz2
 		bool indexTiles = false;
 
 		// The image content follows the compressed block, so it's read from the raw stream (headless builds masks only)
-		if (!_isHeadless) {
-			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, usedTiles, atlasSlot, width, height, tileCount,
+		if (!_isHeadless && withDiffuse) {
+			const bool lz4Content = ((flags & Compatibility::JJ2Anims::ImageContentLz4Flag) == Compatibility::JJ2Anims::ImageContentLz4Flag);
+			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, lz4Content, usedTiles, atlasSlot, width, height, tileCount,
 				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, captionTile);
 		}
 
@@ -1848,7 +1867,7 @@ namespace Jazz2
 	}
 
 	SmallVector<std::unique_ptr<Texture>, 1> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
-		const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
+		bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 		const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile)
@@ -1882,6 +1901,8 @@ namespace Jazz2
 		// played and torn down the main menu had 2.2 MB free but no contiguous 900 KB left, and the third level
 		// loaded from the menu aborted in that read. A band of a 960 px wide sheet is 30 KB.
 		const std::uint32_t sheetBandRows = TileSet::DefaultTileSize;
+		static_assert(Compatibility::JJ2Anims::TilesetLz4BandRows == TileSet::DefaultTileSize, "LZ4 blocks of a tileset have to be one band each");
+		bool lz4Failed = false;
 		const std::uint32_t sheetBandCount = (height + sheetBandRows - 1) / sheetBandRows;
 		std::unique_ptr<std::uint8_t[]> sheetBand = std::make_unique<std::uint8_t[]>(std::size_t(sheetBandRows) * width * channelCount);
 		Compatibility::JJ2Anims::ImageContentDecoder sheetDecoder;
@@ -1936,7 +1957,28 @@ namespace Jazz2
 			while (sheetBandIndex < band && std::uint32_t(sheetBandIndex + 1) < sheetBandCount) {
 				sheetBandIndex++;
 				const std::uint32_t rows = std::min(sheetBandRows, height - std::uint32_t(sheetBandIndex) * sheetBandRows);
-				if (sheetData != nullptr) {
+				if (lz4Content) {
+					// One LZ4 block per band, written for exactly this band height (JJ2Anims::TilesetLz4BandRows)
+					const std::int32_t bandBytes = std::int32_t(rows * width * channelCount);
+#if defined(WITH_LZ4)
+					const bool decoded = (sheetData != nullptr
+						? Compatibility::JJ2Anims::DecodeImageContentLz4(sheetSrc, sheetEnd, sheetBand.get(), bandBytes)
+						: Compatibility::JJ2Anims::ReadImageContentLz4(*s, sheetBand.get(), bandBytes));
+#else
+					const bool decoded = false;
+#endif
+					if (!decoded) {
+						if (!lz4Failed) {
+							lz4Failed = true;
+#if defined(WITH_LZ4)
+							LOGE("Tileset \"{}\" has damaged image content, the tiles past row {} are empty", name, sheetBandIndex * sheetBandRows);
+#else
+							LOGE("Tileset \"{}\" has its image content in LZ4, which this build does not support", name);
+#endif
+						}
+						std::memset(sheetBand.get(), 0, std::size_t(bandBytes));
+					}
+				} else if (sheetData != nullptr) {
 					sheetDecoder.Decode(sheetSrc, sheetEnd, sheetBand.get(), std::int32_t(rows * width), channelCount);
 				} else {
 					sheetDecoder.Decode(*s, sheetBand.get(), std::int32_t(rows * width), channelCount);
@@ -2116,42 +2158,55 @@ namespace Jazz2
 				}
 				decodeSheetUpTo(srcBand);
 				const std::uint8_t* pixels = sheetBand.get();
-				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-						const std::uint32_t src = (y * width + (srcX + x)) * channelCount;
-						const std::uint32_t dst = ((y + TileSet::TilePadding) * paddedWidth + (x + TileSet::TilePadding)) * dstChannels;
+				if (!is32bit && indexTiles && channelCount == 1 && paletteRemapping == nullptr) {
+					// The common case - an 8-bit tile of an indexed atlas, not remapped - is a copy of its rows as
+					// they are (index 0 is transparent). Taking it apart per pixel through the general loop below
+					// was a sizeable part of building the atlas on the consoles.
+					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+						const std::uint8_t* srcRow = &pixels[y * width + srcX];
+						std::memcpy(&dstTile[(y + TileSet::TilePadding) * paddedWidth + TileSet::TilePadding], srcRow, TileSet::DefaultTileSize);
+						if (opaque && std::memchr(srcRow, 0, TileSet::DefaultTileSize) != nullptr) {
+							opaque = false;
+						}
+					}
+				} else {
+					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+						for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+							const std::uint32_t src = (y * width + (srcX + x)) * channelCount;
+							const std::uint32_t dst = ((y + TileSet::TilePadding) * paddedWidth + (x + TileSet::TilePadding)) * dstChannels;
 
-						if (is32bit) {
-							// True-color: copy RGBA straight through (only happens in baked tilesets, so dstChannels == 4)
-							dstTile[dst + 0] = pixels[src + 0];
-							dstTile[dst + 1] = pixels[src + 1];
-							dstTile[dst + 2] = pixels[src + 2];
-							dstTile[dst + 3] = pixels[src + 3];
-							if (pixels[src + 3] != 255) {
-								opaque = false;
-							}
-						} else {
-							// 8-bit: index is the first byte; transparency is index 0 (carried as on/off alpha when the
-							// source is 4-channel). Remapping preserves transparency - a transparent source stays index 0
-							// even if the remap table moves index 0 elsewhere.
-							const std::uint8_t origIndex = pixels[src];
-							const bool transparent = (channelCount >= 4 ? (pixels[src + 3] == 0) : (origIndex == 0));
-							const std::uint8_t index = (transparent ? 0 : (paletteRemapping != nullptr ? paletteRemapping[origIndex] : origIndex));
-
-							if (indexTiles) {
-								dstTile[dst] = index;
-								if (transparent) {
+							if (is32bit) {
+								// True-color: copy RGBA straight through (only happens in baked tilesets, so dstChannels == 4)
+								dstTile[dst + 0] = pixels[src + 0];
+								dstTile[dst + 1] = pixels[src + 1];
+								dstTile[dst + 2] = pixels[src + 2];
+								dstTile[dst + 3] = pixels[src + 3];
+								if (pixels[src + 3] != 255) {
 									opaque = false;
 								}
 							} else {
-								const std::uint32_t color = _palettes[index];
-								const std::uint8_t alpha = (transparent ? 0 : (std::uint8_t)((color >> 24) & 0xFF));
-								dstTile[dst + 0] = (color >> 0) & 0xFF;
-								dstTile[dst + 1] = (color >> 8) & 0xFF;
-								dstTile[dst + 2] = (color >> 16) & 0xFF;
-								dstTile[dst + 3] = alpha;
-								if (alpha != 255) {
-									opaque = false;
+								// 8-bit: index is the first byte; transparency is index 0 (carried as on/off alpha when the
+								// source is 4-channel). Remapping preserves transparency - a transparent source stays index 0
+								// even if the remap table moves index 0 elsewhere.
+								const std::uint8_t origIndex = pixels[src];
+								const bool transparent = (channelCount >= 4 ? (pixels[src + 3] == 0) : (origIndex == 0));
+								const std::uint8_t index = (transparent ? 0 : (paletteRemapping != nullptr ? paletteRemapping[origIndex] : origIndex));
+
+								if (indexTiles) {
+									dstTile[dst] = index;
+									if (transparent) {
+										opaque = false;
+									}
+								} else {
+									const std::uint32_t color = _palettes[index];
+									const std::uint8_t alpha = (transparent ? 0 : (std::uint8_t)((color >> 24) & 0xFF));
+									dstTile[dst + 0] = (color >> 0) & 0xFF;
+									dstTile[dst + 1] = (color >> 8) & 0xFF;
+									dstTile[dst + 2] = (color >> 16) & 0xFF;
+									dstTile[dst + 3] = alpha;
+									if (alpha != 255) {
+										opaque = false;
+									}
 								}
 							}
 						}
@@ -2587,6 +2642,17 @@ namespace Jazz2
 		return Death::move(episode);
 	}
 
+#if defined(NCINE_HAS_NATIVE_AUDIO)
+	String ContentResolver::GetNativeSoundPath(StringView assetPath) const
+	{
+		if (fs::GetExtension(assetPath) != "wav"_s) {
+			return {};
+		}
+		String nativePath = fs::CombinePath({ GetContentPath(), "Animations"_s, String(assetPath + "64"_s) });
+		return (fs::IsReadableFile(nativePath) ? nativePath : String());
+	}
+#endif
+
 	std::unique_ptr<AudioStreamPlayer> ContentResolver::GetMusic(StringView path)
 	{
 #if defined(WITH_AUDIO)
@@ -2600,11 +2666,24 @@ namespace Jazz2
 			fullPath = _pathHandler(path);
 		}
 		if (fullPath.empty()) {
+#	if defined(NCINE_HAS_NATIVE_AUDIO)
+			// The console cannot decode any of the original module formats; the asset packer converts every track
+			// it can into a ".xm64" module, which the audio device plays with its instruments streamed from the
+			// cartridge, and pre-renders the rest into a compressed ".wav64" recording
+			StringView stem = fs::GetFileNameWithoutExtension(path);
+			for (StringView extension : { "xm64"_s, "wav64"_s }) {
+				fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, String(stem + "."_s + extension) });
+				if (fs::IsReadableFile(fullPath)) {
+					break;
+				}
+			}
+#	else
 			fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
 			if (!fs::IsReadableFile(fullPath)) {
 				// "Source" directory must be case in-sensitive
 				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
 			}
+#	endif
 		}
 		if (!fs::IsReadableFile(fullPath)) {
 			return nullptr;

@@ -19,19 +19,18 @@ namespace nCine
 		buffer can be shared by multiple @ref AudioBufferPlayer instances. The samples live in
 		a buffer object owned by the current @ref IAudioDevice, which on some backends means
 		dedicated sound memory rather than the main heap.
+
+		Where `NCINE_HAS_NATIVE_AUDIO` is defined, nothing is decoded: @ref loadFromFile() hands the
+		file over to the device (see @ref IAudioDevice::loadNativeBuffer()), which plays it by itself,
+		and the functions that take encoded or raw samples do not exist.
 	*/
 	class AudioBuffer : public Object
 	{
 	public:
-		/** @brief Sample format */
-		using Format = IAudioDevice::BufferFormat;
-
 		/** @brief Creates an empty buffer */
 		AudioBuffer();
 		/** @brief Creates a buffer and loads it from the specified file */
 		explicit AudioBuffer(StringView filename);
-		/** @brief Creates a buffer and loads it from an already opened stream */
-		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		~AudioBuffer() override;
 
 		AudioBuffer(const AudioBuffer&) = delete;
@@ -39,15 +38,24 @@ namespace nCine
 		AudioBuffer(AudioBuffer&& other) noexcept;
 		AudioBuffer& operator=(AudioBuffer&& other) noexcept;
 
+		/** @brief Loads audio data from the specified file */
+		bool loadFromFile(StringView filename);
+
+#if !defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Sample format */
+		using Format = IAudioDevice::BufferFormat;
+
+		/** @brief Creates a buffer and loads it from an already opened stream */
+		AudioBuffer(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
+
 		/** @brief Initializes an empty buffer with the specified format and frequency */
 		void init(Format format, std::int32_t frequency);
 
-		/** @brief Loads audio data from the specified file */
-		bool loadFromFile(StringView filename);
 		/** @brief Loads audio data from an already opened stream */
 		bool loadFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, StringView filename);
 		/** @brief Loads samples in raw PCM format from a memory buffer */
 		bool loadFromSamples(const unsigned char* bufferPtr, std::int32_t bufferSize);
+#endif
 
 		/** @brief Returns the backend buffer id */
 		inline std::uint32_t bufferId() const {
@@ -102,7 +110,9 @@ namespace nCine
 		/** @brief Duration in seconds */
 		float _duration;
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 		/** @brief Loads audio samples using the supplied loader and its reader */
 		bool load(IAudioLoader& audioLoader);
+#endif
 	};
 }

@@ -190,6 +190,19 @@
 #if !defined(DEATH_TARGET_N64)
 #	define NCINE_HAS_RESUMABLE_STATE
 #endif
+/**
+	@brief Whether the audio device plays sound in formats of its own instead of samples the engine decodes
+
+	The content prepared for the Nintendo 64 carries every sound effect as a `.wav64` file the mixer streams
+	from the cartridge, and every track as an `.xm64` module or a `.wav64` recording, all of which libdragon
+	plays without the engine decoding anything. There @relativeref{nCine,AudioBuffer} and
+	@relativeref{nCine,AudioStream} only hand files over to the device, and the whole decoding path is compiled
+	out: the audio loaders and readers, sample uploads, the streaming buffer queue and the decoding thread.
+	Everywhere else it is the other way around, and the native playback interface does not exist.
+*/
+#if defined(DEATH_TARGET_N64)
+#	define NCINE_HAS_NATIVE_AUDIO
+#endif
 
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)

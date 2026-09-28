@@ -3,7 +3,7 @@
 #include "IAudioDevice.h"
 #include "../Base/TimeStamp.h"
 
-#if defined(WITH_THREADS)
+#if defined(WITH_THREADS) && !defined(NCINE_HAS_NATIVE_AUDIO)
 #	include "../Threading/Thread.h"
 #	include "../Threading/ThreadSync.h"
 #endif
@@ -17,8 +17,9 @@ namespace nCine
 	/**
 		@brief Backend-independent part of an audio device
 
-		Owns the pool of free sources, the list of active players and the stream decoding thread -
-		everything an @ref IAudioDevice has to do that does not depend on the sound hardware. A
+		Owns the pool of free sources, the list of active players and the stream decoding thread (not
+		where `NCINE_HAS_NATIVE_AUDIO` is defined, since nothing is decoded there) - everything an
+		@ref IAudioDevice has to do that does not depend on the sound hardware. A
 		backend derives from this, hands over the source ids it created with @ref setSourcePool()
 		and only implements the buffer and source operations of @ref IAudioDevice.
 	*/
@@ -57,8 +58,10 @@ namespace nCine
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
 		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+#endif
 
 		const Vector3f& getListenerPosition() const override;
 
@@ -121,6 +124,7 @@ namespace nCine
 		 */
 		void checkForStalledSources();
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 		/**
 		 * @brief Stops the decoding thread and releases every request still queued
 		 *
@@ -128,6 +132,7 @@ namespace nCine
 		 * could still touch, the base destructor is too late for that.
 		 */
 		void shutdownDecodeThread();
+#endif
 
 	private:
 		// Since when every source has been in use without any of them advancing, the sum of the playback
@@ -142,7 +147,7 @@ namespace nCine
 		TimeStamp _lastSourceWarningTime;
 		std::uint32_t _suppressedSourceWarnings;
 #endif
-#if defined(WITH_THREADS)
+#if defined(WITH_THREADS) && !defined(NCINE_HAS_NATIVE_AUDIO)
 		// Decoding thread that executes stream decode requests ahead of time
 		Thread _decodeThread;
 		// Protects the request queue, the active request and the quit flag

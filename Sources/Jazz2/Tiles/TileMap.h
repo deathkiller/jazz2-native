@@ -707,6 +707,9 @@ namespace Jazz2::Tiles
 		// Whether any tile's graphics or mask was overridden (MLLE) - such an atlas must not be repacked,
 		// the rebuild would silently revert the overrides
 		bool _tilesOverridden;
+		// Whether the main tileset was loaded without its atlas (masks only), because the atlas is built once
+		// the level's tile usage is known (see PruneTilesetAtlas())
+		bool _diffuseDeferred;
 		BitArray _triggerState;
 		BitArray _triggerStateForRollback;
 
@@ -761,14 +764,15 @@ namespace Jazz2::Tiles
 
 #	if defined(TILEMAP_GROUP_MESH_BY_TILE)
 		/// One visible tile of the layer currently being built, held back so the layer can be emitted grouped by
-		/// the atlas slot its tiles sample instead of in screen order (see @ref DrawLayer()). Exactly the
-		/// arguments @ref AppendTileQuad() takes plus the grouping key, so nothing has to be recomputed - the
-		/// two integer divisions the UV bias costs would have run again per tile otherwise.
+		/// the atlas slot its tiles sample instead of in screen order (see @ref DrawLayer()). Everything the
+		/// RDP's packed tile record takes (see `RHI::RDP::TileRecord`) plus the grouping key, so nothing has to
+		/// be recomputed - the two integer divisions the texel position costs would run again per tile otherwise.
 		struct MeshTileEntry
 		{
 			float X, Y;
-			float TexScaleX, TexBiasX, TexScaleY, TexBiasY;
-			float Alpha;
+			std::uint16_t TexX, TexY;	//< Top-left texel of the tile in its atlas chunk
+			std::uint8_t Alpha;			//< The tile's own alpha (LayerTile::Alpha)
+			std::uint8_t Flags;			//< `RHI::RDP::TileRecord::FlipX` / `FlipY`
 			std::uint16_t Slot;			//< Packed atlas slot the tile samples, the grouping key
 			std::uint16_t Chunk;		//< Atlas chunk (texture) that slot lives in
 			std::uint16_t Xo, Yo;		//< Cell of the layer's window the tile sits in (see LayerMeshCache)
@@ -890,5 +894,7 @@ namespace Jazz2::Tiles
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
 		std::int32_t ResolveTileID(const LayerTile& tile) const;
+		/** @brief Loads the whole atlas of the main tileset if it was deferred, see @ref _diffuseDeferred */
+		void LoadDeferredDiffuse();
 	};
 }

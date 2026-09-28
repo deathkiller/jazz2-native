@@ -74,7 +74,7 @@ namespace ShaderCompiler
 			}
 		}
 
-		// --- Vulkan GLSL emitter ---------------------------------------------------------------------
+		// ── Vulkan GLSL Emitter ──────────────────────────────────────────────────────────────────
 		//
 		// Re-emits a stage's shared typed AST as Vulkan-flavored GLSL ("#version 450"). GLSL is close to
 		// the lowered modern-GLSL input, so expression/statement emission is a faithful pretty-print (no
@@ -244,7 +244,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Function / statement emission ---------------------------------------------------------
+			// ── Function / Statement Emission ────────────────────────────────────────────────────
 
 			String EmitFunction(const Function& fn)
 			{
@@ -339,7 +339,7 @@ namespace ShaderCompiler
 				return {};
 			}
 
-			// --- Expression emission (faithful GLSL pretty-print) --------------------------------------
+			// ── Expression Emission (faithful GLSL pretty-print) ─────────────────────────────────
 
 			std::int32_t EmitPrec(const Expr* e) const
 			{

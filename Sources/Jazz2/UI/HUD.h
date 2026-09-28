@@ -75,6 +75,13 @@ namespace Jazz2::UI
 
 		/** @brief Returns `true` if weapon wheel is visible */
 		bool IsWeaponWheelVisible(std::int32_t playerIndex) const;
+		/**
+		 * @brief Returns `true` if weapon wheel is held open to choose a weapon
+		 *
+		 * Unlike @ref IsWeaponWheelVisible(), a short press, which shows the wheel only briefly and switches to the next
+		 * weapon, doesn't count, and neither does the wheel fading out once it's released.
+		 */
+		bool IsWeaponWheelOpen(std::int32_t playerIndex) const;
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 		/** @brief Rebuilds internal touch button data from current @ref PreferencesCache::TouchButtons configuration */

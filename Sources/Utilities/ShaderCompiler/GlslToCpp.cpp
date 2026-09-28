@@ -17,7 +17,7 @@ namespace ShaderCompiler
 {
 	namespace
 	{
-		// --- Type system of the supported subset ---------------------------------------------------
+		// ── Type System of the Supported Subset ──────────────────────────────────────────────────
 
 		enum class Ty
 		{
@@ -163,7 +163,7 @@ namespace ShaderCompiler
 			return false;
 		}
 
-		// --- Abstract syntax tree --------------------------------------------------------------------
+		// ── Abstract Syntax Tree ─────────────────────────────────────────────────────────────────
 		// The expression AST (Expr / ExprKind / ExprPtr / MakeExpr) is shared with the HLSL emitter and
 		// lives in GlslAst.h; only the statement/declaration model is software-transpiler-local. The
 		// shared ExprKind carries a UIntLit the HLSL emitter needs; this path folds `2u` to a signed
@@ -201,7 +201,7 @@ namespace ShaderCompiler
 		enum class SymKind { Varying, Sampler, Uniform, Output, GlobalConst };
 		struct Global { SymKind Kind; Ty Type = Ty::Void; std::int32_t Unit = -1; };
 
-		// --- Parser ----------------------------------------------------------------------------------
+		// ── Parser ───────────────────────────────────────────────────────────────────────────────
 
 		class Parser
 		{
@@ -713,7 +713,7 @@ namespace ShaderCompiler
 			}
 		};
 
-		// --- Constant-varying analysis (vertex stage) ------------------------------------------------
+		// ── Constant-Varying Analysis (vertex stage) ─────────────────────────────────────────────
 
 		/** @brief One per-instance-constant varying the fragment may read, plus how to recompute it on the CPU */
 		struct ConstVaryingInfo
@@ -999,7 +999,7 @@ namespace ShaderCompiler
 			}
 		};
 
-		// --- Emitter ---------------------------------------------------------------------------------
+		// ── Emitter ──────────────────────────────────────────────────────────────────────────────
 
 		class Emitter
 		{
@@ -1410,7 +1410,7 @@ namespace ShaderCompiler
 		};
 	}
 
-	// --- Public entry point --------------------------------------------------------------------------
+	// ── Public Entry Point ───────────────────────────────────────────────────────────────────────
 
 	GlslToCppResult GlslToCpp::TranspileFragment(StringView programName, StringView fragmentGlsl,
 		StringView vertexGlsl, const SmallVectorImpl<SamplerBinding>& samplers,

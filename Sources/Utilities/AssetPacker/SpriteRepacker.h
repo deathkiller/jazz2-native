@@ -39,5 +39,17 @@ namespace Jazz2::AssetPacker
 			fits into a page or it has a single frame. @p name is only used in messages.
 		*/
 		static bool TryRepack(Stream& input, MemoryStream& output, StringView name);
+
+		/**
+			@brief Rewrites a sprite sheet with its image content in LZ4
+
+			Used for the hand-made sheets of a target whose converted ones are written in LZ4 (see
+			@ref Compatibility::JJ2Anims::ImageCompression), so that the whole tree decodes one way. The header
+			and the frame layout are copied as they are, only the flag and the image content change.
+
+			@return `true` if @p output received the sheet, `false` if it was not recognized (or is LZ4 already)
+			and has to be copied as it is
+		*/
+		static bool TryConvertToLz4(Stream& input, MemoryStream& output, StringView name);
 	};
 }

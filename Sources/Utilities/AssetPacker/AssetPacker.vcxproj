@@ -134,9 +134,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="CartridgeImage.cpp" />
     <ClCompile Include="DiscImage.cpp" />
     <ClCompile Include="FontPacker.cpp" />
     <ClCompile Include="Iso9660.cpp" />
+    <ClCompile Include="ModuleConverter.cpp" />
+    <ClCompile Include="N64Content.cpp" />
     <ClCompile Include="PngCodec.cpp" />
     <ClCompile Include="SpriteRepacker.cpp" />
     <!-- The original-data converters, shared with the game (CONVERTER_SOURCES in cmake/ncine_sources.cmake) -->
@@ -185,9 +188,12 @@
     <ClCompile Include="..\..\Dependencies\jsoncpp\writer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CartridgeImage.h" />
     <ClInclude Include="DiscImage.h" />
     <ClInclude Include="FontPacker.h" />
     <ClInclude Include="Iso9660.h" />
+    <ClInclude Include="ModuleConverter.h" />
+    <ClInclude Include="N64Content.h" />
     <ClInclude Include="PngCodec.h" />
     <ClInclude Include="SpriteRepacker.h" />
     <ClInclude Include="..\..\Main.h" />

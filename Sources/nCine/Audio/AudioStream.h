@@ -19,6 +19,10 @@ namespace nCine
 
 		Used for long sounds such as music, where decoding the whole file into memory would be
 		wasteful. Owned by @ref AudioStreamPlayer, which feeds it through @ref enqueue().
+
+		Where `NCINE_HAS_NATIVE_AUDIO` is defined, nothing is decoded at all: the device plays the file
+		by itself (see @ref IAudioDevice::openNativeStream()), @ref enqueue() binds it to the player's
+		source once and from then on only reports whether the device is still playing it.
 	*/
 	class AudioStream
 	{
@@ -29,7 +33,12 @@ namespace nCine
 
 		/** @brief Returns the backend id of the currently playing buffer, or `0` if none */
 		inline std::uint32_t bufferId() const {
+#if defined(NCINE_HAS_NATIVE_AUDIO)
+			// A native stream plays through no buffer of the engine's
+			return 0;
+#else
 			return _currentBufferId;
+#endif
 		}
 
 		/** @brief Returns the number of bytes per sample */
@@ -59,12 +68,14 @@ namespace nCine
 			return (_numSamples == -1 ? -1 : (_numSamples * _numChannels * _bytesPerSample));
 		}
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns the number of samples held by a single streaming buffer */
 		std::int32_t numStreamSamples() const;
 		/** @brief Returns the size of a single streaming buffer in bytes */
 		inline std::int32_t streamBufferSize() const {
 			return BufferSize;
 		}
+#endif
 
 		/**
 		 * @brief Decodes and enqueues new buffers and unqueues processed ones
@@ -83,6 +94,32 @@ namespace nCine
 		void setLooping(bool value);
 
 	private:
+#if defined(NCINE_HAS_NATIVE_AUDIO)
+		/** @brief Stream the device plays by itself (see @ref IAudioDevice::openNativeStream()), closed with the handle */
+		struct NativeStreamHandle
+		{
+			/** @brief Id returned by @ref IAudioDevice::openNativeStream(), `0` if none */
+			std::uint32_t Id = 0;
+			/** @brief Whether the stream has been bound to the source and started */
+			bool Started = false;
+
+			NativeStreamHandle() = default;
+			explicit NativeStreamHandle(std::uint32_t id) : Id(id) {}
+			~NativeStreamHandle();
+			NativeStreamHandle(const NativeStreamHandle&) = delete;
+			NativeStreamHandle& operator=(const NativeStreamHandle&) = delete;
+			// A moved-from stream must not close what it no longer owns; the assignment hands the previous
+			// stream to the moved-from object, whose destructor then closes it
+			NativeStreamHandle(NativeStreamHandle&& other) noexcept : Id(other.Id), Started(other.Started) { other.Id = 0; }
+			NativeStreamHandle& operator=(NativeStreamHandle&& other) noexcept {
+				std::uint32_t id = Id; Id = other.Id; other.Id = id;
+				Started = other.Started;
+				return *this;
+			}
+		};
+		/** @brief Stream being played */
+		NativeStreamHandle _nativeStream;
+#else
 		/** @brief Number of buffers used for streaming */
 		static const std::int32_t NumBuffers = 3;
 		/** @brief Backend buffer queue used for streaming */
@@ -121,6 +158,12 @@ namespace nCine
 		/** @brief Whether the last chunk could be handed to a decoding thread, so this one need not decode it */
 		bool _asyncDecodeAvailable;
 
+		/** @brief Sample format of the decoded data */
+		IAudioDevice::BufferFormat _format;
+		/** @brief Reader that continuously streams decoded data, shared with @ref _decodeRequest */
+		std::shared_ptr<IAudioReader> _audioReader;
+#endif
+
 		/** @brief Number of bytes per sample */
 		std::int32_t _bytesPerSample;
 		/** @brief Number of channels */
@@ -136,11 +179,6 @@ namespace nCine
 		/** @brief Whether the stream loops */
 		bool _isLooping;
 
-		/** @brief Sample format of the decoded data */
-		IAudioDevice::BufferFormat _format;
-		/** @brief Reader that continuously streams decoded data, shared with @ref _decodeRequest */
-		std::shared_ptr<IAudioReader> _audioReader;
-
 		// Private constructors called only by AudioStreamPlayer
 		AudioStream();
 		explicit AudioStream(StringView filename);
@@ -152,7 +190,8 @@ namespace nCine
 
 		bool loadFromFile(StringView filename);
 
+#if !defined(NCINE_HAS_NATIVE_AUDIO)
 		void createReader(IAudioLoader& audioLoader);
-
+#endif
 	};
 }

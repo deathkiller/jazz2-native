@@ -8,6 +8,8 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <objbase.h>
+#elif defined(DEATH_TARGET_N64)
+#	include <entropy.h>
 #endif
 
 namespace nCine
@@ -47,7 +49,14 @@ namespace nCine
 	RandomGenerator::RandomGenerator() noexcept
 		: _state(0ULL), _increment(0ULL)
 	{
+#if defined(DEATH_TARGET_N64)
+		// Without a real-time clock on the cartridge, libdragon's gettimeofday() fails and the clock reads the
+		// same value on every boot - so did the whole "random" sequence. libdragon collects entropy during the
+		// boot itself, which differs on every power-on of real hardware (emulators stay deterministic).
+		const std::uint64_t now = getentropy64();
+#else
 		std::uint64_t now = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
+#endif
 		Init(DefaultInitState ^ now, DefaultInitSequence);
 	}
 

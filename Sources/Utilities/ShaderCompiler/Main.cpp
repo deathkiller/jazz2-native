@@ -410,7 +410,7 @@ namespace
 		return dump;
 	}
 
-	// --- SwGeneratedShaders.h emission (GLSL-to-C++ software fragment functions) -------------------
+	// ── SwGeneratedShaders.h Emission (GLSL-to-C++ software fragment functions) ──────────────────
 
 	/** One non-sampler uniform of a transpiled shader's "<Program>_Uniforms" struct */
 	struct GeneratedUniformField
@@ -674,7 +674,7 @@ namespace
 		return true;
 	}
 
-	// --- HLSL validation via d3dcompiler_47's D3DCompile ------------------------------------------
+	// ── HLSL Validation via d3dcompiler_47's D3DCompile ──────────────────────────────────────────
 
 #if defined(DEATH_TARGET_WINDOWS)
 	pD3DCompile g_D3DCompile = nullptr;
@@ -733,7 +733,7 @@ namespace
 		return CompileHlslToDxbc(source, entry, target, dxbc, log);
 	}
 
-	// --- Vulkan SPIR-V compilation via a child glslangValidator process ---------------------------
+	// ── Vulkan SPIR-V Compilation via a Child glslangValidator Process ───────────────────────────
 
 	/** Matches @p name against @p pattern, where the pattern may contain "*" and "?" wildcards */
 	bool MatchesWildcard(StringView pattern, StringView name)
@@ -1402,7 +1402,7 @@ namespace
 		return out;
 	}
 
-	// --- Fixed-function aggregate emission (PvrGeneratedEffects.h / GxGeneratedEffects.h) ----------
+	// ── Fixed-Function Aggregate Emission (PvrGeneratedEffects.h / GxGeneratedEffects.h) ─────────
 
 	/** One (program, variant) table row of the aggregate header */
 	struct GeneratedEffectEntry
@@ -1884,7 +1884,7 @@ namespace
 		return 0;
 	}
 
-	// --- PlayStation 3 RSX microcode via a child cgcomp process -----------------------------------
+	// ── PlayStation 3 RSX Microcode via a Child cgcomp Process ───────────────────────────────────
 
 	/**
 		@brief Largest batch a PlayStation 3 shader is compiled for
@@ -2290,7 +2290,7 @@ namespace
 		return 0;
 	}
 
-	// --- Whole-directory regeneration (--generate-all) --------------------------------------------
+	// ── Whole-Directory Regeneration (--generate-all) ────────────────────────────────────────────
 
 	/**
 		Options of the --generate-all driver, which produces every committed artifact under

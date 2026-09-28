@@ -88,7 +88,10 @@ namespace Jazz2::UI
 			std::unique_ptr<AudioBuffer> Buffer;
 
 			SfxItem();
+#	if !defined(NCINE_HAS_NATIVE_AUDIO)
 			SfxItem(std::unique_ptr<Stream> stream, StringView path);
+#	endif
+			explicit SfxItem(StringView path);
 		};
 
 		struct SfxPlaylistItem {
@@ -109,6 +112,11 @@ namespace Jazz2::UI
 		SmallVector<SfxPlaylistItem> _sfxPlaylist;
 #endif
 		Function<bool(IRootController*, bool)> _callback;
+#if defined(DEATH_TARGET_N64)
+		// A full-motion video prepared for this console (see nCine::Backends::N64FullMotionVideo), played in
+		// place of the original video by the first OnBeginFrame()
+		String _fullMotionVideoPath;
+#endif
 		std::uint32_t _width, _height;
 		// Every frame is decoded at full resolution (the delta encoding requires it), but the texture can
 		// be built from every n-th pixel of every n-th row. Uploading a 640x480 frame costs several

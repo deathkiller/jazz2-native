@@ -43,7 +43,7 @@ namespace ShaderCompiler
 	// it here is redundant for them and harmless (a using-directive stays local to the including TU).
 	using namespace Death::Containers::Literals;
 
-	// --- Type system of the translated subset --------------------------------------------------------
+	// ── Type System of the Translated Subset ─────────────────────────────────────────────────────
 
 	/** @brief Scalar/vector/matrix/opaque type of the translated GLSL subset (uint/uvec kept distinct) */
 	enum class Ty
@@ -151,7 +151,7 @@ namespace ShaderCompiler
 		return false;
 	}
 
-	// --- Statement AST -------------------------------------------------------------------------------
+	// ── Statement AST ────────────────────────────────────────────────────────────────────────────
 	// The expression AST (Expr / ExprKind / ExprPtr / MakeExpr) is shared and lives in GlslAst.h; the
 	// statement/declaration model is shared here across the AST-based non-software emitters.
 
@@ -184,7 +184,7 @@ namespace ShaderCompiler
 	struct Param { TyRef Type; String Name; std::int32_t ArraySize = 0; String Qualifier; };	// Qualifier: "" / "out" / "inout"
 	struct Function { TyRef RetType; String Name; SmallVector<Param, 0> Params; StmtPtr Body; };
 
-	// --- Declaration records -------------------------------------------------------------------------
+	// ── Declaration Records ──────────────────────────────────────────────────────────────────────
 
 	struct Field { String Name; TyRef Type; std::int32_t ArraySize = 0; bool SymbolicArray = false; };
 	struct StructDecl { String Name; SmallVector<Field, 0> Fields; };
@@ -195,7 +195,7 @@ namespace ShaderCompiler
 	struct AttributeDecl { String Name; TyRef Type; std::int32_t Location = -1; };
 	struct GlobalVarDecl { String Name; TyRef Type; bool IsConst = false; ExprPtr Init; };
 
-	// --- Parser --------------------------------------------------------------------------------------
+	// ── Parser ───────────────────────────────────────────────────────────────────────────────────
 
 	/**
 		@brief Grows the shared typed AST (declarations + per-function statement trees) from an already-lowered

@@ -445,6 +445,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_ANGLE` (default @cpp OFF @ce except on UWP) --- Enable Google **ANGLE** library support
 -   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library, only offered for `NCINE_RHI_GL_PROFILE=Core`
 -   `NCINE_WITH_BACKWARD` (default @cpp ON @ce except on Android, iOS, Emscripten and UWP) --- Enable better exception handling
+-   `NCINE_WITH_LZ4` (default @cpp ON @ce on the **Nintendo 64**, **Sega Dreamcast**, **PlayStation 2** and **Nintendo GameCube**, @cpp OFF @ce elsewhere) --- Enable **LZ4** support, built from source with the target's own toolchain (`NCINE_DOWNLOAD_DEPENDENCIES`, see `cmake/FindLz4.cmake`). These consoles cannot convert the game data on the device, so they only ever get a tree prepared by the asset packer, and that tree carries their sprite sheets and tilesets in LZ4 --- see @ref asset-packer-lz4. A build without it refuses such a file instead of misreading it
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library on desktop; the consoles use their own backends, see @ref consoles-common-audio
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library

@@ -57,8 +57,9 @@ namespace Jazz2
 
 	namespace
 	{
-		// Version of the level state snapshot format, snapshots are also stored in resumable states
-		constexpr std::uint16_t LevelStateVersion = 1;
+		// Version of the level state snapshot format, snapshots are also stored in resumable states. Version 2 added
+		// the special levels completed from the level at the end, version 1 is read the same way without them.
+		constexpr std::uint16_t LevelStateVersion = 2;
 
 		void WriteSnapshotString(Stream& dest, StringView value)
 		{
@@ -98,10 +99,25 @@ namespace Jazz2
 			data.assign(buffer, buffer + stream.GetSize());
 		}
 
+		void ReadSnapshotStrings(Stream& src, SmallVectorImpl<String>& values)
+		{
+			std::uint32_t count = src.ReadVariableUint32();
+			values.clear();
+			values.reserve(count);
+			for (std::uint32_t i = 0; i < count; i++) {
+				values.push_back(ReadSnapshotString(src));
+			}
+		}
+
+		bool IsLevelStateVersionSupported(std::uint16_t version)
+		{
+			return (version >= 1 && version <= LevelStateVersion);
+		}
+
 		String ReadLevelStateName(const LevelStateSnapshot& state)
 		{
 			MemoryStream src(state.data(), (std::int64_t)state.size());
-			if (src.ReadValueAsLE<std::uint16_t>() != LevelStateVersion) {
+			if (!IsLevelStateVersionSupported(src.ReadValueAsLE<std::uint16_t>())) {
 				return {};
 			}
 			return ReadSnapshotString(src);
@@ -356,6 +372,10 @@ namespace Jazz2
 			if (!returnLevelState.empty()) {
 				_returnLevelState = std::make_shared<LevelStateSnapshot>(std::move(returnLevelState));
 			}
+		}
+
+		if (version >= 6) {
+			ReadSnapshotStrings(src, _completedSpecialLevels);
 		}
 
 		return true;
@@ -1372,7 +1392,7 @@ namespace Jazz2
 			String targetLevel = ResolveNextLevelName(exitType, nextLevel);
 			if (!targetLevel.empty() && !StringUtils::equalsIgnoreCase(targetLevel, _levelName) && IsReturnLevel(targetLevel)) {
 				MemoryStream dest(64 * 1024);
-				SerializeLevelState(dest);
+				SerializeLevelState(dest, targetLevel);
 				auto state = std::make_shared<LevelStateSnapshot>();
 				AssignSnapshotData(*state, dest);
 				_leftLevelState = std::move(state);
@@ -1412,6 +1432,22 @@ namespace Jazz2
 		for (auto player : _players) {
 			player->OnLevelChanging(initiator, exitType);
 		}
+	}
+
+	bool LevelHandler::CanTakeLevelExit(ExitType exitType, StringView nextLevel) const
+	{
+		if (_completedSpecialLevels.empty()) {
+			return true;
+		}
+
+		// The player already returned from the special level, so it cannot be entered again
+		String targetLevel = ResolveNextLevelName(exitType, nextLevel);
+		for (const String& level : _completedSpecialLevels) {
+			if (StringUtils::equalsIgnoreCase(level, targetLevel)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void LevelHandler::SendPacket(const Actors::ActorBase* self, ArrayView<const std::uint8_t> data)
@@ -1790,6 +1826,13 @@ namespace Jazz2
 		// Also the level to return to, if it's a special level
 		WriteSnapshotData(dest, _returnLevelState.get());
 
+		// Special levels that cannot be entered again, they stay completed even if the level is resumed at an earlier
+		// checkpoint (since v6)
+		dest.WriteVariableUint32((std::uint32_t)_completedSpecialLevels.size());
+		for (const String& level : _completedSpecialLevels) {
+			WriteSnapshotString(dest, level);
+		}
+
 		return true;
 	}
 
@@ -1967,7 +2010,7 @@ namespace Jazz2
 		}
 	}
 
-	void LevelHandler::SerializeLevelState(Stream& dest)
+	void LevelHandler::SerializeLevelState(Stream& dest, StringView specialLevel)
 	{
 		if (_checkpointSnapshotPending) {
 			CreateCheckpointSnapshot();
@@ -2009,6 +2052,14 @@ namespace Jazz2
 		WriteSnapshotData(dest, &_checkpointSnapshot);
 		// A special level can lead to another special level, then both of them have to be returned from
 		WriteSnapshotData(dest, _returnLevelState.get());
+
+		// The special level the state is left to is stored as completed already, because the state is restored only
+		// once it's completed (see PrepareNextLevelInitialization())
+		dest.WriteVariableUint32((std::uint32_t)_completedSpecialLevels.size() + 1);
+		for (const String& level : _completedSpecialLevels) {
+			WriteSnapshotString(dest, level);
+		}
+		WriteSnapshotString(dest, specialLevel);
 	}
 
 	bool LevelHandler::InitializeFromLevelState(const LevelStateSnapshot& state, const LevelInitialization& levelInit)
@@ -2017,7 +2068,7 @@ namespace Jazz2
 
 		MemoryStream src(state.data(), (std::int64_t)state.size());
 		std::uint16_t version = src.ReadValueAsLE<std::uint16_t>();
-		if (version != LevelStateVersion) {
+		if (!IsLevelStateVersionSupported(version)) {
 			LOGE("Level state has unsupported version {}", version);
 			return false;
 		}
@@ -2126,6 +2177,10 @@ namespace Jazz2
 		ReadSnapshotData(src, returnLevelState);
 		if (!returnLevelState.empty()) {
 			_returnLevelState = std::make_shared<LevelStateSnapshot>(std::move(returnLevelState));
+		}
+
+		if (version >= 2) {
+			ReadSnapshotStrings(src, _completedSpecialLevels);
 		}
 
 		if (!_players.empty() && (levelBoundsLeft != _levelBounds.X || levelBoundsWidth != _levelBounds.W)) {

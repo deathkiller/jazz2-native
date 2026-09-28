@@ -73,9 +73,12 @@ steps below.
 The content tree is prepared with @ref asset-packer "AssetPacker", a host tool built as part of an
 ordinary desktop build. Every data-prepared console consumes the **same** tree, so it is prepared
 once and pointed at from each console build. Only the cinematics are ever decided per console: the
-@ref consoles-dreamcast-content "Dreamcast" wants a profile of its own and the
-@ref consoles-n64-content "Nintendo 64" one further step on top of the shared tree. The whole
-procedure is four steps.
+@ref consoles-dreamcast-content "Dreamcast" wants a profile of its own, and the
+@ref consoles-n64-content "Nintendo 64" a conversion of its own that also covers the sound and the
+music. The one other difference is the image compression: the profiles of the consoles that cannot
+convert on the device at all (`dreamcast`, `ps2`, `gamecube` and `n64`) write the sprite sheets and
+tilesets in LZ4, which their builds decode faster and which takes less space, and a generic `console`
+tree keeps the game's own format (see @ref asset-packer-lz4). The whole procedure is four steps.
 
 @m_class{m-block m-info}
 
@@ -242,9 +245,9 @@ Feature | N64 | Dreamcast | Wii | GameCube | 3DS | PSP | PS2 | PS3 | Vita | Swit
 ------- | --- | --------- | --- | -------- | --- | --- | --- | --- | ---- | ------
 Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | **No** | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (a pthread shim over libctru) @m_endspan | Yes | **No** | **No** | Yes | Yes
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | No | No | No | No | No | No | No | No | No | No
-Audio backend | `N64` @m_span{m-text m-dim} (software mixer over the AI ring) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `NDSP` @m_span{m-text m-dim} (software mixer into a DSP channel) @m_endspan | `PSP` @m_span{m-text m-dim} (software mixer into an `sceAudio` channel) @m_endspan | `PS2` @m_span{m-text m-dim} (software mixer into the `audsrv` stream) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Audio backend | `N64` @m_span{m-text m-dim} (libdragon's RSP mixer) @m_endspan | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `NDSP` @m_span{m-text m-dim} (software mixer into a DSP channel) @m_endspan | `PSP` @m_span{m-text m-dim} (software mixer into an `sceAudio` channel) @m_endspan | `PS2` @m_span{m-text m-dim} (software mixer into the `audsrv` stream) @m_endspan | `PS3` @m_span{m-text m-dim} (software mixer over libaudio) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
 Sound effects | Yes | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (needs the DSP firmware, see @ref consoles-3ds-limits) @m_endspan | Yes | Yes | Yes | SDK-dependent | SDK-dependent
-Module music | **No** @m_span{m-text m-dim} (see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
+Module music | Yes @m_span{m-text m-dim} (**XM64**, converted ahead by the asset packer, see @ref consoles-n64-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-dreamcast-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-wii-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-psp-limits) @m_endspan | Yes @m_span{m-text m-dim} (**libxmp**, see @ref consoles-ps2-limits) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt, built from source, single-threaded) @m_endspan | Yes @m_span{m-text m-dim} (libopenmpt; libxmp is packaged too, see @ref consoles-vita-limits) @m_endspan | SDK-dependent
 Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --- the driver leaves it off | **No** --- no filter stage on the DSP | **No** --- no filter stage on the DSP | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | **No** --- no filter stage in the mixer | SDK-dependent | Yes
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
@@ -269,9 +272,9 @@ Backend | `WITH_*` | What it drives
 @ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer, the only sound API devkitPro ships for PowerPC. Comes with the toolchain, so there is nothing to install
 @ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS, using its wavetable channels for sound effects and its `snd_stream` driver for music
 @ref nCine::Ps3AudioDevice "PS3" | `WITH_PS3AUDIO` | PSL1GHT's libaudio. The console offers no mixer at all --- only a ring of 256-sample blocks of interleaved floats that the hardware scans out --- so this backend **is** the mixer, on the PPE
-@ref nCine::PspAudioDevice "PSP" | `WITH_PSPAUDIO` | One `sceAudio` hardware channel. pspdev does ship an OpenAL, but the console cannot afford it (see below), so this is the N64/SDL mixer again --- on a thread of its own here, which is the one thing that sets it apart from the others
+@ref nCine::PspAudioDevice "PSP" | `WITH_PSPAUDIO` | One `sceAudio` hardware channel. pspdev does ship an OpenAL, but the console cannot afford it (see below), so this is the SDL backend's integer mixer again --- on a thread of its own here, which is the one thing that sets it apart from the others
 @ref nCine::NdspAudioDevice "NDSP" | `WITH_NDSP` | One channel of libctru's NDSP, the 3DS's DSP driver. The PSP backend's design again --- the same mixer on a thread of higher priority than the game's, woken by the DSP's frame callback --- with the one difference that the DSP resamples the channel from the mixing rate itself, so any rate the option offers is valid and no upsampling pass is needed. Needs the DSP firmware, see @ref consoles-3ds-limits
-@ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's AI ring. The console has no sound chip at all --- the AI is a bare stereo DAC fed by DMA --- so this backend is the mixer too, on the VR4300; the same arrangement as the PS3, except it mixes in integers to spare the 93 MHz core's FPU
+@ref nCine::N64AudioDevice "N64" | `WITH_N64AUDIO` | libdragon's mixer, which mixes on the RSP (the programmable half of the graphics chip) into the AI ring --- the console has no sound chip at all, the AI is a bare stereo DAC fed by DMA. Sound effects stream from the cartridge (`.wav64` files the asset packer writes beside the package), the music is libdragon's `.xm64` player, and the cinematics' soundtracks play on channels lent to libdragon's video player --- the engine itself decodes no audio there (`NCINE_HAS_NATIVE_AUDIO`)
 @ref nCine::Ps2AudioDevice "PS2" | `WITH_PS2AUDIO` | `audsrv`, the IRX that owns the SPU2 --- the sound chip is on the I/O Processor, so the only thing the EE can do with it is hand it PCM. The same mixer again, topped up from the frame like the N64's because this console has no threads; the SPU2 resamples the stream from the mixing rate in hardware, so that rate is a free choice here too
 none | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
 
@@ -324,7 +327,7 @@ level, with music and effects playing, its mixer thread alone took **12--24%** o
 core, as much as the whole module decoder, for filters and effects the game never asks for
 @m_span{m-text m-dim} (it resamples and low-passes every source in floating point, under one global
 lock that every `alSource*` call from the game then waits on) @m_endspan. The game's sounds are 8- and
-16-bit samples at 11--22 kHz mixed into stereo, which the integer mixer the N64 and SDL backends share
+16-bit samples at 11--22 kHz mixed into stereo, which the integer mixer of the SDL backend
 does for a few percent, so @ref nCine::PspAudioDevice is that mixer over one `sceAudio` channel. With
 it the same level went from 30--45 fps to a steady 57--60 with sound on.
 
@@ -559,38 +562,29 @@ cp libz.a "$N64_INST/mips64-elf/lib/" && cp zlib.h zconf.h "$N64_INST/mips64-elf
 
 @subsection consoles-n64-content Preparing the content tree
 
-Unlike the other consoles this one does not consume the shared tree unchanged --- its cinematics
-have to be re-encoded, both to halve their resolution for the 320x240 output and, more importantly,
-to convert them out of the original format into the game's own @m_span{m-text m-dim} (whose decoder
-is a @cpp memcpy() @ce, where the original needs an inflate per frame) @m_endspan. That is one
-option on the ordinary `console` profile, so this console gets a tree of its own from a single
-conversion --- everything in @ref consoles-common-content applies to it, only the command differs:
+Unlike the other consoles this one does not consume the shared tree: it gets a conversion of its own,
+`--target=n64`, which turns the sound effects, the music and the cinematics into libdragon's formats
+with libdragon's own host tools --- which is what gives the console a soundtrack at all, and what makes
+the whole game fit on a cartridge @m_span{m-text m-dim} (see @ref asset-packer-n64 for what exactly
+changes) @m_endspan. Everything else in @ref consoles-common-content applies to it:
 
 @code{.sh}
 ./build/Utilities/AssetPacker/AssetPacker ./build/ConsoleContentN64 \
     --source=<path to the original Jazz Jackrabbit 2> --content=./Content \
-    --target=console --video-downscale=2
+    --target=n64 --n64-tools=$N64_INST
 @endcode
 
 @m_class{m-noindent}
 
-The N64 build below then takes that tree as its `NCINE_CONTENT_DIR`. Where a shared tree has already
-been prepared, the same result is reached by copying it @m_span{m-text m-dim} (`cp -al` hard-links
-it, so the copy costs no disk space) @m_endspan and re-encoding only the cinematics in the copy,
-which is the faster way around when the conversion itself is the slow part:
+`audioconv64` is required, `videoconv64` plus **ffmpeg** and **ffprobe** encode the cinematics, and
+a packer built with **libopenmpt** pre-renders the few tracks that are not in the game's own module
+format and mixes the music into the cinematics' soundtracks. The sprite sheets and tilesets are
+written in LZ4, which the N64 build decodes (`NCINE_WITH_LZ4`, see @ref asset-packer-lz4). The N64
+build below then takes that tree as its `NCINE_CONTENT_DIR`.
 
-@code{.sh}
-for video in intro ending; do
-    ./build/Utilities/AssetPacker/AssetPacker recompress-video \
-        "<shared console tree>/Cinematics/$video.j2v" \
-        "<n64 content tree>/Cinematics/$video.j2v" --video-downscale=2
-done
-@endcode
-
-@m_class{m-noindent}
-
-Re-encoding trades size for decode cost --- the files come out *larger* than the originals, which is
-why the ending cinematic is left out of the image by the packaging step.
+A tree of the plain `console` profile still works, but without music, and its cinematics have to be
+re-encoded at half size to play at a watchable rate @m_span{m-text m-dim} (`recompress-video
+--video-downscale=2`: in the original format the intro costs about 136 ms per frame) @m_endspan.
 
 @subsection consoles-n64-build Building
 
@@ -617,7 +611,11 @@ a POST_BUILD step reproduces libdragon's ROM layout --- the symbol table for on-
 (`n64sym`), the stripped and compressed executable (`n64elfcompress`), and a **DragonFS** image
 with the content tree (`mkdfs`) are concatenated behind a table of contents (`n64tool`), and
 `ed64romconfig` marks **eeprom16k** in the header so emulators and flashcarts provide the 2 KB
-EEPROM the preferences are saved to.
+EEPROM the preferences are saved to, and a **Rumble Pak** in the first controller. The content is
+staged first by @cpp "cmake/n64_stage_content.cmake" @ce, which leaves out what the console cannot play
+@m_span{m-text m-dim} (the original music formats, the original of a cinematic that has a video) @m_endspan.
+The real-time clock is deliberately not declared: an EverDrive cannot provide it together with EEPROM,
+and the game does not need one.
 
 @subsection consoles-n64-deploy Deploying and running
 
@@ -625,6 +623,9 @@ EEPROM the preferences are saved to.
     to an Expansion Pak. ares also prints the trace (ISViewer) to its terminal.
 -   **Real hardware** --- copy the ROM onto an **EverDrive-64** or **SC64** flashcart; the save type
     is read from the header. An Expansion Pak must be installed.
+-   **New content without the toolchain** --- the content of a finished ROM can be replaced with the
+    asset packer alone, `AssetPacker swap-content jazz2.z64 --content=<n64 content tree>`
+    @m_span{m-text m-dim} (see @ref asset-packer-swap-content) @m_endspan.
 
 @subsection consoles-n64-limits Limits and known issues
 
@@ -674,26 +675,82 @@ EEPROM the preferences are saved to.
     sampler reaching outside a tile reads that tile's own edge, and here the tile layer is drawn 1:1
     with point sampling, so no sample can land outside. Any platform that scales the layer or samples
     it bilinearly still needs it.
--   **Module music is off on purpose** @m_span{m-text m-dim} (`NCINE_WITH_OPENMPT`) @m_endspan ---
-    a decoded module's runtime state plus the streaming buffers do not fit next to the game, so
-    this console has sound effects and no soundtrack. The lighter **libxmp**
-    the PSP and the Dreamcast use does not rescue it either: one of this game's modules costs it
-    between 0.5 MB and 4 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan,
-    which is most of the console's 8 MB, and the ROM packaging drops the whole `Music` directory to
-    stay inside the 64 MB cartridge ceiling anyway.
--   **The ROM must fit in 64 MB** --- the ceiling of the flashcarts and of the PI bus mapping ---
-    and a full converted content tree does not, so the packaging step drops what the console
-    cannot use or cannot afford: @cpp "Music" @ce, which nothing in this binary can decode anyway
-    @m_span{m-text m-dim} (module playback is off, see above) @m_endspan, and the @cpp "ending" @ce
-    cinematic, which is 9.7 MB once re-encoded and does not fit next to the tilesets' 45 MB. The
-    intro is kept, and the game treats what is missing as missing content and plays on without it.
-    The packaging step fails the build if the image ever outgrows the cartridge, rather than
-    producing one whose tail is unreachable on hardware.
--   **The cinematics have to be re-encoded** for this console @m_span{m-text m-dim} (see below)
-    @m_endspan. Played in the original format, the intro costs about 136 ms per frame --- some
-    57 ms of that is zlib inflate over 640x480 pixels, on a 93 MHz CPU. Re-encoded, it plays at
-    about 55 ms per frame: the game's own container is decoded with nothing but @cpp memcpy() @ce
-    and @cpp memset() @ce, which is exactly why it exists.
+-   **Music plays from converted modules, not from the originals.** Neither libopenmpt nor libxmp fits:
+    a decoded module's runtime state plus its streaming buffers cost between 0.5 MB and 4 MB of the
+    console's 8 MB @m_span{m-text m-dim} (measured over the shipped tracks) @m_endspan. The asset
+    packer instead translates the game's Galaxy Music System modules into libdragon's `.xm64`, whose
+    player keeps only the patterns in memory and streams the (VADPCM-compressed) instruments from the
+    cartridge, and it pre-renders the three tracks in other formats into compressed recordings. All
+    of the game's `.j2b` modules are the kind with one sample per instrument and no envelopes, so the
+    translation loses nothing structurally @m_span{m-text m-dim} (checked against libopenmpt renders
+    of the originals: 0.80--0.96 spectral correlation, the remaining difference is libxm's
+    interpolation and volume ramps) @m_endspan.
+-   **Audio costs about 3 ms of CPU per frame** in a level with a 16-channel module and sound effects
+    playing @m_span{m-text m-dim} (`mixer_try_play`, measured in ares with libdragon's profiler: the
+    module player's tick ~0.7 ms, the rest the per-round fetch and command setup of the playing channels;
+    the mixing itself runs on the RSP) @m_endspan. What keeps it there is that every streamed channel
+    is VADPCM: libdragon's mixer fetches at most ~120 samples of a raw PCM stream per round, so a single
+    raw effect used to cut every round of the frame that short, and every playing channel pays for
+    every round - with the effects in raw PCM, music and effects together cost 6.4 ms (and whole frames
+    ~6 ms more, the RSP being busy with nine mixing rounds instead of three). The Huffman stage of
+    VADPCM is left off too, because the CPU would have to undo it (0.4 ms a frame). Uncompressed
+    instruments are worse still: they multiply the cartridge reads.
+-   **A paused sound effect starts over when it resumes.** The mixer has no paused state, so pausing
+    the game (or an actor going quiet) gives the effect's channel up, and resuming it is a seek. A
+    VADPCM stream can only be restarted on a frame its file saved the decoder state for, and the effects
+    are converted without such seek points, so the seek goes to the start --- libdragon asserts on any
+    other position @m_span{m-text m-dim} ("invalid VADPCM seeking point", which is what resuming the
+    game right after picking up a gem used to crash with) @m_endspan.
+-   **The ROM must fit in 64 MB** --- the ceiling of the flashcarts and of the PI bus mapping. A tree
+    prepared with `--target=n64` does with room to spare: the whole soundtrack and both cinematics
+    included it is **39 MB** @m_span{m-text m-dim} (the two cinematics are 12 MB of it, the music 8.8 MB,
+    the tilesets 8.2 MB in LZ4 - see @ref asset-packer-lz4 - the sound effects 3.7 MB and the package
+    2.9 MB) @m_endspan. The packaging step fails the
+    build if the image ever outgrows the cartridge, rather than producing one whose tail is
+    unreachable on hardware.
+-   **The cinematics are MPEG-1 video** played by libdragon's player, which decodes on the CPU and
+    the RSP together and paces itself by its soundtrack. It owns the main thread while it plays, so
+    the game hands it the display and two mixer channels between two frames. The player feeds the
+    mixer only twice per frame and the mixer tops up one 16 ms buffer per call while the RSP is busy
+    decoding, which starved the soundtrack to about 0.8x speed and let the picture finish seconds
+    ahead of it; the port therefore tops the audio up once more per frame and holds a frame back
+    while the soundtrack is behind it @m_span{m-text m-dim}
+    (@cpp "nCine/Backends/N64/N64FullMotionVideo.cpp" @ce) @m_endspan.
+-   **Level loading** was 3.65 s for `castle1` and is about 2.4 s now @m_span{m-text m-dim} (in ares) @m_endspan, most of the difference being
+    work that was done twice or through too many calls: the tileset atlas is built once, after the
+    level's tile usage is known, instead of being built whole and then rebuilt pruned; the layers are
+    read in blocks rather than two stream reads per tile; and the image decoder no longer rehashes
+    the pixels its own index operations hand it. The tileset image is LZ4 now (0.18 s to decode
+    castle1's instead of 0.29, see @ref asset-packer-lz4), which leaves the metadata the events ask for
+    as the largest part.
+-   **Where a level frame goes** @m_span{m-text m-dim} (castle1, walking, music and sound effects,
+    ares, `NCINE_PROFILING`; ~25--27 ms in all, before the integer paths below) @m_endspan: building the RDP commands 9.5--12 ms (tile
+    layers about half of it, sprites most of the rest), the scene visit 4.6--5.7 ms (tile map 2--3, HUD
+    1.3--1.6, lighting 1.0), actor updates 3.8--5 ms, audio ~3.4 ms, collisions and cameras 1.4--3 ms.
+    The frame is CPU-bound - the RDP is never waited on. A tile's TMEM window is derived from the same
+    fixed-point texel coordinates its rectangle is drawn with; derived from the floats, an atlas that is
+    not a power of two wide made half the windows 33 texels wide, too big for their 1 KB slot, and sent
+    them through the synchronized upload path. The upload itself is autosynced by libdragon (it has to
+    be, see InitializeRdp in the RDP device), so fewer uploads is what makes it cheaper, not fewer syncs.
+-   **Tiles and sprites reach the RDP as integers.** A tile of a layer mesh, cached or streamed, is one
+    16-byte record --- its position, its top-left texel in the atlas chunk, its alpha and its flip bits
+    @m_span{m-text m-dim} (@cpp RHI::RDP::TileRecord @ce) @m_endspan --- drawn as
+    @cpp PrimitiveType::Points @ce, a form only this backend is given. The two float corners a tile
+    took before had to be scaled back to texels and rounded onto the RDP's fixed-point grid for every
+    tile; the record already holds the integers the rectangle command takes, so what is left per tile
+    is its position through the view transform, the window check and the command. A sprite whose texel
+    window fits TMEM goes the same way: its corners are rounded onto the grid once, and the window, the
+    steps and the command all come from those integers @m_span{m-text m-dim}
+    (@cpp SubmitSpriteRect() @ce in the RDP device) @m_endspan. That includes the HUD icons, which are
+    drawn scaled and filtered. A point-sampled mirrored sprite now starts one 1/32-texel step inside its
+    far edge, as mirrored tiles already did: started on the edge itself, its first column sampled
+    outside the window, was clamped back onto the last texel, and showed that texel twice while the
+    first never appeared. Measured on the castle1 walk with the draw statistics switched on, so the
+    absolute numbers run a little high: tile layers **7.3 to 4.4 ms**, the whole RDP dispatch **10.6
+    to 7.3 ms**, and the frame **29.5 to 25.3 ms**. Most of that is the tiles. A sprite went from
+    about 50 to 40 us, and most of what is left is its TMEM upload. Compare release builds, not builds
+    with probes added or removed: code layout alone moved the tile figure by 2 ms between otherwise
+    identical runs.
 -   **The preferences live on the cartridge EEPROM** through libdragon's eepromfs
     @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce, 2 KB) @m_endspan. An emulator or flashcart
     that ignores the header's save type leaves the game running with no way to save, which is
@@ -722,7 +779,19 @@ EEPROM the preferences are saved to.
     distinct texture windows it touches, not how many pixels it covers. The tile map renders one
     32x32 tile per upload with consecutive same-tile runs coalesced, and a sprite whose frame is
     larger than a window is drawn as bands of rows through the same machinery rather than through
-    libdragon's blitter.
+    libdragon's blitter. Consecutive windows alternate between two halves of that space, each with a
+    tile descriptor of its own @m_span{m-text m-dim} (TILE0 and TILE1) @m_endspan. A two-cycle draw ---
+    the colorized text --- also samples through the descriptor after its own, which for TILE1 is one
+    nothing else programs and which a console powers up with random contents (emulators zero it), so
+    the backend gives every tile it does not use a harmless descriptor at startup. The same draws skip
+    alpha compare on the screen, where the hardware evaluates it a pixel off in two-cycle mode, and keep
+    it only in a render target, whose alpha bit is the coverage every write stores.
+-   **A hung RDP reports itself on the screen.** A command the RDP chokes on does not fault, the chip
+    just stops, and libdragon's own report of that goes to the debug log, which a flashcart without USB
+    cannot deliver --- while the emulators do not reproduce these hangs at all. So the backend watches the
+    RDP from the VI interrupt, and once it has been busy on the same command for 100 ms it replaces the
+    picture with its registers, the state commands last sent to it and the command words around where it
+    stopped, and halts. A photo of that screen is enough to tell which command it was.
 -   **Additive blending is alpha-over here.** The RDP's blender computes its additive form without a
     clamp, so a sum past white wraps to black instead of saturating --- libdragon's own header calls
     the mode broken, and it is. Every additive pass therefore maps to the alpha-weighted form, which
@@ -755,10 +824,11 @@ EEPROM the preferences are saved to.
     updates, collisions, the HUD and the software lightmap. The two structural wins so far were
     giving each tile layer a **cached mesh** of its visible window @m_span{m-text m-dim} (rebuilt
     only when that window moves by a whole tile, which for a slow parallax layer is rare, with
-    animated tiles kept out of it and re-resolved every frame) @m_endspan and a compact two-vertex
-    form for tile quads, cached and streamed alike; both are N64-only and sit behind the ordinary
-    tile-mesh path. The debris shares that mesh shader but keeps the indexed four-corner form, because a
-    spinning particle's quad is not a rectangle and cannot be rebuilt from two of its corners.
+    animated tiles kept out of it and re-resolved every frame) @m_endspan and a packed record per tile
+    in place of its vertices, cached and streamed alike (see above); both are N64-only and sit behind
+    the ordinary tile-mesh path. The debris shares that mesh shader but keeps the indexed four-corner
+    form, because a spinning particle's quad is not a rectangle and cannot be described by a position
+    and a texel corner.
 -   **Sprites got the same treatment.** Nearly every sprite of a frame is drawn by one generated
     effect --- a single modulate pass carrying the instance colour, shared by the sprite defaults,
     their batched forms and both palette remaps --- and the general dispatch built a 600-byte effect
@@ -792,8 +862,6 @@ EEPROM the preferences are saved to.
     apart and hardly batched at all --- fixing that alone took the same screen from 74 to 65 ms. The main
     menu and a level are paced by the RDP and the display at about 25 ms, so there the CPU time saved
     shows up as time spent waiting for a framebuffer rather than as a shorter frame.
--   Like the PSP, PS2, Wii and GameCube ports, this port has **not been tested on real hardware**
-    yet --- ares is the reference until then.
 
 - - -
 
@@ -2450,8 +2518,7 @@ provokes the same thing.
 -   The three resize filters and batching aside, nothing else is knowingly unimplemented. Under the
     emulator the game runs at 60 FPS with tilemaps, sprites, HUD, menus and the textured backgrounds
     all correct, and the command queue stays healthy @m_span{m-text m-dim} (no FIFO desync, no aborted
-    vertex programs) @m_endspan --- but the port has not had the testing on real hardware that the
-    older consoles have.
+    vertex programs) @m_endspan.
 
 @m_class{m-block m-info}
 

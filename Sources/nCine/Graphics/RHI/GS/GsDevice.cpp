@@ -449,7 +449,7 @@ namespace nCine::RHI::GS
 			_packetCursor = q;
 		}
 
-		// ------------------------------------------------------------ texture state and primitives
+		// ── Texture State and Primitives ─────────────────────────────────────────────────────────
 
 		/**
 			@brief Everything one primitive needs from `TEX0`/`TEX1`/`CLAMP`, resolved per instance
@@ -891,7 +891,7 @@ namespace nCine::RHI::GS
 
 	std::vector<GsDevice::PendingSoftwareLight> GsDevice::_pendingSoftwareLights;
 
-	// ------------------------------------------------------------------ session
+	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::InitializeGs()
 	{
@@ -1053,7 +1053,7 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	// ------------------------------------------------------------------ state
+	// ── State ────────────────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::SetBlendingEnabled(bool enabled) { _blending.Enabled = enabled; }
 	void GsDevice::SetBlendingFactors(nCine::BlendingFactor srcRgb, nCine::BlendingFactor dstRgb, nCine::BlendingFactor srcAlpha, nCine::BlendingFactor dstAlpha)
@@ -1153,7 +1153,7 @@ namespace nCine::RHI::GS
 		_packetCursor = q;
 	}
 
-	// ------------------------------------------------------------------ draw entry points
+	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
@@ -1223,7 +1223,7 @@ namespace nCine::RHI::GS
 		_scissor = ScissorState();
 	}
 
-	// ------------------------------------------------------------------ bindings
+	// ── Bindings ─────────────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::BindProgram(GsShaderProgram* program)
 	{
@@ -1325,7 +1325,7 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	// ------------------------------------------------------------------ palettes
+	// ── Palettes ─────────────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::FlushPendingPackets()
 	{
@@ -1547,7 +1547,7 @@ namespace nCine::RHI::GS
 		return target->Block;
 	}
 
-	// ------------------------------------------------------------------ direct-tier lighting
+	// ── Direct-Tier Lighting ─────────────────────────────────────────────────────────────────────
 
 	void GsDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
@@ -1743,7 +1743,7 @@ namespace nCine::RHI::GS
 		}
 	}
 
-	// ------------------------------------------------------------------ fixed-function quad effects
+	// ── Fixed-Function Quad Effects ──────────────────────────────────────────────────────────────
 	//
 	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this EffectContext -
 	// the structural contract documented in FixedFunctionPass.h, implemented here against the GIF
@@ -2015,7 +2015,7 @@ namespace nCine::RHI::GS
 		return nullptr;
 	}
 
-	// ------------------------------------------------------------------ dispatch
+	// ── Dispatch ─────────────────────────────────────────────────────────────────────────────────
 
 	void GsDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
 		const std::uint16_t* indices, std::int32_t indexCount)

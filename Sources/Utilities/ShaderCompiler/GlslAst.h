@@ -31,7 +31,7 @@
 
 namespace ShaderCompiler
 {
-	// --- Shared lexical / precedence helpers -----------------------------------------------------
+	// ── Shared Lexical / Precedence Helpers ──────────────────────────────────────────────────────
 
 	/** @brief True for a type-qualifier keyword the AST parsers skip (precision / interpolation / const) */
 	inline bool IsQualifier(StringView k)
@@ -62,7 +62,7 @@ namespace ShaderCompiler
 		return -1;
 	}
 
-	// --- Expression AST --------------------------------------------------------------------------
+	// ── Expression AST ───────────────────────────────────────────────────────────────────────────
 
 	/** @brief Kind of an @ref Expr node (the union across the AST-based targets) */
 	enum class ExprKind { IntLit, UIntLit, FloatLit, BoolLit, Ident, Member, Index, Call, Unary, Binary, Assign, Conditional };

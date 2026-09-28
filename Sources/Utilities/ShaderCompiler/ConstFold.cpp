@@ -547,7 +547,7 @@ namespace ShaderCompiler
 		};
 	}
 
-	// --- GlslExprTokenizer ----------------------------------------------------------------------
+	// ── GlslExprTokenizer ────────────────────────────────────────────────────────────────────────
 
 	void GlslExprTokenizer::Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, SmallVectorImpl<GlslToken>& out)
 	{
@@ -631,7 +631,7 @@ namespace ShaderCompiler
 		}
 	}
 
-	// --- ConstFolder ----------------------------------------------------------------------------
+	// ── ConstFolder ──────────────────────────────────────────────────────────────────────────────
 
 	void ConstFolder::ComputeFolds(const SmallVectorImpl<FoldInputLine>& lines, SmallVectorImpl<FoldEdit>& edits)
 	{

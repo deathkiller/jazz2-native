@@ -500,7 +500,10 @@ if(PLATFORM_AMIGA)
 endif()
 
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT IOS AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
-#option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
+# LZ4 is built (from source, see FindLz4.cmake) only for the consoles that cannot convert the game data on the
+# device: nothing but a tree made by the asset packer ever reaches them, and it gives them their sprite sheets and
+# tilesets in LZ4 (see JJ2Anims::ImageCompression), which they decode faster than the game's own format
+cmake_dependent_option(NCINE_WITH_LZ4 "Enable LZ4 compression support" ON "PLATFORM_N64 OR PLATFORM_DREAMCAST OR PLATFORM_PS2 OR NINTENDO_GAMECUBE" OFF)
 #option(NCINE_WITH_ZSTD "Enable Zstd compression support" OFF)
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)

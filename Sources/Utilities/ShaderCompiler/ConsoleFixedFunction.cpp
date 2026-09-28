@@ -17,7 +17,7 @@ namespace ShaderCompiler
 {
 	namespace
 	{
-		// --- Type system of the fixed_function subset -----------------------------------------------
+		// ── Type System of the fixed_function Subset ─────────────────────────────────────────────
 		// Deliberately smaller than the software transpiler's: the block vocabulary only ever needs
 		// float scalars/vectors, int loop counters, bool conditions and the opaque pass descriptor.
 
@@ -232,7 +232,7 @@ namespace ShaderCompiler
 				backend == FixedFunctionBackend::LegacyGl || backend == FixedFunctionBackend::Pica);
 		}
 
-		// --- Statement AST ---------------------------------------------------------------------------
+		// ── Statement AST ────────────────────────────────────────────────────────────────────────
 		// The expression AST (Expr / ExprKind / MakeExpr) is shared and lives in GlslAst.h; the block's
 		// statement model is local. Every statement carries the 1-based input line it started on, so
 		// semantic errors (which surface during emission) can point at real source lines.
@@ -263,7 +263,7 @@ namespace ShaderCompiler
 			return s;
 		}
 
-		// --- Parser ----------------------------------------------------------------------------------
+		// ── Parser ───────────────────────────────────────────────────────────────────────────────
 		// The block body is a plain statement list (no declarations/functions around it), so the parser
 		// is the statement/expression half of the software transpiler's grammar plus "pass" declarations.
 
@@ -594,7 +594,7 @@ namespace ShaderCompiler
 			}
 		};
 
-		// --- Emitter + type checker --------------------------------------------------------------------
+		// ── Emitter + Type Checker ───────────────────────────────────────────────────────────────
 		// Single pass: emission infers every expression's type on the way and rejects anything outside
 		// the vocabulary, so invalid blocks fail HERE (on the dev machine, with a line number) and never
 		// reach a console compiler as broken C++.
@@ -885,7 +885,7 @@ namespace ShaderCompiler
 				_scopes.back()[name] = t;
 			}
 
-			// --- Statements ----------------------------------------------------------------------------
+			// ── Statements ───────────────────────────────────────────────────────────────────────
 
 			void EmitStmt(const Stmt* s, const String& indent, String& out)
 			{
@@ -1344,7 +1344,7 @@ namespace ShaderCompiler
 				_scopes.pop_back();
 			}
 
-			// --- Expressions ---------------------------------------------------------------------------
+			// ── Expressions ──────────────────────────────────────────────────────────────────────
 
 			// Precedence of an emitted expression, so children get minimal correct parentheses
 			std::int32_t EmitPrec(const Expr* e) const
@@ -1747,7 +1747,7 @@ namespace ShaderCompiler
 		};
 	}
 
-	// --- Public entry points ---------------------------------------------------------------------------
+	// ── Public Entry Points ──────────────────────────────────────────────────────────────────────
 
 	FixedFunctionResult ConsoleFixedFunction::TranspileBlock(const FixedFunctionBlock& block,
 		StringView define, FixedFunctionBackend backend)

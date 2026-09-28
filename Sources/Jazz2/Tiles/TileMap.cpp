@@ -7,6 +7,9 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/RenderResources.h"
+#if defined(TILEMAP_GROUP_MESH_BY_TILE)
+#	include "../../nCine/Graphics/RHI/RDP/RdpTileRecord.h"
+#endif
 
 #include <Containers/GrowableArray.h>
 
@@ -26,8 +29,8 @@ namespace Jazz2::Tiles
 			@brief Whether a level's tileset atlas is repacked around the tiles the level references
 
 			A tileset describes everything its author drew; the levels measured reference 42% and 59% of theirs,
-			and the rest sits in memory as texels nothing samples. Repacking costs a second read of the sheet at
-			load time and gives back 592 KB on the largest of them - the difference, on a console with 8 MB of
+			and the rest sits in memory as texels nothing samples. Repacking costs a second read of the masks at
+			load time (the atlas itself is only built once, see TileMap()) and gives back 592 KB on the largest of them - the difference, on a console with 8 MB of
 			RDRAM in total, between a level that draws every sprite and one that starts refusing them.
 			Only the Nintendo 64 takes that trade for now: the analysis cannot see a tile a script places at
 			runtime (it draws blank there), and the platforms that can hold the whole sheet have no reason to
@@ -53,6 +56,36 @@ namespace Jazz2::Tiles
 		// `DispatchTileMesh()` in the GU, GX, PVR, GS, RDP and LegacyGL backends).
 		constexpr std::uint32_t VerticesPerQuad = RenderResources::VerticesPerQuad;
 		constexpr std::uint32_t FloatsPerQuad = VerticesPerQuad * FloatsPerVertex;
+#endif
+
+#if defined(TILEMAP_GROUP_MESH_BY_TILE)
+		// Where the grouped tiles go, they are the RDP's packed records (see RHI::RDP::TileRecord), four floats
+		// of storage each in the vertex buffers they are written into
+		constexpr std::uint32_t TileRecordFloats = sizeof(RHI::RDP::TileRecord) / sizeof(float);
+		static_assert(RHI::RDP::TileRecord::Size == TileSet::DefaultTileSize, "The packed tile records assume the tile size");
+
+		/** @brief Record flags for a layer tile's flip bits */
+		inline std::uint8_t MeshTileFlags(LayerTileFlags flags)
+		{
+			return std::uint8_t(((flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX ? RHI::RDP::TileRecord::FlipX : 0) |
+				((flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY ? RHI::RDP::TileRecord::FlipY : 0));
+		}
+
+		/** @brief Writes a grouped tile entry at @p x, @p y as a packed record into vertex storage */
+		template<class Entry>
+		inline void WriteTileRecord(float* dst, const Entry& e, float x, float y)
+		{
+			RHI::RDP::TileRecord record;
+			record.X = x;
+			record.Y = y;
+			record.TexX = e.TexX;
+			record.TexY = e.TexY;
+			record.Alpha = e.Alpha;
+			record.Flags = e.Flags;
+			record.Reserved = 0;
+			// Copied rather than stored through a cast pointer: the storage is typed as floats
+			std::memcpy(dst, &record, sizeof(record));
+		}
 #endif
 
 #if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_WII) || \
@@ -93,13 +126,18 @@ namespace Jazz2::Tiles
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false),
 			_renderCommandsCount(0), _renderCommandsPeak(0), _renderCommandsPeakAge(0), _collapsingTimer(0.0f),
-			_animatedTilesOffset(0), _tileSetPath(tileSetPath), _captionTileId(captionTileId), _tilesOverridden(false),
+			_animatedTilesOffset(0), _tileSetPath(tileSetPath), _captionTileId(captionTileId), _tilesOverridden(false), _diffuseDeferred(false),
 			_triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
 			_texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
+		// Where the atlas is repacked around the tiles the level uses, only the masks are loaded here - the
+		// layers that say which tiles those are have not been read yet, and building the whole atlas only to
+		// throw it away in PruneTilesetAtlas() was a full decode of the sheet and an upload of every tile for
+		// nothing (0.7 s of a 3.6 s level load on the Nintendo 64)
 		auto& tileSetPart = _tileSets.emplace_back();
-		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
+		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette, nullptr, nullptr, !PruneAtlasToUsedTiles);
 		DEATH_ASSERT(tileSetPart.Data != nullptr, ("Failed to load main tileset \"{}\"", tileSetPath), );
+		_diffuseDeferred = PruneAtlasToUsedTiles;
 		
 		tileSetPart.Offset = 0;
 		tileSetPart.Count = tileSetPart.Data->TileCount;
@@ -1510,8 +1548,10 @@ namespace Jazz2::Tiles
 #	if defined(TILEMAP_GROUP_MESH_BY_TILE)
 						// Held back so the whole layer can be emitted grouped by atlas slot below; the quad this
 						// would have appended is fully described by what goes into the entry
-						_meshTileEntries.push_back({ x2r, y2r, texScaleX, texBiasX, texScaleY, texBiasY,
-							tile.Alpha / 255.0f, (std::uint16_t)tileSlot, (std::uint16_t)tileChunk,
+						_meshTileEntries.push_back({ x2r, y2r,
+							(std::uint16_t)(tileCol * TileSet::PaddedTileSize + TileSet::TilePadding),
+							(std::uint16_t)(tileRow * TileSet::PaddedTileSize + TileSet::TilePadding),
+							tile.Alpha, MeshTileFlags(tile.Flags), (std::uint16_t)tileSlot, (std::uint16_t)tileChunk,
 							(std::uint16_t)tile_xo, (std::uint16_t)tile_yo, tileX + tileY * layer.LayoutSize.X, animatedTile });
 #	else
 						// Accumulate this tile into its chunk's mesh; the layer tint and palette are applied once
@@ -1918,13 +1958,14 @@ namespace Jazz2::Tiles
 			read and write-allocate), and a frame's ~370 tiles at 128 bytes per quad made that copy the
 			single largest part of the commit phase. Here the quad is written once, where it will be read.
 
-			Only corners 0 and 2 of each quad are written, back to back and without indices - the compact
-			form the layer cache uses too (see BuildLayerMeshCache). The consumer of this mesh on this
-			platform is the RDP dispatch, which reconstructs an axis-aligned quad from those two (see
-			DispatchTileMesh). It must not be the indexed form: that one carries four real corners, which
-			the particles in the same kind of mesh need (their spin is folded into the corners, see
-			AppendDebrisQuad), so the dispatch reads all four of them there.
+			Each tile is one packed record, drawn as a point (see RHI::RDP::TileRecord) - the form the layer
+			cache uses too (see BuildLayerMeshCache). The consumer of this mesh is the RDP dispatch, which
+			takes the tile's texels as the integers they are instead of scaling normalized coordinates back
+			up (see DispatchTileMesh), from 16 bytes instead of the 64 of two float corners. It must not be
+			the indexed form: that one carries four real corners, which the particles in the same kind of mesh
+			need (their spin is folded into the corners, see AppendDebrisQuad).
 		*/
+		// The limit of the float quads is kept, a record is only an eighth of one, so it is a safe bound
 		const std::uint32_t maxQuadsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
 
 		for (std::uint32_t firstQuad = 0; firstQuad < entryCount; firstQuad += maxQuadsPerChunk) {
@@ -1958,9 +1999,9 @@ namespace Jazz2::Tiles
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 			auto& geometry = command->GetGeometry();
-			geometry.SetElementsPerVertex(FloatsPerVertex);
+			geometry.SetElementsPerVertex(TileRecordFloats);
 			geometry.SetHostVertexPointer(nullptr);
-			float* v = geometry.AcquireVertexPointer(count * 2 * FloatsPerVertex, FloatsPerVertex);
+			float* v = geometry.AcquireVertexPointer(count * TileRecordFloats, TileRecordFloats);
 			if (v == nullptr) {
 				geometry.ReleaseVertexPointer();
 				_meshCommandCount--;
@@ -1969,21 +2010,13 @@ namespace Jazz2::Tiles
 			}
 			for (std::uint32_t k = 0; k < count; k++) {
 				const MeshTileEntry& e = _meshTileEntries[_meshTileOrder[firstEntry + firstQuad + k]];
-				float* q = v + std::size_t(k) * 2 * FloatsPerVertex;
-				// Corner 0: (x, y) at (u0, v0)
-				q[0] = e.X; q[1] = e.Y; q[2] = e.TexBiasX; q[3] = e.TexBiasY;
-				q[4] = 1.0f; q[5] = 1.0f; q[6] = 1.0f; q[7] = e.Alpha;
-				// Corner 2: (x + size, y + size) at (u1, v1)
-				float* q2 = q + FloatsPerVertex;
-				q2[0] = e.X + (float)TileSet::DefaultTileSize; q2[1] = e.Y + (float)TileSet::DefaultTileSize;
-				q2[2] = e.TexScaleX + e.TexBiasX; q2[3] = e.TexScaleY + e.TexBiasY;
-				q2[4] = 1.0f; q2[5] = 1.0f; q2[6] = 1.0f; q2[7] = e.Alpha;
+				WriteTileRecord(v + std::size_t(k) * TileRecordFloats, e, e.X, e.Y);
 			}
 			geometry.ReleaseVertexPointer();
 			// The command pool is shared with EmitMesh(), which leaves its indices set up
 			geometry.SetIndexCount(0);
 			geometry.SetHostIndexPointer(nullptr);
-			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * 2);
+			geometry.SetDrawParameters(PrimitiveType::Points, 0, count);
 
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);
@@ -2057,7 +2090,7 @@ namespace Jazz2::Tiles
 				chunk.Command = std::make_unique<RenderCommand>(RenderCommand::Type::TileMap);
 				chunk.Command->GetMaterial().SetBlendingEnabled(true);
 			}
-			const std::uint32_t floats = std::uint32_t(chunk.QuadCount) * 2 * FloatsPerVertex;
+			const std::uint32_t floats = std::uint32_t(chunk.QuadCount) * TileRecordFloats;
 			if (floats > chunk.VboFloats) {
 				// With a little room to grow, so a window with a few more tiles does not reallocate
 				chunk.VboFloats = floats + (floats / 4);
@@ -2065,9 +2098,9 @@ namespace Jazz2::Tiles
 			}
 		}
 
-		// The vertices, in the compact two-corner form the RDP dispatch reads (see DispatchTileMesh),
-		// relative to the window's origin so that the same VBO serves every frame of the window. Written
-		// straight into the mapped VBO (the backend maps its buffers, and never re-copies a custom one)
+		// The tiles, as the packed records the RDP dispatch reads (see RHI::RDP::TileRecord), relative to the
+		// window's origin so that the same VBO serves every frame of the window. Written straight into the
+		// mapped VBO (the backend maps its buffers, and never re-copies a custom one)
 		SmallVector<std::uint32_t, 4> fill;
 		SmallVector<float*, 4> mapped;
 		fill.resize(std::size_t(chunkCount), 0u);
@@ -2082,14 +2115,8 @@ namespace Jazz2::Tiles
 			if (e.Animated || e.Chunk >= chunkCount || mapped[e.Chunk] == nullptr) {
 				continue;
 			}
-			float* q = mapped[e.Chunk] + fill[e.Chunk];
-			fill[e.Chunk] += 2 * FloatsPerVertex;
-			q[0] = e.X - float(x1i); q[1] = e.Y - float(y1i); q[2] = e.TexBiasX; q[3] = e.TexBiasY;
-			q[4] = 1.0f; q[5] = 1.0f; q[6] = 1.0f; q[7] = e.Alpha;
-			float* q2 = q + FloatsPerVertex;
-			q2[0] = q[0] + (float)TileSet::DefaultTileSize; q2[1] = q[1] + (float)TileSet::DefaultTileSize;
-			q2[2] = e.TexScaleX + e.TexBiasX; q2[3] = e.TexScaleY + e.TexBiasY;
-			q2[4] = 1.0f; q2[5] = 1.0f; q2[6] = 1.0f; q2[7] = e.Alpha;
+			WriteTileRecord(mapped[e.Chunk] + fill[e.Chunk], e, e.X - float(x1i), e.Y - float(y1i));
+			fill[e.Chunk] += TileRecordFloats;
 		}
 		for (std::int32_t c = 0; c < chunkCount; c++) {
 			if (mapped[c] != nullptr) {
@@ -2128,11 +2155,11 @@ namespace Jazz2::Tiles
 				}
 			}
 			auto& geometry = command->GetGeometry();
-			geometry.SetElementsPerVertex(FloatsPerVertex);
+			geometry.SetElementsPerVertex(TileRecordFloats);
 			geometry.SetHostVertexPointer(nullptr);
 			geometry.SetIndexCount(0);
 			geometry.SetHostIndexPointer(nullptr);
-			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, chunk.QuadCount * 2);
+			geometry.SetDrawParameters(PrimitiveType::Points, 0, chunk.QuadCount);
 			ContentResolver::Get().BindSpritePalette(*command, *tileSet.TextureDiffuse[c], indexed, 0);
 		}
 	}
@@ -2171,25 +2198,12 @@ namespace Jazz2::Tiles
 			}
 			const std::int32_t tileChunk = (tileSet.TilesPerTexture > 0 && tileSlot >= tileSet.TilesPerTexture
 				? tileSlot / tileSet.TilesPerTexture : 0);
-			const Vector2i texSize = tileTexture->GetSize();
-			const float invW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
-			const float invH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
 			const std::int32_t tileRow = tileId / tileSet.TilesPerRow;
 			const std::int32_t tileCol = tileId - tileRow * tileSet.TilesPerRow;
-			float texScaleX = TileSet::DefaultTileSize * invW;
-			float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * invW;
-			float texScaleY = TileSet::DefaultTileSize * invH;
-			float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * invH;
-			if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-				texBiasX += texScaleX;
-				texScaleX *= -1;
-			}
-			if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-				texBiasY += texScaleY;
-				texScaleY *= -1;
-			}
 			_meshTileEntries.push_back({ float(x1i + cell.Xo * (std::int32_t)TileSet::DefaultTileSize), float(y1i + cell.Yo * (std::int32_t)TileSet::DefaultTileSize),
-				texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f, (std::uint16_t)tileSlot, (std::uint16_t)tileChunk,
+				(std::uint16_t)(tileCol * TileSet::PaddedTileSize + TileSet::TilePadding),
+				(std::uint16_t)(tileRow * TileSet::PaddedTileSize + TileSet::TilePadding),
+				tile.Alpha, MeshTileFlags(tile.Flags), (std::uint16_t)tileSlot, (std::uint16_t)tileChunk,
 				cell.Xo, cell.Yo, cell.LayoutIndex, true });
 		}
 	}
@@ -2227,6 +2241,9 @@ namespace Jazz2::Tiles
 
 	void TileMap::AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
 	{
+		// A level with extra tilesets is never repacked (see PruneTilesetAtlas())
+		LoadDeferredDiffuse();
+
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, 0, false, paletteRemapping);
 		tileSetPart.Offset = offset;
@@ -2306,38 +2323,59 @@ namespace Jazz2::Tiles
 			newLayer.Description.Color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
+		// Each tile is stored as 3 bytes (flags, then the tile index as a little-endian word). They are read
+		// a block at a time: two stream reads per tile - virtual calls into the decompressing stream - were
+		// the largest single cost of loading a level on the Nintendo 64, about a second for castle1's layers
+		constexpr std::int32_t TileRecordSize = 3;
+		constexpr std::int32_t TilesPerBlock = 512;
+		std::uint8_t block[TilesPerBlock * TileRecordSize];
+		const std::int32_t tileCount = width * height;
+		const auto readBlock = [&s, &block](std::int32_t count) {
+			const std::int64_t bytes = std::int64_t(count) * TileRecordSize;
+			const std::int64_t bytesRead = s.Read(block, bytes);
+			if DEATH_UNLIKELY(bytesRead < bytes) {
+				// A truncated stream reads as empty tiles; the caller rejects it by the stream state
+				std::memset(block + std::max<std::int64_t>(bytesRead, 0), 0, std::size_t(bytes - std::max<std::int64_t>(bytesRead, 0)));
+			}
+		};
+
 		if (!newLayer.Layout.Allocate(std::size_t(width) * std::size_t(height), LayerLayout::CompactDrawOnlyLayers && layerType != LayerType::Sprite)) {
 			LOGE("Cannot allocate the layout of a {}x{} layer", width, height);
 			_loadFailed = true;
 			newLayer.Visible = false;
 			// The tile data still has to be consumed for the layers after it
-			for (std::int32_t i = 0; i < (width * height); i++) {
-				s.ReadValue<std::uint8_t>();
-				s.ReadValueAsLE<std::uint16_t>();
+			for (std::int32_t i = 0; i < tileCount; i += TilesPerBlock) {
+				readBlock(std::min(TilesPerBlock, tileCount - i));
 			}
 			return;
 		}
-		for (std::int32_t i = 0; i < (width * height); i++) {
-			std::uint8_t tileFlags = s.ReadValue<std::uint8_t>();
-			// A tile index is masked down to the tile set bound by the converter, so it always fits LayerTile::TileID
-			std::uint16_t tileIdx = s.ReadValueAsLE<std::uint16_t>();
+		for (std::int32_t i = 0; i < tileCount; i += TilesPerBlock) {
+			const std::int32_t count = std::min(TilesPerBlock, tileCount - i);
+			readBlock(count);
 
-			std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
+			for (std::int32_t j = 0; j < count; j++) {
+				const std::uint8_t* record = &block[j * TileRecordSize];
+				std::uint8_t tileFlags = record[0];
+				// A tile index is masked down to the tile set bound by the converter, so it always fits LayerTile::TileID
+				std::uint16_t tileIdx = std::uint16_t(record[1] | (record[2] << 8));
 
-			LayerTile tile = {};
-			tile.TileID = tileIdx;
-			tile.DestructAnimation = -1;
+				std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
 
-			tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
+				LayerTile tile = {};
+				tile.TileID = tileIdx;
+				tile.DestructAnimation = -1;
 
-			if (tileModifier == 1 /*Translucent*/) {
-				tile.Alpha = 192;
-			} else if (tileModifier == 2 /*Invisible*/) {
-				tile.Alpha = 0;
-			} else {
-				tile.Alpha = 255;
+				tile.Flags = (LayerTileFlags)(tileFlags & 0x0f);
+
+				if (tileModifier == 1 /*Translucent*/) {
+					tile.Alpha = 192;
+				} else if (tileModifier == 2 /*Invisible*/) {
+					tile.Alpha = 0;
+				} else {
+					tile.Alpha = 255;
+				}
+				newLayer.Layout.Set(i + j, tile);
 			}
-			newLayer.Layout.Set(i, tile);
 		}
 	}
 
@@ -2410,6 +2448,9 @@ namespace Jazz2::Tiles
 	/** @brief Overrides the diffuse texture of the specified tile */
 	bool TileMap::OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<TileSet::PaddedTileSize * TileSet::PaddedTileSize, std::uint32_t> tileDiffuse)
 	{
+		// An overridden tile is patched into the whole atlas, which is then never repacked
+		LoadDeferredDiffuse();
+
 		TileSet* tileSet = ResolveTileSet(tileId);
 		if (tileSet == nullptr) {
 			return false;
@@ -2422,6 +2463,9 @@ namespace Jazz2::Tiles
 
 	bool TileMap::IsTileSetIndexed(std::int32_t tileId)
 	{
+		// Only known once the atlas is built; asked for the tiles about to be overridden
+		LoadDeferredDiffuse();
+
 		TileSet* tileSet = ResolveTileSet(tileId);
 		return (tileSet != nullptr && tileSet->IsIndexed);
 	}
@@ -2429,6 +2473,9 @@ namespace Jazz2::Tiles
 	/** @brief Overrides the collision mask of the specified tile */
 	bool TileMap::OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask)
 	{
+		// Loading the atlas later would replace the tileset and with it the patched mask
+		LoadDeferredDiffuse();
+
 		TileSet* tileSet = ResolveTileSet(tileId);
 		if (tileSet == nullptr) {
 			return false;
@@ -3351,17 +3398,20 @@ namespace Jazz2::Tiles
 		if (!PruneAtlasToUsedTiles || _tileSets.size() != 1 || _tileSets[0].Data == nullptr) {
 			// More than one part means the level brought its own extra tiles (MLLE); the ids then span several
 			// sets and the mapping below would not describe them, so those are left whole
+			LoadDeferredDiffuse();
 			return;
 		}
 		if (_tilesOverridden) {
 			// The level's per-tile overrides (MLLE) were already patched into this atlas and its masks;
 			// rebuilding from the source sheet would silently revert them - both the graphics and the
 			// collision - so such a level keeps its whole atlas
+			LoadDeferredDiffuse();
 			return;
 		}
 
 		const std::int32_t tileCount = _tileSets[0].Data->TileCount;
 		if (tileCount <= 0) {
+			LoadDeferredDiffuse();
 			return;
 		}
 
@@ -3403,15 +3453,18 @@ namespace Jazz2::Tiles
 			distinct += (used[i] ? 1 : 0);
 		}
 		if (distinct >= tileCount) {
+			LoadDeferredDiffuse();
 			return;	// Nothing to gain
 		}
 
-		// The whole atlas goes before the packed one is built, so only one of the two is ever resident - which
-		// is the point of doing this at all. The source sheet is read again for it; that is one more pass over
-		// the cartridge at load time in exchange for the memory for the rest of the level.
+		// The tileset loaded so far goes before the packed one is built, so only one of the two is ever
+		// resident. Normally that is just its masks (the atlas was deferred to here); the tileset file is read
+		// again for the atlas, which re-reads the masks too - a few tens of milliseconds, where building the
+		// whole atlas up front and throwing it away cost the entire sheet.
 		const String path = _tileSetPath;
 		const std::uint16_t captionTileId = _captionTileId;
 		_tileSets[0].Data = nullptr;
+		_diffuseDeferred = false;
 
 		auto pruned = ContentResolver::Get().RequestTileSet(path, captionTileId, false, nullptr, &used);
 		if (pruned == nullptr) {
@@ -3440,6 +3493,26 @@ namespace Jazz2::Tiles
 			// Skipped entirely when unsupported, which also saves the pass's render target
 			_texturedBackgroundPass.Initialize();
 		}
+	}
+
+	void TileMap::LoadDeferredDiffuse()
+	{
+		if (!_diffuseDeferred) {
+			return;
+		}
+		_diffuseDeferred = false;
+
+		// Freed first, so the masks are never resident twice; the palette was applied by the first request
+		_tileSets[0].Data = nullptr;
+		_tileSets[0].Data = ContentResolver::Get().RequestTileSet(_tileSetPath, _captionTileId, false);
+		if (_tileSets[0].Data == nullptr) {
+			// Every lookup now reports a missing tile instead of walking a null tileset; the level is
+			// unplayable either way, but it fails as empty layers rather than as a crash
+			LOGE("Cannot load tileset \"{}\", the level has no tiles to draw", _tileSetPath);
+			_tileSets[0].Count = 0;
+			return;
+		}
+		_tileSets[0].Count = _tileSets[0].Data->TileCount;
 	}
 
 	TileSet* TileMap::ResolveTileSet(std::int32_t& tileId)

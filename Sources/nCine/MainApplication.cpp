@@ -411,6 +411,14 @@ namespace nCine
 			printf("\n  Cannot mount the cartridge filesystem!\n\n  The ROM was built without the attached game files.\n");
 			while (true) { }
 		}
+
+		// The console has no clock of its own, but some cartridges do, and some flashcarts and emulators offer
+		// one (the ROM header does not ask for it - see the packaging step for why). rtc_init() hooks whichever it
+		// finds into newlib's time functions, so the date-dependent parts of the game (the seasonal menu,
+		// timestamps) see the real date. Without one, time() keeps answering -1 and those keep their "date
+		// unknown" fallbacks.
+		const bool hasRtc = rtc_init();
+		printf("Real-time clock: %s\n", hasRtc ? "yes" : "no");
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// Bring up the shared subsystems before any device exists: the video hardware (OgcGfxDevice picks
 		// the mode and allocates framebuffers later), the SD/storage FAT layer and the controller ports

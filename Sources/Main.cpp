@@ -131,7 +131,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::uint16_t StateVersion = 5;
+	static constexpr std::uint16_t StateVersion = 6;
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
@@ -246,6 +246,9 @@ private:
 	void CheckUpdates();
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
+#if defined(WITH_MULTIPLAYER)
+	bool QuitIfDedicatedServer(StringView levelName);
+#endif
 	void HandleEndOfGame(const LevelInitialization& levelInit, bool playerDied);
 	void RemoveResumableStateIfAny();
 #if defined(DEATH_TARGET_ANDROID)
@@ -881,6 +884,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		std::shared_ptr<IStateHandler> newHandler;
 		if (levelInit.LevelName.empty()) {
 			// Next level not specified, so show main menu
+#if defined(WITH_MULTIPLAYER)
+			if (QuitIfDedicatedServer(levelInit.LevelName)) {
+				return;
+			}
+#endif
 			InGameConsole::Clear();
 			newHandler = std::make_shared<Menu::MainMenu>(this, false);
 #if defined(WITH_MULTIPLAYER)
@@ -911,6 +919,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 
 			if (levelName != ":end"_s) {
 				if (!SetLevelHandler(levelInit)) {
+#if defined(WITH_MULTIPLAYER)
+					if (QuitIfDedicatedServer(levelInit.LevelName)) {
+						return;
+					}
+#endif
 					InGameConsole::Clear();
 					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
@@ -927,6 +940,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #endif
 				}
 			} else {
+#if defined(WITH_MULTIPLAYER)
+				if (QuitIfDedicatedServer(levelInit.LevelName)) {
+					return;
+				}
+#endif
 				HandleEndOfGame(levelInit, false);
 #if defined(WITH_MULTIPLAYER)
 				// TODO: This should show some server console instead of exiting
@@ -982,6 +1000,11 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #endif
 			{
 				if (!SetLevelHandler(levelInit)) {
+#if defined(WITH_MULTIPLAYER)
+					if (QuitIfDedicatedServer(levelInit.LevelName)) {
+						return;
+					}
+#endif
 					InGameConsole::Clear();
 					auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
 					mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot load specified level!\f[/c]\n\n\nMake sure all necessary files\nare accessible and try it again."), true);
@@ -2371,6 +2394,24 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 
 	return true;
 }
+
+#if defined(WITH_MULTIPLAYER)
+bool GameEventHandler::QuitIfDedicatedServer(StringView levelName)
+{
+	// A dedicated server has nobody to show the main menu to, and the menu cannot be relied on to even load there:
+	// a level that failed because the process ran out of file descriptors takes the menu's own resources down with
+	// it, and the half-constructed menu crashed the server. It ends the same way as a failed initial level does in
+	// CreateServer() instead - `OnShutdown()` still disposes the network manager, which delists the server and
+	// notifies the webhook if there are any descriptors left to do it with.
+	if (!ContentResolver::Get().IsHeadless()) {
+		return false;
+	}
+
+	LOGE("Failed to load level \"{}\", shutting down server", levelName);
+	theApplication().Quit();
+	return true;
+}
+#endif
 
 void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, bool playerDied)
 {
