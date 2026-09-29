@@ -220,6 +220,12 @@ public class AppDocumentsProvider extends DocumentsProvider {
         File targetFile = new File(targetParent, sourceFile.getName());
 
         try {
+            String sourcePath = sourceFile.getCanonicalPath();
+            String targetParentPath = targetParent.getCanonicalPath();
+            if (targetParentPath.equals(sourcePath)
+                    || targetParentPath.startsWith(sourcePath + File.separator)) {
+                throw new IOException("Cannot copy a document into itself or its subtree");
+            }
             copyRecursively(sourceFile, targetFile, false);
             return getDocIdForFile(targetFile);
         } catch (IOException e) {
@@ -234,7 +240,7 @@ public class AppDocumentsProvider extends DocumentsProvider {
         try {
             File parent = getFileForDocId(parentDocumentId);
             File child = getFileForDocId(documentId);
-            return child.getCanonicalPath().startsWith(parent.getCanonicalPath());
+            return isWithin(parent.getCanonicalFile(), child.getCanonicalFile());
         } catch (IOException e) {
             return false;
         }
@@ -249,8 +255,7 @@ public class AppDocumentsProvider extends DocumentsProvider {
     private File getFileForDocId(String documentId) throws FileNotFoundException {
         try {
             File file = new File(documentId).getCanonicalFile();
-            // Path traversal guard: ensure file is inside baseDir
-            if (!file.getPath().startsWith(baseDir.getCanonicalPath())) {
+            if (!isWithin(baseDir.getCanonicalFile(), file)) {
                 throw new SecurityException("Attempted path traversal outside base directory: " + documentId);
             }
             if (!file.exists()) {
@@ -349,5 +354,11 @@ public class AppDocumentsProvider extends DocumentsProvider {
                 }
             }
         }
+    }
+    
+    private static boolean isWithin(File parent, File child) {
+        String p = parent.getPath();
+        String c = child.getPath();
+        return c.equals(p) || c.startsWith(p.endsWith(File.separator) ? p : p + File.separator);
     }
 }
