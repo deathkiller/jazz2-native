@@ -144,6 +144,7 @@ endif()
 set(BRIDGE_SOURCE_DIR "${NCINE_SOURCE_DIR}/nCine/Backends/Android/Bridge")
 
 set(JAVA_FILES
+    AppDocumentsProvider.java
 	Keep.java
 	MainActivity.java
 	MainActivityBase.java
