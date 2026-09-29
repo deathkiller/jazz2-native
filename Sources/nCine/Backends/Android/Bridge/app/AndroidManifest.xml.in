@@ -47,5 +47,15 @@
 				<category android:name="android.intent.category.LEANBACK_LAUNCHER" />
 			</intent-filter>
 		</activity>
+		<provider
+			android:name=".AppDocumentsProvider"
+			android:authorities="@NCINE_REVERSE_DNS@.documents"
+			android:exported="true"
+			android:grantUriPermissions="true"
+			android:permission="android.permission.MANAGE_DOCUMENTS">
+			<intent-filter>
+				<action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+			</intent-filter>
+		</provider>
 	</application>
 </manifest>
