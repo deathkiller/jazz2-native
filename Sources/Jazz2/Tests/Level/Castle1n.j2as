@@ -1,0 +1,98 @@
+/*
+	Trajectory probe, cut down to one scenario and pointed at a level nobody built for a test.
+
+	The counterpart of scenario 446 in `PhysicsProbe.cpp`. Castle 1 Night holds a spring-and-pole climb of
+	its own: a **green** spring at (129,52) with three *rows* of vertical poles above it at y=46, 41 and 36,
+	each five or six tiles wide. Reported from play as not reaching the height the original does, which is
+	what this exists to settle - so unlike `dm_chain`, which is an independent check of a model fitted
+	elsewhere, this one is aimed at a specific defect.
+
+	Drop this next to Castle1n.j2l in the original game's directory; JJ2+ picks up `<level>.j2as` on its own.
+	Nothing else in the level is touched, and the level file itself is not modified.
+
+	Written standalone rather than by copying `_pt.j2as`, for the same reason `Diam3.j2as` is: that one opens
+	with an MLLE include its own level requires, and this is an original 1.20 level. There is one scenario and
+	it starts by teleporting, so the PRIME/SETTLE pair that gives every `_pt` scenario the same starting spot
+	is not needed either.
+
+	Output goes to castle1n_trace.asdat next to the game (jjSTREAM::save() forces that extension). Columns are
+	identical to `_pt_trace`, so `Tools/ExtractTrace.ps1` and `Tools/CompareTraces.ps1` read it unchanged.
+	x/y/xs/ys are sampled AFTER the previous tick's movement and BEFORE this tick's input is applied, which is
+	the same point in the tick both probes log at.
+*/
+
+const string OutputFile = "castle1n_trace.csv";
+
+// Three poles to climb where Diamondus has one, and each holds the player about 140 ticks before it
+// launches. Kept identical to GetScenarioTicks(446) in this engine's probe.
+const int ScenarioTicks = 1200;
+
+// Ticks to let the level start up before the player is moved. Nothing is measured in them - they exist
+// because a teleport on the very first tick does not always stick, and because the two probes have to begin
+// their runs from the same state rather than mid-fade.
+const int WarmupTicks = 20;
+
+// Three tiles above the green spring, and above the lowest pole row at y=46: entering the climb from below
+// the first pole is what the level itself does.
+const int StartTileX = 129, StartTileY = 49;
+
+const int StateWarmup = 0, StateRun = 1, StateDone = 2;
+
+int State = StateWarmup;
+int Tick = 0;
+int Warmed = 0;
+
+uint64 StartMs = 0;
+
+jjSTREAM@ Log = jjSTREAM();
+
+void onLevelBegin() {
+	StartMs = jjUnixTimeMs();
+	Log.write("scenario,tick,x,y,xs,ys,right,left,run,jump,down,sm,gametick,ms,objx,objy,camx,camy,anim,frame\n");
+	jjAlert("Castle 1 Night trajectory probe armed");
+}
+
+void onPlayerInput(jjPLAYER@ play) {
+	switch (State) {
+		case StateDone:
+			return;
+
+		case StateWarmup: {
+			play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = false;
+			Warmed++;
+			if (Warmed >= WarmupTicks) {
+				play.xPos = StartTileX * 32 + 16;
+				play.yPos = StartTileY * 32 + 16;
+				play.xSpeed = 0;
+				play.ySpeed = 0;
+				Tick = 0;
+				State = StateRun;
+			}
+			return;
+		}
+	}
+
+	// Nothing is held for the whole run - the spring and the poles do all of the work, which is the point:
+	// no scripted input means nothing about the height depends on when a key was pressed
+	play.keyRight = play.keyLeft = play.keyRun = play.keyJump = play.keyDown = play.keyFire = false;
+
+	// Logged from onPlayerInput() rather than onPlayer() for the same reason `_pt.j2as` does: onPlayer() runs
+	// after the movement in the original but before it in this engine, which would offset the two traces by a
+	// tick. The two object columns have nothing to report here, so they carry -1 as `_pt` does.
+	Log.write(
+		"cn_chain," + Tick + "," +
+		formatFloat(play.xPos, "", 0, 3) + "," + formatFloat(play.yPos, "", 0, 3) + "," +
+		formatFloat(play.xSpeed, "", 0, 4) + "," + formatFloat(play.ySpeed, "", 0, 4) + "," +
+		"0,0,0,0,0," + play.specialMove + "," +
+		jjGameTicks + "," + int(jjUnixTimeMs() - StartMs) + ",-1.0,-1.0," +
+		formatFloat(play.cameraX - play.xPos, "", 0, 3) + "," + formatFloat(play.cameraY - play.yPos, "", 0, 3) + "," +
+		// The animation, so a climb that stalls can be told from one that never grabs a pole at all
+		play.curAnim + "," + play.curFrame + "\n");
+
+	Tick++;
+	if (Tick >= ScenarioTicks) {
+		State = StateDone;
+		Log.save(OutputFile);
+		jjAlert("Castle 1 Night probe finished, wrote " + OutputFile);
+	}
+}

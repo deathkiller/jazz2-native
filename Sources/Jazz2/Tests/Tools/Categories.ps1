@@ -42,6 +42,7 @@ $script:ProbeCategories = @(
 	@{ Name = 'gaps';       Prefixes = @('lh_') }
 	@{ Name = 'belts';      Prefixes = @('bl_', 'wd_') }
 	@{ Name = 'floatup';    Prefixes = @('fu_') }
+	@{ Name = 'water';      Prefixes = @('wt_') }
 	@{ Name = 'animation';  Prefixes = @('an_', 'rt_') }
 	@{ Name = 'copter';     Prefixes = @('cp_') }
 	@{ Name = 'oneway';     Prefixes = @('ow_') }

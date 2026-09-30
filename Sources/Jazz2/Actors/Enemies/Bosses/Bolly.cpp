@@ -157,6 +157,38 @@ namespace Jazz2::Actors::Bosses
 			UpdateTurret(timeMult);
 		}*/
 
+		// The chain comes off one **segment** at a time and only from the free end - see ChainBallHealth. Find
+		// what the free end currently is, which is the last entry still present.
+		std::int32_t tail = -1;
+		for (std::int32_t i = std::int32_t(arraySize(_chain)) - 1; i >= 0; i--) {
+			if (_chain[i] != nullptr) {
+				tail = i;
+				break;
+			}
+		}
+		if (tail >= 0) {
+			if (_chain[tail]->GetState(ActorState::IsDestroyed)) {
+				// The ball takes its own two pieces with it, back as far as the previous ball. The ball has
+				// already perished - that is how it was found - so only the pieces need killing, and they are
+				// killed rather than simply unhooked so they go through BollyPart::OnPerish() and come apart
+				// the same way it did.
+				for (std::int32_t j = tail; j > tail - ChainPiecesPerSegment && j >= 0; j--) {
+					if (_chain[j] != nullptr) {
+						if (j != tail) {
+							_chain[j]->DecreaseHealth(INT32_MAX, this);
+						}
+						_chain[j] = nullptr;
+					}
+				}
+				// Whatever is left ends in the previous ball, and that one becomes the shootable one on the
+				// next frame through the branch below
+			} else {
+				// Only the end of the chain can be hit at all. Every ball further in stays invulnerable, which
+				// is what makes a shot into the middle of the chain do nothing rather than cut it there.
+				_chain[tail]->SetState(ActorState::IsInvulnerable, false);
+			}
+		}
+
 		float distance = 30.0f;
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_chain)); i++) {
 			if (_chain[i] != nullptr) {
@@ -309,11 +341,21 @@ namespace Jazz2::Actors::Bosses
 				CanCollideWithShots = false;
 				Size = 0.0f;
 				break;
-			case 3: // Chain 1
-				CanCollideWithShots = false;
+			// The chain is shootable, which is the reported *"the Sonic boss should have a breakable chain"*,
+			// and only the **balls** are - see ChainBallHealth for the whole rule. `CanCollideWithShots` is
+			// what makes a shot pass straight through the small pieces between them, which is the "you have to
+			// hit the ball" half of it; `IsInvulnerable` stays on from here and is cleared by Bolly::OnUpdate()
+			// on the one ball at the end of the chain, which is the other half.
+			//
+			// `_scoreValue` is deliberately left at the zero EnemyBase starts it at: a link is a piece of the
+			// boss coming off rather than a kill, and five segments paying out would be worth a fair share of
+			// the 3000 the boss itself is.
+			case 3: // Chain ball
+				CanCollideWithShots = true;
+				_health = ChainBallHealth;
 				Size = 14.0f;
 				break;
-			case 4: // Chain 2
+			case 4: // Chain piece
 				CanCollideWithShots = false;
 				Size = 7.0f;
 				break;
@@ -324,6 +366,19 @@ namespace Jazz2::Actors::Bosses
 
 	void Bolly::BollyPart::OnUpdate(float timeMult)
 	{
+	}
+
+	bool Bolly::BollyPart::OnPerish(ActorBase* collider)
+	{
+		// A piece of the chain comes apart the way an enemy does - an explosion and the sprite shredded into
+		// debris. Drawn here rather than where the segment is taken out, so the ball the player actually shot
+		// and the two pieces that are cut with it go the same way; EnemyBase::OnPerish() adds a score and
+		// nothing visible, which is why every part of this boss that wants to be seen going draws its own.
+		Explosion::Create(_levelHandler, Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y,
+			_renderer.layer() + 2), Explosion::Type::Small);
+		CreateParticleDebrisOnPerish(collider);
+
+		return EnemyBase::OnPerish(collider);
 	}
 
 	Task<bool> Bolly::Rocket::OnActivatedAsync(const ActorActivationDetails& details)

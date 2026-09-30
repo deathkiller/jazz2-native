@@ -1,4 +1,4 @@
-﻿{
+{
 	"Version": {
 		"Target": "Jazz² Resurrection"
 	},
@@ -27,6 +27,7 @@
 		},
 		"Fall": {
 			"Path": "Spaz/fall.aura",
+			"FrameRate": 12.97,
 			"States": [ 8 ]
 		},
 		"FallDiag": {
@@ -178,10 +179,11 @@
 		},
 		"FallToIdle": {
 			"Path": "Spaz/fall_end.aura",
-			"States": [ 1073741826 ]
+			"States": [ 1073741826 ],
+			"FrameRate": 14.29
 		},
 		"ShootToIdle": {
-			"Path": "Spaz/shoot_start.aura",
+			"Path": "Spaz/shoot_end.aura",
 			"FrameRate": 20,
 			"States": [ 1073741828 ]
 		},
@@ -197,7 +199,8 @@
 		},
 		"FallShootToFall": {
 			"Path": "Spaz/jump_shoot_end.aura",
-			"FrameRate": 20,
+			"FrameCount": 2,
+			"FrameRate": 29.2,
 			"States": [ 1073741872 ]
 		},
 		"SidekickA": {

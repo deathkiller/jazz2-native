@@ -6816,11 +6816,18 @@ namespace Jazz2::Multiplayer
 			// A player who chose to spectate keeps spectating in the next level, the same as a remote player does (see
 			// SynchronizePeers()) - a spectate mode forced in the previous level was already cleared in Initialize()
 			bool isSpectating = ((peerDesc->IsSpectating & SpectateMode::Mask) != SpectateMode::None);
+			// Checked against the tileset rather than applied blind - see LevelHandler::FindClearSpawnPosition(),
+			// which the single-player path shares. This is the path **local splitscreen co-op actually takes**,
+			// the menu selecting it through `LocalMultiplayerGameMode`, and its 30 px lift buried the second
+			// player in the ceiling wherever a level starts in a tight space. Reported on `rescue/02_colon2`,
+			// and it survived a fix to the other handler entirely because a `/level` start does not come
+			// through here at all - the two paths are reached by different routes and look alike.
+			Vector2f playerPos = FindClearSpawnPosition(spawnPosition, Vector2f((float)(i * 30), (float)(-i * 30)));
 			std::shared_ptr<Actors::Multiplayer::LocalPlayerOnServer> player = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
 			std::uint8_t playerParams[2] = { (std::uint8_t)(isSpectating ? PlayerType::Spectate : playerType), (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
+				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - i),
 				playerParams
 			));
 			if (isSpectating) {

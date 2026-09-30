@@ -421,6 +421,8 @@ column needed no adjustment while the original's did.
 | `lc_*` | Ledge climb — **engine only**, the original has no such move, so these have no counterpart |
 | `jr_*` | Which rise gravity a spring launch decays under — **engine only**, a regression guard rather than a measurement: both reach the same spring the same way and differ only in whether jump was released on the way in, so the two traces must agree |
 | `cp_mod_*` | The copter the level carries at (236,26) — JJ2's `COPTER` (0xE2), which is the one a **lizard drops and the player hangs from**, not the copter ears. These are the only **state-driven** scenarios in the harness: every other one is a schedule of ticks, and a schedule cannot work here, because the generator's period is itself one of the things the two games disagree about, so any fixed tick catches it in one and misses it in the other. Each hops on the spot until it is genuinely hanging from one, latches that tick and times everything after it from there; `cp_mod_get` then rides doing nothing and measures the ride's own length. They are also the only scenarios that **repeat within their window**: a ride is far too short to test a direction properly and the generator ignores whatever lifetime its event is given, so each one runs its test on nine or ten separate copters and the trace is read as episodes, never as a whole. Two things make that work — the latch is re-armed the moment a ride ends, and the player is put back under the generator 30 ticks later, without which the scenarios that hold a direction fly away, come down somewhere else and get exactly **one** ride each while the three that stay put get ten. Three things about them are easy to get wrong and were: **Jump must stop the instant it is on**, or the very next hop lets go again; the detector is `Modifier::LizardCopter` here and the copter *object sitting on the player* in the original, where `jjPLAYER.helicopter` is the ears and stays 0 for a whole ride; and they run as **Spaz**, because the hop is a string of jump presses made while falling and that is exactly how Jazz's own ears engage, which would fly the approach under its own power. Read these by **per-tick speed, never by displacement**: each scenario catches its copter wherever the generator's cycle happens to put it, so the totals say things like "sinks 967 px flying right but only 72 px holding Down", which is level geometry and not the mechanic. The rates themselves are exact — 0.0625 px/tick falling and 0.25 climbing, with no exceptions across 154 and 75 consecutive samples |
+| `wt_*` | Swimming, in a water line the probe raises to y=896 for the scenario and puts back afterwards — the water is a level property rather than a placed object, so nothing in `ClearProps()` could take it out and the first `wt_*` scenario would otherwise leave every scenario after it submerged. Row 28 is the highest the column is open to, which gives 432 px of water over the standing spot; a shallower line was tried first and the player broke the surface before either game had reached its cap. The six directional scenarios each have a **`_run` twin**, and they are the whole point of the family: swimming turned out to be the vine rule, half the cap alone and the full cap with Run, and nothing had ever asked the original whether Run does anything in water at all. Read the **per-tick `xs`/`ys`, not the travel** — the caps are what is being measured and every scenario reaches the surface eventually, after which it is measuring the bob. `wt_float_up*` put a ten-tile float-up column underwater, which is the reported bug: the original crosses it at the same flat −8 it uses in air, Up, Down and Run notwithstanding |
+| `cp_kill*`, `cp_sj_*` | What refuses the copter, and the reason `cp_tap*` could not answer it on its own: every one of those taps from a stated tick and **never stops**, and all five share one jump, so a rule about the tapping and a rule about the airtime predict the same thing for all of them. These press **once** and then go quiet until tick 80 (`cp_kill47/52/58`, with `cp_kill80` the no-early-press control), and repeat the question out of a two-tick jump rather than a five-tick one (`cp_sj_early`, `cp_sj_late`, `cp_sj_hold`). Read them as **engaged or not, and on which tick** — the descent afterwards is `cp_tap65`'s and adds nothing. `cp_kill47` looks redundant beside `cp_kill80` and is not: its "early press" falls inside the jump's own key hold, so it produces no fresh press at all and is the check that the pair really are the same input |
 | `ow_*` | One-way floors, on the ladder of seven 3-tile platforms at tiles 27..29, rows 33, 31, 29, 26, 23, 19 and 15, standing on the bottom rung. `ow_jump` rises through two and comes down on one, `ow_hop` peaks level with the next one up, `ow_down` and `ow_down_fall` hold Down standing on one and through the fall onto one, and `ow_hold` never lets the jump key go. Read **`ow_hold`**: crossing a platform with jump held relaunches the jump, so any scenario that *releases* the key near a crossing is decided by that tick rather than by the rule (see the hazard below) |
 
 ## Scenarios that do not measure the same thing on both sides
@@ -446,6 +448,9 @@ These show up as outliers in every comparison and are not engine bugs. Check thi
 | `fu_copter` | **A copter scenario that happens to run over float tiles — its 305 px gap is not a float-up defect.** The original copters into the ladder and climbs 479.7 px; this engine never engages the copter at all and climbs 174.6. The cause is the one-chance-per-airtime rule in `HandleJump()`, which spends the attempt on the first press of the airtime wherever it lands: the first tap here is at tick 20, while the player is still rising, so every later tap is refused — while the original, whose first tap is *also* rising, engages on the second pair at tick 27. The rule is what makes `cp_tap55` and `cp_tap60` match, so loosening it means re-measuring the whole `cp_*` family rather than trading one mismatch for another. |
 | `fu_col_butt`, `fu_col_butt_in` | Both cross the column at the right speed — the descent cap is measured and matches to 2% — but they then oscillate in the field for the rest of their 700 ticks, and the two sides sit at different points in that cycle. Read the *descent*, which is what they were built for, not the speed distribution: `fu_col_butt_in` rises 244.8 px against 242.7, and the post-landing coast tops out at 1084.2 against 1080.1. |
 | `fu_col_hold`, `fu_col_rel`, `fu_col_none` | The probe-placed float column, 38.8 / 47.5 / 113.3 px/s, and both causes are listed as gaps in `Docs/MovementAccuracyReference.dox`: while a float area holds the speed the original travels exactly what it assigned with no gravity that tick, where ours applies the usual half-step and comes out 2.7% short; and on leaving, the original decays at 0.875 whenever jump is not *currently* held — including never pressed — which ours reads as held and decays at 0.375. Both cancel on the level's real ladder, where `fu_jump_right` is 0.4 px out over 520. |
+| `sp_lori_kick_fire`, `sp_lori_fire_still`, `sp_lori_fire_tap`, `sp_lori_kick_tap`, `pb_pad_fire` | The "can you shoot here, and should you" questions, and the **ammo** column is the whole of the answer — a shot that happened and a shot that was refused look identical in every other column either probe logs. All five stock a Seeker for that, finite so it can be counted and not RF, whose own blast would move the player and put a second thing in `x`. `pb_pad_fire` settles its question outright: the original's ammo is 50 on the first tick and 50 on the last, so the answer is no.<br><br>The other four are **one measurement in four parts and cannot be read singly**. They cross two variables — kicking or not, key held or tapped every 12 ticks — and the whole rule lives in the corner: held-versus-tapped tells the game's behaviour apart from the probe's (a held key here is a script writing `keyFire = true` every tick, which may register as one press however long it is held), and kicking-versus-not tells the kick apart from the weapon. Three of the four have two readings each; only all four together say that each kick allows exactly one shot. This is the clearest example in the harness of why a control that seems to state the obvious is worth its ten minutes. |
+| `sp_lori_turn_e`, `sp_lori_turn`, `sp_lori_turn_l` | **Read the first ~80 ticks after the turn and no further.** They measure whether Lori's kick can change direction, and on that they agree closely — −177 against −178 px by tick 60 for the mid-kick case, −62 against −59 by tick 120 for the other two. What follows is not the mechanic: turning left walks her off the flat into broken terrain, and the two games do not cross it alike. The original's `y` climbs to 1201, falls to 1298 and climbs again while its pose goes 229 → 217 → 216 → 225, so it stops kicking and starts jumping and falling; ours stays on the floor at 1328.8 and kicks the whole way, ending 674 px further left by tick 300. Whatever that is, it is a collision difference over one stretch of level and not something a kick scenario can say anything about. |
+| `wt_swim_up`, `wt_swim_up_run`, `wt_float_up`, `wt_float_up_run`, `wt_float_up_u` | 32–45 px/s, and **all of it is after the player leaves the water**. The four scenarios that stay under score 0.0 to 0.7; these are the same scenarios run long enough to surface, and the arc out of the water — which nothing here measures — then puts the two games at different points in a bob that lasts the rest of the window. Read the **climb up the 432 px column**, which is what they were built for and which agrees to 3–8%. |
 
 Twenty-eight scenarios currently sit outside the 25 px/s band, out of 280 shared. The rows above account
 for twenty-six of them — the ones that do not measure the same thing, `lh_g3_walk`'s coin flip,
@@ -478,6 +483,16 @@ geometry at the bottom opens out — read it launch by launch, as with any chain
 
 ## Things that have gone wrong before
 
+- **Reading a full-sweep-against-full-sweep diff as a list of regressions.** Two sweeps of the *same* build do
+  not start their scenarios in the same place: the settle ends on real-time frame pacing, so a scenario can
+  begin a third of a pixel out and run a few frames longer or shorter. Most scenarios absorb that. The
+  chaotic ones multiply it — a check after one small change reported **39 of 446** scenarios moving by over a
+  pixel, with `lh_g1_walk` a thousand pixels out, and **not one of them was the change**. Two tells settle it
+  without re-running anything. **Compare tick 0**: 24 of those 39 already differed before any input had been
+  written, which no code change can cause. And **find the first divergence rather than reading the last row**:
+  `lh_g1_walk` drifts 0.12 px over six hundred ticks and then leaves a ledge one frame earlier, which is worth
+  a thousand pixels of fall and nothing else. Read the **stable** families instead — `g_*` and `a_*` are plain
+  ground and air with nothing knife-edge in them, and a real movement regression shows there first.
 - **A column added to a probe, with the extractor writing the old header over the new data.** `ExtractTrace.ps1`
   used to carry one hardcoded header literal per side. Adding `up`, `fire` and `mod` to the engine's row moved
   `anim` from index 22 to 25, and the next full sweep was written out with 29 fields under 26 names — so
@@ -488,6 +503,13 @@ geometry at the bottom opens out — read it launch by launch, as with any chain
   the capture itself — both probes log one — and the extractor refuses to write a set whose widest row does
   not have as many fields as the header has names. The old literals survive only as a fallback for captures
   too old to carry one.
+- **Replacing a category from a filtered run whose filter does not cover it.** `-Split` replaces a category
+  file **wholesale**, so a capture that holds only part of a category silently drops the rest. A category's
+  prefixes are not always one family: `doublejump` is `sp_dj` *and* `an_dj`, so a run filtered on `sp_`
+  rebuilt it with `an_dj_len` missing and nothing said so — the file was written, the row count looked
+  plausible, and only counting scenarios against the previous set showed 38 where there had been 39.
+  **Before replacing a category, take its filter from `Get-CategoryFilter` rather than writing one**, and
+  check the scenario count the split reports against what was there before.
 - **Re-running a category at a different frame rate from the rest of the set.** The committed engine
   capture is at **144 FPS**, not the 60 `Results/README.md` claimed until 2026-09-17, and the whole set is
   at that rate. Four categories re-captured with `/max-fps:60` as documented dropped eleven scenarios out
@@ -499,6 +521,52 @@ geometry at the bottom opens out — read it launch by launch, as with any chain
   by its last `tick`, which is ~2.06 at 144 FPS and ~0.86 at 60, or read the `ms` column, which steps
   7.00 ms against 16.70. Pass `/max-fps:` explicitly every time; an uncapped Debug build lands near 143 on
   one machine and somewhere else on another.
+
+- **Sorting a high-rate capture by `tick` in PowerShell.** `Sort-Object` is **not stable** in Windows
+  PowerShell 5.1, and above 70 FPS a capture has more than one row per tick — 2.06 of them at 144. Sorting
+  by `tick` therefore shuffles the rows *within* each tick into an arbitrary order, and what that looks like
+  is a physics bug: a `wt_*` capture read `ys` = −4.0000 flat while `y` alternated +1.675 and −5.004 px,
+  which is not something any movement model can do. It was read as the trace sink reordering rows under
+  `DEATH_TRACE_ASYNC` and written up here as such; it is not. The same capture in file order has **zero**
+  out-of-order `ms` steps in 676,872, and its median frame is 7.00 ms against a nominal 6.94.
+  <br><br>
+  Rows come out of the extractor in capture order, so the fix is to **not sort at all**, or to sort by `ms`,
+  which is unique per row. The tell that it is this rather than a real finding: the anomaly appears at high
+  frame rates and vanishes at 60, where there is at most one row per tick and an unstable sort has nothing
+  to shuffle.
+- **A family that sweeps one variable and never varies the others.** `cp_tap55`..`cp_tap80` differ only in
+  when the tapping starts, and every one of them taps to the end of the window. Two completely different
+  rules — "the airtime gets one attempt, spent on the first press" and "every press re-arms the jump
+  cooldown" — predict the same outcome for all five, so the family cannot choose between them and the
+  first one written down stood for weeks as a measured fact. It took three scenarios that press **once**
+  and then stop (`cp_kill52`, `cp_kill58`, and `cp_kill80` as the control) to separate them, and they
+  disagree with the recorded rule outright. This is the same shape as the buttstomp bounce below: **a family
+  is not a sample until its members disagree**, and "differs only in when X starts" is not variation if
+  every member then does the same thing for the rest of the run.
+- **Editing the original's script with a scripted multi-line replacement, and not reading it back.** A batch
+  of six replacements into `_pt.j2as` reported six matches and applied three. One of the three that "failed"
+  had in fact deleted a `switch`'s `case` labels and left the body behind, which is a **compile error** — so
+  JJ2+ loaded the level with no script at all and the player simply stood there. Nothing says so: the game
+  starts normally, runs, and exits normally, and `jazz2.log` records a clean session with a gameloop and a
+  normal exit. The only symptom is that the trace file is never written, and a stale one from a previous run
+  sits there looking plausible. **After any edit to that file, grep for the lines you added before launching
+  it**, and delete the old `.asdat` so an unwritten trace cannot be mistaken for a written one.
+- **Restoring the water line by reading it back.** The `wt_*` set raises the level's water line and has to
+  put it back, and the obvious way — capture `jjWaterLevel` first, write it back after — **floods the
+  level**, because that value is a signed 16-bit quantity and a dry level reads back **32768**. Writing 32768
+  (or anything above 32767) wraps to −32768 and puts the line *above* the level. It is not a round trip.
+  <br><br>
+  The line also **drifts on its own**, about 233 per scenario, so a restore that runs once eventually wraps
+  past 32767 by itself even from a good value. Both halves are needed: a constant below the level and under
+  32767, re-asserted on **every** scenario. This cost four runs, because two plausible fixes — capture it
+  later, or restore a large constant — each look right and each still floods.
+  <br><br>
+  What makes it expensive is that a flooded level is nearly invisible: the player stands on the bottom at
+  exactly the normal resting height, jump does nothing because jump is not a thing underwater, and the trace
+  reads as a rabbit standing still. The tell is the **pose** — 72 rather than the idle 66. And none of it
+  can be seen in a filtered run, because the restore only ever runs after a `wt_` scenario: filter the water
+  family and nothing follows it to drown; filter anything else and the line is never raised. It took a full
+  sweep, where scenarios 450 onward all come after the water, for it to show at all.
 - **Reading one scenario's divergence as a regression.** Most scenarios repeat to a hundredth of a pixel,
   but a few decide something late on a margin of a few pixels — whether the player clears a wall, catches a
   ledge, lands on a platform — and those swing wildly. `sp_dj_a_dashflip` is the known one: three runs of

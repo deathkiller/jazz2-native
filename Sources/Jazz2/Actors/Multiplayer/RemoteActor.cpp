@@ -37,7 +37,8 @@ namespace Jazz2::Actors::Multiplayer
 	RemoteActor::RemoteActor()
 		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _alwaysInterpolate(false), _furColor(0),
 			_paletteOffset(-1), _blendingPreset(DrawableNode::BlendingPreset::Alpha),
-			_activeShield(ShieldType::None), _activeShieldTime(0.0f), _sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f)
+			_activeShield(ShieldType::None), _activeShieldTime(0.0f), _sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
+			_revUpTime(0.0f), _revUpSparkCooldown(0.0f)
 	{
 	}
 
@@ -141,6 +142,31 @@ namespace Jazz2::Actors::Multiplayer
 					Player::SpawnSugarRushStar(_levelHandler, _metadata, _pos, _renderer.layer());
 				}
 			}
+		}
+
+		// The run-in-place, on the same footing as the shield and the sugar rush above: the server sends the
+		// *pose* and nothing else, so a remote player showed the wind-up at the animation's own flat speed and
+		// threw no sparks - reported as "the animation looks correct but the speed isn't". Nothing needs to be
+		// sent to fix it. The charge is a pure function of how long the wind-up has been running, so counting
+		// the frames the pose has been up here yields the same number the owner computes, not an estimate of
+		// it - see Player::UpdateRemoteRevUp().
+		//
+		// Keyed on what is actually drawn, transition included: the wind-up has a start animation played over
+		// the top, and a remote actor is sent whichever of the two is on screen.
+		AnimState drawnState = (_currentTransition != nullptr ? _currentTransition->State
+			: (_currentAnimation != nullptr ? _currentAnimation->State : _lastAnim));
+		if ((drawnState & AnimState::RevUp) == AnimState::RevUp && _metadata != nullptr) {
+			float speedUp = Player::UpdateRemoteRevUp(_levelHandler, _metadata, _pos, _renderer.layer(),
+				IsFacingLeft(), timeMult, _revUpTime, _revUpSparkCooldown);
+			// Only over the looping pose. The start animation is a transition with a length of its own, and
+			// writing the duration while one is playing is what once left the owner's own wind-up frozen on
+			// frame 0 - see the same guard in Player::UpdateRevUp().
+			if (_currentTransition == nullptr && _currentAnimation != nullptr) {
+				_renderer.AnimDuration = _currentAnimation->AnimDuration / speedUp;
+			}
+		} else if (_revUpTime > 0.0f) {
+			_revUpTime = 0.0f;
+			_revUpSparkCooldown = 0.0f;
 		}
 
 		ActorBase::OnUpdate(timeMult);

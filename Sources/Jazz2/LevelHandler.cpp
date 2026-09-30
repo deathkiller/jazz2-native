@@ -677,6 +677,41 @@ namespace Jazz2
 		return std::make_unique<UI::HUD>(this);
 	}
 
+	Vector2f LevelHandler::FindClearSpawnPosition(Vector2f spawnPosition, Vector2f offset)
+	{
+		if (_tileMap == nullptr || (offset.X == 0.0f && offset.Y == 0.0f)) {
+			return spawnPosition;
+		}
+
+		// Headroom demanded above the hitbox, so a spot that only just fits is not taken. The **top** is the
+		// side that needs it and the only side that can have it. It needs it because the position is truncated
+		// to whole pixels when the player is created, which moves them up by up to one, and because the offset
+		// is a *lift* - both spend their margin at the top. No other side can take one: the player is meant to
+		// be standing on solid floor, so a margin below would reject every ground-level spawn there is.
+		//
+		// 4 px was tried first and changes nothing on the level this was reported from: `rescue/02_colon2`
+		// starts in a space barely taller than the player, and the half-strength offset there clears 4 but
+		// not 8.
+		constexpr float SpawnHeadroom = 8.0f;
+		static const float OffsetScales[] = { 1.0f, 0.5f, 0.0f };
+
+		for (float scale : OffsetScales) {
+			Vector2f candidate = Vector2f(spawnPosition.X + offset.X * scale, spawnPosition.Y + offset.Y * scale);
+			// The player's own hitbox, taken from Player::OnUpdateHitbox() - the Reforged one, which is the
+			// wider and taller of the two, so a spot accepted here fits in either mode
+			AABBf aabb = AABBf(candidate.X - 11.0f, candidate.Y + 8.0f - 18.0f - SpawnHeadroom,
+				candidate.X + 11.0f, candidate.Y + 8.0f + 12.0f);
+			TileCollisionParams params = { TileDestructType::None, true };
+			if (_tileMap->IsTileEmpty(aabb, params)) {
+				return candidate;
+			}
+		}
+
+		// The spawn point itself, which is where the level says to start and so is the one place that cannot
+		// be argued with. Players then begin stacked and push each other apart, which is harmless.
+		return spawnPosition;
+	}
+
 	void LevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
 		std::int32_t playerCount = levelInit.GetPlayerCount();
@@ -697,11 +732,19 @@ namespace Jazz2
 				}
 			}
 
+			// The offset exists only so co-op players do not start standing inside one another. It is checked
+			// against the tileset rather than applied blind - see FindClearSpawnPosition(), which the local
+			// splitscreen path in MpLevelHandler shares, because that one had the same defect and its own
+			// copy of the arithmetic.
+			float offsetX = (float)((i * 10) - ((playerCount - 1) * 5));
+			float offsetY = (float)(-(i * 20) + ((playerCount - 1) * 5));
+			Vector2f playerPos = FindClearSpawnPosition(Vector2f(spawnPosition.X, spawnPosition.Y), Vector2f(offsetX, offsetY));
+
 			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
 			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
 			player->OnActivated(Actors::ActorActivationDetails(
 				this,
-				Vector3i((std::int32_t)spawnPosition.X + (i * 10) - ((playerCount - 1) * 5), (std::int32_t)spawnPosition.Y - (i * 20) + ((playerCount - 1) * 5), PlayerZ - i),
+				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - i),
 				playerParams
 			));
 

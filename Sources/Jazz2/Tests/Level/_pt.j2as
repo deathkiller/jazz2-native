@@ -42,7 +42,7 @@ const int ScenarioTicks = 250;
 // ground speed first, which is what makes the speed-dependent launch boost measurable.
 const int J = 45;
 
-const int ScenarioCount = 437;
+const int ScenarioCount = 465;
 // Only scenarios from here on are run. Set to 0 for a full sweep; raise it to re-measure just the newest
 // ones, which turns a seven-minute run into half a minute while iterating.
 //
@@ -99,6 +99,37 @@ const uint8 EV_PUSHABLE_ROCK = 231, EV_PUSHABLE_BOX = 232;
 const uint8 EV_VINE = 3;
 // Area that lifts the player against gravity
 const uint8 EV_FLOAT_UP = 20;
+// Where the wt_* set puts the water line, in pixels. The player rests at about y=1329 at the scenario
+// origin, so this is 433 px of water over their head - thirteen and a half tiles, deep enough that a swim
+// upwards is still submerged a hundred ticks in. A first attempt at 1200 gave four tiles and surfaced almost
+// at once, which measures the surface rather than the swim. Row 28 rather than higher because that is as far
+// as the column above the origin is known to be open - fu_col_hold's ride reaches exactly there.
+// Kept identical to WaterLineY in this engine's probe. The level's own line is captured at onLevelBegin()
+// and given back to every other scenario.
+const float WaterLineY = 896.0f;
+// Where the water line is put on every scenario that is not a wt_ one - far below the level, so there is no
+// water. Set **unconditionally and every scenario**, and written as a constant rather than captured from the
+// level, and both of those are load-bearing:
+//
+//   - jjWaterLevel is a signed 16-bit quantity. A dry level reads back **32768**, which does not fit, so
+//     writing that value - or anything above 32767 - wraps to -32768 and puts the line ABOVE the level,
+//     drowning everything. Capturing the level's own value and restoring it is therefore not a round trip,
+//     and fails identically whether it is captured at onLevelBegin() or at the first raise.
+//   - the line drifts on its own, about 233 per scenario, so a restore that runs once eventually wraps past
+//     32767 by itself. Re-asserting it every scenario is what holds it still.
+//
+// None of this is visible to a filtered run, which is why it survived: a filtered run of the water family
+// has nothing following it to drown, and a filtered run of anything else never raises the line at all. In a
+// full sweep it read as every scenario from 450 on being a rabbit standing still, with pose 72 rather than
+// the idle 66, because jump does nothing underwater.
+const float NoWaterLevel = 16384.0f;
+// Whether a wt_* scenario has raised the line, so the restore below only ever runs after one that did.
+// Restoring unconditionally does NOT work and cost a run to find: jjWaterLevel read at onLevelBegin() is
+// not yet the value a level without water ends up with, so writing it back **floods the level**, and a
+// flooded level is not obvious in a trace - the player stands on the bottom at exactly the resting height,
+// jump does nothing because jump is not a thing underwater, and every scenario reads as a rabbit standing
+// still holding one pose (72, the swim idle). cp_tap55, which had a committed capture to compare against,
+// came back identical to the brand-new scenarios, which is the only reason it was caught at all.
 // The events that move the player horizontally without being touched. Wind applies anywhere; belts and the
 // slide tile are floor events, read from the tile below.
 const uint8 EV_SLIDE = 5;
@@ -838,6 +869,82 @@ string ScenarioName(int i) {
 		case 344: return "an_shoot_upper";
 		case 345: return "an_shoot_side";
 		case 346: return "an_shoot_air";
+		// The same shot for the other two characters. The air shot's *return* animation is one of the few
+		// that differ per character, so reading it off Jazz alone and applying the numbers to all three would
+		// be an inference rather than a measurement - these two make it one. Same input as 346 exactly.
+		case 437: return "an_shoot_air_spaz";
+		case 438: return "an_shoot_air_lori";
+		// A buttstomp begun out of a **full dash lead**, for the camera. Every other sp_*_butt stomps at tick
+		// 70, before the pan has gone anywhere, so the lead is ~0 on both sides and the rule being tested -
+		// whether a held direction still moves the view once the move has started - cannot show at all.
+		case 439: return "sp_butt_pan";
+		// Water, which nothing has ever measured - there is no scenario that gets wet. The level has none of
+		// its own, so these set the water line themselves; it is one global value in pixels, put well above
+		// the floor so the player is submerged where they stand rather than falling in. The last three add
+		// the float-up column `fu_col_*` uses, which is the reported case: two mechanics both moving the
+		// player vertically, with Up and Down asking for a third thing.
+		case 440: return "wt_swim_up";
+		case 441: return "wt_swim_down";
+		case 442: return "wt_swim_right";
+		case 443: return "wt_float_up";
+		case 444: return "wt_float_up_u";
+		case 445: return "wt_float_up_d";
+		// ...and the same four with Run held. Swimming may or may not have a fast mode - nothing here has
+		// ever asked - and the float-up column is worth pairing too, since Run doubles what several other
+		// carries drive the player at.
+		case 446: return "wt_swim_up_run";
+		case 447: return "wt_swim_down_run";
+		case 448: return "wt_swim_right_run";
+		case 449: return "wt_float_up_run";
+		// Reported from play: pressing jump for the copter too early, before it is available, is said to remove
+		// the ability to copter out of that jump at all - especially out of a short one. The cp_tap* family
+		// already shows that one press spends the airtime's attempt, but each of its scenarios taps and never
+		// stops, so none can separate a spent attempt from a rule about the tapping itself, and all five share
+		// one long jump. These put a single two-tick tap somewhere in the rise, then nothing, then the tap
+		// train cp_tap80 engages on. cp_kill80 is the control with no early press.
+		case 450: return "cp_kill47";
+		case 451: return "cp_kill52";
+		case 452: return "cp_kill58";
+		case 453: return "cp_kill80";
+		// The short jump the report names: the key let go after two ticks rather than five, which releases the
+		// rise into the 0.875 gravity almost at once and moves the apex from about tick 72 up to 57. _early
+		// taps from the middle of that shorter rise, _late from just past its apex, and _hold never lets go -
+		// a held key gives no fresh press, and whether a copter can start from one has never been asked.
+		case 454: return "cp_sj_early";
+		case 455: return "cp_sj_late";
+		case 456: return "cp_sj_hold";
+		// Reported: in Vanilla you can change the direction of Lori's kick mid kick, or when starting a new
+		// one, when early enough. These are sp_lori_side_hold exactly, keys held so the run repeats, with
+		// **Left** arriving instead of Right at three points of the cycle - her kicks start at 41, 76, 111
+		// and 146, so _e lands three ticks into the first, the plain one in the recovery between kicks, and
+		// _l two ticks before the next begins. Read x: whether she turns at all, and on which kick.
+		case 457: return "sp_lori_turn_e";
+		case 458: return "sp_lori_turn";
+		case 459: return "sp_lori_turn_l";
+		// Reported: while it's true that Lori can shoot during her kick, in Vanilla this is partially blocked
+		// during the end of it. sp_lori_side_fire fires one short burst at tick 42 and stops, so it cannot say
+		// anything about the end; this holds Fire down for a whole repeating run. The answer is the **ammo**
+		// column - a shot that happens and a shot that is refused look alike in every other column - so a
+		// finite weapon is stocked below, Seeker rather than RF, whose blast would move the player too.
+		case 460: return "sp_lori_kick_fire";
+		// And the same question about the pinball paddle: the player can shoot while riding one, and the pose
+		// looks wrong. Two questions, and the ammo column separates them - whether the original fires at all,
+		// and if so which pose. Dropped where pb_pad_fall is, so the ride itself is known to match.
+		case 461: return "pb_pad_fire";
+		// The control sp_lori_kick_fire needs and does not contain: Fire held with nothing else, so what it
+		// measures is the weapon's own rate and nothing about the kick. Without it the kick scenario cannot
+		// say whether a difference in how often the two games shoot belongs to the kick or to the Seeker it
+		// has to stock to be countable at all.
+		case 462: return "sp_lori_fire_still";
+		// ...and the pair that says what _still measured. A held key here is a script writing keyFire = true
+		// every tick, so "one shot standing still" has two readings and they call for opposite fixes: either
+		// this game refuses to repeat a held shot, or it edges its fire on the key going down and the probe
+		// only ever pressed once. Tapping on a cadence of its own separates them - 2 ticks down every 12,
+		// about 64 presses over the window. The second asks the same of the kick, where a held key fires on
+		// exactly her 35-tick kick period: with the key tapped faster than the kick repeats, the two answers
+		// are 64 shots and 22.
+		case 463: return "sp_lori_fire_tap";
+		case 464: return "sp_lori_kick_tap";
 		case 347: return "an_dj_len";
 		case 348: return "an_side_cancel";
 		case 349: return "an_slide_stop";
@@ -1094,9 +1201,11 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		// sets exactly the same field - a second tap while falling is how his own ears engage - so the
 		// detector could not tell the powerup from the ability. Spaz answers that tap with a double jump and
 		// leaves the field alone. The engine's probe uses him for these too, so the comparison is like for like.
-		(s >= 429 && s <= 436)) {
+		(s >= 429 && s <= 436) || s == 437) {
 		wanted = CHAR::SPAZ;
-	} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 95 || s == 96 || s == 370 || s == 371 || s == 379 || s == 380 || s == 381 || s == 384) {
+	} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 95 || s == 96 || s == 370 || s == 371 || s == 379 || s == 380 || s == 381 || s == 384 || s == 438 ||
+		// The three sp_lori_turn* scenarios, which are about her kick and so are hers
+		(s >= 457 && s <= 460) || (s >= 462 && s <= 464)) {
 		wanted = CHAR::LORI;
 	}
 	if (play.charCurr != wanted) {
@@ -1306,7 +1415,7 @@ void SetupCharacter(jjPLAYER@ play, int s) {
 		play.yPos = 26 * 32;
 		play.ammo[weapon] = 50;
 		play.currWeapon = weapon;
-	} else if (s == 385 || s == 386) {
+	} else if (s == 385 || s == 386 || s == 460 || s == 461 || (s >= 462 && s <= 464)) {
 		// Left where they start - the point is the *standstill*, and the sliding one needs only enough floor
 		// to reach the dash cap and skid, which the default start has. A finite weapon so the ammo shows a shot
 		play.ammo[WEAPON::SEEKER] = 50;
@@ -1403,6 +1512,11 @@ void SetupProps(jjPLAYER@ play, int s) {
 	// The previous scenario's leftovers are already gone - ClearProps() takes them out at the RESET, before
 	// the settle, so a pole cannot still be held while the next scenario is lining up
 
+	// ...except the water line, which is not a placed object but one value on the level, so nothing in
+	// ClearProps() can take it out. Put back to whatever the level itself asked for on every scenario, or
+	// the first wt_* one would leave everything after it swimming.
+	jjSetWaterLevel(NoWaterLevel, true);
+
 	int tx = int(GroundX) / 32;
 	int ty = int(GroundY) / 32;
 
@@ -1465,6 +1579,18 @@ void SetupProps(jjPLAYER@ play, int s) {
 		// is what the level's diagonal ladder cannot offer.
 		case 183: case 184: case 185:
 			for (int k = 0; k <= 9; k++) { PlaceTileEvent(tx, ty - k, EV_FLOAT_UP); }
+			break;
+		// The water set. The line is one global value in pixels rather than anything placed, so it is set
+		// straight here - and put well above the floor, so the player is submerged where they already stand
+		// and the scenario measures swimming rather than the plunge in. The last three get the same float-up
+		// column the fu_col_* ones use, so the two can be read side by side.
+		case 440: case 441: case 442:
+		case 443: case 444: case 445:
+		case 446: case 447: case 448: case 449:
+			jjSetWaterLevel(WaterLineY, true);
+			if ((s >= 443 && s <= 445) || s == 449) {
+				for (int k = 0; k <= 9; k++) { PlaceTileEvent(tx, ty - k, EV_FLOAT_UP); }
+			}
 			break;
 		// The same column cut to six tiles, so there is clear air above it for a move to be established in
 		// before it reaches the field, and fu_col_butt / fu_col_copter dropped in seven tiles over the top.
@@ -1583,7 +1709,8 @@ void SetupProps(jjPLAYER@ play, int s) {
 		// The top of the chamber, midway between the three bumpers
 		case 294: play.xPos = 66 * 32 + 16; play.yPos = 160; play.xSpeed = 0; play.ySpeed = 0; break;
 		// Above the paddle at (80,18). Its tile is its mounted end, so the offsets step leftwards.
-		case 295: case 296: case 297: case 298: case 299: case 305: case 306:
+		// pb_pad_fire (461) is dropped where pb_pad_fall is, so the ride itself is known to match
+		case 295: case 296: case 297: case 298: case 299: case 305: case 306: case 461:
 			play.xPos = 80 * 32 + 16; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0;
 			break;
 		case 300: play.xPos = 80 * 32 + 16 - 32; play.yPos = 400; play.xSpeed = 0; play.ySpeed = 0; break;
@@ -2021,7 +2148,33 @@ void ApplyInput(jjPLAYER@ play, int s, int t) {
 		case 343: jump = (t >= 20); break;
 		// Animation family, same inputs as the engine's side
 		case 344: case 345: fire = (t >= 30 && t < 34); down = (t >= 35 && t < 39); jump = (t >= 35 && t < 39); break;
-		case 346: jump = (t >= 20 && t < 50); fire = (t >= 40 && t < 44); break;
+		case 346: case 437: case 438: jump = (t >= 20 && t < 50); fire = (t >= 40 && t < 44); break;
+		case 439: right = true; run = true; jump = (t >= 160 && t < 170); down = (t >= 180); break;
+		case 440: up = true; break;
+		case 441: down = true; break;
+		case 442: right = true; break;
+		case 443: break;
+		case 444: up = true; break;
+		case 445: down = true; break;
+		case 446: up = true; run = true; break;
+		case 447: down = true; run = true; break;
+		case 448: right = true; run = true; break;
+		case 449: run = true; break;
+		case 450: jump = (t >= J && t < J + 5) || (t >= 47 && t < 49) || (t >= 80 && ((t - 80) % 6) < 2); break;
+		case 451: jump = (t >= J && t < J + 5) || (t >= 52 && t < 54) || (t >= 80 && ((t - 80) % 6) < 2); break;
+		case 452: jump = (t >= J && t < J + 5) || (t >= 58 && t < 60) || (t >= 80 && ((t - 80) % 6) < 2); break;
+		case 453: jump = (t >= J && t < J + 5) || (t >= 80 && ((t - 80) % 6) < 2); break;
+		case 454: jump = (t >= J && t < J + 2) || (t >= 50 && ((t - 50) % 6) < 2); break;
+		case 455: jump = (t >= J && t < J + 2) || (t >= 60 && ((t - 60) % 6) < 2); break;
+		case 456: jump = (t >= J); break;
+		case 457: right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 44); break;
+		case 458: right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 60); break;
+		case 459: right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 74); break;
+		case 460: right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30); break;
+		case 461: fire = (t >= 60); break;
+		case 462: fire = (t >= 30); break;
+		case 463: fire = (t >= 30 && ((t - 30) % 12) < 2); break;
+		case 464: right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30 && ((t - 30) % 12) < 2); break;
 		case 347: jump = (t >= 20 && t < 50) || (t >= 62 && t < 66); break;
 		case 348: right = true; run = true; down = (t >= 80 && t < 84); jump = (t >= 80 && t < 84); break;
 		case 349: right = (t < 90); run = (t < 90); break;
@@ -2494,6 +2647,10 @@ void onPlayerInput(jjPLAYER@ play) {
 
 void onLevelBegin() {
 	StartMs = jjUnixTimeMs();
+
+	// The level's own water line is NOT read here - see where it is captured in SetupProps(). At this point
+	// it is not yet the value a dry level settles on, and writing that back is what flooded the level for
+	// every scenario after the wt_ family.
 
 	// Locate the objects the level was built with. The event map is readable whether or not the object has
 	// been activated yet, unlike jjObjects, which only fills in near the player. Both of these have to be

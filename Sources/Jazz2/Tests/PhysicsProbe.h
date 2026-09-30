@@ -66,7 +66,7 @@ namespace Jazz2::Tests
 		// sweep of the test level stops after 394 of these. Anything added has to go *before* it - and that
 		// renumbering has to reach the case in ApplyInput(), the window in GetScenarioTicks() and the
 		// placement in SetupProps(), all three of which name `dm_chain` by index.
-		static constexpr std::int32_t ScenarioCount = 447;
+		static constexpr std::int32_t ScenarioCount = 477;
 		// Raise this to re-measure only the later scenarios while iterating, which turns a twenty-minute
 		// sweep into half a minute. LEAVE IT AT 0 WHEN COMMITTING: a raised value silently skips everything
 		// before it, which has been mistaken for scenarios that stopped working more than once.
@@ -152,6 +152,16 @@ namespace Jazz2::Tests
 		static constexpr std::int32_t EventScanMaxTileX = 400;
 		static constexpr std::int32_t EventScanMaxTileY = 120;
 
+		// Where the `wt_*` set puts the water line, in pixels. The player rests at about y=1329 at the
+		// scenario origin, so this is **433 px of water over their head** - thirteen and a half tiles, which
+		// is deep enough that a swim upwards is still submerged a hundred ticks in. A first attempt at 1200
+		// gave only four tiles and surfaced almost at once, which measures the surface rather than the swim.
+		//
+		// Row 28 rather than anything higher because that is as far as the column above the origin is *known*
+		// to be open: `fu_col_hold`'s ride reaches exactly there. Going further would risk putting the line
+		// inside a ceiling, where what the water did would be indistinguishable from what the ceiling did.
+		static constexpr float WaterLineY = 896.0f;
+
 		// The `cp_mod_*` set hops on the spot until it is genuinely on the copter and times everything from
 		// there, so these are offsets from the pickup rather than from the start of the scenario. A schedule
 		// cannot work here: the generator's period is one of the things the two games disagree about, so any
@@ -192,6 +202,10 @@ namespace Jazz2::Tests
 		// whatever tick that enquiry fell on.
 		std::int32_t _copterAttachTick;
 		bool _onCopter;
+		// The level's own water line, captured once so a `wt_*` scenario can be given it back - see SetupProps()
+		float _defaultWaterLevel;
+		// Whether the previous scenario raised the line, so the restore only ever runs after one that did
+		bool _waterRaised;
 		// The tick the last ride ended, or -1 once the player has been put back under the generator for the
 		// next one. See CopterReturnDelay.
 		std::int32_t _copterEndTick;

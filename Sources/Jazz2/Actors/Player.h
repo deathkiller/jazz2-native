@@ -404,6 +404,30 @@ namespace Jazz2::Actors
 		 * @param baseLayer     Base render layer; the star is drawn just behind it
 		 */
 		static void SpawnSugarRushStar(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos, std::uint16_t baseLayer);
+		/**
+		 * @brief Advances a remote player's run-in-place and returns the factor its animation runs faster by
+		 *
+		 * The wind-up quickens as it charges and throws sparks at the same quickening rate, and neither is sent
+		 * over the network --- what a remote player receives is the *pose*, which is why it looked right and ran
+		 * at one speed. Nothing has to be sent, either: the charge is a pure function of how long the wind-up
+		 * pose has been up @m_span{m-text m-dim} (see @ref RevUpFullChargeTime) @m_endspan, so a receiver
+		 * measuring that reproduces the same number rather than approximating it.
+		 *
+		 * Runs on the same "decays locally, the server sends only state changes" footing the shield and the
+		 * sugar rush already use in @ref Actors::Multiplayer::RemoteActor.
+		 *
+		 * @param levelHandler   Level handler whose tile map owns the sparks
+		 * @param metadata       Metadata holding the spark animation (the player's metadata)
+		 * @param pos            World position of the remote player
+		 * @param baseLayer      Base render layer; sparks are drawn just behind it
+		 * @param facingLeft     Which way the player faces --- sparks are thrown the other way
+		 * @param timeMult       Frame time
+		 * @param revUpTime      Caller's accumulator for how long the pose has been up; reset it when it is not
+		 * @param sparkCooldown  Caller's accumulator for the spark interval
+		 * @return               What to divide the pose's own animation duration by
+		 */
+		static float UpdateRemoteRevUp(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos,
+			std::uint16_t baseLayer, bool facingLeft, float timeMult, float& revUpTime, float& sparkCooldown);
 		/** @brief Spawns bird companion */
 		bool SpawnBird(std::uint8_t type, Vector2f pos);
 		/** @brief Disables controls for specified time */
@@ -658,12 +682,16 @@ namespace Jazz2::Actors
 		 * already half again slower than the original --- as "still quite fast". The original's landing is
 		 * simply over before it registers at this engine's framerate, so matching it was abandoned as the
 		 * goal. Anything here above 2.75 is a preference and nothing above it should be read as measured.
+		 * It settled at 5.5 and was then asked to be **30% faster**, which is this. Reforged is given the same
+		 * 30% through `FrameRate` on each character's `FallToIdle` entry, which is where a rate belongs when
+		 * there is no measurement behind it --- this constant exists only because the non-Reforged path has to
+		 * stamp the duration per frame, Lori's landing having seven frames where the other two have five.
 		 *
 		 * Per *frame*, not per landing, because the characters do not agree on how many there are: Jazz and
 		 * Spaz land in five frames and Lori in seven. A whole-pose duration would run Lori's at five-sevenths
 		 * the speed of theirs.
 		 */
-		static constexpr float LandAnimFrameTicks = 5.5f;
+		static constexpr float LandAnimFrameTicks = 3.85f;
 		/**
 		 * @brief How much faster the sidekick's ending animation plays, in both modes
 		 *
@@ -731,7 +759,16 @@ namespace Jazz2::Actors
 		static constexpr float LegacyRiseBrakeEaseSpeed = 1.0f * LegacyFrameRateScale;
 		/** @brief Non-Reforged fall gravity (original 0.125 px/tick^2) */
 		static constexpr float LegacyFallGravity = 0.125f * LegacyFrameRateScaleSqr;
-		/** @brief Non-Reforged underwater gravity (original 1024/65536 px/tick^2 - a very slow sink) */
+		/**
+		 * @brief Non-Reforged underwater gravity (original 1024/65536 px/tick^2 - a very slow sink)
+		 *
+		 * Confirmed a second time by the `wt_*` set, and from the other direction: it is what makes the two
+		 * vertical swimming caps differ. 2.109375 px/tick going up against 2.140625 going down is this term
+		 * once subtracted and once added, and holding nothing at all bleeds an ascent off at exactly this
+		 * rate. It is therefore applied in HandleWaterAndModifierMovement() rather than only here, because
+		 * OnHandleWater() clears ActorState::ApplyGravitation for a swimming player and nothing would
+		 * otherwise reach it - which is what left this engine's player hanging motionless in the water.
+		 */
 		static constexpr float LegacyWaterGravity = (1024.0f / 65536.0f) * LegacyFrameRateScaleSqr;
 		/**
 		 * @brief Non-Reforged cap on applied movement (the original clamps it to 8 px/tick on both axes)
@@ -1053,6 +1090,23 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacySpazSidekickDistance = 440.0f;
 		/**
+		 * @brief Remainder of a sidekick's distance that counts as none left
+		 *
+		 * Not a tuning value and not a fudge --- it is the floor below which the budget provably cannot be
+		 * worked off, because the quantity that pays it down is the difference of two level coordinates held
+		 * in a `float`. Out at x ~ 4000 that has a resolution of roughly half a thousandth of a pixel and at
+		 * the far end of a large level about a hundredth, so a step smaller than this moves the position by
+		 * nothing at all and bills the kick for nothing at all.
+		 *
+		 * 1/64 px clears the resolution at any coordinate a level can reach, and is 1/28000 of
+		 * @ref LegacySpazSidekickDistance --- far below anything a trajectory could show.
+		 *
+		 * See where it is applied for the reported symptom it removes; the short version is that the last
+		 * frame of a kick is cut short to whatever budget is left, so whether it rounds a hair over or a hair
+		 * under is a coin flip, and under is a two-second hang in mid-air.
+		 */
+		static constexpr float SidekickDistanceEpsilon = 1.0f / 64.0f;
+		/**
 		 * @brief Ticks a horizontal spring's launch speed is held before it clamps (original 4)
 		 *
 		 * The launch itself is the spring's own figure --- 16, 24 and 32 for red, green and blue --- but the
@@ -1187,6 +1241,38 @@ namespace Jazz2::Actors
 		 * which is the reported "buttstomping a float-up event should slow the fall noticeably".
 		 */
 		static constexpr float LegacyFloatUpFallCap = 4.0f * LegacyFrameRateScale;
+		/**
+		 * @brief Non-Reforged swimming speed cap (original 2 px/tick, doubled while Run is held)
+		 *
+		 * The same rule the vine follows (@ref LegacyVineSpeed) and measured the same way: half the walk cap
+		 * on its own, exactly the walk cap with Run. It holds on **both** axes - the `wt_swim_*` set reads
+		 * 2.0625 px/tick swimming right and 2.1094 swimming up, 4.0625 and 4.2344 with Run - and the fractions
+		 * are the tell rather than noise. The original tests the cap before adding rather than clamping after,
+		 * so the speed always ends one acceleration step past it, and subtracting that step off each figure
+		 * leaves exactly 2 and 4 in every direction.
+		 *
+		 * This engine had no water cap of its own at all: horizontally it reached straight for
+		 * @ref LegacyWalkSpeed, which is the *Run* figure, and vertically for the Reforged `MaxRunningSpeed`,
+		 * unscaled - so swimming was twice as fast as it should be with nothing held and Run did nothing.
+		 */
+		static constexpr float LegacyWaterSpeed = 2.0f * LegacyFrameRateScale;
+		/**
+		 * @brief Non-Reforged horizontal swimming acceleration (original 1/16 px/tick^2)
+		 *
+		 * A third of the walk acceleration, and - unlike on land - **the same with Run held**. Run raises the
+		 * cap and nothing else: `wt_swim_right` and `wt_swim_right_run` share the identical 0.0625 ladder for
+		 * their first 32 ticks and part company only when the slower one stops at 2.
+		 */
+		static constexpr float LegacyWaterAccelX = (1.0f / 16.0f) * LegacyFrameRateScaleSqr;
+		/**
+		 * @brief Non-Reforged vertical swimming acceleration (original 1/8 px/tick^2, doubled while Run is held)
+		 *
+		 * Twice the horizontal rate, and this one *does* double with Run - which is the asymmetry that makes
+		 * the two axes reach the same cap at different times. Measured as the stroke alone: what the trace
+		 * shows is this combined with @ref LegacyWaterGravity, 0.109375 climbing and 0.140625 sinking, which
+		 * is 0.125 either side of 1/64.
+		 */
+		static constexpr float LegacyWaterAccelY = (1.0f / 8.0f) * LegacyFrameRateScaleSqr;
 		/**
 		 * @brief Pixels a non-Reforged wind area moves the player per unit of its strength (original 0.5)
 		 *
@@ -1387,15 +1473,24 @@ namespace Jazz2::Actors
 		// to start it again and nothing else has to guess what the transition is
 		bool _inHookIdleFlavor;
 		bool _canDoubleJump;
-		// Whether the copter's single attempt for this airtime has been spent. The original gives one, taken
-		// at the first jump press after leaving the ground and gone whether or not it succeeded; landing hands
-		// it back. Both are set in Player::HandleJump(), on the press itself rather than where the copter is
-		// engaged, because _jumpTime hides a press made within ten frames of a jump from that code entirely.
-		bool _copterChanceUsed = false;
-		// Whether *this* press is the one that took it, read by the copter branch of HandleSpecialJump()
-		bool _copterChanceThisPress = false;
+		// Whether the ascent under way is one a *jump* launched, as opposed to a spring, a pole, an enemy
+		// bounce or an RF blast. Only those rises let a fresh press take the heavier rise gravity back off
+		// again; every other source has its own answer and holds it whatever the key does. See HandleJump().
+		bool _riseOwnedByJump = false;
+		// How long the copter is deaf for, re-armed in Player::HandleJump() on every airborne tick the jump
+		// key is down - so a press inside the window pushes it out rather than merely being refused. This is
+		// the whole of what refuses the copter after an early press; see @ref LegacyCopterEngageMaxSpeed.
+		// Deliberately not `_jumpTime`, which also gates the double jump, and the original does not.
+		float _copterDeafLeft = 0.0f;
+		// Whether *this* press fell outside that window, read by the copter branch of HandleSpecialJump().
+		// Taken before the window is re-armed, or a press would always be refused by the one it just opened.
+		bool _copterPressAllowed = true;
 		// Ticks until Lori's kick repeats, start to start; 0 when no kick is pending. See LegacyLoriKickPeriod.
 		float _loriKickRepeatLeft = 0.0f;
+		// Whether the kick under way has already spent its one shot. Her kick allows exactly one, taken at the
+		// first opportunity, which is the reported "shooting is partially blocked during the end of her kick" -
+		// see the gate in Player::HandleWeaponFire() for the four scenarios that establish it.
+		bool _loriKickShotUsed = false;
 		// Whether this player is currently standing on top of another player (local splitscreen co-op stacking, and
 		// online stacking when this is an `MpPlayer`); guards cancelling the carry so a real solid object is untouched
 		bool _stackCarrying;
@@ -1770,6 +1865,26 @@ namespace Jazz2::Actors
 		 * ticks later - the previous 12-frame value is 14 ticks and swallowed that grab completely.
 		 */
 		static constexpr float VineDropCooldown = 6.0f;
+		/**
+		 * @brief How long the copter is deaf for after the jump key was last down (original bracket 11 to 14 ticks)
+		 *
+		 * Re-armed on **every airborne tick the key is down**, so a press that does nothing still pushes the
+		 * window out, and a tap train every six ticks therefore holds the copter off for an entire airtime
+		 * however slowly the player ends up falling. This engine had no such window and papered over the gap
+		 * with an invented one-attempt-per-airtime rule --- see @ref LegacyCopterEngageMaxSpeed for the
+		 * twelve scenarios and what they settle.
+		 *
+		 * The length is bracketed rather than read: a press 11 ticks after the key was last down is refused
+		 * (`cp_tap60`) and one 14 ticks after is accepted (`cp_sj_late`), with 16 also accepted (`cp_tap65`).
+		 * 12.5 ticks is the midpoint and clears both by a tick and a half.
+		 *
+		 * @par It is the copter's alone
+		 * Reusing @cpp _jumpTime @ce for it was tried and is wrong, because that gates the **double jump**
+		 * as well and the original does not make it wait: `sp_dj_d05` presses five ticks after letting go and
+		 * rises 211.5 px, where a 12.5-tick window refuses it and leaves a plain 128.5 px jump. Five
+		 * scenarios of the `sp_dj_*` sweep lost 50 to 83 px of rise that way. Two rules, one key.
+		 */
+		static constexpr float LegacyJumpCooldown = 12.5f / LegacyFrameRateScale;
 
 		/**
 		 * @brief How long the rev-up's end animation holds the pose (original 6 ticks)
@@ -1835,6 +1950,34 @@ namespace Jazz2::Actors
 		static constexpr float LegacyRunAnimFrameTicks = 12.0f;
 		/** @brief The floor on @ref LegacyRunAnimFrameTicks --- one frame per tick is all the original can draw */
 		static constexpr float LegacyRunAnimMinFrameTicks = 1.0f;
+		/**
+		 * @brief Fastest the non-Reforged spring pose runs (original 2 ticks per frame)
+		 *
+		 * The launch pose obeys the same @cpp 12 - speed @ce rule the ground runs do, off the **vertical**
+		 * speed rather than the horizontal one, and with its own floor and ceiling. Measured on the three
+		 * spring colours, reading how long each frame of the original's pose 65 is held against the `ys` it
+		 * was entered at: 17.375 down to 9.875 all give **2**, 9.375 and 9.125 give 3, 8.25 and 8.0 give 5,
+		 * and 6.375 and below give 8. Those are not `12 - speed` at the entry tick and are not meant to be
+		 * --- the speed decays through the frame, so what the hold measures is the integral, which is what an
+		 * engine setting a duration each frame produces by construction. Check: entering at 8.25 and decaying
+		 * at the held rise rate sums to a frame boundary in 5 ticks, at 9.375 in 3, and at 6.375 in 8 once
+		 * the ceiling caps it. Every one of those is a measured hold.
+		 *
+		 * This engine played the pose at the animation's own flat rate --- 8 frames over half a second, which
+		 * is 4.38 ticks a frame for Jazz and Spaz --- so a blue spring's launch ran at less than half the
+		 * original's speed and a low one ran too fast. That is the reported "animation speed when launched
+		 * from a vertical spring is sometimes too slow": *sometimes*, because red barely shows the pose at
+		 * all and green is close.
+		 */
+		static constexpr float LegacySpringAnimMinFrameTicks = 2.0f;
+		/**
+		 * @brief Slowest the non-Reforged spring pose runs (original 8 ticks per frame)
+		 *
+		 * A real ceiling rather than a clamp for safety: entering at 3.375 px/tick, @cpp 12 - speed @ce is
+		 * 8.625 and rising as the rise decays, which predicts a hold of about nine, and the original holds
+		 * **eight**. One data point, so it is the weaker half of the pair --- the floor has ten.
+		 */
+		static constexpr float LegacySpringAnimMaxFrameTicks = 8.0f;
 
 		/**
 		 * @brief The two-bit horizontal speed field of a composite animation state
@@ -1925,7 +2068,7 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacyVineJumpLift = 12.0f;
 		/**
-		 * @brief Fastest descent the copter can still be *started* from (original ~2 px/tick)
+		 * @brief Fastest descent the copter can still be *started* from (original bracket 2.25 to 2.375 px/tick)
 		 *
 		 * The copter's descent speed was never the difference --- where the original engages, it holds
 		 * 1.0078 px/tick, which is @ref LegacyCopterDescentSpeed to three decimals. What it has and this
@@ -1934,14 +2077,26 @@ namespace Jazz2::Actors
 		 * engaged at any speed and pinned every descent at 1.0 --- which is exactly the reported "static
 		 * here, variable in the original", seen from the wrong end.
 		 *
-		 * Measured with `cp_tap55`..`cp_tap80`, five scenarios sharing one jump and differing only in when
-		 * the tapping starts. All five rise at tick 46 and begin falling at 61. Taps starting at 55 and 60
-		 * are refused because the player is still rising; 65 engages 4 ticks into the fall, 70 at 9,
-		 * `sp_jazz_copter` at 15 --- and 80, nineteen ticks in, is **refused**. That brackets the bound
-		 * between the 1.875 px/tick that engages and the 2.375 that does not; 2.0 is the round figure
-		 * between them and is what is used, but only the bracket is measured.
+		 * First bracketed with `cp_tap55`..`cp_tap80`, five scenarios sharing one jump and differing only in
+		 * when the tapping starts, which put it between 1.875 and 2.375 and left 2.0 as the round figure
+		 * between them. The `cp_kill*` set, which taps once early and then stops, narrows it: `cp_kill52`
+		 * engages at a descent of 2.25 where `cp_tap80` is refused at 2.375, both read before that tick's
+		 * gravity. 2.3125 is the midpoint of the tighter bracket and clears both by a margin; as before,
+		 * only the bracket is measured.
+		 *
+		 * @par What this bound is **not**
+		 * It used to be paired with a one-attempt-per-airtime rule --- the copter spent on the first jump
+		 * press after leaving the ground, gone whether or not it succeeded. That fits `cp_tap55` and
+		 * `cp_tap60`, which tap from the rise and never engage however long they keep trying, and it fits
+		 * nothing else. `cp_kill52` and `cp_kill58` press **once** during the rise, stop, and then engage
+		 * cleanly at tick 81; under a spent attempt they could not. What refuses the tapping scenarios is
+		 * the ordinary jump cooldown, re-armed by the key being down rather than by a jump having happened,
+		 * so a tap train every six ticks holds the window open for the entire airtime. Every one of the
+		 * twelve scenarios follows from the cooldown, the fall being under way, and this bound --- and the
+		 * report that started it, *"pressing jump too early removes the ability to copter out of that jump"*,
+		 * is the invented rule rather than the original's.
 		 */
-		static constexpr float LegacyCopterEngageMaxSpeed = 2.0f * LegacyFrameRateScale;
+		static constexpr float LegacyCopterEngageMaxSpeed = 2.3125f * LegacyFrameRateScale;
 		/**
 		 * @brief How often Lori's kick repeats while Down and Jump are held (original 35 ticks)
 		 *
@@ -2044,8 +2199,10 @@ namespace Jazz2::Actors
 		void ResetRevUpState();
 
 	private:
-		// Throws sparks backwards off the feet while revving up
-		void EmitRevUpSparks(float charge);
+		// Throws sparks backwards off the feet while revving up. Static because a remote player throws its own,
+		// through UpdateRemoteRevUp() - there is no Player instance on the receiving side.
+		static void EmitRevUpSparks(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos,
+			std::uint16_t baseLayer, bool facingLeft, float charge);
 		// Puts the stored launch speed into effect, with the no-friction window and the grace that ends it
 		void ApplyRevUpLaunch();
 		// Whether the non-Reforged dash is up - Run held, or still inside the grace that outlives it

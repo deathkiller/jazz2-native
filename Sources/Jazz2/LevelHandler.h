@@ -388,6 +388,26 @@ namespace Jazz2
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
+		/**
+			@brief Returns where a co-op player can actually be placed, given the offset that would separate them
+
+			The offset exists only so players do not start standing inside one another, and applying it blind
+			puts the second one inside the tileset wherever the level starts in a tight space --- reported on
+			`rescue/02_colon2`, where the start is barely taller than the player and the lift buried them from
+			the first frame. Tried at full strength, then at half, then not at all.
+
+			Shared with @ref Multiplayer::MpLevelHandler, which spawns local splitscreen players through its
+			own override and had the same defect with its own copy of the arithmetic --- an unchecked 30 px
+			lift. That is the reason this is a function rather than a few lines at each site: the two paths
+			look alike, are reached by different routes @m_span{m-text m-dim} (the menu's co-op goes through
+			the multiplayer handler, a `/level` start does not) @m_endspan, and a fix applied to one of them
+			silently leaves the other broken.
+
+			@param spawnPosition  Where the level says the player starts
+			@param offset         What to add to separate this player from the others; zero returns the start
+			@return               The first of the offset, half the offset and no offset that the player fits in
+		*/
+		Vector2f FindClearSpawnPosition(Vector2f spawnPosition, Vector2f offset);
 		/** @brief Creates a player instance while restoring a resumable state from a stream (one per serialized player) */
 		virtual std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index);
 		/** @brief Returns `true` if cheats are enabled for the specified player, `nullptr` refers to the local console */

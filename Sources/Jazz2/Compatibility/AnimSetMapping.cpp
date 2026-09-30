@@ -686,7 +686,7 @@ namespace Jazz2::Compatibility
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "idle_flavor_3"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "idle_flavor_4"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "idle_flavor_5"_s);
-			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "vine_shoot_up_start"_s);
+			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "jump_shoot_end"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "fall_shoot"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "jump_unknown_1"_s);
 			m.Add(JJ2Version::TSF | JJ2Version::CC, "Lori"_s, "jump_unknown_2"_s);

@@ -416,37 +416,62 @@ namespace Jazz2::Multiplayer
 			return false;
 		};
 
-		// Where the player is in each tile (horizontally centered): its highest position where the box fits and
-		// something holds it up, else its lowest position where the box fits at all (in the air there), else -1.
+		// Where the player is in each tile: its highest position where the box fits and something holds it up, else
+		// its lowest position where the box fits at all (in the air there), else -1.
 		// A position belongs to the tile its body is centered in, not the one its feet are in, which is where the
 		// level's events are placed - a spring on a floor a few pixels below a tile boundary is still in the tile
 		// the player standing on that floor is in.
+		//
+		// The box is tried at several positions across the tile, not only at its middle, and the one it fits at is
+		// kept in feetXMap. A gap exactly one tile wide that is offset half a tile from the grid - which is what a
+		// passage between the solid halves of two tiles is - has nothing at either tile's middle and used to read
+		// as solid rock on both sides, so the tracer walled itself out of whole sections: on `flash/06_medivo2`
+		// that is the way out of the starting chamber, right above the vines and beside the warp, and with it
+		// invisible the only route out was the warp itself.
 		constexpr std::int32_t FirstFeetOffset = BoxHeight / 2 + CellSize / 2;	// Relative to the tile's top
+		// Kept within the tile: at these offsets the body (16 px of the 32 a tile is wide) still lies inside it, so
+		// a tile only counts as somewhere the player can be when they fit in the tile itself
+		static const std::int32_t BodyOffsets[] = { 0, -CellSize, CellSize };
 		std::unique_ptr<std::int32_t[]> feetMap = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+		std::unique_ptr<std::int8_t[]> feetXMap = std::make_unique<std::int8_t[]>((std::size_t)totalTiles);
 		std::unique_ptr<std::uint8_t[]> standMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 		for (std::int32_t ty = 0; ty < H; ty++) {
 			for (std::int32_t tx = 0; tx < W; tx++) {
-				std::int32_t x = tx * TS + TS / 2;
-				std::int32_t feet = -1;
+				std::int32_t feet = -1, feetX = 0;
 				bool stands = false;
-				for (std::int32_t r = 0; r < CellsPerTile; r++) {
-					std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
-					if (!boxBlocked(x, f) && boxSupported(x, f)) {
-						feet = f;
-						stands = true;
+				for (std::int32_t offset : BodyOffsets) {
+					std::int32_t x = tx * TS + TS / 2 + offset;
+					for (std::int32_t r = 0; r < CellsPerTile; r++) {
+						std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
+						if (!boxBlocked(x, f) && boxSupported(x, f)) {
+							feet = f;
+							feetX = offset;
+							stands = true;
+							break;
+						}
+					}
+					if (stands) {
 						break;
 					}
 				}
 				if (!stands) {
-					for (std::int32_t r = CellsPerTile - 1; r >= 0; r--) {
-						std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
-						if (!boxBlocked(x, f)) {
-							feet = f;
+					for (std::int32_t offset : BodyOffsets) {
+						std::int32_t x = tx * TS + TS / 2 + offset;
+						for (std::int32_t r = CellsPerTile - 1; r >= 0; r--) {
+							std::int32_t f = ty * TS + FirstFeetOffset + r * CellSize;
+							if (!boxBlocked(x, f)) {
+								feet = f;
+								feetX = offset;
+								break;
+							}
+						}
+						if (feet >= 0) {
 							break;
 						}
 					}
 				}
 				feetMap[tx + ty * W] = feet;
+				feetXMap[tx + ty * W] = (std::int8_t)feetX;
 				standMap[tx + ty * W] = (stands ? 1 : 0);
 			}
 		}
@@ -499,6 +524,25 @@ namespace Jazz2::Multiplayer
 			std::int32_t feet = feetMap[tx + ty * W];
 			return (feet >= 0 ? feet : (ty + 1) * TS);
 		};
+		// Where across the tile the player's body is, which is its middle unless only an offset position fits
+		auto bodyXAt = [&](std::int32_t tx, std::int32_t ty) -> std::int32_t {
+			return tx * TS + TS / 2 + (tx >= 0 && ty >= 0 && tx < W && ty < H ? feetXMap[tx + ty * W] : 0);
+		};
+		// Whether the player can pass from a tile into the one beside it at this height. Two tiles can each have
+		// room for the body and still have rock between them - that is what a body position away from the middle
+		// of its tile means - so somewhere the body has to fit across the boundary as well, at any height within
+		// the row. Walking and falling always tested this; the sideways step off a spring did not, and once the
+		// body was allowed off-centre that let the route step clean through a wall two tiles thick
+		// (`flash/06_medivo2`, straight out of the starting chamber at tiles 17-18).
+		auto canCrossSideways = [&](std::int32_t tx, std::int32_t dir, std::int32_t ty) -> bool {
+			std::int32_t edgeX = tx * TS + TS / 2 + dir * (TS / 2);
+			for (std::int32_t r = 0; r < CellsPerTile; r++) {
+				if (!boxBlocked(edgeX, ty * TS + FirstFeetOffset + r * CellSize)) {
+					return true;
+				}
+			}
+			return false;
+		};
 		// The tile the player's body is in, for a position of its feet
 		auto tileOfFeet = [&](float feetY) -> std::int32_t {
 			return floorDiv((std::int32_t)feetY - BoxHeight / 2, TS);
@@ -510,6 +554,41 @@ namespace Jazz2::Multiplayer
 		auto topEventRow = [&](std::int32_t tx, std::int32_t ty) -> std::int32_t {
 			return std::max<std::int32_t>(0, std::min(ty, floorDiv(feetAt(tx, ty) - HitboxHeight, TS)));
 		};
+		// The airspace an airboard, a copter or a fly carrot opens up: everything the player can fly to from one of
+		// those pickups, flooded once here instead of per tile during the search. A Fly Off area is part of it -
+		// the flight ends there and goes on on foot - but nothing is flown through it.
+		std::unique_ptr<std::uint8_t[]> flightRegion = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+		{
+			std::queue<Vector2i> open;
+			for (std::int32_t i = 0; i < totalTiles; i++) {
+				if (flightMap[i] == 1 && occupiable(i % W, i / W)) {
+					flightRegion[i] = 1;
+					open.push(Vector2i(i % W, i / W));
+				}
+			}
+			while (!open.empty()) {
+				Vector2i f = open.front();
+				open.pop();
+				if (flightMap[f.X + f.Y * W] == 2) {
+					continue;
+				}
+				for (std::int32_t dy = -1; dy <= 1; dy++) {
+					for (std::int32_t dx = -1; dx <= 1; dx++) {
+						std::int32_t nx = f.X + dx, ny = f.Y + dy;
+						if ((dx == 0 && dy == 0) || !occupiable(nx, ny) || flightRegion[nx + ny * W] != 0) {
+							continue;
+						}
+						// Diagonally only past two open corners
+						if (dx != 0 && dy != 0 && (!occupiable(f.X + dx, f.Y) || !occupiable(f.X, f.Y + dy))) {
+							continue;
+						}
+						flightRegion[nx + ny * W] = 1;
+						open.push(Vector2i(nx, ny));
+					}
+				}
+			}
+		}
+
 		// Snaps a tile to the nearest occupiable tile within a small radius (or {-1,-1} if none found)
 		auto findSeed = [&occupiable](Vector2i t) -> Vector2i {
 			if (occupiable(t.X, t.Y)) {
@@ -555,6 +634,7 @@ namespace Jazz2::Multiplayer
 		constexpr std::int32_t BoostReachX = 3;		// Sideways reach when stepping off a vertical boost
 		constexpr std::int32_t HSpringReachX = 16;	// Horizontal reach of a running jump off a spring (clears wide pits)
 		constexpr std::int32_t PoleReachY = 8;		// How far a spinning pole carries the player to the next pole (kept modest so it doesn't vault whole sections)
+		constexpr std::int32_t LiftGapTiles = 1;	// How many tiles a vine/hook/float-up may skip before the ride ends
 		constexpr std::int32_t MaxWalkStep = 40;	// Height difference (px) walking handles between neighboring tiles - a 45-degree slope, and some
 
 		// Finds a clear arc for a jump from (sx,sy) to (sx+dx,sy+dy) - rise in the start column, travel across at
@@ -564,10 +644,15 @@ namespace Jazz2::Multiplayer
 		// Vine/hook/pole tiles often have a solid mask, but the player grabs them instead of bumping into them (see
 		// occupiable() above), so they don't block an arc either - otherwise a hook right above the ground would read
 		// as a ceiling and the player could never jump up to it
-		auto arcFree = [&isFree, &isLift](std::int32_t tx, std::int32_t ty) -> bool {
-			return isFree(tx, ty) || isLift(tx, ty);
+		// Judged the same way as every other move in the search, at sub-tile precision: a whole-tile test reads a
+		// slope, a half tile or a passage that lies across a tile boundary as solid rock, and the arc through it
+		// is then refused outright. On `flash/06_medivo2` that is what kept the player from jumping off the top
+		// of the vines into the one-tile gap beside the warp - the only way out of the starting chamber that
+		// isn't the warp - so the route had no choice but to take the warp.
+		auto arcFree = [&](std::int32_t tx, std::int32_t ty) -> bool {
+			return occupiable(tx, ty) || isLift(tx, ty);
 		};
-		auto jumpApex = [&arcFree, &isOneWay](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> std::int32_t {
+		auto jumpApex = [&](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> std::int32_t {
 			std::int32_t ex = sx + dx, ey = sy + dy;
 			std::int32_t x0 = (sx < ex ? sx : ex), x1 = (sx < ex ? ex : sx);
 			std::int32_t apexStart = (sy < ey ? sy : ey);
@@ -580,7 +665,13 @@ namespace Jazz2::Multiplayer
 					break; // ceiling above the start: a higher apex is impossible too
 				}
 				for (std::int32_t xx = x0; xx <= x1; xx++) {
-					if (!arcFree(xx, apexY)) { ok = false; break; }
+					// Each tile has to have room, and the player has to be able to get from one into the next -
+					// two tiles can both have room with rock between them (see canCrossSideways)
+					if (!arcFree(xx, apexY) ||
+						(xx > x0 && !isLift(xx, apexY) && !isLift(xx - 1, apexY) && !canCrossSideways(xx - 1, 1, apexY))) {
+						ok = false;
+						break;
+					}
 				}
 				if (!ok) {
 					continue; // wall at this height; try a higher apex
@@ -655,6 +746,39 @@ namespace Jazz2::Multiplayer
 			// Tenths of a tile travelled, so a jump costs what walking the same distance does
 			return std::max<std::int32_t>(10, (std::int32_t)(10.0f * sqrtf((float)(dx * dx + dy * dy)) + 0.5f));
 		};
+		// A flight priced at the ground it covers is free, and a long one then beats every route that follows the
+		// level: crossing a valley in one hop is a shorter line than walking down into it and out again. Jazz's
+		// copter is the extreme case - it descends at about a pixel a tick while the run carries on at eight, so a
+		// single glide sails 30 tiles across at nearly constant height, and the route sails with it, over the top
+		// of the level rather than through it (reported on `monk/05_damn`, and as an unreachable jump shortcut on
+		// `secretf/01_easter1`).
+		//
+		// So a flight is charged for how far it carries the player *sideways* beyond an ordinary jump. Sideways
+		// only: dropping down a shaft is free however deep it is, because a fall costs the player nothing either,
+		// while distance across the air is what a route has to earn. A hop over a pit stays what walking it costs,
+		// a glide across half the level costs several times the ground it skips - taken when there is no other way
+		// through, left alone when there is.
+		constexpr std::int32_t FreeFlightTiles = 6;			// Reach of an ordinary running jump, charged as walking
+		constexpr std::int32_t LongFlightPenalty = 30;		// Tenths of a tile charged for each tile beyond it
+		auto flightCost = [&](std::int32_t dx, std::int32_t dy) -> std::int32_t {
+			std::int32_t across = (dx < 0 ? -dx : dx);
+			return stepCost(dx, dy) + std::max<std::int32_t>(0, across - FreeFlightTiles) * LongFlightPenalty;
+		};
+		// What taking a warp costs, in the same tenths of a tile. It used to be 10 - one tile, the cheapest
+		// edge in the graph - which made a warp very nearly *free* however far it teleported, so the route
+		// went through every secret warp it could find. Reported on `flash/06_medivo2`, where it detours
+		// through secret warps to save almost nothing.
+		//
+		// The minimap is meant to show the track, not the fastest way through the level, so a warp has to be
+		// worth a real detour before the line takes one: forty tiles of walking. A warp is not free to a player
+		// even when it is short - it has to be found and entered, and it takes the route somewhere they cannot
+		// see coming. The figure is a judgement rather than a measurement - there is nothing to measure it
+		// against - so it is named here to be turned.
+		constexpr std::int32_t WarpCost = 400;
+		// How much of the level the geometry alone has to reach, in percent of what warps reach, for the route
+		// to be laid out warp-free (see the turning point below). Three quarters leaves the levels that merely
+		// hide a warp or two on real geometry, and keeps the ones actually built around warps working as before.
+		constexpr std::int32_t NoWarpRegionPercent = 75;
 
 		// A flight the player steers freely: the vertical motion is the one of trace(), but every horizontal position
 		// the player could steer to is followed at once - a set of box positions 8 px apart, which spreads by one
@@ -948,9 +1072,11 @@ namespace Jazz2::Multiplayer
 			jumpFlights.Start[i] = -1;
 		}
 		FlightCache tubeFlights;
-		FlightCache pickupFlights;
 		FlightCache hPoleFlights;
-		auto getFlights = [&](FlightCache& cache, Vector2i c, auto&& simulate) -> ArrayView<const Pair<std::int32_t, std::int32_t>> {
+		// `priced` charges the long flights extra, see flightCost() - the player's own jumps and glides are
+		// priced, a tube, a horizontal pole or an airboard is not: those carry the player because the level
+		// says so, and a route is meant to follow them
+		auto getFlights = [&](FlightCache& cache, Vector2i c, bool priced, auto&& simulate) -> ArrayView<const Pair<std::int32_t, std::int32_t>> {
 			std::int32_t ci = c.X + c.Y * W;
 			if (cache.Start == nullptr) {
 				auto it = cache.Sparse.find(ci);
@@ -977,7 +1103,7 @@ namespace Jazz2::Multiplayer
 							}
 						}
 					}
-					cache.Entries.push_back(pair(ti, stepCost(tx - c.X, ty - c.Y)));
+					cache.Entries.push_back(pair(ti, priced ? flightCost(tx - c.X, ty - c.Y) : stepCost(tx - c.X, ty - c.Y)));
 				};
 				// The landing tile is where the body is, or the neighbor on the side the player is at, when the box
 				// centered in that tile wouldn't fit
@@ -1003,8 +1129,8 @@ namespace Jazz2::Multiplayer
 			return { cache.Entries.data() + cache.Start[ci], (std::size_t)cache.Count[ci] };
 		};
 		auto getJumps = [&](Vector2i c) {
-			return getFlights(jumpFlights, c, [&](auto&& emit, auto&& emitAt) {
-				const float startX = (float)(c.X * TS + TS / 2), startFeet = (float)feetAt(c.X, c.Y);
+			return getFlights(jumpFlights, c, true, [&](auto&& emit, auto&& emitAt) {
+				const float startX = (float)bodyXAt(c.X, c.Y), startFeet = (float)feetAt(c.X, c.Y);
 				for (const auto& p : JumpProfiles) {
 					for (float dir = -1.0f; dir <= 1.0f; dir += 2.0f) {
 						if (dir > 0.0f && p.SpeedX == 0.0f && p.SteerSpeedX == 0.0f) {
@@ -1154,7 +1280,7 @@ namespace Jazz2::Multiplayer
 					tryAdd(c.X, c.Y - 1, 10, cd, ci);
 					tryAdd(c.X, c.Y + 1, 10, cd, ci);
 					if ((sx != 0 || sy != 0) && !isTube(c.X + sx, c.Y + sy)) {
-						auto exits = getFlights(tubeFlights, c, [&](auto&& emit, auto&& emitAt) {
+						auto exits = getFlights(tubeFlights, c, false, [&](auto&& emit, auto&& emitAt) {
 							for (std::int32_t k = 1; k <= 12; k++) {
 								std::int32_t nx = c.X + sx * k, ny = c.Y + sy * k;
 								if (nx < 0 || ny < 0 || nx >= W || ny >= H) {
@@ -1163,7 +1289,7 @@ namespace Jazz2::Multiplayer
 								if (feetMap[nx + ny * W] >= 0) {
 									// Out of the tube at its speed, and steering once the tube lets go of the controls
 									emit(nx, ny);
-									const float x = (float)(nx * TS + TS / 2), feet = (float)feetMap[nx + ny * W];
+									const float x = (float)bodyXAt(nx, ny), feet = (float)feetMap[nx + ny * W];
 									const float vx = (float)tubeSpeedX[ci], vy = (float)tubeSpeedY[ci];
 									for (float steer : { 0.0f, -6.0f, 6.0f }) {
 										trace(x, feet, vx, vy, 0, (steer != 0.0f ? TubeControlTicks : 0), steer, JumpMove::None, false, emit, emitAt);
@@ -1198,7 +1324,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 				if (hPoleY >= 0) {
-					auto flights = getFlights(hPoleFlights, c, [&](auto&& emit, auto&& emitAt) {
+					auto flights = getFlights(hPoleFlights, c, false, [&](auto&& emit, auto&& emitAt) {
 						const float x = (float)(c.X * TS + TS / 2), feet = (float)(hPoleY * TS + TS / 2 + BoxHeight / 2);
 						for (float speedX : { -8.0f, -0.01f, 0.01f, 8.0f }) {
 							trace(x, feet, speedX, 0.0f, 0, 0, 0.0f, JumpMove::None, false, emit, emitAt);
@@ -1209,43 +1335,30 @@ namespace Jazz2::Multiplayer
 					}
 				}
 
-				// With an airboard or a copter the player flies freely - anywhere in the open space around, until a Fly
-				// Off area takes it away (a Reforged copter runs out after 10 seconds, but that's far enough anyway)
-				bool flightHere = false;
-				for (std::int32_t ey = topEventRow(c.X, c.Y); ey <= c.Y && !flightHere; ey++) {
-					flightHere = isFlightPickup(c.X, ey);
-				}
-				if (flightHere) {
-					auto flights = getFlights(pickupFlights, c, [&](auto&& emit, auto&&) {
-						std::unique_ptr<std::uint8_t[]> flown = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-						std::queue<Vector2i> open;
-						flown[ci] = 1;
-						open.push(c);
-						while (!open.empty()) {
-							Vector2i f = open.front();
-							open.pop();
-							if (flightMap[f.X + f.Y * W] == 2) {
-								continue;	// The flight ends here, it goes on on foot
+				// With an airboard or a copter the player flies freely through the open space the pickup opens up,
+				// until a Fly Off area takes it away (a Reforged copter runs out after 10 seconds, but that's far
+				// enough anyway). Moved through a tile at a time, like swimming: the flight used to be one edge from
+				// the pickup to every tile it could reach, which the minimap then drew as a straight line from the
+				// pickup across whatever stood in the way - reported on `prince/06_labrat2`, where the line cut
+				// 39 tiles diagonally through the middle of the level from the airboard at [134, 32]. Tile by tile
+				// the route follows the air the player actually flies through, and a long flight costs what it
+				// really travels instead of the straight line between its ends.
+				if (flightRegion[ci] != 0) {
+					for (std::int32_t dy = -1; dy <= 1; dy++) {
+						for (std::int32_t dx = -1; dx <= 1; dx++) {
+							if (dx == 0 && dy == 0) {
+								continue;
 							}
-							for (std::int32_t dy = -1; dy <= 1; dy++) {
-								for (std::int32_t dx = -1; dx <= 1; dx++) {
-									std::int32_t nx = f.X + dx, ny = f.Y + dy;
-									if ((dx == 0 && dy == 0) || !occupiable(nx, ny) || flown[nx + ny * W] != 0) {
-										continue;
-									}
-									// Diagonally only past two open corners
-									if (dx != 0 && dy != 0 && (!occupiable(f.X + dx, f.Y) || !occupiable(f.X, f.Y + dy))) {
-										continue;
-									}
-									flown[nx + ny * W] = 1;
-									open.push(Vector2i(nx, ny));
-									emit(nx, ny);
-								}
+							std::int32_t nx = c.X + dx, ny = c.Y + dy;
+							if (nx < 0 || ny < 0 || nx >= W || ny >= H || flightRegion[nx + ny * W] == 0) {
+								continue;
 							}
+							// Diagonally only past two open corners
+							if (dx != 0 && dy != 0 && (!occupiable(c.X + dx, c.Y) || !occupiable(c.X, c.Y + dy))) {
+								continue;
+							}
+							relax(nx + ny * W, (dx != 0 && dy != 0 ? 14 : 10), cd, ci);
 						}
-					});
-					for (const auto& flight : flights) {
-						relax(flight.first(), flight.second(), cd, ci);
 					}
 				}
 
@@ -1254,7 +1367,7 @@ namespace Jazz2::Multiplayer
 					for (std::int32_t ey = topEventRow(c.X, c.Y); ey <= c.Y; ey++) {
 						auto warp = warpJump.find(Vector2i(c.X, ey));
 						if (warp != warpJump.end()) {
-							tryAddRaw(warp->second.X, warp->second.Y, 10, cd, ci);
+							tryAddRaw(warp->second.X, warp->second.Y, WarpCost, cd, ci);
 						}
 					}
 				}
@@ -1264,11 +1377,11 @@ namespace Jazz2::Multiplayer
 				bool boostUp = springHere == 1 || (lift && !poleHere) || poleUp;
 
 				if (boostUp) {
-					// Vertical springs launch the player a fixed height (per spring type); float-up/vine/pole areas
-					// carry the player up the whole clear column. Ride upward (bounded by that cap or a ceiling) and
-					// step off onto any ledge within reach along the way.
+					// Vertical springs launch the player a fixed height (per spring type); a vine, a hook or a
+					// float-up area carries them as far as it reaches. Ride upward (bounded by that cap or a
+					// ceiling) and step off onto any ledge within reach along the way.
 					// Poles only carry a modest distance (they don't lift the player the whole shaft like a float-up
-					// area or vine), so cap them low; springs use their per-type height, vines/float-up the full column
+					// area or vine), so cap them low; springs use their per-type height
 					std::int32_t cap = poleHere ? PoleReachY : (lift ? BoostHeight : springBoostAt(c.X, c.Y));
 					if (cap == 0) {
 						cap = springBoostAt(c.X, c.Y + 1);
@@ -1276,10 +1389,23 @@ namespace Jazz2::Multiplayer
 					if (cap <= 0 || cap > BoostHeight) {
 						cap = BoostHeight;
 					}
+					// A lift used to ride the whole clear column above it, which turns one vine tile into a lift to
+					// the roof of the level: on `flash/05_medivo1` a handful of scattered vines in a shaft carried the
+					// route 40 tiles up and along the top of the level, where the player can climb nowhere near that
+					// high. What a vine or a float-up area actually covers is its own tiles, so the ride follows them
+					// and stops where they stop - with a tile of slack, because the events are often laid out with
+					// gaps in them, and with the jump off the top handled separately below.
+					std::int32_t liftGap = 0;
 					for (std::int32_t k = 1; k <= cap; k++) {
 						std::int32_t ty = c.Y - k;
 						if (!occupiable(c.X, ty)) {
 							break; // ceiling
+						}
+						if (lift && !poleHere) {
+							liftGap = (isLift(c.X, ty) ? 0 : liftGap + 1);
+							if (liftGap > LiftGapTiles) {
+								break; // the vine/hook/float-up ends here
+							}
 						}
 						tryAdd(c.X, ty, 10 * k, cd, ci);
 						for (std::int32_t dir = -1; dir <= 1; dir += 2) {
@@ -1287,6 +1413,11 @@ namespace Jazz2::Multiplayer
 								std::int32_t sx = c.X + dir * s;
 								if (!occupiable(sx, ty)) {
 									break; // wall blocks stepping further sideways at this height
+								}
+								// ...and so does rock between two tiles that each have room, unless one of them is
+								// a vine or a pole, which the player grabs through whatever mask it is drawn on
+								if (!isLift(sx, ty) && !isLift(sx - dir, ty) && !canCrossSideways(sx - dir, dir, ty)) {
+									break;
 								}
 								if (hasGround(sx, ty) || isLift(sx, ty)) {
 									tryAdd(sx, ty, 10 * k + 10 * s, cd, ci);
@@ -1442,8 +1573,34 @@ namespace Jazz2::Multiplayer
 		// A lap needs a loop to trace, which an arena doesn't have. A route to the level exit is meaningful in an
 		// open level too, it only has to reach the exit (checked below).
 		if (routeType == TrackRouteType::Lap && regionSize > (totalTiles * 3) / 5) {
-			LOGW("Cannot auto-place minimap track: level looks like an open arena, not a track");
+			LOGW("Cannot auto-place minimap track: level looks like an open arena, not a track ({} of {} tiles walkable)", regionSize, totalTiles);
 			return;
+		}
+
+		// The same search again with the warps taken out. It settles both arms below - the route follows the geometry
+		// rather than teleporting past it - but first it settles the *turning point*, which matters more.
+		//
+		// The far tile above was found with warps enabled, so on a level whose warps reach a pocket the geometry
+		// doesn't, the farthest tile lands in that pocket. Nothing can then be traced to it warp-free, so both arms
+		// fall back to warps and the track threads every secret door on the way. That is the reported
+		// `flash/06_medivo2`, where the detour through the secret warps saves almost nothing: the shortcut was never
+		// really about distance, it was that the destination had been picked through a warp in the first place.
+		//
+		// So when the level is essentially walkable - the warp-free search reaching most of what the warp-enabled one
+		// does - the turning point comes from the warp-free search and the whole track follows real geometry. This
+		// also keeps the far tile clear of the warp cost below, which inflates every distance measured past a warp and
+		// would otherwise drag the turning point towards whatever lies beyond one. A level genuinely built around its
+		// warps, where dropping them strands most of the map, keeps the warp-enabled far tile and is still shown end
+		// to end.
+		std::unique_ptr<std::int32_t[]> parentNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+		std::unique_ptr<std::int32_t[]> distNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+		for (std::int32_t i = 0; i < totalTiles; i++) { parentNW[i] = -1; distNW[i] = -1; }
+		Vector2i farNW;
+		std::int32_t regionNW = 0;
+		runSearch(spawnTile, nullptr, parentNW.get(), distNW.get(), farNW, regionNW, false);
+
+		if (farNW.X >= 0 && regionNW * 100 >= regionSize * NoWarpRegionPercent && distNW[farNW.X + farNW.Y * W] > 0) {
+			farTile = farNW;
 		}
 
 		const std::int32_t spawnIdx = spawnTile.X + spawnTile.Y * W;
@@ -1521,20 +1678,25 @@ namespace Jazz2::Multiplayer
 		const std::int32_t targetIdx = target.X + target.Y * W;
 
 		std::int32_t springUp = 0, springSide = 0, liftCount = 0, surfaceCount = 0, poleCount = 0;
-		std::int32_t springUpReached = 0, liftReached = 0, poleReached = 0;
+		std::int32_t springUpReached = 0, liftReached = 0, poleReached = 0, flightCount = 0, tubeCount = 0, hPoleCount = 0;
 		for (std::int32_t i = 0; i < totalTiles; i++) {
 			if (springMap[i] == 1) { springUp++; if (dist[i] >= 0) { springUpReached++; } }
 			else if (springMap[i] == 2) { springSide++; }
 			if (liftMap[i] != 0) { liftCount++; if (dist[i] >= 0) { liftReached++; } }
 			if (liftMap[i] == 2) { poleCount++; if (dist[i] >= 0) { poleReached++; } }
 			if (surfaceMap[i] != 0) { surfaceCount++; }
+			if (flightMap[i] == 1) { flightCount++; }
+			if (tubeMap[i] != 0) { tubeCount++; }
+			if (hPoleMap[i] != 0) { hPoleCount++; }
 		}
-		LOGI("Minimap track geometry: {} vertical springs ({} reached) + {} horizontal, {} lift ({} reached, of which {} poles {} reached), {} surface, {} warp(s), {} exit(s), {} boss(es); finish [{}, {}] via {} reachable={} (dist {})",
-			springUp, springUpReached, springSide, liftCount, liftReached, poleCount, poleReached, surfaceCount, (std::int32_t)warpJump.size(), (std::int32_t)exitMarkers.size(),
+		LOGI("Minimap track geometry: {} vertical springs ({} reached) + {} horizontal, {} lift ({} reached, of which {} poles {} reached), {} surface, {} flight pickup(s), {} tube, {} horizontal pole(s), {} warp(s), {} exit(s), {} boss(es); finish [{}, {}] via {} reachable={} (dist {}); without warps {} tiles, far [{}, {}]",
+			springUp, springUpReached, springSide, liftCount, liftReached, poleCount, poleReached, surfaceCount,
+			flightCount, tubeCount, hPoleCount, (std::int32_t)warpJump.size(), (std::int32_t)exitMarkers.size(),
 			(std::int32_t)bossMarkers.size(),
 			finishTile.X, finishTile.Y, finishSource,
 			(finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0) ? 1 : 0,
-			(finishTile.X >= 0 ? dist[finishTile.X + finishTile.Y * W] : -1));
+			(finishTile.X >= 0 ? dist[finishTile.X + finishTile.Y * W] : -1),
+			regionNW, farNW.X, farNW.Y);
 		// Each resolved warp and whether the search actually reached its origin (so it could teleport) - helps diagnose
 		// warps the tracer stops at instead of following
 		for (const auto& wj : warpJump) {
@@ -1552,88 +1714,227 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		// First arm: spawn -> far. Prefer a warp-free route so the line follows the geometry (e.g., climbs the poles
-		// or vines) instead of teleporting past it via a warp shortcut; fall back to the warp-enabled route only
-		// when the far tile can't be reached without warps (e.g., a section only accessible by a warp).
-		std::unique_ptr<std::int32_t[]> parentNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::int32_t[]> distNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 0; i < totalTiles; i++) { parentNW[i] = -1; distNW[i] = -1; }
-		Vector2i farNW;
-		std::int32_t regionNW = 0;
-		runSearch(spawnTile, nullptr, parentNW.get(), distNW.get(), farNW, regionNW, false);
-		bool routeNoWarp = (distNW[farIdx] >= 0);
-
-		SmallVector<Vector2i, 0> pathOut;
-		reconstruct(routeNoWarp ? parentNW.get() : parent.get(), spawnIdx, farIdx, pathOut);
-
-		// Second arm: far -> finish, taking the opposite side by blocking the first arm. If blocking disconnects
-		// the finish (e.g., wide corridors), retry without blocking so the route still reaches the end. When the
-		// first arm already ends at the finish, there's no second arm to trace (and big levels save a whole search).
-		SmallVector<Vector2i, 0> pathBack;
-		if (farIdx != targetIdx) {
+		// The route is traced in two arms, spawn -> via -> finish, where `via` is the turning point. The first arm
+		// prefers a warp-free route so the line follows the geometry (e.g., climbs the poles or vines) instead of
+		// teleporting past it via a warp shortcut, and falls back to the warp-enabled route only when the turning
+		// point can't be reached without warps (e.g., a section only accessible by a warp). The second arm takes
+		// the opposite side by blocking the first; if blocking disconnects the finish (e.g., wide corridors) it is
+		// retried unblocked so the route still reaches the end, and when the first arm already ends at the finish
+		// there's no second arm to trace (which saves a whole search on a big level).
+		bool routeNoWarp = true;
+		auto traceRouteVia = [&](const SmallVector<Vector2i, 0>& vias, bool mustComplete, SmallVector<Vector2i, 0>& route) -> bool {
 			std::unique_ptr<std::uint8_t[]> blocked = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-			for (std::int32_t i = 1; i + 1 < (std::int32_t)pathOut.size(); i++) {
-				blocked[pathOut[i].X + pathOut[i].Y * W] = 1;
-			}
-
 			std::unique_ptr<std::int32_t[]> parent2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
 			std::unique_ptr<std::int32_t[]> dist2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+			SmallVector<Vector2i, 0> arm;
+			Vector2i cur = spawnTile;
+			bool noWarp = true, firstArm = true;
+			route.clear();
 
-			Vector2i far2;
-			std::int32_t visited2 = 0;
-			runSearch(farTile, blocked.get(), parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
+			for (std::int32_t w = 0; w <= (std::int32_t)vias.size(); w++) {
+				Vector2i dest = (w < (std::int32_t)vias.size() ? vias[w] : target);
+				std::int32_t destIdx = dest.X + dest.Y * W;
+				if (destIdx == cur.X + cur.Y * W) {
+					continue;
+				}
 
-			if (dist2[targetIdx] < 0) {
-				// Blocking the first arm cut off the finish; retry unblocked so we still reach it
-				for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-				runSearch(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
-			}
-			if (dist2[targetIdx] < 0 && routeNoWarp) {
-				// Still unreachable without warps - allow warps for the return arm so the route completes
-				for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-				runSearch(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, true);
+				arm.clear();
+				if (firstArm) {
+					// The way out of the spawn is already searched, both with warps and without
+					noWarp = (distNW[destIdx] >= 0);
+					reconstruct(noWarp ? parentNW.get() : parent.get(), spawnIdx, destIdx, arm);
+					if (arm.size() < 2) {
+						return false;
+					}
+				} else {
+					for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+					Vector2i far2;
+					std::int32_t visited2 = 0;
+					runSearch(cur, blocked.get(), parent2.get(), dist2.get(), far2, visited2, !noWarp);
+					if (dist2[destIdx] < 0) {
+						// Blocking what the line already covers cut the rest of it off; retry unblocked so the
+						// route still gets there, and only then fall back to the warps
+						for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+						runSearch(cur, nullptr, parent2.get(), dist2.get(), far2, visited2, !noWarp);
+					}
+					if (dist2[destIdx] < 0 && noWarp) {
+						for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
+						runSearch(cur, nullptr, parent2.get(), dist2.get(), far2, visited2, true);
+					}
+					if (dist2[destIdx] < 0) {
+						if (mustComplete) {
+							return false;
+						}
+						break;	// The line ends where it got to
+					}
+					reconstruct(parent2.get(), cur.X + cur.Y * W, destIdx, arm);
+					if (arm.size() < 2) {
+						continue;
+					}
+				}
+
+				// The next arm takes the other side of what this one covers, which is what keeps a lap a loop
+				// rather than the same corridor twice
+				for (std::int32_t i = 1; i + 1 < (std::int32_t)arm.size(); i++) {
+					blocked[arm[i].X + arm[i].Y * W] = 1;
+				}
+				for (std::int32_t i = (route.empty() ? 0 : 1); i < (std::int32_t)arm.size(); i++) {
+					route.push_back(arm[i]);
+				}
+				cur = dest;
+				firstArm = false;
 			}
 
-			if (dist2[targetIdx] >= 0) {
-				reconstruct(parent2.get(), farIdx, targetIdx, pathBack);
+			// If the way out overshoots just past the finish (e.g., a catch-spring sits a couple of tiles beyond
+			// the finish warp), end the route at the finish instead of looping out to it and back. Only with a
+			// single turning point - once the line is laid out through several sections, passing near the finish
+			// on the way is what it is meant to do.
+			if (vias.size() <= 1 && target.X == finishTile.X && target.Y == finishTile.Y) {
+				for (std::int32_t i = (std::int32_t)route.size() / 2; i < (std::int32_t)route.size(); i++) {
+					std::int32_t ddx = route[i].X - finishTile.X, ddy = route[i].Y - finishTile.Y;
+					if (std::max(ddx < 0 ? -ddx : ddx, ddy < 0 ? -ddy : ddy) <= 2) {
+						route.erase(route.begin() + (i + 1), route.end());
+						Vector2i last = route[route.size() - 1];
+						if (last.X != finishTile.X || last.Y != finishTile.Y) {
+							route.push_back(finishTile);
+						}
+						break;
+					}
+				}
 			}
+			if (route.size() < 2) {
+				return false;
+			}
+			routeNoWarp = noWarp;
+			return true;
+		};
+
+		SmallVector<Vector2i, 0> vias, route;
+		if (farTile.X != target.X || farTile.Y != target.Y) {
+			vias.push_back(farTile);
+		}
+		if (!traceRouteVia(vias, false, route)) {
+			LOGW("Cannot auto-place minimap track: could not trace a route through the level");
+			return;
 		}
 
-		// Assemble the route spawn -> far -> finish. But if the far tile overshoots just past the finish (e.g., a
-		// catch-spring sits a couple of tiles beyond the finish warp), end the route at the finish instead of
-		// looping out to far and back.
-		SmallVector<Vector2i, 0> route;
-		std::int32_t trimAt = -1;
-		if (target.X == finishTile.X && target.Y == finishTile.Y) {
-			for (std::int32_t i = (std::int32_t)pathOut.size() / 2; i < (std::int32_t)pathOut.size(); i++) {
-				std::int32_t ddx = pathOut[i].X - finishTile.X, ddy = pathOut[i].Y - finishTile.Y;
-				if (std::max(ddx < 0 ? -ddx : ddx, ddy < 0 ? -ddy : ddy) <= 2) {
-					trimAt = i;
+		// The route so far is the cheapest way from the spawn to the finish, and the cheapest way is not the track.
+		// A level whose start sits next to a spring or a set of poles lets the line climb straight out and run to
+		// the exit along the top, leaving the whole section the player is meant to run first untouched - reported
+		// on `monk/05_damn`, where the track should sweep east along the floor, ride the spring at its end and come
+		// back west along the shelf before it climbs, and the traced line instead turned round at the spawn and
+		// went up. The two are both walkable; the one the level is built around is simply longer, so no pricing of
+		// edges will ever choose it.
+		//
+		// What tells them apart is coverage. Measure how far each reachable tile is from the line - in tiles, along
+		// the walkable region, so a pocket behind a wall is far away even where it looks close - and gather what is
+		// left over into the sections it forms. A section big enough to be a part of the level rather than a corner
+		// of it is one the line is missing, so the line is laid out through it as well, and the whole is measured
+		// again. A lab like `prince/06_labrat2` has its rooms spread over half a dozen of these and needs several
+		// passes before the line runs where the level does; a route that already covers its level gains nothing on
+		// the first pass and is left exactly as it was.
+		//
+		// The turning points are kept in the order the player reaches them, nearest first, which is the order a
+		// track is run in - and each arm is traced around what the ones before it already cover, so the line comes
+		// back along the other side instead of retracing itself.
+		constexpr std::int32_t CoverageDetourTiles = 10;		// How far off the line a tile has to be to count as missed
+		constexpr std::int32_t CoverageDetourPercent = 10;		// How much of the level has to be off the line to lay it out again
+		constexpr std::int32_t MinCoverageSection = 48;			// How big a missed section has to be to be worth going through
+		constexpr std::int32_t MaxCoverageDetours = 4;			// How many of them the line is laid out through at most
+		constexpr std::int32_t MaxCoverageTries = 3;			// How many sections are tried per pass before giving up
+		{
+			std::unique_ptr<std::int32_t[]> offRoute = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+			std::unique_ptr<std::uint8_t[]> section = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
+			std::queue<std::int32_t> open;
+			SmallVector<Vector2i, 0> candidate, covered;
+			SmallVector<Pair<std::int32_t, Vector2i>, 0> candidates;
+
+			for (std::int32_t pass = 0; pass < MaxCoverageDetours; pass++) {
+				for (std::int32_t i = 0; i < totalTiles; i++) { offRoute[i] = -1; section[i] = 0; }
+				for (const auto& r : route) {
+					std::int32_t ri = r.X + r.Y * W;
+					if (offRoute[ri] < 0) { offRoute[ri] = 0; open.push(ri); }
+				}
+				while (!open.empty()) {
+					std::int32_t ci = open.front();
+					open.pop();
+					std::int32_t cx = ci % W, cy = ci / W;
+					for (std::int32_t k = 0; k < 4; k++) {
+						std::int32_t nx = cx + (k == 0 ? -1 : k == 1 ? 1 : 0), ny = cy + (k == 2 ? -1 : k == 3 ? 1 : 0);
+						if (nx < 0 || ny < 0 || nx >= W || ny >= H) { continue; }
+						std::int32_t ni = nx + ny * W;
+						if (offRoute[ni] >= 0 || dist[ni] < 0) { continue; }
+						offRoute[ni] = offRoute[ci] + 1;
+						open.push(ni);
+					}
+				}
+
+				std::int32_t missed = 0;
+				candidates.clear();
+				for (std::int32_t seed = 0; seed < totalTiles; seed++) {
+					if (offRoute[seed] < CoverageDetourTiles || section[seed] != 0) {
+						continue;
+					}
+					std::int32_t size = 0, off = 0;
+					Vector2i best(-1, -1);
+					section[seed] = 1;
+					open.push(seed);
+					while (!open.empty()) {
+						std::int32_t ci = open.front();
+						open.pop();
+						size++;
+						// A turning point has to be somewhere the player can stand, or the line ends in mid-air
+						if (offRoute[ci] > off && (standMap[ci] != 0 || liftMap[ci] != 0 || tubeMap[ci] != 0)) {
+							off = offRoute[ci];
+							best = Vector2i(ci % W, ci / W);
+						}
+						std::int32_t cx = ci % W, cy = ci / W;
+						for (std::int32_t k = 0; k < 4; k++) {
+							std::int32_t nx = cx + (k == 0 ? -1 : k == 1 ? 1 : 0), ny = cy + (k == 2 ? -1 : k == 3 ? 1 : 0);
+							if (nx < 0 || ny < 0 || nx >= W || ny >= H) { continue; }
+							std::int32_t ni = nx + ny * W;
+							if (section[ni] != 0 || offRoute[ni] < CoverageDetourTiles) { continue; }
+							section[ni] = 1;
+							open.push(ni);
+						}
+					}
+					missed += size;
+					if (best.X >= 0 && size >= MinCoverageSection) {
+						candidates.push_back(pair(size, best));
+					}
+				}
+				// Enough of the level has to be off the line for it to be worth laying out again
+				if (candidates.empty() || missed * 100 < regionSize * CoverageDetourPercent) {
+					break;
+				}
+				// Biggest section first, and on to the next one when the line cannot be traced through it - the
+				// point farthest from the line can be a dead end that nothing leads on from
+				std::sort(candidates.begin(), candidates.end(), [](const Pair<std::int32_t, Vector2i>& a, const Pair<std::int32_t, Vector2i>& b) {
+					return a.first() > b.first();
+				});
+				bool laidOut = false;
+				for (std::int32_t c = 0; c < (std::int32_t)candidates.size() && c < MaxCoverageTries && !laidOut; c++) {
+					// Reached in the order the player reaches them
+					candidate = vias;
+					candidate.push_back(candidates[c].second());
+					std::sort(candidate.begin(), candidate.end(), [&](Vector2i a, Vector2i b) {
+						return dist[a.X + a.Y * W] < dist[b.X + b.Y * W];
+					});
+					if (!traceRouteVia(candidate, true, covered)) {
+						continue;
+					}
+					LOGI("Auto-placing minimap track: {} of {} tiles lay {}+ tiles off the route, the biggest section {} of them; laying it out through [{}, {}] as well",
+						missed, regionSize, CoverageDetourTiles, candidates[c].first(), candidates[c].second().X, candidates[c].second().Y);
+					vias = candidate;
+					route = covered;
+					farTile = vias[vias.size() - 1];
+					farIdx = farTile.X + farTile.Y * W;
+					laidOut = true;
+				}
+				if (!laidOut) {
 					break;
 				}
 			}
-		}
-		if (trimAt >= 0) {
-			for (std::int32_t i = 0; i <= trimAt; i++) {
-				route.push_back(pathOut[i]);
-			}
-			Vector2i last = route[route.size() - 1];
-			if (last.X != finishTile.X || last.Y != finishTile.Y) {
-				route.push_back(finishTile);
-			}
-		} else {
-			for (std::int32_t i = 0; i < (std::int32_t)pathOut.size(); i++) {
-				route.push_back(pathOut[i]);
-			}
-			for (std::int32_t i = 1; i < (std::int32_t)pathBack.size(); i++) {
-				route.push_back(pathBack[i]);
-			}
-		}
-
-		if (route.size() < 2) {
-			LOGW("Cannot auto-place minimap track: could not trace a route through the level");
-			return;
 		}
 
 		// Expand jumps (non-adjacent steps) into up-over-down arcs so the minimap draws the player going up and
@@ -1655,6 +1956,12 @@ namespace Jazz2::Multiplayer
 				std::int32_t ddx = b.X - a.X, ddy = b.Y - a.Y;
 				std::int32_t adx = (ddx < 0 ? -ddx : ddx), ady = (ddy < 0 ? -ddy : ddy);
 				if (adx > 1 || ady > 1) {
+					// The drawn arc is looked for the way the search itself decides what the player can pass
+					// through, at sub-tile precision: jumpApex() is deliberately stricter, because it also
+					// *validates* jumps, and a step it refuses here left the line as a straight diagonal from
+					// take-off to landing - which is what drew it through the walls on `prince/06_labrat2`. Where
+					// the two disagree it is the search that was right: the step is in the route because a path
+					// through those tiles exists, so the line has to be drawn going round rather than not at all.
 					std::int32_t apexY = jumpApex(a.X, a.Y, ddx, ddy, BoostHeight);
 					std::int32_t topY = (a.Y < b.Y ? a.Y : b.Y);
 					if (apexY != INT32_MAX && apexY < topY) {
@@ -1667,6 +1974,113 @@ namespace Jazz2::Multiplayer
 			}
 			routeArc.push_back(b);
 			routeArcGroup.push_back(curGroup);
+		}
+
+		// Whatever is still drawn across solid rock is re-drawn through the open space around it. The arc above is
+		// an up-over-down corner, which cannot describe a flight that rises and travels at once - a spring launch
+		// is a parabola, and trace() finds it by simulating the physics, not by any shape the minimap can draw - so
+		// a step like that kept its straight line from take-off to landing and cut through everything between
+		// (`prince/06_labrat2`). Since the step is in the route, a way through does exist; searching the open tiles
+		// between its ends finds one, and drawing that keeps the line inside the level even where it cannot look
+		// like the jump it stands for.
+		{
+			constexpr std::int32_t MaxDetourVisited = 6000;	// A line long enough to need more than this is left alone
+			constexpr std::int32_t DetourMargin = 24;		// How far outside the step's own box the way round may go
+			std::unique_ptr<std::int32_t[]> from = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
+			auto lineOpen = [&](Vector2i p, Vector2i q) -> bool {
+				std::int32_t steps = std::max(std::abs(q.X - p.X), std::abs(q.Y - p.Y));
+				for (std::int32_t s = 1; s < steps; s++) {
+					if (!occupiable(p.X + (q.X - p.X) * s / steps, p.Y + (q.Y - p.Y) * s / steps)) {
+						return false;
+					}
+				}
+				return true;
+			};
+			SmallVector<Vector2i, 0> fixedArc;
+			SmallVector<std::uint8_t, 0> fixedGroup;
+			SmallVector<Vector2i, 0> detour;
+			fixedArc.push_back(routeArc[0]);
+			fixedGroup.push_back(routeArcGroup[0]);
+			for (std::int32_t i = 1; i < (std::int32_t)routeArc.size(); i++) {
+				Vector2i a = routeArc[i - 1], b = routeArc[i];
+				bool crosses = false;
+				if (routeArcGroup[i] == routeArcGroup[i - 1]) {
+					std::int32_t steps = std::max(std::abs(b.X - a.X), std::abs(b.Y - a.Y));
+					for (std::int32_t s = 1; s < steps && !crosses; s++) {
+						crosses = !occupiable(a.X + (b.X - a.X) * s / steps, a.Y + (b.Y - a.Y) * s / steps);
+					}
+				}
+				if (crosses) {
+					std::int32_t minX = std::max<std::int32_t>(0, std::min(a.X, b.X) - DetourMargin);
+					std::int32_t maxX = std::min<std::int32_t>(W - 1, std::max(a.X, b.X) + DetourMargin);
+					std::int32_t minY = std::max<std::int32_t>(0, std::min(a.Y, b.Y) - DetourMargin);
+					std::int32_t maxY = std::min<std::int32_t>(H - 1, std::max(a.Y, b.Y) + DetourMargin);
+					std::int32_t startIdx2 = a.X + a.Y * W, targetIdx2 = b.X + b.Y * W, visited = 0;
+					std::queue<std::int32_t> open;
+					open.push(startIdx2);
+					from[startIdx2] = -1;	// Marked, no predecessor
+					bool found = false;
+					while (!open.empty() && visited < MaxDetourVisited && !found) {
+						std::int32_t ci2 = open.front();
+						open.pop();
+						visited++;
+						std::int32_t cx = ci2 % W, cy = ci2 / W;
+						for (std::int32_t dy = -1; dy <= 1 && !found; dy++) {
+							for (std::int32_t dx = -1; dx <= 1; dx++) {
+								std::int32_t nx = cx + dx, ny = cy + dy;
+								if ((dx == 0 && dy == 0) || nx < minX || ny < minY || nx > maxX || ny > maxY) {
+									continue;
+								}
+								std::int32_t ni = nx + ny * W;
+								if (from[ni] != 0 || !occupiable(nx, ny)) {
+									continue;
+								}
+								if (dx != 0 && dy != 0 && (!occupiable(cx + dx, cy) || !occupiable(cx, cy + dy))) {
+									continue;	// Diagonally only past two open corners
+								}
+								from[ni] = ci2 + 1;
+								if (ni == targetIdx2) { found = true; break; }
+								open.push(ni);
+							}
+						}
+					}
+					if (found) {
+						detour.clear();
+						for (std::int32_t cur = targetIdx2; cur != startIdx2; cur = from[cur] - 1) {
+							detour.push_back(Vector2i(cur % W, cur / W));
+						}
+						std::reverse(detour.begin(), detour.end());
+						detour.insert(detour.begin(), a);
+						// The path came out of a grid search, so it is a staircase. Pull it taut - keep only the
+						// corners it needs to stay inside the open tiles - or the line is a flight of steps and
+						// every step of it becomes a checkpoint.
+						std::int32_t last = (std::int32_t)detour.size() - 1;
+						for (std::int32_t k = 0; k < last; ) {
+							std::int32_t next = k + 1;
+							for (std::int32_t m = last; m > k + 1; m--) {
+								if (lineOpen(detour[k], detour[m])) {
+									next = m;
+									break;
+								}
+							}
+							fixedArc.push_back(detour[next]);
+							fixedGroup.push_back(routeArcGroup[i]);
+							k = next;
+						}
+					}
+					// The marks only ever cover the searched box, so clearing that is enough
+					for (std::int32_t y = minY; y <= maxY; y++) {
+						for (std::int32_t x = minX; x <= maxX; x++) { from[x + y * W] = 0; }
+					}
+					if (found) {
+						continue;
+					}
+				}
+				fixedArc.push_back(b);
+				fixedGroup.push_back(routeArcGroup[i]);
+			}
+			routeArc = std::move(fixedArc);
+			routeArcGroup = std::move(fixedGroup);
 		}
 
 		// Minimap extent = the route's bounding box (padded for track width), plus start markers

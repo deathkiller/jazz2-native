@@ -296,6 +296,68 @@ ground. The sweep shows it plainly --- the error follows the release tick betwee
 pairs of adjacent release ticks collapse onto one frame @m_span{m-text m-dim} (`ap_r03`/`ap_r04` both give
 70.96, `ap_r17`/`ap_r18` both 119.00) @m_endspan which no change to the rise rule can separate.
 
+@subsection movement-accuracy-air-copterdeny What refuses the copter, and the rule that was invented to explain it
+
+Reported from play: *"pressing jump for copter too early, before it's available, removes the ability to copter
+out of that jump entirely --- especially from a short jump"*. It was a real defect, and the rule behind it was
+one this page used to state as measured.
+
+The `cp_tap*` family taps every six ticks from a stated start and never stops. `cp_tap55` and `cp_tap60` begin
+tapping during the rise and the original refuses them for their **whole** airtime, eleven later presses
+included, even though those presses land squarely in the window `cp_tap65` engages in. The rule written down
+for that was a single attempt per airtime, spent on the first press after leaving the ground and gone whether
+or not it succeeded. It fits both scenarios exactly. It is also wrong, and nothing in that family could show
+it, because all five tap continuously and all five share one jump.
+
+`cp_kill47`..`cp_kill80` press **once** at a stated point and then stop until tick 80, and `cp_sj_*` do the
+same out of a two-tick jump rather than a five-tick one. Together the twelve settle it:
+
+Scenario | Early press | Later press | Original
+-------- | ----------- | ----------- | --------
+`cp_tap55` | taps from 55, never stops | --- | never engages
+`cp_tap60` | taps from 60, never stops | --- | never engages
+`cp_tap65` | none | first tap at 65 | **engages at 66**
+`cp_kill80` | none | tap train from 80 | never engages
+`cp_kill47` | inside the jump's own hold, no fresh press | tap train from 80 | never engages
+`cp_kill52` | one tap at 52, during the rise | tap train from 80 | **engages at 81**
+`cp_kill58` | one tap at 58, during the rise | tap train from 80 | **engages at 81**
+`cp_sj_early` | taps from 50, never stops | --- | never engages
+`cp_sj_late` | none | first tap at 60 | **engages at 61**
+`cp_sj_hold` | key never released | --- | never engages
+
+@m_class{m-noindent}
+
+A spent attempt cannot produce rows 6 and 7: both press during the rise and both copter perfectly well
+afterwards. What produces all twelve is the ordinary **jump cooldown**, with one detail this engine did not
+have --- it is re-armed by the key being *down*, not by a jump having happened. A press that does nothing
+still pushes the window out, so a tap train every six ticks holds it open for the entire airtime however
+slowly the player ends up falling, while a single tap and then silence lets it expire. Rows 4 and 5 are
+refused by the speed bound instead, being nineteen ticks into the fall.
+
+The length is bracketed rather than read: 11 ticks after the key was last down is refused, 14 and 16 are
+accepted. @ref Jazz2::Actors::Player::LegacyJumpCooldown is 12.5, the midpoint. The engine's own 10 frames is
+11.67 ticks --- inside the bracket, but sitting *on* the refused edge, and a boundary that tight flips on
+which frame a 70 Hz press lands in.
+
+@par A second mechanic fell out of the same set
+`cp_kill52`'s apex is **7.4 px higher** than the identical jump without its tap, and `cp_kill58`'s 1.4 px
+higher. Pressing jump again during a rise puts the *held* rise gravity back: the original's two ticks after
+that tap step by 0.375 where the untapped jump steps by 0.875. There is no latch in the original at all, it
+simply asks whether the key is down this tick, and a flag set at the release can never un-set itself. Every
+scenario that presses once and releases once behaves identically either way, which is why `ap_r01`..`ap_r30`
+measured the two rates cleanly without this ever showing. It is kept to the rises a **jump** owns
+@m_span{m-text m-dim} (@cpp _riseOwnedByJump @ce) @m_endspan, because the other launch sources are not
+live-key: a spring holds the light rate with nothing pressed at all, an enemy bounce and an RF blast both
+hold the heavy one with jump still held, and a pole depends on how the player reached it.
+
+@par What is still short
+`cp_kill52` and `cp_kill58` are the two of twelve that still differ, and the cause is the standing jump's
+known 4 px rather than anything about the copter. The original engages them at a descent of 2.25 px/tick and
+refuses `cp_kill80` at 2.375, one eighth of a pixel apart; this engine's apex on the same jump is 3.5 px
+lower, which puts it about a tick and a half further into the fall and reads 2.41 where the original reads
+2.25. Fitting the bound to that would be fitting to this engine's own phase error. See *Standing jump is 3%
+short* under @ref movement-accuracy-gaps.
+
 @subsection movement-accuracy-air-turn Air turn-around, the one that took five attempts
 
 Since ground and air share one table, turning around in the air is symmetric and keeps its momentum, which
@@ -310,6 +372,89 @@ offsets, *forward* of takeoff: walking jump and turn **+114.8 px**, dashing and 
 @m_span{m-text m-dim} (a no-turn walking jump lands at +312) @m_endspan. The air acceleration is simply too
 weak --- a full reversal takes 43.7 ticks walking and 87.4 dashing. Chasing the belief instead of the
 measurement cost several rounds of work.
+
+@section movement-accuracy-water Swimming
+
+Water is a third medium with its own table, and this engine had none: horizontally it reached straight for
+the walk cap, vertically for the Reforged @cpp MaxRunningSpeed @ce unscaled, and Run did nothing at all in
+either axis. Swimming was therefore twice as fast as it should be with nothing held, and holding Run added
+nothing on top of it.
+
+Quantity | 3.8.0 | Original (70 Hz) | Now (60 Hz) | How far 3.8.0 was off | How far Now is off
+-------- | ----- | ---------------- | ----------- | --------------------- | ------------------
+Swim cap, no Run | 4.0 horiz / 4.0 vert @m_span{m-text m-dim} (unscaled) @m_endspan | **2.0** @m_span{m-text m-dim} (both axes) @m_endspan | 2.3333 | **+100% / +71%** | exact
+Swim cap, Run held | unchanged | **4.0** @m_span{m-text m-dim} (**×2**) @m_endspan | 4.6667 | **−50%** | exact
+Horizontal acceleration | @cpp LegacyWalkAccel @ce = 0.1831 | **0.0625** @m_span{m-text m-dim} (the same with Run) @m_endspan | 0.0851 | **+193%** | exact
+Vertical acceleration | 0.2 @m_span{m-text m-dim} (unscaled) @m_endspan | **0.125** @m_span{m-text m-dim} (**×2** with Run) @m_endspan | 0.1701 | +37% | exact
+Holding nothing | decayed to zero | **sinks at 1/64 for ever** | sinks | wrong shape | exact
+Float-up field, submerged | force towards −6, then decayed | @cpp ys = -8 @ce, as in air | −9.3333 | wrong shape | exact
+
+@subsection movement-accuracy-water-cap Water is the vine rule, on both axes
+
+Half the walk cap on its own, exactly the walk cap with Run --- the same rule
+@ref movement-accuracy-objects-poles records for a vine, arrived at from a completely different family. What
+makes it readable at all is that the caps are **not** round numbers: the `wt_swim_*` set settles at 2.0625
+px/tick swimming right and 2.1094 swimming up, 4.0625 and 4.2344 with Run. Those fractions are the finding
+rather than noise in it. The original tests the cap *before* adding rather than clamping after, so the speed
+always ends one acceleration step past it, and subtracting that step off each of the four figures leaves
+exactly 2 and 4 in every direction.
+
+Land does not do this --- `g_walk` tops out at 4.0000 and `g_dash` at 16.0000, never a fraction over --- so
+the overshoot is water's own arithmetic and is reproduced here rather than generalised.
+
+The two axes differ in how they *reach* the cap, and this is the part no prior guess would have produced:
+horizontal acceleration is **the same with Run held**, vertical **doubles**. `wt_swim_right` and
+`wt_swim_right_run` share an identical 0.0625 ladder for their first 32 ticks and part company only when the
+slower one stops at 2; `wt_swim_up` and `wt_swim_up_run` diverge on the second tick. So Run buys a higher
+ceiling horizontally and a higher ceiling *and* a faster climb to it vertically.
+
+@subsection movement-accuracy-water-gravity The pull is always there, and the stroke is added to it
+
+@ref Jazz2::Actors::Player::LegacyWaterGravity had already been measured for the fall, and the `wt_*` set
+confirms it from the other end: it is what makes the two vertical caps differ. 2.109375 px/tick climbing
+against 2.140625 sinking is 0.125 either side of 1/64 --- the stroke once minus the pull, once plus it. Both
+are the *net* figure, which is why the cap has to be built from the net acceleration and not from the stroke
+if the asymmetry is to come out right.
+
+It also answers what a player holding nothing does, and the answer is that the original **sinks, slowly and
+for ever**. Measured on the tail of `wt_float_up`, where the ascent the field assigned bleeds off at exactly
+1/64 a tick once the column ends. This engine decayed the speed to zero and left the player hanging
+motionless in the water.
+
+Standing on the bottom is a separate case and the original reads @cpp ys = 0.0000 @ce for every tick of
+`wt_swim_down`, Run held or not. Nothing in this engine was taking that step of the pull back off a player
+who was not moving, because @ref Jazz2::Actors::Player::OnHandleWater() clears
+@ref Jazz2::Actors::ActorState::ApplyGravitation for a swimmer and with it the landing path that normally
+would --- so it accumulated, invisibly, and would have been handed to the player the moment they walked off
+a ledge.
+
+@subsection movement-accuracy-water-floatup A float-up field works underwater, and it beats every input
+
+The reported *"Float Up doesn't work correctly under water, mainly when Up or Down is also pressed"*. The
+original makes no distinction at all: it crosses the submerged ten-tile column at the same flat −8.0 px/tick
+it uses in air, on every tick of all four `wt_float_up*` scenarios --- swimming up, swimming down, and with
+Run held. The field simply wins.
+
+This engine's legacy assignment was gated on @cpp ApplyGravitation @ce, which water clears, so a submerged
+field fell through to a *force* towards −6 that the water handling then decayed away again. The player
+crawled up at a tenth of the speed and **stalled 76 px short of the surface**, where the original reaches it
+in 53 ticks.
+
+Excluding the field from the water model is not enough on its own, and this is worth recording because the
+first attempt did exactly that and still came out wrong: merely falling through to the generic branch is not
+"leaving it alone". Its @cpp Deceleration @ce shaved the assignment to 7.811 px/tick of the original's 8,
+every tick, for a 2.4% deficit that survived two rounds of measurement before it was noticed.
+
+@m_class{m-block m-warning}
+
+@par The sawtooth this family seemed to show was the analysis, not the engine
+The first capture was taken at the monitor's 144 Hz, and read `ys` = −4.0000 flat while `y` alternated
++1.675 and −5.004 px --- which is not something any movement model can do. It was written up here as the
+trace sink reordering rows under @cpp DEATH_TRACE_ASYNC @ce, and that was wrong. Above 70 FPS a capture has
+more than one row per tick, 2.06 of them at 144, and `Sort-Object` is not stable in Windows PowerShell 5.1,
+so sorting by `tick` shuffles the rows *within* each tick. The same capture read in file order has **zero**
+out-of-order `ms` steps in 676,872 and a median frame of 7.00 ms against a nominal 6.94. Do not sort a
+capture by `tick`; sort by `ms`, which is unique per row, or leave it in the order it came out.
 
 @section movement-accuracy-objects Objects
 
@@ -2045,6 +2190,48 @@ At 60 FPS this engine cannot reproduce the top of the curve, and that is arithme
 one frame there is 1.167 of the original's ticks, so a one-tick cadence is not available at all and `g_dash`
 measures a 4.69-tick loop against the original's 4.00. At 144 it is.
 
+@subsection movement-accuracy-stopanim-springrate The spring pose is played at the speed of the launch
+
+Reported as *"the animation speed when launched from a vertical spring is sometimes too slow"*, and
+*sometimes* is the word: the pose obeys the same @cpp 12 - speed @ce rule
+@ref movement-accuracy-stopanim-runrate records for the ground runs, off the **vertical** speed rather than
+the horizontal one --- so a weak launch looked right and a strong one ran at less than half the original's
+rate. This engine played it at the animation's own flat rate, eight frames over half a second, which is 4.38
+ticks a frame for Jazz and Spaz.
+
+Read off the three colours as how long each frame of the original's pose 65 is held against the `ys` it was
+entered at:
+
+Entry `ys` | 17.4 … 9.9 | 9.4 | 9.1 | 8.25 | 8.0 | 6.4 | 6.1 | 3.4
+---------- | ---------- | --- | --- | ---- | --- | --- | --- | ---
+Ticks held | **2** | 3 | 3 | 5 | 5 | 8 | 8 | 8
+
+@m_class{m-noindent}
+
+Those are **not** @cpp 12 - speed @ce at the entry tick and are not meant to be. The speed decays through the
+frame, so what a hold measures is the integral of the rate --- which is exactly what an engine that sets a
+duration every frame produces by construction, and the check is that the integral reproduces every row:
+entering at 8.25 and decaying at the held rise rate crosses a frame boundary in 5 ticks, at 9.375 in 3, and
+at 6.375 in 8 once the ceiling caps it.
+
+Both ends are real limits rather than safety clamps. The floor of **2** has ten measurements behind it,
+every entry from 9.9 up to 17.4 giving the same hold; the ceiling of **8** has one, an entry at 3.375 where
+@cpp 12 - speed @ce predicts nine and the original holds eight. Blue now runs 1-2-2-2-1-2-2-1-2-2-4-5-6-8
+against the original's 1-2-2-2-2-2-2-2-2-2-2-2-3-5-8-7, and green 1-4-6-8 against 1-3-5-8.
+
+@subsection movement-accuracy-stopanim-fallrate The falling animation was 22% too slow
+
+Found while measuring the spring above and not reported by anyone, which is the useful part: the fall pose is
+a flat **9 ticks per frame** in the original, three frames, at every speed from 0.125 to 7.875 px/tick --- it
+is one of the poses that does *not* take its rate from the speed. This engine used the sprite's own duration,
+half a second over three frames, which is 11.67 ticks a frame.
+
+Fixed in the metadata rather than in code, which is where a fixed rate belongs, and so it applies in both
+modes: @cpp "FrameRate": 12.97 @ce on each character's `Fall`, from @cpp 5 / (3 * 9 / 70.021) @ce. Lori's
+sprite is slightly faster than the other two to begin with (0.4531 s against 0.5) and the same figure covers
+her, because the rate wanted is per frame and all three have three of them. `a_jump` now holds 8-10-9-8-9
+against the original's 9-9-9-9, where it held 11-11-11-12.
+
 @subsection movement-accuracy-stopanim-doublejump The double-jump pose lasts the rise, not the animation
 
 The same mistake, in the other direction. Spaz's double jump shows `spring` for **11 ticks** in the original
@@ -2159,6 +2346,19 @@ same residual the camera lead had to be re-keyed around, in @ref movement-accura
 <b>1b. Do the four rates agree with *each other*?</b> Positions compared on a shared tick grid, with two runs
 at the same rate as the control:
 
+@m_class{m-block m-success}
+
+@par Re-measured after the 2026-09-29 work, and unchanged
+That session added a water model, a copter engagement window, a speed-driven spring animation rate and a
+distance floor on the sidekick --- four new time-dependencies, so all four rates were swept again against
+the same build. The headline is **12.68 px** median across 474 scenarios with **140** agreeing within a
+pixel, against the 12.70 px and 119 / 406 below: identical, with 68 more scenarios in the set. Every
+invariant in the table further down holds to its old figure, the sidekick improving slightly
+@m_span{m-text m-dim} (0.9% to 0.8%, which is the distance floor doing what it was added for) @m_endspan,
+and the new quantities join them --- swimming 0.3% across the four rates with and without Run. All four held
+their target rate to within 0.06 ms of the median frame, checked before anything was compared, because
+@cpp /max-fps @ce is a cap and not a floor and four instances were sharing one machine.
+
 Compared | Median worst per-tick difference | Agree within 1 px
 -------- | -------------------------------- | -----------------
 <b>Same rate, two runs</b> | **0.34 px** | **324 / 406**
@@ -2197,6 +2397,8 @@ Dash distance @@ 3 s | 1580.6 | 1584.3 | 1589.6 | 1598.0 | 1.1%
 Double jump height | 198.2 | 200.5 | 202.1 | 201.9 | 1.9%
 Uppercut height | 237.1 | 228.0 | 228.3 | 227.4 | 4.1%
 Tap jump height | 81.5 | 76.2 | 76.2 | 77.3 | 6.5%
+Swim distance @@ 11 s | 1619.1 | 1618.0 | 1622.4 | 1623.4 | **0.3%**
+Swim distance, Run held | 3116.4 | 3113.9 | 3122.3 | 3124.5 | **0.3%**
 
 @m_class{m-block m-info}
 
@@ -2325,6 +2527,39 @@ Copter rise | **Largely resolved by the double-jump-phase fix, and the residual 
 ~~Float-up areas barely lifted~~ | **Resolved.** They assign a fixed rise speed while the player is inside; this engine applied a continuous force that oscillated around zero instead. Riding a ladder of them gained 149.8 px against the original's 520.3, and is now 520.7. See @ref movement-accuracy-objects-floatup.
 ~~Float-up: gravity during the held rise~~ | **Resolved, and the cost of doing it was overestimated.** While a float area holds the speed the original travels **exactly** the speed it assigned --- 8.0 px per tick, with no gravity that tick. Ours applied the usual velocity-Verlet half-step and travelled 7.79 in the original's units, 2.7% short, for the reason that only shows up once it is written down: @ref Jazz2::Actors::Player::LegacyFloatUpSpeed is *equal* to the applied rise cap, so there is no headroom for the half-step to be clamped back off. Every other launch is assigned above the cap and therefore travels the full 8 whatever the half-step does. This entry said fixing it would mean "a flag through shared movement code"; it does not --- @ref Jazz2::Actors::Player::GetGravityModifier() is already the per-source gravity hook, and returning zero from it covers both places gravity lands, the half-step before the move and the application after it. The flag it reads is sampled in @ref Jazz2::Actors::Player::OnHandleAreaEvents(), which runs at the *end* of the frame, so what it holds during a move is the previous frame's sample --- the same order the speed it guards is written and read in.
 ~~Float-up: which rise gravity the exit decays at~~ | **Resolved.** Leaving a float area, the original decays at **0.875 whenever jump is not being held** --- including when it was never pressed at all, which ours treated as "held" and decayed at 0.375. It is a **fifth launch source** for @ref movement-accuracy-objects-poleascent's per-source table, and the one whose answer is simply the live key state. The flag could not be retuned: @cpp _jumpReleased @ce is shared with the spring and pole sources, where "nothing pressed" measures 0.375. The ascent now remembers that it came from a float area @m_span{m-text m-dim} (@cpp _riseFromFloatUp @ce) @m_endspan and reads the live key only in that case. `fu_col_none` decays at 0.876 against 0.875 and eases at 0.626 against 0.625; its peak overshoot fell from 35 px above the original to 13.6 px below, the remainder being *where* the player leaves the column rather than how the rise decays.
+~~Swimming had no model of its own~~ | **Resolved.** Horizontally it reached for @ref Jazz2::Actors::Player::LegacyWalkSpeed and vertically for the Reforged @cpp MaxRunningSpeed @ce unscaled, so a swim with nothing held ran at **twice** the original's speed and Run --- which the water branch explicitly excluded from the dash --- could add nothing on top of it. The original is the vine rule on both axes: half the walk cap alone, exactly the walk cap with Run. What made it readable is that the caps are not round: 2.0625 and 4.0625 horizontally, 2.1094 and 4.2344 vertically, each exactly one acceleration step past 2 or 4 because the cap is tested before the add. Land clamps at exactly the cap @m_span{m-text m-dim} (`g_walk` 4.0000, `g_dash` 16.0000) @m_endspan, so the overshoot is water's own and is reproduced rather than generalised. Horizontal acceleration is 1/16 and **does not change with Run**; vertical is 1/8 and doubles. `wt_swim_right` now travels 1622.6 px against 1614.9 and `wt_swim_right_run` 3122.9 against 3115.9, from 3155.2 against 1614.9. See @ref movement-accuracy-water.
+~~Holding nothing in water hung motionless~~ | **Resolved.** The original sinks at @ref Jazz2::Actors::Player::LegacyWaterGravity for ever; this engine decayed the speed to zero. The same term is what makes the two vertical caps differ --- 2.109375 climbing against 2.140625 sinking is 0.125 either side of 1/64 --- so it had to be folded into the acceleration before the cap rather than applied after it. It is applied in @ref Jazz2::Actors::Player::HandleWaterAndModifierMovement() rather than left to the physics, because @ref Jazz2::Actors::Player::OnHandleWater() clears @cpp ApplyGravitation @ce for a swimmer and nothing would otherwise reach it. That same clearing is why a player standing on the bottom accumulated a step of the pull they were never given back: `wt_swim_down` and `wt_swim_down_run` now both score **exactly 0.0 px/s**.
+~~Float-up areas did nothing useful under water~~ | **Resolved.** Reported as *"Float Up doesn't work correctly under water, mainly when Up or Down is also pressed"*. The original makes no distinction at all --- it crosses a submerged ten-tile column at the same flat −8.0 px/tick it uses in air, on every tick of all four `wt_float_up*` scenarios, swimming up, swimming down or with Run held. The field beats every input. Here the legacy assignment was gated on @cpp ApplyGravitation @ce, which water clears, so a submerged field fell through to a force towards −6 that the water handling then decayed away: the player crawled up at a tenth of the speed and stalled **76 px short of the surface** where the original reaches it in 53 ticks. Excluding the field from the water model was not enough on its own --- falling through to the generic branch let its @cpp Deceleration @ce shave the assignment to 7.811 of the original's 8, every tick. `wt_float_up_u` and `wt_float_up_d` now track the original's height to within a few px throughout.
+~~Bolly's chain cannot be shot~~ | **Implemented from a report.** A boss is out of reach of this harness --- it drives one player through one test level --- so the rule below comes from somebody who knows the original rather than from a trace. Every part of Bolly was @cpp IsInvulnerable @ce with @cpp INT32_MAX @ce health and @cpp CanCollideWithShots = false @ce.<br/><br/>The difficulty lies entirely in **what** has to be hit rather than in how many times, so @ref Jazz2::Actors::Bosses::Bolly::ChainBallHealth is **1**. Only the **balls** take shots at all, and the two small pieces between them let a shot pass straight through. Only the ball at the **free end** of what is left can be hit --- every ball further in stays invulnerable, so firing into the middle of the chain does nothing and the chain can be shortened but never cut. And a ball takes its own two pieces with it, so the chain comes off a whole segment at a time; the layout is `[piece, piece, ball]` repeating and both chain lengths are exact multiples of it, so the end is always a ball.<br/><br/>All three come apart the way an enemy does, an explosion and the sprite shredded into debris, which is drawn in @cpp BollyPart::OnPerish() @ce rather than where the segment is unhooked --- the cut pieces are *killed* rather than simply dropped so that the ball the player shot and the two that go with it take the same path. @ref Jazz2::Actors::EnemyBase::OnPerish() adds a score and nothing visible, which is why every part of this boss that wants to be seen going draws its own.
+~~The run-in-place is not synchronised in online multiplayer~~ | **Resolved, and nothing had to be sent.** Reported as *"the animation looks correct, but the speed isn't, and it would be nice to spawn the particles if possible"*, and both halves have the same cause: what a remote player receives is the **pose**, and the wind-up's speed and its sparks are driven by a charge that is local to the owner. The charge is a pure function of how long the wind-up has been up @m_span{m-text m-dim} (@cpp _revUpChargeTime / RevUpFullChargeTime @ce, incremented by `timeMult` every frame the pose is held) @m_endspan --- so a receiver counting the frames the pose has been drawn has the *identical* quantity rather than an estimate of it, and no protocol change is involved. @ref Jazz2::Actors::Multiplayer::RemoteActor now runs both from that clock, on the same "decays locally, the server sends only state changes" footing its shield and sugar rush already use. Guarded on the metadata actually holding the spark animation: `AnimState::RevUp` is a bit out of the player's own vocabulary, but a remote actor is only ever handed a state to draw and nothing says whose vocabulary it came from, so anything without that animation is left entirely alone. **Not measured against the original** --- this harness drives one player and no scenario can reach it; what is verified is that the two sides now compute the same number from the same input. This is the one item on this page whose evidence is an argument rather than a trace.
+~~Shooting from a pinball paddle~~ | **Resolved, and the answer to the question asked --- *"he can shoot there, is it correct?"* --- is no.** The original refuses the shot outright. Measured on `pb_pad_fire`, which drops the player onto the paddle exactly as `pb_pad_fall` does and then holds Fire for the rest of the window: the original's ammo reads 50 on the first tick and 50 on the last, and its pose stays **58** --- the curled ball a pole or a tube ride holds --- for the whole ride. This engine fired six shots and held @cpp Dash|Jump|Shoot @ce from the first of them onwards, which is the *"the animation looks strange"* half of the report; blocking the shot disposes of it, because there is no shooting pose to get right when there is no shot. Non-Reforged only. The pose the engine shows while riding is still a stand-in --- see the curled ball under @ref movement-accuracy-gaps --- and that is unchanged by this.
+~~Spaz freezes in the air at the end of a sidekick~~ | **Resolved, and it is a floating-point floor rather than a movement rule.** Reported as *"sometimes when sidekicking to the right on flat ground but ending in the air, Spaz freezes --- hard to reproduce, about one in twenty"*. The kick is billed for the distance it **actually travelled**, and that quantity is the difference of two level coordinates held in a `float`: out at x ~ 4000 its resolution is about half a thousandth of a pixel. The last frame of a kick is deliberately cut short to whatever budget is left, so whether that final step rounds a hair over the budget or a hair under it is a coin flip --- and under leaves a few ten-thousandths of a pixel owing, the next frame asks for a step below the resolution, the position does not change at all, `travelled` comes out as exactly zero, and the budget never reaches zero again.<br/><br/>Every detail of the report follows from that. It hangs for **two seconds** rather than for good, because `_controllableTimeout` hands control back and the move's other exit condition fires. It hangs **in the air** because gravity is off for the kick's duration. And it needs the kick to end **over a gap**, because ending on the ground puts the player on TryMoveSubstep()'s ground-bound path, which follows the floor and moves the position by more than the resolution --- breaking the stall by accident. @ref Jazz2::Actors::Player::SidekickDistanceEpsilon is 1/64 px, which clears the resolution at any coordinate a level can reach and is 1/28000 of the kick's distance.<br/><br/>**Not reproduced before fixing, and not testable after it.** A probe scenario is deterministic, so it would either land on the coin flip or not, and a run that came back clean would prove nothing either way. What the fix rests on is that a remainder below the position's own resolution provably cannot be paid down, whatever produced it. Re-running the sidekick family confirms it is neutral on every measured kick, which is the most a trace can say here.
+Firing during Lori's kick lengthens it in the original | **Open, and noticed rather than reported.** `sp_lori_side_fire` is `sp_lori_side_rel` with a four-tick shot inside the kick and nothing else changed. Without the shot both games travel ~206 px; with it the original travels **289.9** and this engine still travels 206. So a shot taken inside her kick extends it by about 84 px there and by nothing here. The scenario has been in the harness since the kick was first measured and its travel was never read against the no-shot control beside it, which is what hid it.
+~~Lori can shoot freely through her kick~~ | **Resolved, and it took a fourth scenario to become a rule rather than a coincidence.** Reported as *"she can shoot during her kick, but in Vanilla this is partially blocked during the end of it"*. The **ammo** column is the only one that tells a shot that happened from one that was refused, so all four stock a finite weapon and are read off it:
+
+Scenario | Original | Before | After
+-------- | -------- | ------ | -----
+Fire held, standing | 1 shot | 6, every 140 | 6, every 140
+Fire **tapped** every 12, standing | 49, every 12 | 64, every 12 | 64, every 12
+Fire held, kicking | 22, every 35 | 6, every 140 | **22, every 35**
+Fire **tapped** every 12, kicking | 21, every 36 | 64, every 12 | **23, every 36**
+
+@m_class{m-noindent}
+
+The last row is the one that settles it. Standing still the original fires once per press --- 49 shots off a 64-press tap train --- so nothing about it refuses a repeat. **Kicking**, the same train gets 21, on her 35-tick kick period. The limit therefore belongs to the kick and not to the key or to the weapon: each kick allows exactly one shot, taken at the first opportunity, and the rest of the kick fires nothing. That is the reported blocking seen from the inside.
+
+Without the tapped pair this was two readings and no rule, because a held key on the original's side is a script writing `keyFire = true` every tick --- so "one shot standing still" could as easily have been the probe pressing once as the game refusing to repeat, and the 22 could have been the kick clearing whatever that press set. It was left unimplemented for exactly that reason until the tap train ruled it out.
+
+The allowance is spent where the shot **leaves** rather than where the key is read, which is what makes the first kick of a run come out right: the weapon's own cooldown refuses plenty of presses and one of those must not count. `sp_lori_kick_fire` shoots at tick 31, the first kick starts at 41, and the original's next shot is at 76 with the kick --- the kick at 41 came and went inside the window the shot at 31 opened, and this engine now reproduces that gap at 46 against 45.
+
+Two differences are left and neither belongs to the kick. **Fire held standing** is 6 against 1, which is the probe artefact above seen from the other side and is not reachable with a scripted key. **Fire tapped standing** is 64 against 49: both fire once per press, and the original misses about fifteen of the 64 because its weapon cooldown is longer than the 12-tick tap period while ours is shorter. The weapon constants have never been measured and that is a separate job.
+~~The spring launch animation is too slow~~ | **Resolved, and the report's *"sometimes"* was the clue.** The pose follows the same @cpp 12 - speed @ce rule the ground runs do, off the **vertical** speed, floored at 2 ticks a frame and capped at 8 --- so a weak launch looked right and a strong one ran at less than half the original's rate, this engine having played it at the sprite's own flat 4.38. Blue now runs 1-2-2-2-1-2-2-1-2-2-4-5-6-8 against the original's 1-2-2-2-2-2-2-2-2-2-2-2-3-5-8-7. See @ref movement-accuracy-stopanim-springrate.
+~~The falling animation is 22% too slow~~ | **Resolved, and nobody reported it** --- it turned up while measuring the spring above. The original holds each of the three fall frames a flat **9 ticks** at every speed from 0.125 to 7.875 px/tick; this engine used the sprite's own half-second duration, which is 11.67. Fixed in the metadata so it applies in both modes, which is also where a fixed rate belongs. See @ref movement-accuracy-stopanim-fallrate.
+~~Lori's kick cannot change direction~~ | **Resolved, and it is one rule rather than the two the report describes.** Reported as *"in Vanilla you can change the direction of the kick mid kick, or when starting a new kick, when early enough"*. Her facing simply follows the direction key even though the move has taken control away, and her drive is re-derived from the facing on every tick it is live --- so a key that arrives while the kick is still driving reverses **that** kick, and one that arrives later launches the next one the other way. The three `sp_lori_turn*` scenarios are `sp_lori_side_hold` with Left arriving at three points of her 35-tick cycle: at tick 44, three into a kick that began at 41, the original is 69 px **left** of the start by tick 50 where this engine was still going right; at 60 and at 74 it holds its ground and the next kick goes left. All three now turn, and at the same point --- −177 against −178 px by tick 60 for the mid-kick case, −62 against −59 by tick 120 for the other two. Nothing about the speed changed; @cpp canWalk @ce was the only thing standing between the key and @cpp SetFacingLeft() @ce.
+~~The copter is denied after any early press~~ | **Resolved, and the rule it replaced was an invention of this page's own.** Reported as *"pressing jump for copter too early removes the ability to copter out of that jump entirely, especially from a short jump"*, and it was exactly that: a one-attempt-per-airtime rule, spent on the first press after leaving the ground. It fits `cp_tap55` and `cp_tap60` and nothing else, and no scenario in that family could show it, because all five tap continuously from a stated tick and all five share one jump. `cp_kill52` and `cp_kill58` press **once** during the rise, stop, and copter cleanly at tick 81 --- which a spent attempt forbids. What refuses the tapping scenarios is the ordinary jump cooldown, re-armed by the key being *down* rather than by a jump having happened, so a tap train every six ticks holds the window open for a whole airtime. Ten of the twelve scenarios now match outright, engagement tick for engagement tick. See @ref movement-accuracy-air-copterdeny.
+~~The rise gravity is latched at the release~~ | **Resolved, found while measuring the copter.** There is no latch in the original: it asks whether the jump key is down *this tick*. Pressing jump again during a rise therefore puts the held 0.375 back, which a flag set at the release can never do --- `cp_kill52` taps once three ticks after letting go and its apex ends up **7.4 px higher** than the same jump without the tap. Every scenario that presses once and releases once behaves identically either way, which is why `ap_r01`..`ap_r30` measured both rates cleanly without this showing. Kept to the rises a jump owns: a spring holds the light rate with nothing pressed, an enemy bounce and an RF blast hold the heavy one with jump held, and a pole depends on how the player arrived.
+Breaking the surface | **Open, and it is what the whole residual on the `wt_*` set is made of.** With the water model in place the four scenarios that stay submerged score 0.0 to 0.7 px/s and the four that reach the surface score 32 to 45 --- and they are the *same* four scenarios, just run long enough to get out. What differs is the arc after the breach: ours climbs 14 to 38 px higher out of the water and comes back in differently, so everything after the first exit is a different bob. Nothing here measures it. @ref Jazz2::Actors::Player::OnHandleWater() pops the player with a flat @cpp _externalForce.Y = -0.6 @ce that no scenario has ever asked the original about, and the original's own exit is not a simple hand-back either --- it decays the rise at **0.875** on the way out and then falls at 0.125, which is neither the water table nor the air one. Bounded by geometry in practice @m_span{m-text m-dim} (the column is 432 px deep and both games reach the top) @m_endspan, so it is a cosmetic difference on the bob rather than a reachability one. Measuring it wants scenarios that start the player *in* the water well below the surface rather than on the bottom of it.
+Swimming poses | **Open, movement-only so far.** Over the same eleven seconds the original cycles its swim sprites 53 times riding a submerged float-up field and this engine changes pose 11, though the two agree closely on the ordinary swim scenarios @m_span{m-text m-dim} (26 against 31, 32 against 55) @m_endspan. The shape is the same one the lizard copter had before it was fixed: a ridden state showing one frame where the original animates. @ref Jazz2::Actors::Player::OnHandleWater() does drive @cpp AnimDuration @ce from the speed, so the mechanism exists; what is not established is whether it is the rate or the pose selection that is wrong, and the two @cpp anim @ce columns do not compare numerically, so this needs a pose-by-pose reading rather than a segment count.
 ~~Horizontal spring moved the player~~ | **Resolved.** @cpp OnHitSpring() @ce pulled the player halfway towards the spring's own centre before assigning the speed; the original leaves the position untouched. Invisible to every prop scenario, because they all walk into a horizontal spring at the height it already sits at --- only a *fall* onto one is affected, and then it is worth 10 px. Found by pointing the probe at a spring chain in shipped level geometry (Diamondus 3), where those 10 px were the difference between escaping the chain and looping in it for ever: **204.5 px/s before, 0 after**. See @ref movement-accuracy-objects-springs.
 ~~Horizontal pole entered at zero speed~~ | **Resolved.** The launch is floored at 8 and goes *left* at an entry speed of zero, neither of which the three-point fit could see, because two of its points were clamped and the third was the only one determining the curve. Without both, a player who drops onto a horizontal pole is launched at nothing, never leaves its tile, and re-grabs it every 70 ticks **for ever** --- reported from a hand-built spring chain in the test level, which the original runs through without sticking. See @ref movement-accuracy-objects-poles.
 ~~Above the top of the level~~ | **Resolved, and the entry's own description of it was wrong in a way that mattered.** It read "stops the player dead at y = 0", which suggests the speed is killed. Measured on `sp_pole_loop`, only the **position** is bounded: the original reaches y = 0, stays there for **69 ticks** while @cpp ys @ce carries on decaying at the ordinary rise gravity --- −26.00, −25.625, −25.25 --- and falls away by itself once that turns positive. Zeroing the speed would have ended the rise early and dropped the player sooner than the original does. Ours had no top bound at all and overshot 469 px there, costing 51 ticks coming back down.<br/><br/>It also has to be applied **after** the move, next to @ref Jazz2::Actors::Player::TryLegacyOneWayRejump() and for the same reason: the level-bounds block near the top of @ref Jazz2::Actors::Player::OnUpdatePhysics() runs before it, and clamping there left the frame's own step still to come, so the player settled one frame's rise above the bound --- 9.3 px at the applied cap, which is exactly what the first attempt measured. `sp_pole_loop`, `pb_pad_x1`, `pb_bump_left`, `pb_lpad_d40`, `pb_pad_d24` and `pb_pad_below` now all read **exactly 0.0** where they read −13 to −469, and `sp_pole_loop`'s speed-distribution error went from 12.8 px/s to **0**.

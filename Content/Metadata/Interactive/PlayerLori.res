@@ -1,4 +1,4 @@
-﻿{
+{
 	"Version": {
 		"Target": "Jazz² Resurrection"
 	},
@@ -30,6 +30,7 @@
 		},
 		"Fall": {
 			"Path": "Lori/fall.aura",
+			"FrameRate": 12.97,
 			"States": [ 8 ]
 		},
 		"FallDiag": {
@@ -185,10 +186,11 @@
 		},
 		"FallToIdle": {
 			"Path": "Lori/fall_end.aura",
-			"States": [ 1073741826 ]
+			"States": [ 1073741826 ],
+			"FrameRate": 15.76
 		},
 		"ShootToIdle": {
-			"Path": "Lori/shoot_start.aura",
+			"Path": "Lori/shoot_end.aura",
 			"FrameRate": 20,
 			"States": [ 1073741828 ]
 		},
@@ -202,7 +204,12 @@
 			"FrameRate": 27,
 			"States": [ 1073741830 ]
 		},
-		
+		"FallShootToFall": {
+			"Path": "Lori/jump_shoot_end.aura",
+			"FrameRate": 29.2,
+			"States": [ 1073741872 ]
+		},
+
 		"SidekickA": {
 			"Path": "Lori/sidekick.aura",
 			"FrameCount": 2,

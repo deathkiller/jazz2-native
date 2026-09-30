@@ -90,6 +90,11 @@ namespace Jazz2::Actors::Multiplayer
 		// renderer arrives with the actor updates, but the star trail is local debris the owner spawns for itself.
 		float _sugarRushLeft;
 		float _sugarRushStarsTime;
+		// How long this player's run-in-place pose has been up, and the spark schedule that follows from it.
+		// Both are local: the charge is a pure function of that time, so nothing about the wind-up is sent and
+		// counting it here gives the same number the owner has. See Player::UpdateRemoteRevUp().
+		float _revUpTime;
+		float _revUpSparkCooldown;
 		// Lights the object emits on the server (see ActorBase::OnEmitRemotedLights()). A remote actor runs none
 		// of the object's logic, so it can only replay what it was told. Positions are relative to the actor, so
 		// they keep following the interpolated sprite between updates.

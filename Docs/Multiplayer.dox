@@ -83,6 +83,19 @@ message from the server. `/exit` or `/quit` stops the server, and so do `Ctrl+C`
 them shut it down cleanly, disconnecting the peers and delisting the server from the online list before the
 process exits. A second signal during an already running shutdown terminates the process the usual way.
 
+@m_class{m-noindent}
+
+A dedicated server is also the quickest way to see what the **minimap track** of a level comes out as. An
+original level carries no JJ2+ waypoints, so the track is traced from its geometry when the level loads
+@m_span{m-text m-dim} (see @ref Jazz2::Multiplayer::GenerateRaceRouteFromGeometry) @m_endspan, and the tracer
+writes what it found into the trace: the level's springs, vines, poles, tubes, warps and exits with how many
+of them the search reached, one line per warp with whether the route could use it, a line when the route is
+turned through a section of the level it would otherwise miss, and finally the spawn, the turning point, the
+finish and the size of the route. Starting a server whose playlist is a single entry with
+the level and @cpp "GameMode": "race" @ce prints all of it within a second of the level loading, without a
+window, a client or a running round --- which is worth knowing, because the track is otherwise only visible
+on a minimap in a started race.
+
 @subsection multiplayer-hosting-container Running a dedicated server as a container
 
 The dedicated server is also published as a multi-architecture container image, which needs nothing to be
@@ -347,6 +360,25 @@ Opening the log file discards what the previous session wrote into it, so that c
 which any **gzip** tool reads back as one file with the sessions in order. It is trimmed from the front once
 it outgrows 4 MB or 32 sessions, so the most recent sessions are always the ones kept. A log file named
 explicitly with @cpp "/log:file:<name>" @ce is left as the single file it was asked for and gets no archive.
+
+@m_class{m-block m-warning}
+
+@par Local co-op does not run on the single-player handler
+**Every** local splitscreen game runs through @ref Jazz2::Multiplayer::MpLevelHandler, co-operation included
+--- a non-Unknown @cpp LocalMultiplayerGameMode @ce is what selects it, and the menu sets that whenever more
+than one local player is chosen. So anything reached by starting a level with two players is served by that
+class and not by @ref Jazz2::LevelHandler, however much the code in the two looks alike.
+
+The two have separate @cpp SpawnPlayers() @ce implementations, and they carried separate copies of the same
+arithmetic until a co-op defect was reported: players starting inside the tileset wherever a level begins in
+a tight space, on `rescue/02_colon2`. The single-player copy was fixed first and tested by starting the level
+with two players but *without* the game mode set --- which reproduces nothing, because that path is not the
+one a co-op game takes. It reported green while the handler the defect came from still applied an unchecked
+30 px lift. The check now lives in @ref Jazz2::LevelHandler::FindClearSpawnPosition() and both call it.
+
+The lesson is worth more than the fix: when something is reported from the menu's co-op and a two-player
+`/level` start cannot reproduce it, that asymmetry is the evidence, not flakiness. Set the game mode, or the
+test is a green light for code nobody runs.
 
 `/server` is available on **Linux** and **macOS**, and on **Windows** only in a debug build --- a release
 server for Windows is the `DEDICATED_SERVER` build, where no argument is needed to become one and the first

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-09-25 14:35+0200\n"
-"PO-Revision-Date: 2026-09-25 14:38+0200\n"
+"POT-Creation-Date: 2026-09-28 22:42+0200\n"
+"PO-Revision-Date: 2026-09-28 22:43+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1372,19 +1372,25 @@ msgstr ""
 "Bitte besuche\n"
 "www.project2.com"
 
-#: Sources/Jazz2/LevelHandler.cpp:177 Sources/Jazz2/LevelHandler.cpp:235
+#: Sources/Jazz2/LevelHandler.cpp:258 Sources/Jazz2/LevelHandler.cpp:319
 #, c++-format
 msgid "Level \"{}\" initialized"
 msgstr "Level \"{}\" initialisiert"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:963
+#: Sources/Jazz2/LevelHandler.cpp:1075
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
 msgid "For more information, visit the official website:"
 msgstr "Für weitere Informationen besuche die offizielle Website:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2570
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4045
+#: Sources/Jazz2/LevelHandler.cpp:2119
+#, c++-format
+#| msgid "Level \"{}\" initialized"
+msgid "Level \"{}\" restored"
+msgstr "Level \"{}\" wiederhergestellt"
+
+#: Sources/Jazz2/LevelHandler.cpp:3117
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4153
 msgid "Cheats are not allowed in current context"
 msgstr "Cheats sind im aktuellen Kontext nicht erlaubt"
 
@@ -1404,7 +1410,7 @@ msgstr ""
 msgid "Find exit!"
 msgstr "Finde den Ausgang!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:551
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:585
 msgid ""
 "\n"
 "\n"
@@ -1414,7 +1420,7 @@ msgstr ""
 "\n"
 "Das Spiel beginnt in Kürze!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:733
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:769
 #, c++-format
 msgid ""
 "\n"
@@ -1422,73 +1428,85 @@ msgid ""
 "{} won the championship!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2783
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2840
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2859
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2916
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2866
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4534
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4658
 #, c++-format
 msgid "You joined the {} team"
 msgstr "Du bist dem {}-Team beigetreten"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2868
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4536
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2925
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4660
 msgid "Cannot change team right now"
 msgstr "Ich kann das Team derzeit nicht wechseln"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2879
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2891
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2936
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2948
 msgid "Teams are only used in team game modes"
 msgstr "Teams kommen nur in Team-Spielmodi zum Einsatz"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2882
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2939
 msgid "Teams rebalanced"
 msgstr "Teams neu ausbalanciert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2906
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2963
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2921
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2978
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2980
 msgid "Player not found"
 msgstr "Spieler nicht gefunden"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3656
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4646
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3720
+msgid ""
+"You have already finished the race, you can play again in the next round"
+msgstr ""
+"Du hast das Rennen bereits beendet, du kannst in der nächsten Runde erneut "
+"spielen."
+
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3724
+#| msgid "Cannot change team right now"
+msgid "You cannot join the game right now"
+msgstr "Du kannst im Moment nicht am Spiel teilnehmen."
+
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3763
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4770
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] hat die Verbindung getrennt"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3936
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4644
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4044
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4768
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] hat sich verbunden"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4667
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7131
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4791
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7345
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] wurde von \f[c:#d0705d]{}\f[/c] geröstet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4670
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7157
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4794
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7371
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] wurde von der Umgebung geröstet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8399
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8639
 msgid ""
 "\n"
 "\n"
@@ -1498,7 +1516,7 @@ msgstr ""
 "\n"
 "Die Teams wurden neu ausbalanciert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8704
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8944
 #, c++-format
 msgid ""
 "\n"
@@ -1506,7 +1524,7 @@ msgid ""
 "{} took the {} flag!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8712
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8952
 #, c++-format
 msgid ""
 "\n"
@@ -1514,7 +1532,7 @@ msgid ""
 "The {} flag was returned"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8760
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9000
 #, c++-format
 msgid ""
 "\n"
@@ -1522,7 +1540,7 @@ msgid ""
 "{} team captured the {} flag!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8871
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9111
 #, c++-format
 msgid ""
 "\n"
@@ -1530,7 +1548,7 @@ msgid ""
 "The {} flag was dropped"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9902
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10159
 #, c++-format
 msgid ""
 "\n"
@@ -1539,7 +1557,7 @@ msgid ""
 "{} seconds remaining"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9916
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10173
 #, c++-format
 msgid ""
 "\n"
@@ -1547,7 +1565,7 @@ msgid ""
 "{} finished {}."
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10180
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10437
 #, c++-format
 msgid ""
 "\n"
@@ -1558,7 +1576,7 @@ msgstr ""
 "\n"
 "Gewinner ist {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10244
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10501
 #, c++-format
 msgid ""
 "\n"
@@ -1566,7 +1584,7 @@ msgid ""
 "{} team wins!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10300
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10557
 msgid ""
 "\n"
 "\n"
@@ -1576,16 +1594,16 @@ msgstr ""
 "\n"
 "Die Runde endete unentschieden"
 
-#: Sources/Jazz2/UI/HUD.cpp:581 Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:222
+#: Sources/Jazz2/UI/HUD.cpp:602 Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:222
 msgid "Spectating"
 msgstr "Zuschauen"
 
 #. TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
-#: Sources/Jazz2/UI/InGameConsole.cpp:224
+#: Sources/Jazz2/UI/InGameConsole.cpp:235
 msgid "Keyboard"
 msgstr "Tastatur"
 
-#: Sources/Jazz2/UI/InGameConsole.cpp:534
+#: Sources/Jazz2/UI/InGameConsole.cpp:548
 msgid "Unknown command"
 msgstr "Unbekannter Befehl"
 
@@ -1729,20 +1747,20 @@ msgstr "Steuerung"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:46
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:258
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:267
 #, c++-format
 msgid "Remap Controls for Player {}"
 msgstr "Steuerung für Spieler {} neu belegen"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:51
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:261
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:270
 msgid "Remap Controls"
 msgstr "Steuerung neu belegen"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:63
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:108
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:111
 msgid "Touch Controls"
 msgstr "Touch-Steuerung"
 
@@ -1752,8 +1770,8 @@ msgid "Toggle Run"
 msgstr "Laufen umschalten"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:123
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
@@ -1769,18 +1787,18 @@ msgstr "Laufen umschalten"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:166
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:179
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:262
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:178
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:261
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:277
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:287
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:288
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:107
 msgid "Enabled"
 msgstr "Aktiviert"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:69
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:103
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:113
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:123
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:53
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:58
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:62
@@ -1795,11 +1813,11 @@ msgstr "Aktiviert"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:122
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:166
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:179
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:262
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:178
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:261
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:277
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:287
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:294
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:288
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:295
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:107
 msgid "Disabled"
 msgstr "Deaktiviert"
@@ -1808,35 +1826,35 @@ msgstr "Deaktiviert"
 msgid "Gamepad Button Labels"
 msgstr "Gamepad-Tastenbeschriftungen"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:94
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:95
 msgid "Gamepad Rumble"
 msgstr "Gamepad-Vibration"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:98
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:99
 msgid "Strong"
 msgstr "Stark"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:101
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:102
 msgid "Weak"
 msgstr "Schwach"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:111
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:112
 msgid "Extended PlayStation™ Support"
 msgstr "Erweiterte PlayStation™ Unterstützung"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:121
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:122
 msgid "Native Back Button"
 msgstr "Native Zurück-Taste"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:86
 msgid "Input Diagnostics"
 msgstr "Eingabe-Diagnose"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:129
 msgid "Reset To Default"
 msgstr "Auf Standard zurücksetzen"
 
@@ -1964,12 +1982,12 @@ msgstr "Server erstellen"
 #. TRANSLATORS: Transport mode in Create Server section on PSP, local wireless connection between consoles
 #. TRANSLATORS: Transport mode in Connect To Server section on PSP, local wireless connection between consoles
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:473
 msgid "Ad hoc"
 msgstr "Ad-hoc"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:462
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:473
 msgid "Wi-Fi"
 msgstr "Wi-Fi"
 
@@ -2109,7 +2127,7 @@ msgstr "Überarbeitetes Gameplay"
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
 msgid "Reforged Camera"
-msgstr ""
+msgstr "Reforged-Kamera"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
@@ -2234,7 +2252,7 @@ msgstr "Bildschirmauflösung"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:70
 msgid "Rendering Resolution"
-msgstr ""
+msgstr "Auflösung der Darstellung"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
@@ -2252,42 +2270,42 @@ msgid "Background Dithering"
 msgstr "Hintergrund-Dithering"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:178
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:177
 msgid "Blur Effects"
 msgstr "Weichzeichner-Effekte"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:190
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:189
 msgid "Lighting Resolution"
 msgstr "Auflösung der Beleuchtung"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:230
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:229
 msgid "Particle Quality"
 msgstr "Partikelqualität"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:233
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:305
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:232
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:306
 msgid "Off"
-msgstr ""
+msgstr "Aus"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:234
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:253
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:233
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:252
 msgid "Low"
 msgstr "Niedrig"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:235
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:253
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:234
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:252
 msgid "High"
 msgstr "Hoch"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:252
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:251
 msgid "Water Quality"
 msgstr "Wasserqualität"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:261
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:260
 msgid "Show Player Trails"
 msgstr "Spielerspuren anzeigen"
 
@@ -2311,37 +2329,37 @@ msgstr "Herauszoomen bevorzugen"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #. TRANSLATORS: Header of Options > Graphics > Safe Area section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:284
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:285
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:54
 msgid "Safe Area"
 msgstr "Sicherheitsbereich"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:286
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:287
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Seitenverhältnis in Zwischensequenzen beibehalten"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:293
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:294
 msgid "Unaligned Viewport"
 msgstr "Nicht ausgerichteter Viewport"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:294
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:295
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Aktiviert \f[c:#d0705d](Experimentell)\f[/c]"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:302
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:303
 msgid "Performance Metrics"
 msgstr "Leistungsmetriken"
 
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, only the frame rate is shown
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:307
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:308
 msgid "Basic"
 msgstr "Basic"
 
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, the frame rate and the time each part of a frame takes
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:309
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:310
 msgid "Detailed"
 msgstr "Detailliert"
 
@@ -2380,7 +2398,7 @@ msgstr "Keine Dateien ausgewählt!"
 msgid "No new episodes were imported!"
 msgstr "Keine neuen Episoden wurden importiert!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:88
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:100
 msgid "No gamepads are detected!"
 msgstr "Keine Gamepads erkannt!"
 
@@ -2444,42 +2462,42 @@ msgid "Newly added levels and episodes will be available soon."
 msgstr "Neu hinzugefügte Level und Episoden werden bald verfügbar sein."
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:52
 msgid "Left"
 msgstr "Links"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:48
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:54
 msgid "Right"
 msgstr "Rechts"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:50
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:56
 msgid "Up"
 msgstr "Hoch"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:52
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:58
 msgid "Down"
 msgstr "Runter"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:54
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:60
 msgid "Buttstomp"
 msgstr "Stampfen"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:56
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 msgid "Fire"
 msgstr "Feuern"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:58
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:64
 msgid "Jump"
 msgstr "Springen"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:60
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:66
 msgid "Run"
 msgstr "Laufen"
 
@@ -2488,36 +2506,36 @@ msgstr "Laufen"
 #. _root->DrawStringShadow(_("Keyboard"), charOffset, centerX - 84.0f, hintY, IMenuContainer::FontLayer + 110,
 #. Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 #. }
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:283
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:445
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:471
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:68
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:299
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:452
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:482
 msgid "Change Weapon"
 msgstr "Waffe wechseln"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:64
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:70
 msgid "Back"
 msgstr "Zurück"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:72
 msgid "Toggle Console"
 msgstr "Konsole umschalten"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:75
 #, c++-format
 msgid "Weapon {}"
 msgstr "Waffe {}"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:274
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:289
 msgid "Press any key or button to assign"
 msgstr "Drücke eine beliebige Taste oder einen Knopf zum Zuweisen"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:294
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:301
 msgid "to remove assignment"
 msgstr "zum Entfernen der Zuweisung"
 
@@ -2572,7 +2590,7 @@ msgstr "Unterer Abstand"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:66
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:136
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:139
 msgid "Reset"
 msgstr "Reset"
 
@@ -2586,7 +2604,7 @@ msgid "Laps"
 msgstr "Runden"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:554
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:583
 msgid "Treasure"
 msgstr "Schatz"
 
@@ -2606,36 +2624,36 @@ msgstr "Pkt"
 msgid "Ping"
 msgstr "Ping"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:277
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:284
 msgid "Connect To Server"
 msgstr "Mit Server verbinden"
 
 #. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:292
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:299
 msgid "Switching connection mode…"
 msgstr "Verbindungsmodus wird umgeschaltet…"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:297
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:304
 msgid "No servers found, but still searchin'!"
 msgstr "Keine Server gefunden, aber die Suche läuft noch!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:415
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:422
 msgid "IP Address:"
 msgstr "IP Adresse:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:422
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:429
 msgid "<ip> or <ip>:<port>"
 msgstr "<ip> oder <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:453
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:464
 msgid "to show keyboard"
 msgstr "Tastatur anzeigen"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:482
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:496
 msgid "to connect to IP address"
 msgstr "eine Verbindung zur IP-Adresse herzustellen"
 
@@ -2664,19 +2682,19 @@ msgstr "Musik-Lautstärke"
 msgid "Sample Rate"
 msgstr "Sample Rate"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:127
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:130
 msgid "Save"
 msgstr "Speichern"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:143
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:146
 msgid "Joystick"
 msgstr "Joystick"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:153
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:156
 msgid "Vibration"
 msgstr "Vibration"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:161
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:164
 msgid "Drag to move · Pinch or corner to resize"
 msgstr ""
 
@@ -2740,41 +2758,41 @@ msgid "Unique Player ID"
 msgstr "Eindeutige Spieler-ID"
 
 #. TRANSLATORS: Spectator hint, "Fire" and "Run" are the names of the two actions
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:234
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:236
 msgid "Fire: next player, Run: free camera"
 msgstr ""
 
 #. TRANSLATORS: Spectator hint, "Fire" is the name of the action
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:236
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:238
 msgid "Fire: follow a player"
 msgstr ""
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:251
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:255
 #, c++-format
 msgid "Game starts in {}"
 msgstr "Spiel startet in {}"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:257
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:263
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
 msgstr[0] "Warte auf {} weiteren Spieler"
 msgstr[1] "Warte auf {} weitere Spieler"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:278
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:286
 #, c++-format
 msgid "Finish in {} s"
 msgstr "Fertig in {} s"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:552
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:581
 msgid "Time"
 msgstr "Zeit"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:555
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:584
 msgid "Kills"
 msgstr "Tötungen"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:583
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:612
 msgid "Final standings"
 msgstr "Endstand"
 
@@ -2792,7 +2810,7 @@ msgstr ""
 "Verwende \f[c:#d0705d]Hoch/Runter\f[/c], um zwischen Charakter und Team zu "
 "wechseln"
 
-#: Sources/Main.cpp:909 Sources/Main.cpp:980
+#: Sources/Main.cpp:929 Sources/Main.cpp:1010
 msgid ""
 "\f[c:#704a4a]Cannot load specified level!\f[/c]\n"
 "\n"
@@ -2806,7 +2824,7 @@ msgstr ""
 "Stelle sicher, dass alle notwendigen Dateien\n"
 "zugänglich sind und versuche es erneut."
 
-#: Sources/Main.cpp:1082
+#: Sources/Main.cpp:1112
 msgid ""
 "\f[c:#704a4a]Cannot resume saved state!\f[/c]\n"
 "\n"
@@ -2820,11 +2838,11 @@ msgstr ""
 "Stelle sicher, dass alle notwendigen Dateien\n"
 "zugänglich sind und versuche es erneut."
 
-#: Sources/Main.cpp:1370
+#: Sources/Main.cpp:1402
 msgid "Unnamed server"
 msgstr "Unbenannter Server"
 
-#: Sources/Main.cpp:1537
+#: Sources/Main.cpp:1559
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2836,7 +2854,7 @@ msgstr ""
 "\n"
 "Ungültiger Parameter angegeben."
 
-#: Sources/Main.cpp:1538
+#: Sources/Main.cpp:1560
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2848,7 +2866,7 @@ msgstr ""
 "\n"
 "Deine Client-Version ist nicht mit dem Server kompatibel."
 
-#: Sources/Main.cpp:1539
+#: Sources/Main.cpp:1561
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2861,7 +2879,7 @@ msgstr ""
 "Der Client wurde aufgrund eines fehlerhaften Kommunikationsprotokolls "
 "abgelehnt."
 
-#: Sources/Main.cpp:1540
+#: Sources/Main.cpp:1562
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2876,7 +2894,7 @@ msgstr ""
 "Ein möglicher Grund dafür könnte die Verbindung zu einem ungesicherten "
 "WebSocket sein."
 
-#: Sources/Main.cpp:1541
+#: Sources/Main.cpp:1563
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2890,7 +2908,7 @@ msgstr ""
 "Authentifizierung fehlgeschlagen.\n"
 "Kontaktiere die Server-Administratoren für weitere Informationen."
 
-#: Sources/Main.cpp:1542
+#: Sources/Main.cpp:1564
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2902,7 +2920,7 @@ msgstr ""
 "\n"
 "Ungültiges Passwort angegeben."
 
-#: Sources/Main.cpp:1543
+#: Sources/Main.cpp:1565
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2916,7 +2934,7 @@ msgstr ""
 "Ungültiger Spielername angegeben.\n"
 "Bitte überprüfe dein Profil und versuche es erneut."
 
-#: Sources/Main.cpp:1544
+#: Sources/Main.cpp:1566
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2930,7 +2948,7 @@ msgstr ""
 "Dieser Client ist nicht auf der Server-Whitelist.\n"
 "Kontaktiere die Server-Administratoren für weitere Informationen."
 
-#: Sources/Main.cpp:1545
+#: Sources/Main.cpp:1567
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2944,7 +2962,7 @@ msgstr ""
 "Server benötigt einen Drittanbieter für die Authentifizierung.\n"
 "Kontaktiere die Server-Administratoren für weitere Informationen."
 
-#: Sources/Main.cpp:1546
+#: Sources/Main.cpp:1568
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2958,7 +2976,7 @@ msgstr ""
 "Server ist voll.\n"
 "Bitte versuche es später erneut."
 
-#: Sources/Main.cpp:1547
+#: Sources/Main.cpp:1569
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2973,7 +2991,7 @@ msgstr ""
 "kann.\n"
 "Bitte versuche es in einigen Sekunden erneut."
 
-#: Sources/Main.cpp:1548
+#: Sources/Main.cpp:1570
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2987,7 +3005,7 @@ msgstr ""
 "Server wird heruntergefahren.\n"
 "Bitte versuche es später erneut."
 
-#: Sources/Main.cpp:1549
+#: Sources/Main.cpp:1571
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3001,7 +3019,7 @@ msgstr ""
 "Server wird für Wartungsarbeiten heruntergefahren.\n"
 "Bitte versuche es später erneut."
 
-#: Sources/Main.cpp:1550
+#: Sources/Main.cpp:1572
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3015,7 +3033,7 @@ msgstr ""
 "Server wird für Neukonfiguration heruntergefahren.\n"
 "Bitte versuche es später erneut."
 
-#: Sources/Main.cpp:1551
+#: Sources/Main.cpp:1573
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3029,7 +3047,7 @@ msgstr ""
 "Server wird für ein Update heruntergefahren.\n"
 "Bitte überprüfe deine Client-Version und versuche es in einer Minute erneut."
 
-#: Sources/Main.cpp:1552
+#: Sources/Main.cpp:1574
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -3043,7 +3061,7 @@ msgstr ""
 "Bitte versuche es erneut und falls das Problem weiterhin besteht,\n"
 "überprüfe deine Netzwerkverbindung."
 
-#: Sources/Main.cpp:1553
+#: Sources/Main.cpp:1575
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3055,7 +3073,7 @@ msgstr ""
 "\n"
 "Der Server antwortet nicht auf die Verbindungsanfrage."
 
-#: Sources/Main.cpp:1554
+#: Sources/Main.cpp:1576
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3069,7 +3087,7 @@ msgstr ""
 "Du wurdest vom Server \f[c:#907050]gekickt\f[/c].\n"
 "Kontaktiere die Server-Administratoren für weitere Informationen."
 
-#: Sources/Main.cpp:1555
+#: Sources/Main.cpp:1577
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3083,7 +3101,7 @@ msgstr ""
 "Du wurdest vom Server \f[c:#725040]gebannt\f[/c].\n"
 "Kontaktiere die Server-Administratoren für weitere Informationen."
 
-#: Sources/Main.cpp:1556
+#: Sources/Main.cpp:1578
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3095,7 +3113,7 @@ msgstr ""
 "\n"
 "Cheaten erkannt."
 
-#: Sources/Main.cpp:1557
+#: Sources/Main.cpp:1579
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3109,7 +3127,7 @@ msgstr ""
 "Dein Client enthält nicht die erforderlichen Dateien.\n"
 "Bitte lade die benötigten Dateien herunter und versuche es erneut."
 
-#: Sources/Main.cpp:1558
+#: Sources/Main.cpp:1580
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3121,7 +3139,7 @@ msgstr ""
 "\n"
 "Der Server hat dich aufgrund von Inaktivität getrennt."
 
-#: Sources/Main.cpp:1861
+#: Sources/Main.cpp:1910
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"

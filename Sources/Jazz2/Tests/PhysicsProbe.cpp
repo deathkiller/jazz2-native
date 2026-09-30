@@ -1,4 +1,4 @@
-﻿#include "PhysicsProbe.h"
+#include "PhysicsProbe.h"
 
 #if defined(WITH_PHYSICS_PROBE)
 
@@ -27,7 +27,7 @@ namespace Jazz2::Tests
 {
 	PhysicsProbe::PhysicsProbe(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _state(StatePrime), _scenario(FirstScenario), _tick(0.0f), _waited(0.0f),
-			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0), _copterAttachTick(-1), _onCopter(false), _copterEndTick(-1),
+			_groundX(0.0f), _groundY(0.0f), _lastY(0.0f), _startFrames(0.0f), _still(0), _copterAttachTick(-1), _onCopter(false), _defaultWaterLevel(0.0f), _waterRaised(false), _copterEndTick(-1),
 			_pushable(0.0f, 0.0f), _turtle(0.0f, 0.0f)
 	{
 	}
@@ -110,8 +110,13 @@ namespace Jazz2::Tests
 		// `dm_chain`, 15 seconds. This tracks the scenario's INDEX, so it moves whenever anything is appended
 		// ahead of it - it was 334 until the slope, run-tap and vine families went in, at which point it was
 		// quietly giving `sl_up_jhold` a long window and `dm_chain` the 800-tick default instead.
-		if (s == 446) {
+		if (s == 476) {
 			return 1100.0f;
+		}
+		// `cn_chain`, which has three poles to climb where Diamondus has one - each holds the player about
+		// 140 ticks before it launches, so the climb alone is over 400 before any of the rises are counted
+		if (s == 475) {
+			return 1200.0f;
 		}
 		// The copter set. Its generator cycles, and the player has to hop up to the thing's height to catch
 		// one - they land two and a half tiles below it - so most of this window is the approach, and how
@@ -1444,11 +1449,123 @@ namespace Jazz2::Tests
 				}
 				break;
 			}
+			// `an_shoot_air` for the other two characters. The air shot's *return* animation is one of the few
+			// that differ per character in the original - Jazz's is two frames at about six ticks each, and
+			// hers was missing here entirely - so reading it off Jazz alone and applying the numbers to all
+			// three is an inference rather than a measurement. Same input as 351 exactly, so the three are
+			// directly comparable.
+			case 446: name = "an_shoot_air_spaz"_s; jump = (t >= 20 && t < 50); fire = (t >= 40 && t < 44); break;
+			case 447: name = "an_shoot_air_lori"_s; jump = (t >= 20 && t < 50); fire = (t >= 40 && t < 44); break;
+			// A buttstomp begun **out of a full dash lead**, which is the case the reported camera bug needs and
+			// no other scenario produces: every existing `sp_*_butt` stomps at tick 70, before the pan has gone
+			// anywhere, so the lead is ~0 on both sides and freezing it or not looks identical. Run is held for
+			// the whole scenario, direction included, so what is being read is whether the held key still moves
+			// the view once the move has started. See Player::IsCameraPanLocked().
+			case 448: name = "sp_butt_pan"_s; right = true; run = true; jump = (t >= 160 && t < 170); down = (t >= 180); break;
+			// Water, which nothing has ever measured: there is no `!IsReforged()` branch anywhere in the swim
+			// code and no scenario that gets wet. The level has no water of its own, so these set the level's
+			// water line from the probe - it is a single global value in pixels, which is why one assignment
+			// is the whole setup. Placed well above the floor so the player is submerged where they stand.
+			//
+			// The last three are the reported bug: a float-up area *under water*, which is two mechanics that
+			// both want to move the player vertically, with Up and Down then asking for a third thing. Read
+			// them against `fu_col_none` and `fu_col_hold`, which are the same column in air.
+			case 449: name = "wt_swim_up"_s; up = true; break;
+			case 450: name = "wt_swim_down"_s; down = true; break;
+			case 451: name = "wt_swim_right"_s; right = true; break;
+			case 452: name = "wt_float_up"_s; break;
+			case 453: name = "wt_float_up_u"_s; up = true; break;
+			case 454: name = "wt_float_up_d"_s; down = true; break;
+			// ...and the same four with Run held. Swimming may or may not have a fast mode - nothing here has
+			// ever asked - and the float-up column is worth the pairing too, since Run doubles what several
+			// other carries drive the player at.
+			case 455: name = "wt_swim_up_run"_s; up = true; run = true; break;
+			case 456: name = "wt_swim_down_run"_s; down = true; run = true; break;
+			case 457: name = "wt_swim_right_run"_s; right = true; run = true; break;
+			case 458: name = "wt_float_up_run"_s; run = true; break;
+			// Reported from play: *"pressing jump for copter too early before it's available removes the ability
+			// to copter out of that jump entirely, especially from a short jump"*. The `cp_tap*` family already
+			// establishes that one press spends the airtime's attempt, but every one of its scenarios starts
+			// tapping and never stops, so none of them can tell a **spent** attempt apart from a rule about the
+			// tapping itself - and all five share one long jump, so the short one the report names is untested.
+			//
+			// These isolate it. One two-tick tap at a stated point in the rise, nothing at all for a while, and
+			// then the same tap train `cp_tap80` engages on. If the late train engages here too, the early press
+			// costs nothing and the rule is wrong; if it does not, the attempt really is spent on the press.
+			// `cp_kill80` is the control with no early press, and is `cp_tap80` by construction.
+			case 459: name = "cp_kill47"_s; jump = (t >= J && t < J + 5) || (t >= 47 && t < 49) || (t >= 80 && ((t - 80) % 6) < 2); break;
+			case 460: name = "cp_kill52"_s; jump = (t >= J && t < J + 5) || (t >= 52 && t < 54) || (t >= 80 && ((t - 80) % 6) < 2); break;
+			case 461: name = "cp_kill58"_s; jump = (t >= J && t < J + 5) || (t >= 58 && t < 60) || (t >= 80 && ((t - 80) % 6) < 2); break;
+			case 462: name = "cp_kill80"_s; jump = (t >= J && t < J + 5) || (t >= 80 && ((t - 80) % 6) < 2); break;
+			// The short jump the report singles out: the key let go after two ticks rather than five, which
+			// releases the rise into the 0.875 gravity almost at once and puts the apex around tick 57 instead
+			// of 72. `_early` taps from the middle of that much shorter rise, `_late` from just past its apex,
+			// and `_hold` never lets go at all - a held key produces no fresh press, so whether the copter can
+			// start from one is a separate question that no scenario has ever put.
+			case 463: name = "cp_sj_early"_s; jump = (t >= J && t < J + 2) || (t >= 50 && ((t - 50) % 6) < 2); break;
+			case 464: name = "cp_sj_late"_s; jump = (t >= J && t < J + 2) || (t >= 60 && ((t - 60) % 6) < 2); break;
+			case 465: name = "cp_sj_hold"_s; jump = (t >= J); break;
+			// Reported: *"in Vanilla you can change the direction of Lori's kick mid kick, or when starting a
+			// new kick, when early enough"*. Her facing is read once, in BeginLoriKick(), and the kick takes
+			// control away - so a direction pressed after it starts reaches nothing here, and neither the kick
+			// under way nor the next one in the run can turn. These are `sp_lori_side_hold` exactly, keys held
+			// so the run repeats, with **Left** arriving instead of Right at three points of the cycle: the
+			// original's kicks start at 41, 76, 111 and 146, so `_e` lands three ticks into the first kick,
+			// the plain one in the recovery between kicks, and `_l` two ticks before the next one begins.
+			// Read the **x** column: whether she turns at all, and if so on which kick.
+			case 466: name = "sp_lori_turn_e"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 44); break;
+			case 467: name = "sp_lori_turn"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 60); break;
+			case 468: name = "sp_lori_turn_l"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); left = (t >= 74); break;
+			// Reported: *"while it's true that Lori can shoot during her special move kick, in Vanilla this is
+			// partially blocked during the end of her kick"*. `sp_lori_side_fire` already establishes that she
+			// can shoot **inside** the drive, but it fires one short burst at tick 42 and stops, so it cannot
+			// say anything about the end. This holds Fire down for the whole of a repeating run of kicks, and
+			// the answer is the **ammo** column: a shot that happens and a shot that is refused look identical
+			// in every other column the probes log. A finite weapon is stocked in SetupProps() for that, and
+			// Seeker rather than RF - RF's own blast moves the player and would put a second thing in `x`.
+			case 469: name = "sp_lori_kick_fire"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30); break;
+			// And the same question about the pinball paddle: *"when the player is on a pinball paddle he can
+			// shoot there - is it correct? the animation looks strange"*. Two questions in one, and the ammo
+			// column separates them: whether the original fires at all while riding a paddle, and if it does,
+			// which pose it shows. Dropped onto the paddle exactly as `pb_pad_fall` is, so the ride itself is
+			// a scenario already known to match, with nothing held but Fire.
+			case 470: name = "pb_pad_fire"_s; fire = (t >= 60); break;
+			// The control `sp_lori_kick_fire` needs and does not contain: Fire held with nothing else, so what
+			// it measures is the **weapon's own rate** and nothing about the kick. Without it the kick scenario
+			// cannot say whether a difference in how often the two games shoot belongs to the kick or to the
+			// Seeker it has to stock to be countable at all - and this engine fires on the same spacing while
+			// riding a pinball paddle, which is exactly the shape of a weapon-rate difference.
+			case 471: name = "sp_lori_fire_still"_s; fire = (t >= 30); break;
+			// ...and the pair that says what `_still` measured. A *held* key on the original's side is a script
+			// writing `keyFire = true` every tick, so "one shot standing still" has two readings and they call
+			// for opposite fixes: either that game refuses to repeat a held shot, or it edges its fire on the
+			// key going down and the probe only ever pressed once. Tapping on a cadence of its own separates
+			// them - 2 ticks down every 12, about 64 presses over the window. Roughly one shot per tap means
+			// the hold was the probe; a handful either way means it was the game.
+			//
+			// The second one asks the same of the kick. `sp_lori_kick_fire` fires on exactly her 35-tick kick
+			// period with the key held, and whether that is the kick *allowing* a shot or the kick clearing
+			// whatever the hold set is the whole question - with the key tapped faster than the kick repeats,
+			// the two answers are 64 shots and 22.
+			case 472: name = "sp_lori_fire_tap"_s; fire = (t >= 30 && ((t - 30) % 12) < 2); break;
+			case 473: name = "sp_lori_kick_tap"_s; right = (t < 2); down = (t >= 20); jump = (t >= 40); fire = (t >= 30 && ((t - 30) % 12) < 2); break;
+			// Castle 1 Night's own spring-and-pole climb, reported from play as not reaching the height the
+			// original does: a green spring at (129,52) under three *rows* of vertical poles at y=46, 41 and
+			// 36, each five or six tiles wide. Shipped geometry again, and a chain nobody built for a test -
+			// the same reason `dm_chain` exists, except that this one is a **reported defect** rather than an
+			// independent check. Nothing is pressed; the spring and the poles do all of it.
+			case 475:
+				if (!_levelHandler->GetLevelName().contains("castle1n"_s)) {
+					return false;
+				}
+				name = "cn_chain"_s;
+				break;
 			// Guarded on the level, and the guard is what keeps it out of a normal sweep: on `_pt` this falls
-			// through to `return false`, the probe reports finished after 445, and the committed trace is
-			// unaffected. To run it, load that level and raise `FirstScenario` to 446 - see `Tests/README.md`.
-			// It has to stay **last**: a sweep of the test level ends here, so anything after it never runs.
-			case 446:
+			// through to `return false`, the probe reports finished, and the committed trace is unaffected.
+			// To run either of these, load the level it names - with an **empty** filter every scenario counts
+			// as selected, so the first guarded one ends the sweep and nothing after it is reached; with a
+			// filter naming this one, the other is skipped and this runs. See `Tests/README.md`.
+			case 476:
 				if (!_levelHandler->GetLevelName().contains("diam3"_s)) {
 					return false;
 				}
@@ -1704,11 +1821,13 @@ namespace Jazz2::Tests
 			// exactly how Jazz's own ears engage. On him the approach would therefore fly under its own power
 			// and the trace would be of that rather than of the copter. Spaz answers the same tap with a
 			// double jump and nothing else. Both probes use him, so the comparison is like for like.
-			(s >= 438 && s <= 445)) {
+			(s >= 438 && s <= 445) || s == 446) {
 			// The `cl_dj*` ceiling and `sp_dj_*` window scenarios need the double jump, so they need Spaz - and
 			// so do the three `an_*` ones about his sidekick and his double jump's pose
 			wanted = PlayerType::Spaz;
-		} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 88 || s == 375 || s == 376 || s == 384 || s == 385 || s == 386 || s == 389) {
+		} else if (s == 40 || s == 43 || s == 58 || s == 59 || s == 65 || s == 88 || s == 375 || s == 376 || s == 384 || s == 385 || s == 386 || s == 389 || s == 447 ||
+			// The four `sp_lori_*` scenarios above, which are about her kick and so are hers
+			(s >= 466 && s <= 469) || (s >= 471 && s <= 473)) {
 			wanted = PlayerType::Lori;
 		}
 		if (player->GetPlayerType() != wanted) {
@@ -1828,11 +1947,16 @@ namespace Jazz2::Tests
 				player->AddAmmo(WeaponType::RF, 50);
 				player->SetCurrentWeapon(WeaponType::RF, Actors::Player::SetCurrentWeaponReason::User);
 			}
-		} else if (s == 390 || s == 391) {
+		} else if (s == 390 || s == 391 || s == 469 || s == 470 || (s >= 471 && s <= 473)) {
 			// Left where they start - the point is the *standstill*, and the sliding one needs only enough
 			// floor to reach the dash cap and skid, which the default start has. A finite weapon so the ammo
 			// column shows whether a shot happened; Seeker rather than RF, whose blast moves the player and
-			// would put a second thing in the position columns
+			// would put a second thing in the position columns.
+			//
+			// `sp_lori_kick_fire` and `pb_pad_fire` want it for the same reason and take it from the same
+			// line: both ask whether a shot *happened*, which nothing but the ammo count can answer. Only the
+			// weapon half of this applies to them - the paddle one is moved onto its paddle by the pinball
+			// switch further down, which runs after this chain and so has the last word on the position.
 			player->AddAmmo(WeaponType::Seeker, 50);
 			player->SetCurrentWeapon(WeaponType::Seeker, Actors::Player::SetCurrentWeaponReason::User);
 		} else if (s >= 129 && s <= 139) {
@@ -1893,6 +2017,20 @@ namespace Jazz2::Tests
 	{
 		// Whatever the previous scenario left in the world is already gone - ClearProps() takes it out at
 		// the reset, before the settle
+
+		// ...except the water line, which is not a placed object but a single value on the level, so nothing
+		// in ClearProps() can take it out. Put back to whatever the level itself asked for, or the first
+		// `wt_*` one would leave every scenario after it swimming - but **only** after one that raised it,
+		// which is not a nicety. The same restore written unconditionally on the original's side floods the
+		// level, because the water line read at level start is not yet the value a dry level settles on, and
+		// a flooded level hides completely in a trace: the player stands on the bottom at exactly the resting
+		// height, jump does nothing because jump is not a thing underwater, and every scenario reads as a
+		// rabbit standing still. The two probes are kept alike here so a fault in one cannot be argued away
+		// by the other behaving differently.
+		if (_waterRaised) {
+			_levelHandler->_waterLevel = _defaultWaterLevel;
+			_waterRaised = false;
+		}
 
 		std::int32_t tx = (std::int32_t)_groundX / 32;
 		std::int32_t ty = (std::int32_t)_groundY / 32;
@@ -2078,6 +2216,19 @@ namespace Jazz2::Tests
 					player->_speed = Vector2f::Zero;
 				}
 				break;
+			// The water set. The line is a single global value in pixels rather than anything placed, so it is
+			// assigned straight onto the level - and put well above the floor, so the player is submerged
+			// where they already stand and the scenario measures swimming rather than the plunge into it.
+			// The float-up ones get the same column `fu_col_*` uses, so the two can be read side by side.
+			case 449: case 450: case 451:
+			case 452: case 453: case 454:
+			case 455: case 456: case 457: case 458:
+				_levelHandler->_waterLevel = WaterLineY;
+				_waterRaised = true;
+				if ((s >= 452 && s <= 454) || s == 458) {
+					for (std::int32_t k = 0; k <= 9; k++) { placeTileEvent(tx, ty - k, EventType::AreaFloatUp); }
+				}
+				break;
 			// Wind, with the strengths the converter produces from a JJ2 parameter of 8. Both `_r` and `_l`
 			// come out in the *right* slot, which is the conversion under test - see ApplyInput().
 			case 182: fillWind(0, 8); break;
@@ -2243,10 +2394,17 @@ namespace Jazz2::Tests
 			// scenario's INDEX and has to move with it whenever anything is appended ahead - it was left at 366
 			// when the `ow_*` family went in, which teleported `ow_jump` into Diamondus 3's coordinates and
 			// dropped it out of the test level.
-			case 446:
+			case 476:
 				// Diamondus 3's own chain: the top of the one-tile shaft at tile (1,36), which drops onto the
 				// horizontal blue spring at (1,45)
 				player->MoveInstantly(Vector2f(1 * 32 + 16, 36 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);
+				player->_speed = Vector2f::Zero;
+				break;
+			case 475:
+				// Castle 1 Night: three tiles above the green spring at (129,52), so the player falls onto it
+				// and the chain runs from there. Above the lowest pole row at y=46, deliberately - entering the
+				// climb from below the first pole is what the level itself does.
+				player->MoveInstantly(Vector2f(129 * 32 + 16, 49 * 32 + 16), Actors::MoveType::Absolute | Actors::MoveType::Force);
 				player->_speed = Vector2f::Zero;
 				break;
 			// The pinball section. Every one of these starts the player somewhere in the chamber rather than
@@ -2273,6 +2431,8 @@ namespace Jazz2::Tests
 			// Above the paddle at (80,18). Its tile is its mounted end, so the offsets step leftwards.
 			case 300: case 301: case 302: case 303: case 304:
 			case 310: case 311:
+			// pb_pad_fire, dropped exactly where pb_pad_fall is so the ride itself is known to match
+			case 470:
 				placePinball(80 * 32 + 16, 400.0f, 0.0f, 0.0f);
 				break;
 			case 305: placePinball(80 * 32 + 16 - 32, 400.0f, 0.0f, 0.0f); break;
@@ -2352,6 +2512,11 @@ namespace Jazz2::Tests
 				if (atRest || _waited >= MaxWaitTicks) {
 					_groundX = player->_pos.X;
 					_groundY = player->_pos.Y;
+
+					// The level's own water line, so the `wt_*` set can be given it back afterwards. Captured
+					// here rather than written as a constant because a level that genuinely has water would
+					// otherwise be drained by the first scenario that ran in it.
+					_defaultWaterLevel = _levelHandler->_waterLevel;
 
 					// Find the objects the level itself contains. The event map can be read whether or not an
 					// object has been instantiated, which the actor list cannot - it only holds one once the
