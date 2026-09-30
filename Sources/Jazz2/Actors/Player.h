@@ -2192,6 +2192,10 @@ namespace Jazz2::Actors
 		// do this: the launch is what letting go of Run is for.
 		void CancelRevUp();
 		// Gunspot of the current animation relative to its hotspot, false (and zero) if its sheet has none
+		// Switches to a shooting pose that actually has a muzzle, dropping what the player is doing until one is
+		// found - the shot's origin is read off the current animation, so a pose with no shooting variant puts
+		// the bullet at that pose's hotspot instead of at a gun
+		bool SetShootingAnimation();
 		bool GetGunspotOffset(Vector2i& offset) const;
 
 	public:

@@ -329,10 +329,22 @@ Scenario | Early press | Later press | Original
 
 A spent attempt cannot produce rows 6 and 7: both press during the rise and both copter perfectly well
 afterwards. What produces all twelve is the ordinary **jump cooldown**, with one detail this engine did not
-have --- it is re-armed by the key being *down*, not by a jump having happened. A press that does nothing
-still pushes the window out, so a tap train every six ticks holds it open for the entire airtime however
-slowly the player ends up falling, while a single tap and then silence lets it expire. Rows 4 and 5 are
-refused by the speed bound instead, being nineteen ticks into the fall.
+have --- a press that does nothing still pushes the window out, so a tap train every six ticks holds it open
+for the entire airtime however slowly the player ends up falling, while a single tap and then silence lets it
+expire. Rows 4 and 5 are refused by the speed bound instead, being nineteen ticks into the fall.
+
+@m_class{m-noindent}
+
+It is re-armed by a **press**, and this is the part that has to be read carefully, because re-arming it on
+every frame the key was merely *held* fits the table just as well and is unplayable. Held, the window can
+never be outlasted, so the flag is true for the single frame a press lands on --- and that frame also has to
+land while the fall is still under the speed bound. The copter then has a one-frame window to be caught in,
+which is the reported *"much more difficult to activate, it gets ignored very often"*. Re-armed by a press,
+holding Jump through a jump opens the window 12.5 ticks in and leaves it open, which is what lets the copter
+start on the way down; tapping faster than that still re-arms it every time and row 1, 2 and 8 stay refused.
+The twelve scenarios cannot tell the two apart --- every one of them taps --- so this is play, not
+measurement. Re-measured after the change: 18 of 20 `cp_*` within 25 px/s at a median of 6.0, against 5.8
+before it.
 
 The length is bracketed rather than read: 11 ticks after the key was last down is refused, 14 and 16 are
 accepted. @ref Jazz2::Actors::Player::LegacyJumpCooldown is 12.5, the midpoint. The engine's own 10 frames is
@@ -1601,6 +1613,15 @@ rise cap cannot explain, since every value involved is already under it. The con
 travel, because that is what the player sees and nothing reads this move's vertical speed. See
 @ref Jazz2::Actors::Player::LegacyUppercutSpeed.
 
+@m_class{m-noindent}
+
+Two things end or interrupt the move that this engine used to count out against regardless. A **ceiling**
+finishes it there and then, where the countdown was carried on against the ceiling with the pose and the
+weightless gravity still up and the player going nowhere --- @ref Jazz2::Actors::Player::OnHitCeiling() now
+ends it, which is what @ref Jazz2::Actors::Player::EndDamagingMove() was already written for. And a **shot**
+fired out of the move's last phase, which is possible in both, takes the pose: see
+@ref movement-accuracy-stopanim-shootpose.
+
 @subsection movement-accuracy-special-stompbounce Bouncing off an enemy you buttstomped
 
 Measured against the test level's own tube turtle, dropped onto from 420 px up. The stomp arrives at its
@@ -2288,6 +2309,49 @@ running flat at 16 px/tick to tick 110 and the player only then jumping, because
 the separate "Jump while Down is held" entry in the gaps table, not a diagonal sidekick. The kick does start
 with a small upward drift @m_span{m-text m-dim} (@cpp ys @ce = −2, decaying to zero over 15 ticks, worth
 about 6 px) @m_endspan which ours does not have; it is too small to be worth a constant.
+
+@subsection movement-accuracy-stopanim-shootpose A shot has to put a shooting pose on screen, or it leaves from nowhere
+
+Not a question of how it looks. The muzzle a shot starts from is read off whatever animation happens to be
+current at the moment it is fired @m_span{m-text m-dim} (@ref Jazz2::Actors::Player::GetGunspotOffset(),
+called from @ref Jazz2::Actors::Player::GetFirePointAndAngle()) @m_endspan, and the pose was chosen by asking
+the metadata for `State | Shoot` and doing nothing at all when it came back empty. A pose with no shooting
+variant therefore stayed on screen and the shot left from *its* hotspot --- the reported bullets appearing
+out of nowhere.
+
+Jazz's uppercut is the clearest case, because its last phase can be fired out of and there is no
+`Uppercut | Shoot`: the uppercut kept the screen and its shots left from the middle of the player. It is not
+special, though; any pose without the variant does the same.
+
+@ref Jazz2::Actors::Player::SetShootingAnimation() drops the bits that say what the player is *doing*, from
+the most specific outwards, until one of them has a shooting variant with a muzzle on it. What is left says
+only where the player is --- airborne, crouched, on a vine --- which every character has a shooting pose for.
+
+@m_class{m-noindent}
+
+The search is only worth the pose changing under the player when the pose they have would put the shot in
+the wrong place, so **a pose that carries a muzzle of its own is left alone however it is drawn**. Lori's
+kick is why: it has a muzzle, its own code re-applies its pose every frame, and swapping away from it turned
+`sp_lori_kick_fire` into 39 animation segments against the original's 4 --- the two fighting over the pose
+once a frame. The uppercut is the one exception, dropped even though it would have served, because the
+original shows the shot there rather than the move.
+
+@m_class{m-noindent}
+
+The *ending* of a special move needed the same treatment, one layer up. `TransitionUppercutEnd` --- which is
+Jazz's uppercut ending and the sidekick's both --- is issued non-cancellable so that it is actually seen, and
+a shot fired during it left the ending on screen over the shot and took its muzzle. It is now in
+@ref Jazz2::Actors::Player::ShouldCancelTransitionOnFire(), alongside the four shot endings that were already
+there. @ref Jazz2::Actors::Player::BeginStandardJump() had long dropped the same transition by hand for the
+same reason; a shot has the same claim on the screen as a jump.
+
+@par Reading the animation column across runs
+An animation-segment count is only comparable between captures taken with the **same** `ScenarioFilter`. The
+scenarios run back to back and the animation state carries from one into the next, so narrowing the filter
+gives a scenario a different predecessor and a different starting pose: `sp_lori_fire_still` opens on
+@cpp AnimState::Uppercut @ce at tick 0, before any input, in an `sp_` run and on @cpp Idle @ce when it is run
+on its own. Nothing about it is a defect, and it is worth checking a suspicious scenario in isolation before
+reading anything into it. The speed figures do not have this problem.
 
 @subsection movement-accuracy-stopanim-vineidle Hanging on a vine is not a static pose
 

@@ -2486,7 +2486,17 @@ namespace Jazz2::Actors
 			// where a 12.5-tick window refuses it and leaves a plain 128.5 px jump. Two rules, one key.
 			if (!_levelHandler->IsReforged() && !CanJump()) {
 				_copterPressAllowed = (_copterDeafLeft <= 0.0f);
-				_copterDeafLeft = LegacyJumpCooldown;
+				// Re-armed by a **press**, not by the key merely being down. Re-arming it on every frame the key
+				// was held made the window impossible to outlast while holding Jump, so the flag was true for the
+				// single frame a press landed on and the copter had to be caught in a one-frame window that also
+				// had to coincide with the fall still being slow enough - reported as it being far harder to start
+				// than the original and ignoring most attempts. Holding Jump through a jump now opens the window
+				// 12.5 ticks in and leaves it open, which is what lets the copter start on the way down; tapping
+				// faster than that still re-arms it every time and keeps the copter unavailable, which is what
+				// `cp_tap55` and `cp_tap60` measure.
+				if (!_wasJumpPressed) {
+					_copterDeafLeft = LegacyJumpCooldown;
+				}
 				// A press *during* a rise puts the held rise gravity back, which is the other half of what
 				// `cp_kill52` shows: its two ticks after the tap step by 0.375 where the untapped jump steps
 				// by 0.875, and its apex ends up 7.4 px higher. There is no latch in the original at all, it
@@ -3056,7 +3066,7 @@ namespace Jazz2::Actors
 							ForceCancelTransition();
 						}
 
-						SetAnimation(_currentAnimation->State | AnimState::Shoot);
+						SetShootingAnimation();
 						// Rewind the animation, if it should be played only once
 						if (weaponCooledDown) {
 							if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
@@ -3771,6 +3781,15 @@ namespace Jazz2::Actors
 		// are already zeroed by the caller; clear the external force too.)
 		if (!_levelHandler->IsReforged() && _externalForce.Y < 0.0f) {
 			_externalForce.Y = 0.0f;
+		}
+
+		// An uppercut that reaches a ceiling is over there and then in the original. This engine counted the rest
+		// of its ticks out against the ceiling instead, holding the pose and the nearly weightless gravity while
+		// the player went nowhere, and only let go once the countdown expired. EndDamagingMove() is written for a
+		// move cut short - it hands the gravity back, clears the countdown and plays the ending - so the ceiling
+		// only has to call it.
+		if (!_levelHandler->IsReforged() && _currentSpecialMove == SpecialMoveType::Uppercut) {
+			EndDamagingMove();
 		}
 
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f, Direction::Down)) {
@@ -4539,12 +4558,19 @@ namespace Jazz2::Actors
 		// on `cp_mod_fire` the state goes to Hook|Shoot on the tick the burst starts while
 		// `TransitionHookShootToHook` is what is drawn for the next ten ticks. Reported as the copter's
 		// shooting animation being wrong; the vine and the fall have exactly the same defect.
+		// `TransitionUppercutEnd` is the sixth, and it is not a shot's ending at all - it is the ending of a
+		// special move, Jazz's uppercut and the sidekick both. It is issued non-cancellable so that it is
+		// actually seen, which is right, but the last part of those moves can be fired out of and the ending
+		// then stayed on screen over the shot. It also took the shot's muzzle with it, since that is read off
+		// whatever is current (see SetShootingAnimation()). BeginStandardJump() already drops it by hand for
+		// exactly this reason, and a shot has the same claim on the screen as a jump.
 		AnimState state = _currentTransition->State;
 		return (state == AnimState::Spring ||
 			state == AnimState::TransitionShootToIdle ||
 			state == AnimState::TransitionHookShootToHook ||
 			state == AnimState::TransitionCopterShootToCopter ||
-			state == AnimState::TransitionFallShootToFall);
+			state == AnimState::TransitionFallShootToFall ||
+			state == AnimState::TransitionUppercutEnd);
 	}
 
 	void Player::IssueHookIdleFlavor()
@@ -6255,6 +6281,75 @@ namespace Jazz2::Actors
 		_currentWeapon = weaponType;
 	}
 
+	bool Player::SetShootingAnimation()
+	{
+		// Firing has to put a *shooting* pose on screen, and not only because of how it looks: the muzzle a shot
+		// leaves from is read off whatever animation is current at that moment (see GetGunspotOffset() and
+		// GetFirePointAndAngle()), so a pose the metadata has no shooting variant of leaves the previous one up
+		// and the shot comes out of that pose's hotspot instead of a gun - the reported bullets appearing out of
+		// nowhere. `_currentAnimation->State | Shoot` was asked for and the miss simply left the pose alone.
+		//
+		// Jazz's uppercut is the clearest case: there is no `Uppercut | Shoot`, the last phase of the move can be
+		// fired out of, and so the uppercut kept the screen while its shots left from its centre. But it is not
+		// special - any pose without a shooting variant does the same.
+		//
+		// So the bits that say what the player is *doing* are dropped from the most specific outwards until one
+		// of them has a shooting variant with a muzzle on it. What is left says only where the player is - in the
+		// air, crouched, on a vine - which every character has a shooting pose for, and a pose that exists but
+		// carries no gunspot is still preferred over leaving the wrong one up.
+		static const AnimState Droppable[] = {
+			AnimState::Uppercut, AnimState::Buttstomp, AnimState::Spring, AnimState::Lift, AnimState::Dash,
+			AnimState::Run, AnimState::Walk, AnimState::Jump, AnimState::Fall, AnimState::Crouch
+		};
+
+		auto hasMuzzle = [this](AnimState state) -> bool {
+			auto* anim = _metadata->FindAnimation(state);
+			return (anim != nullptr && anim->Base != nullptr &&
+				anim->Base->Gunspot != Vector2i(ContentResolver::InvalidValue, ContentResolver::InvalidValue));
+		};
+
+		AnimState state = _currentAnimation->State;
+		// An uppercut is the one move whose pose is dropped even where it would have served: its last phase is
+		// the part that can be fired out of, and the original shows the shot there rather than the uppercut.
+		if (!_levelHandler->IsReforged() && _currentSpecialMove == SpecialMoveType::Uppercut) {
+			state &= ~AnimState::Uppercut;
+		}
+		if (SetAnimation(state | AnimState::Shoot)) {
+			return true;
+		}
+
+		// No shooting variant of this pose. Searching for another one is only worth the pose changing under the
+		// player when the one they have would put the shot in the wrong place - a pose that carries a muzzle is
+		// left alone however it is drawn. Lori's kick is why: it has a muzzle of its own, its own code re-applies
+		// its pose every frame, and swapping away from it turned `sp_lori_kick_fire` into 39 animation segments
+		// against the original's 4 - the two fighting over the pose, once per frame.
+		Vector2i muzzle;
+		if (GetGunspotOffset(muzzle)) {
+			return false;
+		}
+
+		AnimState withoutMuzzle = AnimState::Idle;
+		bool hasWithoutMuzzle = false;
+		for (std::int32_t i = 0; ; i++) {
+			AnimState candidate = state | AnimState::Shoot;
+			if (hasMuzzle(candidate)) {
+				return SetAnimation(candidate);
+			}
+			if (!hasWithoutMuzzle && _metadata->FindAnimation(candidate) != nullptr) {
+				withoutMuzzle = candidate;
+				hasWithoutMuzzle = true;
+			}
+			if (i >= (std::int32_t)arraySize(Droppable)) {
+				break;
+			}
+			state &= ~Droppable[i];
+		}
+		if (hasWithoutMuzzle) {
+			return SetAnimation(withoutMuzzle);
+		}
+		return SetAnimation(AnimState::Shoot);
+	}
+
 	bool Player::GetGunspotOffset(Vector2i& offset) const
 	{
 		// Not every pose a shot can start from has a gunspot or a shooting variant to switch to - the rev-up wind-up
@@ -6276,7 +6371,7 @@ namespace Jazz2::Actors
 			ForceCancelTransition();
 		}
 
-		SetAnimation(_currentAnimation->State | AnimState::Shoot);
+		SetShootingAnimation();
 
 		initialPos = Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
