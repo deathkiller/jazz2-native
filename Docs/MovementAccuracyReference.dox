@@ -2345,6 +2345,15 @@ a shot fired during it left the ending on screen over the shot and took its muzz
 there. @ref Jazz2::Actors::Player::BeginStandardJump() had long dropped the same transition by hand for the
 same reason; a shot has the same claim on the screen as a jump.
 
+@par The exclusion is not a legacy rule
+The shot suppresses the stop chain in **both** gameplay modes, unlike the measured detail around it. What the
+original is needed for is what the stop *looks* like --- which three poses, in which order, at which speeds
+--- and that stays non-Reforged. Which of two animations wins when both want the screen is not a question
+about the original at all: a skid drawn over a shot is wrong either way, and it was reported a second time
+from Reforged once the non-Reforged side was fixed. The three exclusions beside it in
+@ref Jazz2::Actors::Player::IsSlidingToHalt() --- a carry, a crouch and a move's ending --- were never gated
+for the same reason.
+
 @par Reading the animation column across runs
 An animation-segment count is only comparable between captures taken with the **same** `ScenarioFilter`. The
 scenarios run back to back and the animation state carries from one into the next, so narrowing the filter

@@ -11,6 +11,8 @@
 #	include "../../nCine/Graphics/RHI/RDP/RdpTileRecord.h"
 #endif
 
+#include <cmath>
+
 #include <Containers/GrowableArray.h>
 
 namespace Jazz2::Tiles
@@ -349,6 +351,9 @@ namespace Jazz2::Tiles
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		_meshVerticesCount = 0;
 		_meshCommandCount = 0;
+#endif
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+		_layerWindowFrame++;
 #endif
 	}
 
@@ -1391,6 +1396,66 @@ namespace Jazz2::Tiles
 			auto cellOf = [](std::int32_t d) { return (d >= 0 ? d / (std::int32_t)TileSet::DefaultTileSize : -((-d + (std::int32_t)TileSet::DefaultTileSize - 1) / (std::int32_t)TileSet::DefaultTileSize)); };
 #endif
 
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+			// The window cache (see LayerWindowCache). While it's being rebuilt, the static tiles of the walk below
+			// go into it relative to the window's origin, and only the animated ones are streamed.
+			LayerWindowCache* windowCache = nullptr;
+			float windowOriginX = 0.0f, windowOriginY = 0.0f;
+			if (meshMode) {
+				// Counted with the very float additions the walk makes, so a window that ends exactly on a tile
+				// boundary cannot come out a cell longer or shorter than the walk
+				auto countSteps = [](float from, float to) {
+					std::int32_t steps = 0;
+					for (float v = from; v <= to; v += TileSet::DefaultTileSize) {
+						steps++;
+					}
+					return steps;
+				};
+				const std::int32_t windowCols = countSteps(x1, x3);
+				const std::int32_t windowRows = countSteps(y1, y3);
+				// The walk puts a tile at the floor of its position when aligned, which for whole-tile steps is the
+				// floor of the origin plus whole tiles
+				const bool unaligned = PreferencesCache::UnalignedViewport;
+				windowOriginX = (unaligned ? x1 : std::floor(x1));
+				windowOriginY = (unaligned ? y1 : std::floor(y1));
+
+				windowCache = &GetLayerWindowCache(std::int32_t(&layer - _layers.data()));
+				meshCacheHit = (windowCache->Valid && windowCache->TileSetData == meshTileSet && windowCache->Unaligned == unaligned &&
+					windowCache->RepeatX == layer.Description.RepeatX && windowCache->RepeatY == layer.Description.RepeatY &&
+					windowCache->LayoutSize == tileCount && windowCache->TileAbsX == tileAbsX && windowCache->TileAbsY == tileAbsY &&
+					windowCache->Cols == windowCols && windowCache->Rows == windowRows &&
+					LayerWindowUnchanged(layer, *windowCache, tileAbsY, tileXs, tileY));
+				for (std::int32_t c = 0; meshCacheHit && c < (std::int32_t)windowCache->Chunks.size(); c++) {
+					// The atlas textures can be recreated, which the cached commands would still sample
+					const auto& chunk = windowCache->Chunks[c];
+					meshCacheHit = (chunk.QuadCount == 0 ||
+						(c < meshTileSet->GetTextureCount() && chunk.DiffuseTexture == meshTileSet->TextureDiffuse[c].get()));
+				}
+				if (!meshCacheHit) {
+					windowCache->Valid = false;
+					windowCache->TileSetData = meshTileSet;
+					windowCache->Unaligned = unaligned;
+					windowCache->RepeatX = layer.Description.RepeatX;
+					windowCache->RepeatY = layer.Description.RepeatY;
+					windowCache->LayoutSize = tileCount;
+					windowCache->TileAbsX = tileAbsX;
+					windowCache->TileAbsY = tileAbsY;
+					windowCache->Cols = windowCols;
+					windowCache->Rows = windowRows;
+					windowCache->Window.clear();
+					windowCache->Animated.clear();
+					const std::size_t chunkCount = (std::size_t)std::max<std::int32_t>(meshTileSet->GetTextureCount(), 1);
+					if (windowCache->Chunks.size() != chunkCount) {
+						windowCache->Chunks.resize(chunkCount);
+					}
+					for (auto& chunk : windowCache->Chunks) {
+						chunk.Vertices.clear();
+						chunk.QuadCount = 0;
+					}
+				}
+			}
+#endif
+
 			std::int32_t tile_yo = -1;
 			if (!meshCacheHit)
 			for (float y2 = y1; y2 <= y3; y2 += TileSet::DefaultTileSize) {
@@ -1404,6 +1469,11 @@ namespace Jazz2::Tiles
 #if defined(DEATH_TARGET_N64)
 						if (meshCache != nullptr) {
 							for (std::int32_t k = 0; k < windowCols; k++) { meshCache->WindowIds.push_back(0); }
+						}
+#endif
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+						if (windowCache != nullptr) {
+							for (std::int32_t k = 0; k < windowCache->Cols; k++) { windowCache->Window.push_back(0); }
 						}
 #endif
 						continue;
@@ -1420,6 +1490,11 @@ namespace Jazz2::Tiles
 #if defined(DEATH_TARGET_N64)
 					if (meshCache != nullptr) {
 						meshCache->WindowIds.push_back(tile.TileID);
+					}
+#endif
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+					if (windowCache != nullptr) {
+						windowCache->Window.push_back(PackWindowTile(tile));
 					}
 #endif
 
@@ -1439,6 +1514,11 @@ namespace Jazz2::Tiles
 #if defined(DEATH_TARGET_N64)
 					if (animatedTile && meshCache != nullptr && tile.Alpha != 0) {
 						meshCache->Animated.push_back({ (std::uint16_t)tile_xo, (std::uint16_t)tile_yo, tileX + tileY * layer.LayoutSize.X });
+					}
+#endif
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+					if (animatedTile && windowCache != nullptr && tile.Alpha != 0) {
+						windowCache->Animated.push_back({ (std::uint16_t)tile_xo, (std::uint16_t)tile_yo, tileX + tileY * layer.LayoutSize.X });
 					}
 #endif
 					std::int32_t tileId = ResolveTileID(tile);
@@ -1554,6 +1634,21 @@ namespace Jazz2::Tiles
 							tile.Alpha, MeshTileFlags(tile.Flags), (std::uint16_t)tileSlot, (std::uint16_t)tileChunk,
 							(std::uint16_t)tile_xo, (std::uint16_t)tile_yo, tileX + tileY * layer.LayoutSize.X, animatedTile });
 #	else
+#		if defined(TILEMAP_CACHE_LAYER_WINDOW)
+						if (windowCache != nullptr) {
+							const float cellX = float(tile_xo * (std::int32_t)TileSet::DefaultTileSize);
+							const float cellY = float(tile_yo * (std::int32_t)TileSet::DefaultTileSize);
+							if (!animatedTile && tileChunk < (std::int32_t)windowCache->Chunks.size()) {
+								// Relative to the window's origin, the cached commands are translated there
+								AppendTileQuad(windowCache->Chunks[tileChunk].Vertices, cellX, cellY, (float)TileSet::DefaultTileSize,
+									texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
+								continue;
+							}
+							// Streamed at the very position a cache hit streams it at (see AppendAnimatedWindowTiles())
+							x2r = windowOriginX + cellX;
+							y2r = windowOriginY + cellY;
+						}
+#		endif
 						// Accumulate this tile into its chunk's mesh; the layer tint and palette are applied once
 						// per emitted mesh in EmitMesh(). The per-tile alpha rides along in the vertex color.
 						std::int32_t& verticesIndex = chunkVertices[tileChunk];
@@ -1713,6 +1808,32 @@ namespace Jazz2::Tiles
 
 #if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE)
 			if DEATH_LIKELY(meshMode) {
+#	if defined(TILEMAP_CACHE_LAYER_WINDOW)
+				if (windowCache != nullptr) {
+					if (meshCacheHit) {
+						AppendAnimatedWindowTiles(layer, *windowCache, *meshTileSet, windowOriginX, windowOriginY, chunkVertices);
+					} else {
+						windowCache->Valid = UploadLayerWindowCache(*windowCache, *meshTileSet);
+					}
+					for (std::int32_t chunk = 0; chunk < (std::int32_t)windowCache->Chunks.size(); chunk++) {
+						auto& cached = windowCache->Chunks[chunk];
+						if (cached.QuadCount == 0) {
+							continue;
+						}
+						if (windowCache->Valid) {
+							RenderCommand* command = cached.Command.get();
+							command->GetInstanceBlock()->GetUniform(Material::ColorUniformName)->SetFloatVector(layerColor.Data());
+							command->SetTransformation(Matrix4x4f::Translation(windowOriginX, windowOriginY, 0.0f));
+							command->SetLayer(layer.Description.Depth);
+							renderQueue.AddCommand(command);
+						} else {
+							// Too large for a draw of its own, so this window is streamed like an uncached layer
+							EmitMesh(renderQueue, cached.Vertices, *meshTileSet->TextureDiffuse[chunk], meshTileSet->IsIndexed, 0,
+								layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false, Vector2f(windowOriginX, windowOriginY));
+						}
+					}
+				}
+#	endif
 				// Whole visible layer is submitted as one command per touched texture chunk (or a few
 				// <=64 KB pieces for very large layers). Tiles within a layer never overlap, so the order
 				// between chunks doesn't matter - they all share the layer's depth.
@@ -1883,7 +2004,8 @@ namespace Jazz2::Tiles
 	}
 
 	void TileMap::EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
-		std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending)
+		std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending,
+		Vector2f translation)
 	{
 		// Cap quads per command to what one draw can actually reach through the shared streaming buffers, queried
 		// at runtime from the buffer manager (same source RenderBatcher uses) instead of a fixed size - so it
@@ -1935,13 +2057,188 @@ namespace Jazz2::Tiles
 			geometry.SetHostIndexPointer(quadIndices);
 			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * VerticesPerQuad);
 
-			// Vertex positions are already in world space, so the model matrix is identity
-			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+			// Vertex positions are usually in world space already, so the model matrix is identity then
+			command->SetTransformation(Matrix4x4f::Translation(translation.X, translation.Y, 0.0f));
 			command->SetLayer(depth);
 			// Binds diffuse on unit 0 and, when the mesh is recolored at draw time, the palette on unit 1
 			ContentResolver::Get().BindSpritePalette(*command, texture, indexed, paletteOffset);
 
 			renderQueue.AddCommand(command);
+		}
+	}
+#endif
+
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+	TileMap::LayerWindowCache& TileMap::GetLayerWindowCache(std::int32_t layerIndex)
+	{
+		const Viewport* viewport = RenderResources::GetCurrentViewport();
+		LayerWindowCache* unused = nullptr;
+		for (auto& cache : _layerWindowCaches) {
+			if (cache->Owner == viewport && cache->LayerIndex == layerIndex) {
+				cache->LastUsedFrame = _layerWindowFrame;
+				return *cache;
+			}
+			// Not drawn for a while - its viewport is gone or the layer was hidden - so free for another one
+			if (unused == nullptr && _layerWindowFrame - cache->LastUsedFrame > 2) {
+				unused = cache.get();
+			}
+		}
+		if (unused == nullptr) {
+			unused = _layerWindowCaches.emplace_back(std::make_unique<LayerWindowCache>()).get();
+		}
+		unused->Owner = viewport;
+		unused->LayerIndex = layerIndex;
+		unused->LastUsedFrame = _layerWindowFrame;
+		unused->Valid = false;
+		return *unused;
+	}
+
+	bool TileMap::LayerWindowUnchanged(const TileMapLayer& layer, const LayerWindowCache& cache, std::int32_t tileAbsY,
+		std::int32_t tileXs, std::int32_t tileYs) const
+	{
+		// The same cells in the same order as the walk in DrawLayer() records them
+		if ((std::int32_t)cache.Window.size() != cache.Cols * cache.Rows) {
+			return false;
+		}
+		const Vector2i tileCount = layer.LayoutSize;
+		const std::uint32_t* cells = cache.Window.data();
+		std::int32_t tileY = tileYs;
+		for (std::int32_t yo = 0; yo < cache.Rows; yo++) {
+			if (++tileY >= tileCount.Y) { tileY = 0; }
+			if (!layer.Description.RepeatY && (tileAbsY + yo + 1 < 0 || tileAbsY + yo + 1 >= tileCount.Y)) {
+				// A skipped row depends only on the first tile, which is part of the key already
+				cells += cache.Cols;
+				continue;
+			}
+			const std::size_t rowBase = std::size_t(tileY) * tileCount.X;
+			std::int32_t tileX = tileXs;
+			for (std::int32_t xo = 0; xo < cache.Cols; xo++) {
+				if (++tileX >= tileCount.X) { tileX = 0; }
+				if (*cells++ != PackWindowTile(layer.Layout[rowBase + tileX])) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	bool TileMap::UploadLayerWindowCache(LayerWindowCache& cache, TileSet& tileSet)
+	{
+		// The indices come from the pattern every quad mesh shares, so a chunk can't be longer than one draw of it
+		const std::uint32_t maxQuads = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
+		bool fits = true;
+		for (auto& chunk : cache.Chunks) {
+			chunk.QuadCount = std::uint32_t(chunk.Vertices.size() / FloatsPerQuad);
+			if (chunk.QuadCount > maxQuads) {
+				fits = false;
+			}
+		}
+		if (!fits) {
+			return false;
+		}
+
+		const bool indexed = tileSet.IsIndexed;
+		const std::uint16_t* quadIndices = RenderResources::GetQuadIndices();
+		for (std::int32_t c = 0; c < (std::int32_t)cache.Chunks.size(); c++) {
+			auto& chunk = cache.Chunks[c];
+			if (chunk.QuadCount == 0 || c >= tileSet.GetTextureCount()) {
+				chunk.QuadCount = 0;
+				continue;
+			}
+			if (chunk.Command == nullptr) {
+				chunk.Command = std::make_unique<RenderCommand>(RenderCommand::Type::TileMap);
+				chunk.Command->GetMaterial().SetBlendingEnabled(true);
+			}
+			RenderCommand* command = chunk.Command.get();
+			auto& geometry = command->GetGeometry();
+			if (chunk.QuadCount > chunk.CapacityQuads) {
+				// Sized for the whole window at once (a cell holds one quad at most), because creating a buffer
+				// makes the driver wait for its own worker thread - a whole frame with NVIDIA's threaded
+				// optimization. Growing by a quarter instead recreated the buffers again and again while a
+				// layer scrolled into denser parts of the level, at about 7 ms each.
+				const std::uint32_t windowQuads = std::uint32_t(std::max(cache.Cols, 1) * std::max(cache.Rows, 1));
+				chunk.CapacityQuads = std::min<std::uint32_t>(std::max<std::uint32_t>(windowQuads, chunk.QuadCount), maxQuads);
+				geometry.CreateCustomVbo(chunk.CapacityQuads * FloatsPerQuad, BufferUsage::DynamicDraw);
+				geometry.CreateCustomIbo(chunk.CapacityQuads * RenderResources::IndicesPerQuad, BufferUsage::StaticDraw);
+			}
+			// Without buffer mapping the whole VBO is uploaded from the host copy (see LayerWindowCache::Chunk)
+			chunk.Vertices.resize(std::size_t(chunk.CapacityQuads) * FloatsPerQuad);
+			geometry.SetElementsPerVertex(FloatsPerVertex);
+			// Both mark the data dirty, so it is uploaded by the next commit and never again until the next rebuild.
+			// The indices too, as only as many of them as the draw uses are copied (see Geometry::CommitIndices()).
+			geometry.SetHostVertexPointer(chunk.Vertices.data());
+			geometry.SetHostIndexPointer(quadIndices);
+			geometry.SetIndexCount(chunk.QuadCount * RenderResources::IndicesPerQuad);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, std::int32_t(chunk.QuadCount * VerticesPerQuad));
+
+			command->SetType(RenderCommand::Type::TileMap);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
+				indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+			if (shaderChanged) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+				if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
+				}
+				auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+				if (paletteUniform != nullptr) {
+					paletteUniform->SetIntValue(1); // GL_TEXTURE1
+				}
+			}
+			chunk.DiffuseTexture = tileSet.TextureDiffuse[c].get();
+			ContentResolver::Get().BindSpritePalette(*command, *chunk.DiffuseTexture, indexed, 0);
+		}
+		return true;
+	}
+
+	void TileMap::AppendAnimatedWindowTiles(const TileMapLayer& layer, const LayerWindowCache& cache, TileSet& tileSet,
+		float originX, float originY, SmallVectorImpl<std::int32_t>& chunkVertices)
+	{
+		// What the walk in DrawLayer() does for a tile, for just the animated cells of the window
+		for (const auto& cell : cache.Animated) {
+			const LayerTile tile = layer.Layout[cell.LayoutIndex];
+			std::int32_t tileId = ResolveTileID(tile);
+			if (tileId == 0 || tile.Alpha == 0) {
+				continue;
+			}
+			if (ResolveTileSet(tileId) != &tileSet) {
+				continue;
+			}
+			// Read before ResolveTextureDiffuse(), which rebases the ID into its chunk
+			const std::int32_t tileSlot = tileSet.MapToAtlasSlot(tileId);
+			const std::int32_t tileChunk = (tileSet.TilesPerTexture > 0 && tileSlot >= tileSet.TilesPerTexture
+				? tileSlot / tileSet.TilesPerTexture : 0);
+			Texture* tileTexture = tileSet.ResolveTextureDiffuse(tileId);
+			if (tileTexture == nullptr || tileChunk >= (std::int32_t)chunkVertices.size()) {
+				continue;
+			}
+
+			const Vector2i texSize = tileTexture->GetSize();
+			const float texInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
+			const float texInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
+			const std::int32_t tileRow = tileId / tileSet.TilesPerRow;
+			const std::int32_t tileCol = tileId - tileRow * tileSet.TilesPerRow;
+			float texScaleX = TileSet::DefaultTileSize * texInvW;
+			float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvW;
+			float texScaleY = TileSet::DefaultTileSize * texInvH;
+			float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvH;
+			if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+				texBiasX += texScaleX;
+				texScaleX *= -1;
+			}
+			if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+				texBiasY += texScaleY;
+				texScaleY *= -1;
+			}
+
+			std::int32_t& verticesIndex = chunkVertices[tileChunk];
+			if (verticesIndex < 0) {
+				verticesIndex = RentMeshVertices();
+			}
+			AppendTileQuad(_meshVertices[verticesIndex], originX + float(cell.Xo * (std::int32_t)TileSet::DefaultTileSize),
+				originY + float(cell.Yo * (std::int32_t)TileSet::DefaultTileSize), (float)TileSet::DefaultTileSize,
+				texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
 		}
 	}
 #endif

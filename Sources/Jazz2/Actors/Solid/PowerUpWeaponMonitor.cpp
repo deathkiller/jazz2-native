@@ -75,6 +75,7 @@ namespace Jazz2::Actors::Solid
 		// Mainly to fix the power up in `tube1.j2l`
 		AABBInner.L += 2.0f;
 		AABBInner.R -= 2.0f;
+		AABBInner.B -= 2.0f;
 	}
 
 	bool PowerUpWeaponMonitor::OnHandleCollision(ActorBase* other)

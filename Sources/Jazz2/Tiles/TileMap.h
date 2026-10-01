@@ -41,6 +41,22 @@ namespace Jazz2
 #	define TILEMAP_GROUP_MESH_BY_TILE
 #endif
 
+/*
+	Whether the static tiles of a layer's visible window are kept in buffers of the layer's own between frames.
+
+	The tiles a layer shows only change when its window moves by a whole tile, every 32 pixels of ITS scroll,
+	which the slow parallax layers do rarely. Walking the window and copying its quads into the streaming
+	buffer every frame was about an eighth of the main thread's CPU time on desktop. The window is walked once
+	instead and re-issued under a new translation until it moves or one of its tiles changes; animated tiles
+	stay on the streaming path. The Nintendo 64 has a cache of its own in the RDP's packed tile format (see
+	LayerMeshCache). The fixed-function tiers are left out, because their tile-mesh dispatch reads the vertex
+	stream by hand and isn't known to apply the command's model matrix.
+*/
+#if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE) && \
+	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL))
+#	define TILEMAP_CACHE_LAYER_WINDOW
+#endif
+
 namespace Jazz2::Tiles
 {
 	/**
@@ -858,6 +874,64 @@ namespace Jazz2::Tiles
 		void PushAnimatedMeshEntries(const TileMapLayer& layer, const LayerMeshCache& cache, TileSet& tileSet, std::int32_t x1i, std::int32_t y1i);
 #endif
 
+#if defined(TILEMAP_CACHE_LAYER_WINDOW)
+		/**
+			@brief The static tiles of one layer's window as seen by one viewport, kept between frames
+
+			See the note above `TILEMAP_CACHE_LAYER_WINDOW`. Keyed by the viewport too, because splitscreen
+			draws every layer once per viewport, each with a window of its own. The quads are stored relative
+			to the window's origin, so the frames in between only re-issue the commands under a new
+			translation. A copy of the window's tiles (ID, flags and alpha) detects destroyed, triggered or
+			script-placed tiles, and animated tiles are recorded as cells re-resolved every frame.
+		*/
+		struct LayerWindowCache {
+			struct AnimatedCell {
+				std::uint16_t Xo, Yo;
+				std::int32_t LayoutIndex;
+			};
+			struct Chunk {
+				std::unique_ptr<RenderCommand> Command;
+				// Host copy the command's own VBO is uploaded from. Kept as long as the VBO itself, because
+				// without buffer mapping the whole VBO is uploaded from it (see Geometry::CommitVertices())
+				SmallVector<float, 0> Vertices;
+				const Texture* DiffuseTexture = nullptr;
+				std::uint32_t CapacityQuads = 0;
+				std::uint32_t QuadCount = 0;
+			};
+			const Viewport* Owner = nullptr;
+			std::int32_t LayerIndex = -1;
+			std::uint32_t LastUsedFrame = 0;
+			bool Valid = false;
+			bool Unaligned = false;
+			bool RepeatX = false, RepeatY = false;
+			const TileSet* TileSetData = nullptr;
+			Vector2i LayoutSize;
+			std::int32_t TileAbsX = 0, TileAbsY = 0, Cols = 0, Rows = 0;
+			SmallVector<std::uint32_t, 0> Window;
+			SmallVector<AnimatedCell, 0> Animated;
+			SmallVector<Chunk, 1> Chunks;
+		};
+		SmallVector<std::unique_ptr<LayerWindowCache>, 0> _layerWindowCaches;
+		/// Counts frames for @ref LayerWindowCache::LastUsedFrame, advanced in @ref OnEndFrame()
+		std::uint32_t _layerWindowFrame = 0;
+
+		/** @brief Returns the window cache of a layer for the current viewport, reusing one that is no longer drawn */
+		LayerWindowCache& GetLayerWindowCache(std::int32_t layerIndex);
+		/** @brief Returns `true` if the tiles under the window are the ones the cache was built from */
+		bool LayerWindowUnchanged(const TileMapLayer& layer, const LayerWindowCache& cache, std::int32_t tileAbsY,
+			std::int32_t tileXs, std::int32_t tileYs) const;
+		/** @brief Uploads the window's quads collected in @ref LayerWindowCache::Chunk::Vertices, returns `false` if a chunk is too large for one draw */
+		bool UploadLayerWindowCache(LayerWindowCache& cache, TileSet& tileSet);
+		/** @brief Appends the current frame of the window's animated tiles to the streamed chunk meshes */
+		void AppendAnimatedWindowTiles(const TileMapLayer& layer, const LayerWindowCache& cache, TileSet& tileSet,
+			float originX, float originY, SmallVectorImpl<std::int32_t>& chunkVertices);
+
+		/** @brief Packs the parts of a layer tile its appearance depends on, for @ref LayerWindowCache::Window */
+		static std::uint32_t PackWindowTile(const LayerTile& tile) {
+			return std::uint32_t(tile.TileID) | (std::uint32_t(std::uint8_t(tile.Flags)) << 16) | (std::uint32_t(tile.Alpha) << 24);
+		}
+#endif
+
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
 		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr);
@@ -872,9 +946,11 @@ namespace Jazz2::Tiles
 		// Rents a mesh vertex buffer from the per-frame pool and returns its index (the pool can reallocate, so
 		// callers hold indices rather than pointers)
 		std::int32_t RentMeshVertices();
-		// Emits an accumulated mesh as one or more render commands (split into <=64 KB chunks)
+		// Emits an accumulated mesh as one or more render commands (split into <=64 KB chunks), translated by
+		// `translation` (the vertices are usually in world space already)
 		void EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
-			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending);
+			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending,
+			Vector2f translation = Vector2f(0.0f, 0.0f));
 #endif
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);

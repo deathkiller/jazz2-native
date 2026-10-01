@@ -3870,7 +3870,9 @@ namespace Jazz2::Actors
 						 _levelHandler->IsPositionEmpty(this, hitbox5, params)) {
 
 						uint8_t* wallParams;
-						if (_levelHandler->EventMap()->GetEventByPosition(IsFacingLeft() ? hitbox2.L : hitbox2.R, hitbox2.B, &wallParams) != EventType::ModifierNoClimb) {
+						if (_levelHandler->EventMap()->GetEventByPosition(IsFacingLeft() ? hitbox2.L : hitbox2.R, hitbox2.B, &wallParams) != EventType::ModifierNoClimb &&
+							// Don't allow to climp through tube modifier
+							_levelHandler->EventMap()->GetEventByPosition((hitbox1.L + hitbox1.R) * 0.5f, hitbox1.T, &wallParams) != EventType::ModifierTube) {
 							// Move the player upwards, if it is in tolerance, so the animation will look better
 							AABBf aabb = AABBInner + Vector2f(x, -42.0f);
 							for (std::int32_t y = 0; y >= -MaxTolerancePixels; y -= 1) {
@@ -4635,7 +4637,14 @@ namespace Jazz2::Actors
 		// Keyed on `_fireFramesLeft` rather than on the key, because that is what the shoot pose itself is
 		// keyed on: the two now agree by construction, and a shot fired at the very end of a slide suppresses
 		// the chain for exactly as long as it is showing.
-		if (!_levelHandler->IsReforged() && _fireFramesLeft > 0.0f) {
+		//
+		// It applies to **both** gameplay modes, unlike the measured detail around it. What the original was
+		// needed for is the question of what the stop *looks* like - which three poses, in which order, at which
+		// speeds - and that stays non-Reforged. Which of two animations wins when both want the screen is not a
+		// question about the original at all: a shot is drawn over the skid or it is not, and a skid drawn over
+		// a shot is wrong either way. It was reported again from Reforged for exactly that reason. The three
+		// exclusions above - a carry, a crouch and a move's ending - were never gated for the same reason.
+		if (_fireFramesLeft > 0.0f) {
 			return false;
 		}
 		// **The sidekick's ending pose is the fifth**, and the `_currentSpecialMove` test below cannot see it:
