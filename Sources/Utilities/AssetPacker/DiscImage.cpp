@@ -1,5 +1,6 @@
 #include "DiscImage.h"
 #include "Iso9660.h"
+#include "../../Jazz2/Compatibility/JJ2Anims.h"
 
 #include <cstring>
 
@@ -516,7 +517,7 @@ namespace Jazz2::AssetPacker
 			PlayStation 2 disc is, and what `mkisofs` and everything like it writes --- has no container at
 			all: the file *is* the data track, one 2048-byte sector after another from the first.
 		*/
-		bool IsDiscJugglerImage(Stream& stream)
+		bool IsDiscJugglerStream(Stream& stream)
 		{
 			std::int64_t fileSize = stream.GetSize();
 			if (fileSize < 16) {
@@ -526,6 +527,113 @@ namespace Jazz2::AssetPacker
 			std::uint32_t version = stream.ReadValueAsLE<std::uint32_t>();
 			return (version == CdiVersion2 || version == CdiVersion3 || version == CdiVersion35);
 		}
+
+		/** @brief The track of an image that holds the file system, described the same way for both kinds of image */
+		struct DataTrack
+		{
+			CdiImage Image;
+			CdiTrack Plain;
+			CdiTrack* Track = nullptr;
+			bool DiscJuggler = false;
+		};
+
+		bool FindDataTrack(Stream& source, StringView sourcePath, DataTrack& result)
+		{
+			result.DiscJuggler = IsDiscJugglerStream(source);
+			if (result.DiscJuggler) {
+				if (!ParseCdi(source, result.Image)) {
+					return false;
+				}
+
+				// The game is on the last data track, which on a disc that boots on an unmodified console is the
+				// one of the second session --- the console reads the last session and nothing else
+				for (CdiTrack& track : result.Image.Tracks) {
+					if (track.Mode != TrackModeAudio) {
+						result.Track = &track;
+					}
+				}
+				if (result.Track == nullptr) {
+					LOGE("\"{}\" has no data track", sourcePath);
+					return false;
+				}
+				if (result.Track->SectorSize == 2352) {
+					LOGE("\"{}\" stores whole 2352-byte sectors, which cannot be written back", sourcePath);
+					return false;
+				}
+			} else {
+				// A plain volume is one track that begins where the file does, so everything works on it unchanged
+				// once it is described the same way
+				result.Plain.Mode = TrackModeData;
+				result.Plain.SectorSize = IsoSectorSize;
+				result.Plain.Length = std::uint32_t(source.GetSize() / IsoSectorSize);
+				result.Plain.TotalLength = result.Plain.Length;
+				result.Track = &result.Plain;
+				if (result.Plain.Length < 17) {
+					LOGE("\"{}\" is neither a DiscJuggler image nor a disc volume", sourcePath);
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	bool DiscImage::IsDiscJugglerImage(StringView path)
+	{
+		auto s = fs::Open(path, FileAccess::Read);
+		return (s->IsValid() && IsDiscJugglerStream(*s));
+	}
+
+	bool DiscImage::CarriesLz4Images(StringView path)
+	{
+		auto source = fs::Open(path, FileAccess::Read);
+		DataTrack data;
+		if (!source->IsValid() || !FindDataTrack(*source, path, data)) {
+			return false;
+		}
+		CdiSectorReader sectorReader(*source, *data.Track);
+		Iso9660Reader isoReader;
+		if (!isoReader.Open(sectorReader, data.Track->StartLba)) {
+			return false;
+		}
+
+		std::uint32_t lba = isoReader.GetRootLba();
+		std::uint32_t size = isoReader.GetRootSize();
+		for (StringView directory : { ContentDirectoryName, "Tilesets"_s }) {
+			SmallVector<Iso9660Reader::Entry, 0> entries;
+			if (!isoReader.ReadDirectory(lba, size, entries)) {
+				return false;
+			}
+			const Iso9660Reader::Entry* found = nullptr;
+			for (const Iso9660Reader::Entry& entry : entries) {
+				if (entry.IsDirectory && StringUtils::equalsIgnoreCase(entry.Name, directory)) {
+					found = &entry;
+					break;
+				}
+			}
+			if (found == nullptr) {
+				return false;
+			}
+			lba = found->Lba;
+			size = found->Size;
+		}
+
+		SmallVector<Iso9660Reader::Entry, 0> tilesets;
+		if (!isoReader.ReadDirectory(lba, size, tilesets)) {
+			return false;
+		}
+		for (const Iso9660Reader::Entry& entry : tilesets) {
+			if (entry.IsDirectory || entry.Size < 12) {
+				continue;
+			}
+			// The header of a converted tileset (see JJ2Tileset::Convert()): signature, file type, version, flags
+			std::uint8_t sector[IsoSectorSize];
+			static const std::uint8_t Signature[] = { 0xEF, 0xBB, 0xBF, 0xE2, 0x98, 0x84, 0xEF, 0xB8, 0x8F, 0x20 };
+			if (!sectorReader.ReadSector(entry.Lba, sector) || std::memcmp(sector, Signature, sizeof(Signature)) != 0) {
+				return false;
+			}
+			return ((sector[11] & Compatibility::JJ2Anims::ImageContentLz4Flag) != 0);
+		}
+		return false;
 	}
 
 	bool DiscImage::SwapContent(StringView sourcePath, StringView targetPath, StringView contentPath)
@@ -545,43 +653,13 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 
-		CdiImage image;
-		CdiTrack plainTrack;
-		CdiTrack* dataTrack = nullptr;
-		bool discJuggler = IsDiscJugglerImage(*source);
-		if (discJuggler) {
-			if (!ParseCdi(*source, image)) {
-				return false;
-			}
-
-			// The game is on the last data track, which on a disc that boots on an unmodified console is the
-			// one of the second session --- the console reads the last session and nothing else
-			for (CdiTrack& track : image.Tracks) {
-				if (track.Mode != TrackModeAudio) {
-					dataTrack = &track;
-				}
-			}
-			if (dataTrack == nullptr) {
-				LOGE("\"{}\" has no data track", sourcePath);
-				return false;
-			}
-			if (dataTrack->SectorSize == 2352) {
-				LOGE("\"{}\" stores whole 2352-byte sectors, which cannot be written back", sourcePath);
-				return false;
-			}
-		} else {
-			// A plain volume is one track that begins where the file does, so everything below works on it
-			// unchanged once it is described the same way
-			plainTrack.Mode = TrackModeData;
-			plainTrack.SectorSize = IsoSectorSize;
-			plainTrack.Length = std::uint32_t(source->GetSize() / IsoSectorSize);
-			plainTrack.TotalLength = plainTrack.Length;
-			dataTrack = &plainTrack;
-			if (plainTrack.Length < 17) {
-				LOGE("\"{}\" is neither a DiscJuggler image nor a disc volume", sourcePath);
-				return false;
-			}
+		DataTrack data;
+		if (!FindDataTrack(*source, sourcePath, data)) {
+			return false;
 		}
+		CdiImage& image = data.Image;
+		CdiTrack* dataTrack = data.Track;
+		const bool discJuggler = data.DiscJuggler;
 
 		CdiSectorReader sectorReader(*source, *dataTrack);
 		Iso9660Reader isoReader;

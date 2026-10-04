@@ -345,11 +345,14 @@ namespace Death { namespace IO {
 			// Vita mount points: app0:, ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
 #		if defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_PSP)
 			// "eeprom", "flash0" and "cdrom0" are one character longer than anything the other platforms mount
-			constexpr std::size_t MaxMountPointLength = 7;
+			constexpr std::size_t MaxMountPointLength = 6;
 #		else
+			// "romfs" is the longest name there
 			constexpr std::size_t MaxMountPointLength = 5;
 #		endif
-			for (std::size_t i = 0; i < MaxMountPointLength && i < path.size(); i++) {
+			// The colon comes after the name, so for the longest one it is at index MaxMountPointLength - with
+			// the bound exclusive, "romfs:" was taken for a relative path and GetAbsolutePath() failed on it
+			for (std::size_t i = 0; i <= MaxMountPointLength && i < path.size(); i++) {
 				char c = path.data()[i];
 				if (c == ':') {
 					if (i + 1 < path.size() && (path.data()[i + 1] == '/' || path.data()[i + 1] == '\\')) {
@@ -906,6 +909,11 @@ namespace Death { namespace IO {
 				_dirStream = ::opendir(nullTerminatedPath.data());
 				if (_dirStream != nullptr) {
 					String absPath = GetAbsolutePath(path);
+					if DEATH_UNLIKELY(absPath.empty()) {
+						// The directory is open, so the path as given reaches it - an empty prefix instead put every
+						// entry at the root, and the separator check below read in front of the buffer
+						absPath = path;
+					}
 					std::size_t pathLength = absPath.size();
 					std::memcpy(_path, absPath.data(), pathLength);
 					if (_path[pathLength - 1] == '/' || _path[pathLength - 1] == '\\') {

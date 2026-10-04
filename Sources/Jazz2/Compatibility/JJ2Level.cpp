@@ -1255,6 +1255,16 @@ namespace Jazz2::Compatibility
 		_levelTokenTextIds.push_back(textId);
 	}
 
+	void JJ2Level::AddEventMusic(StringView music)
+	{
+		for (const String& existing : _eventMusic) {
+			if (existing == music) {
+				return;
+			}
+		}
+		_eventMusic.emplace_back(music);
+	}
+
 	void JJ2Level::CheckWaterLevelAroundStart()
 	{
 		bool waterAround = true;

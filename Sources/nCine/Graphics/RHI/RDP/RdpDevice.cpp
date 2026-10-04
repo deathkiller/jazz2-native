@@ -372,6 +372,8 @@ namespace nCine::RHI::RDP
 			bool Valid = false;
 		};
 		TmemWindow tmemWindow;
+		// The scissor rect last programmed, in raster pixels of the current target
+		std::int32_t appliedScissor[4] = { -1, -1, -1, -1 };
 		/*
 			TMEM is DOUBLE-BUFFERED for the windows that make up nearly every frame: the texel half of TMEM
 			(the upper half holds the TLUT) is split into two 1 KB slots, each paired with its own tile
@@ -463,6 +465,27 @@ namespace nCine::RHI::RDP
 		}
 
 		/**
+			@brief Rounds the first texel of a window down to an 8-byte boundary of its row
+
+			LOAD_TILE fetches every row of a window from RDRAM as a transfer of its own, starting at that row of
+			the texture plus the window's first texel. A transfer that starts in the lower half of a 16-byte line
+			(byte 1 to 7) and runs for ~58 bytes or more can crash the RDP - libdragon's validator knows the
+			hazard ("loading pixels from a misaligned texture image"), but checks it only at the texture's base
+			address, which RdpTexture always aligns, so windows that start mid-row passed it unseen. The main
+			menu's spinning carrot did it on most frames: three of its four columns start 58, 116 and 174 bytes
+			into the rows of a 116-texel RGBA16 sheet, so every other row's 58-byte transfer began 2, 4 or 6
+			bytes into a line. Strides are whole multiples of 8 bytes (RdpTexture's row alignment, and the
+			render targets' and the lightmap's), so starting a window on an aligned texel starts every row of it
+			on one. The texture coordinates of the primitives stay as they are - the tile descriptor takes the
+			window's origin, so a window that starts earlier only holds a few more texels.
+		*/
+		inline std::int32_t AlignWindowStart(tex_format_t fmt, std::int32_t s0)
+		{
+			const std::int32_t texelsPerWord = 64 / TEX_FORMAT_BITDEPTH(fmt);
+			return s0 - (s0 % texelsPerWord);
+		}
+
+		/**
 			@brief Rounds a coordinate to the RDP's fixed-point grid of @p steps positions per unit
 
 			rdpq converts a rectangle's coordinates by TRUNCATION - screen positions to 10.2, texel coordinates to
@@ -495,8 +518,9 @@ namespace nCine::RHI::RDP
 
 		inline bool WindowFits(const surface_t* surf, std::int32_t s0, std::int32_t t0, std::int32_t s1, std::int32_t t1)
 		{
+			// Measured the way UploadWindow() loads it, from the aligned first texel
 			const tex_format_t fmt = surface_get_format(surf);
-			return TmemPitch(fmt, s1 - s0) * (t1 - t0) <= TmemBudget(fmt);
+			return TmemPitch(fmt, s1 - AlignWindowStart(fmt, s0)) * (t1 - t0) <= TmemBudget(fmt);
 		}
 
 		/**
@@ -596,6 +620,9 @@ namespace nCine::RHI::RDP
 				t0 = 0;
 				t1 = state.Texture->height;
 			}
+			const tex_format_t fmt = surface_get_format(state.Texture);
+			// Every row the load fetches has to start on an aligned texel (see AlignWindowStart)
+			s0 = AlignWindowStart(fmt, s0);
 			if (tmemWindow.Valid && tmemWindow.Buffer == state.Texture->buffer && tmemWindow.Version == state.TextureVersion &&
 				tmemWindow.S0 == s0 && tmemWindow.T0 == t0 && tmemWindow.S1 == s1 && tmemWindow.T1 == t1 &&
 				tmemWindow.Stride == state.Texture->stride &&
@@ -603,7 +630,6 @@ namespace nCine::RHI::RDP
 				if (TraceDrawStatistics) { stats.WindowHits++; traceUploadTicks += std::uint32_t(get_ticks()) - uploadStart; }
 				return;
 			}
-			const tex_format_t fmt = surface_get_format(state.Texture);
 			const std::int32_t pitch = TmemPitch(fmt, s1 - s0);
 			const std::int32_t bytes = pitch * (t1 - t0);
 			const std::int32_t bpp = TEX_FORMAT_BITDEPTH(fmt);
@@ -760,7 +786,7 @@ namespace nCine::RHI::RDP
 					would sample across the band edge.
 				*/
 				const tex_format_t bandFmt = surface_get_format(state.Texture);
-				const std::int32_t bandPitch = TmemPitch(bandFmt, winS1 - winS0);
+				const std::int32_t bandPitch = TmemPitch(bandFmt, winS1 - AlignWindowStart(bandFmt, winS0));
 				const std::int32_t bandBpp = TEX_FORMAT_BITDEPTH(bandFmt);
 				if (state.Filter == FILTER_POINT && (bandBpp == 8 || bandBpp == 16) && bandPitch <= TmemBudget(bandFmt) &&
 					winT1 > winT0 && std::abs(t1 - t0) > 0.01f) {
@@ -807,11 +833,37 @@ namespace nCine::RHI::RDP
 				// Tells the blitter to overlap its chunks by a texel, which is what keeps a bilinear tap
 				// at a chunk seam from sampling outside the chunk
 				parms.filtering = (state.Filter == FILTER_BILINEAR);
+				// The blitter loads its chunks row by row from the sub-rect's first texel on, which has to be an
+				// aligned one (see AlignWindowStart). The texels that adds in front keep the scale and land outside
+				// the rectangle - before it, or past its end when mirrored - where a scissor around the rectangle
+				// keeps them off the screen. The scissor of the dispatch is known here (ApplyScissor() runs first).
+				float blitX = x0;
+				const std::int32_t loadS0 = AlignWindowStart(surface_get_format(state.Texture), winS0);
+				const bool clipToRect = (loadS0 != winS0 && appliedScissor[0] >= 0);
+				if (clipToRect) {
+					const float clipX0 = std::max(x0, float(appliedScissor[0]));
+					const float clipY0 = std::max(y0, float(appliedScissor[1]));
+					const float clipX1 = std::min(x1, float(appliedScissor[0] + appliedScissor[2]));
+					const float clipY1 = std::min(y1, float(appliedScissor[1] + appliedScissor[3]));
+					if (clipX1 <= clipX0 || clipY1 <= clipY0) {
+						return;
+					}
+					if (!parms.flip_x) {
+						blitX -= float(winS0 - loadS0) * parms.scale_x;
+					}
+					parms.width += winS0 - loadS0;
+					parms.s0 = loadS0;
+					rdpq_set_scissor(clipX0, clipY0, clipX1, clipY1);
+				}
 				// The blitter loads its chunks over TMEM the previous primitive may still read; autosync
 				// covers its own chunks, and these two cover what came before it
 				rdpq_sync_load();
 				rdpq_sync_tile();
-				rdpq_tex_blit(state.Texture, x0, y0, &parms);
+				rdpq_tex_blit(state.Texture, blitX, y0, &parms);
+				if (clipToRect) {
+					rdpq_set_scissor(appliedScissor[0], appliedScissor[1], appliedScissor[0] + appliedScissor[2],
+						appliedScissor[1] + appliedScissor[3]);
+				}
 
 				// The blitter left its own last chunk in the texel half of TMEM, and programmed TILE0 - and TILE1 as
 				// well, the tile its loader loads whole-row chunks through (LOAD_BLOCK). Slot 1 kept its cached
@@ -1019,10 +1071,11 @@ namespace nCine::RHI::RDP
 				// TODO: split rotated primitives like the rectangle path splits axis-aligned ones if a
 				// rotated sprite ever grows past TMEM; today the biggest rotated frames stay well below it
 				const tex_format_t fmt = surface_get_format(state.Texture);
-				while (TmemPitch(fmt, winS1 - winS0) > TmemBudget(fmt) && winS1 - winS0 > 8) {
+				const std::int32_t loadS0 = AlignWindowStart(fmt, winS0);
+				while (TmemPitch(fmt, winS1 - loadS0) > TmemBudget(fmt) && winS1 - winS0 > 8) {
 					winS1--;
 				}
-				const std::int32_t maxRows = TmemBudget(fmt) / TmemPitch(fmt, winS1 - winS0);
+				const std::int32_t maxRows = TmemBudget(fmt) / TmemPitch(fmt, winS1 - loadS0);
 				if (winT1 - winT0 > maxRows) {
 					winT1 = winT0 + maxRows;
 				}
@@ -1083,6 +1136,13 @@ namespace nCine::RHI::RDP
 			}
 			const float texelsS = std::abs(pu[0] - pu[2]), texelsT = std::abs(pv[3] - pv[2]);
 			if (texelsS < 0.5f || texelsT < 0.5f) {
+				return false;
+			}
+			// The blitter loads its chunks from the sub-rect's first texel on, which has to be an aligned one (see
+			// AlignWindowStart). The axis-aligned blit cuts away the texels an earlier start adds with a scissor,
+			// which cannot follow a rotated quad, so such a window keeps the triangle path instead. The window this
+			// path exists for, the legacy menu's 128x128 tile, starts at column 0.
+			if (AlignWindowStart(surface_get_format(state.Texture), winS0) != winS0) {
 				return false;
 			}
 
@@ -1456,7 +1516,7 @@ namespace nCine::RHI::RDP
 					// TmemPitch) instead of padding it: the band that used to warn here now fits. The warp's bands,
 					// which were the strips that got here, go out row by row now (see SubmitRowBandStrip).
 					const tex_format_t fmt = surface_get_format(state.Texture);
-					const std::int32_t rows = std::max<std::int32_t>(TmemBudget(fmt) / TmemPitch(fmt, winS1 - winS0), 1);
+					const std::int32_t rows = std::max<std::int32_t>(TmemBudget(fmt) / TmemPitch(fmt, winS1 - AlignWindowStart(fmt, winS0)), 1);
 					if (winT1 - winT0 > rows) {
 						if (!warnedOversizedTriangle) {
 							warnedOversizedTriangle = true;
@@ -2072,8 +2132,6 @@ namespace nCine::RHI::RDP
 		// changes (nullptr target = the screen)
 		const RdpRenderTarget* attachedTarget = nullptr;
 		bool rdpAttached = false;
-		// The scissor rect last programmed, in raster pixels of the current target
-		std::int32_t appliedScissor[4] = { -1, -1, -1, -1 };
 
 		// The RDP's own performance counters - how many RCP cycles (62.5 MHz) it has been running, how many of
 		// them its pipeline was busy drawing, and how many it spent loading TMEM - and the status register they are

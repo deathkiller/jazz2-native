@@ -87,6 +87,15 @@ if(NCINE_PREFERRED_RHI STREQUAL "Metal")
 endif()
 
 include(ncine_imported_targets)
+
+if(NOT NCINE_BUILD_GAME)
+	# Only the offline tools, see `NCINE_BUILD_GAME` in "ncine_options.cmake" - they need the source lists and none of
+	# what follows, which is all about the game
+	include(ncine_sources)
+	include(ncine_offline_tools)
+	return()
+endif()
+
 include(ncine_imgui)
 include(ncine_tracy)
 
@@ -100,18 +109,6 @@ if(NCINE_BUILD_ANDROID)
 	include(ncine_generated_sources)
 	include(ncine_build_android)
 	return()
-endif()
-
-# ShaderCompiler: preprocesses the ".shader" files into the generated headers that are committed to the
-# repository (see Sources/Utilities/ShaderCompiler/Main.cpp), so the game's own build never runs it. The
-# option behind it is forced off when cross-compiling - the tool runs on the build machine - and defaults
-# to off where nothing would use it, see `NCINE_BUILD_SHADER_COMPILER` in "ncine_options.cmake".
-# The binary directory is given explicitly: without it CMake mirrors the source layout and the tool would be
-# built into "<build>/Sources/Utilities/ShaderCompiler", one level deeper than it needs to be and under a
-# directory that otherwise holds no build output at all.
-if(NCINE_BUILD_SHADER_COMPILER)
-	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/ShaderCompiler" "Utilities/ShaderCompiler")
-	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()
 
 if(NCINE_BUILD_LIBRETRO)
@@ -181,14 +178,7 @@ endforeach()
 
 target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 
-# AssetPacker: converts original game data ahead of time (see Sources/Utilities/AssetPacker/Main.cpp). Host-only - it is
-# a build tool, so it is skipped for every cross-compiled target, and it links only the base layer and the
-# converters rather than the engine. See `NCINE_BUILD_ASSET_PACKER` in "ncine_options.cmake" for where it's built.
-# The binary directory is given explicitly, for the same reason as `ShaderCompiler` above.
-if(NCINE_BUILD_ASSET_PACKER)
-	add_subdirectory("${NCINE_SOURCE_DIR}/Utilities/AssetPacker" "Utilities/AssetPacker")
-	set_target_properties(AssetPacker PROPERTIES FOLDER "Utilities")
-endif()
+include(ncine_offline_tools)
 
 # Windows RT uses custom packaging, enable it only for other platforms. iOS assembles its application bundle at
 # build time instead (see cmake/ncine_ios_bundle.cmake), there is nothing to install or package.

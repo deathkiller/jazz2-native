@@ -816,20 +816,34 @@ endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)
 
+# The game itself, which is what nearly every build is for. Without it, only the offline tools below are built.
+option(NCINE_BUILD_GAME "Build the game itself, turn off to build only the offline tools" ON)
+
 # The two offline tools (see `Sources/Utilities`) are executables for the build machine, which is why both
 # are forced off for every cross-compiled target. Beyond that they are never installed, never packaged and
 # never invoked by the game's own build - the headers ShaderCompiler produces are committed to the
 # repository - so a build whose only product is a package, a container image or a headless server compiles
 # them just to throw them away. Those configurations default to off and can still ask for the tools
 # explicitly; on a normal desktop build they stay on, because that is where they get used.
+# The one cross-compiled exception is the AssetPacker built with Emscripten instead of the game: that is its web
+# version (see Sources/Utilities/AssetPacker/Web), a product of its own rather than a build tool.
 if(DEDICATED_SERVER OR NCINE_BUILD_FLATPAK OR NCINE_BUILD_LIBRETRO)
 	set(_ncineBuildOfflineTools OFF)
 else()
 	set(_ncineBuildOfflineTools ON)
 endif()
-cmake_dependent_option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
+if(NOT CMAKE_CROSSCOMPILING OR (EMSCRIPTEN AND NOT NCINE_BUILD_GAME))
+	set(_ncineCanBuildAssetPacker ON)
+else()
+	set(_ncineCanBuildAssetPacker OFF)
+endif()
+cmake_dependent_option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ${_ncineBuildOfflineTools} "_ncineCanBuildAssetPacker" OFF)
 cmake_dependent_option(NCINE_BUILD_SHADER_COMPILER "Build the offline ShaderCompiler tool" ${_ncineBuildOfflineTools} "NOT CMAKE_CROSSCOMPILING" OFF)
 unset(_ncineBuildOfflineTools)
+unset(_ncineCanBuildAssetPacker)
+if(NOT NCINE_BUILD_GAME AND NOT NCINE_BUILD_ASSET_PACKER AND NOT NCINE_BUILD_SHADER_COMPILER)
+	message(WARNING "Nothing to build: the game is turned off (NCINE_BUILD_GAME) and so are both offline tools")
+endif()
 
 # The movement probe (see `Sources/Jazz2/Tests`) drives the player through a fixed matrix of scenarios and
 # logs its trajectory, so a run can be compared against the same run in the original game. It is a

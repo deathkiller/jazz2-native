@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jazz² Resurrection Content Swapper</title>
+<meta name="description" content="Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast or PlayStation 2 image of Jazz² Resurrection, right in the browser.">
+<style>
+	:root {
+		--bg: #f6f5f2;
+		--panel: #ffffff;
+		--text: #1d1d1f;
+		--muted: #5f6368;
+		--border: #d9d6cf;
+		--accent: #6a3fd1;
+		--accent-text: #ffffff;
+		--ok: #1e7f3c;
+		--error: #b3261e;
+		--log-bg: #1b1b1f;
+		--log-text: #e3e3e6;
+		--log-error: #ff8a80;
+		--drop: #efe9fb;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #141416;
+			--panel: #1e1e22;
+			--text: #ececef;
+			--muted: #a0a0a8;
+			--border: #34343a;
+			--accent: #9a7bf0;
+			--accent-text: #141416;
+			--ok: #6ad48a;
+			--error: #ff8a80;
+			--log-bg: #0e0e10;
+			--drop: #2a2440;
+		}
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	}
+	main {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 32px 16px 48px;
+	}
+	h1 {
+		font-size: 1.6rem;
+		margin: 0 0 4px;
+	}
+	.lead {
+		color: var(--muted);
+		margin: 0 0 24px;
+	}
+	.step {
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		padding: 16px 18px;
+		margin-bottom: 16px;
+	}
+	.step h2 {
+		font-size: 1rem;
+		margin: 0 0 4px;
+	}
+	.step p {
+		margin: 0 0 12px;
+		color: var(--muted);
+		font-size: 0.92rem;
+	}
+	.drop {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		border: 2px dashed var(--border);
+		border-radius: 10px;
+		padding: 14px;
+		transition: background 0.15s, border-color 0.15s;
+	}
+	.drop.over {
+		background: var(--drop);
+		border-color: var(--accent);
+	}
+	.drop .hint {
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
+	.chosen {
+		margin-top: 10px;
+		font-size: 0.92rem;
+		overflow-wrap: anywhere;
+	}
+	.chosen.ok { color: var(--ok); }
+	.chosen.bad { color: var(--error); }
+	button, .button {
+		font: inherit;
+		border: 1px solid var(--border);
+		background: var(--panel);
+		color: var(--text);
+		border-radius: 8px;
+		padding: 7px 14px;
+		cursor: pointer;
+		text-decoration: none;
+		display: inline-block;
+	}
+	button.primary, .button.primary {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--accent-text);
+		font-weight: 600;
+	}
+	button:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	input[type=file] { display: none; }
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin: 20px 0 12px;
+	}
+	#status {
+		color: var(--muted);
+		font-size: 0.92rem;
+	}
+	#log {
+		background: var(--log-bg);
+		color: var(--log-text);
+		font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		border-radius: 10px;
+		padding: 12px;
+		height: 320px;
+		overflow: auto;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		margin: 0;
+	}
+	#log .error { color: var(--log-error); }
+	#result {
+		display: none;
+		margin-top: 16px;
+	}
+	footer {
+		margin-top: 28px;
+		color: var(--muted);
+		font-size: 0.85rem;
+	}
+</style>
+</head>
+<body>
+<main>
+	<h1>Jazz² Resurrection Content Swapper</h1>
+	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast or PlayStation 2
+		image of Jazz² Resurrection. Everything happens in this browser tab &mdash; your files are not uploaded anywhere.</p>
+
+	<section class="step">
+		<h2>1. Console image</h2>
+		<p>The image built for the console: <code>.z64</code> for the Nintendo 64, <code>.cdi</code> for the Dreamcast,
+			<code>.iso</code> for the PlayStation 2.</p>
+		<div class="drop" id="imageDrop">
+			<button type="button" id="imageButton">Choose image…</button>
+			<span class="hint">or drop it here</span>
+			<input type="file" id="imageInput" accept=".z64,.n64,.v64,.cdi,.iso">
+		</div>
+		<div class="chosen" id="imageChosen"></div>
+	</section>
+
+	<section class="step">
+		<h2>2. Original game files</h2>
+		<p>The <code>Source</code> folder with the files of Jazz Jackrabbit 2 (<code>Anims.j2a</code>, levels, tilesets,
+			music...), or the game folder that contains it. Any supported version works &mdash; the Shareware Demo,
+			Holiday Hare &rsquo;98, The Secret Files or Christmas Chronicles.</p>
+		<div class="drop" id="sourceDrop">
+			<button type="button" id="sourceButton">Choose folder…</button>
+			<span class="hint">or drop the folder here</span>
+			<input type="file" id="sourceInput" webkitdirectory multiple>
+		</div>
+		<div class="chosen" id="sourceChosen"></div>
+	</section>
+
+	<div class="actions">
+		<button type="button" class="primary" id="startButton" disabled>Create image</button>
+		<button type="button" id="cancelButton" hidden>Cancel</button>
+		<span id="status"></span>
+	</div>
+
+	<pre id="log" aria-live="polite"></pre>
+
+	<div id="result">
+		<a class="button primary" id="downloadLink" href="#">Download</a>
+	</div>
+
+	<footer>
+		On a desktop computer, converting takes under half a minute for a Dreamcast or PlayStation 2 image and around
+		a minute for a Nintendo 64 one, whose music and cinematics are encoded for the console. A Dreamcast image is over
+		700&nbsp;MB, so a desktop browser with a few gigabytes of free memory is recommended.
+	</footer>
+</main>
+
+<script>
+(() => {
+	'use strict';
+
+	const imageInput = document.getElementById('imageInput');
+	const sourceInput = document.getElementById('sourceInput');
+	const imageChosen = document.getElementById('imageChosen');
+	const sourceChosen = document.getElementById('sourceChosen');
+	const startButton = document.getElementById('startButton');
+	const cancelButton = document.getElementById('cancelButton');
+	const statusText = document.getElementById('status');
+	const logView = document.getElementById('log');
+	const result = document.getElementById('result');
+	const downloadLink = document.getElementById('downloadLink');
+
+	let image = null;
+	// Files of the original game, each with its path relative to the chosen folder
+	let sources = [];
+	let worker = null;
+	let timer = null;
+	let downloadUrl = null;
+
+	const platforms = { z64: 'Nintendo 64', n64: 'Nintendo 64', v64: 'Nintendo 64', cdi: 'Dreamcast', iso: 'PlayStation 2' };
+
+	function formatSize(bytes) {
+		return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.ceil(bytes / 1024) + ' KB';
+	}
+
+	function setChosen(element, text, ok) {
+		element.textContent = text;
+		element.className = 'chosen ' + (ok ? 'ok' : 'bad');
+	}
+
+	function updateStart() {
+		startButton.disabled = (worker !== null || image === null || sources.length === 0);
+	}
+
+	function setImage(file) {
+		const extension = file.name.split('.').pop().toLowerCase();
+		const platform = platforms[extension];
+		if (!platform) {
+			image = null;
+			setChosen(imageChosen, file.name + ' is not a .z64, .cdi or .iso image', false);
+		} else {
+			image = file;
+			setChosen(imageChosen, file.name + ' (' + formatSize(file.size) + ') — ' + platform, true);
+		}
+		updateStart();
+	}
+
+	/** Takes the files of the chosen folder, with their paths relative to it */
+	function setSources(files) {
+		sources = files;
+		const hasAnims = files.some((s) => /(^|\/)(anims|animssw)\.j2a$/i.test(s.path));
+		if (files.length === 0) {
+			setChosen(sourceChosen, 'The folder is empty', false);
+		} else if (!hasAnims) {
+			setChosen(sourceChosen, files.length + ' files, but no Anims.j2a among them — this does not look like Jazz Jackrabbit 2', false);
+		} else {
+			const size = files.reduce((sum, s) => sum + s.file.size, 0);
+			setChosen(sourceChosen, files.length + ' files (' + formatSize(size) + ')', true);
+		}
+		updateStart();
+	}
+
+	// The paths of a picked folder start with the folder's own name, which is not part of the layout
+	function stripTopFolder(path) {
+		const slash = path.indexOf('/');
+		return (slash >= 0 ? path.substring(slash + 1) : path);
+	}
+
+	function readAllEntries(reader) {
+		return new Promise((resolve, reject) => {
+			const entries = [];
+			const next = () => reader.readEntries((batch) => {
+				if (batch.length === 0) {
+					resolve(entries);
+				} else {
+					entries.push(...batch);
+					next();
+				}
+			}, reject);
+			next();
+		});
+	}
+
+	async function collectEntry(entry, path, out) {
+		if (entry.isFile) {
+			const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+			out.push({ path: path + file.name, file });
+		} else if (entry.isDirectory) {
+			for (const child of await readAllEntries(entry.createReader())) {
+				await collectEntry(child, path + entry.name + '/', out);
+			}
+		}
+	}
+
+	function setupDrop(zone, onDrop) {
+		zone.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			zone.classList.add('over');
+		});
+		zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+		zone.addEventListener('drop', (e) => {
+			e.preventDefault();
+			zone.classList.remove('over');
+			onDrop(e.dataTransfer);
+		});
+	}
+
+	document.getElementById('imageButton').addEventListener('click', () => imageInput.click());
+	document.getElementById('sourceButton').addEventListener('click', () => sourceInput.click());
+
+	imageInput.addEventListener('change', () => {
+		if (imageInput.files.length > 0) {
+			setImage(imageInput.files[0]);
+		}
+	});
+	sourceInput.addEventListener('change', () => {
+		setSources(Array.from(sourceInput.files, (file) => ({ path: stripTopFolder(file.webkitRelativePath || file.name), file })));
+	});
+
+	setupDrop(document.getElementById('imageDrop'), (dataTransfer) => {
+		if (dataTransfer.files.length > 0) {
+			setImage(dataTransfer.files[0]);
+		}
+	});
+	setupDrop(document.getElementById('sourceDrop'), async (dataTransfer) => {
+		const items = Array.from(dataTransfer.items || []).map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry()).filter(Boolean);
+		const files = [];
+		if (items.length === 1 && items[0].isDirectory) {
+			// The dropped folder is the one chosen, so its own name is not part of the paths
+			for (const child of await readAllEntries(items[0].createReader())) {
+				await collectEntry(child, '', files);
+			}
+		} else {
+			for (const item of items) {
+				await collectEntry(item, '', files);
+			}
+		}
+		setSources(files);
+	});
+
+	function appendLog(text, level) {
+		const nearBottom = (logView.scrollTop + logView.clientHeight >= logView.scrollHeight - 24);
+		const line = document.createElement('span');
+		if (level === 'error') {
+			line.className = 'error';
+		}
+		line.textContent = text + '\n';
+		logView.appendChild(line);
+		if (nearBottom) {
+			logView.scrollTop = logView.scrollHeight;
+		}
+	}
+
+	function finish(text) {
+		clearInterval(timer);
+		timer = null;
+		if (worker !== null) {
+			worker.terminate();
+			worker = null;
+		}
+		cancelButton.hidden = true;
+		statusText.textContent = text;
+		updateStart();
+	}
+
+	function formatElapsed(ms) {
+		const s = Math.round(ms / 1000);
+		return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+	}
+
+	startButton.addEventListener('click', () => {
+		logView.textContent = '';
+		result.style.display = 'none';
+		if (downloadUrl !== null) {
+			URL.revokeObjectURL(downloadUrl);
+			downloadUrl = null;
+		}
+
+		const startTime = Date.now();
+		statusText.textContent = 'Starting...';
+		timer = setInterval(() => {
+			statusText.textContent = 'Working... ' + formatElapsed(Date.now() - startTime);
+		}, 1000);
+
+		worker = new Worker('assetpacker-worker.js');
+		worker.onmessage = (e) => {
+			const message = e.data;
+			switch (message.type) {
+				case 'log':
+					appendLog(message.text, message.level);
+					break;
+				case 'done':
+					downloadUrl = URL.createObjectURL(message.blob);
+					downloadLink.href = downloadUrl;
+					downloadLink.download = message.name;
+					downloadLink.textContent = 'Download ' + message.name + ' (' + formatSize(message.size) + ')';
+					result.style.display = 'block';
+					finish('Done in ' + formatElapsed(message.elapsed));
+					break;
+				case 'failed':
+					appendLog(message.text, 'error');
+					finish('Failed after ' + formatElapsed(message.elapsed));
+					break;
+			}
+		};
+		worker.onerror = (e) => {
+			appendLog(e.message || 'The worker stopped unexpectedly', 'error');
+			finish('Failed');
+		};
+		worker.postMessage({ image, sources });
+		cancelButton.hidden = false;
+		updateStart();
+	});
+
+	cancelButton.addEventListener('click', () => {
+		appendLog('Cancelled', 'error');
+		finish('Cancelled');
+	});
+})();
+</script>
+</body>
+</html>

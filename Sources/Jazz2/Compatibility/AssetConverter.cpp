@@ -502,6 +502,10 @@ namespace Jazz2::Compatibility
 							}
 							usedMusic.emplace(std::move(music), true);
 						}
+						// The track a boss fight switches to is named only by the event that starts it
+						for (const String& eventMusic : level.GetEventMusic()) {
+							usedMusic.emplace(eventMusic, true);
+						}
 
 						// Also copy level script file if exists
 						StringView foundDot = item.findLastOr('.', item.end());

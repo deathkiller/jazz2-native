@@ -79,9 +79,58 @@ jobs:
     #    mkdir ./_package/
     #    cp -f ./_build/jazz2 ./_package/jazz2
     #    cp -f -r ./Content/ ./_package/Content/
-    #    
+    #
     #- name: 'Upload Package'
     #  uses: actions/upload-artifact@v4
     #  with:
     #    name: Jazz2_Emscripten_${{ matrix.CC }}_${{ matrix.Backend }}
     #    path: ./_package/
+
+  # The web version of the AssetPacker - the tool alone, compiled with Emscripten, with the repository's "Content"
+  # baked in and the page that drives it (see Sources/Utilities/AssetPacker/Web/README.md)
+  AssetPacker:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Install Emscripten SDK'
+      run: |
+        sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+        cd ..
+        git clone https://github.com/emscripten-core/emsdk.git
+        cd emsdk
+
+        #EMSDK_VERSION=latest
+        EMSDK_VERSION=3.1.64
+        ./emsdk install $EMSDK_VERSION
+        ./emsdk activate $EMSDK_VERSION
+
+    - name: 'Configure CMake'
+      run: |
+        source ../emsdk/emsdk_env.sh
+
+        emcmake cmake -B ./_build/ -D CMAKE_BUILD_TYPE=Release -D NCINE_BUILD_GAME=OFF
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # Everything the site needs, it can be served as it is
+        mkdir ./_package/
+        cp -f ./_build/Utilities/AssetPacker/index.html ./_package/index.html
+        cp -f ./_build/Utilities/AssetPacker/assetpacker-worker.js ./_package/assetpacker-worker.js
+        cp -f ./_build/Utilities/AssetPacker/AssetPacker.js ./_package/AssetPacker.js
+        cp -f ./_build/Utilities/AssetPacker/AssetPacker.wasm ./_package/AssetPacker.wasm
+        cp -f ./_build/Utilities/AssetPacker/AssetPacker.data ./_package/AssetPacker.data
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_AssetPacker_Web
+        path: ./_package/

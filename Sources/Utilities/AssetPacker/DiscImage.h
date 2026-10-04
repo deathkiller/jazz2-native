@@ -28,6 +28,17 @@ namespace Jazz2::AssetPacker
 	class DiscImage
 	{
 	public:
+		/** @brief Returns `true` if the file is a DiscJuggler image (`.cdi`), the form a Dreamcast disc is kept in */
+		static bool IsDiscJugglerImage(StringView path);
+
+		/**
+			@brief Returns `true` if the tilesets already on the disc are in LZ4
+
+			Only a build of the game that decodes LZ4 sprite sheets and tilesets is ever given them, so this tells
+			whether new content may use them too. `false` also when the disc has no tilesets to tell by.
+		*/
+		static bool CarriesLz4Images(StringView path);
+
 		/**
 			@brief Writes a copy of a disc image with its `Content` directory replaced
 

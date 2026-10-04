@@ -97,6 +97,10 @@ namespace Jazz2::Compatibility
 
 	void EventConverter::ConvertParamInt(uint32_t paramInt, const ArrayView<const Pair<std::int32_t, std::int32_t>>& paramTypes, std::uint8_t eventParams[16])
 	{
+		// Only the bytes of the listed parameters are written below, and the callers pass an uninitialized array -
+		// ParamIntToParamList() copies all 16 of them, which put stack garbage into the converted levels
+		std::memset(eventParams, 0, 16);
+
 		std::int32_t i = 0;
 		for (auto& param : paramTypes) {
 			if (param.second() == 0) {
@@ -359,7 +363,11 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 1 }		// Music
 			}, eventParams);
 
-			return { EventType::AreaActivateBoss, { 'b', 'o', 's', 's', (std::uint8_t)('1' + eventParams[0]), '.', 'j', '2', 'b', '\0' } };
+			ConversionResult result = { EventType::AreaActivateBoss, { 'b', 'o', 's', 's', (std::uint8_t)('1' + eventParams[0]), '.', 'j', '2', 'b', '\0' } };
+			if (level != nullptr) {
+				level->AddEventMusic(StringView(reinterpret_cast<const char*>(result.Params)));
+			}
+			return result;
 		});
 
 		Add(JJ2Event::AREA_EOL, [](JJ2Level* level, std::uint32_t jj2Params) -> ConversionResult {

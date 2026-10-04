@@ -112,6 +112,17 @@ namespace Jazz2::Compatibility
 		void Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
 		/** @brief Marks the level text with the specified ID as a level token */
 		void AddLevelTokenTextID(std::uint8_t textId);
+		/** @brief Records a music track that an event of the level switches to, in the form the converted level asks for it */
+		void AddEventMusic(StringView music);
+		/**
+			@brief Returns the music tracks the events of the level switch to, filled in by @ref Convert()
+
+			The level's own track (@ref Music) is not among them. A boss fight plays one of its own, and only the
+			activating event names it, so a content tree that carries only what the levels name has to ask here.
+		*/
+		ArrayView<const String> GetEventMusic() const {
+			return _eventMusic;
+		}
 
 		/** @brief Returns target version of the level */
 		JJ2Version GetVersion() const {
@@ -246,6 +257,7 @@ namespace Jazz2::Compatibility
 		SmallVector<OverridenTileMask, 0> _overridenTileMasks;
 		std::unique_ptr<TileEventSection[]> _events;
 		SmallVector<std::uint8_t, TextEventStringsCount> _levelTokenTextIds;
+		SmallVector<String, 0> _eventMusic;
 		SmallVector<OffGridEvent, 0> _offGridEvents;
 
 		void LoadMetadata(JJ2Block& block, bool strictParser);

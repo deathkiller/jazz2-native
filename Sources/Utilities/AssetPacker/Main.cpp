@@ -31,6 +31,26 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <string>
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+#	include <cerrno>
+#	include <sys/types.h>
+
+/**
+	Emscripten's libc declares fallocate() without implementing it, and the base layer's FileSystem::Copy() calls it -
+	only to preallocate the copy, and it carries on when the call says it is not supported, which is what this says
+*/
+extern "C" int fallocate(int fd, int mode, off_t offset, off_t length)
+{
+	static_cast<void>(fd);
+	static_cast<void>(mode);
+	static_cast<void>(offset);
+	static_cast<void>(length);
+	errno = ENOSYS;
+	return -1;
+}
+#endif
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
@@ -142,6 +162,10 @@ namespace
 		String SourceOverride;
 		/** @brief The game's own content directory named by `--content=`, wherever the originals are */
 		String ContentOverride;
+		/** @brief The profile named by `--target=`, empty if none was */
+		String ProfileName;
+		/** @brief Whether `--video-downscale=` was given, which overrides what the profile asks for */
+		bool VideoDownscaleSet = false;
 		TargetProfile Profile = TargetProfile::Desktop;
 		/** @brief How much the cinematics are downscaled; 1 keeps their original resolution */
 		std::int32_t VideoDownscale = 1;
@@ -286,7 +310,10 @@ namespace
 		LOGI("                         tilesets in LZ4, which only their builds decode");
 		LOGI("    --n64-tools=<dir>    libdragon toolchain (or its \"bin\") for --target=n64, if N64_INST is not set.");
 		LOGI("                         That profile stores the sound effects, the music and the cinematics in");
-		LOGI("                         libdragon's formats, so it needs audioconv64, and videoconv64 with ffmpeg");
+		LOGI("                         libdragon's formats, made with audioconv64, and videoconv64 with ffmpeg,");
+		LOGI("                         where they are installed - and by the encoders built into the tool where");
+		LOGI("                         not (if this build has them). \"builtin\" uses those even where libdragon's");
+		LOGI("                         converters are installed");
 		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 keeps them at their original size.");
 		LOGI("                         Cinematics are re-encoded for dreamcast and ps2 (or any N > 1) and");
 		LOGI("                         otherwise copied unchanged; desktop gets none, as the game reads the");
@@ -320,13 +347,49 @@ namespace
 		LOGI("    \".iso\" and a Nintendo 64 \".z64\"; <dir> is a directory prepared by \"convert --target=dreamcast\",");
 		LOGI("    \"--target=ps2\" or \"--target=n64\". The image is rewritten in place if no target is given, and");
 		LOGI("    a \".cdi\" grows only if the new content does not fit in the space the disc already has");
+		LOGI("  swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]");
+		LOGI("    The same, converting the original game files in --source= first, for the console the image is for");
+		LOGI("    (a \".z64\" is n64, a \".cdi\" dreamcast, anything else ps2, unless --target= says otherwise);");
+		LOGI("    --content= is then the game's own content, as for \"convert\", and the options of \"convert\" apply");
+	}
+
+	/** @brief Works out everything the profile named by `--target=` implies */
+	bool ResolveProfile(Options& options)
+	{
+		std::int32_t profileVideoDownscale = 0;
+		if (!options.ProfileName.empty() &&
+			!TryParseProfile(options.ProfileName, options.Profile, profileVideoDownscale, options.N64, options.Lz4Images)) {
+			LOGE("Unknown target profile \"{}\"", options.ProfileName);
+			return false;
+		}
+
+		// A profile that names a downscale of its own supplies it unless the command line already did, so
+		// "--target=ps2" alone produces what that console actually plays
+		if (!options.VideoDownscaleSet && profileVideoDownscale > 0) {
+			options.VideoDownscale = profileVideoDownscale;
+		}
+
+		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
+		// was asked for; every other target needs them in the output tree
+		if (options.N64) {
+			// Where a cinematic cannot be encoded as video, it falls back to the engine's container at the size the
+			// console displays (see the conversion below)
+			options.Videos = VideoHandling::FullMotionVideo;
+			if (!options.VideoDownscaleSet) {
+				options.VideoDownscale = 2;
+			}
+		} else if (options.VideoDownscale > 1 || profileVideoDownscale > 0) {
+			options.Videos = VideoHandling::Recompress;
+		} else if (options.Profile != TargetProfile::Desktop) {
+			options.Videos = VideoHandling::Copy;
+		} else if (options.VideoDownscaleSet) {
+			options.Videos = VideoHandling::Recompress;
+		}
+		return true;
 	}
 
 	bool ParseOptions(ArrayView<const StringView> args, Options& options)
 	{
-		bool videoDownscaleSet = false;
-		std::int32_t profileVideoDownscale = 0;
-
 		std::size_t firstArgument = 1;
 		if (args.size() > 1 && TryParseCommand(args[1], options.Action)) {
 			firstArgument = 2;
@@ -335,10 +398,7 @@ namespace
 		for (std::size_t i = firstArgument; i < args.size(); i++) {
 			StringView arg = args[i];
 			if (arg.hasPrefix("--target="_s)) {
-				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, profileVideoDownscale, options.N64, options.Lz4Images)) {
-					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
-					return false;
-				}
+				options.ProfileName = arg.exceptPrefix("--target="_s);
 			} else if (arg.hasPrefix("--source="_s)) {
 				options.SourceOverride = arg.exceptPrefix("--source="_s);
 			} else if (arg.hasPrefix("--content="_s)) {
@@ -349,7 +409,7 @@ namespace
 					LOGE("Video downscale must be between 1 and 4");
 					return false;
 				}
-				videoDownscaleSet = true;
+				options.VideoDownscaleSet = true;
 			} else if (arg == "--originals-only"_s) {
 				options.OriginalsOnly = true;
 			} else if (arg == "--shareware-only"_s) {
@@ -385,27 +445,8 @@ namespace
 			}
 		}
 
-		// A profile that names a downscale of its own supplies it unless the command line already did, so
-		// "--target=ps2" alone produces what that console actually plays
-		if (!videoDownscaleSet && profileVideoDownscale > 0) {
-			options.VideoDownscale = profileVideoDownscale;
-		}
-
-		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
-		// was asked for; every other target needs them in the output tree
-		if (options.N64) {
-			// Where a cinematic cannot be encoded as video, it falls back to the engine's container at the size the
-			// console displays (see the conversion below)
-			options.Videos = VideoHandling::FullMotionVideo;
-			if (!videoDownscaleSet) {
-				options.VideoDownscale = 2;
-			}
-		} else if (options.VideoDownscale > 1 || profileVideoDownscale > 0) {
-			options.Videos = VideoHandling::Recompress;
-		} else if (options.Profile != TargetProfile::Desktop) {
-			options.Videos = VideoHandling::Copy;
-		} else if (videoDownscaleSet) {
-			options.Videos = VideoHandling::Recompress;
+		if (!ResolveProfile(options)) {
+			return false;
 		}
 
 		if (options.Action == Command::Convert) {
@@ -413,8 +454,9 @@ namespace
 		}
 		// The only command that rewrites what it is given, so it is also the only one whose target is optional
 		if (options.Action == Command::SwapDiscContent) {
-			if (options.ContentOverride.empty()) {
-				LOGE("\"swap-content\" needs the directory that is to become the content of the disc, named by \"--content=\"");
+			if (options.ContentOverride.empty() && options.SourceOverride.empty()) {
+				LOGE("\"swap-content\" needs the directory that is to become the content of the disc, named by \"--content=\", "
+					"or the original game files to convert into it, named by \"--source=\"");
 				return false;
 			}
 			return !options.SourcePath.empty();
@@ -587,52 +629,9 @@ namespace
 
 namespace
 {
-	/** Runs the tool over the already-decoded UTF-8 command line */
-	int RunAssetPacker(ArrayView<const StringView> args)
+	/** @brief Converts the original game data the options name, which is what the tool exists for */
+	bool ConvertGameData(const Options& options)
 	{
-		ConsoleSink consoleSink;
-		Trace::AttachSink(&consoleSink);
-
-		Options options;
-		if (!ParseOptions(args, options)) {
-			PrintUsage();
-			return 1;
-		}
-
-		// The asset-level commands work on single files and share nothing with the conversion below
-		if (options.Action != Command::Convert) {
-			bool success;
-			switch (options.Action) {
-				case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
-				case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
-				case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
-				case Command::RecompressVideo:
-					success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
-					if (success) {
-						LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
-							options.VideoDownscale, fs::GetFileSize(options.TargetPath));
-					}
-					break;
-				case Command::SwapDiscContent:
-					success = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath)
-						? AssetPacker::CartridgeImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride)
-						: AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride));
-					break;
-				case Command::ConvertMusic:
-					success = AssetPacker::ModuleConverter::ConvertJ2bToXm(options.SourcePath, options.TargetPath);
-					if (success) {
-						LOGI("\"{}\" converted to \"{}\", {} bytes", options.SourcePath, options.TargetPath, fs::GetFileSize(options.TargetPath));
-					}
-					break;
-				default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
-			}
-			if (!success) {
-				return 1;
-			}
-			LOGI("Done");
-			return 0;
-		}
-
 		// `--source=` and the positional argument name the same thing, so both go through the same resolution
 		// and a whole game installation is recognized either way
 		StringView sourcePath = (options.SourceOverride.empty()
@@ -640,14 +639,14 @@ namespace
 			: StringView(options.SourceOverride));
 		if (!fs::DirectoryExists(sourcePath)) {
 			LOGE("Source directory \"{}\" does not exist", sourcePath);
-			return 1;
+			return false;
 		}
 
 		SourceLayout layout = ResolveSourceLayout(sourcePath);
 		String animsPath = FindAnimsFile(layout.OriginalsPath);
 		if (!fs::IsReadableFile(animsPath)) {
 			LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", sourcePath);
-			return 1;
+			return false;
 		}
 
 		// An explicit content directory wins over one found beside the originals, which is what allows the two
@@ -655,7 +654,7 @@ namespace
 		if (!options.ContentOverride.empty()) {
 			if (!fs::DirectoryExists(options.ContentOverride)) {
 				LOGE("Content directory \"{}\" does not exist", options.ContentOverride);
-				return 1;
+				return false;
 			}
 			layout.ContentPath = options.ContentOverride;
 		}
@@ -719,10 +718,12 @@ namespace
 		if (options.N64) {
 			if (!AssetPacker::N64Content::FindTools(options.N64Tools, n64Tools)) {
 				LOGE("The n64 profile needs libdragon's audioconv64 - pass \"--n64-tools=<dir>\" or set N64_INST");
-				return 1;
+				return false;
 			}
 			if (!n64Tools.CanEncodeVideo) {
 				LOGW("videoconv64, ffmpeg or ffprobe is missing, so the cinematics will not be encoded as video");
+			} else if (!n64Tools.BuiltIn && n64Tools.VideoConv.empty()) {
+				LOGI("videoconv64, ffmpeg or ffprobe is missing, so the cinematics are encoded by the tool itself");
 			}
 			n64TempPath = fs::CombinePath(outputPath, ".n64-temp"_s);
 			fs::RemoveDirectoryRecursive(n64TempPath);
@@ -734,14 +735,14 @@ namespace
 		PakWriter pakWriter(pakPath, !options.N64);
 		if (!pakWriter.IsValid()) {
 			LOGE("Cannot open \"{}\" for writing", pakPath);
-			return 1;
+			return false;
 		}
 
 		Compatibility::JJ2Version version;
 		if (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, pakWriter, version) ==
 				Compatibility::AssetConverter::Result::UnsupportedVersion) {
 			LOGE("Provided Jazz Jackrabbit 2 version is not supported");
-			return 1;
+			return false;
 		}
 
 		// Added after the conversion, so a path both of them have resolves to what the original data provided,
@@ -762,7 +763,7 @@ namespace
 			PakWriter finalPak(fs::CombinePath(outputPath, packageName), true);
 			if (!finalPak.IsValid() || !AssetPacker::N64Content::SplitPackage(n64TempPak, finalPak, outputPath, n64TempPath, n64Tools)) {
 				LOGE("Cannot prepare the sound effects for the Nintendo 64");
-				return 1;
+				return false;
 			}
 			finalPak.Finalize();
 		}
@@ -843,6 +844,125 @@ namespace
 				fs::GetLastModificationTime(animsPath).ToUnixMilliseconds());
 		}
 
+		return true;
+	}
+
+	/**
+		@brief Converts the original game data for the console an image is for, and puts it into the image
+
+		What the web build of the tool does in one go: the profile is the one the image calls for (unless
+		`--target=` names another), the tree is converted into a temporary directory, and that directory becomes
+		the content of the image.
+	*/
+	bool SwapContentFromSource(const Options& options)
+	{
+		if (!fs::IsReadableFile(options.SourcePath)) {
+			LOGE("Cannot open \"{}\"", options.SourcePath);
+			return false;
+		}
+
+		Options conversion;
+		conversion.SourceOverride = options.SourceOverride;
+		conversion.ContentOverride = options.ContentOverride;
+		conversion.ProfileName = options.ProfileName;
+		conversion.VideoDownscale = options.VideoDownscale;
+		conversion.VideoDownscaleSet = options.VideoDownscaleSet;
+		conversion.AllVideos = options.AllVideos;
+		conversion.OriginalsOnly = options.OriginalsOnly;
+		conversion.SharewareOnly = options.SharewareOnly;
+		conversion.SkipNonEpisodeLevels = options.SkipNonEpisodeLevels;
+		conversion.N64Tools = options.N64Tools;
+		if (conversion.ProfileName.empty()) {
+			conversion.ProfileName = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) ? "n64"_s
+				: AssetPacker::DiscImage::IsDiscJugglerImage(options.SourcePath) ? "dreamcast"_s
+				: "ps2"_s);
+			LOGI("\"{}\" is an image for the \"{}\" profile", fs::GetFileName(options.SourcePath), conversion.ProfileName);
+		}
+		if (!ResolveProfile(conversion)) {
+			return false;
+		}
+
+		// A build of the game older than the LZ4 sprite sheets and tilesets draws garbage from them, while every build
+		// reads the game's own format - so a disc gets them only if the content already on it has them. A cartridge
+		// always does: a build that plays the profile's sound and music (which are newer) reads them as well.
+		if (conversion.Lz4Images && !AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) &&
+			!AssetPacker::DiscImage::CarriesLz4Images(options.SourcePath)) {
+			LOGI("The content on the disc keeps its sprite sheets and tilesets in the game's own format, which an older build "
+				"of the game needs, so the new content keeps to it too");
+			conversion.Lz4Images = false;
+		}
+
+		// Unique enough for two runs not to meet, the directory is removed again either way
+		conversion.TargetPath = fs::CombinePath(fs::GetTempDirectory(),
+			String("jazz2-content-"_s + String(std::to_string(DateTime::UtcNow().ToUnixMilliseconds()).c_str())));
+		if (!fs::CreateDirectories(conversion.TargetPath)) {
+			LOGE("Cannot create \"{}\"", conversion.TargetPath);
+			return false;
+		}
+
+		bool success = ConvertGameData(conversion);
+		if (success) {
+			success = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath)
+				? AssetPacker::CartridgeImage::SwapContent(options.SourcePath, options.TargetPath, conversion.TargetPath)
+				: AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, conversion.TargetPath));
+		}
+		fs::RemoveDirectoryRecursive(conversion.TargetPath);
+		return success;
+	}
+
+	/** Runs the tool over the already-decoded UTF-8 command line */
+	int RunAssetPacker(ArrayView<const StringView> args)
+	{
+		ConsoleSink consoleSink;
+		Trace::AttachSink(&consoleSink);
+
+		Options options;
+		if (!ParseOptions(args, options)) {
+			PrintUsage();
+			return 1;
+		}
+
+		// The asset-level commands work on single files and share nothing with the conversion below
+		if (options.Action != Command::Convert) {
+			bool success;
+			switch (options.Action) {
+				case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
+				case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
+				case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
+				case Command::RecompressVideo:
+					success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
+					if (success) {
+						LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
+							options.VideoDownscale, fs::GetFileSize(options.TargetPath));
+					}
+					break;
+				case Command::SwapDiscContent:
+					if (!options.SourceOverride.empty()) {
+						success = SwapContentFromSource(options);
+					} else {
+						success = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath)
+							? AssetPacker::CartridgeImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride)
+							: AssetPacker::DiscImage::SwapContent(options.SourcePath, options.TargetPath, options.ContentOverride));
+					}
+					break;
+				case Command::ConvertMusic:
+					success = AssetPacker::ModuleConverter::ConvertJ2bToXm(options.SourcePath, options.TargetPath);
+					if (success) {
+						LOGI("\"{}\" converted to \"{}\", {} bytes", options.SourcePath, options.TargetPath, fs::GetFileSize(options.TargetPath));
+					}
+					break;
+				default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
+			}
+			if (!success) {
+				return 1;
+			}
+			LOGI("Done");
+			return 0;
+		}
+
+		if (!ConvertGameData(options)) {
+			return 1;
+		}
 		LOGI("Done");
 		return 0;
 	}

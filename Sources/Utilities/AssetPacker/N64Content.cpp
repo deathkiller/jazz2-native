@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <vector>
+
 #include <Containers/Array.h>
 #include <Containers/SmallVector.h>
 #include <Containers/StringConcatenable.h>
@@ -18,10 +20,15 @@
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
 
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+#	include "Mpeg1Encoder.h"
+#	include "Wav64Writer.h"
+#	include "Xm64Converter.h"
+#endif
+
 #if defined(ASSETPACKER_WITH_OPENMPT)
 #	include <libopenmpt.h>
 #	include <string>
-#	include <vector>
 #endif
 
 using namespace Death::Containers::Literals;
@@ -37,10 +44,13 @@ namespace Jazz2::AssetPacker
 		constexpr std::int32_t VideoWidth = 320;
 		/** @brief Frame rate the cinematics are encoded at, the nearest one MPEG-1 allows */
 		constexpr std::int32_t OutputFps = 24;
+		/** @brief Bitrate the built-in encoder gives the cinematics, the one videoconv64 picks at its default quality */
+		constexpr std::int32_t VideoBitrateKbps = 800;
 		/** @brief Default volumes of the game's preferences, which balance the music against the effects */
 		constexpr float MusicGain = 0.4f;
 		constexpr float SfxGain = 0.8f;
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		String Quote(StringView arg)
 		{
 #if defined(DEATH_TARGET_WINDOWS)
@@ -87,6 +97,49 @@ namespace Jazz2::AssetPacker
 #endif
 			return (fs::IsReadableFile(path) ? path : String());
 		}
+#endif
+
+		/** @brief Converts a float sample to 16 bits, as a recording written for the converters stores it */
+		std::int16_t ToSample16(float value)
+		{
+			return std::int16_t(std::lround(std::clamp(value, -1.0f, 1.0f) * 32767.0f));
+		}
+
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+		bool WriteBuffer(StringView path, const BigEndianWriter& buffer)
+		{
+			auto s = fs::Open(path, FileAccess::Write);
+			if (!s->IsValid() || s->Write(buffer.Data.data(), std::int64_t(buffer.Data.size())) != std::int64_t(buffer.Data.size())) {
+				LOGE("Cannot write \"{}\"", path);
+				return false;
+			}
+			return true;
+		}
+
+		/**
+			@brief Writes interleaved stereo float audio as a `.wav64` file
+
+			@param loopStart	First frame of the loop, or negative for audio that plays once
+		*/
+		bool WriteStereoWav64(StringView path, const float* stereo, std::int64_t frames, std::int32_t rate, std::int64_t loopStart, Wav64Format format)
+		{
+			Wav64Audio audio;
+			audio.Channels = 2;
+			audio.SampleRate = rate;
+			audio.Frames = std::int32_t(frames);
+			audio.Samples.resize(std::size_t(frames) * 2);
+			for (std::size_t i = 0; i < audio.Samples.size(); i++) {
+				audio.Samples[i] = ToSample16(stereo[i]);
+			}
+			if (loopStart >= 0) {
+				audio.Looping = true;
+				audio.LoopOffset = std::int32_t(loopStart);
+				audio.LoopEnd = audio.Frames;
+			}
+			BigEndianWriter out;
+			return Wav64Writer::Write(out, audio, format, fs::GetFileName(path)) && WriteBuffer(path, out);
+		}
+#endif
 
 		/** @brief A decoded mono sound effect */
 		struct SoundSample
@@ -139,6 +192,7 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		void WriteWave(StringView path, const float* stereo, std::int64_t frames, std::int32_t rate)
 		{
 			auto s = fs::Open(path, FileAccess::Write);
@@ -160,18 +214,68 @@ namespace Jazz2::AssetPacker
 			for (std::int64_t i = 0; i < frames * 2; i += std::int64_t(block.size())) {
 				const std::int64_t n = std::min<std::int64_t>(std::int64_t(block.size()), frames * 2 - i);
 				for (std::int64_t k = 0; k < n; k++) {
-					const float v = std::clamp(stereo[i + k], -1.0f, 1.0f);
-					block[std::size_t(k)] = std::int16_t(std::lround(v * 32767.0f));
+					block[std::size_t(k)] = ToSample16(stereo[i + k]);
 				}
 				s->Write(block.data(), n * 2);
 			}
 		}
+#endif
 
 #if defined(ASSETPACKER_WITH_OPENMPT)
+		/** @brief Makes the module stop right at the end of the song, without the short fade-out libopenmpt adds by default */
+		void SetStopAtEnd(openmpt_module* mod)
+		{
+#	if OPENMPT_API_VERSION_AT_LEAST(0, 5, 0)
+			openmpt_module_ctl_set_text(mod, "play.at_end", "stop");
+#	else
+			openmpt_module_ctl_set(mod, "play.at_end", "stop");
+#	endif
+		}
+
+#	if !OPENMPT_API_VERSION_AT_LEAST(0, 8, 0)
+		/**
+			@brief Finds the frame a song repeats from, for libopenmpt versions that cannot tell it (e.g. 0.6 in Ubuntu
+				22.04, or the 0.7 the web build is compiled with)
+
+			The song is played again, now repeating, to a few frames past the end of its first pass - the row playing
+			then is the one it repeats from, and where that row begins is what it is turned into.
+		*/
+		std::int64_t FindRestartFrame(const std::vector<char>& data, std::int64_t firstPassFrames)
+		{
+			openmpt_module* mod = openmpt_module_create_from_memory2(data.data(), data.size(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+			if (mod == nullptr) {
+				return 0;
+			}
+			openmpt_module_set_repeat_count(mod, 1);
+			SetStopAtEnd(mod);
+
+			const std::int64_t target = firstPassFrames + 16;
+			float buffer[2 * 4096];
+			std::int64_t rendered = 0;
+			while (rendered < target) {
+				const std::size_t count = openmpt_module_read_interleaved_float_stereo(mod, RenderRate,
+					std::size_t(std::min<std::int64_t>(4096, target - rendered)), buffer);
+				if (count == 0) {
+					break;
+				}
+				rendered += std::int64_t(count);
+			}
+
+			std::int64_t restartFrame = 0;
+			if (rendered >= target) {
+				const double seconds = openmpt_module_set_position_order_row(mod, openmpt_module_get_current_order(mod), openmpt_module_get_current_row(mod));
+				restartFrame = std::int64_t(std::llround(std::max(0.0, seconds) * RenderRate));
+			}
+			openmpt_module_destroy(mod);
+			return restartFrame;
+		}
+#	endif
+
 		/**
 			@brief Renders a module once through with libopenmpt, the player the game uses on the other platforms
 
-			@param loopStartFrame	Receives where the song jumps back to when it repeats, in output frames
+			@param loopStartFrame	Receives where the song jumps back to when it repeats, in output frames - the
+				recording then ends exactly where the song does, so the loop is seamless
 		*/
 		bool RenderModule(StringView path, SmallVector<float, 0>& stereo, std::int64_t* loopStartFrame)
 		{
@@ -192,21 +296,24 @@ namespace Jazz2::AssetPacker
 
 			openmpt_module_set_repeat_count(mod, 0);
 			if (loopStartFrame != nullptr) {
+				// By default the module fades out for a moment past the end of the song, which would then be heard
+				// every time the recording loops
+				SetStopAtEnd(mod);
+				*loopStartFrame = 0;
 #	if OPENMPT_API_VERSION_AT_LEAST(0, 8, 0)
 				const std::int32_t restartOrder = openmpt_module_get_restart_order(mod, 0);
 				const std::int32_t restartRow = openmpt_module_get_restart_row(mod, 0);
 				const double seconds = (restartOrder > 0 || restartRow > 0 ? openmpt_module_set_position_order_row(mod, restartOrder, restartRow) : 0.0);
 				*loopStartFrame = std::int64_t(std::llround(std::max(0.0, seconds) * RenderRate));
 				openmpt_module_set_position_seconds(mod, 0.0);
-#	else
-				// Older versions (e.g. 0.6 in Ubuntu 22.04) cannot tell the restart position, so the song loops from the start
-				*loopStartFrame = 0;
 #	endif
 			}
 			float buffer[2 * 4096];
+			bool ended = false;
 			while (true) {
 				const std::size_t count = openmpt_module_read_interleaved_float_stereo(mod, RenderRate, 4096, buffer);
 				if (count == 0) {
+					ended = true;
 					break;
 				}
 				stereo.append(buffer, buffer + count * 2);
@@ -216,6 +323,14 @@ namespace Jazz2::AssetPacker
 				}
 			}
 			openmpt_module_destroy(mod);
+#	if !OPENMPT_API_VERSION_AT_LEAST(0, 8, 0)
+			// A module that never ends has no first pass to repeat after, it loops from the start
+			if (loopStartFrame != nullptr && ended) {
+				*loopStartFrame = FindRestartFrame(data, std::int64_t(stereo.size() / 2));
+			}
+#	else
+			static_cast<void>(ended);
+#	endif
 			return !stereo.empty();
 		}
 #endif
@@ -267,8 +382,36 @@ namespace Jazz2::AssetPacker
 
 	}
 
+	bool N64Content::HasBuiltInEncoders()
+	{
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+		return true;
+#else
+		return false;
+#endif
+	}
+
 	bool N64Content::FindTools(StringView hint, Tools& tools)
 	{
+		const bool builtInRequested = (hint == "builtin"_s);
+		if (builtInRequested && !HasBuiltInEncoders()) {
+			LOGE("This build of the tool has no encoders of its own for the Nintendo 64, it needs libdragon's converters");
+			return false;
+		}
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		// No other program can be run here, the built-in encoders are all there is
+		static_cast<void>(builtInRequested);
+		tools.BuiltIn = true;
+		tools.CanEncodeVideo = true;
+		return true;
+#else
+		if (builtInRequested) {
+			tools.BuiltIn = true;
+			tools.CanEncodeVideo = true;
+			return true;
+		}
+
 		SmallVector<String, 4> candidates;
 		if (!hint.empty()) {
 			candidates.push_back(fs::CombinePath(hint, "bin"_s));
@@ -299,19 +442,30 @@ namespace Jazz2::AssetPacker
 			break;
 		}
 		if (tools.AudioConv.empty()) {
-			return false;
+			if (!HasBuiltInEncoders()) {
+				return false;
+			}
+			LOGI("libdragon's converters were not found, the encoders built into the tool are used instead");
+			tools.BuiltIn = true;
+			tools.CanEncodeVideo = true;
+			return true;
 		}
 
-		// videoconv64 drives ffmpeg and ffprobe, and finds audioconv64 through N64_INST
+		// videoconv64 drives ffmpeg and ffprobe, and finds audioconv64 through N64_INST. Without them the cinematics
+		// are left to the built-in encoder, where there is one.
 		const String ffmpegCheck[] = { "ffmpeg"_s, "-version"_s };
 		const String ffprobeCheck[] = { "ffprobe"_s, "-version"_s };
-		tools.CanEncodeVideo = !tools.VideoConv.empty() && RunTool(ffmpegCheck, true) && RunTool(ffprobeCheck, true);
-#if defined(DEATH_TARGET_WINDOWS)
+		if (tools.VideoConv.empty() || !RunTool(ffmpegCheck, true) || !RunTool(ffprobeCheck, true)) {
+			tools.VideoConv = {};
+		}
+		tools.CanEncodeVideo = (!tools.VideoConv.empty() || HasBuiltInEncoders());
+#	if defined(DEATH_TARGET_WINDOWS)
 		_putenv_s("N64_INST", String(tools.Root).data());
-#else
+#	else
 		setenv("N64_INST", String(tools.Root).data(), 1);
-#endif
+#	endif
 		return true;
+#endif
 	}
 
 	bool N64Content::SplitPackage(StringView sourcePak, PakWriter& target, StringView outputPath, StringView tempPath, const Tools& tools)
@@ -345,8 +499,24 @@ namespace Jazz2::AssetPacker
 				}
 				const String normalized = StringUtils::replaceAll(path, "\\"_s, "/"_s);
 				if (normalized.hasPrefix("Animations/"_s) && fs::GetExtension(normalized) == "wav"_s) {
-					// Sound samples are written out for audioconv64 instead of being packed
 					const StringView relativePath = StringView(normalized).exceptPrefix("Animations/"_s);
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+					if (tools.BuiltIn) {
+						// Encoded right away, with the same settings as audioconv64 below
+						const String targetPath = fs::CombinePath({ outputPath, "Animations"_s,
+							String(relativePath.exceptSuffix(4) + ".wav64"_s) });
+						Wav64Audio audio;
+						BigEndianWriter encoded;
+						if (!Wav64Writer::ReadWave(*file, audio, normalized) || !Wav64Writer::Write(encoded, audio, Wav64Format::Vadpcm, normalized) ||
+							!fs::CreateDirectories(fs::GetDirectoryName(targetPath)) || !WriteBuffer(targetPath, encoded)) {
+							success = false;
+							continue;
+						}
+						soundCount++;
+						continue;
+					}
+#endif
+					// Sound samples are written out for audioconv64 instead of being packed
 					const String loosePath = fs::CombinePath(soundsPath, relativePath);
 					fs::CreateDirectories(fs::GetDirectoryName(loosePath));
 					// audioconv64 mirrors the directory tree, but it does not check whether its stat() succeeded
@@ -372,15 +542,16 @@ namespace Jazz2::AssetPacker
 			}
 		}
 
-		if (soundCount > 0) {
+		// VADPCM without the Huffman stage. Raw PCM would look cheaper, but the mixer cannot fetch more than about 120
+		// samples of a raw stream at once, so while a single raw effect played every mixing round was cut that short -
+		// and each round costs every playing channel, the sixteen of a module included: music and effects together
+		// cost 6.4 ms a frame, against 5.8 ms for the music alone and 1.1 ms for the effects alone (castle1 in ares).
+		// A VADPCM stream allows full rounds, 3.1 ms for both, and is half the size. The mixer decodes VADPCM on the
+		// RSP; the Huffman stage on top would be decoded on the CPU, which costs more (0.4 ms a frame) than the
+		// cartridge space it saves is worth here.
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (soundCount > 0 && !tools.BuiltIn) {
 			LOGI("Converting {} sound effects to .wav64...", soundCount);
-			// VADPCM without the Huffman stage. Raw PCM would look cheaper, but the mixer cannot fetch more than
-			// about 120 samples of a raw stream at once, so while a single raw effect played every mixing round
-			// was cut that short - and each round costs every playing channel, the sixteen of a module included:
-			// music and effects together cost 6.4 ms a frame, against 5.8 ms for the music alone and 1.1 ms for
-			// the effects alone (castle1 in ares). A VADPCM stream allows full rounds, 3.1 ms for both, and is half
-			// the size. The mixer decodes VADPCM on the RSP; the Huffman stage on top would be decoded on the
-			// CPU, which costs more (0.4 ms a frame) than the cartridge space it saves is worth here.
 			const String args[] = { tools.AudioConv, "--wav-compress"_s, "vadpcm,huffman=false"_s, "-o"_s,
 				fs::CombinePath(outputPath, "Animations"_s), soundsPath };
 			if (!RunTool(args)) {
@@ -388,6 +559,7 @@ namespace Jazz2::AssetPacker
 				success = false;
 			}
 		}
+#endif
 		LOGI("{} files packed, {} sound effects stored as .wav64", fileCount, soundCount);
 		return success;
 	}
@@ -432,8 +604,32 @@ namespace Jazz2::AssetPacker
 
 			if (extension == "wav"_s) {
 				// Played as it is, compressed the same way as the rendered tracks
-				const String args[] = { tools.AudioConv, "--wav-compress"_s, "2"_s, "--wav-loop"_s, "true"_s, "-o"_s, musicPath, file };
-				if (RunTool(args)) {
+				bool converted = false;
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+				if (tools.BuiltIn) {
+					// As audioconv64 is told below: the whole recording loops, unless it names a loop of its own
+					auto s = fs::Open(file, FileAccess::Read);
+					Wav64Audio audio;
+					if (s->IsValid() && Wav64Writer::ReadWave(*s, audio, fs::GetFileName(file))) {
+						audio.Looping = true;
+						if (audio.LoopEnd == 0) {
+							audio.LoopEnd = audio.Frames;
+						}
+						std::sort(audio.SkipPoints.begin(), audio.SkipPoints.end());
+						audio.SkipPoints.erase(std::unique(audio.SkipPoints.begin(), audio.SkipPoints.end()), audio.SkipPoints.end());
+						BigEndianWriter encoded;
+						converted = Wav64Writer::Write(encoded, audio, Wav64Format::Ulc, fs::GetFileName(file)) &&
+							WriteBuffer(fs::CombinePath(musicPath, String(stem + ".wav64"_s)), encoded);
+					}
+				}
+#endif
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				if (!tools.BuiltIn) {
+					const String args[] = { tools.AudioConv, "--wav-compress"_s, "2"_s, "--wav-loop"_s, "true"_s, "-o"_s, musicPath, file };
+					converted = RunTool(args);
+				}
+#endif
+				if (converted) {
 					renders++;
 				} else {
 					dropped++;
@@ -447,14 +643,27 @@ namespace Jazz2::AssetPacker
 			std::int64_t loopStart = 0;
 			if (RenderModule(file, stereo, &loopStart)) {
 				const std::int64_t frames = std::int64_t(stereo.size() / 2);
-				const String wavPath = fs::CombinePath(rendersPath, String(stem + ".wav"_s));
-				WriteWave(wavPath, stereo.data(), frames, RenderRate);
 				LOGI("Pre-rendered \"{}\": {} s, looping from {} s", fs::GetFileName(file), frames / RenderRate, loopStart / RenderRate);
 				// ULC is decoded with the RSP's help and costs the CPU far less than Opus
-				const String loopOffset = String(std::to_string(std::clamp<std::int64_t>(loopStart, 0, frames > 0 ? frames - 1 : 0)).c_str());
-				const String args[] = { tools.AudioConv, "--wav-compress"_s, "2"_s, "--wav-loop"_s, "true"_s,
-					"--wav-loop-offset"_s, loopOffset, "-o"_s, musicPath, wavPath };
-				if (RunTool(args)) {
+				loopStart = std::clamp<std::int64_t>(loopStart, 0, frames > 0 ? frames - 1 : 0);
+				bool converted = false;
+#	if defined(ASSETPACKER_WITH_N64_ENCODERS)
+				if (tools.BuiltIn) {
+					converted = WriteStereoWav64(fs::CombinePath(musicPath, String(stem + ".wav64"_s)), stereo.data(), frames, RenderRate,
+						loopStart, Wav64Format::Ulc);
+				}
+#	endif
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+				if (!tools.BuiltIn) {
+					const String wavPath = fs::CombinePath(rendersPath, String(stem + ".wav"_s));
+					WriteWave(wavPath, stereo.data(), frames, RenderRate);
+					const String loopOffset = String(std::to_string(loopStart).c_str());
+					const String args[] = { tools.AudioConv, "--wav-compress"_s, "2"_s, "--wav-loop"_s, "true"_s,
+						"--wav-loop-offset"_s, loopOffset, "-o"_s, musicPath, wavPath };
+					converted = RunTool(args);
+				}
+#	endif
+				if (converted) {
 					renders++;
 					fs::RemoveFile(file);
 					continue;
@@ -468,19 +677,30 @@ namespace Jazz2::AssetPacker
 
 		if (modules > 0) {
 			LOGI("Converting {} XM modules to .xm64...", modules);
-			// One audioconv64 run per module: its XM writer names the offsets it patches in afterwards without the
-			// file they belong to and never forgets them, so every module after the first one of a run gets the
-			// first one's header - xm64player_open() then reads its context sizes from the wrong place and hangs or
-			// crashes on a NULL allocation. The .wav64 writer keys them by file and is safe to batch.
 			SmallVector<String, 0> xmFiles;
 			for (auto item : fs::Directory(modulesPath, fs::EnumerationOptions::SkipDirectories)) {
 				xmFiles.push_back(item);
 			}
 			for (const String& xmFile : xmFiles) {
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+				if (tools.BuiltIn) {
+					const String targetPath = fs::CombinePath(musicPath, String(fs::GetFileNameWithoutExtension(xmFile) + ".xm64"_s));
+					if (!Xm64Converter::Convert(xmFile, targetPath)) {
+						LOGE("Cannot convert \"{}\" to .xm64", fs::GetFileName(xmFile));
+					}
+					continue;
+				}
+#endif
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+				// One audioconv64 run per module: its XM writer names the offsets it patches in afterwards without
+				// the file they belong to and never forgets them, so every module after the first one of a run gets
+				// the first one's header - xm64player_open() then reads its context sizes from the wrong place and
+				// hangs or crashes on a NULL allocation. The .wav64 writer keys them by file and is safe to batch.
 				const String args[] = { tools.AudioConv, "-o"_s, musicPath, xmFile };
 				if (!RunTool(args)) {
 					LOGE("audioconv64 failed to convert \"{}\"", fs::GetFileName(xmFile));
 				}
+#endif
 			}
 		}
 		LOGI("Music: {} modules, {} pre-rendered, {} left out", modules, renders, dropped);
@@ -499,41 +719,95 @@ namespace Jazz2::AssetPacker
 		const String lowerName = StringUtils::lowercase(name);
 		const String yuvPath = fs::CombinePath(tempPath, String(lowerName + ".y4m"_s));
 		const String wavPath = fs::CombinePath(tempPath, String(lowerName + ".wav"_s));
+		const String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
+		const String videoOutputPath = fs::CombinePath(cinematicsPath, String(lowerName + ".m1v"_s));
+		const String audioOutputPath = fs::CombinePath(cinematicsPath, String(lowerName + ".wav64"_s));
+		fs::CreateDirectories(cinematicsPath);
 
-		// Frames, written as uncompressed YUV for ffmpeg to read
-		auto yuvFile = fs::Open(yuvPath, FileAccess::Write);
-		if (!yuvFile->IsValid()) {
+		// Without videoconv64 the built-in encoder takes the frames as they are decoded, otherwise they are written
+		// as uncompressed YUV for ffmpeg to read
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+		const bool builtIn = (tools.BuiltIn || tools.VideoConv.empty());
+		Mpeg1Encoder encoder;
+		std::vector<std::uint8_t> encoded;
+		if (builtIn) {
+			LOGI("Encoding \"{}\" as full-motion video...", name);
+		}
+#else
+		const bool builtIn = false;
+#endif
+		auto videoFile = fs::Open(builtIn ? StringView(videoOutputPath) : StringView(yuvPath), FileAccess::Write);
+		if (!videoFile->IsValid()) {
 			return false;
 		}
+
 		SmallVector<std::uint8_t, 0> yuv;
 		Compatibility::J2vVideoInfo info;
 		std::int64_t outputFrames = 0;
+		bool encodingFailed = false;
 		const bool decoded = Compatibility::J2vRecompressor::DecodeFrames(videoPath, [&](const Compatibility::J2vVideoInfo& video,
 			std::int32_t frameIndex, const std::uint8_t* indices, const std::uint8_t* palette, bool paletteChanged) {
 			static_cast<void>(paletteChanged);
 			const std::int32_t factor = std::max(1, video.Width / VideoWidth);
+			const std::int32_t width = video.Width / factor;
+			const std::int32_t height = video.Height / factor;
 			if (frameIndex == 0) {
 				// MPEG-1 only allows a handful of frame rates, and the cinematics run at 1000/42 fps, which is not one
 				// of them - the encoder then inserts frames of its own and its two passes disagree. So the video is
 				// written at 24 fps instead, each output frame showing the source frame of its moment in time: a
 				// frame is shown twice now and then, and the soundtrack, built on the original timing, stays in sync.
-				char header[128];
-				const std::int32_t length = std::snprintf(header, sizeof(header), "YUV4MPEG2 W%d H%d F%d:1 Ip A1:1 C420jpeg XCOLORRANGE=LIMITED\n",
-					video.Width / factor, video.Height / factor, OutputFps);
-				yuvFile->Write(header, length);
+				if (builtIn) {
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+					Mpeg1Encoder::Options options;
+					options.Width = width;
+					options.Height = height;
+					options.FrameRateNum = OutputFps;
+					options.FrameRateDen = 1;
+					options.BitrateKbps = VideoBitrateKbps;
+					if (!encoder.Begin(options, encoded)) {
+						encodingFailed = true;
+						return false;
+					}
+#endif
+				} else {
+					char header[128];
+					const std::int32_t length = std::snprintf(header, sizeof(header), "YUV4MPEG2 W%d H%d F%d:1 Ip A1:1 C420jpeg XCOLORRANGE=LIMITED\n",
+						width, height, OutputFps);
+					videoFile->Write(header, length);
+				}
 			}
 			ConvertFrame(indices, video.Width, video.Height, factor, palette, yuv);
 			const std::int64_t frameEndMs = std::int64_t(frameIndex + 1) * video.FrameDelay;
 			while (outputFrames * 1000 < frameEndMs * OutputFps) {
-				yuvFile->Write("FRAME\n", 6);
-				yuvFile->Write(yuv.data(), std::int64_t(yuv.size()));
+				if (builtIn) {
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+					const std::uint8_t* planeY = yuv.data();
+					const std::uint8_t* planeU = planeY + std::size_t(width) * height;
+					const std::uint8_t* planeV = planeU + std::size_t(width / 2) * (height / 2);
+					if (!encoder.EncodeFrame(planeY, planeU, planeV, encoded)) {
+						encodingFailed = true;
+						return false;
+					}
+					videoFile->Write(encoded.data(), std::int64_t(encoded.size()));
+					encoded.clear();
+#endif
+				} else {
+					videoFile->Write("FRAME\n", 6);
+					videoFile->Write(yuv.data(), std::int64_t(yuv.size()));
+				}
 				outputFrames++;
 			}
 			return true;
 		}, &info);
-		yuvFile = nullptr;
-		if (!decoded) {
-			fs::RemoveFile(yuvPath);
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+		if (builtIn && decoded && !encodingFailed) {
+			encodingFailed = !encoder.End(encoded);
+			videoFile->Write(encoded.data(), std::int64_t(encoded.size()));
+		}
+#endif
+		videoFile = nullptr;
+		if (!decoded || encodingFailed) {
+			fs::RemoveFile(builtIn ? StringView(videoOutputPath) : StringView(yuvPath));
 			return false;
 		}
 
@@ -622,26 +896,37 @@ namespace Jazz2::AssetPacker
 				v = sign * (0.9f + 0.1f * std::tanh((std::abs(v) - 0.9f) / 0.1f));
 			}
 		}
-		WriteWave(wavPath, mix.data(), frames, RenderRate);
 
-		LOGI("Encoding \"{}\" as full-motion video ({} frames, {} sound effects)...", name, info.FrameCount, effectCount);
-		const String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
-		fs::CreateDirectories(cinematicsPath);
-		// MPEG-1 at the console's width; the audio track is VADPCM, which the mixer decodes on the RSP, without the
-		// Huffman stage the CPU would have to undo - the video decoder needs all of the CPU it can get
-		const String args[] = { tools.VideoConv, "-c"_s, "mpeg1"_s, "-w"_s, String(std::to_string(VideoWidth).c_str()),
-			"--profile"_s, "cartoon"_s, "--audio-compress"_s, "vadpcm,huffman=false"_s, "--audio-parms"_s, "32000,2"_s,
-			"--no-progress"_s, "-o"_s, cinematicsPath, yuvPath, wavPath };
-		const bool encoded = RunTool(args);
-		fs::RemoveFile(yuvPath);
-		fs::RemoveFile(wavPath);
-		if (!encoded || !fs::IsReadableFile(fs::CombinePath(cinematicsPath, String(lowerName + ".m1v"_s)))) {
-			LOGW("videoconv64 could not encode \"{}\"", name);
-			return false;
+		// The audio track is VADPCM, which the mixer decodes on the RSP, without the Huffman stage the CPU would have
+		// to undo - the video decoder needs all of the CPU it can get
+		if (builtIn) {
+#if defined(ASSETPACKER_WITH_N64_ENCODERS)
+			// Encoded at the rate it was mixed at, the console's own (videoconv64 goes through 48 kHz and back)
+			if (!WriteStereoWav64(audioOutputPath, mix.data(), frames, RenderRate, -1, Wav64Format::Vadpcm)) {
+				fs::RemoveFile(videoOutputPath);
+				return false;
+			}
+#endif
+		} else {
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+			WriteWave(wavPath, mix.data(), frames, RenderRate);
+
+			LOGI("Encoding \"{}\" as full-motion video ({} frames, {} sound effects)...", name, info.FrameCount, effectCount);
+			// MPEG-1 at the console's width
+			const String args[] = { tools.VideoConv, "-c"_s, "mpeg1"_s, "-w"_s, String(std::to_string(VideoWidth).c_str()),
+				"--profile"_s, "cartoon"_s, "--audio-compress"_s, "vadpcm,huffman=false"_s, "--audio-parms"_s, "32000,2"_s,
+				"--no-progress"_s, "-o"_s, cinematicsPath, yuvPath, wavPath };
+			const bool encoded = RunTool(args);
+			fs::RemoveFile(yuvPath);
+			fs::RemoveFile(wavPath);
+			if (!encoded || !fs::IsReadableFile(videoOutputPath)) {
+				LOGW("videoconv64 could not encode \"{}\"", name);
+				return false;
+			}
+#endif
 		}
-		LOGI("\"{}\" encoded: {} KB of video, {} KB of audio", name,
-			fs::GetFileSize(fs::CombinePath(cinematicsPath, String(lowerName + ".m1v"_s))) / 1024,
-			fs::GetFileSize(fs::CombinePath(cinematicsPath, String(lowerName + ".wav64"_s))) / 1024);
+		LOGI("\"{}\" encoded: {} KB of video, {} KB of audio ({} frames, {} sound effects)", name,
+			fs::GetFileSize(videoOutputPath) / 1024, fs::GetFileSize(audioOutputPath) / 1024, info.FrameCount, effectCount);
 		return true;
 	}
 }

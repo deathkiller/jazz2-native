@@ -23,11 +23,28 @@ re-encoding `.j2v` cinematics into the game's own @ref Jazz2::VideoFormat contai
 
 @section asset-packer-building Building the tool
 
-The tool is host-only --- it is built by default as part of the desktop CMake build
-(`NCINE_BUILD_ASSET_PACKER`, default @cpp ON @ce) and skipped for every cross-compiled
-target. It links only the base layer and the original-data converters, deliberately not the
-engine, so it has no renderer, no window backend and no networking. After a regular
-@ref building "desktop build" the binary is at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce.
+The tool is built by default as part of the desktop CMake build (`NCINE_BUILD_ASSET_PACKER`,
+default @cpp ON @ce) and skipped for cross-compiled targets, except for its web version below.
+It links only the base layer and the original-data converters, deliberately not the engine, so it
+has no renderer, no window backend and no networking. After a regular @ref building "desktop build"
+the binary is at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce. With `NCINE_BUILD_GAME` turned
+off, the game is left out and only the offline tools are built.
+
+With Emscripten, that builds the tool's web version: a WebAssembly module with the repository's
+`Content` baked in, and a page that swaps the content of a Nintendo 64, Dreamcast or PlayStation 2
+image in the browser from the user's own copy of the original game (`swap-content --source=`, see
+@ref asset-packer-swap-content):
+
+@code{.sh}
+emcmake cmake -S . -B build/assetpacker-web -G Ninja -D CMAKE_BUILD_TYPE=Release -D NCINE_BUILD_GAME=OFF
+cmake --build build/assetpacker-web
+@endcode
+
+@m_class{m-noindent}
+
+The build directory's `Utilities/AssetPacker` then holds the whole site, see
+@cpp "Sources/Utilities/AssetPacker/Web/README.md" @ce for how it is deployed. The Emscripten
+workflow builds it as well and publishes the site as the `Jazz2_AssetPacker_Web` artifact.
 
 @section asset-packer-usage Command-line reference
 
@@ -57,7 +74,9 @@ The command may be omitted, in which case `convert` is assumed:
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
         `gamecube` | `psp` | `ps2` | `n64` | `emscripten` (or `web`)
     -   `--n64-tools=<dir>` --- Where libdragon's host tools are (the toolchain prefix or its `bin`),
-        for `--target=n64`; defaults to `$N64_INST`. See @ref asset-packer-n64
+        for `--target=n64`; defaults to `$N64_INST`, and without them the encoders built into the tool
+        are used. `builtin` uses those even where libdragon's tools are installed. See
+        @ref asset-packer-n64
     -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 keeps them at their
         original size. Cinematics are re-encoded for `dreamcast` and `ps2` (or any N > 1) and
         otherwise copied unchanged, `desktop` gets none, as the game reads the originals.
@@ -86,6 +105,10 @@ The command may be omitted, in which case `convert` is assumed:
     directory of an already built console image --- a Dreamcast `.cdi`, a PlayStation 2 `.iso` or a
     Nintendo 64 `.z64` --- keeping its bootstrap and its executable exactly as they are. The image is
     rewritten in place when no target is given
+-   `swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]` --- The
+    same, converting the original game files first, for the console the image is for (a `.z64` is
+    `n64`, a DiscJuggler `.cdi` `dreamcast`, anything else `ps2`, unless `--target=` names another
+    profile). `--content=` is then the game's own content, as for `convert`, whose options apply
 
 Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
 on failure.
@@ -370,8 +393,8 @@ as UTF-8 without one.
 
 The Nintendo 64 has a profile that goes further than the others: `--target=n64` converts the sound,
 the music and the cinematics into libdragon's own formats, which is what lets the console play music
-at all and fit everything on a 64 MB cartridge. It runs libdragon's host tools, so it needs them ---
-`audioconv64` always, and `videoconv64` with **ffmpeg** and **ffprobe** on the `PATH` for the
+at all and fit everything on a 64 MB cartridge. Where libdragon's host tools are installed it runs
+them --- `audioconv64`, and `videoconv64` with **ffmpeg** and **ffprobe** on the `PATH` for the
 cinematics:
 
 @code{.sh}
@@ -380,6 +403,17 @@ AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit
 @endcode
 
 @m_class{m-noindent}
+
+Without them (or with `--n64-tools=builtin`) the encoders built into the tool are used instead, which
+need nothing installed and are all the web version has. They are libdragon's own codecs, vendored in
+`Sources/Dependencies` --- VADPCM, ULC and libxm --- driven the way `audioconv64` drives them
+(`Wav64Writer`, `Xm64Converter`), and an MPEG-1 encoder of the tool's own for the cinematics
+(`Mpeg1Encoder`), so a tree made either way plays the same: the sound effects and the pre-rendered music
+come out byte for byte what `audioconv64` writes, and the modules differ only in how their patterns and
+structure are LZ4-compressed. The cinematic soundtracks are encoded at the console's 32 kHz straight
+from the mix, where `videoconv64` takes them through 48 kHz and back. The built-in encoders are compiled
+wherever the vendored C compiles (GCC, Clang, Emscripten), so an MSVC build of the tool still needs
+libdragon's tools for this profile.
 
 What differs from a `console` tree:
 
@@ -450,6 +484,16 @@ AssetPacker swap-content ./jazz2.iso --content=./build/Ps2Content
 
 AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit 2> --content=./Content --target=n64
 AssetPacker swap-content ./jazz2.z64 --content=./build/ConsoleContentN64
+@endcode
+
+@m_class{m-noindent}
+
+With `--source=` instead, the two steps are one: the original game files are converted into a
+temporary tree for the console the image is for, which then becomes its `Content` --- this is what the
+web version runs:
+
+@code{.sh}
+AssetPacker swap-content ./jazz2.z64 ./jazz2-new.z64 --source=<original Jazz Jackrabbit 2> --content=./Content
 @endcode
 
 @m_class{m-noindent}
@@ -605,6 +649,11 @@ went through `swap-content` always comes back with one, so it is reachable eithe
     2352-byte sectors is refused rather than written back in a form that was never checked, a
     byte-swapped `.v64` or `.n64` ROM has to be converted to `.z64` first, and no other container
     @m_span{m-text m-dim} (`.mds`, `.nrg`, `.gdi`) @m_endspan is read at all.
+-   **A module's memory sizes are worked out as a 64-bit host would.** libdragon's player reads from an
+    `.xm64` how much memory its context takes, which libxm computes with `sizeof` of structures that
+    hold pointers. A 64-bit `audioconv64` declares more than the console needs; a 32-bit build --- the
+    web version is one --- would declare less, and the player refuses a module that does not fit.
+    `Xm64Converter` always declares the 64-bit sizes.
 -   **`--target=n64` runs one `audioconv64` per module on purpose.** In one run over several XM files
     the tool writes every module after the first with the first one's internal offsets, which the
     console then hangs or crashes on when it opens them. The packer works around it; converting

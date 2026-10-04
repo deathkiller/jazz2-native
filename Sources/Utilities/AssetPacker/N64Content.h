@@ -15,8 +15,10 @@ namespace Jazz2::AssetPacker
 
 		The console streams its audio from the cartridge through libdragon's RSP mixer and plays its cinematics
 		with libdragon's RSP-assisted video decoder, and all three of those read formats of libdragon's own. They
-		are produced here with libdragon's converters (`audioconv64`, `videoconv64`, which needs `ffmpeg`), so a
-		tree made for this console is exactly what goes into the ROM:
+		are produced either with libdragon's converters (`audioconv64`, `videoconv64`, which needs `ffmpeg`) or
+		with the encoders built into this tool (@ref Wav64Writer, @ref Xm64Converter and @ref Mpeg1Encoder), which
+		need nothing installed - the web build has only those. A tree made for this console is exactly what goes
+		into the ROM:
 
 		- Every **sound effect** leaves the package and becomes a `.wav64` file of its own under `Animations/`,
 		  VADPCM the mixer streams from the cartridge and decodes on the RSP while it plays - nothing is decoded
@@ -32,21 +34,36 @@ namespace Jazz2::AssetPacker
 	public:
 		N64Content() = delete;
 
-		/** @brief libdragon's converters */
+		/** @brief The converters the formats are produced with */
 		struct Tools
 		{
 			/** @brief The toolchain prefix, which `videoconv64` needs in `N64_INST` to find `audioconv64` */
 			String Root;
 			String AudioConv;
 			String VideoConv;
-			/** @brief Whether `videoconv64` and `ffmpeg` are both available */
+			/** @brief Whether the cinematics can be encoded as video */
 			bool CanEncodeVideo = false;
+			/** @brief Whether the encoders built into this tool are used instead of libdragon's converters */
+			bool BuiltIn = false;
 		};
 
 		/**
-			@brief Locates libdragon's converters
+			@brief Whether this build of the tool has encoders of its own for libdragon's formats
 
-			@param hint		A libdragon toolchain prefix or its `bin` directory, or empty to use `N64_INST`
+			They are compiled wherever the C codecs they are built on are known to compile (GCC, Clang and
+			Emscripten); elsewhere libdragon's converters are the only way.
+		*/
+		static bool HasBuiltInEncoders();
+
+		/**
+			@brief Picks the converters to use
+
+			libdragon's converters are preferred where they are installed, so a tree made on a development machine
+			stays what the console's toolchain produces; otherwise the built-in encoders are used where this build has
+			them, which is always the case for the web build, as it cannot run other programs at all.
+
+			@param hint		A libdragon toolchain prefix or its `bin` directory, empty to use `N64_INST`, or `builtin`
+							to use the built-in encoders even where libdragon's converters are installed
 		*/
 		static bool FindTools(StringView hint, Tools& tools);
 
@@ -55,7 +72,7 @@ namespace Jazz2::AssetPacker
 
 			@param sourcePak	A package written with a name index, so its contents can be listed
 			@param outputPath	The content tree the `.wav64` files are written into, under `Animations/`
-			@param tempPath		Scratch directory
+			@param tempPath		Scratch directory, which only libdragon's converters need
 		*/
 		static bool SplitPackage(StringView sourcePak, Death::IO::PakWriter& target, StringView outputPath, StringView tempPath, const Tools& tools);
 

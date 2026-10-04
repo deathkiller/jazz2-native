@@ -364,8 +364,10 @@ The following parameters can be used to customize the build:
 -   `NCINE_CREATE_CONTENT_SYMLINK` (default @cpp OFF @ce) --- Create symbolic link to the @cpp "Content" @ce game data directory in target directory
     -   Ignored on **Android**, **Emscripten**, **Nintendo Switch** and **UWP** platforms
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
+-   `NCINE_BUILD_GAME` (default @cpp ON @ce) --- Build the game itself
+    -   If disabled, only the offline tools below are built --- with **Emscripten**, that is the web version of the @ref asset-packer "AssetPacker"
 -   `NCINE_BUILD_ASSET_PACKER` (default @cpp ON @ce) --- Build the offline @ref asset-packer "AssetPacker" tool
-    -   It runs on the build machine, so it's skipped for every cross-compiled target
+    -   It runs on the build machine, so it's skipped for every cross-compiled target, except **Emscripten** with `NCINE_BUILD_GAME` disabled, which builds its web version
     -   Defaults to @cpp OFF @ce if `DEDICATED_SERVER`, `NCINE_BUILD_FLATPAK` or `NCINE_BUILD_LIBRETRO` is enabled --- the tool is not part of any of those artifacts
 -   `NCINE_BUILD_SHADER_COMPILER` (default @cpp ON @ce) --- Build the offline @ref shader-compiler "ShaderCompiler" tool
     -   It runs on the build machine, so it's skipped for every cross-compiled target
