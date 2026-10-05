@@ -2,6 +2,7 @@
 #include "Iso9660.h"
 #include "../../Jazz2/Compatibility/JJ2Anims.h"
 
+#include <cstdio>
 #include <cstring>
 
 #include <Containers/Array.h>
@@ -10,9 +11,11 @@
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
+#include <Containers/DateTime.h>
 #include <Core/Logger.h>
 #include <IO/FileSystem.h>
 #include <IO/Stream.h>
+#include <Utf8.h>
 
 using namespace Death;
 using namespace Death::Containers;
@@ -575,12 +578,273 @@ namespace Jazz2::AssetPacker
 			}
 			return true;
 		}
+
+		/**
+			@brief Where a GameCube disc keeps what the boot ROM reads, all of it inside the system area of the volume
+
+			The disc header (`boot.bin`) comes first, then `bi2.bin` with the settings the boot ROM hands to the game,
+			then the apploader. Everything the header names is a byte offset from the start of the disc.
+		*/
+		enum : std::uint32_t {
+			GameCubeMagicOffset = 0x1C,
+			GameCubeTitleOffset = 0x20,
+			GameCubeTitleSize = 0x3E0,
+			GameCubeDolOffsetField = 0x420,
+			GameCubeFstOffsetField = 0x424,
+			GameCubeFstSizeField = 0x428,
+			GameCubeFstMaxSizeField = 0x42C,
+			GameCubeBi2Offset = 0x440,
+			GameCubeApploaderOffset = 0x2440
+		};
+
+		/** @brief The word at @ref GameCubeMagicOffset that makes a disc a GameCube disc, to the console and to Dolphin */
+		constexpr std::uint32_t GameCubeDiscMagic = 0xC2339F3D;
+
+		/** @brief Where the boot ROM loads the apploader, which its header has to point into */
+		constexpr std::uint32_t GameCubeApploaderAddress = 0x81200000;
+
+		/** @brief Size of the header in front of the code of an apploader */
+		constexpr std::uint32_t GameCubeApploaderHeaderSize = 0x20;
+
+		/**
+			@brief Zero sectors a GameCube image ends with, after the volume
+
+			Readers on the console fetch more than they are asked for --- libogc's ISO 9660 driver always reads 16
+			sectors at once, and the apploader rounds every read up to a cache line --- and a read that runs past
+			the end of the image is a read error to Dolphin, however little of it was wanted.
+		*/
+		constexpr std::uint32_t GameCubeTailSectors = 16;
+
+		std::uint32_t ReadU32BE(const std::uint8_t* source)
+		{
+			return (std::uint32_t(source[0]) << 24) | (std::uint32_t(source[1]) << 16) |
+				(std::uint32_t(source[2]) << 8) | std::uint32_t(source[3]);
+		}
+
+		void WriteU32BE(std::uint8_t* target, std::uint32_t value)
+		{
+			target[0] = std::uint8_t(value >> 24);
+			target[1] = std::uint8_t(value >> 16);
+			target[2] = std::uint8_t(value >> 8);
+			target[3] = std::uint8_t(value);
+		}
+
+		void WriteU16Both(std::uint8_t* target, std::uint16_t value)
+		{
+			target[0] = std::uint8_t(value);
+			target[1] = std::uint8_t(value >> 8);
+			target[2] = std::uint8_t(value >> 8);
+			target[3] = std::uint8_t(value);
+		}
+
+		bool IsGameCubeSystemArea(ArrayView<const std::uint8_t> systemArea)
+		{
+			return (systemArea.size() >= GameCubeApploaderOffset && ReadU32BE(systemArea.data() + GameCubeMagicOffset) == GameCubeDiscMagic);
+		}
+
+		/** @brief Fills in the disc header and `bi2.bin`, everything of them except where the executable is */
+		void WriteGameCubeHeader(ArrayView<std::uint8_t> systemArea, StringView gameId, StringView title)
+		{
+			std::uint8_t* header = systemArea.data();
+			std::memcpy(header, gameId.data(), 6);
+			// Disc number, version, audio streaming and the size of its buffer are all zero, and so is the rest
+			WriteU32BE(header + GameCubeMagicOffset, GameCubeDiscMagic);
+
+			// The name is shown by Dolphin and by loaders, in Shift-JIS on a Japanese disc and in Windows-1252
+			// anywhere else - which is Latin-1 for everything below U+0100, enough for "Jazz²"
+			std::size_t length = 0;
+			for (std::size_t i = 0; i < title.size() && length < GameCubeTitleSize - 1; ) {
+				Pair<char32_t, std::size_t> next = Utf8::NextChar(arrayView(title.data(), title.size()), i);
+				i = next.second();
+				header[GameCubeTitleOffset + length++] = (next.first() < 0x100 ? std::uint8_t(next.first()) : std::uint8_t('?'));
+			}
+
+			// No file system table: the game reads the ISO 9660 hierarchy, and nothing else on the console needs one
+			WriteU32BE(header + GameCubeFstOffsetField, 0);
+			WriteU32BE(header + GameCubeFstSizeField, 0);
+			WriteU32BE(header + GameCubeFstMaxSizeField, 0);
+
+			// `bi2.bin`: the memory the game may assume (all 24 MB) and the region, which the boot ROM of a console
+			// compares with its own and Dolphin uses to pick the video mode; the fourth character of the game code
+			// says the same thing in letters
+			std::uint8_t* bi2 = header + GameCubeBi2Offset;
+			WriteU32BE(bi2 + 0x04, 0x01800000);
+			std::uint32_t region = (gameId[3] == 'J' ? 0 : (gameId[3] == 'E' ? 1 : 2));
+			WriteU32BE(bi2 + 0x18, region);
+		}
+
+		/**
+			@brief Reads an apploader image and checks that it is one
+
+			The image is what the GameCube target builds (see `GameCubeApploader.c`): a 32-byte header naming the
+			date, the entry point and the size, followed by the code BS2 loads to @ref GameCubeApploaderAddress.
+			It has to fit between `bi2.bin` and the first volume descriptor.
+		*/
+		bool ReadGameCubeApploader(StringView path, Array<std::uint8_t>& apploader)
+		{
+			auto s = fs::Open(path, FileAccess::Read);
+			if (!s->IsValid()) {
+				LOGE("Cannot open \"{}\"", path);
+				return false;
+			}
+			std::int64_t size = s->GetSize();
+			if (size <= GameCubeApploaderHeaderSize || size > std::int64_t(IsoSystemAreaSize - GameCubeApploaderOffset)) {
+				LOGE("\"{}\" is {} bytes long, an apploader has to be between {} and {} bytes", path, size,
+					GameCubeApploaderHeaderSize + 1, IsoSystemAreaSize - GameCubeApploaderOffset);
+				return false;
+			}
+			apploader = Array<std::uint8_t>{NoInit, std::size_t(size)};
+			if (s->Read(apploader.data(), size) != size) {
+				LOGE("Cannot read \"{}\"", path);
+				return false;
+			}
+
+			std::uint32_t entryPoint = ReadU32BE(apploader.data() + 0x10);
+			std::uint32_t codeSize = ReadU32BE(apploader.data() + 0x14);
+			std::uint32_t trailerSize = ReadU32BE(apploader.data() + 0x18);
+			if (codeSize == 0 || std::uint64_t(GameCubeApploaderHeaderSize) + codeSize + trailerSize > std::uint64_t(size) ||
+				entryPoint < GameCubeApploaderAddress || entryPoint >= GameCubeApploaderAddress + codeSize) {
+				LOGE("\"{}\" is not an apploader, its header does not describe the code behind it", path);
+				return false;
+			}
+			return true;
+		}
+
+		/** @brief Checks that a file is a DOL whose sections are all inside it */
+		bool CheckDolExecutable(StringView path)
+		{
+			auto s = fs::Open(path, FileAccess::Read);
+			if (!s->IsValid()) {
+				LOGE("Cannot open \"{}\"", path);
+				return false;
+			}
+			std::int64_t size = s->GetSize();
+			std::uint8_t header[0x100];
+			if (size < std::int64_t(sizeof(header)) || s->Read(header, sizeof(header)) != std::int64_t(sizeof(header))) {
+				LOGE("\"{}\" is too small to be an executable", path);
+				return false;
+			}
+			for (std::uint32_t i = 0; i < 18; i++) {
+				std::uint32_t offset = ReadU32BE(header + i * 4);
+				std::uint32_t sectionSize = ReadU32BE(header + 0x90 + i * 4);
+				if (sectionSize != 0 && std::uint64_t(offset) + sectionSize > std::uint64_t(size)) {
+					LOGE("\"{}\" is not a DOL executable, section {} ends past the end of the file", path, i);
+					return false;
+				}
+			}
+			std::uint32_t entryPoint = ReadU32BE(header + 0xE0);
+			if (entryPoint < 0x80000000 || entryPoint >= 0x81800000) {
+				LOGE("\"{}\" is not a DOL executable, it starts at 0x{:.8x}", path, entryPoint);
+				return false;
+			}
+			return true;
+		}
+
+		/** @brief Fills a text field of a volume descriptor, which is padded with spaces */
+		void WriteDescriptorText(std::uint8_t* field, std::size_t size, StringView text)
+		{
+			std::memset(field, ' ', size);
+			std::memcpy(field, text.data(), (text.size() < size ? text.size() : size));
+		}
+
+		/** @brief Fills a date of a volume descriptor, which unlike that of a directory record is spelled in digits */
+		void WriteDescriptorDate(std::uint8_t* field, const DateTime* value)
+		{
+			char digits[17];
+			if (value != nullptr) {
+				std::snprintf(digits, sizeof(digits), "%04d%02d%02d%02d%02d%02d00", std::int32_t(value->GetYear()),
+					std::int32_t(value->GetMonth() + 1), std::int32_t(value->GetDay()), std::int32_t(value->GetHour()),
+					std::int32_t(value->GetMinute()), std::int32_t(value->GetSecond()));
+			} else {
+				std::memset(digits, '0', 16);
+			}
+			std::memcpy(field, digits, 16);
+			// Offset from GMT in 15-minute intervals, which the digits above already are in local time anyway
+			field[16] = 0;
+		}
+
+		/**
+			@brief Makes the primary volume descriptor a new volume is described by
+
+			Only what @ref Iso9660Builder does not fill in itself: the identity of the volume, its dates, and the
+			fixed fields every volume carries the same. The Joliet descriptor is derived from this one.
+		*/
+		Array<std::uint8_t> MakePrimaryVolumeDescriptor(StringView label)
+		{
+			Array<std::uint8_t> descriptor{ValueInit, IsoSectorSize};
+			std::uint8_t* d = descriptor.data();
+			d[0] = 1;
+			std::memcpy(d + 1, "CD001", 5);
+			d[6] = 1;
+			WriteDescriptorText(d + 8, 32, {});
+			WriteDescriptorText(d + 40, 32, label);
+			WriteU16Both(d + 120, 1);		// Volume set size
+			WriteU16Both(d + 124, 1);		// Volume sequence number
+			WriteU16Both(d + 128, std::uint16_t(IsoSectorSize));
+			WriteDescriptorText(d + 190, 128, label);
+			WriteDescriptorText(d + 318, 128, {});
+			WriteDescriptorText(d + 446, 128, "ASSETPACKER"_s);
+			WriteDescriptorText(d + 574, 128, {});
+			WriteDescriptorText(d + 702, 37, {});
+			WriteDescriptorText(d + 739, 37, {});
+			WriteDescriptorText(d + 776, 37, {});
+			DateTime now = DateTime::UtcNow();
+			// The root directory takes its date from the record here (see Iso9660Builder::SetDescriptorTemplates())
+			std::uint8_t* rootRecorded = d + 156 + 18;
+			rootRecorded[0] = std::uint8_t(now.GetYear() - 1900);
+			rootRecorded[1] = std::uint8_t(now.GetMonth() + 1);
+			rootRecorded[2] = std::uint8_t(now.GetDay());
+			rootRecorded[3] = std::uint8_t(now.GetHour());
+			rootRecorded[4] = std::uint8_t(now.GetMinute());
+			rootRecorded[5] = std::uint8_t(now.GetSecond());
+			WriteDescriptorDate(d + 813, &now);
+			WriteDescriptorDate(d + 830, &now);
+			WriteDescriptorDate(d + 847, nullptr);
+			WriteDescriptorDate(d + 864, nullptr);
+			d[881] = 1;		// File structure version
+			return descriptor;
+		}
+
+		/** @brief Stands in for the volume being read when there is none, a new image copies nothing out of one */
+		class NoSectorReader : public ISectorReader
+		{
+		public:
+			bool ReadSector(std::uint32_t lba, std::uint8_t* destination) override
+			{
+				static_cast<void>(destination);
+				LOGE("Sector {} was asked for, but there is no image to read it from", lba);
+				return false;
+			}
+		};
+
+		bool WriteZeroSectors(ISectorSink& sink, std::uint32_t count)
+		{
+			std::uint8_t sector[IsoSectorSize] {};
+			for (std::uint32_t i = 0; i < count; i++) {
+				if (!sink.WriteSector(sector)) {
+					return false;
+				}
+			}
+			return true;
+		}
 	}
 
 	bool DiscImage::IsDiscJugglerImage(StringView path)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
 		return (s->IsValid() && IsDiscJugglerStream(*s));
+	}
+
+	bool DiscImage::IsGameCubeImage(StringView path)
+	{
+		auto s = fs::Open(path, FileAccess::Read);
+		if (!s->IsValid() || s->GetSize() < std::int64_t(IsoSystemAreaSize) || IsDiscJugglerStream(*s)) {
+			return false;
+		}
+		std::uint8_t header[GameCubeMagicOffset + 4];
+		s->Seek(0, SeekOrigin::Begin);
+		return (s->Read(header, sizeof(header)) == std::int64_t(sizeof(header)) &&
+			ReadU32BE(header + GameCubeMagicOffset) == GameCubeDiscMagic);
 	}
 
 	bool DiscImage::CarriesLz4Images(StringView path)
@@ -673,10 +937,12 @@ namespace Jazz2::AssetPacker
 				return false;
 			}
 		}
-		// Only a Dreamcast disc keeps anything in the system area, and a DiscJuggler image is always one
+		// A Dreamcast disc keeps its bootstrap in the system area, and a DiscJuggler image is always one. A GameCube
+		// disc keeps its header and apploader there, and the header points at the executable, which moves.
 		if (discJuggler && std::memcmp(systemArea.data(), "SEGA SEGAKATANA", 15) != 0) {
 			LOGW("\"{}\" does not begin with a Dreamcast bootstrap, the disc it produces may not boot", sourcePath);
 		}
+		const bool gameCube = (!discJuggler && IsGameCubeSystemArea(systemArea));
 
 		Iso9660Builder builder;
 		builder.SetTrackStartLba(dataTrack->StartLba);
@@ -689,6 +955,30 @@ namespace Jazz2::AssetPacker
 		SmallVector<Iso9660Reader::Entry, 0> rootEntries;
 		if (!isoReader.ReadDirectory(isoReader.GetRootLba(), isoReader.GetRootSize(), rootEntries)) {
 			return false;
+		}
+
+		// The header names the executable by where it starts, and that is the file to keep track of
+		String executableName;
+		if (gameCube) {
+			std::uint32_t dolOffset = ReadU32BE(systemArea.data() + GameCubeDolOffsetField);
+			for (Iso9660Reader::Entry& entry : rootEntries) {
+				if (!entry.IsDirectory && std::uint64_t(entry.Lba) * IsoSectorSize == dolOffset) {
+					executableName = entry.Name;
+					break;
+				}
+			}
+			if (executableName.empty()) {
+				LOGE("The executable of \"{}\" is not one of the files of its volume, so the disc cannot be rewritten "
+					"without losing it", sourcePath);
+				return false;
+			}
+			if (ReadU32BE(systemArea.data() + GameCubeFstSizeField) != 0) {
+				// Not one this tool wrote, and it would point at files that are about to move
+				LOGW("\"{}\" carries a GameCube file system table, which the new image leaves out", sourcePath);
+				WriteU32BE(systemArea.data() + GameCubeFstOffsetField, 0);
+				WriteU32BE(systemArea.data() + GameCubeFstSizeField, 0);
+				WriteU32BE(systemArea.data() + GameCubeFstMaxSizeField, 0);
+			}
 		}
 
 		bool replaced = false;
@@ -721,7 +1011,8 @@ namespace Jazz2::AssetPacker
 		// it is one that was written to a track longer than it needed, and it gets all of it
 		std::uint32_t runOut = (dataTrack->Length > isoReader.GetVolumeSpaceSize()
 			? dataTrack->Length - isoReader.GetVolumeSpaceSize() : 0);
-		if (runOut > 150) {
+		if (runOut > 150 || gameCube) {
+			// What a GameCube image ends with is not a run-out but padding, written again below
 			runOut = 0;
 		}
 		std::uint32_t required = builder.GetRequiredSectorCount();
@@ -739,6 +1030,16 @@ namespace Jazz2::AssetPacker
 			LOGI("The new content does not fit in the disc as it is, growing it by {} sectors", trackLength - dataTrack->Length);
 		}
 		std::uint32_t volumeSectorCount = trackLength - runOut;
+
+		if (gameCube) {
+			std::uint32_t executableLba = builder.FindFileLba(executableName, volumeSectorCount);
+			if (executableLba == 0) {
+				LOGE("Cannot find \"{}\" in the new volume", executableName);
+				return false;
+			}
+			WriteU32BE(systemArea.data() + GameCubeDolOffsetField, executableLba * IsoSectorSize);
+			builder.SetSystemArea(systemArea);
+		}
 
 		bool inPlace = (targetPath.empty() || targetPath == sourcePath);
 		String writePath = targetPath;
@@ -765,7 +1066,8 @@ namespace Jazz2::AssetPacker
 			}
 
 			CdiSectorSink sink(*target, dataTrack->SectorSize);
-			if (!builder.Write(sink, volumeSectorCount, sectorReader) || !sink.Flush()) {
+			if (!builder.Write(sink, volumeSectorCount, sectorReader) ||
+				(gameCube && !WriteZeroSectors(sink, GameCubeTailSectors)) || !sink.Flush()) {
 				return false;
 			}
 
@@ -819,6 +1121,72 @@ namespace Jazz2::AssetPacker
 			}
 		}
 
+		return true;
+	}
+
+	bool DiscImage::CreateGameCubeImage(const GameCubeImageDescription& description, StringView targetPath)
+	{
+		if (description.GameId.size() != 6) {
+			LOGE("\"{}\" is not a GameCube game ID, which is six characters - a game code like \"GJJE\" and a maker code", description.GameId);
+			return false;
+		}
+		for (char c : description.GameId) {
+			if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) {
+				LOGE("\"{}\" is not a GameCube game ID, it can only be made of upper-case letters and digits", description.GameId);
+				return false;
+			}
+		}
+		if (!fs::DirectoryExists(description.ContentPath)) {
+			LOGE("Content directory \"{}\" does not exist", description.ContentPath);
+			return false;
+		}
+		if (!CheckDolExecutable(description.ExecutablePath)) {
+			return false;
+		}
+		Array<std::uint8_t> apploader;
+		if (!ReadGameCubeApploader(description.ApploaderPath, apploader)) {
+			return false;
+		}
+
+		Array<std::uint8_t> systemArea{ValueInit, IsoSystemAreaSize};
+		WriteGameCubeHeader(systemArea, description.GameId, description.Title);
+		std::memcpy(systemArea.data() + GameCubeApploaderOffset, apploader.data(), apploader.size());
+
+		Iso9660Builder builder;
+		builder.SetDescriptorTemplates(MakePrimaryVolumeDescriptor("JAZZ2"_s), {});
+
+		// The executable sits in the root under its own name, which is also how a rewritten image finds it again
+		StringView executableName = fs::GetFileName(description.ExecutablePath);
+		if (!builder.AddFileFromDisk(executableName, description.ExecutablePath)) {
+			return false;
+		}
+		LOGI("Reading \"{}\"...", description.ContentPath);
+		if (!builder.AddDirectoryFromDisk(ContentDirectoryName, description.ContentPath)) {
+			return false;
+		}
+
+		std::uint32_t volumeSectorCount = builder.GetRequiredSectorCount();
+		std::uint32_t executableLba = builder.FindFileLba(executableName, volumeSectorCount);
+		if (volumeSectorCount == 0 || executableLba == 0) {
+			return false;
+		}
+		WriteU32BE(systemArea.data() + GameCubeDolOffsetField, executableLba * IsoSectorSize);
+		builder.SetSystemArea(systemArea);
+
+		LOGI("Writing \"{}\"...", targetPath);
+		auto target = fs::Open(targetPath, FileAccess::Write);
+		if (!target->IsValid()) {
+			LOGE("Cannot open \"{}\" for writing", targetPath);
+			return false;
+		}
+
+		NoSectorReader noReader;
+		CdiSectorSink sink(*target, IsoSectorSize);
+		if (!builder.Write(sink, volumeSectorCount, noReader) || !WriteZeroSectors(sink, GameCubeTailSectors) || !sink.Flush()) {
+			return false;
+		}
+
+		LOGI("The disc is {} sectors long, the executable starts at sector {}", volumeSectorCount + GameCubeTailSectors, executableLba);
 		return true;
 	}
 }

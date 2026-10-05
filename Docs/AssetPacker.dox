@@ -31,9 +31,9 @@ the binary is at @cpp "build/Utilities/AssetPacker/AssetPacker" @ce. With `NCINE
 off, the game is left out and only the offline tools are built.
 
 With Emscripten, that builds the tool's web version: a WebAssembly module with the repository's
-`Content` baked in, and a page that swaps the content of a Nintendo 64, Dreamcast or PlayStation 2
-image in the browser from the user's own copy of the original game (`swap-content --source=`, see
-@ref asset-packer-swap-content):
+`Content` baked in, and a page that swaps the content of a Nintendo 64, Dreamcast, PlayStation 2 or
+GameCube image in the browser from the user's own copy of the original game (`swap-content --source=`,
+see @ref asset-packer-swap-content):
 
 @code{.sh}
 emcmake cmake -S . -B build/assetpacker-web -G Ninja -D CMAKE_BUILD_TYPE=Release -D NCINE_BUILD_GAME=OFF
@@ -102,13 +102,20 @@ The command may be omitted, in which case `convert` is assumed:
 -   `convert-music <source .j2b> <target .xm>` --- Translates one of the game's Galaxy Music System
     modules into a FastTracker II module, the first half of what `--target=n64` does to the music
 -   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content`
-    directory of an already built console image --- a Dreamcast `.cdi`, a PlayStation 2 `.iso` or a
-    Nintendo 64 `.z64` --- keeping its bootstrap and its executable exactly as they are. The image is
-    rewritten in place when no target is given
+    directory of an already built console image --- a Dreamcast `.cdi`, a PlayStation 2 `.iso`, a
+    GameCube `.iso` or a Nintendo 64 `.z64` --- keeping its bootstrap and its executable exactly as they
+    are. The image is rewritten in place when no target is given
 -   `swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]` --- The
     same, converting the original game files first, for the console the image is for (a `.z64` is
-    `n64`, a DiscJuggler `.cdi` `dreamcast`, anything else `ps2`, unless `--target=` names another
-    profile). `--content=` is then the game's own content, as for `convert`, whose options apply
+    `n64`, a DiscJuggler `.cdi` `dreamcast`, an image that starts with a GameCube disc header
+    `gamecube`, anything else `ps2`, unless `--target=` names another profile). `--content=` is then the
+    game's own content, as for `convert`, whose options apply
+-   `create-image <executable .dol> <target .iso> --content=<dir> --apploader=<file> [--target=gamecube]
+    [--game-id=<id>] [--title=<name>]` --- Makes a bootable GameCube disc image out of the executable,
+    the apploader the GameCube target builds and a content directory (see @ref asset-packer-gamecube).
+    `--game-id=` is the six characters of the game code and the maker code, `GJJEJR` by default, and
+    `--title=` the name the disc header carries. The GameCube build runs it itself when it is told where
+    the tool is
 
 Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
 on failure.
@@ -466,11 +473,10 @@ such a file instead of drawing garbage from it --- rebuild the tree for a target
 
 @section asset-packer-swap-content Replacing the content of a disc image
 
-The two consoles that boot from a read-only disc --- the Dreamcast and the PlayStation 2 ---
+The consoles that boot from a read-only disc --- the Dreamcast, the PlayStation 2 and the GameCube ---
 bake their content into the image at build time @m_span{m-text m-dim} (see
-@ref consoles-dreamcast-content and @ref consoles-ps2-content) @m_endspan, which is the only way
-either of them can be given anything: neither has writable storage the game could be handed a
-tree on. The price is that changing what is on the disc used to mean building the whole image
+@ref consoles-dreamcast-content, @ref consoles-ps2-content and @ref consoles-gamecube-disc) @m_endspan,
+which is the only way a disc can be given anything: the game cannot write to it. The price is that changing what is on the disc used to mean building the whole image
 again, with the console toolchain and an image authoring tool at hand. `swap-content` is the
 other half of that: it opens a finished image, keeps everything on it except `Content`, and
 writes it back out around a different one.
@@ -484,6 +490,9 @@ AssetPacker swap-content ./jazz2.iso --content=./build/Ps2Content
 
 AssetPacker convert ./build/ConsoleContentN64 --source=<original Jazz Jackrabbit 2> --content=./Content --target=n64
 AssetPacker swap-content ./jazz2.z64 --content=./build/ConsoleContentN64
+
+AssetPacker convert ./build/ConsoleContentGameCube --source=<original Jazz Jackrabbit 2> --content=./Content --target=gamecube
+AssetPacker swap-content ./Jazz2.iso --content=./build/ConsoleContentGameCube
 @endcode
 
 @m_class{m-noindent}
@@ -509,7 +518,10 @@ licence screen, the serial number and the title --- carried over as the 32 KB it
 `1ST_READ.BIN`, copied across still scrambled exactly as it was written; on a PlayStation 2 one
 it is `SYSTEM.CNF`, the executable it names and the `.IRX` modules beside them. The tool
 therefore needs neither the toolchain the image was built with nor the executable it was built
-from, and runs on any platform the packer itself does.
+from, and runs on any platform the packer itself does. A GameCube disc keeps its disc header and its
+apploader, which sit in the first 32 KB of the volume, and its executable, `Jazz2.dol` in the root ---
+which is the one file that moves on purpose: the header names the sector it starts at, so that is
+rewritten to wherever the new layout puts it.
 
 A Nintendo 64 cartridge is not a disc, but the same applies: the game content is the DragonFS image
 at the end of the ROM, found at boot through the table of contents libdragon's `n64tool` writes after
@@ -572,6 +584,31 @@ which is why the build now passes `-J` as well @m_span{m-text m-dim} (before it 
 --- were on the disc as `XMAS_1_FEAW.J2T` and could not be opened) @m_endspan. An image that
 went through `swap-content` always comes back with one, so it is reachable either way.
 
+@section asset-packer-gamecube The GameCube disc image
+
+No image authoring tool knows the GameCube disc format, so the tool writes that image itself, with
+`create-image`, which the GameCube build runs when it is given the path of a host build of the tool
+(`GAMECUBE_ASSETPACKER_EXECUTABLE`, see @ref consoles-gamecube-disc). The image is an ordinary ISO 9660
+volume, written by the same @ref Jazz2::AssetPacker::Iso9660Builder as everything above, whose first
+32 KB --- the system area, which a file system leaves alone --- hold exactly what a GameCube disc holds
+there:
+
+-   the **disc header** (`boot.bin`): the game ID, the magic word that makes it a GameCube disc to the
+    console and to Dolphin, the title, and the offset of the executable,
+-   **`bi2.bin`**: the memory the game may assume and the region, which the boot ROM compares with the
+    console's own,
+-   the **apploader**: the small program the boot ROM loads from every disc and runs to bring the
+    executable into memory. Nintendo's own is part of every retail disc and cannot be redistributed, and
+    the devkitPro toolchain ships none, so the GameCube target builds a minimal one from
+    @cpp "Sources/nCine/Backends/Ogc/GameCubeApploader.c" @ce, with the bare compiler.
+
+The executable and `Content` are files of the volume, with the Joliet names beside the plain ones, so a
+computer opens the image as the ISO it is, while the console and Dolphin boot it as the disc it also
+is, and the game reads its content through the ISO 9660 hierarchy (see `OgcDvd.h`). The volume is
+followed by 32 KB of zeros: the console's readers fetch more than they are asked for, and a read past
+the end of an image is a read error to Dolphin. There is no GameCube file system table --- nothing on
+the console needs one --- so tools that list a GameCube disc by its table show no files.
+
 @section asset-packer-platforms Platform notes
 
 -   **Desktop** builds do not need the tool at all --- the game converts on first run.
@@ -585,10 +622,10 @@ went through `swap-content` always comes back with one, so it is reachable eithe
     GameCube have no conversion compiled in at all and *require* the prepared tree --- which is why
     `dreamcast` and `gamecube` also write their images in LZ4 (see @ref asset-packer-lz4) --- the PSP and the
     Wii would convert an installation left in their `Source` directory, which is slow on both and is
-    why they are given a prepared tree as well. The Dreamcast additionally authors the tree into a
-    read-only disc image at build time, which is a procedure of its own ---
-    see @ref consoles-dreamcast-content; the content of a finished image can be replaced afterwards
-    without building it again, see @ref asset-packer-swap-content.
+    why they are given a prepared tree as well. The Dreamcast and the GameCube additionally author the
+    tree into a read-only disc image at build time, which is a procedure of its own ---
+    see @ref consoles-dreamcast-content and @ref consoles-gamecube-disc; the content of a finished image
+    can be replaced afterwards without building it again, see @ref asset-packer-swap-content.
 -   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
     `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* halved to
     the 320×240 the console actually displays, and its images in LZ4 (see @ref asset-packer-lz4). A
@@ -643,7 +680,7 @@ went through `swap-content` always comes back with one, so it is reachable eithe
     platform needs it (the tool's per-target defaults already do the right thing), everything
     else wants the original file.
 -   **`swap-content` reads the kinds of image the game's own builds produce.** A plain `.iso`,
-    which is what the PlayStation 2 disc is, a DiscJuggler `.cdi` whose data track stores 2048 or
+    which is what the PlayStation 2 and the GameCube discs are, a DiscJuggler `.cdi` whose data track stores 2048 or
     2336 bytes per sector, which is what `mkdcdisc` writes, and a `.z64` ROM that ends with its
     DragonFS image, which is how the Nintendo 64 build lays it out. A `.cdi` that stores whole
     2352-byte sectors is refused rather than written back in a form that was never checked, a

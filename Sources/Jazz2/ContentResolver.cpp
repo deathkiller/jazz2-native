@@ -18,6 +18,10 @@
 #include "../nCine/Graphics/RenderResources.h"
 #include "../nCine/Graphics/RenderCommand.h"
 #include "../nCine/Base/Random.h"
+#if defined(WITH_OGC) && defined(DEATH_TARGET_GAMECUBE)
+#	include "../nCine/Backends/Ogc/OgcDvd.h"
+#	include "../nCine/Backends/Ogc/OgcStorage.h"
+#endif
 #if defined(WITH_PS2)
 // Brings removable storage up, so InitializePaths() below can look for the content on it.
 // Guarded on WITH_PS2, not DEATH_TARGET_PS2: the header's own contents are, and it is the narrower of
@@ -177,7 +181,7 @@ namespace Jazz2
 		}
 	}
 
-#if defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE)
 	StringView ContentResolver::GetWritablePath() const
 	{
 		return StringView(_writablePath);
@@ -199,7 +203,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
-		return "carda:/Jazz2/Content/"_s;
+		// Not a constant on this console either: the disc or an SD card, decided in InitializePaths() below
+		return (_contentPath.empty() ? "carda:/Jazz2/Content/"_s : StringView(_contentPath));
 #elif defined(DEATH_TARGET_3DS)
 		// Next to the .3dsx in the standard Homebrew Launcher layout ("sdmc:/3ds/<application>/"). The SD card is
 		// mounted as "sdmc:" by libctru before main() runs, so ContentResolver can open files while the application
@@ -250,7 +255,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
-		return "carda:/Jazz2/Cache/"_s;
+		// Read-only on the disc, writable on an SD card
+		return (_cachePath.empty() ? "carda:/Jazz2/Cache/"_s : StringView(_cachePath));
 #elif defined(DEATH_TARGET_3DS)
 		return "sdmc:/3ds/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
@@ -288,7 +294,7 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_WII)
 		return "sd:/apps/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_GAMECUBE)
-		return "carda:/Jazz2/Source/"_s;
+		return (_sourcePath.empty() ? "carda:/Jazz2/Source/"_s : StringView(_sourcePath));
 #elif defined(DEATH_TARGET_3DS)
 		return "sdmc:/3ds/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
@@ -574,6 +580,71 @@ namespace Jazz2
 			if (_contentPath.empty()) {
 				LOGW("No \"Content\" directory next to the executable, none under \"Games/Jazz2\" on any "
 					"removable storage, and no disc carrying one either");
+			}
+		}
+#elif defined(WITH_OGC) && defined(DEATH_TARGET_GAMECUBE)
+		// The game runs from the disc made for it (see AssetPacker's DiscImage::CreateGameCubeImage()) or from an
+		// SD card - in an SD Gecko in a memory-card slot or an SD2SP2 adapter under the console - which is how
+		// most of these consoles start anything today. Unlike the PlayStation 2, asking for the disc costs
+		// nothing when the console booted from it: the drive is spun up and the disc authenticated, so its
+		// header is simply read, and without a disc that read fails at once. So the order follows what the
+		// person who started the game most likely meant:
+		//
+		// - a "Content" directory next to the executable, where a loader that started it from an SD card says
+		//   it is, because that is where whoever copied it there put the content;
+		// - the disc, if it is this game's - never a stale tree from a card somebody left in the adapter;
+		// - "Jazz2/Content" on each SD card, the layout the build stages ("sd/" in the build directory);
+		// - the disc again, this time resetting and spinning up the drive, which takes more than a second and
+		//   is only worth it to a console that booted from something else and has its content on the disc.
+		//
+		// The disc is read-only, so a game read from it saves to a memory card (see PreferencesCache); an SD
+		// card is also where the settings go, and the level cache, as on the Wii.
+		{
+			using namespace nCine::Backends;
+
+			auto useWritableRoot = [this](StringView root, const char* where) {
+				_contentPath = root + "Content/"_s;
+				_cachePath = root + "Cache/"_s;
+				_sourcePath = root + "Source/"_s;
+				_writablePath = root;
+				LOGI("Reading content from \"{}\" ({}), which is also writable", _writablePath, where);
+			};
+			auto useDisc = [this]() {
+				if (!fs::DirectoryExists("dvd:/Content"_s)) {
+					LOGW("The disc carries no \"Content\" directory");
+					return false;
+				}
+				_contentPath = "dvd:/Content/"_s;
+				_cachePath = "dvd:/Cache/"_s;
+				_sourcePath = "dvd:/Source/"_s;
+				LOGI("Reading content from the disc");
+				return true;
+			};
+
+			StringView bootDirectory = OgcStorage::GetBootDirectory();
+			if (!bootDirectory.empty() && fs::DirectoryExists(String(bootDirectory + "Content"_s))) {
+				useWritableRoot(bootDirectory, "next to the executable");
+			}
+			if (_contentPath.empty() && OgcDvd::Mount(OgcStorage::GetGameId(), false)) {
+				useDisc();
+			}
+			if (_contentPath.empty()) {
+				for (StringView device : OgcStorage::GetMountedDevices()) {
+					String root = device + "Jazz2/"_s;
+					if (fs::DirectoryExists(String(root + "Content"_s))) {
+						useWritableRoot(root, "SD card");
+						break;
+					}
+				}
+			}
+			if (_contentPath.empty() && OgcDvd::Mount(OgcStorage::GetGameId(), true)) {
+				useDisc();
+			}
+			if (_contentPath.empty()) {
+				// The boot console is still on the screen, the renderer does not exist yet
+				OgcStorage::HaltWithMessage("  Cannot find the game files!\n\n"
+					"  Insert the game disc, or an SD card with the \"Jazz2\" folder\n"
+					"  into an SD Gecko or an SD2SP2 adapter.");
 			}
 		}
 #endif
@@ -2630,7 +2701,9 @@ namespace Jazz2
 			//
 			// The Nintendo 64's textures also live in main memory, and even with the Expansion Pak there is
 			// only 8 MB of RDRAM in total - half the Dreamcast's heap - so the backdrops are skipped there too.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP)
+			// So do the GameCube's, in its 24 MB, where the thirteen backdrops of a full installation ran it out
+			// of memory the moment the episode list opened.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_N64) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_GAMECUBE)
 			constexpr bool LoadEpisodeBackgrounds = false;
 #else
 			constexpr bool LoadEpisodeBackgrounds = true;

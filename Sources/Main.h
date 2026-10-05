@@ -14,6 +14,18 @@
 #	define NCINE_VERSION "3.8.0"
 #endif
 /**
+	@brief Game ID of the GameCube disc image
+
+	Six characters, the game code and the maker code. The game recognizes its own disc by it and creates its memory
+	card saves under it, and AssetPacker takes it as the default of `create-image --game-id=` --- the GameCube build
+	passes it to the tool explicitly anyway (`GAMECUBE_GAME_ID` in CMake). "GJJ" is no retail game, so Dolphin
+	applies no game-specific settings or patches to the disc and its saves do not mix with anything else's, "E" is
+	the region (NTSC-U, which every loader and optical drive emulator boots), and "JR" is the maker code.
+*/
+#if !defined(NCINE_GAMECUBE_GAME_ID)
+#	define NCINE_GAMECUBE_GAME_ID "GJJEJR"
+#endif
+/**
 	@brief Application multiplayer protocol version
 
 	Decides whether a client and a server can play together, independently of @ref NCINE_VERSION. Bump it

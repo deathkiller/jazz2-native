@@ -132,15 +132,16 @@ namespace Jazz2
 		/** @brief Releases all cached assets */
 		void Release();
 
-#if defined(DEATH_TARGET_PS2) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 		 * @brief Returns the directory the content was found in, if it is writable, otherwise an empty view
 		 *
-		 * Only the PlayStation 2 can answer anything but "no" here, and only in one configuration: the game
-		 * normally runs from a disc, where nothing can be written and settings have to go to a memory card,
-		 * but it can equally be started from an SD card in an MX4SIO adapter, and then the directory it is
-		 * reading from is also the best place on the console to write to. @ref PreferencesCache prefers it
-		 * over a memory card, which is what lets such a build save on a console with no memory card in it.
+		 * Only the PlayStation 2 and the GameCube can answer anything but "no" here. Both run from a disc,
+		 * where nothing can be written and settings have to go to a memory card, but both can equally be
+		 * started from an SD card - in an MX4SIO adapter on the PlayStation 2, in an SD Gecko or an SD2SP2
+		 * adapter on the GameCube - and then the directory the game is reading from is also the best place on
+		 * the console to write to. @ref PreferencesCache prefers it over a memory card, which is what lets
+		 * such a build save on a console with no memory card in it.
 		 */
 		StringView GetWritablePath() const;
 #endif
@@ -535,14 +536,16 @@ namespace Jazz2
 		/** @brief Drops the cached fonts whose atlas baked the palette, leaving the palette-indexed ones alone */
 		void DropBakedFonts();
 
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_PS2) || \
+		defined(DEATH_TARGET_GAMECUBE)
 		String _contentPath;
 #endif
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT) || \
+		defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE)
 		String _cachePath;
 		String _sourcePath;
 #endif
-#if defined(DEATH_TARGET_PS2)
+#if defined(DEATH_TARGET_PS2) || defined(DEATH_TARGET_GAMECUBE)
 		/** @brief Set only when the content was found on writable storage - see @ref GetWritablePath() */
 		String _writablePath;
 #endif

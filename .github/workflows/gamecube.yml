@@ -31,12 +31,28 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: 'Build AssetPacker'
+      run: |
+        # The bootable disc image is made by AssetPacker, a host tool of this repository, because no image
+        # authoring tool knows the GameCube disc header (see the NINTENDO_GAMECUBE packaging in
+        # cmake/ncine_extra_sources.cmake). Only the tool is built here, with the image's own host compiler,
+        # and the game below is told where it is. Making the image needs nothing but the tool itself, so it is
+        # built without the downloaded libraries and the encoders of the Nintendo 64 formats - the prebuilt
+        # libopenmpt cannot even be linked here - and only zlib, which the image does not have for the host,
+        # has to be installed.
+        apt-get update && apt-get install -y --no-install-recommends zlib1g-dev
+        git config --global --add safe.directory '*'
+        cmake -B ./_build_tools/ -D CMAKE_BUILD_TYPE=Release -D NCINE_BUILD_GAME=OFF -D NCINE_BUILD_SHADER_COMPILER=OFF \
+          -D NCINE_DOWNLOAD_DEPENDENCIES=OFF -D ASSETPACKER_WITH_N64_ENCODERS=OFF
+        make -j $(nproc) -C ./_build_tools/ AssetPacker
+
     - name: 'Configure CMake'
       run: |
         rm -f ./Content/Translations/*.po
 
         git config --global --add safe.directory '*'
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/GameCube.cmake
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/GameCube.cmake \
+          -D GAMECUBE_ASSETPACKER_EXECUTABLE=$(pwd)/_build_tools/Utilities/AssetPacker/AssetPacker
 
     - name: 'Build'
       run: |
@@ -44,9 +60,11 @@ jobs:
 
     - name: 'Create Package'
       run: |
-        # The "sd" directory contains the staged SD card layout including the game content
+        # The "sd" directory contains the staged SD card layout including the game content, and "Jazz2.iso" is
+        # the bootable disc image with the same content, which Dolphin and optical drive emulators run
         mkdir ./_package/
         cp -r ./_build/sd/. ./_package/
+        cp -f ./_build/jazz2.iso ./_package/Jazz2.iso
         cp -f ./LICENSE ./_package/LICENSE
 
     - name: 'Upload Package'

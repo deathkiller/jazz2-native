@@ -40,6 +40,9 @@
 #	include <eeprom.h>
 #	include <eepromfs.h>
 #	include <system.h>	// for attach_filesystem()
+#elif defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
+#	include "../nCine/Backends/Ogc/OgcMemoryCard.h"
+#	include "../nCine/Backends/Ogc/OgcStorage.h"
 #elif defined(DEATH_TARGET_PS2)
 #	include <cmath>
 extern "C" {
@@ -146,8 +149,9 @@ namespace Jazz2
 	float PreferencesCache::MusicVolume = 0.4f;
 #if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP)
 	// Half the hardware's 44100 Hz: the mixer's cost is linear in the rate, the game's samples are 11-22 kHz
-	// to begin with and the module music is rendered at this rate anyway (see AudioLoaderMpt). The 3DS's DSP
-	// resamples the channel to its own 32728 Hz in hardware, so the mixing rate is a free choice there too.
+	// to begin with and the module decoder, which renders at this rate too, costs half as much as at the full
+	// rate (see PspAudioDevice). The 3DS's DSP resamples the channel to its own 32728 Hz in hardware, so the
+	// mixing rate is a free choice there too.
 	std::int32_t PreferencesCache::AudioSampleRate = 22050;
 #else
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
@@ -1174,6 +1178,26 @@ namespace
 				auto& resolver = ContentResolver::Get();
 				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 			}
+#	elif defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
+			// An SD card the content was found on is where everything is written, as on the Wii. A game read from
+			// the disc has nowhere to write but a memory card - the first usable one, slot A before slot B, the way
+			// the Dreamcast takes the first VMU. With neither the path is left on the disc, where opening it for
+			// writing simply fails, and the game runs with the default settings every time.
+			auto& resolver = ContentResolver::Get();
+			StringView writablePath = resolver.GetWritablePath();
+			if (!writablePath.empty()) {
+				_configPath = fs::CombinePath(writablePath, "Jazz2.config"_s);
+			} else {
+				Backends::OgcMemoryCard::Initialize(Backends::OgcStorage::GetGameId());
+				if (Backends::OgcMemoryCard::IsUsable(0)) {
+					_configPath = "mca:/Jazz2.config"_s;
+				} else if (Backends::OgcMemoryCard::IsUsable(1)) {
+					_configPath = "mcb:/Jazz2.config"_s;
+				} else {
+					LOGW("No usable memory card found, settings and progress cannot be saved");
+					_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+				}
+			}
 #	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
 				defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_AMIGAOS)
 			// Save config file next to `Source` directory (on the storage device the content is read from;
@@ -1213,7 +1237,18 @@ namespace
 		// (Apple, Unix, Windows) it also forces tracing to the file even without
 		// using any command-line argument
 #	if defined(DEATH_TRACE)
-#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || \
+#		if defined(DEATH_TARGET_GAMECUBE) && defined(WITH_OGC)
+		// Only next to content on an SD card - a memory card has a few dozen 8 KB blocks for everything the console
+		// saves, which is no place for a log. The USB Gecko in slot B gets every message either way.
+		if (!ContentResolver::Get().GetWritablePath().empty()) {
+			fs::CreateDirectories(configDir);
+#			if defined(DEATH_TRACE_LOG_PATH)
+			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
+#			else
+			theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+#			endif
+		}
+#		elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || \
 			defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 		fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
@@ -1677,6 +1712,21 @@ namespace
 #endif
 	}
 
+#if defined(DEATH_TARGET_GAMECUBE)
+	void PreferencesCache::DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription)
+	{
+#	if defined(WITH_OGC)
+		StringView configPath = _configPath;
+		if (configPath.hasPrefix("mca:"_s) || configPath.hasPrefix("mcb:"_s)) {
+			Backends::OgcMemoryCard::SetNextFileDescription(shortDescription, longDescription);
+		}
+#	else
+		static_cast<void>(shortDescription);
+		static_cast<void>(longDescription);
+#	endif
+	}
+#endif
+
 #if defined(DEATH_TARGET_DREAMCAST)
 	void PreferencesCache::DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription)
 	{
@@ -1729,6 +1779,8 @@ namespace
 
 #if defined(DEATH_TARGET_DREAMCAST)
 		DescribeNextMemoryCardFile("Jazz2 Settings"_s, "Jazz2 Resurrection - Settings"_s);
+#elif defined(DEATH_TARGET_GAMECUBE)
+		DescribeNextMemoryCardFile("Jazz² Resurrection"_s, "Settings and progress"_s);
 #endif
 
 		auto so = fs::Open(_configPath, FileAccess::Write);

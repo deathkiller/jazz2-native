@@ -18,6 +18,7 @@
 #elif defined(WITH_OGC)
 #	include "Backends/Ogc/OgcGfxDevice.h"
 #	include "Backends/Ogc/OgcInputManager.h"
+#	include "Backends/Ogc/OgcStorage.h"
 #elif defined(WITH_CTR)
 #	include "Backends/Ctr/CtrGfxDevice.h"
 #	include "Backends/Ctr/CtrInputManager.h"
@@ -437,18 +438,22 @@ namespace nCine
 		VIDEO_WaitVSync();
 		printf("Application starting...\n");
 
+#	if defined(DEATH_TARGET_GAMECUBE)
+		// The game content is on the disc or on an SD card, and which one is decided once everything has been
+		// asked (see ContentResolver::InitializePaths(), which also stops with a readable message when neither
+		// has it). Only the SD cards are mounted here, along with where the loader started the executable from,
+		// which only `argv` says and only this function has.
+		OgcStorage::Initialize(argc > 0 ? argv[0] : nullptr);
+#	else
 		if (!fatInitDefault()) {
 			// Without a FAT device there is no game content and no writable storage, so halt with
 			// a readable message instead of crashing on the missing device later
-#	if defined(DEATH_TARGET_GAMECUBE)
-			printf("\n  Cannot access the SD card!\n\n  Insert an SD card with the game files into the SD Gecko adapter.\n");
-#	else
 			printf("\n  Cannot access the SD card!\n\n  Insert an SD card with the game files and restart the console.\n");
-#	endif
 			while (true) {
 				VIDEO_WaitVSync();
 			}
 		}
+#	endif
 		PAD_Init();
 #	if defined(DEATH_TARGET_WII)
 		WPAD_Init();
@@ -796,6 +801,9 @@ namespace nCine
 		// end the title instead of running off into whatever follows the entry point
 		fatUnmount("sd:");
 		fatUnmount("carda:");
+#	if defined(DEATH_TARGET_GAMECUBE)
+		fatUnmount("cardb:");
+#	endif
 #	if defined(DEATH_TARGET_WII)
 		if (*(volatile std::uint32_t*)0x80001804 != 0x53545542 /*"STUB"*/) {
 			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);

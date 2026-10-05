@@ -1,7 +1,7 @@
 # AssetPacker for the web
 
 The AssetPacker compiled to WebAssembly, with a page that swaps the game content of a Nintendo 64 (`.z64`), Dreamcast
-(`.cdi`) or PlayStation 2 (`.iso`) image of Jazz² Resurrection. The user provides the image and the `Source` folder
+(`.cdi`), PlayStation 2 (`.iso`) or GameCube (`.iso`) image of Jazz² Resurrection. The user provides the image and the `Source` folder
 of their copy of Jazz Jackrabbit 2; the page runs
 
     AssetPacker swap-content <image> <new image> --source=<Source> --content=/Content

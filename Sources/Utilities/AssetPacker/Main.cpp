@@ -59,6 +59,8 @@ using namespace Death::Trace;
 using namespace Jazz2;
 
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
+#define NCINE_APP_NAME_s DEATH_PASTE(NCINE_APP_NAME, _s)
+#define NCINE_GAMECUBE_GAME_ID_s DEATH_PASTE(NCINE_GAMECUBE_GAME_ID, _s)
 
 namespace
 {
@@ -150,8 +152,10 @@ namespace
 		RecompressVideo,
 		/** @brief Translate one of the game's Galaxy Music System modules into a FastTracker II module */
 		ConvertMusic,
-		/** @brief Replace the game content of an already built Dreamcast disc image */
-		SwapDiscContent
+		/** @brief Replace the game content of an already built console disc or ROM image */
+		SwapDiscContent,
+		/** @brief Make a bootable GameCube disc image out of the executable, its apploader and a content directory */
+		CreateImage
 	};
 
 	struct Options {
@@ -185,7 +189,19 @@ namespace
 		String N64Tools;
 		/** @brief Whether the sprite sheets and tilesets are written in LZ4, see @ref Compatibility::JJ2Anims::ImageCompression */
 		bool Lz4Images = false;
+		/** @brief The apploader named by `--apploader=`, which `create-image` puts on the disc */
+		String ApploaderPath;
+		/** @brief The game ID named by `--game-id=`, see @ref DefaultGameCubeGameId */
+		String GameId;
+		/** @brief The name the disc header carries, named by `--title=` */
+		String Title;
 	};
+
+	/** @brief Game ID of a GameCube disc when `--game-id=` names none, the one the game is built with (see @ref NCINE_GAMECUBE_GAME_ID) */
+	constexpr StringView DefaultGameCubeGameId = NCINE_GAMECUBE_GAME_ID_s;
+
+	/** @brief Name the GameCube disc header carries when `--title=` names none, the one the game is built with */
+	constexpr StringView DefaultGameCubeTitle = NCINE_APP_NAME_s;
 
 	/**
 		@brief Where the original files, and optionally the game's own content, live under a given directory
@@ -224,6 +240,8 @@ namespace
 			command = Command::ConvertMusic;
 		} else if (value == "swap-content"_s) {
 			command = Command::SwapDiscContent;
+		} else if (value == "create-image"_s) {
+			command = Command::CreateImage;
 		} else {
 			return false;
 		}
@@ -344,13 +362,22 @@ namespace
 		LOGI("    Replaces the \"Content\" directory of an already built console disc or ROM image with <dir>,");
 		LOGI("    keeping its bootstrap and its executable exactly as they are - so the image can be given new game");
 		LOGI("    data without the console toolchain it was built with. Reads a Dreamcast \".cdi\", a PlayStation 2");
-		LOGI("    \".iso\" and a Nintendo 64 \".z64\"; <dir> is a directory prepared by \"convert --target=dreamcast\",");
-		LOGI("    \"--target=ps2\" or \"--target=n64\". The image is rewritten in place if no target is given, and");
-		LOGI("    a \".cdi\" grows only if the new content does not fit in the space the disc already has");
+		LOGI("    \".iso\", a GameCube \".iso\" and a Nintendo 64 \".z64\"; <dir> is a directory prepared by");
+		LOGI("    \"convert --target=dreamcast\", \"--target=ps2\", \"--target=gamecube\" or \"--target=n64\". The image");
+		LOGI("    is rewritten in place if no target is given, and a \".cdi\" grows only if the new content does not fit");
+		LOGI("    in the space the disc already has");
 		LOGI("  swap-content <source image> [<target image>] --source=<dir> [--content=<dir>] [options]");
 		LOGI("    The same, converting the original game files in --source= first, for the console the image is for");
-		LOGI("    (a \".z64\" is n64, a \".cdi\" dreamcast, anything else ps2, unless --target= says otherwise);");
-		LOGI("    --content= is then the game's own content, as for \"convert\", and the options of \"convert\" apply");
+		LOGI("    (a \".z64\" is n64, a \".cdi\" dreamcast, an image starting with a GameCube disc header gamecube,");
+		LOGI("    anything else ps2, unless --target= says otherwise); --content= is then the game's own content, as");
+		LOGI("    for \"convert\", and the options of \"convert\" apply");
+		LOGI("  create-image <executable .dol> <target .iso> --content=<dir> --apploader=<file> [--target=gamecube]");
+		LOGI("               [--game-id=<id>] [--title=<name>]");
+		LOGI("    Makes a bootable GameCube disc image: an ISO 9660 volume with the executable and <dir> as \"Content\",");
+		LOGI("    whose first 32 KB are the disc header and the apploader the console's boot ROM loads the executable");
+		LOGI("    with (built by the GameCube target, see GameCubeApploader.c). --game-id= is the six characters of the");
+		LOGI("    game and maker codes (default {}), --title= the name in the header (default \"{}\")",
+			DefaultGameCubeGameId, DefaultGameCubeTitle);
 	}
 
 	/** @brief Works out everything the profile named by `--target=` implies */
@@ -420,6 +447,12 @@ namespace
 				options.SkipNonEpisodeLevels = true;
 			} else if (arg.hasPrefix("--n64-tools="_s)) {
 				options.N64Tools = arg.exceptPrefix("--n64-tools="_s);
+			} else if (arg.hasPrefix("--apploader="_s)) {
+				options.ApploaderPath = arg.exceptPrefix("--apploader="_s);
+			} else if (arg.hasPrefix("--game-id="_s)) {
+				options.GameId = arg.exceptPrefix("--game-id="_s);
+			} else if (arg.hasPrefix("--title="_s)) {
+				options.Title = arg.exceptPrefix("--title="_s);
 			} else if (arg == "--help"_s || arg == "-h"_s) {
 				return false;
 			} else if (options.SourcePath.empty()) {
@@ -451,6 +484,19 @@ namespace
 
 		if (options.Action == Command::Convert) {
 			return !options.TargetPath.empty() && (!options.SourcePath.empty() || !options.SourceOverride.empty());
+		}
+		if (options.Action == Command::CreateImage) {
+			// The only kind of image there is no authoring tool for (see DiscImage::CreateGameCubeImage())
+			if (!options.ProfileName.empty() && options.ProfileName != "gamecube"_s) {
+				LOGE("\"create-image\" makes GameCube disc images only, not \"{}\" ones", options.ProfileName);
+				return false;
+			}
+			if (options.ContentOverride.empty() || options.ApploaderPath.empty()) {
+				LOGE("\"create-image\" needs the directory that is to become the content of the disc, named by \"--content=\", "
+					"and the apploader, named by \"--apploader=\"");
+				return false;
+			}
+			return !options.SourcePath.empty() && !options.TargetPath.empty();
 		}
 		// The only command that rewrites what it is given, so it is also the only one whose target is optional
 		if (options.Action == Command::SwapDiscContent) {
@@ -872,9 +918,11 @@ namespace
 		conversion.SharewareOnly = options.SharewareOnly;
 		conversion.SkipNonEpisodeLevels = options.SkipNonEpisodeLevels;
 		conversion.N64Tools = options.N64Tools;
+		const bool gameCube = AssetPacker::DiscImage::IsGameCubeImage(options.SourcePath);
 		if (conversion.ProfileName.empty()) {
 			conversion.ProfileName = (AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) ? "n64"_s
 				: AssetPacker::DiscImage::IsDiscJugglerImage(options.SourcePath) ? "dreamcast"_s
+				: gameCube ? "gamecube"_s
 				: "ps2"_s);
 			LOGI("\"{}\" is an image for the \"{}\" profile", fs::GetFileName(options.SourcePath), conversion.ProfileName);
 		}
@@ -884,8 +932,9 @@ namespace
 
 		// A build of the game older than the LZ4 sprite sheets and tilesets draws garbage from them, while every build
 		// reads the game's own format - so a disc gets them only if the content already on it has them. A cartridge
-		// always does: a build that plays the profile's sound and music (which are newer) reads them as well.
-		if (conversion.Lz4Images && !AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) &&
+		// always does: a build that plays the profile's sound and music (which are newer) reads them as well. So does
+		// a GameCube disc, which no build older than them could be made into.
+		if (conversion.Lz4Images && !AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) && !gameCube &&
 			!AssetPacker::DiscImage::CarriesLz4Images(options.SourcePath)) {
 			LOGI("The content on the disc keeps its sprite sheets and tilesets in the game's own format, which an older build "
 				"of the game needs, so the new content keeps to it too");
@@ -936,6 +985,16 @@ namespace
 							options.VideoDownscale, fs::GetFileSize(options.TargetPath));
 					}
 					break;
+				case Command::CreateImage: {
+					AssetPacker::DiscImage::GameCubeImageDescription description;
+					description.ExecutablePath = options.SourcePath;
+					description.ApploaderPath = options.ApploaderPath;
+					description.ContentPath = options.ContentOverride;
+					description.GameId = (options.GameId.empty() ? DefaultGameCubeGameId : StringView(options.GameId));
+					description.Title = (options.Title.empty() ? DefaultGameCubeTitle : StringView(options.Title));
+					success = AssetPacker::DiscImage::CreateGameCubeImage(description, options.TargetPath);
+					break;
+				}
 				case Command::SwapDiscContent:
 					if (!options.SourceOverride.empty()) {
 						success = SwapContentFromSource(options);

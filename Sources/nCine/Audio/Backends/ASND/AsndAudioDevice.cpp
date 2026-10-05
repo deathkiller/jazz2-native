@@ -44,6 +44,28 @@ namespace nCine
 		void streamVoiceCallback(s32 voice)
 		{
 		}
+
+		/** @brief libogc's own DSP interrupt callback, which hands each mail to the task it is for */
+		DSPCallback libogcDspCallback = nullptr;
+
+		/**
+			@brief Lets a DSP interrupt that came without a mail pass
+
+			libogc's callback waits for the DSP's mail without any limit, with interrupts disabled, before it
+			looks at what the mail says - and Dolphin's high-level emulation of ASND's mixer microcode (its
+			default DSP engine) every so often raises the interrupt with no mail behind it, which froze the
+			whole console in that loop after a few dozen menu sounds. A real DSP writes the mail before it
+			raises the interrupt, so there the mail is always present on the first look and nothing changes.
+		*/
+		void guardedDspCallback()
+		{
+			for (std::int32_t i = 0; i < 64; i++) {
+				if (DSP_CheckMailFrom()) {
+					libogcDspCallback();
+					return;
+				}
+			}
+		}
 	}
 
 	AsndAudioDevice::AsndAudioDevice()
@@ -53,6 +75,9 @@ namespace nCine
 
 		// Sets up the DSP mixer task and starts the audio DMA, including DSP_Init() and AUDIO_Init()
 		ASND_Init();
+		if (libogcDspCallback == nullptr) {
+			libogcDspCallback = DSP_RegisterCallback(guardedDspCallback);
+		}
 		// The mixer starts out paused
 		ASND_Pause(0);
 		_initialized = true;

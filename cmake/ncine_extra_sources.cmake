@@ -328,7 +328,31 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		if(NINTENDO_WII)
 			target_link_libraries(${NCINE_APP} PRIVATE wiiuse bte fat ogc m)
 		else()
+			# The GameCube also runs from its own disc, which it reads itself, and saves to a memory card when it
+			# does (see OgcDvd.h and OgcMemoryCard.h); OgcStorage mounts the SD cards and records where the
+			# executable was started from, for ContentResolver to choose between them
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcDvd.h
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcMemoryCard.h
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcStorage.h
+			)
+			list(APPEND SOURCES
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcDvd.cpp
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcMemoryCard.cpp
+				${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcStorage.cpp
+			)
 			target_link_libraries(${NCINE_APP} PRIVATE fat ogc m)
+
+			# The game ID of the disc the build makes (see the packaging below and ncine_options.cmake), which is
+			# also how the game recognizes that disc and the code its memory card saves are created under
+			target_compile_definitions(${NCINE_APP} PRIVATE "NCINE_GAMECUBE_GAME_ID=\"${GAMECUBE_GAME_ID}\"")
+
+			# The icon a memory card save is listed with - the same one the Dreamcast lists its saves with,
+			# converted to the GameCube's format at run time (see OgcMemoryCard.cpp)
+			include("${CMAKE_SOURCE_DIR}/cmake/ncine_dreamcast_icon.cmake")
+			ncine_generate_dreamcast_icon(_gameCubeIconHeader)
+			list(APPEND HEADERS ${_gameCubeIconHeader})
+			target_include_directories(${NCINE_APP} PRIVATE "${CMAKE_BINARY_DIR}/Generated")
 		endif()
 	elseif(NINTENDO_3DS)
 		# libctru window/input backend. devkitPro does package an SDL for the 3DS, but it is SDL 1.2 (and a
@@ -1166,8 +1190,11 @@ else()
 		ogc_create_dol(${NCINE_APP})
 
 		# Stage the SD card layout expected by ContentResolver ("sd:/apps/Jazz2/" on Wii, which is
-		# the standard Homebrew Channel layout, and "carda:/Jazz2/" on GameCube) into "sd/" in the
-		# build directory, so its contents can be copied directly to a (virtual) SD card
+		# the standard Homebrew Channel layout, and "Jazz2/" on any SD card on GameCube) into "sd/" in the
+		# build directory, so its contents can be copied directly to a (virtual) SD card. The staged content
+		# is removed first: `copy_directory` never deletes anything, so files a previous content tree had
+		# and the current one does not - an old "Source.pak" next to the "Prebaked.pak", which the game
+		# would mount as well - would otherwise stay on every card made from here.
 		if(NINTENDO_WII)
 			set(OGC_SD_APP_DIR "${CMAKE_BINARY_DIR}/sd/apps/Jazz2")
 			set(OGC_SD_DOL_NAME "boot.dol")
@@ -1178,9 +1205,54 @@ else()
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E make_directory "${OGC_SD_APP_DIR}"
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${NCINE_APP}.dol" "${OGC_SD_APP_DIR}/${OGC_SD_DOL_NAME}"
+			COMMAND ${CMAKE_COMMAND} -E remove_directory "${OGC_SD_APP_DIR}/Content"
 			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${OGC_SD_APP_DIR}/Content"
 			COMMENT "Staging SD card layout with game content"
 			VERBATIM)
+
+		if(NINTENDO_GAMECUBE)
+			# A bootable disc image as well ("jazz2.iso"), which is what Dolphin runs - it has no SD adapter for
+			# the GameCube - and what an optical drive emulator (GCLoader, CubeODE, FlippyDrive) or a burned disc
+			# boots on a console. It is an ISO 9660 volume with the executable and "Content" in it, whose system
+			# area holds the GameCube disc header and the apploader - the small program the boot ROM loads from
+			# every disc and runs to bring the executable into memory, built here from source with the bare
+			# compiler, because none ships with the toolchain (see GameCubeApploader.c). No image authoring tool
+			# knows that header, so the image is made by AssetPacker, a host tool of this repository, which can
+			# also replace its content later without rebuilding anything (`swap-content`).
+			set(_gameCubeApploaderSource "${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/GameCubeApploader.c")
+			set(_gameCubeApploaderScript "${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/GameCubeApploader.ld")
+			set(_gameCubeApploaderElf "${CMAKE_BINARY_DIR}/GameCubeApploader.elf")
+			set(GAMECUBE_APPLOADER "${CMAKE_BINARY_DIR}/GameCubeApploader.img")
+			# No libogc, no C library and no startup code, and nothing addressed relative to r2 or r13, which
+			# hold whatever the boot ROM left in them when it calls in
+			add_custom_command(OUTPUT "${GAMECUBE_APPLOADER}"
+				COMMAND "${CMAKE_C_COMPILER}" -O2 -mcpu=750 -meabi -mhard-float -msdata=none -G0 -fno-pic
+					-ffreestanding -fno-builtin -nostdlib -nostartfiles -Wl,--gc-sections -T "${_gameCubeApploaderScript}"
+					-o "${_gameCubeApploaderElf}" "${_gameCubeApploaderSource}"
+				COMMAND "${CMAKE_OBJCOPY}" -O binary "${_gameCubeApploaderElf}" "${GAMECUBE_APPLOADER}"
+				DEPENDS "${_gameCubeApploaderSource}" "${_gameCubeApploaderScript}"
+				COMMENT "Building the GameCube apploader"
+				VERBATIM)
+			add_custom_target(${NCINE_APP}_apploader DEPENDS "${GAMECUBE_APPLOADER}")
+			add_dependencies(${NCINE_APP} ${NCINE_APP}_apploader)
+
+			find_program(GAMECUBE_ASSETPACKER_EXECUTABLE NAMES AssetPacker
+				DOC "Host build of AssetPacker, which makes the GameCube disc image")
+			if(GAMECUBE_ASSETPACKER_EXECUTABLE)
+				# The executable is taken from the staged SD layout above, so it is called "Jazz2.dol" on the
+				# disc as well
+				add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+					COMMAND "${GAMECUBE_ASSETPACKER_EXECUTABLE}" create-image "${OGC_SD_APP_DIR}/${OGC_SD_DOL_NAME}"
+						"${CMAKE_BINARY_DIR}/${NCINE_APP}.iso" --target=gamecube "--content=${NCINE_CONTENT_DIR}"
+						"--apploader=${GAMECUBE_APPLOADER}" "--game-id=${GAMECUBE_GAME_ID}" "--title=${NCINE_APP_NAME}"
+					COMMENT "Creating bootable GameCube disc image with game content"
+					VERBATIM)
+			else()
+				# Not fatal: the SD card layout above is complete without it
+				message(STATUS "AssetPacker not found, the GameCube disc image will not be created - build it for "
+					"the host and point GAMECUBE_ASSETPACKER_EXECUTABLE at it")
+			endif()
+		endif()
 	elseif(NINTENDO_3DS)
 		# The one vertex program the PICA backend needs (Sources/Shaders/Pica/Sprite.v.pica, a passthrough of
 		# screen-space vertices under an orthographic matrix) is assembled by picasso - the shader assembler

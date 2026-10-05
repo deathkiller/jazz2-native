@@ -201,7 +201,8 @@ namespace Jazz2::AssetPacker
 			}
 
 			target[0] = std::uint8_t(value.GetYear() - 1900);
-			target[1] = std::uint8_t(value.GetMonth());
+			// DateTime counts months from zero, a directory record from one
+			target[1] = std::uint8_t(value.GetMonth() + 1);
 			target[2] = std::uint8_t(value.GetDay());
 			target[3] = std::uint8_t(value.GetHour());
 			target[4] = std::uint8_t(value.GetMinute());
@@ -465,6 +466,32 @@ namespace Jazz2::AssetPacker
 		return AddDirectoryContents(*node, hostPath);
 	}
 
+	bool Iso9660Builder::AddFileFromDisk(StringView path, StringView hostPath)
+	{
+		StringView fileName = fs::GetFileName(path);
+		Node* parent = FindOrCreateDirectory(path.prefix(fileName.begin()));
+		if (parent == nullptr) {
+			LOGE("Cannot put \"{}\" on the disc, a file of the same name is already there", path);
+			return false;
+		}
+
+		Node* node = AddChild(*parent, fileName, false);
+		if (node == nullptr) {
+			LOGE("Cannot put \"{}\" on the disc, a directory of the same name is already there", path);
+			return false;
+		}
+
+		std::int64_t size = fs::GetFileSize(hostPath);
+		if (size < 0 || size > std::int64_t(UINT32_MAX)) {
+			LOGE("Cannot put \"{}\" on the disc, it is unreadable or larger than 4 GB", hostPath);
+			return false;
+		}
+		WriteRecordDate(node->Recorded, fs::GetLastModificationTime(hostPath));
+		node->HostPath = hostPath;
+		node->Size = std::uint32_t(size);
+		return true;
+	}
+
 	bool Iso9660Builder::AddDirectoryContents(Node& parent, StringView hostPath)
 	{
 		// Anything that cannot be put on the disc stops the whole thing, because a disc is read-only and a
@@ -678,6 +705,33 @@ namespace Jazz2::AssetPacker
 			return 0;
 		}
 		return layout.VolumeSectorCount;
+	}
+
+	std::uint32_t Iso9660Builder::FindFileLba(StringView path, std::uint32_t volumeSectorCount)
+	{
+		Layout layout;
+		if (!BuildLayout(volumeSectorCount, layout)) {
+			return 0;
+		}
+
+		Node* current = &_root;
+		for (StringView part : path.split('/')) {
+			if (part.empty()) {
+				continue;
+			}
+			Node* next = nullptr;
+			for (auto& child : current->Children) {
+				if (StringUtils::equalsIgnoreCase(child->Name, part)) {
+					next = child.get();
+					break;
+				}
+			}
+			if (next == nullptr) {
+				return 0;
+			}
+			current = next;
+		}
+		return (current != &_root && !current->IsDirectory ? current->Lba : 0);
 	}
 
 	void Iso9660Builder::WriteDescriptors(ArrayView<std::uint8_t> target, const Layout& layout)

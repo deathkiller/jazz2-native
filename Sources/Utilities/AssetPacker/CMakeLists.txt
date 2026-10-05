@@ -109,8 +109,11 @@ target_sources(AssetPacker PRIVATE ${SOURCES})
 # Set explicitly rather than through ncine_apply_compiler_options(): the tool reports its progress through the
 # usual logging macros, so DEATH_TRACE has to be on whatever the game is configured with, and it must be on
 # WITHOUT DEATH_TRACE_VERBOSE_IO - a conversion touches thousands of files, and logging each one buries the
-# output. NCINE_VERSION matches the game so the cache index it writes isn't seen as coming from another build.
-target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\"")
+# output. NCINE_VERSION matches the game so the cache index it writes isn't seen as coming from another build,
+# and NCINE_APP_NAME and NCINE_GAMECUBE_GAME_ID are the title and the game ID a GameCube disc image is given
+# unless others are named.
+target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\""
+	"NCINE_APP_NAME=\"${NCINE_APP_NAME}\"" "NCINE_GAMECUBE_GAME_ID=\"${GAMECUBE_GAME_ID}\"")
 
 if(WIN32)
 	# Not going through ncine_apply_compiler_options() also means missing the Unicode switch it sets for the game.

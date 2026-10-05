@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jazz² Resurrection Content Swapper</title>
-<meta name="description" content="Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast or PlayStation 2 image of Jazz² Resurrection, right in the browser.">
+<meta name="description" content="Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast, PlayStation 2 or GameCube image of Jazz² Resurrection, right in the browser.">
 <style>
 	:root {
 		--bg: #f6f5f2;
@@ -182,17 +182,18 @@
 <body>
 <main>
 	<h1>Jazz² Resurrection Content Swapper</h1>
-	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast or PlayStation 2
-		image of Jazz² Resurrection. Everything happens in this browser tab &ndash; your files are not uploaded anywhere.</p>
+	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast, PlayStation 2 or
+		GameCube image of Jazz² Resurrection. Everything happens in this browser tab &ndash; your files are not uploaded
+		anywhere.</p>
 
 	<section class="step">
 		<h2>1. Console image</h2>
 		<p>The image built for the console: <code>.z64</code> for the Nintendo 64, <code>.cdi</code> for the Dreamcast,
-			<code>.iso</code> for the PlayStation 2.</p>
+			<code>.iso</code> for the PlayStation 2 and the GameCube.</p>
 		<div class="drop" id="imageDrop">
 			<button type="button" id="imageButton">Choose image…</button>
 			<span class="hint">or drop it here</span>
-			<input type="file" id="imageInput" accept=".z64,.n64,.v64,.cdi,.iso">
+			<input type="file" id="imageInput" accept=".z64,.n64,.v64,.cdi,.iso,.gcm">
 		</div>
 		<div class="chosen" id="imageChosen"></div>
 	</section>
@@ -248,9 +249,9 @@
 	</div>
 
 	<footer>
-		On a desktop computer, converting takes under half a minute for a Dreamcast or PlayStation 2 image and around
-		a minute for a Nintendo 64 one, whose music and cinematics are encoded for the console. A Dreamcast image is over
-		700&nbsp;MB, so a desktop browser with a few gigabytes of free memory is recommended.
+		On a desktop computer, converting takes under half a minute for a Dreamcast, PlayStation 2 or GameCube image and
+		around a minute for a Nintendo 64 one, whose music and cinematics are encoded for the console. A Dreamcast image is
+		over 700&nbsp;MB, so a desktop browser with a few gigabytes of free memory is recommended.
 	</footer>
 </main>
 
@@ -277,7 +278,10 @@
 	let timer = null;
 	let downloadUrl = null;
 
-	const platforms = { z64: 'Nintendo 64', n64: 'Nintendo 64', v64: 'Nintendo 64', cdi: 'Dreamcast', iso: 'PlayStation 2' };
+	const platforms = { z64: 'Nintendo 64', n64: 'Nintendo 64', v64: 'Nintendo 64', cdi: 'Dreamcast', iso: 'PlayStation 2', gcm: 'GameCube' };
+	// A GameCube disc is an ".iso" as well, told apart by the word its header carries at 0x1C - which is also how the
+	// tool tells it apart (see DiscImage::IsGameCubeImage())
+	const gameCubeMagic = 0xC2339F3D;
 	// The options of AssetPacker that each choice of levels stands for
 	const levelArgs = { all: [], originals: ['--originals-only'], shareware: ['--shareware-only'] };
 
@@ -294,9 +298,17 @@
 		startButton.disabled = (worker !== null || image === null || sources.length === 0);
 	}
 
-	function setImage(file) {
+	async function setImage(file) {
 		const extension = file.name.split('.').pop().toLowerCase();
-		const platform = platforms[extension];
+		let platform = platforms[extension];
+		if (platform && (extension === 'iso' || extension === 'gcm') && file.size >= 32) {
+			const header = new DataView(await file.slice(0, 32).arrayBuffer());
+			if (header.getUint32(0x1C, false) === gameCubeMagic) {
+				platform = 'GameCube';
+			} else if (extension === 'gcm') {
+				platform = null;
+			}
+		}
 		if (!platform) {
 			image = null;
 			setChosen(imageChosen, file.name + ' is not a .z64, .cdi or .iso image', false);

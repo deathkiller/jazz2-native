@@ -621,6 +621,15 @@ if(IOS)
 	mark_as_advanced(NCINE_IOS_CODESIGN_IDENTITY NCINE_IOS_PROVISIONING_PROFILE)
 endif()
 
+# ── GameCube ──────────────────────────────────────────────────────────────────────────────────────────
+# The game ID of the GameCube disc image (`NCINE_GAMECUBE_GAME_ID`, see Sources/Main.h). Declared for every build
+# rather than for the GameCube alone, because AssetPacker - a host tool - takes it as the default of `create-image
+# --game-id=`, while the GameCube build compiles it into the game and passes it to the tool explicitly.
+set(GAMECUBE_GAME_ID "GJJEJR" CACHE STRING "Game ID of the GameCube disc image, six characters")
+if(NOT NINTENDO_GAMECUBE)
+	mark_as_advanced(GAMECUBE_GAME_ID)
+endif()
+
 if(NCINE_WITH_RENDERDOC)
 	set(RENDERDOC_DIR "" CACHE PATH "Set path to RenderDoc directory")
 endif()

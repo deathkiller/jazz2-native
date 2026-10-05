@@ -22,7 +22,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 @ref consoles-n64 "Nintendo 64" | libdragon @m_span{m-text m-dim} (`cmake/toolchains/n64.cmake`) @m_endspan | `RDP` --- fixed-function | `N64` | `jazz2.z64` @m_span{m-text m-dim} (bootable ROM image) @m_endspan
 @ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
-@ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
+@ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan and `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-3ds "Nintendo 3DS" | devkitARM + libctru + citro3d @m_span{m-text m-dim} (`3DS.cmake`) @m_endspan | `PICA` --- fixed-function | `Ctr` | `Jazz2.3dsx` @m_span{m-text m-dim} (in a staged `sdmc/` tree) @m_endspan
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
 @ref consoles-ps2 "PlayStation 2" | ps2dev @m_span{m-text m-dim} (`ps2dev.cmake`) @m_endspan | `GS` --- fixed-function | `Ps2` | `jazz2.iso` @m_span{m-text m-dim} (bootable disc image) @m_endspan
@@ -181,7 +181,7 @@ Console | Content directory the game reads | Cache / save data
 Nintendo 64 | @cpp "rom:/Content/" @ce @m_span{m-text m-dim} (inside the ROM's DragonFS image) @m_endspan | @cpp "rom:/Cache/" @ce --- read-only, so nothing is ever written; the preferences live on the cartridge EEPROM @m_span{m-text m-dim} (@cpp "eeprom:/JAZZ2CFG" @ce) @m_endspan
 Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written; the preferences and the resumable state live on a memory card @m_span{m-text m-dim} (@cpp "/vmu/<port><unit>/Jazz2" @ce and @cpp "Jazz2.resume" @ce beside it) @m_endspan
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
-GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
+GameCube | @cpp "dvd:/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan, or @cpp "Jazz2/Content/" @ce on an SD card @m_span{m-text m-dim} (`sd:`, `carda:` or `cardb:`, see @ref consoles-gamecube-disc) @m_endspan | Read-only on the disc, where the preferences and the resumable state go to a memory card @m_span{m-text m-dim} (@cpp "mca:/Jazz2.config" @ce and @cpp "Jazz2.resume" @ce beside it) @m_endspan; @cpp "Jazz2/Cache/" @ce on an SD card, which is writable
 Nintendo 3DS | @cpp "sdmc:/3ds/Jazz2/Content/" @ce | @cpp "sdmc:/3ds/Jazz2/Cache/" @ce
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
 PlayStation 2 | @cpp "cdfs:/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "cdfs:/Cache/" @ce --- read-only, and nothing is staged there
@@ -411,7 +411,7 @@ Console | Where the trace goes
 ------- | --------------------
 Nintendo 64 | `stderr` through libdragon's debug sinks --- the **ISViewer** register window (**ares** prints it to its terminal) and the **USB log** of an EverDrive/SC64 flashcart, both probed once at startup. The boot console mirrors startup messages on screen until the renderer takes the framebuffer over
 Dreamcast | `dbgio` --- the **framebuffer console** during startup @m_span{m-text m-dim} (visible on screen) @m_endspan, then the **SCIF serial port** once the renderer takes over. Emulators print it to their own log, `dc-tool` shows it in its console
-Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup, without the adapter nothing is written and the game runs normally
+Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup, without the adapter nothing is written and the game runs normally. **Dolphin** serves it on TCP port 55020 @m_span{m-text m-dim} (or the next free one) @m_endspan with slot B set to "USB Gecko". `Jazz2.log` is written beside the content on an SD card, but never to a GameCube memory card
 Nintendo 3DS | `svcOutputDebugString` --- **Azahar** prints it into its log under `Debug.Emulated` @m_span{m-text m-dim} (hidden by its default filter, see @ref consoles-3ds-deploy) @m_endspan and a debugger attached to the console shows it, plus the **console on the bottom screen**, which shows every line until the renderer takes the top screen over and warnings and errors afterwards. `Jazz2.log` next to the `.3dsx` on the SD card is written as well
 PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console, plus the **debug screen** on the display until the GU session takes the framebuffer over
 PlayStation 2 | The Emotion Engine's **SIO transmit register** @m_span{m-text m-dim} (`0x1000F180`) @m_endspan --- a bare ELF has no connected stdout. **PCSX2** captures it as EE console output with `EnableEEConsole` on, and a serial cable picks it up on hardware. Plus the **boot console** on the display @m_span{m-text m-dim} (PS2SDK's libdebug) @m_endspan until the renderer takes the Graphics Synthesizer over, which is after the disc wait, the IOP module loads and the content and memory-card probes --- so a boot that stops on hardware stops with its last trace line on the television
@@ -1306,7 +1306,8 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
 The Wii's predecessor and the same code path: a 486 MHz Gekko and the Flipper GPU, driven by the
 same `GX` backend and `Ogc` window backend. The one difference that matters in practice is memory
 --- **24 MB of main RAM and no MEM2**, which makes it the tighter of the two PowerPC targets --- and
-that its storage is an SD card in a memory-card slot.
+that it runs either from its own disc or from an SD card, in an SD Gecko in a memory-card slot or an
+SD2SP2 adapter in the serial port under the console.
 
 @subsection consoles-gamecube-toolchain Toolchain
 
@@ -1319,48 +1320,99 @@ export DEVKITPRO=/opt/devkitpro
 @m_class{m-noindent}
 
 As on the Wii, `ppc-zlib` is not part of the console's package group. The toolchain file is
-@cpp "$DEVKITPRO/cmake/GameCube.cmake" @ce.
+@cpp "$DEVKITPRO/cmake/GameCube.cmake" @ce. The disc image is made by @ref asset-packer "AssetPacker",
+so a host build of it is needed as well --- any desktop build directory has one.
 
 @subsection consoles-gamecube-build Building
 
 @code{.sh}
 cmake -B ./build/gamecube/ -D CMAKE_BUILD_TYPE=Release \
     -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/GameCube.cmake \
-    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContentGameCube \
+    -D GAMECUBE_ASSETPACKER_EXECUTABLE=$PWD/build/Utilities/AssetPacker/AssetPacker
 make -j $(nproc) -C ./build/gamecube/
 @endcode
 
 @m_class{m-noindent}
 
-The staged layout differs from the Wii's, because the GameCube has no Homebrew Channel
-and reads the card directly:
+The tree is best prepared with `--target=gamecube`, which writes the sprite sheets and tilesets in LZ4
+(see @ref asset-packer-lz4); a generic `console` tree plays as well. The build stages the same content
+twice --- as a disc image, and as the layout of an SD card --- because the GameCube has no Homebrew
+Channel and reads the card directly:
 
 @code{.shell-session}
+build/gamecube/jazz2.iso                 # bootable disc image
 build/gamecube/sd/Jazz2/Jazz2.dol
 build/gamecube/sd/Jazz2/Content/…
 @endcode
 
+@m_class{m-noindent}
+
+Without `GAMECUBE_ASSETPACKER_EXECUTABLE` (or an `AssetPacker` on the `PATH`) the build says so and stages
+only the SD card layout, which is complete without the image. The staged `Content` is removed before it is
+copied again, so a card made from the build directory never carries a package an older tree had.
+
+@subsection consoles-gamecube-disc The disc image
+
+No image authoring tool knows the GameCube disc header, so `AssetPacker create-image` makes the image (see
+@ref asset-packer-gamecube): an ISO 9660 volume with the executable and `Content` in it, whose system area
+holds the disc header and an **apploader** --- the small program the boot ROM loads from every disc and runs
+to bring the executable into memory, built here from @cpp "Sources/nCine/Backends/Ogc/GameCubeApploader.c" @ce
+because none ships with the toolchain. The game ID is `GJJEJR` @m_span{m-text m-dim} (`GAMECUBE_GAME_ID`;
+"GJJ" is no retail game, so Dolphin applies nothing game-specific to it) @m_endspan and the region NTSC-U. The
+content of a finished image can be replaced with `AssetPacker swap-content`, in its web version as well, so
+the disc the CI builds can be given anyone's copy of the original game without the toolchain.
+
+The game reads the disc through a driver of its own @m_span{m-text m-dim} (`OgcDvd`, mounted as `dvd:`;
+libogc's ISO 9660 driver leaks the listing of a directory on every `open()` and resets the drive)
+@m_endspan, and looks for its content in this order --- see `ContentResolver::InitializePaths()`:
+
+1.  `Content` **next to the executable**, where a loader that started it from an SD card says it is.
+2.  **The disc**, if it is this game's: a console that booted from it has the drive ready, so the probe is a
+    single read, and the content on the disc then wins over a stale tree on a card left in an adapter.
+3.  `Jazz2/Content` on each **SD card** --- `sd:` @m_span{m-text m-dim} (SD2SP2) @m_endspan, then `carda:` and
+    `cardb:` @m_span{m-text m-dim} (SD Gecko) @m_endspan.
+4.  The disc again, this time resetting and spinning up the drive, which only a console that booted from
+    something else and has its content on the disc needs.
+
+With none of them the boot console says so and stops. Content on an SD card is also where the settings,
+the resumable state, the cache and the log go. A game read from the disc saves to a **memory card** instead,
+the first usable one, slot A before slot B: `Jazz2.config` and `Jazz2.resume`, each a few 8 KB blocks under
+the game and maker code of the disc, listed by the console's memory card manager with an icon and a comment
+@m_span{m-text m-dim} (see `OgcMemoryCard.h`) @m_endspan. With no memory card nothing is saved, and the
+game starts with the default settings every time.
+
 @subsection consoles-gamecube-deploy Deploying and running
 
--   **Real hardware** --- copy the contents of @cpp "build/gamecube/sd/" @ce to an SD card in an **SD
-    Gecko** @m_span{m-text m-dim} (memory-card slot A) @m_endspan or an **SD2SP2** adapter, and
-    start @cpp "Jazz2/Jazz2.dol" @ce from **Swiss**. The game reads its content from
-    @cpp "carda:/Jazz2/Content/" @ce, which is slot A by definition.
--   **Dolphin** --- attach an SD adapter to **slot A** and point it at a FAT32 image built exactly
-    like the Wii one above. Keep slot B free for the USB Gecko if the log is needed, the game writes
+-   **Dolphin** --- boot @cpp "build/gamecube/jazz2.iso" @ce. Dolphin has no SD adapter for the GameCube,
+    so the disc image is the only way to run the game there. Slot A holds a memory card by default
+    @m_span{m-text m-dim} (the "GCI Folder" kind keeps every save as a `.gci` file under
+    @cpp "GC/USA/Card A/" @ce) @m_endspan; keep slot B on "USB Gecko" if the log is needed, the game writes
     its trace to EXI channel 1, which is slot B.
+-   **Real hardware, from an SD card** --- copy the contents of @cpp "build/gamecube/sd/" @ce to an SD card
+    in an **SD2SP2** adapter or an **SD Gecko** @m_span{m-text m-dim} (either memory-card slot) @m_endspan,
+    and start @cpp "Jazz2/Jazz2.dol" @ce from **Swiss**.
+-   **Real hardware, from the disc image** --- an optical drive emulator @m_span{m-text m-dim} (GCLoader,
+    CubeODE, FlippyDrive) @m_endspan boots the image like any disc, and a burned one boots on a console
+    that can boot burned discs. This is the untested route: the image is only known to boot in Dolphin.
+    Swiss's own loading of disc images from a card patches the disc reads of retail games, which this
+    one does not make, so put the SD layout above on the card instead.
 
 @subsection consoles-gamecube-limits Limits and known issues
 
-Everything in @ref consoles-wii-limits applies, with two additions:
+Everything in @ref consoles-wii-limits applies, with these additions:
 
 -   **Memory is much tighter than on the Wii** --- 24 MB total, with no second pool to fall back
     on. The console budgets described for the Dreamcast are active here as well, and audio is one
     more claim on that pool here: the ASND backend keeps every decoded sound effect in main memory
-    for the DSP to read by DMA.
+    for the DSP to read by DMA. The episode list draws no backdrops, which would take over 5 MB of it.
 -   There is no Bluetooth, so only GameCube controllers are read
     @m_span{m-text m-dim} (the Wii build additionally links `wiiuse` and `bte` for Wii Remotes)
     @m_endspan.
+-   Dolphin's default high-level emulation of the DSP every so often raises the DSP interrupt of ASND's
+    mixer without the mail that belongs to it, which libogc's interrupt handler waits for forever --- the
+    whole console froze after a few dozen menu sounds. The ASND backend lets such an interrupt pass
+    (see `AsndAudioDevice.cpp`); a real DSP always sends the mail first, so nothing changes on hardware.
 
 - - -
 
@@ -1777,24 +1829,22 @@ anything else can fail, so the console always has a way out even if initializati
     arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
     sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
     read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
--   **Everything is mixed at 22050 Hz here, not the hardware's 44100 --- and the user can go lower.** A
-    module mixer's cost scales with its output rate, and this one is the most expensive thing the
-    Allegrex is asked to do outside the renderer: measured in `prince/02_castle1n`, mixing at the device
-    rate cost around 420 ms of every second --- more CPU than the whole renderer. Half the rate is half of
-    that, for music that comes out of a pair of centimetre-wide speakers, and the samples inside the
-    original modules were recorded at around this rate to begin with. @ref nCine::AudioLoaderMpt and
-    @ref nCine::AudioLoaderXmp both cap the module decoder, which matters because **only the libxmp one
-    is reachable on this console** --- the cap had been written for libopenmpt alone and was dead code
-    here until it was noticed. The sound effects mixer runs at the same rate: @ref nCine::PspAudioDevice
-    mixes its sources at a **mixing rate** below the hardware's and upsamples each block to 44100 Hz with
-    a linear interpolation on the way out, so the per-source loop --- where the mixer's time goes --- runs
-    half or a quarter as often. The rate is the **"Sample Rate"** option in Options > Sounds
-    @m_span{m-text m-dim} (11025 or 22050 Hz here; offered only on this console and the Amiga, the two
-    software-mixing consoles with a rate to trade) @m_endspan, stored in
-    @ref Jazz2::PreferencesCache::AudioSampleRate and applied through
-    @ref nCine::IAudioDevice::setMixingFrequency(). Effects follow at once, the music when the next stream
-    is opened (the menu reopens its own on leaving the section), because a stream keeps decoding at the
-    rate it was opened with.
+-   **Everything is mixed at 22050 Hz here by default, not the hardware's 44100.** A module mixer's
+    cost scales with its output rate, and this one is the most expensive thing the Allegrex is asked to
+    do outside the renderer: measured in `prince/02_castle1n`, mixing at 44100 Hz cost around 420 ms of
+    every second --- more CPU than the whole renderer. Half the rate is half of that, for music that
+    comes out of a pair of centimetre-wide speakers, and the samples inside the original modules were
+    recorded at around this rate to begin with. The module decoder renders at the device's mixing rate
+    @m_span{m-text m-dim} (@ref nCine::IAudioDevice::nativeFrequency()) @m_endspan, and the sound
+    effects mixer runs at it too: @ref nCine::PspAudioDevice mixes its sources at a **mixing rate** and
+    upsamples each block to 44100 Hz with a linear interpolation on the way out, so at the default the
+    per-source loop --- where the mixer's time goes --- runs half as often. The rate is the
+    **"Sample Rate"** option in Options > Sounds @m_span{m-text m-dim} (11025, 22050 or 44100 Hz here;
+    the last is the hardware's own rate, at twice the default's cost for the music, which a busy level
+    may not have to spare) @m_endspan, stored in @ref Jazz2::PreferencesCache::AudioSampleRate and
+    applied through @ref nCine::IAudioDevice::setMixingFrequency(). Effects follow at once, the music
+    when the next stream is opened (the menu reopens its own on leaving the section), because a stream
+    keeps decoding at the rate it was opened with.
 -   **This platform's libm is startlingly slow --- a `sinf()` costs about 13.5 us, some 4500 cycles.**
     That is enough for a handful of light sources flickering to cost several milliseconds a frame on
     their own, so anything that only drives appearance --- a flicker phase, a pulse, an orbit --- goes
@@ -2855,7 +2905,7 @@ Workflow | Container image | Artifact
 -------- | --------------- | --------
 `dreamcast.yml` | `pcercuei/dreamcast-toolchain` @m_span{m-text m-dim} (compilers only --- KOS, kos-ports and mkdcdisc are built in the job and cached) @m_endspan | `Jazz2.cdi` + `Jazz2.elf`
 `wii.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `apps/Jazz2/boot.dol`
-`gamecube.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `Jazz2/Jazz2.dol`
+`gamecube.yml` | `devkitpro/devkitppc` @m_span{m-text m-dim} (AssetPacker is built in the job with the image's host compiler, to make the disc image) @m_endspan | `Jazz2.iso` + the `sd/` card tree with `Jazz2/Jazz2.dol`
 `3ds.yml` | `devkitpro/devkitarm` @m_span{m-text m-dim} (the `3ds-zlib`, `3ds-curl` and `3ds-mbedtls` ports are installed in the job) @m_endspan | the `sdmc/` card tree with `3ds/Jazz2/Jazz2.3dsx`
 `psp.yml` | `pspdev/pspdev` | the `ms0/` memory-stick tree with `EBOOT.PBP`
 `ps2.yml` | `ps2dev/ps2dev` | `Jazz2.iso` + `Jazz2.elf` @m_span{m-text m-dim} (the bare ELF because PCSX2 boots one with `-elf`) @m_endspan

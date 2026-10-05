@@ -159,8 +159,21 @@ namespace Jazz2::AssetPacker
 		/** @brief Adds a directory and everything below it from the file system */
 		bool AddDirectoryFromDisk(StringView path, StringView hostPath);
 
+		/** @brief Adds a single file from the file system */
+		bool AddFileFromDisk(StringView path, StringView hostPath);
+
 		/** @brief Number of logical sectors the volume needs to hold everything that was added */
 		std::uint32_t GetRequiredSectorCount();
+
+		/**
+			@brief Absolute address the contents of a file are going to be written at
+
+			The volume is laid out exactly as @ref Write() lays it out over the same number of sectors, which is
+			what a system area that points into the volume --- the header of a GameCube disc, which names the
+			sector its executable starts at --- has to be completed with before it is written. Returns @cpp 0 @ce
+			if there is no such file or the volume does not fit.
+		*/
+		std::uint32_t FindFileLba(StringView path, std::uint32_t volumeSectorCount);
 
 		/**
 			@brief Lays the volume out over the specified number of sectors and writes it

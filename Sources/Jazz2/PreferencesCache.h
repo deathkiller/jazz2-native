@@ -497,7 +497,7 @@ namespace Jazz2
 		static void Initialize(AppConfiguration& config);
 		/** @brief Serializes current preferences to file */
 		static void Save();
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 		 * @brief Describes the next file written to a memory card to the console's file manager
 		 *
@@ -510,7 +510,13 @@ namespace Jazz2
 		 * file is opened and what it sets stays in force until the next call. @p shortDescription is what the file manager
 		 * lists the save as and is limited to 16 characters, @p longDescription is shown beside it and is limited to 32.
 		 *
-		 * @partialsupport Available only on @ref DEATH_TARGET_DREAMCAST "Dreamcast" platform.
+		 * A GameCube memory card lists a file with an icon and two lines of up to 32 characters, the name of the game
+		 * and what the file is, which are @p shortDescription and @p longDescription there; they apply to the next file
+		 * written only (see @relativeref{nCine::Backends,OgcMemoryCard}). Nothing happens if the settings are not on
+		 * a memory card at all.
+		 *
+		 * @partialsupport Available only on @ref DEATH_TARGET_DREAMCAST "Dreamcast" and @ref DEATH_TARGET_GAMECUBE "GameCube"
+		 *		platforms.
 		 */
 		static void DescribeNextMemoryCardFile(StringView shortDescription, StringView longDescription);
 #endif

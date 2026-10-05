@@ -250,16 +250,18 @@ namespace nCine::Backends
 
 	void OgcInputManager::updateJoystickStates()
 	{
-		PADStatus padStatus[PAD_CHANMAX];
-		PAD_ScanPads();
-		PAD_Read(padStatus);
+		// PAD_ScanPads() reads every port and keeps what it read for PAD_ButtonsHeld() and the rest, and says
+		// which ports answered. That is the only read there can be in a frame: the serial interface hands each
+		// controller's response out once, so a PAD_Read() right after it finds nothing new and reports a transfer
+		// error for every port - which is how no GameCube controller ever counted as connected.
+		const std::uint32_t padsAnswered = PAD_ScanPads();
 #if defined(DEATH_TARGET_WII)
 		WPAD_ScanPads();
 #endif
 
 		for (std::int32_t i = 0; i < MaxJoysticks; i++) {
-			bool connected = (padStatus[i].err == PAD_ERR_NONE || padStatus[i].err == PAD_ERR_NOT_READY);
-			bool useGcPad = (padStatus[i].err == PAD_ERR_NONE);
+			bool useGcPad = ((padsAnswered & (1u << i)) != 0);
+			bool connected = useGcPad;
 
 #if defined(DEATH_TARGET_WII)
 			// A Wii Remote (with or without a Classic Controller) on the same slot takes precedence
