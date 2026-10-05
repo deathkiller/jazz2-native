@@ -373,7 +373,7 @@ namespace Death { namespace IO {
 		return bytesWrittenTotal;
 	}
 
-	bool FileStream::Flush()
+	bool FileStream::FlushBuffer()
 	{
 		bool result = true;
 		if (_writePos > 0) {
@@ -381,6 +381,12 @@ namespace Death { namespace IO {
 		} else if (_readPos < _readLength) {
 			FlushReadBuffer();
 		}
+		return result;
+	}
+
+	bool FileStream::Flush()
+	{
+		bool result = FlushBuffer();
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (!::FlushFileBuffers(_fileHandle) && ::GetLastError() != ERROR_ACCESS_DENIED) {

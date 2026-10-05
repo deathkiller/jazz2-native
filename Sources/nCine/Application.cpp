@@ -50,6 +50,7 @@ extern "C"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
 #include "Graphics/RenderResources.h"
+#include "Graphics/RenderBuffersManager.h"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
 #include "Graphics/RHI/Rhi.h"
@@ -1742,6 +1743,9 @@ namespace nCine
 				_profileStartTime = TimeStamp::now();
 			}
 			_gfxDevice->update();
+			// The streaming ring section of the next frame is waited on only now, the swap has given the GPU time
+			// to finish with it, and the wait still comes before the next frame reads input
+			RenderResources::GetBuffersManager().WaitForCurrentSection();
 			if (measure) {
 				_timings[(std::int32_t)Timings::Present] = _profileStartTime.secondsSince();
 			}

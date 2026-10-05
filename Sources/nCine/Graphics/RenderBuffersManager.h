@@ -14,11 +14,13 @@ namespace nCine
 		@brief Suballocates vertex, index and uniform data from a pool of OpenGL buffer objects
 		
 		Maintains one or more mapped (or host-backed) buffer objects per buffer type and hands out aligned
-		sub-ranges of them to render commands through @ref AcquireMemory(). Buffers are remapped at the start
-		of a frame and flushed to the GPU once all commands have written their data.
+		sub-ranges of them to render commands through @ref AcquireMemory(). Buffers are flushed to the GPU
+		once all commands have written their data and remapped right after the frame is drawn, ready for the
+		next one. Persistently mapped buffers stay mapped and cycle through a ring of sections instead.
 	*/
 	class RenderBuffersManager
 	{
+		friend class Application;
 		friend class ScreenViewport;
 #if defined(NCINE_PROFILING)
 		friend class RenderStatistics;
@@ -100,11 +102,14 @@ namespace nCine
 		bool _usePersistentMapping;
 		// Current section of the persistent buffer ring
 		std::uint32_t _currentSection;
-		// Fences protecting each ring section from being overwritten while the GPU still reads it
+		// Fences protecting each ring section from being overwritten while the GPU still reads it,
+		// the current section's fence is non-null until WaitForCurrentSection() has waited on it
 		FenceHandle _sectionFences[NumPersistentSections];
 
 		void FlushUnmap();
 		void Remap();
+		// Blocks until the GPU is done with the current ring section, a no-op if it was already waited on
+		void WaitForCurrentSection();
 		void CreateBuffer(const BufferSpecifications& specs);
 	};
 

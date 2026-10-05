@@ -159,11 +159,9 @@ namespace Jazz2::Rendering
 		command.GetMaterial().SetTexture(0, *_owner->_viewTexture);
 		command.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
 		if (PreferencesCache::BlurEffects) {
-			// The quarter-size level does not exist at a low lighting resolution (see PlayerViewport::Initialize()),
-			// and the half-size one takes its place
-			Texture* blurQuarter = _owner->_blurPass4.GetTarget();
+			// The quarter-size level does not exist at a low lighting resolution, and the half-size one takes its place
 			command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
-			command.GetMaterial().SetTexture(3, blurQuarter != nullptr ? *blurQuarter : *_owner->_blurPass2.GetTarget());
+			command.GetMaterial().SetTexture(3, *_owner->GetBlurredTarget());
 		} else {
 			command.GetMaterial().SetTexture(2, nullptr);
 			command.GetMaterial().SetTexture(3, nullptr);

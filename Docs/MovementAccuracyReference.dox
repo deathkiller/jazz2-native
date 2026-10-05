@@ -1618,9 +1618,19 @@ travel, because that is what the player sees and nothing reads this move's verti
 Two things end or interrupt the move that this engine used to count out against regardless. A **ceiling**
 finishes it there and then, where the countdown was carried on against the ceiling with the pose and the
 weightless gravity still up and the player going nowhere --- @ref Jazz2::Actors::Player::OnHitCeiling() now
-ends it, which is what @ref Jazz2::Actors::Player::EndDamagingMove() was already written for. And a **shot**
-fired out of the move's last phase, which is possible in both, takes the pose: see
+ends it, which is what @ref Jazz2::Actors::Player::EndDamagingMove() was already written for. Reforged needs
+no such cancel: it ends the move once the rise has decayed past −2, and a ceiling zeroes the rise outright.
+And a **shot** fired out of the move's last phase, which is possible in both, takes the pose: see
 @ref movement-accuracy-stopanim-shootpose.
+
+@par The same ceiling, a launch rather than a move
+@ref Jazz2::Actors::Player::OnHitCeiling() also clears an upward @cpp _externalForce.Y @ce, and that clear
+was gated to non-Reforged --- precisely backwards, because the launches it guards against are the **Reforged**
+ones. A vertical spring there sets the force to the spring's own figure and a pole launch sets 1.3, while
+both non-Reforged arms assign the speed outright and set the force to zero. So the guard only ever ran where
+there was nothing to clear, and a Reforged player launched into a ceiling was held against it for as long as
+the force lasted. The gate is gone; the measured side is unaffected, since the value it clears there is
+already zero.
 
 @subsection movement-accuracy-special-stompbounce Bouncing off an enemy you buttstomped
 

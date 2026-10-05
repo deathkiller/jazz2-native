@@ -16,7 +16,7 @@ using namespace Death::Containers::Literals;
 #	define NCINE_HAS_PERSISTENT_MAPPING
 #endif
 
-// The RSX's buffer objects already ARE a persistent mapping: they live in GPU-visible main memory the PPE
+// The RSX's buffer objects already are a persistent mapping: they live in GPU-visible main memory the PPE
 // writes straight into, so mapping is the identity and there is nothing to flush. What they lack is the
 // section ring, and on this backend that is a correctness requirement rather than an optimization - no
 // driver renames a buffer behind us, so without it the CPU rewrites the very bytes the GPU is still
@@ -131,6 +131,14 @@ namespace nCine
 			alignment = _specs[std::int32_t(type)].alignment;
 		}
 
+#if defined(NCINE_HAS_PERSISTENT_MAPPING)
+		// Application::Step() has usually waited for the section right after the swap already,
+		// this only catches memory acquired between Remap() and that point
+		if DEATH_UNLIKELY(_sectionFences[_currentSection] != nullptr) {
+			WaitForCurrentSection();
+		}
+#endif
+
 		Parameters params;
 
 		for (ManagedBuffer& buffer : _buffers) {
@@ -208,18 +216,15 @@ namespace nCine
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		if (_usePersistentMapping) {
 			// This runs right after the frame's draw calls were submitted, so a fence here protects
-			// everything the GPU may still read from the current section. Advancing then waits on the
-			// fence inserted `NumPersistentSections - 1` frames ago before its section is reused.
+			// everything the GPU may still read from the current section. The section the ring advances to
+			// must not be written before the fence inserted `NumPersistentSections - 1` frames ago signals,
+			// but Application::Step() waits for it only after the swap: waiting here made the driver spin in
+			// glClientWaitSync() for the GPU to catch up, while after the swap it has usually signaled already.
+			// It still comes before the next frame reads input, so it adds no latency.
 			RHI::Device::DeleteFence(_sectionFences[_currentSection]);
 			_sectionFences[_currentSection] = RHI::Device::InsertFence();
 
 			_currentSection = (_currentSection + 1) % NumPersistentSections;
-			if (_sectionFences[_currentSection] != nullptr) {
-				if (!RHI::Device::ClientWaitFence(_sectionFences[_currentSection], 1000000000)) {
-					LOGW("Wait for persistent buffer section {} failed", _currentSection);
-				}
-				RHI::Device::DeleteFence(_sectionFences[_currentSection]);
-			}
 		}
 #endif
 
@@ -242,6 +247,22 @@ namespace nCine
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
+	}
+
+	void RenderBuffersManager::WaitForCurrentSection()
+	{
+#if defined(NCINE_HAS_PERSISTENT_MAPPING)
+		FenceHandle& fence = _sectionFences[_currentSection];
+		if (fence == nullptr) {
+			return;
+		}
+
+		ZoneScopedC(0x81A861);
+		if (!RHI::Device::ClientWaitFence(fence, 1000000000)) {
+			LOGW("Wait for persistent buffer section {} failed", _currentSection);
+		}
+		RHI::Device::DeleteFence(fence);
+#endif
 	}
 
 	void RenderBuffersManager::CreateBuffer(const BufferSpecifications& specs)

@@ -91,6 +91,10 @@ namespace Jazz2::Rendering
 		Rectf GetBounds() const;
 		/** @brief Returns size of the viewport */
 		Vector2i GetViewportSize() const;
+#if defined(RHI_CAP_POSTPROCESSING)
+		/** @brief Returns the most blurred level of the blur chain, or `nullptr` if blur effects are disabled */
+		Texture* GetBlurredTarget() const;
+#endif
 		/** @brief Returns the actor the camera follows */
 		Actors::ActorBase* GetTargetActor() const;
 		/** @brief Called at the end of each frame */

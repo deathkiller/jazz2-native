@@ -70,6 +70,15 @@ namespace Death { namespace IO {
 		*/
 		bool SetBufferSize(std::int32_t bufferSize);
 
+		/**
+			@brief Hands everything buffered over to the operating system, without waiting for the device
+
+			Unlike @ref Flush(), which also commits the file to the storage device (`FlushFileBuffers()`,
+			`fdatasync()`) and can take a hundred milliseconds or more, this only empties the stream's own
+			buffer. What the OS already holds survives a crash of the process, just not a crash of the system.
+		*/
+		bool FlushBuffer();
+
 #if defined(DEATH_TARGET_WINDOWS)
 		/** @brief Returns native file handle */
 		DEATH_ALWAYS_INLINE void* GetHandle() const {

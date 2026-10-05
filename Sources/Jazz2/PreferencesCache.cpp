@@ -87,8 +87,10 @@ namespace Jazz2
 #else
 	bool PreferencesCache::BackgroundDithering = true;
 #endif
-	bool PreferencesCache::BlurEffects = true;
 #if defined(DEATH_TARGET_VITA)
+	// The blur chain is a series of extra off-screen passes, each a fill-rate cost the SGX can least afford.
+	// Only a default, it can still be enabled in Options > Graphics.
+	bool PreferencesCache::BlurEffects = false;
 	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
 	// it costs the SGX a quarter of that work for a difference the light falloff largely hides. Below full
 	// resolution the blur chain also runs one pass fewer (see PlayerViewport::Initialize()).
@@ -97,6 +99,7 @@ namespace Jazz2
 	// blit becomes a clean 2x point doubling instead of a fractional resample (see GxmDevice::ScreenWidth)
 	std::uint8_t PreferencesCache::RenderingResolutionPercent = 50;
 #else
+	bool PreferencesCache::BlurEffects = true;
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
 	std::uint8_t PreferencesCache::RenderingResolutionPercent = 100;
 #endif

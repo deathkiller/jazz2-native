@@ -3776,10 +3776,16 @@ namespace Jazz2::Actors
 
 	void Player::OnHitCeiling(float timeMult)
 	{
-		// Hitting a ceiling must stop the upward push immediately - otherwise a strong launch (e.g. a vertical
-		// spring) keeps re-applying its force and the player sticks to the ceiling. (_speed.Y and _internalForceY
-		// are already zeroed by the caller; clear the external force too.)
-		if (!_levelHandler->IsReforged() && _externalForce.Y < 0.0f) {
+		// Hitting a ceiling must stop the upward push immediately - otherwise a strong launch keeps re-applying
+		// its force and the player sticks to the ceiling. (_speed.Y and _internalForceY are already zeroed by
+		// the caller; clear the external force too.)
+		//
+		// It was gated to non-Reforged, which is precisely backwards: the launches this guards against are the
+		// **Reforged** ones. A vertical spring there sets `_externalForce.Y` to the spring's own figure and a
+		// pole launch sets 1.3, while the non-Reforged arms of both assign the speed outright and set the force
+		// to zero - so the guard was only ever running where there was nothing to clear, and withheld where a
+		// player launched into a ceiling was pinned against it for as long as the force lasted.
+		if (_externalForce.Y < 0.0f) {
 			_externalForce.Y = 0.0f;
 		}
 

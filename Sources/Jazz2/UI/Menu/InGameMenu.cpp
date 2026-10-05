@@ -162,8 +162,9 @@ namespace Jazz2::UI::Menu
 			Rectf scopedView = viewport->GetBounds();
 #if defined(RHI_CAP_POSTPROCESSING)
 			// The blurred background behind the pause menu comes from the bloom blur chain, which only the full
-			// post-processing tier builds; the direct tier darkens the frozen scene with a solid overlay instead
-			Texture* blurTexture = viewport->_blurPass4.GetTarget();
+			// post-processing tier builds; the direct tier darkens the frozen scene with a solid overlay instead.
+			// The chain is shortened at a low lighting resolution, so the last level is not always the quarter-size one.
+			Texture* blurTexture = viewport->GetBlurredTarget();
 			if DEATH_LIKELY(blurTexture != nullptr) {
 				DrawTexture(*blurTexture, scopedView.GetLocation(), 500, scopedView.GetSize(), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
 			} else

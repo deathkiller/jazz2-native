@@ -191,6 +191,16 @@ namespace Jazz2::Rendering
 #endif
 	}
 
+#if defined(RHI_CAP_POSTPROCESSING)
+	Texture* PlayerViewport::GetBlurredTarget() const
+	{
+		// The quarter-size level does not exist at a low lighting resolution (see Initialize()), and the half-size
+		// one takes its place. With blur effects disabled neither exists.
+		Texture* blurQuarter = _blurPass4.GetTarget();
+		return (blurQuarter != nullptr ? blurQuarter : _blurPass2.GetTarget());
+	}
+#endif
+
 	Actors::ActorBase* PlayerViewport::GetTargetActor() const
 	{
 		return _targetActor;
