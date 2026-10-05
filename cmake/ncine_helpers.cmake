@@ -414,16 +414,11 @@ function(ncine_apply_compiler_options target)
 	elseif(VITA)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_VITA")
 
-		# `vita-elf-create` appends about 16 KB of SCE module data at the end of the read-only segment, which
-		# has to fit in the padding before the read-write one, or it fails the build with "Cannot allocate N
-		# bytes for SCE data at end of segment 0; segment 1 overlaps". The VitaSDK linker script places that
-		# segment at `ALIGN(MAXPAGESIZE) + (. & (MAXPAGESIZE - 1))` - the second term adds back exactly what
-		# the alignment rounded away, so the padding is always at least one maximum page and never more than
-		# it matters. At the default 4 KB page that guaranteed padding is 4 KB, well under what the tool
-		# needs, and whether a build links depends on where its code size happens to land, one page of 64 KB
-		# covers the SCE data four times over for any code size. The Vita loads the whole module at once, so a
-		# larger link-time page costs address space in the gap, not memory or load time.
-		target_link_options(${target} PRIVATE "LINKER:-z,max-page-size=0x10000")
+		# `vita-elf-create` appends the SCE module data (up to ~20 KB) in the padding after the read-only
+		# segment, or fails with "Cannot allocate N bytes for SCE data at end of segment 0; segment 1 overlaps".
+		# Older SDKs pad by one maximum page, so a 64 KB page is enough; since the 2026-08 binutils update the
+		# padding depends on code size and only `__sce_headroom` guarantees it (vitasdk/buildscripts#144).
+		target_link_options(${target} PRIVATE "LINKER:-z,max-page-size=0x10000" "LINKER:--defsym=__sce_headroom=0x10000")
 	elseif(WIN32)
 		# Force Unicode mode on Windows
 		target_compile_definitions(${target} PRIVATE "_UNICODE" "UNICODE")
