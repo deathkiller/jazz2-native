@@ -45,9 +45,9 @@ namespace nCine::RHI::GXM
 		- but it is the constraint any change to the viewport chain has to respect.
 
 		A closed scene is not waited for. It stays pending - with a completion notification of its own -
-		until a draw samples the surface it wrote, or a new scene is about to write a surface it wrote or
-		sampled, and only that draw or scene waits for it (see @ref FinishScene()). Anything the CPU releases
-		or rewrites in place has to wait in turn (@ref WaitForGpuIdle(), @ref WaitForPendingScenes(),
+		until a later scene that samples the surface it wrote, or writes a surface it wrote or sampled, is
+		about to end, and only that scene waits for it (see @ref FinishScene()). Anything the CPU releases or
+		rewrites in place has to wait in turn (@ref WaitForGpuIdle(), @ref WaitForPendingScenes(),
 		@ref RetireBlock()), and the barrier at present time still ends every frame.
 
 		<b>sceGxm only draws indexed.</b> There is no `glDrawArrays` equivalent - every `sceGxmDraw()` consumes
@@ -169,8 +169,9 @@ namespace nCine::RHI::GXM
 			@brief Ends the scene currently being recorded, if any
 
 			Called whenever what the following draws render into changes - a render-target switch or the frame's
-			presentation. The scene is submitted, not waited for: it stays pending until a later scene needs what
-			it wrote, or needs to write what it read (see @ref WaitForGpuIdle() for releasing a resource).
+			presentation. The scenes this one depends on are waited for first; the scene itself is submitted, not
+			waited for: it stays pending until a later scene needs what it wrote, or needs to write what it read
+			(see @ref WaitForGpuIdle() for releasing a resource).
 		*/
 		static void FinishScene();
 		/**
@@ -464,9 +465,9 @@ namespace nCine::RHI::GXM
 		// same surface goes on adding to this scene rather than starting one that would discard it (see
 		// EnsureScene())
 		static void* _sceneSurfaceData;
-		// Render-target surfaces the open scene has sampled so far, handed over to its pending entry when it ends
-		// (see PendingScene). A count past the array means it sampled more than were recorded. Sixteen covers
-		// the combine pass of four splitscreen players, the most any scene of this pipeline samples.
+		// Render-target surfaces the open scene has sampled so far, waited for when it ends and then handed over to
+		// its pending entry (see PendingScene). A count past the array means it sampled more than were recorded.
+		// Sixteen covers the combine pass of four splitscreen players, the most any scene of this pipeline samples.
 		static constexpr std::uint32_t MaxSampledSurfaces = 16;
 		static const void* _sceneSampledSurfaces[MaxSampledSurfaces];
 		static std::uint32_t _sceneSampledCount;
@@ -537,10 +538,11 @@ namespace nCine::RHI::GXM
 		/** @brief Opens a scene on the current target if none is open, and (re)applies the pipeline state it reset */
 		static bool EnsureScene();
 		/**
-			@brief Waits for the pending scenes that wrote a render target the program is about to sample
+			@brief Records the render targets the program is about to sample, for the open scene to wait for their producers
 
-			Also records the sampled surfaces for the open scene, which a later scene writing one of them has to
-			wait for in turn (see WaitForSurfaceUsers()).
+			The wait itself comes when the scene ends (see FinishScene()), except for a vertex stage's, which is
+			waited for right away - vertex processing need not hold off until the scene ends. A later scene
+			writing one of these surfaces has to wait for this one in turn (see WaitForSurfaceUsers()).
 		*/
 		static void WaitForSampledTargets(const GxmShaderProgram* program);
 		/** @brief Waits for the pending scenes that wrote @p surfaceData, as a scene about to sample it has to */

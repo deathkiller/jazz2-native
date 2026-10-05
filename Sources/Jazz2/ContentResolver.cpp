@@ -2120,6 +2120,25 @@ namespace Jazz2
 
 		SmallVector<std::unique_ptr<Texture>, 1> textures;
 		const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+		// An indexed tile is drawn with the colours of the palette in effect now, which is also the one the level is
+		// drawn with (a level's own palette is applied before its tile set is built), and the converted palettes carry
+		// a few translucent entries among their colours - so a tile without a transparent texel can still draw some
+		// pixels translucent. Recorded per tile as the second level of tileDiffuseOpaque (see TileSet::IsTileOpaque()),
+		// but only where the tile map reads it (`TILEMAP_PER_TILE_OPACITY`) - elsewhere the tiles' rows would be scanned
+		// for nothing, on the consoles that build the atlas slowest.
+#if defined(TILEMAP_PER_TILE_OPACITY)
+		constexpr bool recordsOpaqueAsDrawn = true;
+#else
+		constexpr bool recordsOpaqueAsDrawn = false;
+#endif
+		bool translucentIndex[ColorsPerPalette];
+		bool paletteHasTranslucentColors = false;
+		for (std::int32_t i = 0; i < ColorsPerPalette; i++) {
+			translucentIndex[i] = (((_palettes[i] >> 24) & 0xFF) != 255);
+			if (i > 0 && translucentIndex[i]) {
+				paletteHasTranslucentColors = true;
+			}
+		}
 		for (std::uint32_t firstTileRow = 0; firstTileRow < tilesPerColumn; firstTileRow += tileRowsPerChunk) {
 			const std::uint32_t chunkTileRows = std::min(tileRowsPerChunk, tilesPerColumn - firstTileRow);
 			const std::uint32_t chunkHeight = chunkTileRows * paddedTileSize;
@@ -2148,6 +2167,7 @@ namespace Jazz2
 
 				std::uint8_t* dstTile = &chunk[(dstY * paddedWidth + dstX) * dstChannels];
 				bool opaque = true;
+				bool opaqueAsDrawn = recordsOpaqueAsDrawn;
 
 				// A source tile row is exactly one decoded band (both are DefaultTileSize rows tall). Slots
 				// ascend with tile IDs, so this only ever moves the decoder forward (see the note at the top).
@@ -2167,6 +2187,14 @@ namespace Jazz2
 						std::memcpy(&dstTile[(y + TileSet::TilePadding) * paddedWidth + TileSet::TilePadding], srcRow, TileSet::DefaultTileSize);
 						if (opaque && std::memchr(srcRow, 0, TileSet::DefaultTileSize) != nullptr) {
 							opaque = false;
+						}
+						if (opaque && opaqueAsDrawn && paletteHasTranslucentColors) {
+							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+								if (translucentIndex[srcRow[x]]) {
+									opaqueAsDrawn = false;
+									break;
+								}
+							}
 						}
 					}
 				} else {
@@ -2196,6 +2224,8 @@ namespace Jazz2
 									dstTile[dst] = index;
 									if (transparent) {
 										opaque = false;
+									} else if (translucentIndex[index]) {
+										opaqueAsDrawn = false;
 									}
 								} else {
 									const std::uint32_t color = _palettes[index];
@@ -2214,7 +2244,7 @@ namespace Jazz2
 				}
 
 				if (tileIdx < (std::int32_t)tileCount) {
-					tileDiffuseOpaque[tileIdx] = (opaque ? 1 : 0);
+					tileDiffuseOpaque[tileIdx] = (opaque ? (opaqueAsDrawn ? 2 : 1) : 0);
 				}
 
 				ExpandTileDiffuse(dstTile, paddedWidth, dstChannels);
@@ -3003,14 +3033,58 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		std::uint32_t texels[64 * 64];
+		constexpr std::int32_t Size = 64;
+		std::uint32_t texels[Size * Size];
 
 		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(arraySize(texels)); i++) {
 			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
 		}
 
-		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);
-		tex->LoadFromTexels((std::uint8_t*)texels, 0, 0, 64, 64);
+		// The blue channel holds smooth noise instead of white noise: gradient noise that tiles with the
+		// texture, which the low-power path of CombineWithWater.shader reads its light rays from instead of
+		// evaluating simplex noise per pixel. 13 lattice cells across the tile, which that shader maps to
+		// 8 noise units, are 0.62 units per cell, and with the deviation normalized below that matches the
+		// shader's simplex noise in both contrast and sharpness. Nothing else reads this channel.
+		constexpr std::int32_t Cells = 13;
+		Vector2f gradients[Cells * Cells];
+		for (Vector2f& gradient : gradients) {
+			float angle = Random().FastFloat(0.0f, fTwoPi);
+			gradient = Vector2f(std::cos(angle), std::sin(angle));
+		}
+		auto fade = [](float t) {
+			return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+		};
+		float noise[Size * Size];
+		float sum = 0.0f, sumOfSquares = 0.0f;
+		for (std::int32_t y = 0; y < Size; y++) {
+			for (std::int32_t x = 0; x < Size; x++) {
+				float cellX = (x + 0.5f) * Cells / Size;
+				float cellY = (y + 0.5f) * Cells / Size;
+				std::int32_t x0 = (std::int32_t)cellX, y0 = (std::int32_t)cellY;
+				float dx = cellX - x0, dy = cellY - y0;
+				auto corner = [&](std::int32_t cx, std::int32_t cy, float ox, float oy) {
+					const Vector2f& g = gradients[(cy % Cells) * Cells + (cx % Cells)];
+					return g.X * ox + g.Y * oy;
+				};
+				float u = fade(dx), v = fade(dy);
+				float top = corner(x0, y0, dx, dy) + u * (corner(x0 + 1, y0, dx - 1.0f, dy) - corner(x0, y0, dx, dy));
+				float bottom = corner(x0, y0 + 1, dx, dy - 1.0f) + u * (corner(x0 + 1, y0 + 1, dx - 1.0f, dy - 1.0f) - corner(x0, y0 + 1, dx, dy - 1.0f));
+				float value = top + v * (bottom - top);
+				noise[y * Size + x] = value;
+				sum += value;
+				sumOfSquares += value * value;
+			}
+		}
+		float mean = sum / (Size * Size);
+		float deviation = std::sqrt(std::max(sumOfSquares / (Size * Size) - mean * mean, 1e-6f));
+		float scale = 0.47f / deviation;
+		for (std::int32_t i = 0; i < Size * Size; i++) {
+			float value = std::clamp((noise[i] - mean) * scale * 0.5f + 0.5f, 0.0f, 1.0f);
+			texels[i] = (texels[i] & 0xff00ffffu) | ((std::uint32_t)(value * 255.0f + 0.5f) << 16);
+		}
+
+		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, Size, Size);
+		tex->LoadFromTexels((std::uint8_t*)texels, 0, 0, Size, Size);
 		tex->SetMinFiltering(SamplerFilter::Linear);
 		tex->SetMagFiltering(SamplerFilter::Linear);
 		tex->SetWrap(SamplerWrapping::Repeat);

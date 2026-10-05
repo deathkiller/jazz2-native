@@ -62,6 +62,29 @@ namespace nCine
 			bytesRead = bytes;
 			state.store(State::Ready, std::memory_order_release);
 		}
+
+		/**
+			@brief Decodes at most @p maxBytes more of the buffer, continuing where the previous call stopped
+
+			For a device that has no decoding thread and spreads the work over the time between frames instead.
+			@ref bytesRead counts what is done so far, so it has to be zero when the request is submitted.
+			@return `true` once the buffer is full or the data has ended, which is when the request is marked ready
+		*/
+		bool ExecuteSlice(std::int32_t maxBytes)
+		{
+			const std::int32_t wanted = (maxBytes < bufferSize - bytesRead ? maxBytes : bufferSize - bytesRead);
+			std::int32_t bytes = reader->read(buffer.get() + bytesRead, wanted);
+			if (bytes < wanted && looping) {
+				reader->rewind();
+				bytes += reader->read(buffer.get() + bytesRead + bytes, wanted - bytes);
+			}
+			bytesRead += bytes;
+			if (bytesRead < bufferSize && bytes == wanted) {
+				return false;
+			}
+			state.store(State::Ready, std::memory_order_release);
+			return true;
+		}
 	};
 #endif
 
@@ -190,6 +213,16 @@ namespace nCine
 		 */
 		virtual void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) = 0;
 #endif
+
+		/**
+		 * @brief Does one short step of background work in time the caller would otherwise spend waiting
+		 *
+		 * A console waiting for the vertical blank calls this while it waits, for a device that has no
+		 * decoding thread and decodes streams then instead (see @ref submitStreamDecode).
+		 * @param availableMs   Time left before the caller has to stop, a step that would not fit is not started
+		 * @return `true` if a step was done and more remains
+		 */
+		virtual bool runIdleWork(float availableMs) { static_cast<void>(availableMs); return false; }
 
 		/** @brief Returns the 3D position of the listener */
 		virtual const Vector3f& getListenerPosition() const = 0;

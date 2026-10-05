@@ -680,12 +680,14 @@ namespace ShaderCompiler
 			String Declaration;	// Declaration without the "varying"/"flat" keywords, e.g. "highp float vExtra"
 			bool Flat = false;
 			std::int32_t Line = 0;
-			// Backend selector of a varying wrapped in a global-scope "#ifdef/#ifndef SOFTWARE_RENDERER"
-			// conditional: 0 = every backend, 1 = software renderer only, 2 = every backend EXCEPT the
-			// software renderer. The lowering re-emits a tagged declaration wrapped in the matching
-			// directive so BuildStageSource resolves it per backend (the transpiler sees SW-only varyings,
-			// the GL/ES2/HLSL/SPIR-V emissions never do - their output stays byte-identical).
-			std::int32_t SwMode = 0;
+			// Backend selector of a varying wrapped in a global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" or
+			// "#ifdef/#ifndef LOW_POWER_GPU" conditional: the macro it depends on (empty = every backend) and
+			// whether it belongs to the side where that macro is defined. The lowering re-emits a tagged
+			// declaration wrapped in the matching directive so BuildStageSource resolves it per backend - the
+			// transpiler alone sees SW-only varyings and the Cg / ESSL 100 emissions alone see low-power ones,
+			// while every emission the macro does not apply to stays byte-identical.
+			String BackendMacro;
+			bool BackendDefined = false;
 		};
 
 		/** @brief Parsed "attribute" declaration (lowered to a vertex-stage-only "in" global) */
@@ -714,6 +716,10 @@ namespace ShaderCompiler
 			bool CanvasItem = false;		// "shader_type canvas_item;" seen ("custom" is the default)
 			bool HasVertexBody = false;
 			bool HasFragmentBody = false;
+			// Backend macro of the global-scope conditional the vertex() entry sits in, empty when every backend
+			// runs it. Only "LOW_POWER_GPU" in canvas_item mode: the other backends keep the default vertex
+			// template, so their emitted text is exactly what it was without the entry (see BuildCanvasVertexStage())
+			String VertexBodyMacro;
 		};
 
 		// Vertex-stage template of the canvas_item lowering. The default (no "vertex()") output used to
@@ -1035,14 +1041,16 @@ R"GLSL(void main()
 			auto captureLabel = [&capturing]() {
 				return (capturing == 1 ? "vertex()" : capturing == 2 ? "fragment()" : "fixed_function(...)");
 			};
-			// Global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" conditional around varying declarations:
-			// which backend the lines currently parsed belong to (VaryingDecl::SwMode semantics), and
-			// whether the conditional's "#else" was already seen. Such a conditional may only wrap varying
-			// declarations (plus comments/blank lines) - its directive lines are consumed here so they
-			// cannot leak into the shared globals, and the tagged varyings are re-wrapped by the lowering.
-			std::int32_t swVaryingMode = 0;
-			bool swVaryingSeenElse = false;
-			std::int32_t swVaryingLine = 0;
+			// Global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" (or LOW_POWER_GPU) conditional around varying
+			// declarations: the macro of the conditional being parsed (empty outside one), which side of it
+			// the lines currently parsed belong to (VaryingDecl::BackendMacro/BackendDefined semantics), and
+			// whether its "#else" was already seen. Such a conditional may only wrap varying declarations
+			// (plus comments/blank lines) - its directive lines are consumed here so they cannot leak into the
+			// shared globals, and the tagged varyings are re-wrapped by the lowering.
+			String backendVaryingMacro;
+			bool backendVaryingDefined = false;
+			bool backendVaryingSeenElse = false;
+			std::int32_t backendVaryingLine = 0;
 
 			for (std::size_t index = 0; index < lines.size(); index++) {
 				const SourceLine& line = lines[index];
@@ -1093,11 +1101,13 @@ R"GLSL(void main()
 				}
 
 				// A global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" conditional selects backend-specific
-				// varying declarations (the transpiler's per-instance-constant varying machinery). The
-				// directive lines are consumed here - the collected varyings are tagged instead and the
-				// lowering re-wraps them, so the shared globals never carry the (empty) resolved block and
-				// every other backend's emitted text stays byte-identical. Only varying declarations,
-				// comments and blank lines are allowed inside such a conditional.
+				// varying declarations (the transpiler's per-instance-constant varying machinery), and a
+				// "LOW_POWER_GPU" one the extra interpolants of a cheaper low-power path (work moved from the
+				// fragment stage to the vertex stage). The directive lines are consumed here - the collected
+				// varyings are tagged instead and the lowering re-wraps them, so the shared globals never
+				// carry the (empty) resolved block and every other backend's emitted text stays
+				// byte-identical. Only varying declarations, comments and blank lines are allowed inside
+				// such a conditional.
 				{
 					std::size_t hash = FindFirstNotOf(bare, " \t"_s);
 					if (hash != Npos && bare[hash] == '#') {
@@ -1113,10 +1123,16 @@ R"GLSL(void main()
 						// Either spelling of the conditional selects the same two sides, so the "#if" form is
 						// recognized here as well - otherwise its varyings would be parsed as one undivided
 						// set (both sides at once) instead of being tagged per backend
-						std::int32_t mode = 0;
+						auto isVaryingBackendMacro = [](const String& name) {
+							return (name == "SOFTWARE_RENDERER" || name == "LOW_POWER_GPU");
+						};
+						String macro;
+						bool defined = false;
 						if (directive == "ifdef" || directive == "ifndef") {
-							if (FirstIdentifier(Substr(bare, p)) == "SOFTWARE_RENDERER") {
-								mode = (directive == "ifdef" ? 1 : 2);
+							String name = FirstIdentifier(Substr(bare, p));
+							if (isVaryingBackendMacro(name)) {
+								macro = std::move(name);
+								defined = (directive == "ifdef");
 							}
 						} else if (directive == "if") {
 							String expression = Trim(Substr(bare, p));
@@ -1124,44 +1140,54 @@ R"GLSL(void main()
 							if (negated) {
 								expression = Trim(Substr(expression, 1));
 							}
-							if (expression == "SOFTWARE_RENDERER") {
-								mode = (negated ? 2 : 1);
+							if (isVaryingBackendMacro(expression)) {
+								macro = std::move(expression);
+								defined = !negated;
 							}
 						}
-						if (mode != 0) {
-							if (swVaryingMode != 0) {
-								return Fail(diag, "nested SOFTWARE_RENDERER conditionals are not supported at global scope", line.Line);
+						if (!macro.empty()) {
+							if (!backendVaryingMacro.empty()) {
+								return Fail(diag, "nested "_s + backendVaryingMacro + "/"_s + macro + " conditionals are not supported at global scope"_s, line.Line);
 							}
-							swVaryingMode = mode;
-							swVaryingSeenElse = false;
-							swVaryingLine = line.Line;
+							backendVaryingMacro = std::move(macro);
+							backendVaryingDefined = defined;
+							backendVaryingSeenElse = false;
+							backendVaryingLine = line.Line;
 							continue;
 						}
-						if (swVaryingMode != 0) {
+						if (!backendVaryingMacro.empty()) {
 							if (directive == "else") {
-								if (swVaryingSeenElse) {
-									return Fail(diag, "duplicate #else in a SOFTWARE_RENDERER conditional", line.Line);
+								if (backendVaryingSeenElse) {
+									return Fail(diag, "duplicate #else in a "_s + backendVaryingMacro + " conditional"_s, line.Line);
 								}
-								swVaryingSeenElse = true;
-								swVaryingMode = (swVaryingMode == 1 ? 2 : 1);
+								backendVaryingSeenElse = true;
+								backendVaryingDefined = !backendVaryingDefined;
 								continue;
 							}
 							if (directive == "endif") {
-								swVaryingMode = 0;
+								backendVaryingMacro = {};
 								continue;
 							}
-							return Fail(diag, "a global-scope SOFTWARE_RENDERER conditional supports only #else/#endif inside (no nested directives)", line.Line);
+							return Fail(diag, "a global-scope "_s + backendVaryingMacro + " conditional supports only #else/#endif inside (no nested directives)"_s, line.Line);
 						}
 					}
 				}
-				if (swVaryingMode != 0 && Trim(bare).empty()) {
+				if (!backendVaryingMacro.empty() && Trim(bare).empty()) {
 					continue;		// Comment-only or blank lines inside the conditional are dropped with it
 				}
 
 				std::size_t cursor = 0;
 				String word = WordAt(bare, cursor);
-				if (swVaryingMode != 0 && word != "varying") {
-					return Fail(diag, "a global-scope SOFTWARE_RENDERER conditional may only contain varying declarations", line.Line);
+				if (!backendVaryingMacro.empty() && word != "varying") {
+					// The one exception is the vertex() entry of a canvas_item shader on the LOW_POWER_GPU side,
+					// which gives only the low-power backends a vertex stage of their own (see VertexBodyMacro)
+					std::size_t nameCursor = cursor;
+					const bool lowPowerVertex = (word == "void" && WordAt(bare, nameCursor) == "vertex" &&
+						backendVaryingMacro == "LOW_POWER_GPU" && backendVaryingDefined && src.CanvasItem);
+					if (!lowPowerVertex) {
+						return Fail(diag, "a global-scope "_s + backendVaryingMacro + " conditional may only contain varying "
+							"declarations (and, on the LOW_POWER_GPU side of a canvas_item shader, the vertex() entry)"_s, line.Line);
+					}
 				}
 
 				if (word == "program" || word == "batched" || word == "variant") {
@@ -1240,7 +1266,8 @@ R"GLSL(void main()
 					}
 					varying.Declaration = std::move(decl);
 					varying.Line = line.Line;
-					varying.SwMode = swVaryingMode;
+					varying.BackendMacro = backendVaryingMacro;
+					varying.BackendDefined = backendVaryingDefined;
 					src.Varyings.push_back(std::move(varying));
 					continue;
 				}
@@ -1424,6 +1451,9 @@ R"GLSL(void main()
 							cursor++;
 						}
 						(isVertex ? src.HasVertexBody : src.HasFragmentBody) = true;
+						if (isVertex) {
+							src.VertexBodyMacro = backendVaryingMacro;
+						}
 						capturing = (isVertex ? 1 : 2);
 						captureStartLine = line.Line;
 						if (cursor >= bare.size()) {
@@ -1486,8 +1516,8 @@ R"GLSL(void main()
 			if (capturing != 0) {
 				return Fail(diag, "unterminated \""_s + captureLabel() + "\" body"_s, captureStartLine);
 			}
-			if (swVaryingMode != 0) {
-				return Fail(diag, "unterminated SOFTWARE_RENDERER conditional at global scope", swVaryingLine);
+			if (!backendVaryingMacro.empty()) {
+				return Fail(diag, "unterminated "_s + backendVaryingMacro + " conditional at global scope"_s, backendVaryingLine);
 			}
 			if (globalDepth != 0) {
 				return Fail(diag, "unbalanced braces at global scope", lines.empty() ? 1 : lines.back().Line);
@@ -3133,6 +3163,79 @@ R"GLSL(void main()
 			}
 		}
 
+		/**
+			Removes the loose uniform declarations that resolving the backend conditionals left
+			unreferenced in a built stage. TrimUnusedUniforms() runs on the document, where a reference
+			inside any preprocessor branch counts, so a uniform that only the low-power branch of a vertex
+			stage reads would otherwise stay declared in the vertex stage of every other emission - where
+			it is not just dead text but a member of that stage's HLSL cbuffer and MSL argument struct,
+			i.e. a different interface. @p otherLines is the other stage of the same emission, resolved
+			the same way: a declaration is only removed when that stage still reads every name it
+			declares, which keeps the reflection-preservation rule of TrimUnusedUniforms() intact.
+		*/
+		void TrimUniformsResolvedAway(SmallVectorImpl<SourceLine>& lines, const SmallVectorImpl<SourceLine>& otherLines)
+		{
+			SmallVector<SourceLine, 0> stripped(InPlaceInit, lines.begin(), lines.end());
+			ShaderParser::StripComments(stripped);
+			SmallVector<GlobalDecl, 0> decls;
+			if (!ScanGlobalDeclarations(stripped, decls)) {
+				return;
+			}
+			SmallVector<SourceLine, 0> otherStripped(InPlaceInit, otherLines.begin(), otherLines.end());
+			ShaderParser::StripComments(otherStripped);
+			SmallVector<GlobalDecl, 0> otherDecls;
+			if (!ScanGlobalDeclarations(otherStripped, otherDecls)) {
+				return;
+			}
+
+			auto readInOtherStage = [&otherStripped, &otherDecls](const String& name) {
+				SmallVector<std::size_t, 0> excluded;
+				for (const GlobalDecl& otherDecl : otherDecls) {
+					if (std::find(otherDecl.DeclaredNames.begin(), otherDecl.DeclaredNames.end(), name) != otherDecl.DeclaredNames.end()) {
+						for (std::size_t l = otherDecl.StartLine; l <= otherDecl.EndLine; l++) {
+							excluded.push_back(l);
+						}
+					}
+				}
+				return IdentifierReadOutsideLines(otherStripped, name, excluded);
+			};
+
+			SmallVector<std::pair<std::size_t, std::size_t>, 0> extents;
+			for (const GlobalDecl& decl : decls) {
+				if (decl.Kind != GlobalDeclKind::LooseUniform) {
+					continue;
+				}
+				SmallVector<std::size_t, 0> excluded;
+				for (std::size_t l = decl.StartLine; l <= decl.EndLine; l++) {
+					excluded.push_back(l);
+				}
+				bool removable = true;
+				for (const String& name : decl.ReferenceNames) {
+					if (IdentifierReadOutsideLines(stripped, name, excluded)) {
+						removable = false;
+						break;
+					}
+				}
+				for (std::size_t i = 0; removable && i < decl.DeclaredNames.size(); i++) {
+					removable = readInOtherStage(decl.DeclaredNames[i]);
+				}
+				if (removable) {
+					extents.emplace_back(decl.StartLine, decl.EndLine);
+				}
+			}
+
+			// Removed in descending position order so earlier extents stay valid, collapsing the blank seam a
+			// removed declaration leaves behind exactly like TrimUnusedUniforms() does
+			std::sort(extents.begin(), extents.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+			for (const auto& extent : extents) {
+				lines.erase(lines.begin() + extent.first, lines.begin() + extent.second + 1);
+				while (extent.first < lines.size() && Trim(lines[extent.first].Text).empty() &&
+					(extent.first == 0 || Trim(lines[extent.first - 1].Text).empty())) {
+					lines.erase(lines.begin() + extent.first);
+				}
+			}
+		}
+
 		// ── Constant Folding ─────────────────────────────────────────────────────────────────────
 
 		/**
@@ -4260,19 +4363,18 @@ R"GLSL(void main()
 		}
 
 		/**
-			Appends one lowered varying declaration. A backend-tagged varying (VaryingDecl::SwMode, from a
-			global-scope SOFTWARE_RENDERER conditional) is re-wrapped in the matching directive so
-			BuildStageSource resolves it per backend; an untagged one is emitted verbatim as before.
+			Appends one lowered varying declaration. A backend-tagged varying (VaryingDecl::BackendMacro,
+			from a global-scope SOFTWARE_RENDERER or LOW_POWER_GPU conditional) is re-wrapped in the
+			matching directive so BuildStageSource resolves it per backend; an untagged one is emitted
+			verbatim as before.
 		*/
 		void AppendVaryingDecl(SmallVectorImpl<SourceLine>& lines, const VaryingDecl& varying, const char* prefix, const char* flatPrefix)
 		{
-			if (varying.SwMode == 1) {
-				lines.push_back({ "#ifdef SOFTWARE_RENDERER", 0 });
-			} else if (varying.SwMode == 2) {
-				lines.push_back({ "#ifndef SOFTWARE_RENDERER", 0 });
+			if (!varying.BackendMacro.empty()) {
+				lines.push_back({ (varying.BackendDefined ? "#ifdef "_s : "#ifndef "_s) + varying.BackendMacro, 0 });
 			}
 			lines.push_back({ String(varying.Flat ? flatPrefix : prefix) + varying.Declaration + ";"_s, varying.Line });
-			if (varying.SwMode != 0) {
+			if (!varying.BackendMacro.empty()) {
 				lines.push_back({ "#endif", 0 });
 			}
 		}
@@ -4297,6 +4399,13 @@ R"GLSL(void main()
 			if (!src.HasVertexBody) {
 				AppendTemplate(lines, batched ? CanvasBatchedVsMain : CanvasSpriteVsMain);
 				return;
+			}
+
+			// An entry only some backends run is the first branch of a conditional whose other branch is the
+			// default template, which every other backend then resolves to - the same text as without the entry
+			const bool conditionalEntry = !src.VertexBodyMacro.empty();
+			if (conditionalEntry) {
+				lines.push_back({ "#if "_s + src.VertexBodyMacro, 0 });
 			}
 
 			// User globals are shared with the fragment stage; the custom vertex() body may reference them
@@ -4330,6 +4439,12 @@ R"GLSL(void main()
 			lines.push_back({ "\tvColor = COLOR;", 0 });
 			lines.push_back({ "\tvPaletteOffset = PALETTE_OFFSET;", 0 });
 			lines.push_back({ "}", 0 });
+
+			if (conditionalEntry) {
+				lines.push_back({ "#else", 0 });
+				AppendTemplate(lines, batched ? CanvasBatchedVsMain : CanvasSpriteVsMain);
+				lines.push_back({ "#endif", 0 });
+			}
 		}
 
 		/**
@@ -4950,6 +5065,17 @@ R"GLSL(void main()
 				// reference scan is textual and this stream still holds the variant conditionals, so it
 				// stays conservative about those; it only collects what THIS backend just dropped.
 				EliminateUnusedFunctions(resolved);
+
+				// The same for the uniform declarations of the stage, which needs the other stage of this
+				// backend to tell which ones are still read at all (see TrimUniformsResolvedAway())
+				const SmallVectorImpl<SourceLine>& otherStage = (vertexStage ? document.FragmentLines : document.VertexLines);
+				SmallVector<SourceLine, 0> other;
+				other.reserve(document.Prelude.size() + otherStage.size());
+				other.insert(other.end(), document.Prelude.begin(), document.Prelude.end());
+				other.insert(other.end(), otherStage.begin(), otherStage.end());
+				ResolveBackendConditionals(other, softwareRenderer, noDynamicBranching, lowPowerGpu);
+				EliminateUnusedFunctions(other);
+				TrimUniformsResolvedAway(resolved, other);
 			}
 			if (lowerConditionals) {
 				LowerEmittedConditionals(resolved, valueMacros);

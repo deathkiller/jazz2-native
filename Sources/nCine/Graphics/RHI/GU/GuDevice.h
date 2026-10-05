@@ -220,6 +220,13 @@ namespace nCine::RHI::GU
 		static void SyncBeforeStoreRelease();
 		/** @brief Clears a texture from every unit it is bound to (called from ~GuTexture) */
 		static void UnbindTexture(const GuTexture* texture);
+		/**
+		 * @brief Makes the next textured draw send its whole texture setup again, texture cache flush included
+		 *
+		 * Call after rewriting a GE store in place: it keeps its address, so the draw state alone cannot tell
+		 * the new texels from the old ones the GE's texture cache may still hold.
+		 */
+		static void InvalidateTextureState();
 		/** @brief Returns the texture bound to a texture unit */
 		static const GuTexture* GetBoundTexture(std::uint32_t unit);
 		/** @brief Records the host data range bound to a uniform binding point */

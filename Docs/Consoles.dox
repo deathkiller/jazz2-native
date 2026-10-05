@@ -370,7 +370,8 @@ wait made the next frame later still. So a chunk that is not ready yet simply is
 goes quiet for a frame --- it had already run dry, and waiting could not have undone that --- and the
 decoding thread gets the whole of the vblank wait to catch up, which is what actually ends the underrun.
 A platform with no decoding thread at all is the one exception and still decodes in place, because
-there is nothing else that ever would.
+there is nothing else that ever would --- unless its audio device takes the request over, as the PS2's
+does to spread the decoding over its waits for the vertical blank (see @ref consoles-ps2-limits).
 
 The same reasoning decides *when* a level's or the menu's music starts. The stream is fed from the main
 thread once per frame, and the frames right after a level or the main menu is created are the ones that
@@ -537,7 +538,9 @@ except the library itself --- which must come from the **preview** branch (the t
 verifies this through the OpenGL headers only that branch installs, and also that the installed
 `libdragon.a` was not built with `NDEBUG` --- the log channels depend on symbols that build strips).
 The preview branch moves; when reproducibility matters, check out and record a specific revision
-rather than its tip:
+rather than its tip (the CI uses the one in @cpp ".github/workflows/n64.yml" @ce). It must not be older
+than `7c57c409` (@cpp "rspq: make lowpri buffer handoff atomic" @ce): before it, full-motion video
+could stop a few seconds in with @cpp "rspq_next_buffer: wait loop timed out" @ce.
 
 @code{.sh}
 # The prebuilt cross-compiler (also available as .deb; extract anywhere and point N64_INST at it)
@@ -2290,7 +2293,13 @@ video signal, not the game.
     @ref nCine::IAudioDevice::beginBlockingOperation() --- a level load, and the episode list, which
     reads twenty-odd episodes off the disc --- which stops the stream, so those are silent instead of
     a loop. Gameplay running sustained below about 19 fps still repeats; that is a frame rate problem
-    rather than an audio one. `NCINE_WITH_OPENMPT` is forced off
+    rather than an audio one. The music is decoded on the main thread as well, and a whole 16 KB chunk
+    @m_span{m-text m-dim} (0.19 s of music) @m_endspan was 24 to 35 ms of libxmp work every eleventh
+    frame --- a visible stutter even in a level that otherwise held 60 fps. So the device takes the decode
+    request over and runs it in 1 KB slices while the GS device waits for the vertical blank
+    @m_span{m-text m-dim} (@ref nCine::IAudioDevice::runIdleWork(); a slice starts only if its running
+    cost estimate fits before the blank) @m_endspan, and a chunk still unfinished after twelve frames is
+    decoded in slices inside the frame instead. `NCINE_WITH_OPENMPT` is forced off
     @m_span{m-text m-dim} (libopenmpt's `to_chars(char*, char*, const double&)` is ambiguous against
     PS2SDK's newlib) @m_endspan, so the soundtrack is **libxmp**'s, which is on by default here ---
     and which cannot read the 4 `.mo3` tracks of the 56 shipped, exactly as on every other libxmp
@@ -2305,9 +2314,6 @@ video signal, not the game.
     is what raises the bound from the 16:9 720x405 the other platforms use) @m_endspan.
 -   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
     is compiled out and asset loading is synchronous.
--   Two pipeline stages are still unimplemented: the weapon wheel's line strip
-    @m_span{m-text m-dim} (`line_strip_mesh`) @m_endspan and the CPU-lightmap compositor
-    @m_span{m-text m-dim} (`lighting_combine`, so a level renders unlit) @m_endspan.
 -   **Saving needs writable storage that a disc is not.** Preferences and progress go to a memory
     card @m_span{m-text m-dim} (`mc0:/Jazz2/`, the first usable slot, with the `icon.sys` the
     console's own browser needs or it calls the save "Corrupted Data") @m_endspan --- or, when the
@@ -2333,9 +2339,9 @@ This is the odd one out among the console ports. The RSX is a fully **programmab
 being a console backend it belongs with `GXM` and the desktop backends rather than with the
 fixed-function `PVR`/`GX`/`GU`/`GS` tier: it advertises shaders and off-screen render targets, runs
 the whole bloom / lighting / combine / rescale chain, and consumes none of the transpiled
-`fixed_function` effect tables. What separates it from the PS Vita --- which wants the same Cg --- is
-only *when* the shaders are compiled. The Vita has SceShaccCg on the console, the PS3 has no runtime
-shader compiler at all, so the same Cg is compiled to NV40 microcode **offline** and embedded in the
+`fixed_function` effect tables. What separates it from the PS Vita --- which wants the same Cg dialect
+--- is above all *when* the shaders are compiled. The Vita has SceShaccCg on the console, the PS3 has no
+runtime shader compiler at all, so its Cg is compiled to NV40 microcode **offline** and embedded in the
 executable, the arrangement the Vulkan backend uses for its SPIR-V.
 
 @subsection consoles-ps3-toolchain Toolchain
@@ -2430,11 +2436,13 @@ PS3DEV=<prefix> LD_LIBRARY_PATH=<Cg toolkit>/usr/lib64 \
 @m_class{m-noindent}
 
 It is a mode of @ref shader-compiler "ShaderCompiler" like every other generated artifact ---
-`--emit-rsx`, which `--generate-all` runs when it can find `cgcomp`. The tool emits the very same Cg
-it produces for the PS Vita, because the two consoles want the same language, and only caps
-`BATCH_SIZE` to what the RSX's constant registers hold before compiling each stage with the
-`vp40`/`fp40` profiles. `cgcomp` is found through `$PS3DEV/bin` or `PATH`, or named with `--cgcomp`,
-it needs NVIDIA's Cg Toolkit on the library path, which is what `LD_LIBRARY_PATH` above supplies.
+`--emit-rsx`, which `--generate-all` runs when it can find `cgcomp`. The tool emits Cg the same way it
+does for the PS Vita, because the two consoles want the same language, but from each shader's plain view
+rather than the Vita's `LOW_POWER_GPU` one @m_span{m-text m-dim} (see @ref shader-compiler-cg-rsx)
+@m_endspan, and caps `BATCH_SIZE` to what the RSX's constant registers hold before compiling each stage
+with the `vp40`/`fp40` profiles. `cgcomp` is found through `$PS3DEV/bin` or `PATH`, or named with
+`--cgcomp`, it needs NVIDIA's Cg Toolkit on the library path, which is what `LD_LIBRARY_PATH` above
+supplies.
 
 On a machine without `cgcomp`, `--generate-all` reports @cpp "skipped: RsxGeneratedShaders.h" @ce and
 leaves the committed header alone rather than emptying it --- so a regeneration elsewhere cannot
@@ -2640,7 +2648,7 @@ binaries SceShaccCg produces.
     @m_span{m-text m-dim} (see below) @m_endspan or because the clear and present shaders are string
     literals in @cpp "GxmDevice.cpp" @ce. Pruning against the generated header deletes precisely those.
 
-With the shipped pack a cold start loads 51 binaries and compiles nothing; startup from the clock line to
+With the shipped pack a cold start loads 53 binaries and compiles nothing; startup from the clock line to
 @cpp sceGxmInitialize() @ce completing is then well under half a second.
 
 @subsection consoles-vita-batching Sprite batching
@@ -2684,6 +2692,26 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     It is sticky context state rather than part of a draw, so the three paths that bypass that function
     --- the stencil band, @cpp Clear() @ce and the present blit --- assert `TRIANGLE_FILL` for themselves
     the same way they already re-assert the depth and fragment-program state.
+-   **Consecutive scenes are not ordered on the GPU.** Ending one scene before the next begins does not
+    stop the SGX from running the two at once, so a scene that samples a render target an earlier scene
+    drew can read it unfinished --- measured on hardware as the player's light flickering in up to a
+    quarter of the frames without CPU waits, at 60% rendering resolution with blur effects off, where the
+    composite comes straight after the lighting pass. @cpp nCine::RHI::GXM::GxmDevice @ce therefore
+    records every render target a scene samples and waits for the scenes that drew them --- and for those
+    that drew or read the surface it rewrites --- right before submitting it
+    @m_span{m-text m-dim} (@cpp GxmDevice::FinishScene() @ce) @m_endspan; waiting there rather than at
+    the first draw that samples one is 0.8--0.9 ms cheaper per frame. Neither the scene dependency flags
+    @m_span{m-text m-dim} (@cpp SCE_GXM_SCENE_FRAGMENT_SET_DEPENDENCY @ce with
+    @cpp SCE_GXM_SCENE_VERTEX_WAIT_FOR_DEPENDENCY @ce) @m_endspan nor a fragment sync object shared by
+    every scene replaces the wait.
+-   **No buffer is ever orphaned behind the scenes.** Every buffer object is GPU-visible memory written in
+    place @m_span{m-text m-dim} (@cpp nCine::RHI::GXM::GxmBufferObject @ce) @m_endspan, with no driver to
+    hand a busy store a fresh copy the way OpenGL's @cpp glBufferData(nullptr) @ce can. The pipeline
+    re-declares its streaming buffers exactly that way at the end of every frame's draw
+    @m_span{m-text m-dim} (@cpp nCine::RenderBuffersManager::Remap() @ce) @m_endspan, while the frame's
+    last scenes have not run yet, so an existing block keeps its contents and only a fresh one is
+    cleared. Clearing it in place took the lines of the weapon wheel --- the one HUD element that
+    streams its own vertices --- out of most frames.
 -   Under **Vita3K** the `GXM` backend draws a one-pixel seam where a repeating texture wraps --- most
     visibly along the scrolling textured background. The wrap is set up correctly for the hardware
     @m_span{m-text m-dim} (a power-of-two, tiled colour-surface texture whose control words read back
@@ -2745,15 +2773,24 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     compact (272-row) and full (400-row) layouts by view height @m_span{m-text m-dim}
     (`Jazz2::UI::Menu::MenuLayout`) @m_endspan, so the sizes in between look right, and a change lays
     every open section out again in place rather than rebuilding the menu.
+-   **Blur effects and high-quality water are on by default here too** @m_span{m-text m-dim} (an
+    existing configuration keeps its saved values) @m_endspan. The combine, water and blur shaders take
+    their `LOW_POWER_GPU` paths on this console @m_span{m-text m-dim} (see
+    @ref shader-compiler-input-preprocessor) @m_endspan, which approximate the same look with far less
+    per-pixel work: sine as a short polynomial, light rays from a noise texture baked at load time
+    instead of per-pixel simplex noise, and texture coordinates computed per vertex, so the SGX issues
+    the reads before the fragment program even runs instead of as dependent ones. With them a level
+    renders in about 12 ms at the default 50% rendering resolution with blur effects on, and in 15 ms
+    with the whole view under water, measured on hardware with the frame-rate cap removed.
 -   **Blur effects run over a shorter chain.** The blur that darkness mixes in is five off-screen passes at
     full lighting resolution --- a downsample to half size, two blur passes there and two more at a
-    quarter --- and on this backend every pass is a scene the CPU waits out before the next one may
-    sample it @m_span{m-text m-dim} (see @cpp nCine::RHI::GXM::GxmDevice::FinishScene() @ce) @m_endspan,
-    so the number of passes costs more than their pixels. Below 100% the first blur pass reads the view
-    directly instead of a downsampled copy, which leaves four passes at the 50% this console defaults to;
-    at 25% and below the quarter-size level is dropped as well and the half-size one stands in for it,
-    which leaves two @m_span{m-text m-dim} (@ref Jazz2::Rendering::PlayerViewport::Initialize(), on every
-    platform) @m_endspan.
+    quarter --- and on this backend a pass has to have finished before the scene that samples it may be
+    submitted @m_span{m-text m-dim} (see *Consecutive scenes are not ordered on the GPU* above)
+    @m_endspan, so the number of passes costs more than their pixels. Below 100% the first blur pass
+    reads the view directly instead of a downsampled copy, which leaves four passes at the 50% this
+    console defaults to; at 25% and below the quarter-size level is dropped as well and the half-size one
+    stands in for it, which leaves two @m_span{m-text m-dim}
+    (@ref Jazz2::Rendering::PlayerViewport::Initialize(), on every platform) @m_endspan.
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.

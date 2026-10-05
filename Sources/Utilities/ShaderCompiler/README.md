@@ -181,9 +181,14 @@ lines, and it must not nest (`a global-scope SOFTWARE_RENDERER conditional may o
 declarations`). The tagged declarations still participate in unused-varying trimming, and reads
 inside the inactive branch count as reads, so neither side is trimmed away. See
 `tests/SwVarying.shader` (`vPos` for the shader backends, `vRect` for the software one) and
-`TexturedBackground.shader`. Only this one spot is restricted to a single macro: it accepts
-`#ifdef`/`#ifndef SOFTWARE_RENDERER` and the plain `#if [!]SOFTWARE_RENDERER` expression, nothing
-more — the two sides are what it tags declarations with.
+`TexturedBackground.shader`. `LOW_POWER_GPU` works the same way there, for the extra interpolants of a
+cheaper path that moves screen-linear work to the vertex stage (`tests/LowPowerVarying.shader`,
+`CombineWithWater.shader`), and on its `LOW_POWER_GPU` side it may also hold the `vertex()` entry of a
+`canvas_item` shader: the low-power emissions then get a vertex stage of their own, while every other
+emission keeps the default canvas template — the exact text the shader produces with no `vertex()` at
+all (`tests/LowPowerCanvasVertex.shader`, `Blur.shader`). This spot accepts only those two macros, as
+`#ifdef`/`#ifndef` and the plain `#if [!]MACRO` expression, nothing more — the two sides are what it
+tags declarations with.
 
 ### Compile-time macros in `#if` expressions
 

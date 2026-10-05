@@ -61,6 +61,12 @@ namespace Jazz2::Rendering
 		SmallVector<LightEmitter, 0> _swLightsCache;
 		// Half-resolution accumulation buffer, 2 floats/texel: R=intensity, G=brightness
 		SmallVector<float, 0> _swLightmap;
+		// The columns of each lightmap row the lights reached in the last frame, as first/last pairs (a row they
+		// missed has first > last), and the width and ambient level that frame reset the map with - everything
+		// outside those spans still holds the reset, so only the spans need resetting again
+		SmallVector<std::int32_t, 0> _swLitSpans;
+		std::int32_t _swLitWidth = 0;
+		float _swLitAmbient = -1.0f;
 
 		/**
 		 * @brief Builds the half-resolution dynamic lightmap on the CPU and hands it plus the water parameters to the software device (software backend)

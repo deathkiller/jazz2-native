@@ -194,9 +194,17 @@ namespace nCine::RHI::GS
 		*/
 		std::uint32_t EnsureBakedColor(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex,
 			std::uint32_t paletteGeneration, const void* palette);
-		/** @brief Returns the buffer pitch in texels of the baked copies (they share the store's sampled extent) */
+		/**
+			@brief Returns the buffer pitch in texels of the baked copies
+
+			They share the store's sampled extent, but not its pitch: a `PSMCT32` row is a whole page wide (64
+			texels), so a sheet up to 32 wide is padded to 32 for sampling and to 64 in memory. Returning the
+			sampled width made `TBW` zero for those, and the GS folded every 32-row band of the sheet onto the
+			first one - the lower frames of narrow per-pixel-alpha sheets (the freezer ammo icons, the small
+			explosion) were drawn from the wrong rows.
+		*/
 		inline std::int32_t GetBakedBufferPitch() const {
-			return _paddedWidth;
+			return GsVram::GetPaddedWidth(GsPsm::Ct32, _width);
 		}
 
 		/**

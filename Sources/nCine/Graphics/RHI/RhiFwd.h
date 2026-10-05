@@ -414,10 +414,16 @@ namespace nCine::RHI
 // that is regenerated every frame (the cinematics) can be produced straight into it instead of into a
 // buffer that is then copied twice - the tile accelerator reads textures out of ordinary video memory,
 // which is addressable, unlike a driver-owned object that has to be uploaded through an API.
+//
+// `RHI_LIGHTING_DARKEN_ONLY` means the CPU lightmap can only darken the scene: the device multiplies the
+// scene by per-texel factors its ARGB4444 store clamps to 1, so the brightening the shader path adds around
+// a light has nothing to show, and a lightmap at the full ambient level comes out as exactly 1 everywhere -
+// a multiply that changes no pixel, which the compositor can skip as a whole.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
 #define RHI_CAP_BATCHING
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::PVR
 {
@@ -509,10 +515,15 @@ namespace nCine::RHI
 // is regenerated every frame (the cinematics) can be produced straight into it. The GE reads textures out of
 // ordinary addressable memory (either main RAM or VRAM through sceGeEdramGetAddr), never out of a
 // driver-owned object, so this holds on the PSP as well.
+//
+// `RHI_LIGHTING_DARKEN_ONLY` holds for the same reason as on the PowerVR: the lightmap is stored as 4444
+// factors that clamp to 15 (exactly one), so a lightmap at the full ambient level would only multiply the
+// scene by one.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
 #define RHI_CAP_BATCHING
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::GU
 {
@@ -698,9 +709,13 @@ namespace nCine::RHI
 // memory has no host mapping whatsoever - every texel arrives through a GIF transfer - so there is no pointer
 // to hand out and `GsTexture::MapStreamingTexels()` always fails. Callers take the copy-through-a-buffer path
 // instead.
+//
+// `RHI_LIGHTING_DARKEN_ONLY` holds as on the PowerVR and the GE: the lightmap is stored as the attenuation
+// the blend subtracts, clamped at zero, so a lightmap at the full ambient level would subtract nothing.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_BATCHING
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::GS
 {

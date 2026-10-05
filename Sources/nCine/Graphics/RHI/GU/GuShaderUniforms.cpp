@@ -1,6 +1,6 @@
 #include "GuShaderUniforms.h"
 #include "GuShaderProgram.h"
-#include "GuBuffer.h"
+#include "GuDevice.h"
 
 #include <cstring>
 
@@ -214,48 +214,26 @@ namespace nCine::RHI::GU
 
 	void GuShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
-			return;
-		}
-
-		std::int32_t totalUsedSize = 0;
-		bool hasMemoryGaps = false;
-		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
-			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
-				hasMemoryGaps = true;
-			}
-			totalUsedSize += cache.usedSize();
-		}
-
-		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
-			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
-			if (_uboParams.mapBase != nullptr) {
-				if (hasMemoryGaps) {
-					std::int32_t offset = 0;
-					for (GuUniformBlockCache& cache : _uniformBlockCaches) {
-						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
-						offset += cache.usedSize();
-					}
-				} else {
-					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
-				}
-			}
-		}
+		// Nothing to commit, for the RDP's reason (see RdpShaderUniformBlocks): the reader of the blocks is the
+		// draw dispatch on this same CPU, which takes the bytes through the plain pointers Bind() forwards. Staging
+		// them in a range of the streaming uniform buffer first was a copy of every block of every command, the
+		// whole instance array of each batch included, for bytes that were already where the dispatch reads them.
 	}
 
 	void GuShaderUniformBlocks::Bind()
 	{
-		if (_uboParams.object == nullptr) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != GuShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		_uboParams.object->Bind();
-		std::size_t moreOffset = 0;
+		// Each cache owns contiguous storage, so a block is forwarded where it already lives - which also means
+		// a non-contiguous set of blocks needs no gap handling
 		for (GuUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
-			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
-			moreOffset += std::size_t(cache.usedSize());
+			const std::uint8_t* data = cache.GetDataPointer();
+			if (data != nullptr) {
+				GuDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.usedSize()));
+			}
 		}
 	}
 

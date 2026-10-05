@@ -23,6 +23,11 @@ namespace Jazz2::AssetPacker
 		groups written so far and the ones ahead exactly on target, so the quality stays even across the sequence and
 		the target bitrate is met over all of it rather than per group. Those frames are held in memory meanwhile.
 
+		A decoder that only keeps up with a limited bitrate, like the console's, can be given it as a peak: no run of
+		pictures then takes more than the buffer plus the peak bitrate over its duration (the leaky bucket of MPEG's
+		video buffering verifier), and a picture that would is encoded again with a coarser quantizer. The rate control
+		counts such a picture as the bits it would have taken, so what it saves goes to the groups around it.
+
 		Two quirks of libdragon's decoder are taken care of: its RSP path halves negative odd motion vectors the other
 		way than the standard when it predicts chroma, so such vectors are only used where both roundings predict the
 		same pixels, and it cannot decode the last few bytes of a file, so the stream ends with padding.
@@ -47,6 +52,10 @@ namespace Jazz2::AssetPacker
 			std::int32_t SearchRange = 32;
 			/** @brief Quantizer (1 to 31) of every P-picture instead of following @ref BitrateKbps, `0` for rate control */
 			std::int32_t FixedQuantizer = 0;
+			/** @brief Bitrate in kbit/s the decoder keeps up with, `0` for no limit - never below @ref BitrateKbps */
+			std::int32_t PeakBitrateKbps = 0;
+			/** @brief How many kbit the decoder may fall behind @ref PeakBitrateKbps before it drops a picture, `0` for half a second of it */
+			std::int32_t PeakBufferKbits = 0;
 		};
 
 		/** @brief Statistics of the stream written so far */

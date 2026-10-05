@@ -30,7 +30,11 @@ jobs:
       # the branch moves, and an unpinned clone can break this workflow (or silently change the runtime)
       # with no change in this repository. The project's toolchain file additionally verifies that the
       # install carries the preview headers and was not built with NDEBUG.
-      LIBDRAGON_COMMIT: 55aac1355773169d87e45424b772faf0dfb9432a
+      # It has to include 7c57c409 ("rspq: make lowpri buffer handoff atomic"): before it, the mixer's
+      # high-priority work could land between a low-priority buffer's "done" signal and its jump, and the
+      # RSP then resumed in a buffer the CPU had already cleared - full-motion video stopped with
+      # "rspq_next_buffer: wait loop timed out" a few seconds in.
+      LIBDRAGON_COMMIT: 4a9bfb242b28b64940d8fa606f7ddb3c39807864
       ZLIB_VERSION: 1.3.1
 
     steps:

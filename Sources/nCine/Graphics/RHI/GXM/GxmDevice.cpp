@@ -657,9 +657,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 
 		// A scene that is still running may be writing this surface, or sampling what it held - neither may
-		// overlap with this one rewriting it
-		WaitForSurfaceUsers(surfaceData);
-
+		// overlap with this one rewriting it, which is waited for when this one ends (see FinishScene())
 		const std::int32_t result = sceGxmBeginScene(_context, 0, renderTarget, nullptr, nullptr, syncObject,
 			colorSurface, depthSurface);
 		if (result < 0) {
@@ -691,15 +689,33 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 		// A scene's output is sampled by a later scene in the same frame all along the pipeline's chain (the
 		// blur passes read the scene view, the composite reads all of them), and sharing one context is not
-		// enough to make that hand-over safe: this scene's tile writeback is still in flight while the next one
-		// records, so the reader can sample what the surface held before. Measured on the console - waiting
-		// for the producer is what makes the level view arrive intact, and not waiting leaves it holding just
-		// its clear.
+		// enough to make that hand-over safe: ending one scene before the next begins does not stop the GPU
+		// from running the two at once, so the reader can sample what the surface held before. Measured on the
+		// console - waiting for the producer is what makes the level view arrive intact, and not waiting leaves
+		// it holding just its clear. Not waiting at all made the player's light flicker in up to a quarter of
+		// the frames at 60% rendering resolution with blur effects off, where the composite comes straight
+		// after the lighting pass. Neither SCE_GXM_SCENE_FRAGMENT_SET_DEPENDENCY with
+		// SCE_GXM_SCENE_VERTEX_WAIT_FOR_DEPENDENCY on every scene nor one fragment sync object shared by all
+		// of them replaces the wait: the flags made the composite read the lighting buffer unwritten, the shared
+		// sync object changed nothing.
 		//
-		// That wait no longer happens here, though, but when a later draw really samples this surface (see
-		// WaitForSampledTargets()) or a later scene rewrites it (see EnsureScene()). Until then the CPU goes on
-		// recording - the lighting pass and the scene pass do not depend on each other at all, and every other
-		// consumer's sorting and batching overlaps with the tail of its producer instead of following it.
+		// The wait happens here, for the scenes this one depends on - the ones that wrote a surface it sampled
+		// (see WaitForSampledTargets()) and the ones that wrote or sampled the surface it rewrites - right before
+		// it is submitted, since its fragment processing cannot start any earlier. Waiting at the first draw
+		// that sampled a producer instead kept the GPU idle while the CPU woke up and recorded the rest of the
+		// reader, which cost 0.8 ms more per frame, 0.9 ms more with blur effects on. Neither starting this
+		// scene's vertex processing ahead of a wait that blocks (sceGxmMidSceneFlush()) nor polling the
+		// notification instead of sleeping on it changed the frame time by more than 0.3 ms either way.
+		if (_sceneSampledCount > MaxSampledSurfaces) {
+			// More than were recorded, so any pending scene may have written one of them
+			WaitForPendingScenes();
+		} else {
+			for (std::uint32_t i = 0; i < _sceneSampledCount; i++) {
+				WaitForSurfaceProducers(_sceneSampledSurfaces[i]);
+			}
+			WaitForSurfaceUsers(_sceneSurfaceData);
+		}
+
 		PendingScene& scene = _pendingScenes[_nextPendingScene];
 		_nextPendingScene = (_nextPendingScene + 1) % PendingSceneCount;
 		if (scene.Active) {
@@ -801,7 +817,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// Only a render target can have been written by a scene of this frame - every other texture is uploaded
 		// by the CPU (see WaitForPendingScenes()). The open scene is never among the pending ones, so sampling
 		// the surface it renders into finds nothing to wait for, and it would not be safe anyway.
-		auto visit = [](const auto& slots) {
+		auto visit = [](const auto& slots, bool waitNow) {
 			for (const GxmShaderProgram::GxmSamplerSlot& slot : slots) {
 				const GxmTexture* texture = GetBoundTexture(slot.EngineUnit);
 				if (texture == nullptr || !texture->IsRenderTarget()) {
@@ -811,9 +827,12 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				if (surfaceData == nullptr) {
 					continue;
 				}
-				WaitForSurfaceProducers(surfaceData);
+				if (waitNow) {
+					WaitForSurfaceProducers(surfaceData);
+				}
 
-				// Remembered for the scene that later rewrites this surface, which must not overlap this one
+				// Remembered for the producers to be waited for when the scene ends (see FinishScene()), and for
+				// the scene that later rewrites this surface, which must not overlap this one
 				bool known = false;
 				const std::uint32_t recorded = std::min<std::uint32_t>(_sceneSampledCount, MaxSampledSurfaces);
 				for (std::uint32_t i = 0; i < recorded && !known; i++) {
@@ -830,8 +849,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				}
 			}
 		};
-		visit(program->GetVertexSamplerSlots());
-		visit(program->GetFragmentSamplerSlots());
+		visit(program->GetVertexSamplerSlots(), true);
+		visit(program->GetFragmentSamplerSlots(), false);
 	}
 
 	void* GxmDevice::AcquireClearQuad()
@@ -2123,9 +2142,6 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// display controller will pick up next
 		_currentRenderTarget = nullptr;
 		FinishScene();
-		// The blit samples the screen surface straight through its own texture rather than through a program's
-		// samplers, so it waits for the scenes that drew the frame there itself
-		WaitForSurfaceProducers(_screenBuffer.Base);
 
 		if (_presentVertexProgram != nullptr && _presentFragmentProgram != nullptr && EnsureSequentialIndices(4)) {
 			const std::int32_t result = sceGxmBeginScene(_context, 0, _displayRenderTarget, nullptr, nullptr,
@@ -2143,6 +2159,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				sceGxmSetFragmentTexture(_context, 0, &_screenTexture);
 				sceGxmSetVertexStream(_context, 0, _presentVertices.Base);
 				sceGxmDraw(_context, SCE_GXM_PRIMITIVE_TRIANGLE_STRIP, SCE_GXM_INDEX_FORMAT_U16, _sequentialIndices.Base, 4);
+				// The blit samples the screen surface straight through its own texture rather than through a
+				// program's samplers, so it waits for the scenes that drew the frame there itself - right before
+				// it is submitted, like any other scene (see FinishScene())
+				WaitForSurfaceProducers(_screenBuffer.Base);
 				sceGxmEndScene(_context, nullptr, nullptr);
 			} else {
 				LOGE("sceGxmBeginScene(present) failed with 0x{:.8x}", std::uint32_t(result));

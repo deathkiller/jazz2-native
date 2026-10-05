@@ -349,6 +349,8 @@ float4 main(PsInput _input) : COLOR
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float2 uPixelOffset;
+uniform float2 uDirection;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -359,6 +361,10 @@ uniform float palOffset;
 static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
+static float2 vTap1;
+static float2 vTap2;
+static float2 vTap3;
+static float2 vTap4;
 
 struct VsInput
 {
@@ -369,47 +375,68 @@ struct VsOutput
 {
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
+	float2 vTap1 : TEXCOORD1;
+	float2 vTap2 : TEXCOORD2;
+	float2 vTap3 : TEXCOORD3;
+	float2 vTap4 : TEXCOORD4;
 };
 
 VsOutput main(VsInput _input)
 {
 	aQuadCorner = _input.aQuadCorner;
 	float2 aPosition = float2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	float4 position = float4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
-	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float2 VERTEX = float2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	float2 UV = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	float4 COLOR = color;
+	float PALETTE_OFFSET = palOffset;
+	float2 off1 = ((float2)1.3846153846) * uPixelOffset * uDirection;
+	float2 off2 = ((float2)3.2307692308) * uPixelOffset * uDirection;
+	vTap1 = UV + off1;
+	vTap2 = UV - off1;
+	vTap3 = UV + off2;
+	vTap4 = UV - off2;
+	gl_Position = mul(float4(VERTEX, 0.0, 1.0), mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
+	vTexCoords = UV;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
+	_output.vTap1 = vTap1;
+	_output.vTap2 = vTap2;
+	_output.vTap3 = vTap3;
+	_output.vTap4 = vTap4;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
-uniform float2 uPixelOffset;
-uniform float2 uDirection;
-
 uniform sampler2D uTexture : TEXUNIT0;
 
 static float2 vTexCoords;
+static float2 vTap1;
+static float2 vTap2;
+static float2 vTap3;
+static float2 vTap4;
 static float4 COLOR;
 
 struct PsInput
 {
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
+	float2 vTap1 : TEXCOORD1;
+	float2 vTap2 : TEXCOORD2;
+	float2 vTap3 : TEXCOORD3;
+	float2 vTap4 : TEXCOORD4;
 };
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
-	float4 color = ((float4)0.0);
-	float2 off1 = ((float2)1.3846153846) * uPixelOffset * uDirection;
-	float2 off2 = ((float2)3.2307692308) * uPixelOffset * uDirection;
-	color += tex2D(uTexture, vTexCoords) * 0.2270270270;
-	color += tex2D(uTexture, vTexCoords + off1) * 0.3162162162;
-	color += tex2D(uTexture, vTexCoords - off1) * 0.3162162162;
-	color += tex2D(uTexture, vTexCoords + off2) * 0.0702702703;
-	color += tex2D(uTexture, vTexCoords - off2) * 0.0702702703;
+	vTap1 = _input.vTap1;
+	vTap2 = _input.vTap2;
+	vTap3 = _input.vTap3;
+	vTap4 = _input.vTap4;
+	float4 color = tex2D(uTexture, vTexCoords) * 0.2270270270;
+	color += (tex2D(uTexture, vTap1) + tex2D(uTexture, vTap2)) * 0.3162162162;
+	color += (tex2D(uTexture, vTap3) + tex2D(uTexture, vTap4)) * 0.0702702703;
 	COLOR = color;
 	return COLOR;
 }
@@ -578,6 +605,7 @@ static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vPixelPos;
 
 struct VsInput
 {
@@ -589,6 +617,7 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
@@ -599,10 +628,12 @@ VsOutput main(VsInput _input)
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vViewSizeInv = ((float2)1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vViewSizeInv = vViewSizeInv;
+	_output.vPixelPos = vPixelPos;
 	return _output;
 }
 )",
@@ -617,6 +648,7 @@ uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vPixelPos;
 static float4 COLOR;
 
 struct PsInput
@@ -624,29 +656,30 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
 };
 
-float2 hash2D(float2 p)
+float interleavedGradientNoise(float2 p)
 {
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
 }
 
-float2 noiseTexCoords(float2 position)
+float2 lightingJitterLowPower()
 {
-	float2 seed = position + frac(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
+	float2 seed = vPixelPos + frac(uTime * 7.31) * 512.0;
+	float2 offset = float2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
 }
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vViewSizeInv = _input.vViewSizeInv;
+	vPixelPos = _input.vPixelPos;
 	float4 blur1 = tex2D(uTextureBlurHalf, vTexCoords);
 	float4 blur2 = tex2D(uTextureBlurQuarter, vTexCoords);
 	float4 main = tex2D(uTexture, vTexCoords);
-	float4 light = tex2D(uTextureLighting, noiseTexCoords(vTexCoords));
+	float4 light = tex2D(uTextureLighting, vTexCoords + lightingJitterLowPower());
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
@@ -659,6 +692,10 @@ float4 main(PsInput _input) : COLOR
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4x4 uProjectionMatrix;
 uniform float4x4 uViewMatrix;
+uniform float4 uAmbientColor;
+uniform float uTime;
+uniform float2 uCameraPos;
+uniform float uWaterLevel;
 
 uniform float4x4 modelMatrix;
 uniform float4 color;
@@ -669,6 +706,12 @@ static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vLightingSeed;
+static float2 vDisplacementPos;
+static float2 vRaysPos;
+static float4 vWavePhases;
+static float4 vWaterLine;
+static float2 vConstants;
 
 struct VsInput
 {
@@ -680,6 +723,12 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vLightingSeed : TEXCOORD2;
+	float2 vDisplacementPos : TEXCOORD3;
+	float2 vRaysPos : TEXCOORD4;
+	float4 vWavePhases : TEXCOORD5;
+	float4 vWaterLine : TEXCOORD6;
+	float2 vConstants : TEXCOORD7;
 };
 
 VsOutput main(VsInput _input)
@@ -690,18 +739,36 @@ VsOutput main(VsInput _input)
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vViewSizeInv = ((float2)1.0) / spriteSize;
+	float2 uvLocal = vTexCoords;
+	float2 uvWorldCenter = uCameraPos * vViewSizeInv;
+	const float invTau = 0.15915494;
+	vLightingSeed = aPosition * spriteSize + frac(uTime * 7.31) * 512.0;
+	float2 displacementBase = uvWorldCenter * 0.1 + (uTime * 0.4 - (2.0) * floor((uTime * 0.4) / (2.0)));
+	vDisplacementPos = uvLocal * 0.1 + frac(displacementBase);
+	float raysLinear = uvLocal.x * 1.4 + uvLocal.x * spriteSize.x * (6.0 / 720.0) + uvLocal.y * spriteSize.y * (5.0 / 720.0);
+	float raysBase = uvWorldCenter.x * 6.0 + uvWorldCenter.y * 0.5 - 5.0;
+	vRaysPos = float2(raysLinear * 0.125 + frac(raysBase * 0.125), frac((uTime * 5.0 + uvWorldCenter.y) * 0.125));
+	float4 waveScale = float4(60.0, 20.0, 35.0, 70.0) * invTau;
+	float4 waveBase = float4((uvWorldCenter.x - uTime) * waveScale.x + 0.25, (uvWorldCenter.x - 2.0 * uTime) * waveScale.y + 0.25, (uvWorldCenter.x + 2.0 * uTime) * waveScale.z, (uvWorldCenter.x + 4.0 * uTime) * waveScale.w + 0.25);
+	vWavePhases = uvLocal.x * waveScale + frac(waveBase);
+	float rippleBase = (uTime * 16.0 + uvWorldCenter.y * 20.0) * invTau;
+	vWaterLine = float4(uvLocal.y * 20.0 * invTau + frac(rippleBase), uvLocal.y - uWaterLevel, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 + vViewSizeInv.y, max(0.4 - uWaterLevel, 0.0));
+	vConstants = float2(1.0 / sqrt(max(uAmbientColor.w, 0.35)), 0.70710678 * spriteSize.y);
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vViewSizeInv = vViewSizeInv;
+	_output.vLightingSeed = vLightingSeed;
+	_output.vDisplacementPos = vDisplacementPos;
+	_output.vRaysPos = vRaysPos;
+	_output.vWavePhases = vWavePhases;
+	_output.vWaterLine = vWaterLine;
+	_output.vConstants = vConstants;
 	return _output;
 }
 )",
 				R"(// Generated Cg (PS Vita, sceGxm) by ShaderCompiler. Do not edit manually.
 uniform float4 uAmbientColor;
-uniform float uTime;
-uniform float2 uCameraPos;
-uniform float uWaterLevel;
 
 uniform sampler2D uTexture : TEXUNIT0;
 uniform sampler2D uTextureLighting : TEXUNIT1;
@@ -711,6 +778,12 @@ uniform sampler2D uTextureNoise : TEXUNIT4;
 
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vLightingSeed;
+static float2 vDisplacementPos;
+static float2 vRaysPos;
+static float4 vWavePhases;
+static float4 vWaterLine;
+static float2 vConstants;
 static float4 COLOR;
 
 struct PsInput
@@ -718,103 +791,80 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vLightingSeed : TEXCOORD2;
+	float2 vDisplacementPos : TEXCOORD3;
+	float2 vRaysPos : TEXCOORD4;
+	float4 vWavePhases : TEXCOORD5;
+	float4 vWaterLine : TEXCOORD6;
+	float2 vConstants : TEXCOORD7;
 };
 
-float2 hash2D(float2 p)
+float interleavedGradientNoise(float2 p)
 {
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
 }
 
-float2 noiseTexCoords(float2 position)
+float2 lightingJitterLowPower()
 {
-	float2 seed = position + frac(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
+	float2 offset = float2(interleavedGradientNoise(vLightingSeed), interleavedGradientNoise(vLightingSeed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
 }
 
-float wave(float x, float time)
+float sinCycles(float cycles)
 {
-	float waveOffset = cos((x - time) * 60.0) * 0.004 + cos((x - 2.0 * time) * 20.0) * 0.008 + sin((x + 2.0 * time) * 35.0) * 0.01 + cos((x + 4.0 * time) * 70.0) * 0.001;
-	return waveOffset * 0.4;
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
 }
 
-float aastep(float threshold, float value)
+float4 sinCycles(float4 cycles)
 {
-	float afwidth = length(float2(ddx(value), ddy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value);
-}
-
-float3 permute(float3 x)
-{
-	return ((x * 34.0 + 1.0) * x - (289.0) * floor(((x * 34.0 + 1.0) * x) / (289.0)));
-}
-
-float snoise(float2 v)
-{
-	const float4 C = float4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
-	float2 i = floor(v + dot(v, C.yy));
-	float2 x0 = v - i + dot(i, C.xx);
-	float2 i1 = x0.x > x0.y ? float2(1.0, 0.0) : float2(0.0, 1.0);
-	float4 x12 = x0.xyxy + C.xxzz;
-	x12.xy -= i1;
-	i = (i - (289.0) * floor((i) / (289.0)));
-	float3 p = permute(permute(i.y + float3(0.0, i1.y, 1.0)) + i.x + float3(0.0, i1.x, 1.0));
-	float3 m = max(0.5 - float3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
-	m = m * m;
-	m = m * m;
-	float3 x = 2.0 * frac(p * C.www) - 1.0;
-	float3 h = abs(x) - 0.5;
-	float3 ox = floor(x + 0.5);
-	float3 a0 = x - ox;
-	m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
-	float3 g;
-	g.x = a0.x * x0.x + h.x * x0.y;
-	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-	return 130.0 * dot(m, g);
+	float4 v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float4 y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
 }
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vViewSizeInv = _input.vViewSizeInv;
+	vLightingSeed = _input.vLightingSeed;
+	vDisplacementPos = _input.vDisplacementPos;
+	vRaysPos = _input.vRaysPos;
+	vWavePhases = _input.vWavePhases;
+	vWaterLine = _input.vWaterLine;
+	vConstants = _input.vConstants;
 	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
-	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
-	float2 uvWorld = uvLocal + uvWorldCenter;
-	float waveHeight = wave(uvWorld.x, uTime);
-	float isTexelBelow = aastep(waveHeight, uvLocal.y - uWaterLevel);
+	float waveHeight = dot(sinCycles(vWavePhases), float4(0.004, 0.008, 0.01, 0.001) * 0.4);
+	float belowWaterLine = vWaterLine.y - waveHeight;
+	float aaSlope = vConstants.y;
+	float isTexelBelow = clamp(belowWaterLine * aaSlope + 0.5, 0.0, 1.0);
 	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 disPos = uvWorld * ((float2)0.1) + ((float2)(uTime * 0.4 - (2.0) * floor((uTime * 0.4) / (2.0))));
-	float2 dis = (tex2D(uTextureNoise, disPos).xy - ((float2)0.5)) * ((float2)0.01);
-	float2 uv = clamp(uvLocal + (float2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * ((float2)isTexelBelow), ((float2)0.0), ((float2)1.0));
+	float2 dis = (tex2D(uTextureNoise, vDisplacementPos).xy - ((float2)0.5)) * ((float2)0.01);
+	float2 uv = uvLocal + (float2(0.004 * sinCycles(vWaterLine.x), 0.0) + dis) * ((float2)isTexelBelow);
 	float4 main = tex2D(uTexture, uv);
 	float aberration = abs(uvLocal.x - 0.5) * 0.012;
 	float red = tex2D(uTexture, float2(uv.x - aberration, uv.y)).x;
 	float blue = tex2D(uTexture, float2(uv.x + aberration, uv.y)).z;
 	main.xyz = lerp(main.xyz, waterColor * (0.4 + 1.2 * float3(red, main.y, blue)), ((float3)(isTexelBelow * 0.5)));
-	float2 uvNormalized = (uvLocal / vViewSizeInv - (720.0) * floor((uvLocal / vViewSizeInv) / (720.0))) / 720.0;
-	float noisePos = uvWorldCenter.x * 6.0 + uvLocal.x * 1.4 + uvWorldCenter.y * 0.5 + (1.0 - uvNormalized.x * 1.2 - uvNormalized.y) * -5.0;
-	float rays = snoise(float2(noisePos, uTime * 5.0 + uvWorldCenter.y)) * 0.55 + 0.3;
+	float rays = tex2D(uTextureNoise, vRaysPos).z * 1.1 - 0.25;
 	main.xyz += ((float3)(rays * isTexelBelow * max(1.0 - uvLocal.y * 1.4, 0.0) * 0.6));
-	float topDist = abs(uvLocal.y - uWaterLevel - waveHeight);
-	float isNearTop = 1.0 - aastep(vViewSizeInv.y * 2.8, topDist);
-	float isVeryNearTop = 1.0 - aastep(vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
+	float topDist = abs(belowWaterLine);
+	float isNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * 2.8) * aaSlope, 0.0, 1.0);
+	float isVeryNearTop = clamp(0.5 - (topDist - vViewSizeInv.y * (0.8 - 100.0 * waveHeight)) * aaSlope, 0.0, 1.0);
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
-	main.xyz = lerp(main.xyz, tex2D(uTexture, float2(uvLocal.x, (uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y)).xyz, ((float3)topColorBlendFac));
+	main.xyz = lerp(main.xyz, tex2D(uTexture, float2(uvLocal.x, vWaterLine.z - waveHeight)).xyz, ((float3)topColorBlendFac));
 	main.xyz += ((float3)(0.2 * isVeryNearTop));
-	float4 blur1 = tex2D(uTextureBlurHalf, uv);
-	float4 blur2 = tex2D(uTextureBlurQuarter, uv);
-	float4 light = tex2D(uTextureLighting, noiseTexCoords(uv));
+	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
+	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
+	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);
 	float darknessStrength = 1.0 - light.x;
-	if (uWaterLevel < 0.4) {
-		float aboveWaterDarkness = isTexelAbove * (0.4 - uWaterLevel);
-		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
-	}
-	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
+	darknessStrength = min(1.0, darknessStrength + isTexelAbove * vWaterLine.w);
+	COLOR = lerp(lerp(main * (1.0 + light.y) + max(light.y - 0.7, 0.0) * ((float4)1.0), blur, ((float4)clamp((1.0 - light.x) * vConstants.x, 0.0, 1.0))), uAmbientColor, ((float4)darknessStrength));
 	COLOR.w = 1.0;
 	return COLOR;
 }
@@ -833,6 +883,7 @@ static float2 aQuadCorner;
 static float4 gl_Position;
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vPixelPos;
 
 struct VsInput
 {
@@ -844,6 +895,7 @@ struct VsOutput
 	float4 _clipPosition : POSITION;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
 };
 
 VsOutput main(VsInput _input)
@@ -854,10 +906,12 @@ VsOutput main(VsInput _input)
 	gl_Position = mul(position, mul(modelMatrix, mul(uViewMatrix, uProjectionMatrix)));
 	vTexCoords = float2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vViewSizeInv = ((float2)1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
 	VsOutput _output = (VsOutput)0;
 	_output._clipPosition = gl_Position;
 	_output.vTexCoords = vTexCoords;
 	_output.vViewSizeInv = vViewSizeInv;
+	_output.vPixelPos = vPixelPos;
 	return _output;
 }
 )",
@@ -874,6 +928,7 @@ uniform sampler2D uTextureBlurQuarter : TEXUNIT3;
 
 static float2 vTexCoords;
 static float2 vViewSizeInv;
+static float2 vPixelPos;
 static float4 COLOR;
 
 struct PsInput
@@ -881,41 +936,49 @@ struct PsInput
 	float4 _fragCoord : WPOS;
 	float2 vTexCoords : TEXCOORD0;
 	float2 vViewSizeInv : TEXCOORD1;
+	float2 vPixelPos : TEXCOORD2;
 };
 
-float2 hash2D(float2 p)
+float interleavedGradientNoise(float2 p)
 {
-	float h = dot(p, float2(12.9898, 78.233));
-	float h2 = dot(p, float2(37.271, 377.632));
-	return -1.0 + 2.0 * float2(frac(sin(h) * 43758.5453), frac(sin(h2) * 43758.5453));
+	return frac(52.9829189 * frac(dot(p, float2(0.06711056, 0.00583715))));
 }
 
-float2 noiseTexCoords(float2 position)
+float2 lightingJitterLowPower()
 {
-	float2 seed = position + frac(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, ((float2)0.0), ((float2)1.0));
+	float2 seed = vPixelPos + frac(uTime * 7.31) * 512.0;
+	float2 offset = float2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + float2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+float sinCycles(float cycles)
+{
+	float v = frac(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
 }
 
 float4 main(PsInput _input) : COLOR
 {
 	vTexCoords = _input.vTexCoords;
 	vViewSizeInv = _input.vViewSizeInv;
+	vPixelPos = _input.vPixelPos;
 	float3 waterColor = float3(0.4, 0.6, 0.8);
 	float2 uvLocal = vTexCoords;
 	float2 uvWorldCenter = uCameraPos.xy * vViewSizeInv.xy;
 	float2 uvWorld = uvLocal + uvWorldCenter;
 	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
 	float isTexelAbove = 1.0 - isTexelBelow;
-	float2 uv = clamp(uvLocal + float2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), ((float2)0.0), ((float2)1.0));
+	float2 uv = uvLocal + float2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
 	float4 main = tex2D(uTexture, uv);
 	float topDist = abs(uvLocal.y - uWaterLevel);
 	float topGradient = max(1.0 - topDist, 0.0);
 	float isNearTop = 0.2 * topGradient * topGradient;
 	float isVeryNearTop = 1.0 - step(vViewSizeInv.y, topDist);
 	main.xyz = lerp(main.xyz, waterColor, ((float3)(isTexelBelow * 0.4))) + ((float3)((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow));
-	float4 blur1 = tex2D(uTextureBlurHalf, uv);
-	float4 blur2 = tex2D(uTextureBlurQuarter, uv);
-	float4 light = tex2D(uTextureLighting, noiseTexCoords(uv));
+	float4 blur1 = tex2D(uTextureBlurHalf, uvLocal);
+	float4 blur2 = tex2D(uTextureBlurQuarter, uvLocal);
+	float4 light = tex2D(uTextureLighting, uvLocal + lightingJitterLowPower());
 	float4 blur = (blur1 + blur2) * ((float4)0.5);
 	float gray = dot(blur.xyz, float3(0.299, 0.587, 0.114));
 	blur = float4(gray, gray, gray, blur.w);

@@ -219,6 +219,23 @@ namespace Jazz2::Tiles
 			return _isTileFilled[tileId];
 		}
 
+		/**
+		 * @brief Returns `true` if a tile draws every pixel fully opaque with the palette the tile set was built with
+		 *
+		 * Stricter than @ref IsTileFilled() for an indexed tile set, whose tiles are recolored from the palette
+		 * at draw time: a filled tile only uses no transparent texel, while an opaque one also uses no translucent
+		 * palette colour. Holds for as long as that palette is in effect. The content loader works it out for
+		 * indexed tiles only where the tile map reads it (`TILEMAP_PER_TILE_OPACITY`), and leaves it `false` elsewhere.
+		 */
+		bool IsTileOpaque(std::int32_t tileId) const
+		{
+			if (tileId >= TileCount) {
+				return false;
+			}
+
+			return _isTileOpaque[tileId];
+		}
+
 		/** @brief Returns a caption tile */
 		StaticArrayView<DefaultTileSize * DefaultTileSize, Color> GetCaptionTile() const
 		{
@@ -237,6 +254,7 @@ namespace Jazz2::Tiles
 		BitArray _isMaskEmpty;
 		BitArray _isMaskFilled;
 		BitArray _isTileFilled;
+		BitArray _isTileOpaque;
 		BitArray _isColumnContiguous;
 	};
 }

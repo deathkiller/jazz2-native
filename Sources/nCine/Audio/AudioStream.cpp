@@ -286,6 +286,8 @@ namespace nCine
 		if (shouldKeepPlaying && !reachedEndOfData &&
 			_decodeRequest->state.load(std::memory_order_relaxed) == StreamDecodeRequest::State::Idle) {
 			_decodeRequest->looping = looping;
+			// A device that decodes the chunk in slices continues from what is already in the buffer
+			_decodeRequest->bytesRead = 0;
 			_decodeRequest->state.store(StreamDecodeRequest::State::Pending, std::memory_order_relaxed);
 			_asyncDecodeAvailable = device.submitStreamDecode(_decodeRequest);
 			if (!_asyncDecodeAvailable) {

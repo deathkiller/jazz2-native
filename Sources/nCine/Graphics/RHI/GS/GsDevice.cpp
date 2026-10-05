@@ -7,9 +7,11 @@
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
 #include "../../../Base/FrameStatistics.h"
+#include "../../../ServiceLocator.h"
 
 #include "../../../../Main.h"
 
+#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -43,6 +45,12 @@ namespace nCine::RHI::GS
 		*/
 		alignas(64) qword_t _packet[16384];
 		qword_t* _packetCursor = _packet;
+
+		/** @brief When the last vertical blank was seen, and how far apart they come - one per field of the mode */
+		TimeStamp _lastVsync;
+		float _vsyncPeriodMs = 1000.0f / 59.94f;
+		/** @brief What the idle work leaves untouched before the blank, so the flip still lands inside it */
+		constexpr float VsyncMarginMs = 1.0f;
 
 		/** @brief Staging buffer for CLUT uploads (256 entries of 32 bits, qword-aligned for the transfer) */
 		alignas(64) std::uint32_t _clutStaging[256];
@@ -630,6 +638,78 @@ namespace nCine::RHI::GS
 			return true;
 		}
 
+		/** @brief libdraw's pixel-centre offsets of a SPRITE's two corners (`draw2d.c`), which a batch has to match */
+		constexpr float SpriteStartOffset = 2047.5625f;
+		constexpr float SpriteEndOffset = 2048.5625f;
+
+		/**
+			@brief Textured SPRITEs sharing their texture, colour and blending, written as one GIF register list
+
+			`draw_rect_textured()` spends four qwords on every rectangle - its own tag, PRIM and RGBAQ included -
+			and a tile layer repeats all of it for every tile while only the corners change. This writes PRIM and
+			RGBAQ once and then two qwords per rectangle (UV, XYZ2, UV, XYZ2) holding the values libdraw would
+			have produced, so the picture is the same for half the packet and a fraction of the CPU. The texture
+			state has to be applied before @ref Begin(); anything else written to the GS in between - another
+			primitive's PRIM above all - means calling @ref Begin() again.
+		*/
+		struct SpriteBatch
+		{
+			/** @brief NLOOP is 15 bits, and a tag that waits this long to be patched holds up nothing */
+			static constexpr std::int32_t MaxSpritesPerTag = 4096;
+
+			qword_t* Tag = nullptr;
+			std::int32_t Count = 0;
+
+			void Begin(const color_t& color)
+			{
+				Close();
+				qword_t* q = Reserve(3);
+				q->dw[0] = GIF_SET_TAG(2, 0, 0, 0, GIF_FLG_PACKED, 1);
+				q->dw[1] = GIF_REG_AD;
+				q++;
+				// ABE follows the library-wide flag draw_enable_blending() set once, as every libdraw primitive does
+				q->dw[0] = GS_SET_PRIM(PRIM_SPRITE, 0, 1 /*TME*/, 0, 1 /*ABE*/, 0, PRIM_MAP_UV, 0, 0);
+				q->dw[1] = GS_REG_PRIM;
+				q++;
+				q->dw[0] = color.rgbaq;
+				q->dw[1] = GS_REG_RGBAQ;
+				q++;
+				_packetCursor = q;
+			}
+
+			/** @brief Adds a rectangle from its top-left and bottom-right corners, raster position and texel */
+			void Add(float x0, float y0, float u0, float v0, float x1, float y1, float u1, float v1)
+			{
+				const std::size_t capacity = sizeof(_packet) / sizeof(_packet[0]);
+				if (Tag == nullptr || Count == MaxSpritesPerTag || std::size_t(_packetCursor - _packet) + 2 > capacity) {
+					// The open tag is completed before Reserve() can flush the packet holding it
+					Close();
+					Tag = Reserve(3);
+					_packetCursor = Tag + 1;
+				}
+				qword_t* q = _packetCursor;
+				q->dw[0] = GIF_SET_UV(ftoi4(u0), ftoi4(v0));
+				q->dw[1] = GIF_SET_XYZ(ftoi4(x0 + SpriteStartOffset), ftoi4(y0 + SpriteStartOffset), 0);
+				q++;
+				q->dw[0] = GIF_SET_UV(ftoi4(u1), ftoi4(v1));
+				q->dw[1] = GIF_SET_XYZ(ftoi4(x1 + SpriteEndOffset), ftoi4(y1 + SpriteEndOffset), 0);
+				q++;
+				_packetCursor = q;
+				Count++;
+			}
+
+			void Close()
+			{
+				if (Tag != nullptr) {
+					Tag->dw[0] = GIF_SET_TAG(Count, 0, 0, 0, GIF_FLG_REGLIST, 4);
+					Tag->dw[1] = (std::uint64_t(GIF_REG_UV) << 0) | (std::uint64_t(GIF_REG_XYZ2) << 4) |
+						(std::uint64_t(GIF_REG_UV) << 8) | (std::uint64_t(GIF_REG_XYZ2) << 12);
+					Tag = nullptr;
+					Count = 0;
+				}
+			}
+		};
+
 		// Forward-declared because a rotated quad falls through to it (see below), and it is the longer of the
 		// two so it reads better after the common case
 		void SubmitVertexPrimitive(std::int32_t primType, const DrawState& state, const float* sx, const float* sy,
@@ -949,6 +1029,9 @@ namespace nCine::RHI::GS
 		// unit conversion belongs between them.
 		graph_initialize(std::int32_t(GsVram::GetDisplayBufferPage(_displayBufferIndex ^ 1) * WordsPerPage),
 			DisplayWidth, DisplayHeight, _frame.psm, 0, 0);
+		// `graph_initialize` picks NTSC or PAL from the console's region, interlaced with a blank per field
+		_vsyncPeriodMs = (graph_get_region() == GRAPH_MODE_PAL ? 20.0f : 1000.0f / 59.94f);
+		_lastVsync = TimeStamp::now();
 
 		// PS2SDK's primitive helpers bake the ABE bit of the PRIM register they emit from a LIBRARY-WIDE
 		// flag that starts out clear, so every `draw_rect_textured()` and `draw_rect_filled()` asks the
@@ -1008,7 +1091,23 @@ namespace nCine::RHI::GS
 			FrameStatistics::AddCounter("GS wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 
-		graph_wait_vsync();
+		// What is left of the field before the vertical blank does the background work this console has no
+		// thread for - the audio device decodes music in it (see Ps2AudioDevice::runIdleWork). A step is only
+		// started if it fits before the blank, so the flip still lands inside it; the polling is
+		// graph_wait_vsync() split into its two halves. The blanks come at a steady rate, so how far the
+		// field has got is the time since the last one seen, modulo the period - which also covers a frame
+		// that has already missed one.
+		graph_start_vsync();
+		IAudioDevice& audioDevice = theServiceLocator().GetAudioDevice();
+		while (!graph_check_vsync()) {
+			const float sinceBlank = std::fmod(_lastVsync.millisecondsSince(), _vsyncPeriodMs);
+			if (!audioDevice.runIdleWork(_vsyncPeriodMs - sinceBlank - VsyncMarginMs)) {
+				while (!graph_check_vsync()) {
+				}
+				break;
+			}
+		}
+		_lastVsync = TimeStamp::now();
 
 		// The flip. The buffer just finished goes to the read circuits and the rasterizer moves to the other
 		// one, so nothing is ever drawn into memory the CRT is scanning (see InitializeGs for what that cost
@@ -2485,6 +2584,12 @@ namespace nCine::RHI::GS
 		// clamp-and-quantize steps run once per change instead of once per tile
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		color_t packed{};
+		// The tiles that are plain rectangles go out together, and whatever is not one ends the batch - so
+		// does a change of colour, which is part of the batch's state
+		const float sampledWidth = float(state.SampledWidth), sampledHeight = float(state.SampledHeight);
+		ApplyTexture(state);
+		SpriteBatch batch;
+		bool batchOpen = false;
 		while (triangle < triangleCount) {
 			// Tiles reach here as two triangles whose fourth and fifth slots repeat the first and third.
 			// Recognizing that pattern lets a tile go out as one quad.
@@ -2517,6 +2622,7 @@ namespace nCine::RHI::GS
 				const float modulated[4] = { group[4] * layerColor[0], group[5] * layerColor[1],
 					group[6] * layerColor[2], group[7] * layerColor[3] };
 				packed = PackPassColor(modulated);
+				batchOpen = false;
 			}
 
 			// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
@@ -2528,15 +2634,40 @@ namespace nCine::RHI::GS
 				float tlX, tlY, tlU, tlV, brX, brY, brU, brV;
 				project(v0, tlX, tlY, tlU, tlV);
 				project(v2, brX, brY, brU, brV);
-				const float px[4] = { brX, brX, tlX, tlX };
-				const float py[4] = { tlY, brY, tlY, brY };
-				const float pu[4] = { brU, brU, tlU, tlU };
-				const float pvv[4] = { tlV, brV, tlV, brV };
-				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, true);
+				const float pu[2] = { tlU, brU };
+				const float pvv[2] = { tlV, brV };
+				if (FitsUvRegister(pu, pvv, 2, sampledWidth, sampledHeight)) {
+					// The corners in raster order, as SubmitQuadPrimitive() orders them - the GS rasterizes a
+					// SPRITE given bottom-up a row off
+					if (tlX > brX) {
+						std::swap(tlX, brX);
+						std::swap(tlU, brU);
+					}
+					if (tlY > brY) {
+						std::swap(tlY, brY);
+						std::swap(tlV, brV);
+					}
+					if (!batchOpen) {
+						batch.Begin(packed);
+						batchOpen = true;
+					}
+					batch.Add(tlX, tlY, tlU * sampledWidth, tlV * sampledHeight, brX, brY, brU * sampledWidth, brV * sampledHeight);
+				} else {
+					// Texel coordinates out of the UV register's range take the generic path, which can use ST
+					batch.Close();
+					batchOpen = false;
+					const float px[4] = { brX, brX, tlX, tlX };
+					const float py[4] = { tlY, brY, tlY, brY };
+					const float qu[4] = { brU, brU, tlU, tlU };
+					const float qv[4] = { tlV, brV, tlV, brV };
+					SubmitQuadPrimitive(state, px, py, qu, qv, packed, 0.0f, 0.0f, true);
+				}
 				triangle += 2;
 			} else if (isQuad) {
 				// Turned, or sheared by the layer: every corner has to be carried through, and the two
 				// triangles of a strip are what can draw it
+				batch.Close();
+				batchOpen = false;
 				float px[4], py[4], pu[4], pvv[4];
 				project(v1, px[0], py[0], pu[0], pvv[0]);
 				project(v2, px[1], py[1], pu[1], pvv[1]);
@@ -2546,6 +2677,8 @@ namespace nCine::RHI::GS
 				triangle += 2;
 			} else {
 				// A lone triangle, from a mesh whose vertices do not pair up into quads at all
+				batch.Close();
+				batchOpen = false;
 				float sx[3], sy[3], tu[3], tv[3];
 				for (std::int32_t i = 0; i < 3; i++) {
 					project(vertexAt(element + i), sx[i], sy[i], tu[i], tv[i]);
@@ -2554,6 +2687,7 @@ namespace nCine::RHI::GS
 				triangle++;
 			}
 		}
+		batch.Close();
 	}
 
 	void GsDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices)

@@ -63,14 +63,31 @@ uniform mat4 uViewMatrix;
 	uniform float palOffset;
 
 varying vec2 vTexCoords;
+varying vec2 vTap1;
+varying vec2 vTap2;
+varying vec2 vTap3;
+varying vec2 vTap4;
+
+uniform vec2 uPixelOffset;
+uniform vec2 uDirection;
 
 void main()
 {
 	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
-	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	vec2 VERTEX = vec2(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y);
+	vec2 UV = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vec4 COLOR = color;
+	highp float PALETTE_OFFSET = palOffset;
 
-	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
-	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vec2 off1 = vec2(1.3846153846) * uPixelOffset * uDirection;
+	vec2 off2 = vec2(3.2307692308) * uPixelOffset * uDirection;
+	vTap1 = UV + off1;
+	vTap2 = UV - off1;
+	vTap3 = UV + off2;
+	vTap4 = UV - off2;
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(VERTEX, 0.0, 1.0);
+	vTexCoords = UV;
 }
 )__SHDR__";
 #endif
@@ -113,22 +130,19 @@ R"__SHDR__(#line 1
 precision mediump float;
 
 varying vec2 vTexCoords;
+varying vec2 vTap1;
+varying vec2 vTap2;
+varying vec2 vTap3;
+varying vec2 vTap4;
 
 uniform sampler2D uTexture;
-uniform vec2 uPixelOffset;
-uniform vec2 uDirection;
 
 
 void main() {
 	vec4 COLOR;
-	vec4 color = vec4(0.0);
-	vec2 off1 = vec2(1.3846153846) * uPixelOffset * uDirection;
-	vec2 off2 = vec2(3.2307692308) * uPixelOffset * uDirection;
-	color += texture2D(uTexture, vTexCoords) * 0.2270270270;
-	color += texture2D(uTexture, vTexCoords + off1) * 0.3162162162;
-	color += texture2D(uTexture, vTexCoords - off1) * 0.3162162162;
-	color += texture2D(uTexture, vTexCoords + off2) * 0.0702702703;
-	color += texture2D(uTexture, vTexCoords - off2) * 0.0702702703;
+	vec4 color = texture2D(uTexture, vTexCoords) * 0.2270270270;
+	color += (texture2D(uTexture, vTap1) + texture2D(uTexture, vTap2)) * 0.3162162162;
+	color += (texture2D(uTexture, vTap3) + texture2D(uTexture, vTap4)) * 0.0702702703;
 	COLOR = color;
 	gl_FragColor = COLOR;
 }

@@ -682,7 +682,7 @@ namespace nCine::RHI::GS
 			_nextBakedSlot = (_nextBakedSlot + 1) % BakedSlotCount;
 		}
 
-		const std::int32_t bakedPitch = GsVram::GetPaddedWidth(GsPsm::Ct32, _width);
+		const std::int32_t bakedPitch = GetBakedBufferPitch();
 		const std::int32_t storeHeight = ResolveStoreHeight(GsPsm::Ct32);
 		const std::uint32_t pageCount = GsVram::GetPageCount(GsPsm::Ct32, bakedPitch, storeHeight);
 

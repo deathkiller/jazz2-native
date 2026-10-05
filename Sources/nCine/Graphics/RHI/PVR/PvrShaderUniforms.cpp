@@ -1,6 +1,7 @@
 #include "PvrShaderUniforms.h"
 #include "PvrShaderProgram.h"
 #include "PvrBuffer.h"
+#include "PvrDevice.h"
 
 #include <cstring>
 
@@ -214,48 +215,28 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
-			return;
-		}
-
-		std::int32_t totalUsedSize = 0;
-		bool hasMemoryGaps = false;
-		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
-			if (cache.GetDataPointer() != _dataPointer + totalUsedSize) {
-				hasMemoryGaps = true;
-			}
-			totalUsedSize += cache.usedSize();
-		}
-
-		if (totalUsedSize > 0 && _uniformRangeAllocator != nullptr) {
-			_uboParams = _uniformRangeAllocator(std::uint32_t(totalUsedSize));
-			if (_uboParams.mapBase != nullptr) {
-				if (hasMemoryGaps) {
-					std::int32_t offset = 0;
-					for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
-						std::memcpy(_uboParams.mapBase + _uboParams.offset + offset, cache.GetDataPointer(), cache.usedSize());
-						offset += cache.usedSize();
-					}
-				} else {
-					std::memcpy(_uboParams.mapBase + _uboParams.offset, _dataPointer, totalUsedSize);
-				}
-			}
-		}
+		// Nothing to commit. The other backends copy the block contents into a streaming uniform buffer
+		// because only the GPU reads them from there; on this tier the reader is the draw dispatch running
+		// on the same CPU, and it takes the bytes through the plain pointer @ref Bind() forwards. Staging
+		// them through a uniform range copied the largest per-frame payload the engine has - every batch's
+		// whole instance array - once more each frame for bytes that never moved anywhere (the same finding
+		// as the RDP backend's).
 	}
 
 	void PvrShaderUniformBlocks::Bind()
 	{
-		if (_uboParams.object == nullptr) {
+		if (_shaderProgram == nullptr || _shaderProgram->GetStatus() != PvrShaderProgram::Status::LinkedWithIntrospection) {
 			return;
 		}
 
-		_uboParams.object->Bind();
-		std::size_t moreOffset = 0;
+		// Each cache owns its own contiguous storage, so a block is forwarded where it already lives -
+		// which also means a non-contiguous set of blocks needs no gap handling at all
 		for (PvrUniformBlockCache& cache : _uniformBlockCaches) {
 			cache.SetBlockBinding(std::int32_t(cache.GetIndex()));
-			const std::size_t offset = std::size_t(_uboParams.offset) + moreOffset;
-			_uboParams.object->BindBufferRange(std::uint32_t(cache.GetBindingIndex()), offset, std::size_t(cache.usedSize()));
-			moreOffset += std::size_t(cache.usedSize());
+			const std::uint8_t* data = cache.GetDataPointer();
+			if (data != nullptr) {
+				PvrDevice::BindUniformRange(std::uint32_t(cache.GetBindingIndex()), data, std::uint32_t(cache.usedSize()));
+			}
 		}
 	}
 

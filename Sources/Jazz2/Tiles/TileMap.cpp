@@ -9,6 +9,8 @@
 #include "../../nCine/Graphics/RenderResources.h"
 #if defined(TILEMAP_GROUP_MESH_BY_TILE)
 #	include "../../nCine/Graphics/RHI/RDP/RdpTileRecord.h"
+#elif defined(TILEMAP_PACKED_TILE_RECORDS)
+#	include "../../nCine/Graphics/RHI/PVR/PvrTileRecord.h"
 #endif
 
 #include <cmath>
@@ -87,6 +89,31 @@ namespace Jazz2::Tiles
 			record.Reserved = 0;
 			// Copied rather than stored through a cast pointer: the storage is typed as floats
 			std::memcpy(dst, &record, sizeof(record));
+		}
+#endif
+
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+		// The PVR's packed records (see RHI::PVR::TileRecord), four floats of storage each in the layer mesh buffers
+		constexpr std::uint32_t TileRecordFloats = sizeof(RHI::PVR::TileRecord) / sizeof(float);
+		static_assert(RHI::PVR::TileRecord::Size == TileSet::DefaultTileSize, "The packed tile records assume the tile size");
+
+		/** @brief Appends one tile to a layer mesh buffer as a packed record, its texel position being the tile's top-left texel in its atlas chunk */
+		inline void AppendTileRecord(SmallVector<float, 0>& records, float x, float y, std::int32_t texX, std::int32_t texY,
+			std::uint8_t alpha, LayerTileFlags flags)
+		{
+			const std::size_t base = records.size();
+			records.resize_for_overwrite(base + TileRecordFloats);
+			// Stored in place rather than copied in: GCC makes a 16-byte memcpy() a library call on this target, which
+			// was one per tile of every layer, and the engine is built without strict aliasing
+			RHI::PVR::TileRecord& record = *reinterpret_cast<RHI::PVR::TileRecord*>(records.data() + base);
+			record.X = x;
+			record.Y = y;
+			record.TexX = std::uint16_t(texX);
+			record.TexY = std::uint16_t(texY);
+			record.Alpha = alpha;
+			record.Flags = std::uint8_t(((flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX ? RHI::PVR::TileRecord::FlipX : 0) |
+				((flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY ? RHI::PVR::TileRecord::FlipY : 0));
+			record.Reserved = 0;
 		}
 #endif
 
@@ -365,7 +392,7 @@ namespace Jazz2::Tiles
 		Rectf cullingRect = viewport->GetCullingRect();
 		Vector2f viewCenter = cullingRect.Center();
 
-#if defined(DEATH_TARGET_N64)
+#if defined(TILEMAP_OPAQUE_COVERAGE)
 		// The sprite layer goes first so that its opaque coverage exists when the layers behind it are
 		// walked (their tiles under solid ground are then never emitted); the render queue orders the
 		// commands by depth, so the emission order is unobservable
@@ -1274,7 +1301,7 @@ namespace Jazz2::Tiles
 			float x3 = x1 + (TileSet::DefaultTileSize * 2) + cullingRect.W;
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + cullingRect.H;
 
-#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64)
+#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64) || (defined(TILEMAP_OPAQUE_COVERAGE) && defined(WITH_ANGELSCRIPT))
 			// Whether every non-zero entry of the sprite palette (row 0, the one tile layers sample) is fully
 			// opaque. Combined with a tile's IsTileFilled() flag (no index-0 texel, the transparent base
 			// entry) this proves the tile draws all 32x32 pixels opaque, so it may go out with blending off
@@ -1300,8 +1327,11 @@ namespace Jazz2::Tiles
 			bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1 && _tileSets[0].Data != nullptr);
 			TileSet* meshTileSet = (meshMode ? _tileSets[0].Data.get() : nullptr);
 			// One vertex buffer per chunk, rented on first use - a layer usually touches only some of them.
-			// Indices rather than pointers, because renting can grow (and so reallocate) _meshVertices.
-			SmallVector<std::int32_t, 2> chunkVertices;
+			// Indices rather than pointers, because renting can grow (and so reallocate) _meshVertices. Room for
+			// eight inline: a console splits a large tileset into several atlas chunks (three 512-texel ones for
+			// the castle tileset on the PSP), and growing past the inline storage was a heap allocation per
+			// layer per frame - the only allocations a level frame made there.
+			SmallVector<std::int32_t, 8> chunkVertices;
 			if DEATH_LIKELY(meshMode) {
 				chunkVertices.resize(meshTileSet->GetTextureCount(), -1);
 			}
@@ -1314,6 +1344,9 @@ namespace Jazz2::Tiles
 			// tiles overwhelmingly share one texture, so this turns four divisions per tile into two per layer
 			Texture* lastTileTexture = nullptr;
 			float lastTexInvW = 0.0f, lastTexInvH = 0.0f;
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+			float lastTilesPerRowInv = 0.0f;
+#endif
 			bool meshCacheHit = false;
 
 			// Y is the OUTER loop, so the walk runs along the layout's rows. `Layout` is indexed
@@ -1322,23 +1355,28 @@ namespace Jazz2::Tiles
 			// every one of the ~200 tiles a layer visits landed on its own cache line. Along a row instead,
 			// eighteen consecutive tiles share four lines. The same tiles are visited either way; only the
 			// order the quads are appended in changes, and tiles of one layer never overlap.
-#if defined(DEATH_TARGET_N64)
+#if defined(TILEMAP_OPAQUE_COVERAGE)
 			/*
 				Tiles that cannot be seen are not drawn. A level's sprite layer is mostly solid ground and
-				walls, and every background layer keeps drawing its own tiles underneath - on this console
+				walls, and every background layer keeps drawing its own tiles underneath - on the Nintendo 64
 				that was a quarter of the ~370 rectangles of a frame, each with its RDP fill and often a TMEM
-				load, for pixels that the sprite layer overwrites a moment later. The sprite layer is walked
-				first (see OnDraw) and records which of its screen cells hold a FULLY opaque tile: no
-				transparent texel (IsTileFilled), full tile and layer alpha, and a palette without translucent
-				entries. A tile of a layer behind it is skipped when the up-to-four cells its 32x32 screen
-				rectangle touches are all covered. Layers in front are never culled, and neither is the
-				procedural background, which does not come through this loop.
+				load, and the PowerVR renders its translucent list without any hidden-surface removal, so
+				there every hidden tile costs its submission and the fill of all its pixels - for pixels that
+				the sprite layer overwrites a moment later. The sprite layer is walked first (see OnDraw) and
+				records which of its screen cells hold a FULLY opaque tile: no transparent texel
+				(IsTileFilled), no texel in a translucent palette colour (see below), full tile and layer
+				alpha. A tile of a layer behind it is skipped when the up-to-four cells its 32x32 screen
+				rectangle touches are all covered. Layers in front are never culled, and neither is the procedural background,
+				which does not come through this loop.
 			*/
 			const bool buildsCoverage = (&layer == &_layers[_sprLayerIndex] && rendererType == LayerRendererType::Default &&
 				layerColor.W >= 1.0f && PreferencesCache::UnalignedViewport == false);
 			const bool cullsByCoverage = (!buildsCoverage && _opaqueCoverage.Valid && rendererType == LayerRendererType::Default &&
 				layer.Description.Depth < _opaqueCoverage.Depth);
-
+			auto floorToInt = [](float v) { const std::int32_t i = std::int32_t(v); return (float(i) > v ? i - 1 : i); };
+			const std::int32_t x1i = floorToInt(x1), y1i = floorToInt(y1);
+#endif
+#if defined(DEATH_TARGET_N64)
 			/*
 				The window cache (see LayerMeshCache). The tiles a layer shows change only when its window
 				moves by a whole tile - every 32 pixels of ITS scroll, so rarely for the slow parallax layers -
@@ -1350,9 +1388,7 @@ namespace Jazz2::Tiles
 				what catches a destroyed or triggered tile. On a hit the covering layer's own coverage grid
 				comes back from the cache, under the current origin.
 			*/
-			auto floorToInt = [](float v) { const std::int32_t i = std::int32_t(v); return (float(i) > v ? i - 1 : i); };
 			auto floorDivTile = [](std::int32_t d) { return (d >= 0 ? d / (std::int32_t)TileSet::DefaultTileSize : -((-d + (std::int32_t)TileSet::DefaultTileSize - 1) / (std::int32_t)TileSet::DefaultTileSize)); };
-			const std::int32_t x1i = floorToInt(x1), y1i = floorToInt(y1);
 			const std::int32_t windowCols = std::int32_t((x3 - x1) / TileSet::DefaultTileSize) + 1;
 			const std::int32_t windowRows = std::int32_t((y3 - y1) / TileSet::DefaultTileSize) + 1;
 			LayerMeshCache* meshCache = nullptr;
@@ -1383,6 +1419,8 @@ namespace Jazz2::Tiles
 				}
 			}
 			OpaqueCoverage previousCoverage = _opaqueCoverage;
+#endif
+#if defined(TILEMAP_OPAQUE_COVERAGE)
 			if (buildsCoverage && !meshCacheHit) {
 				_opaqueCoverage.OriginX = x1i;
 				_opaqueCoverage.OriginY = y1i;
@@ -1530,14 +1568,26 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64)
+#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64) || (defined(TILEMAP_OPAQUE_COVERAGE) && defined(WITH_ANGELSCRIPT))
 					// Whether every pixel this tile samples is provably opaque (see spritePaletteOpaque
 					// above). Read before ResolveTextureDiffuse(), which rebases the ID into its texture chunk
 					const bool tileFilled = tileSet->IsTileFilled(tileId) && (!tileSet->IsIndexed || spritePaletteOpaque);
 #endif
-#if defined(DEATH_TARGET_N64)
+#if defined(TILEMAP_OPAQUE_COVERAGE)
 					if (buildsCoverage) {
-						if (tileFilled && tile.Alpha == 255 && !animatedTile && tile_xo < _opaqueCoverage.Cols && tile_yo < _opaqueCoverage.Rows) {
+						// A script can recolor the palette while the level runs, which leaves only a palette with no
+						// translucent colour at all as proof; without scripting the palette stays the one the tile set
+						// was built with, so its own per-tile flag holds - the converted palettes nearly all carry a
+						// few translucent entries, which the whole-palette test would let no tile past.
+						// The Nintendo 64 keeps the whole-palette test for now: there the coverage also keys the window
+						// caches of the culled layers (see LayerMeshCache), so a coverage that changes as the view
+						// scrolls trades their cache hits for the skipped rectangles - not yet measured on that console.
+#	if defined(TILEMAP_PER_TILE_OPACITY)
+						const bool tileOpaque = tileSet->IsTileOpaque(tileId);
+#	else
+						const bool tileOpaque = tileFilled;
+#	endif
+						if (tileOpaque && tile.Alpha == 255 && !animatedTile && tile_xo < _opaqueCoverage.Cols && tile_yo < _opaqueCoverage.Rows) {
 							_opaqueCoverage.RowBits[tile_yo] |= (1u << tile_xo);
 						}
 					} else if (cullsByCoverage && !animatedTile) {
@@ -1594,8 +1644,19 @@ namespace Jazz2::Tiles
 						const Vector2i texSize = tileTexture->GetSize();
 						lastTexInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
 						lastTexInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+						// A texture belongs to one tileset, so its row width changes only with the texture
+						lastTilesPerRowInv = 1.0f / float(tileSet->TilesPerRow);
+#endif
 					}
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+					// No integer divider on the SH-4: the division is a library call, made for every tile. Offset by
+					// half an ID, the quotient's fraction stays at least half a row width away from the next integer
+					// for any ID a layer tile can hold, so the float product truncates to the exact row.
+					const std::int32_t tileRow = std::int32_t((float(tileId) + 0.5f) * lastTilesPerRowInv);
+#else
 					const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
+#endif
 					const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
 					float texScaleX = TileSet::DefaultTileSize * lastTexInvW;
 					float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvW;
@@ -1655,8 +1716,13 @@ namespace Jazz2::Tiles
 						if (verticesIndex < 0) {
 							verticesIndex = RentMeshVertices();
 						}
+#		if defined(TILEMAP_PACKED_TILE_RECORDS)
+						AppendTileRecord(_meshVertices[verticesIndex], x2r, y2r, tileCol * TileSet::PaddedTileSize + TileSet::TilePadding,
+							tileRow * TileSet::PaddedTileSize + TileSet::TilePadding, tile.Alpha, tile.Flags);
+#		else
 						AppendTileQuad(_meshVertices[verticesIndex], x2r, y2r, (float)TileSet::DefaultTileSize,
 							texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
+#		endif
 #	endif
 						continue;
 					}
@@ -1844,8 +1910,13 @@ namespace Jazz2::Tiles
 					}
 					// Tiles use the default sprite palette (row 0, offset 0); every tile accumulated into these
 					// vertices resolved to this chunk of the tileset atlas
+#	if defined(TILEMAP_PACKED_TILE_RECORDS)
+					EmitTileRecords(renderQueue, _meshVertices[verticesIndex], *meshTileSet->TextureDiffuse[chunk],
+						meshTileSet->IsIndexed, layerColor, layer.Description.Depth);
+#	else
 					EmitMesh(renderQueue, _meshVertices[verticesIndex], *meshTileSet->TextureDiffuse[chunk],
 						meshTileSet->IsIndexed, 0, layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false);
+#	endif
 				}
 			}
 #endif
@@ -2068,6 +2139,61 @@ namespace Jazz2::Tiles
 	}
 #endif
 
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+	void TileMap::EmitTileRecords(RenderQueue& renderQueue, SmallVector<float, 0>& records, const Texture& texture, bool indexed,
+		const Vector4f& color, std::uint16_t depth)
+	{
+		// The limit of the float quads is kept, a record is only an eighth of one, so it is a safe bound
+		const std::uint32_t maxRecordsPerChunk = RenderResources::GetMaxQuadsPerDraw(FloatsPerVertex);
+		const std::uint32_t totalRecords = std::uint32_t(records.size() / TileRecordFloats);
+		for (std::uint32_t firstRecord = 0; firstRecord < totalRecords; firstRecord += maxRecordsPerChunk) {
+			const std::uint32_t count = std::min(maxRecordsPerChunk, totalRecords - firstRecord);
+
+			if (_meshCommandCount >= (std::int32_t)_meshCommands.size()) {
+				auto& newCommand = _meshCommands.emplace_back(std::make_unique<RenderCommand>());
+				newCommand->GetMaterial().SetBlendingEnabled(true);
+			}
+			RenderCommand* command = _meshCommands[_meshCommandCount++].get();
+
+			command->SetType(RenderCommand::Type::TileMap);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+
+			bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
+				indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+			if (shaderChanged) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+
+				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+				if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
+				}
+				// Palette shaders sample the shared palette texture on unit 1
+				auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+				if (paletteUniform != nullptr) {
+					paletteUniform->SetIntValue(1); // GL_TEXTURE1
+				}
+			}
+
+			auto instanceBlock = command->GetInstanceBlock();
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+
+			auto& geometry = command->GetGeometry();
+			geometry.SetElementsPerVertex(TileRecordFloats);
+			geometry.SetHostVertexPointer(records.data() + std::size_t(firstRecord) * TileRecordFloats);
+			// The command pool is shared with EmitMesh(), which leaves its indices set up
+			geometry.SetIndexCount(0);
+			geometry.SetHostIndexPointer(nullptr);
+			geometry.SetDrawParameters(PrimitiveType::Points, 0, count);
+
+			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+			command->SetLayer(depth);
+			ContentResolver::Get().BindSpritePalette(*command, texture, indexed, 0);
+
+			renderQueue.AddCommand(command);
+		}
+	}
+#endif
+
 #if defined(TILEMAP_CACHE_LAYER_WINDOW)
 	TileMap::LayerWindowCache& TileMap::GetLayerWindowCache(std::int32_t layerIndex)
 	{
@@ -2152,17 +2278,27 @@ namespace Jazz2::Tiles
 			RenderCommand* command = chunk.Command.get();
 			auto& geometry = command->GetGeometry();
 			if (chunk.QuadCount > chunk.CapacityQuads) {
+#if defined(WITH_RHI_GU)
+				// A buffer of the GE backend is a plain allocation with no driver behind it to wait on, so a
+				// quarter of room to grow is enough. Sized for the whole window, a castle level's eight chunks -
+				// most of which hold only a few tiles - would keep about 0.45 MB of the heap, for nothing.
+				chunk.CapacityQuads = std::min<std::uint32_t>(chunk.QuadCount + chunk.QuadCount / 4, maxQuads);
+#else
 				// Sized for the whole window at once (a cell holds one quad at most), because creating a buffer
 				// makes the driver wait for its own worker thread - a whole frame with NVIDIA's threaded
 				// optimization. Growing by a quarter instead recreated the buffers again and again while a
 				// layer scrolled into denser parts of the level, at about 7 ms each.
-				const std::uint32_t windowQuads = std::uint32_t(std::max(cache.Cols, 1) * std::max(cache.Rows, 1));
+				const std::uint32_t windowQuads = std::uint32_t(std::max<std::int32_t>(cache.Cols, 1) * std::max<std::int32_t>(cache.Rows, 1));
 				chunk.CapacityQuads = std::min<std::uint32_t>(std::max<std::uint32_t>(windowQuads, chunk.QuadCount), maxQuads);
+#endif
 				geometry.CreateCustomVbo(chunk.CapacityQuads * FloatsPerQuad, BufferUsage::DynamicDraw);
 				geometry.CreateCustomIbo(chunk.CapacityQuads * RenderResources::IndicesPerQuad, BufferUsage::StaticDraw);
 			}
-			// Without buffer mapping the whole VBO is uploaded from the host copy (see LayerWindowCache::Chunk)
-			chunk.Vertices.resize(std::size_t(chunk.CapacityQuads) * FloatsPerQuad);
+			// Without buffer mapping the whole VBO is uploaded from the host copy (see LayerWindowCache::Chunk); with
+			// it, only the quads the draw uses are copied, and the rest of the copy would be held for nothing
+			if (RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags == MapFlags::None) {
+				chunk.Vertices.resize(std::size_t(chunk.CapacityQuads) * FloatsPerQuad);
+			}
 			geometry.SetElementsPerVertex(FloatsPerVertex);
 			// Both mark the data dirty, so it is uploaded by the next commit and never again until the next rebuild.
 			// The indices too, as only as many of them as the draw uses are copied (see Geometry::CommitIndices()).

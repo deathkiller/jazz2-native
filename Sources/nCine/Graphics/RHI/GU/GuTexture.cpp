@@ -398,6 +398,8 @@ namespace nCine::RHI::GU
 
 		// The GE reads main memory without looking at the data cache
 		sceKernelDcacheWritebackRange(_geStore, _geStoreSize);
+		// ...nor does its texture cache look at main memory, and a store rebuilt in place keeps its address
+		GuDevice::InvalidateTextureState();
 		_geStoreValid = true;
 		return true;
 	}
@@ -507,6 +509,8 @@ namespace nCine::RHI::GU
 			offset += std::size_t(rowBytes) * std::size_t(page.PaddedHeight);
 		}
 		sceKernelDcacheWritebackRange(store.Data, size);
+		// A slot that is baked again keeps its address (see RefreshGeStore())
+		GuDevice::InvalidateTextureState();
 
 		store.Valid = true;
 		store.PaletteRow = paletteRowIndex;
@@ -541,6 +545,8 @@ namespace nCine::RHI::GU
 				}
 			}
 			sceKernelDcacheWritebackRange(_geStore, _geStoreSize);
+			// Every frame lands in the same store (see RefreshGeStore())
+			GuDevice::InvalidateTextureState();
 		}
 		if (!_geStoreValid && !RefreshGeStore()) {
 			return nullptr;

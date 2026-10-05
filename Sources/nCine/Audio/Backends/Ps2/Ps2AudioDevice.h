@@ -37,6 +37,14 @@ namespace nCine
 		way the N64 backend keeps them: nearly all of the game's own sounds are 8-bit, and the console's 32 MB
 		is shared with a renderer that pages every texture through main memory. Unlike the N64 there is no
 		decimation ladder on top of that - 32 MB is not 8 MB, and the whole sound set of a level fits.
+
+		<em>Music is decoded while the frame waits for the vertical blank.</em> Without a decoding thread, @ref AudioStream
+		would decode each 16 KB chunk on the main thread the moment a buffer frees up - measured at 24-35 ms
+		for libxmp at 22050 Hz, a frame in every eleven that missed the vertical blank. So the device takes the
+		request instead (@ref submitStreamDecode()) and decodes it in short slices from @ref runIdleWork(),
+		which the GS backend calls in the time it would otherwise spend polling for the blank. A chunk the idle
+		time has not finished within @ref IdleDecodeGraceFrames is advanced inside the frame, so a run of frames
+		with no time to spare cannot starve the music.
 	*/
 	class Ps2AudioDevice : public AudioDeviceBase
 	{
@@ -54,6 +62,9 @@ namespace nCine
 
 		std::uint32_t registerPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
+		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		bool runIdleWork(float availableMs) override;
 
 		std::uint32_t createBuffer(BufferUsage usage) override;
 		void deleteBuffer(std::uint32_t bufferId) override;
@@ -207,6 +218,38 @@ namespace nCine
 		std::int32_t _residentBytes;
 
 		Source _sources[MaxSources];
+
+		/**
+			@brief Bytes a slice of the idle decode adds to a chunk, 256 frames of 16-bit stereo
+
+			libxmp renders a whole tick at a time (~440 frames at 22050 Hz and 125 BPM, ~3.3 ms), so a slice
+			costs either next to nothing or a full tick - which is why the cost estimate decays slowly.
+		*/
+		static constexpr std::int32_t IdleDecodeSliceBytes = 1024;
+		/**
+			@brief Frames a chunk may take in the idle time before the frame itself advances it
+
+			A chunk is submitted when the third buffer is queued, so it has the ~11 frames until a buffer is
+			returned and the ~22 the other two still play before the music would gap. The idle time finishes
+			one in about eight frames; past this, the frame takes over with room to spare.
+		*/
+		static constexpr std::uint32_t IdleDecodeGraceFrames = 12;
+		/** @brief Bytes the frame adds to a chunk that is past its grace, 512 frames - a whole chunk in eight frames */
+		static constexpr std::int32_t InFrameDecodeSliceBytes = 2048;
+
+		/** @brief A stream chunk being decoded in the idle time, oldest first */
+		struct IdleDecode
+		{
+			std::shared_ptr<StreamDecodeRequest> Request;
+			/** @brief Value of @ref _frameIndex when it was submitted */
+			std::uint32_t SubmittedFrame;
+		};
+
+		SmallVector<IdleDecode, 4> _idleDecodes;
+		/** @brief Counts @ref updatePlayers() calls, which is once per frame */
+		std::uint32_t _frameIndex;
+		/** @brief What a slice of the idle decode took lately, in milliseconds - a slice is only started if it fits */
+		float _idleSliceMs;
 
 		/** @brief Scratch the block is accumulated into, 32-bit so the sum can exceed the output range */
 		std::int32_t* _mixBuffer;

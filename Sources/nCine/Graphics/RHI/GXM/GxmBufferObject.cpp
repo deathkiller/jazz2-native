@@ -62,13 +62,19 @@ namespace nCine::RHI::GXM
 	{
 		static_cast<void>(usage);
 
+		const std::uint8_t* previous = _data;
 		Reserve(size);
 		if (_data == nullptr) {
 			return;
 		}
 		if (data != nullptr) {
 			std::memcpy(_data, data, size);
-		} else {
+		} else if (_data != previous) {
+			// Only a block nothing has used yet is cleared. Without data the call just (re)declares the store,
+			// like glBufferData(nullptr), and the pipeline does that to every streaming buffer at the end of each
+			// frame (see RenderBuffersManager::Remap()) - while the frame's last scenes have not run yet and still
+			// fetch from this very block, as there is no driver here to orphan it. Clearing it in place handed them
+			// zeros: measured on the console as the weapon wheel's lines missing from most frames.
 			std::memset(_data, 0, size);
 		}
 	}

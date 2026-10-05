@@ -42,6 +42,39 @@ namespace Jazz2
 #endif
 
 /*
+	Whether a tile layer's mesh holds one packed record per tile instead of the four corners of a float quad.
+
+	A record is 16 bytes where the quad is 128 bytes of vertices and 12 of indices, and the tile map writes
+	every byte of it, the commit copies it into the streaming buffer and a fixed-function dispatch reads it
+	back - three passes over some thousand tiles a frame at the PowerVR's 640x480. The PVR dispatch takes the
+	tile's position and texels straight from the record (see RHI::PVR::TileRecord). The RDP has records of its
+	own, written by the grouped emission above.
+*/
+#if defined(TILEMAP_USE_SINGLE_DRAW) && defined(WITH_RHI_PVR)
+#	define TILEMAP_PACKED_TILE_RECORDS
+#endif
+
+/*
+	Whether the tiles of a layer behind the sprite layer are skipped where fully opaque sprite-layer tiles cover
+	them (see TileMap::OpaqueCoverage). Worth its walk only where a hidden tile costs real work: a rectangle and
+	often a texel upload on the Nintendo 64, a submitted polygon and the fill of every one of its pixels on the
+	PowerVR, which has no hidden-surface removal in the translucent list everything is drawn in.
+*/
+#if defined(DEATH_TARGET_N64) || defined(WITH_RHI_PVR)
+#	define TILEMAP_OPAQUE_COVERAGE
+#endif
+
+/*
+	Whether that coverage takes each tile's own opacity (TileSet::IsTileOpaque()) as proof, instead of requiring a
+	palette with no translucent colour at all. The content loader works the flag out only where it is defined, as
+	it costs a pass over every opaque tile when the atlas is built. Not with scripting, which can recolor the
+	palette while the level runs, and not yet on the Nintendo 64 (see the note in TileMap::DrawLayer()).
+*/
+#if defined(TILEMAP_OPAQUE_COVERAGE) && !defined(DEATH_TARGET_N64) && !defined(WITH_ANGELSCRIPT)
+#	define TILEMAP_PER_TILE_OPACITY
+#endif
+
+/*
 	Whether the static tiles of a layer's visible window are kept in buffers of the layer's own between frames.
 
 	The tiles a layer shows only change when its window moves by a whole tile, every 32 pixels of ITS scroll,
@@ -50,10 +83,12 @@ namespace Jazz2
 	instead and re-issued under a new translation until it moves or one of its tiles changes; animated tiles
 	stay on the streaming path. The Nintendo 64 has a cache of its own in the RDP's packed tile format (see
 	LayerMeshCache). The fixed-function tiers are left out, because their tile-mesh dispatch reads the vertex
-	stream by hand and isn't known to apply the command's model matrix.
+	stream by hand and isn't known to apply the command's model matrix - except the GE's, which does (see
+	`GuDevice::DispatchTileMesh()`). On the PSP the walk and the copy of its quads into the streaming buffer
+	were a fifth of the main thread's CPU time in a castle level standing still (measured in PPSSPP).
 */
 #if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE) && \
-	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL))
+	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL) || defined(WITH_RHI_GU))
 #	define TILEMAP_CACHE_LAYER_WINDOW
 #endif
 
@@ -815,17 +850,18 @@ namespace Jazz2::Tiles
 		std::int32_t _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
 
-#if defined(DEATH_TARGET_N64)
+#if defined(TILEMAP_OPAQUE_COVERAGE)
 		/**
 			@brief Screen cells the sprite layer covers with fully opaque tiles this frame
 
 			Rebuilt by DrawLayer() for the sprite layer, which OnDraw() draws first for that reason; the
 			layers behind it then skip every tile whose whole screen rectangle falls on covered cells (see
-			the note in DrawLayer). One bit per cell, a cell being one sprite-layer tile on screen.
+			the note in DrawLayer). One bit per cell, a cell being one sprite-layer tile on screen - a
+			640x480 view walks 23x18 of them.
 		*/
 		struct OpaqueCoverage {
 			static constexpr std::int32_t MaxCols = 32;
-			static constexpr std::int32_t MaxRows = 16;
+			static constexpr std::int32_t MaxRows = 24;
 			std::int32_t OriginX, OriginY;		//< Screen position of cell (0, 0)
 			std::int32_t Cols, Rows;
 			std::uint16_t Depth;				//< Depth of the covering layer; only layers behind it are culled
@@ -833,6 +869,9 @@ namespace Jazz2::Tiles
 			std::uint32_t RowBits[MaxRows];
 		};
 		OpaqueCoverage _opaqueCoverage = {};
+#endif
+
+#if defined(DEATH_TARGET_N64)
 		/// Bumped whenever a rebuilt coverage grid differs from the previous one (keys the culled layers' caches)
 		std::uint32_t _coverageStamp = 0;
 
@@ -951,6 +990,12 @@ namespace Jazz2::Tiles
 		void EmitMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
 			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending,
 			Vector2f translation = Vector2f(0.0f, 0.0f));
+#endif
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+		// Emits a layer mesh buffer of packed tile records (see `TILEMAP_PACKED_TILE_RECORDS`) as one or more
+		// point-list render commands
+		void EmitTileRecords(RenderQueue& renderQueue, SmallVector<float, 0>& records, const Texture& texture, bool indexed,
+			const Vector4f& color, std::uint16_t depth);
 #endif
 
 		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);

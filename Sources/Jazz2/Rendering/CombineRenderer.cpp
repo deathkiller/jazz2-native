@@ -217,7 +217,15 @@ namespace Jazz2::Rendering
 		const float ambR = _owner->_ambientLight.X;
 		const float ambG = _owner->_ambientLight.Y;
 		const float ambB = _owner->_ambientLight.Z;
+#if defined(RHI_LIGHTING_DARKEN_ONLY)
+		// A device that can only darken (see RhiFwd.h) needs no lightmap at the full ambient level even with
+		// lights in view: every texel starts out fully covered and the lights only ever add to it, so all the
+		// factors would come out as exactly 1 - a whole-viewport multiply that leaves every pixel as it was,
+		// paid for with a map reset, the splats and the conversion every frame
+		const bool fullyLit = (ambientLevel >= 0.999f);
+#else
 		const bool fullyLit = (ambientLevel >= 0.999f && _swLightsCache.empty());
+#endif
 		if (fullyLit && !viewHasWater) {
 			return false;
 		}
@@ -270,19 +278,21 @@ namespace Jazz2::Rendering
 		// It also keeps the map under 1.1 KB of IA16, which fits TMEM in one load instead of being
 		// blitted in chunks.
 		constexpr std::int32_t Scale = 12;
-#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || \
-		defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PS2)
+#elif defined(DEATH_TARGET_PS2)
+		// A sixth, like the PSP, and for the same reason: the map is converted into a texture and DMAed into
+		// video memory every frame on top of the reset and the splat here. The 597x448 viewport made a quarter
+		// 150x112 texels, and the device pass over them alone measured 1.8 ms of a 10 ms frame (in PCSX2);
+		// a sixth is 100x75, under half of that. A texel then covers six game pixels exactly as on the PSP,
+		// and every light still spans dozens of them under bilinear filtering. It also halves the surface
+		// in local memory, which the texture cache is short of: 128x128 PSMT8 is two pages and 16 KB a frame
+		// across the bus, where the quarter took four pages and 32 KB (and half resolution would take 16).
+		constexpr std::int32_t Scale = 6;
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
 		// work; the map is stretched over the viewport with bilinear filtering either way, and the lights
 		// themselves are smooth cubic falloffs with nothing sharp to lose.
-		//
-		// The PS2 belongs here for a second reason on top of that: its device pass does not just convert
-		// the map, it DMAs the result into video memory every frame, and the surface it needs is rounded up
-		// to the storage mode's page geometry. At half resolution a 640x448 viewport wants a 512x256 PSMT8
-		// surface - 16 pages of the very local memory the texture cache is short of, and 128 KB across the
-		// bus every frame. At quarter it is 256x128, which is four pages and 32 KB.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;
@@ -293,11 +303,35 @@ namespace Jazz2::Rendering
 		// R (intensity) starts at the ambient level everywhere; G (brightness core) starts at zero. The
 		// reset writes both channels in one sequential pass - clearing the whole buffer first and then
 		// striding back over it to set R touched every cache line twice for no benefit.
+		//
+		// A texel the lights did not reach in the last frame still holds exactly that reset, so while the map
+		// keeps its size and the ambient level, only the spans they did reach are reset again. A light covers a
+		// fraction of the viewport, and the full pass rewrote every texel of the map each frame - as much work as
+		// the splats, and on the consoles a whole buffer's worth of cache lines on top.
+		const bool resetLitSpansOnly = (_swLitWidth == lmW && _swLitSpans.size() == std::size_t(lmH) * 2 &&
+			_swLitAmbient == ambientLevel);
 		_swLightmap.resize_for_overwrite(texelCount * 2);
 		float* DEATH_RESTRICT lightmap = _swLightmap.data();
-		for (std::size_t i = 0; i < texelCount; i++) {
-			lightmap[i * 2] = ambientLevel;
-			lightmap[i * 2 + 1] = 0.0f;
+		if (resetLitSpansOnly) {
+			for (std::int32_t y = 0; y < lmH; y++) {
+				float* DEATH_RESTRICT row = lightmap + (std::size_t)y * lmW * 2;
+				for (std::int32_t x = _swLitSpans[y * 2]; x <= _swLitSpans[y * 2 + 1]; x++) {
+					row[x * 2] = ambientLevel;
+					row[x * 2 + 1] = 0.0f;
+				}
+			}
+		} else {
+			for (std::size_t i = 0; i < texelCount; i++) {
+				lightmap[i * 2] = ambientLevel;
+				lightmap[i * 2 + 1] = 0.0f;
+			}
+			_swLitSpans.resize_for_overwrite(std::size_t(lmH) * 2);
+			_swLitWidth = lmW;
+			_swLitAmbient = ambientLevel;
+		}
+		for (std::int32_t y = 0; y < lmH; y++) {
+			_swLitSpans[y * 2] = lmW;
+			_swLitSpans[y * 2 + 1] = -1;
 		}
 
 		// World -> screen pixel mapping of the scene camera (orthographic, unit scale, Y flipped by the
@@ -342,6 +376,19 @@ namespace Jazz2::Rendering
 			const float rLm = radiusFar * InvScale;
 			if (rLm < 0.5f) {
 				continue;
+			}
+
+			// The texels a light can change are those within the bounds its splat clamps itself to, which is
+			// what the next frame's reset has to cover (see above)
+			const std::int32_t litX0 = std::max<std::int32_t>(0, (std::int32_t)(cx - rLm));
+			const std::int32_t litX1 = std::min(lmW - 1, (std::int32_t)(cx + rLm));
+			if (litX0 <= litX1) {
+				const std::int32_t litY0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
+				const std::int32_t litY1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
+				for (std::int32_t y = litY0; y <= litY1; y++) {
+					_swLitSpans[y * 2] = std::min(_swLitSpans[y * 2], litX0);
+					_swLitSpans[y * 2 + 1] = std::max(_swLitSpans[y * 2 + 1], litX1);
+				}
 			}
 
 #if defined(DEATH_TARGET_PSP)

@@ -832,6 +832,11 @@ namespace Jazz2::AssetPacker
 		std::int64_t ActualBits = 0;
 		/** @brief Complexity per frame of the last group written, the guess for a group when there is none ahead */
 		std::int64_t LastComplexityPerFrame = 0;
+		/** @brief Bits the decoder catches up with per picture at the peak bitrate, `0` without one, and the most it can be ahead */
+		std::int64_t PeakBitsPerPicture = 0;
+		std::int64_t BucketSize = 0;
+		/** @brief How many bits the decoder is ahead of the peak bitrate after the groups written so far */
+		std::int64_t Bucket = 0;
 
 		Statistics Stats;
 		bool Started = false;
@@ -852,10 +857,16 @@ namespace Jazz2::AssetPacker
 			std::int32_t Quantizer16 = 0;
 			std::int64_t QuantizerSum = 0;
 			std::uint64_t LumaSquaredError = 0;
+			/** @brief Complexity of the pictures made coarser than the group's quantizer, beyond what their bits show */
+			std::int64_t ExtraComplexity = 0;
+			/** @brief How many bits the decoder is ahead of the peak bitrate before and after the group */
+			std::int64_t BucketBefore = 0;
+			std::int64_t BucketAfter = 0;
+			std::vector<std::int32_t> PictureBits;
 
 			std::int64_t GetComplexity() const
 			{
-				return Stream.GetBitCount() * Quantizer16;
+				return Stream.GetBitCount() * Quantizer16 + ExtraComplexity;
 			}
 		};
 
@@ -954,7 +965,9 @@ namespace Jazz2::AssetPacker
 		void EncodePicture(const Picture& source, std::int32_t type, std::int32_t temporalReference, std::int32_t quantizer16,
 			std::int32_t ditherSeed, BitWriter& bw, PictureStats& stats);
 		void WritePicture(BitWriter& bw, std::int32_t type, std::int32_t temporalReference, std::int32_t fCode) const;
-		void EncodeGop(std::int32_t first, std::int32_t count, std::int32_t quantizer16, bool findEnd, bool lastFrames, GopPass& pass);
+		void EncodeGop(std::int32_t first, std::int32_t count, std::int32_t quantizer16, bool findEnd, bool lastFrames,
+			std::int64_t bucket, GopPass& pass);
+		std::int64_t ReplayBucket(std::int64_t bucket, const GopPass& pass) const;
 		std::int32_t PlanQuantizer(std::int64_t windowComplexity, std::int64_t windowTarget) const;
 		std::int64_t ShareOf(std::int32_t frames) const;
 		void PlanAhead(bool flush);
@@ -1668,13 +1681,16 @@ namespace Jazz2::AssetPacker
 	}
 
 	void Mpeg1Encoder::State::EncodeGop(std::int32_t first, std::int32_t count, std::int32_t quantizer16, bool findEnd, bool lastFrames,
-		GopPass& pass)
+		std::int64_t bucket, GopPass& pass)
 	{
 		pass.Stream.Clear();
 		pass.Count = 0;
 		pass.Quantizer16 = quantizer16;
 		pass.QuantizerSum = 0;
 		pass.LumaSquaredError = 0;
+		pass.ExtraComplexity = 0;
+		pass.BucketBefore = bucket;
+		pass.PictureBits.clear();
 		BitWriter& bw = pass.Stream;
 
 		// Repeated before every group, so a decoder can start at any of them. The rate is in units of 400 bit/s and the
@@ -1716,12 +1732,18 @@ namespace Jazz2::AssetPacker
 			const bool intra = (i == 0);
 			const BitWriter::Mark mark = bw.GetMark();
 			const std::int64_t startBits = bw.GetBitCount();
-			std::int32_t pictureQuantizer16 = (intra ? intraQuantizer16 : quantizer16);
+			const std::int32_t nominalQuantizer16 = (intra ? intraQuantizer16 : quantizer16);
+			std::int32_t pictureQuantizer16 = nominalQuantizer16;
+			// The decoder catches up at the peak bitrate, so a picture may take its own share of it and whatever lead
+			// the pictures before it left
+			const std::int64_t available = (PeakBitsPerPicture > 0 ? std::min(bucket + PeakBitsPerPicture, BucketSize) : maxPictureBits);
+			const std::int64_t pictureLimit = std::min(maxPictureBits, available);
 			PictureStats stats;
 			EncodePicture(Queue[std::size_t(first + i)], intra ? PictureTypeI : PictureTypeP, i, pictureQuantizer16,
 				std::int32_t((frame + i) % 16), bw, stats);
-			// A picture larger than a second's worth of the bitrate would stall the decoder, so it is made coarser
-			while (bw.GetBitCount() - startBits > maxPictureBits && pictureQuantizer16 < 31 * 16) {
+			// A picture larger than a second's worth of the bitrate, or than the decoder can catch up with, would stall
+			// it, so it is made coarser
+			while (bw.GetBitCount() - startBits > pictureLimit && pictureQuantizer16 < 31 * 16) {
 				bw.Rewind(mark);
 				pictureQuantizer16 = std::min(31 * 16, pictureQuantizer16 * 5 / 4 + 1);
 				stats = PictureStats();
@@ -1733,25 +1755,50 @@ namespace Jazz2::AssetPacker
 				bw.Rewind(mark);
 				break;
 			}
+			const std::int64_t pictureBits = bw.GetBitCount() - startBits;
 			pass.Count++;
 			pass.QuantizerSum += stats.QuantizerSum;
 			pass.LumaSquaredError += stats.LumaSquaredError;
+			// Bits fall roughly with the quantizer, so a picture made coarser counts as the bits it would have taken
+			pass.ExtraComplexity += pictureBits * (pictureQuantizer16 - nominalQuantizer16) * quantizer16 / nominalQuantizer16;
+			pass.PictureBits.push_back(std::int32_t(pictureBits));
+			// A picture that could not be made to fit is a delay the decoder does not make up, so the next ones do not pay for it
+			bucket = std::max<std::int64_t>(available - pictureBits, 0);
 			std::swap(Reference, Current);
 			if (pass.Count == GopLength) {
 				regularEnd = bw.GetMark();
 				regular.Count = pass.Count;
 				regular.QuantizerSum = pass.QuantizerSum;
 				regular.LumaSquaredError = pass.LumaSquaredError;
+				regular.ExtraComplexity = pass.ExtraComplexity;
+				regular.BucketAfter = bucket;
 			}
 		}
+		pass.BucketAfter = bucket;
 		// The pictures past the normal length were only encoded to look for a cut there, unless they are the last ones
 		if (findEnd && !lastFrames && pass.Count > GopLength && pass.Count == count) {
 			bw.Rewind(regularEnd);
 			pass.Count = regular.Count;
 			pass.QuantizerSum = regular.QuantizerSum;
 			pass.LumaSquaredError = regular.LumaSquaredError;
+			pass.ExtraComplexity = regular.ExtraComplexity;
+			pass.BucketAfter = regular.BucketAfter;
+			pass.PictureBits.resize(std::size_t(regular.Count));
 		}
 		bw.Align();
+	}
+
+	std::int64_t Mpeg1Encoder::State::ReplayBucket(std::int64_t bucket, const GopPass& pass) const
+	{
+		// The lead the decoder ends the group with when it starts it with another one, or -1 if a picture no longer fits
+		for (std::int32_t bits : pass.PictureBits) {
+			const std::int64_t available = std::min(bucket + PeakBitsPerPicture, BucketSize);
+			if (bits > available) {
+				return -1;
+			}
+			bucket = available - bits;
+		}
+		return bucket;
 	}
 
 	std::int64_t Mpeg1Encoder::State::ShareOf(std::int32_t frames) const
@@ -1796,9 +1843,10 @@ namespace Jazz2::AssetPacker
 			} else {
 				quantizer16 = InitialQuantizer16;
 			}
+			const std::int64_t bucket = (!Planned.empty() ? Planned.back().BucketAfter : Bucket);
 			Planned.emplace_back();
 			GopPass& pass = Planned.back();
-			EncodeGop(covered, count, quantizer16, true, flush && covered + count == QueueCount, pass);
+			EncodeGop(covered, count, quantizer16, true, flush && covered + count == QueueCount, bucket, pass);
 			covered += pass.Count;
 			complexity += pass.GetComplexity();
 			target += ShareOf(pass.Count);
@@ -1823,7 +1871,7 @@ namespace Jazz2::AssetPacker
 				if (std::abs(next - best.Quantizer16) * QuantizerTolerance <= best.Quantizer16) {
 					break;
 				}
-				EncodeGop(0, best.Count, next, false, false, trial);
+				EncodeGop(0, best.Count, next, false, false, Bucket, trial);
 				std::swap(best, trial);
 			}
 		}
@@ -1833,6 +1881,7 @@ namespace Jazz2::AssetPacker
 		TargetBits += share;
 		ActualBits += bits;
 		LastComplexityPerFrame = best.GetComplexity() / std::max(1, best.Count);
+		Bucket = best.BucketAfter;
 
 		output.insert(output.end(), best.Stream.Bytes.begin(), best.Stream.Bytes.end());
 		Stats.Frames += best.Count;
@@ -1847,6 +1896,28 @@ namespace Jazz2::AssetPacker
 		QueueCount -= count;
 		QueueStart += count;
 		Planned.erase(Planned.begin());
+
+		// The groups encoded ahead started from the lead this one was planned to leave, which its final encoding may
+		// have changed - one that no longer fits the peak bitrate is encoded again
+		if (PeakBitsPerPicture > 0) {
+			std::int64_t bucket = Bucket;
+			std::int32_t first = 0;
+			for (GopPass& pass : Planned) {
+				if (pass.BucketBefore != bucket) {
+					const std::int64_t after = ReplayBucket(bucket, pass);
+					if (after >= 0) {
+						pass.BucketBefore = bucket;
+						pass.BucketAfter = after;
+					} else {
+						GopPass trial;
+						EncodeGop(first, pass.Count, pass.Quantizer16, false, false, bucket, trial);
+						std::swap(pass, trial);
+					}
+				}
+				bucket = pass.BucketAfter;
+				first += pass.Count;
+			}
+		}
 	}
 
 	Mpeg1Encoder::Mpeg1Encoder()
@@ -1867,7 +1938,8 @@ namespace Jazz2::AssetPacker
 
 		if (options.Width <= 0 || options.Height <= 0 || options.Width > 4095 || options.Height > 2800 ||
 			(options.Width & 1) != 0 || (options.Height & 1) != 0 || options.FrameRateNum <= 0 || options.FrameRateDen <= 0 ||
-			options.BitrateKbps <= 0 || options.BitrateKbps > MaxBitrateKbps || options.FixedQuantizer < 0 || options.FixedQuantizer > 31) {
+			options.BitrateKbps <= 0 || options.BitrateKbps > MaxBitrateKbps || options.FixedQuantizer < 0 || options.FixedQuantizer > 31 ||
+			options.PeakBitrateKbps < 0 || options.PeakBitrateKbps > MaxBitrateKbps || options.PeakBufferKbits < 0) {
 			return false;
 		}
 		// A rate within 0.05 % of one of the standard ones is taken as it, so 23.976 or 29.97 written out works too
@@ -1903,6 +1975,12 @@ namespace Jazz2::AssetPacker
 		const std::int64_t frameBytes = std::int64_t(s.LumaWidth) * s.LumaHeight * 3 / 2;
 		s.LookaheadFrames = std::int32_t(std::min<std::int64_t>((std::int64_t(rate.Num) * LookaheadSeconds + rate.Den / 2) / rate.Den,
 			LookaheadMemory / frameBytes));
+		if (options.PeakBitrateKbps > 0) {
+			const std::int64_t peakBitrate = std::int64_t(std::max(options.PeakBitrateKbps, options.BitrateKbps)) * 1000;
+			s.PeakBitsPerPicture = peakBitrate * rate.Den / rate.Num;
+			s.BucketSize = (options.PeakBufferKbits > 0 ? std::int64_t(options.PeakBufferKbits) * 1000 : peakBitrate / 2);
+			s.Bucket = s.BucketSize;
+		}
 		s.AllocatePicture(s.Reference);
 		s.AllocatePicture(s.Current);
 		s.Started = true;

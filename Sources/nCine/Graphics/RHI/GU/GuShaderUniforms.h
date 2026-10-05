@@ -67,9 +67,9 @@ namespace nCine::RHI::GU
 		@brief Manages the uniform-block caches of a program (aliased as `RHI::ShaderUniformBlocks`)
 
 		Owns a @ref GuUniformBlockCache per active block, distributes a shared host data buffer across
-		them, copies the block contents into a suballocated range of the streaming uniform buffer on
-		@ref CommitUniformBlocks(), and on @ref Bind() forwards each range to the device so the effect
-		running the following draw can sample it.
+		them, and on @ref Bind() forwards each block's own storage to the device so the effect running the
+		following draw can sample it. Nothing is staged through the streaming uniform buffer, see
+		@ref CommitUniformBlocks().
 	*/
 	class GuShaderUniformBlocks
 	{
@@ -107,11 +107,12 @@ namespace nCine::RHI::GU
 		void Bind();
 
 	private:
+		// Registered by RenderResources like on every other backend, and deliberately never called: this tier
+		// needs no uniform staging at all (see CommitUniformBlocks())
 		static UniformRangeAllocator _uniformRangeAllocator;
 
 		GuShaderProgram* _shaderProgram;
 		std::uint8_t* _dataPointer;
-		RHI::BufferRange _uboParams;
 
 		UniformHashMapType _uniformBlockCaches;
 

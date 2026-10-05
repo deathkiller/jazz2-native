@@ -5,6 +5,7 @@
 #include "PvrShaderProgram.h"
 #include "PvrRenderTarget.h"
 #include "PvrTexture.h"
+#include "PvrTileRecord.h"
 #include "../FixedFunctionPass.h"
 #include "../LightingCombine.h"
 
@@ -86,7 +87,7 @@ namespace nCine::RHI::PVR
 			float Tx, Ty;	// Column 3, rows 0 and 1
 		};
 
-		void Mat4MulTransform2D(const float* DEATH_RESTRICT pv, const float* DEATH_RESTRICT model, Transform2D& out)
+		DEATH_ALWAYS_INLINE void Mat4MulTransform2D(const float* DEATH_RESTRICT pv, const float* DEATH_RESTRICT model, Transform2D& out)
 		{
 			out.Xx = pv[0] * model[0] + pv[4] * model[1] + pv[8] * model[2] + pv[12] * model[3];
 			out.Xy = pv[1] * model[0] + pv[5] * model[1] + pv[9] * model[2] + pv[13] * model[3];
@@ -224,6 +225,23 @@ namespace nCine::RHI::PVR
 			std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
 			SubmitStrip(hdr, px, py, pu, pv, 4, argb, oargb, dx, dy);
+		}
+
+		// Writes one vertex of a strip into the store queue at `sq` and flushes it, exactly as SubmitStrip() does,
+		// for a caller that has its corners in registers rather than in arrays; returns the next block
+		DEATH_ALWAYS_INLINE std::uint32_t* SubmitVertex(std::uint32_t* DEATH_RESTRICT sq, std::uint32_t command,
+			float x, float y, float u, float v, std::uint32_t argb)
+		{
+			sq[0] = command;
+			reinterpret_cast<float*>(sq)[1] = x;
+			reinterpret_cast<float*>(sq)[2] = y;
+			reinterpret_cast<float*>(sq)[3] = 1.0f;
+			reinterpret_cast<float*>(sq)[4] = u;
+			reinterpret_cast<float*>(sq)[5] = v;
+			sq[6] = argb;
+			sq[7] = 0;
+			sq_flush(sq);
+			return sq + 8;
 		}
 
 		// As SubmitStrip(), but each vertex carries its own colour so the rasterizer interpolates it across
@@ -1122,29 +1140,48 @@ namespace nCine::RHI::PVR
 						fill[i] = 0xFFFFFFFFu;
 					}
 				}
+				const auto convertTexel = [&light](std::uint32_t rawRBits, std::uint32_t rawGBits) {
+					float rawR, rawG;
+					std::memcpy(&rawR, &rawRBits, sizeof(rawR));
+					std::memcpy(&rawG, &rawGBits, sizeof(rawG));
+					const float r = ClampLightmapChannel(rawR);
+					const float g = ClampLightmapChannel(rawG);
+					const std::uint32_t fr = Quantize4Bit(LightingCombineFactor(r, g, light.AmbR));
+					const std::uint32_t fg = Quantize4Bit(LightingCombineFactor(r, g, light.AmbG));
+					const std::uint32_t fb = Quantize4Bit(LightingCombineFactor(r, g, light.AmbB));
+					return std::uint32_t(0xF000 | (fr << 8) | (fg << 4) | fb);
+				};
 				for (std::int32_t y = 0; y < light.LmH; y++) {
-					const float* DEATH_RESTRICT src = light.Lightmap + std::size_t(y) * light.LmW * 2;
-					std::uint16_t* DEATH_RESTRICT dst = surface + std::size_t(y) * texW;
 					// Unlit runs repeat the same pair of factors across long spans, so remembering the last
-					// converted texel turns most of the surface into a compare and a store
-					float prevR = -1.0f, prevG = -1.0f;
-					std::uint16_t prevTexel = 0;
-					for (std::int32_t x = 0; x < light.LmW; x++) {
-						const float rawR = src[x * 2];
-						const float rawG = src[x * 2 + 1];
-						if (rawR == prevR && rawG == prevG) {
-							dst[x] = prevTexel;
-							continue;
+					// converted texel turns most of the surface into a compare and a store. The compare is of the
+					// raw bits - equal bits are equal factors, and that keeps the test off the FPU - and the texels
+					// go out in pairs, one 32-bit store into video memory for two (rows start 4-byte aligned).
+					// No lightmap value has the all-ones bit pattern, so nothing matches before the first texel.
+					const std::uint32_t* DEATH_RESTRICT src = reinterpret_cast<const std::uint32_t*>(light.Lightmap + std::size_t(y) * light.LmW * 2);
+					std::uint32_t* DEATH_RESTRICT dstPairs = reinterpret_cast<std::uint32_t*>(surface + std::size_t(y) * texW);
+					std::uint32_t prevR = UINT32_MAX, prevG = UINT32_MAX;
+					std::uint32_t prevTexel = 0;
+					std::int32_t x = 0;
+					for (; x + 1 < light.LmW; x += 2) {
+						const std::uint32_t rawR0 = src[x * 2], rawG0 = src[x * 2 + 1];
+						const std::uint32_t rawR1 = src[x * 2 + 2], rawG1 = src[x * 2 + 3];
+						if (rawR0 != prevR || rawG0 != prevG) {
+							prevR = rawR0;
+							prevG = rawG0;
+							prevTexel = convertTexel(rawR0, rawG0);
 						}
-						prevR = rawR;
-						prevG = rawG;
-						const float r = ClampLightmapChannel(rawR);
-						const float g = ClampLightmapChannel(rawG);
-						const std::uint32_t fr = Quantize4Bit(LightingCombineFactor(r, g, light.AmbR));
-						const std::uint32_t fg = Quantize4Bit(LightingCombineFactor(r, g, light.AmbG));
-						const std::uint32_t fb = Quantize4Bit(LightingCombineFactor(r, g, light.AmbB));
-						prevTexel = std::uint16_t(0xF000 | (fr << 8) | (fg << 4) | fb);
-						dst[x] = prevTexel;
+						const std::uint32_t first = prevTexel;
+						if (rawR1 != prevR || rawG1 != prevG) {
+							prevR = rawR1;
+							prevG = rawG1;
+							prevTexel = convertTexel(rawR1, rawG1);
+						}
+						// The first texel of the pair is the lower address, the low half on this little-endian CPU
+						dstPairs[x / 2] = first | (prevTexel << 16);
+					}
+					if (x < light.LmW) {
+						// An odd width leaves one texel, which takes a 16-bit store of its own
+						surface[std::size_t(y) * texW + x] = std::uint16_t(convertTexel(src[x * 2], src[x * 2 + 1]));
 					}
 				}
 
@@ -1180,10 +1217,15 @@ namespace nCine::RHI::PVR
 		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
 		// hard contract of this shader family exactly like the std140 instance block is of the sprite one.
+		// The tiles of a layer arrive as a point list of packed records instead, one per tile (see
+		// TileRecord); only the debris that shares the effect still brings its corners.
 		constexpr std::int32_t FloatsPerVertex = 8;
-		if (primitive != PrimitiveType::Triangles || numVertices < 3) {
+		constexpr std::int32_t FloatsPerRecord = std::int32_t(sizeof(TileRecord) / sizeof(float));
+		const bool packedTiles = (primitive == PrimitiveType::Points);
+		if (packedTiles ? numVertices < 1 : (primitive != PrimitiveType::Triangles || numVertices < 3)) {
 			return;
 		}
+		const std::int32_t floatsPerElement = (packedTiles ? FloatsPerRecord : FloatsPerVertex);
 
 		const PvrBuffer* vbo = _currentProgram->GetBoundVbo();
 		if (vbo == nullptr) {
@@ -1211,8 +1253,8 @@ namespace nCine::RHI::PVR
 			vertexExtent = std::size_t(maxIndex) + 1;
 		}
 		const std::size_t firstFloat = (std::size_t(_currentProgram->GetBoundVboOffset()) / sizeof(float)) +
-			std::size_t(firstVertex) * FloatsPerVertex;
-		if ((firstFloat + vertexExtent * FloatsPerVertex) * sizeof(float) > vbo->GetSize()) {
+			std::size_t(firstVertex) * floatsPerElement;
+		if ((firstFloat + vertexExtent * floatsPerElement) * sizeof(float) > vbo->GetSize()) {
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
@@ -1333,6 +1375,37 @@ namespace nCine::RHI::PVR
 			clipX1 = float(_scissor.Rect.X + _scissor.Rect.W) * scaleX + offsetX;
 			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
 		}
+		// Returns false for a primitive wholly outside the scissor rect, for which the bounding-box reject is
+		// exact. A tile straddling the scissor edge is clipped exactly like the sprite path clips its
+		// axis-aligned quads: there is no hardware scissor on this tier, and on the splitscreen boundary an
+		// unclipped tile would draw up to a full tile into the other player's viewport. The corner-sharing
+		// test mirrors the sprite path; anything else (the raw-triangle fallback, a rotated layer) keeps the
+		// conservative bounding-box reject.
+		const auto clipToScissor = [&](float* px, float* py, float* pu, float* pvv, std::int32_t cornerCount) {
+			float minX = px[0], maxX = px[0], minY = py[0], maxY = py[0];
+			for (std::int32_t i = 1; i < cornerCount; i++) {
+				minX = std::min(minX, px[i]); maxX = std::max(maxX, px[i]);
+				minY = std::min(minY, py[i]); maxY = std::max(maxY, py[i]);
+			}
+			if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
+				return false;
+			}
+			if (cornerCount == 4 && px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]) {
+				float xA = px[2], xB = px[0], uA = pu[2], uB = pu[0];
+				if (!ClipQuadEdge(xA, xB, uA, uB, clipX0, clipX1)) {
+					return false;
+				}
+				px[2] = px[3] = xA; px[0] = px[1] = xB;
+				pu[2] = pu[3] = uA; pu[0] = pu[1] = uB;
+				float yA = py[0], yB = py[1], vA = pvv[0], vB = pvv[1];
+				if (!ClipQuadEdge(yA, yB, vA, vB, clipY0, clipY1)) {
+					return false;
+				}
+				py[0] = py[2] = yA; py[1] = py[3] = yB;
+				pvv[0] = pvv[2] = vA; pvv[1] = pvv[3] = vB;
+			}
+			return true;
+		};
 
 		// Projects one mesh vertex into raster space, matching the sprite path's corner synthesis
 		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
@@ -1354,6 +1427,72 @@ namespace nCine::RHI::PVR
 			outU = v[2] * uvScaleU;
 			outV = v[3] * uvScaleV;
 		};
+
+		if (packedTiles) {
+			// The corners and texture coordinates are synthesized with the very operations TileMap used to
+			// write them with - the texel origin and the tile size scaled by the reciprocal texture size, a
+			// flip folded into that pair, the far corner one tile size away - so a tile comes out exactly as
+			// its quad did, without a vertex to fetch or an index to resolve
+			const float texInvW = (texture->GetWidth() > 0 ? 1.0f / float(texture->GetWidth()) : 0.0f);
+			const float texInvH = (texture->GetHeight() > 0 ? 1.0f / float(texture->GetHeight()) : 0.0f);
+			const float texScaleX = float(TileRecord::Size) * texInvW;
+			const float texScaleY = float(TileRecord::Size) * texInvH;
+			// Read in place: a record copied out with memcpy() is a library call per tile on this target
+			const TileRecord* DEATH_RESTRICT tiles = reinterpret_cast<const TileRecord*>(vertices);
+			// The colour depends on the tile only through its alpha, which within a layer nearly never changes
+			std::int32_t lastAlpha = -1;
+			std::uint32_t argb = 0;
+			// The whole draw shares one polygon header, so it is handed to the tile accelerator (unless that one
+			// is in effect already) before the first tile instead of being compared again before every tile
+			bool headerPending = true;
+			for (std::int32_t i = 0; i < numVertices; i++) {
+				const TileRecord& tile = tiles[i];
+
+				float scaleU = texScaleX, biasU = float(tile.TexX) * texInvW;
+				float scaleV = texScaleY, biasV = float(tile.TexY) * texInvH;
+				if ((tile.Flags & TileRecord::FlipX) != 0) {
+					biasU += scaleU;
+					scaleU *= -1;
+				}
+				if ((tile.Flags & TileRecord::FlipY) != 0) {
+					biasV += scaleV;
+					scaleV *= -1;
+				}
+				const float u0 = biasU * uvScaleU, u1 = (scaleU + biasU) * uvScaleU;
+				const float v0 = biasV * uvScaleV, v1 = (scaleV + biasV) * uvScaleV;
+				const float xr = tile.X + float(TileRecord::Size), yr = tile.Y + float(TileRecord::Size);
+
+				if (tile.Alpha != lastAlpha) {
+					lastAlpha = tile.Alpha;
+					argb = PackArgb(QuantizeChannel(layerColor[0]), QuantizeChannel(layerColor[1]),
+						QuantizeChannel(layerColor[2]), QuantizeChannel((tile.Alpha / 255.0f) * layerColor[3]));
+				}
+
+				// Strip order (see SubmitQuad): the two corners of the right edge, then the two of the left one
+				const float x0 = raster.Xx * xr + raster.Yx * tile.Y + raster.Tx, y0 = raster.Xy * xr + raster.Yy * tile.Y + raster.Ty;
+				const float x1 = raster.Xx * xr + raster.Yx * yr + raster.Tx, y1 = raster.Xy * xr + raster.Yy * yr + raster.Ty;
+				const float x2 = raster.Xx * tile.X + raster.Yx * tile.Y + raster.Tx, y2 = raster.Xy * tile.X + raster.Yy * tile.Y + raster.Ty;
+				const float x3 = raster.Xx * tile.X + raster.Yx * yr + raster.Tx, y3 = raster.Xy * tile.X + raster.Yy * yr + raster.Ty;
+				if (clipActive) {
+					float px[4] = { x0, x1, x2, x3 };
+					float py[4] = { y0, y1, y2, y3 };
+					float pu[4] = { u1, u1, u0, u0 };
+					float pvv[4] = { v0, v1, v0, v1 };
+					if (clipToScissor(px, py, pu, pvv, 4)) {
+						SubmitStrip(hdr, px, py, pu, pvv, 4, argb);
+					}
+					continue;
+				}
+
+				std::uint32_t* sq = (headerPending ? SubmitHeaderIfChanged(hdr) : SQ_MASK_DEST(PVR_TA_INPUT));
+				headerPending = false;
+				sq = SubmitVertex(sq, PVR_CMD_VERTEX, x0, y0, u1, v0, argb);
+				sq = SubmitVertex(sq, PVR_CMD_VERTEX, x1, y1, u1, v1, argb);
+				sq = SubmitVertex(sq, PVR_CMD_VERTEX, x2, y2, u0, v0, argb);
+				SubmitVertex(sq, PVR_CMD_VERTEX_EOL, x3, y3, u0, v1, argb);
+			}
+			return;
+		}
 
 		const std::int32_t triangleCount = numVertices / 3;
 		std::int32_t triangle = 0;
@@ -1392,35 +1531,8 @@ namespace nCine::RHI::PVR
 				triangle++;
 			}
 
-			if (clipActive) {
-				// The bounding-box reject is exact for the fully outside case
-				float minX = px[0], maxX = px[0], minY = py[0], maxY = py[0];
-				for (std::int32_t i = 1; i < cornerCount; i++) {
-					minX = std::min(minX, px[i]); maxX = std::max(maxX, px[i]);
-					minY = std::min(minY, py[i]); maxY = std::max(maxY, py[i]);
-				}
-				if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
-					continue;
-				}
-				// A tile straddling the scissor edge is clipped exactly like the sprite path clips its
-				// axis-aligned quads: there is no hardware scissor on this tier, and on the splitscreen
-				// boundary an unclipped tile would draw up to a full tile into the other player's viewport.
-				// The corner-sharing test mirrors the sprite path; anything else (the raw-triangle fallback,
-				// a rotated layer) keeps the conservative bounding-box reject above.
-				if (cornerCount == 4 && px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]) {
-					float xA = px[2], xB = px[0], uA = pu[2], uB = pu[0];
-					if (!ClipQuadEdge(xA, xB, uA, uB, clipX0, clipX1)) {
-						continue;
-					}
-					px[2] = px[3] = xA; px[0] = px[1] = xB;
-					pu[2] = pu[3] = uA; pu[0] = pu[1] = uB;
-					float yA = py[0], yB = py[1], vA = pvv[0], vB = pvv[1];
-					if (!ClipQuadEdge(yA, yB, vA, vB, clipY0, clipY1)) {
-						continue;
-					}
-					py[0] = py[2] = yA; py[1] = py[3] = yB;
-					pvv[0] = pvv[2] = vA; pvv[1] = pvv[3] = vB;
-				}
+			if (clipActive && !clipToScissor(px, py, pu, pvv, cornerCount)) {
+				continue;
 			}
 
 			// Every vertex of a tile carries the same colour, so it only has to be packed once per change
@@ -1831,24 +1943,67 @@ namespace nCine::RHI::PVR
 			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
 		}
 
+		// The bound texture is the same for every instance of the draw, so it is made resident (and marked used by
+		// this scene) once, here after the scene has been opened, rather than per instance - only a palette bake
+		// depends on the instance (its row)
+		const bool bakesPalette = (hasTexture && !texture->IsIndexed() && isPaletteRemap && texture->NeedsPaletteBake() &&
+			paletteTex != nullptr && paletteTex->GetPixels() != nullptr);
+		pvr_ptr_t textureVram = (hasTexture && !bakesPalette ? texture->AcquireVramPointer() : nullptr);
+		const float uvScaleU = (hasTexture ? texture->GetUScale() : 1.0f);
+		const float uvScaleV = (hasTexture ? texture->GetVScale() : 1.0f);
+		// The palette row of the previous instance and the bank it was given: consecutive instances of a batch
+		// mostly share their row, and the lookup is then only the use stamp AcquirePaletteBank() would leave
+		std::int32_t lastPaletteOffset = -1;
+		std::int32_t lastPaletteBank = -1;
+
+		// The pass descriptors the per-effect functions declare are mapped onto each instance's corners and the
+		// compiled material state through the context - most of it is the same for the whole draw, so it is
+		// filled in once and only the instance's own fields change below
+		float px[4], py[4], pu[4], pvv[4];
+		EffectContext ctx;
+		ctx.TexelW = texelWidth;
+		ctx.TexelH = texelHeight;
+		ctx.Batched = batched;
+		ctx.Hdr = &hdr;
+		ctx.BaseCxt = &cxt;
+		ctx.HdrAdditive = &hdrAdditive;
+		ctx.HdrAdditiveValid = &hdrAdditiveValid;
+		ctx.HdrOpaque = &hdrOpaque;
+		ctx.HdrOpaqueValid = &hdrOpaqueValid;
+		ctx.HdrAlpha = &hdrAlpha;
+		ctx.HdrAlphaValid = &hdrAlphaValid;
+		ctx.Px = px;
+		ctx.Py = py;
+		ctx.Pu = pu;
+		ctx.Pv = pvv;
+		// Resolved uniforms are the only thing the context needs the program for, so effects
+		// without the facility get no program plumbed at all (no resolution can ever run)
+		ctx.Program = (needsUniforms ? _currentProgram : nullptr);
+		if (needsStripBuilder) {
+			// The shaded-strip Material twin and the strip UV scale exist only for the strip
+			// builder; the material blend factors feed that twin's compilation
+			ctx.MaterialBlendSrc = blendSrc;
+			ctx.MaterialBlendDst = blendDst;
+			ctx.UvScaleU = uvScaleU;
+			ctx.UvScaleV = uvScaleV;
+			ctx.HdrShaded = hdrShaded;
+			ctx.HdrShadedValid = hdrShadedValid;
+		}
+
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
 
+			// Read in place: the members are 4-byte aligned floats, and copying each out with memcpy() made three
+			// library calls per instance on this target
+			const float* instData = reinterpret_cast<const float*>(inst);
 			Transform2D mvp;
-			Mat4MulTransform2D(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
-			float color[4];
-			std::memcpy(color, inst + kColorOffset, sizeof(color));
-			float texRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-			float spriteSize[2];
-			if (texturedLayout) {
-				std::memcpy(texRect, inst + kTexRectOffset, sizeof(texRect));
-				std::memcpy(spriteSize, inst + kSpriteSizeOffset, sizeof(spriteSize));
-			} else {
-				std::memcpy(spriteSize, inst + kSpriteSizeNoTexOffset, sizeof(spriteSize));
-			}
+			Mat4MulTransform2D(pv, instData + kModelMatrixOffset / sizeof(float), mvp);
+			const float* color = instData + kColorOffset / sizeof(float);
+			static const float NoTexRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+			const float* texRect = (texturedLayout ? instData + kTexRectOffset / sizeof(float) : NoTexRect);
+			const float* spriteSize = instData + (texturedLayout ? kSpriteSizeOffset : kSpriteSizeNoTexOffset) / sizeof(float);
 
 			// Select this instance's texture variant and (re)compile the poly header when it changes
-			float uvScaleU = 1.0f, uvScaleV = 1.0f;
 			if (hasTexture) {
 				pvr_ptr_t vram = nullptr;
 				std::uint32_t format = 0;
@@ -1857,34 +2012,38 @@ namespace nCine::RHI::PVR
 					// See the mesh path: a paletted store needs a bank selected under every effect
 					std::int32_t paletteOffset = 0;
 					if (isPaletteRemap) {
-						float palOffset = 0.0f;
-						std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-						paletteOffset = std::int32_t(palOffset + 0.5f);
+						paletteOffset = std::int32_t(instData[kPaletteOffsetOffset / sizeof(float)] + 0.5f);
 					}
-					bank = AcquirePaletteBankForRow(paletteTex, paletteOffset);
+					if (paletteOffset == lastPaletteOffset) {
+						bank = lastPaletteBank;
+						if (bank >= 0) {
+							_paletteUseCounter++;
+							_paletteBanks[bank].LastUse = _paletteUseCounter;
+						}
+					} else {
+						bank = AcquirePaletteBankForRow(paletteTex, paletteOffset);
+						lastPaletteOffset = paletteOffset;
+						lastPaletteBank = bank;
+					}
 					if (bank < 0) {
 						bank = 0;
 					}
-					vram = texture->AcquireVramPointer();
+					vram = textureVram;
 					format = texture->GetVramFormat() | PVR_TXRFMT_8BPP_PAL(std::uint32_t(bank));
-				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
-					float palOffset = 0.0f;
-					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
+				} else if (bakesPalette) {
+					const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(instData[kPaletteOffsetOffset / sizeof(float)] + 0.5f));
 					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
 						paletteTex->GetPixels()) + paletteOffset;
 					vram = texture->EnsureBakedArgb4444(entries, paletteOffset,
 						(paletteTex == _paletteTexture ? _paletteGeneration : paletteTex->GetContentVersion()), paletteTex);
 					format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
 				} else {
-					vram = texture->AcquireVramPointer();
+					vram = textureVram;
 					format = texture->GetVramFormat();
 				}
 				if (vram == nullptr) {
 					continue;
 				}
-				uvScaleU = texture->GetUScale();
-				uvScaleV = texture->GetVScale();
 				if (!hdrValid || vram != lastVram || bank != lastBank) {
 					pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format),
 						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, pvr_filter_mode_t(filter));
@@ -1929,7 +2088,6 @@ namespace nCine::RHI::PVR
 			const float spanXy = mvp.Xy * rasterScaleY * spriteSize[0];
 			const float spanYx = mvp.Yx * rasterScaleX * spriteSize[1];
 			const float spanYy = mvp.Yy * rasterScaleY * spriteSize[1];
-			float px[4], py[4], pu[4], pvv[4];
 			for (std::int32_t i = 0; i < 4; i++) {
 				const float ax = ((i & ~1) == 0) ? 1.0f : 0.0f;
 				const float ay = (i & 1) ? 1.0f : 0.0f;
@@ -1969,25 +2127,7 @@ namespace nCine::RHI::PVR
 				}
 			}
 
-			// The pass descriptors the per-effect functions declare are mapped onto this instance's
-			// corners and the compiled material state through the context
-			EffectContext ctx;
 			ctx.InstanceColor = color;
-			ctx.TexelW = texelWidth;
-			ctx.TexelH = texelHeight;
-			ctx.Batched = batched;
-			ctx.Hdr = &hdr;
-			ctx.BaseCxt = &cxt;
-			ctx.HdrAdditive = &hdrAdditive;
-			ctx.HdrAdditiveValid = &hdrAdditiveValid;
-			ctx.HdrOpaque = &hdrOpaque;
-			ctx.HdrOpaqueValid = &hdrOpaqueValid;
-			ctx.HdrAlpha = &hdrAlpha;
-			ctx.HdrAlphaValid = &hdrAlphaValid;
-			ctx.Px = px;
-			ctx.Py = py;
-			ctx.Pu = pu;
-			ctx.Pv = pvv;
 			ctx.TexRect = texRect;
 			// The optional context facilities are only wired up for effects whose static analysis
 			// says they can call them (see reqs above); the loop-invariant conditions predict
@@ -1999,19 +2139,6 @@ namespace nCine::RHI::PVR
 				ctx.AxisXy = spanXy;
 				ctx.AxisYx = spanYx;
 				ctx.AxisYy = spanYy;
-			}
-			// Resolved uniforms are the only thing the context needs the program for, so effects
-			// without the facility get no program plumbed at all (no resolution can ever run)
-			ctx.Program = (needsUniforms ? _currentProgram : nullptr);
-			if (needsStripBuilder) {
-				// The shaded-strip Material twin and the strip UV scale exist only for the strip
-				// builder; the material blend factors feed that twin's compilation
-				ctx.MaterialBlendSrc = blendSrc;
-				ctx.MaterialBlendDst = blendDst;
-				ctx.UvScaleU = uvScaleU;
-				ctx.UvScaleV = uvScaleV;
-				ctx.HdrShaded = hdrShaded;
-				ctx.HdrShadedValid = hdrShadedValid;
 			}
 
 			// Every quad-family effect is the transpiled form of its shader's fixed_function block

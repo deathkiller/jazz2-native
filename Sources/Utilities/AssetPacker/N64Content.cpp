@@ -46,6 +46,15 @@ namespace Jazz2::AssetPacker
 		constexpr std::int32_t OutputFps = 24;
 		/** @brief Bitrate the built-in encoder gives the cinematics, the one videoconv64 picks at its default quality */
 		constexpr std::int32_t VideoBitrateKbps = 800;
+		/**
+			@brief Bitrate the console's decoder keeps up with, and how far it may fall behind it
+
+			videoconv64 keeps its encoder's buffer just as tight, to stay clear of bitrate spikes. Measured in ares, the
+			busiest scenes of the ending at twice the average bitrate and more dropped a frame every few pictures - 12 drops
+			without the limit, 7 with it - while a lone picture of 50 KB did not.
+		*/
+		constexpr std::int32_t VideoPeakBitrateKbps = 1600;
+		constexpr std::int32_t VideoPeakBufferKbits = 800;
 		/** @brief Default volumes of the game's preferences, which balance the music against the effects */
 		constexpr float MusicGain = 0.4f;
 		constexpr float SfxGain = 0.8f;
@@ -764,6 +773,8 @@ namespace Jazz2::AssetPacker
 					options.FrameRateNum = OutputFps;
 					options.FrameRateDen = 1;
 					options.BitrateKbps = VideoBitrateKbps;
+					options.PeakBitrateKbps = VideoPeakBitrateKbps;
+					options.PeakBufferKbits = VideoPeakBufferKbits;
 					if (!encoder.Begin(options, encoded)) {
 						encodingFailed = true;
 						return false;

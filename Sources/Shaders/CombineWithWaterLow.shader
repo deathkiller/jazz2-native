@@ -23,6 +23,25 @@ vec2 noiseTexCoords(vec2 position) {
 	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
 }
 
+// Low-power lighting jitter, see Combine.shader
+float interleavedGradientNoise(vec2 p) {
+	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+vec2 lightingJitterLowPower() {
+	vec2 seed = vPixelPos + fract(uTime * 7.31) * 512.0;
+	vec2 offset = vec2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + vec2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
+}
+
+// sin(2 * pi * cycles) as a parabola over the range-reduced phase, refined to within 0.001 of the real
+// curve - a few multiply-adds, where sin() is one of the most expensive things a USSE-class part runs
+float sinCycles(float cycles) {
+	float v = fract(cycles + 0.5) * 2.0 - 1.0;
+	float y = 4.0 * v * (1.0 - abs(v));
+	return y * (0.775 + 0.225 * abs(y));
+}
+
 void fragment() {
 	vec3 waterColor = vec3(0.4, 0.6, 0.8);
 
@@ -33,7 +52,13 @@ void fragment() {
 	float isTexelBelow = 1.0 - step(uvLocal.y, uWaterLevel);
 	float isTexelAbove = 1.0 - isTexelBelow;
 
+#if LOW_POWER_GPU
+	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): sin() as a polynomial,
+	// and no clamp - the view is sampled with clamp-to-edge anyway
+	vec2 uv = uvLocal + vec2(0.008 * sinCycles((uTime * 16.0 + uvWorld.y * 20.0) * 0.15915494) * isTexelBelow, 0.0);
+#else
 	vec2 uv = clamp(uvLocal + vec2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), vec2(0.0), vec2(1.0));
+#endif
 	vec4 main = texture(uTexture, uv);
 
 	// Waves
@@ -44,9 +69,20 @@ void fragment() {
 	main.rgb = mix(main.rgb, waterColor, vec3(isTexelBelow * 0.4)) + vec3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
 
 	// Lighting
+#if LOW_POWER_GPU
+	// The blurred levels and the lightmap are read at the undisplaced position: a few pixels of ripple are
+	// invisible in either, and a coordinate taken straight from an interpolant lets the blur reads be issued
+	// before the program even runs, rather than as dependent reads. With the lightmap jitter from
+	// Combine.shader and the sine above, this pass costs 3.2 ms over a plain copy on the SGX543 at 480x272
+	// instead of 5.3.
+	vec4 blur1 = texture(uTextureBlurHalf, uvLocal);
+	vec4 blur2 = texture(uTextureBlurQuarter, uvLocal);
+	vec4 light = texture(uTextureLighting, uvLocal + lightingJitterLowPower());
+#else
 	vec4 blur1 = texture(uTextureBlurHalf, uv);
 	vec4 blur2 = texture(uTextureBlurQuarter, uv);
 	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
+#endif
 
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 

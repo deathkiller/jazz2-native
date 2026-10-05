@@ -76,7 +76,7 @@ namespace nCine::RHI::GXM
 		/** @brief Marks no buffer as bound for this object's target */
 		bool Unbind() const;
 
-		/** @brief (Re)creates the data store with the given size, optional initial data and usage hint */
+		/** @brief (Re)creates the data store with the given size, optional initial data and usage hint; without data an existing store keeps its contents */
 		void BufferData(std::size_t size, const void* data, BufferUsage usage);
 		/** @brief Updates a subset of the data store starting at the given byte offset */
 		void BufferSubData(std::size_t offset, std::size_t size, const void* data);

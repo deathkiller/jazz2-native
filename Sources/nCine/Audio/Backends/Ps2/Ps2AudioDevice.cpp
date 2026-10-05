@@ -104,7 +104,7 @@ namespace nCine
 	Ps2AudioDevice::Ps2AudioDevice()
 		: _valid(false), _stopReasons(0), _mixFrequency(DefaultMixingFrequency), _blockFrames(MaxBlockFrames),
 			_ringCapacity(0), _buffers(nullptr), _bufferCount(0), _bufferCapacity(0), _residentBytes(0),
-			_mixBuffer(nullptr), _block(nullptr)
+			_frameIndex(0), _idleSliceMs(2.0f), _mixBuffer(nullptr), _block(nullptr)
 	{
 		if (!InitializeModules()) {
 			return;
@@ -162,6 +162,10 @@ namespace nCine
 		// The base class's decoding thread can still be handing buffers over, so it goes first (a no-op on
 		// this console, where the engine's threading is off, but the order is the contract)
 		shutdownDecodeThread();
+		for (IdleDecode& decode : _idleDecodes) {
+			decode.Request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+		}
+		_idleDecodes.clear();
 
 		if (_valid) {
 			// What the IOP still holds would keep playing for the length of the ring otherwise
@@ -682,6 +686,19 @@ namespace nCine
 
 	void Ps2AudioDevice::updatePlayers()
 	{
+		// A chunk the idle time has not finished in a while gets its share inside the frame - before the
+		// players run, so a chunk this completes is queued by its stream in the same frame
+		_frameIndex++;
+		for (std::size_t i = 0; i < _idleDecodes.size(); ) {
+			IdleDecode& decode = _idleDecodes[i];
+			if (_frameIndex - decode.SubmittedFrame > IdleDecodeGraceFrames &&
+				decode.Request->ExecuteSlice(InFrameDecodeSliceBytes)) {
+				_idleDecodes.erase(&_idleDecodes[i]);
+			} else {
+				i++;
+			}
+		}
+
 		// The base class advances the players and retires the finished ones first, so the mix below sees the
 		// state this frame actually asked for
 		AudioDeviceBase::updatePlayers();
@@ -691,6 +708,46 @@ namespace nCine
 			// of its own here (see _stopReasons)
 			FillRing();
 		}
+	}
+
+	bool Ps2AudioDevice::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	{
+		if (request == nullptr) {
+			return false;
+		}
+		_idleDecodes.push_back(IdleDecode{request, _frameIndex});
+		return true;
+	}
+
+	void Ps2AudioDevice::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	{
+		// Everything runs on the one thread, so a request is never in the middle of a slice here - taking it
+		// off the list is all it needs, the bytes it already holds are discarded with the submit that follows
+		for (std::size_t i = 0; i < _idleDecodes.size(); i++) {
+			if (_idleDecodes[i].Request == request) {
+				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+				_idleDecodes.erase(&_idleDecodes[i]);
+				return;
+			}
+		}
+	}
+
+	bool Ps2AudioDevice::runIdleWork(float availableMs)
+	{
+		// The estimate is the larger of the last slice and a slowly decaying maximum, so the cheap slices that
+		// only copy what the last tick rendered cannot talk the caller into starting one that renders a tick
+		// just before the blank
+		if (_idleDecodes.empty() || availableMs < _idleSliceMs) {
+			return false;
+		}
+
+		const TimeStamp start = TimeStamp::now();
+		if (_idleDecodes[0].Request->ExecuteSlice(IdleDecodeSliceBytes)) {
+			_idleDecodes.erase(&_idleDecodes[0]);
+		}
+		const float elapsed = start.millisecondsSince();
+		_idleSliceMs = (elapsed > _idleSliceMs * 0.98f ? elapsed : _idleSliceMs * 0.98f);
+		return !_idleDecodes.empty();
 	}
 
 	void Ps2AudioDevice::FillRing()

@@ -205,7 +205,7 @@ Directive | Meaning
 
 Element | Meaning
 ------- | -------
-`varying [flat] [precision] <type> <name>;` | Lowered to an @cpp out @ce in the vertex stage and an @cpp in @ce in the fragment stage, qualifiers preserved. May be wrapped in a global-scope `SOFTWARE_RENDERER` conditional, see @ref shader-compiler-input-preprocessor "below"
+`varying [flat] [precision] <type> <name>;` | Lowered to an @cpp out @ce in the vertex stage and an @cpp in @ce in the fragment stage, qualifiers preserved. May be wrapped in a global-scope `SOFTWARE_RENDERER` or `LOW_POWER_GPU` conditional, see @ref shader-compiler-input-preprocessor "below"
 `attribute [layout(location = N)] <declaration>;` | A vertex attribute --- emitted as an @cpp in @ce global in the **vertex stage only**. A leading `layout(...)` stays in front of the @cpp in @ce keyword and the location is honored by reflection
 `uniform <type> <name> : <hint>[, <hint>];` | `texture_unit(N)` assigns the texture unit (**0--31**) of a sampler uniform and is the **only** way to assign one explicitly; in the primary mode the name must match a sampler in at least one variant, and two hints naming the same uniform are an error. `source_color`, `hint_range(...)`, `filter_nearest`, `filter_linear`, `repeat_enable` and `repeat_disable` are parsed and dropped, anything else is an error. The hint list is stripped from the lowered declaration, so hints never reach the emitted sources
 everything else | Global scope --- uniforms, std140 blocks, consts, structs, helper functions --- is shared by both stages of every lowered document
@@ -241,8 +241,9 @@ Opts into the engine's standard sprite template (`InstanceBlock` / `InstancesBlo
 @cpp void vertex() @ce is **optional**: the generated @cpp main() @ce computes the built-ins as
 locals, splices the body verbatim, then runs the standard epilogue (@cpp gl_Position @ce plus the
 varying stores). Because of that epilogue, @cpp return; @ce inside a canvas @cpp vertex() @ce is a
-parse error. @cpp void fragment() @ce is required and enters with @cpp COLOR @ce holding the
-instance color.
+parse error. It can also be given to the low-power emissions alone, by wrapping it in a global-scope
+`#if LOW_POWER_GPU` --- see @ref shader-compiler-input-preprocessor. @cpp void fragment() @ce is
+required and enters with @cpp COLOR @ce holding the instance color.
 
 Built-in | Vertex stage | Fragment stage
 -------- | ------------ | --------------
@@ -308,6 +309,16 @@ Four macros are resolved by the tool and therefore never survive into any emitte
     tied to a single emission: a per-shader header's `_Vs100`/`_Fs100` sources are built with it while
     the modern GL, HLSL, SPIR-V and MSL artifacts beside them are not, and the engine's
     `RHI_LOW_POWER_GPU` (`RhiFwd.h`) mirrors which of the two views a binary ended up compiling.
+    Around **global-scope `varying` declarations** it works like `SOFTWARE_RENDERER` does: the
+    varyings are tagged and only the low-power emissions declare them, which is what lets a cheaper
+    path move screen-linear work from the fragment stage to the vertex stage without changing any
+    other artifact (see @cpp "CombineWithWater.shader" @ce, and @cpp "tests/LowPowerVarying.shader" @ce
+    for the worked example). The same restriction applies --- such a conditional may contain nothing
+    but `varying` declarations --- with one exception: on its `LOW_POWER_GPU` side it may also hold the
+    @cpp vertex() @ce entry of a `canvas_item` shader. Only the low-power emissions then get a vertex
+    stage of their own, while every other emission keeps the default canvas vertex template, the exact
+    text the shader produces without the entry --- which is how @cpp "Blur.shader" @ce computes its tap
+    coordinates per vertex on the PS Vita (see @cpp "tests/LowPowerCanvasVertex.shader" @ce).
 
 All five work in @cpp #ifdef @ce / @cpp #ifndef @ce **and** in @cpp #if @ce / @cpp #elif @ce
 expressions, which is what lets one directive replace a nest of them
@@ -347,6 +358,14 @@ stage, in this order:
     structs are removed under a hard **reflection-preservation rule**: a declaration leaves a stage
     only when the same declaration survives in the other stage, so the merged per-variant reflection
     is byte-identical before and after the pass.
+-   **Backend-resolved uniform trimming** --- the passes above count a reference inside any
+    preprocessor branch, so when a stage source is built for one backend view (with the
+    `SOFTWARE_RENDERER` / `NO_DYNAMIC_BRANCHING` / `LOW_POWER_GPU` conditionals resolved), a loose
+    uniform that only the dropped branches read leaves that stage as well --- provided the other
+    stage of the same view still reads it, the same reflection-preservation rule. Without it a
+    uniform read only by the low-power branch of a vertex stage would stay declared in the vertex
+    stage of every other emission, where it is a member of the HLSL cbuffer and the MSL argument
+    struct, i.e. a different interface.
 -   **Constant folding** --- literal-only subexpressions inside function bodies are folded with
     exact GLSL semantics. Global-scope declarations are never touched, which again guarantees
     reflection stays byte-identical.
@@ -985,7 +1004,10 @@ rather than in the editor.
 
 @section shader-compiler-cg The Cg dialect (PS Vita and PlayStation 3)
 
-Two consoles want Cg, for opposite reasons, and both are served by the same emitted source.
+Two consoles want Cg, for opposite reasons, and both are served by the same emitter. They do not get
+the same text, though: each is built from its own view of a shader --- the PS Vita's with
+`LOW_POWER_GPU` defined, the PlayStation 3's with `NO_DYNAMIC_BRANCHING` instead (see
+@ref shader-compiler-input-preprocessor) --- so a shader's low-power paths are the Vita's alone.
 
 The PS Vita's `sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline
 compiler for them --- the only Cg compiler for the platform is `libshacccg.suprx`, a firmware module
@@ -994,9 +1016,8 @@ time through vitaShaRK, and that is what @cpp "CgGeneratedShaders.h" @ce carries
 per program variant, looked up by the same program identity the fixed-function console tables use.
 
 The PlayStation 3 is the mirror image: its RSX is an NV40-family part that Cg targets natively, but
-the console has no shader compiler of any kind, so the very same source has to be compiled **before**
-it ships. That step is @ref shader-compiler-cg-rsx "described below" and is deliberately not a mode
-of this tool.
+the console has no shader compiler of any kind, so its source has to be compiled **before** it ships,
+by the step @ref shader-compiler-cg-rsx "described below".
 
 Cg is the same language family as HLSL --- `floatN`, `mul()`, `lerp` / `frac` / `ddx`, `TEXCOORD<i>`
 interpolants --- so it is emitted by the *same* emitter (@ref ShaderCompiler::HlslEmitter, selected
@@ -1028,14 +1049,18 @@ silently drop both. A separate aggregate header keeps a Cg run from touching any
 
 @subsection shader-compiler-cg-rsx Compiling that Cg for the PlayStation 3
 
-`--emit-rsx` emits the very same Cg the Vita gets and then compiles it, which is why it lives beside
-`--emit-cg` rather than in a tool of its own. Only two things about it are specific to the console:
+`--emit-rsx` emits Cg the way `--emit-cg` does and then compiles it, which is why it lives beside
+`--emit-cg` rather than in a tool of its own. Three things about it are specific to the console:
 
-1.  **`BATCH_SIZE` is capped.** The Vita's value is derived from a 64 KB uniform-block budget, which is
+1.  **It compiles the plain view of every shader**, with `NO_DYNAMIC_BRANCHING` defined and
+    `LOW_POWER_GPU` not --- the text the desktop backends get, minus the dynamically branching blocks
+    the NV40 profiles miscompile. A shader's low-power paths therefore never reach the RSX, and an edit
+    confined to them leaves @cpp "RsxGeneratedShaders.h" @ce byte-identical.
+2.  **`BATCH_SIZE` is capped.** The Vita's value is derived from a 64 KB uniform-block budget, which is
     what a shader-visible buffer holds there. The RSX has no such buffer --- a batched instance array
     reaches the vertex program through its constant registers --- so the emitter is given the batch
     the backend's corner stream covers, and bakes that in instead.
-2.  **Each stage is compiled by `cgcomp`**, PSL1GHT's offline Cg compiler, run as a child process with
+3.  **Each stage is compiled by `cgcomp`**, PSL1GHT's offline Cg compiler, run as a child process with
     the `vp40` / `fp40` profiles the RSX is --- the same way SPIR-V is produced by running
     `glslangValidator`. It is found through `--cgcomp`, then `$PS3DEV/bin`, then `PATH`. Being a front
     end over NVIDIA's `libCg.so`, it fails with "Unable to load Cg" when the Cg Toolkit is not on the

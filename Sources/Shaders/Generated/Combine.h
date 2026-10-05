@@ -54,6 +54,7 @@ R"__SHDR__(attribute vec2 aQuadCorner;
 
 varying vec2 vTexCoords;
 varying vec2 vViewSizeInv;
+varying vec2 vPixelPos;
 
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
@@ -73,6 +74,7 @@ void main()
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vViewSizeInv = vec2(1.0) / spriteSize;
+	vPixelPos = aPosition * spriteSize;
 }
 )__SHDR__";
 #endif
@@ -140,6 +142,7 @@ precision mediump float;
 
 varying vec2 vTexCoords;
 varying vec2 vViewSizeInv;
+varying vec2 vPixelPos;
 
 uniform sampler2D uTexture;
 uniform sampler2D uTextureLighting;
@@ -149,15 +152,18 @@ uniform sampler2D uTextureBlurQuarter;
 uniform vec4 uAmbientColor;
 uniform float uTime;
 
-vec2 hash2D(in vec2 p) {
-	float h = dot(p, vec2(12.9898, 78.233));
-	float h2 = dot(p, vec2(37.271, 377.632));
-	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+// Interleaved gradient noise (Jimenez 2014) for the low-power lighting jitter below: two fract() and a dot,
+// where hash2D() pays for two sin()
+float interleavedGradientNoise(vec2 p) {
+	return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
 
-vec2 noiseTexCoords(vec2 position) {
-	vec2 seed = position + fract(uTime * 0.01);
-	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+// The same +-1.4 view pixel jitter of the lightmap lookup as noiseTexCoords(), hashed from the pixel
+// position instead, and without the clamp - the lighting buffer is sampled with clamp-to-edge anyway
+vec2 lightingJitterLowPower() {
+	vec2 seed = vPixelPos + fract(uTime * 7.31) * 512.0;
+	vec2 offset = vec2(interleavedGradientNoise(seed), interleavedGradientNoise(seed + vec2(37.0, 17.0))) * 2.0 - 1.0;
+	return offset * vViewSizeInv * 1.4;
 }
 
 
@@ -167,7 +173,10 @@ void main() {
 	vec4 blur2 = texture2D(uTextureBlurQuarter, vTexCoords);
 
 	vec4 main = texture2D(uTexture, vTexCoords);
-	vec4 light = texture2D(uTextureLighting, noiseTexCoords(vTexCoords));
+	// Low-power-GPU variant (the PS Vita's sceGxm and the OpenGL|ES 2.0 profile): the sin()-based hash
+	// was nearly half of this full-screen pass on the SGX543 - this saves 1.4 of the 3 ms it cost over a
+	// plain copy at 480x272. Any uniformly distributed jitter dithers the lightmap texels equally well.
+	vec4 light = texture2D(uTextureLighting, vTexCoords + lightingJitterLowPower());
 
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 

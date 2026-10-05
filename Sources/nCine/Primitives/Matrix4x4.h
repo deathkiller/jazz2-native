@@ -110,6 +110,11 @@ namespace nCine
 			// 0 degrees and worst at 45, so it only appears once something actually rotates. Two things
 			// avoid it together: taking the opposite-signed sine from the negated ANGLE (sin(-x)), and
 			// keeping these builders real calls so their result cannot be folded into the caller.
+			//
+			// Every rotation below takes its sine and cosine as `std::` calls, so a float matrix gets the float
+			// overloads. Unqualified, `cos()` is the C library's double function, which a CPU without a double
+			// FPU runs in software: on the PSP that measured ~18 us per call in PPSSPP against ~0.3 us for
+			// `cosf()`, and the reforged HUD alone rotates up to fifteen elements every frame (its health carrots).
 #if defined(DEATH_TARGET_DREAMCAST)
 #	define DEATH_MATRIX_ROTATION_BUILDER DEATH_NEVER_INLINE
 #else
@@ -576,8 +581,8 @@ namespace nCine
 			const T m13 = m[1][3];
 			const T m23 = m[2][3];
 
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 
 			m[1][0] = c * m10 + s * m20;
 			m[1][1] = c * m11 + s * m21;
@@ -614,8 +619,8 @@ namespace nCine
 			const T m03 = m[0][3];
 			const T m23 = m[2][3];
 
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 
 			m[0][0] = c * m00 - s * m20;
 			m[0][1] = c * m01 - s * m21;
@@ -652,8 +657,8 @@ namespace nCine
 			const T m03 = m[0][3];
 			const T m13 = m[1][3];
 
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 
 			m[0][0] = c * m00 + s * m10;
 			m[0][1] = c * m01 + s * m11;
@@ -719,10 +724,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::RotationX(T radians)
 		{
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 #if defined(DEATH_TARGET_DREAMCAST)
-			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+			const T ns = std::sin(-radians);	// Never "-s", see the note next to the declarations
 #else
 			const T ns = -s;
 #endif
@@ -736,10 +741,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::RotationY(T radians)
 		{
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 #if defined(DEATH_TARGET_DREAMCAST)
-			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+			const T ns = std::sin(-radians);	// Never "-s", see the note next to the declarations
 #else
 			const T ns = -s;
 #endif
@@ -753,10 +758,10 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::RotationZ(T radians)
 		{
-			const T c = cos(radians);
-			const T s = sin(radians);
+			const T c = std::cos(radians);
+			const T s = std::sin(radians);
 #if defined(DEATH_TARGET_DREAMCAST)
-			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+			const T ns = std::sin(-radians);	// Never "-s", see the note next to the declarations
 #else
 			const T ns = -s;
 #endif

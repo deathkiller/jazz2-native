@@ -6,7 +6,7 @@ namespace Jazz2::Tiles
 {
 	TileSet::TileSet(StringView path, std::uint16_t tileCount, SmallVector<std::unique_ptr<Texture>, 1>&& textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque)
 		: FilePath(path), TextureDiffuse(std::move(textureDiffuse)), _mask(std::move(mask)), _captionTile(std::move(captionTile)),
-			_isMaskEmpty(), _isMaskFilled(), _isTileFilled(), _isColumnContiguous()
+			_isMaskEmpty(), _isMaskFilled(), _isTileFilled(), _isTileOpaque(), _isColumnContiguous()
 	{
 		// TilesPerRow/TilesPerTexture are used only for rendering. Every chunk shares the layout of chunk 0
 		// (the last one may be shorter), so its size defines how many tiles each chunk covers.
@@ -23,6 +23,7 @@ namespace Jazz2::Tiles
 		_isMaskEmpty.resize(ValueInit, TileCount);
 		_isMaskFilled.resize(ValueInit, TileCount);
 		_isTileFilled.resize(ValueInit, TileCount);
+		_isTileOpaque.resize(ValueInit, TileCount);
 		_isColumnContiguous.resize(ValueInit, TileCount);
 		// 2 bytes per column (first/last solid row); zero-initialized by make_unique
 		_columnSpans = std::make_unique<std::uint8_t[]>((std::size_t)TileCount * DefaultTileSize * 2);
@@ -52,9 +53,13 @@ namespace Jazz2::Tiles
 
 			// A tile is "filled" for rendering when its diffuse is fully opaque (used to cull hidden debris).
 			// The flag is computed from the diffuse alpha by the content loader; it is absent in headless
-			// mode, where rendering - and therefore this optimization - does not run.
+			// mode, where rendering - and therefore this optimization - does not run. The loader marks a
+			// tile that also draws no pixel in a translucent palette colour with a 2.
 			if (tileDiffuseOpaque != nullptr && tileDiffuseOpaque[i] != 0) {
 				_isTileFilled.set(i);
+				if (tileDiffuseOpaque[i] == 2) {
+					_isTileOpaque.set(i);
+				}
 			}
 
 			// Precompute per-column solid spans. A tile whose every column is vertically contiguous
@@ -165,6 +170,8 @@ namespace Jazz2::Tiles
 		}
 		if (result) {
 			_isTileFilled.set(tileId, filled);
+			// Only a baked atlas carries the colours themselves; an indexed tile's palette is not known here
+			_isTileOpaque.set(tileId, filled && channels > 2);
 		}
 		return result;
 	}

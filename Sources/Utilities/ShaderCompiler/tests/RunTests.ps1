@@ -50,6 +50,7 @@ $errorCases = @{
     'PrecisionInvalid' = @(2, 'unsupported precision')
     'VertexEarlyReturn' = @(9, 'not allowed in vertex()')
     'StageDefine' = @(6, 'cannot be defined or undefined')
+    'LowPowerVertexElse' = @(6, 'may only contain varying declarations')
 }
 
 foreach ($shader in Get-ChildItem (Join-Path $testsDir 'errors\*.shader')) {
@@ -460,6 +461,43 @@ $swText2 = [System.IO.File]::ReadAllText($swOut2)
 Assert ($swText2.Contains('io->vRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));')) 'SwVarying: SW ComputeVaryings does not fill the constant varying from the instance block'
 Assert ($swText2.Contains('unis->vRect.xy()')) 'SwVarying: SW fragment does not read the constant varying from the uniforms struct'
 Assert (-not $swText2.Contains('vPos')) 'SwVarying: non-software branch leaked into the SW transpile'
+
+# --- low-power varyings: the same global-scope conditional spelled with LOW_POWER_GPU ("#if" form here)
+# tags the varyings of a cheaper path that moves work from the fragment stage to the vertex stage. Only the
+# ESSL 100 (and Cg) emission may carry them, and a uniform that only the low-power branch of the vertex
+# stage reads (uTime) must not be declared in the vertex stage of any other emission - there it would be
+# an extra member of the HLSL cbuffer / MSL argument struct - nor in the low-power fragment stage, which no
+# longer reads it, while the fragment stage of every other emission keeps it
+$h = Emit 'LowPowerVarying'
+$vs = Get-Source $h 'LowPowerVarying_Vs'
+$fs = Get-Source $h 'LowPowerVarying_Fs'
+$vs100 = Get-Source $h 'LowPowerVarying_Vs100'
+$fs100 = Get-Source $h 'LowPowerVarying_Fs100'
+Assert ($null -ne $vs -and $null -ne $fs -and $null -ne $vs100 -and $null -ne $fs100) 'LowPowerVarying: sources missing'
+Assert (-not $vs.Contains('vPhase') -and -not $fs.Contains('vPhase')) 'LowPowerVarying: low-power varying leaked into the GL stages'
+Assert (-not $vs.Contains('uTime')) 'LowPowerVarying: uniform read only by the low-power branch still declared in the GL VS'
+Assert ($fs.Contains('uniform float uTime;') -and $fs.Contains('sin((vTexCoords.y * 3.0 + uTime) * 6.2831853)')) 'LowPowerVarying: GL FS lost the default branch'
+Assert ($vs100.Contains('varying vec2 vPhase;') -and $vs100.Contains('vPhase = vec2(vTexCoords.y * 3.0 + uTime, 0.0);')) 'LowPowerVarying: ES2 VS lost the low-power varying/store'
+Assert ($fs100.Contains('varying vec2 vPhase;') -and $fs100.Contains('sinCycles(vPhase.x)')) 'LowPowerVarying: ES2 FS lost the low-power varying/read'
+Assert (-not $fs100.Contains('uTime')) 'LowPowerVarying: uniform the low-power FS no longer reads still declared there'
+Assert (-not $h.Contains('LOW_POWER_GPU')) 'LowPowerVarying: LOW_POWER_GPU macro leaked into the emitted header'
+
+# --- low-power canvas vertex(): the vertex() entry of a canvas_item shader inside a global-scope LOW_POWER_GPU
+# conditional. Only the ESSL 100 (and Cg) emission may run it; every other emission keeps the default vertex
+# template - the exact text the shader would get with no vertex() at all - so their backends see no change.
+# On the other side of the conditional the entry is an error (errors\LowPowerVertexElse.shader).
+$h = Emit 'LowPowerCanvasVertex'
+$vs = Get-Source $h 'LowPowerCanvasVertex_Vs'
+$fs = Get-Source $h 'LowPowerCanvasVertex_Fs'
+$vs100 = Get-Source $h 'LowPowerCanvasVertex_Vs100'
+$fs100 = Get-Source $h 'LowPowerCanvasVertex_Fs100'
+Assert ($null -ne $vs -and $null -ne $fs -and $null -ne $vs100 -and $null -ne $fs100) 'LowPowerCanvasVertex: sources missing'
+Assert ($vs.Contains('vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);') -and -not $vs.Contains('VERTEX')) 'LowPowerCanvasVertex: GL VS is not the default template'
+Assert (-not $vs.Contains('vShifted') -and -not $vs.Contains('uOffset')) 'LowPowerCanvasVertex: low-power vertex() leaked into the GL VS'
+Assert ($fs.Contains('texture(uTexture, vTexCoords + uOffset)') -and -not $fs.Contains('vShifted')) 'LowPowerCanvasVertex: GL FS lost the default branch'
+Assert ($vs100.Contains('vShifted = UV + uOffset;') -and $vs100.Contains('vTexCoords = UV;')) 'LowPowerCanvasVertex: ES2 VS lost the vertex() body or its epilogue'
+Assert ($fs100.Contains('texture2D(uTexture, vShifted)') -and -not $fs100.Contains('uOffset')) 'LowPowerCanvasVertex: ES2 FS lost the low-power read'
+Assert (-not $h.Contains('LOW_POWER_GPU')) 'LowPowerCanvasVertex: LOW_POWER_GPU macro leaked into the emitted header'
 
 # --- BackendConditionals: "#if"/"#elif" expressions over SOFTWARE_RENDERER/NO_DYNAMIC_BRANCHING.
 # An expression naming only those is RESOLVED (its directive lines disappear with the losing

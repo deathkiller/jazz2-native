@@ -302,19 +302,32 @@ namespace nCine::RHI::GU
 
 		DrawState appliedState;
 		bool appliedStateValid = false;
+		// The texture setup the GE's registers hold, which an untextured draw does not undo: it only turns
+		// texturing off, and the texture, its CLUT and its sampling stay loaded. So the next draw of the same
+		// texture only has to turn it back on - where every band of the warped background, which alternates a
+		// textured strip with an untextured one, used to send the whole setup again, CLUT load and texture
+		// cache flush included. Invalidated together with appliedState, and on its own wherever texels can
+		// change under an unchanged address: a draw target switch, or a store rewritten in place (see
+		// InvalidateTextureState()).
+		DrawState appliedTexture;
+		bool appliedTextureValid = false;
 
 		void ApplyDrawState(const DrawState& state)
 		{
-			const bool textureChanged = (!appliedStateValid ||
-				appliedState.TextureData != state.TextureData || appliedState.Clut != state.Clut ||
-				appliedState.TexturePsm != state.TexturePsm || appliedState.TextureWidth != state.TextureWidth ||
-				appliedState.TextureHeight != state.TextureHeight || appliedState.TextureStride != state.TextureStride ||
-				appliedState.TextureSwizzled != state.TextureSwizzled);
-			if (textureChanged) {
-				if (state.TextureData == nullptr) {
+			if (state.TextureData == nullptr) {
+				if (!appliedStateValid || appliedState.TextureData != nullptr) {
 					sceGuDisable(GU_TEXTURE_2D);
-				} else {
+				}
+			} else {
+				if (!appliedStateValid || appliedState.TextureData == nullptr) {
 					sceGuEnable(GU_TEXTURE_2D);
+				}
+				const bool textureChanged = (!appliedTextureValid ||
+					appliedTexture.TextureData != state.TextureData || appliedTexture.Clut != state.Clut ||
+					appliedTexture.TexturePsm != state.TexturePsm || appliedTexture.TextureWidth != state.TextureWidth ||
+					appliedTexture.TextureHeight != state.TextureHeight || appliedTexture.TextureStride != state.TextureStride ||
+					appliedTexture.TextureSwizzled != state.TextureSwizzled);
+				if (textureChanged) {
 					if (state.Clut != nullptr) {
 						// 8-bit indices address the CLUT directly, so no shift and the full 8-bit mask; 32
 						// blocks of 8 entries are the 256 the format has. The entries are ordinary RGBA8
@@ -328,19 +341,19 @@ namespace nCine::RHI::GU
 					// reuses the same addresses, so the cache has to be dropped whenever the binding changes
 					sceGuTexFlush();
 				}
-			}
-			if (state.TextureData != nullptr && (textureChanged ||
-					appliedState.Tfx != state.Tfx || appliedState.Tcc != state.Tcc ||
-					appliedState.EnvColor != state.EnvColor)) {
-				sceGuTexFunc(state.Tfx, state.Tcc);
-				sceGuTexEnvColor(state.EnvColor);
-			}
-			if (state.TextureData != nullptr && (textureChanged || appliedState.Filter != state.Filter)) {
-				sceGuTexFilter(state.Filter, state.Filter);
-			}
-			if (state.TextureData != nullptr && (textureChanged ||
-					appliedState.WrapU != state.WrapU || appliedState.WrapV != state.WrapV)) {
-				sceGuTexWrap(state.WrapU, state.WrapV);
+				if (textureChanged || appliedTexture.Tfx != state.Tfx || appliedTexture.Tcc != state.Tcc ||
+						appliedTexture.EnvColor != state.EnvColor) {
+					sceGuTexFunc(state.Tfx, state.Tcc);
+					sceGuTexEnvColor(state.EnvColor);
+				}
+				if (textureChanged || appliedTexture.Filter != state.Filter) {
+					sceGuTexFilter(state.Filter, state.Filter);
+				}
+				if (textureChanged || appliedTexture.WrapU != state.WrapU || appliedTexture.WrapV != state.WrapV) {
+					sceGuTexWrap(state.WrapU, state.WrapV);
+				}
+				appliedTexture = state;
+				appliedTextureValid = true;
 			}
 			if (!appliedStateValid || appliedState.BlendEnabled != state.BlendEnabled ||
 					(state.BlendEnabled && (appliedState.BlendOp != state.BlendOp ||
@@ -416,6 +429,39 @@ namespace nCine::RHI::GU
 		}
 
 		/**
+			@brief Opens a run of up to @p maxCount vertices appended to the batch of @p prim drawn under @p state
+
+			The same batch AllocVertices() would append to, minus the call and the state comparison per primitive:
+			a caller with many primitives under one state writes them straight into the run and commits however many
+			it wrote with EndVertexRun(), before anything else may touch the batch. Returns `nullptr` when the arena
+			cannot take @p maxCount more, and the caller goes back to AllocVertices(), which is what decides what
+			still fits.
+		*/
+		Vertex2D* BeginVertexRun(const DrawState& state, std::int32_t prim, std::int32_t maxCount)
+		{
+			if (batchVertexCount > 0 && (batchPrim != prim || !SameDrawState(batchState, state))) {
+				FlushBatch();
+			}
+			if (batchVertexCount == 0) {
+				frameArenaUsed = (frameArenaUsed + 15) & ~std::size_t(15);
+				batchFirstByte = frameArenaUsed;
+				batchState = state;
+				batchPrim = prim;
+			}
+			if (frameArenaUsed + std::size_t(maxCount) * sizeof(Vertex2D) > FrameArenaBytes) {
+				return nullptr;
+			}
+			return reinterpret_cast<Vertex2D*>(frameArena + frameArenaUsed);
+		}
+
+		/** @brief Commits the @p count vertices written into the run BeginVertexRun() opened */
+		void EndVertexRun(std::int32_t count)
+		{
+			frameArenaUsed += std::size_t(count) * sizeof(Vertex2D);
+			batchVertexCount += count;
+		}
+
+		/**
 			@brief Submits one quad, as a GE rectangle when it is axis-aligned and as a triangle pair otherwise
 
 			Corners 0/1 share the sprite's local x = 1 edge and 2/3 its x = 0 edge, 0/2 the y = 0 edge and 1/3
@@ -460,11 +506,33 @@ namespace nCine::RHI::GU
 			}
 		}
 
-		/** @brief Submits a triangle strip of its own draw call (arbitrary synthesized geometry) */
+		/** @brief Submits a triangle strip of synthesized geometry, of its own draw call unless it is a quad */
 		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
 			std::int32_t count, const std::uint32_t* abgr, std::uint32_t flatAbgr, float dx, float dy)
 		{
-			// A strip cannot share a draw call with anything else - the GE would connect it to whatever
+			if (count == 4) {
+				// A four-vertex strip is a quad, and as the two triangles of a list it joins whatever triangles
+				// under the same state come before or after it - the pieces of a band of the warped background,
+				// a hundred-odd strips a frame that each used to be a draw call of its own. They are the strip's
+				// own triangles, (0, 1, 2) and (1, 2, 3), the second wound the other way, which only culling
+				// (off) would see.
+				Vertex2D* const v = AllocVertices(state, GU_TRIANGLES, 6);
+				if (v == nullptr) {
+					return;
+				}
+				static const std::int32_t Order[6] = { 0, 1, 2, 2, 1, 3 };
+				for (std::int32_t i = 0; i < 6; i++) {
+					const std::int32_t o = Order[i];
+					v[i].U = (pu != nullptr ? pu[o] : 0.0f);
+					v[i].V = (pv != nullptr ? pv[o] : 0.0f);
+					v[i].Color = (abgr != nullptr ? abgr[o] : flatAbgr);
+					v[i].X = px[o] + dx;
+					v[i].Y = py[o] + dy;
+					v[i].Z = 0.0f;
+				}
+				return;
+			}
+			// A longer strip cannot share a draw call with anything else - the GE would connect it to whatever
 			// vertices follow - so it is bracketed by flushes
 			FlushBatch();
 			Vertex2D* const v = AllocVertices(state, GU_TRIANGLE_STRIP, count);
@@ -909,6 +977,7 @@ namespace nCine::RHI::GU
 		// A fresh list re-sends the draw buffer of the context, and nothing else about the previous frame's
 		// state can be relied upon, so everything is reissued once
 		appliedStateValid = false;
+		appliedTextureValid = false;
 		appliedTargetValid = false;
 		appliedScissor[0] = -1;
 	}
@@ -937,6 +1006,9 @@ namespace nCine::RHI::GU
 		appliedTargetValid = true;
 		// The rect is expressed in the target's raster space, so it has to be reprogrammed as well
 		appliedScissor[0] = -1;
+		// A surface keeps its address while it is rendered into, so a texture sampled from it before has to be
+		// set up again - which is what flushes the old texels out of the GE's texture cache
+		appliedTextureValid = false;
 	}
 
 	void GuDevice::ApplyScissor()
@@ -1199,6 +1271,7 @@ namespace nCine::RHI::GU
 		// sceGuClear() draws its own sprite with its own vertex format and leaves the clear-mode register
 		// touched, so nothing about the cached pipeline state survives it
 		appliedStateValid = false;
+		appliedTextureValid = false;
 	}
 
 	// ── Draw Entry Points ────────────────────────────────────────────────────────────────────────
@@ -1302,6 +1375,7 @@ namespace nCine::RHI::GU
 			_listOpen = false;
 			// Nothing about the list's state survives into the one EnsureList() opens next
 			appliedStateValid = false;
+			appliedTextureValid = false;
 			appliedTargetValid = false;
 		}
 	}
@@ -1322,12 +1396,19 @@ namespace nCine::RHI::GU
 		if (appliedStateValid && appliedState.TextureData != nullptr) {
 			appliedStateValid = false;
 		}
+		// The texture registers may hold the destroyed store even while an untextured draw is current
+		appliedTextureValid = false;
 		// Drop CLUT copies built from the destroyed palette so a stale pointer can never match
 		for (std::int32_t i = 0; i < clutCacheCount; i++) {
 			if (clutCache[i].Palette == texture) {
 				clutCache[i].Palette = nullptr;
 			}
 		}
+	}
+
+	void GuDevice::InvalidateTextureState()
+	{
+		appliedTextureValid = false;
 	}
 
 	const GuTexture* GuDevice::GetBoundTexture(std::uint32_t unit)
@@ -1814,16 +1895,40 @@ namespace nCine::RHI::GU
 		// clamp+float-to-int quantizations run once per change instead of once per tile
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		std::uint32_t lastAbgr = 0;
+
+		// The common case - a single-page atlas under a camera that does not rotate, so every tile lands on the
+		// screen as the very rectangle it is in the mesh - is written straight into a run of the batch: two corners
+		// projected instead of four, and no state comparison, copy or call per tile. It produces exactly what
+		// SubmitQuadPrimitive() would: the same corners, picked and ordered the same way, into the same batch. A
+		// tile it cannot prove axis-aligned from the mesh coordinates goes down the general path below, which
+		// still turns it into a rectangle if it projects to one.
+		const bool directRects = (!pagedTexture && PreferSpritePrimitive && raster.Xy == 0.0f && raster.Yx == 0.0f);
+		// Copies the loop can keep in registers - the originals had their address taken, so every store into
+		// the run would otherwise make the compiler load them again
+		const float rectScaleX = raster.Xx, rectBiasX = raster.Tx, rectScaleY = raster.Yy, rectBiasY = raster.Ty;
+		const float texScaleU = uvScaleU, texBiasU = uvBiasU, texScaleV = uvScaleV, texBiasV = uvBiasV;
+		bool runAvailable = directRects;
+		Vertex2D* run = nullptr;
+		std::int32_t runCount = 0;
+
 		while (triangle < triangleCount) {
 			// Tiles reach here as two triangles whose third and fourth slots repeat the first and third.
 			// Recognizing that pattern lets a tile go out as one quad - and, since tile quads are
 			// axis-aligned, as a two-vertex GE rectangle rather than six triangle vertices.
 			const std::int32_t element = triangle * 3;
 			const float* group = vertexAt(element);
-			const bool isQuad = (triangle + 2 <= triangleCount &&
-				vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
-				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
-				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
+			// A slot that repeats the index of another is that vertex, so the positions need no comparing; the
+			// indexed meshes of the pipeline always take this way
+			bool isQuad = false;
+			if (triangle + 2 <= triangleCount) {
+				if (indices != nullptr && indices[element + 3] == indices[element] && indices[element + 4] == indices[element + 2]) {
+					isQuad = true;
+				} else {
+					isQuad = (vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+						vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+						vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
+				}
+			}
 
 			float px[4], py[4], pu[4], pvv[4];
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
@@ -1831,6 +1936,47 @@ namespace nCine::RHI::GU
 				lastAbgr = PackAbgr(QuantizeChannel(group[4] * layerColor[0]),
 					QuantizeChannel(group[5] * layerColor[1]), QuantizeChannel(group[6] * layerColor[2]),
 					QuantizeChannel(group[7] * layerColor[3]));
+			}
+
+			if (isQuad && runAvailable) {
+				// Slots 1, 2, 0 and 5 are the corners SubmitQuadPrimitive() is handed, and a quad whose x pairs
+				// and y pairs agree in the mesh still does after a transform that scales and translates each
+				// axis on its own
+				const float* c1 = vertexAt(element + 1);
+				const float* c2 = vertexAt(element + 2);
+				const float* c5 = vertexAt(element + 5);
+				if (c1[0] == c2[0] && group[0] == c5[0] && c1[1] == group[1] && c2[1] == c5[1]) {
+					if (run == nullptr) {
+						// Room for every tile still to come, at two vertices each, or the rest goes one by one
+						run = BeginVertexRun(state, GU_SPRITES, triangleCount - triangle);
+					}
+					if (run != nullptr) {
+						float x0 = rectScaleX * group[0] + rectBiasX, u0 = group[2] * texScaleU - texBiasU;
+						float x1 = rectScaleX * c1[0] + rectBiasX, u1 = c1[2] * texScaleU - texBiasU;
+						if (x0 > x1) {
+							std::swap(x0, x1);
+							std::swap(u0, u1);
+						}
+						float y0 = rectScaleY * c1[1] + rectBiasY, v0 = c1[3] * texScaleV - texBiasV;
+						float y1 = rectScaleY * c2[1] + rectBiasY, v1 = c2[3] * texScaleV - texBiasV;
+						if (y0 > y1) {
+							std::swap(y0, y1);
+							std::swap(v0, v1);
+						}
+						run[runCount] = { u0, v0, lastAbgr, x0, y0, 0.0f };
+						run[runCount + 1] = { u1, v1, lastAbgr, x1, y1, 0.0f };
+						runCount += 2;
+						triangle += 2;
+						continue;
+					}
+					runAvailable = false;
+				}
+			}
+			// The general submission appends to the same batch, so whatever the run holds is committed first
+			if (run != nullptr) {
+				EndVertexRun(runCount);
+				run = nullptr;
+				runCount = 0;
 			}
 
 			if (isQuad) {
@@ -1867,6 +2013,9 @@ namespace nCine::RHI::GU
 				}
 				triangle++;
 			}
+		}
+		if (run != nullptr) {
+			EndVertexRun(runCount);
 		}
 	}
 
