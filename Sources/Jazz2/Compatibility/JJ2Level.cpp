@@ -13,6 +13,8 @@
 #include <IO/FileSystem.h>
 #include <IO/Compression/DeflateStream.h>
 
+#include <algorithm>
+
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 using namespace Death::IO::Compression;
@@ -78,8 +80,9 @@ namespace Jazz2::Compatibility
 		JJ2Block layoutBlock(s, layoutBlockPackedSize, layoutBlockUnpackedSize);
 
 		LoadMetadata(infoBlock, strictParser);
-		LoadEvents(eventBlock, strictParser);
-		LoadLayers(dictBlock, dictBlockUnpackedSize / 8, layoutBlock, strictParser);
+		if (!LoadEvents(eventBlock, strictParser) || !LoadLayers(dictBlock, layoutBlock, strictParser)) {
+			return false;
+		}
 
 		// Try to read MLLE data stream
 		std::uint32_t mlleMagic = s->ReadValueAsLE<std::uint32_t>();
@@ -104,6 +107,10 @@ namespace Jazz2::Compatibility
 		LightingStart = block.ReadByte();
 
 		_animCount = block.ReadUInt16();
+		if (_animCount > GetMaxSupportedTiles()) {
+			LOGW("Level \"{}\" declares {} animated tiles, more than the {} tiles it can have", LevelName, _animCount, GetMaxSupportedTiles());
+			_animCount = std::uint16_t(GetMaxSupportedTiles());
+		}
 
 		_verticalMPSplitscreen = block.ReadBool();
 		_isMpLevel = block.ReadBool();
@@ -264,19 +271,34 @@ namespace Jazz2::Compatibility
 			_layers[i].SpriteMode = 0;
 			_layers[i].SpriteParam = 0;
 		}
+
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
+			auto& layer = _layers[i];
+			if (layer.InternalWidth < 0 || layer.Height < 0 || layer.Width < 0 || layer.Width > layer.InternalWidth) {
+				LOGW("Layer {} of level \"{}\" has inconsistent size {}x{} (stride {})", i, LevelName, layer.Width, layer.Height, layer.InternalWidth);
+				layer.InternalWidth = std::max<std::int32_t>(layer.InternalWidth, 0);
+				layer.Height = std::max<std::int32_t>(layer.Height, 0);
+				layer.Width = std::clamp<std::int32_t>(layer.Width, 0, layer.InternalWidth);
+			}
+		}
 	}
 
-	void JJ2Level::LoadEvents(JJ2Block& block, bool strictParser)
+	bool JJ2Level::LoadEvents(JJ2Block& block, bool strictParser)
 	{
 		std::int32_t width = _layers[3].Width;
 		std::int32_t height = _layers[3].Height;
-		if (width <= 0 && height <= 0) {
-			return;
+		if (width <= 0 || height <= 0) {
+			return true;
+		}
+
+		if (std::int64_t(width) * height > block.GetLength() / 4) {
+			LOGE("Event map of level \"{}\" ({}x{}) does not fit its block of {} bytes", LevelName, width, height, block.GetLength());
+			return false;
 		}
 
 		_events = std::make_unique<TileEventSection[]>(width * height);
 
-		for (std::int32_t y = 0; y < _layers[3].Height; y++) {
+		for (std::int32_t y = 0; y < height; y++) {
 			for (std::int32_t x = 0; x < width; x++) {
 				std::uint32_t eventData = block.ReadUInt32();
 
@@ -309,14 +331,16 @@ namespace Jazz2::Compatibility
 				}
 			}
 		}
+		return true;
 	}
 
-	void JJ2Level::LoadLayers(JJ2Block& dictBlock, std::int32_t dictLength, JJ2Block& layoutBlock, bool strictParser)
+	bool JJ2Level::LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser)
 	{
 		struct DictionaryEntry {
 			std::uint16_t Tiles[4];
 		};
 
+		const std::int32_t dictLength = dictBlock.GetLength() / std::int32_t(sizeof(DictionaryEntry));
 		std::unique_ptr<DictionaryEntry[]> dictionary = std::make_unique<DictionaryEntry[]>(dictLength);
 		for (std::int32_t i = 0; i < dictLength; i++) {
 			auto& entry = dictionary[i];
@@ -325,15 +349,32 @@ namespace Jazz2::Compatibility
 			}
 		}
 
+		std::int64_t layoutEntries = 0;
+		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
+			const auto& layer = _layers[i];
+			if (layer.Used) {
+				layoutEntries += std::int64_t(layer.Height) * ((std::int64_t(layer.InternalWidth) + 3) / 4);
+			}
+		}
+		if (layoutEntries > layoutBlock.GetLength() / 2) {
+			LOGE("Layers of level \"{}\" need {} layout entries, but its block holds only {}", LevelName, layoutEntries, layoutBlock.GetLength() / 2);
+			return false;
+		}
+
+		std::int32_t invalidEntries = 0;
 		for (std::int32_t i = 0; i < JJ2LayerCount; i++) {
 			auto& layer = _layers[i];
 
-			if (layer.Used) {
+			if (layer.Used && layer.InternalWidth > 0 && layer.Height > 0) {
 				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.InternalWidth * layer.Height);
 
 				for (std::int32_t y = 0; y < layer.Height; y++) {
 					for (std::int32_t x = 0; x < layer.InternalWidth; x += 4) {
 						std::uint16_t dictIdx = layoutBlock.ReadUInt16();
+						if (dictIdx >= dictLength) {
+							invalidEntries++;
+							continue;
+						}
 
 						for (std::int32_t j = 0; j < 4; j++) {
 							if (j + x >= layer.Width) {
@@ -344,14 +385,13 @@ namespace Jazz2::Compatibility
 						}
 					}
 				}
-			} else {
-				// Array will be initialized with zeros. Sized by InternalWidth like the branch above, because
-				// that is the stride Convert() indexes every layer with - sizing this one by Width instead
-				// left it short by (InternalWidth - Width) * Height entries for any layer whose rows are
-				// padded, which is every layer whose width is not a multiple of four.
-				layer.Tiles = std::make_unique<std::uint16_t[]>(layer.InternalWidth * layer.Height);
 			}
 		}
+
+		if (invalidEntries > 0) {
+			LOGW("Level \"{}\" references {} dictionary entries past the {} it has, these tiles were left empty", LevelName, invalidEntries, dictLength);
+		}
+		return true;
 	}
 
 	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser)
@@ -409,7 +449,7 @@ namespace Jazz2::Compatibility
 			std::uint8_t extraPaletteCount = block.ReadByte();
 			while (extraPaletteCount-- != 0) {
 				auto& palette = AlternatePalettes.emplace_back();
-				std::int32_t nameLength = block.ReadUint7bitEncoded();
+				std::int32_t nameLength = std::clamp<std::int32_t>(block.ReadUint7bitEncoded(), 0, block.GetRemainingLength());
 				palette.Name = String(NoInit, nameLength);
 				block.ReadRawBytes((std::uint8_t*)palette.Name.data(), nameLength);
 				block.ReadRawBytes(palette.Colors, sizeof(palette.Colors));
@@ -453,6 +493,10 @@ namespace Jazz2::Compatibility
 		// Additional layers
 		if (version >= 0x102) {
 			std::int32_t layerCount = block.ReadInt32();
+			if (layerCount < JJ2LayerCount || layerCount > MaxMlleLayerCount) {
+				LOGW("Level \"{}\" declares {} layers in its MLLE stream, ignoring the rest of the stream", LevelName, layerCount);
+				return;
+			}
 
 			for (std::int32_t i = 8; i < layerCount; i += 8) {
 				char numberBuffer[16];
@@ -482,6 +526,10 @@ namespace Jazz2::Compatibility
 					idx = id;
 				} else {
 					idx = nextExtraLayerIdx++;
+				}
+				if (idx >= (std::int32_t)_layers.size()) {
+					LOGW("Level \"{}\" references layer {} of {} in its MLLE stream, ignoring the rest of the stream", LevelName, idx, _layers.size());
+					return;
 				}
 				auto& layer = _layers[idx];
 				layerOrder[idx] = i;
@@ -538,14 +586,14 @@ namespace Jazz2::Compatibility
 			// Edited tiles were added in MLLE-Include-1.3
 			if (version >= 0x103) {
 				std::int16_t editedTilesCount = block.ReadInt16();
-				for (std::int32_t i = 0; i < editedTilesCount; i++) {
+				for (std::int32_t i = 0; i < editedTilesCount && !block.ReachedEndOfStream(); i++) {
 					auto& tile = _overridenTileDiffuses.emplace_back();
 					tile.TileID = block.ReadInt16();
 					block.ReadRawBytes(tile.Diffuse, 32 * 32);
 				}
 
 				editedTilesCount = block.ReadInt16();
-				for (std::int32_t i = 0; i < editedTilesCount; i++) {
+				for (std::int32_t i = 0; i < editedTilesCount && !block.ReachedEndOfStream(); i++) {
 					auto& tile = _overridenTileMasks.emplace_back();
 					tile.TileID = block.ReadInt16();
 					block.ReadRawBytes(tile.Mask, 32 * 32);
@@ -573,7 +621,7 @@ namespace Jazz2::Compatibility
 					}
 
 					if (customWeapon) {
-						std::int32_t weaponNameLength = block.ReadUint7bitEncoded();
+						std::int32_t weaponNameLength = std::clamp<std::int32_t>(block.ReadUint7bitEncoded(), 0, block.GetRemainingLength());
 						String weaponName{NoInit, (std::size_t)weaponNameLength};
 						block.ReadRawBytes((std::uint8_t*)weaponName.data(), weaponNameLength);
 
@@ -916,10 +964,12 @@ namespace Jazz2::Compatibility
 						tileFlags |= 0x02; // Flip Y
 					}
 
-					if (_staticTiles[tileIdx].Type == 1) {
-						tileFlags |= 0x10; // Legacy Translucent
-					} else if (_staticTiles[tileIdx].Type == 3) {
-						tileFlags |= 0x20; // Invisible
+					if (tileIdx < maxTiles) {
+						if (_staticTiles[tileIdx].Type == 1) {
+							tileFlags |= 0x10; // Legacy Translucent
+						} else if (_staticTiles[tileIdx].Type == 3) {
+							tileFlags |= 0x20; // Invisible
+						}
 					}
 
 					co.WriteValue<std::uint8_t>(tileFlags);

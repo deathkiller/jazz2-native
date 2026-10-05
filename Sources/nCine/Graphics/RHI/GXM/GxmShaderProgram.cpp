@@ -146,10 +146,7 @@ namespace nCine::RHI::GXM
 		if (patcher != nullptr) {
 			// A patched program may still be referenced by a scene the GPU has not finished, and releasing it
 			// frees its USSE code
-			GxmDevice::FinishScene();
-			if (SceGxmContext* context = GxmDevice::GetContext()) {
-				sceGxmFinish(context);
-			}
+			GxmDevice::WaitForGpuIdle();
 			for (CachedVertexProgram& cached : _vertexPrograms) {
 				sceGxmShaderPatcherReleaseVertexProgram(patcher, cached.Program);
 			}

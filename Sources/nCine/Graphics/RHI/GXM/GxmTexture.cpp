@@ -78,8 +78,8 @@ namespace nCine::RHI::GXM
 	{
 		if (_gpuBlock.IsValid()) {
 			// The GPU may still be reading these texels from a scene that has been submitted but not yet
-			// consumed, and the memory is about to be unmapped
-			GxmDevice::FinishScene();
+			// consumed - ending a scene no longer waits for it - and the memory is about to be unmapped
+			GxmDevice::WaitForGpuIdle();
 			// Whether this block is a render target's - which is retired for reuse at the same address instead
 			// of released - is decided by who owns it rather than by _isRenderTarget, which a detach has already
 			// flipped by the time this runs
@@ -149,7 +149,9 @@ namespace nCine::RHI::GXM
 			return false;
 		}
 
+		bool freshCopy = false;
 		if (!_gpuBlock.IsValid()) {
+			freshCopy = true;
 			// A colour attachment gets the **tiled** layout, not a linear one. A linear texture cannot address
 			// outside [0, 1] at all - the addressing mode is accepted and then simply does not happen - and every
 			// render target here is sampled by a later pass that needs exactly that: the scrolling background
@@ -210,6 +212,12 @@ namespace nCine::RHI::GXM
 			_samplerDirty = false;
 		}
 		if (_contentsDirty) {
+			if (!freshCopy) {
+				// Rewritten in place, and a scene submitted earlier in the frame may still sample what it held -
+				// ending a scene does not wait for it (see GxmDevice::FinishScene()). A mid-frame re-upload is rare
+				// (a palette row that changed, a cinematic frame), so waiting them all out costs little.
+				GxmDevice::WaitForPendingScenes();
+			}
 			UploadPixels();
 			_contentsDirty = false;
 		}
@@ -421,10 +429,7 @@ namespace nCine::RHI::GXM
 		GxmMemory::Block staging;
 		if (_isRenderTarget && _gpuBlock.IsValid()) {
 			// The GPU has to be done writing the texels first
-			GxmDevice::FinishScene();
-			if (SceGxmContext* context = GxmDevice::GetContext()) {
-				sceGxmFinish(context);
-			}
+			GxmDevice::WaitForGpuIdle();
 			staging = GxmMemory::Alloc("nCine:Readback", _gpuStride * std::uint32_t(_height), SCE_GXM_MEMORY_ATTRIB_RW);
 			if (!staging.IsValid()) {
 				LOGE("Failed to allocate a staging block to read back a {}x{} render target", _width, _height);

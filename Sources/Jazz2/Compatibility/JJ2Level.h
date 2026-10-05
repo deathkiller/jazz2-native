@@ -77,6 +77,8 @@ namespace Jazz2::Compatibility
 
 		/** @brief Number of layers in the original game */
 		static constexpr std::int32_t JJ2LayerCount = 8;
+		/** @brief Most layers accepted from an MLLE stream, far above what real levels use (each further 8 layers is a file of its own) */
+		static constexpr std::int32_t MaxMlleLayerCount = 1024;
 		/** @brief Number of level text entries in the original game */
 		static constexpr std::int32_t TextEventStringsCount = 16;
 
@@ -264,8 +266,8 @@ namespace Jazz2::Compatibility
 		void LoadStaticTileData(JJ2Block& block, bool strictParser);
 		void LoadAnimatedTiles(JJ2Block& block, bool strictParser);
 		void LoadLayerMetadata(JJ2Block& block, bool strictParser);
-		void LoadEvents(JJ2Block& block, bool strictParser);
-		void LoadLayers(JJ2Block& dictBlock, std::int32_t dictLength, JJ2Block& layoutBlock, bool strictParser);
+		bool LoadEvents(JJ2Block& block, bool strictParser);
+		bool LoadLayers(JJ2Block& dictBlock, JJ2Block& layoutBlock, bool strictParser);
 		void LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser);
 		void CheckWaterLevelAroundStart();
 

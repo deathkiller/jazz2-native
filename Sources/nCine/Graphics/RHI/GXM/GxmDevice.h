@@ -44,6 +44,12 @@ namespace nCine::RHI::GXM
 		surface takes exactly one scene per frame, and a render target takes one per pass it is the target of
 		- but it is the constraint any change to the viewport chain has to respect.
 
+		A closed scene is not waited for. It stays pending - with a completion notification of its own -
+		until a draw samples the surface it wrote, or a new scene is about to write a surface it wrote or
+		sampled, and only that draw or scene waits for it (see @ref FinishScene()). Anything the CPU releases
+		or rewrites in place has to wait in turn (@ref WaitForGpuIdle(), @ref WaitForPendingScenes(),
+		@ref RetireBlock()), and the barrier at present time still ends every frame.
+
 		<b>sceGxm only draws indexed.</b> There is no `glDrawArrays` equivalent - every `sceGxmDraw()` consumes
 		index data - so the device keeps one shared, GPU-visible buffer of increasing indices (0, 1, 2, ...)
 		and hands a window of it to the non-indexed draws, which reproduces `glDrawArrays(first, count)`
@@ -162,10 +168,32 @@ namespace nCine::RHI::GXM
 		/**
 			@brief Ends the scene currently being recorded, if any
 
-			Called whenever what the following draws render into changes - a render-target switch, the frame's
-			presentation, or a resource the open scene still references going away.
+			Called whenever what the following draws render into changes - a render-target switch or the frame's
+			presentation. The scene is submitted, not waited for: it stays pending until a later scene needs what
+			it wrote, or needs to write what it read (see @ref WaitForGpuIdle() for releasing a resource).
 		*/
 		static void FinishScene();
+		/**
+			@brief Ends the open scene and waits until the GPU has finished every scene submitted so far
+
+			What has to precede releasing or rewriting any memory a submitted scene may still read - texels,
+			buffers, programs, render target descriptions - since a scene is no longer waited for when it ends.
+		*/
+		static void WaitForGpuIdle();
+		/**
+			@brief Waits until no pending scene can still be reading memory the CPU is about to overwrite
+
+			For contents rewritten in place rather than reallocated (a texture upload into its existing GPU copy):
+			the scene still being recorded is not waited for, as it has not reached the GPU yet.
+		*/
+		static void WaitForPendingScenes();
+		/**
+			@brief Holds @p block until the end of the frame instead of releasing it now, and invalidates it
+
+			For memory a scene submitted this frame may still read, which is freed once the frame's barrier has
+			passed. Released immediately when no session is up.
+		*/
+		static void RetireBlock(GxmMemory::Block& block);
 
 		/** @brief Returns the shader patcher every program creates its vertex/fragment programs through */
 		static SceGxmShaderPatcher* GetShaderPatcher();
@@ -436,6 +464,14 @@ namespace nCine::RHI::GXM
 		// same surface goes on adding to this scene rather than starting one that would discard it (see
 		// EnsureScene())
 		static void* _sceneSurfaceData;
+		// Render-target surfaces the open scene has sampled so far, handed over to its pending entry when it ends
+		// (see PendingScene). A count past the array means it sampled more than were recorded. Sixteen covers
+		// the combine pass of four splitscreen players, the most any scene of this pipeline samples.
+		static constexpr std::uint32_t MaxSampledSurfaces = 16;
+		static const void* _sceneSampledSurfaces[MaxSampledSurfaces];
+		static std::uint32_t _sceneSampledCount;
+		// Clear quads the open scene started at (see AcquireClearQuad())
+		static std::uint32_t _sceneFirstClearQuad;
 		static std::uint32_t _sceneCounter;
 		// State that has to be re-applied after a scene begins (sceGxmBeginScene resets the pipeline state)
 		static bool _sceneStateApplied;
@@ -471,6 +507,8 @@ namespace nCine::RHI::GXM
 		static SceGxmFragmentProgram* _clearFragmentProgram;
 		// Next slot of the clear quad ring, so concurrent clears in one frame keep their own colours
 		static std::uint32_t _clearQuadIndex;
+		// Every quad before this one is known to have been consumed by the GPU (see AcquireClearQuad())
+		static std::uint32_t _clearQuadsConsumed;
 		static GxmMemory::Block _clearVertices;
 
 		// Present: the screen surface stretched over the display buffer
@@ -498,6 +536,19 @@ namespace nCine::RHI::GXM
 
 		/** @brief Opens a scene on the current target if none is open, and (re)applies the pipeline state it reset */
 		static bool EnsureScene();
+		/**
+			@brief Waits for the pending scenes that wrote a render target the program is about to sample
+
+			Also records the sampled surfaces for the open scene, which a later scene writing one of them has to
+			wait for in turn (see WaitForSurfaceUsers()).
+		*/
+		static void WaitForSampledTargets(const GxmShaderProgram* program);
+		/** @brief Waits for the pending scenes that wrote @p surfaceData, as a scene about to sample it has to */
+		static void WaitForSurfaceProducers(const void* surfaceData);
+		/** @brief Waits for the pending scenes that wrote or sampled @p surfaceData, as a scene about to write it has to */
+		static void WaitForSurfaceUsers(const void* surfaceData);
+		/** @brief Returns the next quad (four `ClearVertex`) of the clear ring, first making sure the GPU is done with what it held */
+		static void* AcquireClearQuad();
 		/** @brief Programs the viewport and region clip of the current target from the tracked engine state */
 		static void ApplyViewportAndScissor();
 		/**
@@ -546,15 +597,41 @@ namespace nCine::RHI::GXM
 		/** @brief Returns the color surface, depth surface and dimensions the current target renders into */
 		static void GetCurrentTarget(SceGxmRenderTarget*& renderTarget, SceGxmColorSurface*& colorSurface,
 			SceGxmDepthStencilSurface*& depthSurface, SceGxmSyncObject*& syncObject, std::int32_t& width, std::int32_t& height);
-		// Written by the GPU when a scene's fragment phase completes, so the next scene can be held off until
-		// the surface it may sample is really there (see FinishScene())
-		static SceGxmNotification _sceneNotification;
+		/**
+			@brief A scene that has been submitted but is not known to be finished yet
 
-		/** @brief Blocks displaced by a grown buffer, freed once the frame that may still read them is done */
-		static constexpr std::uint32_t RetiredBlockCount = 8;
+			The GPU writes `Notification.value` into the scene's own word of the driver's notification region once
+			its fragment phase completes, so waiting for one scene does not wait for the whole pipeline the way
+			sceGxmFinish() does. What the scene wrote and sampled says which later scenes depend on it.
+		*/
+		struct PendingScene
+		{
+			SceGxmNotification Notification;
+			// The surface the scene rendered into
+			const void* SurfaceData;
+			// Render-target surfaces it sampled; a count past the array means it may have sampled anything
+			const void* SampledSurfaces[MaxSampledSurfaces];
+			std::uint32_t SampledCount;
+			bool Active;
+		};
+		/**
+			@brief Scenes that may be in flight at once
+
+			One notification word each. Most passes of the pipeline sample the one right before them, so few
+			are ever pending together - the ones that are, are independent passes like the lighting of several
+			splitscreen players. When every slot is taken, the oldest scene is waited for to free one.
+		*/
+		static constexpr std::uint32_t PendingSceneCount = 8;
+		static PendingScene _pendingScenes[PendingSceneCount];
+		static std::uint32_t _nextPendingScene;
+		/** @brief Waits until the pending scene in @p scene has completed and frees its slot */
+		static void CompletePendingScene(PendingScene& scene);
+		/** @brief Forgets every pending scene, after something has waited the whole GPU out */
+		static void ClearPendingScenes();
+
+		/** @brief Blocks displaced by a grown or destroyed buffer, freed once the frame that may still read them is done */
+		static constexpr std::uint32_t RetiredBlockCount = 16;
 		static GxmMemory::Block _retiredBlocks[RetiredBlockCount];
-		/** @brief Holds @p block until the end of the frame instead of releasing it now, and invalidates it */
-		static void RetireBlock(GxmMemory::Block& block);
 		/** @brief Frees every retired block (called after the frame's barrier) */
 		static void ReleaseRetiredBlocks();
 

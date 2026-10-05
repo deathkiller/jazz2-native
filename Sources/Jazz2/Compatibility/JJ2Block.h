@@ -63,6 +63,14 @@ namespace Jazz2::Compatibility
 			return _length;
 		}
 
+		/** @brief Returns the number of bytes left to read */
+		std::int32_t GetRemainingLength() const {
+			return (_offset < _length ? _length - _offset : 0);
+		}
+
+		/** @brief Largest unpacked block accepted, far above anything the original formats produce */
+		static constexpr std::int32_t MaxUnpackedLength = 64 * 1024 * 1024;
+
 	private:
 		std::unique_ptr<std::uint8_t[]> _buffer;
 		std::int32_t _length;

@@ -12,14 +12,14 @@
 		--text: #1d1d1f;
 		--muted: #5f6368;
 		--border: #d9d6cf;
-		--accent: #6a3fd1;
+		--accent: #0077b6;
 		--accent-text: #ffffff;
 		--ok: #1e7f3c;
 		--error: #b3261e;
 		--log-bg: #1b1b1f;
 		--log-text: #e3e3e6;
 		--log-error: #ff8a80;
-		--drop: #efe9fb;
+		--drop: #e3f3fb;
 	}
 	@media (prefers-color-scheme: dark) {
 		:root {
@@ -28,12 +28,12 @@
 			--text: #ececef;
 			--muted: #a0a0a8;
 			--border: #34343a;
-			--accent: #9a7bf0;
+			--accent: #4cc9f0;
 			--accent-text: #141416;
 			--ok: #6ad48a;
 			--error: #ff8a80;
 			--log-bg: #0e0e10;
-			--drop: #2a2440;
+			--drop: #12303d;
 		}
 	}
 	* { box-sizing: border-box; }
@@ -97,6 +97,31 @@
 	}
 	.chosen.ok { color: var(--ok); }
 	.chosen.bad { color: var(--error); }
+	.options {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.options + .options {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border);
+	}
+	.option {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		cursor: pointer;
+	}
+	.option input {
+		margin: 4px 0 0;
+		accent-color: var(--accent);
+	}
+	.option small {
+		display: block;
+		color: var(--muted);
+		font-size: 0.85rem;
+	}
 	button, .button {
 		font: inherit;
 		border: 1px solid var(--border);
@@ -158,7 +183,7 @@
 <main>
 	<h1>Jazz² Resurrection Content Swapper</h1>
 	<p class="lead">Puts the content of your copy of Jazz Jackrabbit 2 into a Nintendo 64, Dreamcast or PlayStation 2
-		image of Jazz² Resurrection. Everything happens in this browser tab &mdash; your files are not uploaded anywhere.</p>
+		image of Jazz² Resurrection. Everything happens in this browser tab &ndash; your files are not uploaded anywhere.</p>
 
 	<section class="step">
 		<h2>1. Console image</h2>
@@ -175,7 +200,7 @@
 	<section class="step">
 		<h2>2. Original game files</h2>
 		<p>The <code>Source</code> folder with the files of Jazz Jackrabbit 2 (<code>Anims.j2a</code>, levels, tilesets,
-			music...), or the game folder that contains it. Any supported version works &mdash; the Shareware Demo,
+			music...), or the game folder that contains it. Any supported version works &ndash; the Shareware Demo,
 			Holiday Hare &rsquo;98, The Secret Files or Christmas Chronicles.</p>
 		<div class="drop" id="sourceDrop">
 			<button type="button" id="sourceButton">Choose folder…</button>
@@ -183,6 +208,31 @@
 			<input type="file" id="sourceInput" webkitdirectory multiple>
 		</div>
 		<div class="chosen" id="sourceChosen"></div>
+	</section>
+
+	<section class="step">
+		<h2 id="levelsHeading">3. Included content</h2>
+		<p>Which of the levels in the game files go into the image.</p>
+		<div class="options" role="radiogroup" aria-labelledby="levelsHeading">
+			<label class="option">
+				<input type="radio" name="levels" value="all" checked>
+				<span>Include all levels<small>Everything in the folder, including levels added to it from elsewhere</small></span>
+			</label>
+			<label class="option">
+				<input type="radio" name="levels" value="originals">
+				<span>Include only original levels<small>Only the episodes and levels the original game shipped</small></span>
+			</label>
+			<label class="option">
+				<input type="radio" name="levels" value="shareware">
+				<span>Include only shareware levels<small>Only the episode and the three multiplayer levels of the Shareware Demo</small></span>
+			</label>
+		</div>
+		<div class="options">
+			<label class="option">
+				<input type="checkbox" id="skipNonEpisodeLevels">
+				<span>Skip non-episode levels<small>Leaves out the levels no episode leads to, such as the multiplayer ones</small></span>
+			</label>
+		</div>
 	</section>
 
 	<div class="actions">
@@ -212,6 +262,7 @@
 	const sourceInput = document.getElementById('sourceInput');
 	const imageChosen = document.getElementById('imageChosen');
 	const sourceChosen = document.getElementById('sourceChosen');
+	const skipNonEpisodeLevels = document.getElementById('skipNonEpisodeLevels');
 	const startButton = document.getElementById('startButton');
 	const cancelButton = document.getElementById('cancelButton');
 	const statusText = document.getElementById('status');
@@ -227,6 +278,8 @@
 	let downloadUrl = null;
 
 	const platforms = { z64: 'Nintendo 64', n64: 'Nintendo 64', v64: 'Nintendo 64', cdi: 'Dreamcast', iso: 'PlayStation 2' };
+	// The options of AssetPacker that each choice of levels stands for
+	const levelArgs = { all: [], originals: ['--originals-only'], shareware: ['--shareware-only'] };
 
 	function formatSize(bytes) {
 		return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.ceil(bytes / 1024) + ' KB';
@@ -416,7 +469,11 @@
 			appendLog(e.message || 'The worker stopped unexpectedly', 'error');
 			finish('Failed');
 		};
-		worker.postMessage({ image, sources });
+		const extraArgs = levelArgs[document.querySelector('input[name=levels]:checked').value].slice();
+		if (skipNonEpisodeLevels.checked) {
+			extraArgs.push('--skip-non-episode-levels');
+		}
+		worker.postMessage({ image, sources, extraArgs });
 		cancelButton.hidden = false;
 		updateStart();
 	});

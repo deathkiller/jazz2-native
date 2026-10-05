@@ -37,10 +37,7 @@ namespace nCine::RHI::GXM
 	{
 		if (_gxmRenderTarget != nullptr) {
 			// The GPU must not still be binning into this target when its data structures are destroyed
-			GxmDevice::FinishScene();
-			if (SceGxmContext* context = GxmDevice::GetContext()) {
-				sceGxmFinish(context);
-			}
+			GxmDevice::WaitForGpuIdle();
 			sceGxmDestroyRenderTarget(_gxmRenderTarget);
 			_gxmRenderTarget = nullptr;
 		}

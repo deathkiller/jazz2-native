@@ -16,7 +16,8 @@ namespace nCine::RHI::GXM
 
 	GxmBufferObject::~GxmBufferObject()
 	{
-		GxmMemory::Free(_gpuBlock);
+		// A scene submitted this frame may still fetch from the store, so it is freed after the frame's barrier
+		GxmDevice::RetireBlock(_gpuBlock);
 		_data = nullptr;
 		_size = 0;
 	}
@@ -40,8 +41,9 @@ namespace nCine::RHI::GXM
 		}
 
 		// A store the GPU reads has to be a mapped memory block. Growing means a fresh block: the pipeline's
-		// ring buffers size themselves once at startup, so this is not a per-frame path
-		GxmMemory::Free(_gpuBlock);
+		// ring buffers size themselves once at startup, so this is not a per-frame path. The old one may still
+		// be read by a scene submitted this frame, so it is retired rather than freed.
+		GxmDevice::RetireBlock(_gpuBlock);
 		const char* name = (_target == BufferTarget::Index ? "nCine:IndexBuffer"
 			: (_target == BufferTarget::Uniform ? "nCine:UniformBuffer" : "nCine:VertexBuffer"));
 		_gpuBlock = GxmMemory::Alloc(name, std::uint32_t(size), SCE_GXM_MEMORY_ATTRIB_READ);

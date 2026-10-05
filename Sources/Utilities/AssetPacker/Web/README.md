@@ -7,7 +7,7 @@ of their copy of Jazz Jackrabbit 2; the page runs
     AssetPacker swap-content <image> <new image> --source=<Source> --content=/Content
 
 in a worker, which converts the original game files for the console the image is for and writes a new image with
-them. The game's own content (the repository's `Content`, without the `.po` sources) is baked into the module, and
+them. The levels chosen on the page add `--originals-only` or `--shareware-only`, and `--skip-non-episode-levels`. The game's own content (the repository's `Content`, without the `.po` sources) is baked into the module, and
 nothing leaves the browser.
 
 Nothing in the conversion needs a console SDK: the Nintendo 64 formats are written by encoders built into the tool

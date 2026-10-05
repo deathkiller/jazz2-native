@@ -126,11 +126,12 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 			Each one writes its own quad, because the GPU consumes a scene long after the call that recorded
 			it - overwriting one buffer per use would hand every clear in the frame the last one's colour, and
-			every stencil band the last one's rectangle. A frame of this pipeline issues about seven clears and
-			one or two stencil bands (@ref GxmDevice::StampStencilBand(), which draws from this same ring); the
-			barrier at present time is what makes reuse safe across frames.
+			every stencil band the last one's rectangle. A frame of this pipeline issues about seven clears per
+			player and one or two stencil bands (@ref GxmDevice::StampStencilBand(), which draws from this same
+			ring). The barrier at present time is what makes reuse safe across frames, and a frame that goes
+			round the ring waits for its pending scenes first (see GxmDevice::AcquireClearQuad()).
 		*/
-		constexpr std::uint32_t ClearQuadRingSize = 32;
+		constexpr std::uint32_t ClearQuadRingSize = 128;
 		/**
 			@brief The same quad with texture coordinates
 
@@ -273,6 +274,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	bool GxmDevice::_vsync = true;
 	bool GxmDevice::_sceneOpen = false;
 	void* GxmDevice::_sceneSurfaceData = nullptr;
+	const void* GxmDevice::_sceneSampledSurfaces[GxmDevice::MaxSampledSurfaces] = {};
+	std::uint32_t GxmDevice::_sceneSampledCount = 0;
+	std::uint32_t GxmDevice::_sceneFirstClearQuad = 0;
 	std::uint32_t GxmDevice::_sceneCounter = 0;
 	bool GxmDevice::_sceneStateApplied = false;
 	std::int32_t GxmDevice::_sceneWidth = GxmDevice::ScreenWidth;
@@ -285,6 +289,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	SceGxmVertexProgram* GxmDevice::_clearVertexProgram = nullptr;
 	SceGxmFragmentProgram* GxmDevice::_clearFragmentProgram = nullptr;
 	std::uint32_t GxmDevice::_clearQuadIndex = 0;
+	std::uint32_t GxmDevice::_clearQuadsConsumed = 0;
 	GxmMemory::Block GxmDevice::_clearVertices;
 
 	SceGxmShaderPatcherId GxmDevice::_presentVertexId = nullptr;
@@ -301,7 +306,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 	GxmMemory::Block GxmDevice::_quadCornerStream;
 	GxmMemory::Block GxmDevice::_batchedCornerStream;
 	GxmMemory::Block GxmDevice::_retiredBlocks[GxmDevice::RetiredBlockCount];
-	SceGxmNotification GxmDevice::_sceneNotification = {};
+	GxmDevice::PendingScene GxmDevice::_pendingScenes[GxmDevice::PendingSceneCount] = {};
+	std::uint32_t GxmDevice::_nextPendingScene = 0;
 
 	// -- Pipeline state --
 
@@ -537,9 +543,15 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		if (!block.IsValid()) {
 			return;
 		}
+		// Without a session nothing can be reading it, and nothing would ever collect it either (the buffers of
+		// the pipeline are destroyed after the swapchain at shutdown)
+		if (!_initialized || _context == nullptr) {
+			GxmMemory::Free(block);
+			return;
+		}
 		// Held until the frame's barrier has passed, because a scene already recorded may still read it. The
-		// table is small and a grow-only buffer stops growing almost immediately; if it ever fills, the block
-		// is released the safe way instead.
+		// table is small and a grow-only buffer stops growing almost immediately; if it ever fills (a burst of
+		// buffers destroyed at once), the GPU is waited out, which makes the whole table safe to free with it.
 		for (GxmMemory::Block& retired : _retiredBlocks) {
 			if (!retired.IsValid()) {
 				retired = block;
@@ -547,8 +559,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 				return;
 			}
 		}
-		FinishScene();
-		sceGxmFinish(_context);
+		WaitForGpuIdle();
+		ReleaseRetiredBlocks();
 		GxmMemory::Free(block);
 	}
 
@@ -644,6 +656,10 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			FinishScene();
 		}
 
+		// A scene that is still running may be writing this surface, or sampling what it held - neither may
+		// overlap with this one rewriting it
+		WaitForSurfaceUsers(surfaceData);
+
 		const std::int32_t result = sceGxmBeginScene(_context, 0, renderTarget, nullptr, nullptr, syncObject,
 			colorSurface, depthSurface);
 		if (result < 0) {
@@ -653,6 +669,8 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 
 		_sceneOpen = true;
 		_sceneSurfaceData = surfaceData;
+		_sceneSampledCount = 0;
+		_sceneFirstClearQuad = _clearQuadIndex;
 		_sceneWidth = width;
 		_sceneHeight = height;
 		// The scene's stencil starts at the surface's background value (0), so no band from the previous one
@@ -675,18 +693,160 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// blur passes read the scene view, the composite reads all of them), and sharing one context is not
 		// enough to make that hand-over safe: this scene's tile writeback is still in flight while the next one
 		// records, so the reader can sample what the surface held before. Measured on the console - waiting
-		// here is what makes the level view arrive intact, and not waiting leaves it holding just its clear.
+		// for the producer is what makes the level view arrive intact, and not waiting leaves it holding just
+		// its clear.
 		//
-		// The notification is sceGxm's own answer to that: the GPU writes `value` to `address` when this
-		// scene's fragment phase completes, so the wait is for this one scene rather than for the whole
-		// pipeline the way sceGxmFinish() would be. A tighter version would wait only when the next scene
-		// really samples this surface, which needs a scene's bindings to be known before it begins.
-		_sceneNotification.value++;
-		sceGxmEndScene(_context, nullptr, &_sceneNotification);
-		sceGxmNotificationWait(&_sceneNotification);
+		// That wait no longer happens here, though, but when a later draw really samples this surface (see
+		// WaitForSampledTargets()) or a later scene rewrites it (see EnsureScene()). Until then the CPU goes on
+		// recording - the lighting pass and the scene pass do not depend on each other at all, and every other
+		// consumer's sorting and batching overlaps with the tail of its producer instead of following it.
+		PendingScene& scene = _pendingScenes[_nextPendingScene];
+		_nextPendingScene = (_nextPendingScene + 1) % PendingSceneCount;
+		if (scene.Active) {
+			// The oldest one in flight, so the wait is usually over by now
+			CompletePendingScene(scene);
+		}
+		if (scene.Notification.value == 0xFFFFFFFFu) {
+			// The word is compared for equality, so wrapping it is only safe once nothing still waits for an old value
+			WaitForPendingScenes();
+			scene.Notification.value = 0;
+			*scene.Notification.address = 0;
+		}
+		scene.Notification.value++;
+		sceGxmEndScene(_context, nullptr, &scene.Notification);
+
+		scene.SurfaceData = _sceneSurfaceData;
+		scene.SampledCount = _sceneSampledCount;
+		const std::uint32_t recorded = std::min<std::uint32_t>(_sceneSampledCount, MaxSampledSurfaces);
+		for (std::uint32_t i = 0; i < recorded; i++) {
+			scene.SampledSurfaces[i] = _sceneSampledSurfaces[i];
+		}
+		scene.Active = true;
+
 		_sceneOpen = false;
 		_sceneSurfaceData = nullptr;
+		_sceneSampledCount = 0;
 		_sceneStateApplied = false;
+	}
+
+	void GxmDevice::CompletePendingScene(PendingScene& scene)
+	{
+		const bool timed = FrameStatistics::IsEnabled();
+		const TimeStamp waitStart = (timed ? TimeStamp::now() : TimeStamp());
+		sceGxmNotificationWait(&scene.Notification);
+		if (timed) {
+			FrameStatistics::AddCounter("Scene wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
+		}
+		scene.Active = false;
+	}
+
+	void GxmDevice::ClearPendingScenes()
+	{
+		// Nothing has to be waited for: whoever calls this has just waited the whole GPU out, so every
+		// notification already holds its value
+		for (PendingScene& scene : _pendingScenes) {
+			scene.Active = false;
+		}
+		_clearQuadsConsumed = _clearQuadIndex;
+	}
+
+	void GxmDevice::WaitForPendingScenes()
+	{
+		for (PendingScene& scene : _pendingScenes) {
+			if (scene.Active) {
+				CompletePendingScene(scene);
+			}
+		}
+	}
+
+	void GxmDevice::WaitForGpuIdle()
+	{
+		FinishScene();
+		if (_context != nullptr) {
+			sceGxmFinish(_context);
+		}
+		ClearPendingScenes();
+	}
+
+	void GxmDevice::WaitForSurfaceProducers(const void* surfaceData)
+	{
+		if (surfaceData == nullptr) {
+			return;
+		}
+		for (PendingScene& scene : _pendingScenes) {
+			if (scene.Active && scene.SurfaceData == surfaceData) {
+				CompletePendingScene(scene);
+			}
+		}
+	}
+
+	void GxmDevice::WaitForSurfaceUsers(const void* surfaceData)
+	{
+		for (PendingScene& scene : _pendingScenes) {
+			if (!scene.Active) {
+				continue;
+			}
+			bool uses = (scene.SurfaceData == surfaceData || scene.SampledCount > MaxSampledSurfaces);
+			for (std::uint32_t i = 0; !uses && i < scene.SampledCount; i++) {
+				uses = (scene.SampledSurfaces[i] == surfaceData);
+			}
+			if (uses) {
+				CompletePendingScene(scene);
+			}
+		}
+	}
+
+	void GxmDevice::WaitForSampledTargets(const GxmShaderProgram* program)
+	{
+		// Only a render target can have been written by a scene of this frame - every other texture is uploaded
+		// by the CPU (see WaitForPendingScenes()). The open scene is never among the pending ones, so sampling
+		// the surface it renders into finds nothing to wait for, and it would not be safe anyway.
+		auto visit = [](const auto& slots) {
+			for (const GxmShaderProgram::GxmSamplerSlot& slot : slots) {
+				const GxmTexture* texture = GetBoundTexture(slot.EngineUnit);
+				if (texture == nullptr || !texture->IsRenderTarget()) {
+					continue;
+				}
+				const void* surfaceData = texture->GetSurfaceData();
+				if (surfaceData == nullptr) {
+					continue;
+				}
+				WaitForSurfaceProducers(surfaceData);
+
+				// Remembered for the scene that later rewrites this surface, which must not overlap this one
+				bool known = false;
+				const std::uint32_t recorded = std::min<std::uint32_t>(_sceneSampledCount, MaxSampledSurfaces);
+				for (std::uint32_t i = 0; i < recorded && !known; i++) {
+					known = (_sceneSampledSurfaces[i] == surfaceData);
+				}
+				if (!known) {
+					if (_sceneSampledCount < MaxSampledSurfaces) {
+						_sceneSampledSurfaces[_sceneSampledCount] = surfaceData;
+					}
+					// Counting past the array marks the scene as one that may have sampled anything
+					if (_sceneSampledCount <= MaxSampledSurfaces) {
+						_sceneSampledCount++;
+					}
+				}
+			}
+		};
+		visit(program->GetVertexSamplerSlots());
+		visit(program->GetFragmentSamplerSlots());
+	}
+
+	void* GxmDevice::AcquireClearQuad()
+	{
+		// The ring is only reused once the quads about to be overwritten are known to be consumed. Everything
+		// before the last full barrier is (see ClearPendingScenes()); a frame that goes round the ring before its
+		// barrier waits for its pending scenes, after which only the scene still being recorded holds any. That
+		// one is never this many quads by itself - ending it to make room would discard what it has drawn.
+		if (_clearQuadIndex - _clearQuadsConsumed >= ClearQuadRingSize) {
+			WaitForPendingScenes();
+			_clearQuadsConsumed = (_sceneOpen ? _sceneFirstClearQuad : _clearQuadIndex);
+		}
+		void* quad = static_cast<ClearVertex*>(_clearVertices.Base) + (_clearQuadIndex % ClearQuadRingSize) * 4u;
+		_clearQuadIndex++;
+		return quad;
 	}
 
 	void GxmDevice::SetStencilTestDisabled()
@@ -764,9 +924,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		const float y0 = -toNdc(yMin, _viewport.Y, _viewport.H);
 		const float y1 = -toNdc(yMax + 1, _viewport.Y, _viewport.H);
 
-		ClearVertex* quad = static_cast<ClearVertex*>(_clearVertices.Base)
-			+ (_clearQuadIndex % ClearQuadRingSize) * 4u;
-		_clearQuadIndex++;
+		ClearVertex* quad = static_cast<ClearVertex*>(AcquireClearQuad());
 		const float positions[4][2] = { { x0, y0 }, { x1, y0 }, { x0, y1 }, { x1, y1 } };
 		for (std::uint32_t i = 0; i < 4; i++) {
 			quad[i].X = positions[i][0];
@@ -958,9 +1116,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			? SCE_GXM_FRAGMENT_PROGRAM_ENABLED : SCE_GXM_FRAGMENT_PROGRAM_DISABLED);
 
 		// This clear's own quad, carrying the colour with it (see ClearVertex)
-		ClearVertex* quad = static_cast<ClearVertex*>(_clearVertices.Base)
-			+ (_clearQuadIndex % ClearQuadRingSize) * 4u;
-		_clearQuadIndex++;
+		ClearVertex* quad = static_cast<ClearVertex*>(AcquireClearQuad());
 		for (std::uint32_t i = 0; i < 4; i++) {
 			quad[i].X = ClearQuad[i * 2 + 0];
 			quad[i].Y = ClearQuad[i * 2 + 1];
@@ -1011,6 +1167,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		if (vertexProgram == nullptr) {
 			return;
 		}
+
+		// After EnsureScene(), which may just have ended the scene this draw samples
+		WaitForSampledTargets(program);
 
 		SceGxmBlendInfo blendInfo = {};
 		const SceGxmBlendInfo* blendInfoPtr = nullptr;
@@ -1297,8 +1456,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		}
 		// Waiting for everything is stronger than the caller asked for, but correct - and this is only reached
 		// when the pipeline's ring buffers have wrapped, which the enlarged vertex ring makes rare
-		FinishScene();
-		sceGxmFinish(_context);
+		WaitForGpuIdle();
 		return true;
 	}
 
@@ -1689,16 +1847,21 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		GxmShaderCache::Initialize(theApplication().GetAppConfiguration().shaderCachePath,
 			GetShaderCompilerFingerprint());
 
-		// A scene's completion notification has to be written into the driver's own notification region
-		// (see FinishScene())
-		_sceneNotification.address = sceGxmGetNotificationRegion();
-		_sceneNotification.value = 0;
-		if (_sceneNotification.address == nullptr) {
+		// A scene's completion notification has to be written into the driver's own notification region, one word
+		// per scene that can be pending at once (see FinishScene())
+		volatile unsigned int* notificationRegion = sceGxmGetNotificationRegion();
+		if (notificationRegion == nullptr) {
 			LOGE("sceGxmGetNotificationRegion() returned nothing, so scene completion cannot be waited on");
 			DestroySwapchain();
 			return false;
 		}
-		*_sceneNotification.address = 0;
+		for (std::uint32_t i = 0; i < PendingSceneCount; i++) {
+			_pendingScenes[i] = {};
+			_pendingScenes[i].Notification.address = notificationRegion + i;
+			*_pendingScenes[i].Notification.address = 0;
+		}
+		_nextPendingScene = 0;
+		_clearQuadsConsumed = _clearQuadIndex;
 
 		if (!CreateBuiltinShaders()) {
 			DestroySwapchain();
@@ -1834,8 +1997,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// wait the GPU out. The display buffers are not involved - the display controller only ever scans out of
 		// those, and the last present blit that sampled the surface is finished with the rest.
 		_currentRenderTarget = nullptr;
-		FinishScene();
-		sceGxmFinish(_context);
+		WaitForGpuIdle();
 
 		const std::int32_t previousWidth = _screenWidth;
 		const std::int32_t previousHeight = _screenHeight;
@@ -1859,10 +2021,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			return;
 		}
 
-		FinishScene();
-		if (_context != nullptr) {
-			sceGxmFinish(_context);
-		}
+		WaitForGpuIdle();
 		// A swapchain can be torn down before the present that would have collected these, and the finish above
 		// is the guarantee no submitted draw still reads them
 		ReleaseRetiredBlocks();
@@ -1887,6 +2046,7 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		_presentVertexProgram = nullptr;
 		_presentFragmentProgram = nullptr;
 		_clearQuadIndex = 0;
+		_clearQuadsConsumed = 0;
 
 		// Safe only now that the programs patched out of these binaries are released and the patcher is gone
 		for (SceGxmProgram*& stage : _builtinStages) {
@@ -1963,6 +2123,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 		// display controller will pick up next
 		_currentRenderTarget = nullptr;
 		FinishScene();
+		// The blit samples the screen surface straight through its own texture rather than through a program's
+		// samplers, so it waits for the scenes that drew the frame there itself
+		WaitForSurfaceProducers(_screenBuffer.Base);
 
 		if (_presentVertexProgram != nullptr && _presentFragmentProgram != nullptr && EnsureSequentialIndices(4)) {
 			const std::int32_t result = sceGxmBeginScene(_context, 0, _displayRenderTarget, nullptr, nullptr,
@@ -2038,7 +2201,9 @@ float4 main(float2 vTexCoords : TEXCOORD0) : COLOR
 			FrameStatistics::AddCounter("GPU wait", waitStart.millisecondsSince(), FrameStatistics::Unit::Milliseconds);
 		}
 
-		// Everything recorded this frame has been consumed, so anything a growing buffer displaced can go
+		// Everything recorded this frame has been consumed, so no scene is pending any more and anything a
+		// growing buffer displaced can go
+		ClearPendingScenes();
 		ReleaseRetiredBlocks();
 
 		_frontBufferIndex = _backBufferIndex;
