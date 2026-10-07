@@ -133,6 +133,15 @@ if(WIN32)
 	endif()
 endif()
 
+if(PLATFORM_AMIGAOS4)
+	# The executable is linked statically, but CMake's generic platform module searches for ".so" before ".a",
+	# and it runs after the toolchain file, so the order cannot be set there. The SDK carries both flavours of
+	# several libraries; most of its shared objects have a version suffix, which kept them out of the search by
+	# chance, until the OpenAL Soft added to the SDK (October 2026) brought an unversioned libopenal.so next to
+	# libopenal.a - and the link failed with "attempted static link of dynamic object".
+	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+endif()
+
 # Common packages
 if(NCINE_WITH_BACKWARD)
 	find_package(Backward)
@@ -673,9 +682,9 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			unset(OPENAL_LIBRARY CACHE)
 			set(AHIAUDIO_FOUND 1)
 		elseif(PLATFORM_AMIGAOS4 OR PLATFORM_MORPHOS)
-			# Neither PowerPC Amiga SDK carries OpenAL, but MorphOS has a port of openal-soft (with an AHI
-			# backend) that can be cross-compiled into the prefix the rest of the dependencies live in
-			# (MORPHOS_DEPS, see Docs/Amiga.dox). Where it is present the engine's own OpenAL backend is used, which is the best-tested
+			# The AmigaOS 4.1 SDK carries OpenAL Soft (with an AHI backend) since the October 2026 toolchain
+			# image, and MorphOS has a port of it that can be cross-compiled into the prefix the rest of the
+			# dependencies live in (MORPHOS_DEPS, see Docs/Amiga.dox). Where it is present the engine's own OpenAL backend is used, which is the best-tested
 			# audio path in the project; where it is not, the fallback is the SDL one (a software mixer into
 			# SDL's audio queue, see SdlAudioDevice), so neither target depends on it being there.
 			find_package(OpenAL)

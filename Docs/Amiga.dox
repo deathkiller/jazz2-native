@@ -317,10 +317,13 @@ with each other. Anything that is not a comparison between two builds belongs on
 @section amiga-os4 AmigaOS 4.1 (PowerPC)
 
 AmigaOS 4 needs no backend of its own: it has a maintained SDL2, so the window and input side is the
-SDL2 backend the desktop builds use, and audio is the `SDL` backend @m_span{m-text m-dim}
+SDL2 backend the desktop builds use. Audio is the engine's OpenAL backend, on the OpenAL Soft (with an
+AHI backend) that the toolchain image carries since October 2026 - linked statically like everything
+else, the SDK also has a `libopenal.so` that the build deliberately ignores. With an older image there
+is no OpenAL, and audio falls back to the `SDL` backend @m_span{m-text m-dim}
 (`Sources/nCine/Audio/Backends/SDL/`) @m_endspan - the same software mixer as the classic Amiga's,
-handing its blocks to `SDL_QueueAudio()` instead of to `ahi.device`, because the AmigaOS 4.1 SDK has
-no OpenAL.
+handing its blocks to `SDL_QueueAudio()` instead of to `ahi.device`. Configuring with
+`-D CMAKE_DISABLE_FIND_PACKAGE_OpenAL=ON` selects that fallback with the new image as well.
 
 @subsection amiga-os4-gl Hardware rendering through MiniGL
 
@@ -395,7 +398,8 @@ identifier of that name - libopenmpt has `common_encoding::amiga`.</li>
 
 @section amiga-morphos MorphOS (PowerPC)
 
-MorphOS is built the same way as AmigaOS 4 - SDL2 for window and input, the `SDL` audio backend, and
+MorphOS is built the same way as AmigaOS 4 - SDL2 for window and input, the `SDL` audio backend (its
+SDK has no OpenAL), and
 the same `LegacyGL` renderer on the system's own fixed-function OpenGL @m_span{m-text m-dim}
 (@ref amiga-morphos-gl) @m_endspan - with a different toolchain and a different set of system quirks.
 What TinyGL does not have is shaders, which is why that backend is a fixed-function one rather than the
@@ -430,7 +434,7 @@ points at an SDK somewhere other than `/gg`. The result is staged into `build/mo
 @m_class{m-block m-info}
 
 @par Audio: OpenAL where it is installed, SDL otherwise
-The SDK ships no OpenAL either, and unlike zlib it is optional: the build looks for one and falls
+The MorphOS SDK ships no OpenAL, and unlike zlib it is optional: the build looks for one and falls
 back to the `SDL` audio backend @m_span{m-text m-dim} (the software mixer feeding `SDL_QueueAudio()`)
 @m_endspan when there is none, which is what the CI build gets. To use OpenAL instead, cross-compile
 BSzili's port of openal-soft @m_span{m-text m-dim} (its AHI backend -- on MorphOS Storage, and its own
