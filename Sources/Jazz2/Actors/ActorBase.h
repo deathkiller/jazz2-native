@@ -846,5 +846,7 @@ namespace Jazz2::Actors
 		bool IsCollidingWithAngled(const AABBf& aabb);
 
 		void RefreshAnimation(bool skipAnimation = false);
+		// Puts back an actor whose position became unusable, kept out of line from the per-frame caller
+		DEATH_NEVER_INLINE void RestoreFromInvalidPosition();
 	};
 }

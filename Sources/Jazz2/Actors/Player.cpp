@@ -215,8 +215,18 @@ namespace Jazz2::Actors
 		// Recoloring needs indexed sprites (palette index in the red channel); otherwise the PaletteRemap shader
 		// would treat the already-baked colors as palette indices and corrupt the sprite, so fall back to normal
 		// rendering. If this warns, the player .res animations aren't being loaded indexed.
-		bool isIndexed = (furColor != 0 && _metadata != nullptr && !_metadata->Animations.empty() && _metadata->Animations[0].Base != nullptr &&
-			(_metadata->Animations[0].Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+		// The flag is read off the first animation that is already loaded, not off the first one: deferred animations
+		// (every metadata on the Nintendo 64) stay unloaded until they are first looked up, and a player spawns falling,
+		// so "Idle" was never loaded yet there and recoloring was disabled for the whole level.
+		bool isIndexed = false;
+		if (furColor != 0 && _metadata != nullptr) {
+			for (const GraphicResource& animation : _metadata->Animations) {
+				if (animation.Base != nullptr) {
+					isIndexed = ((animation.Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+					break;
+				}
+			}
+		}
 		if (furColor != 0 && !isIndexed) {
 			LOGW("Player sprites are not indexed - recoloring disabled");
 		}

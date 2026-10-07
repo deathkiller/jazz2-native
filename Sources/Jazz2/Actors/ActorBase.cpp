@@ -32,6 +32,28 @@ namespace Jazz2::Actors
 {
 	namespace
 	{
+		/** @brief Returns the bit pattern of a float without passing it through a floating-point instruction */
+		inline std::uint32_t FloatBits(float value)
+		{
+			// Not std::memcpy(), which the Nintendo 64 compiler expands into four byte loads and stores
+			union { float f; std::uint32_t i; } u;
+			u.f = value;
+			return u.i;
+		}
+
+		/**
+			@brief Whether both coordinates are finite and within the range of @ref floorFast()
+
+			Tested on the bit pattern, because on the Nintendo 64 even `abs.s` of a NaN raises the FPU's
+			unimplemented-operation exception - the value must not reach a floating-point instruction at all.
+		*/
+		inline bool IsUsablePosition(const Vector2f& pos)
+		{
+			// 4194304.0f (2^22); with the sign bit masked off, infinities and NaNs compare above it too
+			constexpr std::uint32_t MaxCoordinateBits = 0x4A800000u;
+			return ((FloatBits(pos.X) & 0x7FFFFFFFu) < MaxCoordinateBits && (FloatBits(pos.Y) & 0x7FFFFFFFu) < MaxCoordinateBits);
+		}
+
 		/** @brief Whether a render type leaves the alpha channel of the sprite color to the actor's own fade */
 		constexpr bool KeepsActorFadeInAlpha(ActorRendererType type)
 		{
@@ -1670,6 +1692,14 @@ namespace Jazz2::Actors
 
 	void ActorBase::UpdateRendererPosition()
 	{
+		// A position that is NaN, infinite or far outside any level is a bug in whatever wrote it, but it is fatal
+		// only on the Nintendo 64: floorFast() below converts it to an integer, and the R4300 traps on that
+		// unconditionally, while x86 yields INT_MIN and carries on with an invisible actor. The actor is put back
+		// where it started the frame, stopped, and named in the log, so the next occurrence tells which one it was.
+		if DEATH_UNLIKELY(!IsUsablePosition(_pos)) {
+			RestoreFromInvalidPosition();
+		}
+
 		Vector2f pos = _pos;
 		if (!PreferencesCache::UnalignedViewport || (_state & ActorState::IsDirty) != ActorState::IsDirty) {
 			pos.X = floorFast(pos.X);
@@ -1684,6 +1714,20 @@ namespace Jazz2::Actors
 			return;
 		}
 		_renderer.setPosition(pos.X, pos.Y);
+	}
+
+	void ActorBase::RestoreFromInvalidPosition()
+	{
+		// The log gets the raw bits, formatting a NaN as a float would trap there just the same
+		Vector2f fallback = (IsUsablePosition(_frameStartPos) ? _frameStartPos : _renderer.position());
+		LOGE("Actor \"{}\" moved to an invalid position (bits {}, {} with speed bits {}, {}), restored to [{}, {}]",
+			(_metadata != nullptr ? StringView(_metadata->Path) : "<no metadata>"_s), FloatBits(_pos.X), FloatBits(_pos.Y),
+			FloatBits(_speed.X), FloatBits(_speed.Y), fallback.X, fallback.Y);
+		_pos = fallback;
+		_speed = Vector2f::Zero;
+		_externalForce = Vector2f::Zero;
+		// The update derived the hitbox from the invalid position, and the collision checks use it next frame
+		UpdateAABB();
 	}
 
 	void ActorBase::UpdateAABB()
