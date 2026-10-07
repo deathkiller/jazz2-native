@@ -138,15 +138,15 @@ namespace Jazz2::Actors::Environment
 			// where its frame ends inside the sheet. A packed sheet is padded to power-of-two dimensions
 			// (the vine's 7x66 artwork arrives in an 8x128 texture), so the old `ChunkSize / texSize.Y`
 			// slicing spread the chunks across the padding and drew nothing below the halfway point.
-			// `GetFrameRect()` hides the packing; the regular-grid cell it falls back to is two pixels
-			// bigger on each side (`JJ2Anims::AddBorder`), which tiling must skip or every seam gets a
+			// `GetFrameRect()` hides the packing; the regular-grid cell it falls back to carries a
+			// `GenericGraphicResource::FrameBorder` on each side, which tiling must skip or every seam gets a
 			// transparent band.
 			Recti frameRect = resBase->GetFrameRect(_currentAnimation->FrameOffset);
 			if (resBase->FrameRects.empty()) {
-				frameRect.X += (std::int32_t)SpriteBorder;
-				frameRect.Y += (std::int32_t)SpriteBorder;
-				frameRect.W -= (std::int32_t)SpriteBorder * 2;
-				frameRect.H -= (std::int32_t)SpriteBorder * 2;
+				frameRect.X += GenericGraphicResource::FrameBorder;
+				frameRect.Y += GenericGraphicResource::FrameBorder;
+				frameRect.W -= GenericGraphicResource::FrameBorder * 2;
+				frameRect.H -= GenericGraphicResource::FrameBorder * 2;
 			}
 
 			// Rounding the repeat to a whole number of chunks puts the seam on a chunk boundary and keeps

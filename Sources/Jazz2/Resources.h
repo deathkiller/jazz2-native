@@ -78,6 +78,30 @@ namespace Jazz2::Resources
 
 	struct GenericGraphicResource
 	{
+		/**
+			@brief Transparent margin each converted frame carries on every side, counted into @ref FrameDimensions
+
+			Put there by the importer @m_span{m-text m-dim} (`JJ2Anims::AddBorder`, whose value this mirrors) @m_endspan
+			so that a frame cannot bleed into its neighbour under bilinear filtering. @ref Hotspot is written with the
+			same value added, which cancels the margin at the top and leaves the one at the bottom standing - so
+			anything deriving a *size* from @ref FrameDimensions has to drop both, and anything resting an actor on
+			the frame's lower edge has to drop one, or it rests on the margin rather than on the artwork.
+		*/
+		static constexpr std::int32_t FrameBorder = 2;
+
+		/**
+			@brief The hitbox a metadata falls back to when it declares no @ref Metadata::BoundingBox of its own
+
+			The height is the artwork's, both margins dropped, because @ref Jazz2::Actors::ActorBase::UpdateHitbox()
+			rests the box on the frame's lower margin and counts the height up from there: a height that kept one would
+			reach that far above the sprite and an actor would be stood on that far above its own top. The width's
+			figure is *not* a margin and is left as it was - that box is centred on the actor rather than anchored
+			to the frame, so it is a deliberate inset either way.
+		*/
+		static constexpr Vector2i GetDefaultBoundingBox(Vector2i frameDimensions) {
+			return Vector2i(frameDimensions.X - 2, frameDimensions.Y - FrameBorder * 2);
+		}
+
 		/** @brief Resource flags */
 		GenericGraphicResourceFlags Flags;
 		/** @brief Diffuse texture */
@@ -389,7 +413,7 @@ namespace Jazz2::Resources
 		SmallVector<DeferredGraphicResource, 0> DeferredAnimations;
 		/** @brief Sounds */
 		HashMap<String, SoundResource> Sounds;
-		/** @brief Bounding box */
+		/** @brief Hitbox size, as declared by the metadata or else @ref GenericGraphicResource::GetDefaultBoundingBox() "derived from its first sheet" */
 		Vector2i BoundingBox;
 
 		/** @brief Creates a new instance */

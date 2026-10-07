@@ -280,7 +280,8 @@ namespace Jazz2::Actors
 				// the sprite that is showing, like the box would have been derived from the first sheet
 				// otherwise; INT_MAX passed on as a size made a hitbox a billion pixels wide
 				if (_currentAnimation != nullptr && _currentAnimation->Base != nullptr) {
-					UpdateHitbox(_currentAnimation->Base->FrameDimensions.X - 2, _currentAnimation->Base->FrameDimensions.Y - 2);
+					Vector2i boundingBox = GenericGraphicResource::GetDefaultBoundingBox(_currentAnimation->Base->FrameDimensions);
+					UpdateHitbox(boundingBox.X, boundingBox.Y);
 				}
 				return;
 			}
@@ -791,13 +792,25 @@ namespace Jazz2::Actors
 				_pos.Y - base->Hotspot.Y + base->Coldspot.Y
 			);
 		} else {
-			// Collision base set to the bottom of the sprite.
-			// This is probably still not the correct way to do it, but at least it works for now.
+			// Collision base set to the bottom of the sprite - of its *pixels*, not of its frame. The frame carries
+			// a `GenericGraphicResource::FrameBorder` on every side and `FrameDimensions` counts it in, so resting
+			// an actor on the frame's edge rests it on that margin and leaves its artwork floating - reported as
+			// objects sitting a few pixels above the floor, which the original does not do.
+			//
+			// Three actors used to subtract it by hand - the weapon, shield and morph monitors, the weapon one
+			// commented as a fix for a single level - so they were right and everything else without a coldspot
+			// was not. Those three no longer do; this is the one place that knows what the frame is made of.
+			// An actor whose sheet carries a coldspot is unaffected: JJ2's own coldspot already accounts for it,
+			// which is why crates - whose sheets do carry one - were never part of this.
+			//
+			// `h` is counted up from here, so a box derived from the frame has to drop the margin at both ends or
+			// the move would just carry the error to the top edge and the player would stand that far above a
+			// crate - see where `ContentResolver` derives `Metadata::BoundingBox`.
 			AABBInner = AABBf(
 				_pos.X - (w / 2),
-				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y - h,
+				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y - GenericGraphicResource::FrameBorder - h,
 				_pos.X + (w / 2),
-				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y
+				_pos.Y - base->Hotspot.Y + base->FrameDimensions.Y - GenericGraphicResource::FrameBorder
 			);
 		}
 	}

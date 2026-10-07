@@ -1039,9 +1039,9 @@ namespace Jazz2
 								std::uint16_t(keepIndexed ? IndexedGraphicsCacheKey : paletteOffset)));
 							Vector2i frameDimensions;
 							if (cached != _cachedGraphics.end()) {
-								metadata->BoundingBox = cached->second->FrameDimensions - Vector2i(2, 2);
+								metadata->BoundingBox = GenericGraphicResource::GetDefaultBoundingBox(cached->second->FrameDimensions);
 							} else if (ReadAuraFrameDimensions(deferredGraphics.Path, frameDimensions)) {
-								metadata->BoundingBox = frameDimensions - Vector2i(2, 2);
+								metadata->BoundingBox = GenericGraphicResource::GetDefaultBoundingBox(frameDimensions);
 							}
 						}
 					} else {
@@ -1056,8 +1056,7 @@ namespace Jazz2
 						// If no bounding box is provided, use the first sprite (a fully deferred metadata has no
 						// sprite to take it from, so it has to declare one explicitly)
 						if (metadata->BoundingBox == Vector2i(InvalidValue, InvalidValue)) {
-							// TODO: Remove this bounding box reduction
-							metadata->BoundingBox = graphics.Base->FrameDimensions - Vector2i(2, 2);
+							metadata->BoundingBox = GenericGraphicResource::GetDefaultBoundingBox(graphics.Base->FrameDimensions);
 						}
 					}
 

@@ -194,6 +194,10 @@ namespace Jazz2::Compatibility
 		}
 
 	private:
+		// Transparent margin written around every exported frame, so a frame cannot bleed into its neighbour
+		// under bilinear filtering. The runtime reads it back as `GenericGraphicResource::FrameBorder` - hitboxes,
+		// the tiled vine and the scripting API's spot values are all derived from it - so the two have to agree;
+		// it is duplicated rather than shared because `Resources.h` would drag the renderer into the converter.
 		static constexpr int32_t AddBorder = 2;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

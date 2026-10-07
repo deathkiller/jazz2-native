@@ -362,13 +362,26 @@ measured the two rates cleanly without this ever showing. It is kept to the rise
 live-key: a spring holds the light rate with nothing pressed at all, an enemy bounce and an RF blast both
 hold the heavy one with jump still held, and a pole depends on how the player reached it.
 
-@par What is still short
-`cp_kill52` and `cp_kill58` are the two of twelve that still differ, and the cause is the standing jump's
-known 4 px rather than anything about the copter. The original engages them at a descent of 2.25 px/tick and
-refuses `cp_kill80` at 2.375, one eighth of a pixel apart; this engine's apex on the same jump is 3.5 px
-lower, which puts it about a tick and a half further into the fall and reads 2.41 where the original reads
-2.25. Fitting the bound to that would be fitting to this engine's own phase error. See *Standing jump is 3%
-short* under @ref movement-accuracy-gaps.
+@par What was short, and what was done about it
+`cp_kill52` and `cp_kill58` were the two of twelve that differed, and the cause is the standing jump's known
+4 px rather than anything about the copter. The original engages them at a descent of 2.25 px/tick and
+refuses `cp_kill80` at 2.375, one eighth of a pixel apart; this engine's apex on the same jump is lower, so
+the same press arrives later in the fall and reads **2.336** where the original reads 2.25. The bound sat at
+2.3125 --- correct for the original, and just below what this engine feeds it --- so those two were refused,
+and with them a great many presses in play: reported as the copter being far harder to start here than in
+the original and ignoring most attempts.
+
+Tracing the gate on all twelve settles the engine's own bracket: the presses it must accept top out at
+**2.3359** @m_span{m-text m-dim} (`cp_kill52`, `cp_kill58`) @m_endspan and the ones it must refuse start at
+**2.4816** @m_span{m-text m-dim} (`cp_tap80`, `cp_kill47`, `cp_kill80`) @m_endspan. Both ends are shifted by
+the same ~0.086 from the original's, so the bracket survived the phase error intact --- it had simply moved,
+and the bound had not. @ref Jazz2::Actors::Player::LegacyCopterEngageMaxSpeed is now 2.40625, the midpoint of
+*that*, and all **twelve scenarios match the original, engage tick for engage tick** (81, 81, 66, 71, 61).
+The median speed error over the whole `cp_*` family went from 5.8 to 5.4 px/s.
+
+This is the one constant in the legacy set fitted to this engine rather than measured off the original, and
+it is marked as such where it is declared. If the standing jump is ever fixed, put it back to 2.3125 and
+re-run the family. See *Standing jump is 3% short* under @ref movement-accuracy-gaps.
 
 @subsection movement-accuracy-air-turn Air turn-around, the one that took five attempts
 
@@ -1212,6 +1225,45 @@ Two differences, both about the object rather than the player:
     the harness has found to the reported "morph box floating", and it is a real difference; whether it is
     the reported one is not established.
 
+@par An object used to rest on its sprite's padding rather than on its sprite
+Every converted animation frame carries a border of @ref Jazz2::Compatibility::JJ2Anims's @cpp AddBorder @ce
+--- 2 px --- on all four sides, and @cpp FrameDimensions @ce counts it in. The hotspot is written with the
+same value added, which cancels the border at the *top* and leaves the one at the *bottom* standing.
+@ref Jazz2::Actors::ActorBase::UpdateHitbox() then put the collision bottom at
+@cpp FrameDimensions.Y @ce for any sprite without a coldspot, which is the padded edge: such an object came
+to rest with its padding on the floor and its pixels 2 px above it. The three powerup monitors each carried a
+hand-written @cpp AABBInner.B -= 2.0f; @ce --- the weapon one commented as a fix for one specific level ---
+so somebody had met this and patched it per-actor without finding the cause.
+
+Subtracting the border once, in that branch, makes the three hacks unnecessary and fixes everything else at
+the same time. The height has to lose both borders with it: the box is anchored at its bottom and counted
+upwards, so a height that kept one would reach that far *above* the sprite and the player would stand that
+far above a crate rather than on it. The box @ref Jazz2::ContentResolver derives from the first sheet is
+therefore @cpp FrameDimensions - Vector2i(2, 4) @ce --- the width's figure is unchanged, being a deliberate
+inset rather than a border, since the box is centred on the actor rather than anchored to the frame.
+
+@par What that moves, and what it does not
+Measured by logging, for every resting actor, the distance from its collision bottom to the bottom of its
+current frame's opaque pixels. Afterwards that distance is **0** for everything that has no coldspot; before,
+it was exactly 2 px in every case @m_span{m-text m-dim} (both terms track @cpp _pos.Y @ce, so their
+difference does not depend on where the object ended up) @m_endspan. The residual 1--2 px that a few frames
+of `Collectible/AmmoBouncer` still show is the other mechanism: @cpp AdjustedSizeY @ce is the maximum over
+the whole animation, so a frame shorter than its animation's tallest leaves slack no single box can take out
+--- and the original has one box per object too.
+
+The set this actually moves is **smaller than it looks**. A census over six levels found the sprites without
+a coldspot to be the collectibles @m_span{m-text m-dim} (food, coins, gems, ammo pickups) @m_endspan, the
+powerup monitors, and a few things that never rest on a floor @m_span{m-text m-dim} (explosions, a Rapier, a
+Moth) @m_endspan. Crates are **not** among them --- `Object/Crate/Generic` carries a coldspot at
+@cpp (22, 30) @ce and was always correct --- and the monitors come out **bit-identical**, because the
+hand-written 2 px they used to subtract is exactly what the general rule now subtracts: 1956.83/1988.83
+before against 1956.84/1988.84 after. So the 6 px by which a monitor rests higher here than in the original,
+noted above, is **not** this, and is still open.
+
+Verified against 53 object, powerup, collectible and enemy scenarios: no scenario's median position moves by
+more than 1 px, and the three whose animation column disagrees are the same three that disagree by as much
+between two runs of an identical binary.
+
 @subsection movement-accuracy-warp A warp hands control back almost at once
 
 The original lands on tick 73, shows **one frame** of its warp-out pose on 74, and is walking again on 75.
@@ -1475,6 +1527,23 @@ east runs out of the section entirely and into a 17-tile wall, which the player 
 
 Spaz's double jump in the same bays agrees at 2, 3 and 4 tiles and diverged at 5 and 6, which is what
 uncovered the trigger window in the first place --- see @ref movement-accuracy-special-doublejump.
+
+@par The top of the level is a ceiling too, and it was not stopping anything
+A tile ceiling stops the ascent because @ref Jazz2::Actors::ActorBase::TryMoveSubstep() zeroes
+@cpp _speed.Y @ce on the frame the move is refused. The level's own top bound is enforced somewhere else
+entirely --- a clamp in @ref Jazz2::Actors::Player::OnUpdate() that puts the player back on the bound ---
+and that clamp moved the *position* and left the *momentum* untouched. The player was
+therefore pinned against the top of the level for as long as the rise took to bleed off under gravity, which
+at the rise rate is tens of frames.
+
+Measured on `secretf/03_easter3` at tile (216, 16), a vertical spring into a pole: the player reached
+@cpp y = 0 @ce carrying -15.43 px/tick and sat there while it decayed -14.92, -14.41, -13.90 --- about half a
+second of hanging at the ceiling. Reported from play as a launch through a pole not being stopped quickly
+enough, and the launches that reach the bound at all are exactly the ones carrying that much momentum: a
+spring, a pole, or the two chained. The clamp now zeroes an upward @cpp _speed.Y @ce and
+@cpp _internalForceY @ce and calls @ref Jazz2::Actors::Player::OnHitCeiling(), which is where the rest of
+what a ceiling means already lives --- the external force, and an uppercut that ends there. The same frames
+now read -16.07, then 0, then +0.17: contact, stop, fall.
 
 @subsection movement-accuracy-special-lorikick Lori's kick accelerates
 

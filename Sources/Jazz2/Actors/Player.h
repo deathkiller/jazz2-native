@@ -2068,7 +2068,7 @@ namespace Jazz2::Actors
 		 */
 		static constexpr float LegacyVineJumpLift = 12.0f;
 		/**
-		 * @brief Fastest descent the copter can still be *started* from (original bracket 2.25 to 2.375 px/tick)
+		 * @brief Fastest descent the copter can still be *started* from (this engine's bracket 2.336 to 2.482 px/tick)
 		 *
 		 * The copter's descent speed was never the difference --- where the original engages, it holds
 		 * 1.0078 px/tick, which is @ref LegacyCopterDescentSpeed to three decimals. What it has and this
@@ -2081,8 +2081,23 @@ namespace Jazz2::Actors
 		 * when the tapping starts, which put it between 1.875 and 2.375 and left 2.0 as the round figure
 		 * between them. The `cp_kill*` set, which taps once early and then stops, narrows it: `cp_kill52`
 		 * engages at a descent of 2.25 where `cp_tap80` is refused at 2.375, both read before that tick's
-		 * gravity. 2.3125 is the midpoint of the tighter bracket and clears both by a margin; as before,
-		 * only the bracket is measured.
+		 * gravity.
+		 *
+		 * @par This figure is fitted to **this engine**, not read off the original
+		 * The bound above is the original's, and setting it to the midpoint of that bracket (2.3125) left
+		 * `cp_kill52` and `cp_kill58` refused where the original engages them --- and, reported from play,
+		 * the copter rejecting far more attempts than it should. The rule is not wrong; what is fed to it is.
+		 * This engine's standing jump is about 3.5 px short @m_span{m-text m-dim} (see *Standing jump is 3%
+		 * short* in @ref movement-accuracy-gaps) @m_endspan so the same press arrives later in the fall:
+		 * traced at the decisive press, `cp_kill52` reads **2.336** here against the original's 2.25, and
+		 * `cp_kill80` reads **2.482** against 2.375. Both are shifted by the same ~0.086, so the bracket
+		 * survives --- it has simply moved. Measured on every one of the twelve, the presses this engine must
+		 * accept top out at 2.3359 and the ones it must refuse start at 2.4816; 2.40625 is the midpoint of
+		 * *that*, with 0.07 of margin either side.
+		 *
+		 * So this constant is the one place in the legacy set that compensates for an error elsewhere rather
+		 * than measuring the original. **If the standing jump is ever fixed, put it back to 2.3125** and
+		 * re-run the `cp_*` family; the twelve scenarios will say immediately which figure the engine wants.
 		 *
 		 * @par What this bound is **not**
 		 * It used to be paired with a one-attempt-per-airtime rule --- the copter spent on the first jump
@@ -2096,7 +2111,7 @@ namespace Jazz2::Actors
 		 * report that started it, *"pressing jump too early removes the ability to copter out of that jump"*,
 		 * is the invented rule rather than the original's.
 		 */
-		static constexpr float LegacyCopterEngageMaxSpeed = 2.3125f * LegacyFrameRateScale;
+		static constexpr float LegacyCopterEngageMaxSpeed = 2.40625f * LegacyFrameRateScale;
 		/**
 		 * @brief How often Lori's kick repeats while Down and Jump are held (original 35 ticks)
 		 *

@@ -795,7 +795,26 @@ namespace Jazz2::Actors
 		if (!_levelHandler->IsReforged()) {
 			float topBound = float(_levelHandler->GetLevelBounds().Y);
 			if (_pos.Y < topBound) {
+				// The bound has to take the *momentum* as well, not only the position. A tile ceiling does:
+				// TryMoveSubstep() zeroes `_speed.Y` on the frame the move is refused. This clamp only put the
+				// player back and left the rise intact, so they hung against the top of the level while it bled
+				// off under gravity - measured on `secretf/03_easter3` at (216, 16), where a spring into a pole
+				// arrives at -15.4 and takes some thirty frames of that to turn round, half a second of sitting
+				// against the ceiling. Reported as not being stopped quickly enough, and it is the launches that
+				// carry real momentum - a spring, a pole, the two chained - that reach the bound at all.
+				bool rising = (_speed.Y < 0.0f || _internalForceY < 0.0f || _externalForce.Y < 0.0f);
 				MoveInstantly(Vector2f(_pos.X, topBound), MoveType::Absolute | MoveType::Force);
+				if (rising) {
+					if (_speed.Y < 0.0f) {
+						_speed.Y = 0.0f;
+					}
+					if (_internalForceY < 0.0f) {
+						_internalForceY = 0.0f;
+					}
+					// The rest of what hitting a ceiling means - the external force, and an uppercut that ends
+					// there - is already written down once, so the bound borrows it rather than repeating it
+					OnHitCeiling(timeMult);
+				}
 			}
 		}
 

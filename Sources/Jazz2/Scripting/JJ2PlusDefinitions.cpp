@@ -193,9 +193,6 @@ namespace Jazz2::Scripting
 			static constexpr std::uint32_t AnimAnimIndexBits = 10;	// up to 1024 animations per set
 			static constexpr std::uint32_t AnimFrameIndexMask = (1u << AnimFrameIndexBits) - 1;
 			static constexpr std::uint32_t AnimAnimIndexMask = (1u << AnimAnimIndexBits) - 1;
-			// JJ2Anims adds a 2px border around exported frames and stores hotspots negated+offset; the original JJ2
-			// spot value is recovered as (AddBorder - engineSpot). See Compatibility::JJ2Anims::AddBorder.
-			static constexpr std::int32_t AnimSpotBorder = 2;
 
 			// Decodes a composite global frame index (as produced by jjAnimations[a].firstFrame + f) back to its
 			// graphic resource and local frame number, for the "current frame" canvas draw functions
@@ -1125,17 +1122,19 @@ namespace Jazz2::Scripting
 			std::uint32_t animIdx = (globalAnim & AnimAnimIndexMask);
 			auto* base = owner->ResolveSpriteGraphic((std::int32_t)setID, (std::int32_t)animIdx);
 			if (base != nullptr) {
+				// Every spot is stored negated and shifted by the margin the importer put around the frame, so the
+				// value the original JJ2 would have reported is recovered as (FrameBorder - engineSpot)
 				frame->width = (std::int16_t)base->FrameDimensions.X;
 				frame->height = (std::int16_t)base->FrameDimensions.Y;
-				frame->hotSpotX = (std::int16_t)(AnimSpotBorder - base->Hotspot.X);
-				frame->hotSpotY = (std::int16_t)(AnimSpotBorder - base->Hotspot.Y);
+				frame->hotSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Hotspot.X);
+				frame->hotSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Hotspot.Y);
 				if (base->Coldspot.X != ContentResolver::InvalidValue) {
-					frame->coldSpotX = (std::int16_t)(AnimSpotBorder - base->Coldspot.X);
-					frame->coldSpotY = (std::int16_t)(AnimSpotBorder - base->Coldspot.Y);
+					frame->coldSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Coldspot.X);
+					frame->coldSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Coldspot.Y);
 				}
 				if (base->Gunspot.X != ContentResolver::InvalidValue) {
-					frame->gunSpotX = (std::int16_t)(AnimSpotBorder - base->Gunspot.X);
-					frame->gunSpotY = (std::int16_t)(AnimSpotBorder - base->Gunspot.Y);
+					frame->gunSpotX = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Gunspot.X);
+					frame->gunSpotY = (std::int16_t)(GenericGraphicResource::FrameBorder - base->Gunspot.Y);
 				}
 			}
 			return frame;
