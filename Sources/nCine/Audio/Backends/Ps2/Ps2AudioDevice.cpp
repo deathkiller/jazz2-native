@@ -11,6 +11,7 @@
 #include <cstring>
 #include <malloc.h>
 #include <new>
+#include <type_traits>
 
 #include <Containers/StringView.h>
 
@@ -804,23 +805,53 @@ namespace nCine
 		return (buffer.Used && buffer.Samples != nullptr && buffer.FrameCount > 0 ? &buffer : nullptr);
 	}
 
-	// Always inlined: this is called twice per OUTPUT SAMPLE by the resampler below, tens of thousands of
-	// times a frame, and out of line it costs a call, two stores through the reference parameters and a
-	// re-test of the format on every one of them - all three are hoisted once it is inlined, because the
-	// format and the channel count are loop invariants of MixSource
-	DEATH_ALWAYS_INLINE void Ps2AudioDevice::ReadFrame(const Buffer& buffer, std::int32_t frame, std::int32_t& left, std::int32_t& right)
+	namespace
 	{
-		const std::int32_t index = frame * buffer.ChannelCount;
-		if (buffer.BytesPerSample == 1) {
-			// An 8-bit source is stored as it arrived and shifted into the mixer's scale here: one
+		/**
+			@brief Mixes the frames one buffer still holds into @p output, from frame @p i until either runs out
+
+			The sample format is a template parameter, so the loop is compiled once per format with nothing to test
+			per sample, and the cursor, the gains and the counter are locals the compiler keeps in registers. Written
+			inline in MixSource() they would not be: the buffer can change partway through a block, so the format
+			would be re-read and re-tested for every sample, and the cursor - a member of the source, in a build
+			without strict aliasing, where any store to the output might change it - stored and reloaded on every one.
+
+			@returns The index of the first output frame not mixed, which is @p frames unless the buffer ran out
+		*/
+		template<std::int32_t BytesPerSample, std::int32_t Channels>
+		std::int32_t MixRun(const std::uint8_t* data, std::int32_t frameCount, std::int32_t* output, std::int32_t i,
+			std::int32_t frames, std::int64_t& cursorInOut, std::int64_t step, std::int64_t end,
+			std::int32_t leftQ15, std::int32_t rightQ15)
+		{
+			using Sample = typename std::conditional<BytesPerSample == 1, std::int8_t, std::int16_t>::type;
+			// An 8-bit source is stored as it arrived and shifted into the mixer's 16-bit scale here: one
 			// instruction per sample against holding the whole sound at twice the size
-			const std::int8_t* samples = reinterpret_cast<const std::int8_t*>(buffer.Samples);
-			left = std::int32_t(samples[index]) << 8;
-			right = (buffer.ChannelCount == 2 ? std::int32_t(samples[index + 1]) << 8 : left);
-		} else {
-			const std::int16_t* samples = reinterpret_cast<const std::int16_t*>(buffer.Samples);
-			left = samples[index];
-			right = (buffer.ChannelCount == 2 ? samples[index + 1] : left);
+			constexpr std::int32_t Shift = (BytesPerSample == 1 ? 8 : 0);
+			const Sample* samples = reinterpret_cast<const Sample*>(data);
+			std::int64_t cursor = cursorInOut;
+			for (; i < frames && cursor < end; i++) {
+				// Linear interpolation between the two frames the cursor sits between, with the fraction held in
+				// Q8 - plenty for 16-bit samples. The upper neighbour is clamped to the last frame rather than
+				// wrapped: at the very end of a non-looping buffer there is nothing after it, and wrapping would
+				// fold the first sample into the last one as a click.
+				const std::int32_t index = std::int32_t(cursor >> 32);
+				const std::int32_t fraction = std::int32_t((cursor >> 24) & 0xFF);
+				const std::int32_t nextIndex = (index + 1 < frameCount ? index + 1 : index);
+
+				const std::int32_t l0 = std::int32_t(samples[index * Channels]) << Shift;
+				const std::int32_t r0 = (Channels == 2 ? std::int32_t(samples[index * Channels + 1]) << Shift : l0);
+				const std::int32_t l1 = std::int32_t(samples[nextIndex * Channels]) << Shift;
+				const std::int32_t r1 = (Channels == 2 ? std::int32_t(samples[nextIndex * Channels + 1]) << Shift : l1);
+				const std::int32_t left = l0 + (((l1 - l0) * fraction) >> 8);
+				const std::int32_t right = r0 + (((r1 - r0) * fraction) >> 8);
+
+				// The accumulator is stereo, as the stream is (see FrameBytes)
+				output[i * 2] += (left * leftQ15) >> 15;
+				output[i * 2 + 1] += (right * rightQ15) >> 15;
+				cursor += step;
+			}
+			cursorInOut = cursor;
+			return i;
 		}
 	}
 
@@ -852,8 +883,11 @@ namespace nCine
 		std::int64_t step = AudioMixer::ComputeResampleStep(buffer->Frequency, _mixFrequency, source.Pitch);
 		std::int64_t end = std::int64_t(buffer->FrameCount) << 32;
 
-		for (std::int32_t i = 0; i < frames; i++) {
-			while (source.Cursor >= end) {
+		// The cursor is a local for the whole block and goes back into the source on the way out
+		std::int64_t cursor = source.Cursor;
+		std::int32_t i = 0;
+		while (i < frames) {
+			while (cursor >= end) {
 				if (source.QueueCount > 0) {
 					// A streaming source moves on to the next queued buffer, handing the exhausted one back
 					if (source.ProcessedCount < MaxQueuedBuffers) {
@@ -863,9 +897,10 @@ namespace nCine
 						source.Queue[q - 1] = source.Queue[q];
 					}
 					source.QueueCount--;
-					source.Cursor -= end;
+					cursor -= end;
 					buffer = GetActiveBuffer(source);
 					if (buffer == nullptr) {
+						source.Cursor = cursor;
 						return false;
 					}
 					// The next buffer may be at another rate, so the step follows it - and the loop re-tests
@@ -876,30 +911,26 @@ namespace nCine
 					// Wrapped rather than reset, so a step that overshoots the end does not lose the fraction
 					// of a frame it went past by - over a long loop that would drift audibly
 					// (GetActiveBuffer() guarantees FrameCount > 0, so `end` is never zero here)
-					source.Cursor %= end;
+					cursor %= end;
 				} else {
+					source.Cursor = cursor;
 					return false;
 				}
 			}
 
-			// Linear interpolation between the two frames the cursor sits between, with the fraction held in
-			// Q8 - plenty for 16-bit samples. The upper neighbour is clamped to the last frame rather than
-			// wrapped: at the very end of a non-looping buffer there is nothing after it, and wrapping would
-			// fold the first sample into the last one as a click.
-			const std::int32_t index = std::int32_t(source.Cursor >> 32);
-			const std::int32_t fraction = std::int32_t((source.Cursor >> 24) & 0xFF);
-			const std::int32_t nextIndex = (index + 1 < buffer->FrameCount ? index + 1 : index);
-
-			std::int32_t l0, r0, l1, r1;
-			ReadFrame(*buffer, index, l0, r0);
-			ReadFrame(*buffer, nextIndex, l1, r1);
-			const std::int32_t left = l0 + (((l1 - l0) * fraction) >> 8);
-			const std::int32_t right = r0 + (((r1 - r0) * fraction) >> 8);
-
-			output[i * ChannelCount] += (left * leftQ15) >> 15;
-			output[i * ChannelCount + 1] += (right * rightQ15) >> 15;
-			source.Cursor += step;
+			const std::uint8_t* data = buffer->Samples;
+			const std::int32_t frameCount = buffer->FrameCount;
+			if (buffer->BytesPerSample == 1) {
+				i = (buffer->ChannelCount == 2
+					? MixRun<1, 2>(data, frameCount, output, i, frames, cursor, step, end, leftQ15, rightQ15)
+					: MixRun<1, 1>(data, frameCount, output, i, frames, cursor, step, end, leftQ15, rightQ15));
+			} else {
+				i = (buffer->ChannelCount == 2
+					? MixRun<2, 2>(data, frameCount, output, i, frames, cursor, step, end, leftQ15, rightQ15)
+					: MixRun<2, 1>(data, frameCount, output, i, frames, cursor, step, end, leftQ15, rightQ15));
+			}
 		}
+		source.Cursor = cursor;
 		return true;
 	}
 

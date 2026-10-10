@@ -511,6 +511,11 @@ namespace Jazz2::Rendering
 		// the same frame's Draw phase (before the next PrepareSoftwareLighting reassigns it).
 		RHI::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
 			viewHasWater, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
+#if defined(RHI_LIGHTING_LIT_SPANS)
+		// Outside the spans the lights reached this frame every texel holds exactly the reset value, which a device
+		// that keeps its converted lightmap between frames does not have to convert again (see RhiFwd.h)
+		RHI::Device::SetPendingLightmapSpans(_swLitSpans.data(), ambientLevel);
+#endif
 		return true;
 	}
 #endif

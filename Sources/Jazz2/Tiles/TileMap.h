@@ -83,12 +83,15 @@ namespace Jazz2
 	instead and re-issued under a new translation until it moves or one of its tiles changes; animated tiles
 	stay on the streaming path. The Nintendo 64 has a cache of its own in the RDP's packed tile format (see
 	LayerMeshCache). The fixed-function tiers are left out, because their tile-mesh dispatch reads the vertex
-	stream by hand and isn't known to apply the command's model matrix - except the GE's, which does (see
-	`GuDevice::DispatchTileMesh()`). On the PSP the walk and the copy of its quads into the streaming buffer
-	were a fifth of the main thread's CPU time in a castle level standing still (measured in PPSSPP).
+	stream by hand and isn't known to apply the command's model matrix - except the GX's, the PICA200's, the GS's
+	and the GE's, which do (see `GxDevice::DispatchTileMesh()`, `PicaDevice::DispatchTileMesh()`,
+	`GsDevice::DispatchTileMesh()` and `GuDevice::DispatchTileMesh()`). On the PSP the walk and the copy of its
+	quads into the streaming buffer were a fifth of the main thread's CPU time in a castle level standing still
+	(measured in PPSSPP).
 */
 #if defined(TILEMAP_USE_SINGLE_DRAW) && !defined(TILEMAP_GROUP_MESH_BY_TILE) && \
-	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL) || defined(WITH_RHI_GU))
+	(defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_METAL) || \
+	 defined(WITH_RHI_GX) || defined(WITH_RHI_PICA) || defined(WITH_RHI_GS) || defined(WITH_RHI_GU))
 #	define TILEMAP_CACHE_LAYER_WINDOW
 #endif
 
@@ -235,6 +238,14 @@ namespace Jazz2::Tiles
 		bool empty() const { return _count == 0; }
 		/** @brief Returns `true` if the tiles are stored in the four-byte form */
 		bool IsCompact() const { return _compact; }
+		/**
+			@brief Returns a stamp that changes with every write through @ref Set() or @ref Allocate()
+
+			Those are the only writers of the compact form, so an unchanged stamp proves that none of its tiles
+			changed. The full form can still be written through the references @ref operator[]() hands out, which
+			the stamp cannot see.
+		*/
+		std::uint32_t GetVersion() const { return _version; }
 
 		/**
 			@brief Returns the tile at @p i
@@ -251,8 +262,21 @@ namespace Jazz2::Tiles
 			Decode(_packed[i >> BlockShift][i & (BlockTiles - 1)], tile);
 			return tile;
 		}
+		/**
+			@brief Returns the ID of the tile at @p i
+
+			The same value as `operator[](i).TileID`, without decoding the rest of a compact tile into a scratch
+			one first - for a reader that compares only the IDs of a whole window of tiles every frame.
+		*/
+		std::uint16_t TileIDAt(std::size_t i) const {
+			if (!_compact) {
+				return _full[i >> BlockShift][i & (BlockTiles - 1)].TileID;
+			}
+			return std::uint16_t(_packed[i >> BlockShift][i & (BlockTiles - 1)]);
+		}
 		/** @brief Replaces the tile at @p i, in either form */
 		void Set(std::size_t i, const LayerTile& tile) {
+			_version++;
 			if (!_compact) {
 				_full[i >> BlockShift][i & (BlockTiles - 1)] = tile;
 			} else {
@@ -275,6 +299,7 @@ namespace Jazz2::Tiles
 		}
 
 		bool _compact = false;
+		std::uint32_t _version = 0;
 		SmallVector<std::unique_ptr<LayerTile[]>, 0> _full;
 		SmallVector<std::unique_ptr<std::uint32_t[]>, 0> _packed;
 		std::size_t _count = 0;
@@ -870,6 +895,10 @@ namespace Jazz2::Tiles
 		};
 		OpaqueCoverage _opaqueCoverage = {};
 #endif
+#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64) || (defined(TILEMAP_OPAQUE_COVERAGE) && defined(WITH_ANGELSCRIPT))
+		/// Whether every non-zero entry of the sprite palette is fully opaque, scanned once per OnDraw() (see DrawLayer())
+		bool _spritePaletteOpaque = true;
+#endif
 
 #if defined(DEATH_TARGET_N64)
 		/// Bumped whenever a rebuilt coverage grid differs from the previous one (keys the culled layers' caches)
@@ -899,6 +928,7 @@ namespace Jazz2::Tiles
 			std::int32_t TileAbsX = 0, TileAbsY = 0, Cols = 0, Rows = 0;
 			std::int32_t CullShiftX = 0, CullShiftY = 0;
 			std::uint32_t CoverageStamp = 0;
+			std::uint32_t LayoutVersion = 0;		//< The layout's stamp (LayerLayout::GetVersion()) WindowIds were last checked against
 			SmallVector<std::uint16_t, 0> WindowIds;
 			SmallVector<AnimatedCell, 0> Animated;
 			SmallVector<Chunk, 1> Chunks;

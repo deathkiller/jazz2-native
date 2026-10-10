@@ -445,15 +445,18 @@ the case where two consoles reach an effect with *literally the same code*; when
 differ, they stay separate blocks. Capabilities are then checked against the
 @ref shader-compiler-ff-target-lists "intersection of the listed targets".
 
-Today `FrozenMask.shader`, `PartialWhiteMask.shader` and the two background shaders carry a shared
-@cpp void fixed_function(pvr, gu, gs, rdp) @ce block plus a @cpp void fixed_function(gx) @ce one;
-`Colorized.shader` splits the same set three ways --- a shared @cpp void fixed_function(pvr, gu, gs) @ce
-block, its own @cpp void fixed_function(rdp) @ce one @m_span{m-text m-dim} (its combiner ceiling caps
-the additive passes at two, see the output-scale section) @m_endspan and a
-@cpp void fixed_function(gx) @ce one; and `Transition.shader` carries a
-@cpp void fixed_function(pvr) @ce block plus a shared @cpp void fixed_function(gx, gu, gs, rdp) @ce
-one @m_span{m-text m-dim} (the 16-vertex strip scratches) @m_endspan; everything else has a single
-generic block --- which is the norm, since a program with no block at all for a backend is skipped at
+Today `FrozenMask.shader` carries a shared @cpp void fixed_function(pvr, pica, gu, gs, rdp, legacygl) @ce
+block plus a @cpp void fixed_function(gx) @ce one; `PartialWhiteMask.shader` a shared
+@cpp void fixed_function(pvr, gu, gs, rdp) @ce block plus a @cpp void fixed_function(gx, pica, legacygl) @ce
+one; `Colorized.shader` splits three ways --- a shared @cpp void fixed_function(pvr, gu, gs) @ce block, its
+own @cpp void fixed_function(rdp) @ce one @m_span{m-text m-dim} (its combiner ceiling caps the additive
+passes at two, see the output-scale section) @m_endspan and a @cpp void fixed_function(gx, pica, legacygl) @ce
+one; `Transition.shader` carries a @cpp void fixed_function(pvr) @ce block plus a shared
+@cpp void fixed_function(gx, pica, gu, gs, rdp, legacygl) @ce one @m_span{m-text m-dim} (the 16-vertex strip
+scratches) @m_endspan; the two background shaders split five ways --- `pvr` with `gs`, `gu`, `rdp`, `pica`,
+and `gx` with `legacygl` --- by the two macros of their shared include @m_span{m-text m-dim} (see the warp
+below) @m_endspan; and the two water combines carry one block that lists every console. Everything else has a
+single generic block --- which is the norm, since a program with no block at all for a backend is skipped at
 runtime there.
 
 The `--emit-fixed-function` mode transpiles the applicable block of **every program variant** ---
@@ -531,7 +534,7 @@ Field | Type | Meaning
 `p.offset_color` | `vec3` | post-texture additive term (the PVR offset colour; the GX runs a silhouette pass instead; the GU expands the pass into modulate + additive silhouette, which is the same result). Writing it is what enables it, and what sets `usesOffsetColor`
 `p.screen_offset` | `vec2` | displacement of the whole quad in the quad's own coordinate space (the Outline ring taps)
 `p.luma_gain` | `float` | how much `LUMA_RAMP` amplifies the texel's luminance before saturating it; ignored by every other preset
-`p.texture_repeat` | `bool` literal | RDP only: the pass samples with hardware wrap along S (a mask on the tile descriptor), so texture-unit coordinates outside [0, 1] repeat instead of the strip being cut into pieces at the texture's edges --- accepted only in a `fixed_function(rdp)` block. It only ever *adds* wrapping: a texture whose own sampler asks to repeat and whose whole image fits the backend's texture-memory budget is wrapped on both axes anyway, without any pass saying so
+`p.texture_repeat` | `bool` literal | RDP only: the pass samples with hardware wrap along S (a mask on the tile descriptor), so texture-unit coordinates outside [0, 1] repeat instead of the strip being cut into pieces at the texture's edges --- accepted only in a `fixed_function(rdp)` block; the backends that take the wrap from the texture's own sampler state (the GE, the PICA200) need no flag for it. It only ever *adds* wrapping: a texture whose own sampler asks to repeat and whose whole image fits the backend's texture-memory budget is wrapped on both axes anyway, without any pass saying so
 `p.blend` | enum | blend override for this pass
 `p.tev` | enum | GX combiner preset --- portable intent, the PVR always modulates and the GE only knows `MODULATE` and `SILHOUETTE`
 
@@ -696,18 +699,33 @@ so a mistake surfaces on the dev machine instead of silently dropping a console 
     shader's tone for every luminance.
 -   @cpp "Transition.shader" @ce --- geometry synthesis: the iris fan built from `quad_origin()` /
     `quad_axis_x/y()` and shaded strips, 32 segments in the `pvr` block and 64 with a three-band eased
-    edge in one shared @cpp void fixed_function(gx, gu, gs, rdp) @ce block. The iris needs no combiner
-    at all --- only geometry and per-vertex colours --- so what decides the split is the strip scratch:
-    the GX, the GU, the GS and the RDP all take the 10-vertex strip that walks all five radii in ONE
-    draw, and the PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx`
+    edge in one shared @cpp void fixed_function(gx, pica, gu, gs, rdp, legacygl) @ce block. The iris
+    needs no combiner at all --- only geometry and per-vertex colours --- so what decides the split is
+    the strip scratch: every backend but the PowerVR takes the 10-vertex strip that walks all five radii
+    in ONE draw, and the PVR's 8 vertices cannot hold it. It is also the one shader whose list starts at `gx`
     rather than at `pvr`.
 -   @cpp "Include/TexturedBackgroundWarp.inc" @ce --- the warp rebuild, shared by both background
-    shaders **and** all five backends: the band geometry uses only extended vocabulary that every
-    console implements the same way, so the include is literally the same code everywhere. Only the
-    horizon-tint delivery differs, switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the including
-    block defines before the `#include` --- set by the `gx` block alone, which is why the other four
-    consoles need nothing but a shared @cpp void fixed_function(pvr, gu, gs, rdp) @ce block around the
-    bare `#include`, and also the general idiom for specializing a shared include per backend.
+    shaders **and** every backend: the band geometry uses only extended vocabulary that every console
+    implements the same way, so the include is literally the same code everywhere. Two macros the
+    including block defines before the `#include` specialize it per capability, which is also the
+    general idiom for specializing a shared include per backend:
+    -   `WARP_TINT_IN_VERTEX_COLOR` folds the horizon tint into each band piece's own draw through the
+        `TINT_MIX` combiner preset. Without it --- on the PowerVR, the GE and the GS, none of which can
+        lerp a texel toward an interpolated colour --- the tint is a second, alpha-blended gradient over
+        the bands, and it is emitted in a second walk of the bands after all the textured pieces rather
+        than band by band, so the backend batches the whole warp into two draws instead of alternating
+        between two states for every band. That is exact: the bands share only their edge rows, which
+        the rasterizer gives to one band or the other.
+    -   `WARP_TEXTURE_REPEAT` draws each band as **one** strip with unwrapped texture coordinates, for a
+        GPU that repeats the 256x256 render target in hardware, instead of cutting it into up to eight
+        pieces at the texture's edges. The RDP is told to wrap by the pass, so its block also defines
+        `WARP_TEXTURE_REPEAT_IN_PASS`, which sets `p.texture_repeat`; the GE and the PICA200 take the wrap
+        from the render target's own sampler state. The PowerVR's render target is a stride surface its
+        texture unit cannot wrap, so it keeps the pieces.
+
+    The blocks are therefore @cpp void fixed_function(pvr, gs) @ce around the bare `#include`, `gu` with
+    the repeat, `rdp` with the repeat in the pass and the tint folded, `pica` with the repeat and the
+    tint folded, and @cpp void fixed_function(gx, legacygl) @ce with the tint folded.
 
 @section shader-compiler-workflow Regenerating the committed headers
 

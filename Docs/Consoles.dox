@@ -518,6 +518,62 @@ player as the main menu's @m_span{m-text m-dim} ("Cannot load specified level!")
 That matters most where there is no virtual memory to hide behind, which is every console on this
 page.
 
+@subsection consoles-common-skips Work the fixed-function consoles leave out
+
+On the consoles that transform and light on the CPU, three things are shared between the backends rather
+than solved once per console, and each of them removes work by construction --- none of them changes a
+drawn pixel or a played sample in a way anyone could see or hear. Two are about the frame:
+
+-   **A fully lit level draws no lightmap.** The fixed-function backends multiply the scene by the CPU
+    lightmap through a texture whose factors are clamped to one, so the brightening the shader path adds
+    around a light has nothing to show there, and a lightmap at the full ambient level would only multiply
+    the scene by one. Where the backend's clamp makes that true it says so with `RHI_LIGHTING_DARKEN_ONLY`
+    @m_span{m-text m-dim} (@cpp "nCine/Graphics/RHI/RhiFwd.h" @ce --- the `PVR`, `GU`, `GS`, `GX`,
+    `PICA` and `RDP` arms) @m_endspan, and @cpp CombineRenderer::PrepareSoftwareLighting() @ce then skips
+    the splat, the conversion and the composite altogether at the full ambient level, lights or not. Of
+    the first episode's levels, `castle1` and `labrat1` are fully lit; that was 1.5 ms of every frame on
+    the Nintendo 64 and 3.9 ms on the GameCube @m_span{m-text m-dim} (measured in ares and Dolphin)
+    @m_endspan.
+-   **A tile layer's visible window is kept between frames.** The tiles a layer shows change only when its
+    window moves by a whole tile, which for a slow parallax layer is rare, so with
+    `TILEMAP_CACHE_LAYER_WINDOW` @m_span{m-text m-dim} (@cpp "Jazz2/Tiles/TileMap.h" @ce) @m_endspan the
+    window is walked once into buffers of the layer's own and re-issued under a new translation until it
+    moves or one of its tiles changes; animated tiles stay on the per-frame path. It needs a backend whose
+    tile-mesh dispatch applies the command's model matrix --- every shader backend, and of the
+    fixed-function ones the `GX`, `PICA`, `GS` and `GU`. The Nintendo 64 has a cache of its own in the
+    RDP's packed tile format, and the PowerVR and the legacy GL walk every frame. Whether a window is
+    still current is decided without comparing its tiles where a layer is stored compactly
+    @m_span{m-text m-dim} (see @ref consoles-common-levelgrids) @m_endspan: such a layer carries a version
+    stamp that every write bumps.
+
+The third is not about rendering. **The math library calls the module player lives on are replaced where
+they are slow.** libxmp mixes in integers, but on every tick of a module it works out each playing voice's
+period and pitch bend with double-precision `pow()` and `log()` and divides several times per voice
+@m_span{m-text m-dim} (some 6000 divisions a second in a level with busy music) @m_endspan, and the
+generated fixed-function effects call `floorf()` and `ceilf()` several times per band of the textured
+background. On a CPU without double precision every one of those doubles is a soft-float routine --- 68.6 us
+for a `pow()` measured on a PSP, where they made up the larger half of the music decoding thread --- so
+@cpp "nCine/Base/LibmOverrides.cpp" @ce takes them over through the linker's `--wrap`, per console as far as
+it measured as a win:
+
+Console | Replaced | Why
+------- | -------- | ---
+Dreamcast | `pow`, `log`, `ceilf` | KallistiOS builds for the SH-4's single-precision-default ABI, so every double operation switches the FPU's precision mode and back. newlib's own `floorf()` is already the cheaper one here
+Nintendo 64 | `floorf`, `ceilf` | The VR4300 has hardware doubles but no rounding instruction, and newlib's routines cost about 1.9 us each
+PlayStation 2 | `pow`, `log`, double division, `floorf`, `ceilf` | The Emotion Engine's FPU is single precision only, and the music is decoded on the main thread, so the decoder's cost is the frame's
+PSP | `pow`, `log`, double division, `floorf`, `ceilf` | The Allegrex is single precision only as well
+
+The replacements of `pow()` and `log()` compute in single precision, within a few units in the last place of
+a float: a note's period comes out within 5e-7 of the double result and a pitch bend within a ten-thousandth
+of a cent, and rendering every module of the game both ways left 95% to 99.97% of the samples bit-identical.
+A **whole** exponent is never approximated --- libxmp's Vorbis decoder sizes its codebooks with
+`floor(pow(r, dim))` and needs integral powers exact, so those go to newlib, and the powers of two libxmp
+itself asks for are built exactly from their exponent bits. The division and the rounding functions are
+exact, bit for bit what libgcc and newlib return @m_span{m-text m-dim} (the division was checked on 270
+million operand pairs, the rounding functions on every float there is) @m_endspan. A new target opts in by
+adding the file to its source list and the `--wrap` options to its link, both in its arm of
+@cpp "cmake/ncine_extra_sources.cmake" @ce.
+
 - - -
 
 @section consoles-n64 Nintendo 64
@@ -816,9 +872,10 @@ and the game does not need one.
     and 41 --- a **steady 40 ms menu frame in place of one that swung between 36 and 51**.
 -   **It runs, but not smoothly.** This is the one target whose CPU is far below what the game was
     written for --- an order of magnitude under the next-slowest console here --- and it shows: a
-    level frame measures between about 28 and 45 ms in ares depending on the level and what is on
-    screen @m_span{m-text m-dim} (roughly 22 to 36 frames per second, where an untuned build was
-    55 ms) @m_endspan, so treat this port as **experimental** rather than as a finished one. The
+    level frame measures between about 14 and 31 ms of work in ares depending on the level and what is
+    on screen @m_span{m-text m-dim} (`castle1` standing still now holds 60 frames per second, the
+    188-light spot of `castle1n` is the slowest place measured, and an untuned build was 55 ms)
+    @m_endspan, so treat this port as **experimental** rather than as a finished one. The
     numbers above for the cinematics @m_span{m-text m-dim} (55 ms per frame for a decoder that is
     little more than @cpp memcpy() @ce) @m_endspan are the honest scale of the machine. Where the
     frame goes, measured rather than guessed: roughly a third in the RDP dispatch
@@ -829,7 +886,9 @@ and the game does not need one.
     only when that window moves by a whole tile, which for a slow parallax layer is rare, with
     animated tiles kept out of it and re-resolved every frame) @m_endspan and a packed record per tile
     in place of its vertices, cached and streamed alike (see above); both are N64-only and sit behind
-    the ordinary tile-mesh path. The debris shares that mesh shader but keeps the indexed four-corner
+    the ordinary tile-mesh path. A layer's window overhangs the screen, so a quarter to two fifths of its
+    records lie wholly outside the scissor; those are neither loaded into texture memory nor drawn. The
+    debris shares that mesh shader but keeps the indexed four-corner
     form, because a spinning particle's quad is not a rectangle and cannot be described by a position
     and a texel corner.
 -   **Sprites got the same treatment.** Nearly every sprite of a frame is drawn by one generated
@@ -1147,7 +1206,10 @@ crash also loses everything written since the last flush.
     muffled underwater.
 -   Module music is rendered at 22050 Hz rather than at the output rate: the AICA resamples every
     channel in hardware for free, so a higher rate would only cost the SH4 more time in the module
-    mixer --- the one place this console has no headroom to spare.
+    mixer --- the one place this console has no headroom to spare. Its double-precision `pow()` and
+    `log()` are replaced by single-precision ones @m_span{m-text m-dim} (see @ref consoles-common-skips)
+    @m_endspan, worth 6 to 9% of the decoder here --- doubles are not soft-float on this CPU, only
+    expensive to switch to.
 -   A stream is resampled at the rate it was started with and the driver cannot change it
     afterwards, so pitch changes apply to sound effects only.
 -   **Streams are stopped for the duration of a load.** The driver's ring buffer is topped up once
@@ -1161,6 +1223,17 @@ crash also loses everything written since the last flush.
     banks) @m_endspan, the PVR has no hardware scissor @m_span{m-text m-dim} (clipping is
     geometric) @m_endspan, and there is no post-processing tier, so the rescale filters and the
     lightmap's shader path are unavailable --- the lightmap is combined on the CPU instead.
+-   **A scissor as large as the screen clips nothing.** The game sets one equal to the viewport even in
+    single player, and as geometric clipping it put every tile and sprite through the clipping path
+    @m_span{m-text m-dim} (about an eighth of a castle level's CPU time) @m_endspan for a rectangle the
+    tile accelerator discards outside of anyway. `PvrDevice` recognizes that case and submits such
+    primitives as they are; splitscreen and the menus' partial scissors still clip, and a primitive wholly
+    inside a narrower rectangle takes the direct path too, because the clip would leave it unchanged.
+-   **The lightmap is converted only where it can have changed.** Its ARGB4444 texture persists between
+    frames, and outside the rows' lit spans that the compositor already tracks every texel is exactly the
+    ambient value, so only the union of this frame's and the previous frame's spans is converted
+    @m_span{m-text m-dim} (`RHI_LIGHTING_LIT_SPANS`) @m_endspan as long as the map's size and the ambient
+    level and colour stay the same; splitscreen and any change of those convert it whole.
 -   **Saving needs writable storage that a disc is not.** Preferences and the resumable state go to
     the first attached VMU @m_span{m-text m-dim} (@cpp "/vmu/a1/Jazz2" @ce and
     @cpp "/vmu/a1/Jazz2.resume" @ce for the card in the first port's first slot) @m_endspan.
@@ -1292,7 +1365,13 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
     GameCube in particular.
 -   There is no filter stage on the DSP, so nothing is muffled underwater.
 -   Online multiplayer is disabled, local splitscreen works.
--   No post-processing tier, so no rescale filters, the lightmap is combined on the CPU.
+-   No post-processing tier, so no rescale filters, the lightmap is combined on the CPU --- and not at all
+    in a fully lit level @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan. Where it is,
+    it is converted in one pass straight into the 4x4-tiled RGBA8 layout the GPU samples rather than
+    built linearly and tiled afterwards @m_span{m-text m-dim} (the two passes were 3.7 ms of a lit frame
+    in Dolphin) @m_endspan, and the light splat takes its square roots from `frsqrte` and two Newton
+    steps: the Gekko and the Broadway have no square-root instruction, so `std::sqrt` would be a newlib
+    software routine, twice per lit row and once per texel of a light's falloff.
 -   Textures are converted to the GX formats @m_span{m-text m-dim} (including CI8 with a hardware
     TLUT for palettized ones) @m_endspan and the effect passes are expressed as TEV stages with
     swap tables and a KONST colour, all generated from the `.shader` files.
@@ -1577,8 +1656,21 @@ game writes. Two renderer notes for the emulator:
     textures are paged the way the GE backend pages them, and a store whose *real* size is not a power
     of two does not repeat correctly, because the hardware wraps at the padded size --- the same
     limitation as on the PSP, and the same content rule: repeating textures are powers of two. Every
-    store and vertex buffer has to be flushed with `GSPGPU_FlushDataCache()` before the GPU reads it;
-    the device does so per batch.
+    store and vertex buffer has to be written back with `GSPGPU_FlushDataCache()` before the GPU reads
+    it. A store does so when it is built; the frame's vertices are written back **once per submitted
+    command list** rather than once per draw @m_span{m-text m-dim}
+    (@cpp PicaDevice::FlushPendingWrites() @ce) @m_endspan, because the GPU reads none of them earlier:
+    `C3D_FrameBegin()` stops citro3d's command queue and only `C3D_FrameEnd()` runs it again, a
+    `C3D_FrameSplit()` in between merely queueing its part. The call is a request to the GSP service,
+    and at one per draw it cost more than everything else in the dispatch --- in a level with the warped
+    textured background, about 7 ms of a 12 ms CPU frame in Azahar.
+-   **A triangle strip joins the batch as the triangles it is made of.** A strip cannot share a draw
+    call with anything else, and the warped textured background is dozens of them a frame under one
+    state, so each used to be a draw call of its own; as a list of its triangles it batches like any
+    quad. The warp also needs fewer of them here than on the PowerVR: the PICA200 repeats the 256x256
+    render target it samples in hardware, so each band goes out as one strip instead of being cut into
+    pieces at the texture's edges, with the horizon tint folded into it by the combiner
+    @m_span{m-text m-dim} (see @ref shader-compiler-fixed-function) @m_endspan.
 -   **16-bit colour everywhere.** The panels are 16-bit, so the screen target is RGB565 and every
     texture is RGBA4 or RGB565; the lightmap is quantized to 4 bits per channel as well. The
     resulting banding is the console's, not the port's.
@@ -1825,10 +1917,13 @@ anything else can fail, so the console always has a way out even if initializati
     CPU @m_span{m-text m-dim} (every later load takes ~1.8 s) @m_endspan --- most likely because the
     Allegrex has no double-precision unit. There is nowhere to hide a half-minute freeze on a
     handheld, so `NCINE_WITH_OPENMPT` is forced off here and `NCINE_WITH_XMP` is on by default
-    instead: **libxmp**'s mixer is integer throughout @m_span{m-text m-dim} (its only double-precision
-    arithmetic is the resonant-filter coefficient setup, which runs per filter change rather than per
-    sample) @m_endspan, and it reads the game's original `.j2b` modules directly. What it does not
-    read is **MO3**, so the four `.mo3` tracks are silent; everything else plays.
+    instead: **libxmp**'s mixer is integer per sample @m_span{m-text m-dim} (what it does in double
+    precision --- the periods and pitch bends of the playing voices, worked out on every tick --- was the
+    larger half of the decoding thread on this CPU until it was replaced, see
+    @ref consoles-common-skips; measured on hardware, replacing `pow()` and `log()` alone took the thread
+    from 23% to 13.5% of the CPU in a level with busy music) @m_endspan, and it reads the game's original
+    `.j2b` modules directly. What it does not read is **MO3**, so the four `.mo3` tracks are silent;
+    everything else plays.
 -   **Everything is mixed at 22050 Hz here by default, not the hardware's 44100.** A module mixer's
     cost scales with its output rate, and this one is the most expensive thing the Allegrex is asked to
     do outside the renderer: measured in `prince/02_castle1n`, mixing at 44100 Hz cost around 420 ms of
@@ -1850,7 +1945,9 @@ anything else can fail, so the console always has a way out even if initializati
     their own, so anything that only drives appearance --- a flicker phase, a pulse, an orbit --- goes
     through @ref nCine::sinApprox() / @ref nCine::cosApprox() instead, at 331 ns and within 0.0014 of
     full scale. The same applies to `std::floor()`, which is a real `jal floorf` on a CPU with no floor
-    instruction. Note that this is a fact about *this* libm and not about approximations in general:
+    instruction @m_span{m-text m-dim} (the calls that remain --- the generated effects' `floor()` above
+    all --- go to an exact replacement, see @ref consoles-common-skips) @m_endspan. Note that this is a
+    fact about *this* libm and not about approximations in general:
     on x86-64 the same polynomial is 1.37x **slower** than glibc's `sinf()`, so
     @ref nCine::sinApprox() substitutes it only on the consoles and calls the library everywhere else.
 -   **Threads are on**, over pspdev's **pthread-embedded**. Two of the things the engine's threading
@@ -2349,7 +2446,10 @@ video signal, not the game.
     request over and runs it in 1 KB slices while the GS device waits for the vertical blank
     @m_span{m-text m-dim} (@ref nCine::IAudioDevice::runIdleWork(); a slice starts only if its running
     cost estimate fits before the blank) @m_endspan, and a chunk still unfinished after twelve frames is
-    decoded in slices inside the frame instead. `NCINE_WITH_OPENMPT` is forced off
+    decoded in slices inside the frame instead. The decoding itself is cheaper than it was, too: the
+    double-precision arithmetic libxmp does on every tick is soft-float on the EE, and with its hot
+    functions replaced @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan a chunk of a busy
+    level's music measures 7.2 ms of decoding in PCSX2 instead of 17.9. `NCINE_WITH_OPENMPT` is forced off
     @m_span{m-text m-dim} (libopenmpt's `to_chars(char*, char*, const double&)` is ambiguous against
     PS2SDK's newlib) @m_endspan, so the soundtrack is **libxmp**'s, which is on by default here ---
     and which cannot read the 4 `.mo3` tracks of the 56 shipped, exactly as on every other libxmp

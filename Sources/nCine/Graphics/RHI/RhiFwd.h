@@ -229,8 +229,13 @@ namespace nCine::RHI
 // `RHI_CAP_FRAMEBUFFERS` is defined; but it has no programmable shaders, so `RHI_CAP_SHADERS` stays
 // undefined and the game runs the direct tier (scene straight to the screen at the logical resolution,
 // CPU lightmap composited by the device's lighting hook - the same tier as the software backend).
+//
+// `RHI_LIGHTING_DARKEN_ONLY` holds as on the PowerVR, the GE and the PICA200: the lightmap is an RGBA8 texture
+// of factors whose quantization clamps them to 255 (exactly one), modulated by a white vertex colour and
+// blended as dst * src, so a lightmap at the full ambient level would only multiply the scene by one.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_BATCHING
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::GX
 {
@@ -322,8 +327,13 @@ namespace nCine::RHI
 // fill row by row, and `PicaTexture::MapStreamingTexels()` always declines. The cinematics take the
 // copy-through-a-buffer path and the backend tiles each frame as it uploads it - one conversion pass over a
 // 320x200 frame, which the ARM11 does in well under a millisecond.
+//
+// `RHI_LIGHTING_DARKEN_ONLY` holds as on the PowerVR and the GE: the lightmap is an RGBA4 texture of factors
+// that clamp to 15 (exactly one) and the blend multiplies the scene by it, so a lightmap at the full ambient
+// level would only multiply the scene by one.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_BATCHING
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::PICA
 {
@@ -419,11 +429,17 @@ namespace nCine::RHI
 // scene by per-texel factors its ARGB4444 store clamps to 1, so the brightening the shader path adds around
 // a light has nothing to show, and a lightmap at the full ambient level comes out as exactly 1 everywhere -
 // a multiply that changes no pixel, which the compositor can skip as a whole.
+//
+// `RHI_LIGHTING_LIT_SPANS` means the device keeps its converted lightmap texture from one frame to the next
+// and wants to know, through `SetPendingLightmapSpans()`, which span of every lightmap row the lights reached:
+// everything outside holds exactly the ambient level the compositor resets the map to, so a texel that was
+// outside in the previous frame as well already holds the right factor and is not converted again.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
 #define RHI_CAP_BATCHING
 #define RHI_LIGHTING_DARKEN_ONLY
+#define RHI_LIGHTING_LIT_SPANS
 
 namespace nCine::RHI::PVR
 {
@@ -813,11 +829,17 @@ namespace nCine::RHI
 // `RHI_CAP_TRANSPARENT_RENDER_TARGETS` holds because a render target is an RGBA16 surface with one alpha bit,
 // which is all a see-through background needs. The bit is really the pixel's coverage, stored by every write
 // whatever the blending, so the device rejects fully transparent texels rather than blending them away.
+//
+// `RHI_LIGHTING_DARKEN_ONLY` holds as on the PowerVR and the GE, in the RDP's own encoding: the blender cannot
+// multiply the scene by a texel, so the lightmap carries `1 - factor` in the alpha of an IA16 texture drawn under
+// alpha-over blending, with the factor saturated to one before it is stored. A lightmap at the full ambient level
+// is alpha zero everywhere, which the alpha compare of every blended draw rejects - nothing would be written.
 #define RHI_CAP_FRAMEBUFFERS
 #define RHI_CAP_PALETTED_TEXTURES
 #define RHI_CAP_STREAMING_TEXTURES
 #define RHI_CAP_BATCHING
 #define RHI_CAP_TRANSPARENT_RENDER_TARGETS
+#define RHI_LIGHTING_DARKEN_ONLY
 
 namespace nCine::RHI::RDP
 {

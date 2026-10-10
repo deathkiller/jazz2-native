@@ -392,6 +392,20 @@ namespace Jazz2::Tiles
 		Rectf cullingRect = viewport->GetCullingRect();
 		Vector2f viewCenter = cullingRect.Center();
 
+#if defined(WITH_RHI_SOFTWARE) || defined(DEATH_TARGET_N64) || (defined(TILEMAP_OPAQUE_COVERAGE) && defined(WITH_ANGELSCRIPT))
+		// See DrawLayer(), which reads this for every layer - nothing can recolor the palette in between
+		_spritePaletteOpaque = true;
+		{
+			auto palettes = ContentResolver::Get().GetPalettes();
+			for (std::int32_t i = 1; i < ContentResolver::ColorsPerPalette; i++) {
+				if ((palettes[i] >> 24) != 255) {
+					_spritePaletteOpaque = false;
+					break;
+				}
+			}
+		}
+#endif
+
 #if defined(TILEMAP_OPAQUE_COVERAGE)
 		// The sprite layer goes first so that its opaque coverage exists when the layers behind it are
 		// walked (their tiles under solid ground are then never emitted); the render queue orders the
@@ -1305,18 +1319,10 @@ namespace Jazz2::Tiles
 			// Whether every non-zero entry of the sprite palette (row 0, the one tile layers sample) is fully
 			// opaque. Combined with a tile's IsTileFilled() flag (no index-0 texel, the transparent base
 			// entry) this proves the tile draws all 32x32 pixels opaque, so it may go out with blending off
-			// (see below). Scanned per call because scripts can recolor the palette at any time; very few
-			// tilesets ship translucent palette entries, and those simply keep the blended path everywhere.
-			bool spritePaletteOpaque = true;
-			{
-				auto palettes = ContentResolver::Get().GetPalettes();
-				for (std::int32_t i = 1; i < ContentResolver::ColorsPerPalette; i++) {
-					if ((palettes[i] >> 24) != 255) {
-						spritePaletteOpaque = false;
-						break;
-					}
-				}
-			}
+			// (see below). Scanned once per OnDraw() rather than once per layer, but still every frame, because
+			// scripts can recolor the palette at any time; very few tilesets ship translucent palette entries,
+			// and those simply keep the blended path everywhere.
+			const bool spritePaletteOpaque = _spritePaletteOpaque;
 #endif
 
 			// Standard tile layers backed by a single tileset are drawn as one mesh (one draw call for the whole
@@ -1346,6 +1352,8 @@ namespace Jazz2::Tiles
 			float lastTexInvW = 0.0f, lastTexInvH = 0.0f;
 #if defined(TILEMAP_PACKED_TILE_RECORDS)
 			float lastTilesPerRowInv = 0.0f;
+			const TileSet* lastChunkTileSet = nullptr;
+			float lastTilesPerTextureInv = 0.0f;
 #endif
 			bool meshCacheHit = false;
 
@@ -1406,7 +1414,14 @@ namespace Jazz2::Tiles
 					meshCache->Cols == windowCols && meshCache->Rows == windowRows && meshCache->PaletteOpaque == spritePaletteOpaque &&
 					meshCache->Covering == buildsCoverage && meshCache->Culled == cullsByCoverage &&
 					(!cullsByCoverage || (meshCache->CoverageStamp == _coverageStamp && meshCache->CullShiftX == cullShiftX && meshCache->CullShiftY == cullShiftY)) &&
-					LayerMeshWindowUnchanged(layer, *meshCache, tileAbsX, tileAbsY, tileXs, tileY));
+					((layer.Layout.IsCompact() && meshCache->LayoutVersion == layer.Layout.GetVersion()) ||
+					 LayerMeshWindowUnchanged(layer, *meshCache, tileAbsX, tileAbsY, tileXs, tileY)));
+				// A window at the same place in a layout nobody has written to since holds the same tiles, so the
+				// tile-by-tile comparison - a few hundred lookups a frame over every layer - is needed only after a
+				// write, and only once: the window then stands checked against the current stamp
+				if (meshCacheHit) {
+					meshCache->LayoutVersion = layer.Layout.GetVersion();
+				}
 				if (meshCacheHit && buildsCoverage) {
 					_opaqueCoverage = meshCache->Coverage;
 					_opaqueCoverage.OriginX = x1i;
@@ -1524,7 +1539,10 @@ namespace Jazz2::Tiles
 					if (++tileX >= tileCount.X) { tileX = 0; }
 					tile_xo++;
 
-					LayerTile tile = layer.Layout[tileX + tileY * layer.LayoutSize.X];
+					// By reference: nothing below looks another tile up while this one is in use, which is all a
+					// compact layer's decoded tile needs to stay valid (see LayerLayout), and the copy was 12 bytes
+					// per visited cell
+					const LayerTile& tile = layer.Layout[tileX + tileY * layer.LayoutSize.X];
 #if defined(DEATH_TARGET_N64)
 					if (meshCache != nullptr) {
 						meshCache->WindowIds.push_back(tile.TileID);
@@ -1616,19 +1634,33 @@ namespace Jazz2::Tiles
 #endif
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-					// Which texture chunk holds this tile. Has to be read BEFORE ResolveTextureDiffuse(), which
-					// takes the ID by reference and rebases it into that chunk - afterwards the ID is always
-					// below TilesPerTexture and this would collapse to chunk 0, drawing the whole layer out of
-					// the first texture. A no-op single-texture lookup normally; only a device texture-size
+					// Which texture chunk holds this tile, from the ID as it is here - rebased into its chunk, the
+					// ID is always below TilesPerTexture and this would collapse to chunk 0, drawing the whole layer
+					// out of the first texture. A no-op single-texture lookup normally; only a device texture-size
 					// limit small enough to split the tileset atlas (the consoles) makes it matter.
 					// Through the atlas mapping first: where the atlas holds only the tiles this level uses, the
-					// chunk a tile lives in follows its packed slot, not its ID. Kept in a local of its own so
-					// ResolveTextureDiffuse() below still maps the ID itself exactly once.
+					// chunk a tile lives in follows its packed slot, not its ID.
 					const std::int32_t tileSlot = tileSet->MapToAtlasSlot(tileId);
+#	if defined(TILEMAP_PACKED_TILE_RECORDS)
+					// No integer divider on the SH-4, so the division is a library call - the same exact float quotient
+					// as the row below instead, with the reciprocal kept for as long as the tile set stays the same
+					if DEATH_UNLIKELY(tileSet != lastChunkTileSet) {
+						lastChunkTileSet = tileSet;
+						lastTilesPerTextureInv = (tileSet->TilesPerTexture > 0 ? 1.0f / float(tileSet->TilesPerTexture) : 0.0f);
+					}
+					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileSlot >= tileSet->TilesPerTexture
+						? std::int32_t((float(tileSlot) + 0.5f) * lastTilesPerTextureInv) : 0);
+#	else
 					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileSlot >= tileSet->TilesPerTexture
 						? tileSlot / tileSet->TilesPerTexture : 0);
-#endif
+#	endif
+					// What ResolveTextureDiffuse() would return, from the chunk that is already known: the texture of
+					// that chunk, and the ID rebased into it - without mapping the ID and dividing a second time
+					Texture* tileTexture = (tileChunk < tileSet->GetTextureCount() ? tileSet->TextureDiffuse[tileChunk].get() : nullptr);
+					tileId = tileSlot - tileChunk * tileSet->TilesPerTexture;
+#else
 					Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
+#endif
 					if DEATH_UNLIKELY(tileTexture == nullptr) {
 						continue;
 					}
@@ -1658,20 +1690,29 @@ namespace Jazz2::Tiles
 					const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
 #endif
 					const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
-					float texScaleX = TileSet::DefaultTileSize * lastTexInvW;
-					float texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvW;
-					float texScaleY = TileSet::DefaultTileSize * lastTexInvH;
-					float texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvH;
+					// Where the tile is in its texture, as the scale and bias the quad paths below map their corners
+					// with. The packed tile records carry the texel origin and the flips themselves, so with them only
+					// the per-tile commands at the end of the loop need these, and the mesh path skips the arithmetic
+					float texScaleX, texBiasX, texScaleY, texBiasY;
+					const auto computeTexRect = [&]() {
+						texScaleX = TileSet::DefaultTileSize * lastTexInvW;
+						texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvW;
+						texScaleY = TileSet::DefaultTileSize * lastTexInvH;
+						texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * lastTexInvH;
 
-					// ToDo: Flip normal map somehow
-					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
-						texBiasX += texScaleX;
-						texScaleX *= -1;
-					}
-					if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
-						texBiasY += texScaleY;
-						texScaleY *= -1;
-					}
+						// ToDo: Flip normal map somehow
+						if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+							texBiasX += texScaleX;
+							texScaleX *= -1;
+						}
+						if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+							texBiasY += texScaleY;
+							texScaleY *= -1;
+						}
+					};
+#if !defined(TILEMAP_PACKED_TILE_RECORDS)
+					computeTexRect();
+#endif
 
 					float x2r = x2, y2r = y2;
 					if (!PreferencesCache::UnalignedViewport) {
@@ -1728,6 +1769,9 @@ namespace Jazz2::Tiles
 					}
 #endif
 
+#if defined(TILEMAP_PACKED_TILE_RECORDS)
+					computeTexRect();
+#endif
 					TileCommandUniforms* commandUniforms;
 					auto command = RentRenderCommand(rendererType, tileSet->IsIndexed, &commandUniforms);
 					command->SetType(RenderCommand::Type::TileMap);
@@ -1846,6 +1890,7 @@ namespace Jazz2::Tiles
 					meshCache->CullShiftX = cullShiftX;
 					meshCache->CullShiftY = cullShiftY;
 					meshCache->CoverageStamp = _coverageStamp;
+					meshCache->LayoutVersion = layer.Layout.GetVersion();
 					if (buildsCoverage) {
 						meshCache->Coverage = _opaqueCoverage;
 					}
@@ -2278,9 +2323,9 @@ namespace Jazz2::Tiles
 			RenderCommand* command = chunk.Command.get();
 			auto& geometry = command->GetGeometry();
 			if (chunk.QuadCount > chunk.CapacityQuads) {
-#if defined(WITH_RHI_GU)
-				// A buffer of the GE backend is a plain allocation with no driver behind it to wait on, so a
-				// quarter of room to grow is enough. Sized for the whole window, a castle level's eight chunks -
+#if defined(WITH_RHI_GX) || defined(WITH_RHI_PICA) || defined(WITH_RHI_GS) || defined(WITH_RHI_GU)
+				// A buffer of the GX, PICA200, GS and GE backends is a plain allocation with no driver behind it to wait
+				// on, so a quarter of room to grow is enough. Sized for the whole window, a castle level's eight chunks -
 				// most of which hold only a few tiles - would keep about 0.45 MB of the heap, for nothing.
 				chunk.CapacityQuads = std::min<std::uint32_t>(chunk.QuadCount + chunk.QuadCount / 4, maxQuads);
 #else
@@ -2484,7 +2529,7 @@ namespace Jazz2::Tiles
 			std::int32_t tileX = tileXs;
 			for (std::int32_t xo = 0; xo < cache.Cols; xo++) {
 				if (++tileX >= tileCount.X) { tileX = 0; }
-				if (*ids++ != layer.Layout[rowBase + tileX].TileID) { return false; }
+				if (*ids++ != layer.Layout.TileIDAt(rowBase + tileX)) { return false; }
 			}
 		}
 		return true;
@@ -2644,6 +2689,7 @@ namespace Jazz2::Tiles
 
 	bool LayerLayout::Allocate(std::size_t count, bool compact)
 	{
+		_version++;
 		_full.clear();
 		_packed.clear();
 		_compact = compact;

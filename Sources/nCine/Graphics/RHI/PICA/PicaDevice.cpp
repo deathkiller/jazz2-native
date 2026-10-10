@@ -277,6 +277,9 @@ namespace nCine::RHI::PICA
 		std::int32_t arenaIndex = 0;
 		std::size_t frameArenaUsed = 0;		// In vertices
 		std::size_t frameDataUsed = 0;		// In bytes
+		// How much of each arena has been written back to memory already (see FlushPendingWrites)
+		std::size_t frameArenaFlushed = 0;	// In vertices
+		std::size_t frameDataFlushed = 0;	// In bytes
 
 		DrawState batchState;
 		// The primitive is NOT part of DrawState. It is picked at submission time, so keeping it in the
@@ -387,15 +390,35 @@ namespace nCine::RHI::PICA
 				return;
 			}
 			ApplyDrawState(batchState);
-			Vertex* const base = frameArena[arenaIndex] + batchFirstVertex;
-			const std::size_t bytes = std::size_t(batchVertexCount) * sizeof(Vertex);
-			// The GPU reads the linear heap without seeing the data cache; this is the writeback that makes the
-			// vertices visible to it (the 3DS equivalent of the GX's DCFlushRange)
-			GSPGPU_FlushDataCache(base, std::uint32_t(bytes));
+			// The vertices are not written back here: the GPU reads none of them before the command list is
+			// submitted, and FlushPendingWrites() covers the whole frame's worth in one go at that point
 			C3D_DrawArrays(batchPrim, std::int32_t(batchFirstVertex), batchVertexCount);
 			frameDrawCalls++;
 			frameVertices += std::uint32_t(batchVertexCount);
 			batchVertexCount = 0;
+		}
+
+		/**
+			@brief Writes back what the arenas received since the last call, before a command list is handed over
+
+			The GPU reads the linear heap without seeing the data cache, so everything it is about to read has to
+			be written back first (the 3DS equivalent of the GX's DCFlushRange). It reads nothing while a frame is
+			being built: C3D_FrameBegin() stops the command queue and only C3D_FrameEnd() runs it again, and a
+			C3D_FrameSplit() in between merely queues its part. So the writeback is due once per submitted part
+			rather than once per draw call - which matters, because each one is a request to the GSP service, and
+			on a frame of a hundred draws those requests were costing more than everything else in the dispatch.
+		*/
+		void FlushPendingWrites()
+		{
+			if (frameArenaUsed > frameArenaFlushed) {
+				GSPGPU_FlushDataCache(frameArena[arenaIndex] + frameArenaFlushed,
+					std::uint32_t((frameArenaUsed - frameArenaFlushed) * sizeof(Vertex)));
+				frameArenaFlushed = frameArenaUsed;
+			}
+			if (frameDataUsed > frameDataFlushed) {
+				GSPGPU_FlushDataCache(frameData[arenaIndex] + frameDataFlushed, std::uint32_t(frameDataUsed - frameDataFlushed));
+				frameDataFlushed = frameDataUsed;
+			}
 		}
 
 		/** @brief Reserves per-frame data (a generated texture) the GPU will read, 128-byte aligned */
@@ -435,6 +458,38 @@ namespace nCine::RHI::PICA
 		}
 
 		/**
+			@brief Opens a run of up to @p maxCount vertices appended to the batch of @p prim drawn under @p state
+
+			The same batch AllocVertices() would append to, minus the call and the state comparison per primitive:
+			a caller with many primitives under one state writes them straight into the run and commits however many
+			it wrote with EndVertexRun(), before anything else may touch the batch. Returns `nullptr` when the arena
+			cannot take @p maxCount more, and the caller goes back to AllocVertices(), which is what decides what
+			still fits.
+		*/
+		Vertex* BeginVertexRun(const DrawState& state, GPU_Primitive_t prim, std::int32_t maxCount)
+		{
+			if (batchVertexCount > 0 && (batchPrim != prim || !SameDrawState(batchState, state))) {
+				FlushBatch();
+			}
+			if (batchVertexCount == 0) {
+				batchFirstVertex = frameArenaUsed;
+				batchState = state;
+				batchPrim = prim;
+			}
+			if ((frameArenaUsed + std::size_t(maxCount)) * sizeof(Vertex) > FrameArenaBytes) {
+				return nullptr;
+			}
+			return frameArena[arenaIndex] + frameArenaUsed;
+		}
+
+		/** @brief Commits the @p count vertices written into the run BeginVertexRun() opened */
+		void EndVertexRun(std::int32_t count)
+		{
+			frameArenaUsed += std::size_t(count);
+			batchVertexCount += count;
+		}
+
+		/**
 			@brief Submits one quad as a triangle pair
 
 			Corners 0/1 share the sprite's local x = 1 edge and 2/3 its x = 0 edge, 0/2 the y = 0 edge and 1/3
@@ -456,25 +511,34 @@ namespace nCine::RHI::PICA
 			}
 		}
 
-		/** @brief Submits a triangle strip of its own draw call (arbitrary synthesized geometry) */
+		/**
+			@brief Submits a triangle strip (arbitrary synthesized geometry) as the triangles it is made of
+
+			A strip cannot share a draw call with anything else - the GPU would connect it to whatever vertices
+			follow - so drawing it as one meant a draw call of its own, bracketed by flushes. The warped textured
+			background is dozens of such strips a frame, all under the same state, and they went out as dozens of
+			draw calls. As a list of its triangles a strip joins the open batch like any quad does; culling is
+			off, so the winding the strip would have alternated does not matter.
+		*/
 		void SubmitStripPrimitive(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv,
 			std::int32_t count, const std::uint32_t* rgba, std::uint32_t flatRgba, float dx, float dy)
 		{
-			// A strip cannot share a draw call with anything else - the GPU would connect it to whatever
-			// vertices follow - so it is bracketed by flushes
-			FlushBatch();
-			Vertex* const v = AllocVertices(state, GPU_TRIANGLE_STRIP, count);
+			if (count < 3) {
+				return;
+			}
+			Vertex* const v = AllocVertices(state, GPU_TRIANGLES, (count - 2) * 3);
 			if (v == nullptr) {
 				return;
 			}
-			for (std::int32_t i = 0; i < count; i++) {
-				v[i].X = px[i] + dx;
-				v[i].Y = py[i] + dy;
-				v[i].U = (pu != nullptr ? pu[i] * state.InvTextureWidth : 0.0f);
-				v[i].V = (pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f);
-				v[i].Color = (rgba != nullptr ? rgba[i] : flatRgba);
+			const auto corner = [&](std::int32_t i) -> Vertex {
+				return { px[i] + dx, py[i] + dy, (pu != nullptr ? pu[i] * state.InvTextureWidth : 0.0f),
+					(pv != nullptr ? pv[i] * state.InvTextureHeight : 0.0f), (rgba != nullptr ? rgba[i] : flatRgba) };
+			};
+			for (std::int32_t i = 0; i < count - 2; i++) {
+				v[i * 3] = corner(i);
+				v[i * 3 + 1] = corner(i + 1);
+				v[i * 3 + 2] = corner(i + 2);
 			}
-			FlushBatch();
 		}
 
 		/** @brief Folds a pass descriptor's blend mode and combiner preset into a copy of the material state */
@@ -906,6 +970,7 @@ namespace nCine::RHI::PICA
 		}
 		if (_frameOpen) {
 			FlushBatch();
+			FlushPendingWrites();
 			C3D_FrameEnd(GX_CMDLIST_FLUSH);
 			_frameOpen = false;
 		}
@@ -939,12 +1004,22 @@ namespace nCine::RHI::PICA
 			return;
 		}
 		// Waits for the previous frame's commands to finish and for the vblank, which is what paces the game
-		// to the display - and what makes the arena this frame takes over safe to overwrite
+		// to the display - and what makes the arena this frame takes over safe to overwrite. The frame opens
+		// at its first draw, so the wait lands in the draw phase of the statistics; it is reported on its own
+		// to tell that idle time apart from the work around it.
+		const bool timed = FrameStatistics::IsEnabled();
+		const std::uint64_t waitStart = (timed ? svcGetSystemTick() : 0);
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+		if (timed) {
+			FrameStatistics::AddCounter("Frame wait", float(svcGetSystemTick() - waitStart) * (1.0f / float(CPU_TICKS_PER_MSEC)),
+				FrameStatistics::Unit::Milliseconds);
+		}
 		_frameOpen = true;
 		arenaIndex ^= 1;
 		frameArenaUsed = 0;
 		frameDataUsed = 0;
+		frameArenaFlushed = 0;
+		frameDataFlushed = 0;
 		frameSplits = 0;
 
 		// A fresh frame re-sends everything: citro3d tracks its own dirty state across frames, but the batch
@@ -1152,6 +1227,7 @@ namespace nCine::RHI::PICA
 		// asks citro3d to flush the command list itself rather than the WHOLE linear heap, which is its
 		// default and would cost a cache walk over every texture each frame; everything else the GPU reads
 		// was written back where it was written (the arenas per draw call, the stores when built).
+		FlushPendingWrites();
 		C3D_FrameEnd(GX_CMDLIST_FLUSH);
 		_frameOpen = false;
 		appliedTargetValid = false;
@@ -1246,6 +1322,7 @@ namespace nCine::RHI::PICA
 			// The transfer engine's memory fill, which ignores the scissor. It is queued behind the commands
 			// recorded so far only if those are submitted first, which is what the split does - without it the
 			// fill would run before every draw of the frame, including the ones into this very target.
+			FlushPendingWrites();
 			C3D_FrameSplit(GX_CMDLIST_FLUSH);
 			frameSplits++;
 			C3D_RenderTargetClear(target, C3D_CLEAR_COLOR, PackClear565(_clearColor), 0);
@@ -1275,6 +1352,7 @@ namespace nCine::RHI::PICA
 		}
 		if (_frameOpen) {
 			// Sequenced behind whatever was recorded into other targets so far (see Clear)
+			FlushPendingWrites();
 			C3D_FrameSplit(GX_CMDLIST_FLUSH);
 			frameSplits++;
 		}
@@ -1653,8 +1731,7 @@ namespace nCine::RHI::PICA
 			// writes exactly the live prefix of it
 			PicaTexture::TileBand16(surface + std::size_t(bandY) * texW, band, usedW);
 		}
-		const std::size_t flushOffset = std::size_t(firstBand) * std::size_t(texW) * 2;
-		GSPGPU_FlushDataCache(reinterpret_cast<std::uint8_t*>(surface) + flushOffset, std::uint32_t(size - flushOffset));
+		// Written back with the frame's vertices when the command list is submitted (see FlushPendingWrites)
 
 		DrawState state;
 		state.TextureData = surface;
@@ -1857,15 +1934,39 @@ namespace nCine::RHI::PICA
 		// clamp+float-to-int quantizations run once per change instead of once per tile
 		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
 		std::uint32_t lastRgba = 0;
+
+		// The common case - a single-page atlas under a camera that does not rotate, so every tile lands on the
+		// screen as the very rectangle it is in the mesh - is written straight into a run of the batch: two
+		// corners projected per axis instead of four, and no state comparison, copy or call per tile. It writes
+		// exactly what SubmitQuadPrimitive() would, the same values computed in the same order into the same
+		// batch; a tile it cannot prove axis-aligned from the mesh coordinates goes down the general path below.
+		const bool directRects = (!pagedTexture && raster.Xy == 0.0f && raster.Yx == 0.0f);
+		// Copies the loop can keep in registers - the originals had their address taken, so every store into
+		// the run would otherwise make the compiler load them again
+		const float rectScaleX = raster.Xx, rectBiasX = raster.Tx, rectScaleY = raster.Yy, rectBiasY = raster.Ty;
+		const float texScaleU = uvScaleU, texBiasU = uvBiasU, texScaleV = uvScaleV, texBiasV = uvBiasV;
+		const float invTexW = state.InvTextureWidth, invTexH = state.InvTextureHeight;
+		bool runAvailable = directRects;
+		Vertex* run = nullptr;
+		std::int32_t runCount = 0;
+
 		while (triangle < triangleCount) {
 			// Tiles reach here as two triangles whose third and fourth slots repeat the first and third.
 			// Recognizing that pattern lets a tile go out as one quad
 			const std::int32_t element = triangle * 3;
 			const float* group = vertexAt(element);
-			const bool isQuad = (triangle + 2 <= triangleCount &&
-				vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
-				vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
-				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
+			// A slot that repeats the index of another is that vertex, so the positions need no comparing; the
+			// indexed meshes of the pipeline always take this way
+			bool isQuad = false;
+			if (triangle + 2 <= triangleCount) {
+				if (indices != nullptr && indices[element + 3] == indices[element] && indices[element + 4] == indices[element + 2]) {
+					isQuad = true;
+				} else {
+					isQuad = (vertexAt(element + 3)[0] == group[0] && vertexAt(element + 3)[1] == group[1] &&
+						vertexAt(element + 4)[0] == vertexAt(element + 2)[0] &&
+						vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
+				}
+			}
 
 			float px[4], py[4], pu[4], pvv[4];
 			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
@@ -1873,6 +1974,49 @@ namespace nCine::RHI::PICA
 				lastRgba = PackRgba(QuantizeChannel(group[4] * layerColor[0]),
 					QuantizeChannel(group[5] * layerColor[1]), QuantizeChannel(group[6] * layerColor[2]),
 					QuantizeChannel(group[7] * layerColor[3]));
+			}
+
+			if (isQuad && runAvailable) {
+				// Slots 1, 2, 0 and 5 are the corners SubmitQuadPrimitive() is handed (v0..v3), and a quad whose x
+				// pairs and y pairs agree in the mesh still does after a transform that scales and translates each
+				// axis on its own
+				const float* c1 = vertexAt(element + 1);
+				const float* c2 = vertexAt(element + 2);
+				const float* c5 = vertexAt(element + 5);
+				if (c1[0] == c2[0] && group[0] == c5[0] && c1[1] == group[1] && c2[1] == c5[1]) {
+					if (run == nullptr) {
+						// Room for every tile still to come, at six vertices each, or the rest goes one by one
+						run = BeginVertexRun(state, GPU_TRIANGLES, (triangleCount - triangle) * 3);
+					}
+					if (run != nullptr) {
+						const float xA = rectScaleX * c1[0] + rectBiasX;		// v0 and v1
+						const float xB = rectScaleX * group[0] + rectBiasX;		// v2 and v3
+						const float yA = rectScaleY * c1[1] + rectBiasY;		// v0 and v2
+						const float yB = rectScaleY * c2[1] + rectBiasY;		// v1 and v3
+						const Vertex v0 = { xA, yA, (c1[2] * texScaleU - texBiasU) * invTexW, (c1[3] * texScaleV - texBiasV) * invTexH, lastRgba };
+						const Vertex v1 = { xA, yB, (c2[2] * texScaleU - texBiasU) * invTexW, (c2[3] * texScaleV - texBiasV) * invTexH, lastRgba };
+						const Vertex v2 = { xB, yA, (group[2] * texScaleU - texBiasU) * invTexW, (group[3] * texScaleV - texBiasV) * invTexH, lastRgba };
+						const Vertex v3 = { xB, yB, (c5[2] * texScaleU - texBiasU) * invTexW, (c5[3] * texScaleV - texBiasV) * invTexH, lastRgba };
+						// The triangle pair of SubmitQuadPrimitive()
+						Vertex* const out = run + runCount;
+						out[0] = v0;
+						out[1] = v1;
+						out[2] = v2;
+						out[3] = v2;
+						out[4] = v1;
+						out[5] = v3;
+						runCount += 6;
+						triangle += 2;
+						continue;
+					}
+					runAvailable = false;
+				}
+			}
+			// The general submission appends to the same batch, so whatever the run holds is committed first
+			if (run != nullptr) {
+				EndVertexRun(runCount);
+				run = nullptr;
+				runCount = 0;
 			}
 
 			if (isQuad) {
@@ -1906,6 +2050,9 @@ namespace nCine::RHI::PICA
 				}
 				triangle++;
 			}
+		}
+		if (run != nullptr) {
+			EndVertexRun(runCount);
 		}
 	}
 

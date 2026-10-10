@@ -10,6 +10,7 @@
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <malloc.h>
@@ -140,6 +141,13 @@ namespace nCine::RHI::GX
 			return std::uint8_t(v * 255.0f + 0.5f);
 		}
 
+		// A vertex colour as the one 32-bit word GX_Color1u32() writes - the same four bytes, in the same order,
+		// that GX_Color4u8() would write one at a time (the CPU is big-endian)
+		inline std::uint32_t PackRgba(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
+		{
+			return (std::uint32_t(r) << 24) | (std::uint32_t(g) << 16) | (std::uint32_t(b) << 8) | std::uint32_t(a);
+		}
+
 		// Whether the vertex descriptor currently includes texture coordinates
 		bool g_vertexModeTextured = true;
 
@@ -225,7 +233,10 @@ namespace nCine::RHI::GX
 			if (textured) {
 				GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 			}
-			GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+			// Two-component positions: every draw is flat (no depth test, no depth writes), and the GP takes
+			// the missing z as zero - the value every vertex used to carry explicitly, four bytes of the
+			// write-gather pipe each
+			GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_F32, 0);
 			GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 			if (textured) {
 				GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
@@ -481,10 +492,7 @@ namespace nCine::RHI::GX
 		float StripY[MaxStripVertices];
 		float StripU[MaxStripVertices];
 		float StripV[MaxStripVertices];
-		std::uint8_t StripR[MaxStripVertices];
-		std::uint8_t StripG[MaxStripVertices];
-		std::uint8_t StripB[MaxStripVertices];
-		std::uint8_t StripA[MaxStripVertices];
+		std::uint32_t StripRgba[MaxStripVertices];
 
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
@@ -529,10 +537,7 @@ namespace nCine::RHI::GX
 		void SetStripVertexColor(std::int32_t i, float r, float g, float b, float a)
 		{
 			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
-				StripR[i] = QuantizeChannel(r);
-				StripG[i] = QuantizeChannel(g);
-				StripB[i] = QuantizeChannel(b);
-				StripA[i] = QuantizeChannel(a);
+				StripRgba[i] = PackRgba(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
 			}
 		}
 
@@ -551,22 +556,19 @@ namespace nCine::RHI::GX
 		// Emits the quad at an optional screen-space offset, in the given colour
 		void Emit(float dx, float dy, float cr, float cg, float cb, float ca) const
 		{
-			const std::uint8_t r = QuantizeChannel(cr);
-			const std::uint8_t g = QuantizeChannel(cg);
-			const std::uint8_t b = QuantizeChannel(cb);
-			const std::uint8_t a = QuantizeChannel(ca);
+			const std::uint32_t rgba = PackRgba(QuantizeChannel(cr), QuantizeChannel(cg), QuantizeChannel(cb), QuantizeChannel(ca));
 			// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
 			GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 			if (HasTexture) {
-				GX_Position3f32(Px[0] + dx, Py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[0], Pv[0]);
-				GX_Position3f32(Px[1] + dx, Py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[1], Pv[1]);
-				GX_Position3f32(Px[3] + dx, Py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[3], Pv[3]);
-				GX_Position3f32(Px[2] + dx, Py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[2], Pv[2]);
+				GX_Position2f32(Px[0] + dx, Py[0] + dy);	GX_Color1u32(rgba);	GX_TexCoord2f32(Pu[0], Pv[0]);
+				GX_Position2f32(Px[1] + dx, Py[1] + dy);	GX_Color1u32(rgba);	GX_TexCoord2f32(Pu[1], Pv[1]);
+				GX_Position2f32(Px[3] + dx, Py[3] + dy);	GX_Color1u32(rgba);	GX_TexCoord2f32(Pu[3], Pv[3]);
+				GX_Position2f32(Px[2] + dx, Py[2] + dy);	GX_Color1u32(rgba);	GX_TexCoord2f32(Pu[2], Pv[2]);
 			} else {
-				GX_Position3f32(Px[0] + dx, Py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(Px[1] + dx, Py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(Px[3] + dx, Py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(Px[2] + dx, Py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+				GX_Position2f32(Px[0] + dx, Py[0] + dy);	GX_Color1u32(rgba);
+				GX_Position2f32(Px[1] + dx, Py[1] + dy);	GX_Color1u32(rgba);
+				GX_Position2f32(Px[3] + dx, Py[3] + dy);	GX_Color1u32(rgba);
+				GX_Position2f32(Px[2] + dx, Py[2] + dy);	GX_Color1u32(rgba);
 			}
 			GX_End();
 		}
@@ -814,15 +816,12 @@ namespace nCine::RHI::GX
 			} else {
 				ApplyPassTev(pass);
 			}
-			const std::uint8_t r = QuantizeChannel(cr);
-			const std::uint8_t g = QuantizeChannel(cg);
-			const std::uint8_t b = QuantizeChannel(cb);
-			const std::uint8_t a = QuantizeChannel(pass.Color[3]);
+			const std::uint32_t rgba = PackRgba(QuantizeChannel(cr), QuantizeChannel(cg), QuantizeChannel(cb), QuantizeChannel(pass.Color[3]));
 			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
 			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
 			for (std::int32_t i = 0; i < count; i++) {
-				GX_Position3f32(StripX[i] + dx, StripY[i] + dy, 0.0f);
-				GX_Color4u8(r, g, b, a);
+				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);
+				GX_Color1u32(rgba);
 				if (HasTexture) {
 					GX_TexCoord2f32(StripU[i], StripV[i]);
 				}
@@ -861,8 +860,8 @@ namespace nCine::RHI::GX
 			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
 			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
 			for (std::int32_t i = 0; i < count; i++) {
-				GX_Position3f32(StripX[i] + dx, StripY[i] + dy, 0.0f);
-				GX_Color4u8(StripR[i], StripG[i], StripB[i], StripA[i]);
+				GX_Position2f32(StripX[i] + dx, StripY[i] + dy);
+				GX_Color1u32(StripRgba[i]);
 				if (textured) {
 					GX_TexCoord2f32(StripU[i], StripV[i]);
 				}
@@ -925,8 +924,6 @@ namespace nCine::RHI::GX
 	std::uint8_t* GxDevice::_lightmapStore = nullptr;
 	std::size_t GxDevice::_lightmapStoreSize = 0;
 	GXTexObj GxDevice::_lightmapTexObj;
-	std::uint8_t* GxDevice::_lightmapLinear = nullptr;
-	std::size_t GxDevice::_lightmapLinearSize = 0;
 
 	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
@@ -1100,13 +1097,13 @@ namespace nCine::RHI::GX
 		const std::int32_t w = (_currentRenderTarget != nullptr ? _viewport.W : _logicalWidth);
 		const std::int32_t h = (_currentRenderTarget != nullptr ? _viewport.H : _logicalHeight);
 		SetVertexModeTextured(false);
-		const std::uint8_t r = QuantizeChannel(_clearColor.R), g = QuantizeChannel(_clearColor.G);
-		const std::uint8_t b = QuantizeChannel(_clearColor.B), a = QuantizeChannel(_clearColor.A);
+		const std::uint32_t rgba = PackRgba(QuantizeChannel(_clearColor.R), QuantizeChannel(_clearColor.G),
+			QuantizeChannel(_clearColor.B), QuantizeChannel(_clearColor.A));
 		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-			GX_Position3f32(0.0f, 0.0f, 0.0f);				GX_Color4u8(r, g, b, a);
-			GX_Position3f32(float(w), 0.0f, 0.0f);			GX_Color4u8(r, g, b, a);
-			GX_Position3f32(float(w), float(h), 0.0f);		GX_Color4u8(r, g, b, a);
-			GX_Position3f32(0.0f, float(h), 0.0f);			GX_Color4u8(r, g, b, a);
+			GX_Position2f32(0.0f, 0.0f);				GX_Color1u32(rgba);
+			GX_Position2f32(float(w), 0.0f);			GX_Color1u32(rgba);
+			GX_Position2f32(float(w), float(h));		GX_Color1u32(rgba);
+			GX_Position2f32(0.0f, float(h));			GX_Color1u32(rgba);
 		GX_End();
 	}
 
@@ -1500,7 +1497,6 @@ namespace nCine::RHI::GX
 			// term of very bright lights is dropped). Tiled RGBA8, drawn as one linear-filtered quad with a
 			// dst*src blend over the viewport.
 			const std::int32_t w = light.LmW, h = light.LmH;
-			const std::size_t linearSize = std::size_t(w) * std::size_t(h) * 4;
 			const std::size_t tiledSize = std::size_t((w + 3) & ~3) * std::size_t((h + 3) & ~3) * 4;
 			if (_lightmapStore == nullptr || _lightmapStoreSize < tiledSize) {
 				if (_lightmapStore != nullptr) {
@@ -1509,50 +1505,73 @@ namespace nCine::RHI::GX
 				_lightmapStore = static_cast<std::uint8_t*>(memalign(32, tiledSize));
 				_lightmapStoreSize = tiledSize;
 			}
-			// The linear staging buffer persists across frames like the tiled store above - allocating
-			// (and zero-initializing) it per lit frame is wasted work, every byte is written below
-			if (_lightmapLinear == nullptr || _lightmapLinearSize < linearSize) {
-				if (_lightmapLinear != nullptr) {
-					free(_lightmapLinear);
-				}
-				_lightmapLinear = static_cast<std::uint8_t*>(malloc(linearSize));
-				_lightmapLinearSize = (_lightmapLinear != nullptr ? linearSize : 0);
-			}
-			if (_lightmapStore != nullptr && _lightmapLinear != nullptr) {
-				std::uint8_t* const linear = _lightmapLinear;
-				for (std::int32_t y = 0; y < h; y++) {
-					const float* src = light.Lightmap + std::size_t(y) * w * 2;
-					std::uint8_t* dst = linear + std::size_t(y) * w * 4;
-					for (std::int32_t x = 0; x < w; x++) {
-						const float r = ClampLightmapChannel(src[x * 2]);
-						const float g = ClampLightmapChannel(src[x * 2 + 1]);
-						dst[x * 4 + 0] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbR));
-						dst[x * 4 + 1] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbG));
-						dst[x * 4 + 2] = QuantizeChannel(LightingCombineFactor(r, g, light.AmbB));
-						dst[x * 4 + 3] = 255;
-					}
-				}
-
-				// Tile 4x4 RGBA8 (same layout GxTexture uses)
+			if (_lightmapStore != nullptr) {
+				// Converted straight into the 4x4-tiled RGBA8 layout GxTexture uses: a tile is 64 bytes, the
+				// alpha/red pairs of its 16 texels first and their green/blue pairs after them, so on this
+				// big-endian CPU a texel is two halfword stores - (a << 8 | r) and (g << 8 | b) - 16 halfwords
+				// apart. Texels past the map's edge in its last tiles are never sampled (the texture clamps at
+				// LmW x LmH) and are filled white.
+				//
+				// Unlit spans repeat the same pair of lightmap values across long runs, so remembering the last
+				// converted texel turns most of the map into a compare and two stores. The compare is of the raw
+				// bits - equal bits are equal factors, and that keeps the test off the FPU. No lightmap value has
+				// the all-ones bit pattern, so nothing matches before the first texel.
+				//
+				// This used to be two passes - every texel converted into a linear staging copy, then that copy
+				// tiled - and was the largest cost of a lit frame: 3.7 ms for the 160x120 map of a 640x480 view,
+				// measured in Dolphin.
 				const std::int32_t tilesX = (w + 3) / 4;
-				const std::int32_t tilesY = (h + 3) / 4;
-				for (std::int32_t ty = 0; ty < tilesY; ty++) {
-					for (std::int32_t tx = 0; tx < tilesX; tx++) {
-						std::uint8_t* tile = _lightmapStore + std::size_t(ty * tilesX + tx) * 64;
-						for (std::int32_t row = 0; row < 4; row++) {
-							for (std::int32_t col = 0; col < 4; col++) {
-								const std::int32_t x = tx * 4 + col;
-								const std::int32_t y = ty * 4 + row;
-								std::uint8_t r = 255, g = 255, b = 255, a = 255;
-								if (x < w && y < h) {
-									const std::uint8_t* px = linear + (std::size_t(y) * w + x) * 4;
-									r = px[0]; g = px[1]; b = px[2]; a = px[3];
-								}
-								const std::int32_t i = row * 4 + col;
-								tile[i * 2 + 0] = a;
-								tile[i * 2 + 1] = r;
-								tile[32 + i * 2 + 0] = g;
-								tile[32 + i * 2 + 1] = b;
+				const std::int32_t paddedW = tilesX * 4;
+				const std::int32_t paddedH = (h + 3) & ~3;
+				std::uint32_t prevR = UINT32_MAX, prevG = UINT32_MAX;
+				std::uint16_t prevAr = 0xFFFF, prevGb = 0xFFFF;
+				// Converts the texel unless it repeats the previous one, and leaves its two halfwords in prevAr/prevGb
+				const auto fetch = [&](std::uint32_t rawR, std::uint32_t rawG) {
+					if (rawR != prevR || rawG != prevG) {
+						prevR = rawR;
+						prevG = rawG;
+						float valueR, valueG;
+						std::memcpy(&valueR, &rawR, sizeof(valueR));
+						std::memcpy(&valueG, &rawG, sizeof(valueG));
+						const float r = ClampLightmapChannel(valueR);
+						const float g = ClampLightmapChannel(valueG);
+						prevAr = std::uint16_t(0xFF00u | QuantizeChannel(LightingCombineFactor(r, g, light.AmbR)));
+						prevGb = std::uint16_t((std::uint32_t(QuantizeChannel(LightingCombineFactor(r, g, light.AmbG))) << 8) |
+							QuantizeChannel(LightingCombineFactor(r, g, light.AmbB)));
+					}
+				};
+				for (std::int32_t y = 0; y < paddedH; y++) {
+					// This texel row of the band's first tile; each next tile is 32 halfwords on
+					std::uint16_t* DEATH_RESTRICT tile = reinterpret_cast<std::uint16_t*>(_lightmapStore +
+						std::size_t(y >> 2) * std::size_t(tilesX) * 64) + (y & 3) * 4;
+					if (y >= h) {
+						for (std::int32_t x = 0; x < paddedW; x += 4, tile += 32) {
+							for (std::int32_t k = 0; k < 4; k++) {
+								tile[k] = 0xFFFF;
+								tile[16 + k] = 0xFFFF;
+							}
+						}
+						continue;
+					}
+					const std::uint32_t* DEATH_RESTRICT src = reinterpret_cast<const std::uint32_t*>(light.Lightmap + std::size_t(y) * w * 2);
+					std::int32_t x = 0;
+					for (; x + 4 <= w; x += 4, tile += 32, src += 8) {
+						for (std::int32_t k = 0; k < 4; k++) {
+							fetch(src[k * 2], src[k * 2 + 1]);
+							tile[k] = prevAr;
+							tile[16 + k] = prevGb;
+						}
+					}
+					if (x < w) {
+						// The last tile of a row the map's width does not fill
+						for (std::int32_t k = 0; k < 4; k++, x++) {
+							if (x < w) {
+								fetch(src[k * 2], src[k * 2 + 1]);
+								tile[k] = prevAr;
+								tile[16 + k] = prevGb;
+							} else {
+								tile[k] = 0xFFFF;
+								tile[16 + k] = 0xFFFF;
 							}
 						}
 					}
@@ -1569,10 +1588,10 @@ namespace nCine::RHI::GX
 				// The lightmap's row 0 corresponds to the bottom of the displayed viewport (the convention the
 				// CPU lightmap is built in), so V runs 1 -> 0 top -> bottom
 				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-					GX_Position3f32(vpX, vpY, 0.0f);				GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(0.0f, 1.0f);
-					GX_Position3f32(vpX + vpW, vpY, 0.0f);			GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(1.0f, 1.0f);
-					GX_Position3f32(vpX + vpW, vpY + vpH, 0.0f);	GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(1.0f, 0.0f);
-					GX_Position3f32(vpX, vpY + vpH, 0.0f);			GX_Color4u8(255, 255, 255, 255);	GX_TexCoord2f32(0.0f, 0.0f);
+					GX_Position2f32(vpX, vpY);				GX_Color1u32(0xFFFFFFFFu);	GX_TexCoord2f32(0.0f, 1.0f);
+					GX_Position2f32(vpX + vpW, vpY);		GX_Color1u32(0xFFFFFFFFu);	GX_TexCoord2f32(1.0f, 1.0f);
+					GX_Position2f32(vpX + vpW, vpY + vpH);	GX_Color1u32(0xFFFFFFFFu);	GX_TexCoord2f32(1.0f, 0.0f);
+					GX_Position2f32(vpX, vpY + vpH);		GX_Color1u32(0xFFFFFFFFu);	GX_TexCoord2f32(0.0f, 0.0f);
 				GX_End();
 			}
 		}
@@ -1605,14 +1624,25 @@ namespace nCine::RHI::GX
 		// Six indices describe four corners, so the element count is no bound on how far into the stream they
 		// reach - and using it as one would reject any mesh whose chunk lands in the last third of the buffer.
 		// One integer pass gives the real extent, and checks that the indices address vertices this buffer
-		// holds at all.
+		// holds at all. The same pass tells whether every six indices are a quad of the shared pattern - the
+		// fourth slot repeating the first and the fifth the third - which is what a mesh of the tile map always
+		// is, and which lets the submission below take its tiles as quads without examining a single one.
 		std::size_t vertexExtent = std::size_t(numVertices);
+		bool indexedQuads = false;
 		if (indices != nullptr) {
 			std::uint32_t maxIndex = 0;
-			for (std::int32_t i = 0; i < indexCount; i++) {
-				if (indices[i] > maxIndex) {
-					maxIndex = indices[i];
+			indexedQuads = (indexCount == numVertices && numVertices % 6 == 0);
+			for (std::int32_t i = 0; i + 6 <= indexCount; i += 6) {
+				const std::uint32_t i0 = indices[i], i1 = indices[i + 1], i2 = indices[i + 2];
+				const std::uint32_t i3 = indices[i + 3], i4 = indices[i + 4], i5 = indices[i + 5];
+				const std::uint32_t max012 = std::max(i0, std::max(i1, i2));
+				maxIndex = std::max(maxIndex, std::max(max012, std::max(i3, std::max(i4, i5))));
+				if (i3 != i0 || i4 != i2) {
+					indexedQuads = false;
 				}
+			}
+			for (std::int32_t i = indexCount - indexCount % 6; i < indexCount; i++) {
+				maxIndex = std::max<std::uint32_t>(maxIndex, indices[i]);
 			}
 			vertexExtent = std::size_t(maxIndex) + 1;
 		}
@@ -1727,6 +1757,64 @@ namespace nCine::RHI::GX
 			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
 		};
 
+		// GX_Begin carries the vertex count in a 16-bit register, so runs are chopped below that limit
+		constexpr std::int32_t MaxQuadsPerRun = 0x3FFF;
+		constexpr std::int32_t MaxTrianglesPerRun = 0x5554;
+
+		if (indexedQuads) {
+			// Every tile is a quad of four distinct corners - slots 0, 1, 2 and 5 of its six, in perimeter order -
+			// so the whole mesh goes out in runs of GX quads with no per-tile test. A tile's four corners carry one
+			// colour, which is folded with the layer tint and quantized only when it differs from the previous
+			// tile's (nearly every tile of a layer has the same one). And under a transform that neither rotates
+			// nor shears, a tile whose corners pair up on x and on y in the mesh lands on the screen as that same
+			// rectangle: two of the four corners are projected per axis and shared. The values are computed by the
+			// very expression the general path uses for each corner, so what is submitted does not change - a
+			// zero cross term contributes exactly nothing to a corner it is shared with.
+			const std::int32_t quadCount = numVertices / 6;
+			const bool noRotation = (raster.Xy == 0.0f && raster.Yx == 0.0f);
+			float lastColor[4] = {};
+			std::uint32_t rgba = 0;
+			bool colorValid = false;
+			std::int32_t quad = 0;
+			while (quad < quadCount) {
+				const std::int32_t runEnd = quad + std::min(quadCount - quad, MaxQuadsPerRun);
+				GX_Begin(GX_QUADS, GX_VTXFMT0, std::uint16_t((runEnd - quad) * 4));
+				for (; quad < runEnd; quad++) {
+					const std::uint16_t* q = indices + std::size_t(quad) * 6;
+					const float* DEATH_RESTRICT c0 = vertices + std::size_t(q[0]) * FloatsPerVertex;
+					const float* DEATH_RESTRICT c1 = vertices + std::size_t(q[1]) * FloatsPerVertex;
+					const float* DEATH_RESTRICT c2 = vertices + std::size_t(q[2]) * FloatsPerVertex;
+					const float* DEATH_RESTRICT c3 = vertices + std::size_t(q[5]) * FloatsPerVertex;
+					if (!colorValid || c0[4] != lastColor[0] || c0[5] != lastColor[1] || c0[6] != lastColor[2] || c0[7] != lastColor[3]) {
+						lastColor[0] = c0[4]; lastColor[1] = c0[5]; lastColor[2] = c0[6]; lastColor[3] = c0[7];
+						rgba = PackRgba(QuantizeChannel(c0[4] * layerColor[0]), QuantizeChannel(c0[5] * layerColor[1]),
+							QuantizeChannel(c0[6] * layerColor[2]), QuantizeChannel(c0[7] * layerColor[3]));
+						colorValid = true;
+					}
+					if (noRotation && c0[0] == c3[0] && c1[0] == c2[0] && c0[1] == c1[1] && c2[1] == c3[1]) {
+						const float xA = raster.Xx * c0[0] + raster.Yx * c0[1] + raster.Tx;		// Corners 0 and 3
+						const float xB = raster.Xx * c1[0] + raster.Yx * c1[1] + raster.Tx;		// Corners 1 and 2
+						const float yA = raster.Xy * c0[0] + raster.Yy * c0[1] + raster.Ty;		// Corners 0 and 1
+						const float yB = raster.Xy * c2[0] + raster.Yy * c2[1] + raster.Ty;		// Corners 2 and 3
+						GX_Position2f32(xA, yA);	GX_Color1u32(rgba);	GX_TexCoord2f32(c0[2], c0[3]);
+						GX_Position2f32(xB, yA);	GX_Color1u32(rgba);	GX_TexCoord2f32(c1[2], c1[3]);
+						GX_Position2f32(xB, yB);	GX_Color1u32(rgba);	GX_TexCoord2f32(c2[2], c2[3]);
+						GX_Position2f32(xA, yB);	GX_Color1u32(rgba);	GX_TexCoord2f32(c3[2], c3[3]);
+					} else {
+						const float* const corners[4] = { c0, c1, c2, c3 };
+						for (const float* v : corners) {
+							GX_Position2f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+								raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty);
+							GX_Color1u32(rgba);
+							GX_TexCoord2f32(v[2], v[3]);
+						}
+					}
+				}
+				GX_End();
+			}
+			return;
+		}
+
 		const std::int32_t triangleCount = numVertices / 3;
 
 		// Tiles reach here as two triangles whose fourth slot repeats the first and whose fifth repeats the
@@ -1746,10 +1834,6 @@ namespace nCine::RHI::GX
 				vertexAt(element + 4)[1] == vertexAt(element + 2)[1]);
 		};
 
-		// GX_Begin carries the vertex count in a 16-bit register, so runs are chopped below that limit
-		constexpr std::int32_t MaxQuadsPerRun = 0x3FFF;
-		constexpr std::int32_t MaxTrianglesPerRun = 0x5554;
-
 		std::int32_t triangle = 0;
 		while (triangle < triangleCount) {
 			if (isTileQuad(triangle)) {
@@ -1766,17 +1850,15 @@ namespace nCine::RHI::GX
 					const float* group = vertexAt(element);
 					// Every vertex of a tile carries the same colour, so it only has to be folded with the
 					// layer tint and quantized once
-					const std::uint8_t r = QuantizeChannel(group[4] * layerColor[0]);
-					const std::uint8_t g = QuantizeChannel(group[5] * layerColor[1]);
-					const std::uint8_t b = QuantizeChannel(group[6] * layerColor[2]);
-					const std::uint8_t a = QuantizeChannel(group[7] * layerColor[3]);
+					const std::uint32_t rgba = PackRgba(QuantizeChannel(group[4] * layerColor[0]), QuantizeChannel(group[5] * layerColor[1]),
+						QuantizeChannel(group[6] * layerColor[2]), QuantizeChannel(group[7] * layerColor[3]));
 					// Perimeter order of the tile's six strip-ordered slots (see AppendTileQuad)
 					static const std::int32_t QuadOrder[4] = { 0, 1, 2, 5 };
 					for (std::int32_t i = 0; i < 4; i++) {
 						const float* v = vertexAt(element + QuadOrder[i]);
-						GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
-							raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
-						GX_Color4u8(r, g, b, a);
+						GX_Position2f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+							raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty);
+						GX_Color1u32(rgba);
 						GX_TexCoord2f32(v[2], v[3]);
 					}
 				}
@@ -1792,10 +1874,10 @@ namespace nCine::RHI::GX
 				GX_Begin(GX_TRIANGLES, GX_VTXFMT0, std::uint16_t(triRun * 3));
 				for (std::int32_t i = 0; i < triRun * 3; i++) {
 					const float* v = vertexAt(runStart * 3 + i);
-					GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
-						raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
-					GX_Color4u8(QuantizeChannel(v[4] * layerColor[0]), QuantizeChannel(v[5] * layerColor[1]),
-						QuantizeChannel(v[6] * layerColor[2]), QuantizeChannel(v[7] * layerColor[3]));
+					GX_Position2f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+						raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty);
+					GX_Color1u32(PackRgba(QuantizeChannel(v[4] * layerColor[0]), QuantizeChannel(v[5] * layerColor[1]),
+						QuantizeChannel(v[6] * layerColor[2]), QuantizeChannel(v[7] * layerColor[3])));
 					GX_TexCoord2f32(v[2], v[3]);
 				}
 				GX_End();
@@ -1854,10 +1936,7 @@ namespace nCine::RHI::GX
 		// Every vertex of the strip carries the instance colour, so it is quantized once
 		float color[4];
 		std::memcpy(color, blockData + kColorOffset, sizeof(color));
-		const std::uint8_t r = QuantizeChannel(color[0]);
-		const std::uint8_t g = QuantizeChannel(color[1]);
-		const std::uint8_t b = QuantizeChannel(color[2]);
-		const std::uint8_t a = QuantizeChannel(color[3]);
+		const std::uint32_t rgba = PackRgba(QuantizeChannel(color[0]), QuantizeChannel(color[1]), QuantizeChannel(color[2]), QuantizeChannel(color[3]));
 
 		// The strip shares one texture; indexed assets read through the base TLUT row like the fonts do
 		GXTexObj* texObj = nullptr;
@@ -1903,9 +1982,9 @@ namespace nCine::RHI::GX
 		GX_Begin(GX_LINESTRIP, GX_VTXFMT0, std::uint16_t(numVertices));
 		for (std::int32_t i = 0; i < numVertices; i++) {
 			const float* v = vertices + std::size_t(i) * FloatsPerVertex;
-			GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
-				raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
-			GX_Color4u8(r, g, b, a);
+			GX_Position2f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+				raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty);
+			GX_Color1u32(rgba);
 			GX_TexCoord2f32(v[2], v[3]);
 		}
 		GX_End();

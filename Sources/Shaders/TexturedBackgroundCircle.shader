@@ -106,30 +106,43 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr, gu, gs) {
+void fixed_function(pvr, gs) {
 	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
-	// with TexturedBackground.shader). One block for these consoles for the same reason it is one there:
-	// the PVR, the GE and the GS have no combiner stage to fold the horizon tint into (the PVR only
-	// modulates and adds, and the GE's GU_TFX_BLEND weighs by the texel), and the RDP stays with them
-	// to keep the shared body, so all leave the tint macro undefined and get the include's own second
-	// gradient pass over each band.
+	// with TexturedBackground.shader), with the include taken exactly as it is for the same reasons as
+	// there: the PVR and the GS have no combiner stage to fold the horizon tint into, so it is the
+	// include's own second gradient pass, and the bands are cut into pieces at the texture's edges.
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(gu) {
+	// The GE keeps the second gradient pass but wraps the render target in hardware, so each band is one
+	// textured strip (see TexturedBackground.shader)
+#define WARP_TEXTURE_REPEAT
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
 void fixed_function(rdp) {
 	// The same rebuild, but each band goes out as ONE strip: the RDP wraps texture coordinates in
-	// hardware (a mask on the tile descriptor), so the band's unwrapped U span is sampled straight
-	// from the 256-texel row window instead of being cut into up to eight pieces at the texture's
-	// edges. That is ~130 strips a frame down to ~64, on a CPU where every strip costs more than the
-	// RDP's time to draw it. The horizon tint rides the band's own strip as a per-vertex colour through
-	// the TINT_MIX combiner, exactly like the GX block: one strip per band instead of a textured one
-	// and a gradient one, and no combiner change between them.
+	// hardware (a mask on the tile descriptor), and so does the PICA200 (the render target is a power of
+	// two), so the band's unwrapped U span is sampled straight from the 256-texel row window instead of
+	// being cut into up to eight pieces at the texture's edges. That is ~130 strips a frame down to ~64,
+	// on CPUs where every strip costs more than the GPU's time to draw it. The horizon tint rides the
+	// band's own strip as a per-vertex colour through the TINT_MIX combiner, exactly like the GX block:
+	// one strip per band instead of a textured one and a gradient one, and no combiner change between them.
+#define WARP_TEXTURE_REPEAT
+#define WARP_TEXTURE_REPEAT_IN_PASS
+#define WARP_TINT_IN_VERTEX_COLOR
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(pica) {
+	// The rdp block's rebuild exactly, with the wrap taken from the render target's sampler state
 #define WARP_TEXTURE_REPEAT
 #define WARP_TINT_IN_VERTEX_COLOR
 #include "Include/TexturedBackgroundWarp.inc"
 }
 
-void fixed_function(gx, pica, legacygl) {
+void fixed_function(gx, legacygl) {
 	// The circular ("tube") variant borrows the same planar rebuild on this tier as well, with the
 	// horizon tint folded into the band pieces' own draw (see the include)
 #define WARP_TINT_IN_VERTEX_COLOR

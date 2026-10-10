@@ -375,63 +375,68 @@ namespace nCine::RHI::RDP
 				FixedFunctionPass warp;
 				warp.TextureRepeat = true;
 				warp.Tev = FixedFunctionPass::TevPreset::TintMix;
-				for (int topHalf = 0; topHalf < 2; topHalf++) {
-					float yShift = float(topHalf);
-					for (int band = 0; band < 16; band++) {
-						float t0 = (float(topHalf) + float(band) / 16.0f) * 0.5f;
-						float t1 = (float(topHalf) + float(band + 1) / 16.0f) * 0.5f;
-						float split = -1.0f;
-						float vStart = shiftV + (t0 - yShift) * 1.4f * (1.3f - abs(2.0f * t0 - 1.0f));
-						float vEnd = shiftV + (t1 - yShift) * 1.4f * (1.3f - abs(2.0f * t1 - 1.0f));
-						if (floor(vStart) != floor(vEnd)) {
-							float boundary = floor(vEnd);
-							float lo = t0;
-							float hi = t1;
-							for (int i = 0; i < 12; i++) {
-								float mid = 0.5f * (lo + hi);
-								if (shiftV + (mid - yShift) * 1.4f * (1.3f - abs(2.0f * mid - 1.0f)) < boundary) {
-									lo = mid;
-								} else {
-									hi = mid;
+				int stageCount = 1;
+				for (int stage = 0; stage < stageCount; stage++) {
+					for (int topHalf = 0; topHalf < 2; topHalf++) {
+						float yShift = float(topHalf);
+						for (int band = 0; band < 16; band++) {
+							float t0 = (float(topHalf) + float(band) / 16.0f) * 0.5f;
+							float t1 = (float(topHalf) + float(band + 1) / 16.0f) * 0.5f;
+							float split = -1.0f;
+							float vStart = shiftV + (t0 - yShift) * 1.4f * (1.3f - abs(2.0f * t0 - 1.0f));
+							float vEnd = shiftV + (t1 - yShift) * 1.4f * (1.3f - abs(2.0f * t1 - 1.0f));
+							if (floor(vStart) != floor(vEnd)) {
+								float boundary = floor(vEnd);
+								float lo = t0;
+								float hi = t1;
+								for (int i = 0; i < 12; i++) {
+									float mid = 0.5f * (lo + hi);
+									if (shiftV + (mid - yShift) * 1.4f * (1.3f - abs(2.0f * mid - 1.0f)) < boundary) {
+										lo = mid;
+									} else {
+										hi = mid;
+									}
 								}
+								split = 0.5f * (lo + hi);
 							}
-							split = 0.5f * (lo + hi);
-						}
-						for (int part = 0; part < 2; part++) {
-							float bandT0 = part == 0 ? t0 : split;
-							float bandT1 = part == 0 ? (split > 0.0f ? split : t1) : t1;
-							if (!(part == 1 && split <= 0.0f || bandT1 <= bandT0)) {
-								float y0 = topY + spanY * bandT0;
-								float y1 = topY + spanY * bandT1;
-								float d0 = 1.3f - abs(2.0f * bandT0 - 1.0f);
-								float d1 = 1.3f - abs(2.0f * bandT1 - 1.0f);
-								float v0 = shiftV + (bandT0 - yShift) * 1.4f * d0;
-								float v1 = shiftV + (bandT1 - yShift) * 1.4f * d1;
-								float vBase = floor(0.5f * (v0 + v1));
-								v0 -= vBase;
-								v1 -= vBase;
-								float halfSpan0 = 0.5f * (0.5f + 1.5f * d0) * correction;
-								float halfSpan1 = 0.5f * (0.5f + 1.5f * d1) * correction;
-								float uLeft0 = shiftU - halfSpan0;
-								float uRight0 = shiftU + halfSpan0;
-								float uLeft1 = shiftU - halfSpan1;
-								float uRight1 = shiftU + halfSpan1;
-								float tint0 = clamp(d0 * d0 - 0.3f, 0.0f, 1.0f);
-								float tint1 = clamp(d1 * d1 - 0.3f, 0.0f, 1.0f);
-								float uBase = floor(shiftU);
-								StripPosition(ctx, 0, vec2(leftX + spanX, y0));
-								StripPosition(ctx, 1, vec2(leftX + spanX, y1));
-								StripPosition(ctx, 2, vec2(leftX, y0));
-								StripPosition(ctx, 3, vec2(leftX, y1));
-								StripUv(ctx, 0, vec2(uRight0 - uBase, v0));
-								StripUv(ctx, 1, vec2(uRight1 - uBase, v1));
-								StripUv(ctx, 2, vec2(uLeft0 - uBase, v0));
-								StripUv(ctx, 3, vec2(uLeft1 - uBase, v1));
-								StripColor(ctx, 0, vec4(horizon.xyz(), tint0));
-								StripColor(ctx, 1, vec4(horizon.xyz(), tint1));
-								StripColor(ctx, 2, vec4(horizon.xyz(), tint0));
-								StripColor(ctx, 3, vec4(horizon.xyz(), tint1));
-								ctx.SubmitStripShaded(warp, 4);
+							for (int part = 0; part < 2; part++) {
+								float bandT0 = part == 0 ? t0 : split;
+								float bandT1 = part == 0 ? (split > 0.0f ? split : t1) : t1;
+								if (!(part == 1 && split <= 0.0f || bandT1 <= bandT0)) {
+									float y0 = topY + spanY * bandT0;
+									float y1 = topY + spanY * bandT1;
+									float d0 = 1.3f - abs(2.0f * bandT0 - 1.0f);
+									float d1 = 1.3f - abs(2.0f * bandT1 - 1.0f);
+									if (stage == 0) {
+										float v0 = shiftV + (bandT0 - yShift) * 1.4f * d0;
+										float v1 = shiftV + (bandT1 - yShift) * 1.4f * d1;
+										float vBase = floor(0.5f * (v0 + v1));
+										v0 -= vBase;
+										v1 -= vBase;
+										float halfSpan0 = 0.5f * (0.5f + 1.5f * d0) * correction;
+										float halfSpan1 = 0.5f * (0.5f + 1.5f * d1) * correction;
+										float uLeft0 = shiftU - halfSpan0;
+										float uRight0 = shiftU + halfSpan0;
+										float uLeft1 = shiftU - halfSpan1;
+										float uRight1 = shiftU + halfSpan1;
+										float tint0 = clamp(d0 * d0 - 0.3f, 0.0f, 1.0f);
+										float tint1 = clamp(d1 * d1 - 0.3f, 0.0f, 1.0f);
+										float uBase = floor(shiftU);
+										StripPosition(ctx, 0, vec2(leftX + spanX, y0));
+										StripPosition(ctx, 1, vec2(leftX + spanX, y1));
+										StripPosition(ctx, 2, vec2(leftX, y0));
+										StripPosition(ctx, 3, vec2(leftX, y1));
+										StripUv(ctx, 0, vec2(uRight0 - uBase, v0));
+										StripUv(ctx, 1, vec2(uRight1 - uBase, v1));
+										StripUv(ctx, 2, vec2(uLeft0 - uBase, v0));
+										StripUv(ctx, 3, vec2(uLeft1 - uBase, v1));
+										StripColor(ctx, 0, vec4(horizon.xyz(), tint0));
+										StripColor(ctx, 1, vec4(horizon.xyz(), tint1));
+										StripColor(ctx, 2, vec4(horizon.xyz(), tint0));
+										StripColor(ctx, 3, vec4(horizon.xyz(), tint1));
+										ctx.SubmitStripShaded(warp, 4);
+									}
+								}
 							}
 						}
 					}

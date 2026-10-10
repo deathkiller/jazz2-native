@@ -115,17 +115,23 @@ namespace nCine::RHI::PVR
 			}
 		}
 
+		// Both quantizers clamp the converted INTEGER rather than the float. The SH-4 only converts to a signed
+		// integer (`ftrc`), so a float-to-unsigned conversion compiles into a compare against 2^31 with a second,
+		// corrected conversion behind a branch, and a float clamp in front of it is two more compares and
+		// branches on the FPU. The result is the same for every input: inside [0, 1] the expression is the
+		// very same one, a negative input truncates to zero or below and anything above one to the top value
+		// or above, which the integer clamp then pins exactly where the float clamp would have.
 		inline std::uint8_t QuantizeChannel(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint8_t(v * 255.0f + 0.5f);
+			const std::int32_t q = std::int32_t(v * 255.0f + 0.5f);
+			return std::uint8_t(q < 0 ? 0 : (q > 255 ? 255 : q));
 		}
 
 		// Straight to the 4 bits an ARGB4444 channel actually keeps, skipping the round trip through 8 bits
 		inline std::uint32_t Quantize4Bit(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint32_t(v * 15.0f + 0.5f);
+			const std::int32_t q = std::int32_t(v * 15.0f + 0.5f);
+			return std::uint32_t(q < 0 ? 0 : (q > 15 ? 15 : q));
 		}
 
 		inline std::uint32_t PackArgb(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
@@ -187,6 +193,34 @@ namespace nCine::RHI::PVR
 			return sq + 8;
 		}
 
+		// Writes one vertex into the store queue at `sq` and flushes it; returns the next block.
+		//
+		// The eight words go out with pre-decrementing stores from the end of the block. The SH-4 has no
+		// displacement form of the FPU store (`fmov.s FRm, @(disp, Rn)` does not exist), so a field-by-field
+		// write compiles every float into an address copy, an add and the store - three instructions where
+		// `fmov.s FRm, @-Rn` is one - and a vertex is written for every corner of every tile and sprite. The
+		// block is complete before `pref` sends it, so the order the words are stored in makes no difference.
+		DEATH_ALWAYS_INLINE std::uint32_t* SubmitVertex(std::uint32_t* DEATH_RESTRICT sq, std::uint32_t command,
+			float x, float y, float u, float v, std::uint32_t argb, std::uint32_t oargb = 0)
+		{
+			std::uint32_t* end = sq + 8;
+			__asm__ __volatile__(
+				"mov.l %[oargb], @-%[p]\n\t"
+				"mov.l %[argb], @-%[p]\n\t"
+				"fmov.s %[v], @-%[p]\n\t"
+				"fmov.s %[u], @-%[p]\n\t"
+				"fmov.s %[z], @-%[p]\n\t"
+				"fmov.s %[y], @-%[p]\n\t"
+				"fmov.s %[x], @-%[p]\n\t"
+				"mov.l %[cmd], @-%[p]\n\t"
+				"pref @%[p]"
+				: [p] "+r"(end)
+				: [x] "f"(x), [y] "f"(y), [u] "f"(u), [v] "f"(v), [z] "f"(1.0f),
+				  [argb] "r"(argb), [oargb] "r"(oargb), [cmd] "r"(command)
+				: "memory");
+			return sq + 8;
+		}
+
 		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header
 		// to the open translucent list. The corner order matches the procedural sprite strip (v0, v1, v2,
 		// v3) exactly like the software FetchVertex synthesizes it. The offset colour is added after
@@ -208,16 +242,8 @@ namespace nCine::RHI::PVR
 			std::uint32_t* DEATH_RESTRICT sq = SubmitHeaderIfChanged(hdr);
 
 			for (std::int32_t i = 0; i < count; i++) {
-				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
-				reinterpret_cast<float*>(sq)[1] = px[i] + dx;
-				reinterpret_cast<float*>(sq)[2] = py[i] + dy;
-				reinterpret_cast<float*>(sq)[3] = 1.0f;
-				reinterpret_cast<float*>(sq)[4] = pu[i];
-				reinterpret_cast<float*>(sq)[5] = pv[i];
-				sq[6] = argb;
-				sq[7] = oargb;
-				sq_flush(sq);
-				sq += 8;
+				sq = SubmitVertex(sq, (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX),
+					px[i] + dx, py[i] + dy, pu[i], pv[i], argb, oargb);
 			}
 		}
 
@@ -225,23 +251,6 @@ namespace nCine::RHI::PVR
 			std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
 			SubmitStrip(hdr, px, py, pu, pv, 4, argb, oargb, dx, dy);
-		}
-
-		// Writes one vertex of a strip into the store queue at `sq` and flushes it, exactly as SubmitStrip() does,
-		// for a caller that has its corners in registers rather than in arrays; returns the next block
-		DEATH_ALWAYS_INLINE std::uint32_t* SubmitVertex(std::uint32_t* DEATH_RESTRICT sq, std::uint32_t command,
-			float x, float y, float u, float v, std::uint32_t argb)
-		{
-			sq[0] = command;
-			reinterpret_cast<float*>(sq)[1] = x;
-			reinterpret_cast<float*>(sq)[2] = y;
-			reinterpret_cast<float*>(sq)[3] = 1.0f;
-			reinterpret_cast<float*>(sq)[4] = u;
-			reinterpret_cast<float*>(sq)[5] = v;
-			sq[6] = argb;
-			sq[7] = 0;
-			sq_flush(sq);
-			return sq + 8;
 		}
 
 		// As SubmitStrip(), but each vertex carries its own colour so the rasterizer interpolates it across
@@ -252,16 +261,7 @@ namespace nCine::RHI::PVR
 			std::uint32_t* DEATH_RESTRICT sq = SubmitHeaderIfChanged(hdr);
 
 			for (std::int32_t i = 0; i < count; i++) {
-				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
-				reinterpret_cast<float*>(sq)[1] = px[i];
-				reinterpret_cast<float*>(sq)[2] = py[i];
-				reinterpret_cast<float*>(sq)[3] = 1.0f;
-				reinterpret_cast<float*>(sq)[4] = 0.0f;
-				reinterpret_cast<float*>(sq)[5] = 0.0f;
-				sq[6] = argb[i];
-				sq[7] = 0;
-				sq_flush(sq);
-				sq += 8;
+				sq = SubmitVertex(sq, (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX), px[i], py[i], 0.0f, 0.0f, argb[i]);
 			}
 		}
 
@@ -574,6 +574,10 @@ namespace nCine::RHI::PVR
 	std::size_t PvrDevice::_lightmapVramSize = 0;
 	std::int32_t PvrDevice::_lightmapW = 0;
 	std::int32_t PvrDevice::_lightmapH = 0;
+	std::vector<std::int32_t> PvrDevice::_lightmapConvertedSpans;
+	bool PvrDevice::_lightmapSpansValid = false;
+	float PvrDevice::_lightmapSpansKey[6] = {};
+	std::uint32_t PvrDevice::_lightingEntriesThisFrame = 0;
 
 	// ── Session ──────────────────────────────────────────────────────────────────────────────────
 
@@ -729,6 +733,20 @@ namespace nCine::RHI::PVR
 			_logicalWidth = width;
 			_logicalHeight = height;
 		}
+	}
+
+	bool PvrDevice::ScissorClipsScreen()
+	{
+		// A single-player viewport keeps a scissor rect of the whole screen (PlayerViewport sets one so that
+		// splitscreen players stay in their own regions), and clipping against it could only cut away the parts
+		// of the edge tiles and sprites that lie off the screen - which the tile accelerator never rasterizes in
+		// the first place. It sent every tile of a level through the clipping path instead of the direct one,
+		// for nothing a pixel could show, so a rect that covers the screen counts as no scissor at all.
+		if (!_scissor.Enabled) {
+			return false;
+		}
+		const Recti& rect = _scissor.Rect;
+		return (rect.X > 0 || rect.Y > 0 || rect.X + rect.W < _logicalWidth || rect.Y + rect.H < _logicalHeight);
 	}
 
 	void PvrDevice::GetTargetScale(float& scaleX, float& scaleY, float& offsetX, float& offsetY)
@@ -1069,8 +1087,17 @@ namespace nCine::RHI::PVR
 		_pendingSoftwareLights.push_back(light);
 	}
 
+	void PvrDevice::SetPendingLightmapSpans(const std::int32_t* litSpans, float unlitLevel)
+	{
+		if (!_pendingSoftwareLights.empty()) {
+			_pendingSoftwareLights.back().LitSpans = litSpans;
+			_pendingSoftwareLights.back().UnlitLevel = unlitLevel;
+		}
+	}
+
 	void PvrDevice::EndFrame()
 	{
+		_lightingEntriesThisFrame = 0;
 		if (!_pendingSoftwareLights.empty()) {
 			static bool warnedLeftoverLights = false;
 			if (!warnedLeftoverLights) {
@@ -1088,6 +1115,7 @@ namespace nCine::RHI::PVR
 		}
 		const PendingSoftwareLight light = _pendingSoftwareLights.front();
 		_pendingSoftwareLights.erase(_pendingSoftwareLights.begin());
+		_lightingEntriesThisFrame++;
 
 		// Only the lightmap composite: the water overlay is a fixed_function block of the
 		// CombineWithWater shaders, run by Dispatch after this hook (see CombineWithWater.shader)
@@ -1140,6 +1168,16 @@ namespace nCine::RHI::PVR
 						fill[i] = 0xFFFFFFFFu;
 					}
 				}
+				// The texture is kept from frame to frame, and outside the spans the lights reached a lightmap holds
+				// exactly its reset value, which converts to one constant factor. So while the map stays the same -
+				// its size, the level it is reset to, the ambient colour - a texel outside both this frame's spans
+				// and the ones converted last time already holds that factor, and only the union of the two spans
+				// of a row is converted again; in a level lit by a few lights that is a small part of the map.
+				// Splitscreen converts the viewports one after the other into this same texture, so a frame with a
+				// second entry starts over (and so does the first frame after one).
+				const float spansKey[6] = { float(light.LmW), float(light.LmH), light.UnlitLevel, light.AmbR, light.AmbG, light.AmbB };
+				const bool reuseConverted = (light.LitSpans != nullptr && _lightmapSpansValid && !layoutChanged &&
+					_lightingEntriesThisFrame == 1 && std::memcmp(spansKey, _lightmapSpansKey, sizeof(spansKey)) == 0);
 				const auto convertTexel = [&light](std::uint32_t rawRBits, std::uint32_t rawGBits) {
 					float rawR, rawG;
 					std::memcpy(&rawR, &rawRBits, sizeof(rawR));
@@ -1152,6 +1190,17 @@ namespace nCine::RHI::PVR
 					return std::uint32_t(0xF000 | (fr << 8) | (fg << 4) | fb);
 				};
 				for (std::int32_t y = 0; y < light.LmH; y++) {
+					std::int32_t xStart = 0, xEnd = light.LmW;
+					if (reuseConverted) {
+						const std::int32_t first = std::min(light.LitSpans[y * 2], _lightmapConvertedSpans[y * 2]);
+						const std::int32_t last = std::max(light.LitSpans[y * 2 + 1], _lightmapConvertedSpans[y * 2 + 1]);
+						if (first > last) {
+							continue;
+						}
+						// From an even texel, so the texels still go out in pairs
+						xStart = (first & ~1);
+						xEnd = std::min(last + 1, light.LmW);
+					}
 					// Unlit runs repeat the same pair of factors across long spans, so remembering the last
 					// converted texel turns most of the surface into a compare and a store. The compare is of the
 					// raw bits - equal bits are equal factors, and that keeps the test off the FPU - and the texels
@@ -1161,8 +1210,8 @@ namespace nCine::RHI::PVR
 					std::uint32_t* DEATH_RESTRICT dstPairs = reinterpret_cast<std::uint32_t*>(surface + std::size_t(y) * texW);
 					std::uint32_t prevR = UINT32_MAX, prevG = UINT32_MAX;
 					std::uint32_t prevTexel = 0;
-					std::int32_t x = 0;
-					for (; x + 1 < light.LmW; x += 2) {
+					std::int32_t x = xStart;
+					for (; x + 1 < xEnd; x += 2) {
 						const std::uint32_t rawR0 = src[x * 2], rawG0 = src[x * 2 + 1];
 						const std::uint32_t rawR1 = src[x * 2 + 2], rawG1 = src[x * 2 + 3];
 						if (rawR0 != prevR || rawG0 != prevG) {
@@ -1179,10 +1228,17 @@ namespace nCine::RHI::PVR
 						// The first texel of the pair is the lower address, the low half on this little-endian CPU
 						dstPairs[x / 2] = first | (prevTexel << 16);
 					}
-					if (x < light.LmW) {
-						// An odd width leaves one texel, which takes a 16-bit store of its own
+					if (x < xEnd) {
+						// An odd width (or span) leaves one texel, which takes a 16-bit store of its own
 						surface[std::size_t(y) * texW + x] = std::uint16_t(convertTexel(src[x * 2], src[x * 2 + 1]));
 					}
+				}
+				if (light.LitSpans != nullptr && _lightingEntriesThisFrame == 1) {
+					_lightmapConvertedSpans.assign(light.LitSpans, light.LitSpans + std::size_t(light.LmH) * 2);
+					std::memcpy(_lightmapSpansKey, spansKey, sizeof(spansKey));
+					_lightmapSpansValid = true;
+				} else {
+					_lightmapSpansValid = false;
 				}
 
 				pvr_poly_cxt_t cxt;
@@ -1367,13 +1423,20 @@ namespace nCine::RHI::PVR
 		pvr_poly_hdr_t hdr;
 		pvr_poly_compile(&hdr, &cxt);
 
-		const bool clipActive = (_scissor.Enabled && screenPass);
+		const bool clipActive = (screenPass && ScissorClipsScreen());
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
 			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
 			clipY0 = float(_scissor.Rect.Y) * scaleY + offsetY;
 			clipX1 = float(_scissor.Rect.X + _scissor.Rect.W) * scaleX + offsetX;
 			clipY1 = float(_scissor.Rect.Y + _scissor.Rect.H) * scaleY + offsetY;
+		} else if (screenPass) {
+			// Without a scissor that clips, the screen itself still bounds what a tile can cover (see the off-screen
+			// cull of the packed tiles below)
+			clipX0 = offsetX;
+			clipY0 = offsetY;
+			clipX1 = float(_logicalWidth) * scaleX + offsetX;
+			clipY1 = float(_logicalHeight) * scaleY + offsetY;
 		}
 		// Returns false for a primitive wholly outside the scissor rect, for which the bounding-box reject is
 		// exact. A tile straddling the scissor edge is clipped exactly like the sprite path clips its
@@ -1445,8 +1508,28 @@ namespace nCine::RHI::PVR
 			// The whole draw shares one polygon header, so it is handed to the tile accelerator (unless that one
 			// is in effect already) before the first tile instead of being compared again before every tile
 			bool headerPending = true;
+			// TileMap walks a tile beyond the view on every side, and the ring of those that lie wholly off the
+			// screen is a sizeable part of a layer. While nothing is clipped, the screen rect is taken back into
+			// the layer's own tile space once per draw, so such a tile is dropped by its position alone, before
+			// anything about it is computed. Only for the plain scale-and-translate transform every layer is drawn
+			// with, and with a margin of a whole unit on every side: a tile is only ever dropped when it is far
+			// clear of the screen, never because of how the reverse mapping rounded.
+			const bool cullsOffscreen = (screenPass && !clipActive && raster.Xy == 0.0f && raster.Yx == 0.0f &&
+				raster.Xx != 0.0f && raster.Yy != 0.0f);
+			float cullX0 = 0.0f, cullX1 = 0.0f, cullY0 = 0.0f, cullY1 = 0.0f;
+			if (cullsOffscreen) {
+				const float ax = (clipX0 - raster.Tx) / raster.Xx, bx = (clipX1 - raster.Tx) / raster.Xx;
+				const float ay = (clipY0 - raster.Ty) / raster.Yy, by = (clipY1 - raster.Ty) / raster.Yy;
+				cullX0 = std::min(ax, bx) - float(TileRecord::Size) - 1.0f;
+				cullX1 = std::max(ax, bx) + 1.0f;
+				cullY0 = std::min(ay, by) - float(TileRecord::Size) - 1.0f;
+				cullY1 = std::max(ay, by) + 1.0f;
+			}
 			for (std::int32_t i = 0; i < numVertices; i++) {
 				const TileRecord& tile = tiles[i];
+				if (cullsOffscreen && (tile.X <= cullX0 || tile.X >= cullX1 || tile.Y <= cullY0 || tile.Y >= cullY1)) {
+					continue;
+				}
 
 				float scaleU = texScaleX, biasU = float(tile.TexX) * texInvW;
 				float scaleV = texScaleY, biasV = float(tile.TexY) * texInvH;
@@ -1474,14 +1557,20 @@ namespace nCine::RHI::PVR
 				const float x2 = raster.Xx * tile.X + raster.Yx * tile.Y + raster.Tx, y2 = raster.Xy * tile.X + raster.Yy * tile.Y + raster.Ty;
 				const float x3 = raster.Xx * tile.X + raster.Yx * yr + raster.Tx, y3 = raster.Xy * tile.X + raster.Yy * yr + raster.Ty;
 				if (clipActive) {
-					float px[4] = { x0, x1, x2, x3 };
-					float py[4] = { y0, y1, y2, y3 };
-					float pu[4] = { u1, u1, u0, u0 };
-					float pvv[4] = { v0, v1, v0, v1 };
-					if (clipToScissor(px, py, pu, pvv, 4)) {
-						SubmitStrip(hdr, px, py, pu, pvv, 4, argb);
+					// A tile wholly inside the scissor rect would come out of the clipping unchanged, so only the ones
+					// crossing its edge take that path - in splitscreen most tiles of a viewport are inside its rect
+					const float minX = std::min(std::min(x0, x1), std::min(x2, x3)), maxX = std::max(std::max(x0, x1), std::max(x2, x3));
+					const float minY = std::min(std::min(y0, y1), std::min(y2, y3)), maxY = std::max(std::max(y0, y1), std::max(y2, y3));
+					if (!(minX >= clipX0 && maxX <= clipX1 && minY >= clipY0 && maxY <= clipY1)) {
+						float px[4] = { x0, x1, x2, x3 };
+						float py[4] = { y0, y1, y2, y3 };
+						float pu[4] = { u1, u1, u0, u0 };
+						float pvv[4] = { v0, v1, v0, v1 };
+						if (clipToScissor(px, py, pu, pvv, 4)) {
+							SubmitStrip(hdr, px, py, pu, pvv, 4, argb);
+						}
+						continue;
 					}
-					continue;
 				}
 
 				std::uint32_t* sq = (headerPending ? SubmitHeaderIfChanged(hdr) : SQ_MASK_DEST(PVR_TA_INPUT));
@@ -1654,7 +1743,7 @@ namespace nCine::RHI::PVR
 		pvr_poly_hdr_t hdr;
 		pvr_poly_compile(&hdr, &cxt);
 
-		const bool clipActive = (_scissor.Enabled && screenPass);
+		const bool clipActive = (screenPass && ScissorClipsScreen());
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
 			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
@@ -1934,7 +2023,7 @@ namespace nCine::RHI::PVR
 		// geometrically. The rect maps to raster coordinates the same way the vertices do (both are top-down,
 		// so the engine rect's Y addresses raster rows directly); only screen passes are clipped, which covers
 		// every scissor user on this tier (menu clipping, splitscreen viewports)
-		const bool clipActive = (_scissor.Enabled && screenPass);
+		const bool clipActive = (screenPass && ScissorClipsScreen());
 		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
 		if (clipActive) {
 			clipX0 = float(_scissor.Rect.X) * scaleX + offsetX;
@@ -2124,10 +2213,10 @@ namespace nCine::RHI::PVR
 					if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
 						continue;
 					}
-				}
-			}
+									}
+								}
 
-			ctx.InstanceColor = color;
+								ctx.InstanceColor = color;
 			ctx.TexRect = texRect;
 			// The optional context facilities are only wired up for effects whose static analysis
 			// says they can call them (see reqs above); the loop-invariant conditions predict

@@ -290,6 +290,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64InputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64GfxDevice.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/N64/N64FullMotionVideo.cpp
+			${NCINE_SOURCE_DIR}/nCine/Base/LibmOverrides.cpp
 		)
 
 		if(NCINE_N64_SIZE_OPTIMIZATION)
@@ -386,7 +387,14 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcPlatform.cpp
+			${NCINE_SOURCE_DIR}/nCine/Base/LibmOverrides.cpp
 		)
+
+		# Double-precision `pow()` and `log()` switch the FPU's precision mode around every operation and the
+		# module player calls them on every tick of every channel, and `ceilf()` is a library routine the textured
+		# background calls for every band it draws; the definitions that take them over are in LibmOverrides.cpp.
+		# Not `floorf()`: newlib's is already cheaper on the SH-4 than the replacement.
+		target_link_options(${NCINE_APP} PRIVATE "-Wl,--wrap=pow,--wrap=log,--wrap=ceilf")
 
 		# The icon a save is listed with in the console's file manager, converted from the .ico it is drawn
 		# in (see PreferencesCache::DescribeNextMemoryCardFile). The include path is set here rather than
@@ -410,6 +418,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspLibcCompat.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspNetwork.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspPower.cpp
+			${NCINE_SOURCE_DIR}/nCine/Base/LibmOverrides.cpp
 		)
 	elseif(PLATFORM_PS2)
 		# PS2SDK window/input backend. PS2SDK does package an SDL2, and the configure would otherwise pick it,
@@ -440,6 +449,7 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2InputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2GfxDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Base/LibmOverrides.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Modules.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Ps2/Ps2Storage.cpp
 			${PS2_EMBEDDED_MODULES_SOURCE}
@@ -456,6 +466,11 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		# MainApplication::Run() and Application::OnTraceReceived()). Spelled as a flag because a bare `debug`
 		# here is CMake's own per-configuration keyword and silently applies to the NEXT item instead.
 		target_link_libraries(${NCINE_APP} PRIVATE draw graph dma packet pad mc cdvd patches -ldebug kernel atomic)
+
+		# Double-precision `pow()`, `log()` and division are soft-float on this console and the module player
+		# calls them on every tick of every channel, and `floorf()`/`ceilf()` are library routines the textured
+		# background calls for every band it draws; the definitions that take them over are in LibmOverrides.cpp
+		target_link_options(${NCINE_APP} PRIVATE "-Wl,--wrap=pow,--wrap=log,--wrap=__divdf3,--wrap=floorf,--wrap=ceilf")
 	elseif(PLATFORM_PS3)
 		# PSL1GHT window/input backend (no SDL/GLFW: PSL1GHT ships neither, and the console's video output is
 		# configured through sysutil rather than through anything a windowing library would wrap). The RSX
@@ -1367,6 +1382,10 @@ else()
 		# reentrant syscalls resolve from libdragonsys, libdragon calls back into libc).
 		target_link_libraries(${NCINE_APP} PRIVATE "-Wl,--start-group" dragon m dragonsys c stdc++ "-Wl,--end-group")
 
+		# `floorf()` and `ceilf()` are library routines on this CPU, and the textured background calls them for
+		# every band it draws; the definitions that take them over are in LibmOverrides.cpp
+		target_link_options(${NCINE_APP} PRIVATE "-Wl,--wrap=floorf,--wrap=ceilf")
+
 		# Package a bootable .z64 ROM, reproducing libdragon's n64.mk "%.z64" rule: the symbol table for
 		# on-console backtraces, the stripped+compressed ELF, and a DragonFS image with the game content
 		# ("rom:/Content/", where the N64 branch of ContentResolver::GetContentPath() looks for it) are
@@ -1599,6 +1618,11 @@ else()
 			# one of them ships kubridge), but it is the reason to keep the import to this single call.
 			pspkubridge
 		)
+
+		# Double-precision `pow()`, `log()` and division are soft-float on this console and the module player
+		# calls them on every tick of every channel, and `floorf()`/`ceilf()` are library routines the textured
+		# background calls for every band it draws; the definitions that take them over are in LibmOverrides.cpp
+		target_link_options(${NCINE_APP} PRIVATE "-Wl,--wrap=pow,--wrap=log,--wrap=__divdf3,--wrap=floorf,--wrap=ceilf")
 
 		if(CURL_FOUND)
 			# The console has no socket stack at boot, so MainApplication brings one up for `WebRequest`

@@ -28,7 +28,7 @@ namespace Jazz2::Actors::Environment
 		// TODO: Implement Fade:1|Sine:1
 
 		_sfx = details.Params[0];
-		_gain = 0.2f * (details.Params[1] / 255.0f);
+		_gain = 0.4f * (details.Params[1] / 255.0f);
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithSolidObjects | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);
@@ -52,6 +52,12 @@ namespace Jazz2::Actors::Environment
 	void AmbientSound::OnUpdate(float timeMult)
 	{
 		ActorBase::OnUpdate(timeMult);
+
+		// The near-field smoothing (see IAudioPlayer::getAdjustedPosition()) is baked against the listener whenever
+		// a position is set, so it has to be re-applied as the listener moves, otherwise it stays displaced
+		if (_sound != nullptr) {
+			_sound->setPosition(Vector3f(_pos.X, _pos.Y, 100.0f));
+		}
 
 		// A looping ambience that reports itself stopped was stopped by something other than this actor,
 		// which starts it once and otherwise only stops it in the destructor. The audio device releases

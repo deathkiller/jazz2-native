@@ -114,6 +114,26 @@ namespace nCine::RHI::RDP
 			return PackRgba(QuantizeChannel(rgba[0]), QuantizeChannel(rgba[1]), QuantizeChannel(rgba[2]), QuantizeChannel(rgba[3]));
 		}
 
+		typedef std::uint32_t __attribute__((__may_alias__)) AliasedWord;
+
+		/**
+			@brief Whether two runs of @p Count floats hold the same bits
+
+			What `std::memcmp` answers, without its call and the byte-at-a-time loop newlib's takes on this target - the
+			dispatch compares the camera matrices on every draw and the colours of every warp band this way.
+		*/
+		template<std::int32_t Count>
+		inline bool SameBits(const float* a, const float* b)
+		{
+			const AliasedWord* wa = reinterpret_cast<const AliasedWord*>(a);
+			const AliasedWord* wb = reinterpret_cast<const AliasedWord*>(b);
+			std::uint32_t diff = 0;
+			for (std::int32_t i = 0; i < Count; i++) {
+				diff |= (wa[i] ^ wb[i]);
+			}
+			return (diff == 0);
+		}
+
 		// ── Combiner / Blender Presets ───────────────────────────────────────────────────────────
 		//
 		// The color combiner computes (A-B)*C+D per cycle; the pass colour travels in the PRIM register
@@ -481,8 +501,11 @@ namespace nCine::RHI::RDP
 		*/
 		inline std::int32_t AlignWindowStart(tex_format_t fmt, std::int32_t s0)
 		{
+			// A word holds a power of two of texels and a window never starts left of the surface (every caller
+			// clamps it into it first), so this is a mask - written as `s0 % texelsPerWord` it was an integer
+			// division, ~40 cycles on this CPU, for every window of every tile and sprite of a frame
 			const std::int32_t texelsPerWord = 64 / TEX_FORMAT_BITDEPTH(fmt);
-			return s0 - (s0 % texelsPerWord);
+			return s0 & ~(texelsPerWord - 1);
 		}
 
 		/**
@@ -983,6 +1006,13 @@ namespace nCine::RHI::RDP
 
 			The layer tint rides the PRIM colour, with the tile's own alpha folded into it - re-applied only
 			when the alpha changes, which within a layer is nearly never.
+
+			A layer's window reaches a tile or two past every edge of the screen, and a tile wholly outside the
+			scissor is not submitted at all: the RDP would have discarded every pixel of it, but only after its
+			window had been loaded - a quarter of a layer's tiles, and their loads, went that way. Whether a whole
+			tile fits TMEM is answered once for the layer, and the window of the tile before is known to be still
+			resident (nothing else touches TMEM between two tiles of the loop), so a run of tiles out of the same
+			atlas slot - the order the layer arrives in - calls UploadWindow() only for its first tile.
 		*/
 		void DispatchTileRecords(DrawState& state, const float* records, std::int32_t count, const Transform2D& raster,
 			const float* layerColor)
@@ -995,6 +1025,14 @@ namespace nCine::RHI::RDP
 				tintB = QuantizeChannel(layerColor[2]);
 			std::int32_t lastAlpha = -1;
 			std::int32_t lastSpanX = 0, lastSpanY = 0, lastDsdx = 0, lastDtdy = 0;
+			// The scissor in the rectangles' own 10.2 encoding (ApplyScissor() has run for this draw)
+			const std::int32_t clipX0 = appliedScissor[0] * 4, clipY0 = appliedScissor[1] * 4;
+			const std::int32_t clipX1 = (appliedScissor[0] + appliedScissor[2]) * 4, clipY1 = (appliedScissor[1] + appliedScissor[3]) * 4;
+			// The fit of a window depends only on its size and on where its first texel falls within a TMEM word
+			// (see WindowFits), and the tiles of an atlas without padding all start on a word
+			const std::int32_t wordTexelMask = (64 / TEX_FORMAT_BITDEPTH(surface_get_format(state.Texture))) - 1;
+			const bool alignedTileFits = WindowFits(state.Texture, 0, 0, Size, Size);
+			std::int32_t residentS0 = -1, residentT0 = -1;
 
 			for (std::int32_t i = 0; i < count; i++) {
 				TileRecord tile;
@@ -1019,18 +1057,23 @@ namespace nCine::RHI::RDP
 				if (winS1 > surfW || winT1 > surfH) {
 					continue;
 				}
-				if (!WindowFits(state.Texture, winS0, winT0, winS1, winT1)) {
+				if ((winS0 & wordTexelMask) != 0 ? !WindowFits(state.Texture, winS0, winT0, winS1, winT1) : !alignedTileFits) {
 					// A texel format too wide for TMEM to hold a whole tile; the general path bands it
 					SubmitTexturedRect(state, px0, py0, px1, py1, float(flipX ? winS1 : winS0), float(flipY ? winT1 : winT0),
 						float(flipX ? winS0 : winS1), float(flipY ? winT0 : winT1));
+					residentS0 = -1;
 					continue;
 				}
-				UploadWindow(state, winS0, winT0, winS1, winT1);
 
 				std::int32_t x0 = std::int32_t(px0 * 4.0f), y0 = std::int32_t(py0 * 4.0f);
 				std::int32_t x1 = std::int32_t(px1 * 4.0f), y1 = std::int32_t(py1 * 4.0f);
-				if (x1 == x0 || y1 == y0) {
+				if (x1 == x0 || y1 == y0 || x1 <= clipX0 || x0 >= clipX1 || y1 <= clipY0 || y0 >= clipY1) {
 					continue;
+				}
+				if (winS0 != residentS0 || winT0 != residentT0) {
+					UploadWindow(state, winS0, winT0, winS1, winT1);
+					residentS0 = winS0;
+					residentT0 = winT0;
 				}
 				if (x1 - x0 != lastSpanX) {
 					lastSpanX = x1 - x0;
@@ -1263,8 +1306,7 @@ namespace nCine::RHI::RDP
 				return false;
 			}
 			if (colors != nullptr) {
-				if (state.Combiner != CombShadeTintMix || std::memcmp(colors, colors + 8, 4 * sizeof(float)) != 0 ||
-					std::memcmp(colors + 4, colors + 12, 4 * sizeof(float)) != 0) {
+				if (state.Combiner != CombShadeTintMix || !SameBits<4>(colors, colors + 8) || !SameBits<4>(colors + 4, colors + 12)) {
 					return false;
 				}
 			}
@@ -1360,7 +1402,7 @@ namespace nCine::RHI::RDP
 			if (colors != nullptr) {
 				// A tint that covers the whole band leaves nothing of the texture: the band is its colour
 				if (QuantizeChannel(colors[3]) == 255 && QuantizeChannel(colors[7]) == 255 &&
-					std::memcmp(colors, colors + 4, 3 * sizeof(float)) == 0) {
+					SameBits<3>(colors, colors + 4)) {
 					rowState.Texture = nullptr;
 					rowState.Tlut = nullptr;
 					rowState.Combiner = CombFlat;
@@ -3135,8 +3177,7 @@ namespace nCine::RHI::RDP
 		// The product changes a handful of times a frame (a camera move, a viewport switch) while a frame
 		// runs a few hundred dispatches, so it is rebuilt only when either input changed. Compared by
 		// VALUE, not by pointer - the matrices are rewritten in place when the camera moves.
-		if (!cachedPvValid || std::memcmp(projMat, cachedPvProj, sizeof(cachedPvProj)) != 0 ||
-				std::memcmp(viewMat, cachedPvView, sizeof(cachedPvView)) != 0) {
+		if (!cachedPvValid || !SameBits<16>(projMat, cachedPvProj) || !SameBits<16>(viewMat, cachedPvView)) {
 			std::memcpy(cachedPvProj, projMat, sizeof(cachedPvProj));
 			std::memcpy(cachedPvView, viewMat, sizeof(cachedPvView));
 			Mat4Mul(projMat, viewMat, cachedPv);

@@ -285,11 +285,6 @@ namespace nCine::RHI::GX
 		static std::uint8_t* _lightmapStore;
 		static std::size_t _lightmapStoreSize;
 		static GXTexObj _lightmapTexObj;
-		// Linear staging buffer the lightmap texels are combined into before tiling; persists across
-		// frames and grows monotonically, because reallocating (and zero-filling) it per lit frame is
-		// wasted work - every byte is overwritten anyway
-		static std::uint8_t* _lightmapLinear;
-		static std::size_t _lightmapLinearSize;
 
 		/** @brief Resolves the index range of a `DrawElements()` into a host pointer, or `nullptr` if it cannot be read */
 		static const std::uint16_t* ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices);

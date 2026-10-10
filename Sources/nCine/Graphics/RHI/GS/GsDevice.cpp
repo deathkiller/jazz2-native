@@ -73,10 +73,33 @@ namespace nCine::RHI::GS
 		framebuffer_t _frame;
 		zbuffer_t _zbuffer;
 
+		/**
+			@brief Clamps @p v into [0, 1] with the FPU's own `MAX.S` and `MIN.S`
+
+			The EE has both and GCC emits them for `fmax()`/`fmin()`, but not for the same clamp written as two
+			comparisons - that becomes two compares and two branches, each compare followed by a stall slot before
+			its branch can read the condition. The quantizers below run for every pass of every sprite and for every
+			texel of the lightmap. The two forms agree on every input except NaN, which this FPU does not have.
+		*/
+		inline float Saturate(float v)
+		{
+			return std::fmin(std::fmax(v, 0.0f), 1.0f);
+		}
+
+		/** @brief The bit pattern of @p f, for equality tests that need no floating-point compare */
+		inline std::uint32_t FloatBits(float f)
+		{
+			std::uint32_t bits;
+			std::memcpy(&bits, &f, sizeof(bits));
+			return bits;
+		}
+
 		inline std::uint8_t QuantizeChannel(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint8_t(v * 255.0f + 0.5f);
+			// Converted through a SIGNED integer: MIPS has no float-to-unsigned conversion, so going to
+			// `std::uint8_t` directly adds a compare against 2^31 and a second conversion behind a branch, for a
+			// value that is never above 255.5 here
+			return std::uint8_t(std::int32_t(Saturate(v) * 255.0f + 0.5f));
 		}
 
 		/**
@@ -91,8 +114,7 @@ namespace nCine::RHI::GS
 		*/
 		inline std::uint8_t QuantizePassChannel(float v)
 		{
-			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
-			return std::uint8_t(v * 128.0f + 0.5f);
+			return std::uint8_t(std::int32_t(Saturate(v) * 128.0f + 0.5f));
 		}
 
 		/** @brief A `FixedFunctionPass` colour packed into `RGBAQ` for a TEXTURED primitive */
@@ -677,6 +699,16 @@ namespace nCine::RHI::GS
 				_packetCursor = q;
 			}
 
+			/** @brief Writes the two qwords of one rectangle at @p q, which is where the register list continues */
+			static DEATH_ALWAYS_INLINE void Write(qword_t* q, float x0, float y0, float u0, float v0,
+				float x1, float y1, float u1, float v1)
+			{
+				q[0].dw[0] = GIF_SET_UV(ftoi4(u0), ftoi4(v0));
+				q[0].dw[1] = GIF_SET_XYZ(ftoi4(x0 + SpriteStartOffset), ftoi4(y0 + SpriteStartOffset), 0);
+				q[1].dw[0] = GIF_SET_UV(ftoi4(u1), ftoi4(v1));
+				q[1].dw[1] = GIF_SET_XYZ(ftoi4(x1 + SpriteEndOffset), ftoi4(y1 + SpriteEndOffset), 0);
+			}
+
 			/** @brief Adds a rectangle from its top-left and bottom-right corners, raster position and texel */
 			void Add(float x0, float y0, float u0, float v0, float x1, float y1, float u1, float v1)
 			{
@@ -687,15 +719,43 @@ namespace nCine::RHI::GS
 					Tag = Reserve(3);
 					_packetCursor = Tag + 1;
 				}
-				qword_t* q = _packetCursor;
-				q->dw[0] = GIF_SET_UV(ftoi4(u0), ftoi4(v0));
-				q->dw[1] = GIF_SET_XYZ(ftoi4(x0 + SpriteStartOffset), ftoi4(y0 + SpriteStartOffset), 0);
-				q++;
-				q->dw[0] = GIF_SET_UV(ftoi4(u1), ftoi4(v1));
-				q->dw[1] = GIF_SET_XYZ(ftoi4(x1 + SpriteEndOffset), ftoi4(y1 + SpriteEndOffset), 0);
-				q++;
-				_packetCursor = q;
+				Write(_packetCursor, x0, y0, u0, v0, x1, y1, u1, v1);
+				_packetCursor += 2;
 				Count++;
+			}
+
+			/**
+				@brief Opens room for up to @p count more rectangles in the open list, or returns `nullptr`
+
+				What Add() checks for every rectangle - an open tag, its count, the room left in the scratch - checked
+				once for a whole run: the caller writes the rectangles itself with Write(), two qwords each from the
+				returned cursor, and commits however many it wrote with EndRun() before anything else may touch the
+				packet. When the run does not fit it returns `nullptr` and nothing changes, and the caller goes back to
+				Add(), which is what flushes and reopens.
+			*/
+			qword_t* BeginRun(std::int32_t count)
+			{
+				const std::size_t capacity = sizeof(_packet) / sizeof(_packet[0]);
+				const std::size_t used = std::size_t(_packetCursor - _packet);
+				if (Tag == nullptr) {
+					if (count > MaxSpritesPerTag || used + 1 + std::size_t(count) * 2 > capacity) {
+						return nullptr;
+					}
+					Tag = _packetCursor;
+					_packetCursor = Tag + 1;
+					return _packetCursor;
+				}
+				if (Count + count > MaxSpritesPerTag || used + std::size_t(count) * 2 > capacity) {
+					return nullptr;
+				}
+				return _packetCursor;
+			}
+
+			/** @brief Commits the @p count rectangles written into the run BeginRun() opened, ending at @p end */
+			void EndRun(qword_t* end, std::int32_t count)
+			{
+				_packetCursor = end;
+				Count += count;
 			}
 
 			void Close()
@@ -941,6 +1001,223 @@ namespace nCine::RHI::GS
 			qword_t* q = Reserve(8);
 			q = draw_scissor_area(q, 0, x0, x1, y0, y1);
 			_packetCursor = q;
+		}
+
+		/** @brief A tile-mesh vertex in raster space: the layer transform of SubmitTileMesh() applied to one source vertex */
+		DEATH_ALWAYS_INLINE void ProjectTileVertex(const Transform2D& raster, float uvScaleU, float uvScaleV, const float* v,
+			float& outX, float& outY, float& outU, float& outV)
+		{
+			outX = raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx;
+			outY = raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty;
+			outU = v[2] * uvScaleU;
+			outV = v[3] * uvScaleV;
+		}
+
+		/**
+			@brief Submits a tile SubmitTileMesh() cannot batch, from its @p corners, returning the triangles it used
+
+			A rectangle whose texels do not fit the `UV` register, a quad the layer turns or shears (and the spinning
+			debris, see TileMap::AppendDebrisQuad), and a lone triangle. Out of line, so the batching loop does not
+			carry the registers of all this for the tiles that never need it.
+		*/
+		DEATH_NEVER_INLINE std::int32_t SubmitTileGeneral(const DrawState& state, const float* const* corners,
+			bool isQuad, bool isRect, const Transform2D& raster, float uvScaleU, float uvScaleV, const color_t& packed)
+		{
+			// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
+			// 1 = (1,1), 2 = (0,0), 3 = (0,1) - which the mesh's slot order maps onto as v1, v2, v0, v3.
+			const float* v0 = corners[0];
+			const float* v1 = corners[1];
+			const float* v2 = corners[2];
+			const float* v3 = corners[3];
+			if (isRect) {
+				// Texel coordinates out of the UV register's range take the generic path, which can use ST
+				float tlX, tlY, tlU, tlV, brX, brY, brU, brV;
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v0, tlX, tlY, tlU, tlV);
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v2, brX, brY, brU, brV);
+				const float px[4] = { brX, brX, tlX, tlX };
+				const float py[4] = { tlY, brY, tlY, brY };
+				const float qu[4] = { brU, brU, tlU, tlU };
+				const float qv[4] = { tlV, brV, tlV, brV };
+				SubmitQuadPrimitive(state, px, py, qu, qv, packed, 0.0f, 0.0f, true);
+				return 2;
+			}
+			if (isQuad) {
+				// Turned, or sheared by the layer: every corner has to be carried through, and the two
+				// triangles of a strip are what can draw it
+				float px[4], py[4], pu[4], pvv[4];
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v1, px[0], py[0], pu[0], pvv[0]);
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v2, px[1], py[1], pu[1], pvv[1]);
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v0, px[2], py[2], pu[2], pvv[2]);
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, v3, px[3], py[3], pu[3], pvv[3]);
+				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, false);
+				return 2;
+			}
+			// A lone triangle, from a mesh whose vertices do not pair up into quads at all - its three slots are
+			// the first three corners
+			float sx[3], sy[3], tu[3], tv[3];
+			for (std::int32_t i = 0; i < 3; i++) {
+				ProjectTileVertex(raster, uvScaleU, uvScaleV, corners[i], sx[i], sy[i], tu[i], tv[i]);
+			}
+			SubmitTrianglePrimitive(state, sx, sy, tu, tv, packed, 0.0f, 0.0f);
+			return 1;
+		}
+
+		/**
+			@brief Submits the triangles of one tile-layer mesh under @p state - the per-tile half of
+				@ref GsDevice::DispatchTileMesh()
+
+			Out of line on purpose, and so is everything but the common case (see SubmitTileGeneral()). Inlined into
+			the dispatch, the loop shares the registers of a function many thousands of instructions long, and the
+			transform, the last colour and the corners of every tile end up on the stack, stored and reloaded tile
+			after tile.
+		*/
+		DEATH_NEVER_INLINE void SubmitTileMesh(const DrawState& state, const float* DEATH_RESTRICT vertices,
+			const std::uint16_t* indices, std::int32_t triangleCount, const Transform2D& raster, bool axisAligned,
+			float uvScaleU, float uvScaleV, const float* layerColor)
+		{
+			constexpr std::int32_t FloatsPerVertex = 8;
+			// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
+			const auto vertexAt = [vertices, indices](std::int32_t element) {
+				return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
+			};
+			const Transform2D layer = raster;
+
+			// Virtually every tile of a layer carries the same colour (white at the layer's alpha), so the four
+			// clamp-and-quantize steps run once per change instead of once per tile
+			float lastR = -1.0f, lastG = -1.0f, lastB = -1.0f, lastA = -1.0f;
+			std::uint32_t lastBitsR = FloatBits(lastR), lastBitsG = lastBitsR, lastBitsB = lastBitsR, lastBitsA = lastBitsR;
+			color_t packed{};
+			// The tiles that are plain rectangles go out together, and whatever is not one ends the batch - so
+			// does a change of colour, which is part of the batch's state
+			const float sampledWidth = float(state.SampledWidth), sampledHeight = float(state.SampledHeight);
+			ApplyTexture(state);
+			SpriteBatch batch;
+			bool batchOpen = false;
+			// The rectangles of the open batch are written straight into a run of the packet (see
+			// SpriteBatch::BeginRun()), so a tile costs its own arithmetic and its two qwords rather than the checks
+			// Add() repeats for every one. Whatever is written to the packet next commits the run first.
+			qword_t* run = nullptr;
+			qword_t* runStart = nullptr;
+
+			std::int32_t triangle = 0;
+			while (triangle < triangleCount) {
+				const std::int32_t element = triangle * 3;
+				const float* corners[4] = { vertexAt(element), vertexAt(element + 1), vertexAt(element + 2), nullptr };
+				const float* v0 = corners[0];
+				const float* v1 = corners[1];
+				const float* v2 = corners[2];
+				// Tiles reach here as two triangles whose fourth and fifth slots repeat the first and third.
+				// Recognizing that pattern lets a tile go out as one quad. Through the indices of the pipeline's
+				// indexed meshes a repeated slot is the very same vertex, so the positions need no comparing there.
+				bool isQuad = false;
+				if (triangle + 2 <= triangleCount) {
+					if (indices != nullptr && indices[element + 3] == indices[element] && indices[element + 4] == indices[element + 2]) {
+						isQuad = true;
+					} else {
+						isQuad = (vertexAt(element + 3)[0] == v0[0] && vertexAt(element + 3)[1] == v0[1] &&
+							vertexAt(element + 4)[0] == v2[0] && vertexAt(element + 4)[1] == v2[1]);
+					}
+					corners[3] = vertexAt(element + 5);
+				}
+				// Whether that quad is a rectangle is a separate question, and the answer is not always yes:
+				// the destructible debris is appended to this same stream with its spin folded into its four
+				// corners (see TileMap::AppendDebrisQuad). Rebuilding one of those from two OPPOSITE corners
+				// collapses it onto its bounding box, which does not turn - it stays upright and its width
+				// runs to zero and back as the diagonal sweeps through vertical, so a spinning particle reads
+				// as one being squashed flat.
+				//
+				// Tested on the source vertices, so a tile pays eight compares and no extra transforms. That
+				// is equivalent to testing the projected ones: the layer transform is affine, so a source
+				// rectangle stays a rectangle exactly when the layer carries no rotation or shear, which is
+				// what axisAligned already says. The eight equalities are tried on the bits first, all at once:
+				// the corners of a tile are written from the same few values (see TileMap::AppendTileQuad), so a
+				// rectangle matches bit for bit, and only a quad that does not goes through the floating-point
+				// compares - each of which is a compare, a stall slot and a branch on this FPU.
+				bool isRect = false;
+				if (isQuad && axisAligned) {
+					const float* v3 = corners[3];
+					isRect = (((FloatBits(v1[1]) ^ FloatBits(v0[1])) | (FloatBits(v2[0]) ^ FloatBits(v1[0])) |
+						(FloatBits(v3[0]) ^ FloatBits(v0[0])) | (FloatBits(v3[1]) ^ FloatBits(v2[1])) |
+						(FloatBits(v1[3]) ^ FloatBits(v0[3])) | (FloatBits(v2[2]) ^ FloatBits(v1[2])) |
+						(FloatBits(v3[2]) ^ FloatBits(v0[2])) | (FloatBits(v3[3]) ^ FloatBits(v2[3]))) == 0);
+					if (!isRect) {
+						isRect = (v1[1] == v0[1] && v2[0] == v1[0] && v3[0] == v0[0] && v3[1] == v2[1] &&
+							v1[3] == v0[3] && v2[2] == v1[2] && v3[2] == v0[2] && v3[3] == v2[3]);
+					}
+				}
+
+				// The same two-step test for the colour: an unchanged one is the same bits
+				const float* group = v0;
+				const std::uint32_t bitsR = FloatBits(group[4]), bitsG = FloatBits(group[5]);
+				const std::uint32_t bitsB = FloatBits(group[6]), bitsA = FloatBits(group[7]);
+				if (((bitsR ^ lastBitsR) | (bitsG ^ lastBitsG) | (bitsB ^ lastBitsB) | (bitsA ^ lastBitsA)) != 0 &&
+					(group[4] != lastR || group[5] != lastG || group[6] != lastB || group[7] != lastA)) {
+					lastR = group[4]; lastG = group[5]; lastB = group[6]; lastA = group[7];
+					lastBitsR = bitsR; lastBitsG = bitsG; lastBitsB = bitsB; lastBitsA = bitsA;
+					const float modulated[4] = { group[4] * layerColor[0], group[5] * layerColor[1],
+						group[6] * layerColor[2], group[7] * layerColor[3] };
+					packed = PackPassColor(modulated);
+					if (run != nullptr) {
+						batch.EndRun(run, std::int32_t(run - runStart) / 2);
+						run = nullptr;
+					}
+					batchOpen = false;
+				}
+
+				if (isRect) {
+					// Two opposite corners describe the whole of it, so only those are transformed, and it goes
+					// out as a single GS SPRITE. The transform is ProjectTileVertex() without the two terms that
+					// axisAligned says are multiplied by zero: dropping `+ 0 * v` can change nothing but the sign
+					// of a zero, which neither the comparisons nor the conversions below can tell apart.
+					float tlX = layer.Xx * v0[0] + layer.Tx, tlY = layer.Yy * v0[1] + layer.Ty;
+					float brX = layer.Xx * v2[0] + layer.Tx, brY = layer.Yy * v2[1] + layer.Ty;
+					float tlU = v0[2] * uvScaleU, tlV = v0[3] * uvScaleV;
+					float brU = v2[2] * uvScaleU, brV = v2[3] * uvScaleV;
+					// FitsUvRegister() of the two corners, spelled out so they can stay in registers
+					const bool fitsUv = !(tlU < 0.0f || tlV < 0.0f || tlU * sampledWidth > MaxUvTexel || tlV * sampledHeight > MaxUvTexel ||
+						brU < 0.0f || brV < 0.0f || brU * sampledWidth > MaxUvTexel || brV * sampledHeight > MaxUvTexel);
+					if (fitsUv) {
+						// The corners in raster order, as SubmitQuadPrimitive() orders them - the GS rasterizes a
+						// SPRITE given bottom-up a row off
+						if (tlX > brX) {
+							std::swap(tlX, brX);
+							std::swap(tlU, brU);
+						}
+						if (tlY > brY) {
+							std::swap(tlY, brY);
+							std::swap(tlV, brV);
+						}
+						if (!batchOpen) {
+							batch.Begin(packed);
+							batchOpen = true;
+						}
+						if (run == nullptr) {
+							// Room for every tile still to come, or the rest goes through Add() one by one
+							run = runStart = batch.BeginRun((triangleCount - triangle) / 2);
+						}
+						if (run != nullptr) {
+							SpriteBatch::Write(run, tlX, tlY, tlU * sampledWidth, tlV * sampledHeight, brX, brY, brU * sampledWidth, brV * sampledHeight);
+							run += 2;
+						} else {
+							batch.Add(tlX, tlY, tlU * sampledWidth, tlV * sampledHeight, brX, brY, brU * sampledWidth, brV * sampledHeight);
+						}
+						triangle += 2;
+						continue;
+					}
+				}
+
+				if (run != nullptr) {
+					batch.EndRun(run, std::int32_t(run - runStart) / 2);
+					run = nullptr;
+				}
+				batch.Close();
+				batchOpen = false;
+				triangle += SubmitTileGeneral(state, corners, isQuad, isRect, layer, uvScaleU, uvScaleV, packed);
+			}
+			if (run != nullptr) {
+				batch.EndRun(run, std::int32_t(run - runStart) / 2);
+			}
+			batch.Close();
 		}
 	}
 
@@ -1785,8 +2062,9 @@ namespace nCine::RHI::GS
 					}
 					prevR = rawR;
 					prevG = rawG;
-					const float r = ClampLightmapChannel(rawR);
-					const float g = ClampLightmapChannel(rawG);
+					// ClampLightmapChannel(), in the form this FPU does without branches (see Saturate)
+					const float r = Saturate(rawR);
+					const float g = Saturate(rawG);
 					// The stored value is the ATTENUATION (1 - factor), because the equation subtracts it
 					prevTexel = QuantizePassChannel(1.0f - LightingCombineFactor(r, g, ambGray));
 					dst[x] = prevTexel;
@@ -2455,10 +2733,6 @@ namespace nCine::RHI::GS
 			return;
 		}
 		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
-		// Where an element slot's vertex is: at the slot's own position in the stream, or where its index says
-		const auto vertexAt = [vertices, indices](std::int32_t element) {
-			return vertices + std::size_t(indices != nullptr ? indices[element] : element) * FloatsPerVertex;
-		};
 
 		const GsUniformBlock* block = _currentProgram->GetDispatchFacts().InstanceBlock;
 		if (block == nullptr) {
@@ -2569,125 +2843,8 @@ namespace nCine::RHI::GS
 		// of the two triangles it would otherwise take.
 		const bool axisAligned = (raster.Xy == 0.0f && raster.Yx == 0.0f);
 
-		const float uvScaleU = texture->GetUScale();
-		const float uvScaleV = texture->GetVScale();
-		auto project = [&](const float* v, float& outX, float& outY, float& outU, float& outV) {
-			outX = raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx;
-			outY = raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty;
-			outU = v[2] * uvScaleU;
-			outV = v[3] * uvScaleV;
-		};
-
-		const std::int32_t triangleCount = numVertices / 3;
-		std::int32_t triangle = 0;
-		// Virtually every tile of a layer carries the same colour (white at the layer's alpha), so the four
-		// clamp-and-quantize steps run once per change instead of once per tile
-		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
-		color_t packed{};
-		// The tiles that are plain rectangles go out together, and whatever is not one ends the batch - so
-		// does a change of colour, which is part of the batch's state
-		const float sampledWidth = float(state.SampledWidth), sampledHeight = float(state.SampledHeight);
-		ApplyTexture(state);
-		SpriteBatch batch;
-		bool batchOpen = false;
-		while (triangle < triangleCount) {
-			// Tiles reach here as two triangles whose fourth and fifth slots repeat the first and third.
-			// Recognizing that pattern lets a tile go out as one quad.
-			const std::int32_t element = triangle * 3;
-			const float* group = vertexAt(element);
-			const float* v0 = group;
-			const float* v1 = vertexAt(element + 1);
-			const float* v2 = vertexAt(element + 2);
-			const float* v3 = vertexAt(element + 5);
-			const bool isQuad = (triangle + 2 <= triangleCount &&
-				vertexAt(element + 3)[0] == v0[0] && vertexAt(element + 3)[1] == v0[1] &&
-				vertexAt(element + 4)[0] == v2[0] && vertexAt(element + 4)[1] == v2[1]);
-			// Whether that quad is a rectangle is a separate question, and the answer is not always yes:
-			// the destructible debris is appended to this same stream with its spin folded into its four
-			// corners (see TileMap::AppendDebrisQuad). Rebuilding one of those from two OPPOSITE corners
-			// collapses it onto its bounding box, which does not turn - it stays upright and its width
-			// runs to zero and back as the diagonal sweeps through vertical, so a spinning particle reads
-			// as one being squashed flat.
-			//
-			// Tested on the source vertices, so a tile pays eight compares and no extra transforms. That
-			// is equivalent to testing the projected ones: the layer transform is affine, so a source
-			// rectangle stays a rectangle exactly when the layer carries no rotation or shear, which is
-			// what axisAligned already says.
-			const bool isRect = (isQuad && axisAligned &&
-				v1[1] == v0[1] && v2[0] == v1[0] && v3[0] == v0[0] && v3[1] == v2[1] &&
-				v1[3] == v0[3] && v2[2] == v1[2] && v3[2] == v0[2] && v3[3] == v2[3]);
-
-			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
-				lastColor[0] = group[4]; lastColor[1] = group[5]; lastColor[2] = group[6]; lastColor[3] = group[7];
-				const float modulated[4] = { group[4] * layerColor[0], group[5] * layerColor[1],
-					group[6] * layerColor[2], group[7] * layerColor[3] };
-				packed = PackPassColor(modulated);
-				batchOpen = false;
-			}
-
-			// SubmitQuadPrimitive indexes its corners by the sprite path's (ax, ay) weights - 0 = (1,0),
-			// 1 = (1,1), 2 = (0,0), 3 = (0,1) - which the mesh's slot order maps onto as v1, v2, v0, v3.
-			if (isRect) {
-				// Two opposite corners describe the whole of it, so only those are transformed. The
-				// duplicated ones keep the axis-aligned test inside SubmitQuadPrimitive agreeing with the
-				// decision made here, and it goes out as a single GS SPRITE.
-				float tlX, tlY, tlU, tlV, brX, brY, brU, brV;
-				project(v0, tlX, tlY, tlU, tlV);
-				project(v2, brX, brY, brU, brV);
-				const float pu[2] = { tlU, brU };
-				const float pvv[2] = { tlV, brV };
-				if (FitsUvRegister(pu, pvv, 2, sampledWidth, sampledHeight)) {
-					// The corners in raster order, as SubmitQuadPrimitive() orders them - the GS rasterizes a
-					// SPRITE given bottom-up a row off
-					if (tlX > brX) {
-						std::swap(tlX, brX);
-						std::swap(tlU, brU);
-					}
-					if (tlY > brY) {
-						std::swap(tlY, brY);
-						std::swap(tlV, brV);
-					}
-					if (!batchOpen) {
-						batch.Begin(packed);
-						batchOpen = true;
-					}
-					batch.Add(tlX, tlY, tlU * sampledWidth, tlV * sampledHeight, brX, brY, brU * sampledWidth, brV * sampledHeight);
-				} else {
-					// Texel coordinates out of the UV register's range take the generic path, which can use ST
-					batch.Close();
-					batchOpen = false;
-					const float px[4] = { brX, brX, tlX, tlX };
-					const float py[4] = { tlY, brY, tlY, brY };
-					const float qu[4] = { brU, brU, tlU, tlU };
-					const float qv[4] = { tlV, brV, tlV, brV };
-					SubmitQuadPrimitive(state, px, py, qu, qv, packed, 0.0f, 0.0f, true);
-				}
-				triangle += 2;
-			} else if (isQuad) {
-				// Turned, or sheared by the layer: every corner has to be carried through, and the two
-				// triangles of a strip are what can draw it
-				batch.Close();
-				batchOpen = false;
-				float px[4], py[4], pu[4], pvv[4];
-				project(v1, px[0], py[0], pu[0], pvv[0]);
-				project(v2, px[1], py[1], pu[1], pvv[1]);
-				project(v0, px[2], py[2], pu[2], pvv[2]);
-				project(v3, px[3], py[3], pu[3], pvv[3]);
-				SubmitQuadPrimitive(state, px, py, pu, pvv, packed, 0.0f, 0.0f, false);
-				triangle += 2;
-			} else {
-				// A lone triangle, from a mesh whose vertices do not pair up into quads at all
-				batch.Close();
-				batchOpen = false;
-				float sx[3], sy[3], tu[3], tv[3];
-				for (std::int32_t i = 0; i < 3; i++) {
-					project(vertexAt(element + i), sx[i], sy[i], tu[i], tv[i]);
-				}
-				SubmitTrianglePrimitive(state, sx, sy, tu, tv, packed, 0.0f, 0.0f);
-				triangle++;
-			}
-		}
-		batch.Close();
+		SubmitTileMesh(state, vertices, indices, numVertices / 3, raster, axisAligned,
+			texture->GetUScale(), texture->GetVScale(), layerColor);
 	}
 
 	void GsDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices)

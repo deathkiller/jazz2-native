@@ -296,8 +296,6 @@ namespace nCine
 		void ReleaseBuffer(Buffer& buffer);
 		/** @brief Returns the buffer a source is currently reading from, or `nullptr` */
 		Buffer* GetActiveBuffer(Source& source);
-		/** @brief Reads one interleaved frame, widening an 8-bit source to the mixer's 16-bit scale */
-		static DEATH_ALWAYS_INLINE void ReadFrame(const Buffer& buffer, std::int32_t frame, std::int32_t& left, std::int32_t& right);
 
 		/** @brief Tops the module's ring up, bounded and never blocking on the hardware */
 		void FillRing();

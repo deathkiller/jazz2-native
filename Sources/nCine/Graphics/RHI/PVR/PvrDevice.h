@@ -200,6 +200,14 @@ namespace nCine::RHI::PVR
 		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
 			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
 			bool waterActive = false, float waterLevelPx = 0.0f, float waterTime = 0.0f, float waterCamY = 0.0f);
+		/**
+			@brief Attaches the lit spans of its lightmap to the lighting entry queued last (`RHI_LIGHTING_LIT_SPANS`)
+
+			@p litSpans holds a `[first, last]` texel pair for every lightmap row (`first > last` for a row no
+			light reached); every texel outside them is exactly (@p unlitLevel, 0). Must stay valid until the
+			entry is consumed, like the lightmap itself.
+		*/
+		static void SetPendingLightmapSpans(const std::int32_t* litSpans, float unlitLevel);
 		/** @brief Drops any lighting entries not consumed this frame (called by the window backend at present) */
 		static void EndFrame();
 
@@ -228,6 +236,8 @@ namespace nCine::RHI::PVR
 			std::int32_t LmW = 0, LmH = 0, Scale = 1;
 			std::int32_t VpX = 0, VpY = 0, VpW = 0, VpH = 0;
 			float AmbR = 0.0f, AmbG = 0.0f, AmbB = 0.0f;
+			const std::int32_t* LitSpans = nullptr;
+			float UnlitLevel = 0.0f;
 		};
 
 		struct PaletteBank
@@ -269,6 +279,12 @@ namespace nCine::RHI::PVR
 		static std::size_t _lightmapVramSize;
 		static std::int32_t _lightmapW;
 		static std::int32_t _lightmapH;
+		// What the lightmap texture holds outside the spans converted last: valid only while it is the same map
+		// (size, ambient level and colour) and no other entry has written the texture since
+		static std::vector<std::int32_t> _lightmapConvertedSpans;
+		static bool _lightmapSpansValid;
+		static float _lightmapSpansKey[6];
+		static std::uint32_t _lightingEntriesThisFrame;
 
 		/** @brief Resolves the index range of a `DrawElements()` into a host pointer, or `nullptr` if it cannot be read */
 		static const std::uint16_t* ResolveHostIndices(IndexFormat indexFormat, std::uintptr_t indexOffset, std::uint32_t numIndices);
@@ -289,5 +305,7 @@ namespace nCine::RHI::PVR
 		static std::int32_t AcquirePaletteBank(const PvrTexture* palette, std::int32_t paletteOffset,
 			std::uint32_t version, const std::uint32_t* entries);
 		static void GetTargetScale(float& scaleX, float& scaleY, float& offsetX, float& offsetY);
+		/** @brief Returns `true` if the scissor rect of a screen pass excludes any part of the screen, so primitives need clipping */
+		static bool ScissorClipsScreen();
 	};
 }
