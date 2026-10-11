@@ -17,14 +17,15 @@ namespace nCine::Backends
 		console_close();
 
 		// 320x240 is what the RDP can fill at 2D workloads, and the resample filter lets the VI upscale
-		// cleanly to the TV. TWO buffers, not three: a third only pays for itself when a frame takes about
-		// as long as one refresh period, so that the CPU can start the next one while the previous is still
-		// being scanned out. A frame here takes three or more, and the display has long finished with a
-		// buffer by the time another is asked for - measured on the same scene, the third buffer changed
-		// the frame time by 0.4% (inside the noise) and the wait inside display_get() by 24 us of a 55 ms
-		// frame, while costing 150 KB of the RDRAM a level is short of. RdpDevice's syncpoint-tracked
-		// retirement keeps resource reuse safe at any buffer count.
-		display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2, GAMMA_NONE, FILTERS_RESAMPLE);
+		// cleanly to the TV. THREE buffers: a third pays off where a frame takes between one and two refresh
+		// periods, as most level frames do now - with two the CPU waits in display_get() for the buffer still
+		// being scanned out, with three it starts the next frame instead (measured in ares: castle1 with the
+		// weapon wheel open 20.9 -> 19.5 ms a frame, carrot1 22.4 -> 19.4 ms, with the wheel 33.8 -> 27.9 ms).
+		// Where the frame is longer and nothing is left to wait for, it gains nothing and the frame came out
+		// slightly slower - the night castle 26.9 -> 27.5 ms walking - and it costs 150 KB of the heap
+		// (xmas3, the fullest level measured, kept 0.83 MB free with three buffers against 0.98 MB with two).
+		// RdpDevice's syncpoint-tracked retirement keeps resource reuse safe at any buffer count.
+		display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE);
 
 		RHI::Device::InitializeRdp();
 

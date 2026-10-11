@@ -59,6 +59,17 @@ elseif(NOT TARGET Libxmp)
 	# What the header keys its import/export attributes off; without it a Windows build would declare
 	# every entry point `__declspec(dllimport)` and link against an import library that is not there
 	target_compile_definitions(Libxmp PUBLIC "LIBXMP_STATIC")
+	# The byte order is the one result of libxmp's own configure step that the sources cannot do without:
+	# its configure script and its CMakeLists both probe it and define WORDS_BIGENDIAN, and without that
+	# the code assumes a little-endian machine. On a big-endian one (the GameCube, the Wii, the classic
+	# Amiga) the uncompressed 16-bit samples of ".it", ".s3m", ".xm" and ".j2b" modules, which the files
+	# store little-endian, are then kept byte-swapped in memory and play as loud broadband noise over the
+	# rest of the track - while 8-bit samples are not affected at all, so only some of the tracks sound wrong
+	include(TestBigEndian)
+	test_big_endian(LIBXMP_WORDS_BIGENDIAN)
+	if(LIBXMP_WORDS_BIGENDIAN)
+		target_compile_definitions(Libxmp PRIVATE "WORDS_BIGENDIAN=1")
+	endif()
 
 	# The dependency's own file set (117 C files) is globbed rather than listed: it is taken verbatim
 	# from the release and never edited here

@@ -67,6 +67,14 @@ namespace Jazz2::AssetPacker
 		static bool CarriesLz4Images(StringView path);
 
 		/**
+			@brief Returns `true` if the cinematics already on the disc have their frames in LZ4
+
+			The same question for @ref Jazz2::VideoFormat::CodecDeltaRleLz4, which a build of the game older than it
+			refuses to play. `false` also when the disc has no cinematics to tell by.
+		*/
+		static bool CarriesLz4Videos(StringView path);
+
+		/**
 			@brief Writes a copy of a disc image with its `Content` directory replaced
 
 			@param sourcePath	Image to read --- a DiscJuggler `.cdi` or a plain `.iso`

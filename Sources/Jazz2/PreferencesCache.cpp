@@ -147,12 +147,14 @@ namespace Jazz2
 	float PreferencesCache::MasterVolume = 0.7f;
 	float PreferencesCache::SfxVolume = 0.8f;
 	float PreferencesCache::MusicVolume = 0.4f;
-#if defined(DEATH_TARGET_3DS) || defined(DEATH_TARGET_PSP)
-	// Half the hardware's 44100 Hz: the mixer's cost is linear in the rate, the game's samples are 11-22 kHz
-	// to begin with and the module decoder, which renders at this rate too, costs half as much as at the full
-	// rate (see PspAudioDevice). The 3DS's DSP resamples the channel to its own 32728 Hz in hardware, so the
-	// mixing rate is a free choice there too.
+#if defined(DEATH_TARGET_3DS)
+	// The mixer's cost is linear in the rate, the game's samples are 11-22 kHz to begin with and the module
+	// decoder renders at this rate too, so half of 44100 Hz costs half as much; the DSP resamples the channel to
+	// its own 32728 Hz in hardware, so the mixing rate is a free choice here.
 	std::int32_t PreferencesCache::AudioSampleRate = 22050;
+#elif defined(DEATH_TARGET_PSP)
+	// The hardware's own 44100 Hz, which the game holds 60 fps at on hardware (see PspAudioDevice)
+	std::int32_t PreferencesCache::AudioSampleRate = 44100;
 #else
 	std::int32_t PreferencesCache::AudioSampleRate = 0;
 #endif

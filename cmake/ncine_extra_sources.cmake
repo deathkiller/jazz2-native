@@ -1386,6 +1386,17 @@ else()
 		# every band it draws; the definitions that take them over are in LibmOverrides.cpp
 		target_link_options(${NCINE_APP} PRIVATE "-Wl,--wrap=floorf,--wrap=ceilf")
 
+		# The hottest code goes to the start of the executable in a fixed order, so that its loops do not evict each
+		# other's lines from the direct-mapped instruction cache (see cmake/n64_text_order.ld). Binutils 2.43 added
+		# the option; an older linker builds the same executable in plain link order.
+		execute_process(COMMAND "${CMAKE_LINKER}" --help OUTPUT_VARIABLE _n64LinkerHelp ERROR_QUIET)
+		if(_n64LinkerHelp MATCHES "--section-ordering-file")
+			target_link_options(${NCINE_APP} PRIVATE "-Wl,--section-ordering-file=${CMAKE_SOURCE_DIR}/cmake/n64_text_order.ld")
+			set_property(TARGET ${NCINE_APP} APPEND PROPERTY LINK_DEPENDS "${CMAKE_SOURCE_DIR}/cmake/n64_text_order.ld")
+		else()
+			message(STATUS "The linker does not support --section-ordering-file, the hot code of the N64 build is placed in link order")
+		endif()
+
 		# Package a bootable .z64 ROM, reproducing libdragon's n64.mk "%.z64" rule: the symbol table for
 		# on-console backtraces, the stripped+compressed ELF, and a DragonFS image with the game content
 		# ("rom:/Content/", where the N64 branch of ContentResolver::GetContentPath() looks for it) are

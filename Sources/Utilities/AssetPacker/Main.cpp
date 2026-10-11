@@ -121,7 +121,9 @@ namespace
 			The consoles whose CPU cannot inflate the original container inside a frame need this: it costs
 			55-115 ms a frame on the Dreamcast against a 42 ms budget, and the PlayStation 2 - which also
 			draws the cinematics at a quarter of their pixels, see @ref DefaultVideoDownscaleForProfile() -
-			is in the same position, where the re-encoded one costs under a millisecond on either. Everything
+			is in the same position, where the re-encoded one costs under a millisecond on either. The GameCube
+			can inflate the original, but not the way it has to be read: its four streams are interleaved, and
+			reading them from the disc as they are consumed made the intro take 61 s instead of 34. Everything
 			else decodes the original perfectly well and is better off with the smaller file. Downscaling also
 			requires it, since the frames have to be re-encoded either way.
 		*/
@@ -189,6 +191,8 @@ namespace
 		String N64Tools;
 		/** @brief Whether the sprite sheets and tilesets are written in LZ4, see @ref Compatibility::JJ2Anims::ImageCompression */
 		bool Lz4Images = false;
+		/** @brief Whether re-encoded cinematics get their frames in LZ4, see @ref ProfileUsesLz4Videos() */
+		bool Lz4Videos = false;
 		/** @brief The apploader named by `--apploader=`, which `create-image` puts on the disc */
 		String ApploaderPath;
 		/** @brief The game ID named by `--game-id=`, see @ref DefaultGameCubeGameId */
@@ -257,18 +261,19 @@ namespace
 		quarter of the pixels, the player's downscale pass disappears, and the file that has to come off the
 		disc is smaller as well.
 
-		The PlayStation 2 is 640x448 and fits the video into it, so a 640x480 cinematic is already halved at
-		run time - 2 gives exactly what it displays. The Dreamcast halves at run time too, but its default
-		stays 1 because it has been shipping that way and the re-encoded container alone is what it needed;
-		`--video-downscale=` is there for anyone who wants the rest of the trade on that console as well.
-		Zero means the profile makes no choice and the videos are copied across as they are.
+		The PlayStation 2 gets 2: it reads its disc (or a USB drive, through a loader) on the same thread that
+		draws, so the video has to stay small, and the filtered 320x240 it gets is drawn smoothly upscaled.
+		The Dreamcast and the GameCube show 640x480 as it is, and read on a thread of their own, so they get
+		the original resolution re-encoded (1); `--video-downscale=` is there for anyone who wants the trade
+		on those consoles as well. Zero means the profile makes no choice and the videos are copied across as
+		they are.
 	*/
 	std::int32_t DefaultVideoDownscaleForProfile(StringView value)
 	{
 		if (value == "ps2"_s) {
 			return 2;
 		}
-		if (value == "dreamcast"_s) {
+		if (value == "dreamcast"_s || value == "gamecube"_s) {
 			return 1;	// Re-encoded, but at the original resolution
 		}
 		return 0;
@@ -287,11 +292,26 @@ namespace
 		return (value == "n64"_s || value == "dreamcast"_s || value == "ps2"_s || value == "gamecube"_s);
 	}
 
-	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale, bool& isN64, bool& lz4Images)
+	/**
+		@brief Whether a target profile gets the frames of its re-encoded cinematics in LZ4
+
+		The delta commands of the game's own container spend a byte on every pixel that changes, so a busy scene
+		at 640x480 needs more than a disc drive delivers: the ending of the original game comes to 1.8 MB a second
+		for five seconds in a row. LZ4 takes about 40% off that, and its decoder - which these builds carry for
+		the images anyway - costs little more than a copy (see @ref Jazz2::VideoFormat::CodecDeltaRleLz4).
+	*/
+	bool ProfileUsesLz4Videos(StringView value)
+	{
+		return (value == "dreamcast"_s || value == "gamecube"_s || value == "ps2"_s);
+	}
+
+	bool TryParseProfile(StringView value, TargetProfile& profile, std::int32_t& defaultVideoDownscale, bool& isN64, bool& lz4Images,
+		bool& lz4Videos)
 	{
 		defaultVideoDownscale = DefaultVideoDownscaleForProfile(value);
 		isN64 = (value == "n64"_s);
 		lz4Images = ProfileUsesLz4Images(value);
+		lz4Videos = ProfileUsesLz4Videos(value);
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
 		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s ||
@@ -325,7 +345,8 @@ namespace
 		LOGI("                         the two halves are not kept together");
 		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | ps2 | n64 |");
 		LOGI("                         emscripten. dreamcast, ps2, gamecube and n64 get their sprite sheets and");
-		LOGI("                         tilesets in LZ4, which only their builds decode");
+		LOGI("                         tilesets in LZ4, and dreamcast, gamecube and ps2 the frames of their");
+		LOGI("                         re-encoded cinematics too, which only their builds decode");
 		LOGI("    --n64-tools=<dir>    libdragon toolchain (or its \"bin\") for --target=n64, if N64_INST is not set.");
 		LOGI("                         That profile stores the sound effects, the music and the cinematics in");
 		LOGI("                         libdragon's formats, made with audioconv64, and videoconv64 with ffmpeg,");
@@ -333,10 +354,11 @@ namespace
 		LOGI("                         not (if this build has them). \"builtin\" uses those even where libdragon's");
 		LOGI("                         converters are installed");
 		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 keeps them at their original size.");
-		LOGI("                         Cinematics are re-encoded for dreamcast and ps2 (or any N > 1) and");
+		LOGI("                         Cinematics are re-encoded for dreamcast, gamecube and ps2 (or any N > 1) and");
 		LOGI("                         otherwise copied unchanged; desktop gets none, as the game reads the");
-		LOGI("                         originals. Defaults to what the profile asks for - 2 for ps2, which is");
-		LOGI("                         what that console displays - and to 1 everywhere else");
+		LOGI("                         originals. A smaller video is filtered down and gets palettes of its");
+		LOGI("                         own. Defaults to what the profile asks for - 2 for ps2, which draws it");
+		LOGI("                         smoothly upscaled - and to 1 everywhere else");
 		LOGI("    --originals-only     Convert only the episodes and levels the original game shipped");
 		LOGI("    --shareware-only     Convert only what the Shareware Demo shipped (implies --originals-only)");
 		LOGI("    --all-videos         Deploy every cinematic found, not just the two the game plays");
@@ -354,8 +376,9 @@ namespace
 		LOGI("    Replaces the palette indices of an image with the colors they stand for, so it can be edited");
 		LOGI("  to-indices <source .png> <target .png>");
 		LOGI("    Resolves the colors of an edited image back to the nearest palette indices");
-		LOGI("  recompress-video <source .j2v> <target .j2v> [--video-downscale=N]");
-		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution");
+		LOGI("  recompress-video <source .j2v> <target .j2v> [--video-downscale=N] [--target=<profile>]");
+		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution, or");
+		LOGI("    to what the profile asks for, which also decides whether the frames are written in LZ4");
 		LOGI("  convert-music <source .j2b> <target .xm>");
 		LOGI("    Translates one of the game's Galaxy Music System modules into a FastTracker II module");
 		LOGI("  swap-content <source image> [<target image>] --content=<dir>");
@@ -385,7 +408,7 @@ namespace
 	{
 		std::int32_t profileVideoDownscale = 0;
 		if (!options.ProfileName.empty() &&
-			!TryParseProfile(options.ProfileName, options.Profile, profileVideoDownscale, options.N64, options.Lz4Images)) {
+			!TryParseProfile(options.ProfileName, options.Profile, profileVideoDownscale, options.N64, options.Lz4Images, options.Lz4Videos)) {
 			LOGE("Unknown target profile \"{}\"", options.ProfileName);
 			return false;
 		}
@@ -870,7 +893,7 @@ namespace
 						LOGW("Cannot recompress \"{}\", skipping it", videoPath);
 					}
 				} else if (options.Videos == VideoHandling::Recompress) {
-					if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
+					if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale, options.Lz4Videos)) {
 						LOGW("Cannot recompress \"{}\", skipping it", videoPath);
 					}
 				} else if (!fs::Copy(videoPath, targetVideoPath)) {
@@ -940,6 +963,14 @@ namespace
 				"of the game needs, so the new content keeps to it too");
 			conversion.Lz4Images = false;
 		}
+		// The same goes for the frames of the cinematics, on a GameCube disc as well: a build older than them refuses
+		// to play them, and skips the cinematic altogether
+		if (conversion.Lz4Videos && !AssetPacker::CartridgeImage::IsCartridgeImage(options.SourcePath) &&
+			!AssetPacker::DiscImage::CarriesLz4Videos(options.SourcePath)) {
+			LOGI("The cinematics on the disc are not in LZ4, which an older build of the game needs, so the new ones are "
+				"not either");
+			conversion.Lz4Videos = false;
+		}
 
 		// Unique enough for two runs not to meet, the directory is removed again either way
 		conversion.TargetPath = fs::CombinePath(fs::GetTempDirectory(),
@@ -979,7 +1010,8 @@ namespace
 				case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
 				case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
 				case Command::RecompressVideo:
-					success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
+					success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale,
+						options.Lz4Videos);
 					if (success) {
 						LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
 							options.VideoDownscale, fs::GetFileSize(options.TargetPath));

@@ -166,7 +166,12 @@ namespace Jazz2::Actors
 
 	void Explosion::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
 	{
-		if (_lightRadiusFar > 0.0f) {
+		// A light whose intensity and brightness have both ramped to nothing adds nothing - both lighting paths clamp
+		// a light's contribution at zero - but it still costs its whole circle. The upgraded RF explosion ramps both
+		// through zero about halfway through its animation, while its ring keeps growing for the rest of it.
+		const bool lightVisible = (_lightIntensity > 0.0f || _lightBrightness > 0.0f);
+
+		if (_lightRadiusFar > 0.0f && lightVisible) {
 			auto& light1 = lights.emplace_back();
 			light1.Pos = _pos;
 			light1.Intensity = _lightIntensity;
@@ -176,20 +181,28 @@ namespace Jazz2::Actors
 		}
 
 		if (_type == Type::RFUpgraded) {
-			// RFUpgraded explosion uses ring light
-			float distance = 20.0f + (_time * 6.0f);
-			std::int32_t SegmentCount = (std::int32_t)(distance * 0.5f);
-			for (std::int32_t i = 0; i < SegmentCount; i++) {
-				float angle = i * fTwoPi / SegmentCount;
+			// RFUpgraded explosion uses ring light. It used to be one light every 4*pi px of the circumference, which
+			// is as dense as the ring is when it starts - but the lights grow with it, so towards the end ~2.2x more of
+			// them overlapped than were needed, up to 88 large lights per explosion. The spacing now stays at that
+			// starting ratio to the light's falloff, and each light is brighter by as much as there are fewer of them,
+			// so the ring sums to the same light (its mean exactly, its peaks within a few percent).
+			if (lightVisible) {
+				float distance = 20.0f + (_time * 6.0f);
+				std::int32_t denseCount = (std::int32_t)(distance * 0.5f);
+				std::int32_t segmentCount = std::clamp<std::int32_t>((std::int32_t)(fTwoPi * distance / (0.9f * (_lightRadiusFar - _lightRadiusNear))), 1, denseCount);
+				float compensation = (float)denseCount / (float)segmentCount;
+				for (std::int32_t i = 0; i < segmentCount; i++) {
+					float angle = i * fTwoPi / segmentCount;
 
-				auto& light = lights.emplace_back();
-				float sinAngle, cosAngle;
-				sincosApprox(angle, sinAngle, cosAngle);
-				light.Pos = _pos + Vector2f(cosAngle * distance, sinAngle * distance);
-				light.Intensity = _lightIntensity;
-				light.Brightness = _lightBrightness;
-				light.RadiusNear = _lightRadiusNear;
-				light.RadiusFar = _lightRadiusFar;
+					auto& light = lights.emplace_back();
+					float sinAngle, cosAngle;
+					sincosApprox(angle, sinAngle, cosAngle);
+					light.Pos = _pos + Vector2f(cosAngle * distance, sinAngle * distance);
+					light.Intensity = _lightIntensity * compensation;
+					light.Brightness = _lightBrightness * compensation;
+					light.RadiusNear = _lightRadiusNear;
+					light.RadiusFar = _lightRadiusFar;
+				}
 			}
 		} else if (_type == Type::Pepper) {
 			auto& light2 = lights.emplace_back();

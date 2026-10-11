@@ -455,7 +455,11 @@ one; `Transition.shader` carries a @cpp void fixed_function(pvr) @ce block plus 
 @cpp void fixed_function(gx, pica, gu, gs, rdp, legacygl) @ce one @m_span{m-text m-dim} (the 16-vertex strip
 scratches) @m_endspan; the two background shaders split five ways --- `pvr` with `gs`, `gu`, `rdp`, `pica`,
 and `gx` with `legacygl` --- by the two macros of their shared include @m_span{m-text m-dim} (see the warp
-below) @m_endspan; and the two water combines carry one block that lists every console. Everything else has a
+below) @m_endspan; and the two water combines split three ways --- a shared
+@cpp void fixed_function(gx, pica, gu, gs, legacygl) @ce block, an `rdp` one and a `pvr` one --- by the macros
+of their shared include @m_span{m-text m-dim} (`Include/CombineWaterFixedFunction.inc`: the `rdp` block draws
+the light variant without the light rays, because every triangle is expensive to set up there, and the `pvr`
+one cuts the wavy bands into strips its 8-vertex scratch holds) @m_endspan. Everything else has a
 single generic block --- which is the norm, since a program with no block at all for a backend is skipped at
 runtime there.
 

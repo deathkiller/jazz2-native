@@ -367,10 +367,19 @@ namespace nCine::RHI::GS
 		const std::int32_t dstRowBytes = _bufferPitch * bytesPerTexel;
 
 		if (_uploadFormat == PixelFormat::R8) {
+			// A filtered texture samples the texel beyond its last column and row too, and with `WRAP_CLAMP`
+			// clamping only at the power-of-two extent, that texel is padding: zeros there blended the colour of
+			// palette entry 0 into the right and bottom edge of an upscaled video. Repeating the edge instead is
+			// what clamping to the edge means; a point-sampled texture never reads the padding at all.
+			const bool repeatEdge = (_magFilter != nCine::SamplerFilter::Nearest || _minFilter != nCine::SamplerFilter::Nearest);
 			for (std::int32_t y = 0; y < _height; y++) {
 				std::uint8_t* dstRow = staging + std::size_t(y) * dstRowBytes;
 				std::memcpy(dstRow, _pixels.data() + std::size_t(y) * _strideBytes, std::size_t(_width));
-				std::memset(dstRow + _width, 0, std::size_t(dstRowBytes - _width));
+				std::memset(dstRow + _width, repeatEdge ? dstRow[_width - 1] : 0, std::size_t(dstRowBytes - _width));
+			}
+			if (repeatEdge && _height < storeHeight) {
+				std::memcpy(staging + std::size_t(_height) * dstRowBytes, staging + std::size_t(_height - 1) * dstRowBytes,
+					std::size_t(dstRowBytes));
 			}
 		} else if (_uploadFormat == PixelFormat::RGB565) {
 			// Expand 565 to the GS's PSMCT32; the low bits are replicated so that full-scale input stays

@@ -147,6 +147,15 @@ namespace Jazz2::Rendering
 			if (ambientUniform != nullptr) {
 				ambientUniform->SetFloatVector(_owner->_ambientLight.Data());
 			}
+			// The wave and the light rays are animated and anchored to the world like the fragment stage's
+			auto* timeUniform = command.GetMaterial().Uniform("uTime");
+			if (timeUniform != nullptr) {
+				timeUniform->SetFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);
+			}
+			auto* cameraPosUniform = command.GetMaterial().Uniform("uCameraPos");
+			if (cameraPosUniform != nullptr) {
+				cameraPosUniform->SetFloatVector(_owner->_cameraPos.Data());
+			}
 		}
 
 		renderQueue.AddCommand(&command);
@@ -379,16 +388,19 @@ namespace Jazz2::Rendering
 			}
 
 			// The texels a light can change are those within the bounds its splat clamps itself to, which is
-			// what the next frame's reset has to cover (see above)
+			// what the next frame's reset has to cover (see above). The emitters are every actor's, most of them
+			// off the screen, and a light whose bounds miss the map entirely is left out here rather than by
+			// the splat, which would find it reaches no row only after setting itself up.
 			const std::int32_t litX0 = std::max<std::int32_t>(0, (std::int32_t)(cx - rLm));
 			const std::int32_t litX1 = std::min(lmW - 1, (std::int32_t)(cx + rLm));
-			if (litX0 <= litX1) {
-				const std::int32_t litY0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
-				const std::int32_t litY1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
-				for (std::int32_t y = litY0; y <= litY1; y++) {
-					_swLitSpans[y * 2] = std::min(_swLitSpans[y * 2], litX0);
-					_swLitSpans[y * 2 + 1] = std::max(_swLitSpans[y * 2 + 1], litX1);
-				}
+			const std::int32_t litY0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
+			const std::int32_t litY1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
+			if (litX0 > litX1 || litY0 > litY1) {
+				continue;
+			}
+			for (std::int32_t y = litY0; y <= litY1; y++) {
+				_swLitSpans[y * 2] = std::min(_swLitSpans[y * 2], litX0);
+				_swLitSpans[y * 2 + 1] = std::max(_swLitSpans[y * 2 + 1], litX1);
 			}
 
 #if defined(DEATH_TARGET_PSP)

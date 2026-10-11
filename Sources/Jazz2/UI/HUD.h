@@ -124,6 +124,10 @@ namespace Jazz2::UI
 			std::int32_t VerticesCount;
 			std::int32_t LastIndex;
 			float Anim;
+			// The segment tessellation of the last two arc sizes (see DrawWeaponWheelSegment()) - all arcs of a frame
+			// but the highlight share one size, and powf() is slow on the consoles
+			float SegmentSize[2];
+			float SegmentSizePow[2];
 			bool Shown;
 
 			WeaponWheelState();

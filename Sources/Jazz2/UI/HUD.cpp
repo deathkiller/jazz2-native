@@ -1687,16 +1687,14 @@ namespace Jazz2::UI
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.2f);
 
+				// The Nintendo 64 draws the wheel without a shadow (see Font::ShadowsEnabled). The whole wheel is line
+				// strips, and the RDP draws each segment of one as two textured triangles - about 20 us of CPU each -
+				// so even a single offset copy cost as much as the wheel itself: over 3 ms of a frame, the most expensive
+				// thing on screen while it is open, on the console with the least to spare.
 				if constexpr (Font::ShadowsEnabled) {
 					DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 					DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
-				} else {
-					// The whole wheel is line strips, and the RDP draws each segment of one as its own coverage
-					// quad, so this ring of four offset copies costs four times what the wheel itself does - the
-					// most expensive thing on screen while it is open, on the console with the least to spare.
-					// One copy down and to the right still reads as a drop shadow at this size.
 					DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				}
 
@@ -1817,7 +1815,27 @@ namespace Jazz2::UI
 		height *= 0.5f; y += height;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)roundFast(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		float size = std::max(width, height);
+		if (size != state.SegmentSize[0]) {
+			if (size == state.SegmentSize[1]) {
+				std::swap(state.SegmentSize[0], state.SegmentSize[1]);
+				std::swap(state.SegmentSizePow[0], state.SegmentSizePow[1]);
+			} else {
+				state.SegmentSize[1] = state.SegmentSize[0];
+				state.SegmentSizePow[1] = state.SegmentSizePow[0];
+				state.SegmentSize[0] = size;
+				state.SegmentSizePow[0] = powf(size, 0.65f);
+			}
+		}
+		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)roundFast(state.SegmentSizePow[0] * 3.5f * angleRange / fRadAngle360), 4, 128);
+#if defined(DEATH_TARGET_N64)
+		// Every segment costs the RDP backend two textured triangles, so the arcs are drawn with four fifths of the
+		// points - still about ten degrees a segment, where a one-pixel line reads as round. The count is rounded up
+		// to an even number, which puts a whole segment rather than a corner on the middle of the arc: at this
+		// density a corner there shows as a one-pixel bump at the top of an arc. Never more than the full count.
+		const std::int32_t reducedSegmentNum = 2 * (std::int32_t)ceilFast(state.SegmentSizePow[0] * (3.5f * 0.8f) * angleRange / fRadAngle360 * 0.5f);
+		segmentNum = std::max<std::int32_t>(std::min(segmentNum, reducedSegmentNum), 4);
+#endif
 		float angleStep = angleRange / (segmentNum - 1);
 		std::int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
@@ -1896,10 +1914,11 @@ namespace Jazz2::UI
 
 		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-		auto instanceBlock = command->GetInstanceBlock();
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(1.0f, 1.0f);
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		// Resolved once per shader change instead of looked up in the block by name for every segment
+		auto* instanceUniforms = command->GetInstanceUniforms();
+		instanceUniforms->TexRect->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceUniforms->SpriteSize->SetFloatValue(1.0f, 1.0f);
+		instanceUniforms->Color->SetFloatVector(color.Data());
 
 		command->SetTransformation(Matrix4x4f::Identity);
 		command->SetLayer(z);
@@ -2263,7 +2282,7 @@ namespace Jazz2::UI
 	}
 
 	HUD::WeaponWheelState::WeaponWheelState()
-		: Anim(0.0f), LastIndex(-1), Shown(false)
+		: Anim(0.0f), LastIndex(-1), SegmentSize{-1.0f, -1.0f}, SegmentSizePow{0.0f, 0.0f}, Shown(false)
 	{
 	}
 }

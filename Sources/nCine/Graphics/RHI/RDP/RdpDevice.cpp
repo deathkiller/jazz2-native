@@ -1273,6 +1273,127 @@ namespace nCine::RHI::RDP
 			}
 		}
 
+		/**
+			@brief The run of identical texels last found in a one-row texture (see SubmitLineQuad)
+
+			Keyed like the TMEM window, by the store and its content stamp, which is unique to the content - a texture
+			freed and another loaded into the same memory has a different stamp. The run is in texels of the row.
+		*/
+		struct UniformTexelRun
+		{
+			const void* Buffer = nullptr;
+			std::uint32_t Version = 0;
+			std::int32_t S0 = 0, S1 = 0;
+		};
+		UniformTexelRun uniformTexelRun;
+
+		/**
+			@brief Whether every texel of `[s0, s1)` in a one-row 8 or 16 bpp surface is the same, and if so the whole run of them
+
+			The texels are read back from the store the RDP samples (cached memory, written back after every upload),
+			once for each run: a window inside the run last found answers without reading anything.
+		*/
+		bool FindUniformTexelRun(const DrawState& state, std::int32_t s0, std::int32_t s1, std::int32_t& runS0, std::int32_t& runS1)
+		{
+			const surface_t* surface = state.Texture;
+			if (uniformTexelRun.Buffer == surface->buffer && uniformTexelRun.Version == state.TextureVersion &&
+				s0 >= uniformTexelRun.S0 && s1 <= uniformTexelRun.S1) {
+				runS0 = uniformTexelRun.S0;
+				runS1 = uniformTexelRun.S1;
+				return true;
+			}
+			const std::int32_t width = surface->width;
+			const auto texelAt = [surface](std::int32_t s) -> std::uint32_t {
+				return (TEX_FORMAT_BITDEPTH(surface_get_format(surface)) == 16
+					? std::uint32_t(static_cast<const std::uint16_t*>(surface->buffer)[s])
+					: std::uint32_t(static_cast<const std::uint8_t*>(surface->buffer)[s]));
+			};
+			const std::uint32_t value = texelAt(s0);
+			for (std::int32_t s = s0 + 1; s < s1; s++) {
+				if (texelAt(s) != value) {
+					return false;
+				}
+			}
+			runS0 = s0;
+			runS1 = s1;
+			while (runS0 > 0 && texelAt(runS0 - 1) == value) {
+				runS0--;
+			}
+			while (runS1 < width && texelAt(runS1) == value) {
+				runS1++;
+			}
+			uniformTexelRun.Buffer = surface->buffer;
+			uniformTexelRun.Version = state.TextureVersion;
+			uniformTexelRun.S0 = runS0;
+			uniformTexelRun.S1 = runS1;
+			return true;
+		}
+
+		/**
+			@brief One segment of a textured line strip: the triangle pair SubmitQuadPrimitive() would draw, without its general cases
+
+			The weapon wheel is the only line strip on this tier, and it sent ~80 segments a frame through the general
+			quad path, which asked of every one of them whether it was a rectangle, whether its window outgrew TMEM
+			enough to need the rotated blitter (the window computed and clamped for that), and then, per triangle,
+			computed and clamped the same window again and re-applied the unchanged draw state - for two triangles
+			that sample exactly the same span, because both carry the U of both ends of the segment. This computes the
+			window once and submits the two triangles directly, with the same vertices in the same order, so the
+			commands are the ones the general path produced. The draw state is applied once per strip by the caller.
+			A segment that is a rectangle (exactly horizontal) or whose window does not fit still takes the general path.
+
+			The other half of the cost was the TMEM loads, one per segment, as every segment samples its own span of
+			the line texture. The wheel's texture is opaque white along all of its middle and fades out only at the
+			ends, so most of its segments sample texels that are all the same - and then the window does not change
+			what they draw. A texel outside the window is never read: the RDP clamps every sample to the loaded span,
+			which only ever lands on another texel of the same value as long as the whole span holds that value. So a
+			window inside such a run loads the whole run instead, through which every later segment inside the run is
+			drawn with nothing reloaded, pixel for pixel as before. The spans are compared as loaded, i.e. from the
+			word-aligned first texel the upload starts at (see AlignWindowStart), and the run is loaded from its first
+			aligned texel on, so that no texel of a different value enters either window.
+		*/
+		void SubmitLineQuad(const DrawState& state, const float* px, const float* py, const float* pu, const float* pv)
+		{
+			const bool axisAligned = (px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]);
+			// Both triangles hold corners of both ends, so they span the same texels: those of the segment's two ends
+			const float minS = std::min(pu[0], pu[2]), maxS = std::max(pu[0], pu[2]);
+			const float minT = std::min(pv[0], pv[2]), maxT = std::max(pv[0], pv[2]);
+			std::int32_t winS0 = std::int32_t(minS), winT0 = std::int32_t(minT);
+			std::int32_t winS1 = std::int32_t(maxS), winT1 = std::int32_t(maxT);
+			if (float(winS0) > minS) { winS0--; }
+			if (float(winT0) > minT) { winT0--; }
+			if (float(winS1) < maxS) { winS1++; }
+			if (float(winT1) < maxT) { winT1++; }
+			ClampWindow(state.Texture, winS0, winT0, winS1, winT1, state.Filter == FILTER_BILINEAR);
+			if (axisAligned || !WindowFits(state.Texture, winS0, winT0, winS1, winT1)) {
+				SubmitQuadPrimitive(state, px, py, pu, pv);
+				return;
+			}
+
+			const surface_t* surface = state.Texture;
+			const tex_format_t fmt = surface_get_format(surface);
+			const std::int32_t bpp = TEX_FORMAT_BITDEPTH(fmt);
+			std::int32_t runS0, runS1;
+			if (surface->height == 1 && (bpp == 8 || bpp == 16) && state.RepeatMaskS == 0 && state.RepeatMaskT == 0 &&
+				FindUniformTexelRun(state, AlignWindowStart(fmt, winS0), winS1, runS0, runS1)) {
+				// The run from its first word-aligned texel on - the segment's own span starts on a word as well, so it
+				// stays inside
+				const std::int32_t texelsPerWord = 64 / bpp;
+				const std::int32_t loadS0 = (runS0 + texelsPerWord - 1) & ~(texelsPerWord - 1);
+				if (WindowFits(surface, loadS0, winT0, runS1, winT1)) {
+					winS0 = loadS0;
+					winS1 = runS1;
+				}
+			}
+			UploadWindow(state, winS0, winT0, winS1, winT1);
+
+			const float v0[5] = { px[0], py[0], pu[0], pv[0], 1.0f };
+			const float v1[5] = { px[1], py[1], pu[1], pv[1], 1.0f };
+			const float v2[5] = { px[2], py[2], pu[2], pv[2], 1.0f };
+			const float v3[5] = { px[3], py[3], pu[3], pv[3], 1.0f };
+			rdpq_triangle(&triFmtTex[tmemCurrentSlot], v0, v1, v2);
+			rdpq_triangle(&triFmtTex[tmemCurrentSlot], v2, v1, v3);
+			if (TraceDrawStatistics) { stats.Triangles += 2; }
+		}
 
 		/**
 			@brief Draws a textured strip that is a screen rectangle sampled row by row as texture rectangles, one per row
@@ -1419,6 +1540,10 @@ namespace nCine::RHI::RDP
 				rowState.PrimColor = tintColor();
 			}
 			ApplyDrawState(rowState);
+			// The warp's tint has the same colour at both ends of a band and only its weight changes from row to row,
+			// so the colour channels are packed once and only the weight is stepped and packed per row
+			const bool tintAlphaOnly = (colors != nullptr && colorStep[0] == 0 && colorStep[1] == 0 && colorStep[2] == 0);
+			const std::uint32_t tintRgb = rowState.PrimColor & 0xFFFFFF00u;
 
 			// The texel rows a row samples: its own, and the one below for the bilinear taps. Clamped into the
 			// surface; a tap past the last row is clamped by the tile descriptor, as in every other path.
@@ -1466,9 +1591,15 @@ namespace nCine::RHI::RDP
 					UploadWindow(rowState, 0, win0, surfW, win1);
 				}
 				if (colors != nullptr) {
-					const std::uint32_t prim = tintColor();
-					for (std::int32_t i = 0; i < 4; i++) {
-						colorFix[i] += colorStep[i];
+					std::uint32_t prim;
+					if (tintAlphaOnly) {
+						prim = tintRgb | std::uint32_t(std::clamp<std::int32_t>(fromFixed(colorFix[3]), 0, 255));
+						colorFix[3] += colorStep[3];
+					} else {
+						prim = tintColor();
+						for (std::int32_t i = 0; i < 4; i++) {
+							colorFix[i] += colorStep[i];
+						}
 					}
 					if (prim != appliedState.PrimColor) {
 						rdpq_set_prim_color(color_from_packed32(prim));
@@ -1770,6 +1901,11 @@ namespace nCine::RHI::RDP
 		float PendingRgb[3] = { 0.0f, 0.0f, 0.0f };
 		bool HasPending = false;
 
+		// The last pass a shaded strip was submitted with and the state it folded into (see SubmitStripShaded)
+		FixedFunctionPass StripPass;
+		DrawState StripState;
+		bool HasStripState = false;
+
 		const float* Color() const { return InstanceColor; }
 		float TexelWidth() const { return TexelW; }
 		float TexelHeight() const { return TexelH; }
@@ -2008,6 +2144,15 @@ namespace nCine::RHI::RDP
 			HasPending = true;
 		}
 
+		/** @brief Whether two passes are the same in every field (bit for bit, like everything ApplyPassToState() reads) */
+		static bool SamePass(const FixedFunctionPass& a, const FixedFunctionPass& b)
+		{
+			return (SameBits<4>(a.Color, b.Color) && SameBits<3>(a.OffsetColor, b.OffsetColor) &&
+				SameBits<2>(a.ScreenOffset, b.ScreenOffset) && SameBits<1>(&a.LumaGain, &b.LumaGain) &&
+				a.HasOffsetColor == b.HasOffsetColor && a.TextureRepeat == b.TextureRepeat &&
+				a.Blend == b.Blend && a.Tev == b.Tev);
+		}
+
 		/** @brief Whether @p pass differs from the pending one only in the colour that is being accumulated */
 		bool CanMergeInto(const FixedFunctionPass& pass) const
 		{
@@ -2060,8 +2205,17 @@ namespace nCine::RHI::RDP
 				return;
 			}
 			FlushPendingQuad();
-			DrawState state = *Material;
-			ApplyPassToState(state, pass, pass.Color);
+			// The warp submits its ~40 bands with one and the same pass, which folds into the same state every time
+			DrawState state;
+			if (HasStripState && SamePass(pass, StripPass)) {
+				state = StripState;
+			} else {
+				state = *Material;
+				ApplyPassToState(state, pass, pass.Color);
+				StripPass = pass;
+				StripState = state;
+				HasStripState = true;
+			}
 			if (pass.Tev == FixedFunctionPass::TevPreset::TintMix && state.Texture != nullptr) {
 				state.Combiner = CombShadeTintMix;
 				SubmitStripPrimitive(state, StripX, StripY, StripU, StripV, count, &StripColor[0][0],
@@ -2592,6 +2746,7 @@ namespace nCine::RHI::RDP
 		}
 	}
 
+
 	void RdpDevice::PresentFrame()
 	{
 		if (!_rdpInitialized) {
@@ -2635,6 +2790,7 @@ namespace nCine::RHI::RDP
 			}
 			::write(STDERR_FILENO, "FBDUMP:END\n", 11);
 		}
+
 
 		// Schedules the display flip behind the RDP's completion and returns immediately, so the CPU
 		// builds the next frame while the RDP finishes this one (display_get() at the next frame's first
@@ -3610,6 +3766,8 @@ namespace nCine::RHI::RDP
 			return;
 		}
 		ApplyScissor();
+		// Every segment is drawn under the same state, so it is applied here once (see SubmitLineQuad)
+		ApplyDrawState(state);
 
 		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
 		Recti viewport;
@@ -3649,7 +3807,7 @@ namespace nCine::RHI::RDP
 				const float py[4] = { prevY + ny, prevY - ny, curY + ny, curY - ny };
 				const float pu[4] = { prevU, prevU, curU, curU };
 				const float pvv[4] = { prevV, prevV, curV, curV };
-				SubmitQuadPrimitive(state, px, py, pu, pvv);
+				SubmitLineQuad(state, px, py, pu, pvv);
 			}
 
 			prevX = curX; prevY = curY; prevU = curU; prevV = curV;

@@ -23,7 +23,9 @@ namespace Jazz2::Actors::Solid
 		// into the lift pose and stops them moving while they are merely standing underneath; and a solid
 		// box cannot be sloped, while the original's paddle surface drops a consistent 0.3 px for every
 		// pixel away from its mounted end. The paddle carries the player itself in OnUpdate() instead.
-		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation | ActorState::IsSolidObject, false);
+		// Nor can it be frozen: it is part of the table, so a freezer shot passes through it like it does through
+		// a checkpoint, instead of stopping on it and switching the paddle off.
+		SetState(ActorState::CollideWithTileset | ActorState::ApplyGravitation | ActorState::IsSolidObject | ActorState::CanBeFrozen, false);
 
 		async_await RequestMetadataAsync("Object/PinballPaddle"_s);
 
@@ -35,10 +37,6 @@ namespace Jazz2::Actors::Solid
 
 	void PinballPaddle::OnUpdate(float timeMult)
 	{
-		if (_frozenTimeLeft > 0.0f) {
-			return;
-		}
-
 		// Nothing is carried while a launch is in flight. The player is still well inside the catch band on
 		// the frame after one - they have moved about eight pixels - so carrying them there would snap them
 		// straight back down onto the surface and undo the launch entirely. The cooldown is long enough for

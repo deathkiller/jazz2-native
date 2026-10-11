@@ -28,6 +28,12 @@ namespace Jazz2
 		A flag byte (bit 0 --- a 256 entry BGRA palette follows), then commands until @ref CommandEndOfFrame.
 		Skipped spans are left as they are, which is what makes an unchanged region free: the frame buffer
 		already holds the previous frame.
+
+		@par LZ4-compressed payloads
+		With @ref CodecDeltaRleLz4, each payload starts with a @cb{.cpp} u32 @ce size of the frame payload
+		described above, followed by that payload compressed as one LZ4 block --- or, where compressing it would
+		not make it smaller, a size of zero and the payload as it is. The codec is the header's choice, so a
+		player that does not know it refuses the file rather than misreading it.
 	*/
 	struct VideoFormat
 	{
@@ -40,6 +46,8 @@ namespace Jazz2
 		static constexpr std::uint8_t PixelFormatIndexed8 = 0;
 		/** @brief Per-frame changes as skip/literal/run commands (see @ref VideoFormat) */
 		static constexpr std::uint8_t CodecDeltaRle = 0;
+		/** @brief The same commands, with each frame's payload compressed as an LZ4 block (see @ref VideoFormat) */
+		static constexpr std::uint8_t CodecDeltaRleLz4 = 1;
 
 		/** @brief Set in a frame's flag byte when a palette precedes its commands */
 		static constexpr std::uint8_t FrameFlagPalette = 0x01;

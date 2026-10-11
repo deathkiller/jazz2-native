@@ -246,42 +246,105 @@ namespace nCine::RHI::RDP
 			}
 		}
 
-		// CombineWithWater - from CombineWithWater.shader:fixed_function(pvr, gx, pica, gu, gs, rdp, legacygl)
-		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(pvr, gx, pica, gu, gs, rdp, legacygl)]
+		// CombineWithWater - from CombineWithWater.shader:fixed_function(rdp)
+		// Shared by: CombineWithWater, CombineWithWaterLow [CombineWithWaterLow.shader:fixed_function(rdp)]
 		void CombineWithWater_Effect(EffectContext& ctx)
 		{
 			using namespace ff;
 			if (ctx.HasUniform("uWaterLevel")) {
 				vec2 origin = vec2(ctx.QuadOriginX(), ctx.QuadOriginY());
-				vec2 axisX = vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy());
-				vec2 axisY = vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy());
+				float viewW = vec2(ctx.QuadAxisXx(), ctx.QuadAxisXy()).x;
+				float viewH = vec2(ctx.QuadAxisYx(), ctx.QuadAxisYy()).y;
+				float leftX = origin.x;
+				float rightX = origin.x + viewW;
+				float topY = origin.y;
+				float bottomY = origin.y + viewH;
+				float invViewH = 1.0f / viewH;
 				float level = UniformFloat(ctx, "uWaterLevel");
-				vec2 waterline = origin + level * axisY;
+				float waterY = topY + level * viewH;
+				float time = UniformFloat(ctx, "uTime");
+				vec2 camera = UniformVec2(ctx, "uCameraPos");
+				vec4 ambient = UniformVec4(ctx, "uAmbientColor");
 				FixedFunctionPass p;
 				p.Blend = FixedFunctionPass::BlendMode::Alpha;
-				if (level < 1.0f) {
-					StripPosition(ctx, 0, waterline);
-					StripPosition(ctx, 1, waterline + axisX);
-					StripPosition(ctx, 2, origin + axisY);
-					StripPosition(ctx, 3, origin + axisY + axisX);
-					StripColor(ctx, 0, vec4(0.4f, 0.6f, 0.8f, 0.4f));
-					StripColor(ctx, 1, vec4(0.4f, 0.6f, 0.8f, 0.4f));
-					StripColor(ctx, 2, vec4(0.4f, 0.6f, 0.8f, 0.4f));
-					StripColor(ctx, 3, vec4(0.4f, 0.6f, 0.8f, 0.4f));
-					ctx.SubmitStripShaded(p, 4);
-				}
-				vec4 ambient = UniformVec4(ctx, "uAmbientColor");
+				vec4 waveScale = vec4(60.0f, 20.0f, 35.0f, 70.0f) * 0.15915494f;
+				float worldX = camera.x / viewW;
+				vec4 waveBase = vec4((worldX - time) * waveScale.x + 0.25f, (worldX - 2.0f * time) * waveScale.y + 0.25f, (worldX + 2.0f * time) * waveScale.z, (worldX + 4.0f * time) * waveScale.w + 0.25f);
+				waveBase = waveBase - floor(waveBase);
+				vec4 waveAmp = vec4(0.0f, 0.0072f, 0.0f, 0.0f) * viewH;
+				float waveMax = 0.0072f * viewH;
+				float segmentCount = float(2 * 5);
+				bool wavy = waterY + waveMax > topY && waterY - waveMax < bottomY;
 				if (level < 0.4f && level > 0.0f) {
 					vec4 above = vec4(ambient.x, ambient.y, ambient.z, 0.4f - level);
-					StripPosition(ctx, 0, origin);
-					StripPosition(ctx, 1, origin + axisX);
-					StripPosition(ctx, 2, waterline);
-					StripPosition(ctx, 3, waterline + axisX);
+					float crestY = clamp(waterY, topY, bottomY);
+					StripPosition(ctx, 0, vec2(leftX, topY));
+					StripPosition(ctx, 1, vec2(rightX, topY));
+					StripPosition(ctx, 2, vec2(leftX, crestY));
+					StripPosition(ctx, 3, vec2(rightX, crestY));
 					StripColor(ctx, 0, above);
 					StripColor(ctx, 1, above);
 					StripColor(ctx, 2, above);
 					StripColor(ctx, 3, above);
 					ctx.SubmitStripShaded(p, 4);
+				}
+				if (level < 1.0f) {
+					float lineY = waterY + waveMax + max(viewH * 0.008f, 1.5f);
+					float y0 = clamp(waterY, topY, bottomY);
+					float y1 = clamp(lineY, topY, bottomY);
+					float y2 = clamp(waterY + viewH * (1.0f / 3.0f), topY, bottomY);
+					float y3 = clamp(waterY + viewH * (2.0f / 3.0f), topY, bottomY);
+					float t0 = max(1.0f - (y0 - waterY) * invViewH, 0.0f);
+					float t1 = max(1.0f - (y1 - waterY) * invViewH, 0.0f);
+					float t2 = max(1.0f - (y2 - waterY) * invViewH, 0.0f);
+					float t3 = max(1.0f - (y3 - waterY) * invViewH, 0.0f);
+					float t4 = max(1.0f - (bottomY - waterY) * invViewH, 0.0f);
+					float g0 = 0.1f * t0 * t0 + (waterY > topY ? 0.3f : 0.0f);
+					float g1 = 0.1f * t1 * t1;
+					float g2 = 0.1f * t2 * t2;
+					float g3 = 0.1f * t3 * t3;
+					float g4 = 0.1f * t4 * t4;
+					float a0 = 0.4f + 0.6f * g0;
+					float a1 = 0.4f + 0.6f * g1;
+					float a2 = 0.4f + 0.6f * g2;
+					float a3 = 0.4f + 0.6f * g3;
+					float a4 = 0.4f + 0.6f * g4;
+					vec4 c0 = vec4((vec3(0.4f, 0.6f, 0.8f) * (0.4f * (1.0f - g0)) + g0) * (1.0f / a0), a0);
+					vec4 c1 = vec4((vec3(0.4f, 0.6f, 0.8f) * (0.4f * (1.0f - g1)) + g1) * (1.0f / a1), a1);
+					vec4 c2 = vec4((vec3(0.4f, 0.6f, 0.8f) * (0.4f * (1.0f - g2)) + g2) * (1.0f / a2), a2);
+					vec4 c3 = vec4((vec3(0.4f, 0.6f, 0.8f) * (0.4f * (1.0f - g3)) + g3) * (1.0f / a3), a3);
+					vec4 c4 = vec4((vec3(0.4f, 0.6f, 0.8f) * (0.4f * (1.0f - g4)) + g4) * (1.0f / a4), a4);
+					if (wavy) {
+						for (int s = 0; s < 2; s++) {
+							for (int j = 0; j <= 5; j++) {
+								float u = float(s * 5 + j) / segmentCount;
+								vec4 ph = waveBase + waveScale * u + 0.5f;
+								ph = (ph - floor(ph)) * 2.0f - 1.0f;
+								vec4 sy = 4.0f * ph * (1.0f - vec4(abs(ph.x), abs(ph.y), abs(ph.z), abs(ph.w)));
+								sy = sy * (0.775f + 0.225f * vec4(abs(sy.x), abs(sy.y), abs(sy.z), abs(sy.w))) * waveAmp;
+								float x = leftX + u * viewW;
+								StripPosition(ctx, 2 * j, vec2(x, clamp(waterY + sy.x + sy.y + sy.z + sy.w, topY, bottomY)));
+								StripPosition(ctx, 2 * j + 1, vec2(x, y1));
+								StripColor(ctx, 2 * j, c0);
+								StripColor(ctx, 2 * j + 1, c1);
+							}
+							ctx.SubmitStripShaded(p, 2 * 5 + 2);
+						}
+					}
+					StripPosition(ctx, 0, vec2(leftX, y1));
+					StripPosition(ctx, 1, vec2(rightX, y1));
+					StripPosition(ctx, 2, vec2(leftX, bottomY));
+					StripPosition(ctx, 3, vec2(rightX, bottomY));
+					StripColor(ctx, 0, c1);
+					StripColor(ctx, 1, c1);
+					StripColor(ctx, 2, c4);
+					StripColor(ctx, 3, c4);
+					ctx.SubmitStripShaded(p, 4);
+					float rayEnd = topY + viewH * (1.0f / 1.4f);
+					float fadeIn = viewH * 0.06f;
+					float yA = max(waterY, topY);
+					float yB = max(waterY + fadeIn, topY);
+					float rayStrength = 0.25f * clamp(ambient.w, 0.0f, 1.0f);
 				}
 			}
 		}

@@ -132,8 +132,9 @@ consumes the same layout:
 
 `--target=` | For | Cinematics
 ----------- | --- | ----------
-`console` | Every console below except the Dreamcast @m_span{m-text m-dim} (`wii`, `gamecube` and `psp` are accepted spellings of it and do exactly the same thing) @m_endspan | The original `.j2v` files copied unchanged
-`dreamcast` | @ref consoles-dreamcast "Sega Dreamcast" | Re-encoded into @ref Jazz2::VideoFormat, whose decoder is a @cpp memcpy() @ce --- the SH-4 cannot inflate the original container inside a frame
+`console` | Every console below except the Dreamcast and the GameCube @m_span{m-text m-dim} (`wii` and `psp` are accepted spellings of it and do exactly the same thing) @m_endspan | The original `.j2v` files copied unchanged
+`dreamcast` | @ref consoles-dreamcast "Sega Dreamcast" | Re-encoded into @ref Jazz2::VideoFormat, whose decoder is a @cpp memcpy() @ce behind an LZ4 block per frame --- the SH-4 cannot inflate the original container inside a frame
+`gamecube` | @ref consoles-gamecube "Nintendo GameCube" | Re-encoded the same way --- the original's four interleaved streams cannot be read from the disc as fast as they are consumed
 
 @m_class{m-noindent}
 
@@ -399,7 +400,12 @@ The buffer formats of @ref nCine::IAudioDevice are **native-endian**, which is w
 decoder produces. The WAVE and Vorbis readers therefore byte-swap 16-bit samples on a big-endian
 target @m_span{m-text m-dim} (Vorbis for free, by asking `ov_read()` for big-endian packing)
 @m_endspan --- without that, every `.wav` sound effect would come out as noise on the two PowerPC
-consoles.
+consoles. The module decoder needs the same care one level down: libxmp converts the 16-bit
+samples inside a module to native order only when it is compiled with `WORDS_BIGENDIAN` on a
+big-endian target. Its own build system defines that, so the from-source build that replaces it
+sets the macro from the target's byte order instead @m_span{m-text m-dim} (`cmake/Findlibxmp.cmake`)
+@m_endspan --- without it the 16-bit samples of `.it`, `.s3m`, `.xm` and `.j2b` modules play as
+loud noise over the rest of the track on the GameCube and the Wii.
 
 @subsection consoles-common-logging Getting a log out of a console
 
@@ -1415,7 +1421,8 @@ make -j $(nproc) -C ./build/gamecube/
 @m_class{m-noindent}
 
 The tree is best prepared with `--target=gamecube`, which writes the sprite sheets and tilesets in LZ4
-(see @ref asset-packer-lz4); a generic `console` tree plays as well. The build stages the same content
+(see @ref asset-packer-lz4) and re-encodes the cinematics into @ref Jazz2::VideoFormat; a generic
+`console` tree plays as well, but its intro falls far behind its music. The build stages the same content
 twice --- as a disc image, and as the layout of an SD card --- because the GameCube has no Homebrew
 Channel and reads the card directly:
 
@@ -1924,22 +1931,22 @@ anything else can fail, so the console always has a way out even if initializati
     from 23% to 13.5% of the CPU in a level with busy music) @m_endspan, and it reads the game's original
     `.j2b` modules directly. What it does not read is **MO3**, so the four `.mo3` tracks are silent;
     everything else plays.
--   **Everything is mixed at 22050 Hz here by default, not the hardware's 44100.** A module mixer's
+-   **Everything is mixed at the hardware's 44100 Hz by default, and can be halved.** A module mixer's
     cost scales with its output rate, and this one is the most expensive thing the Allegrex is asked to
-    do outside the renderer: measured in `prince/02_castle1n`, mixing at 44100 Hz cost around 420 ms of
-    every second --- more CPU than the whole renderer. Half the rate is half of that, for music that
-    comes out of a pair of centimetre-wide speakers, and the samples inside the original modules were
-    recorded at around this rate to begin with. The module decoder renders at the device's mixing rate
-    @m_span{m-text m-dim} (@ref nCine::IAudioDevice::nativeFrequency()) @m_endspan, and the sound
-    effects mixer runs at it too: @ref nCine::PspAudioDevice mixes its sources at a **mixing rate** and
-    upsamples each block to 44100 Hz with a linear interpolation on the way out, so at the default the
-    per-source loop --- where the mixer's time goes --- runs half as often. The rate is the
-    **"Sample Rate"** option in Options > Sounds @m_span{m-text m-dim} (11025, 22050 or 44100 Hz here;
-    the last is the hardware's own rate, at twice the default's cost for the music, which a busy level
-    may not have to spare) @m_endspan, stored in @ref Jazz2::PreferencesCache::AudioSampleRate and
-    applied through @ref nCine::IAudioDevice::setMixingFrequency(). Effects follow at once, the music
-    when the next stream is opened (the menu reopens its own on leaving the section), because a stream
-    keeps decoding at the rate it was opened with.
+    do outside the renderer: measured in `prince/02_castle1n` before its double-precision math was taken
+    over @m_span{m-text m-dim} (see @ref consoles-common-skips) @m_endspan, mixing at 44100 Hz cost
+    around 420 ms of every second --- more CPU than the whole renderer was then. With that and the
+    renderer's own savings the game holds 60 fps at the full rate on hardware, so that is the default.
+    The module decoder renders at the device's mixing rate @m_span{m-text m-dim}
+    (@ref nCine::IAudioDevice::nativeFrequency()) @m_endspan, and the sound effects mixer runs at it too:
+    @ref nCine::PspAudioDevice mixes its sources at a **mixing rate** and, when that is below 44100 Hz,
+    upsamples each block with a linear interpolation on the way out, so at half the rate the per-source
+    loop --- where the mixer's time goes --- runs half as often and the decoder costs half as much. The
+    rate is the **"Sample Rate"** option in Options > Sounds @m_span{m-text m-dim} (22050 or 44100 Hz
+    here) @m_endspan, stored in @ref Jazz2::PreferencesCache::AudioSampleRate and applied through
+    @ref nCine::IAudioDevice::setMixingFrequency(). Effects follow at once, the music when the next
+    stream is opened (the menu reopens its own on leaving the section), because a stream keeps decoding
+    at the rate it was opened with.
 -   **This platform's libm is startlingly slow --- a `sinf()` costs about 13.5 us, some 4500 cycles.**
     That is enough for a handful of light sources flickering to cost several milliseconds a frame on
     their own, so anything that only drives appearance --- a flicker phase, a pulse, an orbit --- goes
@@ -2182,8 +2189,10 @@ which is both more than this console can inflate inside a frame and four times t
 display, since the player caps the frame texture at the 640x448 drawable and then picks every second
 index back out on the CPU, per frame. `ps2` re-encodes them into the game's own container
 @m_span{m-text m-dim} (whose decoder is @cb{.cpp} memcpy @ce and @cb{.cpp} memset @ce over a reused
-frame buffer --- see @ref Jazz2::VideoFormat) @m_endspan **at 320x240**, which is exactly what ends
-up on screen. The same trade is available to any profile through `--video-downscale=`.
+frame buffer, each frame an LZ4 block --- see @ref Jazz2::VideoFormat) @m_endspan **at 320x240**, filtered down rather than
+picked apart (see @ref asset-packer-cinematics-format), and the player draws that smoothly upscaled.
+A quarter of the pixels is a quarter of the data to read from the disc, which this console does on
+the thread that draws. The same trade is available to any profile through `--video-downscale=`.
 @par
 A tree from `console` still plays; it is just the slow way round. A tree from `ps2` is equally
 usable on the other consoles, which would simply be showing a smaller cinematic than they could.

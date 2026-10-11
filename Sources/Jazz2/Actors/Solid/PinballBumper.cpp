@@ -29,9 +29,9 @@ namespace Jazz2::Actors::Solid
 
 	void PinballBumper::OnUpdate(float timeMult)
 	{
-		if (_frozenTimeLeft > 0.0f) {
-			return;
-		}
+		// A frozen bumper still bumps - the freezer only turns it to ice on screen, with the frozen shader and its
+		// animation held until it thaws
+		UpdateFrozenState(timeMult);
 
 		if (_cooldown <= 0.0f) {
 			// Measured against the original by dropping the player past a bumper at a set horizontal offset,
@@ -43,7 +43,11 @@ namespace Jazz2::Actors::Solid
 				if (auto* player = runtime_cast<Player>(actor)) {
 					_cooldown = 16.0f;
 
-					SetTransition(_currentAnimation->State | (AnimState)0x200, true);
+					// Not while frozen: the animation is held then, so the hit would sit on its first frame and
+					// only play out once the ice is gone
+					if (_frozenTimeLeft <= 0.0f) {
+						SetTransition(_currentAnimation->State | (AnimState)0x200, true);
+					}
 					PlaySfx("Hit"_s, 0.8f);
 
 					// Move the player back

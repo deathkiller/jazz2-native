@@ -201,6 +201,24 @@ namespace Jazz2::Rendering::SoftwareLighting
 		const std::int32_t bx0 = std::max<std::int32_t>(0, (std::int32_t)(cx - rLm));
 		const std::int32_t bx1 = std::min(lmW - 1, (std::int32_t)(cx + rLm));
 
+#if defined(DEATH_TARGET_N64)
+		// The horizontal half of a texel's squared distance depends on its column alone, so it is computed once per
+		// column of the light rather than in every row of it: three float operations a texel fewer, in loops that
+		// are chains of dependent ones. It is the same product of the same two floats - the column's coordinate,
+		// a whole number the texel loops count up to exactly, and the same scale - and the VR4300 has no fused
+		// multiply-add that could round the sum differently, so every texel comes out bit-identical.
+		constexpr std::int32_t MaxColumnTerms = 64;
+		float columnTerms[MaxColumnTerms];
+		const bool hasColumnTerms = (bx1 - bx0 < MaxColumnTerms);
+		if (hasColumnTerms) {
+			const float columnScale = (Coreless ? invRLmScaled : invRLm);
+			for (std::int32_t x = bx0; x <= bx1; x++) {
+				const float dx = (float(x) - cx) * columnScale;
+				columnTerms[x - bx0] = dx * dx;
+			}
+		}
+#endif
+
 		for (std::int32_t y = y0; y <= y1; y++) {
 			const float dy = (y - cy) * invRLm;
 			const float dySq = dy * dy;
@@ -224,9 +242,21 @@ namespace Jazz2::Rendering::SoftwareLighting
 				// Distance()'s 1024 steps per unit - so the scale is folded into the two terms instead: (32 dx)^2 +
 				// 1024 dy^2 is the very float (dx^2 + dy^2) * 1024 is, as scaling by a power of two commutes with the
 				// rounding, for one multiplication a texel fewer. The texel's coordinate counts up as a float (exact
-				// at any lightmap size) instead of being converted from the integer every time.
+				// at any lightmap size) instead of being converted from the integer every time. Two texels an
+				// iteration: one texel is a single chain of dependent float operations and a table load, which the
+				// in-order VR4300 waits out stage by stage, and a second, independent one fills those waits.
 				const float dySqScaled = dySq * 1024.0f;
+				if (hasColumnTerms) {
+#pragma GCC unroll 2
+					for (std::int32_t x = xs; x <= xe; x++, row += 2) {
+						const float strength = corelessFalloff[std::min<std::int32_t>(std::int32_t(columnTerms[x - bx0] + dySqScaled), 1025)];
+						row[0] += strength * intensity;
+						row[1] += strength * brightness;
+					}
+					continue;
+				}
 				float fx = float(xs);
+#pragma GCC unroll 2
 				for (std::int32_t x = xs; x <= xe; x++, row += 2, fx += 1.0f) {
 					const float dxScaled = (fx - cx) * invRLmScaled;
 					const float strength = corelessFalloff[std::min<std::int32_t>(std::int32_t(dxScaled * dxScaled + dySqScaled), 1025)];
@@ -252,6 +282,27 @@ namespace Jazz2::Rendering::SoftwareLighting
 
 			// Left annulus segment [xs, cs), the core [cs, ce], the right segment (ce, xe]
 			std::int32_t x = xs;
+#if defined(DEATH_TARGET_N64)
+			if (hasColumnTerms) {
+#pragma GCC unroll 4
+				for (; x < cs; x++, row += 2) {
+					const float strength = FalloffStrength(Distance(columnTerms[x - bx0] + dySq), invDenom);
+					row[0] += strength * intensity;
+					row[1] += strength * brightness;
+				}
+				for (; x <= ce; x++, row += 2) {
+					row[0] += intensity;
+					row[1] += brightness;
+				}
+#pragma GCC unroll 4
+				for (; x <= xe; x++, row += 2) {
+					const float strength = FalloffStrength(Distance(columnTerms[x - bx0] + dySq), invDenom);
+					row[0] += strength * intensity;
+					row[1] += strength * brightness;
+				}
+				continue;
+			}
+#endif
 			float fx = (float)x;
 #pragma GCC unroll 4
 			for (; x < cs; x++, row += 2, fx += 1.0f) {

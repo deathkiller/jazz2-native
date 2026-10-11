@@ -9,6 +9,10 @@
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 #include "../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../nCine/Input/InputEvents.h"
+#if defined(WITH_THREADS)
+#	include "../../nCine/Threading/Thread.h"
+#	include "../../nCine/Threading/ThreadSync.h"
+#endif
 
 #include <Containers/Pair.h>
 #include <Containers/SmallVector.h>
@@ -231,6 +235,14 @@ namespace Jazz2::UI
 		/** @brief Set when the file uses the game's own format instead of the original one */
 		bool _nativeFormat;
 		/**
+			@brief Set when the frames of the game's own format are LZ4-compressed (see @ref VideoFormat::CodecDeltaRleLz4)
+
+			The delta commands spend a byte on every pixel that changed, which at 640x480 comes to 1.8 MB a second
+			for five seconds in the busiest stretch of the ending - more than the disc drives of the consoles that
+			play it can deliver. LZ4 takes more than a third off that, and decompressing a block is close to a plain copy.
+		*/
+		bool _lz4Payloads;
+		/**
 			@brief Whether the frames are converted to RGB565 on the CPU instead of uploaded as indices
 
 			Indexed frames are the cheaper choice wherever the hardware can sample them as they are, but the
@@ -240,7 +252,18 @@ namespace Jazz2::UI
 			a plain row copy, and a 16-bit palette makes the conversion one lookup and one store per pixel.
 		*/
 		bool _convertTo565;
-		/** @brief Whole converted frame, only used where the texture's storage cannot be written directly */
+		/**
+			@brief Whether the decoder keeps @ref _frame565 current itself, converting only the pixels each frame writes
+
+			Converting every pixel of a 640x480 frame was most of the 11.7 ms the Dreamcast spent on getting one
+			to the screen, and the average frame of the intro changes 13% of them - the native format says
+			exactly which ones, so only those are converted, while they are decoded. A new palette changes the
+			color of every pixel, so the frame that brings one is still converted as a whole.
+		*/
+		bool _incremental565;
+		/** @brief Set when the decoder did not patch @ref _frame565 for the current frame, which is then converted as a whole */
+		bool _frame565Stale;
+		/** @brief Whole converted frame - kept current by the decoder (see @ref _incremental565), or used where the texture's storage cannot be written directly */
 		std::unique_ptr<std::uint16_t[]> _frame565;
 		/** @brief One converted row, small enough to stay in the cache between converting it and copying it out */
 		std::unique_ptr<std::uint16_t[]> _frameRow;
@@ -255,34 +278,172 @@ namespace Jazz2::UI
 		std::uint32_t _uploadPalette[256];
 		bool _paletteTextureDirty;
 
-		/** @brief Scratch buffer for a frame whose payload does not fit in the block buffer (e.g., the keyframe of a full-resolution video) */
+		/** @brief Scratch buffer for a frame whose payload is not contiguous in the read-ahead ring (it wraps around its end, or is larger than the ring) */
 		std::unique_ptr<std::uint8_t[]> _framePayload;
 		std::uint32_t _framePayloadCapacity;
+		/** @brief Scratch buffer the payload of an LZ4-compressed frame is decompressed into */
+		std::unique_ptr<std::uint8_t[]> _decompressedPayload;
+		std::uint32_t _decompressedPayloadCapacity;
 
 		/**
-			@brief Sequential read-ahead buffer for the native format
+			@brief Sequential read-ahead of the native format, kept topped up while the video plays
 
 			Each frame is only a few kilobytes, and asking the drive for them one at a time is dominated by
 			per-request overhead - measured at 58 ms per frame on average with spikes past half a second, far
-			more than the transfer itself. Reading in large blocks amortizes that: one request covers several
-			seconds of video, and the frames are then served from memory.
-		*/
-		static constexpr std::uint32_t VideoBlockCapacity =
-#if defined(DEATH_TARGET_DREAMCAST)
-			1024 * 1024;
-#else
-			256 * 1024;
-#endif
-		/** @brief Alignment both the destination and the file offset need for the DMA path (see EnsureBuffered) */
-		static constexpr std::uint32_t VideoBlockAlignment = 32;
-		std::unique_ptr<std::uint8_t[]> _blockAllocation;
-		std::uint8_t* _blockBuffer;
-		std::uint32_t _blockSize;
-		std::uint32_t _blockOffset;
-		std::int64_t _blockFilePosition;
+			more than the transfer itself. So the file is read in pieces of tens of kilobytes into a ring, and
+			the frames are decoded out of it. What matters just as much is WHEN those pieces are read. Reading a
+			whole block only once it has run dry stalls the video for as long as the drive takes to deliver it:
+			a 256 KB block measured about 200 ms on the PlayStation 2 and the GameCube and a 1 MB one more than
+			half a second on the Dreamcast (in their emulators, which model the drives' speed), every one of
+			them a visible freeze, lost against the music. The ring is therefore refilled piece by piece long
+			before it runs dry:
 
-		/** @brief Makes sure at least @p bytes are buffered, refilling from the file when needed */
-		bool EnsureBuffered(std::uint32_t bytes);
+			- Where there are threads, a reader thread does it. The optical drives of these consoles transfer by
+			  DMA while the thread sleeps on the driver, so the frames keep being decoded and presented while the
+			  disc is read - the read costs the main thread nothing at all.
+			- Elsewhere it happens on rendered frames that do not decode a video frame (at 60 Hz that is most of
+			  them, the video runs at 24), one piece at a time, sized to fit into the time such a frame otherwise
+			  spends waiting for the display.
+
+			A read only has to happen synchronously when a frame is needed before the read-ahead could deliver
+			it, which is the old behaviour, now the exception.
+
+			Where the frames are LZ4-compressed and there is a reader thread, a second thread decompresses them,
+			a few frames ahead into slots the main thread takes them from (see @ref AcquireFrame()). These
+			consoles have a single core, so this is not about doing two things at once: running below the main
+			thread, it only gets the time the main thread spends waiting for the display, which decompressing on
+			the main thread took out of the frame instead. It is a thread of its own because the reader thread
+			spends most of a busy scene blocked on the drive, and decompressing there would wait for every read.
+		*/
+		class VideoReader
+		{
+		public:
+			/** @brief Alignment both the destination and the file offset need for the Dreamcast's DMA path */
+			static constexpr std::uint32_t Alignment = 32;
+
+			VideoReader();
+			~VideoReader();
+
+			VideoReader(const VideoReader&) = delete;
+			VideoReader& operator=(const VideoReader&) = delete;
+
+			/** @brief Prepares reading @p file from @p dataOffset into a ring of @p capacity bytes in pieces of @p pieceSize */
+			bool Initialize(Stream* file, std::int64_t dataOffset, std::uint32_t capacity, std::uint32_t pieceSize);
+			/**
+				@brief Starts reading
+
+				@p prefillPieces are read right away, before anything is decoded; the rest follows in the
+				background (if @p background is set) or through @ref Pump(). With @p decompressAhead (only together
+				with @p background, and only for LZ4-compressed frames) the frames are taken with @ref AcquireFrame().
+			*/
+			bool Start(std::uint32_t prefillPieces, bool background, bool decompressAhead = false);
+			/** @brief Stops the reader thread, if any; reading through this object afterwards is not allowed */
+			void Shutdown();
+
+			/**
+				@brief Returns @p bytes contiguous bytes at the read position, waiting for them or reading them if needed
+
+				Returns @cpp nullptr @ce if they are not contiguous in the ring (the caller then uses @ref ReadInto())
+				or if the file ends first (then @p endOfFile is set).
+			*/
+			const std::uint8_t* Peek(std::uint32_t bytes, bool& endOfFile);
+			/** @brief Copies @p bytes into @p destination and consumes them, waiting for them or reading them if needed */
+			bool ReadInto(std::uint8_t* destination, std::uint32_t bytes);
+			/** @brief Releases @p bytes at the read position (previously returned by @ref Peek()) back to the reader */
+			void Consume(std::uint32_t bytes);
+			/** @brief Reads one piece ahead if there is room for it - only for a reader without a thread */
+			void Pump();
+			/** @brief Whether the reader runs on its own thread */
+			bool IsBackground() const {
+				return _background;
+			}
+			/** @brief Whether a thread decompresses the frames ahead, which are then taken with @ref AcquireFrame() */
+			bool IsDecompressingAhead() const {
+				return _decompressAhead;
+			}
+#if defined(WITH_THREADS)
+			/**
+				@brief Takes the next frame's payload, decompressed, waiting for it if it is not ready yet
+
+				Returns `false` at the end of the file or for a malformed frame. The payload stays valid until
+				@ref ReleaseFrame().
+			*/
+			bool AcquireFrame(const std::uint8_t*& payload, std::uint32_t& size);
+			/** @brief Hands the slot of the frame taken by @ref AcquireFrame() back to the decompressing thread */
+			void ReleaseFrame();
+#endif
+
+		private:
+			Stream* _file;
+			std::unique_ptr<std::uint8_t[]> _allocation;
+			std::uint8_t* _data;
+			std::uint32_t _capacity;
+			std::uint32_t _pieceSize;
+			// Positions in the ring; `_filled` bytes from `_readPos` onwards are valid. The producer only ever
+			// writes the free part of the ring and the consumer only reads the filled part, so the data itself
+			// needs no lock - only the counters that hand the regions over do.
+			std::uint32_t _readPos;
+			std::uint32_t _writePos;
+			std::uint32_t _filled;
+			// Bytes before the first frame that were only read to keep the file offset aligned
+			std::uint32_t _skip;
+			std::int64_t _fileOffset;
+			bool _endOfFile;
+			bool _background;
+			bool _decompressAhead;
+#if defined(WITH_THREADS)
+			bool _stopRequested;
+			Thread _thread;
+			Mutex _mutex;
+			CondVariable _dataAvailable;
+			CondVariable _spaceAvailable;
+
+			/** @brief Frames decompressed ahead of the main thread */
+			static constexpr std::int32_t FrameSlotCount = 3;
+
+			struct FrameSlot {
+				std::unique_ptr<std::uint8_t[]> Data;
+				std::uint32_t Capacity = 0;
+				std::uint32_t Size = 0;
+			};
+
+			// Slots from `_firstReadySlot` on, `_readySlots` of them, hold decompressed frames; the rest are the
+			// decompressing thread's to fill. `_framesEnded` is set when no further frame will become ready.
+			Thread _decompressThread;
+			CondVariable _frameAvailable;
+			CondVariable _slotAvailable;
+			FrameSlot _frameSlots[FrameSlotCount];
+			std::int32_t _firstReadySlot;
+			std::int32_t _readySlots;
+			bool _framesEnded;
+			// A frame record that is not contiguous in the ring, gathered before it is decompressed
+			std::unique_ptr<std::uint8_t[]> _record;
+			std::uint32_t _recordCapacity;
+#	if defined(DEATH_TARGET_DREAMCAST)
+			// The decompressing thread goes one below it (see DecompressThreadFunc)
+			std::int32_t _mainThreadPriority;
+#	endif
+
+			static void ThreadFunc(void* arg);
+#	if defined(WITH_LZ4)
+			static void DecompressThreadFunc(void* arg);
+			/** @brief Takes the next frame record out of the ring and decompresses it into @p slot */
+			bool DecompressNextFrame(FrameSlot& slot);
+#	endif
+#endif
+
+			/** @brief Reads the next piece into the free part of the ring; the caller has made sure there is room */
+			void ReadPiece();
+			/**
+				@brief Waits until @p bytes are filled (or the file ended), reading them on this thread if there is no other
+
+				Returns how many bytes are filled, which is fewer than asked for only at the end of the file.
+			*/
+			std::uint32_t WaitForData(std::uint32_t bytes);
+		};
+
+		/** @brief Reader of the native format, declared after the file it reads so that it stops first */
+		VideoReader _videoReader;
 
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
@@ -300,6 +461,8 @@ namespace Jazz2::UI
 		void DecodeFrameLegacy();
 		/** @brief Decodes one frame of the game's own format into @ref _buffer */
 		void DecodeFrameNative();
+		/** @brief Executes one frame's (uncompressed) payload of the game's own format: its palette, then its commands */
+		void DecodePayload(const std::uint8_t* src, const std::uint8_t* srcEnd);
 		/** @brief Uploads the given indices, and the palette if it changed */
 		void ApplyPaletteAndUpload(const std::uint8_t* indices);
 		/** @brief Starts any sounds scheduled for the current frame */

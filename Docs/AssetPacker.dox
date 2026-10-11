@@ -78,10 +78,11 @@ The command may be omitted, in which case `convert` is assumed:
         are used. `builtin` uses those even where libdragon's tools are installed. See
         @ref asset-packer-n64
     -   `--video-downscale=N` --- Downscale cinematics by N (1--4), 1 keeps them at their
-        original size. Cinematics are re-encoded for `dreamcast` and `ps2` (or any N > 1) and
+        original size. Cinematics are re-encoded for `dreamcast`, `gamecube` and `ps2` (or any N > 1) and
         otherwise copied unchanged, `desktop` gets none, as the game reads the originals.
-        Defaults to what the profile asks for --- 2 for `ps2`, which is what that console
-        displays --- and to 1 everywhere else
+        A smaller video is filtered down and gets palettes of its own (see
+        @ref asset-packer-cinematics-format). Defaults to what the profile asks for --- 2 for
+        `ps2`, which draws it smoothly upscaled --- and to 1 everywhere else
     -   `--originals-only` --- Convert only the episodes and levels the original game shipped
     -   `--shareware-only` --- Convert only what the Shareware Demo shipped
         @m_span{m-text m-dim} (implies `--originals-only`) @m_endspan
@@ -97,8 +98,10 @@ The command may be omitted, in which case `convert` is assumed:
     with the colors they stand for, so it can be edited
 -   `to-indices <source .png> <target .png>` --- Resolves the colors of an edited image back
     to the nearest palette indices
--   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N]` --- Re-encodes one
-    cinematic on its own, N defaults to 1, which keeps the original resolution
+-   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N] [--target=<profile>]` ---
+    Re-encodes one cinematic on its own, N defaults to 1, which keeps the original resolution, or
+    to what the profile asks for, which also decides whether the frames are written in LZ4 (see
+    @ref asset-packer-cinematics-format)
 -   `convert-music <source .j2b> <target .xm>` --- Translates one of the game's Galaxy Music System
     modules into a FastTracker II module, the first half of what `--target=n64` does to the music
 -   `swap-content <source image> [<target image>] --content=<dir>` --- Replaces the `Content`
@@ -227,17 +230,20 @@ files land in a `Cinematics` subdirectory under lowercase names, which is how th
 looks them up. What happens to them depends on the target:
 
 -   **Nothing** for the desktop profile --- the game reads the original files where they are
--   **Copied unchanged** for every target but the Dreamcast and the PlayStation 2 --- they decode the
-    original format perfectly well and are better off with the smaller file
--   **Re-encoded** for `dreamcast` and `ps2`, or whenever `--video-downscale` is greater than 1 (on
-    any profile), since downscaling means re-encoding either way
+-   **Copied unchanged** for every target but the Dreamcast, the GameCube and the PlayStation 2 ---
+    they decode the original format perfectly well and are better off with the smaller file
+-   **Re-encoded** for `dreamcast`, `gamecube` and `ps2`, or whenever `--video-downscale` is greater
+    than 1 (on any profile), since downscaling means re-encoding either way
 
-Two consoles need the re-encoding, for the same reason at different sizes: inflating the original
-container costs the Dreamcast 55--115 ms per frame against a 42 ms budget, where the re-encoded one
-costs under one millisecond, and the PlayStation 2 is in the same position. The PS2 additionally
-defaults to `--video-downscale=2`, because it can only *draw* a 640×480 cinematic at 320×240 --- the
-player caps the frame texture at the drawable and then picks every second index back out, per frame,
-on the CPU. Doing that here instead costs the same picture and none of the work.
+Three consoles need the re-encoding: inflating the original container costs the Dreamcast
+55--115 ms per frame against a 42 ms budget, where the re-encoded one costs under one millisecond,
+and the PlayStation 2 is in the same position. The GameCube inflates it fast enough, but the four
+interleaved streams have to be read from the disc as they are consumed, which made the intro take
+61 seconds instead of 34 there; the re-encoded file is read sequentially, on a thread of its own. The
+Dreamcast and the GameCube keep the original 640×480, which is what they display. The PS2 defaults
+to `--video-downscale=2`: it reads the disc (or a USB drive, through a loader) on the thread that
+draws, in small pieces between the frames, and a quarter of the pixels is a quarter of the data to
+read. The player draws that 320×240 smoothly upscaled.
 
 @subsection asset-packer-cinematics-format The .j2v recompression
 
@@ -246,10 +252,20 @@ streams --- opcodes, the offset and row parts of copy-from-previous-frame runs, 
 literal pixels plus palettes --- and the decoder has to inflate every frame at playback time.
 @ref Jazz2::Compatibility::J2vRecompressor decodes the video exactly the way the player does
 @m_span{m-text m-dim} (including decoding into one reused frame buffer, so pixels no run
-covers keep the previous frame's value) @m_endspan, optionally downscales it once by picking
-every n-th pixel of every n-th row --- matching what the player used to do at runtime --- and
-re-encodes it into the game's own @ref Jazz2::VideoFormat container. The player detects the
-format by its signature and accepts both.
+covers keep the previous frame's value) @m_endspan, optionally downscales it, and re-encodes it
+into the game's own @ref Jazz2::VideoFormat container. The player detects the format by its
+signature and accepts both.
+
+At the original size the frames are taken over exactly, indices and palettes alike. A smaller
+picture is *not* made by picking every n-th pixel, which is what the player used to do at runtime:
+the cinematics are heavily dithered, and point sampling turns the dithering into noise and every
+edge into stairs. Each output pixel is the average of the area it covers, in linear light, and the
+resulting colors --- which the original palette does not have --- get a palette of their own for
+every stretch of frames that shares one palette in the original: a median cut over all the colors
+of that stretch, refined by a few rounds of k-means, onto which the frames are then mapped. Against
+the same downscale in true color that is about 45 dB PSNR on the intro, where picking pixels was
+26 dB; the file comes out about a fifth larger, because the smooth gradients repeat less than the
+dithering did. It takes two decodes of the original --- about 2 seconds for the intro.
 
 The output container keeps the same idea --- 8-bit indexed frames encoded as changes against
 the previous one --- but replaces the entropy coding with a byte-oriented delta-RLE codec
@@ -269,6 +285,16 @@ same resolution --- that is the deliberate trade: entropy coding is exchanged fo
 that fits the weakest platform's frame budget. Platforms that can afford the inflation get
 the original file copied instead. `recompress-video` re-encodes a single file outside a full
 conversion, which is the way to experiment with resolutions per target.
+
+`dreamcast`, `gamecube` and `ps2` additionally get every frame's payload compressed as an LZ4 block
+(LZ4HC at its highest level, codec @ref Jazz2::VideoFormat::CodecDeltaRleLz4 in the header): at
+640×480 the busiest five seconds of the ending need 1.8 MB a second of plain commands, more than the
+disc drives deliver, and in LZ4 they need 1.2 MB. The intro shrinks from 15.9 to 8.8 MB and the ending
+from 31.6 to 19.5 MB at 640×480, from 5.8 to 4.6 MB and from 10.8 to 8.3 MB at 320×240. Decompressing a
+block is close to a plain copy, and the builds of those consoles carry the decoder for the LZ4 images
+anyway. A player without it refuses such a file rather than misreading it, which is why `swap-content`
+writes LZ4 frames onto a disc only if the cinematics already on it have them (see
+@ref asset-packer-swap-content).
 
 @section asset-packer-fonts Font packing
 
@@ -507,6 +533,15 @@ AssetPacker swap-content ./jazz2.z64 ./jazz2-new.z64 --source=<original Jazz Jac
 
 @m_class{m-noindent}
 
+Converted that way, a disc gets the LZ4 content of its profile only if the content already on it has
+it: a build of the game older than the LZ4 sprite sheets and tilesets (see @ref asset-packer-lz4) draws
+garbage from them, and one older than the LZ4 frames of the cinematics (see
+@ref asset-packer-cinematics-format) refuses to play those, so the new tree keeps the game's own format
+for whichever of the two the disc did not have yet. A GameCube disc always gets the images, since no
+build older than them was ever made into one; a cartridge always gets them as well.
+
+@m_class{m-noindent}
+
 The directory named by `--content=` becomes `Content` on the disc whatever it is called here,
 so it is exactly what a `--target=dreamcast` conversion produces. With no target image given the
 source is rewritten in place @m_span{m-text m-dim} (through a `.tmp` beside it, which only takes
@@ -616,8 +651,8 @@ the console needs one --- so tools that list a GameCube disc by its table show n
     cinematics with `--video-downscale`.
 -   **Dreamcast, PlayStation Portable, Wii and GameCube** all consume a tree prepared with
     `--target=dreamcast` / `psp` / `wii` / `gamecube`. All four share the same layout, the target name
-    only decides the cinematics --- the Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat,
-    the others get the smaller originals copied. Where each console expects that tree, and how it gets
+    only decides the cinematics --- the Dreamcast and the GameCube get them re-encoded into
+    @ref Jazz2::VideoFormat, the others get the smaller originals copied. Where each console expects that tree, and how it gets
     there, is described in @ref consoles-common-content "Building for consoles". The Dreamcast and the
     GameCube have no conversion compiled in at all and *require* the prepared tree --- which is why
     `dreamcast` and `gamecube` also write their images in LZ4 (see @ref asset-packer-lz4) --- the PSP and the
@@ -627,8 +662,8 @@ the console needs one --- so tools that list a GameCube disc by its table show n
     see @ref consoles-dreamcast-content and @ref consoles-gamecube-disc; the content of a finished image
     can be replaced afterwards without building it again, see @ref asset-packer-swap-content.
 -   **PlayStation 2** has a profile of its own, `--target=ps2`, which differs from the generic
-    `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* halved to
-    the 320×240 the console actually displays, and its images in LZ4 (see @ref asset-packer-lz4). A
+    `console` one only in the cinematics --- re-encoded into @ref Jazz2::VideoFormat *and* filtered
+    down to 320×240, which keeps the disc reads small --- and its images in LZ4 (see @ref asset-packer-lz4). A
     `console` tree still plays, it is just the slow way round. The PS2 boots from a read-only disc and so *requires* the prepared tree, exactly as the
     Dreamcast does @m_span{m-text m-dim} (and authors it into an ISO at build time, see
     @ref consoles-ps2-content, whose content can likewise be replaced afterwards with

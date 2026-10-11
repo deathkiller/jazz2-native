@@ -31,8 +31,13 @@ namespace Jazz2::Compatibility
 	class J2vRecompressor
 	{
 	public:
-		/** @brief Decodes @p sourcePath, downscales it by @p downscale and writes it to @p targetPath */
-		static bool Recompress(StringView sourcePath, StringView targetPath, std::int32_t downscale);
+		/**
+			@brief Decodes @p sourcePath, downscales it by @p downscale and writes it to @p targetPath
+
+			With @p lz4, every frame's payload is compressed as an LZ4 block (see @ref VideoFormat::CodecDeltaRleLz4),
+			which only the builds with an LZ4 decoder can play.
+		*/
+		static bool Recompress(StringView sourcePath, StringView targetPath, std::int32_t downscale, bool lz4 = false);
 
 		/**
 			@brief Decodes every frame of an original cinematic

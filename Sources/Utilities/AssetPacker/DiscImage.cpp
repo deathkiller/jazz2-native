@@ -1,6 +1,8 @@
 #include "DiscImage.h"
 #include "Iso9660.h"
 #include "../../Jazz2/Compatibility/JJ2Anims.h"
+#include "../../Jazz2/ContentFileTypes.h"
+#include "../../Jazz2/VideoFormat.h"
 
 #include <cstdio>
 #include <cstring>
@@ -12,6 +14,7 @@
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringUtils.h>
 #include <Containers/DateTime.h>
+#include <Base/Memory.h>
 #include <Core/Logger.h>
 #include <IO/FileSystem.h>
 #include <IO/Stream.h>
@@ -580,6 +583,59 @@ namespace Jazz2::AssetPacker
 		}
 
 		/**
+			@brief Reads the first sector of the first file in a directory of a disc's `Content` that @p accept takes
+
+			How the content on a disc was converted - and so which builds of the game it is meant for - is told by the
+			header at the start of its files, which is all this reads.
+		*/
+		bool ReadFirstContentSector(StringView path, StringView directoryName, std::uint8_t* sector,
+			bool (*accept)(const Iso9660Reader::Entry& entry))
+		{
+			auto source = fs::Open(path, FileAccess::Read);
+			DataTrack data;
+			if (!source->IsValid() || !FindDataTrack(*source, path, data)) {
+				return false;
+			}
+			CdiSectorReader sectorReader(*source, *data.Track);
+			Iso9660Reader isoReader;
+			if (!isoReader.Open(sectorReader, data.Track->StartLba)) {
+				return false;
+			}
+
+			std::uint32_t lba = isoReader.GetRootLba();
+			std::uint32_t size = isoReader.GetRootSize();
+			for (StringView directory : { ContentDirectoryName, directoryName }) {
+				SmallVector<Iso9660Reader::Entry, 0> entries;
+				if (!isoReader.ReadDirectory(lba, size, entries)) {
+					return false;
+				}
+				const Iso9660Reader::Entry* found = nullptr;
+				for (const Iso9660Reader::Entry& entry : entries) {
+					if (entry.IsDirectory && StringUtils::equalsIgnoreCase(entry.Name, directory)) {
+						found = &entry;
+						break;
+					}
+				}
+				if (found == nullptr) {
+					return false;
+				}
+				lba = found->Lba;
+				size = found->Size;
+			}
+
+			SmallVector<Iso9660Reader::Entry, 0> files;
+			if (!isoReader.ReadDirectory(lba, size, files)) {
+				return false;
+			}
+			for (const Iso9660Reader::Entry& entry : files) {
+				if (!entry.IsDirectory && accept(entry)) {
+					return sectorReader.ReadSector(entry.Lba, sector);
+				}
+			}
+			return false;
+		}
+
+		/**
 			@brief Where a GameCube disc keeps what the boot ROM reads, all of it inside the system area of the volume
 
 			The disc header (`boot.bin`) comes first, then `bi2.bin` with the settings the boot ROM hands to the game,
@@ -849,55 +905,34 @@ namespace Jazz2::AssetPacker
 
 	bool DiscImage::CarriesLz4Images(StringView path)
 	{
-		auto source = fs::Open(path, FileAccess::Read);
-		DataTrack data;
-		if (!source->IsValid() || !FindDataTrack(*source, path, data)) {
+		std::uint8_t sector[IsoSectorSize];
+		if (!ReadFirstContentSector(path, "Tilesets"_s, sector, [](const Iso9660Reader::Entry& entry) {
+				return (entry.Size >= 12);
+			})) {
 			return false;
 		}
-		CdiSectorReader sectorReader(*source, *data.Track);
-		Iso9660Reader isoReader;
-		if (!isoReader.Open(sectorReader, data.Track->StartLba)) {
+		// The header of a converted tileset (see JJ2Tileset::Convert()): signature, file type, version, flags
+		static const std::uint8_t Signature[] = { 0xEF, 0xBB, 0xBF, 0xE2, 0x98, 0x84, 0xEF, 0xB8, 0x8F, 0x20 };
+		if (std::memcmp(sector, Signature, sizeof(Signature)) != 0) {
 			return false;
 		}
+		return ((sector[11] & Compatibility::JJ2Anims::ImageContentLz4Flag) != 0);
+	}
 
-		std::uint32_t lba = isoReader.GetRootLba();
-		std::uint32_t size = isoReader.GetRootSize();
-		for (StringView directory : { ContentDirectoryName, "Tilesets"_s }) {
-			SmallVector<Iso9660Reader::Entry, 0> entries;
-			if (!isoReader.ReadDirectory(lba, size, entries)) {
-				return false;
-			}
-			const Iso9660Reader::Entry* found = nullptr;
-			for (const Iso9660Reader::Entry& entry : entries) {
-				if (entry.IsDirectory && StringUtils::equalsIgnoreCase(entry.Name, directory)) {
-					found = &entry;
-					break;
-				}
-			}
-			if (found == nullptr) {
-				return false;
-			}
-			lba = found->Lba;
-			size = found->Size;
-		}
-
-		SmallVector<Iso9660Reader::Entry, 0> tilesets;
-		if (!isoReader.ReadDirectory(lba, size, tilesets)) {
+	bool DiscImage::CarriesLz4Videos(StringView path)
+	{
+		std::uint8_t sector[IsoSectorSize];
+		if (!ReadFirstContentSector(path, "Cinematics"_s, sector, [](const Iso9660Reader::Entry& entry) {
+				return (entry.Size >= 25 && fs::GetExtension(entry.Name) == "j2v"_s);
+			})) {
 			return false;
 		}
-		for (const Iso9660Reader::Entry& entry : tilesets) {
-			if (entry.IsDirectory || entry.Size < 12) {
-				continue;
-			}
-			// The header of a converted tileset (see JJ2Tileset::Convert()): signature, file type, version, flags
-			std::uint8_t sector[IsoSectorSize];
-			static const std::uint8_t Signature[] = { 0xEF, 0xBB, 0xBF, 0xE2, 0x98, 0x84, 0xEF, 0xB8, 0x8F, 0x20 };
-			if (!sectorReader.ReadSector(entry.Lba, sector) || std::memcmp(sector, Signature, sizeof(Signature)) != 0) {
-				return false;
-			}
-			return ((sector[11] & Compatibility::JJ2Anims::ImageContentLz4Flag) != 0);
-		}
-		return false;
+		// The header of the game's own video format (see Jazz2::VideoFormat): signature, file type, version,
+		// dimensions, frame delay and count, pixel format, codec
+		std::uint64_t signature;
+		std::memcpy(&signature, sector, sizeof(signature));
+		return (Memory::AsLE(signature) == Jazz2::VideoFormat::Signature && sector[8] == Jazz2::ContentFileType::Video &&
+			sector[22] == Jazz2::VideoFormat::CodecDeltaRleLz4);
 	}
 
 	bool DiscImage::SwapContent(StringView sourcePath, StringView targetPath, StringView contentPath)

@@ -18,8 +18,12 @@
 
 #if defined(DEATH_TARGET_DREAMCAST)
 #	include <dc/sq.h>
+#	include <kos/thread.h>
 #elif defined(DEATH_TARGET_N64)
 #	include "../../nCine/Backends/N64/N64FullMotionVideo.h"
+#endif
+#if defined(WITH_LZ4)
+#	include <lz4.h>
 #endif
 
 using namespace Death::Memory;
@@ -34,18 +38,24 @@ namespace Jazz2::UI
 
 			Four indices arrive in one 32-bit load and two colors leave in one 32-bit store, which is the fewest
 			memory operations this can be done in - the straightforward byte-at-a-time loop is what the whole
-			frame conversion costs most of its time in. Anything the wide path cannot cover (an odd length, or a
-			buffer that is not 32-bit aligned) is done one index at a time.
+			frame conversion costs most of its time in. Spans the decoder converts start anywhere in a frame, so
+			up to three leading pixels are converted one at a time to align the source, which aligns a
+			destination at the same offset into its frame as well. A source that still cannot be aligned with
+			its destination leaves two colors per store at least.
 		*/
 		DEATH_ALWAYS_INLINE void ConvertIndicesTo565(const std::uint8_t* DEATH_RESTRICT src,
 			std::uint16_t* DEATH_RESTRICT dst, const std::uint16_t* DEATH_RESTRICT palette, std::uint32_t count)
 		{
 			std::uint32_t i = 0;
 #if !defined(DEATH_TARGET_BIG_ENDIAN)
-			if (((reinterpret_cast<std::uintptr_t>(src) | reinterpret_cast<std::uintptr_t>(dst)) & 3) == 0) {
-				const std::uint32_t* DEATH_RESTRICT src32 = reinterpret_cast<const std::uint32_t*>(src);
-				std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst);
-				const std::uint32_t quads = count / 4;
+			while (i < count && i < 3 && ((reinterpret_cast<std::uintptr_t>(src + i) | reinterpret_cast<std::uintptr_t>(dst + i)) & 3) != 0) {
+				dst[i] = palette[src[i]];
+				i++;
+			}
+			if (((reinterpret_cast<std::uintptr_t>(src + i) | reinterpret_cast<std::uintptr_t>(dst + i)) & 3) == 0) {
+				const std::uint32_t* DEATH_RESTRICT src32 = reinterpret_cast<const std::uint32_t*>(src + i);
+				std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst + i);
+				const std::uint32_t quads = (count - i) / 4;
 				for (std::uint32_t q = 0; q < quads; q++) {
 					const std::uint32_t four = src32[q];
 					const std::uint32_t c0 = palette[four & 0xFF];
@@ -55,11 +65,44 @@ namespace Jazz2::UI
 					dst32[(q * 2) + 0] = c0 | (c1 << 16);
 					dst32[(q * 2) + 1] = c2 | (c3 << 16);
 				}
-				i = quads * 4;
+				i += quads * 4;
+			} else {
+				if ((reinterpret_cast<std::uintptr_t>(dst + i) & 3) != 0 && i < count) {
+					dst[i] = palette[src[i]];
+					i++;
+				}
+				std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst + i);
+				const std::uint32_t pairs = (count - i) / 2;
+				for (std::uint32_t p = 0; p < pairs; p++) {
+					const std::uint32_t c0 = palette[src[i + p * 2]];
+					const std::uint32_t c1 = palette[src[i + p * 2 + 1]];
+					dst32[p] = c0 | (c1 << 16);
+				}
+				i += pairs * 2;
 			}
 #endif
 			for (; i < count; i++) {
 				dst[i] = palette[src[i]];
+			}
+		}
+
+		/** @brief Fills @p count pixels with one RGB565 color, two of them per store where the destination allows */
+		DEATH_ALWAYS_INLINE void Fill565(std::uint16_t* DEATH_RESTRICT dst, std::uint16_t color, std::uint32_t count)
+		{
+			std::uint32_t i = 0;
+			if ((reinterpret_cast<std::uintptr_t>(dst) & 3) != 0 && count > 0) {
+				dst[0] = color;
+				i = 1;
+			}
+			std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst + i);
+			const std::uint32_t pair = std::uint32_t(color) | (std::uint32_t(color) << 16);
+			const std::uint32_t pairs = (count - i) / 2;
+			for (std::uint32_t p = 0; p < pairs; p++) {
+				dst32[p] = pair;
+			}
+			i += pairs * 2;
+			if (i < count) {
+				dst[i] = color;
 			}
 		}
 
@@ -88,12 +131,241 @@ namespace Jazz2::UI
 			static_cast<void>(count);
 #endif
 		}
+
+#if defined(WITH_LZ4) && defined(DEATH_TARGET_DREAMCAST)
+		/** @brief Copies a short span four bytes at a time, which halves the loop overhead of a byte-wise copy */
+		DEATH_ALWAYS_INLINE void CopyBytes(std::uint8_t*& op, const std::uint8_t*& ip, std::size_t length)
+		{
+			for (; length >= 4; length -= 4) {
+				op[0] = ip[0];
+				op[1] = ip[1];
+				op[2] = ip[2];
+				op[3] = ip[3];
+				op += 4;
+				ip += 4;
+			}
+			for (; length > 0; length--) {
+				*op++ = *ip++;
+			}
+		}
+
+		/**
+			@brief Decompresses one LZ4 block, returning its size or -1 if it is malformed or does not fit
+
+			The library's decoder is written for processors that load and store at any alignment: it copies
+			literals and matches in 8 and 16 byte strides through `memcpy()`, which compilers turn into single
+			unaligned moves. The SH-4 has none, so each of those strides becomes a call into the C library: a
+			640x480 frame took 3 ms to decompress on average and up to 45 ms (in Flycast), against 1.3 and 18 ms
+			this way. Here a short copy is a plain byte loop and only a long one goes through `memcpy()` - and a
+			match overlapping its own output by less than four bytes (a repeated pattern) is copied byte by byte.
+		*/
+		std::int32_t DecompressLz4Block(const std::uint8_t* DEATH_RESTRICT src, std::size_t srcSize,
+			std::uint8_t* DEATH_RESTRICT dst, std::size_t dstCapacity)
+		{
+			constexpr std::size_t LongCopy = 32;
+
+			const std::uint8_t* ip = src;
+			const std::uint8_t* const ipEnd = src + srcSize;
+			std::uint8_t* op = dst;
+			std::uint8_t* const opEnd = dst + dstCapacity;
+
+			while (ip < ipEnd) {
+				const std::uint32_t token = *ip++;
+				std::size_t length = token >> 4;
+				if (length == 15) {
+					std::uint32_t extra;
+					do {
+						if (ip >= ipEnd) {
+							return -1;
+						}
+						extra = *ip++;
+						length += extra;
+					} while (extra == 255);
+				}
+				if (length > std::size_t(ipEnd - ip) || length > std::size_t(opEnd - op)) {
+					return -1;
+				}
+				if (length >= LongCopy) {
+					std::memcpy(op, ip, length);
+					op += length;
+					ip += length;
+				} else {
+					CopyBytes(op, ip, length);
+				}
+				if (ip >= ipEnd) {
+					// The last sequence of a block has only literals
+					break;
+				}
+
+				if (ipEnd - ip < 2) {
+					return -1;
+				}
+				const std::size_t offset = std::size_t(ip[0]) | (std::size_t(ip[1]) << 8);
+				ip += 2;
+				if (offset == 0 || offset > std::size_t(op - dst)) {
+					return -1;
+				}
+				length = (token & 15) + 4;
+				if ((token & 15) == 15) {
+					std::uint32_t extra;
+					do {
+						if (ip >= ipEnd) {
+							return -1;
+						}
+						extra = *ip++;
+						length += extra;
+					} while (extra == 255);
+				}
+				if (length > std::size_t(opEnd - op)) {
+					return -1;
+				}
+				const std::uint8_t* match = op - offset;
+				if (offset >= length && length >= LongCopy) {
+					std::memcpy(op, match, length);
+					op += length;
+				} else if (offset >= 4) {
+					// Four bytes behind or more, a group of four never reads what the same group writes
+					CopyBytes(op, match, length);
+				} else {
+					for (std::size_t i = 0; i < length; i++) {
+						*op++ = *match++;
+					}
+				}
+			}
+			return std::int32_t(op - dst);
+		}
+#endif
+
+		/**
+			@brief Executes the commands of one frame of the native format (see @ref VideoFormat)
+
+			With @p WithColors, every pixel written is also written to @p colors already converted through
+			@p palette565, which keeps a converted copy of the frame current at the cost of the pixels that
+			changed - instead of converting the whole frame again after it was decoded.
+		*/
+		template<bool WithColors>
+		void DecodeCommands(const std::uint8_t* DEATH_RESTRICT src, const std::uint8_t* const srcEnd,
+			std::uint8_t* DEATH_RESTRICT const frame, const std::size_t frameSize, std::uint16_t* DEATH_RESTRICT const colors,
+			const std::uint16_t* DEATH_RESTRICT const palette565)
+		{
+			std::uint8_t* DEATH_RESTRICT dst = frame;
+			std::uint8_t* const dstEnd = frame + frameSize;
+
+			while (src < srcEnd) {
+				const std::uint8_t command = *src++;
+				if (command == VideoFormat::CommandEndOfFrame) {
+					break;
+				}
+
+				std::int32_t length;
+				if (command <= VideoFormat::CommandLiteralMax) {
+					length = command + 1;
+					if (src + length > srcEnd || dst + length > dstEnd) {
+						break;
+					}
+					std::memcpy(dst, src, std::size_t(length));
+					if constexpr (WithColors) {
+						// From the frame rather than the payload: at the same offset as the colors, both align
+						// together, which lets the conversion take four pixels per load
+						ConvertIndicesTo565(dst, colors + (dst - frame), palette565, std::uint32_t(length));
+					}
+					src += length;
+					dst += length;
+				} else if (command <= VideoFormat::CommandRunMax) {
+					length = command - VideoFormat::CommandRunBase + VideoFormat::CommandRunMinLength;
+					if (src >= srcEnd || dst + length > dstEnd) {
+						break;
+					}
+					if constexpr (WithColors) {
+						Fill565(colors + (dst - frame), palette565[*src], std::uint32_t(length));
+					}
+					std::memset(dst, *src++, std::size_t(length));
+					dst += length;
+				} else if (command <= VideoFormat::CommandSkipMax) {
+					dst += command - VideoFormat::CommandSkipBase + 1;
+				} else if (command == VideoFormat::CommandSkipLong) {
+					if (src + 2 > srcEnd) {
+						break;
+					}
+					length = src[0] | (src[1] << 8);
+					src += 2;
+					dst += length;
+				} else if (command == VideoFormat::CommandLiteralLong) {
+					if (src + 2 > srcEnd) {
+						break;
+					}
+					length = src[0] | (src[1] << 8);
+					src += 2;
+					if (src + length > srcEnd || dst + length > dstEnd) {
+						break;
+					}
+					std::memcpy(dst, src, std::size_t(length));
+					if constexpr (WithColors) {
+						// From the frame rather than the payload: at the same offset as the colors, both align
+						// together, which lets the conversion take four pixels per load
+						ConvertIndicesTo565(dst, colors + (dst - frame), palette565, std::uint32_t(length));
+					}
+					src += length;
+					dst += length;
+				} else if (command == VideoFormat::CommandRunLong) {
+					if (src + 3 > srcEnd) {
+						break;
+					}
+					length = src[0] | (src[1] << 8);
+					src += 2;
+					if (dst + length > dstEnd) {
+						break;
+					}
+					if constexpr (WithColors) {
+						Fill565(colors + (dst - frame), palette565[*src], std::uint32_t(length));
+					}
+					std::memset(dst, *src++, std::size_t(length));
+					dst += length;
+				} else {
+					break;
+				}
+
+				if (dst > dstEnd) {
+					break;
+				}
+			}
+		}
+
+		/**
+			@brief Size of the read-ahead ring of the native format (see @ref Cinematics::VideoReader)
+
+			The consoles that play their video at full resolution need about 20 KB a frame on average, and a
+			few hundred kilobytes in a row at a scene cut, so they get a ring of about a second of video.
+			Everything else plays a quarter of that.
+		*/
+		constexpr std::uint32_t VideoReadAheadCapacity =
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_WII)
+			1024 * 1024;
+#else
+			256 * 1024;
+#endif
+
+#if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		/** @brief Whether the read-ahead runs on a thread of its own */
+		constexpr bool VideoReadInBackground = true;
+		/** @brief Size of one read: a thread can afford large ones, which keep the drive's per-request overhead low */
+		constexpr std::uint32_t VideoReadPieceSize = 64 * 1024;
+#else
+		constexpr bool VideoReadInBackground = false;
+		/**
+			@brief Size of one read: without a thread a read blocks the frame it happens in, so it has to fit into
+			the time such a frame would otherwise spend waiting for the display
+		*/
+		constexpr std::uint32_t VideoReadPieceSize = 16 * 1024;
+#endif
+		/** @brief How much is read before playback starts, so the first frames never wait for the drive */
+		constexpr std::uint32_t VideoPrefillBytes = 128 * 1024;
 	}
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
 			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false),
-			_nativeFormat(false), _convertTo565(false), _paletteDirty(true),
+			_nativeFormat(false), _lz4Payloads(false), _convertTo565(false), _incremental565(false), _frame565Stale(false), _paletteDirty(true),
 			_paletteTextureDirty(false)
 	{
 		Initialize(path);
@@ -102,6 +374,8 @@ namespace Jazz2::UI
 	Cinematics::~Cinematics()
 	{
 		_canvas->setParent(nullptr);
+		// The reader thread (if any) reads into memory and from a file that are released right after this
+		_videoReader.Shutdown();
 	}
 
 	Vector2i Cinematics::GetViewSize() const
@@ -161,26 +435,46 @@ namespace Jazz2::UI
 		// it was already behind - and it turned a frame that was merely late into one three times as long,
 		// which is what a burst of catch-up looks like on a television.
 		constexpr std::int32_t MaxDecodesPerFrame = 1;
+		// What is still owed, on the other hand, is kept, up to about half a second of video. The time the
+		// display runs ahead of the video is not a backlog at all most of the time: at 60 Hz a 42 ms frame is
+		// due after 2.52 presented frames, so it is decoded on the third, and the 0.48 frames of time left
+		// over are what puts the one after it on the second. Capping the progress at a single frame threw
+		// that remainder away every time - each frame then took three presented frames, 50 ms instead of 42,
+		// and the video ran at 20 frames per second, 6.5 seconds behind the music by the end of the intro on
+		// every console listed here, before a single frame was late for any other reason. A real stall (a
+		// slow read, a frame that missed the blank) is then caught up as well, one frame per presented
+		// frame, so the picture and the music come back together within a few frames instead of drifting
+		// apart for good.
+		constexpr std::int32_t MaxBacklogFrames = 12;
 #else
 		// Decoding is cheap here, but a single long frame (a window drag, a driver compiling shaders) would
 		// with a one-decode cap delay the video against the already-playing music for the rest of playback.
 		// A small bounded catch-up recovers from such a hitch within a few frames, while a sustained decode
 		// backlog still cannot snowball into an unbounded burst.
 		constexpr std::int32_t MaxDecodesPerFrame = 3;
+		constexpr std::int32_t MaxBacklogFrames = MaxDecodesPerFrame;
 #endif
-		if (_frameProgress > _frameDelay * MaxDecodesPerFrame) {
-			_frameProgress = _frameDelay * MaxDecodesPerFrame;
+		if (_frameProgress > _frameDelay * MaxBacklogFrames) {
+			_frameProgress = _frameDelay * MaxBacklogFrames;
 		}
 
+		bool frameDecoded = false;
 		for (std::int32_t i = 0; i < MaxDecodesPerFrame && _framesLeft > 0 && _frameProgress >= _frameDelay; i++) {
 			_frameProgress -= _frameDelay;
 			_framesLeft--;
 			PrepareNextFrame();
+			frameDecoded = true;
 			if DEATH_UNLIKELY(_decodingFailed) {
 				// The compressed streams ended prematurely (truncated or corrupted file), finish playback
 				// instead of looping on a dead stream
 				_framesLeft = 0;
 			}
+		}
+
+		if (!frameDecoded && _nativeFormat) {
+			// A frame that decodes nothing would only wait for the display, so that is when the next piece of
+			// the file is read - unless a reader thread does that already (see VideoReader)
+			_videoReader.Pump();
 		}
 
 		UpdatePressedActions();
@@ -253,6 +547,21 @@ namespace Jazz2::UI
 
 #if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP) || defined(WITH_N64AUDIO))
 		_music = resolver.GetMusic(String(path + ".j2b"_s));
+#endif
+
+		if (_nativeFormat) {
+			// The first pieces of the video are read only now, after the sound effects and the music: they are
+			// the last thing read before playback, so the drive is still right where the read-ahead continues,
+			// and the first frames never wait for it. And it still happens before the music starts, so the time
+			// it takes does not put the picture behind the music from the very first frame.
+			if (!_videoReader.Start(VideoPrefillBytes / VideoReadPieceSize, VideoReadInBackground, _lz4Payloads)) {
+				LOGE("Cannot load \"{}.j2v\" - Cannot read the first frames", path);
+				_framesLeft = 0;
+				return;
+			}
+		}
+
+#if defined(WITH_AUDIO) && (defined(WITH_OPENMPT) || defined(WITH_XMP) || defined(WITH_N64AUDIO))
 		if (_music != nullptr) {
 			_music->setGain(PreferencesCache::MasterVolume * PreferencesCache::MusicVolume);
 			_music->setSourceRelative(true);
@@ -268,9 +577,12 @@ namespace Jazz2::UI
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
-		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2v"_s)), 64 * 1024);
+		String contentPath = fs::CombinePath("Cinematics"_s, String(path + ".j2v"_s));
+		String alternativePath;
+		auto s = resolver.OpenContentFile(contentPath, 64 * 1024);
 		if (!s->IsValid()) {
-			if (auto alternativePath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v"_s)))) {
+			alternativePath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v"_s)));
+			if (!alternativePath.empty()) {
 				s = fs::Open(alternativePath, FileAccess::Read, 64 * 1024);
 			}
 		}
@@ -294,6 +606,18 @@ namespace Jazz2::UI
 		std::uint64_t signature = 0;
 		std::memcpy(&signature, internalBuffer, sizeof(signature));
 		if (AsLE(signature) == VideoFormat::Signature && internalBuffer[8] == ContentFileType::Video) {
+			if (VideoReadPieceSize < 64 * 1024) {
+				// The read-ahead reads pieces smaller than the buffer the file was opened with, and a read smaller
+				// than the buffer goes through it - which would turn every few pieces into one read of the whole
+				// buffer, exactly the long stall the small pieces are there to avoid. Opened again with a buffer
+				// no larger than a piece, every piece goes to the drive as it is.
+				auto reopened = (alternativePath.empty()
+					? resolver.OpenContentFile(contentPath, std::int32_t(VideoReadPieceSize))
+					: fs::Open(alternativePath, FileAccess::Read, std::int32_t(VideoReadPieceSize)));
+				if (reopened->IsValid()) {
+					s = std::move(reopened);
+				}
+			}
 			s->Seek(9, SeekOrigin::Begin);
 			return LoadNativeVideo(std::move(s), path);
 		}
@@ -473,10 +797,18 @@ namespace Jazz2::UI
 			s->Seek(extensionSize, SeekOrigin::Current);
 		}
 
-		if (pixelFormat != VideoFormat::PixelFormatIndexed8 || codec != VideoFormat::CodecDeltaRle) {
+		// LZ4-compressed payloads are only decoded where the build carries the decoder anyway (the consoles that
+		// read their content off a disc or a cartridge, see NCINE_WITH_LZ4)
+#if defined(WITH_LZ4)
+		const bool codecSupported = (codec == VideoFormat::CodecDeltaRle || codec == VideoFormat::CodecDeltaRleLz4);
+#else
+		const bool codecSupported = (codec == VideoFormat::CodecDeltaRle);
+#endif
+		if (pixelFormat != VideoFormat::PixelFormatIndexed8 || !codecSupported) {
 			LOGE("Cannot load \"{}.j2v\" - Unsupported pixel format {} or codec {}", path, pixelFormat, codec);
 			return false;
 		}
+		_lz4Payloads = (codec == VideoFormat::CodecDeltaRleLz4);
 		if (_width == 0 || _height == 0 || _framesLeft <= 0) {
 			LOGE("Cannot load \"{}.j2v\" - Unexpected dimensions", path);
 			return false;
@@ -495,12 +827,31 @@ namespace Jazz2::UI
 		_convertTo565 = false;
 #endif
 		const Texture::Format textureFormat = (_convertTo565 ? Texture::Format::RGB565 : Texture::Format::R8);
+
+		// A video the AssetPacker made smaller than the screen it is shown on (see J2vRecompressor) stands for
+		// the full-size picture, and stretching it with point sampling would show its pixels as blocks of
+		// uneven size - 320x240 is drawn about 1.87 times larger on the PlayStation 2. It is filtered instead,
+		// which only works where the texels are colors by the time they are filtered: a converted frame, or
+		// hardware that resolves the palette as part of the texture read (filtering the INDICES, which is what
+		// a palette applied afterwards would get, mixes unrelated colors). A frame shown at its own size
+		// keeps point sampling, which is exact there.
+		SamplerFilter frameFilter = SamplerFilter::Nearest;
+#if defined(RHI_CAP_PALETTED_TEXTURES)
+		constexpr bool filteredAfterPalette = true;
+#else
+		const bool filteredAfterPalette = _convertTo565;
+#endif
+		const Vector2i drawableSize = theApplication().GetResolution();
+		if (filteredAfterPalette && std::int32_t(_textureWidth) < drawableSize.X && std::int32_t(_textureHeight) < drawableSize.Y) {
+			frameFilter = SamplerFilter::Linear;
+		}
+
 		_textures[0] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
 		_textures[1] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
-		_textures[0]->SetMinFiltering(SamplerFilter::Nearest);
-		_textures[0]->SetMagFiltering(SamplerFilter::Nearest);
-		_textures[1]->SetMinFiltering(SamplerFilter::Nearest);
-		_textures[1]->SetMagFiltering(SamplerFilter::Nearest);
+		_textures[0]->SetMinFiltering(frameFilter);
+		_textures[0]->SetMagFiltering(frameFilter);
+		_textures[1]->SetMinFiltering(frameFilter);
+		_textures[1]->SetMagFiltering(frameFilter);
 		_paletteTexture = std::make_unique<Texture>("CinematicsPalette", Texture::Format::RGBA8, 256, 1);
 		_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
 		_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
@@ -516,21 +867,25 @@ namespace Jazz2::UI
 		if (_videoDownscale > 1) {
 			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
 		}
-		if (_convertTo565) {
+		// The converted frame is kept current by the decoder itself (see _incremental565), which this format
+		// allows because it says exactly which pixels change - and only while the frame is not downscaled
+		_incremental565 = (_convertTo565 && _videoDownscale == 1);
+		if (_incremental565) {
+			_frame565 = std::make_unique<std::uint16_t[]>(std::size_t(_width) * _height);
+		} else if (_convertTo565) {
 			_frameRow = std::make_unique<std::uint16_t[]>(_textureWidth);
 		}
 		std::memset(_buffer.get(), 0, _width * _height);
 
 		_framePayloadCapacity = 0;
-		// Over-allocated so the buffer itself can start on an aligned address
-		_blockAllocation = std::make_unique<std::uint8_t[]>(VideoBlockCapacity + VideoBlockAlignment);
-		_blockBuffer = reinterpret_cast<std::uint8_t*>(
-			(reinterpret_cast<std::uintptr_t>(_blockAllocation.get()) + VideoBlockAlignment - 1)
-				& ~std::uintptr_t(VideoBlockAlignment - 1));
-		_blockSize = 0;
-		_blockOffset = 0;
-		_blockFilePosition = s->GetPosition();
+		_decompressedPayloadCapacity = 0;
+		const std::int64_t dataOffset = s->GetPosition();
 		_videoFile = std::move(s);
+		// Reading starts only once everything else the video needs is loaded (see Initialize())
+		if (!_videoReader.Initialize(_videoFile.get(), dataOffset, VideoReadAheadCapacity, VideoReadPieceSize)) {
+			LOGE("Cannot load \"{}.j2v\" - Cannot seek in the file", path);
+			return false;
+		}
 
 		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames)", path, _width, _height, _framesLeft);
 
@@ -539,83 +894,110 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	bool Cinematics::EnsureBuffered(std::uint32_t bytes)
-	{
-		if (_blockSize - _blockOffset >= bytes) {
-			return true;
-		}
-		if (bytes > VideoBlockCapacity - VideoBlockAlignment) {
-			return false;
-		}
-
-		// The Dreamcast's disc driver only transfers by DMA when both the destination and the position within
-		// the file are 32 byte aligned (it checks `ptr & 31`), and falls back to PIO otherwise - which is
-		// slower by orders of magnitude and turns each refill into a multi-second stall. So the block always
-		// starts at an aligned offset in the file and is read into an aligned buffer, with whatever part of
-		// the current frame precedes that offset simply re-read. Nothing is carried over, which also keeps
-		// the destination aligned - a memmove'd remainder would push it off again.
-		std::int64_t wanted = _blockFilePosition + _blockOffset;
-		std::int64_t aligned = wanted & ~std::int64_t(VideoBlockAlignment - 1);
-
-		_videoFile->Seek(aligned, SeekOrigin::Begin);
-		std::int32_t bytesRead = _videoFile->Read(_blockBuffer, VideoBlockCapacity);
-		_blockFilePosition = aligned;
-		_blockSize = (bytesRead > 0 ? std::uint32_t(bytesRead) : 0);
-		_blockOffset = std::uint32_t(wanted - aligned);
-		return (_blockSize > _blockOffset && _blockSize - _blockOffset >= bytes);
-	}
-
 	void Cinematics::DecodeFrameNative()
 	{
-		// One length-prefixed payload per frame, served out of the read-ahead block
-		if (!EnsureBuffered(4)) {
+#if defined(WITH_THREADS)
+		if (_videoReader.IsDecompressingAhead()) {
+			// The frame has been taken out of the ring and decompressed on a thread of the reader already
+			const std::uint8_t* frame;
+			std::uint32_t frameSize;
+			if (!_videoReader.AcquireFrame(frame, frameSize) || frameSize == 0) {
+				_decodingFailed = true;
+				return;
+			}
+			DecodePayload(frame, frame + frameSize);
+			_videoReader.ReleaseFrame();
+			return;
+		}
+#endif
+
+		// One length-prefixed payload per frame, served out of the read-ahead ring
+		bool endOfFile = false;
+		std::uint8_t sizeBytes[4];
+		if (!_videoReader.ReadInto(sizeBytes, sizeof(sizeBytes))) {
 			_decodingFailed = true;
 			return;
 		}
-
-		const std::uint8_t* sizeBytes = _blockBuffer + _blockOffset;
 		std::uint32_t payloadSize = std::uint32_t(sizeBytes[0]) | (std::uint32_t(sizeBytes[1]) << 8)
 			| (std::uint32_t(sizeBytes[2]) << 16) | (std::uint32_t(sizeBytes[3]) << 24);
-		_blockOffset += 4;
 		if (payloadSize == 0 || payloadSize > 8 * 1024 * 1024) {
 			_decodingFailed = true;
 			return;
 		}
 
-		const std::uint8_t* payload;
-		// The same limit EnsureBuffered enforces - a refill can start up to an alignment's worth of
-		// bytes before the payload, so a payload within that of the capacity still cannot fit
-		if (payloadSize <= VideoBlockCapacity - VideoBlockAlignment) {
-			if (!EnsureBuffered(payloadSize)) {
+		// Decoded straight out of the ring, so there is no per-frame copy at all - except for the rare payload
+		// that wraps around the end of the ring (or would not fit into it at all), which is gathered first
+		const std::uint8_t* payload = _videoReader.Peek(payloadSize, endOfFile);
+		bool payloadInRing = (payload != nullptr);
+		if (!payloadInRing) {
+			if (endOfFile) {
 				_decodingFailed = true;
 				return;
 			}
-			// Decoded straight out of the block, so there is no per-frame copy at all
-			payload = _blockBuffer + _blockOffset;
-			_blockOffset += payloadSize;
-		} else {
-			// A frame larger than the read-ahead block (e.g., the keyframe of a full-resolution video)
-			// is read from the file directly. The file's physical position is wherever the last refill
-			// ended, not the payload, so it has to be sought explicitly - and the block is dropped so
-			// the next frame starts with a refill right past this payload
 			if (payloadSize > _framePayloadCapacity) {
 				_framePayload = std::make_unique<std::uint8_t[]>(payloadSize);
 				_framePayloadCapacity = payloadSize;
 			}
-			_videoFile->Seek(_blockFilePosition + _blockOffset, SeekOrigin::Begin);
-			if (_videoFile->Read(_framePayload.get(), payloadSize) != std::int32_t(payloadSize)) {
+			if (!_videoReader.ReadInto(_framePayload.get(), payloadSize)) {
 				_decodingFailed = true;
 				return;
 			}
-			_blockFilePosition += std::int64_t(_blockOffset) + payloadSize;
-			_blockOffset = 0;
-			_blockSize = 0;
 			payload = _framePayload.get();
 		}
 
 		const std::uint8_t* DEATH_RESTRICT src = payload;
-		const std::uint8_t* const srcEnd = src + payloadSize;
+		const std::uint8_t* srcEnd = src + payloadSize;
 
+#if defined(WITH_LZ4)
+		if (_lz4Payloads) {
+			if (payloadSize < 4) {
+				_decodingFailed = true;
+				return;
+			}
+			const std::uint32_t decompressedSize = std::uint32_t(src[0]) | (std::uint32_t(src[1]) << 8)
+				| (std::uint32_t(src[2]) << 16) | (std::uint32_t(src[3]) << 24);
+			src += 4;
+			// A size of zero marks a payload that LZ4 could not make smaller, stored as it is
+			if (decompressedSize > 0) {
+				if (decompressedSize > 8 * 1024 * 1024) {
+					_decodingFailed = true;
+					return;
+				}
+				if (decompressedSize > _decompressedPayloadCapacity) {
+					_decompressedPayload = std::make_unique<std::uint8_t[]>(decompressedSize);
+					_decompressedPayloadCapacity = decompressedSize;
+				}
+#if defined(DEATH_TARGET_DREAMCAST)
+				const std::int32_t decompressed = DecompressLz4Block(src, payloadSize - 4, _decompressedPayload.get(), decompressedSize);
+#else
+				const std::int32_t decompressed = LZ4_decompress_safe(reinterpret_cast<const char*>(src),
+					reinterpret_cast<char*>(_decompressedPayload.get()), std::int32_t(payloadSize - 4), std::int32_t(decompressedSize));
+#endif
+				if (decompressed != std::int32_t(decompressedSize)) {
+					_decodingFailed = true;
+					return;
+				}
+				if (payloadInRing) {
+					// Everything from here on reads the decompressed copy, so the ring can be refilled right away
+					_videoReader.Consume(payloadSize);
+					payloadInRing = false;
+				}
+				src = _decompressedPayload.get();
+				srcEnd = src + decompressedSize;
+			}
+		}
+#endif
+
+		DecodePayload(src, srcEnd);
+
+		if (payloadInRing) {
+			// Only now, so the reader cannot refill the part of the ring the payload was decoded from
+			_videoReader.Consume(payloadSize);
+		}
+	}
+
+	void Cinematics::DecodePayload(const std::uint8_t* src, const std::uint8_t* srcEnd)
+	{
 		if ((*src++ & VideoFormat::FrameFlagPalette) != 0) {
 			if (src + sizeof(_palette) > srcEnd) {
 				_decodingFailed = true;
@@ -628,71 +1010,17 @@ namespace Jazz2::UI
 			_paletteDirty = true;
 		}
 
-		// Skipped spans need no work at all: the buffer still holds the previous frame
-		std::uint8_t* DEATH_RESTRICT dst = _buffer.get();
-		std::uint8_t* const dstEnd = dst + std::size_t(_width) * _height;
-
-		while (src < srcEnd) {
-			const std::uint8_t command = *src++;
-			if (command == VideoFormat::CommandEndOfFrame) {
-				break;
-			}
-
-			std::int32_t length;
-			if (command <= VideoFormat::CommandLiteralMax) {
-				length = command + 1;
-				if (src + length > srcEnd || dst + length > dstEnd) {
-					break;
-				}
-				std::memcpy(dst, src, std::size_t(length));
-				src += length;
-				dst += length;
-			} else if (command <= VideoFormat::CommandRunMax) {
-				length = command - VideoFormat::CommandRunBase + VideoFormat::CommandRunMinLength;
-				if (src >= srcEnd || dst + length > dstEnd) {
-					break;
-				}
-				std::memset(dst, *src++, std::size_t(length));
-				dst += length;
-			} else if (command <= VideoFormat::CommandSkipMax) {
-				dst += command - VideoFormat::CommandSkipBase + 1;
-			} else if (command == VideoFormat::CommandSkipLong) {
-				if (src + 2 > srcEnd) {
-					break;
-				}
-				length = src[0] | (src[1] << 8);
-				src += 2;
-				dst += length;
-			} else if (command == VideoFormat::CommandLiteralLong) {
-				if (src + 2 > srcEnd) {
-					break;
-				}
-				length = src[0] | (src[1] << 8);
-				src += 2;
-				if (src + length > srcEnd || dst + length > dstEnd) {
-					break;
-				}
-				std::memcpy(dst, src, std::size_t(length));
-				src += length;
-				dst += length;
-			} else if (command == VideoFormat::CommandRunLong) {
-				if (src + 3 > srcEnd) {
-					break;
-				}
-				length = src[0] | (src[1] << 8);
-				src += 2;
-				if (dst + length > dstEnd) {
-					break;
-				}
-				std::memset(dst, *src++, std::size_t(length));
-				dst += length;
-			} else {
-				break;
-			}
-
-			if (dst > dstEnd) {
-				break;
-			}
+		// Skipped spans need no work at all: the buffer still holds the previous frame. The converted frame is
+		// patched along with the indices, except when a new palette arrives with this one - then every pixel
+		// changes its color - or when the frame replaces most of the picture (a scene cut), where one pass
+		// over the whole decoded frame afterwards costs no more than following hundreds of short spans
+		// (see ApplyPaletteAndUpload).
+		const std::size_t frameSize = std::size_t(_width) * _height;
+		if (_incremental565 && !_paletteDirty && std::size_t(srcEnd - src) <= frameSize / 2) {
+			DecodeCommands<true>(src, srcEnd, _buffer.get(), frameSize, _frame565.get(), _palette565);
+		} else {
+			DecodeCommands<false>(src, srcEnd, _buffer.get(), frameSize, nullptr, nullptr);
+			_frame565Stale = _incremental565;
 		}
 	}
 
@@ -880,6 +1208,11 @@ namespace Jazz2::UI
 			}
 		}
 
+		if (_frame565Stale) {
+			// The decoder did not patch the converted frame this time (see DecodeFrameNative)
+			_frame565Stale = false;
+			ConvertIndicesTo565(indices, _frame565.get(), _palette565, _width * _height);
+		}
 		// The indices go to the GPU as they are - no palette is applied on the CPU at all. Only a video that
 		// is still larger than its texture needs a pass here, and even that one just picks every n-th index.
 		const std::uint8_t* texels = indices;
@@ -905,10 +1238,13 @@ namespace Jazz2::UI
 			// walks the frame three times over: once to convert, once to copy it into the texture's host copy,
 			// once to copy that where the hardware reads it. A row stays in the cache between being converted
 			// and being copied out, so only the last of those three passes is left.
+			//
+			// Where the decoder keeps the converted frame current already (_incremental565), the rows are
+			// copied out of it as they are, and the conversion disappears from here entirely.
 			std::int32_t strideBytes = 0;
 			if (std::uint8_t* mapped = static_cast<std::uint8_t*>(_textures[_textureIndex]->MapStreamingTexels(strideBytes))) {
 				const std::size_t rowBytes = std::size_t(_textureWidth) * 2;
-				std::uint16_t* DEATH_RESTRICT row = _frameRow.get();
+				std::uint16_t* DEATH_RESTRICT row = (_incremental565 ? _frame565.get() : _frameRow.get());
 #if defined(DEATH_TARGET_DREAMCAST)
 				// The rows go out through the store queues, which burst 32 bytes at a time instead of pushing
 				// each write to video memory on its own. Their requirements - a 32-byte aligned destination, a
@@ -922,7 +1258,11 @@ namespace Jazz2::UI
 				if (useStoreQueues) {
 					sq_lock(mapped);
 					for (std::uint32_t y = 0; y < _textureHeight; y++) {
-						ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+						if (_incremental565) {
+							row = &_frame565[std::size_t(y) * _textureWidth];
+						} else {
+							ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+						}
 						sq_fast_cpy(SQ_MASK_DEST(mapped + std::size_t(y) * strideBytes), row, rowBytes / 32);
 					}
 					sq_unlock();
@@ -930,7 +1270,11 @@ namespace Jazz2::UI
 				}
 #endif
 				for (std::uint32_t y = 0; y < _textureHeight; y++) {
-					ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+					if (_incremental565) {
+						row = &_frame565[std::size_t(y) * _textureWidth];
+					} else {
+						ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+					}
 #if defined(DEATH_TARGET_DREAMCAST)
 					// Whatever ruled the store queues out, accesses to video memory still have to stay
 					// 16/32-bit wide, which libc memcpy does not guarantee for every size and alignment
@@ -945,11 +1289,14 @@ namespace Jazz2::UI
 				return;
 			}
 #endif
-			// The whole-frame buffer is only needed by this fallback, so it is allocated if it is ever reached
-			if (_frame565 == nullptr) {
-				_frame565 = std::make_unique<std::uint16_t[]>(std::size_t(_textureWidth) * _textureHeight);
+			// The whole-frame buffer is only needed by this fallback (or kept current by the decoder already),
+			// so it is allocated if it is ever reached
+			if (!_incremental565) {
+				if (_frame565 == nullptr) {
+					_frame565 = std::make_unique<std::uint16_t[]>(std::size_t(_textureWidth) * _textureHeight);
+				}
+				ConvertIndicesTo565(texels, _frame565.get(), _palette565, _textureWidth * _textureHeight);
 			}
-			ConvertIndicesTo565(texels, _frame565.get(), _palette565, _textureWidth * _textureHeight);
 			texels = reinterpret_cast<const std::uint8_t*>(_frame565.get());
 		}
 
@@ -1290,6 +1637,369 @@ namespace Jazz2::UI
 		// Not supported
 		return Stream::Invalid;
 	}
+
+	Cinematics::VideoReader::VideoReader()
+		: _file(nullptr), _data(nullptr), _capacity(0), _pieceSize(0), _readPos(0), _writePos(0), _filled(0), _skip(0),
+			_fileOffset(0), _endOfFile(false), _background(false), _decompressAhead(false)
+#if defined(WITH_THREADS)
+			, _stopRequested(false), _firstReadySlot(0), _readySlots(0), _framesEnded(false), _recordCapacity(0)
+#endif
+	{
+	}
+
+	Cinematics::VideoReader::~VideoReader()
+	{
+		Shutdown();
+	}
+
+	bool Cinematics::VideoReader::Initialize(Stream* file, std::int64_t dataOffset, std::uint32_t capacity, std::uint32_t pieceSize)
+	{
+		Shutdown();
+
+		_file = file;
+		_pieceSize = pieceSize;
+		// A whole number of pieces, so a piece never has to be split at the end of the ring - which keeps every
+		// read the same size, and both its destination and its offset in the file aligned for DMA
+		_capacity = std::max(capacity / pieceSize, std::uint32_t(2)) * pieceSize;
+		if (_allocation == nullptr) {
+			// Over-allocated so the ring itself can start on an aligned address
+			_allocation = std::make_unique<std::uint8_t[]>(_capacity + Alignment);
+		}
+		_data = reinterpret_cast<std::uint8_t*>((reinterpret_cast<std::uintptr_t>(_allocation.get()) + Alignment - 1)
+			& ~std::uintptr_t(Alignment - 1));
+		_readPos = 0;
+		_writePos = 0;
+		_filled = 0;
+		_endOfFile = false;
+		_background = false;
+		_decompressAhead = false;
+
+		// The Dreamcast's disc driver only transfers by DMA when both the destination and the position within
+		// the file are 32 byte aligned (it checks `ptr & 31`), and falls back to PIO otherwise - which is slower
+		// by orders of magnitude and turns each read into a multi-second stall. So reading starts at an aligned
+		// offset, the bytes before the first frame are skipped, and every piece keeps that alignment.
+		_fileOffset = dataOffset & ~std::int64_t(Alignment - 1);
+		_skip = std::uint32_t(dataOffset - _fileOffset);
+		return (_file->Seek(_fileOffset, SeekOrigin::Begin) == _fileOffset);
+	}
+
+	bool Cinematics::VideoReader::Start(std::uint32_t prefillPieces, bool background, bool decompressAhead)
+	{
+		for (std::uint32_t i = 0; i < prefillPieces && !_endOfFile && _capacity - _filled >= _pieceSize; i++) {
+			ReadPiece();
+		}
+		if (WaitForData(_skip) < _skip) {
+			return false;
+		}
+		Consume(_skip);
+		_skip = 0;
+
+#if defined(WITH_THREADS)
+		if (background) {
+			_stopRequested = false;
+			_background = true;
+#	if defined(WITH_LZ4)
+			_decompressAhead = decompressAhead;
+#	else
+			static_cast<void>(decompressAhead);
+#	endif
+			_firstReadySlot = 0;
+			_readySlots = 0;
+			_framesEnded = false;
+			_thread = Thread(ThreadFunc, this);
+#	if defined(WITH_LZ4)
+			if (_decompressAhead) {
+#		if defined(DEATH_TARGET_DREAMCAST)
+				_mainThreadPriority = std::int32_t(thd_get_prio(thd_get_current()));
+#		endif
+				_decompressThread = Thread(DecompressThreadFunc, this);
+			}
+#	endif
+		}
+#else
+		static_cast<void>(background);
+		static_cast<void>(decompressAhead);
+#endif
+		return true;
+	}
+
+	void Cinematics::VideoReader::Shutdown()
+	{
+#if defined(WITH_THREADS)
+		if (_background) {
+			_mutex.Lock();
+			_stopRequested = true;
+			_spaceAvailable.Signal();
+			_dataAvailable.Signal();
+			_slotAvailable.Signal();
+			_mutex.Unlock();
+			if (_decompressAhead) {
+				_decompressThread.Join();
+			}
+			_thread.Join();
+			_background = false;
+		}
+#endif
+	}
+
+	void Cinematics::VideoReader::ReadPiece()
+	{
+		// Only the free part of the ring is written, which the consumer does not touch, so the read itself
+		// runs without the lock - that is the whole point of having a thread for it
+		std::uint8_t* destination = _data + _writePos;
+		std::int64_t bytesRead = _file->Read(destination, _pieceSize);
+		const std::uint32_t length = (bytesRead > 0 ? std::uint32_t(bytesRead) : 0);
+
+#if defined(WITH_THREADS)
+		if (_background) {
+			_mutex.Lock();
+		}
+#endif
+		_fileOffset += length;
+		_writePos += length;
+		if (_writePos >= _capacity) {
+			_writePos -= _capacity;
+		}
+		_filled += length;
+		if (length < _pieceSize) {
+			// A short read is the end of the file (or a failed read, which ends playback the same way)
+			_endOfFile = true;
+		}
+#if defined(WITH_THREADS)
+		if (_background) {
+			_dataAvailable.Signal();
+			_mutex.Unlock();
+		}
+#endif
+	}
+
+	std::uint32_t Cinematics::VideoReader::WaitForData(std::uint32_t bytes)
+	{
+#if defined(WITH_THREADS)
+		if (_background) {
+			_mutex.Lock();
+			while (_filled < bytes && !_endOfFile && !_stopRequested) {
+				_dataAvailable.Wait(_mutex);
+			}
+			// Taken under the lock: everything the reader filled up to here is visible to this thread now
+			const std::uint32_t available = _filled;
+			_mutex.Unlock();
+			return available;
+		}
+#endif
+		// Without a thread the frame that needs the data has to wait for the drive itself - the case the
+		// read-ahead in Pump() exists to make rare
+		while (_filled < bytes && !_endOfFile) {
+			if (_capacity - _filled < _pieceSize) {
+				// The ring cannot take another piece before the consumer frees some, which it does only once
+				// it has what it waits for - so the request is larger than the ring can ever hold at once
+				break;
+			}
+			ReadPiece();
+		}
+		return _filled;
+	}
+
+	const std::uint8_t* Cinematics::VideoReader::Peek(std::uint32_t bytes, bool& endOfFile)
+	{
+		endOfFile = false;
+		if (bytes > _capacity - _pieceSize || _readPos + bytes > _capacity) {
+			// Wraps around the end of the ring, or could never be held at once (with a reader thread, a
+			// request larger than the ring minus one piece would wait for a piece that has no room)
+			return nullptr;
+		}
+		if (WaitForData(bytes) < bytes) {
+			endOfFile = true;
+			return nullptr;
+		}
+		return _data + _readPos;
+	}
+
+	bool Cinematics::VideoReader::ReadInto(std::uint8_t* destination, std::uint32_t bytes)
+	{
+		// Gathered piece by piece and released as it goes, so this works for any size, also one larger than
+		// the ring
+		while (bytes > 0) {
+			const std::uint32_t available = WaitForData(std::min(bytes, _pieceSize));
+			if (available == 0) {
+				return false;
+			}
+			std::uint32_t chunk = std::min(bytes, available);
+			chunk = std::min(chunk, _capacity - _readPos);
+			std::memcpy(destination, _data + _readPos, chunk);
+			Consume(chunk);
+			destination += chunk;
+			bytes -= chunk;
+		}
+		return true;
+	}
+
+	void Cinematics::VideoReader::Consume(std::uint32_t bytes)
+	{
+#if defined(WITH_THREADS)
+		if (_background) {
+			_mutex.Lock();
+		}
+#endif
+		_readPos += bytes;
+		if (_readPos >= _capacity) {
+			_readPos -= _capacity;
+		}
+		_filled -= bytes;
+#if defined(WITH_THREADS)
+		if (_background) {
+			_spaceAvailable.Signal();
+			_mutex.Unlock();
+		}
+#endif
+	}
+
+	void Cinematics::VideoReader::Pump()
+	{
+		if (!_background && !_endOfFile && _file != nullptr && _capacity - _filled >= _pieceSize) {
+			ReadPiece();
+		}
+	}
+
+#if defined(WITH_THREADS)
+	bool Cinematics::VideoReader::AcquireFrame(const std::uint8_t*& payload, std::uint32_t& size)
+	{
+		_mutex.Lock();
+		while (_readySlots == 0 && !_framesEnded) {
+			_frameAvailable.Wait(_mutex);
+		}
+		const bool available = (_readySlots > 0);
+		FrameSlot& slot = _frameSlots[_firstReadySlot];
+		_mutex.Unlock();
+		if (!available) {
+			return false;
+		}
+		// The decompressing thread never writes a ready slot, so it is read without the lock
+		payload = slot.Data.get();
+		size = slot.Size;
+		return true;
+	}
+
+	void Cinematics::VideoReader::ReleaseFrame()
+	{
+		_mutex.Lock();
+		_firstReadySlot = (_firstReadySlot + 1) % FrameSlotCount;
+		_readySlots--;
+		_slotAvailable.Signal();
+		_mutex.Unlock();
+	}
+
+#	if defined(WITH_LZ4)
+	bool Cinematics::VideoReader::DecompressNextFrame(FrameSlot& slot)
+	{
+		// The same steps the main thread takes in DecodeFrameNative() otherwise
+		std::uint8_t sizeBytes[4];
+		if (!ReadInto(sizeBytes, sizeof(sizeBytes))) {
+			return false;
+		}
+		const std::uint32_t recordSize = std::uint32_t(sizeBytes[0]) | (std::uint32_t(sizeBytes[1]) << 8)
+			| (std::uint32_t(sizeBytes[2]) << 16) | (std::uint32_t(sizeBytes[3]) << 24);
+		if (recordSize < 4 || recordSize > 8 * 1024 * 1024) {
+			return false;
+		}
+		bool endOfFile = false;
+		const std::uint8_t* src = Peek(recordSize, endOfFile);
+		const bool recordInRing = (src != nullptr);
+		if (!recordInRing) {
+			if (endOfFile) {
+				return false;
+			}
+			if (recordSize > _recordCapacity) {
+				_record = std::make_unique<std::uint8_t[]>(recordSize);
+				_recordCapacity = recordSize;
+			}
+			if (!ReadInto(_record.get(), recordSize)) {
+				return false;
+			}
+			src = _record.get();
+		}
+
+		const std::uint32_t decompressedSize = std::uint32_t(src[0]) | (std::uint32_t(src[1]) << 8)
+			| (std::uint32_t(src[2]) << 16) | (std::uint32_t(src[3]) << 24);
+		// A size of zero marks a payload that LZ4 could not make smaller, stored as it is
+		const std::uint32_t size = (decompressedSize > 0 ? decompressedSize : recordSize - 4);
+		bool decoded = (size <= 8 * 1024 * 1024);
+		if (decoded) {
+			if (size > slot.Capacity) {
+				slot.Data = std::make_unique<std::uint8_t[]>(size);
+				slot.Capacity = size;
+			}
+			if (decompressedSize == 0) {
+				std::memcpy(slot.Data.get(), src + 4, size);
+			} else {
+#		if defined(DEATH_TARGET_DREAMCAST)
+				const std::int32_t decompressed = DecompressLz4Block(src + 4, recordSize - 4, slot.Data.get(), size);
+#		else
+				const std::int32_t decompressed = LZ4_decompress_safe(reinterpret_cast<const char*>(src + 4),
+					reinterpret_cast<char*>(slot.Data.get()), std::int32_t(recordSize - 4), std::int32_t(size));
+#		endif
+				decoded = (decompressed == std::int32_t(size));
+			}
+			slot.Size = size;
+		}
+		if (recordInRing) {
+			Consume(recordSize);
+		}
+		return decoded;
+	}
+
+	void Cinematics::VideoReader::DecompressThreadFunc(void* arg)
+	{
+		Thread::SetCurrentName("Cinematics decompressor");
+
+		VideoReader* reader = static_cast<VideoReader*>(arg);
+#		if defined(DEATH_TARGET_DREAMCAST)
+		// KallistiOS shares the processor between threads of one priority in timeslices, so this thread would take
+		// turns with the main thread in the middle of its frames. One step below it, it only runs while the main
+		// thread waits - for the display, or for a frame that is not decompressed yet. (A larger number is a lower
+		// priority there.)
+		thd_set_prio(thd_get_current(), prio_t(reader->_mainThreadPriority + 1));
+#		endif
+
+		reader->_mutex.Lock();
+		while (!reader->_stopRequested && !reader->_framesEnded) {
+			if (reader->_readySlots == FrameSlotCount) {
+				reader->_slotAvailable.Wait(reader->_mutex);
+				continue;
+			}
+			FrameSlot& slot = reader->_frameSlots[(reader->_firstReadySlot + reader->_readySlots) % FrameSlotCount];
+			reader->_mutex.Unlock();
+			const bool decompressed = reader->DecompressNextFrame(slot);
+			reader->_mutex.Lock();
+			if (decompressed) {
+				reader->_readySlots++;
+			} else {
+				reader->_framesEnded = true;
+			}
+			reader->_frameAvailable.Signal();
+		}
+		reader->_mutex.Unlock();
+	}
+#	endif
+
+	void Cinematics::VideoReader::ThreadFunc(void* arg)
+	{
+		Thread::SetCurrentName("Cinematics reader");
+
+		VideoReader* reader = static_cast<VideoReader*>(arg);
+		reader->_mutex.Lock();
+		while (!reader->_stopRequested && !reader->_endOfFile) {
+			if (reader->_capacity - reader->_filled < reader->_pieceSize) {
+				reader->_spaceAvailable.Wait(reader->_mutex);
+				continue;
+			}
+			reader->_mutex.Unlock();
+			reader->ReadPiece();
+			reader->_mutex.Lock();
+		}
+		reader->_mutex.Unlock();
+	}
+#endif
 
 #if defined(WITH_AUDIO)
 	Cinematics::SfxItem::SfxItem()

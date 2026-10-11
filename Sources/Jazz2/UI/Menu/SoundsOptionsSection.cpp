@@ -75,7 +75,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_PSPAUDIO) || defined(WITH_PS2AUDIO) || defined(WITH_NDSP) || defined(WITH_AHIAUDIO)
 		// Only the software-mixing consoles have a mixing rate to trade for CPU time (the mixer's cost is linear
 		// in it, and so is the module decoder's, which renders at the device's rate): the PSP mixes at its
-		// hardware's 44100 Hz or at half or a quarter of it (see PspAudioDevice), the PS2 at any rate audsrv
+		// hardware's 44100 Hz or at half of it (see PspAudioDevice), the PS2 at any rate audsrv
 		// accepts and the SPU2 then resamples from (see Ps2AudioDevice), the 3DS at any rate its DSP then
 		// resamples to its own 32728 Hz (see NdspAudioDevice), the Amiga at whatever AHI resamples from. The
 		// change applies to the effects at once; the music is reopened at the new rate when the section is
@@ -96,12 +96,13 @@ namespace Jazz2::UI::Menu
 				// The DSP outputs at 32728 Hz, so that is the most a mix can be heard at; mixing at 44100 Hz would
 				// spend CPU on samples the hardware resamples straight back down
 				static const std::int32_t presets[] = { 11025, 22050, 32728 };
+#	elif defined(WITH_PSPAUDIO)
+				// The hardware's own 44100 Hz, the default, and half of it to give the CPU back in a pinch - a quarter
+				// would make the music audibly dull for a saving the game does not need (see PspAudioDevice)
+				static const std::int32_t presets[] = { 22050, 44100 };
 #	else
 				// The full set. The PlayStation 2's SPU2 runs at 48000 Hz and audsrv pitches the stream up to it, so
-				// any of these plays back correctly, and the EE has the headroom for 44100 (see Ps2AudioDevice). On
-				// the PSP 44100 Hz is the hardware's own rate, there for the music's sake but not the default: the
-				// module decoder renders at the mixing rate too, and at 44100 Hz it costs twice the CPU it does at
-				// the default 22050 Hz (see PspAudioDevice)
+				// any of these plays back correctly, and the EE has the headroom for 44100 (see Ps2AudioDevice)
 				static const std::int32_t presets[] = { 11025, 22050, 44100 };
 #	endif
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));

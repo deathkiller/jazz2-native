@@ -51,9 +51,9 @@ namespace Jazz2::Rendering
 
 		_vertices.clear();
 		for (auto& light : _emittedLightsCache) {
-			// A light with no far radius covers no pixels at all (the quad the shader path built for it was
-			// zero-sized), and its normalized near radius would divide by zero
-			if (light.RadiusFar <= 0.0f) {
+			// Skip lights that cover no pixels (a zero far radius would also divide by zero below) or add nothing
+			// (the lighting buffer is unsigned, so blending clamps a non-positive contribution to zero)
+			if (light.RadiusFar <= 0.0f || (light.Intensity <= 0.0f && light.Brightness <= 0.0f)) {
 				continue;
 			}
 			if (light.Pos.X + light.RadiusFar <= cullMinX || light.Pos.X - light.RadiusFar >= cullMaxX ||

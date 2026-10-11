@@ -30,17 +30,17 @@ namespace nCine
 		a millisecond) by the mixer. A kernel semaphore rather than a spin lock, because the mixer thread has
 		the higher priority - spinning on a lock the main thread holds would never let it be released.
 
-		The hardware plays 44100 Hz and nothing else, but the sources are mixed at half that by default - the
-		user's "Sample Rate" option can take it down to a quarter or back up to the full rate (see
-		@ref setMixingFrequency()) - and the block is upsampled to the hardware's rate afterwards with a linear
-		interpolation. The per-source loop, which is where the mixer's time goes, then runs half or a quarter as
-		often, for content that is 11-22 kHz samples to begin with; the interpolation is one multiply-add per
-		output sample, whatever the number of sources. @ref nativeFrequency() reports the mixing rate, so the
-		module decoder renders at it too - and that is the larger half of the saving: rendering a module is the
-		most expensive thing the Allegrex does outside the renderer, measured at around 420 ms of every second
-		at 44100 Hz in `prince/02_castle1n`, more CPU than the whole renderer and more than the idle time the
-		decoding thread has to hide it in. At the default rate it is half of that, for music that comes out of
-		a pair of centimetre-wide speakers and whose samples were recorded at around that rate to begin with.
+		The hardware plays 44100 Hz and nothing else, and that is also the rate the sources are mixed at by
+		default. The user's "Sample Rate" option can take it down to half (see @ref setMixingFrequency()), in
+		which case the block is upsampled to the hardware's rate afterwards with a linear interpolation: the
+		per-source loop, which is where the mixer's time goes, then runs half as often, for content that is
+		11-22 kHz samples to begin with, and the interpolation is one multiply-add per output sample, whatever
+		the number of sources. @ref nativeFrequency() reports the mixing rate, so the module decoder renders at
+		it too - and that is the larger half of what the lower rate saves: rendering a module is the most
+		expensive thing the Allegrex does outside the renderer. Measured at 44100 Hz in `prince/02_castle1n`, it
+		was once around 420 ms of every second, more CPU than the whole renderer; once the module player's
+		double-precision math was taken over (see `nCine/Base/LibmOverrides.cpp`) and the renderer had become
+		cheaper, the game held 60 fps at the full rate on hardware, which is why that is the default now.
 
 		The mixer thread outranking the game's is also why it must never loop without waiting: a failed output
 		call returns at once, and retried straight away it would not let the main thread run at all. That is
@@ -98,7 +98,7 @@ namespace nCine
 		/** @brief The hardware's native rate; `sceAudioChReserve()` channels play nothing else */
 		static constexpr std::int32_t OutputFrequency = 44100;
 		/** @brief Rate the sources are mixed at unless @ref setMixingFrequency() says otherwise (see the class documentation) */
-		static constexpr std::int32_t DefaultMixingFrequency = 22050;
+		static constexpr std::int32_t DefaultMixingFrequency = 44100;
 		/**
 			@brief Frames per hardware block (a multiple of 64, as `sceAudioChReserve()` requires) - 23 ms
 
