@@ -87,6 +87,10 @@ namespace Jazz2::UI::Menu
 				PreferencesCache::WeaponWheel = (WeaponWheelStyle)(((std::int32_t)PreferencesCache::WeaponWheel + direction + 3) % 3);
 				_isDirty = true;
 			})->ArrowSpacing = WideArrowSpacing;
+		// TRANSLATORS: Menu item in Options > Gameplay > Enhancements section (weapon wheel shows also weapons the player doesn't have)
+		list->Add<ChoiceItem>(_("Show All Weapon Wheel Slots"),
+			[]() -> StringView { return (PreferencesCache::ShowAllWeaponWheelSlots ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::ShowAllWeaponWheelSlots = !PreferencesCache::ShowAllWeaponWheelSlots; _isDirty = true; })->ArrowSpacing = WideArrowSpacing;
 
 		SetContent(std::move(list));
 	}

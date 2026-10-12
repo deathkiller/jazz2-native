@@ -3,6 +3,7 @@
 #include "../EventType.h"
 #include "../LightEmitter.h"
 #include "../Resources.h"
+#include "../SfxFlags.h"
 #include "../Tiles/TileCollisionParams.h"
 
 #include "../../nCine/Base/Task.h"
@@ -753,7 +754,7 @@ namespace Jazz2::Actors
 		virtual float GetIceShrapnelScale() const;
 
 		/** @brief Plays a sound effect for the object */
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f);
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(StringView identifier, float gain = 1.0f, float pitch = 1.0f, SfxFlags flags = SfxFlags::None);
 		/** @brief Sets an animation of the object */
 		bool SetAnimation(AnimState state, bool skipAnimation = false);
 		/** @brief Sets a transition animation of the object */

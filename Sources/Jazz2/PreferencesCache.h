@@ -413,6 +413,13 @@ namespace Jazz2
 		static bool EnableLedgeClimb;
 		/** @brief Current weapon wheel style */
 		static WeaponWheelStyle WeaponWheel;
+		/**
+		 * @brief Whether the weapon wheel shows a slot for every weapon, not only for the ones the player has
+		 *
+		 * Every weapon then keeps the same place in the wheel all the time. A slot of a weapon the player doesn't
+		 * have is drawn empty and dimmed, and can't be picked.
+		 */
+		static bool ShowAllWeaponWheelSlots;
 		/** @brief Whether a newly acquired weapon is automatically selected */
 		static bool SwitchToNewWeapon;
 		/** @brief Whether RGB light effects are enabled */
@@ -606,7 +613,8 @@ namespace Jazz2
 			ShowMinimap = 0x100000000,
 			EnableReforgedCamera = 0x200000000,
 			// Together with ShowPerformanceMetrics, which on its own is the frame rate counter older versions know
-			ShowDetailedPerformanceMetrics = 0x400000000
+			ShowDetailedPerformanceMetrics = 0x400000000,
+			ShowAllWeaponWheelSlots = 0x800000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);

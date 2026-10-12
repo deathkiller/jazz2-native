@@ -421,10 +421,11 @@ namespace Jazz2::Multiplayer
 					actorId = it->second.ActorID;
 				}
 
-				MemoryStream packet(12 + sfx.Identifier.size());
+				MemoryStream packet(13 + sfx.Identifier.size());
 				packet.WriteVariableUint32(actorId);
 				// TODO: sourceRelative
 				// TODO: looping
+				packet.WriteValue<std::uint8_t>((std::uint8_t)sfx.Flags);
 				packet.WriteValue<std::uint16_t>(sfx.Gain);
 				packet.WriteValue<std::uint16_t>(sfx.Pitch);
 				packet.WriteVariableUint32((std::uint32_t)sfx.Identifier.size());
@@ -437,6 +438,8 @@ namespace Jazz2::Multiplayer
 			}
 			_pendingSfx.clear();
 		} else {
+			UpdateTrackedSfx();
+
 			// Compared against the last sent state, not PressedActionsLast - the pause menu stops UpdatePressedActions(),
 			// which freezes both at the Menu press edge, so that comparison stays true and would send every frame
 			auto& input = _playerInputs[0];
@@ -1316,38 +1319,45 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	std::shared_ptr<AudioBufferPlayer> MpLevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::uint32_t MpLevelHandler::GetSfxActorId(Actors::ActorBase* self, StringView identifier, bool& excludeSelf)
+	{
+		if (auto* player = runtime_cast<Actors::Player>(self)) {
+			// The owner plays its own sounds from its own simulation, except for these, which only the server decides
+			excludeSelf = (!identifier.hasPrefix("EndOfLevel"_s) && !identifier.hasPrefix("Pickup"_s) && !identifier.hasPrefix("Weapon"_s));
+			return player->_playerIndex;
+		}
+
+		excludeSelf = false;
+		std::unique_lock lock(_lock);
+		auto it = _remotingActors.find(self);
+		return (it != _remotingActors.end() ? it->second.ActorID : UINT32_MAX);
+	}
+
+	std::shared_ptr<AudioBufferPlayer> MpLevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, SfxFlags flags)
 	{
 		Vector3f adjustedPos = pos;
 
 		// Nothing to broadcast in a local session (and no RemotePlayerOnServer can exist there either)
 		if (_isServer && !_isLocalSession) {
-			std::uint32_t actorId; bool excludeSelf;
-			if (auto* player = runtime_cast<Actors::Player>(self)) {
-				actorId = player->_playerIndex;
-				excludeSelf = (!identifier.hasPrefix("EndOfLevel"_s) && !identifier.hasPrefix("Pickup"_s) && !identifier.hasPrefix("Weapon"_s));
+			bool excludeSelf;
+			std::uint32_t actorId = GetSfxActorId(self, identifier, excludeSelf);
 
-				if (sourceRelative) {
-					// Remote players don't have local viewport, so SFX cannot be relative to them
-					if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer>(self)) {
-						sourceRelative = false;
-						Vector2f pos = remotePlayer->GetPos();
-						adjustedPos.X += pos.X;
-						adjustedPos.Y += pos.Y;
-					}
+			if (sourceRelative) {
+				// Remote players don't have local viewport, so SFX cannot be relative to them
+				if (auto* remotePlayer = runtime_cast<RemotePlayerOnServer>(self)) {
+					sourceRelative = false;
+					Vector2f pos = remotePlayer->GetPos();
+					adjustedPos.X += pos.X;
+					adjustedPos.Y += pos.Y;
 				}
-			} else {
-				std::unique_lock lock(_lock);
-				auto it = _remotingActors.find(self);
-				actorId = (it != _remotingActors.end() ? it->second.ActorID : UINT32_MAX);
-				excludeSelf = false;
 			}
 
 			if (actorId != UINT32_MAX) {
-				MemoryStream packet(12 + identifier.size());
+				MemoryStream packet(13 + identifier.size());
 				packet.WriteVariableUint32(actorId);
 				// TODO: sourceRelative
 				// TODO: looping
+				packet.WriteValue<std::uint8_t>((std::uint8_t)flags);
 				packet.WriteValue<std::uint16_t>(floatToHalf(gain));
 				packet.WriteValue<std::uint16_t>(floatToHalf(pitch));
 				packet.WriteVariableUint32((std::uint32_t)identifier.size());
@@ -1360,11 +1370,42 @@ namespace Jazz2::Multiplayer
 				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlaySfx, packet);
 			} else {
 				// Actor is probably not fully created yet, try it later again
-				_pendingSfx.emplace_back(self, identifier, floatToHalf(gain), floatToHalf(pitch));
+				_pendingSfx.emplace_back(self, identifier, floatToHalf(gain), floatToHalf(pitch), flags);
 			}
 		}
 
-		return LevelHandler::PlaySfx(self, identifier, buffer, adjustedPos, sourceRelative, gain, pitch);
+		return LevelHandler::PlaySfx(self, identifier, buffer, adjustedPos, sourceRelative, gain, pitch, flags);
+	}
+
+	void MpLevelHandler::StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player)
+	{
+		if (_isServer && !_isLocalSession) {
+			bool excludeSelf;
+			std::uint32_t actorId = GetSfxActorId(self, identifier, excludeSelf);
+
+			if (actorId != UINT32_MAX) {
+				MemoryStream packet(8 + identifier.size());
+				packet.WriteVariableUint32(actorId);
+				packet.WriteVariableUint32((std::uint32_t)identifier.size());
+				packet.Write(identifier.data(), (std::uint32_t)identifier.size());
+
+				// Sent to exactly the peers the sound itself went to
+				Actors::ActorBase* excludedPlayer = (excludeSelf ? self : nullptr);
+				_networkManager->SendTo([this, excludedPlayer](const Peer& peer) {
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized && (excludedPlayer == nullptr || excludedPlayer != peerDesc->Player));
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StopSfx, packet);
+			} else {
+				// Not sent yet either, so the stop is just the sound never going out
+				for (std::int32_t i = (std::int32_t)_pendingSfx.size() - 1; i >= 0; i--) {
+					if (_pendingSfx[i].Actor == self && _pendingSfx[i].Identifier == identifier) {
+						_pendingSfx.erase(i);
+					}
+				}
+			}
+		}
+
+		LevelHandler::StopSfx(self, identifier, player);
 	}
 
 	std::shared_ptr<AudioBufferPlayer> MpLevelHandler::PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain, float pitch)
@@ -3970,6 +4011,7 @@ namespace Jazz2::Multiplayer
 				case ServerPacketType::SetTrigger: return HandleServerPacketSetTrigger(peer, data);
 				case ServerPacketType::AdvanceTileAnimation: return HandleServerPacketAdvanceTileAnimation(peer, data);
 				case ServerPacketType::CreateDebris: return HandleServerPacketCreateDebris(peer, data);
+				case ServerPacketType::StopSfx: return HandleServerPacketStopSfx(peer, data);
 				case ServerPacketType::CreateControllablePlayer: return HandleServerPacketCreateControllablePlayer(peer, data);
 				case ServerPacketType::CreateRemoteActor: return HandleServerPacketCreateRemoteActor(peer, data);
 				case ServerPacketType::CreateMirroredActor: return HandleServerPacketCreateMirroredActor(peer, data);
@@ -5091,6 +5133,7 @@ namespace Jazz2::Multiplayer
 	{
 		MemoryStream packet(data);
 		std::uint32_t actorId = packet.ReadVariableUint32();
+		SfxFlags flags = (SfxFlags)packet.ReadValue<std::uint8_t>();
 		float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
 		float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
 		std::uint32_t identifierLength = packet.ReadVariableUint32();
@@ -5103,21 +5146,92 @@ namespace Jazz2::Multiplayer
 		packet.Read(identifier.data(), identifierLength);
 
 		// TODO: Use only lock here
-		InvokeAsync([this, actorId, gain, pitch, identifier = std::move(identifier)]() {
-			if (_lastSpawnedActorId == actorId) {
-				if (!_players.empty()) {
-					_players[0]->PlaySfx(identifier, gain, pitch);
-				}
-			} else {
-				std::unique_lock lock(_lock);
-				auto it = _remoteActors.find(actorId);
-				if (it != _remoteActors.end()) {
-					// TODO: gain, pitch, ...
-					it->second->PlaySfx(identifier, gain, pitch);
-				}
+		InvokeAsync([this, actorId, flags, gain, pitch, identifier = std::move(identifier)]() {
+			std::unique_lock lock(_lock);
+			Actors::ActorBase* actor = FindSfxActor(actorId);
+			if (actor == nullptr) {
+				return;
 			}
+
+#if defined(WITH_AUDIO)
+			if ((flags & SfxFlags::Exclusive) == SfxFlags::Exclusive) {
+				StopTrackedSfx(actorId, identifier);
+				// The flags go along for the looping, nothing is sent from a client
+				auto player = actor->PlaySfx(identifier, gain, pitch, flags);
+				if (player != nullptr) {
+					_trackedSfx.push_back(TrackedSfx{actorId, String(identifier), std::move(player)});
+				}
+				return;
+			}
+#endif
+			actor->PlaySfx(identifier, gain, pitch);
 		});
 		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketStopSfx(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		std::uint32_t identifierLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(identifierLength > 128) {
+			LOGW("[MP] ServerPacketType::StopSfx - Malformed packet");
+			return true;
+		}
+		String identifier = String(NoInit, identifierLength);
+		packet.Read(identifier.data(), identifierLength);
+
+		InvokeAsync([this, actorId, identifier = std::move(identifier)]() {
+			StopTrackedSfx(actorId, identifier);
+		});
+		return true;
+	}
+
+	Actors::ActorBase* MpLevelHandler::FindSfxActor(std::uint32_t actorId)
+	{
+		// The caller holds `_lock`
+		if (_lastSpawnedActorId == actorId) {
+			return (!_players.empty() ? _players[0] : nullptr);
+		}
+		auto it = _remoteActors.find(actorId);
+		return (it != _remoteActors.end() ? it->second.get() : nullptr);
+	}
+
+	void MpLevelHandler::StopTrackedSfx(std::uint32_t actorId, StringView identifier)
+	{
+#if defined(WITH_AUDIO)
+		for (std::int32_t i = (std::int32_t)_trackedSfx.size() - 1; i >= 0; i--) {
+			auto& sfx = _trackedSfx[i];
+			if (sfx.ActorId == actorId && sfx.Identifier == identifier) {
+				sfx.Player->stop();
+				_trackedSfx.eraseUnordered(i);
+			}
+		}
+#endif
+	}
+
+	void MpLevelHandler::UpdateTrackedSfx()
+	{
+#if defined(WITH_AUDIO)
+		if (_trackedSfx.empty()) {
+			return;
+		}
+
+		std::unique_lock lock(_lock);
+		for (std::int32_t i = (std::int32_t)_trackedSfx.size() - 1; i >= 0; i--) {
+			auto& sfx = _trackedSfx[i];
+			// An actor gone without a stop (destroyed, or the server's StopSfx lost to a level change) takes its
+			// sound with it, otherwise a looping one would play forever
+			Actors::ActorBase* actor = (sfx.Player->isPlaying() ? FindSfxActor(sfx.ActorId) : nullptr);
+			if (actor != nullptr) {
+				Vector2f pos = actor->GetPos();
+				sfx.Player->setPosition(Vector3f(pos.X, pos.Y, 0.8f));
+			} else {
+				sfx.Player->stop();
+				_trackedSfx.eraseUnordered(i);
+			}
+		}
+#endif
 	}
 
 	bool MpLevelHandler::HandleServerPacketPlayCommonSfx(const Peer& peer, ArrayView<const std::uint8_t> data)

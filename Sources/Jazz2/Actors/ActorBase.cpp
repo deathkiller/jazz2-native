@@ -1083,7 +1083,7 @@ namespace Jazz2::Actors
 		return 1.0f;
 	}
 
-	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(StringView identifier, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> ActorBase::PlaySfx(StringView identifier, float gain, float pitch, SfxFlags flags)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
 		if (it != _metadata->Sounds.end()) {
@@ -1096,7 +1096,7 @@ namespace Jazz2::Actors
 				buffer = nullptr;
 			}
 
-			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch);
+			return _levelHandler->PlaySfx(this, identifier, buffer, Vector3f(_pos.X, _pos.Y, 0.0f), false, gain, pitch, flags);
 		}
 
 		return nullptr;

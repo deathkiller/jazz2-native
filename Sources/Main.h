@@ -40,7 +40,11 @@
 	is only this version unless set otherwise.
 */
 #if !defined(NCINE_PROTOCOL_VERSION)
-// Bumped past the released 3.8.0: `ServerPacketType::UpdateAllActors` gained a variable-length light block
+// 3.8.2: `ServerPacketType::PlaySfx` gained a flags byte right after the actor id (see SfxFlags), and the new
+// `ServerPacketType::StopSfx` took the free slot after `CreateDebris`. A 3.8.1 peer would read the flags as the
+// first byte of the gain and misparse every sound that follows.
+//
+// 3.8.1, past the released 3.8.0: `ServerPacketType::UpdateAllActors` gained a variable-length light block
 // behind flag bit 0x80 and `CreateRemoteActor` gained a blending-preset byte plus a light block, so the field
 // layout no longer matches what a 3.8.0 peer parses. A player always emits at least one remoted light, so the
 // flag is set on the very first update - an unbumped 3.8.0 client reads the light bytes as the next entry's
@@ -49,7 +53,7 @@
 // A patch bump is enough because the accepted range is exactly this version by default (see
 // NCINE_PROTOCOL_VERSION_MIN); this number tracks the wire format, not the release it happens to ship in, so
 // it does not have to wait for the next minor.
-#	define NCINE_PROTOCOL_VERSION "3.8.1"
+#	define NCINE_PROTOCOL_VERSION "3.8.2"
 #endif
 /**
 	@brief Oldest client multiplayer protocol version the server accepts

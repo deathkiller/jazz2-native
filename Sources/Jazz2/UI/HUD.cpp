@@ -1625,21 +1625,51 @@ namespace Jazz2::UI
 			DrawElement(WeaponWheelInner, -1, center.X, center.Y, MainLayer + 5, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alphaInner), scale * easing, scale * easing, true, requestedAngle);
 		}
 
+		const bool showAllSlots = PreferencesCache::ShowAllWeaponWheelSlots;
+		// A slot of a weapon the player doesn't have can't be picked and isn't highlighted, pointing at one keeps the previous
+		// choice highlighted instead, so releasing the button there picks that one. With all slots shown, slot index is the weapon index.
+		const bool hoveringEmptySlot = (showAllSlots && requestedIndex >= 0 && requestedIndex < std::int32_t(arraySize(player->_inventory.WeaponAmmo)) &&
+			player->_inventory.WeaponAmmo[requestedIndex] == 0);
 		float angle = -fPiOver2;
 		for (std::int32_t i = 0, j = 0; i < std::int32_t(arraySize(player->_inventory.WeaponAmmo)); i++) {
-			if (player->_inventory.WeaponAmmo[i] != 0) {
+			bool hasWeapon = (player->_inventory.WeaponAmmo[i] != 0);
+			if (hasWeapon || showAllSlots) {
 				float x, y;
 				sincosApprox(angle, y, x);
 				x *= distance;
 				y *= distance;
 
+				bool isSelected = (hasWeapon && (hoveringEmptySlot ? i == state.LastIndex : j == requestedIndex));
+				if (isSelected) {
+					state.LastIndex = i;
+				}
+
+				float angleFrom = angle - angleStep * 0.4f;
+				float angleTo = angle + angleStep * 0.4f;
+
+				if (!hasWeapon) {
+					// An empty slot has no icon (and no ammo count), only a dimmed outline over a gray fill fading outwards
+					DrawWeaponWheelSegmentFill(state, center.X - distance2, center.Y - distance2, distance3, distance3, ShadowLayer + 10,
+						angleFrom, angleTo, lineTexture, Colorf(0.62f, 0.62f, 0.62f, alpha * 0.21f));
+
+					Colorf shadowColor = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.08f);
+					if constexpr (Font::ShadowsEnabled) {
+						DrawWeaponWheelSegment(state, center.X - distance2 - 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, shadowColor);
+						DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, shadowColor);
+					}
+					DrawWeaponWheelSegment(state, center.X - distance2, center.Y - distance2, distance3, distance3, MainLayer, angleFrom, angleTo, lineTexture,
+						Colorf(1.0f, 1.0f, 1.0f, alpha * 0.34f));
+
+					angle += angleStep;
+					j++;
+					continue;
+				}
+
 				Vector2f pos = Vector2f(center.X + x, center.Y + y);
 				AnimState weapon = GetCurrentWeapon(player, (WeaponType)i, pos);
 				Colorf color2;
 				float scale;
-				bool isSelected = (j == requestedIndex);
 				if (isSelected) {
-					state.LastIndex = i;
 					color2 = Colorf(1.0f, 0.8f, 0.5f, alpha);
 					scale = 1.0f;
 				} else {
@@ -1652,6 +1682,18 @@ namespace Jazz2::UI
 				// The Blaster icon is tinted with the player's colors (like the character icon), so recolor it to match
 				// when the player is being recolored; every other weapon has fixed colors and uses the plain (baked) icon.
 				Colorf weaponColor = Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f);
+
+				// Placed by the top-left corner of the cell rather than by its center. A cell of an odd width centered on
+				// a whole pixel starts on a half one, where each frame of a trimmed sheet (with its own offset and width)
+				// rounds on its own, so the icon jumped back and forth by a pixel while animating at full size.
+				Vector2f topLeft = Vector2f(roundf(pos.X), roundf(pos.Y));
+				Alignment align = Alignment::Center;
+				if (auto* weaponRes = _metadata->FindAnimation(weapon)) {
+					topLeft.X = roundf(pos.X - weaponRes->Base->FrameDimensions.X * scale * 0.5f);
+					topLeft.Y = roundf(pos.Y - weaponRes->Base->FrameDimensions.Y * scale * 0.5f);
+					align = Alignment::TopLeft;
+				}
+
 				bool drawn = false;
 				if ((WeaponType)i == WeaponType::Blaster) {
 					std::int32_t paletteOffset = player->GetPaletteOffset();
@@ -1659,11 +1701,11 @@ namespace Jazz2::UI
 						if (_metadataIndexed == nullptr) {
 							_metadataIndexed = ContentResolver::Get().RequestMetadata("UI/HUD"_s, true);
 						}
-						drawn = DrawElementWithPalette(weapon, -1, roundf(pos.X), roundf(pos.Y), MainLayer + 10, Alignment::Center, weaponColor, (float)paletteOffset, scale, scale);
+						drawn = DrawElementWithPalette(weapon, -1, topLeft.X, topLeft.Y, MainLayer + 10, align, weaponColor, (float)paletteOffset, scale, scale);
 					}
 				}
 				if (!drawn) {
-					DrawElement(weapon, -1, roundf(pos.X), roundf(pos.Y), MainLayer + 10, Alignment::Center, weaponColor, scale, scale);
+					DrawElement(weapon, -1, topLeft.X, topLeft.Y, MainLayer + 10, align, weaponColor, scale, scale);
 				}
 
 				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
@@ -1681,9 +1723,6 @@ namespace Jazz2::UI
 					_smallFont->DrawString(this, ammoCount, charOffset, center.X + x * 1.4f, center.Y + y * 1.4f, FontLayer,
 						Alignment::Center, isSelected ? Colorf(0.62f, 0.44f, 0.34f, 0.5f * alpha) : Colorf(0.45f, 0.45f, 0.45f, 0.48f * alpha), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 				}
-
-				float angleFrom = angle - angleStep * 0.4f;
-				float angleTo = angle + angleStep * 0.4f;
 
 				Colorf color1 = Colorf(0.0f, 0.0f, 0.0f, alpha * 0.2f);
 
@@ -1803,7 +1842,12 @@ namespace Jazz2::UI
 
 		// Player must have at least 2 weapons
 		if (weaponCount < 2) {
-			weaponCount = 0;
+			return 0;
+		}
+
+		// All slots are drawn then, including the ones of the weapons the player doesn't have (see DrawWeaponWheel())
+		if (PreferencesCache::ShowAllWeaponWheelSlots) {
+			return std::int32_t(arraySize(player->_inventory.WeaponAmmo));
 		}
 
 		return weaponCount;
@@ -1815,37 +1859,13 @@ namespace Jazz2::UI
 		height *= 0.5f; y += height;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		float size = std::max(width, height);
-		if (size != state.SegmentSize[0]) {
-			if (size == state.SegmentSize[1]) {
-				std::swap(state.SegmentSize[0], state.SegmentSize[1]);
-				std::swap(state.SegmentSizePow[0], state.SegmentSizePow[1]);
-			} else {
-				state.SegmentSize[1] = state.SegmentSize[0];
-				state.SegmentSizePow[1] = state.SegmentSizePow[0];
-				state.SegmentSize[0] = size;
-				state.SegmentSizePow[0] = powf(size, 0.65f);
-			}
-		}
-		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)roundFast(state.SegmentSizePow[0] * 3.5f * angleRange / fRadAngle360), 4, 128);
-#if defined(DEATH_TARGET_N64)
-		// Every segment costs the RDP backend two textured triangles, so the arcs are drawn with four fifths of the
-		// points - still about ten degrees a segment, where a one-pixel line reads as round. The count is rounded up
-		// to an even number, which puts a whole segment rather than a corner on the middle of the arc: at this
-		// density a corner there shows as a one-pixel bump at the top of an arc. Never more than the full count.
-		const std::int32_t reducedSegmentNum = 2 * (std::int32_t)ceilFast(state.SegmentSizePow[0] * (3.5f * 0.8f) * angleRange / fRadAngle360 * 0.5f);
-		segmentNum = std::max<std::int32_t>(std::min(segmentNum, reducedSegmentNum), 4);
-#endif
+		std::int32_t segmentNum = GetWeaponWheelSegmentCount(state, std::max(width, height), angleRange);
 		float angleStep = angleRange / (segmentNum - 1);
 		std::int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
 
-		Vertex* vertices = &state.Vertices[state.VerticesCount];
-		state.VerticesCount += vertexCount;
-
-		if (state.VerticesCount > WeaponWheelMaxVertices) {
-			// This shouldn't happen, 768 vertices should be enough
-			DEATH_DEBUG_ASSERT(state.VerticesCount <= WeaponWheelMaxVertices);
+		Vertex* vertices = AllocateWeaponWheelVertices(state, vertexCount);
+		if (vertices == nullptr) {
 			return;
 		}
 
@@ -1884,6 +1904,92 @@ namespace Jazz2::UI
 			vertices[j].V = 0.0f;
 		}
 
+		DrawWeaponWheelMesh(state, vertices, vertexCount, PrimitiveType::LineStrip, z, texture, color);
+	}
+
+	void HUD::DrawWeaponWheelSegmentFill(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color)
+	{
+		width *= 0.5f; x += width;
+		height *= 0.5f; y += height;
+
+		// Covers the area enclosed by the outline of DrawWeaponWheelSegment() with the same arguments - from its arc out to
+		// the ends of its sides - as a triangle strip. Its inner edge goes through the very points of the arc, so the arc has
+		// to have the same number of them. The line texture is opaque in the middle and fades out to both ends, so the inner
+		// edge samples it where it's opaque and the outer edge near its end, which fades the fill out towards the outside.
+		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
+		std::int32_t segmentNum = GetWeaponWheelSegmentCount(state, std::max(width, height), angleRange);
+		float angleStep = angleRange / (segmentNum - 1);
+		std::int32_t vertexCount = segmentNum * 2;
+		float angle = minAngle;
+
+		Vertex* vertices = AllocateWeaponWheelVertices(state, vertexCount);
+		if (vertices == nullptr) {
+			return;
+		}
+
+		constexpr float Mult = 2.2f;
+		constexpr float InnerU = 0.16f;
+		constexpr float OuterU = 0.02f;
+
+		for (std::int32_t i = 0; i < segmentNum; i++) {
+			float sinAngle, cosAngle;
+			sincosApprox(angle, sinAngle, cosAngle);
+			vertices[i * 2].X = x + cosAngle * (width - 0.5f);
+			vertices[i * 2].Y = y + sinAngle * (height - 0.5f);
+			vertices[i * 2].U = InnerU;
+			vertices[i * 2].V = 0.0f;
+			vertices[i * 2 + 1].X = x + cosAngle * (width * Mult - 0.5f);
+			vertices[i * 2 + 1].Y = y + sinAngle * (height * Mult - 0.5f);
+			vertices[i * 2 + 1].U = OuterU;
+			vertices[i * 2 + 1].V = 0.0f;
+
+			angle += angleStep;
+		}
+
+		DrawWeaponWheelMesh(state, vertices, vertexCount, PrimitiveType::TriangleStrip, z, texture, color);
+	}
+
+	std::int32_t HUD::GetWeaponWheelSegmentCount(WeaponWheelState& state, float size, float angleRange)
+	{
+		if (size != state.SegmentSize[0]) {
+			if (size == state.SegmentSize[1]) {
+				std::swap(state.SegmentSize[0], state.SegmentSize[1]);
+				std::swap(state.SegmentSizePow[0], state.SegmentSizePow[1]);
+			} else {
+				state.SegmentSize[1] = state.SegmentSize[0];
+				state.SegmentSizePow[1] = state.SegmentSizePow[0];
+				state.SegmentSize[0] = size;
+				state.SegmentSizePow[0] = powf(size, 0.65f);
+			}
+		}
+		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)roundFast(state.SegmentSizePow[0] * 3.5f * angleRange / fRadAngle360), 4, 128);
+#if defined(DEATH_TARGET_N64)
+		// Every segment costs the RDP backend two textured triangles, so the arcs are drawn with four fifths of the
+		// points - still about ten degrees a segment, where a one-pixel line reads as round. The count is rounded up
+		// to an even number, which puts a whole segment rather than a corner on the middle of the arc: at this
+		// density a corner there shows as a one-pixel bump at the top of an arc. Never more than the full count.
+		const std::int32_t reducedSegmentNum = 2 * (std::int32_t)ceilFast(state.SegmentSizePow[0] * (3.5f * 0.8f) * angleRange / fRadAngle360 * 0.5f);
+		segmentNum = std::max<std::int32_t>(std::min(segmentNum, reducedSegmentNum), 4);
+#endif
+		return segmentNum;
+	}
+
+	HUD::Vertex* HUD::AllocateWeaponWheelVertices(WeaponWheelState& state, std::int32_t vertexCount)
+	{
+		Vertex* vertices = &state.Vertices[state.VerticesCount];
+		state.VerticesCount += vertexCount;
+
+		if (state.VerticesCount > WeaponWheelMaxVertices) {
+			// This shouldn't happen, 768 vertices should be enough
+			DEATH_DEBUG_ASSERT(state.VerticesCount <= WeaponWheelMaxVertices);
+			return nullptr;
+		}
+
+		return vertices;
+	}
+
+	void HUD::DrawWeaponWheelMesh(WeaponWheelState& state, const Vertex* vertices, std::int32_t vertexCount, PrimitiveType primitiveType, std::uint16_t z, const Texture& texture, const Colorf& color)
+	{
 		// Create render command
 		RenderCommand* command;
 		if (state.RenderCommandsCount < state.RenderCommands.size()) {
@@ -1908,7 +2014,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetGeometry().SetDrawParameters(PrimitiveType::LineStrip, 0, vertexCount);
+		command->GetGeometry().SetDrawParameters(primitiveType, 0, vertexCount);
 		command->GetGeometry().SetElementsPerVertex(VertexFloats);
 		command->GetGeometry().SetHostVertexPointer((const float*)vertices);
 

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-09-28 22:44+0200\n"
+"POT-Creation-Date: 2026-10-12 13:25+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: rtdsx\n"
@@ -1377,19 +1377,18 @@ msgid "Level \"{}\" initialized"
 msgstr "Nivå \"{}\" initialisert"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:1075
+#: Sources/Jazz2/LevelHandler.cpp:1118
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
 msgid "For more information, visit the official website:"
 msgstr "For mer informasjon, besøk den offisielle nettsiden:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2119
+#: Sources/Jazz2/LevelHandler.cpp:2174
 #, c++-format
-#| msgid "Level \"{}\" initialized"
 msgid "Level \"{}\" restored"
 msgstr ""
 
-#: Sources/Jazz2/LevelHandler.cpp:3117
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4153
+#: Sources/Jazz2/LevelHandler.cpp:3172
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4195
 msgid "Cheats are not allowed in current context"
 msgstr "Juks er ikke tillat i nåværende kontekst"
 
@@ -1409,7 +1408,7 @@ msgstr "mistet"
 msgid "Find exit!"
 msgstr "Finn utgang!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:585
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:588
 msgid ""
 "\n"
 "\n"
@@ -1419,7 +1418,7 @@ msgstr ""
 "\n"
 "Spillet vil begynne straks!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:769
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:772
 #, c++-format
 msgid ""
 "\n"
@@ -1430,83 +1429,82 @@ msgstr ""
 "\n"
 "{} vant mesterskapet!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2840
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2881
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr "Verdi utenfor rekkevidde (2-{})"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2916
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2957
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr "Bruk: /team <blue|red|green|yellow|auto>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4658
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2964
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4700
 #, c++-format
 msgid "You joined the {} team"
 msgstr "Du ble med i {} teamet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2925
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4660
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2966
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4702
 msgid "Cannot change team right now"
 msgstr "Kan ikke bytte lag akkurat nå"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2936
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2948
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2977
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2989
 msgid "Teams are only used in team game modes"
 msgstr "Lag brukes kun i lagspillmoduser"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2939
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2980
 msgid "Teams rebalanced"
 msgstr "Lagene er ombalansert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2963
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3004
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr "Bruk: /setteam <spiller#> <blue|red|green|yellow>"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2978
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3019
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr "Spiller {} flyttet til {}-laget"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2980
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3021
 msgid "Player not found"
 msgstr "Spilleren ble ikke funnet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3720
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3761
 msgid ""
 "You have already finished the race, you can play again in the next round"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3724
-#| msgid "Cannot change team right now"
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3765
 msgid "You cannot join the game right now"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3763
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4770
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3804
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4812
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] frakoblet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4044
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4768
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4086
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4810
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] koblet på"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4791
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7345
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4833
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7466
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] Var stekt av \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4794
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7371
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4836
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7492
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] var stekt av miljø"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8639
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8760
 msgid ""
 "\n"
 "\n"
@@ -1516,7 +1514,7 @@ msgstr ""
 "\n"
 "Lagene har blitt ombalansert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8944
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9065
 #, c++-format
 msgid ""
 "\n"
@@ -1527,7 +1525,7 @@ msgstr ""
 "\n"
 "{} tok {}-flagget!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8952
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9073
 #, c++-format
 msgid ""
 "\n"
@@ -1538,7 +1536,7 @@ msgstr ""
 "\n"
 "Flagget {} ble returnert"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9000
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9121
 #, c++-format
 msgid ""
 "\n"
@@ -1549,7 +1547,7 @@ msgstr ""
 "\n"
 "{}-laget erobret {}-flagget!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9111
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9232
 #, c++-format
 msgid ""
 "\n"
@@ -1560,7 +1558,7 @@ msgstr ""
 "\n"
 "Flagget {} ble mistet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10159
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10280
 #, c++-format
 msgid ""
 "\n"
@@ -1573,7 +1571,7 @@ msgstr ""
 "{} fullførte løpet!\n"
 "{} sekunder igjen"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10173
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10294
 #, c++-format
 msgid ""
 "\n"
@@ -1584,7 +1582,7 @@ msgstr ""
 "\n"
 "{} fullførte {}."
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10437
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10558
 #, c++-format
 msgid ""
 "\n"
@@ -1595,7 +1593,7 @@ msgstr ""
 "\n"
 "Vinneren er {}"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10501
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10622
 #, c++-format
 msgid ""
 "\n"
@@ -1606,7 +1604,7 @@ msgstr ""
 "\n"
 "{} lag vinner!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10557
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10678
 msgid ""
 "\n"
 "\n"
@@ -1798,6 +1796,7 @@ msgstr "Slå av/på Løp"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:92
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:56
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
@@ -1825,6 +1824,7 @@ msgstr "Skrudd på"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:92
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
@@ -2117,7 +2117,7 @@ msgstr "Spillopplevelse"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:119
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:43
 msgid "Enhancements"
 msgstr "Forbedringer"
@@ -2173,8 +2173,13 @@ msgstr "Våpenhjul"
 msgid "Enabled With Ammo Count"
 msgstr "Aktivert med ammunisjonstelling"
 
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section (weapon wheel shows also weapons the player doesn't have)
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:91
+msgid "Show All Weapon Wheel Slots"
+msgstr ""
+
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Du kan aktivere forbedringer som ble lagt til i denne nyutgivelsen."
 
@@ -2694,7 +2699,7 @@ msgid "Music Volume"
 msgstr "Musikkvolum"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:84
 msgid "Sample Rate"
 msgstr ""
 
@@ -2852,11 +2857,11 @@ msgstr ""
 "Sørg for at alle nødvendige filer\n"
 "er tilgjengelige og prøv igjen."
 
-#: Sources/Main.cpp:1402
+#: Sources/Main.cpp:1404
 msgid "Unnamed server"
 msgstr "Navnløs server"
 
-#: Sources/Main.cpp:1559
+#: Sources/Main.cpp:1561
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2868,7 +2873,7 @@ msgstr ""
 "\n"
 "Ugyldig parameter angitt."
 
-#: Sources/Main.cpp:1560
+#: Sources/Main.cpp:1562
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2880,7 +2885,7 @@ msgstr ""
 "\n"
 "Din klientversjon er ikke kompatibel med serveren."
 
-#: Sources/Main.cpp:1561
+#: Sources/Main.cpp:1563
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2892,7 +2897,7 @@ msgstr ""
 "\n"
 "Klienten ble avvist på grunn av feil kommunikasjonsprotokoll."
 
-#: Sources/Main.cpp:1562
+#: Sources/Main.cpp:1564
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2906,7 +2911,7 @@ msgstr ""
 "Tilkoblingen ble avvist av nettleseren.\n"
 "En av årsakene kan være tilkobling til en usikret WebSocket."
 
-#: Sources/Main.cpp:1563
+#: Sources/Main.cpp:1565
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2920,7 +2925,7 @@ msgstr ""
 "Autentisering mislyktes.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1564
+#: Sources/Main.cpp:1566
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2932,7 +2937,7 @@ msgstr ""
 "\n"
 "Ugyldig passord angitt."
 
-#: Sources/Main.cpp:1565
+#: Sources/Main.cpp:1567
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2946,7 +2951,7 @@ msgstr ""
 "Ugyldig spillernavn angitt.\n"
 "Kontroller profilen din og prøv igjen."
 
-#: Sources/Main.cpp:1566
+#: Sources/Main.cpp:1568
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2960,7 +2965,7 @@ msgstr ""
 "Denne klienten er ikke på serverens hviteliste.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1567
+#: Sources/Main.cpp:1569
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2974,7 +2979,7 @@ msgstr ""
 "Serveren krever tredjeparts autentiseringsleverandør.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1568
+#: Sources/Main.cpp:1570
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2988,7 +2993,7 @@ msgstr ""
 "Serveren er full.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1569
+#: Sources/Main.cpp:1571
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3002,7 +3007,7 @@ msgstr ""
 "Serveren er ikke i en tilstand der den kan behandle forespørselen din.\n"
 "Vennligst prøv igjen om noen sekunder."
 
-#: Sources/Main.cpp:1570
+#: Sources/Main.cpp:1572
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3016,7 +3021,7 @@ msgstr ""
 "Serveren stenger ned.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1571
+#: Sources/Main.cpp:1573
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3030,7 +3035,7 @@ msgstr ""
 "Serveren stenger for vedlikehold.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1572
+#: Sources/Main.cpp:1574
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3044,7 +3049,7 @@ msgstr ""
 "Serveren stenger for omkonfigurering.\n"
 "Vennligst prøv igjen senere."
 
-#: Sources/Main.cpp:1573
+#: Sources/Main.cpp:1575
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3058,7 +3063,7 @@ msgstr ""
 "Serveren stenger for oppdatering.\n"
 "Vennligst sjekk klientversjonen din og prøv igjen om et minutt."
 
-#: Sources/Main.cpp:1574
+#: Sources/Main.cpp:1576
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -3072,7 +3077,7 @@ msgstr ""
 "Vennligst prøv igjen, og hvis problemet vedvarer, sjekk "
 "nettverkstilkoblingen din."
 
-#: Sources/Main.cpp:1575
+#: Sources/Main.cpp:1577
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3084,7 +3089,7 @@ msgstr ""
 "\n"
 "Serveren svarer ikke på tilkoblingsforespørselen."
 
-#: Sources/Main.cpp:1576
+#: Sources/Main.cpp:1578
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3098,7 +3103,7 @@ msgstr ""
 "Du har blitt \f[c:#907050]kastet\f[/c] ut av serveren.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1577
+#: Sources/Main.cpp:1579
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3112,7 +3117,7 @@ msgstr ""
 "Du har blitt \f[c:#725040]utelukket/bannet\f[/c] fra serveren.\n"
 "Kontakt serveradministratorene for mer informasjon."
 
-#: Sources/Main.cpp:1578
+#: Sources/Main.cpp:1580
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3124,7 +3129,7 @@ msgstr ""
 "\n"
 "Juks oppdaget."
 
-#: Sources/Main.cpp:1579
+#: Sources/Main.cpp:1581
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3138,7 +3143,7 @@ msgstr ""
 "Klienten din inneholder ikke nødvendige ressurser.\n"
 "Last ned de nødvendige filene og prøv igjen."
 
-#: Sources/Main.cpp:1580
+#: Sources/Main.cpp:1582
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3150,7 +3155,7 @@ msgstr ""
 "\n"
 "Serveren har koblet deg fra på grunn av inaktivitet."
 
-#: Sources/Main.cpp:1910
+#: Sources/Main.cpp:1912
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"

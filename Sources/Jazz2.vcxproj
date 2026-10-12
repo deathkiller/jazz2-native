@@ -527,6 +527,7 @@
     <ClInclude Include="Jazz2\Scripting\ScriptActorWrapper.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptLoader.h" />
     <ClInclude Include="Jazz2\Scripting\ScriptPlayerWrapper.h" />
+    <ClInclude Include="Jazz2\SfxFlags.h" />
     <ClInclude Include="Jazz2\ShieldType.h" />
     <ClInclude Include="Jazz2\SuspendType.h" />
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h" />

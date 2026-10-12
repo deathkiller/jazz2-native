@@ -1,4 +1,4 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
@@ -69,7 +69,7 @@ namespace Jazz2::Actors
 		_lastExitType(ExitType::None),
 		_wasUpPressed(false), _wasDownPressed(false), _wasJumpPressed(false), _wasFirePressed(false), _isRunPressed(false),
 		_runActionSeeded(false),
-		_revUpCharge(0.0f), _revUpHeldCharge(0.0f), _revUpPresses(0), _revUpArmed(false), _revUpWound(false), _revUpWindowLeft(0.0f), _revUpChargeTime(0.0f), _revUpSparkCooldown(0.0f), _revUpEndLeft(0.0f), _stopPhase(StopPhaseNone), _hookIdleTime(0.0f), _revUpLaunchLeft(0.0f), _revUpPendingSpeed(0.0f), _revUpStarted(false),
+		_revUpCharge(0.0f), _revUpHeldCharge(0.0f), _revUpPresses(0), _revUpArmed(false), _revUpWound(false), _revUpWindowLeft(0.0f), _revUpChargeTime(0.0f), _revUpSparkCooldown(0.0f), _revUpEndLeft(0.0f), _stopPhase(StopPhaseNone), _hookIdleTime(0.0f), _revUpLaunchLeft(0.0f), _revUpPendingSpeed(0.0f), _revUpSfxCooldown(0.0f), _revUpSfxPitch(RevUpSfxMinPitch), _revUpStarted(false), _revUpSfxActive(false), _weaponSoundType(WeaponType::Unknown),
 		_currentSpecialMove(SpecialMoveType::None),
 		_isAttachedToPole(false), _canPushFurther(false),
 		_copterFramesLeft(0.0f), _fireFramesLeft(0.0f), _pushFramesLeft(0.0f), _waterCooldownLeft(0.0f),
@@ -144,6 +144,10 @@ namespace Jazz2::Actors
 		if (_airboardTurnSound != nullptr) {
 			_airboardTurnSound->stop();
 			_airboardTurnSound = nullptr;
+		}
+		if (_revUpSound != nullptr) {
+			_revUpSound->stop();
+			_revUpSound = nullptr;
 		}
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
@@ -1143,6 +1147,15 @@ namespace Jazz2::Actors
 				_copterSound = nullptr;
 			}
 		}
+		// Kept after the launch too, which lets the last press's sound play out - it has to follow the player off,
+		// because a positional sound's near-field smoothing is fixed at wherever it was last placed
+		if (_revUpSound != nullptr) {
+			if (_revUpSound->isPlaying()) {
+				_revUpSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+			} else {
+				_revUpSound = nullptr;
+			}
+		}
 		if (_airboardSound != nullptr) {
 			if ((_currentAnimation->State & AnimState::Airboard) == AnimState::Airboard) {
 				_airboardSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
@@ -1166,7 +1179,10 @@ namespace Jazz2::Actors
 				}
 			}
 
-			if ((_keepRunningTime > 0.0f || _speed.SqrLength() > (_isRunPressed ? 36.0f : 100.0f)) && _inTubeTime <= 0.0f) {
+			// The uppercut leaves one for the whole move, whatever its speed. The wind-up that comes first stands still,
+			// and the trail is laid by distance, so it starts with the rise itself.
+			bool isUppercut = (_currentSpecialMove == SpecialMoveType::Uppercut);
+			if ((_keepRunningTime > 0.0f || isUppercut || _speed.SqrLength() > (_isRunPressed ? 36.0f : 100.0f)) && _inTubeTime <= 0.0f) {
 				constexpr float TrailDivision = 10.0f;
 				Vector2f trailDelta = (_pos - _trailLastPos);
 				std::int32_t trailDistance = (std::int32_t)(trailDelta.Length() / TrailDivision);
@@ -1214,13 +1230,8 @@ namespace Jazz2::Actors
 				_speed.X = std::clamp(_speed.X, -exitCap, exitCap);
 			} else {
 				// Skip controls, player is not controllable in tube
-#if defined(WITH_AUDIO)
 				// Weapons are automatically disabled if player is not controllable
-				if (_weaponSound != nullptr) {
-					_weaponSound->stop();
-					_weaponSound = nullptr;
-				}
-#endif
+				StopWeaponSfx();
 			}
 		}
 	}
@@ -1271,15 +1282,10 @@ namespace Jazz2::Actors
 		}
 
 		if (!_controllable || !_controllableExternal || _currentSpecialMove == SpecialMoveType::Buttstomp) {
-#if defined(WITH_AUDIO)
 			// Weapons are automatically disabled if player is not controllable
 			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
-				if (_weaponSound != nullptr) {
-					_weaponSound->stop();
-					_weaponSound = nullptr;
-				}
+				StopWeaponSfx();
 			}
-#endif
 			// ...but **Lori's** sidekick can still shoot outside Reforged, and it is this early return that took
 			// that away: losing control is what a special move does, and the return sits *before*
 			// HandleWeaponFire() rather than after it, so the whole of a kick was silently disarmed. Measured
@@ -1349,13 +1355,86 @@ namespace Jazz2::Actors
 		_revUpEndLeft = 0.0f;
 		_revUpLaunchLeft = 0.0f;
 		_revUpPendingSpeed = 0.0f;
+		_revUpSfxCooldown = 0.0f;
+		_revUpSfxPitch = RevUpSfxMinPitch;
 		// The pose runs at a charge-dependent speed, so the ordinary duration has to come back with it or the
 		// next animation inherits however fast the wind-up happened to be going
 		_renderer.AnimDuration = _currentAnimation->AnimDuration;
+		// Only a launch lets the last press's sound play out
+		StopRevUpSfx();
+	}
+
+	void Player::PlayRevUpSfx()
+	{
+		// Exclusive, so the remote peers replace the previous instance too - they get only the request to play it
+#if defined(WITH_AUDIO)
+		if (_revUpSound != nullptr) {
+			_revUpSound->stop();
+		}
+		_revUpSound = PlaySfx("RevUp"_s, RevUpSfxGain, _revUpSfxPitch, SfxFlags::Exclusive);
+#else
+		// Still called without audio, because a dedicated server has none and is the one that tells the peers
+		PlaySfx("RevUp"_s, RevUpSfxGain, _revUpSfxPitch, SfxFlags::Exclusive);
+#endif
+		_revUpSfxActive = true;
+	}
+
+	void Player::StopRevUpSfx()
+	{
+		// Tracked apart from the instance, which a dedicated server never has, so that only a sound actually
+		// started goes out as a stop to the peers
+		if (!_revUpSfxActive) {
+			return;
+		}
+		_revUpSfxActive = false;
+
+#if defined(WITH_AUDIO)
+		_levelHandler->StopSfx(this, "RevUp"_s, _revUpSound.get());
+		_revUpSound = nullptr;
+#else
+		_levelHandler->StopSfx(this, "RevUp"_s, nullptr);
+#endif
+	}
+
+	void Player::StartWeaponSfx(WeaponType weaponType, StringView identifier, float gain, float pitch)
+	{
+		if (_weaponSoundType != WeaponType::Unknown) {
+			return;
+		}
+		_weaponSoundType = weaponType;
+
+		// Outside WITH_AUDIO, because a dedicated server has none and is the one that tells the peers. Looping on
+		// the peers too, which used to get a single pass of it that nothing ever stopped.
+		SfxFlags flags = (SfxFlags::Exclusive | SfxFlags::Looping);
+#if defined(WITH_AUDIO)
+		_weaponSound = PlaySfx(identifier, gain, pitch, flags);
+#else
+		PlaySfx(identifier, gain, pitch, flags);
+#endif
+	}
+
+	void Player::StopWeaponSfx()
+	{
+		if (_weaponSoundType == WeaponType::Unknown) {
+			return;
+		}
+
+		StringView identifier = (_weaponSoundType == WeaponType::Thunderbolt ? "WeaponThunderbolt"_s : "WeaponToaster"_s);
+		_weaponSoundType = WeaponType::Unknown;
+
+#if defined(WITH_AUDIO)
+		_levelHandler->StopSfx(this, identifier, _weaponSound.get());
+		_weaponSound = nullptr;
+#else
+		_levelHandler->StopSfx(this, identifier, nullptr);
+#endif
 	}
 
 	void Player::ApplyRevUpLaunch()
 	{
+		PlaySfx("RevUpLaunch"_s);
+		// The last press's sound is let play out. `_revUpSound` stays, only so it keeps following the player.
+		_revUpSfxActive = false;
 		_speed.X = _revUpPendingSpeed;
 		_externalForce.X = 0.0f;
 		_keepRunningTime = RevUpKeepRunningTime;
@@ -1430,7 +1509,8 @@ namespace Jazz2::Actors
 
 		// The rising edge of the *button*, not of `_isRunPressed`: with `ToggleRunAction` the latter flips once
 		// per press and would count a press and its release as one tap in one mode and two in the other
-		if (_levelHandler->PlayerActionHit(this, PlayerAction::Run)) {
+		bool runHit = _levelHandler->PlayerActionHit(this, PlayerAction::Run);
+		if (runHit) {
 			_revUpCharge += RevUpChargeGainTap;
 			_revUpHeldCharge = 0.0f;
 			_revUpPresses++;
@@ -1510,6 +1590,22 @@ namespace Jazz2::Actors
 				_renderer.AnimDuration = _currentAnimation->AnimDuration / (1.0f + charge * RevUpAnimSpeedUp);
 			}
 
+			// A sound for every Run press once wound up, the press that winds the player up included, but no more
+			// often than the pose completes a cycle at its current speed - tapping as fast as possible would
+			// otherwise restart it every few frames and it would never be heard as more than a click
+			_revUpSfxCooldown -= timeMult;
+			if (runHit) {
+				if (_revUpSfxCooldown <= 0.0f) {
+					PlayRevUpSfx();
+					auto* revUpAnim = _metadata->FindAnimation(AnimState::RevUp);
+					float cycleTicks = (revUpAnim != nullptr ? revUpAnim->AnimDuration / FrameTimer::SecondsPerFrame : 0.0f);
+					_revUpSfxCooldown = cycleTicks / (1.0f + charge * RevUpAnimSpeedUp);
+				}
+				// Every press counts towards the pitch, the ones swallowed by the cooldown too, so it tracks how
+				// hard the player is tapping rather than how often the sound happened to be let through
+				_revUpSfxPitch = std::min(_revUpSfxPitch + RevUpSfxPitchStep, RevUpSfxMaxPitch);
+			}
+
 			// Sparks come at the same rate the pose runs at - they are the feet striking the ground, so they
 			// have to quicken exactly as the feet do rather than on a schedule of their own
 			_revUpSparkCooldown -= timeMult;
@@ -1547,6 +1643,8 @@ namespace Jazz2::Actors
 		_revUpWindowLeft = 0.0f;
 		_revUpChargeTime = 0.0f;
 		_revUpStarted = false;
+		_revUpSfxCooldown = 0.0f;
+		_revUpSfxPitch = RevUpSfxMinPitch;
 
 		// The base state is held at RevUp for the length of the animations instead of being switched to Dash
 		// straight away - see UpdateAnimation(). That is what lets these stay cancellable: the state does not
@@ -1563,7 +1661,6 @@ namespace Jazz2::Actors
 			// above rather than from a callback here, so the loop gets its own time in between.
 			_revUpEndLeft = RevUpStartTime + RevUpLightMidTime + RevUpEndTime;
 		}
-		PlayPlayerSfx("Jump"_s);
 	}
 
 	float Player::UpdateRemoteRevUp(ILevelHandler* levelHandler, Metadata* metadata, Vector2f pos,
@@ -1808,7 +1905,10 @@ namespace Jazz2::Actors
 		_revUpEndLeft = 0.0f;
 		_revUpLaunchLeft = 0.0f;
 		_revUpPendingSpeed = 0.0f;
+		_revUpSfxCooldown = 0.0f;
+		_revUpSfxPitch = RevUpSfxMinPitch;
 		_revUpStarted = false;
+		StopRevUpSfx();
 	}
 
 	bool Player::IsSpecialMoveCrouchReady() const
@@ -3115,21 +3215,25 @@ namespace Jazz2::Actors
 			_weaponCooldown = 0.0f;
 		}
 
+		if (_weaponSoundType != WeaponType::Unknown) {
+			if (weaponInUse && _currentWeapon == _weaponSoundType) {
 #if defined(WITH_AUDIO)
-		if (_weaponSound != nullptr) {
-			if (weaponInUse) {
-				_weaponSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				if (_weaponSound != nullptr) {
+					_weaponSound->setPosition(Vector3f(_pos.X, _pos.Y, 0.8f));
+				}
+#endif
 			} else {
-				_weaponSound->stop();
-				_weaponSound = nullptr;
+				// A weapon switched while firing ends it too - locally the switch already does, but a remote player's
+				// switch reaches the server through SetCurrentWeapon(), which doesn't
+				bool wasThunderbolt = (_weaponSoundType == WeaponType::Thunderbolt);
+				StopWeaponSfx();
 
-				if (_currentWeapon == WeaponType::Thunderbolt) {
+				if (wasThunderbolt) {
 					PlayPlayerSfx("WeaponThunderboltEnd"_s, 0.8f);
 					_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
 				}
 			}
 		}
-#endif
 	}
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
@@ -5878,6 +5982,9 @@ namespace Jazz2::Actors
 	void Player::OnPerishInner()
 	{
 		_trailLastPos = _pos;
+		// Before the rest, which only reaches the instances playing here
+		StopRevUpSfx();
+		StopWeaponSfx();
 		StopAllActiveSounds();
 
 		SetState(ActorState::CanJump, false);
@@ -5993,12 +6100,7 @@ namespace Jazz2::Actors
 
 	void Player::SwitchToNextWeapon()
 	{
-#if defined(WITH_AUDIO)
-		if (_weaponSound != nullptr) {
-			_weaponSound->stop();
-			_weaponSound = nullptr;
-		}
-#endif
+		StopWeaponSfx();
 
 		// Find next available weapon
 		WeaponType weaponType = (WeaponType)(((std::int32_t)_currentWeapon + 1) % (std::int32_t)WeaponType::Count);
@@ -6016,12 +6118,7 @@ namespace Jazz2::Actors
 			PlayPlayerSfx("ChangeWeapon"_s);
 			return;
 		}
-#if defined(WITH_AUDIO)
-		if (_weaponSound != nullptr) {
-			_weaponSound->stop();
-			_weaponSound = nullptr;
-		}
-#endif
+		StopWeaponSfx();
 		SetCurrentWeapon((WeaponType)weaponIndex, SetCurrentWeaponReason::User);
 		_weaponCooldown = 1.0f;
 	}
@@ -6199,17 +6296,16 @@ namespace Jazz2::Actors
 			AddExternalForce(IsFacingLeft() ? 2.0f : -2.0f, 0.0f);
 		}
 
-#if defined(WITH_AUDIO)
-		if (_weaponSound == nullptr) {
+		if (_weaponSoundType == WeaponType::Unknown) {
 			PlaySfx("WeaponThunderboltStart"_s, 0.5f);
-			_weaponSound = PlaySfx("WeaponThunderbolt"_s, 1.0f);
+			// The pitch goes through PlaySfx() rather than being set afterwards, so the peers get it too
+			StartWeaponSfx(WeaponType::Thunderbolt, "WeaponThunderbolt"_s, 1.0f, Random().FastFloat(1.05f, 1.2f));
+#if defined(WITH_AUDIO)
 			if (_weaponSound != nullptr) {
-				_weaponSound->setLooping(true);
-				_weaponSound->setPitch(Random().FastFloat(1.05f, 1.2f));
 				_weaponSound->setLowPass(0.9f);
 			}
-		}
 #endif
+		}
 
 		return true;
 	}
@@ -6262,14 +6358,7 @@ namespace Jazz2::Actors
 						return false;
 					}
 					FireWeapon<Weapons::ToasterShot, WeaponType::Toaster>(6.0f, 0.0f);
-#if defined(WITH_AUDIO)
-					if (_weaponSound == nullptr) {
-						_weaponSound = PlaySfx("WeaponToaster"_s, 0.6f);
-						if (_weaponSound != nullptr) {
-							_weaponSound->setLooping(true);
-						}
-					}
-#endif
+					StartWeaponSfx(WeaponType::Toaster, "WeaponToaster"_s, 0.6f, 1.0f);
 					ammoDecrease = 50;
 					break;
 				}

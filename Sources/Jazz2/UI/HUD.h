@@ -298,6 +298,10 @@ namespace Jazz2::UI
 		bool PrepareWeaponWheel(Actors::Player* player, std::int32_t& weaponCount);
 		static std::int32_t GetWeaponCount(Actors::Player* player);
 		void DrawWeaponWheelSegment(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
+		void DrawWeaponWheelSegmentFill(WeaponWheelState& state, float x, float y, float width, float height, std::uint16_t z, float minAngle, float maxAngle, const Texture& texture, const Colorf& color);
+		static std::int32_t GetWeaponWheelSegmentCount(WeaponWheelState& state, float size, float angleRange);
+		static Vertex* AllocateWeaponWheelVertices(WeaponWheelState& state, std::int32_t vertexCount);
+		void DrawWeaponWheelMesh(WeaponWheelState& state, const Vertex* vertices, std::int32_t vertexCount, PrimitiveType primitiveType, std::uint16_t z, const Texture& texture, const Colorf& color);
 
 #if defined(NCINE_HAS_TOUCH_CONTROLS)
 		TouchButtonInfo MakeTouchButton(PlayerAction action, AnimState state, Alignment align, float edgeX, float edgeY, float w, float h);

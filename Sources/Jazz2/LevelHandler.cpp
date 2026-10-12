@@ -1175,8 +1175,10 @@ namespace Jazz2
 		_actors.push_back(std::move(actor));
 	}
 
-	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch)
+	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, SfxFlags flags)
 	{
+		// Except for looping, the flags only matter to the remote peers - here the actor holds the instance it
+		// started, and replaces or stops it itself
 #if defined(WITH_AUDIO)
 		if (buffer != nullptr) {
 			auto& player = _playingSounds.emplace_back(_assignedViewports.size() > 1
@@ -1185,6 +1187,7 @@ namespace Jazz2
 			player->setPosition(Vector3f(pos.X, pos.Y, 100.0f));
 			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
 			player->setSourceRelative(sourceRelative);
+			player->setLooping((flags & SfxFlags::Looping) == SfxFlags::Looping);
 
 			if (pos.Y >= _waterLevel) {
 				player->setLowPass(0.05f);
@@ -1198,6 +1201,15 @@ namespace Jazz2
 		}
 #endif
 		return nullptr;
+	}
+
+	void LevelHandler::StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player)
+	{
+#if defined(WITH_AUDIO)
+		if (player != nullptr) {
+			player->stop();
+		}
+#endif
 	}
 
 	std::shared_ptr<AudioBufferPlayer> LevelHandler::PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain, float pitch)

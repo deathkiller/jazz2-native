@@ -329,6 +329,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/PlayerType.h
 	${NCINE_SOURCE_DIR}/Jazz2/PreferencesCache.h
 	${NCINE_SOURCE_DIR}/Jazz2/Resources.h
+	${NCINE_SOURCE_DIR}/Jazz2/SfxFlags.h
 	${NCINE_SOURCE_DIR}/Jazz2/ShieldType.h
 	${NCINE_SOURCE_DIR}/Jazz2/SuspendType.h
 	${NCINE_SOURCE_DIR}/Jazz2/WarpFlags.h

@@ -473,6 +473,12 @@
 		"EndOfLevel2": {
 			"Paths": [ "Weapon/ricochet_bullet_3.wav" ]
 		},
+		"RevUp": {
+			"Paths": [ "Common/char_revup.wav" ]
+		},
+		"RevUpLaunch": {
+			"Paths": [ "Common/swish_7.wav" ]
+		},
 		"Spring": {
 			"Paths": [ "Spaz/spring_1.wav", "Spaz/spring_2.wav" ]
 		},

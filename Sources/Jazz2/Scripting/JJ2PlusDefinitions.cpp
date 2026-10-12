@@ -3842,7 +3842,7 @@ namespace Jazz2::Scripting
 		float gain = (volume <= 0 ? 0.0f : volume / 64.0f);
 		float pitch = (frequency <= 0 || buffer->frequency() <= 0 ? 1.0f : (float)frequency / (float)buffer->frequency());
 
-		auto player = _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch);
+		auto player = _levelHandler->PlaySfx(nullptr, {}, buffer, Vector3f(pos.X, pos.Y, 0.0f), sourceRelative, gain, pitch, SfxFlags::None);
 		if (player != nullptr && loopChannel >= 0) {
 			player->setLooping(true);
 

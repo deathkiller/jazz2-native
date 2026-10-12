@@ -147,7 +147,14 @@ namespace Jazz2
 		virtual void AddActor(std::shared_ptr<Actors::ActorBase> actor) = 0;
 
 		/** @brief Plays a sound effect for a given actor (object) */
-		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f) = 0;
+		virtual std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain = 1.0f, float pitch = 1.0f, SfxFlags flags = SfxFlags::None) = 0;
+		/**
+		 * @brief Stops a sound effect of a given actor (object) started with @ref SfxFlags::Exclusive
+		 *
+		 * Stops @p player, the instance playing here (may be `nullptr`), and the instance the remote peers play
+		 * for the same actor and identifier, which the actor has no handle to.
+		 */
+		virtual void StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player) = 0;
 		/** @brief Plays a common sound effect */
 		virtual std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) = 0;
 		/** @brief Warps a camera to its assigned target */

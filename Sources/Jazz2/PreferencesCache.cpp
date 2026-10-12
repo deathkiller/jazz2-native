@@ -127,6 +127,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableContinuousJump = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
+	bool PreferencesCache::ShowAllWeaponWheelSlots = false;
 	bool PreferencesCache::SwitchToNewWeapon = true;
 	// The web build has a backend but needs a local bridge running, so it stays off until asked for
 #if defined(NCINE_HAS_RGB_LIGHTS) && !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -1383,6 +1384,7 @@ namespace
 					if (WeaponWheel != WeaponWheelStyle::Disabled && (boolOptions & BoolOptions::ShowWeaponWheelAmmoCount) == BoolOptions::ShowWeaponWheelAmmoCount) {
 						WeaponWheel = WeaponWheelStyle::EnabledWithAmmoCount;
 					}
+					ShowAllWeaponWheelSlots = ((boolOptions & BoolOptions::ShowAllWeaponWheelSlots) == BoolOptions::ShowAllWeaponWheelSlots);
 
 					if ((boolOptions & BoolOptions::SetLanguage) == BoolOptions::SetLanguage) {
 						uc.Read(Language, sizeof(Language));
@@ -1812,6 +1814,7 @@ namespace
 		if (EnableLedgeClimb) boolOptions |= BoolOptions::EnableLedgeClimb;
 		if (WeaponWheel != WeaponWheelStyle::Disabled) boolOptions |= BoolOptions::EnableWeaponWheel;
 		if (WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) boolOptions |= BoolOptions::ShowWeaponWheelAmmoCount;
+		if (ShowAllWeaponWheelSlots) boolOptions |= BoolOptions::ShowAllWeaponWheelSlots;
 		if (EnableRgbLights) boolOptions |= BoolOptions::EnableRgbLights;
 		if (AllowUnsignedScripts) boolOptions |= BoolOptions::AllowUnsignedScripts;
 		if (ToggleRunAction) boolOptions |= BoolOptions::ToggleRunAction;

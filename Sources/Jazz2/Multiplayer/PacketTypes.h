@@ -82,6 +82,7 @@ namespace Jazz2::Multiplayer
 		AdvanceTileAnimation,			/**< Advances a destructible tile animation */
 		RevertTileAnimation,		// TODO
 		CreateDebris,					/**< Creates particle or sprite debris */
+		StopSfx,						/**< Stops a sound effect attached to an actor, started with @ref SfxFlags::Exclusive */
 
 		CreateControllablePlayer = 110,	/**< Creates a player controllable by the client */
 		CreateRemoteActor,				/**< Creates a remote actor on the client */

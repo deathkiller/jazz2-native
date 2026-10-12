@@ -149,7 +149,8 @@ namespace Jazz2::Multiplayer
 
 		void AddActor(std::shared_ptr<Actors::ActorBase> actor) override;
 
-		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch) override;
+		std::shared_ptr<AudioBufferPlayer> PlaySfx(Actors::ActorBase* self, StringView identifier, AudioBuffer* buffer, const Vector3f& pos, bool sourceRelative, float gain, float pitch, SfxFlags flags) override;
+		void StopSfx(Actors::ActorBase* self, StringView identifier, AudioBufferPlayer* player) override;
 		std::shared_ptr<AudioBufferPlayer> PlayCommonSfx(StringView identifier, const Vector3f& pos, float gain = 1.0f, float pitch = 1.0f) override;
 		void WarpCameraToTarget(Actors::ActorBase* actor, bool fast = false) override;
 
@@ -478,10 +479,22 @@ namespace Jazz2::Multiplayer
 			String Identifier;
 			std::uint16_t Gain;
 			std::uint16_t Pitch;
+			SfxFlags Flags;
 
-			PendingSfx(Actors::ActorBase* actor, String identifier, std::uint16_t gain, std::uint16_t pitch)
-				: Actor(actor), Identifier(std::move(identifier)), Gain(gain), Pitch(pitch) {}
+			PendingSfx(Actors::ActorBase* actor, String identifier, std::uint16_t gain, std::uint16_t pitch, SfxFlags flags)
+				: Actor(actor), Identifier(std::move(identifier)), Gain(gain), Pitch(pitch), Flags(flags) {}
 		};
+
+#if defined(WITH_AUDIO)
+		// Client: a sound the server played with SfxFlags::Exclusive, at most one per actor and identifier. Kept so
+		// the next one can replace it and the server can stop it, and moved with its actor while it plays. Held
+		// here rather than by the actor, because the owner's own player receives some of these too (weapons).
+		struct TrackedSfx {
+			std::uint32_t ActorId;
+			String Identifier;
+			std::shared_ptr<AudioBufferPlayer> Player;
+		};
+#endif
 
 		struct RequiredAsset {
 			AssetType Type;
@@ -550,6 +563,9 @@ namespace Jazz2::Multiplayer
 		Vector2i _minimapBoundsMax;
 		bool _raceCheckpointsOrdered;								// Whether _orderedRaceCheckpoints come from authored waypoints (trusted for progress-based ranking)
 		SmallVector<PendingSfx, 0> _pendingSfx;
+#if defined(WITH_AUDIO)
+		SmallVector<TrackedSfx, 0> _trackedSfx;
+#endif
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::uint32_t _spectateFollowActorId;	// Local only: actor ID the local spectator follows, or SpectateFreeCamera
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
@@ -713,6 +729,16 @@ namespace Jazz2::Multiplayer
 		bool HandleServerPacketFadeOut(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlaySfx(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketPlayCommonSfx(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketStopSfx(const Peer& peer, ArrayView<const std::uint8_t> data);
+		// Remote actor ID a sound of `self` is sent under (`UINT32_MAX` if not remoted yet), and whether its
+		// owner is left out because it plays the sound itself
+		std::uint32_t GetSfxActorId(Actors::ActorBase* self, StringView identifier, bool& excludeSelf);
+		// Client: the actor a sound from the server is attached to - the own player or a remote actor, or `nullptr`
+		Actors::ActorBase* FindSfxActor(std::uint32_t actorId);
+		// Client: stops the tracked sound of an actor with the identifier, see TrackedSfx
+		void StopTrackedSfx(std::uint32_t actorId, StringView identifier);
+		// Client: moves tracked sounds with their actors and drops the finished ones and those of vanished actors
+		void UpdateTrackedSfx();
 		bool HandleServerPacketShowAlert(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
 		bool HandleServerPacketSyncTileMap(const Peer& peer, ArrayView<const std::uint8_t> data);

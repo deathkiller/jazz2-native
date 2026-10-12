@@ -1407,6 +1407,10 @@ namespace Jazz2::Actors
 		float _hookIdleTime;
 		float _revUpLaunchLeft;
 		float _revUpPendingSpeed;
+		// Until a Run press may restart the wind-up sound again, one cycle of the pose at its current speed
+		float _revUpSfxCooldown;
+		// Pitch the next wind-up sound plays at, see RevUpSfxPitchStep
+		float _revUpSfxPitch;
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;
 		std::int32_t _inShallowWater;
 		float _externalForceCooldown;
@@ -1462,6 +1466,9 @@ namespace Jazz2::Actors
 		// Whether the one-shot start transition has already played for this wind-up. A flag rather than a check
 		// on the current animation, because the looping pose is re-decided every frame and would re-trigger it.
 		bool _revUpStarted;
+		// Whether a wind-up sound was started and is still the player's to stop - not after a launch, which lets
+		// it play out. Kept apart from `_revUpSound`, which a dedicated server never has but must still stop.
+		bool _revUpSfxActive;
 		bool _isAttachedToPole, _canPushFurther;
 		bool _isFreefall, _inWater, _isLifting, _isSpring;
 		bool _flyCheatActive;
@@ -1506,6 +1513,7 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 		std::shared_ptr<AudioBufferPlayer> _airboardSound;
 		std::shared_ptr<AudioBufferPlayer> _airboardTurnSound;
+		std::shared_ptr<AudioBufferPlayer> _revUpSound;
 #endif
 
 		std::int32_t _lives, _score;
@@ -1605,6 +1613,9 @@ namespace Jazz2::Actors
 		SuspendType _suspendType;
 		ShieldType _activeShield;
 		WeaponType _currentWeapon;
+		// Continuous weapon whose looping sound is playing, here and on the peers, or WeaponType::Unknown. Kept apart
+		// from `_weaponSound`, which a dedicated server never has but must still stop.
+		WeaponType _weaponSoundType;
 		WeaponWheelState _weaponWheelState;
 
 		/** @brief Whether the jump key has been let go during the current non-Reforged ascent, which makes the rest of it heavier */
@@ -1856,6 +1867,13 @@ namespace Jazz2::Actors
 		// which reads as coming off the back of the shoe rather than out of the middle of the player
 		static constexpr float RevUpSparkOffsetY = -4.0f;
 		static constexpr float RevUpSparkOffsetBack = 4.0f;
+		// Gain of the wind-up sound, which is played on every press and would drown everything else out at full
+		static constexpr float RevUpSfxGain = 0.5f;
+		// Pitch of the wind-up sound, raised by a step on every Run press once wound up. Counted in presses rather
+		// than following the pose's speed, which climbs far too quickly to be heard as anything but a jump.
+		static constexpr float RevUpSfxMinPitch = 0.9f;
+		static constexpr float RevUpSfxMaxPitch = 1.04f;
+		static constexpr float RevUpSfxPitchStep = 0.006f;
 
 		/**
 		 * @brief How long after jumping off a vine another can be grabbed
@@ -2224,6 +2242,15 @@ namespace Jazz2::Actors
 			std::uint16_t baseLayer, bool facingLeft, float charge);
 		// Puts the stored launch speed into effect, with the no-friction window and the grace that ends it
 		void ApplyRevUpLaunch();
+		// Restarts the wind-up sound, cutting off the previous one so they never stack - on the peers too
+		void PlayRevUpSfx();
+		// Cuts off the wind-up sound here and on the peers, for a wind-up that ends without a launch
+		void StopRevUpSfx();
+		// Starts the looping sound of a continuous weapon (Toaster, Thunderbolt), here and on the peers, unless one
+		// is already playing
+		void StartWeaponSfx(WeaponType weaponType, StringView identifier, float gain, float pitch);
+		// Stops the looping weapon sound here and on the peers
+		void StopWeaponSfx();
 		// Whether the non-Reforged dash is up - Run held, or still inside the grace that outlives it
 		bool IsDashActive() const;
 		// The Strength of the `MODIFIER_SLIDE` tile under the player, or -1 when there is none. Read from the

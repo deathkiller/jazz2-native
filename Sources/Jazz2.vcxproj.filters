@@ -1335,6 +1335,9 @@
     <ClInclude Include="Jazz2\ShieldType.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\SfxFlags.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\WeaponType.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>

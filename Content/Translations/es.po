@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-09-28 22:43+0200\n"
+"POT-Creation-Date: 2026-10-12 13:24+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: enfeitizador <fedellar@enfeitizador.es>\n"
 "Language-Team: enfeitizador\n"
@@ -1377,19 +1377,18 @@ msgid "Level \"{}\" initialized"
 msgstr "Nivel \"{}\" inicializado"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:1075
+#: Sources/Jazz2/LevelHandler.cpp:1118
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:235
 msgid "For more information, visit the official website:"
 msgstr "Para más información, visita la web oficial:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2119
+#: Sources/Jazz2/LevelHandler.cpp:2174
 #, c++-format
-#| msgid "Level \"{}\" initialized"
 msgid "Level \"{}\" restored"
 msgstr ""
 
-#: Sources/Jazz2/LevelHandler.cpp:3117
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4153
+#: Sources/Jazz2/LevelHandler.cpp:3172
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4195
 msgid "Cheats are not allowed in current context"
 msgstr "No se permiten trampas en la situación actual"
 
@@ -1409,14 +1408,14 @@ msgstr ""
 msgid "Find exit!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:585
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:588
 msgid ""
 "\n"
 "\n"
 "The game will begin shortly!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:769
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:772
 #, c++-format
 msgid ""
 "\n"
@@ -1424,89 +1423,89 @@ msgid ""
 "{} won the championship!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2840
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2881
 #, c++-format
 msgid "Value out of range (2-{})"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2916
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2957
 msgid "Usage: /team <blue|red|green|yellow|auto>"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2923
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4658
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2964
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4700
 #, c++-format
 msgid "You joined the {} team"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2925
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4660
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2966
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4702
 msgid "Cannot change team right now"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2936
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2948
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2977
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2989
 msgid "Teams are only used in team game modes"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2939
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2980
 msgid "Teams rebalanced"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2963
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3004
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2978
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3019
 #, c++-format
 msgid "Player {} moved to the {} team"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2980
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3021
 msgid "Player not found"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3720
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3761
 msgid ""
 "You have already finished the race, you can play again in the next round"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3724
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3765
 msgid "You cannot join the game right now"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3763
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4770
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3804
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4812
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4044
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4768
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4086
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4810
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4791
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7345
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4833
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7466
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4794
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7371
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4836
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7492
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8639
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8760
 msgid ""
 "\n"
 "\n"
 "Teams have been rebalanced"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8944
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9065
 #, c++-format
 msgid ""
 "\n"
@@ -1514,7 +1513,7 @@ msgid ""
 "{} took the {} flag!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8952
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9073
 #, c++-format
 msgid ""
 "\n"
@@ -1522,7 +1521,7 @@ msgid ""
 "The {} flag was returned"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9000
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9121
 #, c++-format
 msgid ""
 "\n"
@@ -1530,7 +1529,7 @@ msgid ""
 "{} team captured the {} flag!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9111
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9232
 #, c++-format
 msgid ""
 "\n"
@@ -1538,7 +1537,7 @@ msgid ""
 "The {} flag was dropped"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10159
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10280
 #, c++-format
 msgid ""
 "\n"
@@ -1547,7 +1546,7 @@ msgid ""
 "{} seconds remaining"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10173
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10294
 #, c++-format
 msgid ""
 "\n"
@@ -1555,7 +1554,7 @@ msgid ""
 "{} finished {}."
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10437
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10558
 #, c++-format
 msgid ""
 "\n"
@@ -1563,7 +1562,7 @@ msgid ""
 "Winner is {}"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10501
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10622
 #, c++-format
 msgid ""
 "\n"
@@ -1571,7 +1570,7 @@ msgid ""
 "{} team wins!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10557
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10678
 msgid ""
 "\n"
 "\n"
@@ -1762,6 +1761,7 @@ msgstr "Alternar correr"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:92
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:56
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
@@ -1789,6 +1789,7 @@ msgstr "Habilitado"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:66
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:74
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:92
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:71
@@ -2071,7 +2072,7 @@ msgstr "Jugabilidad"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:204
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:115
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:119
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:43
 msgid "Enhancements"
 msgstr "Mejoras"
@@ -2127,8 +2128,14 @@ msgstr "Rueda de armas"
 msgid "Enabled With Ammo Count"
 msgstr "Habilitado con conteo de munición"
 
+#. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section (weapon wheel shows also weapons the player doesn't have)
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:91
+#| msgid "Weapon Wheel"
+msgid "Show All Weapon Wheel Slots"
+msgstr ""
+
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:118
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
 msgid "You can enable enhancements that were added to this remake."
 msgstr "Puedes habilitar las mejoras que se agregaron a este remake."
 
@@ -2651,7 +2658,7 @@ msgid "Music Volume"
 msgstr "Volumen de música"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
-#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:83
+#: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:84
 msgid "Sample Rate"
 msgstr ""
 
@@ -2809,11 +2816,11 @@ msgstr ""
 "Asegúrate que todos los ficheros necesarios\n"
 "son accesibles e inténtalo de nuevo."
 
-#: Sources/Main.cpp:1402
+#: Sources/Main.cpp:1404
 msgid "Unnamed server"
 msgstr ""
 
-#: Sources/Main.cpp:1559
+#: Sources/Main.cpp:1561
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2821,7 +2828,7 @@ msgid ""
 "Invalid parameter specified."
 msgstr ""
 
-#: Sources/Main.cpp:1560
+#: Sources/Main.cpp:1562
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2833,7 +2840,7 @@ msgstr ""
 "\n"
 "La versión de tu cliente no es compatible con la del servidor."
 
-#: Sources/Main.cpp:1561
+#: Sources/Main.cpp:1563
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2841,7 +2848,7 @@ msgid ""
 "The client was rejected due to malformed communication protocol."
 msgstr ""
 
-#: Sources/Main.cpp:1562
+#: Sources/Main.cpp:1564
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2850,7 +2857,7 @@ msgid ""
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
 
-#: Sources/Main.cpp:1563
+#: Sources/Main.cpp:1565
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2859,7 +2866,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:1564
+#: Sources/Main.cpp:1566
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2867,7 +2874,7 @@ msgid ""
 "Invalid password specified."
 msgstr ""
 
-#: Sources/Main.cpp:1565
+#: Sources/Main.cpp:1567
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2876,7 +2883,7 @@ msgid ""
 "Please check your profile and try it again."
 msgstr ""
 
-#: Sources/Main.cpp:1566
+#: Sources/Main.cpp:1568
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2885,7 +2892,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:1567
+#: Sources/Main.cpp:1569
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2894,7 +2901,7 @@ msgid ""
 "Contact server administrators for more information."
 msgstr ""
 
-#: Sources/Main.cpp:1568
+#: Sources/Main.cpp:1570
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2908,7 +2915,7 @@ msgstr ""
 "La capacidad del servidor está completa.\n"
 "Inténtalo de nuevo más tarde."
 
-#: Sources/Main.cpp:1569
+#: Sources/Main.cpp:1571
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2922,7 +2929,7 @@ msgstr ""
 "El servidor non está en un estado que pueda procesar tu solicitud.\n"
 "Inténtalo de nuevo dentro de unos segundos."
 
-#: Sources/Main.cpp:1570
+#: Sources/Main.cpp:1572
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2936,7 +2943,7 @@ msgstr ""
 "El servidor se está apagando.\n"
 "Inténtalo de nuevo más tarde."
 
-#: Sources/Main.cpp:1571
+#: Sources/Main.cpp:1573
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2950,7 +2957,7 @@ msgstr ""
 "El servidor se está apagando para mantenimiento.\n"
 "Inténtalo de nuevo más tarde."
 
-#: Sources/Main.cpp:1572
+#: Sources/Main.cpp:1574
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2964,7 +2971,7 @@ msgstr ""
 "El servidor se está apagando para reconfigurarse.\n"
 "Inténtalo de nuevo más tarde."
 
-#: Sources/Main.cpp:1573
+#: Sources/Main.cpp:1575
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2978,7 +2985,7 @@ msgstr ""
 "El servidor se está apagando por una actualización.\n"
 "Inténtalo de nuevo más tarde."
 
-#: Sources/Main.cpp:1574
+#: Sources/Main.cpp:1576
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2992,7 +2999,7 @@ msgstr ""
 "Inténtalo de nuevo y si el problema persiste,\n"
 "comprueba tu conexión a la red."
 
-#: Sources/Main.cpp:1575
+#: Sources/Main.cpp:1577
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3004,7 +3011,7 @@ msgstr ""
 "\n"
 "El servidor no está respondiendo a la petición de conexión."
 
-#: Sources/Main.cpp:1576
+#: Sources/Main.cpp:1578
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3018,7 +3025,7 @@ msgstr ""
 "Has sido \f[c:#907050]expulsado\f[/c] del servidor.\n"
 "Contacta con la administración del servidor para más información."
 
-#: Sources/Main.cpp:1577
+#: Sources/Main.cpp:1579
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3032,7 +3039,7 @@ msgstr ""
 "Has sido \f[c:#725040]baneado\f[/c] del servidor.\n"
 "Contacta con la administración del servidor para más información."
 
-#: Sources/Main.cpp:1578
+#: Sources/Main.cpp:1580
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3040,7 +3047,7 @@ msgid ""
 "Cheating detected."
 msgstr ""
 
-#: Sources/Main.cpp:1579
+#: Sources/Main.cpp:1581
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -3049,7 +3056,7 @@ msgid ""
 "Please download the required files and try it again."
 msgstr ""
 
-#: Sources/Main.cpp:1580
+#: Sources/Main.cpp:1582
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -3057,7 +3064,7 @@ msgid ""
 "The server has disconnected you due to inactivity."
 msgstr ""
 
-#: Sources/Main.cpp:1910
+#: Sources/Main.cpp:1912
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
