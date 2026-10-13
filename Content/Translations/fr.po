@@ -1393,7 +1393,7 @@ msgstr "Pour plus d'information, visitez le site officiel :"
 #: Sources/Jazz2/LevelHandler.cpp:2174
 #, c++-format
 msgid "Level \"{}\" restored"
-msgstr ""
+msgstr "Niveau « {} » restauré"
 
 #: Sources/Jazz2/LevelHandler.cpp:3172
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4195
@@ -1482,11 +1482,11 @@ msgstr "Joueur non trouvé"
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3761
 msgid ""
 "You have already finished the race, you can play again in the next round"
-msgstr ""
+msgstr "Tu as déjà terminé la course, tu pourras jouer à la manche suivante"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3765
 msgid "You cannot join the game right now"
-msgstr ""
+msgstr "Tu ne peux pas rejoindre la partie pour le moment"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3804
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4812
@@ -2188,7 +2188,7 @@ msgstr "Activé avec compteur de munitions"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:91
 #| msgid "Weapon Wheel"
 msgid "Show All Weapon Wheel Slots"
-msgstr ""
+msgstr "Afficher tous les emplacements de la roue d'armes"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
@@ -2392,7 +2392,7 @@ msgstr "Indicateurs de performance"
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, only the frame rate is shown
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:308
 msgid "Basic"
-msgstr ""
+msgstr "Basique"
 
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, the frame rate and the time each part of a frame takes
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:310
