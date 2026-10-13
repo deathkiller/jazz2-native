@@ -34,10 +34,13 @@
 #include "ResizeSabr.h"
 #include "ShieldFire.h"
 #include "ShieldLightning.h"
+#include "Silhouette.h"
 #include "TexturedBackground.h"
 #include "TexturedBackgroundCircle.h"
 #include "TileMapMesh.h"
+#include "TileMapMeshBlur.h"
 #include "TileMapMeshPalette.h"
+#include "TileMapMeshXRay.h"
 #include "Tinted.h"
 #include "TouchCircle.h"
 #include "Transition.h"
@@ -79,10 +82,13 @@ namespace Jazz2::ShadersGen
 		&ResizeSabr,
 		&ShieldFire,
 		&ShieldLightning,
+		&Silhouette,
 		&TexturedBackground,
 		&TexturedBackgroundCircle,
 		&TileMapMesh,
+		&TileMapMeshBlur,
 		&TileMapMeshPalette,
+		&TileMapMeshXRay,
 		&Tinted,
 		&BatchedTinted,
 		&TouchCircle,

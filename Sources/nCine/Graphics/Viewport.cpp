@@ -81,7 +81,39 @@ namespace nCine
 		if (RenderResources::_currentViewport == this) {
 			RenderResources::_currentViewport = nullptr;
 		}
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Neither side of a split may be left pointing at the other one
+		RemoveSplitPasses();
+		if (_splitOwner != nullptr) {
+			auto& ownerPasses = _splitOwner->_splitPasses;
+			for (auto it = ownerPasses.begin(); it != ownerPasses.end();) {
+				if (*it == this) {
+					it = ownerPasses.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+#endif
 	}
+
+#if defined(RHI_CAP_POSTPROCESSING)
+	void Viewport::AddSplitPass(Viewport* pass)
+	{
+		DEATH_ASSERT(pass != nullptr && pass != this && pass->_type == Type::WithTexture && pass->_splitOwner == nullptr, "Invalid split pass", );
+		pass->_splitOwner = this;
+		_splitPasses.push_back(pass);
+	}
+
+	void Viewport::RemoveSplitPasses()
+	{
+		for (Viewport* pass : _splitPasses) {
+			pass->_splitOwner = nullptr;
+		}
+		_splitPasses.clear();
+	}
+#endif
 
 	/** @note Adding more textures enables the use of multiple render targets (MRTs) */
 	bool Viewport::SetTexture(std::uint32_t index, Texture* texture)
@@ -331,7 +363,12 @@ namespace nCine
 
 		if (!_renderQueue.IsEmpty()) {
 			ZoneScopedC(0x81A861);
+#if defined(RHI_CAP_POSTPROCESSING)
+			// The split was requested while the scene was visited, which is over by now
+			_renderQueue.SortAndCommit(_splitPasses.empty() ? RenderQueue::NoSplitLayer : _splitLayer);
+#else
 			_renderQueue.SortAndCommit();
+#endif
 		}
 
 		_stateBits.set(StateBitPositions::CommittedBit);
@@ -346,6 +383,18 @@ namespace nCine
 			nextViewport->Draw(nextIndex + 1);
 		}
 
+#if defined(RHI_CAP_POSTPROCESSING)
+		if (_splitOwner != nullptr) {
+			// Drawn by the viewport it is a split pass of, in the middle of that one's queue (see AddSplitPass())
+			return;
+		}
+#endif
+
+		DrawContents(nextViewport, nextIndex);
+	}
+
+	void Viewport::DrawContents(Viewport* nextViewport, std::uint32_t nextIndex)
+	{
 		ZoneScopedC(0x81A861);
 #if defined(DEATH_DEBUG)
 		// TODO: RHI::Debug
@@ -435,7 +484,16 @@ namespace nCine
 				RHI::Device::SetScissor(_scissorRect);
 			}
 
-			_renderQueue.Draw();
+#if defined(RHI_CAP_POSTPROCESSING)
+			if (_splitLayer < RenderQueue::NoSplitLayer && !_splitPasses.empty() && _type == Type::WithTexture) {
+				_renderQueue.Draw(0, _splitLayer);
+				DrawSplitPasses();
+				_renderQueue.Draw(_splitLayer, RenderQueue::NoSplitLayer);
+			} else
+#endif
+			{
+				_renderQueue.Draw();
+			}
 
 			if (scissorRectNonZeroArea) {
 				RHI::Device::SetScissorState(scissorState);
@@ -471,7 +529,40 @@ namespace nCine
 			// screen is what is bound now
 			RenderResources::_renderTargetBound = false;
 		}
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		// A split lasts only for the frame it was requested in
+		_splitLayer = RenderQueue::NoSplitLayer;
+#endif
 	}
+
+#if defined(RHI_CAP_POSTPROCESSING)
+	void Viewport::DrawSplitPasses()
+	{
+		ZoneScopedNC("Split passes", 0x81A861);
+
+		// Each pass binds its own target, which is what lets it sample this one's texture, and leaves the screen
+		// bound when it's done - it never draws the chain after it, that already happened (see Draw())
+		for (Viewport* pass : _splitPasses) {
+			pass->DrawContents(nullptr, 0);
+		}
+
+		// Back to what the first part of the queue was drawn with. The target is bound without clearing, so the
+		// second part is drawn over the first one.
+		RenderResources::SetCurrentViewport(this);
+		_fbo->BindDraw();
+		_fbo->SetDrawBuffers(_numColorAttachments);
+		RenderResources::_renderTargetBound = true;
+		if (_viewportRect.W > 0 && _viewportRect.H > 0) {
+			RHI::Device::SetViewport(_viewportRect);
+		}
+		if (_scissorRect.W > 0 && _scissorRect.H > 0) {
+			RHI::Device::SetScissor(_scissorRect);
+		}
+		RenderResources::SetCurrentCamera(_camera);
+		RenderResources::UpdateCameraUniforms();
+	}
+#endif
 
 	void Viewport::UpdateCulling(SceneNode* node)
 	{

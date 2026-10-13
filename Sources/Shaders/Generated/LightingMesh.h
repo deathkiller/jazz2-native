@@ -48,8 +48,10 @@ void main()
 	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
 	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
 	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
+	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
+	// of the far radius.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
-	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, 0.0);
+	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;
 }
 )__SHDR__";
@@ -85,8 +87,10 @@ void main()
 	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
 	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
 	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
+	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
+	// of the far radius.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
-	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, 0.0);
+	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;
 }
 )__SHDR__";
@@ -114,10 +118,13 @@ out vec4 COLOR;
 void main() {
 	vec2 center = vTexCoords.xy;
 	float radiusNear = vTexCoords.z;
+	float ringRadius = vTexCoords.w;
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	float dist = length(vColor.zw);
+	// A ring light measures the distance from its circle instead of from its centre - with a ring radius of
+	// zero, as every point light has, this is the plain distance from the centre
+	float dist = abs(length(vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {
@@ -161,10 +168,13 @@ void main() {
 	vec4 COLOR;
 	vec2 center = vTexCoords.xy;
 	float radiusNear = vTexCoords.z;
+	float ringRadius = vTexCoords.w;
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	float dist = length(vColor.zw);
+	// A ring light measures the distance from its circle instead of from its centre - with a ring radius of
+	// zero, as every point light has, this is the plain distance from the centre
+	float dist = abs(length(vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {

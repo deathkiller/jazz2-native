@@ -29,7 +29,8 @@ namespace Jazz2::Compatibility
 	{
 	public:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		static constexpr std::uint16_t CacheVersion = 39;
+		// 40: converted levels carry a version (see LevelFormat), the unversioned ones are no longer read
+		static constexpr std::uint16_t CacheVersion = 40;
 #endif
 
 		/**

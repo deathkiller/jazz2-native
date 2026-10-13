@@ -208,6 +208,33 @@ namespace nCine
 		/** @brief Sets the debug object label for the viewport's render target */
 		void SetRenderTargetLabel(const char* label);
 
+#if defined(RHI_CAP_POSTPROCESSING) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Adds a pass drawn in the middle of this viewport's queue when it is split
+
+			A split pass is a viewport with a texture of its own that stays registered in the chain, so it is
+			updated, visited and committed like any other, but the chain doesn't draw it. This viewport does,
+			between the commands below the split layer and the rest, which lets a pass sample what is drawn
+			behind a layer before the layer itself is drawn over it (see @ref RequestSplit()). The passes are
+			drawn in the order they were added. Only a viewport with a texture can be split.
+		*/
+		void AddSplitPass(Viewport* pass);
+		/** @brief Removes all passes added by @ref AddSplitPass() */
+		void RemoveSplitPasses();
+		/**
+			@brief Splits the queue of the current frame at the given layer
+
+			Called while the scene is visited, so the queue is batched and drawn in two parts: the commands below
+			@p layer, then the split passes, then the rest. The lowest layer requested in a frame wins, and the
+			request lasts only for the frame. Does nothing without split passes.
+		*/
+		void RequestSplit(std::uint16_t layer) {
+			if (layer < _splitLayer) {
+				_splitLayer = layer;
+			}
+		}
+#endif
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/** @brief Bit positions inside the state bitset */
@@ -268,6 +295,21 @@ namespace nCine
 	private:
 		std::uint32_t _numColorAttachments;
 
+#if defined(RHI_CAP_POSTPROCESSING)
+		/** @brief Passes drawn in the middle of the queue when it is split, see @ref AddSplitPass() */
+		SmallVector<Viewport*, 0> _splitPasses;
+		/** @brief Viewport this one is a split pass of, which draws it instead of the chain */
+		Viewport* _splitOwner = nullptr;
+		/** @brief Layer the queue of the current frame is split at, see @ref RequestSplit() */
+		std::uint32_t _splitLayer = RenderQueue::NoSplitLayer;
+#endif
+
 		void UpdateCulling(SceneNode* node);
+		/** @brief Binds the target, clears it and draws the queue, everything @ref Draw() does past the chain */
+		void DrawContents(Viewport* nextViewport, std::uint32_t nextIndex);
+#if defined(RHI_CAP_POSTPROCESSING)
+		/** @brief Draws the split passes in the middle of the queue and binds this viewport's target again */
+		void DrawSplitPasses();
+#endif
 	};
 }

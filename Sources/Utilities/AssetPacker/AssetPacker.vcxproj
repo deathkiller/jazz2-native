@@ -198,6 +198,7 @@
     <ClInclude Include="SpriteRepacker.h" />
     <ClInclude Include="..\..\Main.h" />
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h" />
+    <ClInclude Include="..\..\Jazz2\LevelFormat.h" />
     <ClInclude Include="..\..\Jazz2\EventType.h" />
     <ClInclude Include="..\..\Jazz2\UI\FontFormat.h" />
     <ClInclude Include="..\..\Jazz2\Compatibility\AnimSetMapping.h" />

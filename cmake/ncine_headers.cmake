@@ -321,6 +321,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/IStateHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelDescriptor.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelFlags.h
+	${NCINE_SOURCE_DIR}/Jazz2/LevelFormat.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelHandler.h
 	${NCINE_SOURCE_DIR}/Jazz2/LevelInitialization.h
 	${NCINE_SOURCE_DIR}/Jazz2/LightEmitter.h
@@ -471,6 +472,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/LightingRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/PlayerViewport.h
 	${NCINE_SOURCE_DIR}/Jazz2/Rendering/UpscaleRenderPass.h
+	${NCINE_SOURCE_DIR}/Jazz2/Rendering/XRayMaskRenderer.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/JJ2PlusDefinitions.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/LevelScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/RegisterArray.h
@@ -483,6 +485,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptLoader.h
 	${NCINE_SOURCE_DIR}/Jazz2/Scripting/ScriptPlayerWrapper.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/ITileMapOwner.h
+	${NCINE_SOURCE_DIR}/Jazz2/Tiles/LayerEffects.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileCollisionParams.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileDestructType.h
 	${NCINE_SOURCE_DIR}/Jazz2/Tiles/TileMap.h

@@ -4,6 +4,7 @@
 #include "../ILevelHandler.h"
 #include "../PitType.h"
 #include "../SuspendType.h"
+#include "LayerEffects.h"
 #include "LayerTypes.h"
 #include "TileSet.h"
 
@@ -687,6 +688,27 @@ namespace Jazz2::Tiles
 		 */
 		bool SetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, std::uint16_t tileValue);
 
+		/** @brief Returns the renderer type of a given layer, or @ref LayerRendererType::Default if the layer doesn't exist */
+		LayerRendererType GetLayerRendererType(std::int32_t layerIndex) const;
+		/**
+			@brief Changes the renderer type of a given layer
+
+			Meant for tools such as an editor. A layer switched to @ref LayerRendererType::XRay or
+			@ref LayerRendererType::BlurBehind can need render passes the level didn't need so far, which the
+			owner is told about (see @ref ITileMapOwner::OnLayerEffectsChanged()). Where the backend can't show
+			those layers, they are reduced as when a level is loaded, an x-ray layer irreversibly. Returns `false`
+			if the layer doesn't exist or is the sprite layer.
+		*/
+		bool SetLayerRendererType(std::int32_t layerIndex, LayerRendererType type);
+#if defined(TILEMAP_LAYER_EFFECTS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Returns `true` if any layer is a @ref LayerRendererType::XRay layer */
+		bool HasXRayLayers() const;
+		/** @brief Returns `true` if any layer is a @ref LayerRendererType::BlurBehind layer */
+		bool HasBlurBehindLayers() const;
+		/** @brief Returns `true` if a @ref LayerRendererType::BlurBehind layer has a tile that reflects or displaces, which needs a sharp copy of the scene behind it */
+		bool BlurBehindLayersNeedSharpCopy();
+#endif
+
 		/** @brief Creates a checkpoint for eventual rollback */
 		void CreateCheckpointForRollback();
 		/** @brief Rolls back to the last checkpoint */
@@ -774,6 +796,9 @@ namespace Jazz2::Tiles
 		/// level without a single destructible tile has an empty (but valid) checkpoint.
 		bool _hasRollbackCheckpoint;
 		SmallVector<AnimatedTile, 0> _animatedTiles;
+		// Per animation of the level itself, the one derived from it for x-ray layers (see GetXRayUnmaskedAnimation()),
+		// `0` if none was derived. Empty until the first one is
+		SmallVector<std::int32_t, 0> _xrayUnmaskedAnims;
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
 		std::uint32_t _animatedTilesOffset;
@@ -1021,6 +1046,88 @@ namespace Jazz2::Tiles
 			std::uint16_t paletteOffset, const Vector4f& color, std::uint16_t depth, RenderCommand::Type type, bool additiveBlending,
 			Vector2f translation = Vector2f(0.0f, 0.0f));
 #endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		/** @brief What a group of the tiles of a special layer is drawn as */
+		enum class EffectMeshKind : std::uint8_t {
+			Unmasked,		//< The current frame of x-ray tiles outside the mask, as an ordinary layer mesh - with no mask in this frame
+			XRay,			//< That frame and the mask frame of x-ray tiles, chosen per pixel by the mask (12-float vertices)
+			Blur			//< Tiles of a blur-behind layer, the amount of blur behind them
+		};
+
+		/** @brief Tiles of a special layer accumulated into one mesh, one per texture and kind */
+		struct EffectMeshGroup {
+			const Texture* DiffuseTexture;
+			bool Indexed;
+			EffectMeshKind Kind;
+			std::int32_t VerticesIndex;
+		};
+
+		/** @brief The special layer @ref DrawLayer() is drawing, a @ref LayerRendererType::Default type otherwise */
+		struct EffectLayerState {
+			LayerRendererType Type = LayerRendererType::Default;
+			LayerEffectsTarget* Target = nullptr;
+			std::uint16_t Depth = 0;
+			bool MaskAvailable = false;
+		};
+
+		/** @brief A column of the window of the blur layer being walked: the last row it had a reflective tile in, and that tile's mirror line */
+		struct ReflectionColumn {
+			std::int32_t Row;
+			float AxisY;
+		};
+
+		EffectLayerState _effectLayer;
+		SmallVector<EffectMeshGroup, 4> _effectMeshGroups;
+		SmallVector<ReflectionColumn, 0> _reflectionColumns;
+		/// A pool of their own, so the commands of the ordinary layers never see the third texture these bind
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _effectMeshCommands;
+		std::int32_t _effectMeshCommandCount = 0;
+
+		/** @brief Prepares drawing of a special layer, returns `false` if it can't be drawn in the current viewport at all */
+		bool BeginEffectLayer(const TileMapLayer& layer, LayerRendererType type);
+		/** @brief Appends an x-ray tile at the given position, returns `false` if it is no x-ray tile and is drawn as usual */
+		bool AppendXRayTile(const LayerTile& tile, float x, float y);
+		/** @brief Appends a tile (resolved to a single frame) to the mesh of the given kind, a blur one with the mirror line of its reflection */
+		void AppendEffectTile(EffectMeshKind kind, std::int32_t tileId, LayerTileFlags flags, float alpha, float x, float y, float axisY = 0.0f);
+		/** @brief Appends one tile of a blur layer, the 9-float vertex of `TileMapMeshBlur` (the tile-layer mesh layout plus the mirror line) */
+		static void AppendBlurTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
+			float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha, float axisY);
+		/** @brief Returns `true` if a tile has a reflection, and the first visible row of it */
+		bool IsTileReflective(std::int32_t tileId, std::int32_t& topRow);
+		/**
+			@brief Returns the mirror line of the reflection a tile of the blur layer being walked belongs to
+
+			The first visible row of the topmost tile of the uninterrupted column of reflective tiles above it, in the
+			coordinates of @p tileTopY - which is where the tile is drawn. Inherited from the row above in the window,
+			looked up in the layout above it for the first tile of a run in the window.
+		*/
+		float GetReflectionAxis(const TileMapLayer& layer, std::int32_t tileX, std::int32_t tileY, std::int32_t column,
+			std::int32_t row, std::int32_t tileId, float tileTopY);
+		/** @brief Returns the vertex buffer of the mesh group for the given texture and kind, renting it if needed */
+		std::int32_t GetEffectMeshGroup(const Texture* texture, bool indexed, EffectMeshKind kind);
+		/** @brief Emits the meshes accumulated for the current special layer */
+		void EmitEffectMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth);
+		/** @brief Emits one x-ray or blur mesh, split into as many commands as the shared buffers need */
+		void EmitEffectMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
+			EffectMeshKind kind, const Vector4f& color, std::uint16_t depth);
+		/** @brief Resolves a tile to its texture and the scale and bias of its quad's texture coordinates */
+		bool ResolveTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, bool& indexed,
+			float& texScaleX, float& texBiasX, float& texScaleY, float& texBiasY);
+		/** @brief Derives the animations the x-ray tiles of a layer show outside the mask, see @ref GetXRayUnmaskedAnimation() */
+		void PrepareXRayLayer(const TileMapLayer& layer);
+#else
+		/** @brief Turns the animated tiles of an x-ray layer into what they show outside the mask, see @ref LayerRendererType::XRay */
+		void ReduceXRayLayer(TileMapLayer& layer);
+#endif
+		/**
+			@brief Returns the animation an x-ray tile shows outside the mask, deriving it if needed
+
+			All frames of a given animation of three or more frames but the last one, which is the mask frame. Appended
+			to @ref _animatedTiles, so it plays as the level's own animations do. Returns `-1` for an animation that is
+			itself derived.
+		*/
+		std::int32_t GetXRayUnmaskedAnimation(std::int32_t animIndex);
+
 #if defined(TILEMAP_PACKED_TILE_RECORDS)
 		// Emits a layer mesh buffer of packed tile records (see `TILEMAP_PACKED_TILE_RECORDS`) as one or more
 		// point-list render commands

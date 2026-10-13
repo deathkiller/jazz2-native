@@ -132,7 +132,8 @@ namespace nCine
 		batchCommand->SetVisitOrder(refCommand->GetVisitOrder());
 	}
 
-	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue)
+	void RenderBatcher::CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
+		std::uint32_t splitLayer)
 	{
 		std::uint32_t minBatchSize, maxBatchSize;
 		GetBatchSizeLimits(minBatchSize, maxBatchSize);
@@ -148,7 +149,10 @@ namespace nCine
 
 			// Should split if material sort key (that takes into account shader program, textures and blending) or primitive type differs
 			// GL_LINE_STRIP is split always, because it cannot be batched
-			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive || primitive == PrimitiveType::LineStrip);
+			// The layer isn't part of that key, so neighbours on two sides of the split layer have to be told apart
+			// on their own - a batch spanning it would be drawn whole in the first part of a split queue
+			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive ||
+				primitive == PrimitiveType::LineStrip || (prevCommand->GetLayer() < splitLayer) != (command->GetLayer() < splitLayer));
 
 			// Also collect the very last command if it can be batched with the previous one
 			std::uint32_t endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);

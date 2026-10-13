@@ -1452,6 +1452,9 @@
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h">
       <Filter>Header Files\Jazz2\Tiles</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Tiles\LayerEffects.h">
+      <Filter>Header Files\Jazz2\Tiles</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\LevelDescriptor.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
@@ -1659,6 +1662,9 @@
     <ClInclude Include="Jazz2\LevelFlags.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\LevelFormat.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\HighscoresSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1690,6 +1696,9 @@
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h">
+      <Filter>Header Files\Jazz2\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Rendering\XRayMaskRenderer.h">
       <Filter>Header Files\Jazz2\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h">
@@ -2817,6 +2826,9 @@
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp">
+      <Filter>Source Files\Jazz2\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Rendering\XRayMaskRenderer.cpp">
       <Filter>Source Files\Jazz2\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp">

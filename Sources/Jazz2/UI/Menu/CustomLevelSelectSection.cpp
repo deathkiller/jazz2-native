@@ -1,8 +1,7 @@
 ﻿#include "CustomLevelSelectSection.h"
 #include "StartGameOptionsSection.h"
-#include "../../ContentFileTypes.h"
 #include "MenuResources.h"
-#include "../../LevelFlags.h"
+#include "../../LevelFormat.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
@@ -383,15 +382,11 @@ namespace Jazz2::UI::Menu
 		auto s = fs::Open(levelFile, FileAccess::Read);
 		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", );
 
-		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
-		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::Level) {
-			LOGW("Level \"{}\" has invalid signature", levelFile);
+		LevelFlags flags;
+		if (!LevelFormat::ReadHeader(*s, flags)) {
+			LOGW("Level \"{}\" has invalid signature or unsupported version", levelFile);
 			return;
 		}
-
-		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
 
 #if !defined(DEATH_DEBUG)
 		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build

@@ -44,6 +44,7 @@ namespace Jazz2::Rendering
 {
 	class LightingRenderer;
 	class CombineRenderer;
+	class XRayMaskRenderer;
 }
 
 #if defined(WITH_MULTIPLAYER)
@@ -331,6 +332,8 @@ namespace Jazz2::Actors
 		friend class Jazz2::Rendering::LightingRenderer;
 		// Software renderer approximates the dynamic lighting in the combine step and needs the same light source
 		friend class Jazz2::Rendering::CombineRenderer;
+		// Draws the silhouettes of the actors behind the x-ray tile layers from their renderers
+		friend class Jazz2::Rendering::XRayMaskRenderer;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 		friend class Jazz2::UI::Multiplayer::MpInGameCanvasLayer;

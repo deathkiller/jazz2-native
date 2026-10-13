@@ -354,6 +354,7 @@
     <ClInclude Include="Jazz2\Rendering\LightingRenderer.h" />
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
+    <ClInclude Include="Jazz2\Rendering\XRayMaskRenderer.h" />
     <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\TextInputBuffer.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpHUD.h" />
@@ -487,6 +488,7 @@
     <ClInclude Include="Jazz2\IRootController.h" />
     <ClInclude Include="Jazz2\LevelDescriptor.h" />
     <ClInclude Include="Jazz2\LevelFlags.h" />
+    <ClInclude Include="Jazz2\LevelFormat.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
@@ -531,6 +533,7 @@
     <ClInclude Include="Jazz2\ShieldType.h" />
     <ClInclude Include="Jazz2\SuspendType.h" />
     <ClInclude Include="Jazz2\Tiles\ITileMapOwner.h" />
+    <ClInclude Include="Jazz2\Tiles\LayerEffects.h" />
     <ClInclude Include="Jazz2\Tiles\TileCollisionParams.h" />
     <ClInclude Include="Jazz2\Tiles\TileDestructType.h" />
     <ClInclude Include="Jazz2\UI\Alignment.h" />
@@ -955,6 +958,7 @@
     <ClCompile Include="Jazz2\Rendering\LightingRenderer.cpp" />
     <ClCompile Include="Jazz2\Rendering\PlayerViewport.cpp" />
     <ClCompile Include="Jazz2\Rendering\UpscaleRenderPass.cpp" />
+    <ClCompile Include="Jazz2\Rendering\XRayMaskRenderer.cpp" />
     <ClCompile Include="Jazz2\Resources.cpp" />
     <ClCompile Include="Jazz2\Scripting\JJ2PlusDefinitions.cpp" />
     <ClCompile Include="Jazz2\Scripting\LevelScriptLoader.cpp" />

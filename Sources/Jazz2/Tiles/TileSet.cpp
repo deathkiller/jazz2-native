@@ -1,4 +1,7 @@
 ﻿#include "TileSet.h"
+#if defined(TILEMAP_LAYER_EFFECTS)
+#	include "../ContentResolver.h"
+#endif
 
 #include <cstring>
 
@@ -172,6 +175,29 @@ namespace Jazz2::Tiles
 			_isTileFilled.set(tileId, filled);
 			// Only a baked atlas carries the colours themselves; an indexed tile's palette is not known here
 			_isTileOpaque.set(tileId, filled && channels > 2);
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+			if (_tileEffectInfo != nullptr) {
+				// The same as the content loader works out (see GetTileEffectInfo()); an indexed tile's colour is
+				// looked up in the palette in effect now
+				const std::uint32_t* palettes = ContentResolver::Get().GetPalettes();
+				std::int32_t topRow = DefaultTileSize;
+				std::uint8_t effectBits = 0;
+				for (std::int32_t py = 0; py < DefaultTileSize; py++) {
+					for (std::int32_t px = 0; px < DefaultTileSize; px++) {
+						const std::uint32_t c = tileDiffuse[(py + TilePadding) * PaddedTileSize + (px + TilePadding)];
+						const bool visible = (((c >> 24) & 0xFF) != 0 && (channels > 2 || (c & 0xFF) != 0));
+						if (visible) {
+							if (topRow == DefaultTileSize) {
+								topRow = py;
+							}
+							effectBits |= GetTexelEffectBits(channels > 2 ? c : palettes[c & 0xFF]);
+						}
+					}
+				}
+				_tileEffectInfo[tileId] = std::uint8_t(topRow | effectBits);
+			}
+#endif
 		}
 		return result;
 	}

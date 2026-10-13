@@ -10,9 +10,52 @@ namespace Jazz2::Rendering
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
 		// Blur post-processing requires shader support and framebuffers
 #else
-		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
+		_copyOnly = false;
 		_direction = direction;
+
+		InitializeTarget(source, width, height);
+
+		Shader* shader = (_downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader);
+
+		// Prepare render command
+		_renderCommand.GetMaterial().SetShader(shader);
+		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
+		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+
+		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+			textureUniform->SetIntValue(0); // GL_TEXTURE0
+		}
+#endif
+	}
+
+	void BlurRenderPass::InitializeCopy(Texture* source, std::int32_t width, std::int32_t height)
+	{
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		_downsampleOnly = false;
+		_copyOnly = true;
+		_direction = Vector2f(0.0f, 0.0f);
+
+		InitializeTarget(source, width, height);
+
+		// The plain sprite program samples the source once per texel
+		_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+
+		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
+		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+			textureUniform->SetIntValue(0); // GL_TEXTURE0
+		}
+#endif
+	}
+
+	void BlurRenderPass::InitializeTarget(Texture* source, std::int32_t width, std::int32_t height)
+	{
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		_source = source;
 
 		bool notInitialized = (_view == nullptr);
 
@@ -35,19 +78,6 @@ namespace Jazz2::Rendering
 			_view->SetTexture(_target.get());
 		}
 		_target->SetMagFiltering(SamplerFilter::Linear);
-
-		Shader* shader = (_downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader);
-
-		// Prepare render command
-		_renderCommand.GetMaterial().SetShader(shader);
-		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
-		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
-
-		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
-		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-			textureUniform->SetIntValue(0); // GL_TEXTURE0
-		}
 #endif
 	}
 
@@ -82,9 +112,11 @@ namespace Jazz2::Rendering
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
-		_renderCommand.GetMaterial().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
-		if (!_downsampleOnly) {
-			_renderCommand.GetMaterial().Uniform("uDirection")->SetFloatValue(_direction.X, _direction.Y);
+		if (!_copyOnly) {
+			_renderCommand.GetMaterial().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
+			if (!_downsampleOnly) {
+				_renderCommand.GetMaterial().Uniform("uDirection")->SetFloatValue(_direction.X, _direction.Y);
+			}
 		}
 		_renderCommand.GetMaterial().SetTexture(0, *_source);
 

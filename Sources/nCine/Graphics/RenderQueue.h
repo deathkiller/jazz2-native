@@ -18,6 +18,9 @@ namespace nCine
 	class RenderQueue
 	{
 	public:
+		/** @brief Layer past the highest one a command can have, so a split at it splits nothing */
+		static constexpr std::uint32_t NoSplitLayer = 0x10000;
+
 		RenderQueue();
 
 		/** @brief Returns `true` if the queue does not contain any render commands */
@@ -26,10 +29,19 @@ namespace nCine
 		/** @brief Adds a draw command to the queue */
 		void AddCommand(RenderCommand* command);
 
-		/** @brief Sorts the queues, builds batches and commits the commands */
-		void SortAndCommit();
-		/** @brief Issues every render command in order */
-		void Draw();
+		/**
+		 * @brief Sorts the queues, builds batches and commits the commands
+		 *
+		 * No batch spans @p splitLayer, so the queue can then be drawn in two parts, the commands below it and the
+		 * rest (see @ref Draw()).
+		 */
+		void SortAndCommit(std::uint32_t splitLayer = NoSplitLayer);
+		/**
+		 * @brief Issues the render commands of the given layers in order
+		 *
+		 * Draws the commands from @p minLayer up to (but not including) @p endLayer, every command by default.
+		 */
+		void Draw(std::uint32_t minLayer = 0, std::uint32_t endLayer = NoSplitLayer);
 
 		/** @brief Clears all the queues and resets the render batcher */
 		void Clear();

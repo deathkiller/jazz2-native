@@ -1,8 +1,7 @@
 ﻿#include "JJ2Level.h"
 #include "JJ2Strings.h"
 #include "EventConverter.h"
-#include "../ContentFileTypes.h"
-#include "../LevelFlags.h"
+#include "../LevelFormat.h"
 #include "../Tiles/LayerTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
@@ -658,8 +657,9 @@ namespace Jazz2::Compatibility
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
-		so->WriteValueAsLE<uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<uint8_t>(ContentFileType::Level);
+		so->WriteValueAsLE<std::uint64_t>(LevelFormat::Signature);
+		so->WriteValue<std::uint8_t>(ContentFileType::Level);
+		so->WriteValueAsLE<std::uint16_t>(LevelFormat::CurrentVersion);
 
 		// Preprocess events first, so they can change some level properties
 		bool hasMultiplayerSpawnPoints = false;

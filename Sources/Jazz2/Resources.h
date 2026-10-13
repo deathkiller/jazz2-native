@@ -3,6 +3,7 @@
 #include "../Main.h"
 #include "AnimationLoopMode.h"
 #include "AnimState.h"
+#include "Tiles/LayerEffects.h"
 #include "../nCine/Audio/AudioBuffer.h"
 #include "../nCine/Base/HashMap.h"
 #include "../nCine/Graphics/Texture.h"
@@ -533,6 +534,17 @@ namespace Jazz2::Resources
 		// position/texcoords/alpha; `TileMapMeshPalette` additionally recolors indexed tilesets via the palette texture.
 		TileMapMesh,						/**< Tile-map aggregation shader */
 		TileMapMeshPalette,					/**< Batched variant of @ref TileMapMesh */
+#endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		// The special tile layers (see Tiles::LayerRendererType::XRay and ::BlurBehind) and the actor coverage the
+		// x-ray layers sample. Compiled only once a level that has such a layer is loaded, see
+		// ContentResolver::CompileLayerEffectShaders()
+		TileMapMeshXRay,					/**< Animated tiles of an x-ray layer */
+		TileMapMeshXRayPalette,				/**< Palette variant of @ref TileMapMeshXRay */
+		TileMapMeshBlur,					/**< Blur-behind layer */
+		TileMapMeshBlurPalette,				/**< Palette variant of @ref TileMapMeshBlur */
+		Silhouette,							/**< Coverage of the actors behind an x-ray layer */
+		SilhouettePalette,					/**< Palette variant of @ref Silhouette */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)

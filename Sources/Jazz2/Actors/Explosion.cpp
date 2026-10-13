@@ -181,28 +181,23 @@ namespace Jazz2::Actors
 		}
 
 		if (_type == Type::RFUpgraded) {
-			// RFUpgraded explosion uses ring light. It used to be one light every 4*pi px of the circumference, which
-			// is as dense as the ring is when it starts - but the lights grow with it, so towards the end ~2.2x more of
-			// them overlapped than were needed, up to 88 large lights per explosion. The spacing now stays at that
-			// starting ratio to the light's falloff, and each light is brighter by as much as there are fewer of them,
-			// so the ring sums to the same light (its mean exactly, its peaks within a few percent).
+			// RFUpgraded explosion uses a ring light. It used to be a chain of point lights, one every 4*pi px of the
+			// circumference - up to 88 large ones per explosion, and any sparser chain showed the gaps between them
+			// on the edges of the band. A single ring light draws only the band and has no gaps at all. Its cross-
+			// section is what that chain summed to: the falloff integrated along the ring and divided by the 4*pi
+			// spacing, (near + (far - near) / 4) / (2 * pi) at the peak, and a near radius 3/4 of a single light's
+			// gives the same shape to within a few percent (the remaining difference is the curvature, which made
+			// the inside of the old chain slightly denser than its outside).
 			if (lightVisible) {
-				float distance = 20.0f + (_time * 6.0f);
-				std::int32_t denseCount = (std::int32_t)(distance * 0.5f);
-				std::int32_t segmentCount = std::clamp<std::int32_t>((std::int32_t)(fTwoPi * distance / (0.9f * (_lightRadiusFar - _lightRadiusNear))), 1, denseCount);
-				float compensation = (float)denseCount / (float)segmentCount;
-				for (std::int32_t i = 0; i < segmentCount; i++) {
-					float angle = i * fTwoPi / segmentCount;
+				const float strength = (_lightRadiusNear + (_lightRadiusFar - _lightRadiusNear) * 0.25f) / fTwoPi;
 
-					auto& light = lights.emplace_back();
-					float sinAngle, cosAngle;
-					sincosApprox(angle, sinAngle, cosAngle);
-					light.Pos = _pos + Vector2f(cosAngle * distance, sinAngle * distance);
-					light.Intensity = _lightIntensity * compensation;
-					light.Brightness = _lightBrightness * compensation;
-					light.RadiusNear = _lightRadiusNear;
-					light.RadiusFar = _lightRadiusFar;
-				}
+				auto& light = lights.emplace_back();
+				light.Pos = _pos;
+				light.Intensity = _lightIntensity * strength;
+				light.Brightness = _lightBrightness * strength;
+				light.RadiusNear = _lightRadiusNear * 0.75f;
+				light.RadiusFar = _lightRadiusFar;
+				light.RingRadius = 20.0f + (_time * 6.0f);
 			}
 		} else if (_type == Type::Pepper) {
 			auto& light2 = lights.emplace_back();

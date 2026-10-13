@@ -2016,7 +2016,7 @@ vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer
 {
 	VsOut _out = {};
 	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
-	_out.vTexCoords = float4(0.0, 0.0, _vin.aTexCoords.x, 0.0);
+	_out.vTexCoords = float4(0.0, 0.0, _vin.aTexCoords.x, _vin.aTexCoords.y);
 	_out.vColor = _vin.aColor;
 	return _out;
 }
@@ -2044,9 +2044,10 @@ fragment float4 FSMain(FsIn _in [[stage_in]])
 	float4 COLOR = float4(0);
 	float2 center = _in.vTexCoords.xy;
 	float radiusNear = _in.vTexCoords.z;
+	float ringRadius = _in.vTexCoords.w;
 	float intensity = _in.vColor.x;
 	float brightness = _in.vColor.y;
-	float dist = length(_in.vColor.zw);
+	float dist = abs(length(_in.vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = float4(0.0, 0.0, 0.0, 1.0);
 	} else {
@@ -4730,6 +4731,151 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 
 namespace Jazz2::ShadersGen
 {
+	inline constexpr char Silhouette_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float vAlpha [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vAlpha = _vin.aColor.w;
+	_out.vPaletteOffset = _vin.aColor.x;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char Silhouette_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float vAlpha [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float alpha = src.w;
+	COLOR = float4(alpha * _in.vAlpha);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char Silhouette_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float vAlpha [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vAlpha = _vin.aColor.w;
+	_out.vPaletteOffset = _vin.aColor.x;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char Silhouette_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float vAlpha [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[texture(1)]], sampler uTexture_smplr [[sampler(1)]], texture2d<float> uTexturePalette [[texture(0)]], sampler uTexturePalette_smplr [[sampler(0)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float alpha = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY)).w * src.w;
+	COLOR = float4(alpha * _in.vAlpha);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
 	inline constexpr char TexturedBackground_VsMsl[] =
 R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
 #include <metal_stdlib>
@@ -5314,6 +5460,238 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 
 namespace Jazz2::ShadersGen
 {
+	inline constexpr char TileMapMeshBlur_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+	float aAxisY [[attribute(3)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+	float2 vPos [[user(locn3)]];
+	float vAxisY [[user(locn4)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	_out.vPos = _vin.aPosition;
+	_out.vAxisY = _vin.aAxisY;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshBlur_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+	float2 vPos [[user(locn3)]];
+	float vAxisY [[user(locn4)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(1)]], sampler uTextureBehind_smplr [[sampler(1)]], texture2d<float> uTextureSharp [[texture(2)]], sampler uTextureSharp_smplr [[sampler(2)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float4 tile = src;
+	float on = step(0.5 / 255.0, tile.w);
+	float blurAmount = clamp((tile.w * 255.0 - 1.0) / 254.0, 0.0, 1.0);
+	float reflectionAmount = tile.z * on;
+	float2 displacement = (floor(tile.xy * 255.0 + 0.5) - 128.0) * on;
+	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
+	float strength = _in.vColor.w * on;
+	float2 unitsPerPixel = float2(dfdx(_in.vPos.x), dfdy(_in.vPos.y));
+	unitsPerPixel.x = abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x;
+	unitsPerPixel.y = abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y;
+	float2 offset = displacement * strength * 0.25 / unitsPerPixel;
+	float2 uv = (_in.gl_FragCoord.xy + offset) * _globals.uTargetSizeInv;
+	float2 reflectionUv = float2(_in.gl_FragCoord.x + offset.x, _in.gl_FragCoord.y + 2.0 * (_in.vAxisY - _in.vPos.y) / unitsPerPixel.y + offset.y) * _globals.uTargetSizeInv;
+	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * _globals.uTargetSizeInv.y), 0.0, 1.0);
+	float3 sharp = uTextureSharp.sample(uTextureSharp_smplr, uv).xyz;
+	float3 blurred = uTextureBehind.sample(uTextureBehind_smplr, uv).xyz;
+	float3 reflected = mix(uTextureSharp.sample(uTextureSharp_smplr, reflectionUv).xyz, uTextureBehind.sample(uTextureBehind_smplr, reflectionUv).xyz, blurAmount);
+	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
+	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
+	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshBlur_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float4 aColor [[attribute(2)]];
+	float aAxisY [[attribute(3)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+	float2 vPos [[user(locn3)]];
+	float vAxisY [[user(locn4)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	_out.vPos = _vin.aPosition;
+	_out.vAxisY = _vin.aAxisY;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshBlur_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float4 vColor [[user(locn1)]];
+	float vPaletteOffset [[user(locn2)]];
+	float2 vPos [[user(locn3)]];
+	float vAxisY [[user(locn4)]];
+};
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(1)]], sampler uTexture_smplr [[sampler(1)]], texture2d<float> uTexturePalette [[texture(0)]], sampler uTexturePalette_smplr [[sampler(0)]], texture2d<float> uTextureBehind [[texture(2)]], sampler uTextureBehind_smplr [[sampler(2)]], texture2d<float> uTextureSharp [[texture(3)]], sampler uTextureSharp_smplr [[sampler(3)]])
+{
+	float4 COLOR = float4(0);
+	float4 src = uTexture.sample(uTexture_smplr, _in.vTexCoords);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 paletteColor = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
+	float4 tile = float4(paletteColor.xyz, paletteColor.w * src.w);
+	float on = step(0.5 / 255.0, tile.w);
+	float blurAmount = clamp((tile.w * 255.0 - 1.0) / 254.0, 0.0, 1.0);
+	float reflectionAmount = tile.z * on;
+	float2 displacement = (floor(tile.xy * 255.0 + 0.5) - 128.0) * on;
+	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
+	float strength = _in.vColor.w * on;
+	float2 unitsPerPixel = float2(dfdx(_in.vPos.x), dfdy(_in.vPos.y));
+	unitsPerPixel.x = abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x;
+	unitsPerPixel.y = abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y;
+	float2 offset = displacement * strength * 0.25 / unitsPerPixel;
+	float2 uv = (_in.gl_FragCoord.xy + offset) * _globals.uTargetSizeInv;
+	float2 reflectionUv = float2(_in.gl_FragCoord.x + offset.x, _in.gl_FragCoord.y + 2.0 * (_in.vAxisY - _in.vPos.y) / unitsPerPixel.y + offset.y) * _globals.uTargetSizeInv;
+	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * _globals.uTargetSizeInv.y), 0.0, 1.0);
+	float3 sharp = uTextureSharp.sample(uTextureSharp_smplr, uv).xyz;
+	float3 blurred = uTextureBehind.sample(uTextureBehind_smplr, uv).xyz;
+	float3 reflected = mix(uTextureSharp.sample(uTextureSharp_smplr, reflectionUv).xyz, uTextureBehind.sample(uTextureBehind_smplr, reflectionUv).xyz, blurAmount);
+	float sharpAmount = (1.0 - blurAmount) * (1.0 - reflectionAmount);
+	float alpha = 1.0 - sharpAmount * (1.0 - displaced);
+	float3 color = sharp * (sharpAmount * displaced) + blurred * (blurAmount * (1.0 - reflectionAmount)) + reflected * reflectionAmount;
+	COLOR = float4(color / max(alpha, 0.0001), alpha * strength);
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
 	inline constexpr char TileMapMeshPalette_VsMsl[] =
 R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
 #include <metal_stdlib>
@@ -5391,6 +5769,222 @@ fragment float4 FSMain(FsIn _in [[stage_in]], texture2d<float> uTexture [[textur
 	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	float4 color = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
 	COLOR = float4(color.xyz, color.w * src.w) * _in.vColor;
+	return COLOR;
+}
+)__SHDR__";
+
+}
+
+namespace Jazz2::ShadersGen
+{
+	inline constexpr char TileMapMeshXRay_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float2 aTexCoords1 [[attribute(2)]];
+	float2 aWeights [[attribute(3)]];
+	float4 aColor [[attribute(4)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vTexCoords1 [[user(locn1)]];
+	float2 vWeights [[user(locn2)]];
+	float4 vColor [[user(locn3)]];
+	float vPaletteOffset [[user(locn4)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vTexCoords1 = _vin.aTexCoords1;
+	_out.vWeights = _vin.aWeights;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshXRay_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vTexCoords1 [[user(locn1)]];
+	float2 vWeights [[user(locn2)]];
+	float4 vColor [[user(locn3)]];
+	float vPaletteOffset [[user(locn4)]];
+};
+
+float4 tileSample(float2 uv, texture2d<float> uTexture, sampler uTexture_smplr)
+{
+	float4 src = uTexture.sample(uTexture_smplr, uv);
+	return src;
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(0)]], sampler uTexture_smplr [[sampler(0)]], texture2d<float> uTextureMask [[texture(1)]], sampler uTextureMask_smplr [[sampler(1)]])
+{
+	float4 COLOR = float4(0);
+	float4 frame0 = tileSample(_in.vTexCoords, uTexture, uTexture_smplr);
+	float4 frame1 = tileSample(_in.vTexCoords1, uTexture, uTexture_smplr);
+	frame0 = float4(frame0.xyz * frame0.w, frame0.w) * _in.vWeights.x;
+	frame1 = float4(frame1.xyz * frame1.w, frame1.w) * _in.vWeights.y;
+	float mask = uTextureMask.sample(uTextureMask_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).x;
+	float4 tile = mix(frame0, frame1, mask);
+	COLOR = float4(tile.xyz * _in.vColor.xyz, tile.w) * _in.vColor.w;
+	return COLOR;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshXRay_USE_PALETTE_VsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct VsIn
+{
+	float2 aPosition [[attribute(0)]];
+	float2 aTexCoords [[attribute(1)]];
+	float2 aTexCoords1 [[attribute(2)]];
+	float2 aWeights [[attribute(3)]];
+	float4 aColor [[attribute(4)]];
+};
+
+struct VsOut
+{
+	float4 gl_Position [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vTexCoords1 [[user(locn1)]];
+	float2 vWeights [[user(locn2)]];
+	float4 vColor [[user(locn3)]];
+	float vPaletteOffset [[user(locn4)]];
+};
+
+vertex VsOut VSMain(VsIn _vin [[stage_in]], constant _Globals& _globals [[buffer(0)]], constant InstanceBlock& _bInstanceBlock [[buffer(1)]])
+{
+	VsOut _out = {};
+	_out.gl_Position = _globals.uProjectionMatrix * _globals.uViewMatrix * _bInstanceBlock.modelMatrix * float4(_vin.aPosition.x, _vin.aPosition.y, 0.0, 1.0);
+	_out.vTexCoords = _vin.aTexCoords;
+	_out.vTexCoords1 = _vin.aTexCoords1;
+	_out.vWeights = _vin.aWeights;
+	_out.vColor = _vin.aColor * _bInstanceBlock.color;
+	_out.vPaletteOffset = _bInstanceBlock.palOffset;
+	return _out;
+}
+)__SHDR__";
+
+	inline constexpr char TileMapMeshXRay_USE_PALETTE_FsMsl[] =
+R"__SHDR__(// Generated MSL (Metal, macOS/iOS) by ShaderCompiler. Do not edit manually.
+#include <metal_stdlib>
+using namespace metal;
+
+struct _Globals
+{
+	float4x4 uProjectionMatrix;
+	float4x4 uViewMatrix;
+	float2 uTargetSizeInv;
+};
+
+struct InstanceBlock
+{
+	float4x4 modelMatrix;
+	float4 color;
+	float4 texRect;
+	float2 spriteSize;
+	float palOffset;
+};
+
+struct FsIn
+{
+	float4 gl_FragCoord [[position]];
+	float2 vTexCoords [[user(locn0)]];
+	float2 vTexCoords1 [[user(locn1)]];
+	float2 vWeights [[user(locn2)]];
+	float4 vColor [[user(locn3)]];
+	float vPaletteOffset [[user(locn4)]];
+};
+
+float4 tileSample(float2 uv, texture2d<float> uTexture, sampler uTexture_smplr, texture2d<float> uTexturePalette, sampler uTexturePalette_smplr, thread FsIn& _in)
+{
+	float4 src = uTexture.sample(uTexture_smplr, uv);
+	float palIndex = floor(_in.vPaletteOffset + 0.5) + floor(src.x * 255.0 + 0.5);
+	float palX = ((palIndex - (256.0) * floor((palIndex) / (256.0))) + 0.5) / 256.0;
+	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	float4 color = uTexturePalette.sample(uTexturePalette_smplr, float2(palX, palY));
+	return float4(color.xyz, color.w * src.w);
+}
+
+fragment float4 FSMain(FsIn _in [[stage_in]], constant _Globals& _globals [[buffer(0)]], texture2d<float> uTexture [[texture(1)]], sampler uTexture_smplr [[sampler(1)]], texture2d<float> uTexturePalette [[texture(0)]], sampler uTexturePalette_smplr [[sampler(0)]], texture2d<float> uTextureMask [[texture(2)]], sampler uTextureMask_smplr [[sampler(2)]])
+{
+	float4 COLOR = float4(0);
+	float4 frame0 = tileSample(_in.vTexCoords, uTexture, uTexture_smplr, uTexturePalette, uTexturePalette_smplr, _in);
+	float4 frame1 = tileSample(_in.vTexCoords1, uTexture, uTexture_smplr, uTexturePalette, uTexturePalette_smplr, _in);
+	frame0 = float4(frame0.xyz * frame0.w, frame0.w) * _in.vWeights.x;
+	frame1 = float4(frame1.xyz * frame1.w, frame1.w) * _in.vWeights.y;
+	float mask = uTextureMask.sample(uTextureMask_smplr, _in.gl_FragCoord.xy * _globals.uTargetSizeInv).x;
+	float4 tile = mix(frame0, frame1, mask);
+	COLOR = float4(tile.xyz * _in.vColor.xyz, tile.w) * _in.vColor.w;
 	return COLOR;
 }
 )__SHDR__";

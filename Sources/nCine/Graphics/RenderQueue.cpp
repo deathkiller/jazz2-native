@@ -71,7 +71,7 @@ namespace nCine
 #endif
 	}
 
-	void RenderQueue::SortAndCommit()
+	void RenderQueue::SortAndCommit(std::uint32_t splitLayer)
 	{
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
@@ -88,8 +88,8 @@ namespace nCine
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
-			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue);
-			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue);
+			RenderResources::GetRenderBatcher().CreateBatches(_opaqueQueue, _opaqueBatchedQueue, splitLayer);
+			RenderResources::GetRenderBatcher().CreateBatches(_transparentQueue, _transparentBatchedQueue, splitLayer);
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
@@ -116,7 +116,7 @@ namespace nCine
 		}
 	}
 
-	void RenderQueue::Draw()
+	void RenderQueue::Draw(std::uint32_t minLayer, std::uint32_t endLayer)
 	{
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		static char debugString[128];
@@ -127,8 +127,9 @@ namespace nCine
 
 		// Every command left after batching is one draw call, while the unbatched queues still hold what was
 		// submitted - the two together say how well the batching does. Tested here rather than left to the call,
-		// so a frame that collects nothing does not pay for a call per render queue.
-		if (FrameStatistics::IsEnabled()) {
+		// so a frame that collects nothing does not pay for a call per render queue. A queue drawn in parts is
+		// counted once, with its first part.
+		if (minLayer == 0 && FrameStatistics::IsEnabled()) {
 			FrameStatistics::AddDrawCalls(std::uint32_t(opaques->size() + transparents->size()),
 				std::uint32_t(_opaqueQueue.size() + _transparentQueue.size()));
 		}
@@ -142,6 +143,9 @@ namespace nCine
 
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
+			if (opaqueRenderCommand->GetLayer() < minLayer || opaqueRenderCommand->GetLayer() >= endLayer) {
+				continue;
+			}
 			TracyGpuZone("Opaque");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const std::int32_t numInstances = opaqueRenderCommand->GetInstanceCount();
@@ -179,6 +183,9 @@ namespace nCine
 		RHI::Device::SetDepthMaskEnabled(false);
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
+			if (transparentRenderCommand->GetLayer() < minLayer || transparentRenderCommand->GetLayer() >= endLayer) {
+				continue;
+			}
 			TracyGpuZone("Transparent");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 			const std::int32_t numInstances = transparentRenderCommand->GetInstanceCount();

@@ -242,6 +242,9 @@
     <ClInclude Include="..\..\Jazz2\ContentFileTypes.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Jazz2\LevelFormat.h">
+      <Filter>Header Files\Jazz2</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Jazz2\EventType.h">
       <Filter>Header Files\Jazz2</Filter>
     </ClInclude>

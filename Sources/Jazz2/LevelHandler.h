@@ -249,8 +249,17 @@ namespace Jazz2
 
 		void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) override {}
 		void OnTileFrozen(std::int32_t x, std::int32_t y) override;
+#if defined(TILEMAP_LAYER_EFFECTS)
+		Tiles::LayerEffectsTarget* GetLayerEffectsTarget(const Viewport* view) override;
+		void OnLayerEffectsChanged() override;
+#endif
 
 	protected:
+#if defined(DEATH_DEBUG)
+		/** @brief Changes the renderer of a tile layer from `<index> <default|xray|blur>`, returns `false` if it can't */
+		bool ApplyDebugLayerRendererType(StringView args);
+#endif
+
 		/** @brief Describes current input state of a player */
 		struct PlayerInput {
 			/** @brief Bitmask of actions pressed in the current frame */

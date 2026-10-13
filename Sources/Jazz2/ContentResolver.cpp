@@ -4,7 +4,7 @@
 #endif
 #include "../Shaders/Generated/ShadersGen.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
-#include "LevelFlags.h"
+#include "LevelFormat.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
 #include "Compatibility/AssetConverter.h"
@@ -141,7 +141,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set - bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 14;
+	static constexpr std::uint64_t ShadersVersion = 15;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -1877,6 +1877,9 @@ namespace Jazz2
 		std::unique_ptr<std::uint16_t[]> atlasSlot;
 		// Per-tile flag (1 = fully opaque diffuse); used to cull hidden debris. Set by BuildTilesetDiffuse().
 		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
+		// Per-tile first visible row and reflection flag for the blur-behind layers (see TileSet::GetTileEffectInfo());
+		// set by BuildTilesetDiffuse() only where those layers are drawn with their effects
+		std::unique_ptr<std::uint8_t[]> tileEffectInfo;
 		// Whether tiles keep raw palette indices (recolored at draw time) vs baked colors; set by BuildTilesetDiffuse()
 		bool indexTiles = false;
 
@@ -1884,7 +1887,7 @@ namespace Jazz2
 		if (!_isHeadless && withDiffuse) {
 			const bool lz4Content = ((flags & Compatibility::JJ2Anims::ImageContentLz4Flag) == Compatibility::JJ2Anims::ImageContentLz4Flag);
 			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, lz4Content, usedTiles, atlasSlot, width, height, tileCount,
-				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, captionTile);
+				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, tileEffectInfo, captionTile);
 		}
 
 		if (!uc.IsValid()) {
@@ -1896,6 +1899,9 @@ namespace Jazz2
 			maskSize, Death::move(captionTile), tileDiffuseOpaque.get());
 		tileSet->IsIndexed = indexTiles;
 		tileSet->AtlasSlot = Death::move(atlasSlot);
+#if defined(TILEMAP_LAYER_EFFECTS)
+		tileSet->SetTileEffectInfo(Death::move(tileEffectInfo));
+#endif
 		return tileSet;
 	}
 
@@ -1936,11 +1942,52 @@ namespace Jazz2
 		return mask;
 	}
 
+#if defined(TILEMAP_LAYER_EFFECTS)
+	namespace
+	{
+		// What a blur-behind layer needs to know about a tile built into the atlas (see TileSet::GetTileEffectInfo()):
+		// its first visible row, the mirror line of a reflection that starts with it, and whether any visible texel
+		// reflects (some blue) or displaces (red or green other than 128). An indexed tile is resolved through the
+		// palette in effect now.
+		std::uint8_t ComputeTileEffectInfo(const std::uint8_t* tile, std::uint32_t stride, std::uint32_t channels, const std::uint32_t* palette)
+		{
+			constexpr std::uint8_t AllBits = (TileSet::TileEffectReflective | TileSet::TileEffectDisplaces);
+			std::int32_t topRow = TileSet::DefaultTileSize;
+			std::uint8_t effectBits = 0;
+			for (std::int32_t y = 0; y < TileSet::DefaultTileSize && effectBits != AllBits; y++) {
+				const std::uint8_t* row = &tile[((y + TileSet::TilePadding) * stride + TileSet::TilePadding) * channels];
+				for (std::int32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+					std::uint32_t color;
+					if (channels == 1) {
+						// Index 0 is transparent, whatever its palette entry (see BuildTilesetDiffuse())
+						const std::uint8_t index = row[x];
+						color = (index != 0 ? palette[index] : 0);
+					} else {
+						const std::uint8_t* texel = &row[x * channels];
+						color = std::uint32_t(texel[0]) | (std::uint32_t(texel[1]) << 8) | (std::uint32_t(texel[2]) << 16) | (std::uint32_t(texel[3]) << 24);
+					}
+					if ((color >> 24) != 0) {
+						if (topRow == TileSet::DefaultTileSize) {
+							topRow = y;
+						}
+						effectBits |= TileSet::GetTexelEffectBits(color);
+						if (effectBits == AllBits) {
+							// The first visible row is known by now too, so the rest of the tile can't change anything
+							break;
+						}
+					}
+				}
+			}
+			return std::uint8_t(topRow | effectBits);
+		}
+	}
+#endif
+
 	SmallVector<std::unique_ptr<Texture>, 1> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
 		bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 		const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
-		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile)
+		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile)
 	{
 		// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked as RGBA;
 		// an all-8-bit tileset keeps raw palette indices and recolors at draw time (uploaded as R8).
@@ -2121,6 +2168,11 @@ namespace Jazz2
 		const std::uint32_t dstChannels = (indexTiles ? 1u : 4u);
 
 		tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
+#if defined(TILEMAP_LAYER_EFFECTS)
+		// A tile the atlas leaves out has nothing visible and no reflection
+		tileEffectInfo = std::make_unique<std::uint8_t[]>(tileCount);
+		std::memset(tileEffectInfo.get(), TileSet::DefaultTileSize, tileCount);
+#endif
 
 		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
 		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
@@ -2315,6 +2367,9 @@ namespace Jazz2
 
 				if (tileIdx < (std::int32_t)tileCount) {
 					tileDiffuseOpaque[tileIdx] = (opaque ? (opaqueAsDrawn ? 2 : 1) : 0);
+#if defined(TILEMAP_LAYER_EFFECTS)
+					tileEffectInfo[tileIdx] = ComputeTileEffectInfo(dstTile, paddedWidth, dstChannels, _palettes);
+#endif
 				}
 
 				ExpandTileDiffuse(dstTile, paddedWidth, dstChannels);
@@ -2369,13 +2424,11 @@ namespace Jazz2
 			return false;
 		}
 
-		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
-		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::Level) {
+		LevelFlags flags;
+		if (!LevelFormat::ReadHeader(*s, flags)) {
 			return false;
 		}
 
-		/*LevelFlags flags =*/ s->ReadValueAsLE<std::uint16_t>();
 		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
 		DeflateStream uc(*s, compressedSize);
 
@@ -2407,12 +2460,13 @@ namespace Jazz2
 		auto s = fs::Open(descriptor.FullPath, FileAccess::Read, 16 * 1024);
 		if (!s->IsValid()) return false;
 
-		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
-		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == ContentFileType::Level,
-			("Level \"{}\" has invalid signature", descriptor.FullPath), false);
-
-		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
+		LevelFlags flags;
+		if (!LevelFormat::ReadHeader(*s, flags)) {
+			// A level converted by another version of the game (the cache is rebuilt when the version changes, see
+			// JJ2Anims::CacheVersion), or not a level at all
+			LOGE("Level \"{}\" has invalid signature or unsupported version", descriptor.FullPath);
+			return false;
+		}
 
 		// Read compressed data
 		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
@@ -2986,6 +3040,68 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Transition] = CompileShader("Transition", ShadersGen::Transition);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TouchCircle] = CompileShader("TouchCircle", ShadersGen::TouchCircle);
 	}
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+	bool ContentResolver::CompileLayerEffectShaders()
+	{
+		if (_isHeadless) {
+			return false;
+		}
+
+		constexpr PrecompiledShader LayerEffectShaders[] = {
+			PrecompiledShader::TileMapMeshXRay, PrecompiledShader::TileMapMeshXRayPalette,
+			PrecompiledShader::TileMapMeshBlur, PrecompiledShader::TileMapMeshBlurPalette,
+			PrecompiledShader::Silhouette, PrecompiledShader::SilhouettePalette
+		};
+
+		if (_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshXRay] == nullptr) {
+			ZoneScoped;
+
+			_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshXRay] = CompileShader("TileMapMeshXRay", ShadersGen::TileMapMeshXRay);
+			_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshXRayPalette] = CompileShader("TileMapMeshXRayPalette", ShadersGen::TileMapMeshXRay, "USE_PALETTE");
+			_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshBlur] = CompileShader("TileMapMeshBlur", ShadersGen::TileMapMeshBlur);
+			_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshBlurPalette] = CompileShader("TileMapMeshBlurPalette", ShadersGen::TileMapMeshBlur, "USE_PALETTE");
+			_precompiledShaders[(std::int32_t)PrecompiledShader::Silhouette] = CompileShader("Silhouette", ShadersGen::Silhouette);
+			_precompiledShaders[(std::int32_t)PrecompiledShader::SilhouettePalette] = CompileShader("SilhouettePalette", ShadersGen::Silhouette, "USE_PALETTE");
+
+			// The actor coverage uses the interleaved per-vertex format of the tile-layer meshes (position.xy,
+			// texcoords.xy, color.rgba = 8 floats), the blur layer adds the mirror line of its reflection (9 floats,
+			// see TileMap::AppendBlurTileQuad()) and the x-ray tiles the texture coordinates of their mask frame
+			// and the weights of both frames (12 floats, see TileMap::AppendXRayTile())
+			for (PrecompiledShader meshShader : { PrecompiledShader::Silhouette, PrecompiledShader::SilhouettePalette }) {
+				Shader* shader = _precompiledShaders[(std::int32_t)meshShader].get();
+				constexpr std::int32_t Stride = 8 * sizeof(float);
+				shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+				shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+				shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+			}
+			for (PrecompiledShader meshShader : { PrecompiledShader::TileMapMeshBlur, PrecompiledShader::TileMapMeshBlurPalette }) {
+				Shader* shader = _precompiledShaders[(std::int32_t)meshShader].get();
+				constexpr std::int32_t Stride = 9 * sizeof(float);
+				shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+				shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+				shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+				shader->SetAttribute("aAxisY", Stride, reinterpret_cast<void*>(8 * sizeof(float)));
+			}
+			for (PrecompiledShader meshShader : { PrecompiledShader::TileMapMeshXRay, PrecompiledShader::TileMapMeshXRayPalette }) {
+				Shader* shader = _precompiledShaders[(std::int32_t)meshShader].get();
+				constexpr std::int32_t Stride = 12 * sizeof(float);
+				shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+				shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+				shader->SetAttribute("aTexCoords1", Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+				shader->SetAttribute("aWeights", Stride, reinterpret_cast<void*>(6 * sizeof(float)));
+				shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(8 * sizeof(float)));
+			}
+		}
+
+		for (PrecompiledShader shader : LayerEffectShaders) {
+			if (_precompiledShaders[(std::int32_t)shader] == nullptr || !_precompiledShaders[(std::int32_t)shader]->IsLinked()) {
+				return false;
+			}
+		}
+		return true;
+	}
+#endif
 
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const ShaderCompiler::Program& program, const char* variantName, Shader::Introspection introspection)
 	{

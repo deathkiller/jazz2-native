@@ -1,4 +1,5 @@
 ﻿#include "PlayerViewport.h"
+#include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Player.h"
 #include "../UI/HUD.h"
@@ -13,6 +14,9 @@ namespace Jazz2::Rendering
 		: _levelHandler(levelHandler), _targetActor(targetActor),
 #if defined(RHI_CAP_POSTPROCESSING)
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
+#endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+			_behindCopyPass(this), _behindDownsamplePass(this), _behindBlurPass1(this), _behindBlurPass2(this),
 #endif
 			_cameraViewCenterY(0.0f), _lookAheadDirectionX(1.0f), _lookAheadTurnTime(0.0f), _centerOnTargetProgress(0.0f),
 			_shakeDuration(0.0f)
@@ -139,6 +143,9 @@ namespace Jazz2::Rendering
 			_blurPass4.Dispose();
 		}
 #endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		InitializeLayerEffects(w, h);
+#endif
 		// On the direct tier no lighting render target exists at all: lighting is composited on the CPU by
 		// CombineRenderer (the former inert _lightingView stub is gone)
 
@@ -165,6 +172,20 @@ namespace Jazz2::Rendering
 		}
 #endif
 
+#if defined(TILEMAP_LAYER_EFFECTS)
+		// The passes that blur what is behind the blur layers are drawn by the scene view itself, in the middle of its
+		// queue, so they are only in the chain to be visited and committed with the rest
+		_view->RemoveSplitPasses();
+		if (_layerEffects.BehindBlur != nullptr || _layerEffects.BehindCopy != nullptr) {
+			for (BlurRenderPass* pass : { &_behindCopyPass, &_behindDownsamplePass, &_behindBlurPass1, &_behindBlurPass2 }) {
+				if (pass->GetView() != nullptr) {
+					pass->Register();
+					_view->AddSplitPass(pass->GetView());
+				}
+			}
+		}
+#endif
+
 		auto& chain = Viewport::GetChain();
 #if !defined(RHI_CAP_POSTPROCESSING)
 		// Direct tier: only the scene view exists (no lighting render target; the CPU lightmap composite
@@ -173,6 +194,12 @@ namespace Jazz2::Rendering
 #else
 		chain.push_back(_lightingView.get());
 		chain.push_back(_view.get());
+#endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		// Registered after the scene, so it's drawn before it - the x-ray layers sample it
+		if (_xrayMaskView != nullptr) {
+			chain.push_back(_xrayMaskView.get());
+		}
 #endif
 	}
 
@@ -198,6 +225,101 @@ namespace Jazz2::Rendering
 		// one takes its place. With blur effects disabled neither exists.
 		Texture* blurQuarter = _blurPass4.GetTarget();
 		return (blurQuarter != nullptr ? blurQuarter : _blurPass2.GetTarget());
+	}
+#endif
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+	void PlayerViewport::InitializeLayerEffects(std::int32_t width, std::int32_t height)
+	{
+		// Only what the level asks for, so a level without the special layers has no extra pass at all
+		Tiles::TileMap* tileMap = _levelHandler->_tileMap.get();
+		bool needsMask = (tileMap != nullptr && tileMap->HasXRayLayers());
+		const bool hasBlurLayers = (tileMap != nullptr && tileMap->HasBlurBehindLayers());
+		// Blurring what is behind a layer follows the blur effects option, a reflection or displacement of it is always
+		// shown - a blur layer with neither isn't drawn at all
+		bool needsBehindBlur = (hasBlurLayers && PreferencesCache::BlurEffects);
+		bool needsBehindCopy = (hasBlurLayers && tileMap->BlurBehindLayersNeedSharpCopy());
+		if ((needsMask || needsBehindBlur || needsBehindCopy) && !ContentResolver::Get().CompileLayerEffectShaders()) {
+			LOGW("Shaders of the special tile layers are not available, the layers are drawn without their effects");
+			needsMask = false;
+			needsBehindBlur = false;
+			needsBehindCopy = false;
+		}
+
+		_layerEffects.View = _view.get();
+		_layerEffects.XRayMask = nullptr;
+		_layerEffects.XRayDepth = 0;
+
+		if (needsMask) {
+			// The format of the lighting buffer, which every backend of this tier is known to render into (OpenGL|ES 2.0
+			// cannot render into fewer than four channels). Only the red channel is read.
+#	if defined(RHI_GL_PROFILE_ES2) || defined(DEATH_TARGET_EMSCRIPTEN)
+			constexpr Texture::Format MaskFormat = Texture::Format::RGBA8;
+#	else
+			constexpr Texture::Format MaskFormat = Texture::Format::RG8;
+#	endif
+			// The size of the scene target, so a fragment of the scene finds its own texel in the mask
+			if (_xrayMaskView == nullptr) {
+				_xrayMaskRenderer = std::make_unique<XRayMaskRenderer>(this);
+				_xrayMaskBuffer = std::make_unique<Texture>(nullptr, MaskFormat, width, height);
+				_xrayMaskView = std::make_unique<Viewport>(_xrayMaskBuffer.get(), Viewport::DepthStencilFormat::None);
+				_xrayMaskView->SetRootNode(_xrayMaskRenderer.get());
+				_xrayMaskView->SetClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+			} else {
+				_xrayMaskView->RemoveAllTextures();
+				_xrayMaskBuffer->Init(nullptr, MaskFormat, width, height);
+				_xrayMaskView->SetTexture(_xrayMaskBuffer.get());
+			}
+			_xrayMaskView->SetCamera(_camera.get());
+			_xrayMaskBuffer->SetMagFiltering(SamplerFilter::Nearest);
+			_xrayMaskBuffer->SetMinFiltering(SamplerFilter::Nearest);
+			_xrayMaskBuffer->SetWrap(SamplerWrapping::ClampToEdge);
+		} else {
+			_xrayMaskView = nullptr;
+			_xrayMaskBuffer = nullptr;
+			_xrayMaskRenderer = nullptr;
+		}
+
+		if (needsBehindBlur) {
+			// A blur of its own rather than the bloom chain: that one is rendered from the whole scene, this one only
+			// from what is below the layer. Every step is at most a halving, as in the bloom chain (see Initialize()).
+#	if defined(RHI_LOW_POWER_GPU)
+			// Where every pass is a whole scene of its own (see Initialize()), the first blur reads the view directly
+			// and the chain stays at half size
+			_behindDownsamplePass.Dispose();
+			_behindBlurPass1.Initialize(_viewTexture.get(), width / 2, height / 2, Vector2f(1.0f, 0.0f));
+			_behindBlurPass2.Initialize(_behindBlurPass1.GetTarget(), width / 2, height / 2, Vector2f(0.0f, 1.0f));
+#	else
+			_behindDownsamplePass.Initialize(_viewTexture.get(), width / 2, height / 2, Vector2f(0.0f, 0.0f));
+			_behindBlurPass1.Initialize(_behindDownsamplePass.GetTarget(), width / 4, height / 4, Vector2f(1.0f, 0.0f));
+			_behindBlurPass2.Initialize(_behindBlurPass1.GetTarget(), width / 4, height / 4, Vector2f(0.0f, 1.0f));
+#	endif
+			_layerEffects.BehindBlur = _behindBlurPass2.GetTarget();
+		} else {
+			_behindDownsamplePass.Dispose();
+			_behindBlurPass1.Dispose();
+			_behindBlurPass2.Dispose();
+			_layerEffects.BehindBlur = nullptr;
+		}
+
+		if (needsBehindCopy) {
+			// A sharp copy of what is behind the layer for the reflections to mirror and the displacement to move, taken
+			// first in the middle of the scene (see Register()). A plain copy rather than a downsampling pass of the same
+			// size, which would blur it.
+#	if defined(RHI_LOW_POWER_GPU)
+			// Half the pixels to write and read where every pass costs a whole scene
+			_behindCopyPass.InitializeCopy(_viewTexture.get(), width / 2, height / 2);
+#	else
+			_behindCopyPass.InitializeCopy(_viewTexture.get(), width, height);
+#	endif
+			_layerEffects.BehindCopy = _behindCopyPass.GetTarget();
+		} else {
+			_behindCopyPass.Dispose();
+			_layerEffects.BehindCopy = nullptr;
+		}
+
+		LOGD("Special tile layers: x-ray mask {}, behind blur {}, behind copy {}", needsMask ? "allocated" : "not needed",
+			needsBehindBlur ? "allocated" : "not needed", needsBehindCopy ? "allocated" : "not needed");
 	}
 #endif
 

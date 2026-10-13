@@ -7,10 +7,13 @@ float lightBlend(float t) {
 void fragment() {
 	vec2 center = vTexCoords.xy;
 	float radiusNear = vTexCoords.z;
+	float ringRadius = vTexCoords.w;
 	float intensity = vColor.r;
 	float brightness = vColor.g;
 
-	float dist = length(vColor.zw);
+	// A ring light measures the distance from its circle instead of from its centre - with a ring radius of
+	// zero, as every point light has, this is the plain distance from the centre
+	float dist = abs(length(vColor.zw) - ringRadius);
 	if (dist > 1.0) {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
 	} else {

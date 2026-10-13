@@ -41,6 +41,7 @@ namespace Jazz2::Rendering
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 
 		void AppendLightQuad(const LightEmitter& light);
+		void AppendRingQuads(const LightEmitter& light, const Rectf& cullingRect);
 		RenderCommand* RentRenderCommand(std::int32_t index);
 #endif
 	};

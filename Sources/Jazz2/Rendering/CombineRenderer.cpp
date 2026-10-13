@@ -5,6 +5,7 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 
 #if defined(DEATH_TARGET_PSP)
+#	include "../../nCine/Base/Algorithms.h"
 #	include <cstring>
 #else
 #	include "SoftwareLightSplat.h"
@@ -17,6 +18,157 @@
 
 namespace Jazz2::Rendering
 {
+#if defined(DEATH_TARGET_PSP)
+	namespace
+	{
+		/**
+		 * @brief Adds one ring light to the lightmap on the VFPU, the PSP's counterpart of `SoftwareLighting::SplatRing()`
+		 *
+		 * The VFPU splat of a point light in @ref CombineRenderer::PrepareSoftwareLighting() taken to a ring: the same
+		 * registers and the same branch-free quads, with the distance measured from the ring's circle - two more
+		 * instructions a quad, `|dist - ring|` - and every row cut into the band on either side of the hole, as the
+		 * generic splat does. The ring radius sits in S132, next to the per-row S130/S131.
+		 *
+		 * A quad may run up to three texels past the end of a part of the band, and those have to add exactly nothing.
+		 * Past the outer edge they lie outside the band; past the left part they lie in the hole only if the hole is
+		 * at least three texels wide, so a row with a narrower one is splatted whole - its hole adds nothing either.
+		 */
+		void SplatRingVfpu(float* lightmap, std::int32_t lmW, std::int32_t lmH, float cx, float cy, float ringLm, float rLm,
+			float radiusNearNorm, float intensity, float brightness, std::int32_t* litSpans)
+		{
+			// Everything below is in units of the far radius, like the falloff
+			const float invRLm = 1.0f / rLm;
+			const float denom = (1.0f - radiusNearNorm);
+			const float invDenom = (denom > 0.0f ? 1.0f / denom : 1.0e30f);
+			const float ring = ringLm * invRLm;
+			const float outer = ring + 1.0f;
+			const float inner = ring - 1.0f;
+			const float outerSq = outer * outer;
+			const float innerSq = (inner > 0.0f ? inner * inner : 0.0f);
+
+			const float outerLm = ringLm + rLm;
+			const std::int32_t y0 = std::max<std::int32_t>(0, (std::int32_t)(cy - outerLm));
+			const std::int32_t y1 = std::min(lmH - 1, (std::int32_t)(cy + outerLm));
+			const std::int32_t bx0 = std::max<std::int32_t>(0, (std::int32_t)(cx - outerLm));
+			const std::int32_t bx1 = std::min(lmW - 1, (std::int32_t)(cx + outerLm));
+
+			alignas(16) float vfpuConstants[8] = {
+				invDenom, intensity, brightness, 4.0f * invRLm,
+				0.0f, invRLm, 2.0f * invRLm, 3.0f * invRLm
+			};
+			std::uint32_t ringBits;
+			std::memcpy(&ringBits, &ring, sizeof(ringBits));
+			asm volatile(
+				"lv.q C100, 0(%[k])\n\t"
+				"lv.q C110, 16(%[k])\n\t"
+				"vone.q C120\n\t"
+				"mtv %[ring], S132\n\t"
+				: : [k] "r"(vfpuConstants), [ring] "r"(ringBits) : "memory");
+
+			for (std::int32_t y = y0; y <= y1; y++) {
+				const float dy = (y - cy) * invRLm;
+				const float dySq = dy * dy;
+				const float rowOuterSq = outerSq - dySq;
+				if (rowOuterSq <= 0.0f) {
+					continue;
+				}
+				const float halfW = std::sqrt(rowOuterSq) * rLm;
+				const std::int32_t xs = std::max(bx0, (std::int32_t)nCine::ceilFast(cx - halfW));
+				const std::int32_t xe = std::min(bx1, (std::int32_t)nCine::floorFast(cx + halfW));
+				if (xs > xe) {
+					continue;
+				}
+				litSpans[y * 2] = std::min(litSpans[y * 2], xs);
+				litSpans[y * 2 + 1] = std::max(litSpans[y * 2 + 1], xe);
+
+				// The texels strictly inside the hole, kept out only when there are at least three of them
+				std::int32_t hs = xe + 1;
+				std::int32_t he = xe;
+				if (innerSq > dySq) {
+					const float halfHole = std::sqrt(innerSq - dySq) * rLm;
+					hs = std::max(xs, (std::int32_t)nCine::floorFast(cx - halfHole) + 1);
+					he = std::min(xe, (std::int32_t)nCine::ceilFast(cx + halfHole) - 1);
+					if (he - hs < 2) {
+						hs = xe + 1;
+						he = xe;
+					}
+				}
+
+				std::uint32_t dySqBits;
+				std::memcpy(&dySqBits, &dySq, sizeof(dySqBits));
+				asm volatile("mtv %[dysq], S131\n\t" : : [dysq] "r"(dySqBits));
+
+				auto splatSegment = [&](std::int32_t first, std::int32_t last, bool padIntoHole) {
+					float dx = (first - cx) * invRLm;
+					float* texelRow = &lightmap[((std::size_t)y * lmW + first) * 2];
+					std::int32_t x = first;
+
+					const std::int32_t count = last - first + 1;
+					const std::int32_t paddedCount = (count + 3) & ~3;
+					const std::int32_t quads = (padIntoHole || first + paddedCount <= lmW ? paddedCount : count) >> 2;
+					if (quads > 0) {
+						// A texel the padding reaches exactly on the outer edge can still come out lit after rounding
+						// - fully, for a band without falloff - so the next frame's reset has to cover it too
+						litSpans[y * 2 + 1] = std::max(litSpans[y * 2 + 1], first + quads * 4 - 1);
+
+						std::uint32_t dxBits;
+						std::memcpy(&dxBits, &dx, sizeof(dxBits));
+						asm volatile(
+							"mtv %[dx], S130\n\t"
+							"vadd.q C000, C110, C130[x,x,x,x]\n\t"
+							: : [dx] "r"(dxBits));
+						for (std::int32_t q = 0; q < quads; q++) {
+							asm volatile(
+								"vmul.q C010, C000, C000\n\t"					// dx^2
+								"vadd.q C010, C010, C130[y,y,y,y]\n\t"			// + dy^2
+								"vsqrt.q C010, C010\n\t"							// distance from the centre
+								"vsub.q C010, C010, C130[z,z,z,z]\n\t"			// - ring
+								"vabs.q C010, C010\n\t"							// dist from the circle
+								"vsub.q C010, C120, C010\n\t"					// 1 - dist
+								"vscl.q C010, C010, S100\n\t"					// * invDenom
+								"vsat0.q C010, C010\n\t"							// t = clamp(.., 0, 1)
+								"vmul.q C020, C010, C010\n\t"
+								"vmul.q C010, C020, C010\n\t"					// strength = t^3
+								"ulv.q C200, 0(%[row])\n\t"						// [R0 G0 R1 G1]
+								"ulv.q C210, 16(%[row])\n\t"						// [R2 G2 R3 G3]
+								"vmul.q C220, C010[x,x,y,y], C100[y,z,y,z]\n\t"	// [s0*I s0*B s1*I s1*B]
+								"vmul.q C230, C010[z,z,w,w], C100[y,z,y,z]\n\t"	// [s2*I s2*B s3*I s3*B]
+								"vadd.q C200, C200, C220\n\t"
+								"vadd.q C210, C210, C230\n\t"
+								"usv.q C200, 0(%[row])\n\t"
+								"usv.q C210, 16(%[row])\n\t"
+								"vadd.q C000, C000, C100[w,w,w,w]\n\t"			// dx += 4/rLm
+								: : [row] "r"(texelRow) : "memory");
+							texelRow += 8;
+						}
+						x += quads * 4;
+						dx += (float)(quads * 4) * invRLm;
+					}
+
+					// Scalar tail of a part clipped by the lightmap's right edge
+					for (; x <= last; x++, texelRow += 2, dx += invRLm) {
+						const float dist2 = dx * dx + dySq;
+						if (dist2 >= outerSq) {
+							continue;
+						}
+						const float t = std::min(std::max((1.0f - std::fabs(std::sqrt(dist2) - ring)) * invDenom, 0.0f), 1.0f);
+						const float strength = t * t * t;
+						texelRow[0] += strength * intensity;
+						texelRow[1] += strength * brightness;
+					}
+				};
+
+				if (hs <= he) {
+					splatSegment(xs, hs - 1, true);
+					splatSegment(he + 1, xe, false);
+				} else {
+					splatSegment(xs, xe, false);
+				}
+			}
+		}
+	}
+#endif
+
 	CombineRenderer::CombineRenderer(PlayerViewport* owner)
 		: _owner(owner)
 	{
@@ -172,8 +324,11 @@ namespace Jazz2::Rendering
 			command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
 			command.GetMaterial().SetTexture(3, *_owner->GetBlurredTarget());
 		} else {
-			command.GetMaterial().SetTexture(2, nullptr);
-			command.GetMaterial().SetTexture(3, nullptr);
+			// The darkness fades the scene toward a desaturated copy of it, which is the blurred one when there is
+			// one. Without it, the scene itself stands in: an unbound sampler reads black, which dimmed every unlit
+			// pixel almost to black at a low ambient level instead of leaving it as bright as the light says.
+			command.GetMaterial().SetTexture(2, *_owner->_viewTexture);
+			command.GetMaterial().SetTexture(3, *_owner->_viewTexture);
 		}
 		if (viewHasWater && !PreferencesCache::LowWaterQuality) {
 			command.GetMaterial().SetTexture(4, *_owner->_levelHandler->_noiseTexture);
@@ -386,18 +541,31 @@ namespace Jazz2::Rendering
 			if (rLm < 0.5f) {
 				continue;
 			}
+			const float ringLm = light.RingRadius * InvScale;
+			const float extentLm = ringLm + rLm;
 
 			// The texels a light can change are those within the bounds its splat clamps itself to, which is
 			// what the next frame's reset has to cover (see above). The emitters are every actor's, most of them
 			// off the screen, and a light whose bounds miss the map entirely is left out here rather than by
 			// the splat, which would find it reaches no row only after setting itself up.
-			const std::int32_t litX0 = std::max<std::int32_t>(0, (std::int32_t)(cx - rLm));
-			const std::int32_t litX1 = std::min(lmW - 1, (std::int32_t)(cx + rLm));
-			const std::int32_t litY0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
-			const std::int32_t litY1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
+			const std::int32_t litX0 = std::max<std::int32_t>(0, (std::int32_t)(cx - extentLm));
+			const std::int32_t litX1 = std::min(lmW - 1, (std::int32_t)(cx + extentLm));
+			const std::int32_t litY0 = std::max<std::int32_t>(0, (std::int32_t)(cy - extentLm));
+			const std::int32_t litY1 = std::min(lmH - 1, (std::int32_t)(cy + extentLm));
 			if (litX0 > litX1 || litY0 > litY1) {
 				continue;
 			}
+
+			if (ringLm > 0.0f) {
+				// A ring covers only a band of its bounding box, so it widens the spans row by row itself
+#if defined(DEATH_TARGET_PSP)
+				SplatRingVfpu(lightmap, lmW, lmH, cx, cy, ringLm, rLm, radiusNearNorm, intensity, brightness, _swLitSpans.data());
+#else
+				SoftwareLighting::SplatRing(lightmap, lmW, lmH, cx, cy, ringLm, rLm, radiusNearNorm, intensity, brightness, _swLitSpans.data());
+#endif
+				continue;
+			}
+
 			for (std::int32_t y = litY0; y <= litY1; y++) {
 				_swLitSpans[y * 2] = std::min(_swLitSpans[y * 2], litX0);
 				_swLitSpans[y * 2 + 1] = std::max(_swLitSpans[y * 2 + 1], litX1);

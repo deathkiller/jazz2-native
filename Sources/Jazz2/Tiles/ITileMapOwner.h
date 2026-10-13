@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../Actors/ActorBase.h"
+#include "LayerEffects.h"
 
 namespace Jazz2::Tiles
 {
@@ -20,5 +21,19 @@ namespace Jazz2::Tiles
 		virtual void OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount) = 0;
 		/** @brief Called when a tile is frozen */
 		virtual void OnTileFrozen(std::int32_t x, std::int32_t y) = 0;
+
+#if defined(TILEMAP_LAYER_EFFECTS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Returns what the special tile layers need from the given scene viewport
+
+			Returns `nullptr` for a viewport that doesn't render the level with them, the special layers are then
+			drawn as they are on the backends that can't show the effects.
+		*/
+		virtual LayerEffectsTarget* GetLayerEffectsTarget(const Viewport* view) {
+			return nullptr;
+		}
+		/** @brief Called when the renderer type of a layer changes at runtime, which can need other render passes */
+		virtual void OnLayerEffectsChanged() {}
+#endif
 	};
 }

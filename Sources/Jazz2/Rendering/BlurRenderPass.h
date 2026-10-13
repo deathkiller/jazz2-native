@@ -41,6 +41,17 @@ namespace Jazz2::Rendering
 		 * @param direction  Blur direction (zero vector performs only downsampling)
 		 */
 		void Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction);
+		/**
+		 * @brief Initializes the render pass to a plain copy, which a reflection mirrors
+		 *
+		 * Unlike a downsampling pass of the same size, which averages each texel with its neighbours, this keeps the
+		 * copy as sharp as the source.
+		 *
+		 * @param source     Source texture to copy
+		 * @param width      Width of the target texture
+		 * @param height     Height of the target texture
+		 */
+		void InitializeCopy(Texture* source, std::int32_t width, std::int32_t height);
 		/** @brief Registers the render pass into the viewport chain */
 		void Register();
 		/** @brief Releases all allocated resources */
@@ -53,6 +64,11 @@ namespace Jazz2::Rendering
 			return _target.get();
 		}
 
+		/** @brief Returns the viewport the pass renders through, or `nullptr` if it isn't initialized */
+		Viewport* GetView() const {
+			return _view.get();
+		}
+
 	private:
 		PlayerViewport* _owner;
 		std::unique_ptr<Texture> _target;
@@ -62,6 +78,9 @@ namespace Jazz2::Rendering
 
 		Texture* _source;
 		bool _downsampleOnly;
+		bool _copyOnly = false;
 		Vector2f _direction;
+
+		void InitializeTarget(Texture* source, std::int32_t width, std::int32_t height);
 	};
 }

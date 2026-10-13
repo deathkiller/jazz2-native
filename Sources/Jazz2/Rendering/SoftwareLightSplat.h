@@ -182,6 +182,112 @@ namespace Jazz2::Rendering::SoftwareLighting
 		SplatLightRows<false>(lightmap, lmW, lmH, cx, cy, rLm, radiusNearNorm, intensity, brightness);
 	}
 
+	/**
+	 * @brief Adds one ring light to a two-channel (intensity, brightness) float lightmap
+	 *
+	 * @param lightmap        `lmW * lmH` texels of two floats each, row-major
+	 * @param lmW             Lightmap width in texels
+	 * @param lmH             Lightmap height in texels
+	 * @param cx, cy          Ring centre in lightmap texels
+	 * @param ringLm          Ring radius in lightmap texels
+	 * @param rLm             Far radius in lightmap texels (at least 0.5), measured from the ring's circle
+	 * @param radiusNearNorm  Near radius as a fraction of the far radius (may exceed 1: no falloff)
+	 * @param intensity       Added to the first channel of every texel the light reaches, scaled by the falloff
+	 * @param brightness      Added to the second channel the same way
+	 * @param litSpans        Per-row `[first, last]` texel pairs, widened to cover every texel this changes
+	 *
+	 * The falloff of @ref SplatLight() of the distance from the ring's circle instead of from its centre, as in
+	 * `LightingFs.inc`. Each row is cut analytically into the texels of the band - those inside the outer circle,
+	 * less the hole inside the inner one where the row crosses it - so the hole, most of the ring's bounding box,
+	 * is never touched. A ring has no flat core of its own to cut out (its core is a band too), so every texel of
+	 * the band takes the square root and the same branch-free falloff, which is 1 across the core anyway. Unlike
+	 * a light's, a ring's lit texels are far from its bounding box, so it reports them per row itself.
+	 */
+	inline void SplatRing(float* lightmap, std::int32_t lmW, std::int32_t lmH, float cx, float cy, float ringLm, float rLm,
+		float radiusNearNorm, float intensity, float brightness, std::int32_t* litSpans)
+	{
+		// Everything below is in units of the far radius, like the falloff
+		const float invRLm = 1.0f / rLm;
+		const float denom = (1.0f - radiusNearNorm);
+		// Without a falloff (near >= far) the band is a hard step: this factor makes the clamp below 1 inside it
+		// and 0 outside, the way it does on the PSP
+		const float invDenom = (denom > 0.0f ? 1.0f / denom : 1.0e30f);
+		const float ring = ringLm * invRLm;
+		const float outer = ring + 1.0f;
+		const float inner = ring - 1.0f;
+		const float outerSq = outer * outer;
+		// A ring narrower than its band has no hole
+		const float innerSq = (inner > 0.0f ? inner * inner : 0.0f);
+#if defined(DEATH_TARGET_N64)
+		// Distance() is a table over [0, 1] there, so the squared distance is looked up in units of the outer
+		// radius, which the band never leaves, and scaled back
+		const float invOuterSq = 1.0f / outerSq;
+#endif
+
+		const float outerLm = ringLm + rLm;
+		const std::int32_t y0 = std::max<std::int32_t>(0, (std::int32_t)(cy - outerLm));
+		const std::int32_t y1 = std::min(lmH - 1, (std::int32_t)(cy + outerLm));
+		const std::int32_t bx0 = std::max<std::int32_t>(0, (std::int32_t)(cx - outerLm));
+		const std::int32_t bx1 = std::min(lmW - 1, (std::int32_t)(cx + outerLm));
+
+		for (std::int32_t y = y0; y <= y1; y++) {
+			const float dy = (y - cy) * invRLm;
+			const float dySq = dy * dy;
+			const float rowOuterSq = outerSq - dySq;
+			if (rowOuterSq <= 0.0f) {
+				continue;
+			}
+			const float halfW = RowHalfWidth(rowOuterSq) * rLm;
+			const std::int32_t xs = std::max(bx0, (std::int32_t)nCine::ceilFast(cx - halfW));
+			const std::int32_t xe = std::min(bx1, (std::int32_t)nCine::floorFast(cx + halfW));
+			if (xs > xe) {
+				continue;
+			}
+			litSpans[y * 2] = std::min(litSpans[y * 2], xs);
+			litSpans[y * 2 + 1] = std::max(litSpans[y * 2 + 1], xe);
+
+			// The texels strictly inside the hole, if this row crosses it; a texel exactly on its edge is in the
+			// band, where it gets a strength of 0 and stays as it was
+			std::int32_t hs = xe + 1;
+			std::int32_t he = xe;
+			if (innerSq > dySq) {
+				const float halfHole = RowHalfWidth(innerSq - dySq) * rLm;
+				hs = std::max(xs, (std::int32_t)nCine::floorFast(cx - halfHole) + 1);
+				he = std::min(xe, (std::int32_t)nCine::ceilFast(cx + halfHole) - 1);
+				if (hs > he) {
+					hs = xe + 1;
+					he = xe;
+				}
+			}
+
+			// Left part of the band [xs, hs), the hole [hs, he] skipped, the right part (he, xe]
+			float* row = &lightmap[((std::size_t)y * lmW + xs) * 2];
+			float fx = (float)xs;
+			std::int32_t x = xs;
+			for (std::int32_t end = hs; ; end = xe + 1) {
+#pragma GCC unroll 4
+				for (; x < end; x++, row += 2, fx += 1.0f) {
+					const float dx = (fx - cx) * invRLm;
+#if defined(DEATH_TARGET_N64)
+					const float dist = Distance((dx * dx + dySq) * invOuterSq) * outer;
+#else
+					const float dist = Distance(dx * dx + dySq);
+#endif
+					const float strength = FalloffStrength(std::fabs(dist - ring), invDenom);
+					row[0] += strength * intensity;
+					row[1] += strength * brightness;
+				}
+				if (end > xe) {
+					break;
+				}
+				const std::int32_t skip = he + 1 - x;
+				x += skip;
+				row += skip * 2;
+				fx = (float)x;
+			}
+		}
+	}
+
 	template<bool Coreless>
 	inline void SplatLightRows(float* lightmap, std::int32_t lmW, std::int32_t lmH, float cx, float cy, float rLm,
 		float radiusNearNorm, float intensity, float brightness)

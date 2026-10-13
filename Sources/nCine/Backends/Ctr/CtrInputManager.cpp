@@ -247,12 +247,15 @@ namespace nCine::Backends
 			}
 		}
 
-		// The buttons under the console's own labels (A on the right, B at the bottom, X on top, Y on the
-		// left), SELECT as Back and START as Start; there is no Guide button and no stick buttons
-		_state.simulateButtonEvent(ButtonA, (held & KEY_A) != 0);
-		_state.simulateButtonEvent(ButtonB, (held & KEY_B) != 0);
-		_state.simulateButtonEvent(ButtonX, (held & KEY_X) != 0);
-		_state.simulateButtonEvent(ButtonY, (held & KEY_Y) != 0);
+		// The face buttons by position, not by their labels: the XInput names are positions (A at the bottom,
+		// B on the right, X on the left, Y on top), and so are the Switch labels the menus draw for them - the
+		// icon of A shows a "B", because that is what a Nintendo pad has at the bottom. The console's own A is
+		// on the right, so publishing it as A put every label on the wrong button (confirmed on hardware).
+		// SELECT is Back and START is Start; there is no Guide button and no stick buttons
+		_state.simulateButtonEvent(ButtonA, (held & KEY_B) != 0);
+		_state.simulateButtonEvent(ButtonB, (held & KEY_A) != 0);
+		_state.simulateButtonEvent(ButtonX, (held & KEY_Y) != 0);
+		_state.simulateButtonEvent(ButtonY, (held & KEY_X) != 0);
 		_state.simulateButtonEvent(ButtonLShoulder, (held & KEY_L) != 0);
 		_state.simulateButtonEvent(ButtonRShoulder, (held & KEY_R) != 0);
 		_state.simulateButtonEvent(ButtonBack, (held & KEY_SELECT) != 0);

@@ -308,10 +308,13 @@ namespace nCine::Backends
 				WPADData* data = WPAD_Data(i);
 				const bool hasClassic = (data != nullptr && data->exp.type == WPAD_EXP_CLASSIC);
 				if (hasClassic) {
-					state.simulateButtonEvent(ButtonA, (held & WPAD_CLASSIC_BUTTON_A) != 0);
-					state.simulateButtonEvent(ButtonB, (held & WPAD_CLASSIC_BUTTON_B) != 0);
-					state.simulateButtonEvent(ButtonX, (held & WPAD_CLASSIC_BUTTON_X) != 0);
-					state.simulateButtonEvent(ButtonY, (held & WPAD_CLASSIC_BUTTON_Y) != 0);
+					// The face buttons by position, not by their labels - the Classic Controller has the 3DS layout
+					// (A on the right, B at the bottom, X on top, Y on the left), and the XInput names and the Switch
+					// labels the menus draw for them are positions, see CtrInputManager
+					state.simulateButtonEvent(ButtonA, (held & WPAD_CLASSIC_BUTTON_B) != 0);
+					state.simulateButtonEvent(ButtonB, (held & WPAD_CLASSIC_BUTTON_A) != 0);
+					state.simulateButtonEvent(ButtonX, (held & WPAD_CLASSIC_BUTTON_Y) != 0);
+					state.simulateButtonEvent(ButtonY, (held & WPAD_CLASSIC_BUTTON_X) != 0);
 					state.simulateButtonEvent(ButtonBack, (held & WPAD_CLASSIC_BUTTON_MINUS) != 0);
 					state.simulateButtonEvent(ButtonGuide, (held & WPAD_CLASSIC_BUTTON_HOME) != 0);
 					state.simulateButtonEvent(ButtonStart, (held & WPAD_CLASSIC_BUTTON_PLUS) != 0);

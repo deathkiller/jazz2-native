@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../../Main.h"
+#include "LayerEffects.h"
 
 #include "../../nCine/Base/BitArray.h"
 #include "../../nCine/Graphics/Texture.h"
@@ -236,6 +237,44 @@ namespace Jazz2::Tiles
 			return _isTileOpaque[tileId];
 		}
 
+#if defined(TILEMAP_LAYER_EFFECTS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Bit of @ref GetTileEffectInfo() set for a tile with a reflection --- a visible texel with some blue */
+		static constexpr std::uint8_t TileEffectReflective = 0x80;
+		/** @brief Bit of @ref GetTileEffectInfo() set for a tile that displaces --- a visible texel with red or green other than 128 */
+		static constexpr std::uint8_t TileEffectDisplaces = 0x40;
+		/** @brief Bits of @ref GetTileEffectInfo() holding the first visible row of the tile, @ref DefaultTileSize if it has none */
+		static constexpr std::uint8_t TileEffectTopRowMask = 0x3F;
+
+		/** @brief Returns the bits of @ref GetTileEffectInfo() a visible texel of a given color sets, red in the lowest byte */
+		static constexpr std::uint8_t GetTexelEffectBits(std::uint32_t rgba)
+		{
+			return std::uint8_t((((rgba >> 16) & 0xFF) != 0 ? TileEffectReflective : 0) |
+				((rgba & 0xFF) != 0x80 || ((rgba >> 8) & 0xFF) != 0x80 ? TileEffectDisplaces : 0));
+		}
+
+		/**
+			@brief Returns what a blur-behind layer needs to know about a tile
+
+			The first visible row of the tile in the bits of @ref TileEffectTopRowMask, which is where the mirror
+			line of a reflection that starts with this tile lies, @ref TileEffectReflective if the tile has a
+			reflection at all and @ref TileEffectDisplaces if it moves what is behind it (see
+			@ref LayerRendererType::BlurBehind). Worked out when the tile set is built, with the palette in effect then.
+		*/
+		std::uint8_t GetTileEffectInfo(std::int32_t tileId) const
+		{
+			if (_tileEffectInfo == nullptr || tileId < 0 || tileId >= TileCount) {
+				return DefaultTileSize;
+			}
+			return _tileEffectInfo[tileId];
+		}
+
+		/** @brief Sets the table returned by @ref GetTileEffectInfo(), one byte per tile */
+		void SetTileEffectInfo(std::unique_ptr<std::uint8_t[]> tileEffectInfo)
+		{
+			_tileEffectInfo = std::move(tileEffectInfo);
+		}
+#endif
+
 		/** @brief Returns a caption tile */
 		StaticArrayView<DefaultTileSize * DefaultTileSize, Color> GetCaptionTile() const
 		{
@@ -256,5 +295,8 @@ namespace Jazz2::Tiles
 		BitArray _isTileFilled;
 		BitArray _isTileOpaque;
 		BitArray _isColumnContiguous;
+#if defined(TILEMAP_LAYER_EFFECTS)
+		std::unique_ptr<std::uint8_t[]> _tileEffectInfo;
+#endif
 	};
 }

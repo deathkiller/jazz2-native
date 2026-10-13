@@ -40,10 +40,16 @@ namespace nCine
 		 * two together would leave every run shorter than the maximum, and every remainder past a multiple
 		 * of it, drawn one command at a time.
 		 *
-		 * @param srcQueue   Sorted source command queue
-		 * @param destQueue  Destination queue that receives batched and pass-through commands
+		 * A batch never spans @p splitLayer: the commands below it and the ones from it up end up in different
+		 * batches, so the queue can be drawn in two parts with something else in between (see
+		 * @ref RenderQueue::Draw()). The default of @ref RenderQueue::NoSplitLayer splits nothing.
+		 *
+		 * @param srcQueue    Sorted source command queue
+		 * @param destQueue   Destination queue that receives batched and pass-through commands
+		 * @param splitLayer  Layer no batch may span
 		 */
-		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
+		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue,
+			std::uint32_t splitLayer = 0x10000);
 		/** @brief Marks all managed buffers as free for reuse in the next frame */
 		void Reset();
 

@@ -614,6 +614,20 @@ namespace Jazz2
 		_tileMap->SetOwner(this);
 		_tileMap->setParent(_rootNode.get());
 
+#if defined(DEATH_DEBUG)
+		// "/layer <index> <default|xray|blur>" on the command line, any number of times, does what the console
+		// command of the same name does, so the special layers can be tried on any level from the start
+		{
+			const AppConfiguration& config = theApplication().GetAppConfiguration();
+			for (std::int32_t i = 0; i + 2 < config.argc(); i++) {
+				if (config.argv(i) == "/layer"_s) {
+					String layerArgs = String(config.argv(i + 1)) + " "_s + config.argv(i + 2);
+					ApplyDebugLayerRendererType(layerArgs);
+				}
+			}
+		}
+#endif
+
 		_eventMap = std::move(descriptor.EventMap);
 		_eventMap->SetLevelHandler(this);
 
@@ -1118,6 +1132,20 @@ namespace Jazz2
 			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://de4th.dev/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
 		}
+
+#if defined(DEATH_DEBUG)
+		// "/layer <index> <default|xray|blur>" switches the renderer of a tile layer, to try the special layers on
+		// any level until there is an editor to save them with
+		if (line.hasPrefix("/layer "_s) && _tileMap != nullptr) {
+			_console->WriteLine(UI::MessageLevel::Echo, line);
+			if (ApplyDebugLayerRendererType(line.exceptPrefix("/layer "_s))) {
+				_console->WriteLine(UI::MessageLevel::Confirm, "Layer changed"_s);
+			} else {
+				_console->WriteLine(UI::MessageLevel::Error, "Usage: /layer <index> <default|xray|blur>"_s);
+			}
+			return true;
+		}
+#endif
 
 		return TryInvokeCheat(line);
 	}
@@ -2279,6 +2307,56 @@ namespace Jazz2
 			AddActor(iceBlock);
 		}
 	}
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+	Tiles::LayerEffectsTarget* LevelHandler::GetLayerEffectsTarget(const Viewport* view)
+	{
+		for (auto& viewport : _assignedViewports) {
+			if (viewport->_view.get() == view) {
+				return viewport->GetLayerEffectsTarget();
+			}
+		}
+		return nullptr;
+	}
+
+	void LevelHandler::OnLayerEffectsChanged()
+	{
+		// The passes the special layers need are allocated with the viewports, so they are set up again
+		if (!_assignedViewports.empty()) {
+			CommitViewports();
+		}
+	}
+#endif
+
+#if defined(DEATH_DEBUG)
+	bool LevelHandler::ApplyDebugLayerRendererType(StringView args)
+	{
+		if (_tileMap == nullptr) {
+			return false;
+		}
+
+		auto parts = args.trimmed().partition(' ');
+		String indexString = parts[0];
+		char* indexEnd = nullptr;
+		const std::int32_t layerIndex = (std::int32_t)std::strtol(indexString.data(), &indexEnd, 10);
+		if (indexEnd == indexString.data()) {
+			return false;
+		}
+
+		const StringView typeName = parts[2].trimmed();
+		Tiles::LayerRendererType type;
+		if (typeName == "xray"_s) {
+			type = Tiles::LayerRendererType::XRay;
+		} else if (typeName == "blur"_s) {
+			type = Tiles::LayerRendererType::BlurBehind;
+		} else if (typeName == "default"_s) {
+			type = Tiles::LayerRendererType::Default;
+		} else {
+			return false;
+		}
+		return _tileMap->SetLayerRendererType(layerIndex, type);
+	}
+#endif
 
 	void LevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
 	{

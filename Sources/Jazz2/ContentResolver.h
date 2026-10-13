@@ -388,6 +388,16 @@ namespace Jazz2
 		Shader* GetShader(PrecompiledShader shader);
 		/** @brief Precompiles all required shaders */
 		void CompileShaders();
+#if defined(TILEMAP_LAYER_EFFECTS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Compiles the shaders of the special tile layers, if they aren't compiled yet
+
+			Called once a level that has an x-ray or a blur-behind layer is loaded, so a game that never plays one
+			never spends the startup time or the memory on them. Returns `false` if they couldn't be compiled,
+			the layers are then drawn as on the backends that can't show the effects.
+		*/
+		bool CompileLayerEffectShaders();
+#endif
 		/** @brief Returns a noise texture with random pixels */
 		std::unique_ptr<Texture> GetNoiseTexture();
 
@@ -469,7 +479,7 @@ namespace Jazz2
 			bool lz4Content, const BitArray* usedTiles, std::unique_ptr<std::uint16_t[]>& atlasSlot,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
-			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile);
+			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<std::uint8_t[]>& tileEffectInfo, std::unique_ptr<Color[]>& captionTile);
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
 		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index

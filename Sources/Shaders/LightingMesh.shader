@@ -23,8 +23,10 @@ void vertex() {
 	// already in world space, the light's own parameters ride along per vertex (see LightingRenderer::OnDraw).
 	// The fragment stage is shared with the single-light program, so the varyings it reads are filled the same
 	// way - the light centre it would need for normal mapping is not in the stream and would have to be added.
+	// The texture coordinates carry the near radius and the ring radius (zero for a point light), both in units
+	// of the far radius.
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
-	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, 0.0);
+	vTexCoords = vec4(0.0, 0.0, aTexCoords.x, aTexCoords.y);
 	vColor = aColor;
 }
 

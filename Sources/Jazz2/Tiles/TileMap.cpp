@@ -379,6 +379,9 @@ namespace Jazz2::Tiles
 		_meshVerticesCount = 0;
 		_meshCommandCount = 0;
 #endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		_effectMeshCommandCount = 0;
+#endif
 #if defined(TILEMAP_CACHE_LAYER_WINDOW)
 		_layerWindowFrame++;
 #endif
@@ -1211,6 +1214,21 @@ namespace Jazz2::Tiles
 			layerColor = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
+#if defined(TILEMAP_LAYER_EFFECTS)
+		_effectLayer.Type = LayerRendererType::Default;
+		if (rendererType == LayerRendererType::XRay || rendererType == LayerRendererType::BlurBehind) {
+			if (!BeginEffectLayer(layer, rendererType)) {
+				return;
+			}
+			// The static tiles of an x-ray layer are ordinary ones and take the ordinary path, only its animated tiles
+			// are intercepted in the walk below. A blur layer stays what it is, which keeps it out of the mesh path and
+			// its window cache - every tile of it goes into the blur mesh instead.
+			if (rendererType == LayerRendererType::XRay) {
+				rendererType = LayerRendererType::Default;
+			}
+		}
+#endif
+
 		if (isProceduralLayer && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
@@ -1356,6 +1374,15 @@ namespace Jazz2::Tiles
 			float lastTilesPerTextureInv = 0.0f;
 #endif
 			bool meshCacheHit = false;
+#if defined(TILEMAP_LAYER_EFFECTS)
+			// Read once rather than per tile - the walk below is the hot path of every layer
+			const bool xrayLayer = (_effectLayer.Type == LayerRendererType::XRay);
+			const bool blurLayer = (_effectLayer.Type == LayerRendererType::BlurBehind);
+			if (blurLayer) {
+				// No run of reflective tiles is known yet in any column of the window
+				_reflectionColumns.clear();
+			}
+#endif
 
 			// Y is the OUTER loop, so the walk runs along the layout's rows. `Layout` is indexed
 			// `tileX + tileY * LayoutSize.X`, so with X outside (as it used to be) the inner step jumped a
@@ -1577,10 +1604,28 @@ namespace Jazz2::Tiles
 						windowCache->Animated.push_back({ (std::uint16_t)tile_xo, (std::uint16_t)tile_yo, tileX + tileY * layer.LayoutSize.X });
 					}
 #endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+					// The current frame and the mask frame of an x-ray tile. Placed where a streamed tile of
+					// the layer would be (see x2r below), which is where a window cache hit places it as well.
+					if (animatedTile && xrayLayer && tile.Alpha != 0 &&
+						AppendXRayTile(tile, PreferencesCache::UnalignedViewport ? x2 : std::floor(x2),
+							PreferencesCache::UnalignedViewport ? y2 : std::floor(y2))) {
+						continue;
+					}
+#endif
 					std::int32_t tileId = ResolveTileID(tile);
 					if (tileId == 0 || tile.Alpha == 0) {
 						continue;
 					}
+#if defined(TILEMAP_LAYER_EFFECTS)
+					if (blurLayer) {
+						const float blurX = (PreferencesCache::UnalignedViewport ? x2 : std::floor(x2));
+						const float blurY = (PreferencesCache::UnalignedViewport ? y2 : std::floor(y2));
+						AppendEffectTile(EffectMeshKind::Blur, tileId, tile.Flags, tile.Alpha / 255.0f, blurX, blurY,
+							GetReflectionAxis(layer, tileX, tileY, tile_xo, tile_yo, tileId, blurY));
+						continue;
+					}
+#endif
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr) {
 						continue;
@@ -1963,6 +2008,11 @@ namespace Jazz2::Tiles
 						meshTileSet->IsIndexed, 0, layerColor, layer.Description.Depth, RenderCommand::Type::TileMap, false);
 #	endif
 				}
+			}
+#endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+			if (_effectLayer.Type != LayerRendererType::Default) {
+				EmitEffectMeshes(renderQueue, layerColor, layer.Description.Depth);
 			}
 #endif
 		}
@@ -2379,6 +2429,13 @@ namespace Jazz2::Tiles
 		// What the walk in DrawLayer() does for a tile, for just the animated cells of the window
 		for (const auto& cell : cache.Animated) {
 			const LayerTile tile = layer.Layout[cell.LayoutIndex];
+#if defined(TILEMAP_LAYER_EFFECTS)
+			if (_effectLayer.Type == LayerRendererType::XRay && tile.Alpha != 0 &&
+				AppendXRayTile(tile, originX + float(cell.Xo * (std::int32_t)TileSet::DefaultTileSize),
+					originY + float(cell.Yo * (std::int32_t)TileSet::DefaultTileSize))) {
+				continue;
+			}
+#endif
 			std::int32_t tileId = ResolveTileID(tile);
 			if (tileId == 0 || tile.Alpha == 0) {
 				continue;
@@ -2767,6 +2824,20 @@ namespace Jazz2::Tiles
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
 			newLayer.Description.RendererType = (LayerRendererType)s.ReadValue<std::uint8_t>();
+			switch (newLayer.Description.RendererType) {
+				case LayerRendererType::Default:
+				case LayerRendererType::Solid:
+				case LayerRendererType::Tinted:
+				case LayerRendererType::XRay:
+				case LayerRendererType::BlurBehind:
+				case LayerRendererType::Sky:
+				case LayerRendererType::Circle:
+					break;
+				default:
+					// A renderer this version of the game doesn't know is drawn as an ordinary layer
+					newLayer.Description.RendererType = LayerRendererType::Default;
+					break;
+			}
 			std::uint8_t r = s.ReadValue<std::uint8_t>();
 			std::uint8_t g = s.ReadValue<std::uint8_t>();
 			std::uint8_t b = s.ReadValue<std::uint8_t>();
@@ -2856,6 +2927,22 @@ namespace Jazz2::Tiles
 				newLayer.Layout.Set(i + j, tile);
 			}
 		}
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+		if (newLayer.Description.RendererType == LayerRendererType::XRay) {
+			PrepareXRayLayer(newLayer);
+		}
+#else
+		// Without the effects, the special layers are reduced to what a level looks like without them (see
+		// LayerRendererType): an x-ray layer shows its animated tiles as they are outside the mask, a blur layer nothing
+		if (newLayer.Description.RendererType == LayerRendererType::XRay) {
+			ReduceXRayLayer(newLayer);
+			newLayer.Description.RendererType = LayerRendererType::Default;
+		} else if (newLayer.Description.RendererType == LayerRendererType::BlurBehind) {
+			newLayer.Visible = false;
+			newLayer.Description.RendererType = LayerRendererType::Default;
+		}
+#endif
 	}
 
 	void TileMap::ReadAnimatedTiles(Stream& s)
@@ -3560,6 +3647,567 @@ namespace Jazz2::Tiles
 		tile.Flags = (LayerTileFlags)flags;
 		layer.Layout.Set(layoutIndex, tile);
 		return true;
+	}
+
+	LayerRendererType TileMap::GetLayerRendererType(std::int32_t layerIndex) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return LayerRendererType::Default;
+		}
+		return _layers[layerIndex].Description.RendererType;
+	}
+
+	bool TileMap::SetLayerRendererType(std::int32_t layerIndex, LayerRendererType type)
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size() || layerIndex == _sprLayerIndex) {
+			return false;
+		}
+
+		TileMapLayer& layer = _layers[layerIndex];
+		if (layer.Description.RendererType == type) {
+			return true;
+		}
+
+#if defined(DEATH_DEBUG)
+		{
+			// Only the animated tiles change in an x-ray layer, so tell whether there are any
+			std::int32_t tileCount = 0, xrayTiles = 0;
+			for (std::size_t i = 0; i < layer.Layout.size(); i++) {
+				const std::int32_t tileId = layer.Layout.TileIDAt(i);
+				if (tileId != 0) {
+					tileCount++;
+				}
+				const std::int32_t animIndex = tileId - std::int32_t(_animatedTilesOffset);
+				if (animIndex >= 0 && animIndex < (std::int32_t)_animatedTiles.size()) {
+					xrayTiles++;
+				}
+			}
+			LOGI("Layer {} ({}x{}, depth {}) changed to renderer type {} - {} tile(s), {} animated tile(s)",
+				layerIndex, layer.LayoutSize.X, layer.LayoutSize.Y, layer.Description.Depth, (std::int32_t)type, tileCount, xrayTiles);
+		}
+#endif
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+		const bool hadEffect = (layer.Description.RendererType == LayerRendererType::XRay || layer.Description.RendererType == LayerRendererType::BlurBehind);
+		const bool hasEffect = (type == LayerRendererType::XRay || type == LayerRendererType::BlurBehind);
+		layer.Description.RendererType = type;
+		if (type == LayerRendererType::XRay) {
+			PrepareXRayLayer(layer);
+		}
+#	if defined(TILEMAP_CACHE_LAYER_WINDOW)
+		// A blur layer bypasses the window cache, so whatever it held before is stale once it's an ordinary one again
+		for (auto& cache : _layerWindowCaches) {
+			if (cache->LayerIndex == layerIndex) {
+				cache->Valid = false;
+			}
+		}
+#	endif
+		if ((hadEffect || hasEffect) && _owner != nullptr) {
+			_owner->OnLayerEffectsChanged();
+		}
+#else
+		// Reduced right away, as when a level is loaded (see ReadLayerConfiguration())
+		if (type == LayerRendererType::XRay) {
+			ReduceXRayLayer(layer);
+			type = LayerRendererType::Default;
+		} else if (type == LayerRendererType::BlurBehind) {
+			layer.Visible = false;
+			type = LayerRendererType::Default;
+		}
+		layer.Description.RendererType = type;
+#endif
+		return true;
+	}
+
+#if defined(TILEMAP_LAYER_EFFECTS)
+	bool TileMap::HasXRayLayers() const
+	{
+		for (const auto& layer : _layers) {
+			if (layer.Description.RendererType == LayerRendererType::XRay) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool TileMap::HasBlurBehindLayers() const
+	{
+		for (const auto& layer : _layers) {
+			if (layer.Description.RendererType == LayerRendererType::BlurBehind) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool TileMap::BlurBehindLayersNeedSharpCopy()
+	{
+		auto needsCopy = [this](std::int32_t tileId) {
+			TileSet* tileSet = ResolveTileSet(tileId);
+			return (tileSet != nullptr && (tileSet->GetTileEffectInfo(tileId) & (TileSet::TileEffectReflective | TileSet::TileEffectDisplaces)) != 0);
+		};
+
+		for (const auto& layer : _layers) {
+			if (layer.Description.RendererType != LayerRendererType::BlurBehind) {
+				continue;
+			}
+			for (std::size_t i = 0; i < layer.Layout.size(); i++) {
+				const std::int32_t tileId = layer.Layout.TileIDAt(i);
+				if (tileId == 0) {
+					continue;
+				}
+				const std::int32_t animIndex = tileId - std::int32_t(_animatedTilesOffset);
+				if (animIndex >= 0) {
+					// Any frame of an animated tile can be the one shown
+					if (animIndex < (std::int32_t)_animatedTiles.size()) {
+						for (const auto& frame : _animatedTiles[animIndex].Tiles) {
+							if (frame.TileID != 0 && needsCopy(frame.TileID)) {
+								return true;
+							}
+						}
+					}
+				} else if (needsCopy(tileId)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	bool TileMap::BeginEffectLayer(const TileMapLayer& layer, LayerRendererType type)
+	{
+		_effectMeshGroups.clear();
+		_effectLayer.Type = type;
+		_effectLayer.Depth = layer.Description.Depth;
+		_effectLayer.Target = (_owner != nullptr ? _owner->GetLayerEffectsTarget(RenderResources::GetCurrentViewport()) : nullptr);
+
+		auto& resolver = ContentResolver::Get();
+		if (type == LayerRendererType::XRay) {
+			// Without a mask, an x-ray layer still shows its tiles as they are outside the mask
+			_effectLayer.MaskAvailable = (_effectLayer.Target != nullptr && _effectLayer.Target->XRayMask != nullptr &&
+				resolver.GetShader(PrecompiledShader::TileMapMeshXRay) != nullptr);
+			return true;
+		}
+
+		// Neither a blur nor a reflection of what is behind a blur layer (the blur effects are off and none of its
+		// tiles reflects, or the viewport doesn't render the level at all), so there is nothing to draw either: the
+		// layer itself is never visible
+		_effectLayer.MaskAvailable = false;
+		return (_effectLayer.Target != nullptr && _effectLayer.Target->View != nullptr &&
+			(_effectLayer.Target->BehindBlur != nullptr || _effectLayer.Target->BehindCopy != nullptr) &&
+			resolver.GetShader(PrecompiledShader::TileMapMeshBlur) != nullptr);
+	}
+
+	bool TileMap::AppendXRayTile(const LayerTile& tile, float x, float y)
+	{
+		const std::int32_t animIndex = std::int32_t(tile.TileID) - std::int32_t(_animatedTilesOffset);
+		if (animIndex < 0 || animIndex >= (std::int32_t)_animatedTiles.size()) {
+			return false;
+		}
+		const std::size_t frameCount = _animatedTiles[animIndex].Tiles.size();
+		if (frameCount == 0) {
+			return false;
+		}
+
+		// Tells the mask pass of the next frame that it's needed, and for the actors behind which layer
+		if (_effectLayer.Target != nullptr && _effectLayer.Target->XRayDepth < _effectLayer.Depth) {
+			_effectLayer.Target->XRayDepth = _effectLayer.Depth;
+		}
+
+		// The last frame is the mask frame, the ones before it animate outside the mask as usual. A single frame is
+		// only shown in the mask, nothing outside it
+		std::int32_t frame0;
+		if (frameCount == 1) {
+			frame0 = 0;
+		} else if (frameCount == 2) {
+			frame0 = _animatedTiles[animIndex].Tiles[0].TileID;
+		} else {
+			// Can append to _animatedTiles, so no reference to it is held across
+			const std::int32_t unmaskedIndex = GetXRayUnmaskedAnimation(animIndex);
+			const AnimatedTile& unmasked = _animatedTiles[unmaskedIndex >= 0 ? unmaskedIndex : animIndex];
+			frame0 = (unmaskedIndex >= 0 ? unmasked.Tiles[unmasked.CurrentTileIdx].TileID : unmasked.Tiles[0].TileID);
+		}
+		const std::int32_t frame1 = _animatedTiles[animIndex].Tiles[frameCount - 1].TileID;
+
+		const float alpha = tile.Alpha / 255.0f;
+		if (!_effectLayer.MaskAvailable) {
+			if (frame0 != 0) {
+				AppendEffectTile(EffectMeshKind::Unmasked, frame0, tile.Flags, alpha, x, y);
+			}
+			return true;
+		}
+
+		Texture* texture0 = nullptr;
+		Texture* texture1 = nullptr;
+		bool indexed0 = false, indexed1 = false;
+		float rect0[4] = {}, rect1[4] = {};
+		const bool has0 = (frame0 != 0 && ResolveTileQuad(frame0, tile.Flags, texture0, indexed0, rect0[0], rect0[1], rect0[2], rect0[3]));
+		const bool has1 = (frame1 != 0 && ResolveTileQuad(frame1, tile.Flags, texture1, indexed1, rect1[0], rect1[1], rect1[2], rect1[3]));
+		if (!has0 && !has1) {
+			return true;
+		}
+		if (has0 && has1 && (texture0 != texture1 || indexed0 != indexed1)) {
+			// One draw samples one texture, so frames from two of them (two tile sets, or two chunks of an atlas too
+			// large for one texture) can't be swapped per pixel - the tile keeps showing what it shows outside the mask
+			AppendEffectTile(EffectMeshKind::Unmasked, frame0, tile.Flags, alpha, x, y);
+			return true;
+		}
+
+		// An empty frame samples the other one under a weight of zero, so both stay inside the same tile
+		const float* r0 = (has0 ? rect0 : rect1);
+		const float* r1 = (has1 ? rect1 : rect0);
+		const float w0 = (has0 ? 1.0f : 0.0f);
+		const float w1 = (has1 ? 1.0f : 0.0f);
+
+		constexpr std::uint32_t XRayFloatsPerVertex = 12;
+		SmallVector<float, 0>& vertices = _meshVertices[GetEffectMeshGroup(has0 ? texture0 : texture1, has0 ? indexed0 : indexed1, EffectMeshKind::XRay)];
+		const std::size_t base = vertices.size();
+		vertices.resize_for_overwrite(base + RenderResources::VerticesPerQuad * XRayFloatsPerVertex);
+		float* v = vertices.data() + base;
+		const float xr = x + (float)TileSet::DefaultTileSize, yr = y + (float)TileSet::DefaultTileSize;
+		// The 12-float vertex of TileMapMeshXRay: position.xy, texcoords of both frames, their weights and the
+		// color, whose alpha is the tile's own (the layer tint is applied through the instance color)
+		auto put = [&](float px, float py, float cx, float cy) {
+			*v++ = px; *v++ = py;
+			*v++ = cx * r0[0] + r0[1]; *v++ = cy * r0[2] + r0[3];
+			*v++ = cx * r1[0] + r1[1]; *v++ = cy * r1[2] + r1[3];
+			*v++ = w0; *v++ = w1;
+			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = alpha;
+		};
+		// The four corners in the order of the shared quad index pattern, as in AppendTileQuad()
+		put(x,  y,  0.0f, 0.0f);
+		put(xr, y,  1.0f, 0.0f);
+		put(xr, yr, 1.0f, 1.0f);
+		put(x,  yr, 0.0f, 1.0f);
+		return true;
+	}
+
+	void TileMap::AppendEffectTile(EffectMeshKind kind, std::int32_t tileId, LayerTileFlags flags, float alpha, float x, float y, float axisY)
+	{
+		Texture* texture;
+		bool indexed;
+		float texScaleX, texBiasX, texScaleY, texBiasY;
+		if (!ResolveTileQuad(tileId, flags, texture, indexed, texScaleX, texBiasX, texScaleY, texBiasY)) {
+			return;
+		}
+		if (kind == EffectMeshKind::Blur) {
+			AppendBlurTileQuad(_meshVertices[GetEffectMeshGroup(texture, indexed, kind)], x, y, (float)TileSet::DefaultTileSize,
+				texScaleX, texBiasX, texScaleY, texBiasY, alpha, axisY);
+		} else {
+			AppendTileQuad(_meshVertices[GetEffectMeshGroup(texture, indexed, kind)], x, y, (float)TileSet::DefaultTileSize,
+				texScaleX, texBiasX, texScaleY, texBiasY, alpha);
+		}
+	}
+
+	void TileMap::AppendBlurTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
+		float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha, float axisY)
+	{
+		constexpr std::uint32_t BlurFloatsPerVertex = 9;
+		const float u0 = texBiasX, v0 = texBiasY;
+		const float u1 = texScaleX + texBiasX, v1 = texScaleY + texBiasY;
+		const float xr = x + size, yr = y + size;
+
+		const std::size_t base = vertices.size();
+		vertices.resize_for_overwrite(base + VerticesPerQuad * BlurFloatsPerVertex);
+		float* v = vertices.data() + base;
+		auto put = [&](float px, float py, float pu, float pv) {
+			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
+			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = alpha;
+			*v++ = axisY;
+		};
+		// The four corners in the order of the shared quad index pattern, as in AppendTileQuad()
+		put(x,  y,  u0, v0);
+		put(xr, y,  u1, v0);
+		put(xr, yr, u1, v1);
+		put(x,  yr, u0, v1);
+	}
+
+	bool TileMap::IsTileReflective(std::int32_t tileId, std::int32_t& topRow)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+		const std::uint8_t info = tileSet->GetTileEffectInfo(tileId);
+		topRow = (info & TileSet::TileEffectTopRowMask);
+		return ((info & TileSet::TileEffectReflective) != 0);
+	}
+
+	float TileMap::GetReflectionAxis(const TileMapLayer& layer, std::int32_t tileX, std::int32_t tileY, std::int32_t column,
+		std::int32_t row, std::int32_t tileId, float tileTopY)
+	{
+		// How far up the layout the start of a run is looked for, which is also the tallest reflection there can be
+		constexpr std::int32_t MaxReflectionRun = 64;
+
+		std::int32_t topRow;
+		if (!IsTileReflective(tileId, topRow)) {
+			// Mirrors nothing, the line is never used
+			return tileTopY;
+		}
+
+		if (column >= (std::int32_t)_reflectionColumns.size()) {
+			_reflectionColumns.resize(column + 1, ReflectionColumn { -2, 0.0f });
+		}
+		ReflectionColumn& state = _reflectionColumns[column];
+		if (state.Row == row - 1) {
+			// The run goes on from the row above
+			state.Row = row;
+			return state.AxisY;
+		}
+
+		// The first tile of a run in this window, which may have started above it - the rows above are looked up in
+		// the layout itself, wrapping around a layer that repeats vertically
+		std::int32_t rowsAbove = 0;
+		std::int32_t layoutY = tileY;
+		for (std::int32_t k = 1; k <= MaxReflectionRun; k++) {
+			if (--layoutY < 0) {
+				if (!layer.Description.RepeatY) {
+					break;
+				}
+				layoutY += layer.LayoutSize.Y;
+			}
+			const LayerTile& above = layer.Layout[tileX + layoutY * layer.LayoutSize.X];
+			const std::int32_t aboveId = ResolveTileID(above);
+			std::int32_t aboveTopRow;
+			if (aboveId == 0 || above.Alpha == 0 || !IsTileReflective(aboveId, aboveTopRow)) {
+				break;
+			}
+			rowsAbove = k;
+			topRow = aboveTopRow;
+		}
+
+		state.Row = row;
+		state.AxisY = tileTopY - float(rowsAbove * TileSet::DefaultTileSize) + float(topRow);
+		return state.AxisY;
+	}
+
+	std::int32_t TileMap::GetEffectMeshGroup(const Texture* texture, bool indexed, EffectMeshKind kind)
+	{
+		for (const auto& group : _effectMeshGroups) {
+			if (group.DiffuseTexture == texture && group.Indexed == indexed && group.Kind == kind) {
+				return group.VerticesIndex;
+			}
+		}
+		const std::int32_t verticesIndex = RentMeshVertices();
+		_effectMeshGroups.push_back({ texture, indexed, kind, verticesIndex });
+		return verticesIndex;
+	}
+
+	void TileMap::EmitEffectMeshes(RenderQueue& renderQueue, const Vector4f& color, std::uint16_t depth)
+	{
+		bool blurEmitted = false;
+		for (const auto& group : _effectMeshGroups) {
+			auto& vertices = _meshVertices[group.VerticesIndex];
+			if (vertices.empty()) {
+				continue;
+			}
+			if (group.Kind == EffectMeshKind::Unmasked) {
+				EmitMesh(renderQueue, vertices, *group.DiffuseTexture, group.Indexed, 0, color, depth, RenderCommand::Type::TileMap, false);
+			} else {
+				EmitEffectMesh(renderQueue, vertices, *group.DiffuseTexture, group.Indexed, group.Kind, color, depth);
+				blurEmitted |= (group.Kind == EffectMeshKind::Blur);
+			}
+		}
+		_effectMeshGroups.clear();
+
+		if (blurEmitted) {
+			// Everything below the layer is drawn first and blurred before the rest of the scene is drawn over it
+			_effectLayer.Target->View->RequestSplit(depth);
+		}
+	}
+
+	void TileMap::EmitEffectMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, const Texture& texture, bool indexed,
+		EffectMeshKind kind, const Vector4f& color, std::uint16_t depth)
+	{
+		const bool isXRay = (kind == EffectMeshKind::XRay);
+		// A blur layer shows the blurred scene by alpha and the sharp copy moved and mirrored by the other channels.
+		// Each stands in for the other where only one of them exists: without the blur effects the blur mixes the scene
+		// with itself, and without any tile that reflects or displaces the sharp copy is never used
+		Texture* sampledTarget;
+		Texture* reflectionTarget = nullptr;
+		if (isXRay) {
+			sampledTarget = _effectLayer.Target->XRayMask;
+		} else {
+			sampledTarget = (_effectLayer.Target->BehindBlur != nullptr ? _effectLayer.Target->BehindBlur : _effectLayer.Target->BehindCopy);
+			reflectionTarget = (_effectLayer.Target->BehindCopy != nullptr ? _effectLayer.Target->BehindCopy : _effectLayer.Target->BehindBlur);
+		}
+		Shader* shader = ContentResolver::Get().GetShader(isXRay
+			? (indexed ? PrecompiledShader::TileMapMeshXRayPalette : PrecompiledShader::TileMapMeshXRay)
+			: (indexed ? PrecompiledShader::TileMapMeshBlurPalette : PrecompiledShader::TileMapMeshBlur));
+		if (sampledTarget == nullptr || shader == nullptr) {
+			return;
+		}
+
+		const std::uint32_t floatsPerVertex = (isXRay ? 12 : 9);
+		const std::uint32_t floatsPerQuad = VerticesPerQuad * floatsPerVertex;
+		const std::uint32_t maxQuadsPerChunk = RenderResources::GetMaxQuadsPerDraw(floatsPerVertex);
+		const std::uint16_t* quadIndices = RenderResources::GetQuadIndices();
+		// The size of the target being drawn into, the mask has it too and the blurred scene covers the same view
+		const Vector2i targetSize = RenderResources::GetCurrentViewport()->GetSize();
+		const Vector2f targetSizeInv(targetSize.X > 0 ? 1.0f / targetSize.X : 0.0f, targetSize.Y > 0 ? 1.0f / targetSize.Y : 0.0f);
+
+		const std::uint32_t totalQuads = (std::uint32_t)(vertices.size() / floatsPerQuad);
+		for (std::uint32_t firstQuad = 0; firstQuad < totalQuads; firstQuad += maxQuadsPerChunk) {
+			const std::uint32_t count = std::min(maxQuadsPerChunk, totalQuads - firstQuad);
+
+			if (_effectMeshCommandCount >= (std::int32_t)_effectMeshCommands.size()) {
+				auto& newCommand = _effectMeshCommands.emplace_back(std::make_unique<RenderCommand>());
+				newCommand->GetMaterial().SetBlendingEnabled(true);
+			}
+			RenderCommand* command = _effectMeshCommands[_effectMeshCommandCount++].get();
+
+			command->SetType(RenderCommand::Type::TileMap);
+			// The x-ray tiles come out premultiplied (see TileMapMeshXRay.shader), the blur is a plain mix by the amount
+			command->GetMaterial().SetBlendingFactors(isXRay ? BlendingFactor::One : BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+
+			if (command->GetMaterial().SetShader(shader)) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+				if (textureUniform != nullptr) {
+					textureUniform->SetIntValue(0);
+				}
+				auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+				if (paletteUniform != nullptr) {
+					paletteUniform->SetIntValue(1);
+				}
+				auto* sampledUniform = command->GetMaterial().Uniform(isXRay ? "uTextureMask" : "uTextureBehind");
+				if (sampledUniform != nullptr) {
+					sampledUniform->SetIntValue(2);
+				}
+				auto* reflectionUniform = command->GetMaterial().Uniform("uTextureSharp");
+				if (reflectionUniform != nullptr) {
+					reflectionUniform->SetIntValue(3);
+				}
+			}
+
+			auto* instanceBlock = command->GetInstanceBlock();
+			if (instanceBlock != nullptr) {
+				auto* colorUniform = instanceBlock->GetUniform(Material::ColorUniformName);
+				if (colorUniform != nullptr) {
+					colorUniform->SetFloatVector(color.Data());
+				}
+			}
+			auto* targetSizeUniform = command->GetMaterial().Uniform("uTargetSizeInv");
+			if (targetSizeUniform != nullptr) {
+				targetSizeUniform->SetFloatValue(targetSizeInv.X, targetSizeInv.Y);
+			}
+
+			auto& geometry = command->GetGeometry();
+			geometry.SetElementsPerVertex(floatsPerVertex);
+			geometry.SetHostVertexPointer(vertices.data() + firstQuad * floatsPerQuad);
+			geometry.SetIndexCount(count * RenderResources::IndicesPerQuad);
+			geometry.SetHostIndexPointer(quadIndices);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count * VerticesPerQuad);
+
+			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+			command->SetLayer(depth);
+			// Diffuse on unit 0 and the palette on unit 1 when indexed, the sampled target on unit 2 and the sharp copy a
+			// blur layer reflects and displaces on unit 3
+			ContentResolver::Get().BindSpritePalette(*command, texture, indexed, 0);
+			command->GetMaterial().SetTexture(2, *sampledTarget);
+			// Cleared otherwise - the pool is shared by both kinds, and a texture of a pass that was released since must
+			// not stay bound to a command an x-ray layer reuses
+			if (reflectionTarget != nullptr) {
+				command->GetMaterial().SetTexture(3, *reflectionTarget);
+			} else {
+				command->GetMaterial().SetTexture(3, nullptr);
+			}
+
+			renderQueue.AddCommand(command);
+		}
+	}
+
+	bool TileMap::ResolveTileQuad(std::int32_t tileId, LayerTileFlags flags, Texture*& texture, bool& indexed,
+		float& texScaleX, float& texBiasX, float& texScaleY, float& texBiasY)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr) {
+			return false;
+		}
+		indexed = tileSet->IsIndexed;
+		// Rebases the ID into its texture chunk
+		texture = tileSet->ResolveTextureDiffuse(tileId);
+		if (texture == nullptr) {
+			return false;
+		}
+
+		const Vector2i texSize = texture->GetSize();
+		const float texInvW = (texSize.X > 0 ? 1.0f / float(texSize.X) : 0.0f);
+		const float texInvH = (texSize.Y > 0 ? 1.0f / float(texSize.Y) : 0.0f);
+		const std::int32_t tileRow = tileId / tileSet->TilesPerRow;
+		const std::int32_t tileCol = tileId - tileRow * tileSet->TilesPerRow;
+		texScaleX = TileSet::DefaultTileSize * texInvW;
+		texBiasX = (tileCol * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvW;
+		texScaleY = TileSet::DefaultTileSize * texInvH;
+		texBiasY = (tileRow * float(TileSet::PaddedTileSize) + TileSet::TilePadding) * texInvH;
+		if ((flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			texBiasX += texScaleX;
+			texScaleX *= -1;
+		}
+		if ((flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			texBiasY += texScaleY;
+			texScaleY *= -1;
+		}
+		return true;
+	}
+
+	void TileMap::PrepareXRayLayer(const TileMapLayer& layer)
+	{
+		// Derived right away rather than when first drawn, so they play in step with the animations they come from
+		for (std::size_t i = 0; i < layer.Layout.size(); i++) {
+			const std::int32_t animIndex = layer.Layout.TileIDAt(i) - std::int32_t(_animatedTilesOffset);
+			if (animIndex >= 0 && animIndex < (std::int32_t)_animatedTiles.size() && _animatedTiles[animIndex].Tiles.size() >= 3) {
+				GetXRayUnmaskedAnimation(animIndex);
+			}
+		}
+	}
+#else
+	void TileMap::ReduceXRayLayer(TileMapLayer& layer)
+	{
+		for (std::size_t i = 0; i < layer.Layout.size(); i++) {
+			LayerTile tile = layer.Layout[i];
+			const std::int32_t animIndex = std::int32_t(tile.TileID) - std::int32_t(_animatedTilesOffset);
+			if (animIndex < 0 || animIndex >= (std::int32_t)_animatedTiles.size()) {
+				continue;
+			}
+			// What the tile shows outside the mask: nothing for a single frame, the frame before the mask frame for two,
+			// and the animation of the frames before it for more
+			const std::size_t frameCount = _animatedTiles[animIndex].Tiles.size();
+			if (frameCount <= 1) {
+				tile.TileID = 0;
+			} else if (frameCount == 2) {
+				tile.TileID = _animatedTiles[animIndex].Tiles[0].TileID;
+			} else {
+				const std::int32_t unmaskedIndex = GetXRayUnmaskedAnimation(animIndex);
+				tile.TileID = (unmaskedIndex >= 0 && _animatedTilesOffset + unmaskedIndex <= UINT16_MAX
+					? std::uint16_t(_animatedTilesOffset + unmaskedIndex)
+					: _animatedTiles[animIndex].Tiles[0].TileID);
+			}
+			layer.Layout.Set(i, tile);
+		}
+	}
+#endif
+
+	std::int32_t TileMap::GetXRayUnmaskedAnimation(std::int32_t animIndex)
+	{
+		// Sized by the animations of the level itself, the derived ones are appended behind them
+		if (_xrayUnmaskedAnims.empty()) {
+			_xrayUnmaskedAnims.resize(_animatedTiles.size(), 0);
+		}
+		if (animIndex >= (std::int32_t)_xrayUnmaskedAnims.size()) {
+			return -1;
+		}
+		if (_xrayUnmaskedAnims[animIndex] == 0) {
+			AnimatedTile unmasked = _animatedTiles[animIndex];
+			unmasked.Tiles.pop_back();
+			// Starts as the level's own animations do when it is loaded
+			unmasked.CurrentTileIdx = 0;
+			unmasked.FramesLeft = 0.0f;
+			unmasked.Forwards = false;
+			_xrayUnmaskedAnims[animIndex] = (std::int32_t)_animatedTiles.size();
+			_animatedTiles.push_back(std::move(unmasked));
+		}
+		return _xrayUnmaskedAnims[animIndex];
 	}
 
 	void TileMap::SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile)

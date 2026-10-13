@@ -4,6 +4,7 @@
 #include "LightingRenderer.h"
 #include "CombineRenderer.h"
 #include "BlurRenderPass.h"
+#include "XRayMaskRenderer.h"
 
 namespace Jazz2::Rendering
 {
@@ -37,6 +38,20 @@ namespace Jazz2::Rendering
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
+#endif
+#if defined(TILEMAP_LAYER_EFFECTS)
+		// What the special tile layers (see Tiles::LayerRendererType::XRay and ::BlurBehind) need from this viewport:
+		// the coverage of the actors behind the x-ray layers, rendered before the scene, and the blurred scene behind
+		// the blur layers, rendered in the middle of it (see Viewport::AddSplitPass()). Allocated only for a level
+		// that has such a layer. Declared before the scene view, which is destroyed first and lets go of the passes.
+		Tiles::LayerEffectsTarget _layerEffects;
+		std::unique_ptr<XRayMaskRenderer> _xrayMaskRenderer;
+		std::unique_ptr<Viewport> _xrayMaskView;
+		std::unique_ptr<Texture> _xrayMaskBuffer;
+		BlurRenderPass _behindCopyPass;
+		BlurRenderPass _behindDownsamplePass;
+		BlurRenderPass _behindBlurPass1;
+		BlurRenderPass _behindBlurPass2;
 #endif
 
 		std::unique_ptr<Viewport> _view;
@@ -97,6 +112,12 @@ namespace Jazz2::Rendering
 #endif
 		/** @brief Returns the actor the camera follows */
 		Actors::ActorBase* GetTargetActor() const;
+#if defined(TILEMAP_LAYER_EFFECTS)
+		/** @brief Returns what the special tile layers need from this viewport */
+		Tiles::LayerEffectsTarget* GetLayerEffectsTarget() {
+			return &_layerEffects;
+		}
+#endif
 		/** @brief Called at the end of each frame */
 		void OnEndFrame();
 		/** @brief Updates the camera position */
@@ -166,5 +187,9 @@ namespace Jazz2::Rendering
 
 		/** @brief Returns `true` if the view is at most half the default width, which makes the camera lead further */
 		bool IsSmallView() const;
+#if defined(TILEMAP_LAYER_EFFECTS)
+		/** @brief Allocates or releases the passes the special tile layers of the level need */
+		void InitializeLayerEffects(std::int32_t width, std::int32_t height);
+#endif
 	};
 }

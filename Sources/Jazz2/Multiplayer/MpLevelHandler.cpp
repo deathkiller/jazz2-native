@@ -109,7 +109,10 @@ namespace Jazz2::Multiplayer
 	// nothing at all while it moves. The quantization is deliberately coarse: the encoded bytes are what decides
 	// whether an update is sent, so a light nobody could tell apart from the previous one must not cost anything.
 	static constexpr std::uint32_t MaxRemotedLights = 16;
-	static constexpr std::uint32_t MaxRemotedLightsSize = 1 + MaxRemotedLights * 10;
+	static constexpr std::uint32_t MaxRemotedLightsSize = 1 + MaxRemotedLights * 12;
+	// Set in the near radius of a ring light, whose ring radius then follows the far radius - a radius is never
+	// anywhere near this large, so a point light keeps its 10 bytes and only a ring pays for the extra two
+	static constexpr std::uint16_t RemotedLightRingFlag = 0x8000;
 
 	static void AppendUint16(SmallVectorImpl<std::uint8_t>& target, std::uint16_t value)
 	{
@@ -127,15 +130,24 @@ namespace Jazz2::Multiplayer
 
 		for (std::uint32_t i = 0; i < count; i++) {
 			// The lights are picked evenly across the whole list, so an object emitting more of them than fit in
-			// a single update keeps its shape - an expanding ring stays a ring, only a sparser one
+			// a single update keeps its shape - a chain of lights stays a chain, only a sparser one
 			const LightEmitter& light = lights[i * total / count];
+
+			const std::uint16_t ringRadius = (std::uint16_t)std::clamp(light.RingRadius, 0.0f, 65535.0f);
+			std::uint16_t radiusNear = (std::uint16_t)std::clamp(light.RadiusNear, 0.0f, (float)(RemotedLightRingFlag - 1));
+			if (ringRadius != 0) {
+				radiusNear |= RemotedLightRingFlag;
+			}
 
 			AppendUint16(target, (std::uint16_t)(std::int16_t)std::clamp(light.Pos.X - origin.X, -32768.0f, 32767.0f));
 			AppendUint16(target, (std::uint16_t)(std::int16_t)std::clamp(light.Pos.Y - origin.Y, -32768.0f, 32767.0f));
 			target.push_back((std::uint8_t)(std::clamp(light.Intensity, 0.0f, 1.0f) * 255.0f));
 			target.push_back((std::uint8_t)(std::clamp(light.Brightness, 0.0f, 1.0f) * 255.0f));
-			AppendUint16(target, (std::uint16_t)std::clamp(light.RadiusNear, 0.0f, 65535.0f));
+			AppendUint16(target, radiusNear);
 			AppendUint16(target, (std::uint16_t)std::clamp(light.RadiusFar, 0.0f, 65535.0f));
+			if (ringRadius != 0) {
+				AppendUint16(target, ringRadius);
+			}
 		}
 	}
 
@@ -156,8 +168,12 @@ namespace Jazz2::Multiplayer
 			light.Pos.Y = (float)(std::int16_t)packet.ReadValueAsLE<std::uint16_t>();
 			light.Intensity = packet.ReadValue<std::uint8_t>() / 255.0f;
 			light.Brightness = packet.ReadValue<std::uint8_t>() / 255.0f;
-			light.RadiusNear = (float)packet.ReadValueAsLE<std::uint16_t>();
+			const std::uint16_t radiusNear = packet.ReadValueAsLE<std::uint16_t>();
+			light.RadiusNear = (float)(radiusNear & ~RemotedLightRingFlag);
 			light.RadiusFar = (float)packet.ReadValueAsLE<std::uint16_t>();
+			if (radiusNear & RemotedLightRingFlag) {
+				light.RingRadius = (float)packet.ReadValueAsLE<std::uint16_t>();
+			}
 		}
 
 		return true;
