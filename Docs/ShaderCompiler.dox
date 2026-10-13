@@ -313,7 +313,12 @@ Four macros are resolved by the tool and therefore never survive into any emitte
     varyings are tagged and only the low-power emissions declare them, which is what lets a cheaper
     path move screen-linear work from the fragment stage to the vertex stage without changing any
     other artifact (see @cpp "CombineWithWater.shader" @ce, and @cpp "tests/LowPowerVarying.shader" @ce
-    for the worked example). The same restriction applies --- such a conditional may contain nothing
+    for the worked example). @cpp "TileMapMeshBlur.shader" @ce does the same for derivatives: its
+    `dFdx`/`dFdy` of the position are constant over a layer, so the low-power side takes the layer's
+    scale on screen from the diagonal of its matrices in the vertex stage instead. Only the *magnitude*
+    may be taken from there --- the projection's sign of y differs between backends (GL flips it while a
+    render target is bound) while every target is stored top-down, so a row further down is further down
+    the layer everywhere and the sign is a constant, not a matrix element. The same restriction applies --- such a conditional may contain nothing
     but `varying` declarations --- with one exception: on its `LOW_POWER_GPU` side it may also hold the
     @cpp vertex() @ce entry of a `canvas_item` shader. Only the low-power emissions then get a vertex
     stage of their own, while every other emission keeps the default canvas vertex template, the exact
@@ -1061,6 +1066,12 @@ are these:
 -   A batched shader's `BATCH_SIZE` is baked into the emitted source as a plain `#define`, because a
     Cg source is compiled as one string with no place to inject a define ahead of it. The backend
     rewrites that number when the runtime settles on a different batch size.
+-   A `mix()` of two vectors by a scalar weight is emitted with the weight cast to the vectors' type,
+    @cpp lerp(a, b, ((float3)(t))) @ce, as GLSL defines it. The console's `SceShaccCg` resolves
+    @cpp lerp(float3, float3, float) @ce by converting the scalar and found that call *ambiguous* when
+    both vectors came straight from `tex2D()` --- the blur-behind layer failed to compile on hardware
+    while Vita3K accepted it. Only @cpp "CgGeneratedShaders.h" @ce changes with it; HLSL keeps the plain
+    call.
 
 @m_class{m-block m-info}
 

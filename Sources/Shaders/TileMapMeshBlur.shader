@@ -32,8 +32,13 @@ attribute float aAxisY;
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
+#if LOW_POWER_GPU
+// The layer's scale on screen and the mirror line, worked out per vertex (see vertex())
+varying highp vec4 vScale;
+#else
 varying highp vec2 vPos;
 varying highp float vAxisY;
+#endif
 
 uniform sampler2D uTexture : texture_unit(0);
 #if USE_PALETTE
@@ -52,8 +57,22 @@ void vertex() {
 	vTexCoords = aTexCoords;
 	vColor = aColor * color;
 	vPaletteOffset = palOffset;
+#if LOW_POWER_GPU
+	// What the fragment stage takes from derivatives elsewhere is the same in every vertex of a layer, and derivatives
+	// and divisions per pixel are a large part of this shader's cost on such a part - so the scale of the layer on
+	// screen is taken from the matrices instead. Every target is stored top-down whatever the backend's projection
+	// convention, so a row further down is always further down the layer and only the magnitude is needed.
+	highp vec4 unitX = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)));
+	highp vec4 unitY = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(0.0, 1.0, 0.0, 0.0)));
+	highp vec2 pixelsPerUnit = abs(vec2(unitX.x, unitY.y)) * 0.5 / uTargetSizeInv;
+	// xy: a quarter of a pixel of displacement in target units, z: the distance to the mirrored point in target units,
+	// w: one over the 8 pixels a reflection fades out over at the edge of the target
+	vScale = vec4(pixelsPerUnit * 0.25 * uTargetSizeInv, 2.0 * (aAxisY - aPosition.y) * pixelsPerUnit.y * uTargetSizeInv.y,
+		0.125 / uTargetSizeInv.y);
+#else
 	vPos = aPosition;
 	vAxisY = aAxisY;
+#endif
 }
 
 void fragment() {
@@ -67,6 +86,19 @@ void fragment() {
 #else
 	vec4 tile = src;
 #endif
+#if LOW_POWER_GPU
+	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
+	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
+	// displacement allows, so it isn't rounded
+	float on = step(0.5 / 255.0, tile.a);
+	float blurAmount = clamp(tile.a * (255.0 / 254.0) - (1.0 / 254.0), 0.0, 1.0);
+	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
+	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
+	float strength = vColor.a * on;
+	vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
+	vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
+	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
+#else
 	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
 	// index 0 leave black, the largest displacement there is. Above that, it's the blur
 	float on = step(0.5 / 255.0, tile.a);
@@ -89,6 +121,7 @@ void fragment() {
 	vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
 	// Fades out over the last few pixels of the target instead of smearing its edge where the mirrored point leaves it
 	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
+#endif
 
 	vec3 sharp = texture(uTextureSharp, uv).rgb;
 	vec3 blurred = texture(uTextureBehind, uv).rgb;

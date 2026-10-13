@@ -255,11 +255,6 @@ namespace Jazz2
 #endif
 
 	protected:
-#if defined(DEATH_DEBUG)
-		/** @brief Changes the renderer of a tile layer from `<index> <default|xray|blur>`, returns `false` if it can't */
-		bool ApplyDebugLayerRendererType(StringView args);
-#endif
-
 		/** @brief Describes current input state of a player */
 		struct PlayerInput {
 			/** @brief Bitmask of actions pressed in the current frame */

@@ -236,6 +236,14 @@ The converted data carries a cache format version, and a prepared tree is never 
 produced by an older AssetPacker is not rejected with a message --- the game simply fails to load
 what changed, which looks like missing text, missing tilesets or a level that will not start. After
 pulling changes that touch the data formats, regenerate the tree with a freshly built tool.
+@par
+Levels are the one part that says so: a converted level carries a version of its own after the file
+type @m_span{m-text m-dim} (see @ref Jazz2::LevelFormat) @m_endspan, and the game reads only the one it
+was built for --- any other level is refused with a log line naming it, so a tree from before the
+version existed lists every level and starts none of them. Levels that cannot be converted again,
+because only their converted file is left, can be upgraded instead: from the unversioned layout to
+version 1 nothing changed but the header, so inserting the @cpp u16 @ce version 1 right after the
+file type byte is all such a level needs.
 
 @subsection consoles-common-features What is available on which console
 
@@ -253,7 +261,7 @@ Underwater low-pass filter | **No** --- no filter stage in the mixer | **No** --
 Local splitscreen | **No** --- needs threads | Yes | Yes | Yes | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | Yes @m_span{m-text m-dim} (built, but the console has one controller) @m_endspan | **No** --- needs threads | **No** --- needs threads | Yes | Yes
 Online multiplayer | **No** | **No** | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-3ds-limits) @m_endspan | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-psp-limits) @m_endspan | **No** | **No** | Yes @m_span{m-text m-dim} (ENet only, see @ref consoles-vita-limits) @m_endspan | Yes
 Post-processing and rescale filters | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **No** --- fixed-function | **Yes** --- the RSX has shaders | Yes | Yes
-X-ray and blur-behind tile layers @m_span{m-text m-dim} (`TILEMAP_LAYER_EFFECTS`) @m_endspan | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes @m_span{m-text m-dim} (needs `RsxGeneratedShaders.h` regenerated with `cgcomp`) @m_endspan | Yes | Yes
+X-ray and blur-behind tile layers @m_span{m-text m-dim} (`TILEMAP_LAYER_EFFECTS`) @m_endspan | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | **No** --- reduced at load | Yes @m_span{m-text m-dim} (the microcode is generated, not yet run on a console) @m_endspan | Yes | Yes
 External `.shader` files | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** --- no runtime compiler | Yes | Yes
 Converts the game data itself | **No** | **No** | **No** | **No** | **No** | **No** | **No** | **No** | Yes | Yes
 
@@ -1712,6 +1720,18 @@ game writes. Two renderer notes for the emulator:
     is the system's business on this console, and a console that is offline simply fails to connect.
     Verified under Azahar against an ENet peer on the host: the emulator puts `soc:u` straight onto the
     host's own sockets, so a server on `127.0.0.1` is the host and nothing has to be set up for it.
+-   **A failed socket call is not a lost connection here.** On real hardware the client dropped out of
+    most servers two seconds into downloading a level's tileset: the server queues the whole file at
+    once, the client writes each chunk to the SD card on its network thread, and partway through,
+    `enet_host_service()` returned an error --- which ENet treats as the end of the connection. Azahar
+    cannot show it, its sockets being the host's. The one buffer the service is lent is shared by every
+    socket and every HTTPS request, so what is a dropped datagram elsewhere can be an error here. The
+    3DS arms of `enet_socket_send()` and `enet_socket_receive()` therefore treat every error but a broken
+    handle (`EBADF`, `ENOTSOCK`, `EFAULT`) as nothing sent or received this time: ENet resends what was
+    reliable, and a server that has really gone is still noticed by its own peer timeout. The errors are
+    logged with their `errno` (the first 16 of them), since which one it was could not be seen on the
+    console the drop was reported from. The streamed assets are also written through a 64 KB buffer on
+    every platform, so the network thread waits on the card in fewer, larger writes.
 -   **HTTPS needs the CA bundle staged next to the content.** devkitPro's libcurl is built on mbedTLS and
     looks for its trust store at @cpp "sdmc:/config/ssl/cacert.pem" @ce, which nothing on a fresh card
     provides, so the build fetches the bundle at configure time and stages it as
@@ -1897,6 +1917,11 @@ anything else can fail, so the console always has a way out even if initializati
     display list @m_span{m-text m-dim} (below) @m_endspan and the four half-pixel shadow segments of the
     weapon wheel, which this backend does not need
     @m_span{m-text m-dim} (see @ref Jazz2::UI::HUD::DrawWeaponWheel()) @m_endspan.
+    Levels with large true-colour tilesets are past what fits: the LayerFX test level
+    @m_span{m-text m-dim} (`Sources/Jazz2/Tests/LayerEffects`, a 9.6 MB 32-bit tileset) @m_endspan loads,
+    but from its green screen on the GU backend cannot allocate the 512 KB stores of its atlas pages and
+    those tiles go missing. PPSSPP shows none of it, its allocator leaves more room --- check memory on
+    hardware.
 -   **Palette-indexed fonts are not dropped when the palette changes.** @ref Jazz2::ContentResolver
     drops cached fonts on a palette change so a baked atlas can rebake, but with
     `RHI_CAP_PALETTED_TEXTURES` a font atlas holds indices and resolves its colors from the live palette
@@ -2117,6 +2142,12 @@ anything else can fail, so the console always has a way out even if initializati
     @cpp "Rendering/SoftwareLightSplat.h" @ce, which cuts each row analytically into outside, flat core and
     falloff segments and uses each platform's cheapest square root --- `fsrra` on the Dreamcast, `frsqrte`
     with two Newton steps on the Wii and GameCube, whose CPU has no square-root instruction at all.
+    A ring light @m_span{m-text m-dim} (@ref Jazz2::LightEmitter::RingRadius, the upgraded RF explosion)
+    @m_endspan has an arm of each, `SplatRingVfpu()` here and `SoftwareLighting::SplatRing()` elsewhere,
+    which measure the falloff from the ring's circle and skip the hole in its middle row by row. The VFPU
+    one was compared with the scalar one on every frame of twelve expanding rings, in PPSSPP and on a
+    PSP: at most 4.7e-6 apart, and every texel the scalar one changed inside the spans the VFPU one
+    reported for the next frame's reset.
 -   **The Media Engine is not a second core for this port.** The console does have one --- a second
     Allegrex normally reserved to the firmware's codecs --- and pspdev ships a library that runs user code
     on it @m_span{m-text m-dim} (`libme-core`, which embeds and loads a kernel bridge, so it needs a custom
@@ -2809,7 +2840,10 @@ binaries SceShaccCg produces.
     literals in @cpp "GxmDevice.cpp" @ce. Pruning against the generated header deletes precisely those.
 
 With the shipped pack a cold start loads 53 binaries and compiles nothing; startup from the clock line to
-@cpp sceGxmInitialize() @ce completing is then well under half a second.
+@cpp sceGxmInitialize() @ce completing is then well under half a second. The pack holds 65: the other 12 are
+the stages of the x-ray and blur-behind layers, which are compiled only when a level that has such a layer
+is loaded @m_span{m-text m-dim} (see @ref Jazz2::ContentResolver::CompileLayerEffectShaders()) @m_endspan, so
+the run that refreshes the pack has to play one --- the LayerFX test level in `Sources/Jazz2/Tests` does.
 
 @subsection consoles-vita-batching Sprite batching
 
@@ -2951,6 +2985,23 @@ shaders are not interchangeable @m_span{m-text m-dim} (`Colorized` desaturates a
     console defaults to; at 25% and below the quarter-size level is dropped as well and the half-size one
     stands in for it, which leaves two @m_span{m-text m-dim}
     (@ref Jazz2::Rendering::PlayerViewport::Initialize(), on every platform) @m_endspan.
+-   **The x-ray and blur-behind layers cost about 4--6 ms where several are on screen**, measured on
+    hardware at 50% with the frame-rate cap removed (13 ms without them, 17--18.5 ms with them in the
+    busiest parts of the LayerFX test level). Most of it is passes rather than pixels, for the reason
+    above: the x-ray mask, the half-size sharp copy and the two half-size blur passes behind the layer are
+    a scene each, and the scene they are taken from is split in two around them --- about 0.6 ms per
+    scene at this size, against 0.2 ms saved by halving the blur passes again. The blur-behind layer's own
+    shader takes a `LOW_POWER_GPU` path @m_span{m-text m-dim} (`TileMapMeshBlur.shader`) @m_endspan
+    that gets the layer's scale on screen from its matrices in the vertex stage instead of from
+    derivatives, and does without the divisions and rounding per pixel; that took 0.5--1.4 ms off the
+    same views with no visible difference. Half precision made no difference at all.
+-   **The firmware's Cg compiler is stricter than Vita3K's.** `SceShaccCg` rejected the blur-behind
+    shader with *ambiguous call to 'lerp'* for a `mix()` of two texture reads by a scalar, which Vita3K
+    compiled without complaint, and one failed program turns every special layer back into its reduced
+    form @m_span{m-text m-dim} (see @ref Jazz2::ContentResolver::CompileLayerEffectShaders()) @m_endspan.
+    The Cg emitter now writes that weight out as a vector @m_span{m-text m-dim}
+    (see @ref shader-compiler-cg) @m_endspan; a new shader still has to be compiled on a console once
+    before it can be trusted here, which refreshing the shipped pack does anyway.
 -   Asynchronous tracing is disabled, threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.

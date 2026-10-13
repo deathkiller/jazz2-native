@@ -175,7 +175,11 @@ What the output directory is going to be loaded by decides its layout:
     the Wii and the PlayStation 3, whose content is on writable storage) finds it and skips the
     conversion instead of looking for original files that were never deployed --- see
     @ref Jazz2::ContentResolver::IsContentPrebaked(). No index is written, deliberately: a prepared
-    tree is never rewritten, and an index there would only invite the game to try.
+    tree is never rewritten, and an index there would only invite the game to try. That also means a
+    prepared tree does not follow the game's formats by itself: the converted levels carry a version
+    of their own @m_span{m-text m-dim} (see @ref Jazz2::LevelFormat) @m_endspan and the game reads only
+    its own, so a tree from an older tool has to be converted again --- see the warning in
+    @ref consoles-common-content for the levels that can only be upgraded in place.
 -   **emscripten** --- Likewise a tree prepared entirely ahead of time for the web build,
     with `Prebaked.pak` and without an index.
 

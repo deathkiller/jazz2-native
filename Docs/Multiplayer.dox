@@ -288,6 +288,11 @@ the whitelist, the ban lists and the password, and finally the client is asked f
 A connection that doesn't authenticate within 20 seconds is dropped.
 Anything it is missing --- levels, tilesets, music --- is downloaded from the server if the server allows
 it with @cpp "AllowAssetStreaming" @ce; otherwise the player has to install the missing files manually.
+A level is sent the way the server converted it, and a converted level carries a version of its own
+@m_span{m-text m-dim} (see @ref Jazz2::LevelFormat) @m_endspan that only the same build reads, which is
+one more reason the protocol version has to match exactly. The client writes a downloaded file on its
+network thread, in 64 KB writes rather than one per chunk, so a slow memory card holds up the connection
+as little as possible.
 Once in, an in-game lobby offers the character selection and the welcome message of the server.
 
 @m_class{m-noindent}

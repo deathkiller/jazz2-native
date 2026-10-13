@@ -6390,6 +6390,25 @@ extern "C" {
 		}
 	}
 
+#if defined(DEATH_TARGET_3DS)
+	// Whether a failed sendto()/recvfrom() on the 3DS means the socket itself is gone. A real client lost its
+	// connection two seconds into every larger asset download (2026-10-12): the server queues the whole file at
+	// once, the client writes each chunk to the SD card on the network thread, and one socket call came back
+	// with an error - which ENet takes for a dead connection. The SOC service shares a single buffer between
+	// every socket and the HTTPS requests, so running short of it is an error here rather than a dropped
+	// datagram as elsewhere. Anything but a broken handle is treated as nothing sent or received this time:
+	// ENet resends what was reliable and still notices a peer that has really gone through its own timeout.
+	static int enet_socket_error_is_fatal_3ds(int error, const char* operation) {
+		const int fatal = (error == EBADF || error == ENOTSOCK || error == EFAULT);
+		static unsigned int reported = 0;
+		if (fatal || reported < 16) {
+			reported++;
+			LOGW("{}() failed with errno {}{}", operation, error, fatal ? "" : ", retrying");
+		}
+		return fatal;
+	}
+#endif
+
 	int enet_socket_send(ENetSocket socket, const ENetAddress* address, const ENetBuffer* buffers, size_t bufferCount) {
 #if defined(DEATH_TARGET_PSP)
 		if (enetPspAdhoc) {
@@ -6500,6 +6519,10 @@ extern "C" {
 			// A failed send ends the connection (see enet_protocol_send_outgoing_commands), so the firmware's
 			// own error code is worth a line - the trace log is the only debugging channel on this console
 			LOGW("enet_socket_send() failed with errno {} (socket error 0x{:.8x}, {} bytes)", errno, (unsigned int)*sceNetErrnoLoc(), (unsigned int)total);
+#elif defined(DEATH_TARGET_3DS)
+			if (!enet_socket_error_is_fatal_3ds(errno, "enet_socket_send")) {
+				return 0;
+			}
 #elif defined(ENET_DEBUG)
 			LOGW("enet_socket_send() failed with error {}", errno);
 #endif
@@ -6639,6 +6662,10 @@ extern "C" {
 			}
 #if defined(DEATH_TARGET_VITA)
 			LOGW("enet_socket_receive() failed with errno {} (socket error 0x{:.8x})", errno, (unsigned int)*sceNetErrnoLoc());
+#elif defined(DEATH_TARGET_3DS)
+			if (!enet_socket_error_is_fatal_3ds(errno, "enet_socket_receive")) {
+				return 0;
+			}
 #endif
 			return -1;
 		}

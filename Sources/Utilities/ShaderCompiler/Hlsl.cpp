@@ -838,7 +838,20 @@ namespace ShaderCompiler
 				}
 
 				// Remapped built-ins (name differs from GLSL)
-				if (name == "mix") return "lerp("_s + EmitArgs(e) + ")"_s;
+				if (name == "mix") {
+					// SceShaccCg resolves lerp(vecN, vecN, float) by converting the scalar, and finds that call
+					// ambiguous when the vectors come straight from tex2D() ("ambiguous call to 'lerp'") - so in
+					// Cg the scalar weight of a vector mix is splatted explicitly, as GLSL defines it
+					if (_cg && e->Args.size() == 3) {
+						TyRef at = InferTy(e->Args[0].get());
+						TyRef tt = InferTy(e->Args[2].get());
+						if (IsVector(at.T) && tt.T == Ty::Float) {
+							return "lerp("_s + EmitExpr(e->Args[0].get(), 0) + ", "_s + EmitExpr(e->Args[1].get(), 0) + ", (("_s +
+								TypeName(at) + ")("_s + EmitExpr(e->Args[2].get(), 0) + ")))"_s;
+						}
+					}
+					return "lerp("_s + EmitArgs(e) + ")"_s;
+				}
 				if (name == "fract") return "frac("_s + EmitArgs(e) + ")"_s;
 				if (name == "dFdx") return "ddx("_s + EmitArgs(e) + ")"_s;
 				if (name == "dFdy") return "ddy("_s + EmitArgs(e) + ")"_s;

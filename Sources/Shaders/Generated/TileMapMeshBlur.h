@@ -86,8 +86,7 @@ attribute float aAxisY;
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-varying highp vec2 vPos;
-varying highp float vAxisY;
+varying highp vec4 vScale;
 
 // Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
 // disagree on precision between them does not link - so the fragment prologue keeps the vertex default
@@ -117,6 +116,7 @@ uniform sampler2D uTexturePalette;
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
 // cover the same view
+uniform vec2 uTargetSizeInv;
 
 void main()
 {
@@ -124,8 +124,17 @@ void main()
 	vTexCoords = aTexCoords;
 	vColor = aColor * color;
 	vPaletteOffset = palOffset;
-	vPos = aPosition;
-	vAxisY = aAxisY;
+	// What the fragment stage takes from derivatives elsewhere is the same in every vertex of a layer, and derivatives
+	// and divisions per pixel are a large part of this shader's cost on such a part - so the scale of the layer on
+	// screen is taken from the matrices instead. Every target is stored top-down whatever the backend's projection
+	// convention, so a row further down is always further down the layer and only the magnitude is needed.
+	highp vec4 unitX = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)));
+	highp vec4 unitY = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(0.0, 1.0, 0.0, 0.0)));
+	highp vec2 pixelsPerUnit = abs(vec2(unitX.x, unitY.y)) * 0.5 / uTargetSizeInv;
+	// xy: a quarter of a pixel of displacement in target units, z: the distance to the mirrored point in target units,
+	// w: one over the 8 pixels a reflection fades out over at the edge of the target
+	vScale = vec4(pixelsPerUnit * 0.25 * uTargetSizeInv, 2.0 * (aAxisY - aPosition.y) * pixelsPerUnit.y * uTargetSizeInv.y,
+		0.125 / uTargetSizeInv.y);
 }
 )__SHDR__";
 #endif
@@ -235,8 +244,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_Fs100[] =
-R"__SHDR__(#extension GL_OES_standard_derivatives : enable
-#line 1
+R"__SHDR__(#line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -247,8 +255,7 @@ precision mediump float;
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-varying highp vec2 vPos;
-varying highp float vAxisY;
+varying highp vec4 vScale;
 
 // Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
 // disagree on precision between them does not link - so the fragment prologue keeps the vertex default
@@ -293,28 +300,17 @@ void main() {
 #else
 	vec4 tile = src;
 #endif
-	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
-	// index 0 leave black, the largest displacement there is. Above that, it's the blur
+	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
+	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
+	// displacement allows, so it isn't rounded
 	float on = step(0.5 / 255.0, tile.a);
-	float blurAmount = clamp((tile.a * 255.0 - 1.0) / 254.0, 0.0, 1.0);
-	float reflectionAmount = tile.b * on;
-	vec2 displacement = (floor(tile.rg * 255.0 + 0.5) - 128.0) * on;
+	float blurAmount = clamp(tile.a * (255.0 / 254.0) - (1.0 / 254.0), 0.0, 1.0);
+	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
 	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
-	// vColor.a is the tile's own alpha times the alpha of the layer's color, how strong the whole effect is
 	float strength = vColor.a * on;
-
-	// The derivatives are the layer's units per pixel along the window's axes, so they carry both the scale (the view
-	// can be supersampled) and the direction of y, which differs between backends
-	highp vec2 unitsPerPixel = vec2(dFdx(vPos.x), dFdy(vPos.y));
-	unitsPerPixel.x = (abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x);
-	unitsPerPixel.y = (abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y);
-	// A step of displacement is a quarter of the layer's pixel, applied to the reflection as well
-	vec2 offset = displacement * strength * 0.25 / unitsPerPixel;
-	vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
-	// The mirrored point in window pixels
-	vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
-	// Fades out over the last few pixels of the target instead of smearing its edge where the mirrored point leaves it
-	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
+	vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
+	vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
+	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
 
 	vec3 sharp = texture2D(uTextureSharp, uv).rgb;
 	vec3 blurred = texture2D(uTextureBehind, uv).rgb;
@@ -437,8 +433,7 @@ attribute float aAxisY;
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-varying highp vec2 vPos;
-varying highp float vAxisY;
+varying highp vec4 vScale;
 
 // Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
 // disagree on precision between them does not link - so the fragment prologue keeps the vertex default
@@ -468,6 +463,7 @@ uniform sampler2D uTexturePalette;
 // exists if a tile of the level reflects or displaces (the blur stands in for it otherwise, where it's never used)
 // One over the size of the target being drawn into. The textures behind are smaller or the same size, but they
 // cover the same view
+uniform vec2 uTargetSizeInv;
 
 void main()
 {
@@ -475,8 +471,17 @@ void main()
 	vTexCoords = aTexCoords;
 	vColor = aColor * color;
 	vPaletteOffset = palOffset;
-	vPos = aPosition;
-	vAxisY = aAxisY;
+	// What the fragment stage takes from derivatives elsewhere is the same in every vertex of a layer, and derivatives
+	// and divisions per pixel are a large part of this shader's cost on such a part - so the scale of the layer on
+	// screen is taken from the matrices instead. Every target is stored top-down whatever the backend's projection
+	// convention, so a row further down is always further down the layer and only the magnitude is needed.
+	highp vec4 unitX = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)));
+	highp vec4 unitY = uProjectionMatrix * (uViewMatrix * (modelMatrix * vec4(0.0, 1.0, 0.0, 0.0)));
+	highp vec2 pixelsPerUnit = abs(vec2(unitX.x, unitY.y)) * 0.5 / uTargetSizeInv;
+	// xy: a quarter of a pixel of displacement in target units, z: the distance to the mirrored point in target units,
+	// w: one over the 8 pixels a reflection fades out over at the edge of the target
+	vScale = vec4(pixelsPerUnit * 0.25 * uTargetSizeInv, 2.0 * (aAxisY - aPosition.y) * pixelsPerUnit.y * uTargetSizeInv.y,
+		0.125 / uTargetSizeInv.y);
 }
 )__SHDR__";
 #endif
@@ -587,8 +592,7 @@ void main() {
 
 #if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshBlur_USE_PALETTE_Fs100[] =
-R"__SHDR__(#extension GL_OES_standard_derivatives : enable
-#define USE_PALETTE (1)
+R"__SHDR__(#define USE_PALETTE (1)
 #line 1
 
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -600,8 +604,7 @@ precision mediump float;
 varying vec2 vTexCoords;
 varying vec4 vColor;
 varying highp float vPaletteOffset;
-varying highp vec2 vPos;
-varying highp float vAxisY;
+varying highp vec4 vScale;
 
 // Every global reaches both stages, InstanceBlock included, and a named uniform block whose members
 // disagree on precision between them does not link - so the fragment prologue keeps the vertex default
@@ -646,28 +649,17 @@ void main() {
 #else
 	vec4 tile = src;
 #endif
-	// Alpha switches a texel on, so one with none does nothing whatever its colour - which image editors and palette
-	// index 0 leave black, the largest displacement there is. Above that, it's the blur
+	// The same as below with the screen-space terms from the vertex stage (see vertex()), and the arithmetic in fewer
+	// steps: a channel of an 8-bit texture times 255 is an integer already, well within the 0.5 the test of a
+	// displacement allows, so it isn't rounded
 	float on = step(0.5 / 255.0, tile.a);
-	float blurAmount = clamp((tile.a * 255.0 - 1.0) / 254.0, 0.0, 1.0);
-	float reflectionAmount = tile.b * on;
-	vec2 displacement = (floor(tile.rg * 255.0 + 0.5) - 128.0) * on;
+	float blurAmount = clamp(tile.a * (255.0 / 254.0) - (1.0 / 254.0), 0.0, 1.0);
+	vec2 displacement = (tile.rg * 255.0 - 128.0) * on;
 	float displaced = step(0.5, max(abs(displacement.x), abs(displacement.y)));
-	// vColor.a is the tile's own alpha times the alpha of the layer's color, how strong the whole effect is
 	float strength = vColor.a * on;
-
-	// The derivatives are the layer's units per pixel along the window's axes, so they carry both the scale (the view
-	// can be supersampled) and the direction of y, which differs between backends
-	highp vec2 unitsPerPixel = vec2(dFdx(vPos.x), dFdy(vPos.y));
-	unitsPerPixel.x = (abs(unitsPerPixel.x) < 0.000001 ? 1.0 : unitsPerPixel.x);
-	unitsPerPixel.y = (abs(unitsPerPixel.y) < 0.000001 ? 1.0 : unitsPerPixel.y);
-	// A step of displacement is a quarter of the layer's pixel, applied to the reflection as well
-	vec2 offset = displacement * strength * 0.25 / unitsPerPixel;
-	vec2 uv = (gl_FragCoord.xy + offset) * uTargetSizeInv;
-	// The mirrored point in window pixels
-	vec2 reflectionUv = vec2(gl_FragCoord.x + offset.x, gl_FragCoord.y + 2.0 * (vAxisY - vPos.y) / unitsPerPixel.y + offset.y) * uTargetSizeInv;
-	// Fades out over the last few pixels of the target instead of smearing its edge where the mirrored point leaves it
-	reflectionAmount *= clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) / (8.0 * uTargetSizeInv.y), 0.0, 1.0);
+	vec2 uv = gl_FragCoord.xy * uTargetSizeInv + displacement * (strength * vScale.xy);
+	vec2 reflectionUv = vec2(uv.x, uv.y + vScale.z);
+	float reflectionAmount = tile.b * on * clamp(min(reflectionUv.y, 1.0 - reflectionUv.y) * vScale.w, 0.0, 1.0);
 
 	vec3 sharp = texture2D(uTextureSharp, uv).rgb;
 	vec3 blurred = texture2D(uTextureBehind, uv).rgb;

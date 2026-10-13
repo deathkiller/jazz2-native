@@ -1997,6 +1997,9 @@ namespace Jazz2::Multiplayer
 #elif defined(DEATH_TARGET_VITA)
 						// The firmware's own error code (SCE_NET_ERROR_*), which newlib's wrappers map onto errno
 						LOGE("[MP] enet_host_service() returned {} (socket error 0x{:.8x}, errno {})", result, std::uint32_t(*sceNetErrnoLoc()), errno);
+#elif defined(DEATH_TARGET_3DS)
+						// The socket call that failed logs its own errno (see enet_socket_send/receive in enet.h)
+						LOGE("[MP] enet_host_service() returned {} (errno {})", result, errno);
 #else
 						LOGE("[MP] enet_host_service() returned {}", result);
 #endif

@@ -33,8 +33,10 @@ is never something a build has to have.
 ## Coverage
 
 A run only compiles the stages it actually reaches, and the pack is written from what the run used, so
-what you play is what gets cached. The 53 entries committed here come from a run that reached the main
-menu; playing further and re-pulling can only add to them.
+what you play is what gets cached. The 65 entries committed here come from a run that reached the main
+menu (53) and then loaded a level with x-ray and blur-behind layers, whose shaders are compiled only then
+(the other 12, see `ContentResolver::CompileLayerEffectShaders()`); playing further and re-pulling can
+only add to them.
 
 **Commit the file exactly as the console wrote it — do not try to "clean" it.** It is tempting to drop
 entries that no source in `CgGeneratedShaders.h` hashes to, on the assumption they are leftovers from an

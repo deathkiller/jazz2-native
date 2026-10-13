@@ -1812,7 +1812,9 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						if (!fullPath.empty()) {
 							fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 
-							_streamedAsset = fs::Open(fullPath, FileAccess::Write);
+							// The chunks arrive on the network thread, which services the connection only between them, so they're
+							// collected into fewer, larger writes - a slow memory card stalls it far less often (see enet.h on the 3DS)
+							_streamedAsset = fs::Open(fullPath, FileAccess::Write, 64 * 1024);
 							if (_streamedAsset->IsValid()) {
 								break;
 							}

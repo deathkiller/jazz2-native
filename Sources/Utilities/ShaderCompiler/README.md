@@ -987,7 +987,11 @@ interpolants), so it is emitted by the *same* emitter — `Hlsl.h`/`.cpp` with
   afterwards is rejected with a diagnostic rather than mis-emitted;
 - a batched shader's `BATCH_SIZE` is baked in as a plain `#define` (a Cg source is compiled as one
   string, with no place to inject a define ahead of it); the backend rewrites that number when the
-  runtime settles on a different batch size.
+  runtime settles on a different batch size;
+- a `mix()` of two vectors by a scalar weight gets the weight cast to the vectors' type,
+  `lerp(a, b, ((float3)(t)))`: the console's SceShaccCg found `lerp(float3, float3, float)` *ambiguous*
+  when both vectors came straight from `tex2D()` (TileMapMeshBlur failed on hardware, Vita3K accepted
+  it). HLSL keeps the plain call.
 
 Why its own header rather than two more `ProgramVariant` fields: the DXBC and SPIR-V blobs in the
 per-shader headers can only be produced on Windows, so regenerating those headers on any other host
