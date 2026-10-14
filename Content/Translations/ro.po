@@ -11,7 +11,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n==0 || (n!=1 && n%100>=1 && "
 "n%100<=19) ? 1 : 2);\n"
-"X-Generator: Poedit 3.9\n"
+"X-Generator: Poedit 3.10\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1388,7 +1388,7 @@ msgstr "Pentru mai multe informații, vizitați site-ul oficial:"
 #: Sources/Jazz2/LevelHandler.cpp:2174
 #, c++-format
 msgid "Level \"{}\" restored"
-msgstr ""
+msgstr "Nivelul \"{}” a fost restabilit"
 
 #: Sources/Jazz2/LevelHandler.cpp:3172
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4195
@@ -1477,11 +1477,11 @@ msgstr "Jucătorul nu a fost găsit"
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3761
 msgid ""
 "You have already finished the race, you can play again in the next round"
-msgstr ""
+msgstr "Ai terminat deja cursa; poți juca din nou în runda următoare"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3765
 msgid "You cannot join the game right now"
-msgstr ""
+msgstr "Nu te poți alătura jocului în acest moment"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3804
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:4812
@@ -1569,6 +1569,10 @@ msgid ""
 "{} finished the race!\n"
 "{} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"{} a terminat cursa!\n"
+"{} secunde rămase"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10294
 #, c++-format
@@ -1577,6 +1581,9 @@ msgid ""
 "\n"
 "{} finished {}."
 msgstr ""
+"\n"
+"\n"
+"{} a terminat {}."
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:10558
 #, c++-format
@@ -1989,7 +1996,7 @@ msgstr "Start"
 #. TRANSLATORS: Menu item to select Wi-Fi or ad hoc connection (PSP only)
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:44
 msgid "Connection"
-msgstr ""
+msgstr "Conexiune"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:47
@@ -2001,12 +2008,12 @@ msgstr "Creați un server"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:473
 msgid "Ad hoc"
-msgstr ""
+msgstr "Ad hoc"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:263
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:473
 msgid "Wi-Fi"
-msgstr ""
+msgstr "Wi-Fi"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:418
 msgid ""
@@ -2143,7 +2150,7 @@ msgstr "Modul de joc Reforjat"
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
 msgid "Reforged Camera"
-msgstr ""
+msgstr "Cameră Reforjată"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
@@ -2174,7 +2181,7 @@ msgstr "Activat cu Număr Gloanțe"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:91
 #| msgid "Weapon Wheel"
 msgid "Show All Weapon Wheel Slots"
-msgstr ""
+msgstr "Afișează toate sloturile din roata de arme"
 
 #. TRANSLATORS: Header in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:122
@@ -2268,12 +2275,12 @@ msgstr "Moduri de Redimensionare"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:54
 msgid "Screen Resolution"
-msgstr ""
+msgstr "Rezoluția ecranului"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:70
 msgid "Rendering Resolution"
-msgstr ""
+msgstr "Rezoluția randării"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:121
@@ -2303,12 +2310,12 @@ msgstr "Rezoluția iluminării"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:229
 msgid "Particle Quality"
-msgstr ""
+msgstr "Calitatea particulelor"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:232
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:306
 msgid "Off"
-msgstr ""
+msgstr "Oprit"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:233
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:252
@@ -2353,7 +2360,7 @@ msgstr "Preferat ecran micșorat"
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:285
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:54
 msgid "Safe Area"
-msgstr ""
+msgstr "Zonă sigură"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:287
@@ -2377,7 +2384,7 @@ msgstr "Indicatori de Performanță"
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, only the frame rate is shown
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:308
 msgid "Basic"
-msgstr ""
+msgstr "De bază"
 
 #. TRANSLATORS: Option for Performance Metrics item in Options > Graphics section, the frame rate and the time each part of a frame takes
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:310
@@ -2592,22 +2599,22 @@ msgstr "Monocrom"
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:58
 msgid "Left Margin"
-msgstr ""
+msgstr "Marginea din stânga"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:60
 msgid "Top Margin"
-msgstr ""
+msgstr "Marginea de sus"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:62
 msgid "Right Margin"
-msgstr ""
+msgstr "Marginea din dreapta"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:64
 msgid "Bottom Margin"
-msgstr ""
+msgstr "Marginea de jos"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:66
@@ -2618,7 +2625,7 @@ msgstr "Resetare"
 #. TRANSLATORS: Value of a margin in Options > Graphics > Safe Area section
 #: Sources/Jazz2/UI/Menu/SafeAreaOptionsSection.cpp:92
 msgid "None"
-msgstr ""
+msgstr "Nici unul"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:139
 msgid "Laps"
@@ -2652,7 +2659,7 @@ msgstr "Conectare la server"
 #. TRANSLATORS: Shown in Connect To Server section on PSP while the console switches between Wi-Fi and ad hoc mode
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:299
 msgid "Switching connection mode…"
-msgstr ""
+msgstr "Se schimbă modul de conectare…"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:304
 msgid "No servers found, but still searchin'!"
@@ -2701,7 +2708,7 @@ msgstr "Volum Muzică"
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:84
 msgid "Sample Rate"
-msgstr ""
+msgstr "Rata de eșantionare"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:130
 msgid "Save"
@@ -2782,12 +2789,12 @@ msgstr "ID Unic al Jucătorului"
 #. TRANSLATORS: Spectator hint, "Fire" and "Run" are the names of the two actions
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:236
 msgid "Fire: next player, Run: free camera"
-msgstr ""
+msgstr "Foc: jucătorul următor, Alergare: cameră liberă"
 
 #. TRANSLATORS: Spectator hint, "Fire" is the name of the action
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:238
 msgid "Fire: follow a player"
-msgstr ""
+msgstr "Foc: urmărește un jucător"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:255
 #, c++-format
@@ -2805,19 +2812,19 @@ msgstr[2] "Se așteaptă încă {} jucători"
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:286
 #, c++-format
 msgid "Finish in {} s"
-msgstr ""
+msgstr "Termină în {} s"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:581
 msgid "Time"
-msgstr ""
+msgstr "Timp"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:584
 msgid "Kills"
-msgstr ""
+msgstr "Ucideri"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:612
 msgid "Final standings"
-msgstr ""
+msgstr "Clasamentul final"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
 msgid "Team"
