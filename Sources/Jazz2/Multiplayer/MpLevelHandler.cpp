@@ -7324,10 +7324,10 @@ namespace Jazz2::Multiplayer
 		reach = std::clamp(reach, 64.0f, 640.0f);
 
 		Vector2i layoutSize = _eventMap->GetSize();
-		std::int32_t tx1 = std::max((std::int32_t)((from.X - reach) / TileSize), 0);
-		std::int32_t ty1 = std::max((std::int32_t)((from.Y - reach) / TileSize), 0);
-		std::int32_t tx2 = std::min((std::int32_t)((from.X + reach) / TileSize), layoutSize.X - 1);
-		std::int32_t ty2 = std::min((std::int32_t)((from.Y + reach) / TileSize), layoutSize.Y - 1);
+		std::int32_t tx1 = std::max<std::int32_t>((std::int32_t)((from.X - reach) / TileSize), 0);
+		std::int32_t ty1 = std::max<std::int32_t>((std::int32_t)((from.Y - reach) / TileSize), 0);
+		std::int32_t tx2 = std::min<std::int32_t>((std::int32_t)((from.X + reach) / TileSize), layoutSize.X - 1);
+		std::int32_t ty2 = std::min<std::int32_t>((std::int32_t)((from.Y + reach) / TileSize), layoutSize.Y - 1);
 
 		for (std::int32_t ty = ty1; ty <= ty2; ty++) {
 			for (std::int32_t tx = tx1; tx <= tx2; tx++) {

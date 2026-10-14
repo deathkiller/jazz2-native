@@ -561,7 +561,7 @@ namespace Jazz2::Scripting
 			}
 		}
 		void jjPAL::fillTint(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t start, std::uint8_t length, float opacity) {
-			std::int32_t end = std::min((std::int32_t)start + (std::int32_t)length, 256);
+			std::int32_t end = std::min<std::int32_t>((std::int32_t)start + (std::int32_t)length, 256);
 			for (std::int32_t i = start; i < end; i++) {
 				_palette[i].red = BlendChannel(_palette[i].red, red, opacity);
 				_palette[i].green = BlendChannel(_palette[i].green, green, opacity);
@@ -580,7 +580,7 @@ namespace Jazz2::Scripting
 			}
 			// When inclusive, the last index reaches color2 exactly; otherwise color2 is the (excluded) color past the range
 			float denom = (inclusive ? (length > 1 ? (float)(length - 1) : 1.0f) : (float)length);
-			std::int32_t end = std::min((std::int32_t)start + (std::int32_t)length, 256);
+			std::int32_t end = std::min<std::int32_t>((std::int32_t)start + (std::int32_t)length, 256);
 			for (std::int32_t i = start; i < end; i++) {
 				float t = (i - start) / denom;
 				if (t > 1.0f) t = 1.0f;

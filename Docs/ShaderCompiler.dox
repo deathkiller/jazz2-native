@@ -682,7 +682,7 @@ The extension is disabled in untrusted workspaces, since it executes a binary fr
 @subsection shader-compiler-editor-maintaining Keeping it in step with the tool
 
 <b>When this page gains a directive, `render_mode`, pass field or context facility, add it to
-@cpp "src/language.js" @ce</b> (and to @cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its
+`src/language.js`</b> (and to @cpp "syntaxes/deathshader.tmLanguage.json" @ce if it needs its
 own colour). The dependency-free tests assert the closed sets against the parser:
 
 @code{.sh}
